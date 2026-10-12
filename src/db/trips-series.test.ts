@@ -4,7 +4,7 @@ import { calendarDateWeekday } from "@/lib/calendar-date";
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail } from "@/test/fakes";
-import { getTripBlowout } from "./blowouts";
+import { callTripBlowout, getTripBlowout } from "./blowouts";
 import { createBookingParty } from "./bookings";
 import { listDiveSites } from "./dive-sites";
 import { getBookingPayment, setBookingPayment } from "./payments";
@@ -719,6 +719,82 @@ describe("recurring trip series (in-memory PGlite)", () => {
       );
     });
 
+    /** The first date blown out for weather, then put back on the board. */
+    async function blownOutAndReinstated(run: Awaited<ReturnType<typeof bookedRun>>) {
+      const first = run.result.trips[0];
+      if (!first) throw new Error("expected a first date");
+      const blown = await callTripBlowout(run.db, {
+        shopId: run.shop.id,
+        tripId: first.id,
+        calledByPersonId: await ownerId(run.db, run.shop.id),
+        now: run.now,
+        provider: fakeEmail().provider,
+        checkout: fakeCheckout(),
+      });
+      expect(blown.ok).toBe(true);
+      await setTripStatus(run.db, run.shop.id, first.id, "scheduled", run.now);
+      return first;
+    }
+
+    // Review 1b (2026-10-12): a reinstated date the run cancel calls off again
+    // is cancelled because the run ended, not because of the old weather.
+    it("tells a diver on a reinstated date that the run ended, not the old weather", async () => {
+      const run = await bookedRun();
+      const first = await blownOutAndReinstated(run);
+      const party = await createBookingParty(run.db, [
+        {
+          actor: "staff" as const,
+          shopId: run.shop.id,
+          tripId: first.id,
+          fullName: "Cy Back",
+          email: "cy.back@example.com",
+        },
+      ]);
+      if (!party.ok) throw new Error("could not book the reinstated date");
+      const email = fakeEmail();
+      await cancelFutureSeriesTrips(run.db, {
+        shopId: run.shop.id,
+        seriesId: run.result.series.id,
+        calledByPersonId: await ownerId(run.db, run.shop.id),
+        now: run.now,
+        provider: email.provider,
+        checkout: fakeCheckout(),
+      });
+      const told = email.sent.find(
+        (sent) => sent.kind === "trip_blowout" && sent.to === "cy.back@example.com",
+      );
+      expect(told?.kind === "trip_blowout" && told.cause).toBe("run_ended");
+      expect((await getTripBlowout(run.db, run.shop.id, first.id))?.cause).toBe("run_ended");
+    });
+
+    // Security D2 (2026-10-12): an earlier blow-out record must not let the run
+    // cancel call off a reinstated date whose boarding has begun.
+    it("leaves a reinstated date with boarding begun on the board, counted as skipped", async () => {
+      const run = await bookedRun();
+      const first = await blownOutAndReinstated(run);
+      const [staff] = await listStaff(run.db, run.shop.id);
+      if (!staff) throw new Error("seed staff missing");
+      await run.db.insert(rollCallEvents).values({
+        shopId: run.shop.id,
+        tripId: first.id,
+        bookingId: run.paidBooking,
+        recordedByPersonId: staff.person.id,
+        status: "boarded",
+        checkpoint: "departure",
+        occurredAt: run.now,
+      });
+      const outcome = await cancelFutureSeriesTrips(run.db, {
+        shopId: run.shop.id,
+        seriesId: run.result.series.id,
+        calledByPersonId: await ownerId(run.db, run.shop.id),
+        now: run.now,
+        provider: fakeEmail().provider,
+        checkout: fakeCheckout(),
+      });
+      expect(outcome?.skipped).toBe(1);
+      expect((await getTripWithBooked(run.db, run.shop.id, first.id))?.status).toBe("scheduled");
+    });
+
     it("touches nothing of another shop's: a foreign series id cancels no date anywhere", async () => {
       const run = await bookedRun();
       const email = fakeEmail();
@@ -1313,6 +1389,53 @@ describe("a run's standing crew (2026-10-12): applied per date, never assumed", 
         expect(crew).toEqual([`${run.crew.captain}:captain`, `${run.crew.other}:`].sort());
       }
     }
+  });
+
+  // Review 2b (2026-10-12): a called-off departure holds nobody's day, so its
+  // old crew list must not keep the standing crew off the date it overlaps.
+  it("seats the crew over a cancelled departure in the same hours", async () => {
+    const run = await runWithCrew();
+    await setSeriesStandingCrew(run.db, {
+      shopId: run.shop.id,
+      seriesId: run.result.series.id,
+      sourceTripId: run.source.id,
+      standing: true,
+      actorPersonId: null,
+      now: run.now,
+    });
+    const later = at("2031-02-01T12:00:00.000Z");
+    const calledOff = await createTrip(run.db, {
+      shopId: run.shop.id,
+      title: "Old Wreck Run",
+      startsAt: later,
+      endsAt: at("2031-02-01T16:00:00.000Z"),
+      capacity: 6,
+      plannedDives: 2,
+    });
+    if (!calledOff) throw new Error("charter not created");
+    expect(await setTripCrew(run.db, run.shop.id, calledOff.id, [run.crew.other])).toBe(true);
+    await setTripStatus(run.db, run.shop.id, calledOff.id, "cancelled", run.now);
+
+    await rollSeriesForward(
+      run.db,
+      run.shop.id,
+      run.result.series.id,
+      at("2030-11-01T12:00:00.000Z"),
+    );
+    const [rolled] = await run.db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.seriesId, run.result.series.id),
+          eq(trips.startsAt, later),
+          isNull(trips.deletedAt),
+        ),
+      );
+    if (!rolled) throw new Error("the roll did not add the date");
+    expect(await crewOn(run.db, run.shop.id, rolled.id)).toEqual(
+      [`${run.crew.captain}:captain`, `${run.crew.other}:`].sort(),
+    );
   });
 
   it("adds no crew to rolled dates while the run has no standing crew", async () => {

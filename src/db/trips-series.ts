@@ -1094,8 +1094,8 @@ export async function cancelFutureSeriesTrips(
   },
 ): Promise<SeriesCancelResult | null> {
   const now = input.now ?? nowDate();
-  const stopped = await setSeriesRepeat(db, input.shopId, input.seriesId, false, now);
-  if (!stopped) return null;
+  // Which dates to call is read before the repeat stops, so the dates and the
+  // stop are one decision; the run still stops before any date is called.
   const upcoming = await db
     .select({ id: trips.id })
     .from(trips)
@@ -1109,6 +1109,8 @@ export async function cancelFutureSeriesTrips(
       ),
     )
     .orderBy(asc(trips.startsAt));
+  const stopped = await setSeriesRepeat(db, input.shopId, input.seriesId, false, now);
+  if (!stopped) return null;
   if (upcoming.length === 0) return { cancelled: 0, skipped: 0, divers: 0, tripIds: [] };
   const results = await callDayBlowout(db, {
     shopId: input.shopId,

@@ -799,7 +799,10 @@ export async function cancelSeriesAction(shopSlug: string, tripId: string, serie
     calledByPersonId: s.user.personId,
     now,
   });
-  if (!result || result.cancelled === 0) {
+  // Null is the only failure: the run was not this shop's, and nothing
+  // changed. Anything else stopped the repeat, so the notice says what the
+  // dates did — a date that was underway still stands (review 2a, D3).
+  if (!result) {
     revalidateAndRedirect(back, noticeUrl(back, "series-error"));
     return;
   }

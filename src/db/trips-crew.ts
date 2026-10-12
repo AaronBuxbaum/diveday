@@ -176,9 +176,8 @@ async function overlappingCrewDepartures(
       and(
         liveTrip(),
         eq(trips.shopId, shopId),
-        // A called-off departure holds nobody's day. `setTripCrew`'s own
-        // conflict check does not exclude these; this one does, and the
-        // difference is filed rather than quietly copied.
+        // A called-off departure holds nobody's day; `crewBusyElsewhere`,
+        // `setTripCrew`'s own conflict check, reads it the same way.
         eq(trips.status, "scheduled"),
         ne(trips.id, tripId),
         inArray(tripAssignments.personId, [...crewIds]),
@@ -754,6 +753,9 @@ async function crewBusyElsewhere(
       and(
         liveTrip(),
         eq(trips.shopId, shopId),
+        // A called-off departure holds nobody's day, as in
+        // `overlappingCrewDepartures` (review 2b, 2026-10-12).
+        eq(trips.status, "scheduled"),
         ne(trips.id, tripId),
         inArray(tripAssignments.personId, [...personIds]),
         or(...days.map((day) => windowsOverlap(legWindow(tripScheduleDays, trips), day))),

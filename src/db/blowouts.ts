@@ -119,8 +119,9 @@ export type CallBlowoutInput = {
   /**
    * Why it is off, which is what each diver is told. Weather unless said
    * otherwise; a repeating trip's "Cancel every upcoming date" passes
-   * `run_ended` (`cancelFutureSeriesTrips`). Read only when the record is
-   * created: a resume keeps the cause the call was made with.
+   * `run_ended` (`cancelFutureSeriesTrips`). Read when the record is created,
+   * and when a reinstated trip is called off again; a resume of a trip still
+   * cancelled keeps the cause the call was made with.
    */
   cause?: BlowoutCause;
   /** Injectable for tests; defaults to the environment-configured provider. */
@@ -176,8 +177,11 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
     // roll-call event, it is underway (`departureUnderway`) — cancelling it then
     // would hand roll call a cancelled trip with people aboard. An *existing*
     // cascade may still be resumed afterwards: its messages are about a
-    // cancellation that already happened.
-    if (!existing) {
+    // cancellation that already happened. A *scheduled* trip with a record is
+    // not a resume but a fresh call — it was blown out, then reinstated — so
+    // it is asked the same question (security review D2, 2026-10-12).
+    const freshCall = !existing || trip.status === "scheduled";
+    if (freshCall) {
       const [started] = await tx
         // The id as a value, not the column: in a single-table select the
         // column renders unqualified and would bind inside the subquery.
@@ -201,7 +205,14 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
     }
 
     let blowoutId = existing?.id;
-    const cause: BlowoutCause = existing?.cause ?? input.cause ?? "weather";
+    // A resume keeps the cause the call was made with; a fresh call on a
+    // reinstated date says why it is off *now* (a run cancel after an old
+    // weather call is `run_ended`, never the weather).
+    const cause: BlowoutCause =
+      existing && !freshCall ? existing.cause : (input.cause ?? "weather");
+    if (existing && freshCall && existing.cause !== cause) {
+      await tx.update(tripBlowouts).set({ cause }).where(eq(tripBlowouts.id, existing.id));
+    }
     if (!blowoutId) {
       const [created] = await tx
         .insert(tripBlowouts)
@@ -247,7 +258,7 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
         .onConflictDoNothing({ target: tripBlowoutDivers.bookingId });
     }
 
-    return { ok: true as const, blowoutId, trip, cause, resumed: Boolean(existing) };
+    return { ok: true as const, blowoutId, trip, cause, resumed: !freshCall };
   });
 }
 
