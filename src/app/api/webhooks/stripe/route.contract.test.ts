@@ -282,7 +282,7 @@ describe("money reversed outside DiveDay (ADR 20261009-stripe-reversals-reach-di
     );
   });
 
-  it("charge.refund.updated reads a failed Refund's id, amount, status and PaymentIntent (#2291)", async () => {
+  it("charge.refund.updated reads a failed Refund's id, amount, status and PaymentIntent (issue 2291)", async () => {
     vi.mocked(recordStripeRefundFailure).mockResolvedValue({ status: "reversed" });
     const response = await deliver("charge.refund.updated");
     expect(response.status).toBe(200);

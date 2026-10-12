@@ -52,7 +52,7 @@ import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 import { MonthJump } from "./_components/MonthJump";
-import { MoneyByLine, MonthDetailLines } from "./_components/MonthMoneyDetail";
+import { MoneyByLine, MonthDetailLines, QuietMonth } from "./_components/MonthMoneyDetail";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { YearReport } from "./_components/YearReport";
 
@@ -603,18 +603,12 @@ export default async function ReportsPage({
       </div>
 
       {!hasMonthlyActivity ? (
-        // A month with no departures is this page's rest state, not news about
-        // it: `ShopNotice` is the vocabulary for something that *happened*
-        // (a save, a refusal, a permission bounce), and wearing it here made an
-        // ordinary quiet January read as a warning. No figure row either — five
-        // zeroes over an empty ledger is a month described wrongly, not
-        // described quietly (`monthHasActivity`).
-        <>
-          <EmptyState title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")} />
-          {/* A month with no departures can still take money: a package, a
-              counter sale, a gear-bench job (issue #2305). */}
-          <MoneyByLine detail={moneyDetail} t={t} money={money} />
-        </>
+        <QuietMonth
+          title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")}
+          detail={moneyDetail}
+          t={t}
+          money={money}
+        />
       ) : (
         <>
           <MonthFigures label={t("reports.numbersLabel")} figures={figures} />

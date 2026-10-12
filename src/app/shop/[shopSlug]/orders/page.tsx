@@ -5,9 +5,8 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonManageOrders, canPersonManagePaymentSettings } from "@/db/authz";
@@ -31,7 +30,7 @@ import {
   isValidCalendarDate,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents, formatShortDate, joinFacts } from "@/lib/format";
+import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
@@ -39,10 +38,20 @@ import { uuidParam } from "@/lib/uuid";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { orderLedgerRow } from "./_components/ledger-row";
+import {
+  FACT_SEPARATOR,
+  NOTICE_ROWS,
+  OPEN_TRIP_LINE,
+  OPEN_TRIP_LINK,
+} from "./_components/notice-rows";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
+import {
+  FailedRefundsQueue,
+  OwedRefundsQueue,
+  PaidAfterCloseQueue,
+} from "./_components/OwedMoneyQueues";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
-import { refundPaidAfterCloseAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -93,35 +102,6 @@ const OPERATION_UNFINISHED_KEYS: Record<string, StaffMessageKey> = {
   refund: "orders.index.paymentOps.unfinished.refund",
 };
 const OPERATION_UNFINISHED_FALLBACK: StaffMessageKey = "orders.index.paymentOps.unfinished.other";
-
-/**
- * **"Open trip" is a 44px target on a 20px line** (K-389). The notices drew
- * it as a plain underlined word, 61.8×20px. The link takes
- * `tapTargetLinkClass`, and this wrapper is exactly one `text-sm` line tall,
- * so the 44px box spills 12px above and below without moving the line
- * (`EYEBROW_TAP_WRAPPER`'s idiom, a line box round a larger target). A flex
- * item of the danger row or inline in an owed row's text, the wrapper stands
- * on the line's baseline by the link's words.
- */
-const OPEN_TRIP_LINE = "inline-flex h-5 items-center";
-const OPEN_TRIP_LINK = `${tapTargetLinkClass} font-medium text-primary underline underline-offset-2`;
-
-/**
- * **A notice's rows stand at least a target apart** (K-389). Each "Open trip"
- * box spills 12px above and below its 20px line, so at `space-y-2` two
- * one-line rows stood 28px apart and their boxes crossed by 16px: the later
- * link paints over the earlier and took a click on the earlier one's
- * underline, opening the next diver's departure. A 20px line and a 24px gap
- * is the 44px target, so two rows' spills meet and never cross. Both lists
- * take it: an unconfirmed payment with no Stripe id yet is a one-line row too.
- */
-const NOTICE_ROWS = "mt-3 space-y-6 text-sm";
-
-/**
- * A notice row's separator, bound by a no-break space to the word before it,
- * so a wrapped line ends after a dot and never opens on one (K-569).
- */
-const FACT_SEPARATOR = "\u00A0· ";
 
 const IMPORTED_PAYMENT_DIRECTION_KEYS: Record<"payment" | "refund" | "unknown", StaffMessageKey> = {
   payment: "orders.index.importedHistory.direction.payment",
@@ -581,151 +561,27 @@ export default async function OrdersIndexPage({
         </section>
       ) : null}
 
-      {/* Renders nothing when nothing is owed — a queue, not a heading that
-          sits on the page announcing its own emptiness. Warning rather than
-          danger: nothing is broken, somebody is just owed money. */}
-      {owedRefunds.length > 0 ? (
-        <section aria-label={t("orders.index.owedRefunds.sectionLabel")} className="mb-6">
-          <ShopNotice tone="warning" role="status">
-            <p className="font-medium">
-              {t("orders.index.owedRefunds.heading", { count: owedRefunds.length })}
-            </p>
-            <p className="mt-1 text-sm">{t("orders.index.owedRefunds.detail")}</p>
-            <ul className={NOTICE_ROWS}>
-              {owedRefunds.map((owed) => (
-                // **Running text, not flex items** (K-569). Each fact was a
-                // flex item opening on its own "·", so the row spaced its
-                // dots two ways and, wrapped on a phone, began lines
-                // "· $60.00"; and a single joined span, as one flex item,
-                // left the name's line whole on a phone and pushed "Open
-                // trip" to a line of its own. As one run of text the row
-                // breaks only after a dot or inside the departure's words,
-                // every dot bound to the word before it, and "Open trip"
-                // (a 20px `inline-flex` on the text's baseline) shares the
-                // last line.
-                <li key={owed.bookingId}>
-                  <span className="font-medium">{owed.diverName}</span>
-                  {FACT_SEPARATOR}
-                  {owed.tripTitle}
-                  <span className="text-muted">
-                    {FACT_SEPARATOR}
-                    {joinFacts([
-                      // A counter mark often records no amount. Saying so
-                      // beats printing a confident 0.00 the shop would have
-                      // to distrust.
-                      owed.amountCents === null
-                        ? t("orders.index.owedRefunds.unrecordedAmount")
-                        : formatMoneyCents(owed.amountCents, owed.currency, locale),
-                      owed.depositOnly && t("orders.index.owedRefunds.depositOnly"),
-                      formatShortDate(owed.tripStartsAt, locale, shop.timezone),
-                    ])}
-                  </span>{" "}
-                  <span className={OPEN_TRIP_LINE}>
-                    <Link
-                      href={`/shop/${shopSlug}/trips/${owed.tripId}`}
-                      className={OPEN_TRIP_LINK}
-                    >
-                      {t("orders.index.owedRefunds.openTrip")}
-                    </Link>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </ShopNotice>
-        </section>
-      ) : null}
-
-      {paidAfterClose.length > 0 ? (
-        <section aria-label={t("orders.index.paidAfterClose.sectionLabel")} className="mb-6">
-          <ShopNotice tone="warning" role="status">
-            <p className="font-medium">
-              {t("orders.index.paidAfterClose.heading", { count: paidAfterClose.length })}
-            </p>
-            <ul className={NOTICE_ROWS}>
-              {paidAfterClose.map((owed) => (
-                <li key={owed.checkoutId}>
-                  <span className="font-medium">{owed.diverNames.join(", ")}</span>
-                  {FACT_SEPARATOR}
-                  {owed.tripTitle}
-                  <span className="text-muted">
-                    {FACT_SEPARATOR}
-                    {joinFacts([
-                      formatMoneyCents(owed.amountCents, owed.currency, locale),
-                      formatShortDate(owed.tripStartsAt, locale, shop.timezone),
-                    ])}
-                  </span>{" "}
-                  <span className={OPEN_TRIP_LINE}>
-                    <Link
-                      href={`/shop/${shopSlug}/trips/${owed.tripId}`}
-                      className={OPEN_TRIP_LINK}
-                    >
-                      {t("orders.index.paidAfterClose.openTrip")}
-                    </Link>
-                  </span>
-                  <form action={refundPaidAfterCloseAction} className="mt-2">
-                    <input type="hidden" name="checkoutId" value={owed.checkoutId} />
-                    <SubmitButton
-                      pendingLabel={t("orders.index.paidAfterClose.refunding")}
-                      className={buttonClass({ variant: "secondary" })}
-                    >
-                      {t("orders.index.paidAfterClose.refund")}
-                    </SubmitButton>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          </ShopNotice>
-        </section>
-      ) : null}
-
-      {failedRefunds.length > 0 ? (
-        <section aria-label={t("orders.index.failedRefunds.sectionLabel")} className="mb-6">
-          <ShopNotice tone="warning" role="status">
-            <p className="font-medium">
-              {t("orders.index.failedRefunds.heading", { count: failedRefunds.length })}
-            </p>
-            <ul className={NOTICE_ROWS}>
-              {failedRefunds.map((owed) => (
-                <li key={owed.id}>
-                  <span className="font-medium">{owed.diverNames.join(", ")}</span>
-                  {owed.tripTitle ? (
-                    <>
-                      {FACT_SEPARATOR}
-                      {owed.tripTitle}
-                    </>
-                  ) : null}
-                  <span className="text-muted">
-                    {FACT_SEPARATOR}
-                    {joinFacts([
-                      formatMoneyCents(owed.amountCents, owed.currency, locale),
-                      formatShortDate(owed.failedAt, locale, shop.timezone),
-                    ])}
-                  </span>{" "}
-                  {owed.orderId ? (
-                    <span className={OPEN_TRIP_LINE}>
-                      <Link
-                        href={`/shop/${shopSlug}/orders/${owed.orderId}`}
-                        className={OPEN_TRIP_LINK}
-                      >
-                        {t("orders.index.failedRefunds.openOrder")}
-                      </Link>
-                    </span>
-                  ) : owed.tripId ? (
-                    <span className={OPEN_TRIP_LINE}>
-                      <Link
-                        href={`/shop/${shopSlug}/trips/${owed.tripId}`}
-                        className={OPEN_TRIP_LINK}
-                      >
-                        {t("orders.index.failedRefunds.openTrip")}
-                      </Link>
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </ShopNotice>
-        </section>
-      ) : null}
+      <OwedRefundsQueue
+        queue={owedRefunds}
+        shopSlug={shopSlug}
+        timeZone={shop.timezone}
+        locale={locale}
+        t={t}
+      />
+      <PaidAfterCloseQueue
+        queue={paidAfterClose}
+        shopSlug={shopSlug}
+        timeZone={shop.timezone}
+        locale={locale}
+        t={t}
+      />
+      <FailedRefundsQueue
+        queue={failedRefunds}
+        shopSlug={shopSlug}
+        timeZone={shop.timezone}
+        locale={locale}
+        t={t}
+      />
 
       {showToolbar ? (
         <OrdersToolbar

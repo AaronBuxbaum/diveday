@@ -51,6 +51,9 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 };
 const auth = authModule.auth;
 const OrdersIndexPage = (await import("./page")).default;
+const { FailedRefundsQueue, OwedRefundsQueue, PaidAfterCloseQueue } = await import(
+  "./_components/OwedMoneyQueues"
+);
 
 const SHOP_SLUG = "blue-mantis";
 
@@ -77,11 +80,29 @@ async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySess
 }
 
 /** The page, rendered for whatever `?…` a test wants to put to it. */
-function renderWith(searchParams: Record<string, string> = {}) {
-  return OrdersIndexPage({
-    params: Promise.resolve({ shopSlug: SHOP_SLUG }),
-    searchParams: Promise.resolve(searchParams),
-  });
+/** The back-office queues, rendered in place so the tree walkers can read them. */
+const QUEUES = new Set<unknown>([OwedRefundsQueue, PaidAfterCloseQueue, FailedRefundsQueue]);
+
+function expandQueues(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(expandQueues);
+  if (node === null || typeof node !== "object" || !("props" in node)) return node;
+  const element = node as { type: unknown; props: Record<string, unknown> };
+  if (QUEUES.has(element.type)) {
+    return expandQueues((element.type as (props: unknown) => unknown)(element.props));
+  }
+  return {
+    ...element,
+    props: { ...element.props, children: expandQueues(element.props.children) },
+  };
+}
+
+async function renderWith(searchParams: Record<string, string> = {}) {
+  return expandQueues(
+    await OrdersIndexPage({
+      params: Promise.resolve({ shopSlug: SHOP_SLUG }),
+      searchParams: Promise.resolve(searchParams),
+    }),
+  ) as Awaited<ReturnType<typeof OrdersIndexPage>>;
 }
 
 async function renderOrders(

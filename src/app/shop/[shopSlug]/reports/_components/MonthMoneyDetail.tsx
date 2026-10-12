@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/EmptyState";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { MonthMoneyDetail as Detail } from "@/db/report-lines";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -114,5 +115,33 @@ export function MoneyByLine({
         ))}
       </dl>
     </section>
+  );
+}
+
+/**
+ * A month with no departures. It is this page's rest state, not news about
+ * it: `ShopNotice` is the vocabulary for something that *happened* (a save, a
+ * refusal, a permission bounce), and wearing it here made an ordinary quiet
+ * January read as a warning. No figure row either — five zeroes over an empty
+ * ledger is a month described wrongly, not described quietly
+ * (`monthHasActivity`). It can still have taken money, a package, a counter
+ * sale, a gear-bench job, so the money by line still shows (issue #2305).
+ */
+export function QuietMonth({
+  title,
+  detail,
+  t,
+  money,
+}: {
+  title: string;
+  detail: Detail;
+  t: StaffTranslator;
+  money: (cents: number) => string;
+}) {
+  return (
+    <>
+      <EmptyState title={title} />
+      <MoneyByLine detail={detail} t={t} money={money} />
+    </>
   );
 }

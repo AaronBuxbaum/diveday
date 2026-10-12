@@ -1,6 +1,6 @@
 import { and, count, eq, gt, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { getDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import { requestCrewAssignment } from "@/db/crew-requests";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { createDiveSite } from "@/db/dive-sites";
@@ -151,89 +151,8 @@ export async function POST(request: Request) {
     })
     .onConflictDoNothing();
 
-  // 2. Somebody is owed money: a departure the shop cancelled that still
-  //    carries a paid seat. `listOwedShopCancellationRefunds` joins a paid
-  //    booking_payment to a `cancelled` trip whose booking is *not* cancelled
-  //    (the forfeit carve-out), so cancelling the trip is the whole edit.
-  const [paidSeat] = await db
-    .select({ tripId: bookings.tripId })
-    .from(bookingPayments)
-    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
-    .where(
-      and(
-        eq(bookingPayments.shopId, shop.id),
-        inArray(bookingPayments.status, ["paid", "deposit_paid"]),
-      ),
-    )
-    .limit(1);
-  if (paidSeat) {
-    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, paidSeat.tripId));
-  }
-
-  // 2b. A diver paid on a checkout DiveDay had already closed (issue #2335):
-  //     the money waits on the Orders index as owed back, with a Refund.
-  const [lateSeat] = await db
-    .select({ id: bookings.id, tripId: bookings.tripId })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(bookings.shopId, shop.id),
-        ne(bookings.status, "cancelled"),
-        eq(trips.status, "scheduled"),
-      ),
-    )
-    .orderBy(trips.startsAt, bookings.createdAt)
-    .limit(1);
-  if (lateSeat) {
-    const [lateCheckout] = await db
-      .insert(bookingCheckouts)
-      .values({
-        shopId: shop.id,
-        tripId: lateSeat.tripId,
-        status: "expired",
-        stripeAccountId: "acct_e2e_late",
-        stripeSessionId: "cs_e2e_paid_after_close",
-        currency: "usd",
-        amountPerDiverCents: 14_500,
-        totalCents: 14_500,
-        paidAfterCloseAt: now,
-        paidAfterCloseCents: 14_500,
-      })
-      .onConflictDoNothing()
-      .returning({ id: bookingCheckouts.id });
-    if (lateCheckout) {
-      await db
-        .insert(bookingCheckoutBookings)
-        .values({ shopId: shop.id, checkoutId: lateCheckout.id, bookingId: lateSeat.id });
-    }
-  }
-
-  // 2c. A refund Stripe accepted and later reported failed (issue #2291): the
-  //     diver is owed again, on the Orders index.
-  const [bouncedOrder] = await db
-    .select({ id: orders.id, refundedCents: orders.refundedCents, currency: orders.currency })
-    .from(orders)
-    .where(eq(orders.shopId, shop.id))
-    .orderBy(orders.createdAt)
-    .limit(1);
-  if (bouncedOrder) {
-    await db
-      .insert(stripeRefundFailures)
-      .values({
-        shopId: shop.id,
-        stripeAccountId: "acct_e2e_bounced",
-        stripeRefundId: "re_e2e_bounced",
-        orderId: bouncedOrder.id,
-        amountCents: 4_200,
-        currency: bouncedOrder.currency,
-        refundStatus: "failed",
-        failureReason: "expired_or_canceled_card",
-        owedUntilRefundedCents: bouncedOrder.refundedCents + 4_200,
-        failedAt: now,
-      })
-      .onConflictDoNothing();
-  }
+  // 2. Money the shop owes back, three ways (`seedOwedMoney`).
+  await seedOwedMoney(db, shop.id, now);
 
   // 3. A photo delete the provider refused, and
   // 4. two erasures Stripe still owes — the panels that lead Settings' "Data &
@@ -1816,4 +1735,105 @@ async function hideEnoughReviewsToWithholdTheRating(
       reason: "spam",
     });
   }
+}
+
+/**
+ * A diver paid on a checkout DiveDay had already closed (issue #2335): the
+ * money waits on the Orders index as owed back, with a Refund.
+ */
+async function seedPaidAfterClose(db: AppDb, shopId: string, now: Date): Promise<void> {
+  const [lateSeat] = await db
+    .select({ id: bookings.id, tripId: bookings.tripId })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+        eq(trips.status, "scheduled"),
+      ),
+    )
+    .orderBy(trips.startsAt, bookings.createdAt)
+    .limit(1);
+  if (lateSeat) {
+    const [lateCheckout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shopId,
+        tripId: lateSeat.tripId,
+        status: "expired",
+        stripeAccountId: "acct_e2e_late",
+        stripeSessionId: "cs_e2e_paid_after_close",
+        currency: "usd",
+        amountPerDiverCents: 14_500,
+        totalCents: 14_500,
+        paidAfterCloseAt: now,
+        paidAfterCloseCents: 14_500,
+      })
+      .onConflictDoNothing()
+      .returning({ id: bookingCheckouts.id });
+    if (lateCheckout) {
+      await db
+        .insert(bookingCheckoutBookings)
+        .values({ shopId: shopId, checkoutId: lateCheckout.id, bookingId: lateSeat.id });
+    }
+  }
+}
+
+/**
+ * A refund Stripe accepted and later reported failed (issue #2291): the diver
+ * is owed again, on the Orders index.
+ */
+async function seedFailedRefund(db: AppDb, shopId: string, now: Date): Promise<void> {
+  const [bouncedOrder] = await db
+    .select({ id: orders.id, refundedCents: orders.refundedCents, currency: orders.currency })
+    .from(orders)
+    .where(eq(orders.shopId, shopId))
+    .orderBy(orders.createdAt)
+    .limit(1);
+  if (bouncedOrder) {
+    await db
+      .insert(stripeRefundFailures)
+      .values({
+        shopId: shopId,
+        stripeAccountId: "acct_e2e_bounced",
+        stripeRefundId: "re_e2e_bounced",
+        orderId: bouncedOrder.id,
+        amountCents: 4_200,
+        currency: bouncedOrder.currency,
+        refundStatus: "failed",
+        failureReason: "expired_or_canceled_card",
+        owedUntilRefundedCents: bouncedOrder.refundedCents + 4_200,
+        failedAt: now,
+      })
+      .onConflictDoNothing();
+  }
+}
+
+/**
+ * 2. Somebody is owed money: a cancelled departure's paid seat; 2b. a diver
+ * paid on a checkout DiveDay had already closed (issue #2335); 2c. a refund
+ * Stripe accepted and later reported failed (issue #2291).
+ */
+async function seedOwedMoney(db: AppDb, shopId: string, now: Date): Promise<void> {
+  // A departure the shop cancelled that still
+  //    carries a paid seat. `listOwedShopCancellationRefunds` joins a paid
+  //    booking_payment to a `cancelled` trip whose booking is *not* cancelled
+  //    (the forfeit carve-out), so cancelling the trip is the whole edit.
+  const [paidSeat] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookingPayments)
+    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
+    .where(
+      and(
+        eq(bookingPayments.shopId, shopId),
+        inArray(bookingPayments.status, ["paid", "deposit_paid"]),
+      ),
+    )
+    .limit(1);
+  if (paidSeat) {
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, paidSeat.tripId));
+  }
+  await seedPaidAfterClose(db, shopId, now);
+  await seedFailedRefund(db, shopId, now);
 }

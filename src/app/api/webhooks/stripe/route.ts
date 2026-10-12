@@ -38,8 +38,9 @@ import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
+import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
-import { verifyStripeWebhook } from "@/lib/payments/webhook";
+import { type StripeWebhookEvent, verifyStripeWebhook } from "@/lib/payments/webhook";
 
 const invoiceObjectSchema = z.object({
   id: z.string().min(1),
@@ -119,6 +120,55 @@ const refundObjectSchema = z.object({
     .nullable()
     .optional(),
 });
+
+/**
+ * Void the order an invoice backs, and tell the integrations (`order.voided`,
+ * issue #2309). Returns the outcome to log.
+ */
+async function handleInvoiceVoided(db: AppDb, event: StripeWebhookEvent): Promise<string> {
+  const invoice = invoiceObjectSchema.safeParse(event.data.object);
+  if (!invoice.success) return "malformed_payload";
+  const order = await markOrderVoidedByInvoiceId(db, invoice.data.id, event.account);
+  if (!order) return "order_not_found";
+  dispatchIntegrationsAfterResponse();
+  return "order_voided";
+}
+
+/**
+ * A refund Stripe accepted can still fail later — the card closed, the bank
+ * returned it (issue #2291). The money is back in the shop's balance, so the
+ * refund recorded here is reversed and the diver shows as owed on the Orders
+ * index. Any other status changes nothing. Returns the outcome to log.
+ */
+async function handleRefundUpdated(
+  db: AppDb,
+  event: StripeWebhookEvent,
+  occurredAt: Date,
+  sourceLookup: PaymentSourceLookup,
+): Promise<string> {
+  const refund = refundObjectSchema.safeParse(event.data.object);
+  if (!refund.success) return "malformed_payload";
+  if (!event.account) return "missing_account";
+  const paymentIntentId = idOf(refund.data.payment_intent);
+  if (!paymentIntentId) return "refund_target_not_found";
+  const outcome = await recordStripeRefundFailure(
+    db,
+    {
+      stripeAccountId: event.account,
+      paymentIntentId,
+      refund: {
+        id: refund.data.id,
+        amountCents: refund.data.amount,
+        currency: refund.data.currency,
+        status: refund.data.status ?? "",
+        failureReason: refund.data.failure_reason ?? null,
+      },
+      occurredAt,
+    },
+    sourceLookup,
+  );
+  return `refund_failure_${outcome.status}`;
+}
 
 /** The Dispute every `charge.dispute.*` event carries. */
 const disputeObjectSchema = z.object({
@@ -325,9 +375,8 @@ export async function POST(request: Request) {
     logOutcome("livemode_mismatch", { verifiedWith, livemode: event.livemode ?? null });
     return new Response(null, { status: 200 });
   }
-  // Which charge a reversal is about, asked of Stripe with the key chosen for
-  // the event's account, and only one of this event's own mode (ADR
-  // 20261009-stripe-reversals-reach-diveday; the demo's test key, issue #2296).
+  // Which charge a reversal is about, asked of Stripe with the event account's
+  // own key, of the event's mode (ADR 20261009-stripe-reversals-reach-diveday).
   const sourceLookup = paymentSourceLookupFromEnvironment(process.env, fetch, {
     livemode: expectedLivemode,
     db: async () => db,
@@ -421,14 +470,7 @@ export async function POST(request: Request) {
         break;
       }
       case "invoice.voided": {
-        const invoice = invoiceObjectSchema.safeParse(event.data.object);
-        if (invoice.success) {
-          const order = await markOrderVoidedByInvoiceId(db, invoice.data.id, event.account);
-          if (order) dispatchIntegrationsAfterResponse();
-          logOutcome(order ? "order_voided" : "order_not_found");
-        } else {
-          logOutcome("malformed_payload");
-        }
+        logOutcome(await handleInvoiceVoided(db, event));
         break;
       }
       case "checkout.session.completed": {
@@ -623,37 +665,7 @@ export async function POST(request: Request) {
         break;
       }
       case "charge.refund.updated": {
-        // A refund Stripe accepted can still fail later — the card closed, the
-        // bank returned it (issue #2291). The money is back in the shop's
-        // balance, so the refund recorded here is reversed and the diver shows
-        // as owed on the Orders index. Any other status changes nothing.
-        const refund = refundObjectSchema.safeParse(event.data.object);
-        const paymentIntentId = refund.success ? idOf(refund.data.payment_intent) : null;
-        if (!refund.success) {
-          logOutcome("malformed_payload");
-        } else if (!event.account) {
-          logOutcome("missing_account");
-        } else if (!paymentIntentId) {
-          logOutcome("refund_target_not_found");
-        } else {
-          const outcome = await recordStripeRefundFailure(
-            db,
-            {
-              stripeAccountId: event.account,
-              paymentIntentId,
-              refund: {
-                id: refund.data.id,
-                amountCents: refund.data.amount,
-                currency: refund.data.currency,
-                status: refund.data.status ?? "",
-                failureReason: refund.data.failure_reason ?? null,
-              },
-              occurredAt,
-            },
-            sourceLookup,
-          );
-          logOutcome(`refund_failure_${outcome.status}`);
-        }
+        logOutcome(await handleRefundUpdated(db, event, occurredAt, sourceLookup));
         break;
       }
       case "charge.dispute.created":
@@ -717,8 +729,7 @@ export async function POST(request: Request) {
     // `markTipPaidBySessionId` early-returns once paid, both
     // `*ExpiredBySessionId` and `markCheckoutPaymentFailedBySessionId` only
     // touch a `pending` row,
-    // `recordStripeRefundFailure` writes one row per Stripe refund and
-    // reverses only alongside it,
+    // `recordStripeRefundFailure` writes one row per refund, reversing with it,
     // `setShopStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
     // `disconnectShopStripeAccount` neither moves `disconnectedAt` on a row
     // that is already disconnected nor touches one reconnected since this

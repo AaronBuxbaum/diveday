@@ -694,7 +694,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       expect(Sentry.captureException).not.toHaveBeenCalled();
     });
 
-    it("charge.refund.updated hands the refund, its status and its PaymentIntent over (#2291)", async () => {
+    it("charge.refund.updated hands the refund, its status and its PaymentIntent over (issue 2291)", async () => {
       vi.mocked(recordStripeRefundFailure).mockResolvedValue({ status: "reversed" });
       const response = await post({
         id: "evt_refund_failed",

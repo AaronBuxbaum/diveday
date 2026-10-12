@@ -102,7 +102,7 @@ export async function listPaidAfterCloseCheckouts(
         ),
       ),
     )
-    .orderBy(asc(bookings.createdAt), asc(bookings.id));
+    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
   const namesByCheckout = new Map<string, string[]>();
   for (const { checkoutId, fullName } of names) {
     namesByCheckout.set(checkoutId, [...(namesByCheckout.get(checkoutId) ?? []), fullName]);
