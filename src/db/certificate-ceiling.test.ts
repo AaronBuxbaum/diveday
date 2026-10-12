@@ -219,14 +219,14 @@ describe("each path that writes a departure from another ends unable to sell abo
     expect(await book(db, shop.id, old.id)).toMatchObject({ ok: false, reason: "trip_full" });
   });
 
-  it("applying to the rest of the series skips a date on a hull certified for fewer", async () => {
-    const { db, shop } = ctx;
-    const roomy = await certifiedBoat(db, shop.id, null);
-    const small = await certifiedBoat(db, shop.id, LIMIT);
+  /** A three-Saturday series on an uncertified hull, its middle date moved to `small`. */
+  async function seriesWithMiddleOnSmall(db: AppDb, shopId: string, capacity = LIMIT) {
+    const roomy = await certifiedBoat(db, shopId, null);
+    const small = await certifiedBoat(db, shopId, LIMIT);
     const created = await createTripSeries(db, {
-      shopId: shop.id,
+      shopId,
       title: "Saturday",
-      capacity: LIMIT,
+      capacity,
       plannedDives: 2,
       frequency: "weekly",
       intervalWeeks: 1,
@@ -244,26 +244,121 @@ describe("each path that writes a departure from another ends unable to sell abo
     const [source, onSmall, onRoomy] = created.trips;
     if (!source || !onSmall || !onRoomy) throw new Error("expected three instances");
     await db.update(trips).set({ boatId: small.id }).where(eq(trips.id, onSmall.id));
+    return { seriesId: created.series.id, source, onSmall, onRoomy };
+  }
+
+  it("applying to the rest of the series lowers only the seats on a hull certified for fewer (#2322)", async () => {
+    const { db, shop } = ctx;
+    const { seriesId, source, onSmall, onRoomy } = await seriesWithMiddleOnSmall(db, shop.id);
+    // Divers-only seats above what the small hull may carry.
+    await db.update(trips).set({ diverCapacity: 3 }).where(eq(trips.id, onSmall.id));
     await updateTrip(db, shop.id, source.id, {
-      title: source.title,
+      title: "Saturday, renamed",
+      startsAt: source.startsAt,
+      endsAt: source.endsAt,
+      capacity: STATED,
+      plannedDives: source.plannedDives,
+      priceCents: 12_500,
+    });
+
+    const applied = await applyDetailsToFutureSeries(
+      db,
+      shop.id,
+      seriesId,
+      source.id,
+      at("2030-09-01T12:00:00.000Z"),
+    );
+    expect(applied).toEqual({ updated: 2, skipped: 0 });
+    const [smallAfter] = await db.select().from(trips).where(eq(trips.id, onSmall.id));
+    const [roomyAfter] = await db.select().from(trips).where(eq(trips.id, onRoomy.id));
+    // Every field reaches the smaller hull's date; only its seats stop at the certificate.
+    expect(smallAfter).toMatchObject({
+      title: "Saturday, renamed",
+      priceCents: 12_500,
+      capacity: LIMIT,
+      diverCapacity: LIMIT,
+    });
+    expect(roomyAfter).toMatchObject({
+      title: "Saturday, renamed",
+      priceCents: 12_500,
+      capacity: STATED,
+    });
+    await fillToCertificate(db, shop.id, onSmall.id);
+    expect(await book(db, shop.id, onSmall.id)).toMatchObject({ ok: false, reason: "trip_full" });
+  });
+
+  it("still skips a date whose held seats the lowered number would strand", async () => {
+    const { db, shop } = ctx;
+    const { seriesId, source, onSmall } = await seriesWithMiddleOnSmall(db, shop.id, STATED);
+    // Three held on the small hull's date: written before its certificate bound.
+    await db.update(trips).set({ boatId: null }).where(eq(trips.id, onSmall.id));
+    for (let i = 0; i < 3; i += 1) expect((await book(db, shop.id, onSmall.id)).ok).toBe(true);
+    const [small] = await db
+      .select({ id: boats.id })
+      .from(boats)
+      .where(eq(boats.certifiedPassengers, LIMIT));
+    await db
+      .update(trips)
+      .set({ boatId: small?.id ?? null })
+      .where(eq(trips.id, onSmall.id));
+    await updateTrip(db, shop.id, source.id, {
+      title: "Saturday, renamed",
       startsAt: source.startsAt,
       endsAt: source.endsAt,
       capacity: STATED,
       plannedDives: source.plannedDives,
     });
 
-    const applied = await applyDetailsToFutureSeries(
+    expect(
+      await applyDetailsToFutureSeries(
+        db,
+        shop.id,
+        seriesId,
+        source.id,
+        at("2030-09-01T12:00:00.000Z"),
+      ),
+    ).toEqual({ updated: 1, skipped: 1 });
+    const [smallAfter] = await db.select().from(trips).where(eq(trips.id, onSmall.id));
+    expect(smallAfter).toMatchObject({ title: "Saturday", capacity: STATED });
+  });
+
+  it("does not count a no-show as a seat that the new number would strand (#2322)", async () => {
+    const { db, shop } = ctx;
+    const { seriesId, source, onRoomy } = await seriesWithMiddleOnSmall(db, shop.id, STATED);
+    const seats: string[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      const seated = await book(db, shop.id, onRoomy.id);
+      if (!seated.ok) throw new Error(`seat refused: ${seated.reason}`);
+      seats.push(seated.bookingId);
+    }
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seeded staff missing");
+    expect(
+      await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: seats[0] ?? "",
+        recordedByPersonId: staff.person.id,
+        now: onRoomy.startsAt,
+      }),
+    ).toMatchObject({ ok: true });
+    // One seat held, one released: one seat is enough.
+    await updateTrip(db, shop.id, source.id, {
+      title: "Saturday, smaller",
+      startsAt: source.startsAt,
+      endsAt: source.endsAt,
+      capacity: 1,
+      plannedDives: source.plannedDives,
+    });
+
+    await applyDetailsToFutureSeries(
       db,
       shop.id,
-      created.series.id,
+      seriesId,
       source.id,
       at("2030-09-01T12:00:00.000Z"),
     );
-    expect(applied).toEqual({ updated: 1, skipped: 1 });
-    const [smallAfter] = await db.select().from(trips).where(eq(trips.id, onSmall.id));
     const [roomyAfter] = await db.select().from(trips).where(eq(trips.id, onRoomy.id));
-    expect(smallAfter?.capacity).toBe(LIMIT);
-    expect(roomyAfter?.capacity).toBe(STATED);
+    expect(roomyAfter).toMatchObject({ title: "Saturday, smaller", capacity: 1 });
   });
 
   it("a reinstated over-limit departure still refuses seat certificate + 1", async () => {
