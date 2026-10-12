@@ -964,9 +964,13 @@
   staff member of that shop, on a live departure, records one (`recordTripStage`,
   `src/db/trip-stages.ts`), and records rather than edits: `trip_stage_events` is append-only, a
   crew that taps the wrong word taps the right one, and the newest row wins. **A stage goes stale
-  rather than wrong** — it stops speaking two late-arrival buffers past the departure's own end
-  (`liveStageOf`, `STAGE_STALE_AFTER_MS`), because a crew that tapped *Underway* and then got busy
-  would otherwise leave a diver's family reading "out on the reef" at midnight. `home` alone carries
+  rather than wrong** — on the anonymous surfaces (the storefront, the follow link, the diver link)
+  it stops speaking two late-arrival buffers past the departure's own end (`liveStageOf`,
+  `STAGE_STALE_AFTER_MS`), because a crew that tapped *Underway* and then got busy would otherwise
+  leave a diver's family reading "out on the reef" at midnight. The staff surfaces (the departure
+  header, the shop home's station chip) read `boatStageOf` instead, whose staleness is the end of
+  the return shop day, as the **trip phase** entry says: a crew is told its own boat is still out
+  until someone taps *Home*. `home` alone carries
   the roll call's success tone, and `home` alone is withheld from the anonymous surfaces: the diver
   who was aboard reads it on their own link, a storefront panel about tomorrow does not. It was a
   display word until issue #1480 made it load-bearing — the **close-out** reads a live `home` as a
