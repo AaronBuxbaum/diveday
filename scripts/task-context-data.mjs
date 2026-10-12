@@ -114,7 +114,8 @@ export const areas = {
     ],
     tests: [
       "src/lib/gear.test.ts",
-      "src/db/gear.test.ts",
+      "src/db/gear-items.test.ts",
+      "src/db/gear-reservations.test.ts",
       "src/db/gear-reservations.postgres.test.ts",
       "src/lib/work-orders.test.ts",
       "src/db/work-orders.test.ts",
@@ -130,7 +131,7 @@ export const areas = {
       "rental_fit_profiles stays the universal always-on layer; the register never answers what size a diver needs.",
     ],
     validate: [
-      "pnpm test src/lib/gear.test.ts src/db/gear.test.ts src/db/gear-reservations.postgres.test.ts --reporter=dot",
+      "pnpm test src/lib/gear.test.ts src/db/gear-items.test.ts src/db/gear-reservations.test.ts src/db/gear-reservations.postgres.test.ts --reporter=dot",
       "pnpm check:repo && pnpm lint && pnpm typecheck",
       "pnpm e2e e2e/gear.spec.ts --reporter=line",
     ],

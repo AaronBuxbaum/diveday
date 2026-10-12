@@ -198,8 +198,8 @@ const ROLLBACK = Symbol("diveday:rollback");
  *
  * One such test need not keep its whole file off this context: the file takes
  * `fileScopedShopContext()` and that test takes its own
- * `await seededShopContext()`, saying why in a comment (`gear.test.ts` and
- * `check-in.test.ts` do). A test that wants a *second* booking or tenant
+ * `await seededShopContext()`, saying why in a comment (`gear-items.test.ts`
+ * and `check-in.test.ts` do). A test that wants a *second* booking or tenant
  * usually needs a second row in the same database, not a second database.
  *
  * The rule, short: **read-heavy files that commit nothing.** If a file's tests

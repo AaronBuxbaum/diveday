@@ -53,7 +53,7 @@ const ctx = fileScopedShopContext();
 const TODAY = "2026-10-08";
 
 /**
- * A shop of this suite's own, for the reason `gear.test.ts` keeps one: the
+ * A shop of this suite's own, for the reason `gear-test-fixtures.ts` keeps one: the
  * seeded demo now ships work orders of its own, and asserting counts against
  * it would pin the demo's bench. A fresh shop keeps every assertion about the
  * rows the test wrote, and doubles as proof the readers are shop-scoped.

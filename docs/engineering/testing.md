@@ -229,7 +229,7 @@ the last of which is the surprising one:
   outer transaction has already frozen `now()`. `src/db/manifests.test.ts`'s same-transaction,
   same-timestamp tie-break tests would still pass and prove less, and so would any test that needs
   `created_at` to advance between two writes (`src/db/tips.test.ts`'s "most recently started"), or
-  forces a `created_at` tie on purpose (`src/db/waivers.test.ts`).
+  forces a `created_at` tie on purpose (`src/db/waivers-trip-status.test.ts`).
 - **Concurrency races** (`Promise.all` of two calls that each write). Inside one transaction their
   nested transactions become interleaved savepoints on one connection, so the race proves nothing
   and can fail for reasons of its own.

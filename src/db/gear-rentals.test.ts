@@ -18,7 +18,8 @@ const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
 const TODAY = "2026-10-08";
 
 /**
- * A shop of this suite's own, like `gear.test.ts`: the demo fleet ships with
+ * A shop of this suite's own, like `gearShopContext` in
+ * `gear-test-fixtures.ts`: the demo fleet ships with
  * seeded reservations, and asserting against it would pin the demo. A fresh
  * shop also proves the reader is shop-scoped.
  */
