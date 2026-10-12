@@ -38,7 +38,7 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
-import { formValue, parseForm, trimmedText } from "@/lib/form-parse";
+import { formValue, parseForm, readForm, trimmedText } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -159,9 +159,7 @@ export async function bookSpot(
   const locale = await requestLocale();
   const t = diverTranslator(locale);
   const ip = await clientIp();
-  const form = parseForm(bookingForm, formData);
-  if (!form.ok) return { error: t(ERROR_MESSAGE_KEYS.invalid) };
-  const fields = form.data;
+  const fields = readForm(bookingForm, formData);
 
   // Bounded, and the bound is measured — see MAX_PUBLIC_PARTY_SIZE for the
   // numbers and for why the lock, not the row count, is what decides it.
@@ -199,7 +197,7 @@ export async function bookSpot(
     }
     validParty.push({ fullName, email });
   }
-  const phone = fields.phone;
+  const { phone, promoCode: promoCodeInput } = fields;
   if (phone.length > DIVER_PHONE_MAX) fieldErrors.phone = t("booking.fieldErrors.phoneTooLong");
   if (Object.keys(fieldErrors).length > 0) {
     return { error: t("booking.errors.checkFields"), fieldErrors };
@@ -217,7 +215,6 @@ export async function bookSpot(
   // (unknown code, wrong scope, expired, not started) — reusing that here
   // keeps this check from becoming a second oracle for enumerating a shop's
   // live codes; it only ever says "doesn't apply".
-  const promoCodeInput = fields.promoCode;
   let tripPromo: Awaited<ReturnType<typeof getActiveTripPromoByCode>> = null;
   let shopPromo: Awaited<ReturnType<typeof getRedeemableShopPromo>> = null;
   if (promoCodeInput) {
