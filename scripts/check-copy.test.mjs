@@ -166,6 +166,16 @@ describe("looksLikeCopy — syntax the >…< window straddles does not", () => {
     expect(looksLikeCopy("shopId: ShopId")).toBe(false);
   });
 
+  it("excuses the next operand of a type intersection between two generics", () => {
+    expect(looksLikeCopy(" & Pick")).toBe(false);
+    expect(looksLikeCopy(" &\n  Pick")).toBe(false);
+    expect(texts('type In = Pick<Seat, "arrival"> & Pick<Lines, "reasonLines">;', true)).toEqual(
+      [],
+    );
+    // A sentence that opens on an ampersand is still a sentence.
+    expect(looksLikeCopy("& More to come")).toBe(true);
+  });
+
   it("excuses anything with a statement separator", () => {
     expect(looksLikeCopy("const a = 1; return a")).toBe(false);
   });

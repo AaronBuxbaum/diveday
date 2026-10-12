@@ -3,12 +3,7 @@ import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
-import type { RowHeader } from "./roster-row-header";
-import type { RowIdentity } from "./roster-row-identity";
 import type { RowNotices } from "./roster-row-notices";
-import type { RowOutstanding } from "./roster-row-outstanding";
-import type { RowReasonList } from "./roster-row-reason-list";
-import type { RowReasonLines } from "./roster-row-reasons";
 import type { RosterSeat } from "./roster-seat";
 import { SeatComingAs } from "./SeatComingAs";
 import { SeatFootActions } from "./SeatFootActions";
@@ -16,15 +11,40 @@ import { SeatNotes } from "./SeatNotes";
 import { SeatPickup } from "./SeatPickup";
 
 /** **Reference**: what is merely true about this seat, one tap away. */
-export function rowReference(
-  seat: RosterSeat &
-    RowHeader &
-    RowNotices &
-    RowReasonLines &
-    RowIdentity &
-    RowReasonList &
-    RowOutstanding,
-) {
+/**
+ * What `rowReference` reads, and from which builder: the seat's facts and the emergency-contact block `rowNotices` drew. A test builds this
+ * without running the chain.
+ */
+export type RowReferenceInput = Pick<
+  RosterSeat,
+  | "booking"
+  | "person"
+  | "t"
+  | "offersCreateOrder"
+  | "shopSlug"
+  | "shopTimezone"
+  | "locale"
+  | "shopRentalItems"
+  | "rentalFitByBooking"
+  | "participantTypeCertBookingId"
+  | "removeBookingAction"
+  | "setParticipantTypeAction"
+  | "addNoteAction"
+  | "deleteNoteAction"
+  | "updatePickupAction"
+  | "currentWaiver"
+  | "waiverStatus"
+  | "nitrox"
+  | "showsPersonDetail"
+  | "guardian"
+  | "age"
+  | "notes"
+  | "depthText"
+  | "depthShared"
+> &
+  Pick<RowNotices, "emergencyContactBlock">;
+
+export function rowReference(seat: RowReferenceInput) {
   const {
     booking,
     person,

@@ -242,6 +242,9 @@ export function looksLikeCopy(raw) {
   // what separates it from a title: a title's segments carry spaces, and a
   // badge row's first segment is capitalised.
   if (/^[a-z][\w$]*(?:\s*\|\s*[A-Za-z_$][\w$]*)+$/.test(value)) return false;
+  // An intersection's next operand. `Pick<RosterSeat, "a"> & Pick<RowNotices, "b">`
+  // puts `& Pick` between the first generic's `>` and the second's `<`.
+  if (/^&\s*[A-Z][\w$]*$/.test(value)) return false;
   if (value.includes(";")) return false;
   // A ternary: `cond ? a : b`.
   if (/\s\?\s/.test(value) && /\s:\s/.test(value)) return false;

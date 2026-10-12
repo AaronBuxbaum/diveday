@@ -16,18 +16,59 @@ import { ElearningCheck } from "./ElearningCheck";
 import { elearningCheckCopy } from "./elearning-check-copy";
 import { PaymentStatusControl } from "./PaymentStatusControl";
 import { PAYMENT_STATUSES_ALL, PAYMENT_STATUSES_RECORDING_ONLY } from "./roster-model";
-import type { RowHeader } from "./roster-row-header";
 import type { RowIdentity } from "./roster-row-identity";
-import type { RowNotices } from "./roster-row-notices";
 import type { RowReasonList } from "./roster-row-reason-list";
-import type { RowReasonLines } from "./roster-row-reasons";
 import type { RosterSeat } from "./roster-seat";
 import { SeatCourseControls } from "./SeatCourseControls";
 
 /** **Outstanding**: what the seat still needs, the first band of its panel. */
-export function rowOutstanding(
-  seat: RosterSeat & RowHeader & RowNotices & RowReasonLines & RowIdentity & RowReasonList,
-) {
+/**
+ * What `rowOutstanding` reads, and from which builder: the seat's facts, the contact and package lines `rowIdentity` drew, and the desk-private lines `rowReasonList` set aside. A test builds this
+ * without running the chain.
+ */
+export type RowOutstandingInput = Pick<
+  RosterSeat,
+  | "booking"
+  | "person"
+  | "t"
+  | "arrival"
+  | "WAIVER_CONTROLS"
+  | "paymentStatusCopy"
+  | "refundEligible"
+  | "shopSlug"
+  | "shopTimezone"
+  | "locale"
+  | "tripId"
+  | "requiresPayment"
+  | "cancellationDeadline"
+  | "mayWriteOffPayment"
+  | "certifyDefaultLevel"
+  | "courseHasMaterials"
+  | "readinessByBooking"
+  | "courseNextStepByBooking"
+  | "elearningQueryByBooking"
+  | "markWaiverInPersonAction"
+  | "markPaymentAction"
+  | "certifyDiverAction"
+  | "saveCourseNextStepAction"
+  | "setCourseMaterialsDoneAction"
+  | "elearningCheckAction"
+  | "recordPaperCourseFormAction"
+  | "materialsDone"
+  | "paymentStatus"
+  | "paymentSource"
+  | "waiverStatus"
+  | "waiverControl"
+  | "identityUnconfirmed"
+  | "flaggedPrompts"
+  | "requiresGuardian"
+  | "blockerTexts"
+  | "namesakeRefused"
+> &
+  Pick<RowIdentity, "identityContact" | "packageNote"> &
+  Pick<RowReasonList, "deskPrivateLines">;
+
+export function rowOutstanding(seat: RowOutstandingInput) {
   const {
     booking,
     person,

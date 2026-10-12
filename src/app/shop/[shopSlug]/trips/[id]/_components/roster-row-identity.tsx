@@ -11,13 +11,31 @@ import { formatShortDate, formatTimeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { isDiver } from "@/lib/participant-types";
 import { type RentableItemKind, toRentableKinds } from "@/lib/rentals";
-import type { RowHeader } from "./roster-row-header";
-import type { RowNotices } from "./roster-row-notices";
-import type { RowReasonLines } from "./roster-row-reasons";
 import type { RosterSeat } from "./roster-seat";
 
 /** A held seat's identity: who to contact, and the two answers that settle it. */
-export function rowIdentity(seat: RosterSeat & RowHeader & RowNotices & RowReasonLines) {
+/**
+ * What `rowIdentity` reads, and from which builder: the identity answers read the seat's own facts and nothing a builder before it drew. A test
+ * builds this without running the chain.
+ */
+export type RowIdentityInput = Pick<
+  RosterSeat,
+  | "booking"
+  | "person"
+  | "t"
+  | "arrival"
+  | "shopTimezone"
+  | "locale"
+  | "splitAsksDateOfBirth"
+  | "sameNameHeldSeats"
+  | "heldSeatLastDiveDay"
+  | "packageDivesByBooking"
+  | "confirmIdentityAction"
+  | "splitIdentityAction"
+  | "identityUnconfirmed"
+>;
+
+export function rowIdentity(seat: RowIdentityInput) {
   const {
     booking,
     person,

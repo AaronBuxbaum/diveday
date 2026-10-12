@@ -9,7 +9,28 @@ import { isDiver } from "@/lib/participant-types";
 import type { RosterSeat } from "./roster-seat";
 
 /** The name line: who sits here, and the capsules and chips beside the name. */
-export function rowHeader(seat: RosterSeat) {
+/**
+ * What `rowHeader` reads, and from which builder: the name line reads the seat's own facts and nothing a builder before it drew. A test
+ * builds this without running the chain.
+ */
+export type RowHeaderInput = Pick<
+  RosterSeat,
+  | "booking"
+  | "person"
+  | "t"
+  | "shopSlug"
+  | "materialsPending"
+  | "readiness"
+  | "age"
+  | "minor"
+  | "birthday"
+  | "notes"
+  | "depthShared"
+  | "arrivalControl"
+  | "holdOpen"
+>;
+
+export function rowHeader(seat: RowHeaderInput) {
   const {
     booking,
     person,

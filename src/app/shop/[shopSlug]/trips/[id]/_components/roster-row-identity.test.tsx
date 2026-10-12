@@ -4,7 +4,15 @@ import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { deepRow, entry, readinessRow, renderRoster, signedWaiver } from "./roster-test-fixtures";
+import { rowIdentity } from "./roster-row-identity";
+import {
+  deepRow,
+  entry,
+  readinessRow,
+  renderRoster,
+  seatFacts,
+  signedWaiver,
+} from "./roster-test-fixtures";
 import type { ReadinessByBooking, RentalFitByBooking, RosterEntry, WaiverByBooking } from "./types";
 
 afterEach(cleanup);
@@ -559,5 +567,30 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(
       screen.queryByText("Medical and gear details stay hidden until you confirm who this is."),
     ).toBeNull();
+  });
+});
+
+/** `rowIdentity` reads only the seat's own facts, so `seatFacts` is its whole input. */
+describe("rowIdentity, from the seat's facts alone", () => {
+  const options = {
+    readiness: new Map([["i", readinessRow("ready")]]) as ReadinessByBooking,
+    waivers: new Map([["i", signedWaiver]]) as WaiverByBooking,
+  };
+
+  it("asks nothing of a seat whose identity is settled", () => {
+    const { identityContact, identityCheck, packageNote } = rowIdentity(
+      seatFacts(entry("i", "Rene Marsh"), options),
+    );
+    expect([identityContact, identityCheck, packageNote]).toEqual([null, null, null]);
+  });
+
+  it("asks who a held seat is", () => {
+    const held = entry("i", "Rene Marsh");
+    (held.booking as { identityUnconfirmedAt: Date | null }).identityUnconfirmedAt = new Date(
+      "2026-10-01T12:00:00Z",
+    );
+    const { identityContact, identityCheck } = rowIdentity(seatFacts(held, options));
+    expect(identityContact).not.toBeNull();
+    expect(identityCheck).not.toBeNull();
   });
 });

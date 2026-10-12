@@ -3,12 +3,42 @@ import type { ReactNode } from "react";
 import { drysuitCardWarningText } from "@/i18n/rental-labels";
 import { formatShortDate } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
-import type { RowHeader } from "./roster-row-header";
 import type { RowNotices } from "./roster-row-notices";
 import type { RosterSeat } from "./roster-seat";
 
 /** Every reason line the seat can carry, keyed, in the order the row says them. */
-export function rowReasonLines(seat: RosterSeat & RowHeader & RowNotices) {
+/**
+ * What `rowReasonLines` reads, and from which builder: the reason lines read the seat's facts and six of the doors `rowNotices` drew. A test
+ * builds this without running the chain.
+ */
+export type RowReasonLinesInput = Pick<
+  RosterSeat,
+  | "person"
+  | "t"
+  | "shopSlug"
+  | "shopTimezone"
+  | "locale"
+  | "requiresPayment"
+  | "paymentStatus"
+  | "waiverControl"
+  | "showsPersonDetail"
+  | "hasEmergencyContact"
+  | "blockerTexts"
+  | "depthText"
+  | "depthShared"
+  | "drysuitCard"
+> &
+  Pick<
+    RowNotices,
+    | "recencyText"
+    | "linkAction"
+    | "medicalActions"
+    | "earlierRefusal"
+    | "earlierReferral"
+    | "moreHoldsBehindConfirmation"
+  >;
+
+export function rowReasonLines(seat: RowReasonLinesInput) {
   const {
     person,
     t,
