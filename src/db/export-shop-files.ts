@@ -162,6 +162,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // 20260815-minimal-gear-register, amended 2026-10-08): its text, so its
       // backup carries it.
       "rental_terms",
+      // How often the shop services a customer's regulator (#2272): a policy
+      // the shop chose, so a restore keeps its customers' reminders on time.
+      "customer_regulator_service_months",
       // The shop's own emergency numbers. Exported because the bundle is
       // the backup: a shop restoring from one must come back with the
       // chamber's number on its manifests, not an empty card.
@@ -234,6 +237,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(shop.rentalItems),
         JSON.stringify(shop.rentalPricing),
         shop.rentalTerms,
+        shop.customerRegulatorServiceMonths,
         JSON.stringify(shop.emergencyReference),
         shop.seasonStartMonth,
         shop.seasonStartDay,
