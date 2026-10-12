@@ -124,9 +124,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   // signal is not marked at the next count.
   const earlierCheckpoints = envelope.snapshot.manifests
     .map((entry) => entry.checkpoint)
-    .filter(
-      (entry) => rollCallCheckpointOrdinal(entry) < rollCallCheckpointOrdinal(manifest.checkpoint),
-    );
+    .filter((entry) => rollCallCheckpointOrdinal(entry) < rollCallCheckpointOrdinal(checkpoint));
   const blockedAtRail = manifest.divers.map((diver, index) =>
     rowBlockedAtRail({
       ready: diver.readiness.status === "ready",

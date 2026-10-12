@@ -645,7 +645,7 @@ describe("the earlier-refusal capsule", () => {
       },
     } as TripManifest["divers"][number]["medicalWaiver"];
     const { container } = renderList({ divers: [diver({ medicalWaiver: evaluated })] });
-    expect(container.textContent).toMatch(/did not clear this diver on Aug\s3,\s2026/);
+    expect(container.textContent).toMatch(/did not clear this person on Aug\s3,\s2026/);
   });
 });
 

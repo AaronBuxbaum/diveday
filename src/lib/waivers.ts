@@ -665,10 +665,11 @@ export type OverriddenRefusal = {
  * says "riding only", never as a blocker.
  *
  * `not_cleared` when a physician's "no" stands that no later clearance has
- * answered — the release itself, or an earlier one ({@link overriddenRefusal}'s
- * rule) — dated by the physician's evaluation day when stored. `referral` when
- * the release is an unresolved referral and no refusal stands. Null for a
- * clean release, which the ordinary warnings already cover.
+ * answered — the release itself, an earlier one ({@link overriddenRefusal}'s
+ * rule), or one signed after it and since retired, which the rider path skips
+ * past — dated by the physician's evaluation day when stored. `referral` when
+ * the release is an unresolved referral and no refusal stands. Otherwise null
+ * for a clean release, which the ordinary warnings already cover.
  *
  * Only for the release `effectiveReleaseForRiderSeat` chose; a seat held to the
  * medical is blocked by the same record instead.
@@ -683,16 +684,25 @@ export function riderMedicalHold(
   release: WaiverRecord | null,
   personSignedWaivers: readonly WaiverRecord[],
 ): RiderMedicalHold | null {
-  if (!release || !isUnresolvedMedicalHold(release)) return null;
+  if (!release) return null;
   const records = personSignedWaivers.some((record) => record.id === release.id)
     ? personSignedWaivers
     : [...personSignedWaivers, release];
-  // The release's own refusal counts too, so the bound is just past it.
-  const refusal = unansweredRefusal(records, signatureTime(release) + 1);
+  const held = isUnresolvedMedicalHold(release);
+  // A "no" signed *after* the release the rider stands on — a refusal retired
+  // so its seat could take a new link, which the rider path does not choose —
+  // is warned about whatever the release is (dive-domain re-review of #2212).
+  // On a held release every unanswered "no" counts, its own and earlier ones
+  // too; on a clean one an earlier "no" is `overriddenRefusal`'s warning.
+  const refusal = unansweredRefusal(
+    records,
+    Number.POSITIVE_INFINITY,
+    held ? Number.NEGATIVE_INFINITY : signatureTime(release),
+  );
   if (refusal) {
     return { kind: "not_cleared", at: refusal.at, evaluatedOn: refusal.evaluatedOn ?? null };
   }
-  return { kind: "referral", at: new Date(signatureTime(release)) };
+  return held ? { kind: "referral", at: new Date(signatureTime(release)) } : null;
 }
 
 /**
@@ -741,9 +751,16 @@ export type MedicalWarningDays = {
 function unansweredRefusal(
   records: readonly WaiverRecord[],
   signedBefore: number,
+  /** Exclusive lower bound on the refusal's signature; none by default. */
+  signedAfter = Number.NEGATIVE_INFINITY,
 ): OverriddenRefusal | null {
   const refusals = records
-    .filter((record) => isStandingRefusal(record) && signatureTime(record) < signedBefore)
+    .filter(
+      (record) =>
+        isStandingRefusal(record) &&
+        signatureTime(record) < signedBefore &&
+        signatureTime(record) > signedAfter,
+    )
     .sort((a, b) => (decidedAfter(a, b) ? -1 : decidedAfter(b, a) ? 1 : 0));
   for (const refusal of refusals) {
     const refused = flaggedPromptsOf(refusal);

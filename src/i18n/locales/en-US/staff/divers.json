@@ -489,7 +489,7 @@
     "waiverExpired": "The signed release has lapsed.",
     "waiverHeld": "A medical answer is with a doctor for sign-off.",
     "waiverNotCleared": "A physician did not clear this diver to dive.",
-    "waiverEarlierRefusal": "A physician did not clear this diver on an earlier waiver.",
+    "waiverEarlierRefusal": "A physician did not clear this person on an earlier waiver.",
     "waiverReferralOpen": "A physician referral is still open.",
     "openBalance": "{count, plural, one {One seat still owes money.} other {# seats still owe money.}}",
     "noEmergencyContact": "No emergency contact on file.",
@@ -526,7 +526,7 @@
     "cantBoard": "Can’t board {when}."
   },
   "waiver": {
-    "earlierRefusal": "A physician did not clear this diver on {date} (earlier waiver).",
+    "earlierRefusal": "A physician did not clear this person on {date} (earlier waiver).",
     "viewRefusedRecord": "View signed record",
     "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file. Record one, or ask.",
     "viewReferralRecord": "View the referral",

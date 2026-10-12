@@ -166,7 +166,7 @@ describe("the offline manifest's sections", () => {
     expect(warned).not.toContain("Referral still open");
     expect(warned).toContain("Contact, gear & medical");
     expect(warned).toMatch(
-      /A physician did not clear this diver on May\s2,\s2026 \(earlier waiver\)/,
+      /A physician did not clear this person on May\s2,\s2026 \(earlier waiver\)/,
     );
     expect(warned).toMatch(
       /Referred to a physician on Jun\s10,\s2026; re-signed with no physician clearance on file/,

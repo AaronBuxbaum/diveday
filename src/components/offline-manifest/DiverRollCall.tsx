@@ -205,9 +205,11 @@ function OfflineDiverRow({
             {diver.notHere ? (
               <Badge tone="neutral">{t("shared.offlineManifest.single.notHereBadge")}</Badge>
             ) : null}
-            {/* The live roll call's capsule for the same fact (H-98): a
-              physician refused an earlier release. Never a block; the
-              crew at the rail decides with it in view. */}
+            {/* The live roll call's capsule for the same facts, strongest
+              first (`medicalWarningChips`): a rider riding only under a
+              "no" or an open referral (H-109), an earlier refusal (H-98),
+              a referral replaced. Never a block; the crew at the rail
+              decides with it in view. */}
             {medicalChip ? <Badge tone="warning">{medicalChip}</Badge> : null}
             {/* Snorkeler or rider, as on the live roll call (ADR
               20261007-participant-types). Every row is still called;

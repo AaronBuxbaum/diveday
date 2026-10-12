@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { serializeManifests } from "@/lib/offline-manifests";
@@ -277,6 +277,36 @@ describe("the gates a non-diver is not asked to clear", () => {
     });
     expect(offlineRow(referred.bookingId)?.medicalWarnings?.ridingReferredOn).toBeDefined();
     expect(offlineRow(snorkeler.bookingId)?.medicalWarnings).toBeUndefined();
+  });
+
+  it("warns at the rail about a retired refusal signed after a rider's clean release (H-109)", async () => {
+    const { db, shop, trip, staff } = await benwood();
+    await limits(db, trip.id, 8, null);
+    const rider = await seat(db, shop.id, trip.id, "rider");
+    if (!rider.ok) throw new Error("setup failed");
+    // S2: the physician's "no", later retired so the seat could take a new link.
+    await heldRelease(db, shop.id, rider.bookingId, "refusal", staff.id);
+    await db
+      .update(waiverRecords)
+      .set({ supersededAt: nowDate() })
+      .where(eq(waiverRecords.bookingId, rider.bookingId));
+    // S1: a clean release signed before it, which the rider path falls back to.
+    await issueWaiverRequest(db, { shopId: shop.id, bookingId: rider.bookingId });
+    const earlier = new Date(nowDate().getTime() - 24 * 60 * 60 * 1000);
+    await db
+      .update(waiverRecords)
+      .set({
+        status: "completed",
+        signedName: "Guest",
+        signedAt: earlier,
+        completedAt: earlier,
+        consentedAt: earlier,
+      })
+      .where(and(eq(waiverRecords.bookingId, rider.bookingId), isNull(waiverRecords.supersededAt)));
+
+    const manifest = await getTripManifest(db, shop.id, trip.id);
+    const row = manifest?.divers.find((diver) => diver.bookingId === rider.bookingId);
+    expect(row?.riderMedicalHold).toMatchObject({ kind: "not_cleared", evaluatedOn: "2026-01-01" });
   });
 
   it("still asks a rider whose held release has aged out to sign again (H-109)", async () => {
