@@ -101,6 +101,18 @@ number is one shop's: a second shop connecting a number another shop holds is re
 `phone_number_already_connected`. An event naming a WABA its number's row does not record (a
 different one, or none on a row connected before WABAs were stored) is dropped and logged as
 `whatsapp_account.number_waba_mismatch`; the shop reconnects to refresh the row.
+
+**Before deploying the route-on-number migration** (`20261012023655_whatsapp-route-on-phone-number`):
+it refuses to run, naming each `phone_number_id` and its shop ids (newest connection first), when
+two shops hold one number. Nothing is chosen for you. Find them first:
+
+```sql
+SELECT phone_number_id, shop_id, waba_id, template_name, connected_at FROM shop_whatsapp_accounts WHERE phone_number_id IN (SELECT phone_number_id FROM shop_whatsapp_accounts GROUP BY phone_number_id HAVING count(*) > 1) ORDER BY phone_number_id, connected_at DESC;
+```
+
+Ask the shops which one sends from that number at Meta, then have every other shop disconnect
+WhatsApp from its settings (a parked row, `template_name = ''`, has no Disconnect button; delete
+that row by `shop_id` once its owner confirms they are not mid-Connect). Re-run the deploy.
 - **register** — only ever attempted for a number DiveDay has not finished registering. The number
   is probably still active in the consumer WhatsApp or WhatsApp Business *app* and has to be removed
   there first. A `133005` here means the number is bound to a **different two-step PIN** than the one
