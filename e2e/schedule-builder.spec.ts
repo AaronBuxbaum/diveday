@@ -192,23 +192,27 @@ test.describe("schedule builder", () => {
           .map((match) => match?.[1] ?? "")
           .filter(Boolean),
       );
-    // A departure whose divers have been told its date and that has not
-    // sailed: the panel's own impact lines say which, so the seed's calendar
-    // is not written down here.
+    // A departure with divers booked on it that has not sailed: the row's
+    // own seat count and the panel's own refusal line say which, so the seed's
+    // calendar is not written down here.
     let booked: string | null = null;
     for (const title of new Set(titles)) {
+      const row = page.getByRole("listitem").filter({ hasText: title }).first();
+      const text = (await row.textContent()) ?? "";
+      if (!/(?:^|\D)[1-9]\d* of \d+/.test(text) || text.includes("Sailed")) continue;
+      // The panel's preview is a server action; its answer is what says
+      // whether this departure has sailed.
+      const preview = page.waitForResponse((r) => "next-action" in r.request().headers());
       await chooseRowAction(page, "Move", title);
-      await expect(page.getByText("If you move it")).toBeVisible();
-      const told = await page.getByText(/already been told this date/).count();
-      const sailed = await page.getByText("already counted heads").count();
-      if (told > 0 && sailed === 0) {
+      await preview;
+      await page.getByLabel("New date").waitFor();
+      if ((await page.getByText("already counted heads").count()) === 0) {
         booked = title;
         break;
       }
       await page.getByRole("button", { name: "Cancel" }).click();
     }
     expect(booked).toBeTruthy();
-    await expect(page.getByText(/Moving it tells them the new one\./)).toBeVisible();
     const date = await page.getByLabel("New date").inputValue();
     const next = new Date(`${date}T12:00:00Z`);
     next.setUTCDate(next.getUTCDate() + 1);

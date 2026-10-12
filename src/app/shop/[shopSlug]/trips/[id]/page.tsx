@@ -47,7 +47,6 @@ import { temperatureUnitFor } from "@/lib/temperature-units";
 import { tripPhaseOf } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { RescheduleNotice } from "../../_components/RescheduleNotice";
 import { buildArrivalDesk } from "./_arrivals/arrival-desk";
 import { DESK_NOTICES } from "./_arrivals/notices";
 import { BlowoutDoors } from "./_components/BlowoutDoors";
@@ -57,7 +56,7 @@ import { CrewSection } from "./_components/CrewSection";
 import { courseRosterActions } from "./_components/course-roster-actions";
 import { DepartureLogLink } from "./_components/DepartureLogLink";
 import { DeskRefresh } from "./_components/DeskRefresh";
-import { DetailsSection } from "./_components/DetailsSection";
+import { DetailsEditor } from "./_components/DetailsEditor";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { participantTermsRows } from "./_components/ParticipantTermsSection";
 import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
@@ -716,10 +715,6 @@ export default async function ManageTripPage({
         />
 
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
-        {/* A retime's reschedule notice: not beside Save, which sits inside a form. */}
-        {notice === "saved" && held ? (
-          <RescheduleNotice shopId={shop.id} heldId={held} tell={tell} tripId={tripId} t={t} />
-        ) : null}
 
         {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
           // A card in a tone: the card's radius, bed and inset, so its words
@@ -777,9 +772,11 @@ export default async function ManageTripPage({
                   editLabel: t("trips.details.edit"),
                   editorOpen: Boolean(detailsStatus),
                   editor: canConfigure ? (
-                    <DetailsSection
+                    <DetailsEditor
                       action={saveDetails.bind(null, shopSlug, tripId)}
                       status={detailsStatus}
+                      held={notice === "saved" ? held : undefined}
+                      tell={tell}
                       trip={trip}
                       diveSiteList={diveSiteList}
                       tripDiveList={tripDiveList}

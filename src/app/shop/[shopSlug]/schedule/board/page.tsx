@@ -899,7 +899,7 @@ export default async function ScheduleBoardPage({
           {builderNotice.message}
           {builder === "moved" ? (
             <div className="mt-2">
-              <RescheduleNotice shopId={shop.id} heldId={held} tell={tell} t={t} />
+              <RescheduleNotice shopId={shop.id} heldId={held} tell={tell} t={st} />
             </div>
           ) : null}
         </ShopNotice>
