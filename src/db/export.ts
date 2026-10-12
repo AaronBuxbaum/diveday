@@ -758,8 +758,8 @@ export function loadDiverExportBundleInput(
 
 /**
  * {@link loadShopExportContext}'s per-diver twin: every read here is scoped to
+ * `shopId` **and** to `personId` (or to an id already proven to be theirs),
  * through `readScoped` with a diver scope where the table is a plain
- * through `readPersonScoped` / `readBookingScoped` where the table is a plain
  * one and written out where it is not. `null` when the person is not this
  * shop's.
  */
