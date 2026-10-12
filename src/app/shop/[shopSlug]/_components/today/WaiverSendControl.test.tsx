@@ -114,6 +114,28 @@ describe("WaiverSendControl", () => {
     expect(releaseHeldSendAction).toHaveBeenCalledWith("held-1");
   });
 
+  // Issue #2346: a send from a rental ticket is a counter send, and carries
+  // the ticket so the held send can refresh the page the staffer is on.
+  it("carries a counter rental's ticket with its surface", async () => {
+    render(
+      <WaiverSendControl
+        surface="counter"
+        ticketId="ticket-1"
+        personId="person-1"
+        bookingIds={[]}
+        label="Send waiver"
+        copy={copy}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Send waiver" }));
+    const formData = holdSendAction.mock.calls.at(-1)?.[0];
+    if (!formData) throw new Error("hold was not asked for");
+    expect(formData.get("surface")).toBe("counter");
+    expect(formData.get("ticketId")).toBe("ticket-1");
+    expect(formData.get("personId")).toBe("person-1");
+  });
+
   it("drops the send once the answer is that there is nothing to send", async () => {
     outcome = { ...outcome, alreadyDone: ["Declan Murphy"] };
     renderControl();

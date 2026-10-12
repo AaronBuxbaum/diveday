@@ -12,6 +12,7 @@ import {
   counterRentalCards,
   counterRentalPerson,
   counterRentalUnitLabel,
+  counterRentalWaiverStandings,
 } from "@/db/gear-counter-rentals";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
@@ -36,6 +37,7 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { InvoiceAddressFields } from "../../../orders/_components/InvoiceAddressFields";
+import { CounterRentalWaiverLine } from "../../_components/CounterRentalWaiverLine";
 import { createCounterRentalAction } from "../actions";
 import {
   CounterRentalCart,
@@ -98,7 +100,7 @@ export default async function RentOutPage({
   const windowRefusal = checkCounterRentalWindow({ from, until, todayLocal });
 
   const noticeUnitId = uuidParam(search.unit);
-  const [person, fleetSize, matches, cards, noticeUnit] = await Promise.all([
+  const [person, fleetSize, matches, cards, noticeUnit, waivers] = await Promise.all([
     personId ? counterRentalPerson(db, shop.id, personId) : null,
     countGearItems(db, shop.id),
     !personId && query
@@ -108,6 +110,15 @@ export default async function RentOutPage({
     // The URL carries a unit id, never words: the label is this shop's own,
     // looked up here, and an id that is not one falls back to the unnamed line.
     noticeUnitId ? counterRentalUnitLabel(db, shop.id, noticeUnitId) : null,
+    // Said while the person is still at the counter, not one screen later on
+    // the ticket (issue #2346); informing only, never a gate (H-108).
+    personId
+      ? counterRentalWaiverStandings(db, {
+          shopId: shop.id,
+          timezone: shop.timezone,
+          personIds: [personId],
+        })
+      : null,
   ]);
   const [units, canManageOrders, paymentsReady] = person
     ? await Promise.all([
@@ -245,16 +256,26 @@ export default async function RentOutPage({
           whoNotice={whoNotice}
           whoTone={notice?.tone}
           cards={
-            person && cardSummary ? (
-              <RentalCardSeen
-                t={t}
-                personId={person.id}
-                from={from}
-                until={until}
-                summary={cardSummary}
-                minor={Boolean(person.dateOfBirth && isMinorOnDate(person.dateOfBirth, from))}
-                drysuitOnOffer={units.some((unit) => unit.kind === "drysuit")}
-              />
+            person ? (
+              <>
+                {cardSummary ? (
+                  <RentalCardSeen
+                    t={t}
+                    personId={person.id}
+                    from={from}
+                    until={until}
+                    summary={cardSummary}
+                    minor={Boolean(person.dateOfBirth && isMinorOnDate(person.dateOfBirth, from))}
+                    drysuitOnOffer={units.some((unit) => unit.kind === "drysuit")}
+                  />
+                ) : null}
+                <CounterRentalWaiverLine
+                  t={t}
+                  state={waivers?.get(person.id)}
+                  personId={person.id}
+                  className="mt-3"
+                />
+              </>
             ) : null
           }
         />

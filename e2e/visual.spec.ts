@@ -7796,7 +7796,8 @@ for (const scheme of ["light", "dark"] as const) {
       // Renting gear out at the counter (ADR 20260815-minimal-gear-register,
       // amended 2026-10-08; redrawn 2026-10-09): the person chosen, today's
       // window, the free units of one kind as tiles, the bill with its total,
-      // and how they pay.
+      // and how they pay. Priya has signed nothing, so the person step also
+      // holds the unsigned waiver line and its Send waiver (issue #2346).
       test(`the rent-out form renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();

@@ -61,14 +61,13 @@ describe("the counter-rental ticket", () => {
    */
   it("says the person's waiver on screen only, with the send beside it", () => {
     const line = SOURCE.slice(
-      SOURCE.indexOf("waiverState && waiverFlag"),
+      SOURCE.indexOf("<CounterRentalWaiverLine"),
       SOURCE.indexOf('aria-labelledby="ticket-units-heading"'),
     );
     expect(line).toContain("print:hidden");
-    expect(line).toContain('t("gearRentals.waiver"');
-    expect(line).toContain("waiverFlag.offerLink ? (");
-    expect(line).toContain("<WaiverSendControl");
     expect(line).toContain("personId={ticket.personId}");
+    // The send is a counter send from this ticket (issue #2346).
+    expect(line).toContain("ticketId={ticket.ticketId}");
   });
 
   it("does not call a flagged return back on the wall", () => {

@@ -74,6 +74,10 @@ test.describe("staff", () => {
 
   test("rents units out at the counter, hands them over, and takes them back", async ({ page }) => {
     await startRentalForCustomer(page);
+    // The waiver is said while Priya is still at the counter choosing gear,
+    // with the link to send (issue #2346); nothing below waits on it (H-108).
+    await expect(page.getByText("Waiver: Not signed")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send waiver" })).toBeVisible();
     await pickUnit(page, "Mask", "Mask #2");
     await pickUnit(page, "Fins", "Fins #2");
     await payBy(page, "No charge");
