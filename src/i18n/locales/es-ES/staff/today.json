@@ -50,6 +50,11 @@
     "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "openRoster": "Ver lista"
   },
+  "yourWeek": {
+    "heading": "Tu semana",
+    "openTrip": "Abrir {title}",
+    "roleUnset": "En la tripulación"
+  },
   "actionKind": {
     "rollCallMissingDiver": "Buceador sin localizar",
     "rollCallUnfinished": "Recuento",

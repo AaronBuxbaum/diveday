@@ -50,6 +50,11 @@
     "blockedCount": "{count} blocked",
     "openRoster": "Open roster"
   },
+  "yourWeek": {
+    "heading": "Your week",
+    "openTrip": "Open {title}",
+    "roleUnset": "On the crew"
+  },
   "actionKind": {
     "rollCallMissingDiver": "Missing diver",
     "rollCallUnfinished": "Roll call",

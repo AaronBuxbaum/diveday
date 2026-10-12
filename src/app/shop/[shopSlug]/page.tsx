@@ -18,6 +18,7 @@ import {
   RoleOrientationLine,
 } from "@/app/shop/[shopSlug]/_components/today/RoleOrientationCard";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
+import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
@@ -369,6 +370,10 @@ async function TodayBody({
   // and badges the boat they crew; an instructor's leads with their sessions. It never re-orders
   // the spine — clock order wins.
   const lens = roleLensFor(session.user.roles);
+  // "Your week" is the crew's: a reader the lens files under boat work, or a
+  // deckhand, at a shop that plans its crew in DiveDay.
+  const showCrewWeek =
+    shop.crewScheduleEnabled && (lens === "boat" || session.user.roles.includes("crew"));
   const eveningClose = assembleEveningClose(closeout.departures, now);
   // **The shop's own calendar day**, as the two UTC instants that bracket it. Four readers below
   // want it — the first-boat-ever question, the day strip's window and ticks, and the day's takings
@@ -1011,6 +1016,22 @@ async function TodayBody({
           }
         />
       )}
+
+      {/* A crew member's next three departures, on any day, quiet or not. */}
+      {showCrewWeek ? (
+        <Suspense fallback={null}>
+          <YourWeek
+            db={db}
+            shopId={shop.id}
+            shopSlug={shopSlug}
+            personId={session.user.personId}
+            timeZone={shop.timezone}
+            locale={locale}
+            now={now}
+            diversPerDivemaster={shop.diversPerDivemaster}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 }

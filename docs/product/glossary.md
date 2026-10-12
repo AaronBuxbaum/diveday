@@ -240,6 +240,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Waiver completion
 - WhatsApp sender
 - Working shift
+- Your week
 
 ## Records and evidence
 

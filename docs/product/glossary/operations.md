@@ -1375,3 +1375,11 @@
   their own password, which flips the account to **active**. A shop may never end up with zero
   people holding the `owner` role: removing, disabling, or demoting the shop's last owner is
   refused. See [20260726-staff-invite-accounts](../../architecture/decisions/20260726-staff-invite-accounts.md).
+- **Your week** — a crew member's next three departures, on their Today below the day: the boat
+  and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the roster
+  did not say), and the one crew gap the staffing week would draw on it, from the same pass
+  (`getStaffingView`'s `gapTrips`). The window is tomorrow and the six days after it in the shop's
+  zone; today's boat is already badged on the spine. Shown to a reader the Today lens files under
+  boat work, or a deckhand, at a shop that plans its crew (`shops.crew_schedule_enabled`); absent
+  for a reader rostered on nothing. Read in `src/db/crew-week.ts`, drawn by
+  `_components/today/YourWeek.tsx`.
