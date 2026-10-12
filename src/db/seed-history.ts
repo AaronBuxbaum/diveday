@@ -881,19 +881,37 @@ export async function seedHistory(
 
   // Reviews from divers who actually sailed. Deterministic by index (never the
   // clock or randomness) so the frozen-clock e2e fleet renders an identical
-  // rating every run. A couple carry words and are published; one carries words
+  // rating every run. Most carry words and are published; one carries words
   // and is still waiting on staff, so the moderation queue is demonstrable; the
   // rest are bare ratings, which publish on arrival.
-  const reviewComments = [
-    "Vis was unreal and the crew found us a turtle on the second tank.",
-    "Calm, unhurried briefing — exactly what I wanted for my first boat dive back.",
-    "Choppy ride out, but the reef more than made up for it.",
-    "The crew made a busy weekend feel easy, thoughtful, and beautifully organized.",
-    "A warm, patient crew and a brilliant final drift over the reef.",
+  //
+  // **A believable spread, not a wall of fives and fours** (UX review
+  // 2026-10-10, item 17): a few four-star days with a short reason and one
+  // three-star, the way a trading shop's archive reads. A distribution with
+  // nothing under four stars reads as fabricated.
+  const reviewComments: { rating: number; comment: string }[] = [
+    { rating: 5, comment: "Vis was unreal and the crew found us a turtle on the second tank." },
+    {
+      rating: 5,
+      comment: "Calm, unhurried briefing — exactly what I wanted for my first boat dive back.",
+    },
+    { rating: 4, comment: "Choppy ride out, but the reef more than made up for it." },
+    {
+      rating: 4,
+      comment: "The crew made a busy weekend feel easy, thoughtful, and beautifully organized.",
+    },
+    // The fifth written review stays unpublished: the "waiting on you" card
+    // the staff Reviews page exists to clear.
+    { rating: 5, comment: "A warm, patient crew and a brilliant final drift over the reef." },
+    { rating: 4, comment: "Good guide, sensible pace. The rental fins were a size big." },
+    { rating: 3, comment: "Nice reef, but we sat at the dock forty minutes before leaving." },
+    { rating: 4, comment: "Easy check-in and a full boat that never felt crowded." },
   ];
+  const WAITING_COMMENT = 5;
   // The written reviews go on different departures, so the public list reads
   // like a shop's history rather than one memorable boat day.
   const commentedTrips = new Set<string>();
+  let bareRatings = 0;
   const reviewRows = plans
     .map((plan, i) => {
       const booking = bookingRows[i];
@@ -901,17 +919,19 @@ export async function seedHistory(
       const wantsComment =
         commentedTrips.size < reviewComments.length && !commentedTrips.has(booking.tripId);
       if (wantsComment) commentedTrips.add(booking.tripId);
-      const comment = wantsComment ? reviewComments[commentedTrips.size - 1] : null;
-      // The fifth written review stays unpublished — that is the "waiting on
-      // you" card the staff Reviews page exists to clear.
-      const isPublished = comment === null || commentedTrips.size < 5;
+      const written = wantsComment ? reviewComments[commentedTrips.size - 1] : null;
+      const comment = written?.comment ?? null;
+      const isPublished = comment === null || commentedTrips.size !== WAITING_COMMENT;
+      // Bare ratings: half fives, most of the rest fours, the odd three.
+      const bare = written ? 0 : bareRatings++;
+      const rating = written ? written.rating : bare % 17 === 16 ? 3 : bare % 2 === 0 ? 5 : 4;
       const createdAt = new Date(plan.createdAt.getTime() + 6 * 60 * 60 * 1000);
       return {
         shopId,
         bookingId: booking.id,
         tripId: booking.tripId,
         personId: plan.personId,
-        rating: i % 3 === 0 ? 5 : 4,
+        rating,
         comment,
         isStandout: Boolean(comment && isPublished && commentedTrips.size <= 4),
         isPublished,
