@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripInEmbed, signOut, threadStatus } from "./helpers";
+import { acceptAgeAttestation, e2eNow, openTripInEmbed, threadStatus } from "./helpers";
 
 /**
  * The embed widget (docs ADR 20260726-schedule-embed): a shop pastes the
@@ -61,56 +61,53 @@ test.describe("as owner", () => {
     await expect(page.getByRole("navigation")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Today" })).not.toBeVisible();
   });
+});
 
-  test("booking through the embed keeps embed mode through the confirmation", async ({ page }) => {
-    const title = `Embed Booking Check ${e2eNow().getTime()}`;
-    await page.goto("/shop/blue-mantis/schedule/board?add=full");
-    await page.getByLabel("What is it").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(6));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("11:00");
-    await page.getByLabel("Seats").fill("6");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
-    await signOut(page);
+/**
+ * **A diver booking inside the frame stays inside it.** No staff detour: the
+ * test used to sign in, put a fresh departure on the board and sign out again
+ * just to have a trip past the widget's four-departure window, which cost
+ * about half its 15-second budget before the diver's half began and ran it
+ * out under load (issue #2312: 14-15s measured on an idle machine). A seeded
+ * departure past that window is the same subject, reached the same way.
+ */
+test("booking through the embed keeps embed mode through the confirmation", async ({ page }) => {
+  // **Through the widget's own way out.** The embed shows the next four
+  // departures (issue #805), and this course sits past that window.
+  await page.goto("/s/blue-mantis?embed=1", { waitUntil: "domcontentloaded" });
+  await openTripInEmbed(page, "Discover Scuba — Pool & Reef");
+  await expect(page).toHaveURL(/embed=1/);
+  await expect(page.getByRole("link", { name: "All trips", exact: true })).toHaveCount(0);
 
-    // **Through the widget's own way out.** The embed shows the next four
-    // departures (issue #805), and this trip is six days out — past the window
-    // on a seeded shop that runs a boat a day.
-    await page.goto("/s/blue-mantis?embed=1", { waitUntil: "domcontentloaded" });
-    await openTripInEmbed(page, title);
-    await expect(page).toHaveURL(/embed=1/);
-    await expect(page.getByRole("link", { name: "All trips", exact: true })).toHaveCount(0);
+  // The booking form is controlled, so wait for hydration before typing.
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill("Embed Diver");
+  await page.getByLabel("Email", { exact: true }).fill(`embed-${e2eNow().getTime()}@example.com`);
+  await acceptAgeAttestation(page);
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
 
-    // The booking form is controlled, so wait for hydration before typing.
-    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-    await page.getByLabel("Name", { exact: true }).fill("Embed Diver");
-    await page.getByLabel("Email", { exact: true }).fill(`embed-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Embed/ })).toBeVisible();
+  // The redirect after a successful book-now-pay-later booking must have
+  // carried embed=1 forward, or the confirmation reloads into full chrome.
+  await expect(page).toHaveURL(/embed=1/);
+  await expect(page.getByRole("link", { name: "All trips", exact: true })).toHaveCount(0);
+  const backLink = page.getByRole("link", { name: "Back to the schedule" });
+  await expect(backLink).toHaveAttribute("href", /embed=1/);
 
-    await expect(page.getByRole("heading", { name: /You’re on the boat, Embed/ })).toBeVisible();
-    // The redirect after a successful book-now-pay-later booking must have
-    // carried embed=1 forward, or the confirmation reloads into full chrome.
-    await expect(page).toHaveURL(/embed=1/);
-    await expect(page.getByRole("link", { name: "All trips", exact: true })).toHaveCount(0);
-    const backLink = page.getByRole("link", { name: "Back to the schedule" });
-    await expect(backLink).toHaveAttribute("href", /embed=1/);
-
-    // The one door out of the frame, followed for real. It points at a *route*
-    // rather than a `/ready/<token>` minted while this page rendered: a
-    // readiness token is stored hashed, so the page cannot read an existing one
-    // back, and minting per render wrote a row per reload and eventually
-    // retired the readiness link `bookSpot` had already emailed. The route
-    // trades this booking's confirm token for the capability at tap time.
-    const readinessLink = page.getByRole("link", { name: /readiness page/ });
-    await expect(readinessLink).toHaveAttribute("href", /\/ready\?booking=/);
-    await readinessLink.click();
-    // Landed on a real capability page — the token in the path is the one the
-    // route just issued, and it opens the readiness page rather than the
-    // "this link isn't available" notice a dead capability would render.
-    await expect(page).toHaveURL(/\/ready\/[^/?]+$/);
-    await expect(threadStatus(page)).toBeVisible();
-  });
+  // The one door out of the frame, followed for real. It points at a *route*
+  // rather than a `/ready/<token>` minted while this page rendered: a
+  // readiness token is stored hashed, so the page cannot read an existing one
+  // back, and minting per render wrote a row per reload and eventually
+  // retired the readiness link `bookSpot` had already emailed. The route
+  // trades this booking's confirm token for the capability at tap time.
+  const readinessLink = page.getByRole("link", { name: /readiness page/ });
+  await expect(readinessLink).toHaveAttribute("href", /\/ready\?booking=/);
+  await readinessLink.click();
+  // Landed on a real capability page — the token in the path is the one the
+  // route just issued, and it opens the readiness page rather than the
+  // "this link isn't available" notice a dead capability would render.
+  await expect(page).toHaveURL(/\/ready\/[^/?]+$/);
+  await expect(threadStatus(page)).toBeVisible();
 });
 
 test("the embed widget carries a discreet Powered-by-DiveDay attribution link with UTM params", async ({
