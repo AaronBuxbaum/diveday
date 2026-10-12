@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import { fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { wasMultiTouch, watchRollCallTouches } from "./roll-call-touch-guard";
+import {
+  TOUCH_REFUSED_ATTRIBUTE,
+  TOUCH_REFUSED_CUE_MS,
+  TOUCH_REFUSED_EVENT,
+  wasMultiTouch,
+  watchRollCallTouches,
+} from "./roll-call-touch-guard";
 
 function touch(type: "pointerDown" | "pointerUp", pointerId: number) {
   fireEvent[type](document, { pointerId, pointerType: "touch" });
@@ -19,6 +25,7 @@ function surface(): { button: HTMLButtonElement; onClick: ReturnType<typeof vi.f
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   touch("pointerUp", 1);
   touch("pointerUp", 2);
   document.body.innerHTML = "";
@@ -34,6 +41,42 @@ describe("the roll call's touch guard", () => {
     expect(wasMultiTouch()).toBe(true);
     button.click();
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  /**
+   * **A refused press is never silent** (issue #2328). The control it landed
+   * on carries the cue for a moment, and the surface hears about it so it can
+   * say "Tap again with one finger". Nothing is submitted, then or later.
+   */
+  it("flags the refused control for its cue, tells the surface, and clears the flag", () => {
+    vi.useFakeTimers();
+    const { button, onClick } = surface();
+    const label = document.createElement("span");
+    button.append(label);
+    const heard = vi.fn();
+    document.addEventListener(TOUCH_REFUSED_EVENT, heard);
+    touch("pointerDown", 1);
+    touch("pointerDown", 2);
+    label.click();
+    expect(onClick).not.toHaveBeenCalled();
+    expect(button.hasAttribute(TOUCH_REFUSED_ATTRIBUTE)).toBe(true);
+    expect(heard).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(TOUCH_REFUSED_CUE_MS);
+    expect(button.hasAttribute(TOUCH_REFUSED_ATTRIBUTE)).toBe(false);
+    expect(onClick).not.toHaveBeenCalled();
+    document.removeEventListener(TOUCH_REFUSED_EVENT, heard);
+  });
+
+  it("raises no cue for a press it lets through", () => {
+    const { button } = surface();
+    const heard = vi.fn();
+    document.addEventListener(TOUCH_REFUSED_EVENT, heard);
+    touch("pointerDown", 1);
+    touch("pointerUp", 1);
+    button.click();
+    expect(button.hasAttribute(TOUCH_REFUSED_ATTRIBUTE)).toBe(false);
+    expect(heard).not.toHaveBeenCalled();
+    document.removeEventListener(TOUCH_REFUSED_EVENT, heard);
   });
 
   it("lets a single touch through", () => {

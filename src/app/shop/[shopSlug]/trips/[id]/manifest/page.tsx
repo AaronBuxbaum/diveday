@@ -10,6 +10,7 @@ import {
   type OfflineManifestManagerCopy,
 } from "@/components/OfflineManifestManager";
 import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
+import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -1129,6 +1130,8 @@ export default async function TripManifestPage({
           message: t("shared.subSurfaceRipple.message"),
         }}
       />
+      {/* The words for a press the touch guard refused (issue #2328). */}
+      <RollCallTouchCue message={t("manifest.touchRefused")} />
     </div>
   );
 }

@@ -193,6 +193,7 @@
   "personTrailDetail": "{time} · {name}",
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Marcar de vuelta a bordo",
+  "touchRefused": "Vuelve a tocar con un solo dedo.",
   "crewMarkBackAboard": "Marcar de vuelta a bordo",
   "emergency": {
     "heading": "En una emergencia",

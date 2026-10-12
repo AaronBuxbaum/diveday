@@ -193,6 +193,7 @@
   "personTrailDetail": "{time} · {name}",
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Mark back aboard",
+  "touchRefused": "Tap again with one finger.",
   "crewMarkBackAboard": "Mark back aboard",
   "emergency": {
     "heading": "In an emergency",
