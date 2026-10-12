@@ -38,7 +38,8 @@ export default function manifest(): MetadataRoute.Manifest {
     // installed it. `/shop` is an existing entry point rather than a new
     // surface: `src/proxy.ts` redirects a signed-in staff member from it to
     // their own shop, and bounces a signed-out visitor to sign-in, which
-    // returns here afterwards. So an installed launch lands on the shop's own
+    // returns here afterwards. When the proxy cannot tell which shop (a cold
+    // cookie cache), `src/app/shop/route.ts` decides from the session. So an installed launch lands on the shop's own
     // day, and the shop layout's auto-save is what keeps this device's offline
     // copy current — which is exactly what the empty offline-manifest screen
     // tells a crew member to go and do.
