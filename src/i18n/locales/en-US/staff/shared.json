@@ -559,5 +559,11 @@
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Give them their own record",
     "splitting": "Creating…"
+  },
+  "payouts": {
+    "paid": "Paid out {amount} on {date}, covering {from} to {to}",
+    "paidOneDay": "Paid out {amount} on {date}, covering {from}",
+    "paidNoSpan": "Paid out {amount} on {date}",
+    "failed": "A payout of {amount} due {date} failed. Check the bank account in Stripe."
   }
 }

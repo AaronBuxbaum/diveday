@@ -52,7 +52,12 @@ import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 import { MonthJump } from "./_components/MonthJump";
-import { MoneyByLine, MonthDetailLines } from "./_components/MonthMoneyDetail";
+import {
+  MoneyByLine,
+  MonthDetailLines,
+  MonthFootnotes,
+  MonthPayouts,
+} from "./_components/MonthMoneyDetail";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { YearReport } from "./_components/YearReport";
 
@@ -296,7 +301,7 @@ export default async function ReportsPage({
       : Promise.resolve(null),
     // The money by line, the package dives still owed, and the returning
     // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
-    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now),
+    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, current),
   ]);
   const report = summarizeMonth(input);
   const money = (cents: number) => formatReportMoney(cents, currency, locale);
@@ -614,24 +619,13 @@ export default async function ReportsPage({
         <>
           <MonthFigures label={t("reports.numbersLabel")} figures={figures} />
 
-          {/* The month's two quiet doors on one line: what Stripe Tax took out
-              of the revenue figure above, and the CSV an owner sends their
-              accountant (issue #700 — the full-shop export is the right tool
-              for a bookkeeper and the wrong one for "just this month"). Tax
-              used to be the sixth tile; it is a footnote to net revenue, not a
-              headline beside it. */}
-          <p className="mt-3 text-end text-sm text-muted tabular-nums">
-            {t("reports.taxLine", {
-              amount: formatReportMoney(report.taxCents, currency, locale),
-            })}
-            {" · "}
-            <a
-              href={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
-              className="font-medium text-primary hover:underline"
-            >
-              {t("reports.downloadCsv")}
-            </a>
-          </p>
+          <MonthFootnotes
+            taxCents={report.taxCents}
+            csvHref={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
+            detail={moneyDetail}
+            t={t}
+            money={money}
+          />
 
           {report.importedFinancialRecordCount > 0 ? (
             <section aria-label={t("reports.importedHistory.sectionLabel")} className="mt-6">
@@ -655,6 +649,7 @@ export default async function ReportsPage({
 
           <MonthDetailLines report={report} detail={moneyDetail} t={t} money={money} />
           <MoneyByLine detail={moneyDetail} t={t} money={money} />
+          <MonthPayouts detail={moneyDetail} t={t} locale={locale} timeZone={tz} />
 
           {report.tripCount > 0 ? (
             <DepartureLedger

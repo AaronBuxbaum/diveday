@@ -88,6 +88,7 @@ import {
   staffCredentials,
   staffReplies,
   staffShifts,
+  stripePayouts,
   tips,
   tripAssignments,
   tripBlowoutDivers,
@@ -1151,6 +1152,18 @@ export async function seedDemoSchedule(
 }
 
 /**
+ * What Stripe told DiveDay about a shop's money, cleared on a schedule reset. A
+ * card dispute references the order or checkout it is about (ADR
+ * 20261009-stripe-reversals-reach-diveday), so it goes before both. A payout
+ * names no order or seat (ADR 20261012-payouts-reach-diveday); it goes with the
+ * money it reported.
+ */
+async function clearStripeRecords(db: DbExecutor, shopId: string): Promise<void> {
+  await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
+  await db.delete(stripePayouts).where(eq(stripePayouts.shopId, shopId));
+}
+
+/**
  * Restore the demo playground to its seeded state. Wipes everything a visitor
  * can touch — trips and their sessions, bookings and everything hanging off
  * them (waivers, roll call), the course catalog, cards, rental fit,
@@ -1308,9 +1321,8 @@ export async function resetDemoSchedule(
   // bookings, orders, and booking_checkouts — so both go before booking_checkouts.
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
-  // A card dispute references the order or checkout it is about (ADR
-  // 20261009-stripe-reversals-reach-diveday), so it goes before both.
-  await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
+  // Disputes before the orders and checkouts they are about (`clearStripeRecords`).
+  await clearStripeRecords(db, shopId);
   // A redemption points at the checkout that spent the code, so it goes first
   // (docs ADR 20260729-shop-promo-codes). The codes themselves are shop config
   // and survive a schedule reset.

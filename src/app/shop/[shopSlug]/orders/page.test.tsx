@@ -13,6 +13,7 @@ import {
   orders,
   paymentOperationIntents,
   people,
+  stripePayouts,
   trips,
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
@@ -30,6 +31,7 @@ import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
+import { PayoutLines } from "./_components/PayoutLines";
 
 // Same mocking shape as ../settings/SettingsPage.test.tsx: the page is invoked
 // directly, outside Next's request scope, so the three things that only exist
@@ -168,6 +170,63 @@ describe("the stuck-payment-operations panel", () => {
     // not, which is the one thing that could have gone wrong in moving a
     // gated section onto an ungated page.
     expect(ariaLabelsIn(await renderOrders("divemaster", stickAnOperation))).not.toContain(PANEL);
+  });
+});
+
+/** Every string the page put on screen, in order, through every element's children. */
+function textIn(node: unknown): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textIn).join("");
+  if (node && typeof node === "object" && "props" in node) {
+    const element = node as { type?: unknown; props: { children?: unknown } };
+    // `PayoutLines` is a plain function of its props; render it by calling it.
+    if (element.type === PayoutLines) return textIn(PayoutLines(element.props as never));
+    return textIn(element.props.children);
+  }
+  return "";
+}
+
+async function recordPayouts(db: AppDb, session: DiveDaySession) {
+  const base = {
+    shopId: session.user.shopId,
+    stripeAccountId: "acct_orders_payouts",
+    currency: "usd",
+  };
+  await db.insert(stripePayouts).values([
+    {
+      ...base,
+      stripePayoutId: "po_orders_paid",
+      amountCents: 184_200,
+      status: "paid",
+      arrivalDate: new Date("2026-10-03T00:00:00Z"),
+      coveredFrom: new Date("2026-09-27T15:00:00Z"),
+      coveredTo: new Date("2026-10-01T15:00:00Z"),
+      feeCents: 5_430,
+      lastEventAt: new Date("2026-10-03T01:00:00Z"),
+    },
+    {
+      ...base,
+      stripePayoutId: "po_orders_failed",
+      amountCents: 61_000,
+      status: "failed",
+      failureCode: "account_closed",
+      arrivalDate: new Date("2026-10-06T00:00:00Z"),
+      lastEventAt: new Date("2026-10-06T09:00:00Z"),
+    },
+  ]);
+}
+
+describe("what Stripe paid into the bank (ADR 20261012-payouts-reach-diveday)", () => {
+  it("tells an owner the last payout and the one that failed after it", async () => {
+    const text = textIn(await renderOrders("owner", recordPayouts)).replaceAll("\u00A0", " ");
+    expect(text).toContain("Paid out $1,842.00 on October 3, covering September 27 to October 1");
+    expect(text).toContain("A payout of $610.00 due October 6 failed.");
+  });
+
+  it("says nothing about payouts to a divemaster", async () => {
+    const text = textIn(await renderOrders("divemaster", recordPayouts));
+    expect(text).not.toContain("Paid out");
+    expect(text).not.toContain("A payout of");
   });
 });
 

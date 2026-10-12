@@ -95,6 +95,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - First paid month
 - Free term
 - Pass-through fee
+- Payout
 - Subscription (DiveDay billing)
 
 ## Operations

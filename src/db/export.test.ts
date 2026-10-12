@@ -216,6 +216,10 @@ const EXCLUDED_TABLES = [
   // the shop's Stripe dashboard is where a dispute is answered and exported.
   // The money it concerns is already on orders.csv and booking_checkouts.csv.
   "payment_disputes",
+  // Stripe payouts (ADR 20261012-payouts-reach-diveday), on the same footing:
+  // Stripe's own record of money it moved to the shop's bank, mirrored so
+  // Reports can name it, and exported from the shop's Stripe dashboard.
+  "stripe_payouts",
   // Historical assignments are source evidence attached to the gear-history
   // import, not a live reservation or booking record. They remain in the
   // shop database and are intentionally not part of the current full-shop

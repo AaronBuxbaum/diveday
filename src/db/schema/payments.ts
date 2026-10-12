@@ -1067,6 +1067,60 @@ export const paymentDisputes = pgTable(
   ],
 );
 
+/**
+ * **A Stripe payout**: money Stripe moved from a shop's connected account to
+ * its bank, one row per Stripe payout, kept current by the `payout.paid` and
+ * `payout.failed` webhooks (ADR 20261012-payouts-reach-diveday).
+ *
+ * This is the line that ties Reports to the bank statement: "Paid out $1,842
+ * on Oct 3, covering Sep 27 to Oct 1". The amount, currency and arrival date
+ * are Stripe's own, verbatim off the event. `covered_from`/`covered_to` and
+ * `fee_cents` are a summary of the payout's balance transactions, asked of
+ * Stripe once when the payout is paid and never at render; null means Stripe
+ * did not say (a manual payout, which Stripe will not itemize, or a read that
+ * was refused), never zero.
+ *
+ * Informs, never moves money. A failed payout is Stripe's to retry and the
+ * shop's to fix in its own Stripe account; DiveDay only says so.
+ */
+export const stripePayouts = pgTable(
+  "stripe_payouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** The event's own `account`: whose bank this money went to. */
+    stripeAccountId: text("stripe_account_id").notNull(),
+    stripePayoutId: text("stripe_payout_id").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    /** Stripe's own status code (`paid`, `failed`, …), verbatim. */
+    status: text("status").notNull(),
+    /** When Stripe says the money reaches (or reached) the bank. */
+    arrivalDate: timestamp("arrival_date", { withTimezone: true }).notNull(),
+    /** Stripe's own failure code (`account_closed`, `no_account`, …), verbatim. */
+    failureCode: text("failure_code"),
+    /** The earliest and latest money this payout carries, by Stripe's `created`. */
+    coveredFrom: timestamp("covered_from", { withTimezone: true }),
+    coveredTo: timestamp("covered_to", { withTimezone: true }),
+    /** Stripe's fees on the money this payout carries, net of fees it returned. */
+    feeCents: integer("fee_cents"),
+    /** The `created` time of the newest event applied; an older one never overwrites it. */
+    lastEventAt: timestamp("last_event_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("stripe_payouts_stripe_payout_unique").on(table.stripePayoutId),
+    /** Reports' and the Orders index's read: one shop's live payouts by arrival. */
+    index("stripe_payouts_shop_arrival_idx")
+      .on(table.shopId, table.arrivalDate)
+      .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
 export const tipStatus = pgEnum("tip_status", ["pending", "paid", "expired"]);
 
 /**
@@ -1365,6 +1419,7 @@ export type StripeWebhookEvent = typeof stripeWebhookEvents.$inferSelect;
 export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 
 export type PaymentDispute = typeof paymentDisputes.$inferSelect;
+export type StripePayout = typeof stripePayouts.$inferSelect;
 
 export type Tip = typeof tips.$inferSelect;
 

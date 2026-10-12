@@ -12,9 +12,7 @@ import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table"
 import { canPersonManageOrders, canPersonManagePaymentSettings } from "@/db/authz";
 import { listImportedPaymentHistory } from "@/db/imported-payment-history";
 import { ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
-import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { getShopPersonName } from "@/db/people";
-import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { orderStatus } from "@/db/schema";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getShopTripTitle } from "@/db/trips";
@@ -39,6 +37,7 @@ import { orderLedgerRow } from "./_components/ledger-row";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
+import { PayoutLines, readBackOffice } from "./_components/PayoutLines";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -231,14 +230,6 @@ export default async function OrdersIndexPage({
     canPersonManagePaymentSettings(db, session.user.shopId, session.user.personId),
     canPersonManageOrders(db, session.user.shopId, session.user.personId),
   ]);
-  // Money the shop owes divers for departures it cancelled and could not refund
-  // by card — a counter payment, a disconnected Stripe account, a refund Stripe
-  // refused. The sweep that creates most of these runs hourly from a cron with
-  // no human near it, and it tells every affected diver the shop will be in
-  // touch; until this panel there was nothing on any screen that said so
-  // (ADR 20260813-shop-cancellation-refunds-itself's own consequence).
-  //
-  // Same gate and same query-only-if-visible as the stuck operations above.
   // The one "New order" door, drawn in the header and the empty state alike:
   // absent for a reader `orders/new` would refuse (issue #1925).
   const newOrderDoor = canManageOrders ? (
@@ -246,12 +237,8 @@ export default async function OrdersIndexPage({
       {t("orders.index.newOrder")}
     </Link>
   ) : null;
-  const stuckPaymentOperations = canReconcilePayments
-    ? await listStuckPaymentOperations(db, shop.id)
-    : [];
-  const owedRefunds = canReconcilePayments
-    ? await listOwedShopCancellationRefunds(db, shop.id)
-    : [];
+  const backOffice = await readBackOffice(db, shop.id, canReconcilePayments);
+  const { stuckPaymentOperations, owedRefunds, payouts } = backOffice;
 
   const statusFilter = orderStatus.enumValues.includes(
     status as (typeof orderStatus.enumValues)[number],
@@ -606,6 +593,8 @@ export default async function OrdersIndexPage({
           </ShopNotice>
         </section>
       ) : null}
+
+      <PayoutLines payouts={payouts} locale={locale} timeZone={shop.timezone} t={t} />
 
       {showToolbar ? (
         <OrdersToolbar

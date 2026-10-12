@@ -375,5 +375,6 @@ script again.
 | [20261009-demo-test-mode-payments](20261009-demo-test-mode-payments.md) | The canonical demo takes a card at booking, in Stripe test mode | Accepted |  |
 | [20261009-single-use-setup-links](20261009-single-use-setup-links.md) | `/onboard` opens with a single-use link per request, not a standing key | Accepted |  |
 | [20261009-stripe-reversals-reach-diveday](20261009-stripe-reversals-reach-diveday.md) | Record refunds and disputes made outside DiveDay from Stripe's webhooks | Accepted |  |
+| [20261012-payouts-reach-diveday](20261012-payouts-reach-diveday.md) | Record Stripe payouts so Reports meets the bank statement | Accepted |  |
 
 <!-- adr-index:end -->

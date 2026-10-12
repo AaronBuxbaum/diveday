@@ -11,6 +11,7 @@ import {
 } from "@/lib/report-lines";
 import type { DbExecutor } from "./client";
 import { packageOrderStillBacks } from "./dive-packages";
+import { listShopPayoutsArriving, type ShopPayout } from "./payouts";
 import { queryAll } from "./query-helpers";
 import {
   bookingCheckoutBookings,
@@ -39,6 +40,16 @@ export type MonthMoneyDetail = {
   packageDivesOwed: { dives: number; valueCents: number };
   /** Distinct divers on this month's departures, and how many had dived with the shop before. */
   divers: { total: number; returning: number };
+  /**
+   * What left the month's money (UX review 2026-10-11, item 17), on the same
+   * paid-in-the-month basis as `lines`: refunds of money paid this month, what
+   * discount codes took off this month's checkouts, and Stripe's fees on the
+   * payouts that reached the bank this month — null when no payout this month
+   * says what its fees were, which is not the same as none.
+   */
+  out: { refundedCents: number; discountedCents: number; stripeFeesCents: number | null };
+  /** Stripe payouts arriving at the bank this month, oldest first (ADR 20261012-payouts-reach-diveday). */
+  payouts: ShopPayout[];
 };
 
 /** Same set the roster and every other report figure count as "on the boat". */
@@ -46,19 +57,93 @@ const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
 /** An order the shop still holds money on; a fully refunded one holds none. */
 const KEPT_ORDER_STATUSES = ["paid", "partly_refunded"] as const;
 
+/** A month's UTC calendar bounds, or the given window when no month is named. */
+function payoutWindow(
+  month: { year: number; month: number } | undefined,
+  from: Date,
+  to: Date,
+): { from: Date; to: Date } {
+  if (!month) return { from, to };
+  return {
+    from: new Date(Date.UTC(month.year, month.month - 1, 1)),
+    to: new Date(Date.UTC(month.year, month.month, 1)),
+  };
+}
+
 export async function getMonthMoneyDetail(
   db: DbExecutor,
   shopId: string,
   startUtc: Date,
   endUtc: Date,
   now: Date,
+  /**
+   * The calendar month a payout's arrival day is read against. Stripe states
+   * that day at UTC midnight, so payouts are read over the month's UTC
+   * calendar bounds rather than the shop's: a shop's month starts hours after
+   * a payout that arrives on its first day. Absent, the month's own bounds.
+   */
+  payoutMonth?: { year: number; month: number },
 ): Promise<MonthMoneyDetail> {
-  const [lines, packageDivesOwed, divers] = await queryAll(db, [
+  const [lines, packageDivesOwed, divers, out, payouts] = await queryAll(db, [
     () => moneyByLine(db, shopId, startUtc, endUtc),
     () => packageDivesOwedAt(db, shopId, endUtc < now ? endUtc : now),
     () => returningDivers(db, shopId, startUtc, endUtc),
+    () => moneyOut(db, shopId, startUtc, endUtc),
+    () => listShopPayoutsArriving(db, shopId, payoutWindow(payoutMonth, startUtc, endUtc)),
   ]);
-  return { lines, packageDivesOwed, divers };
+  const paidFees = payouts.flatMap((payout) =>
+    payout.status === "paid" && payout.feeCents !== null ? [payout.feeCents] : [],
+  );
+  return {
+    lines,
+    packageDivesOwed,
+    divers,
+    out: {
+      ...out,
+      stripeFeesCents: paidFees.length > 0 ? paidFees.reduce((sum, fee) => sum + fee, 0) : null,
+    },
+    payouts,
+  };
+}
+
+/**
+ * Refunds and discounts on the money paid in the window. Every figure is a
+ * stored row's own: `refunded_cents` is what Stripe reported reversing (or
+ * DiveDay refunded), and a checkout's discount is the snapshot taken when the
+ * code was handed to Stripe (`applied_discount_cents`, or the percent of the
+ * asked total), never re-derived from a code as it reads today.
+ */
+async function moneyOut(
+  db: DbExecutor,
+  shopId: string,
+  startUtc: Date,
+  endUtc: Date,
+): Promise<{ refundedCents: number; discountedCents: number }> {
+  const [orderRefunds] = await db
+    .select({ total: sql<string>`coalesce(sum(${orders.refundedCents}), 0)` })
+    .from(orders)
+    .where(and(eq(orders.shopId, shopId), gte(orders.paidAt, startUtc), lt(orders.paidAt, endUtc)));
+  const [checkoutMoney] = await db
+    .select({
+      refunded: sql<string>`coalesce(sum(${bookingCheckouts.refundedCents}), 0)`,
+      discounted: sql<string>`coalesce(sum(coalesce(
+        ${bookingCheckouts.appliedDiscountCents},
+        round(${bookingCheckouts.totalCents} * ${bookingCheckouts.appliedDiscountPercent} / 100.0)
+      )), 0)`,
+    })
+    .from(bookingCheckouts)
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "completed"),
+        gte(bookingCheckouts.completedAt, startUtc),
+        lt(bookingCheckouts.completedAt, endUtc),
+      ),
+    );
+  return {
+    refundedCents: Number(orderRefunds?.total ?? 0) + Number(checkoutMoney?.refunded ?? 0),
+    discountedCents: Number(checkoutMoney?.discounted ?? 0),
+  };
 }
 
 async function moneyByLine(

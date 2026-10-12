@@ -28,7 +28,7 @@
     "waiversAllIn": "Everyone’s paperwork is in",
     "revenueViewOrders": "View orders",
     "tipsLabel": "Tips",
-    "tipsDetail": "{count, plural, =0 {No tips left on this month’s trips} one {# tip, kept by the shop} other {# tips, all kept by the shop}}"
+    "tipsDetail": "{count, plural, =0 {No tips left on this month’s trips} one {# tip, for the shop to pass on to the crew} other {# tips, for the shop to pass on to the crew}}"
   },
   "noTripsFuture": "Nothing on the books for this month yet.",
   "noTripsPast": "No trips sailed this month.",
@@ -93,5 +93,13 @@
     "retail": "Retail and other"
   },
   "packagesOwed": "{dives, plural, one {# package dive} other {# package dives}} still to dive, worth {amount}",
-  "returningDivers": "{returning} of {total, plural, one {# diver} other {# divers}} had dived with you before"
+  "returningDivers": "{returning} of {total, plural, one {# diver} other {# divers}} had dived with you before",
+  "moneyOut": {
+    "refunded": "Refunded {amount} of this month’s payments",
+    "discounted": "Discount codes took {amount} off",
+    "fees": "Stripe fees {amount}, on this month’s payouts"
+  },
+  "payouts": {
+    "heading": "Paid to your bank"
+  }
 }

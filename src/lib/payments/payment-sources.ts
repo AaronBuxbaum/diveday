@@ -123,7 +123,7 @@ const disabledPaymentSourceLookup: PaymentSourceLookup = {
 };
 
 /** `true` for a live key, `false` for a test key, null when the prefix says neither. */
-function keyLivemode(secretKey: string): boolean | null {
+export function keyLivemode(secretKey: string): boolean | null {
   if (/^(sk|rk)_live_/.test(secretKey)) return true;
   if (/^(sk|rk)_test_/.test(secretKey)) return false;
   return null;
