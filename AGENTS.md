@@ -35,7 +35,8 @@ provider-specific folders are adapters and must not introduce unique requirement
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000; wait for **`dev: serving … — warmed in Ns`**, not Next's `✓ Ready`. One per checkout (the **run** skill) |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
-| `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm test:changed`, `pnpm e2e <spec>` | the pre-commit and pre-push checklist is the **verify** skill |
+| `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm e2e <spec>` | the pre-commit checklist is the **verify** skill |
+| `pnpm verify:push` | before every push, in the background: the diff's checks, unit tests and Playwright specs; `git push` is refused without its stamp |
 | `pnpm lint:fix` | Biome autofix |
 | `pnpm check:repo` | 47 static guards, concurrently; each names itself and the offending line. The *why* of each: [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
 | `pnpm agent:doctor` | what this environment will trip you on (Node, `gh`, stale `origin/main`, strays) |
@@ -155,8 +156,9 @@ One line each, with what enforces it; the full statement and its incident:
 - **A background job you start is yours to end**; check with
   `node scripts/stray-processes.mjs --list`, never `TaskList`, and never pipe a long run through
   `tail`/`head` (`Stop` hook `scripts/stray-processes.mjs`, `scripts/guard-bash.mjs`).
-- **Verify before commit, push once per round; CI runs anything whole.** The **verify** skill is
-  the checklist. Never report unverified work as done.
+- **Verify before commit, `pnpm verify:push` before push, push once per round; CI runs anything
+  whole.** The **verify** skill is the checklist; `scripts/guard-push.mjs` refuses an unverified
+  push. Never report unverified work as done.
 - **A thought you don't act on is a `needs-triage` issue**, at most ten per run, ending in a
   prompt a fresh session can paste ([issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up").
 - **A failing or flaky test is part of the work**, even when unrelated: never skipped, never a

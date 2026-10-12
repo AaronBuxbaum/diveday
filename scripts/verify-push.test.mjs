@@ -1,0 +1,63 @@
+import { describe, expect, it } from "vitest";
+
+import { plan, sourceScanTests } from "./verify-push.mjs";
+
+const names = (steps) => steps.map((step) => step.name);
+const base = { mergeBase: "abc", specs: [], scans: ["src/components/ui/form.test.tsx"] };
+
+describe("the pre-push plan", () => {
+  it("runs every local check CI's red jobs came from, cheapest first", () => {
+    const steps = plan({ ...base, changed: ["src/lib/x.ts"], specs: ["e2e/a.spec.ts"] });
+    expect(names(steps)).toEqual([
+      "regen",
+      "lint",
+      "typecheck",
+      "check:repo",
+      "guards",
+      "source scans",
+      "changed tests",
+      "e2e build",
+      "e2e specs",
+    ]);
+    expect(steps.find((s) => s.name === "changed tests").args).toContain("abc");
+    expect(steps.at(-1).args).toContain("e2e/a.spec.ts");
+  });
+
+  it("names the schema guards instead of a --changed run that would be the whole suite", () => {
+    const steps = plan({ ...base, changed: ["src/db/schema/trips.ts"] });
+    expect(names(steps)).toContain("schema guards");
+    expect(names(steps)).not.toContain("changed tests");
+  });
+
+  it("regenerates the export snapshot only when seed, schema or export changed", () => {
+    expect(plan({ ...base, changed: ["src/db/seed-trips.ts"] })[0].args).toEqual(["regen"]);
+    expect(plan({ ...base, changed: ["src/lib/x.ts"] })[0].args).toEqual([
+      "regen",
+      "--no-snapshot",
+    ]);
+  });
+
+  it("stops at the static checks for a docs-only diff, as CI does", () => {
+    expect(names(plan({ ...base, changed: ["docs/agents/verifying.md", "AGENTS.md"] }))).toEqual([
+      "regen",
+      "lint",
+      "typecheck",
+      "check:repo",
+      "guards",
+    ]);
+  });
+});
+
+describe("the source scans", () => {
+  it("include the tests that read files and that vitest --changed never selects", () => {
+    const scans = sourceScanTests();
+    for (const file of [
+      "src/components/ui/form.test.tsx",
+      "src/components/ui/button.test.ts",
+      "src/components/account/EntryShell.test.tsx",
+      "src/db/erasure-coverage.test.ts",
+    ]) {
+      expect(scans).toContain(file);
+    }
+  });
+});
