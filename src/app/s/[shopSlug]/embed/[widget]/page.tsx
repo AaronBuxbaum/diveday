@@ -8,7 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
-import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
+import { getShopReviewAggregate, listPublishedShopReviewsPage } from "@/db/reviews";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -110,12 +110,12 @@ export default async function EmbedWidgetPage({
     // shows: published, moderated reviews with words, signed "Marta R."
     // (`reviewerDisplayName`), and nothing at all from a shop that switched
     // reviews off (ADR 20261005-optional-shop-features).
-    const [aggregate, reviews] = shop.reviewsEnabled
+    const [aggregate, reviewPage] = shop.reviewsEnabled
       ? await Promise.all([
           getShopReviewAggregate(db, shop.id),
-          listPublishedShopReviews(db, shop.id),
+          listPublishedShopReviewsPage(db, shop.id, { limit: WIDGET_QUOTES }),
         ])
-      : [null, []];
+      : [null, null];
     // **Quiet below the shelf's own threshold.** The storefront's shelf renders
     // nothing until a rating is published, because an empty "no reviews yet"
     // panel reads as a warning; on someone else's page it would read worse.
@@ -144,8 +144,15 @@ export default async function EmbedWidgetPage({
                 maximumFractionDigits: 1,
               }).format(average)}
             </span>
+            {/* Two counts, the archive's own line: ratings and written
+                reviews are not the same number (UX review 2026-10-10, item 17). */}
             <span className="tabular-nums">
-              {t("reviews.ratingsCount", { count: aggregate.count })}
+              {reviewPage && reviewPage.total > 0
+                ? t("reviews.ratingsAndReviews", {
+                    ratings: aggregate.count,
+                    reviews: reviewPage.total,
+                  })
+                : t("reviews.ratingsCount", { count: aggregate.count })}
             </span>
           </p>
           <Link
@@ -157,7 +164,7 @@ export default async function EmbedWidgetPage({
           </Link>
         </div>
         <ReviewLedger
-          reviews={reviews.slice(0, WIDGET_QUOTES)}
+          reviews={reviewPage?.reviews ?? []}
           // No trip titles on a third-party page: a private charter's name
           // is not the shop's to publish (the archive hides them too).
           showTrip={false}
