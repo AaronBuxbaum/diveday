@@ -68,7 +68,7 @@ export async function crewWeekFor(
         liveTrip(),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id))
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
     .limit(CREW_WEEK_LINES);
   if (rows.length === 0) return [];
 
