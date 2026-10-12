@@ -29,6 +29,13 @@ type PaletteItem = {
   key: string;
   label: string;
   detail?: string;
+  /**
+   * The row's accessible name when `label` alone would name two rows. A
+   * Settings row called "Crew schedule" sits in the same list as the staffing
+   * destination of the same name; its name carries the group so a reader (and
+   * a locator) can tell the two apart.
+   */
+  ariaLabel?: string;
   href?: string;
   run?: () => void;
   /**
@@ -242,6 +249,7 @@ function gotoItems({
         key: `goto:settings:${shortcut.id}`,
         label: shortcut.label,
         detail: shortcut.group,
+        ariaLabel: `${shortcut.label} · ${shortcut.group}`,
         href: shortcut.href,
         icon: <StaffDestinationIcon id="settings" className="size-5" />,
       });
@@ -741,7 +749,7 @@ export function CommandPalette({
                               id={`${listId}-${item.key}`}
                               type="button"
                               role="option"
-                              aria-label={item.label}
+                              aria-label={item.ariaLabel ?? item.label}
                               aria-selected={isActive}
                               tabIndex={-1}
                               onMouseMove={() =>
