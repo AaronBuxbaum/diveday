@@ -2,6 +2,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
+import { deriveBrandTheme, deriveDarkBrandTheme } from "@/lib/brand";
 import { type CalendarDate, calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
 import { type CourseLearningMaterial, isLearningMaterialLink } from "@/lib/courses";
@@ -255,8 +256,6 @@ const DARK_PRIMARY_COLOR = "#4fbcd8";
 const DARK_PANEL_COLOR = "#162129";
 const DARK_BORDER_COLOR = "#25333c";
 
-const EMAIL_HEAD_STYLE = `<style>:root{color-scheme:light dark;}a{color:${BRAND_PRIMARY_COLOR};}.dd-btn{background-color:${BRAND_PRIMARY_COLOR}!important;color:#ffffff!important;}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-card{background-color:${DARK_PANEL_COLOR}!important;border-color:${DARK_BORDER_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${DARK_PRIMARY_COLOR}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${DARK_PRIMARY_COLOR}!important;}.dd-btn{background-color:${DARK_PRIMARY_COLOR}!important;color:#0f171c!important;}a{color:${DARK_PRIMARY_COLOR}!important;}}</style>`;
-
 /**
  * Bulletproof email call-to-action button, table-wrapped to render consistently
  * across Outlook, Apple Mail, Gmail, and mobile clients.
@@ -291,16 +290,104 @@ const EMAIL_MARK_HTML =
   '<td width="4" height="24" valign="top" style="width: 4px;"><div style="width: 4px; height: 4px; border-radius: 50%; background-color: #ff6b6b; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
   "</tr></table>";
 
+/** The fill behind a panel (a packing list, course materials, where to meet). */
+const PANEL_FILL_COLOR = "#f3f4f6";
+
+/**
+ * One tinted panel: a heading and what sits under it. The one shape every
+ * template's side box takes, so the wrapper can recolour all of them for a
+ * shop's brand at once, and the `dd-panel` class its dark rules reach is never
+ * forgotten on a new one.
+ */
+export function emailPanel(headingHtml: string, innerHtml: string): string {
+  return `<div class="dd-panel" style="margin-top: 20px; padding: 15px; border-left: 4px solid ${BRAND_PRIMARY_COLOR}; background-color: ${PANEL_FILL_COLOR}; border-radius: 8px;"><strong>${headingHtml}</strong>${innerHtml}</div>`;
+}
+
+/**
+ * What the wrapper needs to dress a message as the shop's own (ux review
+ * 2026-10-11, item 3). Absent for a message DiveDay sends in its own name.
+ */
+export type EmailShopBrand = {
+  /** An absolute `https:` URL, already vetted as first-party (`emailLogoUrl`). */
+  logoUrl?: string;
+  /** `#rrggbb`; absent keeps DiveDay's own teal. */
+  color?: string;
+  /** The credit line at the foot, in the recipient's language ("Bookings by DiveDay"). */
+  credit: string;
+};
+
+/**
+ * The shop's colour as the email's accents: moved until it reads on white in
+ * the light document and on the dark panel at depth (`deriveBrandTheme` and
+ * `deriveDarkBrandTheme`, the same rule the storefront wears), so a pale brand
+ * never becomes an unreadable link in somebody's inbox.
+ */
+function emailPalette(color: string | undefined) {
+  if (!color) {
+    return {
+      primary: BRAND_PRIMARY_COLOR,
+      panel: PANEL_FILL_COLOR,
+      darkPrimary: DARK_PRIMARY_COLOR,
+      darkOnPrimary: DARK_PAGE_COLOR,
+    };
+  }
+  const light = deriveBrandTheme(color, { surface: BRAND_CONTAINER_COLOR });
+  const dark = deriveDarkBrandTheme(color);
+  return {
+    primary: light.primary,
+    panel: light.primaryTint,
+    darkPrimary: dark.primary,
+    darkOnPrimary: dark.primaryForeground,
+  };
+}
+
+/**
+ * Recolour the body's accents for the shop. Only inside `style="…"`
+ * attributes, which a template writes and a diver's or shop's words never can
+ * (every value is escaped, so a literal `"` in free text arrives as `&quot;`).
+ */
+function recolor(html: string, palette: ReturnType<typeof emailPalette>): string {
+  return html.replace(/style="[^"]*"/g, (attribute) =>
+    attribute
+      .replaceAll(BRAND_PRIMARY_COLOR, palette.primary)
+      .replaceAll(PANEL_FILL_COLOR, palette.panel),
+  );
+}
+
+function headStyle(palette: ReturnType<typeof emailPalette>): string {
+  return `<style>:root{color-scheme:light dark;}a{color:${palette.primary};}.dd-btn{background-color:${palette.primary}!important;color:#ffffff!important;}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-card{background-color:${DARK_PANEL_COLOR}!important;border-color:${DARK_BORDER_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${palette.darkPrimary}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${palette.darkPrimary}!important;}.dd-btn{background-color:${palette.darkPrimary}!important;color:${palette.darkOnPrimary}!important;}a{color:${palette.darkPrimary}!important;}}</style>`;
+}
+
 /**
  * Wraps a template's inner body fragment in a real HTML document — doctype,
- * `<html lang>`, a viewport meta tag, the brand palette from `docs/design/brand.md`,
- * and the table-safe bubble mark beside the shop name.
+ * `<html lang>`, a viewport meta tag, the brand palette from `docs/design/brand.md`.
+ *
+ * **Sent as a shop** (`brand` present), the message is the shop's: its logo
+ * and name lead, its colour is every accent, and DiveDay is a small credit at
+ * the foot — "a credit, not a headline", the rule the link-preview cards
+ * already keep (`ogCredit`). The logo is an `<img>` with an empty `alt`
+ * *beside* the shop's name in text, never instead of it: a client that blocks
+ * images by default (most of them, until the reader opts in) shows the name
+ * and nothing broken. Sent as DiveDay, the bubble mark leads as it always has.
  */
 export function wrapEmailHtml(
   bodyHtml: string,
-  options: { shopName: string; locale: string },
+  options: { shopName: string; locale: string; brand?: EmailShopBrand },
 ): string {
-  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">${EMAIL_HEAD_STYLE}</head><body class="dd-page" style="margin: 0; padding: 0; background-color: ${BRAND_PAGE_COLOR}; color: ${BRAND_INK_COLOR}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><div class="dd-card" style="background-color: ${BRAND_CONTAINER_COLOR}; border: 1px solid ${BRAND_BORDER_COLOR}; border-radius: 16px; padding: 32px 24px;"><table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom: 24px;"><tr><td style="vertical-align: middle;">${EMAIL_MARK_HTML}</td><td style="vertical-align: middle;"><p class="dd-shop" style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${BRAND_PRIMARY_COLOR};">${escapeHtml(options.shopName)}</p></td></tr></table><div style="font-size: 15px; line-height: 1.6;">${bodyHtml}</div></div></div></body></html>`;
+  const { brand } = options;
+  const palette = emailPalette(brand?.color);
+  const name = `<p class="dd-shop" style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${palette.primary};">${escapeHtml(options.shopName)}</p>`;
+  const lead = brand
+    ? brand.logoUrl
+      ? `<img src="${escapeHtml(brand.logoUrl)}" alt="" height="40" style="display: block; height: 40px; width: auto; max-width: 160px; border: 0; margin-right: 12px;">`
+      : ""
+    : EMAIL_MARK_HTML;
+  const header = `<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom: 24px;"><tr>${lead ? `<td style="vertical-align: middle;">${lead}</td>` : ""}<td style="vertical-align: middle;">${name}</td></tr></table>`;
+  const credit = brand
+    ? `<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 16px auto 0; opacity: 0.7;"><tr><td style="vertical-align: middle;">${EMAIL_MARK_HTML}</td><td style="vertical-align: middle; font-size: 12px;">${escapeHtml(brand.credit)}</td></tr></table>`
+    : "";
+  const body = brand ? recolor(bodyHtml, palette) : bodyHtml;
+  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">${headStyle(palette)}</head><body class="dd-page" style="margin: 0; padding: 0; background-color: ${BRAND_PAGE_COLOR}; color: ${BRAND_INK_COLOR}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><div class="dd-card" style="background-color: ${BRAND_CONTAINER_COLOR}; border: 1px solid ${BRAND_BORDER_COLOR}; border-radius: 16px; padding: 32px 24px;">${header}<div style="font-size: 15px; line-height: 1.6;">${body}</div></div>${credit}</div></body></html>`;
 }
 
 export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): NotificationEmail {
@@ -595,7 +682,10 @@ function materialsSection(t: DiverTranslator, materials: CourseLearningMaterial[
   });
   return {
     text: `\n\n${heading}\n${textLines.join("\n")}\n`,
-    html: `<div class="dd-panel" style="margin-top: 20px; padding: 15px; border-left: 4px solid ${BRAND_PRIMARY_COLOR}; background-color: #f3f4f6; border-radius: 8px;"><strong>${escapeHtml(heading)}</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${htmlItems.join("")}</ul></div>`,
+    html: emailPanel(
+      escapeHtml(heading),
+      `<ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${htmlItems.join("")}</ul>`,
+    ),
   };
 }
 
@@ -713,7 +803,10 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
     ? `\n\n${packingHeading}\n${packingItems.map((item) => `- ${item}`).join("\n")}\n`
     : "";
   const reminderHtml = packingItems.length
-    ? `<div class="dd-panel" style="margin-top: 20px; padding: 15px; border-left: 4px solid ${BRAND_PRIMARY_COLOR}; background-color: #f3f4f6; border-radius: 8px;"><strong>${packingHeading}</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${packingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
+    ? emailPanel(
+        escapeHtml(packingHeading),
+        `<ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${packingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`,
+      )
     : "";
 
   const confirmed = t("notifications.bookingConfirmation.confirmed", {

@@ -1176,6 +1176,23 @@ export const notificationSenderSchema = z.object({
    * every real shop's send.
    */
   demoShop: z.literal(true).optional(),
+  /**
+   * The shop's logo, already resolved to an absolute `https:` URL on DiveDay's
+   * own origin or its managed storage (`shopSenderOf`), so the email can lead
+   * with the shop's mark (ux review 2026-10-11, item 3). Never a URL the shop
+   * typed: a remote image in mail is a request the recipient's client makes,
+   * and only first-party storage may be the host of it.
+   */
+  logoUrl: z
+    .url()
+    .max(2_000)
+    .refine((value) => value.startsWith("https://"))
+    .optional(),
+  /** The shop's brand colour, `#rrggbb` (`shops.brand_color`), for the wrapper's accents. */
+  brandColor: z
+    .string()
+    .regex(/^#[0-9a-f]{6}$/)
+    .optional(),
 });
 
 export type NotificationSender = z.infer<typeof notificationSenderSchema>;

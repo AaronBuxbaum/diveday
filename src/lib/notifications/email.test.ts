@@ -4,6 +4,8 @@ import {
   bookingConfirmationEmail,
   courseInquiryEmail,
   demoStartedAlertEmail,
+  emailButton,
+  emailPanel,
   founderDigestEmail,
   guardianReleaseCopyEmail,
   lastMinuteDealEmail,
@@ -51,10 +53,10 @@ describe("bookingConfirmationEmail", () => {
       ...base,
       packingList: ["Reef-safe sunscreen", "Your digital certification record or other evidence"],
     });
-    expect(email.text).toContain("Pre-Trip Checklist Reminder:");
+    expect(email.text).toContain("Bring\n- Reef-safe sunscreen");
     expect(email.text).toContain("Reef-safe sunscreen");
     expect(email.text).toContain("digital certification record");
-    expect(email.html).toContain("Pre-Trip Checklist Reminder:");
+    expect(email.html).toContain("<strong>Bring</strong>");
     expect(email.html).toContain("Reef-safe sunscreen");
     // The one tinted panel in any template: without the class the wrapper's
     // dark rules cannot reach it, and its light fill stays put in a dark inbox.
@@ -63,8 +65,8 @@ describe("bookingConfirmationEmail", () => {
 
   it("omits the checklist entirely when the shop has no packing list (no empty box)", () => {
     const email = bookingConfirmationEmail(base);
-    expect(email.text).not.toContain("Pre-Trip Checklist Reminder:");
-    expect(email.html).not.toContain("Pre-Trip Checklist Reminder:");
+    expect(email.text).not.toContain("Bring");
+    expect(email.html).not.toContain("Bring");
   });
 });
 
@@ -188,7 +190,10 @@ describe("tripInvitationEmail", () => {
     expect(email.text).toContain("https://diveday.example/s/blue-mantis/trips/trip-1");
     expect(email.html).toContain('href="https://diveday.example/s/blue-mantis/trips/trip-1"');
     expect(email.html).toContain("&lt;Reef &quot;Special&quot;&gt;");
-    expect(email.html).toContain("Blue Mantis &amp; Co.");
+    // The shop speaks in the first person (ux review 2026-10-11, item 9); its
+    // name rides the subject and the From, never raw markup in the body.
+    expect(email.html).toContain("We’ve planned");
+    expect(email.html).not.toContain("Blue Mantis & Co.");
   });
 });
 
@@ -245,7 +250,7 @@ describe("bookingCancelledEmail", () => {
 
   it("says the shop’s policy keeps the money past the window", () => {
     const email = bookingCancelledEmail({ ...canceled, money: { story: "forfeit" } });
-    expect(email.text).toContain("Blue Mantis’s free-cancellation window closed");
+    expect(email.text).toContain("our free-cancellation window closed");
     expect(email.text).toContain("nothing is refunded");
   });
 
@@ -255,8 +260,8 @@ describe("bookingCancelledEmail", () => {
       cancelledBy: "shop",
       money: { story: "shop_will_follow_up" },
     });
-    expect(email.text).toContain("Blue Mantis has canceled your booking");
-    expect(email.text).toContain("Blue Mantis will be in touch about what you paid");
+    expect(email.text).toContain("We’ve canceled your booking");
+    expect(email.text).toContain("We’ll be in touch about what you paid");
   });
 
   it("says nothing about money to a diver who never paid", () => {
@@ -273,7 +278,7 @@ describe("bookingCancelledEmail", () => {
       money: { story: "forfeit" },
     });
     expect(email.html).toContain("&lt;b&gt;Reef&lt;/b&gt;");
-    expect(email.html).toContain("Fish &amp; Co");
+    expect(email.html).not.toContain("Fish & Co");
   });
 
   it("writes the amount in the diver's own locale", () => {
@@ -329,7 +334,7 @@ describe("tripBlowoutEmail", () => {
       scheduleUrl: "https://diveday.example/s/blue-mantis",
     });
     expect(email.text).toContain("owed a full refund");
-    expect(email.text).toContain("Blue Mantis");
+    expect(email.text).toContain("we’ll be in touch");
   });
 
   it("degrades gracefully to the schedule when no alternative qualifies", () => {
@@ -450,7 +455,7 @@ describe("tripReminderEmail", () => {
     expect(email.text).toContain("Conditions: Warm and glassy");
     expect(email.text).toContain("- Swimsuit and towel");
     expect(email.text).toContain("Aim to be at the dock by");
-    expect(email.text).toContain("Text the shop at +13055551234");
+    expect(email.text).toContain("Text us at +13055551234");
     expect(email.text).toContain("First boat dive?");
     expect(email.html).toContain("<li>Logbook</li>");
   });
@@ -527,7 +532,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
     expect(afterDive.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: 24 hours after your last dive with us, following DAN’s guidance.",
+      "We ask you to wait at least until Sunday\u00A010:10\u00A0AM before flying: 24 hours after your last dive with us, following DAN’s guidance.",
     );
     expect(afterDive.html).toContain("wait at least until Sunday\u00A010:10\u00A0AM before flying");
 
@@ -543,7 +548,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "dives_recorded" },
     });
     expect(spanish.text).toContain(
-      "Blue Mantis te pide esperar al menos hasta el domingo, 10:10 antes de volar: 24 horas después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
+      "Te pedimos esperar al menos hasta el domingo, 10:10 antes de volar: 24 horas después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
     );
   });
 
@@ -562,7 +567,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "last_dive", reason: "earlier_day" },
     });
     expect(afterDive.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: our records show another dive day in the last two days, so 24 hours after your last dive with us, following DAN’s guidance.",
+      "We ask you to wait at least until Sunday\u00A010:10\u00A0AM before flying: our records show another dive day in the last two days, so 24 hours after your last dive with us, following DAN’s guidance.",
     );
 
     const afterReturn = tripRecapEmail({
@@ -570,7 +575,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "earlier_day" },
     });
     expect(afterReturn.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: our records show another dive day in the last two days, so 24 hours after the day was due to end, following DAN’s guidance.",
+      "We ask you to wait at least until Sunday\u00A010:10\u00A0AM before flying: our records show another dive day in the last two days, so 24 hours after the day was due to end, following DAN’s guidance.",
     );
 
     const spanish = tripRecapEmail({
@@ -598,7 +603,7 @@ describe("tripRecapEmail", () => {
       flySafe: { from, hours: 24, anchor: "scheduled_return", reason: "dives_planned" },
     });
     expect(planned.text).toContain(
-      "Blue Mantis asks you to wait at least until Sunday\u00A010:10\u00A0AM before flying: we planned more than one dive, so 24 hours after the day was due to end, following DAN’s guidance.",
+      "We ask you to wait at least until Sunday\u00A010:10\u00A0AM before flying: we planned more than one dive, so 24 hours after the day was due to end, following DAN’s guidance.",
     );
     // It may not claim the dive it cannot see: the crew logged at most one.
     expect(planned.text).not.toContain("your last dive with us");
@@ -964,7 +969,7 @@ describe("wrapEmailHtml", () => {
     expect(html).toContain("<p>Hello</p>");
   });
 
-  it("renders the shop name as a text header, escaped, never a logo image", () => {
+  it("renders the shop name as a text header, escaped, with no image when DiveDay is the voice", () => {
     const html = wrapEmailHtml("<p>Body</p>", {
       shopName: "Sal & Sons <Diving>",
       locale: "en-US",
@@ -1015,6 +1020,72 @@ describe("wrapEmailHtml", () => {
     expect(body).toContain("background-color: #f4f6f4");
     expect(body).toContain("color: #16232c");
     expect(body).toContain("#0b6e8a");
+  });
+
+  // ux review 2026-10-11, item 3: mail sent as the shop wears the shop.
+  describe("sent as the shop", () => {
+    const brand = {
+      logoUrl: "https://media.dive.day/logos/blue-mantis.png",
+      color: "#158462",
+      credit: "Bookings by DiveDay",
+    };
+
+    it("leads with the shop's logo beside its name, never instead of it", () => {
+      const html = wrapEmailHtml("<p>Body</p>", {
+        shopName: "Sal & Sons",
+        locale: "en-US",
+        brand,
+      });
+      const header = html.slice(html.indexOf('class="dd-card"'), html.indexOf("<p>Body</p>"));
+      // The image carries no words of its own: a client that blocks images
+      // shows the name beside it and nothing broken.
+      expect(header).toContain('<img src="https://media.dive.day/logos/blue-mantis.png" alt=""');
+      expect(header).toContain("Sal &amp; Sons");
+      // DiveDay's mark is not the headline any more.
+      expect(header).not.toContain("#ff6b6b");
+    });
+
+    it("keeps the shop's name as the header when it has no logo", () => {
+      const html = wrapEmailHtml("<p>Body</p>", {
+        shopName: "Blue Mantis",
+        locale: "en-US",
+        brand: { credit: brand.credit },
+      });
+      expect(html).not.toContain("<img");
+      expect(html).toContain("Blue Mantis");
+    });
+
+    it("puts DiveDay at the foot as a credit, after the shop's card", () => {
+      const html = wrapEmailHtml("<p>Body</p>", {
+        shopName: "Blue Mantis",
+        locale: "en-US",
+        brand,
+      });
+      const credit = html.indexOf("Bookings by DiveDay");
+      expect(credit).toBeGreaterThan(html.indexOf("<p>Body</p>"));
+      expect(html.slice(credit - 2_000, credit)).toContain("#ff6b6b");
+    });
+
+    it("wears the shop's colour, moved until it reads, on buttons, panels and links", () => {
+      const body = `${emailButton("https://dive.day/ready/x", "Open")}${emailPanel("Bring", "<ul><li>Mask</li></ul>")}`;
+      const html = wrapEmailHtml(body, { shopName: "Blue Mantis", locale: "en-US", brand });
+      const card = html.slice(html.indexOf('class="dd-card"'), html.indexOf("Bookings by DiveDay"));
+      const shopCard = card.slice(0, card.lastIndexOf("<table"));
+      expect(shopCard).not.toContain("#0b6e8a");
+      // The seeded green fails 4.5:1 on white as it stands, so it is darkened
+      // exactly as the storefront darkens it.
+      expect(card).toContain("background-color: #13795a");
+      expect(html).toContain("a{color:#13795a;}");
+    });
+
+    it("recolours only what the template drew, never the shop's or a diver's words", () => {
+      const html = wrapEmailHtml("<p>Ask for #0b6e8a at the desk</p>", {
+        shopName: "Blue Mantis",
+        locale: "en-US",
+        brand,
+      });
+      expect(html).toContain("<p>Ask for #0b6e8a at the desk</p>");
+    });
   });
 
   // Issue #770: an inline <svg> mark is stripped outright by Outlook's Word

@@ -2607,29 +2607,29 @@
     "switchToAria": "Cambiar a {role}",
     "roles": {
       "owner": {
-        "title": "Administrador / Propietario",
-        "desc": "Control total del negocio. Crea viajes, gestiona al personal y consulta los informes operativos.",
-        "tryThis": "Revisa el panel de Informes o programa un viaje."
+        "title": "Propietario",
+        "desc": "Estás al mando de todo el centro. Hoy es tu cola de trabajo: reservas, bloqueos y las salidas de hoy en un solo lugar.",
+        "tryThis": "Abre Agenda para ver las salidas de esta semana."
       },
       "instructor": {
         "title": "Instructor",
-        "desc": "Asignado a impartir cursos, y se asegura de que cada estudiante esté certificado para lo que va a bucear a continuación.",
-        "tryThis": "Abre un viaje de curso Discover Scuba para ver las asignaciones de personal."
+        "desc": "Estás enseñando y certificando buceadores. Buceadores guarda los registros de certificación y el historial de especialidades de cada uno.",
+        "tryThis": "Abre Buceadores para revisar un registro de certificación antes de clase."
       },
       "divemaster": {
         "title": "Divemaster",
-        "desc": "Guía a los buceadores, verifica el papeleo de exenciones y mantiene al día el ajuste del equipo de alquiler.",
-        "tryThis": "Revisa Exenciones, o abre la lista de preparación de un viaje para ver qué preparar."
+        "desc": "Estás preparando a los buceadores para embarcar. Hoy enumera a todos los buceadores que aún no pueden embarcar, con el único toque que resuelve cada caso.",
+        "tryThis": "Abre Hoy para ver quién todavía necesita preparación."
       },
       "captain": {
         "title": "Capitán",
-        "desc": "Lleva el barco: embarque, el manifiesto y el pase de lista final antes de zarpar.",
-        "tryThis": "Abre el manifiesto de un próximo viaje y haz el pase de lista de pasajeros."
+        "desc": "Estás dirigiendo el barco. El manifiesto es tu pase de embarque y lista de pasajeros, pensado para manos mojadas y señal débil.",
+        "tryThis": "Abre el manifiesto de hoy para ver quién va en el barco."
       },
       "diver": {
         "title": "Buceador",
-        "desc": "Lo que ven tus clientes: reservar un viaje, firmar la exención, pedir equipo de alquiler.",
-        "tryThis": "Elige un viaje en el horario y reserva una plaza."
+        "desc": "Estás reservando una inmersión. Esto es lo que ven los buceadores del centro: la agenda, la reserva, la exención.",
+        "tryThis": "Elige una salida en la agenda y reserva una plaza."
       }
     }
   },
@@ -4018,7 +4018,7 @@
       "firstTimer": "¿Tu primera inmersión en barco? El equipo te explica todo el material y el plan antes de entrar al agua, así que nunca te dejarán con el equipo sin más indicaciones. Ven con tus preguntas.",
       "conditionsLabel": "Condiciones:",
       "bringLabel": "Qué traer:",
-      "whoToText": "¿Preguntas para el día? Escribe al centro al {phone}."
+      "whoToText": "¿Preguntas para el día? Escríbenos al {phone}."
     },
     "reminderAction": {
       "waiverPending": "Firma tu waiver",
@@ -4037,14 +4037,14 @@
       "confirmCancel": "{tripTitle}, {date} a las {time}. Responde {code} en la próxima media hora para dejar tu plaza. Todavía no ha cambiado nada.",
       "cancelled": "Tu plaza en {tripTitle}, {date}, queda cancelada.",
       "refundOnItsWay": "Tu reembolso ya va en camino.",
-      "cancelRefused": "No se pudo liberar esa plaza. {shopName} se ocupa de esto.",
-      "codeMismatch": "Ese código no coincide, así que no ha cambiado nada. {shopName} se ocupa de esto.",
-      "nothingToCancel": "No encontramos ninguna plaza que cancelar. {shopName} se ocupa de esto.",
-      "ambiguous": "Tienes más de una salida reservada. {shopName} se ocupa de esto para dar de baja la correcta.",
-      "moveHandoff": "{shopName} te escribe sobre el cambio de tu plaza.",
+      "cancelRefused": "No se pudo liberar esa plaza. Nosotros nos ocupamos.",
+      "codeMismatch": "Ese código no coincide, así que no ha cambiado nada. Nosotros nos ocupamos.",
+      "nothingToCancel": "No encontramos ninguna plaza que cancelar. Nosotros nos ocupamos.",
+      "ambiguous": "Tienes más de una salida reservada. Nosotros nos ocupamos para dar de baja la correcta.",
+      "moveHandoff": "Te escribimos sobre el cambio de tu plaza.",
       "lateOffer": "¿Llegas tarde? Responde TARDE.",
-      "lateNoted": "Gracias. {shopName} ya sabe que llegas tarde.",
-      "lateNothing": "No encontramos ninguna salida tuya en el próximo día, así que no se marcó nada. Tu mensaje le llega a {shopName}."
+      "lateNoted": "Gracias. Ya sabemos que llegas tarde.",
+      "lateNothing": "No encontramos ninguna salida tuya en el próximo día, así que no se marcó nada. Tu mensaje nos llegó."
     },
     "common": {
       "greeting": "Hola, {firstName}:",
@@ -4059,34 +4059,34 @@
     },
     "tripConditionsHold": {
       "subject": "Salida en espera por condiciones — {tripTitle}",
-      "body": "{shopName} ha puesto {tripTitle} en espera por condiciones para el {date}. Tu plaza sigue reservada mientras el equipo toma la decisión final sobre el tiempo.",
+      "body": "Pusimos {tripTitle} en espera por condiciones para el {date}. Tu plaza sigue reservada mientras el equipo toma la decisión final sobre el tiempo.",
       "crewNoteLabel": "Nota del equipo:",
       "seeUpdate": "Consulta la actualización en directo de la salida"
     },
     "tripMinimumNotMet": {
       "subject": "Salida cancelada — {tripTitle}",
-      "body": "{shopName} realiza {tripTitle} el {date} con un mínimo de {minimum, plural, one {# buceador} other {# buceadores}}, y tenía {booked, plural, one {# reserva} other {# reservas}} cuando dijeron que lo decidirían, así que se cancela. Tu plaza queda liberada y no tienes que hacer nada.",
+      "body": "Realizamos {tripTitle} el {date} con un mínimo de {minimum, plural, one {# buceador} other {# buceadores}}, y tenía {booked, plural, one {# reserva} other {# reservas}} cuando dijimos que lo decidiríamos, así que se cancela. Tu plaza queda liberada y no tienes que hacer nada.",
       "moneyRefunded": "Te hemos reembolsado el importe completo: el dinero va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
-      "moneyRefundOwed": "Te corresponde el reembolso completo, y {shopName} se pondrá en contacto contigo para devolvértelo.",
+      "moneyRefundOwed": "Te corresponde el reembolso completo, y nos pondremos en contacto contigo para devolvértelo.",
       "findAnother": "Ver qué más hay programado"
     },
     "bookingCancelled": {
       "subject": "Reserva cancelada: {tripTitle}",
       "bodyByDiver": "Tu reserva para {tripTitle} el {date} está cancelada y tu plaza queda liberada.",
-      "bodyByShop": "{shopName} ha cancelado tu reserva para {tripTitle} el {date} y tu plaza queda liberada.",
+      "bodyByShop": "Cancelamos tu reserva para {tripTitle} el {date} y tu plaza queda liberada.",
       "moneyRefunded": "{amount} va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
-      "moneyForfeit": "Se canceló después de que cerrara el plazo de cancelación gratuita de {shopName}, así que según su política no se reembolsa nada.",
-      "moneyFollowUp": "{shopName} se pondrá en contacto contigo sobre lo que pagaste.",
+      "moneyForfeit": "Se canceló después de que cerrara nuestro plazo de cancelación gratuita, así que según nuestra política no se reembolsa nada.",
+      "moneyFollowUp": "Nos pondremos en contacto contigo sobre lo que pagaste.",
       "findAnother": "Ver qué más hay programado"
     },
     "tripBlowout": {
       "subject": "Salida cancelada — {tripTitle}",
-      "body": "{shopName} ha tenido que cancelar {tripTitle} del {date} por el mal tiempo. Tu plaza queda liberada y no necesitas hacer nada.",
+      "body": "Tuvimos que cancelar {tripTitle} del {date} por el mal tiempo. Tu plaza queda liberada y no necesitas hacer nada.",
       "moneyNone": "No se te ha cobrado nada por esta salida.",
-      "moneyDeposit": "Tu depósito está a salvo: {shopName} se pondrá en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
-      "moneyPaid": "Tu pago está a salvo: {shopName} se pondrá en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
+      "moneyDeposit": "Tu depósito está a salvo: nos pondremos en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
+      "moneyPaid": "Tu pago está a salvo: nos pondremos en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
       "moneyRefunded": "Te hemos reembolsado el importe completo: el dinero va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
-      "moneyRefundOwed": "Te corresponde el reembolso completo, y {shopName} se pondrá en contacto contigo para devolvértelo.",
+      "moneyRefundOwed": "Te corresponde el reembolso completo, y nos pondremos en contacto contigo para devolvértelo.",
       "alternativesIntro": "¿Quieres volver al agua? Estas salidas próximas ya cumplen con tus certificaciones:",
       "alternativeLine": "{title} — {when}",
       "noAlternatives": "Ninguna de las próximas salidas coincide con tus certificaciones por ahora, pero se añaden salidas nuevas constantemente.",
@@ -4095,25 +4095,25 @@
     "bookingConfirmation": {
       "subject": "Estás a bordo — {tripTitle}",
       "confirmed": "Tu plaza en {tripTitle} está confirmada.",
-      "dockNote": "Preséntate en el muelle {dock} antes. {shopName} se encargará del resto.",
-      "packingHeading": "Recordatorio de la lista de equipo:"
+      "dockNote": "Preséntate en el muelle {dock} antes. Nosotros nos encargamos del resto.",
+      "packingHeading": "Trae"
     },
     "waitlistInvite": {
       "subject": "Se ha liberado una plaza en {tripTitle}",
-      "body": "Se acaba de liberar una plaza en {tripTitle} con {shopName}, y el centro te la ofrece a ti.",
+      "body": "Se acaba de liberar una plaza en {tripTitle}, y te la ofrecemos a ti.",
       "claim": "Resérvala antes de que se agote",
       "claimLink": "Reservar tu plaza",
       "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!"
     },
     "tripInvitation": {
       "subject": "Una invitación de {shopName}: {tripTitle}",
-      "body": "{shopName} ha programado {tripTitle} y quiere invitarte.",
+      "body": "Programamos {tripTitle} y queremos invitarte.",
       "note": "Esto es una invitación, no una reserva, así que todavía no hay ninguna plaza apartada.",
       "link": "Ver la salida y reservar tu plaza"
     },
     "lastMinuteDeal": {
       "subject": "{discount} de descuento en {tripTitle}: oferta de última hora",
-      "body": "{shopName} acaba de abrir un descuento de {discount} en {tripTitle}.",
+      "body": "Acabamos de abrir un descuento de {discount} en {tripTitle}.",
       "useCode": "Usa el código {code} al reservar:",
       "bookLink": "Reservar {tripTitle}",
       "expiry": "El código caduca el {expires} (salida) o cuando se agoten las plazas, lo que ocurra antes.",
@@ -4121,19 +4121,19 @@
     },
     "checkoutRecovery": {
       "subject": "¿Terminar la reserva de {tripTitle}?",
-      "body": "Tu plaza en {tripTitle} con {shopName} sigue reservada. Solo falta terminar de pagar.",
+      "body": "Tu plaza en {tripTitle} sigue reservada. Solo falta terminar de pagar.",
       "pickUp": "Continúa justo donde lo dejaste",
       "finishPaying": "Terminar de pagar"
     },
     "tripReminder": {
       "weekSubject": "Sales esta semana — {tripTitle}",
-      "weekBody": "Un recordatorio rápido de que {tripTitle} con {shopName} sale esta semana.",
+      "weekBody": "Un recordatorio rápido de que {tripTitle} sale esta semana.",
       "weekSubjectCourse": "Tu curso empieza esta semana: {tripTitle}",
-      "weekBodyCourse": "Un recordatorio rápido de que {tripTitle} con {shopName} empieza esta semana.",
+      "weekBodyCourse": "Un recordatorio rápido de que {tripTitle} empieza esta semana.",
       "dockNote": "Preséntate en el muelle {dock} antes.",
       "daySubject": "Sales mañana — {tripTitle}",
-      "dayOpenerFirstTimer": "Mañana buceas con {shopName}. Abajo tienes todo lo que necesitas para el día.",
-      "dayOpenerReturning": "Un recordatorio rápido de que {tripTitle} con {shopName} sale mañana.",
+      "dayOpenerFirstTimer": "Mañana buceas con nosotros. Abajo tienes todo lo que necesitas para el día.",
+      "dayOpenerReturning": "Un recordatorio rápido de que {tripTitle} sale mañana.",
       "arrival": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
       "hotelPickupArrival": "Tu recogida de la mañana está programada a las {time} en {location}.",
       "hotelNotSet": "tu hotel"
@@ -4147,13 +4147,13 @@
     },
     "tripRecap": {
       "subject": "Tu inmersión con {shopName} — {tripTitle}",
-      "thanks": "Gracias por bucear {tripTitle} con {shopName} el {date}.",
+      "thanks": "Gracias por bucear {tripTitle} con nosotros el {date}.",
       "dived": "Buceaste en {sites}.",
-      "flySafeAfterDive": "{shopName} te pide esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
-      "flySafeAfterDiveEarlierDay": "{shopName} te pide esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
-      "flySafeAfterReturn": "{shopName} te pide esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
-      "flySafeAfterReturnDivesPlanned": "{shopName} te pide esperar al menos hasta el {when} antes de volar: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
-      "flySafeAfterReturnEarlierDay": "{shopName} te pide esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
+      "flySafeAfterDive": "Te pedimos esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
+      "flySafeAfterDiveEarlierDay": "Te pedimos esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
+      "flySafeAfterReturn": "Te pedimos esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
+      "flySafeAfterReturnDivesPlanned": "Te pedimos esperar al menos hasta el {when} antes de volar: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
+      "flySafeAfterReturnEarlierDay": "Te pedimos esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
       "seeRecap": "Ver el resumen de tu día",
       "footer": "Si te encantó, lo mejor que puedes hacer es traer a un compañero la próxima vez. ¡Nos vemos en el agua!"
     },
@@ -4258,21 +4258,21 @@
     "waiverRequest": {
       "subject": "Completa tu waiver para {tripTitle}",
       "genericSubject": "Completa tu waiver",
-      "body": "{shopName} necesita tu waiver para {tripTitle}.",
-      "genericBody": "{shopName} necesita tu waiver.",
+      "body": "Necesitamos tu waiver para {tripTitle}.",
+      "genericBody": "Necesitamos tu waiver.",
       "completeText": "Complétalo aquí",
       "completeLink": "Completar tu waiver",
       "expiry": "Este enlace privado caduca el {expiresAt}."
     },
     "readinessLink": {
       "subject": "Tu enlace de preparación para {tripTitle}",
-      "body": "Aquí tienes un enlace nuevo con lo que te falta antes de salir con {shopName} en {tripTitle}. El anterior ha caducado.",
+      "body": "Aquí tienes un enlace nuevo con lo que te falta antes de salir con nosotros en {tripTitle}. El anterior ha caducado.",
       "openLink": "Abre tu preparación",
       "expiry": "Este enlace privado caduca el {expiresAt}."
     },
     "bookingHandoff": {
       "subject": "Reserva {tripTitle} con tus datos ya puestos",
-      "body": "Empezaste a reservar {tripTitle} con {shopName}. Abre la página desde este enlace y lo que {shopName} ya tiene de ti viene contigo: tu certificación, tu exención, tus tallas.",
+      "body": "Empezaste a reservar {tripTitle} con nosotros. Abre la página desde este enlace y lo que ya tenemos de ti viene contigo: tu certificación, tu exención, tus tallas.",
       "openLink": "Reservar con tus datos",
       "expiry": "Este enlace privado caduca {expiresAt}."
     },
