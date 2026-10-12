@@ -104,6 +104,8 @@ export type BuilderCopy = {
   noPriceSetAll: string;
   /** What a week's day with nothing on it says (slice 23f). */
   noBoats: string;
+  /** "{first} to {last}": days gone by with no boats, as one row. */
+  quietDays: string;
   /** The heading over the days somebody asked for (slice 23f). */
   asked: string;
   /** The act that answers one — the Requests page's own word for it. */

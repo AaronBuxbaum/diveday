@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { EDITOR_REVEAL_EVENT } from "./reveal-event";
 
 const HIGHLIGHT_CLASSES = ["ring-2", "ring-danger", "rounded-lg"];
 const HIGHLIGHT_MS = 3_000;
@@ -34,6 +35,9 @@ export function FieldErrorFocus({ field, scope }: { field?: string; scope?: stri
     const el = field ? document.getElementById(field) : root.querySelector('[aria-invalid="true"]');
     if (!(el instanceof HTMLElement)) return;
 
+    // A long editor folds its sections on a phone; the one holding this field
+    // opens before the scroll and the focus land on it.
+    el.dispatchEvent(new Event(EDITOR_REVEAL_EVENT, { bubbles: true }));
     el.scrollIntoView({ behavior: "smooth", block: "center" });
     // A hidden field (a JSON payload behind a rich editor) has no natural tab
     // stop, but its container still needs a programmatic one to be focusable

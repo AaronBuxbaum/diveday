@@ -324,7 +324,6 @@
       "listLoadError": "Este dispositivo no pudo abrir sus manifiestos guardados. Guarda una copia nueva mientras tengas señal.",
       "singleLoadError": "Este dispositivo no pudo abrir su manifiesto guardado. Guarda una copia nueva mientras tengas señal.",
       "savedCount": "{count, plural, one {# manifiesto guardado} other {# manifiestos guardados}} en este dispositivo.",
-      "noneSavedYet": "Todavía no hay nada guardado en este dispositivo.",
       "listPendingRejected": "{count, plural, one {# cambio necesita revisión. Abre esa salida para resolverlo.} other {# cambios necesitan revisión. Abre esa salida para resolverlo.}}",
       "listAllCaughtUp": "Todo enviado en estas salidas.",
       "ready": "El manifiesto guardado en este dispositivo está listo.",
@@ -333,10 +332,10 @@
     "list": {
       "eyebrow": "Manifiestos sin conexión",
       "headingWithTrips": "Guardado en este dispositivo",
-      "headingEmpty": "Todavía no hay nada guardado en este dispositivo",
+      "headingEmpty": "Todavía no hay ningún manifiesto guardado en este teléfono",
       "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
       "expiredViewOnly": "Caducado — solo lectura",
-      "emptyHint": "Mientras aún tengas señal, abre cualquier página del centro: DiveDay mantiene al día la copia de los próximos dos días en este dispositivo.",
+      "emptyHint": "Abre el manifiesto de una salida mientras tengas conexión y se guarda aquí.",
       "freshnessAllCurrent": "Todas al día.",
       "freshnessNeedRefresh": "{count, plural, one {# copia necesita actualizarse.} other {# copias necesitan actualizarse.}}",
       "savedAgo": "Guardada {ago}",
@@ -475,8 +474,8 @@
   },
   "buddyTeam": {
     "with": "Pareja: {names}",
-    "separatedDock": "Alguien no está a bordo",
-    "separatedAfterDive": "Alguien sin contabilizar"
+    "separatedDock": "Compañero aún no a bordo",
+    "separatedAfterDive": "Compañero sin regresar a bordo"
   },
   "payments": {
     "connect": "Conectar pagos"
@@ -513,7 +512,10 @@
   },
   "welcomeCue": {
     "firstTrip": "primera vez con nosotros",
-    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}"
+    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}",
+    "dockLine": "Saluda a {name}: {card}.",
+    "dockLineNoCard": "Saluda a {name}.",
+    "dockLineSays": "Saluda a {name}: dice {level}."
   },
   "diveIntent": {
     "aboardToday": "Hoy a bordo: {list}",

@@ -25,15 +25,17 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
   // **Four tabs under one header** (ADR 20261001-logbook, decision 3), the
-  // Divers tab open, with the stage the departure is in as a pill in the header.
+  // Divers tab open.
   const tabs = page.getByRole("navigation", { name: "Departure" });
   // Check-in is not one of them: arrival is a state of the Divers roster once
   // a departure's arrivals open (owner, 2026-10-05).
   await expect(tabs.getByRole("link")).toHaveText(["Divers", "Boat", "Gear", "Details"]);
   await expect(tabs.getByRole("link", { name: "Divers" })).toHaveAttribute("aria-current", "page");
+  // The header's stage is the crew's own word or nothing — never a phase
+  // the clock made up (UX review 2026-10-10, item 1).
   await expect(
     page.locator("header").getByText(/^Stage: (Prep|Check-in|Aboard|Back)$/),
-  ).toBeVisible();
+  ).toHaveCount(0);
 
   // **The packing list is the Gear tab**, not the bottom of the roster.
   await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toHaveCount(0);

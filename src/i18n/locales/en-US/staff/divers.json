@@ -193,7 +193,8 @@
   "remove": {
     "removePersonSummary": "Delete {name}",
     "removing": "Deleting…",
-    "removeDiver": "Delete diver"
+    "removeDiver": "Delete diver",
+    "consequence": "Takes {name} off the roster, the booking pickers, manifests, and trip prep. Their waivers, trips, and payments stay on file, and you can restore them."
   },
   "removed": {
     "badge": "Deleted",
@@ -506,7 +507,17 @@
     "heading": "The story",
     "empty": "No visits yet.",
     "sailed": "sailed",
-    "waiverSigned": "waiver signed",
+    "dived": "dived",
+    "stayedAshore": "stayed ashore",
+    "didNotDive": "did not dive",
+    "joinedLater": "joined later",
+    "firstDive": "first dive with us",
+    "rented": "rented {items}",
+    "rated": "rated it {rating} of 5",
+    "canceled": "canceled",
+    "tripCalledOff": "trip called off",
+    "noShow": "no-show",
+    "notCountedBack": "not counted back aboard",
     "showAll": "Show all {count}",
     "newInvoice": "New invoice"
   },
@@ -529,7 +540,8 @@
     "viewRefusedRecord": "View signed record",
     "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file. Record one, or ask.",
     "viewReferralRecord": "View the referral",
-    "openClearanceDocument": "Open the physician’s evaluation"
+    "openClearanceDocument": "Open the physician’s evaluation",
+    "openSignedRecord": "Open the signed waiver"
   },
   "details": {
     "label": "Contact details",

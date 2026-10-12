@@ -265,9 +265,17 @@ export function WaiverGroup({
       notCleared ||
       status,
   );
+  // **The signed release opens onto its own record** (UX review 2026-10-10,
+  // item 27): a plain "Signed" row was the one row in the file with no arrow
+  // and no way to the document a claims adjuster asks for.
+  const signedRecordHref =
+    diver.waiver.state === "current" && diver.waiver.recordId
+      ? shopPath(shopSlug, "divers", personId, "waivers", diver.waiver.recordId)
+      : undefined;
   return (
     <DiverFileGroupDisclosure
       id="waiver"
+      href={hasWork ? undefined : signedRecordHref}
       label={t("divers.stats.waiver")}
       summary={waiverSummary(
         diver,
@@ -329,6 +337,16 @@ export function WaiverGroup({
               detail={waiverDetail(diver, t, locale, timezone)}
             />
           )}
+          {signedRecordHref ? (
+            <p className="px-5 pb-3 sm:px-6">
+              <Link
+                href={signedRecordHref}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              >
+                {t("divers.waiver.openSignedRecord")}
+              </Link>
+            </p>
+          ) : null}
           {earlierRefusal ? (
             <p className="flex flex-wrap items-baseline gap-x-4 px-5 pb-3 text-sm font-medium text-warning-strong sm:px-6">
               <span>

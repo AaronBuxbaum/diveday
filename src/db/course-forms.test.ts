@@ -27,7 +27,12 @@ import {
   setCourseFormRequirements,
   signCourseForm,
 } from "./course-forms";
-import { getCourseBySlug, pullCourseTemplateUpdates } from "./courses";
+import {
+  coursesAwaitingFormText,
+  getCourseBySlug,
+  pagedCourses,
+  pullCourseTemplateUpdates,
+} from "./courses";
 import { getDiverMergePreview, mergeDiverRecords } from "./diver-merge";
 import { loadDiverExportBundleInput, loadShopExportBundleInput } from "./export";
 import { getBookingReadiness } from "./readiness";
@@ -125,6 +130,24 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     }
     const awaiting = await courseFormsAwaitingTextByCourse(db, shop.id, [openWater.id]);
     expect(awaiting.get(openWater.id)?.map((form) => form.formId)).toEqual(required);
+  });
+
+  it("lists the roster's courses still waiting on their wording once, shop-wide, in roster order", async () => {
+    const { db, shop } = fileCtx;
+    const awaiting = await coursesAwaitingFormText(db, shop.id);
+    const { courses: roster } = await pagedCourses(db, shop.id, { limit: 1000 });
+    const byCourse = await courseFormsAwaitingTextByCourse(
+      db,
+      shop.id,
+      roster.map((course) => course.id),
+    );
+    // Every course with a form awaiting text, past the first page of the
+    // roster too, and in exactly the order the roster draws them.
+    expect(awaiting.map((course) => course.id)).toEqual(
+      roster.filter((course) => byCourse.has(course.id)).map((course) => course.id),
+    );
+    expect(awaiting.length).toBeGreaterThan(1);
+    expect(awaiting.map((course) => course.slug)).toContain("open-water-diver");
   });
 
   it("blocks no one, sends nothing and refuses a signature until the shop pastes the text in", async () => {

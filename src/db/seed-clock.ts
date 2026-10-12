@@ -1,6 +1,6 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { DAY_MS, nowDate, nowMs } from "@/lib/clock";
-import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 /**
  * The seed's clock.
@@ -102,6 +102,16 @@ export function hoursFromNow(hours: number, from = nowDate()): Date {
 /** The earliest local hour today's seeded departure leaves: after the dawn boat docks. */
 export const DEMO_DAY_FIRST_SAILING_HOUR = 9;
 
+/**
+ * The first-light boat's local wall times (`DEMO_COMPLETED_TRIP_TITLE`,
+ * `seed-more-trips.ts`), named once so the crew's shift (`demoTodayShifts`)
+ * and the boat cannot drift apart.
+ */
+export const DEMO_DAWN_BOAT = {
+  sails: { hour: 5, minute: 30 },
+  docks: { hour: 8, minute: 30 },
+} as const;
+
 export function demoTodayDepartureStart(
   now = nowDate(),
   timeZone: string = DEMO_SHOP_TIMEZONE,
@@ -129,4 +139,64 @@ export function demoTodayDepartureStart(
   const wall = utcToWallTime(now, timeZone);
   const midnight = wallTimeToUtc({ ...wall, day: wall.day + 1, hour: 0, minute: 0 }, timeZone);
   return new Date(Math.min(now.getTime() + 60 * 1000, midnight.getTime() - 1000));
+}
+
+/** How long today's seeded departure runs, dock to dock (`seed-trips.ts`). */
+export const DEMO_TODAY_DEPARTURE_MS = 3.5 * 60 * 60 * 1000;
+
+/**
+ * **The one shift every member of the demo cast works today**, on the boat's
+ * own local day: an hour before today's departure sails until an hour after it
+ * is back, and never past the shop's midnight. It used to be a flat twelve
+ * hours from an hour before sailing, so an evening boat put every shift at
+ * "5:30 PM – 5:30 AM" (UX review 2026-10-10, item 4).
+ */
+export function demoTodayShift(
+  now = nowDate(),
+  timeZone: string = DEMO_SHOP_TIMEZONE,
+): { startsAt: Date; endsAt: Date } {
+  const hour = 60 * 60 * 1000;
+  const sails = demoTodayDepartureStart(now, timeZone);
+  const startsAt = new Date(sails.getTime() - hour);
+  const dayEnds = shopDayBounds(sails, timeZone).to;
+  const endsAt = new Date(
+    Math.min(sails.getTime() + DEMO_TODAY_DEPARTURE_MS + hour, dayEnds.getTime()),
+  );
+  return { startsAt, endsAt };
+}
+
+/**
+ * **Every shift one member of the demo cast works today.** Everyone gets the
+ * shift around today's departure (`demoTodayShift`). The dawn boat's crew
+ * (`dawnCrew`: the captain, the divemaster and the assistant who crew it) also
+ * work from an hour before it sails to an hour after it docks, 4:30 to 9:30;
+ * the shared shift never starts before 8:00, so without this the staffing week
+ * flagged the demo's own crew on a boat they were not rostered for
+ * (dive-domain review of the demo layer). Where the two touch or overlap they
+ * are one shift, because nobody clocks out at 8:00 to clock back in at 8:00.
+ */
+export function demoTodayShifts(
+  now = nowDate(),
+  timeZone: string = DEMO_SHOP_TIMEZONE,
+  { dawnCrew }: { dawnCrew: boolean },
+): { startsAt: Date; endsAt: Date }[] {
+  const shared = demoTodayShift(now, timeZone);
+  if (!dawnCrew) return [shared];
+  const hour = 60 * 60 * 1000;
+  const day = utcToWallTime(demoTodayDepartureStart(now, timeZone), timeZone);
+  const dawn = {
+    startsAt: new Date(
+      wallTimeToUtc({ ...day, ...DEMO_DAWN_BOAT.sails }, timeZone).getTime() - hour,
+    ),
+    endsAt: new Date(wallTimeToUtc({ ...day, ...DEMO_DAWN_BOAT.docks }, timeZone).getTime() + hour),
+  };
+  if (shared.startsAt.getTime() <= dawn.endsAt.getTime()) {
+    return [
+      {
+        startsAt: dawn.startsAt,
+        endsAt: new Date(Math.max(dawn.endsAt.getTime(), shared.endsAt.getTime())),
+      },
+    ];
+  }
+  return [dawn, shared];
 }

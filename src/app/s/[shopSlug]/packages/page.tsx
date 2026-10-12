@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listPackagesOnSale } from "@/db/dive-packages";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -10,7 +13,7 @@ import { requestTranslator } from "@/i18n/request";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatMoneyScanned } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { publicPackagesPath } from "@/lib/public-routes";
+import { publicPackagesPath, publicSchedulePath } from "@/lib/public-routes";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { type PackageOffer, PackagePurchaseForm } from "./_components/PackagePurchaseForm";
 
@@ -40,9 +43,10 @@ export async function generateMetadata({
 /**
  * The shop's prepaid dive packages, bought online (ADR
  * 20260822-a-package-is-entitlements-not-money). Reached from the public nav,
- * which offers the tab only while something here is on sale; a shop with
- * nothing on sale has no page at all, so the URL is a 404 rather than an empty
- * shelf.
+ * which offers the tab only while something here is on sale. A shop with
+ * nothing on sale still answers the URL, with a quiet line and a door to the
+ * schedule: a link a diver was sent, or a package that just sold out, used to
+ * land on a 404 (UX review 2026-10-10, item 18).
  */
 export default async function PublicPackagesPage({
   params,
@@ -55,9 +59,26 @@ export default async function PublicPackagesPage({
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
   const packages = await listPackagesOnSale(db, shop.id);
-  if (packages.length === 0) notFound();
 
   const { locale, t } = await requestTranslator(shop.defaultLocale);
+  if (packages.length === 0) {
+    return (
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        <ShopPageHeader title={t("packages.title")} />
+        <EmptyState
+          title={t("packages.none")}
+          action={
+            <Link
+              href={publicSchedulePath(shop.slug)}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("common.backToSchedule")}
+            </Link>
+          }
+        />
+      </main>
+    );
+  }
   const currency = toShopCurrency(shop.currency);
   const money = (cents: number) => formatMoneyScanned(cents, currency, locale);
   const offers: PackageOffer[] = packages.map((pkg) => ({

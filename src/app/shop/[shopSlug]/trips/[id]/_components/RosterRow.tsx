@@ -28,6 +28,11 @@ export type RosterRowContext = {
   rows: RosterRows;
   actions: RosterActions;
   arrival: RosterArrival | undefined;
+  /**
+   * The departure is finished and this ledger is its record (UX review
+   * 2026-10-10, item 10): the row says who, never what is left to do.
+   */
+  record: boolean;
   /** Depth sentences much of the boat shares, said once in the group band. */
   sharedAdvisoryTexts: ReadonlySet<string>;
   waiverControls: WaiverControls;
@@ -93,6 +98,7 @@ export function RosterRow({
     outstanding,
     hasWork,
     reference,
+    record,
   } = s7;
   const badgeCluster =
     headerBadges.length > 0 ? (
@@ -162,10 +168,10 @@ export function RosterRow({
           diver; AutoOpenDetails opens on the hash, so the fold can never
           swallow what a link promised, and `holdOpen` keeps open the row a
           form on it just answered. */}
-      {reasonList}
-      {arrival ? null : identityContact}
-      {identityCheck}
-      {reEntryNote}
+      {record ? null : reasonList}
+      {arrival || record ? null : identityContact}
+      {record ? null : identityCheck}
+      {record ? null : reEntryNote}
       {arrivalBelow}
       <AutoOpenDetails openOnHash={`booking-${booking.id}`} open={holdOpen} className="group">
         {markSummary}
@@ -176,7 +182,7 @@ export function RosterRow({
             the seat still needs, then what is true about it, then notes,
             then the seat's own actions, each a band of its own. */}
         <div className="mb-3 rounded-lg border border-border bg-surface-sunken/50 p-4 sm:p-5">
-          {hasWork ? (
+          {hasWork && !record ? (
             <div className="mb-4 border-b border-border pb-4 [&>*:first-child]:mt-0">
               {outstanding}
             </div>

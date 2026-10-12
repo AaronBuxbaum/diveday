@@ -111,10 +111,15 @@ export const pieceDetail = (t: StaffTranslator, piece: PrepPiece) => {
     );
   }
   if (piece.size) return piece.size;
-  // An item that should have had a size and doesn't says so; one with no
-  // size to record has nothing to say, because those are different problems.
+  // An item that should have had a size and doesn't says so, on the piece
+  // itself and in the warning ink, since the packer cannot pull it yet (UX
+  // review 2026-10-10, item 26: this mark replaced a sentence above the list
+  // saying the list was short). One with no size to record has nothing to
+  // say, because those are different problems.
   return UNSIZED_ITEM_KINDS.includes(piece.kind) ? null : (
-    <span className="text-muted">{t("tripPrep.notRecorded")}</span>
+    <span className="font-medium text-warning-strong" data-size-missing="">
+      {t("tripPrep.sizeMissing")}
+    </span>
   );
 };
 /**
@@ -169,12 +174,22 @@ export const sizeCell = (t: StaffTranslator, piece: PrepPiece) => {
 
 /**
  * One kit line: the piece on the left, what it resolves to — a tagged unit
- * or the picker for one — on the right. Stacked on a phone, two columns from
- * `sm` up, so a diver's pieces line up down the row rather than each finding
- * its own indent.
+ * or the picker for one — on the right, on one line at every width (UX review
+ * 2026-10-10, item 13: stacked on a phone, a five-piece diver was ten lines
+ * and a page of them ran to 7,000px). A diver's pieces line up down the row
+ * rather than each finding its own indent.
  */
 export const kitLineClass =
-  "grid gap-x-3 gap-y-1 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-baseline";
+  "grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-x-3";
+
+/**
+ * **A packing line on a phone: one row, three facts** (UX review 2026-10-10,
+ * item 13) — the piece and its size in a fixed column, who it is for in the
+ * middle where a long list may wrap, and the count at the end. The first
+ * column is fixed so every name list starts at one x down the card.
+ */
+export const KIT_PHONE_ROW_CLASS =
+  "grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-2.5 text-sm";
 
 /**
  * **A diver's name that stands on a line of its own, as the way into their

@@ -388,7 +388,7 @@ describe("OfflineManifestView — the empty panels sit on the panel rung", () =>
     searchParams = new URLSearchParams();
     vi.mocked(listOfflineManifests).mockResolvedValue([]);
     render(<OfflineManifestView />);
-    const hint = await screen.findByText(/open any shop page/);
+    const hint = await screen.findByText(/kept here/);
     expect(hint.parentElement).toHaveClass("rounded-panel");
     expect(hint.parentElement).not.toHaveClass("rounded-3xl");
   });
