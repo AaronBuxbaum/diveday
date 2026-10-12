@@ -78,10 +78,13 @@ describe("the schedule's pager row", () => {
  */
 describe("the off-season ask's heading", () => {
   it("is handed the rung the page's other section heads use", () => {
-    const start = positionOf("<DateRequestForm");
-    const end = SOURCE.indexOf("/>", start);
-    const call = SOURCE.slice(start, end);
+    // The promoted ask lives in its own component (`PromotedDateAsk`), which
+    // draws the page's one open `DateRequestForm`.
+    const ask = readFileSync(join(__dirname, "_components", "PromotedDateAsk.tsx"), "utf8");
+    const start = ask.indexOf("<DateRequestForm");
+    const call = ask.slice(start, ask.indexOf("/>", start));
     expect(call).toContain("headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}");
+    expect(call).toContain("className={className}");
     expect(SOURCE).toContain(
       '<h2 id="boats-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>',
     );
@@ -140,7 +143,7 @@ describe("the storefront's section rhythm", () => {
     }
     // The sections a component draws take the gap as a prop. The first JSX
     // call of each (a comment may name the component before it does).
-    for (const component of ["<DateRequestForm\n", "<CoursesShelf\n", "<ShopReviews\n"]) {
+    for (const component of ["<PromotedDateAsk\n", "<CoursesShelf\n", "<ShopReviews\n"]) {
       const start = positionOf(component);
       const call = SOURCE.slice(start, SOURCE.indexOf("/>", start));
       expect(call, component).toContain("className={SECTION_GAP}");
@@ -172,5 +175,16 @@ describe("the boats grid", () => {
       new Set((classes ?? "").split(/\s+/).filter((token) => token !== "grid-cols-1"));
     expect(shelfGrid).toBeDefined();
     expect(tokens(boatsGrid)).toEqual(tokens(shelfGrid));
+  });
+});
+
+/**
+ * "Our year" is the shop's own counts, so it renders only with its yes and
+ * never inside somebody else's website (the embed).
+ */
+describe("the public schedule's Our year panel", () => {
+  it("is gated on the shop's switch and kept out of the embed", () => {
+    expect(SOURCE).toContain("{!isEmbed && shop.publicYearEnabled ? (");
+    expect(positionOf("<OurYearSection")).toBeGreaterThan(positionOf("<ScheduleReviewsSection"));
   });
 });

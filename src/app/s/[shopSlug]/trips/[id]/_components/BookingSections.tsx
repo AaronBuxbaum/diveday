@@ -23,6 +23,7 @@ import { publicSchedulePath } from "@/lib/public-routes";
 import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
+import { AlreadyBookedDoor } from "./AlreadyBookedDoor";
 import { BookingGearFields } from "./BookingGearFields";
 import { KnownDiverPanel, type KnownDiverPanelProps } from "./KnownDiverPanel";
 import { MoneyBlock, type MoneyBlockSeatLine } from "./MoneyBlock";
@@ -727,6 +728,9 @@ export function BookSpotSection({
           <ErrorNotice message={state.error ?? errorMessage} />
         </div>
       </form>
+      {state.alreadyBookedEmail ? (
+        <AlreadyBookedDoor shopSlug={tripRef.shopSlug} email={state.alreadyBookedEmail} />
+      ) : null}
     </SectionCard>
   );
 }

@@ -618,6 +618,31 @@ describe("claimPartySeat", () => {
     expect(row?.personId).toBe(memberOne.personId);
   });
 
+  it("answers a carded claimant below the bar the same way whether or not they hold a seat here (issue #2288)", async () => {
+    // Adversarial: the link's holder types someone else's email. A refusal
+    // only a passenger can earn would confirm that person is on the manifest,
+    // so the trip's own gate answers first, for passenger and stranger alike.
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne } = await bookParty(db, shop.id, open.id);
+    await demandOf(db, shop.id, open.id, "advanced_open_water");
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: lead.personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: "C-claim-oracle",
+      status: "verified",
+    });
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
+    // The organizer holds a seat on this trip and an Open Water card.
+    const outcome = await claimPartySeat(db, {
+      token,
+      fullName: "Orla Organizer",
+      email: "orla@example.com",
+    });
+    expect(outcome).toMatchObject({ ok: false, reason: "trip_prerequisite" });
+  });
+
   it("asks a rider's seat for no card: a claimant with a lower card on file still claims it", async () => {
     // Regression (dive-domain review, PR #2224): the claim re-ran the trip's
     // card gate as if every seat were a diver's, so a rider holding an Open

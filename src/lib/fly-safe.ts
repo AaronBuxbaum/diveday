@@ -41,8 +41,9 @@ import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
  * closed from inside this module.
  *
  * DAN's guidance covers **no-decompression** recreational diving — a dive that
- * took stops needs substantially longer, and nothing in DiveDay records
- * whether one did.
+ * took stops needs substantially longer, and DiveDay knows only what the shop
+ * says: a departure marked `trips.exceeds_no_deco_limits` gets no answer at all
+ * (H-84, issue #1555), and one nobody marked is read as no-decompression.
  *
  * The only dives it can see are the ones booked at *this* shop: a diver who
  * spent the week with another operator and made one dive here today still
@@ -151,6 +152,19 @@ export type FlySafeInput = {
    * memoising this result must be keyed accordingly.
    */
   divedRecently: boolean;
+  /**
+   * The shop marked this departure as past no-decompression limits
+   * (`trips.exceeds_no_deco_limits`, H-84). Absent reads as no, which is the
+   * column's own default.
+   */
+  exceedsNoDecoLimits?: boolean;
+  /**
+   * This diver sailed on an *earlier* departure in the same lookback window
+   * that the shop marked past no-decompression limits — a morning
+   * decompression boat before this afternoon one. A fact about a person, like
+   * {@link FlySafeInput.divedRecently}. Absent reads as no.
+   */
+  decompressionRecently?: boolean;
   now: Date;
   /** Always {@link DEFAULT_FLY_SAFE_HOURS} in the product; a parameter so the arithmetic stays pure. */
   hours: FlySafeHours;
@@ -184,6 +198,9 @@ export type FlySafeResult = {
  *   None of the three can ever *shorten* a wait: {@link DEFAULT_FLY_SAFE_HOURS}
  *   has a `repetitive` longer than its `single`, so reaching repetitive is
  *   monotonic by construction.
+ * - **Past no-decompression limits.** A departure the shop marked so, or a
+ *   diver who sailed on an earlier one in the lookback window, gets null
+ *   before anything else is read (H-84).
  * - **Anchor.** The latest recorded exit, provided the record is whole — as
  *   many dives logged as the departure planned, none of them later-numbered
  *   and missing its exit. Otherwise the *buffered* return — the scheduled time
@@ -194,6 +211,11 @@ export type FlySafeResult = {
  */
 export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   const { executedDives, plannedDives, endsAt, divedRecently, now, hours } = input;
+  // DAN gives no preflight figure for a dive that took stops, so a departure
+  // the shop marked past no-decompression limits gets no answer at all — the
+  // same silence as a boat still at sea, never the recreational number with
+  // DAN's name beside it (H-84, issue #1555).
+  if (input.exceedsNoDecoLimits || input.decompressionRecently) return null;
   // The recorded count is read first so a day the crew logged as two tanks
   // says so, rather than being explained by a plan or by yesterday.
   const reason: FlySafeReason =

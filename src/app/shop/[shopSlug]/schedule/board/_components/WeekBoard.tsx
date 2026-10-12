@@ -15,6 +15,7 @@ import { fill } from "@/i18n/fill";
 import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
 import { WEEK_DAY_GRID_CLASS, WEEK_EMPTY_DAY_CLASS, WEEK_ROW_BOX_CLASS } from "./week-geometry";
+import { weekRows } from "./week-rows";
 
 /**
  * What every departure the grid draws — a day cell or a spanning course bar —
@@ -199,6 +200,11 @@ export type WeekBoardCopy = {
   rollCallOpenAria: string;
   /** What a day with nothing on it says, because a blank row is just a gap. */
   noBoats: string;
+  /**
+   * "{first} to {last}": a run of days gone by with no boats, folded into one
+   * row, named whole for a screen reader.
+   */
+  quietDays: string;
   /** The heading over the days somebody asked for. */
   asked: string;
   /** The act that answers one — the Requests page's own word for it. */
@@ -788,61 +794,98 @@ export function WeekBoard({
           days plus their boats and have to say which it meant. The headings
           are the structure. */}
       <div className="flex flex-col">
-        {week.days.map((day) => {
-          const spans = spansByDay.get(day.dateIso) ?? [];
-          const empty = day.entries.length === 0 && spans.length === 0;
-          const addKey = `w:add:${day.dateIso}`;
-          // Never on a day that has already been: a departure is put on the
-          // board, and the board is ahead.
-          const addButton =
-            canConfigure && !day.isPast ? (
-              <button
-                type="button"
-                ref={registerToggle(addKey)}
-                onClick={() => onToggle(addKey)}
-                aria-expanded={openKey === addKey}
-                aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
-                className={buttonClass({
-                  variant: "ghost",
-                  size: "sm",
-                  className: "shrink-0 print:hidden",
-                })}
-              >
-                <span aria-hidden="true">+</span> {copy.add}
-              </button>
-            ) : null;
-          const panelUnder = (tripId: string) =>
-            panel?.under === "departure" && panel.tripId === tripId ? panel.node : null;
-          const boatRow = (
-            departure: WeekDeparture,
-            row: Pick<WeekEntry, "seats" | "seatsLabel" | "meta"> & {
-              time: string | null;
-              runs: string | null;
-              crewLine: { names: string } | null;
-            },
-          ) => (
-            <li key={departure.tripId}>
-              <WeekBoat
-                departure={departure}
-                seats={row.seats}
-                seatsLabel={row.seatsLabel}
-                meta={row.meta}
-                time={row.time}
-                runs={row.runs}
-                crewLine={row.crewLine}
-                board={board}
-              />
-              {panelUnder(departure.tripId) ? (
-                <div className="px-2 pb-3">{panelUnder(departure.tripId)}</div>
-              ) : null}
-            </li>
-          );
-          return (
-            <div key={day.dateIso} className="border-b border-border">
-              {/* One rail, 72px, at every width — sized, and shared with
+        {weekRows(week.days, (day) => day.entries.length === 0 && !spansByDay.has(day.dateIso)).map(
+          (row) => {
+            if (row.kind === "quiet") {
+              // **Days gone by with nothing on them, said once** (UX review
+              // 2026-10-10, item 24): "MON–FRI · No boats" rather than five
+              // rows to scroll past on a Saturday. The heading names the run
+              // whole for a screen reader, as each day's names its day.
+              const first = row.days[0];
+              const last = row.days[row.days.length - 1];
+              if (!first || !last) return null;
+              return (
+                <div
+                  key={`quiet:${first.dateIso}`}
+                  data-week-quiet-days=""
+                  className="border-b border-border"
+                >
+                  <div className={WEEK_DAY_GRID_CLASS}>
+                    <h3 className="py-2">
+                      <span className="sr-only">
+                        {fill(copy.quietDays, { first: first.label, last: last.label })}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className={`${groupLabelClass("muted")} flex min-h-8 items-center whitespace-nowrap`}
+                      >
+                        {first.weekday}–{last.weekday}
+                      </span>
+                    </h3>
+                    <div className="min-w-0">
+                      <div className={WEEK_EMPTY_DAY_CLASS}>
+                        <p className="text-sm text-muted">{copy.noBoats}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            const { day } = row;
+            const spans = spansByDay.get(day.dateIso) ?? [];
+            const empty = day.entries.length === 0 && spans.length === 0;
+            const addKey = `w:add:${day.dateIso}`;
+            // Never on a day that has already been: a departure is put on the
+            // board, and the board is ahead.
+            const addButton =
+              canConfigure && !day.isPast ? (
+                <button
+                  type="button"
+                  ref={registerToggle(addKey)}
+                  onClick={() => onToggle(addKey)}
+                  aria-expanded={openKey === addKey}
+                  aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
+                  className={buttonClass({
+                    variant: "ghost",
+                    size: "sm",
+                    className: "shrink-0 print:hidden",
+                  })}
+                >
+                  <span aria-hidden="true">+</span> {copy.add}
+                </button>
+              ) : null;
+            const panelUnder = (tripId: string) =>
+              panel?.under === "departure" && panel.tripId === tripId ? panel.node : null;
+            const boatRow = (
+              departure: WeekDeparture,
+              row: Pick<WeekEntry, "seats" | "seatsLabel" | "meta"> & {
+                time: string | null;
+                runs: string | null;
+                crewLine: { names: string } | null;
+              },
+            ) => (
+              <li key={departure.tripId}>
+                <WeekBoat
+                  departure={departure}
+                  seats={row.seats}
+                  seatsLabel={row.seatsLabel}
+                  meta={row.meta}
+                  time={row.time}
+                  runs={row.runs}
+                  crewLine={row.crewLine}
+                  board={board}
+                />
+                {panelUnder(departure.tripId) ? (
+                  <div className="px-2 pb-3">{panelUnder(departure.tripId)}</div>
+                ) : null}
+              </li>
+            );
+            return (
+              <div key={day.dateIso} className="border-b border-border">
+                {/* One rail, 72px, at every width — sized, and shared with
                   the loading skeleton, in `week-geometry.ts`. */}
-              <div className={WEEK_DAY_GRID_CLASS}>
-                {/* **The day holds its place while its own boats scroll**
+                <div className={WEEK_DAY_GRID_CLASS}>
+                  {/* **The day holds its place while its own boats scroll**
                     (ADR 20260827-clearwater-surface-language, decision 10).
                     `top-(--chrome-h)`, never a number — the bar's height is a
                     token. `self-start` so the sticky box is the header's own
@@ -852,91 +895,92 @@ export function WeekBoard({
                     first departure's time beside it. Stacked from `sm` up, the
                     weekday and its numeral made every day two lines tall, and
                     an empty day twice the height of the one line it says. */}
-                <h3
-                  id={`week-day-${day.dateIso}`}
-                  className="sticky top-(--chrome-h) z-10 self-start bg-background py-2"
-                >
-                  <span className="sr-only">{day.label}</span>
-                  <span aria-hidden="true" className="flex min-h-8 items-center gap-1.5">
-                    {/* A fixed width, so every numeral after it starts at
+                  <h3
+                    id={`week-day-${day.dateIso}`}
+                    className="sticky top-(--chrome-h) z-10 self-start bg-background py-2"
+                  >
+                    <span className="sr-only">{day.label}</span>
+                    <span aria-hidden="true" className="flex min-h-8 items-center gap-1.5">
+                      {/* A fixed width, so every numeral after it starts at
                         one x. */}
-                    <span
-                      className={`${groupLabelClass(day.isToday ? "primary" : "muted")} w-8 shrink-0`}
-                    >
-                      {day.weekday}
-                    </span>
-                    {/* Today is a *filled* disc, not a smaller numeral.
+                      <span
+                        className={`${groupLabelClass(day.isToday ? "primary" : "muted")} w-8 shrink-0`}
+                      >
+                        {day.weekday}
+                      </span>
+                      {/* Today is a *filled* disc, not a smaller numeral.
                         Colour is never the only carrier — the pager's "This
                         week" and the weekday's own ink say it too. */}
-                    <span
-                      className={`${FIGURE_INLINE_CLASS} ${
-                        day.isToday
-                          ? "flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
-                          : day.isPast
-                            ? "text-muted"
-                            : ""
-                      }`}
-                    >
-                      {day.dayNumber}
+                      <span
+                        className={`${FIGURE_INLINE_CLASS} ${
+                          day.isToday
+                            ? "flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                            : day.isPast
+                              ? "text-muted"
+                              : ""
+                        }`}
+                      >
+                        {day.dayNumber}
+                      </span>
                     </span>
-                  </span>
-                </h3>
-                <div className="min-w-0">
-                  {/* More departures than hulls, or one hull in two places —
+                  </h3>
+                  <div className="min-w-0">
+                    {/* More departures than hulls, or one hull in two places —
                       the question the board exists to answer, on the day it is
                       about. */}
-                  {day.boatWarning ? (
-                    <p className="flex items-start gap-1.5 px-2 pt-2 text-xs font-medium text-warning">
-                      <DiveDayIcon name="warning" className="mt-0.5 size-3.5 shrink-0" />
-                      <span>{day.boatWarning}</span>
-                    </p>
-                  ) : null}
-                  <ul aria-labelledby={`week-day-${day.dateIso}`} className="flex flex-col">
-                    {spans.map((span) =>
-                      boatRow(span, {
-                        seats: span.seats,
-                        seatsLabel: span.seatsLabel,
-                        meta: span.meta,
-                        time: null,
-                        runs: span.runsLabel,
-                        crewLine: null,
-                      }),
-                    )}
-                    {day.entries.map((entry) =>
-                      boatRow(entry, {
-                        seats: entry.seats,
-                        seatsLabel: entry.seatsLabel,
-                        meta: entry.meta,
-                        time: entry.time,
-                        runs: null,
-                        crewLine:
-                          entry.crew === null || isUsualCrew(entry.crew, usualCrew)
-                            ? null
-                            : { names: entry.crew.join(", ") },
-                      }),
-                    )}
-                  </ul>
-                  {/* A day with nothing on it says so, and offers to fill it on
+                    {day.boatWarning ? (
+                      <p className="flex items-start gap-1.5 px-2 pt-2 text-xs font-medium text-warning">
+                        <DiveDayIcon name="warning" className="mt-0.5 size-3.5 shrink-0" />
+                        <span>{day.boatWarning}</span>
+                      </p>
+                    ) : null}
+                    <ul aria-labelledby={`week-day-${day.dateIso}`} className="flex flex-col">
+                      {spans.map((span) =>
+                        boatRow(span, {
+                          seats: span.seats,
+                          seatsLabel: span.seatsLabel,
+                          meta: span.meta,
+                          time: null,
+                          runs: span.runsLabel,
+                          crewLine: null,
+                        }),
+                      )}
+                      {day.entries.map((entry) =>
+                        boatRow(entry, {
+                          seats: entry.seats,
+                          seatsLabel: entry.seatsLabel,
+                          meta: entry.meta,
+                          time: entry.time,
+                          runs: null,
+                          crewLine:
+                            entry.crew === null || isUsualCrew(entry.crew, usualCrew)
+                              ? null
+                              : { names: entry.crew.join(", ") },
+                        }),
+                      )}
+                    </ul>
+                    {/* A day with nothing on it says so, and offers to fill it on
                       the same line: one empty row in a run of rows is just a
                       gap, and a second line for "+ Add" made it two. */}
-                  {empty ? (
-                    <div className={WEEK_EMPTY_DAY_CLASS}>
-                      <p className="text-sm text-muted">{copy.noBoats}</p>
-                      {addButton ? <div className="-my-1.5 -me-2">{addButton}</div> : null}
-                    </div>
-                  ) : addButton ? (
-                    <div className="px-2 pb-1">
-                      <div className="-ms-3">{addButton}</div>
-                    </div>
-                  ) : null}
-                  {panel?.under === "day" && panel.dateIso === day.dateIso ? (
-                    <div className="px-2 pb-3">{panel.node}</div>
-                  ) : null}
+                    {empty ? (
+                      <div className={WEEK_EMPTY_DAY_CLASS}>
+                        <p className="text-sm text-muted">{copy.noBoats}</p>
+                        {addButton ? <div className="-my-1.5 -me-2">{addButton}</div> : null}
+                      </div>
+                    ) : addButton ? (
+                      <div className="px-2 pb-1">
+                        <div className="-ms-3">{addButton}</div>
+                      </div>
+                    ) : null}
+                    {panel?.under === "day" && panel.dateIso === day.dateIso ? (
+                      <div className="px-2 pb-3">{panel.node}</div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          },
+        )}
       </div>
 
       {/* **The ghost days.** A request is a day somebody asked for, drawn

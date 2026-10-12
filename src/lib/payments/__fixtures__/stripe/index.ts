@@ -52,13 +52,16 @@ export type StripeEventFixture =
   | "account.updated"
   | "charge.dispute.closed"
   | "charge.dispute.created"
+  | "charge.refund.updated"
   | "charge.refunded"
   | "checkout.session.async_payment_failed"
   | "checkout.session.async_payment_succeeded"
   | "checkout.session.completed"
   | "checkout.session.expired"
   | "invoice.paid"
-  | "invoice.voided";
+  | "invoice.voided"
+  | "payout.failed"
+  | "payout.paid";
 
 export const STRIPE_OBJECT_FIXTURES: readonly StripeObjectFixture[] = [
   "account",
@@ -80,6 +83,7 @@ export const STRIPE_EVENT_FIXTURES: readonly StripeEventFixture[] = [
   "account.updated",
   "charge.dispute.closed",
   "charge.dispute.created",
+  "charge.refund.updated",
   "charge.refunded",
   "checkout.session.async_payment_failed",
   "checkout.session.async_payment_succeeded",
@@ -87,6 +91,8 @@ export const STRIPE_EVENT_FIXTURES: readonly StripeEventFixture[] = [
   "checkout.session.expired",
   "invoice.paid",
   "invoice.voided",
+  "payout.failed",
+  "payout.paid",
 ];
 
 function load(kind: "objects" | "events", name: string): Record<string, unknown> {

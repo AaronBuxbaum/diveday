@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { getDb } from "@/db/client";
 import { pingDeskAfterHoursSafely } from "@/db/desk-pings";
 import { recordInboundMessage, shopIdForInboundEmailToken } from "@/db/inbound-messages";
@@ -142,6 +143,7 @@ export async function POST(request: Request) {
     emailMessageId: parsed.messageId,
     inReplyToProviderMessageId: sesMessageIdFromHeader(parsed.inReplyTo),
     senderAuthenticated,
+    spamFlagged: notification.spamFlagged,
   });
   // Only a message that was actually filed; a redelivery is `duplicate` and
   // never reaches this. SNS retries every non-2xx, so a keyword read off a
@@ -156,10 +158,14 @@ export async function POST(request: Request) {
     }
     // The desk's after-hours ping (src/db/desk-pings.ts): only for a message
     // actually filed from a sender whose domain checks passed (a spoofed burst
-    // to the reply-to address must not page the owner), and never able to
-    // fail this webhook.
-    if (senderAuthenticated)
-      await pingDeskAfterHoursSafely(db, { shopId, receivedAt: notification.receivedAt });
+    // to the reply-to address must not page the owner) and that SES did not
+    // flag as spam, and never able to fail this webhook. After the response
+    // (#2311): a slow mail provider must not hold SNS's request open and
+    // earn a retry of a message that is already filed.
+    if (senderAuthenticated && !notification.spamFlagged) {
+      const receivedAt = notification.receivedAt;
+      after(() => pingDeskAfterHoursSafely(db, { shopId, receivedAt }));
+    }
   }
   // Ids and outcomes only — never the sender, the subject or the words.
   log("email_inbound.recorded", "info", {

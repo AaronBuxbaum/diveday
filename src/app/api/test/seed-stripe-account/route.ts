@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { getShopBySlug } from "@/db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";

@@ -8,6 +8,7 @@ import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
+import { survivingPersonNames } from "./people";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   bookings,
@@ -711,6 +712,8 @@ export async function listTripBuddyTeams(
       bookingId: buddyPairMembers.bookingId,
       bookingStatus: bookings.status,
       diverName: people.fullName,
+      diverPersonId: people.id,
+      diverMergedInto: people.mergedIntoPersonId,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       identityBookedAs: bookings.identityBookedAs,
       crewPersonId: buddyPairMembers.crewPersonId,
@@ -764,6 +767,14 @@ export async function listTripBuddyTeams(
     // never pruned, so this reader does not get to assume that.
     if (!formedByTeam.has(row.teamId)) formedByTeam.set(row.teamId, row);
   }
+  // A cancelled member's seat can be one a merge left behind on a record
+  // merged away (issue #2177); it is named as the record it lives on now
+  // (issue #2333), with the row itself untouched.
+  const survivorNames = await survivingPersonNames(
+    db,
+    shopId,
+    rows.flatMap((row) => (row.diverMergedInto && row.diverPersonId ? [row.diverPersonId] : [])),
+  );
   const byTeam = new Map<string, TripBuddyTeam>();
   for (const row of rows) {
     // The fallback is for a team whose membership rows outlived their trail —
@@ -781,7 +792,12 @@ export async function listTripBuddyTeams(
       team.members.push({
         kind: "diver",
         bookingId: row.bookingId,
-        fullName: seatName(row.diverName ?? "", row),
+        fullName: seatName(
+          (row.diverPersonId ? survivorNames.get(row.diverPersonId) : undefined) ??
+            row.diverName ??
+            "",
+          row,
+        ),
         cancelled: row.bookingStatus === "cancelled",
       });
     } else if (row.crewPersonId) {

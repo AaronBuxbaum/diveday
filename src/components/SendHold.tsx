@@ -44,9 +44,11 @@ export function SendHold<Outcome>({
   undo,
   release,
   onOutcome,
+  onHoldError,
   copy,
   note,
   className,
+  initialTicket,
   children,
 }: {
   hold: (formData: FormData) => Promise<HeldTicket>;
@@ -55,13 +57,25 @@ export function SendHold<Outcome>({
     id: string,
   ) => Promise<{ status: "pending" | "gone" } | { status: "done"; outcome: Outcome }>;
   onOutcome: (outcome: Outcome) => void;
+  /**
+   * Told when the hold itself was refused, so the form can say why where it
+   * stands; without it a refused hold throws as before. The send's own
+   * outcome still arrives through `onOutcome`.
+   */
+  onHoldError?: (error: unknown) => void;
   copy: SendHoldCopy;
   /** The one clause a send keeps ("the old link stops working"), shown beside "Sending…". */
   note?: string;
   className?: string;
+  /**
+   * A send already held on the server before this rendered: the board's move
+   * holds the reschedule notice itself, and the page it lands on shows the
+   * hold draining with Undo (ux review 2026-10-11, item 1).
+   */
+  initialTicket?: HeldTicket | null;
   children: ReactNode;
 }) {
-  const [ticket, setTicket] = useState<HeldTicket | null>(null);
+  const [ticket, setTicket] = useState<HeldTicket | null>(initialTicket ?? null);
   const [releasing, setReleasing] = useState(false);
   // How much of the hold has run, counted in ticks of the interval below —
   // never read off a clock. `Date.now()` is pinned in the e2e fleet (and may
@@ -110,7 +124,14 @@ export function SendHold<Outcome>({
     const form = event.currentTarget;
     const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
     const formData = new FormData(form, submitter ?? undefined);
-    const next = await hold(formData);
+    let next: HeldTicket;
+    try {
+      next = await hold(formData);
+    } catch (error) {
+      if (!onHoldError) throw error;
+      onHoldError(error);
+      return;
+    }
     setElapsedMs(0);
     setTicket(next);
   }

@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { sql } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { openSecret } from "@/lib/secret-box";
@@ -7,7 +6,7 @@ import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import type { AppDb, DbExecutor } from "./client";
 import { shops } from "./schema";
 import {
-  claimWhatsAppWaba,
+  claimWhatsAppNumber,
   connectShopWhatsAppAccount,
   disconnectShopWhatsAppAccount,
   getShopWhatsAppAccount,
@@ -15,7 +14,9 @@ import {
   markShopWhatsAppVerified,
   PARKED_REGISTRATION_STALE_MS,
   SETUP_INCOMPLETE_TEMPLATE,
-  shopIdForWhatsAppWaba,
+  shopIdForWhatsAppEvent,
+  shopPublicWhatsAppNumber,
+  whatsAppAccountForPhoneNumber,
   whatsAppProviderForAccount,
   whatsAppProvidersForShops,
 } from "./whatsapp-accounts";
@@ -131,55 +132,75 @@ describe("connectShopWhatsAppAccount", () => {
     expect(openSecret(after?.accessTokenSealed ?? "", key)).toBe("EAAG-rotated");
   });
 
-  it("refuses a WABA another shop already holds, and stores nothing", async () => {
-    // The fault this closes (issue #1715): the WABA is the tenant key every
-    // inbound WhatsApp event is routed on, and two rows holding one made a
-    // diver's message — a reply keyword in it up to a cancellation — land in an
-    // arbitrary one of the two shops. A chain completing Embedded Signup for two
-    // of its DiveDay shops against one Meta Business is the ordinary way there.
+  it("refuses a phone number another shop already holds, and stores nothing", async () => {
+    // The number is the tenant key every inbound WhatsApp event is routed on
+    // (H-83), and two rows holding one would make a diver's message — a reply
+    // keyword in it up to a cancellation — land in an arbitrary one of them.
     const { db, shop } = ctx;
-    const sibling = await siblingShop(db, "sibling-shop-waba-taken");
-    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_shared" }), { key });
+    const sibling = await siblingShop(db, "sibling-shop-number-taken");
+    await connectShopWhatsAppAccount(db, connectInput(shop.id, { phoneNumberId: "555" }), { key });
 
     const result = await connectShopWhatsAppAccount(
       db,
-      connectInput(sibling.id, { wabaId: "waba_shared" }),
+      connectInput(sibling.id, { phoneNumberId: "555", wabaId: "waba_other" }),
       { key },
     );
 
-    expect(result).toEqual({ status: "refused", reason: "waba_already_connected" });
+    expect(result).toEqual({ status: "refused", reason: "phone_number_already_connected" });
     // Rejected by the database, not merely absent: a test that only re-read the
     // first shop's row would still pass with the unique index dropped.
     expect(await getShopWhatsAppAccount(db, sibling.id)).toBeNull();
-    expect(await shopIdForWhatsAppWaba(db, "waba_shared")).toBe(shop.id);
+    expect(await shopIdForWhatsAppEvent(db, { phoneNumberId: "555", wabaId: null })).toBe(shop.id);
   });
 
-  it("refuses a held WABA inside a transaction without breaking the transaction", async () => {
-    // The signup completes under `claimWhatsAppWaba`'s transaction (#1769). A
+  it("lets a chain connect two shops under one WABA, a number each (H-83)", async () => {
+    const { db, shop } = ctx;
+    const sibling = await siblingShop(db, "sibling-shop-chain");
+    const chain = { wabaId: "waba_chain" };
+    expect(
+      (
+        await connectShopWhatsAppAccount(
+          db,
+          connectInput(shop.id, { ...chain, phoneNumberId: "111" }),
+          { key },
+        )
+      ).status,
+    ).toBe("connected");
+    expect(
+      (
+        await connectShopWhatsAppAccount(
+          db,
+          connectInput(sibling.id, { ...chain, phoneNumberId: "222" }),
+          { key },
+        )
+      ).status,
+    ).toBe("connected");
+  });
+
+  it("refuses a held number inside a transaction without breaking the transaction", async () => {
+    // The signup completes under `claimWhatsAppNumber`'s transaction (#1769). A
     // 23505 there aborts the whole transaction unless the insert ran in a
     // savepoint, and the refusal would surface as "current transaction is
-    // aborted" instead of the worded `waba_already_connected`.
+    // aborted" instead of the worded `phone_number_already_connected`.
     const { db, shop } = ctx;
-    const sibling = await siblingShop(db, "sibling-shop-waba-tx");
-    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_tx" }), { key });
+    const sibling = await siblingShop(db, "sibling-shop-number-tx");
+    await connectShopWhatsAppAccount(db, connectInput(shop.id, { phoneNumberId: "777" }), { key });
 
     const afterwards = await db.transaction(async (tx) => {
       const result = await connectShopWhatsAppAccount(
         tx,
-        connectInput(sibling.id, { wabaId: "waba_tx" }),
+        connectInput(sibling.id, { phoneNumberId: "777" }),
         { key },
       );
-      expect(result).toEqual({ status: "refused", reason: "waba_already_connected" });
-      return shopIdForWhatsAppWaba(tx, "waba_tx");
+      expect(result).toEqual({ status: "refused", reason: "phone_number_already_connected" });
+      return shopIdForWhatsAppEvent(tx, { phoneNumberId: "777", wabaId: null });
     });
     expect(afterwards).toBe(shop.id);
   });
 
   it("lets two shops connect before a WABA is recorded, because nulls repeat", async () => {
-    // `waba_id` stays nullable under the unique index on purpose. A shop whose
-    // row predates a recorded WABA is legal, and Postgres lets nulls repeat — so
-    // tightening the column to not-null, or storing "" for absent, would refuse
-    // a second shop's ordinary connection.
+    // `waba_id` stays nullable on purpose: a shop whose row predates a
+    // recorded WABA is legal, and two of them are too.
     const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-shop-waba-null");
 
@@ -188,8 +209,13 @@ describe("connectShopWhatsAppAccount", () => {
         .status,
     ).toBe("connected");
     expect(
-      (await connectShopWhatsAppAccount(db, connectInput(sibling.id, { wabaId: null }), { key }))
-        .status,
+      (
+        await connectShopWhatsAppAccount(
+          db,
+          connectInput(sibling.id, { wabaId: null, phoneNumberId: "9876543210" }),
+          { key },
+        )
+      ).status,
     ).toBe("connected");
     expect((await getShopWhatsAppAccount(db, sibling.id))?.wabaId).toBeNull();
   });
@@ -238,52 +264,109 @@ describe("getShopWhatsAppAccount", () => {
   });
 });
 
-describe("shopIdForWhatsAppWaba", () => {
-  it("resolves the WABA a delivery event names to its own shop", async () => {
+/**
+ * **Whose event is this** (H-83, issue #1767): two shops of one chain share a
+ * WABA, and each receives only what was sent to its own number.
+ */
+describe("shopIdForWhatsAppEvent", () => {
+  async function chain() {
     const { db, shop } = ctx;
-    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_abc" }), { key });
+    const sibling = await siblingShop(db, `sibling-chain-${randomBytes(3).toString("hex")}`);
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(shop.id, { wabaId: "waba_chain", phoneNumberId: "111" }),
+      { key },
+    );
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(sibling.id, { wabaId: "waba_chain", phoneNumberId: "222" }),
+      { key },
+    );
+    return { db, north: shop.id, south: sibling.id };
+  }
 
-    expect(await shopIdForWhatsAppWaba(db, "waba_abc")).toBe(shop.id);
+  it("routes each number on a shared WABA to its own shop", async () => {
+    const { db, north, south } = await chain();
+    expect(await shopIdForWhatsAppEvent(db, { phoneNumberId: "111", wabaId: "waba_chain" })).toBe(
+      north,
+    );
+    expect(await shopIdForWhatsAppEvent(db, { phoneNumberId: "222", wabaId: "waba_chain" })).toBe(
+      south,
+    );
   });
 
-  it("returns null for a WABA no shop has connected, so nothing is applied unscoped", async () => {
-    const { db, shop } = ctx;
-    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_abc" }), { key });
-
-    expect(await shopIdForWhatsAppWaba(db, "waba_someone_else")).toBeNull();
+  it("never falls back to the WABA for a number nobody here holds", async () => {
+    const { db } = ctx;
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(ctx.shop.id, { wabaId: "waba_alone", phoneNumberId: "111" }),
+      { key },
+    );
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: "999", wabaId: "waba_alone" }),
+    ).toBeNull();
   });
 
-  // The belt to `shop_whatsapp_accounts_waba_unique`'s braces. The index makes
-  // the second row impossible (issue #1715), so this state is now reachable only
-  // by removing it — which is precisely the regression worth holding a test
-  // against: an index dropped in a later migration must not quietly restore the
-  // arbitrary-tenant routing the reader refuses to do. Dropping it in this test's
-  // own throwaway PGlite proves the reader, not the index.
-  it("refuses to guess if two shops ever hold the same WABA", async () => {
-    const { db, shop } = ctx;
-    const sibling = await siblingShop(db, "sibling-shop-whatsapp-test");
-    await db.execute(sql`drop index shop_whatsapp_accounts_waba_unique`);
-    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_shared" }), { key });
-    await connectShopWhatsAppAccount(db, connectInput(sibling.id, { wabaId: "waba_shared" }), {
-      key,
-    });
+  it("does not place an event whose WABA disagrees with its number's row", async () => {
+    const { db } = await chain();
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: "111", wabaId: "waba_elsewhere" }),
+    ).toBeNull();
+  });
 
-    expect(await shopIdForWhatsAppWaba(db, "waba_shared")).toBeNull();
+  it("drops an event that names no number, even on a WABA one shop alone holds", async () => {
+    const { db } = ctx;
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(ctx.shop.id, { wabaId: "waba_alone", phoneNumberId: "111" }),
+      { key },
+    );
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: null, wabaId: "waba_alone" }),
+    ).toBeNull();
+  });
+
+  it("does not place an event naming a WABA when its number's row records none", async () => {
+    const { db } = ctx;
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(ctx.shop.id, { wabaId: null, phoneNumberId: "111" }),
+      { key },
+    );
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: "111", wabaId: "waba_anyone" }),
+    ).toBeNull();
+    // An event that names no WABA still routes on the number alone.
+    expect(await shopIdForWhatsAppEvent(db, { phoneNumberId: "111", wabaId: null })).toBe(
+      ctx.shop.id,
+    );
+  });
+
+  it("drops an event that names no number on a shared WABA, or names nothing", async () => {
+    const { db } = await chain();
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: null, wabaId: "waba_chain" }),
+    ).toBeNull();
+    expect(await shopIdForWhatsAppEvent(db, { phoneNumberId: null, wabaId: null })).toBeNull();
   });
 });
 
 /**
- * **One Connect per WABA at a time** (issue #1769, H-83). Registering a number
- * at Meta mints a PIN, and a row refused after that leaves the number bound to
- * a PIN nobody holds; recovery runs through Meta support. So the pre-check,
- * the Meta calls and the insert all run under one lock on the WABA, and the
- * second Connect waits for the first row and refuses without registering.
+ * **One Connect per number at a time** (issues #1769 and #1767, H-83).
+ * Registering a number at Meta mints a PIN, and a row refused after that
+ * leaves the number bound to a PIN nobody holds; recovery runs through Meta
+ * support. So the pre-check, the Meta calls and the insert all run under locks
+ * on the shop, the WABA and the number, and a second shop's Connect for a
+ * number already held refuses without registering.
  */
-describe("claimWhatsAppWaba", () => {
+describe("claimWhatsAppNumber", () => {
   // Databases of their own, not the file's shared transaction: the subject is
   // a transaction-scoped lock and two callers racing for it. Inside one
   // wrapping transaction the callers share a connection and cannot contend,
   // and the lock outlives the claim that took it (src/test/db.ts, "When NOT to use this").
+  /** One number on one WABA: what every claim below races for. */
+  const RACE = { wabaId: "waba_race", phoneNumberId: "1234567890" };
+
   /** A stand-in for the Meta round trip: records the register, then stores the row. */
   function signupWork(shopId: string, registered: string[]) {
     return async (tx: DbExecutor) => {
@@ -296,14 +379,14 @@ describe("claimWhatsAppWaba", () => {
     };
   }
 
-  it("lets one of two shops connecting the same WABA at once register, and refuses the other first", async () => {
+  it("lets one of two shops connecting the same number at once register, and refuses the other first", async () => {
     const { db, shop } = await seededShopContext();
     const sibling = await siblingShop(db, "sibling-shop-waba-race");
     const registered: string[] = [];
 
     const outcomes = await Promise.all(
       [shop.id, sibling.id].map((shopId) =>
-        claimWhatsAppWaba(db, { shopId, wabaId: "waba_race" }, signupWork(shopId, registered)),
+        claimWhatsAppNumber(db, { shopId, ...RACE }, signupWork(shopId, registered)),
       ),
     );
 
@@ -313,20 +396,35 @@ describe("claimWhatsAppWaba", () => {
     expect(outcomes.filter((outcome) => outcome.status === "held_elsewhere")).toHaveLength(1);
     const winner = outcomes.find((outcome) => outcome.status === "claimed");
     expect(winner?.status === "claimed" && winner.value.status).toBe("connected");
-    expect(await shopIdForWhatsAppWaba(db, "waba_race")).toBe(registered[0]);
+    expect((await whatsAppAccountForPhoneNumber(db, RACE.phoneNumberId))?.shopId ?? null).toBe(
+      registered[0],
+    );
   });
 
-  it("lets the shop that holds the WABA reconnect", async () => {
+  it("lets a second shop of a chain claim its own number on the same WABA", async () => {
+    const { db, shop } = await seededShopContext();
+    const sibling = await siblingShop(db, "sibling-shop-chain-claim");
+    await claimWhatsAppNumber(db, { shopId: shop.id, ...RACE }, signupWork(shop.id, []));
+    const second = await claimWhatsAppNumber(
+      db,
+      { shopId: sibling.id, wabaId: RACE.wabaId, phoneNumberId: "2222222222" },
+      (tx: DbExecutor) =>
+        connectShopWhatsAppAccount(
+          tx,
+          connectInput(sibling.id, { wabaId: RACE.wabaId, phoneNumberId: "2222222222" }),
+          { key },
+        ),
+    );
+    expect(second.status === "claimed" && second.value.status).toBe("connected");
+  });
+
+  it("lets the shop that holds the number reconnect", async () => {
     const { db, shop } = await seededShopContext();
     const registered: string[] = [];
-    await claimWhatsAppWaba(
+    await claimWhatsAppNumber(db, { shopId: shop.id, ...RACE }, signupWork(shop.id, registered));
+    const again = await claimWhatsAppNumber(
       db,
-      { shopId: shop.id, wabaId: "waba_race" },
-      signupWork(shop.id, registered),
-    );
-    const again = await claimWhatsAppWaba(
-      db,
-      { shopId: shop.id, wabaId: "waba_race" },
+      { shopId: shop.id, ...RACE },
       signupWork(shop.id, registered),
     );
     expect(again.status).toBe("claimed");
@@ -334,7 +432,7 @@ describe("claimWhatsAppWaba", () => {
   });
 
   // Issue #2194: a Connect abandoned after Meta's register call leaves a parked
-  // row nobody can see, and it must not hold the WABA against another shop forever.
+  // row nobody can see, and it must not hold the number against another shop forever.
   async function parkedAt(db: AppDb, shopId: string, ageMs: number) {
     const parked = await connectShopWhatsAppAccount(
       db,
@@ -349,20 +447,22 @@ describe("claimWhatsAppWaba", () => {
     if (parked.status !== "connected") throw new Error("parked row not stored");
   }
 
-  it("lets another shop claim a WABA held only by a stale parked row", async () => {
+  it("lets another shop claim a number held only by a stale parked row", async () => {
     const { db, shop } = await seededShopContext();
     const sibling = await siblingShop(db, "sibling-shop-stale-park");
     await parkedAt(db, sibling.id, PARKED_REGISTRATION_STALE_MS + 60_000);
 
     const registered: string[] = [];
-    const claim = await claimWhatsAppWaba(
+    const claim = await claimWhatsAppNumber(
       db,
-      { shopId: shop.id, wabaId: "waba_race" },
+      { shopId: shop.id, ...RACE },
       signupWork(shop.id, registered),
     );
     expect(claim.status).toBe("claimed");
     expect(registered).toEqual([shop.id]);
-    expect(await shopIdForWhatsAppWaba(db, "waba_race")).toBe(shop.id);
+    expect((await whatsAppAccountForPhoneNumber(db, RACE.phoneNumberId))?.shopId ?? null).toBe(
+      shop.id,
+    );
     expect(await getShopWhatsAppRegistration(db, sibling.id)).toBeNull();
   });
 
@@ -372,9 +472,9 @@ describe("claimWhatsAppWaba", () => {
     await parkedAt(db, sibling.id, PARKED_REGISTRATION_STALE_MS - 60_000);
 
     const registered: string[] = [];
-    const claim = await claimWhatsAppWaba(
+    const claim = await claimWhatsAppNumber(
       db,
-      { shopId: shop.id, wabaId: "waba_race" },
+      { shopId: shop.id, ...RACE },
       signupWork(shop.id, registered),
     );
     expect(claim.status).toBe("held_elsewhere");
@@ -394,9 +494,9 @@ describe("claimWhatsAppWaba", () => {
       { key },
     );
 
-    const claim = await claimWhatsAppWaba(
+    const claim = await claimWhatsAppNumber(
       db,
-      { shopId: shop.id, wabaId: "waba_race" },
+      { shopId: shop.id, ...RACE },
       signupWork(shop.id, []),
     );
     expect(claim.status).toBe("held_elsewhere");
@@ -408,16 +508,18 @@ describe("claimWhatsAppWaba", () => {
     const { db, shop } = await seededShopContext();
     const sibling = await siblingShop(db, "sibling-shop-waba-crash");
     await expect(
-      claimWhatsAppWaba(db, { shopId: shop.id, wabaId: "waba_race" }, async () => {
+      claimWhatsAppNumber(db, { shopId: shop.id, ...RACE }, async () => {
         throw new Error("Meta went away");
       }),
     ).rejects.toThrow("Meta went away");
-    expect(await shopIdForWhatsAppWaba(db, "waba_race")).toBeNull();
+    expect(
+      (await whatsAppAccountForPhoneNumber(db, RACE.phoneNumberId))?.shopId ?? null,
+    ).toBeNull();
 
     const registered: string[] = [];
-    const next = await claimWhatsAppWaba(
+    const next = await claimWhatsAppNumber(
       db,
-      { shopId: sibling.id, wabaId: "waba_race" },
+      { shopId: sibling.id, ...RACE },
       signupWork(sibling.id, registered),
     );
     expect(next.status).toBe("claimed");
@@ -495,5 +597,27 @@ describe("whatsAppProviderForAccount", () => {
     const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
     expect(body.template.name).toBe("buceo_aviso");
     expect(body.template.language.code).toBe("es_ES");
+  });
+});
+
+describe("shopPublicWhatsAppNumber", () => {
+  it("gives the public footer the printed number of a finished signup, and nothing else", async () => {
+    const { db, shop } = ctx;
+    expect(await shopPublicWhatsAppNumber(db, shop.id)).toBeNull();
+    await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
+    expect(await shopPublicWhatsAppNumber(db, shop.id)).toBe("+1 305-555-0100");
+  });
+
+  it("gives nothing for a row parked mid-signup, or for another shop's sender", async () => {
+    const { db, shop } = ctx;
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(shop.id, { templateName: SETUP_INCOMPLETE_TEMPLATE }),
+      { key },
+    );
+    expect(await shopPublicWhatsAppNumber(db, shop.id)).toBeNull();
+
+    const sibling = await siblingShop(db, "public-number-sibling");
+    expect(await shopPublicWhatsAppNumber(db, sibling.id)).toBeNull();
   });
 });

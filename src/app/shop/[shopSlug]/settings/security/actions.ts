@@ -14,6 +14,7 @@ import {
   verifyAccountSecondFactor,
 } from "@/db/account-security";
 import { getAccountIdForPerson } from "@/db/user-accounts";
+import { parseForm, readForm, single, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -80,16 +81,27 @@ export async function beginTotpEnrollmentAction(shopSlug: string) {
   );
 }
 
+/** A fresh authenticator code, the one thing enrolment accepts. */
+const totpCodeForm = z.object({ code: single(z.string().regex(/^\d{6}$/)) });
+/** An authenticator code or a recovery code, whichever the account holder typed. */
+const secondFactorForm = z.object({ code: single(z.string().trim().min(6).max(32)) });
+const sessionIdForm = z.object({ sessionId: single(z.string().uuid()) });
+const stepUpForm = z.object({ purpose: text(), returnTo: text() });
+
+function secondFactorCode(formData: FormData) {
+  const parsed = parseForm(secondFactorForm, formData);
+  return parsed.ok
+    ? { success: true as const, data: parsed.data.code }
+    : { success: false as const };
+}
+
 export async function enableTotpAction(shopSlug: string, formData: FormData) {
   const { db, accountId } = await securityContext(shopSlug);
   if (!(await secondFactorAttemptAllowed(accountId))) {
     redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
   }
-  const code = z
-    .string()
-    .regex(/^\d{6}$/)
-    .safeParse(formData.get("code"));
-  const enabled = code.success && (await enableTotp(db, accountId, code.data));
+  const code = parseForm(totpCodeForm, formData);
+  const enabled = code.ok && (await enableTotp(db, accountId, code.data.code));
   revalidateAndRedirect(
     shopPath(shopSlug, "settings", "security"),
     noticeUrl(
@@ -105,7 +117,7 @@ export async function disableTotpAction(shopSlug: string, formData: FormData) {
   if (security?.totpEnabledAt && !(await secondFactorAttemptAllowed(accountId))) {
     redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
   }
-  const code = z.string().trim().min(6).max(32).safeParse(formData.get("code"));
+  const code = secondFactorCode(formData);
   const accepted =
     !security?.totpEnabledAt ||
     (code.success &&
@@ -121,10 +133,10 @@ export async function disableTotpAction(shopSlug: string, formData: FormData) {
 
 export async function revokeSessionAction(shopSlug: string, formData: FormData) {
   const { db, accountId } = await securityContext(shopSlug);
-  const sessionId = z.string().uuid().safeParse(formData.get("sessionId"));
-  if (!sessionId.success)
+  const sessionId = parseForm(sessionIdForm, formData);
+  if (!sessionId.ok)
     redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-invalid"));
-  await revokeAccountSession(db, accountId, sessionId.data);
+  await revokeAccountSession(db, accountId, sessionId.data.sessionId);
   revalidateAndRedirect(
     shopPath(shopSlug, "settings", "security"),
     noticeUrl(shopPath(shopSlug, "settings", "security"), "session-revoked"),
@@ -142,9 +154,10 @@ export async function verifyStepUpAction(shopSlug: string, formData: FormData) {
   if (!(await secondFactorAttemptAllowed(accountId))) {
     redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
   }
-  const purposeValue = String(formData.get("purpose") ?? "");
-  const returnTo = safeStepUpReturnPath(shopSlug, String(formData.get("returnTo") ?? ""));
-  const code = z.string().trim().min(6).max(32).safeParse(formData.get("code"));
+  const stepUp = readForm(stepUpForm, formData);
+  const purposeValue = stepUp.purpose;
+  const returnTo = safeStepUpReturnPath(shopSlug, stepUp.returnTo);
+  const code = secondFactorCode(formData);
   if (!isStepUpPurpose(purposeValue) || !returnTo || !code.success || !session.user.sessionId) {
     redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-invalid"));
   }

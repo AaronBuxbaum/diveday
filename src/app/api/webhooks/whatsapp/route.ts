@@ -1,9 +1,10 @@
+import { after } from "next/server";
 import { getDb } from "@/db/client";
 import { pingDeskAfterHoursSafely } from "@/db/desk-pings";
 import { recordInboundMessage } from "@/db/inbound-messages";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { handleInboundReplyKeyword } from "@/db/reply-keywords";
-import { shopIdForWhatsAppWaba } from "@/db/whatsapp-accounts";
+import { shopIdForWhatsAppEvent } from "@/db/whatsapp-accounts";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -45,9 +46,12 @@ export async function GET(request: Request) {
  * tracked — would buy an endless redelivery loop and nothing else. That is the
  * same posture as the SES route.
  *
- * Both halves resolve the tenant the same way — the WABA in `entry[].id`,
- * looked up to a shop — and an inbound message for a WABA no shop has
- * connected is dropped rather than filed nowhere: the row has a `shop_id`, and
+ * Both halves resolve the tenant the same way (`shopIdForWhatsAppEvent`, H-83):
+ * the phone number id each change names, which one shop holds, and nothing
+ * else. The WABA in `entry[].id` only has to agree with that number's row; a
+ * chain may share a WABA across its shops, a number each, so the WABA alone
+ * is never the answer, even when no number is named. An event that resolves to no
+ * shop is dropped rather than filed nowhere: the row has a `shop_id`, and
  * there is no honest value for it.
  */
 export async function POST(request: Request) {
@@ -68,19 +72,30 @@ export async function POST(request: Request) {
   if (events.length === 0 && inbound.length === 0) return new Response(null, { status: 200 });
 
   const db = await getDb();
-  // Resolved once per batch: every event in one delivery names the same WABA,
-  // and this is the tenant key the update is scoped to.
-  const shopIdByWaba = new Map<string, string | null>();
-  const shopFor = async (wabaId: string) => {
-    if (!shopIdByWaba.has(wabaId))
-      shopIdByWaba.set(wabaId, await shopIdForWhatsAppWaba(db, wabaId));
-    return shopIdByWaba.get(wabaId) ?? null;
+  // Resolved once per number and WABA pair in the batch: the tenant key the
+  // update is scoped to.
+  const shopIdByKey = new Map<string, string | null>();
+  const shopFor = async (event: { phoneNumberId: string | null; wabaId: string | null }) => {
+    const cacheKey = `${event.phoneNumberId ?? ""}|${event.wabaId ?? ""}`;
+    if (!shopIdByKey.has(cacheKey)) {
+      shopIdByKey.set(
+        cacheKey,
+        await shopIdForWhatsAppEvent(db, {
+          phoneNumberId: event.phoneNumberId,
+          wabaId: event.wabaId,
+        }),
+      );
+    }
+    return shopIdByKey.get(cacheKey) ?? null;
   };
 
   for (const message of inbound) {
-    const shopId = message.wabaId ? await shopFor(message.wabaId) : null;
+    const shopId = await shopFor(message);
     if (!shopId) {
-      log("whatsapp_webhook.inbound_unknown_waba", "warn", { hasWaba: Boolean(message.wabaId) });
+      log("whatsapp_webhook.inbound_unknown_tenant", "warn", {
+        hasNumber: Boolean(message.phoneNumberId),
+        hasWaba: Boolean(message.wabaId),
+      });
       continue;
     }
     const result = await recordInboundMessage(db, {
@@ -91,6 +106,8 @@ export async function POST(request: Request) {
       mediaCount: message.mediaCount,
       receivedAt: message.receivedAt,
       providerMessageId: message.providerMessageId,
+      // Meta reports the number the message came from, and only its owner can send from it.
+      senderAuthenticated: true,
     });
     // Ids and outcomes only — never the sender or the words (PII-in-logs rule).
     log("whatsapp_webhook.inbound_recorded", "info", {
@@ -112,33 +129,31 @@ export async function POST(request: Request) {
         log("whatsapp_webhook.reply_keyword", "info", { shopId, outcome });
       }
       // The desk's after-hours ping (src/db/desk-pings.ts): only for a message
-      // actually filed, and never able to fail this webhook.
-      await pingDeskAfterHoursSafely(db, { shopId, receivedAt: message.receivedAt });
+      // actually filed, never able to fail this webhook, and after the
+      // response (#2311), so a slow mail provider cannot hold Meta's request
+      // open and earn a retry.
+      const receivedAt = message.receivedAt;
+      after(() => pingDeskAfterHoursSafely(db, { shopId, receivedAt }));
     }
   }
 
   for (const event of events) {
-    // Meta names the WABA on every entry it sends. `wabaId` is optional in the
-    // parser because the payload *shape* allows the field to be absent, not
-    // because a real event omits it — so an event arriving without one is a
-    // shape DiveDay cannot attribute, and `applyProviderEmailEvent` with no
-    // `shopId` matches the provider message id across every shop's rows. That
-    // is deliberate for SES, where the tenant is genuinely unknowable
-    // (src/db/notifications.ts), and wrong here where it is merely missing:
-    // one shop's delivery status would land on another's row. Fail closed, the
-    // same way the inbound-message loop above does (security review,
-    // 2026-09-12).
-    if (!event.wabaId) {
-      log("whatsapp_webhook.event_without_waba", "warn", { status: event.status });
-      continue;
-    }
-    const shopId = await shopFor(event.wabaId);
-    // A signed event for a WABA no shop has connected — a disconnect that
-    // raced an in-flight message, or a subscription Meta has not dropped yet.
-    // Nothing to apply, and scoping to "no shop" would silently widen the
-    // update instead, so skip rather than fall through unscoped.
+    // An event that resolves to no shop — it names no number, a number nobody
+    // here holds, a WABA its number's row does not record, or a disconnect
+    // that raced an in-flight message — is skipped.
+    // `applyProviderEmailEvent` with no `shopId` matches the provider message
+    // id across every shop's rows. That is deliberate for SES, where the
+    // tenant is genuinely unknowable (src/db/notifications.ts), and wrong here
+    // where it is merely missing: one shop's delivery status would land on
+    // another's row. Fail closed, the same way the inbound-message loop above
+    // does (security review, 2026-09-12).
+    const shopId = await shopFor(event);
     if (!shopId) {
-      log("whatsapp_webhook.unknown_waba", "warn", { status: event.status });
+      log("whatsapp_webhook.unknown_tenant", "warn", {
+        status: event.status,
+        hasNumber: Boolean(event.phoneNumberId),
+        hasWaba: Boolean(event.wabaId),
+      });
       continue;
     }
     const result = await applyProviderEmailEvent(db, {

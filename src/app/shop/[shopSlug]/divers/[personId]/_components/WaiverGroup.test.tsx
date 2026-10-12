@@ -92,6 +92,31 @@ describe("the waiver group", () => {
     expect(row.querySelector("details")).toBeNull();
   });
 
+  /**
+   * UX review 2026-10-10, item 27: the signed row was the one row in the file
+   * with no arrow, and no way to the signed document. It is a door to it now.
+   */
+  it("makes a signed release's row a door to its own record, with the door's arrow", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "current",
+          recordId: "waiver-9",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T15:00:00.000Z"),
+        } as DiverProfile["waiver"],
+      }),
+    );
+    const row = screen.getByTestId("diver-file-group-waiver");
+    expect(within(row).getByRole("link", { name: "Waiver" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/person-1/waivers/waiver-9",
+    );
+    expect(row.querySelector("svg")).not.toBeNull();
+    expect(row.querySelector("details")).toBeNull();
+  });
+
   it("names a minor's co-signer on the plain row", () => {
     renderCard(
       diver({

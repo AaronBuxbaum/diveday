@@ -85,6 +85,17 @@ export const E2E_TEST_ROUTE_SECRET =
 export const E2E_CRON_SECRET = process.env.CRON_SECRET || "diveday-e2e-cron-secret";
 
 /**
+ * The **test-mode** Stripe webhook secret the fleet's servers verify with, so a
+ * spec can pay an invoice the one way DiveDay learns one was paid: a signed
+ * `invoice.paid` on the real webhook (`payInvoiceThroughWebhook`, issue #2306).
+ * A fixed value and never a developer's own, the bar `E2E_TEST_ROUTE_SECRET`
+ * sets. Only ever the test secret: `playwright.config.ts` blanks the live one,
+ * so the fleet stays a deployment that takes no real money and a test event is
+ * not refused as one outside the demo.
+ */
+export const E2E_STRIPE_TEST_WEBHOOK_SECRET = "whsec_diveday_e2e_test_only";
+
+/**
  * The instant the whole e2e fleet pretends "now" is. The demo seed is
  * clock-anchored and dozens of surfaces render relative time, so against a live
  * clock every visual baseline diffs on nothing but the passage of

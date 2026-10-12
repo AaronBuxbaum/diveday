@@ -563,6 +563,14 @@ export const RATE_LIMITS = {
    * worth throttling harder even at the cost of a legitimate retry waiting.
    */
   bookingSelfCancel: perHour(5),
+  /**
+   * "Add a seat" from the readiness link, **per booking** (security review of
+   * layer 8, D3). The link is shared by design, so a per-IP bucket alone lets
+   * one link sprayed from many addresses fill the boat with seats; this one is
+   * spent by every holder of it together. Ten covers a lead adding a whole
+   * group in one sitting, a typo or two included.
+   */
+  readyAddSeatByBooking: perHour(10),
   /** Password-reset requests, per IP — the wider net. */
   passwordResetRequestByIp: perHour(5),
   /** Password-reset requests, per requested email — the narrow net. */

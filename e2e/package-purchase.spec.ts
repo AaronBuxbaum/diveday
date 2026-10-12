@@ -1,11 +1,12 @@
 import { expect, test } from "./fixtures";
+import { bookASeatAndOpenThread, payInvoiceThroughWebhook } from "./helpers";
 
 /**
  * **A diver buys a dive package online** (owner decision 2026-10-09; ADR
  * 20260822-a-package-is-entitlements-not-money).
  *
- * The public nav offers Packages only while one is on sale, the page is the
- * one form, and Buy raises an invoice on the shop's connected account. This
+ * The public nav offers Packages only while one is on sale (the page itself
+ * says "No packages right now" otherwise), the page is the one form, and Buy raises an invoice on the shop's connected account. This
  * fleet sets no `STRIPE_SECRET_KEY`, so the last step stops at "the payment
  * page didn't open" — which is the proof the action got as far as Stripe with
  * the package's own price, and that it says so rather than pretending.
@@ -24,13 +25,16 @@ test("a shop's packages earn a tab, and Buy goes to Stripe or says why not", asy
   const SHOP = privateShop.slug;
   const nav = page.getByRole("navigation", { name: /.+/ }).filter({ hasText: "Schedule" });
 
-  // Nothing on sale: no tab, and no page behind the URL either.
+  // Nothing on sale: no tab, and the URL answers quietly with a door to the
+  // schedule rather than a 404 (UX review 2026-10-10, item 18).
   await page.goto(`/s/${SHOP}`);
   await expect(nav.getByRole("link", { name: "Packages" })).toHaveCount(0);
-  // The page's own `notFound()`, the second layer behind the edge (the shop
-  // exists, so the proxy lets the URL through and the page refuses it).
   await page.goto(`/s/${SHOP}/packages`);
-  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No packages right now" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to the schedule" })).toHaveAttribute(
+    "href",
+    `/s/${SHOP}`,
+  );
 
   await page.goto(`/shop/${SHOP}/promos/packages`);
   await page.getByLabel("What you call it").fill("Ten-dive card");
@@ -64,4 +68,42 @@ test("a shop's packages earn a tab, and Buy goes to Stripe or says why not", asy
   await expect(
     page.getByText("The payment page didn’t open. Nothing was charged. Try again in a moment."),
   ).toBeVisible();
+});
+
+/**
+ * **"N package dives left" on the diver's own page** (owner decision
+ * 2026-10-09; issue #2306). The line rides on the Pay step's paid line, so the
+ * diver needs both a paid seat and package dives, and both arrive the way they
+ * do in production: one invoice for the seat and a ten-dive card, paid by a
+ * signed `invoice.paid` on the real webhook, which settles the seat and grants
+ * the dives.
+ */
+test("a paid package shows the dives left on the diver's page", async ({
+  page,
+  request,
+  privateShop,
+}) => {
+  test.setTimeout(90_000);
+  const SHOP = privateShop.slug;
+  const email = "pia.package@example.com";
+
+  // Booked before the shop is connected, so the seat is unpaid rather than sent to Stripe.
+  await page.goto(`/s/${SHOP}`);
+  await page.locator(`a[href^="/s/${SHOP}/trips/"]`).first().click();
+  await bookASeatAndOpenThread(page, "Pia Package", email);
+  const thread = page.url();
+  await expect(page.getByText(/package dives? left/)).toHaveCount(0);
+
+  const connected = await request.post(
+    `/api/test/seed-stripe-account?slug=${encodeURIComponent(SHOP)}`,
+  );
+  expect(connected.ok()).toBe(true);
+  const seeded = await request.post(
+    `/api/test/seed-open-package-invoice?slug=${encodeURIComponent(SHOP)}&email=${encodeURIComponent(email)}`,
+  );
+  expect(seeded.ok()).toBe(true);
+  await payInvoiceThroughWebhook(request, await seeded.json());
+
+  await page.goto(thread);
+  await expect(page.getByText("10 package dives left")).toBeVisible();
 });

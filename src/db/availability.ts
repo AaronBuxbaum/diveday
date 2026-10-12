@@ -51,7 +51,8 @@ export async function publicAvailabilityTrips(
     title: trip.title,
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
-    capacity: trip.capacity,
+    // Seats on sale, under the boat's certificate (#2321).
+    capacity: trip.sellableCapacity,
     booked: trip.booked,
     priceCents: trip.priceCents,
     conditionsHold: trip.conditionsHold,

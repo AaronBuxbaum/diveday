@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import type { PublicReview } from "@/db/reviews";
 import { diverTranslator } from "@/i18n/messages";
-import { ShopReviews, ShopReviewsSkeleton } from "./ShopReviews";
+import { ReviewLedger, ShopReviews, ShopReviewsSkeleton } from "./ShopReviews";
 
 /**
  * The storefront's reviews shelf (ADR 20260827-clearwater-surface-language,
@@ -26,6 +26,7 @@ function review(n: number, overrides: Partial<PublicReview> = {}): PublicReview 
     tripTitle: "Two-Tank Reef",
     divedAt: new Date("2026-08-26T12:00:00Z"),
     publishedAt: new Date("2026-08-26T18:00:00Z"),
+    reply: null,
     ...overrides,
   };
 }
@@ -152,6 +153,25 @@ describe("what the shelf does not say", () => {
     expect(screen.queryByText(/every one from a diver/)).not.toBeInTheDocument();
   });
 
+  it("names a public trip, and leaves no stray dot where a charter's title was withheld (issue 2318)", () => {
+    render(
+      <ShopReviews
+        aggregate={AGGREGATE}
+        reviews={[review(1), review(2, { tripTitle: null })]}
+        shopSlug="blue-mantis"
+        locale="en-US"
+        timezone="America/New_York"
+        t={t}
+      />,
+    );
+    const [named, withheld] = screen.getAllByRole("listitem");
+
+    expect(named?.textContent).toContain("Diver 1 · Two-Tank Reef ·");
+    expect(withheld?.textContent).toMatch(/Diver 2 · \w/);
+    expect(withheld?.textContent).not.toContain("Two-Tank Reef");
+    expect(withheld?.textContent).not.toContain("null");
+  });
+
   it("renders nothing at all for a shop with no published reviews", () => {
     const { container } = render(
       <ShopReviews
@@ -184,5 +204,52 @@ describe("the stars", () => {
     expect(container.querySelector(".text-accent")).not.toBeNull();
     expect(container.querySelector(".text-warning")).toBeNull();
     expect(container.textContent).not.toContain("★");
+  });
+});
+
+/**
+ * **The shop's reply under a review** (batch 4, K2). Rendered inside the shared
+ * ledger, so the shelf, the archive and the embed all carry it, signed with
+ * the shop's name, and printed as text whatever it holds.
+ */
+describe("the shop's reply", () => {
+  it("renders under the review, signed with the shop's name", () => {
+    render(
+      <ReviewLedger
+        reviews={[
+          review(1, { reply: { body: "Thanks for diving with us!", shopName: "Blue Mantis" } }),
+        ]}
+        locale="en-US"
+        timezone="America/New_York"
+        t={t}
+      />,
+    );
+    expect(screen.getByText("Reply from Blue Mantis")).toBeInTheDocument();
+    expect(screen.getByText("Thanks for diving with us!")).toBeInTheDocument();
+  });
+
+  it("prints markup in a reply as text rather than rendering it", () => {
+    const { container } = render(
+      <ReviewLedger
+        reviews={[
+          review(1, {
+            reply: { body: '<img src=x onerror="alert(1)">', shopName: "<b>Shop</b>" },
+          }),
+        ]}
+        locale="en-US"
+        timezone="America/New_York"
+        t={t}
+      />,
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("b")).toBeNull();
+    expect(screen.getByText('<img src=x onerror="alert(1)">')).toBeInTheDocument();
+  });
+
+  it("renders nothing extra for a review with no reply", () => {
+    const { container } = render(
+      <ReviewLedger reviews={[review(1)]} locale="en-US" timezone="America/New_York" t={t} />,
+    );
+    expect(container.querySelector("[data-review-reply]")).toBeNull();
   });
 });

@@ -24,7 +24,7 @@ import { toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import type { WorkOrderOutcome } from "@/lib/work-orders";
+import { isCustomerRegulatorServiceMonths, type WorkOrderOutcome } from "@/lib/work-orders";
 import { BillAndPickupCard } from "../_components/BillAndPickupCard";
 import { pieceDueLine } from "../_components/piece-dates";
 import { WorkOrderHistoryCard } from "../_components/WorkOrderHistoryCard";
@@ -206,6 +206,11 @@ export default async function WorkOrderPage({
         <WorkOrderWorkCard
           detail={detail}
           previousClocks={clocks}
+          customerRegulatorMonths={
+            isCustomerRegulatorServiceMonths(shop.customerRegulatorServiceMonths)
+              ? shop.customerRegulatorServiceMonths
+              : 12
+          }
           todayLocal={todayLocal}
           locale={locale}
           t={t}

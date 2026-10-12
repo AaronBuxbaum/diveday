@@ -69,7 +69,7 @@ export async function register() {
  * SDK's runtime in the two largest server chunks of every route.
  */
 async function initSentry(dsn: string) {
-  const [Sentry, { redactBreadcrumb, redactEvent }] = await Promise.all([
+  const [Sentry, { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION }] = await Promise.all([
     import("@sentry/nextjs"),
     import("@/app/observability"),
   ]);
@@ -77,6 +77,7 @@ async function initSentry(dsn: string) {
     dsn,
     environment: process.env.NODE_ENV,
     tracesSampleRate: 0,
+    dataCollection: SENTRY_DATA_COLLECTION,
     beforeSend: redactEvent,
     beforeBreadcrumb: redactBreadcrumb,
     defaultIntegrations: false,

@@ -14,6 +14,7 @@ import {
 import { getShopById } from "@/db/shops";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { checkbox, parseForm, single } from "@/lib/form-parse";
 import {
   GEAR_KIND_ORDER,
   GEAR_SERVICE_KINDS,
@@ -31,13 +32,13 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 const kindValues = [...GEAR_KIND_ORDER] as [GearItemKind, ...GearItemKind[]];
 const SERVICE_KINDS: [GearServiceKind, ...GearServiceKind[]] = [...GEAR_SERVICE_KINDS];
 
-const unitIdSchema = z.object({ gearItemId: z.uuid() });
+const unitIdSchema = z.object({ gearItemId: single(z.uuid()) });
 
 async function requireUnitSurface(formData: FormData) {
   const session = await requireStaffSession();
   const gear = shopPath(session.user.shopSlug, "gear");
-  const parsed = unitIdSchema.safeParse({ gearItemId: formData.get("gearItemId") });
-  if (!parsed.success) revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+  const parsed = parseForm(unitIdSchema, formData);
+  if (!parsed.ok) revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
   const unit = shopPath(session.user.shopSlug, "gear", parsed.data.gearItemId);
   /**
    * Where a refusal lands. A `not_found` goes to the register, not back to
@@ -116,6 +117,7 @@ const serviceSchema = z.object({
   nextDueOn: z.string().trim().max(10).optional(),
   nextDueDives: z.string().trim().max(4).optional(),
   note: z.string().trim().max(500).optional(),
+  returnToService: checkbox(),
 });
 
 export async function recordGearServiceAction(formData: FormData) {
@@ -132,7 +134,7 @@ export async function recordGearServiceAction(formData: FormData) {
     nextDueDives: parsed.data.nextDueDives ? Number(parsed.data.nextDueDives) : undefined,
     note: parsed.data.note || undefined,
     recordedByPersonId: session.user.personId,
-    returnToService: formData.get("returnToService") === "on",
+    returnToService: parsed.data.returnToService,
   });
   if (outcome.ok) revalidateAndRedirect(unit, noticeUrl(unit, "service-logged"));
   const to = refusalPath(outcome.reason);
@@ -172,15 +174,15 @@ export async function deleteGearItemAction(formData: FormData) {
   revalidateAndRedirect(gear, noticeUrl(gear, "deleted", { undoId: outcome.deleted.id }));
 }
 
-const reservationSchema = z.object({ reservationId: z.uuid() });
+const reservationSchema = z.object({ reservationId: single(z.uuid()) });
 
 async function reservationAction(
   formData: FormData,
   act: "release" | "check_out" | "return",
 ): Promise<never> {
   const { session, unit } = await requireUnitSurface(formData);
-  const parsed = reservationSchema.safeParse({ reservationId: formData.get("reservationId") });
-  if (!parsed.success) revalidateAndRedirect(unit, noticeUrl(unit, "invalid"));
+  const parsed = parseForm(reservationSchema, formData);
+  if (!parsed.ok) revalidateAndRedirect(unit, noticeUrl(unit, "invalid"));
   const db = await getDb();
   const input = { shopId: session.user.shopId, reservationId: parsed.data.reservationId };
   const outcome =

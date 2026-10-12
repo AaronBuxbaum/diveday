@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   type CompleteSignupInput,
+  confirmNumberInWaba,
   confirmWabaAccess,
   courtesyTemplateDefinition,
   exchangeSignupCode,
@@ -260,6 +261,38 @@ describe("completeEmbeddedSignup", () => {
     });
   });
 
+  // Issue #2334: neither Meta's free-text message nor a thrown one comes back
+  // in the failure; the step, the status and Meta's code say what happened.
+  it("keeps Meta's free-text message out of a failed step", async () => {
+    const fetchImpl = fetchSequence({
+      1: json(400, {
+        error: { message: "Phone +13055550199 is owned by Nora Quinn", code: 133005 },
+      }),
+    });
+    const result = await completeEmbeddedSignup(input, config, fetchImpl);
+
+    expect(result).toMatchObject({ status: "failed", step: "register", errorCode: "133005" });
+    expect(result).not.toHaveProperty("detail");
+    expect(JSON.stringify(result)).not.toContain("Nora Quinn");
+  });
+
+  it("records a thrown Graph call by its cause's code, never its message", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(
+      new TypeError("fetch failed for EAAG-business-token", {
+        cause: Object.assign(new Error("getaddrinfo ENOTFOUND"), { code: "ENOTFOUND" }),
+      }),
+    );
+    const result = await completeEmbeddedSignup(input, config, fetchImpl);
+
+    expect(result).toMatchObject({
+      status: "failed",
+      step: "exchange",
+      errorCode: "network_error",
+      detail: "ENOTFOUND",
+    });
+    expect(JSON.stringify(result)).not.toContain("EAAG");
+  });
+
   it("survives a network failure without throwing", async () => {
     const fetchImpl = vi.fn().mockRejectedValue(new Error("socket hang up"));
     const result = await completeEmbeddedSignup(input, config, fetchImpl);
@@ -347,6 +380,42 @@ describe("confirmWabaAccess", () => {
       status: "failed",
       step: "exchange",
       errorCode: "waba_not_visible",
+    });
+  });
+});
+
+describe("confirmNumberInWaba", () => {
+  it("lists the WABA's numbers with the exchanged token and finds the posted one", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(async () =>
+        json(200, { data: [{ id: "pn-north" }, { id: "pn-south" }] }),
+      );
+    expect(await confirmNumberInWaba("waba-1", "pn-south", "EAAG-token", fetchImpl)).toEqual({
+      status: "visible",
+    });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(String(url)).toContain("/waba-1/phone_numbers?fields=id");
+    expect(init.headers.Authorization).toBe("Bearer EAAG-token");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("refuses as an exchange failure a number that is not that WABA's", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(async () => json(200, { data: [{ id: "pn-north" }] }));
+    expect(
+      await confirmNumberInWaba("waba-1", "pn-someone-else", "EAAG-token", fetchImpl),
+    ).toMatchObject({ status: "failed", step: "exchange", errorCode: "number_not_in_waba" });
+  });
+
+  it("refuses as an exchange failure when Meta will not list them", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(async () => json(400, { error: { message: "nope", code: 100 } }));
+    expect(await confirmNumberInWaba("waba-1", "pn-north", "EAAG-token", fetchImpl)).toMatchObject({
+      status: "failed",
+      step: "exchange",
     });
   });
 });

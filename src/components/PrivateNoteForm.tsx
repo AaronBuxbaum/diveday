@@ -13,7 +13,7 @@ export type PrivateNoteFormCopy = {
 };
 
 /**
- * The one staff-only note input used by the diver record, Guests roster, and
+ * The one staff-only note input used by the diver record, Divers roster, and
  * live manifest. The action decides the note's existing domain scope
  * (person-scoped or booking-scoped); the form deliberately does not create a
  * third client-side note path.
@@ -42,7 +42,10 @@ export function PrivateNoteForm({
       {Object.entries(hiddenFields ?? {}).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <Field label={copy.label}>
+      {/* One field, so the asterisk would distinguish nothing; on the person
+          sheet it read as "a note is required" (UX review 2026-10-10, item
+          12). The textarea stays `required`: an empty note is not a note. */}
+      <Field label={copy.label} markRequired={false}>
         <textarea
           name="note"
           required

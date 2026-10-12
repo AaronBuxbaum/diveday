@@ -1,7 +1,6 @@
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
@@ -9,7 +8,6 @@ import { InsetGroup } from "@/components/ui/ledger";
 import type { stripeCurrencyMismatch } from "@/db/stripe-accounts";
 import { currencyOptions } from "@/i18n/currency-labels";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
-import { formatMonthDay, monthNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import {
   type CuratedTimeZone,
@@ -17,13 +15,7 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
 import { AddressSearch } from "../../AddressSearch";
-import {
-  resendContactConfirmationAction,
-  saveContactAction,
-  saveSeasonStartAction,
-  saveTimezoneAction,
-  saveUnitsAction,
-} from "../../shop-actions";
+import { saveTimezoneAction, saveUnitsAction } from "../../shop-actions";
 import { SettingsRow } from "../SettingsRows";
 import { SectionNotice, SettingsGroup, type SettingsView, SHOP_GROUP } from "./kit";
 
@@ -77,8 +69,9 @@ const CURATED_TIMEZONE_KEYS: Record<CuratedTimeZone, StaffMessageKey> = {
 };
 
 /**
- * The Shop group: the timezone and season every date is read through, the
- * units a shop reads its own numbers in, and how divers reach it.
+ * The Shop group: the timezone every date is read through, the units a shop
+ * reads its own numbers in, and where it is. The season start and the contact
+ * row moved (to Rarely changed and Notifications).
  */
 export function ShopGroup({
   view,
@@ -98,23 +91,8 @@ export function ShopGroup({
   const zoneId = shop.timezone || DEFAULT_TIMEZONE;
   const timezoneValue =
     zoneId in CURATED_TIMEZONE_KEYS ? t(CURATED_TIMEZONE_KEYS[zoneId as CuratedTimeZone]) : zoneId;
-  // The rows below that state several facts do it through `FactLine`, so a
-  // line wraps only between facts: as one `.join(" · ")` string the contact
-  // row broke "+1" / "305 555 0142" and Diving options "6:1 divers" / "per
-  // divemaster" at 390 (K-235). Only the shop's own free text wraps inside
-  // itself (a tagline, a fee's name).
-  const contactText = <FactLine facts={[shop.contactEmail, shop.contactPhone]} empty={notSet} />;
-  // An address the shop has not yet confirmed is the one exceptional state on
-  // this row: until the link sent there is opened, diver replies are not
-  // routed to it (issue #1288). Confirmed is the quiet default and says nothing.
-  const contactUnconfirmed = Boolean(shop.contactEmail && !shop.contactEmailConfirmedAt);
-  const contactValue = contactUnconfirmed ? (
-    <>
-      {contactText} <Badge tone="warning">{t("settings.main.contact.awaitingConfirmation")}</Badge>
-    </>
-  ) : (
-    contactText
-  );
+  // A row that states several facts does it through `FactLine`, so a line
+  // wraps only between facts (K-235).
   const addressValue =
     [shop.addressStreet, shop.addressLocality].filter(Boolean).join(", ") || notSet;
   const unitsValue = (
@@ -185,63 +163,6 @@ export function ShopGroup({
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.timezone.submit")}
-              </SubmitButton>
-            </FieldActions>
-          </FieldGrid>
-        </SettingsRow>
-
-        {/* Beside the timezone, because the two are one reading: the zone
-          says when a day starts and this says when the counting does. The
-          denominator behind the home's one fact of scale (ADR
-          20260904-reef-all-the-way-down, Budget rule 3) — a dive shop's
-          year rarely starts in January, and "your 400th diver of the
-          season" is only true against a date the shop chose. */}
-        <SettingsRow
-          heading={t("settings.main.season.heading")}
-          value={formatMonthDay(shop.seasonStartMonth, shop.seasonStartDay, locale)}
-          detail={t("settings.main.season.detail")}
-          sectionId="season"
-          activeSection={activeSection}
-        >
-          <SectionNotice banner={banner} section="season" active={activeSection} />
-          <FieldGrid as="form" action={saveSeasonStartAction} columns={2} className="mt-4">
-            <Field label={t("settings.main.season.monthLabel")}>
-              <select
-                name="seasonStartMonth"
-                required
-                defaultValue={shop.seasonStartMonth}
-                className={controlClass}
-              >
-                {monthNames(locale).map((name, index) => (
-                  <option key={name} value={index + 1}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t("settings.main.season.dayLabel")}>
-              {/* A number rather than a second select: the days a month
-                has depend on the month, and the action and the table both
-                refuse a date the calendar does not have (`parseSeasonStart`
-                and the `shops_season_start_day_in_month` constraint), so a
-                31 chosen in April comes back as a refusal on the field
-                rather than as a silently clamped 30. */}
-              <input
-                type="number"
-                name="seasonStartDay"
-                required
-                min={1}
-                max={31}
-                defaultValue={shop.seasonStartDay}
-                className={controlClass}
-              />
-            </Field>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("settings.main.season.submitting")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("settings.main.season.submit")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>
@@ -355,62 +276,6 @@ export function ShopGroup({
               </SubmitButton>
             </FieldActions>
           </FieldGrid>
-        </SettingsRow>
-
-        <SettingsRow
-          heading={t("settings.main.contact.heading")}
-          value={contactValue}
-          description={t("settings.main.contact.description")}
-          detail={t("settings.main.contact.detail")}
-          sectionId="contact"
-          activeSection={activeSection}
-        >
-          <SectionNotice banner={banner} section="contact" active={activeSection} />
-          <FieldGrid as="form" action={saveContactAction} columns={2} className="mt-4">
-            <Field label={t("settings.main.contact.emailLabel")}>
-              <input
-                name="contactEmail"
-                type="email"
-                maxLength={200}
-                autoComplete="email"
-                defaultValue={shop.contactEmail ?? ""}
-                placeholder="hello@yourshop.com"
-                className={controlClass}
-              />
-            </Field>
-            <Field
-              label={t("settings.main.contact.phoneLabel")}
-              hint={t("settings.main.contact.phoneHint")}
-            >
-              <input
-                name="contactPhone"
-                type="tel"
-                maxLength={40}
-                autoComplete="tel"
-                defaultValue={shop.contactPhone ?? ""}
-                placeholder="+1 305 555 0134"
-                className={controlClass}
-              />
-            </Field>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("settings.main.contact.submitting")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("settings.main.contact.submit")}
-              </SubmitButton>
-            </FieldActions>
-          </FieldGrid>
-          {contactUnconfirmed ? (
-            <form action={resendContactConfirmationAction} className="mt-3">
-              <SubmitButton
-                pendingLabel={t("settings.main.contact.resending")}
-                className={buttonClass({ variant: "ghost" })}
-              >
-                {t("settings.main.contact.resend")}
-              </SubmitButton>
-            </form>
-          ) : null}
         </SettingsRow>
 
         {/* One search box, no Save: picking a place *is* the save (ADR

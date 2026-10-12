@@ -6,6 +6,7 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { type MeetingPoint, meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
 import {
   type Notification,
@@ -53,6 +54,7 @@ import {
   trips,
 } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
+import { notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 const REMINDER_KINDS: ReminderKind[] = TRIP_REMINDER_CADENCES.map((c) => c.kind);
@@ -169,6 +171,16 @@ function reminderSmsBody(
      * without anyone, so only a boat's day-before text teaches LATE.
      */
     diveMode?: "boat" | "shore" | "pool";
+    /**
+     * Where to go, short form: the label and the address, no landmark or
+     * parking (ux review 2026-10-11, item 4). The email carries the rest.
+     */
+    meetingPoint?: MeetingPoint;
+    /**
+     * The diver's own trip prep (ux review 2026-10-11, item 6): a phone-only
+     * diver had no way to reach the page that says what is left.
+     */
+    readinessUrl?: string;
   },
 ): string {
   const when =
@@ -186,8 +198,8 @@ function reminderSmsBody(
     ? ` ${t("notifications.common.outstandingHeading")} ${todo.join("; ")}.`
     : "";
   // A phone-only student has no email to click through, so the text carries
-  // the first material's own https link. Never the readiness capability: no
-  // reminder text carries one, and this is not the place to start.
+  // the first material's own https link. The readiness link has its own clause
+  // below, once, for every diver.
   const materials = input.materials ?? [];
   const names = materials.map((material) => material.name).join("; ");
   const firstLink = materials.find((material) => material.url)?.url;
@@ -199,6 +211,16 @@ function reminderSmsBody(
             ? t("notifications.sms.materialsWithLink", { names, url: firstLink })
             : t("notifications.sms.materials", { names })
         }`;
+  const meet = input.meetingPoint
+    ? ` ${t("trip.calendarMeetingPoint", {
+        place: [input.meetingPoint.label, input.meetingPoint.address].filter(Boolean).join(", "),
+      })}`
+    : "";
+  // The same capability the email's button carries, minted once per reminder:
+  // it goes only to this seat's own phone, as the email goes to its own inbox.
+  const ready = input.readinessUrl
+    ? ` ${t("notifications.sms.readyLink", { url: input.readinessUrl })}`
+    : "";
   const contact =
     input.lead === "day" && input.whoToText
       ? ` ${t("notifications.sms.contact", { phone: input.whoToText })}`
@@ -231,7 +253,31 @@ function reminderSmsBody(
       : "";
   // Last, and only on a channel that can hear the answer.
   const keywords = input.replyKeywords ? ` ${t("notifications.replyKeyword.offer")}` : "";
-  return `${body}${conditions}${todoText}${materialsText}${contact}${late}${keywords}`;
+  return `${body}${conditions}${meet}${todoText}${materialsText}${ready}${contact}${late}${keywords}`;
+}
+
+/**
+ * The diver's own trip-prep link for one reminder, minted once and carried by
+ * both the email's button and the text (ux review 2026-10-11, item 6).
+ * Undefined with no public origin configured.
+ */
+async function reminderReadinessUrl(
+  db: AppDb,
+  origin: string | null,
+  shopId: string,
+  bookingId: string,
+  now: Date,
+): Promise<string | undefined> {
+  if (!origin) return undefined;
+  const capability = await issueBookingCapability(db, {
+    shopId,
+    bookingId,
+    purpose: "readiness",
+    now,
+  });
+  return capability
+    ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
+    : undefined;
 }
 
 /**
@@ -298,7 +344,7 @@ export async function sendDueReminders(
     .where(
       and(
         ne(bookings.status, "cancelled"),
-        eq(trips.status, "scheduled"),
+        and(eq(trips.status, "scheduled"), notRehearsal()),
         gt(trips.startsAt, now),
         lte(trips.startsAt, horizon),
       ),
@@ -518,18 +564,10 @@ export async function sendDueReminders(
     // different languages.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
-    const readinessCapability = origin
-      ? await issueBookingCapability(db, {
-          shopId: shop.id,
-          bookingId: booking.id,
-          purpose: "readiness",
-          now,
-        })
-      : null;
-    const readinessUrl = readinessCapability
-      ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
-      : undefined;
+    const readinessUrl = await reminderReadinessUrl(db, origin, shop.id, booking.id, now);
     const phone = smsRecipient(person.phone);
+    // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
+    const meetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));
 
     // Name the diver's own outstanding items from that same checklist, so the
     // reminder never diverges from the readiness engine — and so the rule above
@@ -585,6 +623,8 @@ export async function sendDueReminders(
         materials: materialsDue,
         courseSession: Boolean(trip.courseId),
         diveMode: trip.diveMode,
+        meetingPoint,
+        readinessUrl,
       });
     const smsBody = reminderText(false);
     // The same reminder, plus the reply line, for the one text channel that
@@ -627,6 +667,7 @@ export async function sendDueReminders(
           ...(materialsDue.length > 0 ? { learningMaterials: materialsDue } : {}),
           ...(meetings.length > 1 ? { scheduleDays: meetings } : {}),
           ...(trip.courseId ? { courseSession: true } : {}),
+          meetingPoint,
         },
       });
     } else if (phone) {

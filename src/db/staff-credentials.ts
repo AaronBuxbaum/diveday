@@ -109,21 +109,26 @@ export async function createStaffCredential(
     .limit(1);
   if (!person || (input.renewsAt && input.issuedAt && input.renewsAt < input.issuedAt)) return null;
   try {
-    const [row] = await db
-      .insert(staffCredentials)
-      .values({
-        shopId: input.shopId,
-        personId: input.personId,
-        kind: input.kind,
-        name: input.name,
-        issuingBody: input.issuingBody ?? null,
-        identifier: input.identifier ?? null,
-        issuedAt: input.issuedAt ?? null,
-        renewsAt: input.renewsAt ?? null,
-        status: "pending",
-        updatedAt: nowDate(),
-      })
-      .returning();
+    // In its own savepoint (a transaction when `db` is not one), so a refusal
+    // rolls back only this insert and a caller's transaction stays usable: a
+    // bare 23505 there aborts it (issue #2295, the #1769 pattern).
+    const [row] = await db.transaction((savepoint) =>
+      savepoint
+        .insert(staffCredentials)
+        .values({
+          shopId: input.shopId,
+          personId: input.personId,
+          kind: input.kind,
+          name: input.name,
+          issuingBody: input.issuingBody ?? null,
+          identifier: input.identifier ?? null,
+          issuedAt: input.issuedAt ?? null,
+          renewsAt: input.renewsAt ?? null,
+          status: "pending",
+          updatedAt: nowDate(),
+        })
+        .returning(),
+    );
     return row ?? null;
   } catch (error) {
     // `staff_credentials_live_identity_unique` covers (shop, person, kind,

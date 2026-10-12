@@ -42,7 +42,11 @@ vi.mock("@/db/booking-handoff", () => ({
 }));
 vi.mock("@/db/people", () => ({ recordDiverOwnLocaleForBooking: vi.fn() }));
 vi.mock("@/db/notifications", () => ({ sendAndRecordNotification: vi.fn() }));
-vi.mock("@/db/waiver-issue", () => ({ issueWaiverOnJoin: vi.fn() }));
+vi.mock("@/db/waiver-issue", () => ({
+  issueJoinWaiverLink: vi.fn(async () => null),
+  issueWaiverOnJoin: vi.fn(),
+  settleJoinWaiverDelivery: vi.fn(),
+}));
 vi.mock("@/db/nitrox", () => ({ setBookingNitrox: vi.fn() }));
 vi.mock("@/db/rental-fit", () => ({
   saveRentalFit: vi.fn(async () => ({})),

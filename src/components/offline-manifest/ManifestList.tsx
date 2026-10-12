@@ -3,6 +3,7 @@ import { freshnessInkClass, OfflineFreshnessPill } from "@/components/OfflineFre
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
@@ -177,6 +178,13 @@ export function OfflineManifestList({
           <p className="mx-auto mt-4 max-w-md text-muted">
             {t("shared.offlineManifest.list.emptyHint")}
           </p>
+          {/* A door, not a dead end (UX review 2026-10-10, item 33). `/shop`
+              lands a signed-in staffer on their own Today (`src/proxy.ts`)
+              and anyone else on sign-in; a plain anchor, because this page
+              is the cached shell and must not lean on the client router. */}
+          <a href="/shop" className={buttonClass({ variant: "secondary", className: "mt-6" })}>
+            {t("shared.notFound.backToToday")}
+          </a>
         </div>
       )}
     </main>

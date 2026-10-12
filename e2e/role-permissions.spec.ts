@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
 import { openTripAbout, openTripMore } from "./helpers";
 

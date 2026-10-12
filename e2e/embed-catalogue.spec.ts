@@ -158,6 +158,28 @@ test.describe("the loader on a host page", () => {
       .not.toBe(480);
   });
 
+  /**
+   * **A widget with nothing to show folds away** (#2317). Reef Line Divers is
+   * a listed shop with no reviews (`seed-listed-shops.ts`); its reviews widget
+   * reports a height of 0, and the loader takes the frame and the credit off
+   * the host page instead of leaving a blank 120px box under "Powered by".
+   */
+  test("folds a reviews widget with nothing to show, credit and all", async ({ page, baseURL }) => {
+    await page.goto("/");
+    await page.setContent(`<!doctype html><html><body>
+      <script async src="${baseURL}/embed.js"></script>
+      <div data-diveday="reviews" data-shop="reef-line-divers" data-look="light" data-lang="auto"></div>
+      </body></html>`);
+    const frame = page.locator('iframe[data-diveday-frame="reviews"]');
+    // The wait for `embed.js` itself, sized to the fetch as the lightbox test
+    // below explains (issue #1595); the frame mounts at 480px, then folds.
+    await expect(frame).toHaveAttribute("src", /\/s\/reef-line-divers\/embed\/reviews/, {
+      timeout: 15_000,
+    });
+    await expect.poll(() => frame.evaluate((el) => el.style.height)).toBe("0px");
+    await expect(page.getByRole("link", { name: "Powered by DiveDay" })).toBeHidden();
+  });
+
   test("a lightbox link opens the booking page over the host page, and Escape closes it", async ({
     page,
     baseURL,

@@ -144,7 +144,9 @@ export async function commitDiveSiteImport(
       // then `applyDeletedState` counted it as deleted. "1 updated, 1 deleted"
       // over a library that had not changed at all, on exactly the scenario
       // the name match exists for.
-      const updated = await refusingNameClash(() => updateDiveSite(db, shopId, match.id, input));
+      const updated = await refusingNameClash(db, (savepoint) =>
+        updateDiveSite(savepoint, shopId, match.id, input),
+      );
       if (updated === SITE_NAME_TAKEN) {
         summary.skipped.push({ rowNumber: row.rowNumber, issues: ["name_taken"] });
         continue;
@@ -163,7 +165,7 @@ export async function commitDiveSiteImport(
     // write. Unhandled that is a 500 out of the server action with N sites
     // already committed and no summary to show for them, which is the worst
     // shape this can fail in; `refusingNameClash` turns it into one skipped row.
-    const created = await refusingNameClash(() => createDiveSite(db, input));
+    const created = await refusingNameClash(db, (savepoint) => createDiveSite(savepoint, input));
     if (created === SITE_NAME_TAKEN) {
       summary.skipped.push({ rowNumber: row.rowNumber, issues: ["name_taken"] });
       continue;

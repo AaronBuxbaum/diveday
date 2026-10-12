@@ -652,6 +652,7 @@ export function resolveDiverNotice({
   personId,
   locale,
   canRaiseInvoice = false,
+  conflictDeparture,
 }: {
   notice?: string;
   /**
@@ -686,6 +687,12 @@ export function resolveDiverNotice({
    * a reader without that link is told only that it booked. Absent reads as no.
    */
   canRaiseInvoice?: boolean;
+  /**
+   * The departure a refused merge collided on, already worded ("title · when")
+   * by the page from the shop's own trip row (issue #2333). Only
+   * `merge-booking-conflict` reads it; absent keeps the general sentence.
+   */
+  conflictDeparture?: string;
 }): DiverNotice | undefined {
   const banner = noticeFromParam(notice, NOTICE_KEYS);
   if (!banner) return undefined;
@@ -703,7 +710,9 @@ export function resolveDiverNotice({
         ? tripAdmissionRefusalText(t, refusal, locale)
         : notice === "booked" && !canRaiseInvoice
           ? t("divers.notices.bookedNoInvoice")
-          : t(banner.key as StaffMessageKey),
+          : notice === "merge-booking-conflict" && conflictDeparture
+            ? t("divers.notices.mergeBookingConflictOn", { departure: conflictDeparture })
+            : t(banner.key as StaffMessageKey),
     code: notice,
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,

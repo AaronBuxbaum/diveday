@@ -13,6 +13,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import {
   type DiveSiteDifficulty,
@@ -51,8 +52,8 @@ import {
   tripDives,
   trips,
 } from "./schema";
-import { liveTrip } from "./trips-live";
-import { liveBookingJoin } from "./trips-queries";
+import { liveTrip, notRehearsal } from "./trips-live";
+import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
 
 export type DiveSiteInput = {
   shopId: string;
@@ -396,9 +397,15 @@ export type DiveSiteWrite<T> = T | typeof SITE_NAME_TAKEN;
  * with it. Note the index does not exclude archived sites, so the name can be
  * held by a row the staffer cannot see — which is why the wording names them.
  */
-export async function refusingNameClash<T>(write: () => Promise<T>): Promise<DiveSiteWrite<T>> {
+export async function refusingNameClash<T>(
+  db: DbExecutor,
+  write: (db: DbExecutor) => Promise<T>,
+): Promise<DiveSiteWrite<T>> {
   try {
-    return await write();
+    // In its own savepoint (a transaction when `db` is not one), so a clash
+    // rolls back only this write and a caller's transaction stays usable: a
+    // bare 23505 there aborts it (issue #2295, the #1769 pattern).
+    return await db.transaction((savepoint) => write(savepoint));
   } catch (error) {
     if (violatesUniqueIndex(error, "dive_sites_shop_name_unique")) return SITE_NAME_TAKEN;
     throw error;
@@ -453,7 +460,7 @@ function confirmedStationWrite(input: DiveSiteInput) {
   return sql`${diveSites.tideStationId} = ${stationId}`;
 }
 
-export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
+export async function createDiveSite(db: DbExecutor, input: DiveSiteInput) {
   const [site] = await db
     .insert(diveSites)
     .values({
@@ -520,7 +527,7 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
  * rather than the last time anybody pressed Save.
  */
 async function planningNoteWrite(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   siteId: string,
   note: DiveSiteInput["planningNote"],
@@ -541,7 +548,7 @@ async function planningNoteWrite(
 }
 
 export async function updateDiveSite(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   siteId: string,
   input: DiveSiteInput,
@@ -642,8 +649,8 @@ export async function updateDiveSite(
  * themselves (`availableSiteName`) and have nothing to say to a staffer if that
  * ever loses a race.
  */
-export function createDiveSiteForForm(db: AppDb, input: DiveSiteInput) {
-  return refusingNameClash(() => createDiveSite(db, input));
+export function createDiveSiteForForm(db: DbExecutor, input: DiveSiteInput) {
+  return refusingNameClash(db, (savepoint) => createDiveSite(savepoint, input));
 }
 
 /**
@@ -662,13 +669,15 @@ export const SITE_EDIT_CONFLICT = "conflict";
 
 /** `updateDiveSite` for the form a staffer types into. See `createDiveSiteForForm`. */
 export async function updateDiveSiteForForm(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   siteId: string,
   input: DiveSiteInput,
   options: { expectedVersion?: number | null } = {},
 ) {
-  const written = await refusingNameClash(() => updateDiveSite(db, shopId, siteId, input, options));
+  const written = await refusingNameClash(db, (savepoint) =>
+    updateDiveSite(savepoint, shopId, siteId, input, options),
+  );
   if (written !== null) return written;
   // The write matched nothing. Either the site is gone (or another shop's), or
   // the generation moved on — and those want different answers, so ask which.
@@ -1296,6 +1305,7 @@ export async function listUpcomingTripsForSite(
       diveMode: trips.diveMode,
     })
     .from(tripDives)
+    // diveday:allow-rehearsal: the staff site page; a rehearsal is staff's own.
     .innerJoin(trips, eq(trips.id, tripDives.tripId))
     .where(
       and(
@@ -1337,6 +1347,7 @@ export type UpcomingSiteDeparture = {
   title: string;
   startsAt: Date;
   endsAt: Date;
+  /** The seats on sale: the departure's own, capped at its boat's certificate (#2321). */
   capacity: number;
   booked: number;
 };
@@ -1355,12 +1366,14 @@ export async function listUpcomingDeparturesForSite(
       endsAt: trips.endsAt,
       capacity: trips.capacity,
       booked: count(bookings.id),
+      certifiedPassengers: tripBoatCertifiedPassengers(),
     })
     .from(trips)
     .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
         liveTrip(),
+        notRehearsal(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         eq(trips.isPrivate, false),
@@ -1375,7 +1388,11 @@ export async function listUpcomingDeparturesForSite(
     )
     .groupBy(trips.id)
     .orderBy(asc(trips.startsAt));
-  return rows;
+  // A diver-only read: `capacity` here is the seats on sale (#2321).
+  return rows.map(({ certifiedPassengers, ...row }) => ({
+    ...row,
+    capacity: sellableSeats(row.capacity, certifiedPassengers),
+  }));
 }
 
 /**

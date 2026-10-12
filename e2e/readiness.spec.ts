@@ -117,7 +117,7 @@ test.describe("staff-prepared trip", () => {
     // Same frozen-clock suffix convention as the trip title above.
     await page.getByLabel("Email", { exact: true }).fill(`nemo-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book/ }).click();
-    await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toBeVisible();
 
     await expect(page).toHaveURL(/\/ready\//);
     // **The status is said once** (ADR 20260827-the-divers-thread, decision 3):
@@ -258,9 +258,12 @@ test.describe("staff-prepared trip", () => {
   });
 });
 
-test("a tampered readiness token reveals nothing", async ({ page }) => {
+test("a tampered readiness token reveals nothing, and still leaves a door", async ({ page }) => {
   await page.goto("/ready/not-a-real-token");
   await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
+  // No shop to name, so DiveDay's own door rather than a dead end (UX review
+  // 2026-10-10, item 11).
+  await expect(page.getByRole("link", { name: "Go to DiveDay" })).toHaveAttribute("href", "/");
 });
 
 /**
@@ -401,7 +404,7 @@ test("a returning diver is asked once, and answering one fact leaves the others 
   // first thing on this diver — the waiver. The question is a step of the
   // thread, not a thing that jumps the queue.
   await expect(threadStatus(page)).toContainText("of 4 done");
-  await expect(threadStatus(page)).toContainText("Next: Sign");
+  await expect(threadStatus(page)).toContainText("Next: sign your waiver");
 
   const changes = await openThreadStep(page, "changes");
   await expect(changes.getByText("Sizes")).toBeVisible();

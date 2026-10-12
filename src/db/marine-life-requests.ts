@@ -1,4 +1,3 @@
-import { desc, gte } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { marineLifeRequests } from "./schema";
@@ -32,22 +31,4 @@ export async function recordMarineLifeRequest(
     diveSiteId: input.diveSiteId ?? null,
     createdAt: nowDate(),
   });
-}
-
-/**
- * What has been asked for, newest first — for the human running the query, not
- * for a page. Exported so the reading side is a tested function rather than a
- * SQL snippet pasted into a console, and so the follow-up that turns this into
- * a real triage surface has somewhere to start.
- */
-export async function listMarineLifeRequests(
-  db: AppDb,
-  options: { since?: Date; limit?: number } = {},
-) {
-  const rows = db
-    .select()
-    .from(marineLifeRequests)
-    .orderBy(desc(marineLifeRequests.createdAt))
-    .limit(options.limit ?? 200);
-  return options.since ? rows.where(gte(marineLifeRequests.createdAt, options.since)) : rows;
 }

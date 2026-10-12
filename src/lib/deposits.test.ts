@@ -5,6 +5,7 @@ import {
   checkoutSeatTerms,
   refundOnCancellation,
   seatListPriceCents,
+  seatMoneyTerms,
   withinCancellationWindow,
 } from "./deposits";
 
@@ -164,5 +165,46 @@ describe("checkoutSeatTerms", () => {
 
   it("quotes no deposit on a departure that takes none", () => {
     expect(checkoutSeatTerms({ ...trip, depositCents: null }, null).depositCents).toBeNull();
+  });
+});
+
+describe("seatMoneyTerms (ux review 2026-10-11, item 5)", () => {
+  const trip = { priceCents: 15_000, depositCents: 5_000, snorkelerPriceCents: 6_000 };
+
+  it("says the whole seat is owed at the shop when nothing is taken online", () => {
+    expect(seatMoneyTerms(trip, null, "diver", false)).toEqual({
+      due: "at_shop",
+      amountCents: 15_000,
+    });
+  });
+
+  it("splits a deposit from the balance when the seat went to checkout", () => {
+    expect(seatMoneyTerms(trip, null, "diver", true)).toEqual({
+      due: "deposit",
+      depositCents: 5_000,
+      balanceCents: 10_000,
+    });
+  });
+
+  it("charges the whole seat online when there is no deposit", () => {
+    expect(seatMoneyTerms({ priceCents: 15_000, depositCents: null }, null, "diver", true)).toEqual(
+      {
+        due: "online",
+        amountCents: 15_000,
+      },
+    );
+  });
+
+  it("prices a snorkeler's seat at its own fare", () => {
+    expect(seatMoneyTerms(trip, null, "snorkeler", false)).toEqual({
+      due: "at_shop",
+      amountCents: 6_000,
+    });
+  });
+
+  it("has nothing to say about an unpriced seat", () => {
+    expect(
+      seatMoneyTerms({ priceCents: null, depositCents: null }, null, "diver", true),
+    ).toBeNull();
   });
 });

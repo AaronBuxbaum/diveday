@@ -383,7 +383,33 @@ const NOTICE_KEYS: Record<
     tone: "success",
     key: "tripSeries.notices.seriesAppliedPartial",
   },
-  "series-cancelled": { form: "series", tone: "danger", key: "tripSeries.notices.seriesCancelled" },
+  "series-applied-crew": {
+    form: "series",
+    tone: "success",
+    key: "tripSeries.notices.seriesAppliedCrew",
+  },
+  // The details went out; some dates kept their own crew, each for a reason
+  // the crew editor would refuse it for on that date alone.
+  "series-applied-crew-partial": {
+    form: "series",
+    tone: "warning",
+    key: "tripSeries.notices.seriesAppliedCrewPartial",
+    countKey: "tripSeries.notices.seriesAppliedCrewPartialCount",
+  },
+  "series-cancelled": {
+    form: "series",
+    tone: "success",
+    key: "tripSeries.notices.seriesCancelled",
+    countKey: "tripSeries.notices.seriesCancelledCount",
+  },
+  // Some dates still stand: underway by the time the call reached them, or
+  // their setup failed. The shop has a next act, so it is a warning.
+  "series-cancelled-partly": {
+    form: "series",
+    tone: "warning",
+    key: "tripSeries.notices.seriesCancelledPartly",
+    countKey: "tripSeries.notices.seriesCancelledPartlyCount",
+  },
   "series-repeating": {
     form: "series",
     tone: "success",

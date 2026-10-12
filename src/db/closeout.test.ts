@@ -5,9 +5,10 @@ import { assembleEveningClose } from "@/lib/closeout";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { fileScopedShopContext } from "@/test/db";
 import { standingArrivalStatus } from "./arrival-provenance";
-import { getDayCloseout } from "./closeout";
+import { getDayCloseout, listHeadCountCloses } from "./closeout";
 import { recordRollCall } from "./manifests";
 import { markBookingNoShow } from "./no-show";
+import { getTripOpenSeatsDebrief } from "./open-seats";
 import { addCrewRecapPhoto } from "./recap";
 import {
   bookingArrivalEvents,
@@ -241,6 +242,142 @@ describe("day close-out (in-memory PGlite)", () => {
   });
 
   /**
+   * **Who closed the head count is whoever made the last mark, diver or crew**
+   * (issue #2331). The read used to take diver marks only, so a crew member's
+   * own back-aboard mark coming last credited whoever made the last diver mark.
+   */
+  describe("the head count's close", () => {
+    const closingFixture = async () => {
+      const { db, shop } = shared;
+      const now = new Date(nowMs() + HOUR);
+      const state = await getDayCloseout(db, shop.id, shop.timezone, now);
+      const completed = state.departures.find(
+        (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+      );
+      if (!completed) throw new Error("seeded completed trip missing");
+      const staff = await listStaff(db, shop.id);
+      const [diverMarker, crewMarker] = staff;
+      if (!diverMarker || !crewMarker || diverMarker.person.id === crewMarker.person.id) {
+        throw new Error("two staff fixtures required");
+      }
+      const [seat] = await db
+        .select({ id: bookingsTable.id })
+        .from(bookingsTable)
+        .where(eq(bookingsTable.tripId, completed.tripId))
+        .limit(1);
+      const [crew] = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, completed.tripId))
+        .limit(1);
+      if (!seat || !crew) throw new Error("a seat and a crew assignment required");
+      const closing = rollCallCheckpoints(completed.plannedDives).at(-1) ?? "departure";
+      // Later than anything the seed wrote, so these two marks are the last.
+      const late = (minutes: number) => new Date(completed.endsAt.getTime() + minutes * 60_000);
+      const diverMark = (occurredAt: Date, createdAt?: Date) =>
+        db.insert(rollCallEvents).values({
+          shopId: shop.id,
+          tripId: completed.tripId,
+          bookingId: seat.id,
+          recordedByPersonId: diverMarker.person.id,
+          status: "boarded",
+          checkpoint: closing,
+          occurredAt,
+          ...(createdAt ? { createdAt } : {}),
+        });
+      const crewMark = (occurredAt: Date, createdAt?: Date) =>
+        db.insert(rollCallCrewEvents).values({
+          shopId: shop.id,
+          tripId: completed.tripId,
+          personId: crew.personId,
+          recordedByPersonId: crewMarker.person.id,
+          status: "boarded",
+          checkpoint: closing,
+          occurredAt,
+          ...(createdAt ? { createdAt } : {}),
+        });
+      const read = async (crewClosed = true) =>
+        (await listHeadCountCloses(db, shop.id, [{ tripId: completed.tripId, crewClosed }])).get(
+          completed.tripId,
+        );
+      return { db, shop, completed, diverMarker, crewMarker, late, diverMark, crewMark, read };
+    };
+
+    it("names the crew member who made the last mark when a crew mark came last", async () => {
+      const { diverMarker, crewMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await diverMark(late(60));
+      await crewMark(late(65));
+      expect(await read()).toEqual({ closedAt: late(65), closedBy: crewMarker.person.fullName });
+      expect(diverMarker.person.fullName).not.toBe(crewMarker.person.fullName);
+    });
+
+    /**
+     * **While the crew are still open, the line is the divers' alone**
+     * (dive-domain review of #2331). The station then says "8 of 8 back by
+     * {time}", a claim about divers, so the last diver mark answers it: the
+     * last diver back at 2:31 by Keiko, not a crew mark at 2:40 by Tom while
+     * another crew member is still uncounted.
+     */
+    it("keeps the last diver mark while the crew are not all accounted for", async () => {
+      const { db, shop, completed, diverMarker, late, diverMark, crewMark } =
+        await closingFixture();
+      await diverMark(late(31));
+      await crewMark(late(40));
+      // The evening's own answer, not a flag set by hand: one crew mark among
+      // several leaves the crew half open.
+      const state = await getDayCloseout(db, shop.id, shop.timezone, late(45));
+      const departure = state.departures.find((entry) => entry.tripId === completed.tripId);
+      if (!departure) throw new Error("completed trip missing");
+      const station = assembleEveningClose([departure], late(45)).stations[0];
+      if (!station) throw new Error("no station");
+      expect(station.crewAccountedFor).toBe(false);
+      const closes = await listHeadCountCloses(db, shop.id, [
+        { tripId: station.tripId, crewClosed: station.crewAccountedFor },
+      ]);
+      expect(closes.get(completed.tripId)).toEqual({
+        closedAt: late(31),
+        closedBy: diverMarker.person.fullName,
+      });
+    });
+
+    it("names the diver mark's recorder when a diver mark came last", async () => {
+      const { diverMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await crewMark(late(60));
+      await diverMark(late(65));
+      expect(await read()).toEqual({ closedAt: late(65), closedBy: diverMarker.person.fullName });
+    });
+
+    it("breaks a tie on the clock by the row written later", async () => {
+      const { crewMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await diverMark(late(60), late(61));
+      await crewMark(late(60), late(62));
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: crewMarker.person.fullName });
+    });
+
+    it("reads a trip whose only marks are crew marks", async () => {
+      const { db, shop, completed, crewMarker, late, crewMark } = await closingFixture();
+      await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, completed.tripId));
+      await crewMark(late(60));
+      const closes = await listHeadCountCloses(db, shop.id, [
+        { tripId: completed.tripId, crewClosed: true },
+      ]);
+      expect(closes.get(completed.tripId)).toEqual({
+        closedAt: late(60),
+        closedBy: crewMarker.person.fullName,
+      });
+    });
+
+    it("never reads another shop's marks", async () => {
+      const { db, completed, late, crewMark } = await closingFixture();
+      await crewMark(late(60));
+      const closes = await listHeadCountCloses(db, "00000000-0000-4000-8000-000000000000", [
+        { tripId: completed.tripId, crewClosed: true },
+      ]);
+      expect(closes.size).toBe(0);
+    });
+  });
+
+  /**
    * **What the evening counts as having been aboard** (issue #1689).
    *
    * The homecoming sentence used to sum the roster, so a diver a staffer
@@ -338,8 +475,10 @@ describe("day close-out (in-memory PGlite)", () => {
       const evening = assembleEveningClose([after], now);
       expect([evening.divers, evening.back]).toEqual([1, 1]);
       // **The debrief still reads the seats.** Ten of twelve went unsold, and
-      // narrowing the shared count would have quietly made it eleven.
-      expect(after.openSeats?.openSeats).toBe(10);
+      // narrowing the shared count would have quietly made it eleven. It lives
+      // on the departure's Details tab now, read off the same bookings.
+      const debrief = await getTripOpenSeatsDebrief(db, shop.id, trip.id, shop.timezone, now);
+      expect(debrief?.openSeats).toBe(10);
       expect(sailing.status).toBe("booked");
     });
 
@@ -473,7 +612,8 @@ describe("day close-out (in-memory PGlite)", () => {
       expect(after.status).toBe("all_home");
       const evening = assembleEveningClose([after], now);
       expect([evening.divers, evening.back]).toEqual([1, 1]);
-      expect(after.openSeats?.openSeats).toBe(10);
+      const debrief = await getTripOpenSeatsDebrief(db, shop.id, trip.id, shop.timezone, now);
+      expect(debrief?.openSeats).toBe(10);
     });
 
     /**

@@ -32,7 +32,9 @@ export type FormParse<T> =
 export function formFields(
   formData: FormData,
 ): Record<string, FormDataEntryValue | FormDataEntryValue[]> {
-  const fields: Record<string, FormDataEntryValue | FormDataEntryValue[]> = {};
+  // No prototype: a field named `__proto__` is then an ordinary key, never a
+  // way for a hand-built post to swap the object's prototype.
+  const fields: Record<string, FormDataEntryValue | FormDataEntryValue[]> = Object.create(null);
   for (const name of new Set(formData.keys())) {
     const values = formData.getAll(name);
     fields[name] = values.length === 1 ? (values[0] as FormDataEntryValue) : values;
@@ -56,6 +58,109 @@ export function parseForm<Schema extends z.ZodType>(
     ),
   ];
   return { ok: false, fields, messages: parsed.error.issues.map((issue) => issue.message) };
+}
+
+/**
+ * A field read exactly as `formData.get(name)` read it: its first value when
+ * the form sent it more than once, and `null` when it sent nothing. For a
+ * field whose action narrows the value itself (an enum guard, a honeypot, a
+ * value echoed back into the form), where a schema of its own would only
+ * restate that narrowing.
+ */
+export function formValue() {
+  return z.unknown().optional().transform(firstEntry);
+}
+
+function firstEntry(value: unknown): FormDataEntryValue | null {
+  const first = Array.isArray(value) ? value[0] : value;
+  return typeof first === "string" || first instanceof File ? first : null;
+}
+
+/**
+ * A field read as `String(formData.get(name) ?? "")` read it: its first value
+ * as a string, and `""` when the form sent nothing. For an id or a word the
+ * action looks up or compares, so a missing one is simply not found.
+ */
+export function text() {
+  return z
+    .unknown()
+    .optional()
+    .transform((value) => String(firstEntry(value) ?? ""));
+}
+
+/**
+ * Every value a repeated field sent, in form order, as `FormData.getAll` read
+ * it: `[]` when the form sent none.
+ */
+export function allValues() {
+  return z
+    .unknown()
+    .optional()
+    .transform((value): FormDataEntryValue[] =>
+      (value === undefined ? [] : Array.isArray(value) ? value : [value]).filter(
+        (entry): entry is FormDataEntryValue => typeof entry === "string" || entry instanceof File,
+      ),
+    );
+}
+
+/**
+ * A text box read as `String(formData.get(name) ?? "").trim()` read it: its
+ * first value trimmed, and `""` when the form sent nothing. For an action that
+ * measures the text itself, so it can point at the box that is wrong.
+ */
+export function trimmedText() {
+  return z
+    .unknown()
+    .optional()
+    .transform((value) => String(firstEntry(value) ?? "").trim());
+}
+
+/**
+ * {@link parseForm} for a schema built only of fields that cannot refuse
+ * ({@link formValue}, {@link text}, {@link trimmedText}, {@link checkbox}):
+ * the reading itself, with the impossible refusal thrown rather than handled
+ * at every caller.
+ */
+export function readForm<Schema extends z.ZodType>(
+  schema: Schema,
+  formData: FormData,
+): z.infer<Schema> {
+  const parsed = parseForm(schema, formData);
+  if (!parsed.ok) throw new Error(`form refused: ${parsed.fields.join(", ")}`);
+  return parsed.data;
+}
+
+/**
+ * A field read by its first value, as `FormData.get` read it, and held to
+ * `schema`: a name the form sent twice reaches `schema` once rather than as an
+ * array, and an absent one reaches it as `absent` — `undefined` unless the
+ * action read a missing field as something else (`formData.get(name) ?? ""`).
+ */
+export function single<Schema extends z.ZodType>(schema: Schema, absent?: string) {
+  return z.preprocess((value) => {
+    const first = Array.isArray(value) ? value[0] : value;
+    return first === undefined ? absent : first;
+  }, schema);
+}
+
+/**
+ * A field that may be left blank: an empty box and an absent field both read
+ * as `undefined`, exactly as `formData.get(name) || undefined` did, and
+ * anything else must satisfy `schema`.
+ */
+export function blankAsAbsent<Schema extends z.ZodType>(schema: Schema) {
+  return z.preprocess((value) => firstEntry(value) || undefined, schema.optional());
+}
+
+/**
+ * A checkbox: on when the browser sent `"on"` (or the value a form names),
+ * off when it sent nothing — the reading `formData.get(name) === "on"` gave.
+ */
+export function checkbox(on = "on") {
+  return z
+    .unknown()
+    .optional()
+    .transform((value) => firstEntry(value) === on);
 }
 
 /**

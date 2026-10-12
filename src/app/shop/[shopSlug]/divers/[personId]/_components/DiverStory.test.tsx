@@ -17,16 +17,23 @@ function booking(
   id: string,
   title: string,
   startsAt: Date,
-  overrides: { bookingStatus?: string; tripStatus?: string } = {},
+  overrides: {
+    bookingStatus?: string;
+    tripStatus?: string;
+    dock?: "boarded" | "not_boarded" | null;
+    diveMode?: "boat" | "shore" | "pool";
+  } = {},
 ) {
   return {
     booking: { id, status: overrides.bookingStatus ?? "confirmed" },
+    rollCall: { dock: overrides.dock ?? null, afterDive: null },
     trip: {
       id: `trip-${id}`,
       title,
       startsAt,
       endsAt: startsAt,
       status: overrides.tripStatus ?? "scheduled",
+      diveMode: overrides.diveMode ?? "boat",
     },
     course: null,
   };
@@ -111,6 +118,77 @@ describe("one seat, one row", () => {
       "href",
       "/shop/reef-shop/trips/trip-b-behind",
     );
+  });
+});
+
+/**
+ * Each row says what was notable about its trip, not the norm: "waiver
+ * signed" down every boat ahead told staff nothing (UX review 2026-10-10,
+ * item 28).
+ */
+describe("what each row says about its trip", () => {
+  const EARLIER_AT = new Date("2026-05-02T13:00:00.000Z");
+
+  it("leaves 'waiver signed' off a boat ahead", () => {
+    renderStory(diver({ bookings: [AHEAD] }));
+    expect(screen.getByRole("listitem").textContent).not.toMatch(/waiver/i);
+  });
+
+  it("marks the earliest seat that sailed as the first dive with the shop, and only that one", () => {
+    const earlier = booking("b-early", "First reef", EARLIER_AT);
+    renderStory(diver({ bookings: [BEHIND, earlier] }));
+    const [later, first] = screen.getAllByRole("listitem");
+    expect(first?.textContent).toContain("first dive with us");
+    expect(later?.textContent).not.toContain("first dive with us");
+    expect(later?.textContent).toContain("sailed");
+  });
+
+  it("skips a canceled seat when choosing the first dive", () => {
+    const canceled = booking("b-early", "Called-off reef", EARLIER_AT, {
+      bookingStatus: "cancelled",
+    });
+    renderStory(diver({ bookings: [BEHIND, canceled] }));
+    const [sailed, called] = screen.getAllByRole("listitem");
+    expect(sailed?.textContent).toContain("first dive with us");
+    expect(called?.textContent).toContain("canceled");
+    expect(called?.textContent).not.toContain("sailed");
+  });
+
+  it("never makes a seat the crew left on the dock the first dive, nor says it sailed", () => {
+    const ashore = booking("b-early", "Missed the boat", EARLIER_AT, { dock: "not_boarded" });
+    renderStory(diver({ bookings: [BEHIND, ashore] }));
+    const [sailed, left] = screen.getAllByRole("listitem");
+    expect(sailed?.textContent).toContain("first dive with us");
+    expect(left?.textContent).toContain("stayed ashore");
+    expect(left?.textContent).not.toContain("sailed");
+    expect(left?.textContent).not.toContain("first dive with us");
+  });
+
+  it("says a pool session was dived, not sailed", () => {
+    const boat = booking("b-early", "First reef", EARLIER_AT);
+    const pool = booking("b-pool", "Pool session", BEHIND_AT, { diveMode: "pool" });
+    renderStory(diver({ bookings: [boat, pool] }));
+    const [session, reef] = screen.getAllByRole("listitem");
+    expect(session?.textContent).toContain("dived");
+    expect(session?.textContent).not.toContain("sailed");
+    expect(reef?.textContent).toContain("first dive with us");
+  });
+
+  it("claims no first dive when the old system remembers visits before it", () => {
+    renderStory(
+      diver({
+        bookings: [BEHIND],
+        priorVisits: [
+          { id: "v-1", visitedOn: "2025-01-04", title: "Imported reef", sourceLabel: null },
+        ],
+      }),
+    );
+    expect(document.body.textContent).not.toContain("first dive with us");
+  });
+
+  it("says the stars the diver gave a trip they reviewed", () => {
+    renderStory(diver({ bookings: [{ ...BEHIND, reviewRating: 5 }] }));
+    expect(screen.getByRole("listitem").textContent).toContain("rated it 5 of 5");
   });
 });
 

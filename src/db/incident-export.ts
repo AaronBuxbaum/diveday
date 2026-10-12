@@ -13,6 +13,7 @@ import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { listExecutedDives } from "./executed-dives";
 import { getTripManifests } from "./manifests";
+import { survivingPersonNames } from "./people";
 import { latestPreDepartureChecksForTrip, listChecklistItemsForTrip } from "./pre-departure-check";
 import { listTripReadiness } from "./readiness";
 import { bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
@@ -141,12 +142,25 @@ export async function getIncidentExport(
     accountableStaff.map((staff) => [staff.id, staff.fullName]),
   );
 
+  // A seat left behind on a record merged away (a cancelled seat the merge did
+  // not move, issue #2177) still joins to that record, whose name no longer
+  // appears anywhere else in the shop. It is named as the record it lives on
+  // now (issue #2333); the row itself is not rewritten.
+  const survivorNames = await survivingPersonNames(
+    db,
+    shopId,
+    diverEventRows
+      .filter(({ subject }) => subject.mergedIntoPersonId)
+      .map(({ subject }) => subject.id),
+  );
   const events: IncidentTimelineEventInput[] = [
     ...diverEventRows.map(({ event, subject, recorder, heldAt, bookedAs }) => ({
       subjectKind: "diver" as const,
       // A held seat is named as booked, the same as its roster row (issue
       // #2128): the matched person's name is a fact about somebody else.
-      subjectName: heldAt ? bookedAs?.trim() || subject.fullName : subject.fullName,
+      subjectName: heldAt
+        ? bookedAs?.trim() || subject.fullName
+        : (survivorNames.get(subject.id) ?? subject.fullName),
       checkpoint: event.checkpoint,
       status: event.status,
       source: event.source,

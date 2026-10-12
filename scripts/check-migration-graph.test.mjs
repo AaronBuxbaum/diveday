@@ -229,3 +229,58 @@ describe("check-migration-graph, when it has nothing to check", () => {
     expect(output).toContain("pnpm db:merge");
   });
 });
+
+/**
+ * A dangling parent is the trace a rebase leaves when it drops a migration
+ * folder and keeps the one written on top of it. drizzle-kit's walk only looks
+ * at fork points it can reach, so a `prevIds` entry naming an id that no folder
+ * carries is skipped, not refused, and the tree passes here while migrate-time
+ * code has a graph it cannot walk back to its root.
+ */
+describe("check-migration-graph, when a parent is missing", () => {
+  it("refuses a snapshot whose prevIds names an id no folder carries, naming both", () => {
+    const { status, output } = check(
+      graph({
+        "20260101000000_base": base,
+        "20260103000000_orphan": { id: "orphan", prevIds: ["dropped"], columns: ["id", "colour"] },
+      }),
+    );
+
+    expect(status).toBe(1);
+    expect(output).toContain("20260103000000_orphan");
+    expect(output).toContain("dropped");
+  });
+
+  it("refuses a merge node when only one of its parents is gone", () => {
+    const { status, output } = check(
+      graph({
+        "20260101000000_base": base,
+        "20260102000000_left": { id: "left", prevIds: ["base"], columns: ["id", "colour"] },
+        "20260104000000_merge": {
+          id: "merge",
+          prevIds: ["left", "right"],
+          columns: ["id", "colour"],
+        },
+      }),
+    );
+
+    expect(status).toBe(1);
+    expect(output).toContain("20260104000000_merge");
+    expect(output).toContain("right");
+    expect(output).not.toContain('"left"');
+  });
+
+  it("leaves alone the root, whose prevIds is drizzle's all-zero sentinel or empty", () => {
+    const { status } = check(
+      graph({
+        "20260101000000_base": {
+          ...base,
+          prevIds: ["00000000-0000-0000-0000-000000000000"],
+        },
+        "20260102000000_colour": { id: "colour", prevIds: ["base"], columns: ["id", "colour"] },
+      }),
+    );
+
+    expect(status).toBe(0);
+  });
+});

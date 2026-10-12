@@ -4,11 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking, createBookingParty } from "./bookings";
-import {
-  createNitroxCertification,
-  listShopNitroxCertifications,
-  reviewNitroxCertification,
-} from "./nitrox";
+import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import {
   createCertification,
   createSpecialtyCertification,
@@ -33,7 +29,9 @@ import {
   certifications,
   courses,
   diveSites,
+  nitroxCertifications,
   people,
+  shops,
   specialtyCertifications,
   tripAssignments,
   trips,
@@ -442,7 +440,14 @@ describe("trip readiness (in-memory PGlite)", () => {
     // Pick a booked diver who has no nitrox card on file yet.
     const roster = await getTripRoster(db, shop.id, reef.id);
     const nitroxHolders = new Set(
-      (await listShopNitroxCertifications(db, shop.id)).map((r) => r.certification.personId),
+      (
+        await db
+          .select({ personId: nitroxCertifications.personId })
+          .from(nitroxCertifications)
+          .where(
+            and(eq(nitroxCertifications.shopId, shop.id), isNull(nitroxCertifications.deletedAt)),
+          )
+      ).map((r) => r.personId),
     );
     const entry = roster.find((r) => !nitroxHolders.has(r.person.id));
     if (!entry) throw new Error("expected a booked diver without a nitrox card");
@@ -743,6 +748,8 @@ describe("depth advisory (H-08 — a warning, never a gate)", () => {
   async function withAllSiteDepths(meters: number | null) {
     const { db, shop, reef, rosterEntry } = await readinessContext();
     await db.update(diveSites).set({ maxDepthMeters: meters }).where(eq(diveSites.shopId, shop.id));
+    // These cases are written in metres; the Key Largo demo reads feet.
+    await db.update(shops).set({ depthUnit: "meters" }).where(eq(shops.id, shop.id));
     // A verified Open Water card, so there is a ceiling (18 m) to measure at all.
     const card = await createCertification(db, {
       shopId: shop.id,
@@ -913,7 +920,14 @@ describe("site cert gate across the whole itinerary (DOM-C1)", () => {
     // A booked diver with no nitrox card on file, so the blocker is unambiguous.
     const roster = await getTripRoster(db, shop.id, reef.id);
     const nitroxHolders = new Set(
-      (await listShopNitroxCertifications(db, shop.id)).map((r) => r.certification.personId),
+      (
+        await db
+          .select({ personId: nitroxCertifications.personId })
+          .from(nitroxCertifications)
+          .where(
+            and(eq(nitroxCertifications.shopId, shop.id), isNull(nitroxCertifications.deletedAt)),
+          )
+      ).map((r) => r.personId),
     );
     const entry = roster.find((r) => !nitroxHolders.has(r.person.id));
     if (!entry) throw new Error("expected a booked diver without a nitrox card");

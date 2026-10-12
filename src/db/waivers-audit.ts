@@ -7,18 +7,23 @@ import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or } from "drizz
 import { guardianSignatureOf } from "@/lib/guardian";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
-import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
+import { verifyWaiverIntegrity, type WaiverSealedFields } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { bookings, people, trips, waiverRecords } from "./schema";
-import { WAIVER_STATE_COLUMNS, type WaiverStateRecord } from "./waiver-record-columns";
+import {
+  WAIVER_SEALED_COLUMNS,
+  WAIVER_STATE_COLUMNS,
+  type WaiverStateRecord,
+} from "./waiver-record-columns";
 
 /** How many audit rows the Signatures tab shows per page. */
 export const WAIVER_INTEGRITY_PAGE_SIZE = PAGE_SIZE.list;
 
 /** The join shape both `listWaiverIntegrityAudit` and `getSignedWaiverRecordForShop` select. */
 type WaiverAuditJoinRow = {
-  record: typeof waiverRecords.$inferSelect;
+  /** Sealed columns only: never the bearer token or an unsigned draft. */
+  record: WaiverSealedFields;
   personName: string;
   tripId: string | null;
   tripTitle: string | null;
@@ -113,7 +118,7 @@ export async function listWaiverIntegrityAudit(
     fetchRows: async (offset, limit) =>
       db
         .select({
-          record: waiverRecords,
+          record: WAIVER_SEALED_COLUMNS,
           personName: people.fullName,
           tripId: trips.id,
           tripTitle: trips.title,
@@ -157,7 +162,7 @@ export async function getSignedWaiverRecordForShop(
 ) {
   const [row] = await db
     .select({
-      record: waiverRecords,
+      record: WAIVER_SEALED_COLUMNS,
       personName: people.fullName,
       tripId: trips.id,
       tripTitle: trips.title,

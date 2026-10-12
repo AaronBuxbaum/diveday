@@ -383,34 +383,47 @@ async function readinessLinkForUpcomingSeat(plain: AppDb, shopId: string) {
 async function publicTripPageReads(db: AppDb, shopSlug: string, tripId: string) {
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) throw new Error("no shop");
-  const [trip, tripDives] = await Promise.all([
-    getTripWithBooked(db, shop.id, tripId),
-    listTripDives(db, shop.id, tripId),
+  // `readTripPage`'s one wave (issue #2353): a read that needs another's answer
+  // chains off it inside the wave — the briefings off the dives, the Stripe
+  // account and the other boats off the trip.
+  const tripRead = getTripWithBooked(db, shop.id, tripId);
+  const tripDivesRead = listTripDives(db, shop.id, tripId);
+  const [trip] = await Promise.all([
+    tripRead,
+    tripDivesRead,
     listTripScheduleDays(db, shop.id, tripId),
     tripCrewSpokenLanguages(db, shop.id, tripId),
     tripPublicCrew(db, shop.id, tripId),
-  ]);
-  if (!trip) throw new Error("no trip");
-  const siteIds = tripDives
-    .map(({ diveSite }) => diveSite?.id)
-    .filter((id): id is string => Boolean(id));
-  await Promise.all([
     listTripChangeEvents(db, shop.id, tripId),
-    listDiveSiteBriefingExtras(db, shop.id, siteIds),
-    siteSightings(db, shop.id, siteIds),
-    perDiverBookingPriceCents(trip, trip.course) ? getShopStripeAccount(db, shop.id) : null,
+    tripDivesRead.then((dives) => {
+      const siteIds = dives
+        .map(({ diveSite }) => diveSite?.id)
+        .filter((id): id is string => Boolean(id));
+      return Promise.all([
+        listDiveSiteBriefingExtras(db, shop.id, siteIds),
+        siteSightings(db, shop.id, siteIds),
+      ]);
+    }),
     getTripRequirements(db, shop.id, tripId),
     getTripSiteRequirement(db, shop.id, tripId),
-    trip.conditionsHold
-      ? []
-      : pagedUpcomingTripsWithCounts(db, shop.id, {
-          now: nowDate(),
-          limit: 50,
-          hasSpace: true,
-          publicOnly: true,
-        }),
+    tripRead.then((found) =>
+      found && perDiverBookingPriceCents(found, found.course)
+        ? getShopStripeAccount(db, shop.id)
+        : null,
+    ),
+    tripRead.then((found) =>
+      !found || found.conditionsHold
+        ? []
+        : pagedUpcomingTripsWithCounts(db, shop.id, {
+            now: nowDate(),
+            limit: 50,
+            hasSpace: true,
+            publicOnly: true,
+          }).then((page) => page.trips),
+    ),
     shop.reviewsEnabled ? getShopReviewAggregate(db, shop.id) : null,
   ]);
+  if (!trip) throw new Error("no trip");
 }
 
 /**
@@ -511,8 +524,10 @@ const TRIP_CEILING = 50;
  * review 2026-10-10, item 2: `getTodayWork` awaited thirteen single reads one
  * after another after its one fan-out); they now go out in one wave, and what
  * is left is the readiness pass's own chain and the readers' internal steps.
- * The trip page's 10 is its shared reads, then `getTripOverview`'s four steps
- * after its fan-out (`src/db/trips-overview.ts`).
+ * The trip page measured 10: its shared reads, then `getTripOverview`'s four
+ * steps after its fan-out. 10 → 7: the overview's dependent reads (ratings and
+ * shifts on the crew, the off-cadence list, both clash reads) now chain inside
+ * its one wave (`src/db/trips-overview.ts`, issue #2353).
  */
 // 7 → 8: not a new wait, an old one made visible. The marine provider now
 // answers after the database goes quiet, as a real one does, and Today's queue
@@ -522,12 +537,11 @@ const TRIP_CEILING = 50;
 // evidence in one wave (item 13), and the payment rows' Stripe reads joined the
 // queue's wave (item 26).
 const TODAY_PHASE_CEILING = 5;
-// 10 → 9: the readiness pass's payments, course forms and evidence go out in
-// one wave (code review 2026-10-11, item 13). `getTripGuests`' five trailing
-// reads are one wave too (item 12); on the departure measured here four of them
-// skip themselves (no held seat, wait list or course), so that one shows in
-// the code rather than the count. What is left is `getTripOverview`'s chain.
-const TRIP_PHASE_CEILING = 9;
+// 7 → 6 (code review 2026-10-11): the readiness pass's payments, course forms
+// and evidence go out in one wave (item 13), and `getTripGuests`' five trailing
+// reads are one wave too (item 12); on the departure measured here four of
+// those skip themselves (no held seat, wait list or course).
+const TRIP_PHASE_CEILING = 6;
 
 /**
  * The diver pages, measured 2026-10-12 before their reads were grouped (code
@@ -537,11 +551,13 @@ const TRIP_PHASE_CEILING = 9;
  */
 const PUBLIC_TRIP_CEILING = 18;
 const READY_CEILING = 36;
-// 10 → 4: the shop, the fan-out, and one wave of everything else (item 2).
-// The live-staff check rides the fan-out, and `generateMetadata` shares the
-// trip row through `cache()` — a statement saved in a render, not in this
-// replay, which reads the body alone.
-const PUBLIC_TRIP_PHASE_CEILING = 4;
+// 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
+// 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
+// Stripe account and the other boats off the trip — are its third round trip.
+// The live-staff check chains off the session inside the wave, and
+// `generateMetadata` shares the trip row through `publicTripRecord`'s `cache()`:
+// a statement saved in a render, not in this replay, which reads the body alone.
+const PUBLIC_TRIP_PHASE_CEILING = 3;
 // 12 → 5 (item 3): the capability; the readiness detail beside the booking
 // row and its fan-out (`getReadyPageData`); the readiness pass's one wave; and
 // the thread's one wave.
