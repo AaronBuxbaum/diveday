@@ -116,7 +116,9 @@ export function gitAnswers(cwd) {
     head: () => git(["rev-parse", "HEAD"]),
     branch: () => git(["rev-parse", "--abbrev-ref", "HEAD"]),
     sha: (ref) =>
-      /^[\w./-]+$/.test(ref) ? git(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]) : null,
+      /^[\w./~^-]+$/.test(ref)
+        ? git(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`])
+        : null,
     remoteHas: (sha) =>
       Boolean(git(["branch", "-r", "--contains", sha, "--format=%(refname:short)"])),
     stamp: () => {
