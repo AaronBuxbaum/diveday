@@ -851,6 +851,9 @@ For `src/lib/` and `src/features/`; the rules themselves are in `.claude/rules/d
   `api/offline-manifests/upcoming` answers with the whole 48-hour board, `identity` answers
   `{ shop: { slug } }` and nothing else. Both `no-store`; both read through the response types in
   `offline-manifests.ts`, never an inline cast (ADR 20260726-shopwide-offline-manifest-priming).
+  The same worker script, registered a second time from `/ready/` with that scope, keeps the
+  diver's last trip-prep page and nothing else (`src/worker/ready-page-cache.ts`,
+  `src/lib/ready-offline.ts`); the staff registration at `/` never stores one.
 - **Dive-site difficulty**: `dive_sites.difficulty_level`, one of three codes
   (`src/lib/dive-site-difficulty.ts`), worded by `src/i18n/dive-site-labels.ts`. Never free text
   (ADR 20260813-dive-site-difficulty-is-a-code). `siteFit()` believes a chosen level outright and

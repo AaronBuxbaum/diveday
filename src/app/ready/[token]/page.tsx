@@ -15,6 +15,7 @@ import {
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
 import { ExpiredLink } from "@/app/ready/[token]/_components/ExpiredLink";
 import { payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
+import { ReadyOfflineCopy } from "@/app/ready/[token]/_components/ReadyOfflineCopy";
 import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
 import { RunningLate } from "@/app/ready/[token]/_components/RunningLate";
 import { READY_NOTICES } from "@/app/ready/[token]/_components/ready-notices";
@@ -1572,6 +1573,7 @@ export default async function DiverReadinessPage({
                 cards and the gear answers go, and it restates itself every
                 time the shop moves. */}
             <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
+            <ReadyOfflineCopy offlineNote={t("ready.offlineCopy")} />
           </>
         }
       >

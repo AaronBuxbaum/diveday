@@ -865,6 +865,7 @@
     "certInvalid": "Check the agency, level, and certification number, then try again.",
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep. Bookmark it, and it stays up to date until you sail.",
+    "offlineCopy": "No signal: this is the copy your phone saved. Anything you change here needs signal.",
     "gearOnFile": "Your sizes are with the crew.",
     "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
     "changesSizesLabel": "Sizes",

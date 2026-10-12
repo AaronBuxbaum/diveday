@@ -865,6 +865,7 @@
     "certInvalid": "Revisa la agencia, el nivel y el número de certificación, e inténtalo de nuevo.",
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
+    "offlineCopy": "Sin cobertura: esta es la copia que guardó tu teléfono. Para cambiar algo aquí necesitas cobertura.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
     "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
     "changesSizesLabel": "Tallas",
