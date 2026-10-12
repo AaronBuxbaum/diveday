@@ -12,7 +12,7 @@ import { parseWallTime, wallTimeToUtc } from "./zoned";
  *
  * **Why this is a module and not two copies.** Two server actions write a
  * departure's details — the board's add panel (`schedule/board/actions.ts`) and
- * the trip edit form (`trips/[id]/actions.ts`) — and they ran the same pipeline
+ * the trip edit form (`trips/[id]/details-actions.ts`) — and they ran the same pipeline
  * twice, kept in step by a comment ("Same ceiling every other price validator
  * applies (trips/[id]/actions.ts)"). They had drifted three ways, each one
  * something a shop could see, and each one in the same direction: the board was

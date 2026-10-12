@@ -11,7 +11,7 @@ import type { getDb } from "@/db/client";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { publicTripPath } from "@/lib/public-routes";
 import { shopPath } from "@/lib/staff-notices";
-import { recordTripPrintPdfAction } from "../actions";
+import { recordTripPrintPdfAction } from "../details-actions";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { DepartureLogLink } from "./DepartureLogLink";
 import { PrintTripBundleButton } from "./PrintTripBundleButton";

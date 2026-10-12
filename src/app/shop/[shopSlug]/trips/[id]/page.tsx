@@ -38,6 +38,7 @@ import { courseRosterActions } from "./_components/course-roster-actions";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
+import { noteRosterActions } from "./_components/note-roster-actions";
 import { PulseFacts } from "./_components/PulseFacts";
 import { TripAboutLinks } from "./_components/TripAboutLinks";
 import { TripAboutSection } from "./_components/TripAboutSection";
@@ -52,17 +53,13 @@ import { DETAILS_FORMS, ROSTER_FORMS } from "./_components/trip-notice-tabs";
 import { tripPulseFacts } from "./_components/trip-pulse-facts";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import {
-  addInternalNoteAction,
   addToWaitlistAction,
   confirmDiverIdentityAction,
   createDirectTripInvitationAction,
-  deleteInternalNoteAction,
   markPaymentAction,
   markWaiverInPersonAction,
   recordTripInvitationAction,
-  reinstateTripAction,
   removeBookingAction,
-  restoreInternalNoteAction,
   saveRosterEmergencyContactAction,
   sendNewWaiverAction,
   setParticipantTypeAction,
@@ -70,6 +67,7 @@ import {
   undoRemoveBookingAction,
   updateBookingPickupAction,
 } from "./actions";
+import { reinstateTripAction } from "./details-actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -308,13 +306,11 @@ export default async function ManageTripPage({
       ? sendNewWaiverAction.bind(null, shopSlug, tripId)
       : undefined,
     ...courseRosterActions(Boolean(trip.course), shopSlug, tripId),
-    addInternalNoteAction: addInternalNoteAction.bind(null, shopSlug, tripId),
-    deleteInternalNoteAction: deleteInternalNoteAction.bind(null, shopSlug, tripId),
+    ...noteRosterActions(shopSlug, tripId),
     saveRosterEmergencyContactAction: saveRosterEmergencyContactAction.bind(null, shopSlug, tripId),
     updateBookingPickupAction: updateBookingPickupAction.bind(null, shopSlug, tripId),
     recordTripInvitationAction: recordTripInvitationAction.bind(null, shopSlug, tripId),
     undoRemoveBookingAction: undoRemoveBookingAction.bind(null, shopSlug, tripId),
-    restoreInternalNoteAction: restoreInternalNoteAction.bind(null, shopSlug, tripId),
   };
 
   return (

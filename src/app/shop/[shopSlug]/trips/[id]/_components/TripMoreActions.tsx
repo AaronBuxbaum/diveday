@@ -17,7 +17,7 @@ import {
   cancelSeriesAction,
   cancelTripAction,
   setSeriesRepeatAction,
-} from "../actions";
+} from "../details-actions";
 import { BlowoutDoors } from "./BlowoutDoors";
 import { SeriesMoreActions } from "./SeriesSection";
 import { TripMoreDisclosure } from "./TripAboutSection";

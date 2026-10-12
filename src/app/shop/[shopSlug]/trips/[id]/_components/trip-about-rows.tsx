@@ -27,7 +27,7 @@ import {
   saveRequirementsAction,
   updateSeriesCadenceAction,
   updateTripCrewAction,
-} from "../actions";
+} from "../details-actions";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewSection } from "./CrewSection";
 import { DetailsSection } from "./DetailsSection";

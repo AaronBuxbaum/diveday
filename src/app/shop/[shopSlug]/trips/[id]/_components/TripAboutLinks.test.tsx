@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { TripAboutLinks } from "./TripAboutLinks";
 
-vi.mock("../actions", () => ({ recordTripPrintPdfAction: async () => {} }));
+vi.mock("../details-actions", () => ({ recordTripPrintPdfAction: async () => {} }));
 vi.mock("./CopyLinkButton", () => ({
   CopyLinkButton: ({ path }: { path: string }) => <span data-copy={path}>copy</span>,
 }));

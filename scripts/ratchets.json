@@ -221,7 +221,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/_components/CrewSection.tsx#CrewSection": 442,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 502,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 475,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 473,
     "src/app/waivers/[token]/page.tsx#WaiverPage": 571,
     "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
     "src/components/DateRequestForm.tsx#DateRequestForm": 418,
@@ -353,7 +353,7 @@
     "src/app/shop/[shopSlug]/staffing/page.tsx": 626,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 491,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 576,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 572,
     "src/app/waivers/[token]/page.tsx": 676
   },
   "tokens": {

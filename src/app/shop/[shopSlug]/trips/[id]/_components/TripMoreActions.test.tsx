@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { TripMoreActions } from "./TripMoreActions";
 
-vi.mock("../actions", () => {
+vi.mock("../details-actions", () => {
   const action = async () => {};
   return {
     applySeriesDetailsAction: action,
