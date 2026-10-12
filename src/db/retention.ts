@@ -1,4 +1,4 @@
-import { inArray, lt } from "drizzle-orm";
+import { inArray, lt, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -18,6 +18,7 @@ import {
   demoEntries,
   formDrafts,
   inboundMessages,
+  incidentReports,
   integrationEvents,
   integrationOauthStates,
   notificationDeliveries,
@@ -446,6 +447,27 @@ export async function pruneExpiredRecords(
           .where(lt(inboundMessages.receivedAt, cutoff("inbound_messages")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(inboundMessages).where(inArray(inboundMessages.id, ids)),
+    ),
+  );
+
+  // Incident reports (ADR 20261012-incident-reports): seven years from when the
+  // incident happened, or from when a draft that never said so was started.
+  // Its people and addenda cascade with it.
+  outcomes.push(
+    await pruneBatch(
+      "incident_reports",
+      () =>
+        db
+          .select({ id: incidentReports.id })
+          .from(incidentReports)
+          .where(
+            lt(
+              sql`coalesce(${incidentReports.occurredAt}, ${incidentReports.createdAt})`,
+              cutoff("incident_reports"),
+            ),
+          )
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(incidentReports).where(inArray(incidentReports.id, ids)),
     ),
   );
 

@@ -635,6 +635,11 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // `integration_events` with ON DELETE CASCADE, so its rows leave when that
   // 400-day window takes the event they belong to.
   "integration_deliveries",
+  // The same shape: a report's people and addenda are its children with ON
+  // DELETE CASCADE, so they leave when the 7-year window takes the report
+  // (ADR 20261012-incident-reports).
+  "incident_report_people",
+  "incident_report_addenda",
 ];
 
 /** What the guard's failure says, so a session reads the rule and not the list. */

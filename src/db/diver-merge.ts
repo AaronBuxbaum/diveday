@@ -231,6 +231,10 @@ export const STAFF_HISTORY_TABLES = [
   // Only somebody on a crew is ever its subject, so either side of a merge
   // holding one is a staff record and the merge is refused.
   "crew_notices",
+  // A staffer named in an incident report (ADR 20261012-incident-reports). A
+  // diver is named there by booking, which moves with the seat; only staff are
+  // named by person, so a record holding one is a staff record.
+  "incident_report_people",
 ] as const;
 export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
 
@@ -286,6 +290,9 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "gear_items.deleted_by_person_id": "who retired the unit",
   "gear_reservations.released_by_person_id": "who let go of the hold",
   "gear_service_events.recorded_by_person_id": "who serviced the unit",
+  "incident_report_addenda.author_person_id": "who wrote the addendum",
+  "incident_reports.created_by_person_id": "who started the incident report",
+  "incident_reports.filed_by_person_id": "who filed the incident report",
   "internal_notes.created_by_person_id": "who wrote the note",
   "marine_life_requests.requested_by_person_id": "which staffer asked for the species",
   "nitrox_certifications.deleted_by_person_id": "who removed the card",

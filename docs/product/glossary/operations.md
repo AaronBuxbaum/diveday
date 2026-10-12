@@ -662,6 +662,19 @@
   footer — tamper-evidence, not a signature: regenerating the export from unchanged records
   reproduces the code, so two copies can be checked against each other. Staff-only, one tap from
   the manifest (`/shop/<slug>/trips/<id>/incident-export`).
+- **Incident report** — the shop's own written account of something that went wrong on a
+  departure, for an insurer or an authority: when (in the shop's zone) and where, what happened,
+  first aid, oxygen (and for how many minutes), whether emergency services were called, the
+  **handover** (to EMS, a hospital, a chamber, the person themselves, or someone else, and when),
+  and follow-up notes. It names the people involved — a diver by their seat, a staffer by their
+  record, anyone else by name — as affected, witness or responder. A **draft** is edited; filing
+  needs the time, what happened and the three yes/no answers, and a **filed** report is never
+  edited again: what comes later is an **addendum**, dated and attributed. The departure's crew
+  start one and read their own; owners and managers read all of them, on the trip's Details tab
+  and the Reports **Safety** tab. Nothing a diver sees, and never a gate. It is not the
+  **departure log**, which prints recorded facts and judges nothing; the report is the shop's
+  narrative beside it
+  ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking

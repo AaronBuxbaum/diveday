@@ -307,6 +307,9 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .orderBy(asc(crewAssignmentRequests.requestedAt), asc(crewAssignmentRequests.id));
 
   const staffCredentialRows = await readShopScoped(tx, "staffCredentials", shopId);
+  const incidentReportRows = await readShopScoped(tx, "incidentReports", shopId);
+  const incidentPersonRows = await readShopScoped(tx, "incidentReportPeople", shopId);
+  const incidentAddendumRows = await readShopScoped(tx, "incidentReportAddenda", shopId);
 
   // **`bookings.csv`'s row order, and why the diver's name is in it.**
   //
@@ -563,6 +566,9 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     crewAwayRows,
     crewRequestRows,
     staffCredentialRows,
+    incidentReportRows,
+    incidentPersonRows,
+    incidentAddendumRows,
     bookingRows,
     bookingPerson,
     tripHelpRequestRows,
@@ -1147,6 +1153,9 @@ export async function loadShopExportCounts(
     "executed_dives.csv": await countShopScoped(db, "executedDives", shopId),
     "trip_sightings.csv": await countShopScoped(db, "tripSightings", shopId),
     "internal_notes.csv": await countShopScoped(db, "internalNotes", shopId),
+    "incident_reports.csv": await countShopScoped(db, "incidentReports", shopId),
+    "incident_report_people.csv": await countShopScoped(db, "incidentReportPeople", shopId),
+    "incident_report_addenda.csv": await countShopScoped(db, "incidentReportAddenda", shopId),
     "activity_events.csv": await countShopScoped(db, "activityEvents", shopId),
     "notification_deliveries.csv": await countShopScoped(db, "notificationDeliveries", shopId),
     "shop_promo_redemptions.csv": await countShopScoped(db, "shopPromoRedemptions", shopId),

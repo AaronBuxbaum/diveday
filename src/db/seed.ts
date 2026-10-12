@@ -51,6 +51,9 @@ import {
   heldSends,
   importedPaymentHistory,
   inboundMessages,
+  incidentReportAddenda,
+  incidentReportPeople,
+  incidentReports,
   integrationDeliveries,
   integrationEvents,
   integrationOauthStates,
@@ -1181,6 +1184,10 @@ export async function resetDemoSchedule(
   // and a spec that checked somebody in would otherwise leave that arrival
   // standing for the next one (ADR 20260907-the-counter-survives-offline).
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
+  // Incident reports name bookings, people and the departure, so they go first.
+  await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
+  await db.delete(incidentReportPeople).where(eq(incidentReportPeople.shopId, shopId));
+  await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(executedDives).where(eq(executedDives.shopId, shopId));

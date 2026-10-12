@@ -30,6 +30,9 @@ import {
   gearReservations,
   gearServiceEvents,
   importedPaymentHistory,
+  incidentReportAddenda,
+  incidentReportPeople,
+  incidentReports,
   internalNotes,
   lastMinuteListEntries,
   nitroxCertifications,
@@ -242,6 +245,23 @@ export const EXPORT_TABLES = {
     table: tripRequirements,
     order: [],
     scope: { shopColumn: tripRequirements.shopId },
+  },
+  // Incident reports (ADR 20261012-incident-reports). Shop bundle only: the
+  // diver's own bundle leaves them out by decision (H-109).
+  incidentReports: {
+    table: incidentReports,
+    order: [asc(incidentReports.createdAt), asc(incidentReports.id)],
+    scope: { shopColumn: incidentReports.shopId },
+  },
+  incidentReportPeople: {
+    table: incidentReportPeople,
+    order: [asc(incidentReportPeople.createdAt), asc(incidentReportPeople.id)],
+    scope: { shopColumn: incidentReportPeople.shopId },
+  },
+  incidentReportAddenda: {
+    table: incidentReportAddenda,
+    order: [asc(incidentReportAddenda.createdAt), asc(incidentReportAddenda.id)],
+    scope: { shopColumn: incidentReportAddenda.shopId },
   },
   staffCredentials: {
     table: staffCredentials,
