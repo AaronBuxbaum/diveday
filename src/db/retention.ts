@@ -1,4 +1,4 @@
-import { inArray, lt } from "drizzle-orm";
+import { and, inArray, isNull, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -22,12 +22,15 @@ import {
   integrationOauthStates,
   notificationDeliveries,
   notificationDeliveryAttempts,
+  notificationSendQueue,
   pushSubscriptions,
+  setupRequests,
   shopContactEmailConfirmationTokens,
   staffReplies,
   stripeWebhookEvents,
   tripDeskEvents,
   tripReadMarks,
+  waiverDeliveries,
   weeklyDigestSends,
 } from "./schema";
 
@@ -352,6 +355,61 @@ export async function pruneExpiredRecords(
           .where(lt(crewNotices.createdAt, cutoff("crew_notices")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(crewNotices).where(inArray(crewNotices.id, ids)),
+    ),
+  );
+
+  // Finished sends only, on the instant they were finished. `sent`, or
+  // `failed` with the payload already cleared: a parked
+  // `sealed_payload_unreadable` row keeps its payload while the drain may still
+  // offer it, so it never matches (`drainableStatus`, src/db/notifications.ts).
+  // A `queued` or `processing` row is someone's work in flight and never
+  // matches either.
+  outcomes.push(
+    await pruneBatch(
+      "notification_send_queue",
+      () =>
+        db
+          .select({ id: notificationSendQueue.id })
+          .from(notificationSendQueue)
+          .where(
+            and(
+              inArray(notificationSendQueue.status, ["sent", "failed"]),
+              isNull(notificationSendQueue.payloadSealed),
+              lt(notificationSendQueue.updatedAt, cutoff("notification_send_queue")),
+            ),
+          )
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(notificationSendQueue).where(inArray(notificationSendQueue.id, ids)),
+    ),
+  );
+
+  // A waiver link's latest delivery outcome, on its own latest attempt: a new
+  // send replaces the row and moves `attempted_at` forward.
+  outcomes.push(
+    await pruneBatch(
+      "waiver_deliveries",
+      () =>
+        db
+          .select({ id: waiverDeliveries.id })
+          .from(waiverDeliveries)
+          .where(lt(waiverDeliveries.attemptedAt, cutoff("waiver_deliveries")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(waiverDeliveries).where(inArray(waiverDeliveries.id, ids)),
+    ),
+  );
+
+  // A set-up request on the day it was made; its single-use link goes with it
+  // (`on delete cascade`).
+  outcomes.push(
+    await pruneBatch(
+      "setup_requests",
+      () =>
+        db
+          .select({ id: setupRequests.id })
+          .from(setupRequests)
+          .where(lt(setupRequests.createdAt, cutoff("setup_requests")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(setupRequests).where(inArray(setupRequests.id, ids)),
     ),
   );
 
