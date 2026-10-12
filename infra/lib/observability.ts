@@ -21,15 +21,15 @@
  * `reportRefusedQuery` in `src/proxy.ts`. The number lives in one place; this
  * is the pointer to it.
  *
- * This registry currently declares 19 metrics (11 log signals + 5 web vitals
- * + the mutation-duration metric + the two render-cost metrics, each one metric
+ * This registry currently declares 20 metrics (11 log signals + 5 web vitals
+ * + the mutation-duration metric + the three render-cost metrics, each one metric
  * *permanently* because its filter carries no dimension -- see
  * `MUTATION_DURATION_SIGNAL` and `RENDER_DB_QUERIES_SIGNAL`) and 14 alarms (8 + the 3 alarmed vitals + the
  * 2 SES reputation rates, which alarm on metrics AWS publishes for free, + the
  * external uptime alarm in `UPTIME_TARGETS`, which alarms on a Route 53 metric
  * AWS publishes for the price of the health check itself), so it
- * sits 9 metrics and 4 alarms over the free allowance at about $3.10/month once
- * every metric receives data (9 x $0.30 + 4 x $0.10), plus $2.75/month for the
+ * sits 10 metrics and 4 alarms over the free allowance at about $3.40/month once
+ * every metric receives data (10 x $0.30 + 4 x $0.10), plus $2.75/month for the
  * health check the last of those watches. A counted signal without an
  * alarm costs $0.30/month; an alarmed one costs $0.40/month. Those are the real
  * numbers to weigh, not zero and not the free-tier cliff it looks like from the
@@ -452,8 +452,9 @@ export function mutationDurationFilterPattern(): string {
 }
 
 /**
- * What a server render cost, as **two aggregate metrics**: the statements it
- * sent and the wall time from its first statement to the response's end
+ * What a server render cost, as **three aggregate metrics**: the statements
+ * it sent, the time those statements took summed (`db_ms`), and the wall time
+ * from its first statement to the response's end
  * (`render.db_queries`, written once per render pass by `reportRenderQueries`
  * in `src/lib/observability/query-timing.ts`; that file says exactly what `ms`
  * measures and what it does not).
@@ -476,6 +477,13 @@ export const RENDER_DB_QUERIES_SIGNAL = {
       metricName: "RenderDbMs",
       title: "Server render, first statement to response end (p95, ms)",
       field: "ms",
+    },
+    {
+      // The sum of every statement's own time, overlapping ones counted once
+      // each, so a slow query and a slow render read apart (issue #2352).
+      metricName: "RenderDbStatementMs",
+      title: "Database time per server render, statements summed (p95, ms)",
+      field: "db_ms",
     },
   ],
 } as const;
@@ -733,11 +741,11 @@ export const SAVED_LOG_QUERIES: readonly SavedLogQuery[] = [
   },
   {
     name: "DiveDay/Heaviest renders by route",
-    why: "Which pages send the most statements and take longest to render on the server, by route -- the per-route breakdown behind the two render-cost metrics.",
+    why: "Which pages send the most statements, spend longest in the database and take longest to render on the server, by route -- the per-route breakdown behind the three render-cost metrics.",
     queryString: [
-      "fields route, queries, ms",
+      "fields route, queries, ms, db_ms",
       '| filter event = "render.db_queries"',
-      "| stats pct(queries, 95) as queriesP95, pct(ms, 95) as msP95, count(*) as renders by route",
+      "| stats pct(queries, 95) as queriesP95, pct(ms, 95) as msP95, pct(db_ms, 95) as dbMsP95, count(*) as renders by route",
       "| sort msP95 desc",
       "| limit 40",
     ].join("\n"),

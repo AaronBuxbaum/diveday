@@ -12,13 +12,14 @@ import {
   queryTimingLogger,
   reportRenderQueries,
   withQueryStats,
+  withStatementTiming,
 } from "./query-timing";
 
-/** The seeded database, re-opened with the logger `src/db/client.ts` installs. */
+/** The seeded database, re-opened with the driver timing and logger `src/db/client.ts` installs. */
 async function timedShopContext() {
   const { db, shop } = await seededShopContext();
   const timed = drizzle({
-    client: db.$client as PGlite,
+    client: withStatementTiming(db.$client as PGlite),
     logger: queryTimingLogger,
   }) as unknown as AppDb;
   return { db: timed, shop };
@@ -61,6 +62,45 @@ describe("counting a request's statements", () => {
   });
 });
 
+describe("timing a request's statements", () => {
+  it("adds each statement's own time to the scope that sent it", async () => {
+    const { db, shop } = await timedShopContext();
+    const startedAt = performance.now();
+    const { stats } = await withQueryStats(async () => {
+      await getShopById(db, shop.id);
+      await getShopById(db, shop.id);
+    });
+    const elapsed = performance.now() - startedAt;
+    expect(stats.queries).toBe(2);
+    expect(stats.dbMs).toBeGreaterThan(0);
+    // One after the other, the statements' own time fits inside the wall time.
+    expect(stats.dbMs).toBeLessThanOrEqual(elapsed);
+  });
+
+  it("times a statement inside a transaction as well", async () => {
+    const { db, shop } = await timedShopContext();
+    const { stats } = await withQueryStats(() =>
+      db.transaction(async (tx) => {
+        await getShopById(tx, shop.id);
+      }),
+    );
+    // PGlite runs BEGIN and COMMIT itself; the read is the one statement
+    // Drizzle sends, through the transaction's own client.
+    expect(stats.queries).toBe(1);
+    expect(stats.dbMs).toBeGreaterThan(0);
+  });
+
+  it("keeps a scope's time its own when two run at once", async () => {
+    const { db, shop } = await timedShopContext();
+    const [none, some] = await Promise.all([
+      withQueryStats(async () => undefined),
+      withQueryStats(() => getShopById(db, shop.id)),
+    ]);
+    expect(none.stats.dbMs).toBe(0);
+    expect(some.stats.dbMs).toBeGreaterThan(0);
+  });
+});
+
 describe("reporting a render", () => {
   it("writes one line after the response, naming the route the page sharpened it to", async () => {
     const { db, shop } = await timedShopContext();
@@ -92,6 +132,7 @@ describe("reporting a render", () => {
       queries: 2,
     });
     expect(line.ms).toBeGreaterThanOrEqual(0);
+    expect(line.db_ms).toBeGreaterThanOrEqual(0);
   });
 
   it("reports nothing from outside every scope, where its count would always be zero", () => {
