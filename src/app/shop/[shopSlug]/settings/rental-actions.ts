@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import {
   getShopById,
+  setShopCustomerRegulatorServiceMonths,
   setShopRentalItems,
   setShopRentalPricing,
   setShopRentalTerms,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { isCustomerRegulatorServiceMonths } from "@/lib/work-orders";
 import { paymentSettingsBlock, settingsBlock } from "./action-helpers";
 
 /**
@@ -131,5 +133,28 @@ export async function saveRentalTermsAction(formData: FormData) {
   revalidateAndRedirect(
     settings,
     noticeUrl(settings, "rental-terms-saved", { saved: "rentalTerms" }),
+  );
+}
+
+/**
+ * How often the shop services a customer's regulator, 12 or 24 months (#2272):
+ * the interval a customer regulator's suggested next-due date, and so its
+ * service reminder, counts from. A shop unit's own clock never reads it. It
+ * sits in the Rental gear group beside the rental terms and asks the same two
+ * gates.
+ */
+export async function saveRegulatorServiceAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
+  const months = Number(formData.get("regulatorServiceMonths"));
+  if (!isCustomerRegulatorServiceMonths(months)) {
+    redirect(noticeUrl(settings, "regulator-service-invalid", { saved: "regulatorService" }));
+  }
+  await setShopCustomerRegulatorServiceMonths(await getDb(), session.user.shopId, months);
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "regulator-service-saved", { saved: "regulatorService" }),
   );
 }

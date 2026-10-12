@@ -27,9 +27,10 @@ The row is already durable and already due the moment it is written — `next_at
 
 - `dispatchIntegrationsAfterResponse()` (`src/features/integrations/dispatch-on-write.ts`) wraps
   Next's `after()` around the existing `dispatchDueIntegrationDeliveries`. It is called from the
-  four app-layer writes that can enqueue an event: the new-order action (`order.created`), the
-  Stripe `invoice.paid` webhook, and the refund and refresh actions (`order.paid` /
-  `order.refunded`). A void writes no event and is deliberately not wired.
+  app-layer writes that can enqueue an event: the new-order action (`order.created`), the
+  Stripe `invoice.paid` webhook, the refund and refresh actions (`order.paid` /
+  `order.refunded`), and the two void actions and the `invoice.voided` webhook (`order.voided`,
+  issue #2309, so the accounting adapters take back a sale they booked).
 - **`after`, not an inline await.** The delivery crosses the open internet to a third party.
   Awaiting it would put a staffer's "take payment" button behind Zapier's response time, and a
   wedged provider would read to them as DiveDay being broken. On the Stripe webhook it would be

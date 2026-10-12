@@ -1,6 +1,7 @@
 import fs from "node:fs";
 
 import { chromium } from "@playwright/test";
+import credentials from "../src/db/dev-credentials.json" with { type: "json" };
 import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
 
 /**
@@ -15,15 +16,8 @@ import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
 /** How long a route gets to stream its body in before we call it stuck. */
 export const SKELETON_TIMEOUT_MS = 20_000;
 
-// Mirrors src/db/dev-credentials.ts (TS, so not importable from this .mjs).
-// Demo-tenant-only deterministic logins; check-agents does not guard this
-// duplication, so if sign-in starts failing, compare against that file first.
-export const DEV_STAFF_LOGINS = {
-  owner: { email: "dana@demo.invalid", password: "password" },
-  instructor: { email: "marcus@demo.invalid", password: "password" },
-  divemaster: { email: "keiko@demo.invalid", password: "password" },
-  captain: { email: "sal@demo.invalid", password: "password" },
-};
+/** The demo-tenant staff logins, from the one file the seed also reads. */
+export const DEV_STAFF_LOGINS = credentials.staffLogins;
 
 // Same fallback order as e2e/browser.ts: explicit override, Playwright's own
 // pinned browser, then the sandbox/system binaries agent environments ship.

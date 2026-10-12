@@ -799,6 +799,7 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     shop.id,
     parsed.data.tripId,
     wallTimeToUtc(wall, shop.timezone),
+    { actorPersonId: session.user.personId },
   );
   if (!outcome.ok) {
     await trackEvent({ name: "schedule_builder_action", action: "move", outcome: outcome.reason });

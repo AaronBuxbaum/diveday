@@ -58,3 +58,15 @@ export function googleTerrainEmbedUrl(coordinates: string, zoom = 15): string {
 export function googleMapsUrl(query: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
+
+/**
+ * **What the route frames ask before showing the map** (UX review 2026-10-10,
+ * item 20). A framed map that cannot load is not silent: the browser paints
+ * its own broken-document glyph in the middle of the frame, which is exactly
+ * where a shop's route is drawn, and an `<iframe>`'s `load` event fires for
+ * that error page too, so the frame cannot say whether it worked. A one-pixel
+ * read of the same provider can: an image's `error` is honest. Same host the
+ * embed redirects to, so this tells Google nothing the frame would not, and
+ * it is listed under `img-src` (`src/lib/content-security-policy.ts`).
+ */
+export const MAP_REACHABILITY_PROBE = "https://www.google.com/favicon.ico";

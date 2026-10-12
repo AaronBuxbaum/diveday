@@ -166,3 +166,111 @@ describe("deliverQuickBooksEvent — refund receipts", () => {
     expect(calls).toBe(1);
   });
 });
+
+/**
+ * A voided order takes its sale back off the books (issue #2309). QuickBooks
+ * voids a sales receipt in place: read its SyncToken, then post
+ * `operation=void`.
+ */
+describe("deliverQuickBooksEvent — voids", () => {
+  async function voidEvent(
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    shopId: string,
+  ) {
+    const event = await enqueueIntegrationEvent(db, {
+      shopId,
+      eventType: "order.voided",
+      entityType: "order",
+      entityId: "order-1",
+      idempotencyKey: "order:order-1:void",
+      payload: { ...orderPayload(0, 0), status: "void" },
+    });
+    if (!event) throw new Error("event fixture failed");
+    return event;
+  }
+
+  function recordingFetch() {
+    const calls: { url: string; method: string; body: unknown }[] = [];
+    const fetchImpl = (async (url: string, init: { method: string; body?: string }) => {
+      calls.push({
+        url,
+        method: init.method,
+        body: init.body ? JSON.parse(init.body) : undefined,
+      });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ SalesReceipt: { Id: "55", SyncToken: "3" } }),
+      };
+    }) as unknown as typeof fetch;
+    return { calls, fetchImpl };
+  }
+
+  it("voids the sales receipt it booked, once", async () => {
+    const { db, shop } = await seededShopContext();
+    const integration = await connectedIntegration(db, shop.id);
+    await upsertIntegrationSyncRecord(db, {
+      shopId: shop.id,
+      provider: "quickbooks",
+      sourceType: "quickbooks_order",
+      sourceId: "order-1",
+      operation: "sales_receipt",
+      externalId: "55",
+    });
+    const event = await voidEvent(db, shop.id);
+    const { calls, fetchImpl } = recordingFetch();
+
+    expect(await deliverQuickBooksEvent(db, integration, event, CONFIG, fetchImpl)).toEqual({
+      status: "delivered",
+    });
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.method).toBe("GET");
+    expect(calls[0]?.url).toContain("/v3/company/9130350000000000/salesreceipt/55?");
+    expect(calls[1]?.method).toBe("POST");
+    expect(calls[1]?.url).toContain("/salesreceipt?operation=void&");
+    expect(calls[1]?.body).toEqual({ Id: "55", SyncToken: "3", sparse: true });
+
+    // A redelivered void is a no-op.
+    await deliverQuickBooksEvent(db, integration, event, CONFIG, fetchImpl);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("does nothing for an order it never booked", async () => {
+    const { db, shop } = await seededShopContext();
+    const integration = await connectedIntegration(db, shop.id);
+    const { calls, fetchImpl } = recordingFetch();
+    expect(
+      await deliverQuickBooksEvent(
+        db,
+        integration,
+        await voidEvent(db, shop.id),
+        CONFIG,
+        fetchImpl,
+      ),
+    ).toEqual({ status: "delivered" });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("does not book a sale whose void is already queued", async () => {
+    const { db, shop } = await seededShopContext();
+    const integration = await connectedIntegration(db, shop.id);
+    const paid = await enqueueIntegrationEvent(db, {
+      shopId: shop.id,
+      eventType: "order.paid",
+      entityType: "order",
+      entityId: "order-1",
+      idempotencyKey: "order:order-1:paid",
+      payload: orderPayload(0, 0),
+    });
+    if (!paid) throw new Error("event fixture failed");
+    const voided = await voidEvent(db, shop.id);
+    const { calls, fetchImpl } = recordingFetch();
+
+    // The void delivered first (the paid one was still retrying): nothing booked, nothing to undo.
+    await deliverQuickBooksEvent(db, integration, voided, CONFIG, fetchImpl);
+    expect(await deliverQuickBooksEvent(db, integration, paid, CONFIG, fetchImpl)).toEqual({
+      status: "delivered",
+    });
+    expect(calls).toHaveLength(0);
+  });
+});

@@ -12,8 +12,11 @@ import { QueryForm } from "@/components/ui/QueryForm";
  * changes; `QueryForm` keeps it a real GET form that works before hydration
  * and turns the hydrated submit into a router navigation.
  *
- * The labels are `sr-only` for Orders' reason: each select states its own
+ * The selects' labels are `sr-only` for Orders' reason: each states its own
  * value ("Everyone", "Everything"), and a caption above it would restate it.
+ * The date boxes do not: two empty boxes look identical, so each carries a
+ * visible "From" / "To" on its own row, beside the box rather than above it
+ * so the toolbar stays one line of controls (issue #2314).
  */
 export type ActivityToolbarCopy = {
   personLabel: string;
@@ -28,6 +31,8 @@ export type ActivityToolbarCopy = {
 };
 
 const FIELD_CLASS = "min-w-36 flex-1 sm:w-44 sm:flex-none";
+/** A date box and its visible caption, side by side; the box takes the rest. */
+const DATE_FIELD_CLASS = "flex min-w-44 flex-1 items-center gap-2 sm:w-52 sm:flex-none";
 
 export function ActivityToolbar({
   personId,
@@ -94,17 +99,29 @@ export function ActivityToolbar({
         </select>
       </div>
 
-      <div className={FIELD_CLASS}>
-        <label className="sr-only" htmlFor="activity-from">
+      <div className={DATE_FIELD_CLASS}>
+        <label className="shrink-0 text-sm text-muted" htmlFor="activity-from">
           {copy.fromLabel}
         </label>
-        <DateField id="activity-from" name="from" defaultValue={from} onChange={submit} />
+        <DateField
+          id="activity-from"
+          name="from"
+          defaultValue={from}
+          onChange={submit}
+          wrapperClassName="min-w-0 flex-1"
+        />
       </div>
-      <div className={FIELD_CLASS}>
-        <label className="sr-only" htmlFor="activity-to">
+      <div className={DATE_FIELD_CLASS}>
+        <label className="shrink-0 text-sm text-muted" htmlFor="activity-to">
           {copy.toLabel}
         </label>
-        <DateField id="activity-to" name="to" defaultValue={to} onChange={submit} />
+        <DateField
+          id="activity-to"
+          name="to"
+          defaultValue={to}
+          onChange={submit}
+          wrapperClassName="min-w-0 flex-1"
+        />
       </div>
 
       {clearHref ? (

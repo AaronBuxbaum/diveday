@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 const CLAIM_NOTICES: Record<string, { tone: "danger" | "neutral"; key: DiverMessageKey }> = {
   "error-fields": { tone: "danger", key: "seatClaim.errors.checkFields" },
-  "error-already": { tone: "danger", key: "seatClaim.errors.alreadyBooked" },
+  "error-unable": { tone: "danger", key: "seatClaim.errors.unable" },
   "error-course": { tone: "danger", key: "seatClaim.errors.coursePrerequisite" },
   "error-rate": { tone: "danger", key: "ready.rateLimited" },
 };

@@ -4,7 +4,7 @@ import type { TripPrep } from "@/db/trips";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { PrepGrouping } from "@/lib/dive-prep";
 import { shopOffersNitrox } from "@/lib/rentals";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { type NoticeTone, noticeCountParam, noticeFromParam } from "@/lib/staff-notices";
 import { PrepAssignments } from "./PrepAssignments";
 import { PrepFitGaps } from "./PrepFitGaps";
 import { PrepKitList } from "./PrepKitList";
@@ -13,14 +13,20 @@ import { PrepTanks } from "./PrepTanks";
 import type { PrepView } from "./prep-view";
 
 /** `?notice=` codes the Gear tab's forms redirect back with. Read through
- * `noticeFromParam`, never a bare index — the param is attacker-supplied. */
-const GEAR_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
+ * `noticeFromParam`, never a bare index — the param is attacker-supplied.
+ * `counted`: the sentence names `?count=`, and without a readable one says
+ * nothing. */
+const GEAR_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey; counted?: true }> = {
   "gear-released": { tone: "success", key: "gear.prep.notice.released" },
   "gear-already-checked-out": { tone: "warning", key: "gear.prep.notice.alreadyCheckedOut" },
   "gear-not-found": { tone: "danger", key: "gear.notice.notFound" },
   "gear-already-returned": { tone: "warning", key: "gear.notice.alreadyReturned" },
   "gear-returned-set": { tone: "success", key: "gear.notice.returnedSet" },
-  "gear-returned-set-pulled": { tone: "success", key: "gear.notice.returnedSetPulled" },
+  "gear-returned-set-pulled": {
+    tone: "success",
+    key: "gear.notice.returnedSetPulled",
+    counted: true,
+  },
   "gear-handed-over": { tone: "success", key: "gear.prep.notice.handedOver" },
   "gear-nothing-to-hand-over": { tone: "warning", key: "gear.notice.nothingToHandOver" },
   "gear-concern-needs-words": { tone: "warning", key: "gear.notice.concernNeedsWords" },
@@ -45,6 +51,7 @@ export function PrepBody({
   tripId,
   rentalItems,
   notice,
+  noticeCount,
   grouping,
   groupPath,
   cancelled = false,
@@ -64,6 +71,8 @@ export function PrepBody({
   rentalItems: string[];
   /** The raw `?notice=`, read through `noticeFromParam` and never indexed. */
   notice: string | undefined;
+  /** The raw `?count=` a counted notice names, read through `noticeCountParam`. */
+  noticeCount?: string;
   grouping: PrepGrouping;
   /**
    * What the two groupings link to — this list's own page, at a different
@@ -126,7 +135,10 @@ export function PrepBody({
     checklist.tanks.nitrox > 0 ||
     checklist.nitroxBlockers.length > 0;
 
-  const gearBanner = noticeFromParam(notice, GEAR_NOTICES);
+  const gearCount = noticeCountParam(noticeCount);
+  const gearNotice = noticeFromParam(notice, GEAR_NOTICES);
+  const gearBanner =
+    gearNotice && (!gearNotice.counted || gearCount !== null) ? gearNotice : undefined;
 
   return (
     <>
@@ -170,7 +182,9 @@ export function PrepBody({
               margin, so it sits 24px over the assignments it answers for —
               the space every notice keeps over what follows it. */}
           {gearBanner ? (
-            <StaffNoticeBanner tone={gearBanner.tone}>{t(gearBanner.key)}</StaffNoticeBanner>
+            <StaffNoticeBanner tone={gearBanner.tone}>
+              {t(gearBanner.key, { count: gearCount ?? 0 })}
+            </StaffNoticeBanner>
           ) : null}
           {gearFleetTotal > 0 && assignmentRows.length > 0 ? <PrepAssignments view={view} /> : null}
         </div>

@@ -1540,6 +1540,38 @@ describe("sendDueRecaps", () => {
   });
 
   /**
+   * **A departure past no-decompression limits gets no flying sentence**
+   * (H-84, issue #1555): the email and the page both say nothing, rather
+   * than the recreational interval beside DAN's name.
+   */
+  it("says nothing about flying after a departure the shop marked past no-decompression limits", async () => {
+    const { db, shop, reef, bookingId, afterTrip } = await recapContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("no staff");
+    const exitedAt = new Date(reef.endsAt.getTime() - 30 * 60 * 1000);
+    await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      diveNumber: 1,
+      enteredAt: new Date(exitedAt.getTime() - 45 * 60 * 1000),
+      exitedAt,
+      recordedByPersonId: staff.person.id,
+    });
+    await db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, reef.id));
+    const email = fakeEmail();
+    await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    const mine = email.sent.find((n) => n.kind === "trip_recap" && n.bookingId === bookingId);
+    if (mine?.kind !== "trip_recap") throw new Error("recap notification missing");
+    expect(mine.flySafe ?? null).toBeNull();
+    expect((await getRecapPageData(db, bookingId))?.flySafe ?? null).toBeNull();
+  });
+
+  /**
    * **The regression test the per-booking memo exists for** (issue #1439).
    *
    * "Dived on an earlier day" is a fact about a *person*, so two divers on one

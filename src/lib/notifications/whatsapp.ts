@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { DiverLocale } from "@/i18n/settings";
+import { thrownErrorToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import { safeJson } from "@/lib/safe-json";
 import type { CourtesyDelivery, CourtesyMessage, CourtesyProvider } from "./courtesy";
@@ -114,9 +115,13 @@ const sendResponseSchema = z.object({
   messages: z.array(z.object({ id: z.string().min(1) })).min(1),
 });
 
+/**
+ * Meta's error envelope. Its free-text `message` is not read: it can quote the
+ * recipient or the message, and `code`/`error_subcode` already say what failed
+ * (issue #2334).
+ */
 const errorResponseSchema = z.object({
   error: z.object({
-    message: z.string().optional(),
     type: z.string().optional(),
     code: z.number().optional(),
     error_subcode: z.number().optional(),
@@ -149,7 +154,6 @@ function errorInfoFromResponse(status: number, rawBody: string): WhatsAppErrorIn
     httpStatus: status,
     errorCode:
       code === undefined ? undefined : subcode === undefined ? `${code}` : `${code}/${subcode}`,
-    detail: error?.message?.slice(0, 500),
   };
 }
 
@@ -198,7 +202,8 @@ async function postWhatsAppMessage(
       info = {
         retryable: true,
         errorCode: "network_error",
-        detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
+        // The cause's code or the class, never the thrown message (issue #2334).
+        detail: thrownErrorToken(error),
       };
     }
     if (info.retryable && attempt < options.maxAttempts) {

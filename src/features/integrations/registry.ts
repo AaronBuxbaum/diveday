@@ -1,6 +1,10 @@
 import type { IntegrationProvider } from "@/db/schema";
 
-export type IntegrationEventType = "order.created" | "order.paid" | "order.refunded";
+export type IntegrationEventType =
+  | "order.created"
+  | "order.paid"
+  | "order.refunded"
+  | "order.voided";
 
 export type IntegrationCapability = "catalog_sync" | "accounting_export" | "outbound_events";
 
@@ -30,21 +34,21 @@ export const INTEGRATION_PROVIDER_REGISTRY = {
     labelKey: "integrations.quickbooks.name",
     connection: "oauth",
     capabilities: ["accounting_export"],
-    eventTypes: ["order.paid", "order.refunded"],
+    eventTypes: ["order.paid", "order.refunded", "order.voided"],
   },
   xero: {
     id: "xero",
     labelKey: "integrations.xero.name",
     connection: "oauth",
     capabilities: ["accounting_export"],
-    eventTypes: ["order.paid", "order.refunded"],
+    eventTypes: ["order.paid", "order.refunded", "order.voided"],
   },
   zapier: {
     id: "zapier",
     labelKey: "integrations.zapier.name",
     connection: "webhook",
     capabilities: ["outbound_events"],
-    eventTypes: ["order.created", "order.paid", "order.refunded"],
+    eventTypes: ["order.created", "order.paid", "order.refunded", "order.voided"],
   },
 } as const satisfies Record<IntegrationProvider, IntegrationProviderDefinition>;
 

@@ -4,12 +4,11 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { courseFormsAwaitingTextByCourse } from "@/db/course-forms";
-import { pagedCourses } from "@/db/courses";
+import { coursesAwaitingFormText, pagedCourses } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
 import { nextSessionStartByCourse } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
@@ -111,12 +110,10 @@ export default async function CoursesPage({
       "shop",
     ),
     // The agency's forms a template set up with no text yet: nobody signs
-    // them until the shop pastes the wording in, so the row says so.
-    courseFormsAwaitingTextByCourse(
-      db,
-      shop.id,
-      courseList.map((course) => course.id),
-    ),
+    // them until the shop pastes the wording in. Said once above the list,
+    // shop-wide, with a door to the first (UX review 2026-10-10, item 16);
+    // under every row it was the same amber sentence nearly twenty times.
+    coursesAwaitingFormText(db, shop.id),
   ]);
   const base = `/shop/${shopSlug}/courses`;
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
@@ -185,13 +182,6 @@ export default async function CoursesPage({
       </>
     ),
     ...(course.isActive ? {} : { hiddenLabel: st("courses.list.hidden") }),
-    ...(formsAwaitingText.has(course.id)
-      ? {
-          attention: st("courses.list.formsAwaitingText", {
-            forms: (formsAwaitingText.get(course.id) ?? []).map((form) => form.title).join(", "),
-          }),
-        }
-      : {}),
     // The catalog's whole point is that a course gets taught. This hands the
     // board's add panel (`?course=` opens it with the course preselected and
     // shapes the title) the one fact staff would otherwise re-pick from a
@@ -242,6 +232,18 @@ export default async function CoursesPage({
           </Link>
         }
       />
+
+      {formsAwaitingText[0] ? (
+        <ShopNotice tone="warning" className="mt-6">
+          {st("courses.list.formsAwaitingTextSummary", { count: formsAwaitingText.length })}{" "}
+          <Link
+            href={`/shop/${shop.slug}/courses/${formsAwaitingText[0].slug}/edit#forms`}
+            className="font-medium underline"
+          >
+            {st("courses.list.formsAwaitingTextDoor", { title: formsAwaitingText[0].title })}
+          </Link>
+        </ShopNotice>
+      ) : null}
 
       {courseList.length === 0 ? (
         // The roster used to render its card shell around nothing, giving a

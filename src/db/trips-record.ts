@@ -14,7 +14,7 @@ import {
 import type { TripDiveMode } from "@/lib/trip-details";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import type { AppDb, DbExecutor } from "./client";
-import { recordCrewCalledOff } from "./crew-notices";
+import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
 import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import type { Trip } from "./schema";
@@ -410,10 +410,21 @@ export type TripPatch = {
   isPrivate?: boolean;
   /** The shop's own divemaster target stops applying to this departure (issue #973). */
   selfGuided?: boolean;
+  /** The dives went past no-decompression limits, so the recap says nothing about flying (H-84). */
+  exceedsNoDecoLimits?: boolean;
 };
 
 export type UpdateTripOutcome =
-  | { ok: true; trip: Trip }
+  | {
+      ok: true;
+      trip: Trip;
+      /**
+       * Whether the departure instant changed: the edit moved the boat. The
+       * caller writes the activity log's "moved the departure" line on it,
+       * the same line the schedule builder's move writes (issue #2313).
+       */
+      startMoved: boolean;
+    }
   | { ok: false; reason: "invalid" | "not_found" }
   | { ok: false; reason: "capacity_below_booked"; detail: { bookedCount: number } }
   | { ok: false; reason: "boat_not_found" }
@@ -434,7 +445,8 @@ export async function updateTrip(
   tripId: string,
   patch: TripPatch,
 ): Promise<UpdateTripOutcome> {
-  return db.transaction(async (tx) => {
+  let timeMoved = false;
+  const outcome = await db.transaction(async (tx): Promise<UpdateTripOutcome> => {
     const plannedDives = normalizedDiveCount(patch.plannedDives);
     if (!plannedDives) return { ok: false, reason: "invalid" };
 
@@ -449,6 +461,9 @@ export async function updateTrip(
         // calendar client re-alerts on are when the boat leaves and where it
         // goes, so both have to be compared against what the patch asks for.
         startsAt: trips.startsAt,
+        // Read so a moved start time is told to the crew of a running
+        // departure only (#2283).
+        status: trips.status,
         diveSiteId: trips.diveSiteId,
         meetingPointLabel: trips.meetingPointLabel,
         meetingPointAddress: trips.meetingPointAddress,
@@ -541,8 +556,9 @@ export async function updateTrip(
       patch.diveSiteId === undefined
         ? existing.diveSiteId
         : (patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null));
+    const startMoved = patch.startsAt.getTime() !== existing.startsAt.getTime();
     const revisionMoved =
-      patch.startsAt.getTime() !== existing.startsAt.getTime() ||
+      startMoved ||
       tripSiteListChanged(beforeSites, afterSites) ||
       // The denormalized pointer counts on its own: it is what the feed reads
       // for `LOCATION` when the trip has no meeting point of its own.
@@ -599,6 +615,9 @@ export async function updateTrip(
         ...(patch.selfGuided === undefined
           ? {}
           : { selfGuided: existing.courseId ? false : patch.selfGuided }),
+        ...(patch.exceedsNoDecoLimits === undefined
+          ? {}
+          : { exceedsNoDecoLimits: patch.exceedsNoDecoLimits }),
         ...(patch.diveSiteId === undefined
           ? {}
           : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),
@@ -638,8 +657,23 @@ export async function updateTrip(
         occurredAt: changedAt,
       });
     }
-    return { ok: true, trip };
+    // The crew hear a moved start time (#2283), the same notice the schedule
+    // board's move records (`moveTrip`).
+    if (existing.status === "scheduled" && startMoved) {
+      await recordCrewTimeMoved(tx, {
+        shopId,
+        tripId,
+        previousStartsAt: existing.startsAt,
+        actorPersonId: patch.changeActorPersonId ?? null,
+        now: changedAt,
+      });
+      timeMoved = true;
+    }
+    return { ok: true, trip, startMoved };
   });
+  // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
+  if (timeMoved) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId] });
+  return outcome;
 }
 
 /** Ordered dive details for a trip, scoped through the owning shop. */

@@ -344,11 +344,12 @@ test.describe("staff", () => {
     await expect(note).toBeVisible();
     await expect(note).toHaveAttribute("required", "");
 
-    // And the ordinary evening still works *with the concern armed*, which is
-    // the whole reason the fast answers carry `formNoValidate`: the empty
-    // required note sits in the same form, and without it the browser refuses
-    // to submit "All good" until somebody fills in a field they opened by
-    // mistake. This assertion is the bug it was written after.
+    // An open concern hides the fast answers: "All good" there would drop
+    // whatever the staffer typed. Cancel is the way back, and the ordinary
+    // evening still works after it, with the note closed and nothing ticked.
+    await expect(allGood).toHaveCount(0);
+    await assignments.getByRole("button", { name: "Cancel" }).click();
+    await expect(note).toHaveCount(0);
     await allGood.click();
     await expect(page.getByRole("status").filter({ hasText: "Back on the wall." })).toBeVisible();
     // Gone, because nothing is out any more.

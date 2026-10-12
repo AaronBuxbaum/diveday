@@ -107,7 +107,8 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     threshold: 1,
     periodMinutes: 15,
     response:
-      "Find the checkout or order id in the log line, then reconcile it against the Stripe dashboard by hand before the shop notices.",
+      "Find the checkout or order id in the log line, then reconcile it against the Stripe dashboard by hand before the shop notices. " +
+      "A disqualified checkout is already on the shop's Orders index as money owed back, with a Refund.",
   },
   {
     metricName: "NotificationSendFailures",

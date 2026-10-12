@@ -22,6 +22,8 @@ export type CrewScheduleChangeEmailInput = {
     role?: CrewTripRole | null;
     tripTitle: string;
     startsAt: Date;
+    /** On `time_moved`: when it left before the move. */
+    previousStartsAt?: Date;
     tripUrl: string;
   }[];
 };
@@ -34,6 +36,7 @@ const LINE_KEY = {
   request_refused: "notifications.crewSchedule.refused",
   role_changed: "notifications.crewSchedule.roleChanged",
   called_off: "notifications.crewSchedule.calledOff",
+  time_moved: "notifications.crewSchedule.timeMoved",
 } as const satisfies Record<CrewNoticeChange, string>;
 
 const SUBJECT_KEY = {
@@ -44,6 +47,7 @@ const SUBJECT_KEY = {
   request_refused: "notifications.crewSchedule.subjectRefused",
   role_changed: "notifications.crewSchedule.subjectRoleChanged",
   called_off: "notifications.crewSchedule.subjectCalledOff",
+  time_moved: "notifications.crewSchedule.subjectTimeMoved",
 } as const satisfies Record<CrewNoticeChange, string>;
 
 const ROLE_KEY = {
@@ -59,7 +63,7 @@ const ABOARD: ReadonlySet<CrewNoticeChange> = new Set(["assigned", "request_appr
 function line(
   t: DiverTranslator,
   entry: { change: CrewNoticeChange; role?: CrewTripRole | null },
-  values: { tripTitle: string; when: string },
+  values: { tripTitle: string; when: string; previousWhen: string },
 ): string {
   const role = entry.role ? t(ROLE_KEY[entry.role]) : null;
   if (entry.change === "role_changed") {
@@ -85,11 +89,17 @@ export function crewScheduleChangeEmail(input: CrewScheduleChangeEmailInput): No
   const open = t("notifications.crewSchedule.open");
   const lines = input.changes.map((entry) => {
     const when = formatDateTimeTz(entry.startsAt, input.locale, input.timezone);
+    // Both times in the shop's zone, so a crew member reads the one they knew
+    // beside the one it leaves at now.
+    const previousWhen = entry.previousStartsAt
+      ? formatDateTimeTz(entry.previousStartsAt, input.locale, input.timezone)
+      : "";
     return {
-      text: line(t, entry, { tripTitle: entry.tripTitle, when }),
+      text: line(t, entry, { tripTitle: entry.tripTitle, when, previousWhen }),
       html: line(t, entry, {
         tripTitle: `<strong>${escapeHtml(entry.tripTitle)}</strong>`,
         when: escapeHtml(when),
+        previousWhen: escapeHtml(previousWhen),
       }),
       subject: t(SUBJECT_KEY[entry.change], {
         shopName: input.shopName,

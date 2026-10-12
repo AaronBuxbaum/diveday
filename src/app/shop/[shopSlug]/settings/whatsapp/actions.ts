@@ -63,7 +63,7 @@ export type Notice =
   | "no-account"
   | "encryption-key-unset"
   | "encryption-key-invalid"
-  | "waba-already-connected";
+  | "phone-number-already-connected";
 
 /**
  * What Meta's Embedded Signup popup hands back. All three are opaque ids from
@@ -141,9 +141,10 @@ export async function completeWhatsAppSignupAction(formData: FormData): Promise<
   const templateLocale = toDiverLocale(shop?.defaultLocale);
   const diverT = diverTranslator(templateLocale);
 
-  // Exchange first, then claim the shop and the WABA, then register: the one
-  // order in which a junk code learns nothing about other shops (#1766) and no
-  // Connect that will be refused ever mints a PIN (#1769). The order and the
+  // Exchange and confirm the number is in the WABA first, then claim the shop,
+  // the WABA and the number, then register: the one order in which a junk code
+  // learns nothing about other shops (#1766) and no Connect that will be
+  // refused ever mints a PIN (#1769). The order and the
   // locks live in `completeWhatsAppSignup`; this action only words the outcome.
   const outcome = await completeWhatsAppSignup(
     db,

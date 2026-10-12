@@ -2,7 +2,11 @@
 
 import { type ReactNode, useActionState, useEffect, useRef } from "react";
 import { vibrate } from "@/components/haptics";
-import { wasMultiTouch, watchRollCallTouches } from "@/components/roll-call-touch-guard";
+import {
+  refusePress,
+  wasMultiTouch,
+  watchRollCallTouches,
+} from "@/components/roll-call-touch-guard";
 import { textareaClassFor } from "@/components/ui/form";
 
 /**
@@ -206,9 +210,12 @@ export function RollCallButton({
           disabled={isPending}
           aria-busy={isPending}
           // Spray and a wet palm land as several contacts at once; a press
-          // made under more than one does not submit (roll-call-touch-guard).
+          // made under more than one does not submit (roll-call-touch-guard),
+          // and says so on this control (issue #2328). Never retried.
           onClick={(event) => {
-            if (wasMultiTouch()) event.preventDefault();
+            if (!wasMultiTouch()) return;
+            event.preventDefault();
+            refusePress(event.currentTarget);
           }}
           // With a drawn mark there is no visible text to be the accessible
           // name, so the words always have to be said here — including while

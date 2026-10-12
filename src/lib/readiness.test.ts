@@ -1373,3 +1373,110 @@ describe("calculateReadiness — participant types (ADR 20261007-participant-typ
     expect(diverSeat.status).toBe("blocked");
   });
 });
+
+/**
+ * **A rider is never held on a medical** (H-109, issue #2212): someone who
+ * stays on the boat is not blocked by a referral or a physician's "no", while
+ * a snorkeler keeps the dive medical exactly as a diver does. The rider still
+ * signs the release, and a held record is a signed one.
+ */
+describe("calculateReadiness — the medical by participant type (H-109)", () => {
+  const refusedAt = new Date("2026-07-17T09:00:00.000Z");
+  const holds = [
+    ["an open referral", { status: "medical_review" }, "medical_review"],
+    [
+      "a physician's refusal",
+      { status: "medical_review", medicalClearanceDeclinedAt: refusedAt },
+      "medical_not_cleared",
+    ],
+  ] as const;
+
+  it.each(holds)("boards a rider over %s, as a signed release", (_label, overrides) => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
+      certifications: [],
+      participantType: "rider",
+      now,
+    });
+    expect(result).toEqual({ status: "ready", blockers: [] });
+  });
+
+  it.each(holds)(
+    "names no medical code for a rider over %s on an unconfigured departure",
+    (_label, overrides) => {
+      const result = calculateReadiness({
+        requirement: null,
+        waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
+        certifications: [],
+        participantType: "rider",
+        now,
+      });
+      expect(result.blockers).toEqual([{ code: "requirements_not_configured" }]);
+    },
+  );
+
+  it.each(holds)("still holds a snorkeler over %s", (_label, overrides, code) => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
+      certifications: [],
+      participantType: "snorkeler",
+      now,
+    });
+    expect(result.status).toBe("blocked");
+    expect(result.blockers).toEqual([{ code }]);
+  });
+
+  it.each(holds)("still holds a seat with no type over %s", (_label, overrides, code) => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
+      certifications: [certification()],
+      now,
+    });
+    expect(result.blockers).toEqual([{ code }]);
+  });
+
+  it.each([
+    ["no release", null, "waiver_not_sent"],
+    [
+      "an unsigned link",
+      { status: "pending", expiresAt: new Date("2026-07-30T00:00:00.000Z") },
+      "waiver_pending",
+    ],
+    [
+      "a lapsed link",
+      { status: "pending", expiresAt: new Date("2026-07-10T00:00:00.000Z") },
+      "waiver_expired",
+    ],
+  ] as const)("still asks a rider for the release with %s", (_label, waiver, code) => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: waiver as WaiverRecord | null,
+      certifications: [],
+      participantType: "rider",
+      now,
+    });
+    expect(result.blockers).toEqual([{ code }]);
+  });
+
+  it("still asks for a guardian on a minor rider's solo signature that a referral held", () => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: {
+        ...signedWaiver,
+        status: "medical_review",
+        signedAt: new Date("2026-07-10T12:00:00.000Z"),
+        completedAt: new Date("2026-07-10T12:00:00.000Z"),
+        guardianSignedAt: null,
+      } as WaiverRecord,
+      certifications: [],
+      participantType: "rider",
+      dateOfBirth: "2012-03-04",
+      timezone: "America/New_York",
+      now,
+    });
+    expect(result.blockers).toEqual([{ code: "guardian_signature_missing" }]);
+  });
+});
