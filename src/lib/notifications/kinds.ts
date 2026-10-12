@@ -1129,6 +1129,8 @@ const crewScheduleChangeSchema = z.object({
         role: z.enum(CREW_TRIP_ROLES).nullable().optional(),
         tripTitle: z.string().trim().min(1).max(200),
         startsAt: z.date(),
+        /** On `time_moved`: when it left before the move (#2283). */
+        previousStartsAt: z.date().optional(),
         tripUrl: z.url().max(2_000),
       }),
     )

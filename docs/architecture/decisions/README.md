@@ -376,5 +376,6 @@ script again.
 | [20261009-single-use-setup-links](20261009-single-use-setup-links.md) | `/onboard` opens with a single-use link per request, not a standing key | Accepted |  |
 | [20261009-stripe-reversals-reach-diveday](20261009-stripe-reversals-reach-diveday.md) | Record refunds and disputes made outside DiveDay from Stripe's webhooks | Accepted |  |
 | [20261012-architecture-guard-stays-hand-written](20261012-architecture-guard-stays-hand-written.md) | Keep the architecture guard hand-written; do not adopt dependency-cruiser | Accepted |  |
+| [20261012-course-forms-on-charters-and-counter](20261012-course-forms-on-charters-and-counter.md) | Ask a course's forms on a charter seat staff mark as training, and sign students one at a time on a counter device | Proposed |  |
 
 <!-- adr-index:end -->

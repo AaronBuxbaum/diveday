@@ -44,7 +44,9 @@ Two shapes are load-bearing:
   own columns are already calendar dates (`src/lib/staffing-week.ts`).
 - **A decided request is kept, not deleted.** "I asked and was turned down" is the fact the crew
   member came back to check, and a shop declining the same person three Saturdays running should be
-  able to see that it did. Deleting is *withdrawing*, and only the asker may do it.
+  able to see that it did. Deleting is *withdrawing*, and only the asker may do it. (2026-10-12,
+  #2356: no surface ever offered a withdrawal, so its unused writer was removed; a withdraw control
+  is a new feature, built on this rule.)
 
 ### 2. A blackout does exactly two things, and no third
 

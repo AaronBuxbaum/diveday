@@ -2,8 +2,9 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
+import { waiverTemplateHistory } from "@/test/waiver-history";
 import { waiverRecords } from "./schema";
-import { getCurrentWaiverTemplate, listWaiverTemplateHistory } from "./waivers";
+import { getCurrentWaiverTemplate } from "./waivers";
 
 /**
  * The demo shop's release has a history behind it (src/db/seed-waiver-versions.ts).
@@ -17,7 +18,7 @@ describe("seeded waiver template history", () => {
   it("keeps superseded wordings on file behind the live release", async () => {
     const { db, shop } = await seededShopContext();
 
-    const history = await listWaiverTemplateHistory(db, shop.id);
+    const history = await waiverTemplateHistory(db, shop.id);
     expect(history.map((row) => row.version)).toEqual([3, 2, 1]);
     // Gapless and one title throughout: the title is immutable in the UI, so
     // every version of a shop's release carries the shop's own.
@@ -36,7 +37,7 @@ describe("seeded waiver template history", () => {
     const current = await getCurrentWaiverTemplate(db, shop.id);
     // 3, matching the [3, 2, 1] history asserted above.
     expect(current?.version).toBe(3);
-    const [newest] = await listWaiverTemplateHistory(db, shop.id);
+    const [newest] = await waiverTemplateHistory(db, shop.id);
     expect(current?.id).toBe(newest?.id);
   });
 

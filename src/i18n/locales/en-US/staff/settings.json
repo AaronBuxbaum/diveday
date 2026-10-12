@@ -17,6 +17,8 @@
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
       "rentalTermsSaved": "Rental terms saved. Every rental ticket prints them.",
       "rentalTermsInvalid": "Keep rental terms under 1,500 characters.",
+      "regulatorServiceSaved": "Regulator service interval saved.",
+      "regulatorServiceInvalid": "Choose 12 or 24 months.",
       "contactSaved": "Contact details saved.",
       "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers’ replies reach it.",
       "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
@@ -288,7 +290,7 @@
     },
     "rentals": {
       "heading": "What we rent",
-      "detail": "Tick what you rent. Anything unticked drops off the kit form and the prep list.",
+      "detail": "Tick what you rent. Unticked gear leaves the kit form, and fits that already ask for it stay on the prep list, marked.",
       "legend": "Rentable gear and services",
       "submit": "Save rental catalog",
       "submitting": "Saving…",
@@ -313,6 +315,14 @@
       "submit": "Save rental terms",
       "submitting": "Saving…",
       "value": "On every ticket"
+    },
+    "regulatorService": {
+      "heading": "Customer regulator service",
+      "description": "When a customer’s regulator is due again after a service. Your own units keep their own clocks.",
+      "label": "Service every",
+      "months": "{months} months",
+      "submit": "Save service interval",
+      "submitting": "Saving…"
     },
     "stripe": {
       "notConnectedHeading": "No Stripe account connected",

@@ -216,6 +216,10 @@ const EXCLUDED_TABLES = [
   // the shop's Stripe dashboard is where a dispute is answered and exported.
   // The money it concerns is already on orders.csv and booking_checkouts.csv.
   "payment_disputes",
+  // Failed refunds (issue #2291): Stripe's record of a refund that bounced,
+  // mirrored so the Orders index can say who is owed. The money it moved is
+  // already on orders.csv and booking_checkouts.csv (`refunded_cents`).
+  "stripe_refund_failures",
   // Historical assignments are source evidence attached to the gear-history
   // import, not a live reservation or booking record. They remain in the
   // shop database and are intentionally not part of the current full-shop

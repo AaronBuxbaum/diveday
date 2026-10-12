@@ -90,13 +90,16 @@ The owner asked the month to answer three more questions, each kept out of the h
 their meaning does not move:
 
 - **Money in, by line**: Courses, Fun dives and trips, Rentals, Gear bench, Dive packages, and
-  Retail and other. Its basis is the day the money was paid, not the departures the Revenue figure
+  Retail and other, and Unverified imported history. Its basis is the day the money was paid, not the departures the Revenue figure
   is anchored to, because a gear-bench job, a retail sale and a package have no departure. It reads
   paid invoices line by line (an invoice that bills a work order is the gear bench's whole) and
   completed booking checkouts seat by seat (the trip ask to Courses or Fun dives by the departure,
   the gear to Rentals). Tax and pass-through fees are left out, and a refund comes off the line it
-  was paid on, pro rata. A staff mark of cash taken at the counter has no line to read and is not
-  in it. Plain text, no bars, and a line that came to nothing is left out.
+  was paid on, pro rata. A staff mark of cash taken at the desk lands on its departure's line by
+  the day it was last set, and the shop's imported history, net of its refunds, is its own line on
+  the rule Revenue counts it by (issue #2305). The section shows in any month with money in it,
+  departures or none, and the month's CSV carries the same rows. Plain text, no bars, and a line
+  that came to nothing is left out.
 - **Package dives still owed**: dives granted and not yet spent or lapsed at the end of the month
   (or now, for the current month), on an order the shop still holds money for, each valued at the
   price the diver paid over the package's dives.

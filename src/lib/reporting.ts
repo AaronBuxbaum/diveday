@@ -230,7 +230,7 @@ export function tripFillRate(trip: Pick<ReportTrip, "capacity" | "activeBookings
 /**
  * Which prior month a headline card compares against (issue #700). The
  * report page decides this once, off the same `floorMonth` it already
- * computes for the month picker — the earliest month this shop could
+ * computes for the back arrow — the earliest month this shop could
  * possibly have anything to report on — never off whether the fetched month
  * happens to be all zeroes, because a genuinely quiet month a shop *did* run
  * is a real baseline and a month before the shop existed is not.

@@ -100,6 +100,47 @@ describe("netCrewNotices", () => {
     ]);
   });
 
+  describe("a departure that moved", () => {
+    const eight = new Date("2030-06-01T12:00:00Z");
+    const nine = new Date("2030-06-01T13:00:00Z");
+    const moved = (seq: number, previousStartsAt: Date): CrewNoticeRow => ({
+      tripId: A,
+      change: "time_moved",
+      seq,
+      previousStartsAt,
+    });
+
+    it("tells somebody aboard it moved, from the time they last knew", () => {
+      expect(netCrewNotices([moved(1, eight), moved(2, nine)])).toEqual([
+        { tripId: A, change: "time_moved", previousStartsAt: eight },
+      ]);
+    });
+
+    it("folds a move into the assignment it followed, which already says the new time", () => {
+      expect(netCrewNotices([{ tripId: A, change: "assigned", seq: 1 }, moved(2, eight)])).toEqual([
+        { tripId: A, change: "assigned" },
+      ]);
+    });
+
+    it("says only that they are off, when they came off after it moved", () => {
+      expect(netCrewNotices([moved(1, eight), { tripId: A, change: "removed", seq: 2 }])).toEqual([
+        { tripId: A, change: "removed" },
+      ]);
+    });
+
+    it("says a call-off over a move", () => {
+      expect(
+        netCrewNotices([moved(1, eight), { tripId: A, change: "called_off", seq: 2 }]),
+      ).toEqual([{ tripId: A, change: "called_off" }]);
+    });
+
+    it("says the move over a role change, because a missed time is a missed boat", () => {
+      expect(
+        netCrewNotices([{ tripId: A, change: "role_changed", seq: 1 }, moved(2, eight)]),
+      ).toEqual([{ tripId: A, change: "time_moved", previousStartsAt: eight }]);
+    });
+  });
+
   it("returns nothing for nothing", () => {
     expect(netCrewNotices([])).toEqual([]);
   });

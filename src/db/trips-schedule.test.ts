@@ -421,6 +421,36 @@ describe("a self-guided departure keeps its mark when copied", () => {
 });
 
 /**
+ * **A copy of a decompression departure is one too** (H-84, issue #1555): the
+ * recap's silence about flying must hold on the copies a shop makes of it.
+ */
+describe("a departure past no-decompression limits keeps its mark when copied", () => {
+  it("carries exceeds_no_deco_limits through duplicateTrip", async () => {
+    const { db, shop } = ctx;
+    const source = await createTrip(db, {
+      shopId: shop.id,
+      title: "Staged deco — the Spiegel Grove",
+      startsAt: wallTimeToUtc({ year: 2026, month: 9, day: 5, hour: 8, minute: 0 }, shop.timezone),
+      endsAt: wallTimeToUtc({ year: 2026, month: 9, day: 5, hour: 12, minute: 0 }, shop.timezone),
+      capacity: 6,
+      plannedDives: 2,
+      exceedsNoDecoLimits: true,
+    });
+    if (!source) throw new Error("failed to create the source departure");
+    expect(source.exceedsNoDecoLimits).toBe(true);
+    const copied = await duplicateTrip(
+      db,
+      shop.id,
+      source.id,
+      wallTimeToUtc({ year: 2026, month: 9, day: 12, hour: 8, minute: 0 }, shop.timezone),
+    );
+    if (!copied) throw new Error("duplicateTrip returned nothing");
+    const [row] = await db.select().from(trips).where(eq(trips.id, copied.id));
+    expect(row?.exceedsNoDecoLimits).toBe(true);
+  });
+});
+
+/**
  * **A course session is never self-guided** (issue #1342).
  *
  * Self-guided means the divers go in unguided in buddy pairs; a certification

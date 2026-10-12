@@ -44,6 +44,16 @@ export function isDiver(type: ParticipantType | null | undefined): boolean {
 }
 
 /**
+ * Whether this seat is held to the dive medical (H-109, issue #2212). A rider
+ * stays on the boat and is never blocked on a referral or a physician's "no";
+ * a snorkeler is in open water and keeps the dive medical exactly as a diver
+ * does. Absent reads as held, the stricter reading, as {@link isDiver} does.
+ */
+export function isHeldToMedical(type: ParticipantType | null | undefined): boolean {
+  return type !== "rider";
+}
+
+/**
  * The divers-only limit that actually binds, or null when none does.
  *
  * `trips.diver_capacity` is optional, and a value at or above the boat's own
@@ -158,8 +168,11 @@ export function offeredParticipantTypes(
  * Changing a diver to a snorkeler or a rider is the one door that clears a
  * certification block without a card (`setBookingParticipantType`), so every
  * crew surface says it in warning tone beside the name: "Snorkeling, booked as
- * diver". Only an explicit `bookedAs` of diver counts; a row that does not
- * carry the column says nothing rather than guessing.
+ * diver". Leaving for riding also lifts a medical hold for boarding (H-109,
+ * `isHeldToMedical`), and the crew still sees it as a "riding only" warning
+ * (`riderMedicalHold`); leaving for snorkeling never does. Only an explicit
+ * `bookedAs` of diver counts; a row that does not carry the column says
+ * nothing rather than guessing.
  */
 export function leftDiving(seat: {
   participantType?: ParticipantType | null;

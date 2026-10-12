@@ -68,8 +68,9 @@ test.describe("staff", () => {
       .locator("xpath=..")
       .filter({ visible: true });
     await expect(tanks).toContainText("Nitrox");
-    // Nothing on this page claims to know what is in a cylinder.
-    await expect(page.getByText("DiveDay logs no gas analysis")).toBeVisible();
+    await expect(page.getByText("one tank per diver per dive")).toBeVisible();
+    // What the Nitrox tile counts stays beside it for the crew who fill from it.
+    await expect(page.getByText("analyzed and signed for at the fill station")).toBeVisible();
   });
 });
 

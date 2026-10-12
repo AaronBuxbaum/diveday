@@ -13,7 +13,7 @@ import {
   legendClass,
   textareaClassFor,
 } from "@/components/ui/form";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
 import {
   MAX_DECISION_HOURS,
@@ -433,19 +433,8 @@ export function DetailsSection({
                 the rule) clears itself the first time this form is saved: the
                 action parses an absent checkbox as `false` rather than
                 `undefined`, so `updateTrip` writes the correction. */}
-        {trip.courseId ? null : (
-          <Field label={t("schedule.builder.selfGuidedLabel")} htmlFor="trip-details-self-guided">
-            <ChoiceRow
-              type="checkbox"
-              id="trip-details-self-guided"
-              name="selfGuided"
-              defaultChecked={trip.selfGuided}
-              className="text-sm"
-            >
-              {t("schedule.builder.selfGuidedHint")}
-            </ChoiceRow>
-          </Field>
-        )}
+        {trip.courseId ? null : <SelfGuidedField t={t} checked={trip.selfGuided} />}
+        <DecompressionField t={t} checked={trip.exceedsNoDecoLimits} />
       </FieldGrid>
       <fieldset className={GROUP_INSET}>
         <legend className={`${legendClass} text-sm font-medium`}>
@@ -536,5 +525,42 @@ export function DetailsSection({
         <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
       </div>
     </form>
+  );
+}
+
+/**
+ * H-84 (issue #1555): DAN gives no preflight figure for a dive that took
+ * stops, so a departure marked here gets no flying sentence on the recap.
+ * Nothing else reads it.
+ */
+function DecompressionField({ t, checked }: { t: StaffTranslator; checked: boolean }) {
+  return (
+    <Field label={t("trips.details.exceedsNoDecoLabel")} htmlFor="trip-details-exceeds-no-deco">
+      <ChoiceRow
+        type="checkbox"
+        id="trip-details-exceeds-no-deco"
+        name="exceedsNoDecoLimits"
+        defaultChecked={checked}
+        className="text-sm"
+      >
+        {t("trips.details.exceedsNoDecoHint")}
+      </ChoiceRow>
+    </Field>
+  );
+}
+
+function SelfGuidedField({ t, checked }: { t: StaffTranslator; checked: boolean }) {
+  return (
+    <Field label={t("schedule.builder.selfGuidedLabel")} htmlFor="trip-details-self-guided">
+      <ChoiceRow
+        type="checkbox"
+        id="trip-details-self-guided"
+        name="selfGuided"
+        defaultChecked={checked}
+        className="text-sm"
+      >
+        {t("schedule.builder.selfGuidedHint")}
+      </ChoiceRow>
+    </Field>
   );
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import {
   type BoatPapersInput,
   createBoat,
@@ -19,12 +20,45 @@ import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
 import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
+import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { settingsBlock } from "./action-helpers";
 import { boatRowId } from "./boats/certificate-error";
+
+/** Each dock-day amount as posted, `null` when absent; `parseDockDayRhythm` holds the bounds. */
+const dockDayForm = z.object(
+  Object.fromEntries(DOCK_DAY_FIELDS.map((field) => [field, formValue()])) as Record<
+    (typeof DOCK_DAY_FIELDS)[number],
+    ReturnType<typeof formValue>
+  >,
+);
+
+/** The reference's fixed lines, plus a numbered label and phone per contact on the catch-all. */
+const emergencyForm = z
+  .object({ emergencyVessel: text(), emergencyShoreContact: text(), emergencyPlan: text() })
+  .catchall(text());
+
+const divingOptionsForm = z.object({
+  hasBoatDiving: checkbox(),
+  hasShoreDiving: checkbox(),
+  hasPoolDiving: checkbox(),
+});
+
+/** A fleet row as posted; the boat's papers are narrowed by `boatPapers`. */
+const boatForm = z.object({
+  boatId: formValue(),
+  name: trimmedText(),
+  capacity: formValue(),
+  description: trimmedText(),
+  certifiedPassengers: trimmedText(),
+  inspectionDueOn: trimmedText(),
+  registrationExpiresOn: trimmedText(),
+  insuranceExpiresOn: trimmedText(),
+});
+type BoatForm = z.infer<typeof boatForm>;
 
 /**
  * The shop's whole dock-day rhythm: the arrival call plus the five minute
@@ -39,9 +73,7 @@ export async function saveDockDayRhythmAction(formData: FormData) {
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "dock-day");
   await settingsBlock(session);
-  const rhythm = parseDockDayRhythm(
-    Object.fromEntries(DOCK_DAY_FIELDS.map((field) => [field, formData.get(field)])),
-  );
+  const rhythm = parseDockDayRhythm(readForm(dockDayForm, formData));
   if (!rhythm) {
     redirect(noticeUrl(page, "dock-invalid"));
   }
@@ -62,14 +94,15 @@ export async function saveEmergencyReferenceAction(formData: FormData) {
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "emergency-reference");
   await settingsBlock(session);
+  const form = readForm(emergencyForm, formData);
   const reference = normalizeEmergencyReference({
     lines: Array.from({ length: MAX_EMERGENCY_LINES }, (_, index) => ({
-      label: String(formData.get(`emergencyLabel-${index}`) ?? "").slice(0, 80),
-      phone: String(formData.get(`emergencyPhone-${index}`) ?? "").slice(0, 40),
+      label: (form[`emergencyLabel-${index}`] ?? "").slice(0, 80),
+      phone: (form[`emergencyPhone-${index}`] ?? "").slice(0, 40),
     })),
-    vessel: String(formData.get("emergencyVessel") ?? "").slice(0, 120),
-    shoreContact: String(formData.get("emergencyShoreContact") ?? "").slice(0, 160),
-    plan: String(formData.get("emergencyPlan") ?? "").slice(0, 2000),
+    vessel: form.emergencyVessel.slice(0, 120),
+    shoreContact: form.emergencyShoreContact.slice(0, 160),
+    plan: form.emergencyPlan.slice(0, 2000),
   });
   await setShopEmergencyReference(await getDb(), session.user.shopId, reference);
   revalidateAndRedirect(page, noticeUrl(page, "emergency-saved"));
@@ -81,9 +114,7 @@ export async function saveDivingOptionsAction(formData: FormData) {
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
 
-  const hasBoatDiving = formData.get("hasBoatDiving") === "on";
-  const hasShoreDiving = formData.get("hasShoreDiving") === "on";
-  const hasPoolDiving = formData.get("hasPoolDiving") === "on";
+  const { hasBoatDiving, hasShoreDiving, hasPoolDiving } = readForm(divingOptionsForm, formData);
 
   // Unticking all three would leave the builder with no mode to offer and trip
   // creation still defaulting to `boat` — a shop disowning the only kind of
@@ -111,10 +142,8 @@ export async function saveDivingOptionsAction(formData: FormData) {
 }
 
 /** The storefront's one line about a hull: trimmed, bounded, and null when empty. */
-function boatDescription(formData: FormData): string | null {
-  const text = String(formData.get("description") ?? "")
-    .trim()
-    .slice(0, 200);
+function boatDescription(form: BoatForm): string | null {
+  const text = form.description.slice(0, 200);
   return text.length > 0 ? text : null;
 }
 
@@ -125,14 +154,15 @@ function boatDescription(formData: FormData): string | null {
  * day refuses the save rather than being dropped, so a typo is never stored as
  * "nothing said" (roadmap N-10).
  */
-function boatPapers(formData: FormData): BoatPapersInput | "invalid" {
-  const text = (name: string) => String(formData.get(name) ?? "").trim();
-  const day = (name: string): string | null | "invalid" => {
-    const value = text(name);
+function boatPapers(form: BoatForm): BoatPapersInput | "invalid" {
+  const day = (
+    name: "inspectionDueOn" | "registrationExpiresOn" | "insuranceExpiresOn",
+  ): string | null | "invalid" => {
+    const value = form[name];
     if (!value) return null;
     return isValidCalendarDate(value) ? value : "invalid";
   };
-  const passengersText = text("certifiedPassengers");
+  const passengersText = form.certifiedPassengers;
   const certifiedPassengers = passengersText ? Number(passengersText) : null;
   if (
     certifiedPassengers !== null &&
@@ -180,14 +210,15 @@ function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusa
 
 /** Creates a new boat for the shop. */
 export async function createBoatAction(formData: FormData) {
+  const form = readForm(boatForm, formData);
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
 
-  const name = String(formData.get("name") ?? "").trim();
-  const capacity = Number(formData.get("capacity") ?? 0);
-  const description = boatDescription(formData);
-  const papers = boatPapers(formData);
+  const name = form.name;
+  const capacity = Number(form.capacity ?? 0);
+  const description = boatDescription(form);
+  const papers = boatPapers(form);
 
   if (!name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
@@ -204,16 +235,17 @@ export async function createBoatAction(formData: FormData) {
 
 /** Updates an existing boat: its name, seats, line, certificate and papers. */
 export async function updateBoatAction(formData: FormData) {
+  const form = readForm(boatForm, formData);
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
 
-  const rawBoatId = formData.get("boatId");
+  const rawBoatId = form.boatId;
   const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
-  const name = String(formData.get("name") ?? "").trim();
-  const capacity = Number(formData.get("capacity") ?? 0);
-  const description = boatDescription(formData);
-  const papers = boatPapers(formData);
+  const name = form.name;
+  const capacity = Number(form.capacity ?? 0);
+  const description = boatDescription(form);
+  const papers = boatPapers(form);
 
   if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
@@ -246,11 +278,12 @@ export async function updateBoatAction(formData: FormData) {
 
 /** Deletes a boat from the shop. */
 export async function deleteBoatAction(formData: FormData) {
+  const form = readForm(boatForm, formData);
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
 
-  const rawBoatId = formData.get("boatId");
+  const rawBoatId = form.boatId;
   const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
   if (!boatId) {
     redirect(noticeUrl(page, "boat-invalid"));

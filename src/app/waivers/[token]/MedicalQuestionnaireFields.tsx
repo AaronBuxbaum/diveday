@@ -44,7 +44,13 @@ function RadioQuestion({
   // that choice. The parent reconciles the live DOM once into its state so
   // dynamic Boxes and the outcome line learn the same answer.
   return (
-    <fieldset className="rounded-lg border border-border bg-surface p-4">
+    // **No card of its own** (UX review 2026-10-10, item 14): each statement
+    // used to be a bordered card around two bordered radios, ten of them and
+    // their boxes, which ran the waiver to 4,300px at 390. The questions are
+    // now rows of one list (`MedicalQuestionnaireFields` draws the rules), the
+    // answers directly under the words. Not one word of the form changes; its
+    // wording is counsel-gated (H-01, H-03).
+    <fieldset>
       {/*
        * Floated on purpose. A `<legend>` that is the first child of a
        * `<fieldset>` is the *rendered legend*, which the browser draws
@@ -59,7 +65,7 @@ function RadioQuestion({
        * pretty wrap reaches paragraphs, not a legend, and a prompt ended
        * "…within the past 12 / months." (K-534): line breaks only, never words.
        */}
-      <legend className="float-left mb-3 w-full p-0 text-base font-medium text-pretty">
+      <legend className="float-left mb-2 w-full p-0 text-base font-medium text-pretty">
         {question.prompt}
       </legend>
       {/* `size="md"`: the diver reads this form at 16px, the answers too. */}
@@ -93,7 +99,7 @@ function RadioQuestion({
           {copy.noLabel}
         </ChoicePill>
       </div>
-      {answer === true ? <p className="mt-3 text-sm text-muted">{reassurance}</p> : null}
+      {answer === true ? <p className="mt-2 text-sm text-muted">{reassurance}</p> : null}
     </fieldset>
   );
 }
@@ -257,7 +263,7 @@ export function MedicalQuestionnaireFields({
   function renderQuestion(question: MedicalQuestion) {
     const children = byParent.get(question.id) ?? [];
     return (
-      <div key={question.id} className="flex flex-col gap-3">
+      <li key={question.id} className="py-3" data-medical-question="">
         <RadioQuestion
           question={question}
           answer={responses[question.id]}
@@ -265,28 +271,36 @@ export function MedicalQuestionnaireFields({
           onAnswer={answer}
         />
         {question.boxSection && responses[question.id] === true ? (
-          <section className="ml-3 flex flex-col gap-3 border-l-2 border-primary/30 pl-4">
+          <section className="mt-3 ml-1 border-l-2 border-primary/30 pl-4">
             <h3 className="text-sm font-semibold tracking-wide text-muted">
               {questionnaire.boxes?.find((box) => box.section === question.boxSection)?.title}
             </h3>
-            {children.map((child) => (
-              <RadioQuestion
-                key={child.id}
-                question={child}
-                answer={responses[child.id]}
-                copy={copy}
-                onAnswer={answer}
-              />
-            ))}
+            <ul className="divide-y divide-border">
+              {children.map((child) => (
+                <li key={child.id} className="py-3" data-medical-question="">
+                  <RadioQuestion
+                    question={child}
+                    answer={responses[child.id]}
+                    copy={copy}
+                    onAnswer={answer}
+                  />
+                </li>
+              ))}
+            </ul>
           </section>
         ) : null}
-      </div>
+      </li>
     );
   }
 
   return (
     <div ref={rootRef} className="mt-4 flex flex-col gap-3">
-      {primary.map(renderQuestion)}
+      {/* One rule between statements, the full measure for the words: a list
+          a diver reads down, not a stack of cards (UX review 2026-10-10,
+          item 14). */}
+      <ul className="divide-y divide-border border-y border-border">
+        {primary.map(renderQuestion)}
+      </ul>
       <QuestionnaireOutcome questionnaire={questionnaire} responses={responses} copy={copy} />
     </div>
   );

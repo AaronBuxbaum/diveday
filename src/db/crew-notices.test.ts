@@ -1,15 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { CREW_NOTICE_SETTLE_MS } from "@/lib/crew-notices";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
-import { countPendingCrewNotices, previewCrewNotices, sendDueCrewNotices } from "./crew-notices";
+import {
+  countPendingCrewNotices,
+  flushUrgentCrewNotices,
+  previewCrewNotices,
+  sendDueCrewNotices,
+} from "./crew-notices";
 import { decideCrewAssignmentRequest, requestCrewAssignment } from "./crew-requests";
 import { crewNotices, people, shops, trips, userAccounts } from "./schema";
-import { createTrip } from "./trips";
+import { createTrip, updateTrip } from "./trips";
 import { changeTripCrew, listStaff, setTripCrew } from "./trips-crew";
+import { moveTrip } from "./trips-schedule";
 
 /**
  * **Crew hear about their boats** (ADR 20261009-crew-hear-about-their-boats):
@@ -336,5 +342,139 @@ describe("answers to a crew member's own ask", () => {
     await decide();
     const rows = await db.select().from(crewNotices).where(eq(crewNotices.personId, crew.id));
     expect(rows.filter((row) => row.change === "request_declined")).toHaveLength(1);
+  });
+});
+
+describe("a departure that moves (#2283)", () => {
+  const HOUR_MS = 60 * 60 * 1_000;
+
+  async function crewed(days: number) {
+    const c = await context();
+    const trip = await departure(days, "Night Dive");
+    await setTripCrew(c.db, c.shop.id, trip.id, [c.crew.id, c.owner.id], {
+      actorPersonId: c.owner.id,
+    });
+    // The assignment's own news settles first, so what follows is the move alone.
+    await sendDueCrewNotices(c.db, {
+      now: settled(),
+      provider: recorder().provider,
+      origin: ORIGIN,
+    });
+    return { ...c, trip };
+  }
+
+  it("tells the crew the time it left before and the time it leaves now, never the mover", async () => {
+    const { db, shop, owner, crew, trip } = await crewed(3);
+    const later = new Date(trip.startsAt.getTime() + 2 * HOUR_MS);
+    const ownerBefore = await countPendingCrewNotices(db, shop.id, owner.id);
+    expect((await moveTrip(db, shop.id, trip.id, later, { actorPersonId: owner.id })).ok).toBe(
+      true,
+    );
+    expect(await countPendingCrewNotices(db, shop.id, owner.id)).toBe(ownerBefore);
+    const preview = await previewCrewNotices(db, {
+      shopId: shop.id,
+      personId: crew.id,
+      origin: ORIGIN,
+    });
+    expect(preview).toMatchObject({
+      kind: "crew_schedule_change",
+      changes: [
+        {
+          change: "time_moved",
+          tripTitle: "Night Dive",
+          startsAt: later,
+          previousStartsAt: trip.startsAt,
+        },
+      ],
+    });
+  });
+
+  it("tells the crew a start time changed on the departure's own page too", async () => {
+    const { db, shop, owner, crew, trip } = await crewed(3);
+    const later = new Date(trip.startsAt.getTime() + HOUR_MS);
+    const patch = {
+      title: trip.title,
+      endsAt: new Date(trip.endsAt.getTime() + HOUR_MS),
+      capacity: trip.capacity,
+      plannedDives: 1,
+      changeActorPersonId: owner.id,
+    };
+    // A title-only edit is no news.
+    expect(
+      (
+        await updateTrip(db, shop.id, trip.id, {
+          ...patch,
+          startsAt: trip.startsAt,
+          endsAt: trip.endsAt,
+        })
+      ).ok,
+    ).toBe(true);
+    expect(await countPendingCrewNotices(db, shop.id, crew.id)).toBe(0);
+    expect((await updateTrip(db, shop.id, trip.id, { ...patch, startsAt: later })).ok).toBe(true);
+    const preview = await previewCrewNotices(db, {
+      shopId: shop.id,
+      personId: crew.id,
+      origin: ORIGIN,
+    });
+    expect(preview).toMatchObject({
+      changes: [{ change: "time_moved", startsAt: later, previousStartsAt: trip.startsAt }],
+    });
+  });
+
+  it("says nothing when the time is unchanged", async () => {
+    const { db, shop, owner, crew, trip } = await crewed(3);
+    await moveTrip(db, shop.id, trip.id, trip.startsAt, { actorPersonId: owner.id });
+    expect(await countPendingCrewNotices(db, shop.id, crew.id)).toBe(0);
+  });
+
+  it("says nothing about a move undone before it settled", async () => {
+    const { db, shop, owner, crew, trip } = await crewed(3);
+    const as = { actorPersonId: owner.id };
+    await moveTrip(db, shop.id, trip.id, new Date(trip.startsAt.getTime() + HOUR_MS), as);
+    await moveTrip(db, shop.id, trip.id, trip.startsAt, as);
+    const { sent, provider } = recorder();
+    await sendDueCrewNotices(db, { now: settled(), provider, origin: ORIGIN });
+    expect(sent.filter((n) => n.to.startsWith("crew-"))).toEqual([]);
+    const rows = await db.select().from(crewNotices).where(eq(crewNotices.personId, crew.id));
+    expect(rows.filter((row) => row.change === "time_moved").map((row) => row.outcome)).toEqual([
+      "netted",
+      "netted",
+    ]);
+  });
+
+  it("tells them at once when a departure leaving within the day is moved away from it", async () => {
+    const { db, shop, owner, crew, trip } = await crewed(3);
+    // Six hours before it was due to leave, it is moved a week out: the new
+    // time is not urgent, the time the crew knew is — so the move's own flush
+    // claims the news then and there instead of leaving it for the hour.
+    const now = new Date(trip.startsAt.getTime() - 6 * HOUR_MS);
+    const nextWeek = new Date(trip.startsAt.getTime() + 7 * DAY_MS);
+    expect(
+      (await moveTrip(db, shop.id, trip.id, nextWeek, { actorPersonId: owner.id, now })).ok,
+    ).toBe(true);
+    expect(await countPendingCrewNotices(db, shop.id, crew.id)).toBe(0);
+    const [row] = await db
+      .select()
+      .from(crewNotices)
+      .where(and(eq(crewNotices.personId, crew.id), eq(crewNotices.change, "time_moved")));
+    expect(row?.settledAt).toEqual(now);
+    expect(row?.previousStartsAt).toEqual(trip.startsAt);
+  });
+
+  it("leaves a move with both times days out for the hourly pass", async () => {
+    const { db, shop, owner, crew, trip } = await crewed(3);
+    await moveTrip(db, shop.id, trip.id, new Date(trip.startsAt.getTime() + DAY_MS), {
+      actorPersonId: owner.id,
+    });
+    expect(await countPendingCrewNotices(db, shop.id, crew.id)).toBe(1);
+    const { sent, provider } = recorder();
+    await flushUrgentCrewNotices(db, {
+      shopId: shop.id,
+      tripIds: [trip.id],
+      provider,
+      origin: ORIGIN,
+    });
+    expect(sent.filter((n) => n.to.startsWith("crew-"))).toEqual([]);
+    expect(await countPendingCrewNotices(db, shop.id, crew.id)).toBe(1);
   });
 });

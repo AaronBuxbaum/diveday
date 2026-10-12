@@ -17,6 +17,7 @@ import { setCrewPublicConsent } from "@/db/staff-accounts";
 import { createStaffShift, deleteStaffShift } from "@/db/staffing";
 import { changeTripCrew } from "@/db/trips";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { formValue, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -90,11 +91,22 @@ export async function createShiftAction(week: string, formData: FormData) {
   revalidateAndRedirect(path, noticeUrl(path, notice, at));
 }
 
+const shiftIdForm = z.object({ shiftId: text() });
+/** The consent itself is any non-empty value; the public name is passed raw to its writer. */
+const crewPublicForm = z.object({
+  personId: text(),
+  consented: formValue().transform(Boolean),
+  publicName: formValue().transform((value) => value?.toString() ?? null),
+});
+const blockIdForm = z.object({ blockId: text() });
+const tripIdForm = z.object({ tripId: text() });
+const crewDecisionForm = z.object({ requestId: text(), decision: text() });
+
 export async function deleteShiftAction(week: string, formData: FormData) {
   const at = weekExtra(week);
   const session = await requireStaffingManager(at);
   const path = shopPath(session.user.shopSlug, "staffing");
-  const shiftId = String(formData.get("shiftId") ?? "");
+  const { shiftId } = readForm(shiftIdForm, formData);
   if (!z.string().uuid().safeParse(shiftId).success) redirect(noticeUrl(path, "invalid", at));
   const deleted = await deleteStaffShift(await getDb(), session.user.shopId, shiftId);
   revalidateAndRedirect(path, noticeUrl(path, deleted ? "shift-deleted" : "invalid", at));
@@ -143,13 +155,14 @@ export async function saveCrewPublicConsentAction(week: string, formData: FormDa
   const at = weekExtra(week);
   const session = await requireStaffSession();
   const path = shopPath(session.user.shopSlug, "staffing");
-  const personId = String(formData.get("personId") ?? "");
+  const crewPublic = readForm(crewPublicForm, formData);
+  const personId = crewPublic.personId;
   // Not a refusal notice: a request naming somebody else is not a mistake a
   // form can make, so it gets no explanation and no trace of whether that
   // person exists.
   if (!personId || personId !== session.user.personId) redirect(noticeUrl(path, "invalid", at));
 
-  const consented = Boolean(formData.get("consented"));
+  const consented = crewPublic.consented;
   // Passed through raw: trimming, collapsing, capping and the fall back to the
   // shop's own record all live in `crewPublicNameToStore`, beside the write, so
   // the register's rules cannot drift from this one form's reading of them.
@@ -158,7 +171,7 @@ export async function saveCrewPublicConsentAction(week: string, formData: FormDa
     personId,
     actorPersonId: session.user.personId,
     consented,
-    publicName: formData.get("publicName")?.toString() ?? null,
+    publicName: crewPublic.publicName,
   });
   // Two codes rather than one, because the words are directional: a single
   // "Divers will see your first name" told somebody who had just unticked the
@@ -201,7 +214,7 @@ export async function deleteAwayAction(week: string, formData: FormData) {
   const at = weekExtra(week);
   const session = await requireStaffSession();
   const path = shopPath(session.user.shopSlug, "staffing");
-  const blockId = String(formData.get("blockId") ?? "");
+  const { blockId } = readForm(blockIdForm, formData);
   if (!z.string().uuid().safeParse(blockId).success) redirect(noticeUrl(path, "invalid", at));
   const db = await getDb();
   const outcome = await deleteCrewAvailabilityBlock(db, {
@@ -226,7 +239,7 @@ export async function requestCrewAction(week: string, formData: FormData) {
   const at = weekExtra(week);
   const session = await requireStaffSession();
   const path = shopPath(session.user.shopSlug, "staffing");
-  const tripId = String(formData.get("tripId") ?? "");
+  const { tripId } = readForm(tripIdForm, formData);
   if (!z.string().uuid().safeParse(tripId).success) redirect(noticeUrl(path, "invalid", at));
   const outcome = await requestCrewAssignment(await getDb(), {
     shopId: session.user.shopId,
@@ -251,8 +264,7 @@ export async function decideCrewRequestAction(week: string, formData: FormData) 
   const at = weekExtra(week);
   const session = await requireStaffingManager(at);
   const path = shopPath(session.user.shopSlug, "staffing");
-  const requestId = String(formData.get("requestId") ?? "");
-  const decision = String(formData.get("decision") ?? "");
+  const { requestId, decision } = readForm(crewDecisionForm, formData);
   if (!z.string().uuid().safeParse(requestId).success) redirect(noticeUrl(path, "invalid", at));
   if (decision !== "approved" && decision !== "declined") {
     redirect(noticeUrl(path, "invalid", at));

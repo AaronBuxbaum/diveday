@@ -639,7 +639,7 @@ export async function getMonthlyReport(
 /**
  * The departure time of this shop's oldest reportable trip, or null when the
  * shop has never scheduled one. The reports page uses it as the floor of its
- * month picker: a shop that opened in March should not be handed a control
+ * back arrow: a shop that opened in March should not be handed a control
  * offering to walk back to 1970, and it is the same bound the page clamps a
  * hand-typed `?month=` against. Cancelled trips are excluded for the reason
  * every other aggregate here excludes them — a cancelled boat sailed nothing,
@@ -661,7 +661,7 @@ export async function earliestReportedTripStart(
 /**
  * The first source-financial day that can affect the report's aggregate. This
  * deliberately follows the same currency/direction/amount gate as
- * `getMonthlyReport`, so the month picker never reaches backwards merely for
+ * `getMonthlyReport`, so the back arrow never reaches backwards merely for
  * an ambiguous receipt that the report itself correctly leaves out.
  */
 export async function earliestImportedFinancialHistoryDate(
@@ -816,7 +816,7 @@ export async function pagedMonthlyReportTrips(
  * a cost. DiveDay does not know what a shop pays anybody, so a thin departure
  * that sailed with a full crew is visible here as a fact about staffing, not
  * an inference about money (issue #700). One batched query rather than one
- * per row, the same shape `courseCrewCountsByTrip` (src/db/today.ts) uses for
+ * per row, the same shape `courseCrewCountsByTrip` (src/db/course-crew-counts.ts) uses for
  * the identical N+1 reason.
  *
  * `trip_assignments` carries no `shop_id` of its own (CR-007) — proven here by

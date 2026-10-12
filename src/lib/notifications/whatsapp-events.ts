@@ -137,13 +137,26 @@ const payloadSchema = z.object({
   entry: z
     .array(
       z.object({
-        /** The WhatsApp Business Account the events belong to — the tenant key. */
+        /**
+         * The WhatsApp Business Account the events belong to. Not the tenant
+         * key (H-83): a chain may share one, so it only has to agree with the
+         * row of the number the change names.
+         */
         id: z.string().min(1).optional(),
         changes: z
           .array(
             z.object({
               value: z
                 .object({
+                  /**
+                   * The number the change belongs to. `phone_number_id` is
+                   * the tenant key (H-83): one WABA may hold several shops'
+                   * numbers, and only the number says whose event it is.
+                   */
+                  metadata: z
+                    .object({ phone_number_id: z.string().min(1).optional() })
+                    .loose()
+                    .optional(),
                   statuses: z.array(statusSchema).optional(),
                   messages: z.array(inboundMessageSchema).optional(),
                 })
@@ -160,13 +173,17 @@ export type WhatsAppDeliveryEvent = {
   /**
    * The WABA that produced this event, or null when Meta did not name one.
    *
-   * Carried so the caller can resolve it to a shop and scope the update to that
-   * tenant. Without it, a delivery outcome is applied by provider message id
-   * alone across a multi-tenant table, and the only thing keeping one shop's
-   * webhook off another shop's row is "Meta ids are globally unique" — an
-   * upstream property, not one this codebase enforces.
+   * Carried so the caller can check it against the row of the number below,
+   * which is what resolves the event to a shop (H-83).
    */
   wabaId: string | null;
+  /**
+   * The phone number id the event belongs to (`value.metadata`), or null when
+   * Meta named none — **the tenant key** (H-83). A chain may share one WABA
+   * across shops, so the WABA is never the answer, only a check on the
+   * number's row; an event with no number is dropped.
+   */
+  phoneNumberId: string | null;
   providerMessageId: string;
   status: ProviderEmailStatus;
   /** Meta's own explanation for a failure, when it gave one. */
@@ -201,6 +218,7 @@ export function parseWhatsAppDeliveryEvents(payload: string, now: Date): WhatsAp
         if (!mapped) continue;
         events.push({
           wabaId: entry.id ?? null,
+          phoneNumberId: change.value.metadata?.phone_number_id ?? null,
           providerMessageId: status.id,
           status: mapped,
           detail: failureDetail(status.errors),
@@ -213,8 +231,10 @@ export function parseWhatsAppDeliveryEvents(payload: string, now: Date): WhatsAp
 }
 
 export type WhatsAppInboundMessage = {
-  /** The WABA the message arrived at — the tenant key, resolved to a shop by the caller. */
+  /** The WABA the message arrived at — checked against the number's row, never the tenant key. */
   wabaId: string | null;
+  /** The shop number it was sent to — the tenant key (H-83), resolved to a shop by the caller. */
+  phoneNumberId: string | null;
   providerMessageId: string;
   /** Digits only, as Meta reports the sender. */
   from: string;
@@ -254,6 +274,7 @@ export function parseWhatsAppInboundMessages(payload: string, now: Date): WhatsA
           if (!text) continue;
           messages.push({
             wabaId: entry.id ?? null,
+            phoneNumberId: change.value.metadata?.phone_number_id ?? null,
             providerMessageId: message.id,
             from: message.from,
             body: text,
@@ -265,6 +286,7 @@ export function parseWhatsAppInboundMessages(payload: string, now: Date): WhatsA
             message.image?.caption ?? message.document?.caption ?? message.video?.caption ?? "";
           messages.push({
             wabaId: entry.id ?? null,
+            phoneNumberId: change.value.metadata?.phone_number_id ?? null,
             providerMessageId: message.id,
             from: message.from,
             body: caption.trim(),

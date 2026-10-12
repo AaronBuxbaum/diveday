@@ -1644,7 +1644,7 @@ exports.handler = async (event) => {
       period: cdk.Duration.hours(1),
     });
 
-    // What a server render cost: statements sent and wall time, each one
+    // What a server render cost: statements sent, their summed time and wall time, each one
     // undimensioned metric for the reason the mutation filter above gives --
     // a `Route` dimension would bill one metric per route template, over a
     // hundred of them. The per-route ranking is the "Heaviest renders by
@@ -1835,9 +1835,9 @@ exports.handler = async (event) => {
         title: "Heaviest renders by route (p95)",
         logGroupNames: [APP_LOG_GROUP_NAME],
         queryLines: [
-          "fields route, queries, ms",
+          "fields route, queries, ms, db_ms",
           `filter event = "${RENDER_DB_QUERIES_SIGNAL.event}"`,
-          "stats pct(queries, 95) as queriesP95, pct(ms, 95) as msP95, count(*) as renders by route",
+          "stats pct(queries, 95) as queriesP95, pct(ms, 95) as msP95, pct(db_ms, 95) as dbMsP95, count(*) as renders by route",
           "sort msP95 desc",
           "limit 40",
         ],

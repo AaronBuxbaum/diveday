@@ -9,29 +9,11 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { TONE_PANEL_CLASS, TONE_PANEL_LG_CLASS } from "@/components/ui/card";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
-import { readKnownDiver } from "@/db/booking-handoff";
-import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
-import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
-import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
-import { getShopReviewAggregate } from "@/db/reviews";
-import { tripMayTakeACode } from "@/db/shop-promos";
 import { shopBySlugCached } from "@/db/shops-cached";
-import { canAcceptPayments, checkoutMode, getShopStripeAccount } from "@/db/stripe-accounts";
-import { listTripChangeEvents } from "@/db/trip-change-events";
-import { siteSightings } from "@/db/trip-sightings";
-import {
-  getTripWithBooked,
-  getWaitlistEntryForTrip,
-  listTripDives,
-  listTripScheduleDays,
-  pagedUpcomingTripsWithCounts,
-  tripCrewSpokenLanguages,
-  tripPublicCrew,
-} from "@/db/trips";
+import { checkoutMode } from "@/db/stripe-accounts";
+import { getTripWithBooked } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { languageEndonymList } from "@/i18n/language-labels";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
@@ -55,7 +37,6 @@ import { connectionForRoute } from "@/lib/observability/render-connection";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
-import { isLiveShopStaff } from "@/lib/session";
 import { similarDepartures } from "@/lib/similar-departures";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { tripPageJsonLd } from "@/lib/structured-data";
@@ -80,6 +61,7 @@ import { dayCoverPhoto, TripDayPlan } from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
 import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
+import { readTripPage } from "./_lib/page-reads";
 import { offerHandoff } from "./actions";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -182,18 +164,35 @@ export default async function TripDetailPage({
   const shopCurrency = toShopCurrency(shop.currency);
   const t = diverTranslator(locale);
   const session = await auth();
-  // A staffer looking at their own shop's booking page is *previewing* it, and
-  // this page used to answer that with a redirect straight back to the
-  // management view — so "View booking page" on the trip overview could never
-  // show the booking page at all, it just bounced to where the click came
-  // from. A banner says the same thing without taking the page away, and it
-  // also serves the staffer who followed a shared /s/ link and wants the
-  // management view. Never in embed mode: that destination isn't in the
-  // framing allowlist, so an embedded staff preview would show a blocked
-  // frame instead of the compact booking widget. Live-checked (issue #966):
-  // the "manage this trip" link it discloses is separately live-gated on
-  // click, but the banner itself used to trust the cached JWT alone.
-  const staffPreview = !isEmbed && (await isLiveShopStaff(db, shop.id, session));
+  const now = nowDate();
+  const {
+    staffPreview,
+    trip,
+    tripDives,
+    meetingDays,
+    crewLanguages,
+    publicCrew,
+    changeEvents,
+    knownDiver,
+    confirmed,
+    waitlistConfirmation,
+    briefing,
+    requirement,
+    siteRequirement,
+    payment,
+    emailsOnTheWay,
+    board,
+    reviewAggregate,
+  } = await readTripPage(db, shop, {
+    tripId,
+    isEmbed,
+    bookingToken,
+    waitlistId,
+    handoffToken,
+    session,
+    now,
+  });
+  if (!trip) notFound();
   // Staff words come from the staff bundle even here — the rest of this page
   // speaks to divers, and mixing the two vocabularies in one file is exactly
   // what the two bundles exist to prevent.
@@ -204,18 +203,6 @@ export default async function TripDetailPage({
       manageHref={`/shop/${shopSlug}/trips/${tripId}`}
     />
   ) : null;
-  const [trip, tripDives, meetingDays, crewLanguages, publicCrew] = await Promise.all([
-    getTripWithBooked(db, shop.id, tripId),
-    listTripDives(db, shop.id, tripId),
-    // Shop-scoped by the query's own join on `trips.shop_id`, like every other
-    // read on this page. A departure always has at least one of these rows.
-    listTripScheduleDays(db, shop.id, tripId),
-    tripCrewSpokenLanguages(db, shop.id, tripId),
-    // Only the crew who said yes (issue #1181, D21). Empty for every shop that
-    // has switched nothing on, which is every shop until somebody does.
-    tripPublicCrew(db, shop.id, tripId),
-  ]);
-  if (!trip) notFound();
   // A cancelled trip gets its own soft landing (task 13) rather than the same
   // bare `notFound()` as a typo'd URL — a diver who followed a saved or
   // shared link into a since-cancelled departure gets told what happened and
@@ -261,35 +248,11 @@ export default async function TripDetailPage({
     crewLanguageNames.length === 0
       ? null
       : cachedListFormat(locale, { style: "long", type: "conjunction" }).format(crewLanguageNames);
-  const changeEvents = await listTripChangeEvents(db, shop.id, tripId);
   const crewPrediction = hasCrewPrediction(trip);
   // Started, never awaited: ConditionsLine streams it in its own `<Suspense>`.
   const automatedForecast = crewPrediction
     ? Promise.resolve(null)
     : automatedForecastForDeparture(trip.diveSite, trip.startsAt);
-  // The embed's short confirmation renders only from a verified `confirm`
-  // capability — never from a raw booking id in the URL (design principle 6:
-  // trustworthy by inspection; CR-003). A guessed/leaked booking UUID alone is
-  // not a credential; only a token this server itself issued verifies here.
-  //
-  // `isEmbed` first, and it is the *whole* gate: outside the frame a booking
-  // lands on `/ready` and no `confirm` token is ever minted (ADR
-  // 20260820-one-page-after-booking), so an unframed `?booking=` can only be a
-  // stale link or a guess. Refusing to look at it at all is the narrower
-  // answer than verifying a token nothing issues any more.
-  const confirmCapability =
-    isEmbed && bookingToken
-      ? await verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" })
-      : null;
-  // **The door remembers who opened it** (ADR 20260906-before-you-ask,
-  // decision 3). Facts reach this page through a handoff and nothing else: a
-  // cold request, an embed, and an unverifiable token all read as null, and
-  // null renders the form that ships. The facts are worded here, where the
-  // locale and the shop's zone are, and reach the client as sentences.
-  const knownDiver =
-    handoffToken && !isEmbed
-      ? await readKnownDiver(db, { shopId: shop.id, token: handoffToken })
-      : null;
   const knownDiverPanel = knownDiver
     ? {
         name: knownDiver.fullName,
@@ -318,19 +281,8 @@ export default async function TripDetailPage({
         }),
       }
     : null;
-  const [confirmed, waitlistConfirmation] = await Promise.all([
-    confirmCapability ? getBookingForTrip(db, tripId, confirmCapability.bookingId) : null,
-    waitlistId ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId) : null,
-  ]);
-  // Two queries for the whole day's briefings, not two per dive.
-  const siteIds = tripDives
-    .map(({ diveSite }) => diveSite?.id)
-    .filter((id): id is string => Boolean(id));
-  const briefingExtras = await listDiveSiteBriefingExtras(db, shop.id, siteIds);
-  // What the crew has actually logged at those sites this month. Batched over
-  // the whole day for the same reason the briefings are: this is a public page,
-  // and a query per site per departure is how one becomes slow.
-  const seenBySite = await siteSightings(db, shop.id, siteIds);
+  const briefingExtras = briefing.extras;
+  const seenBySite = briefing.seen;
   const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
     dive,
     diveSite,
@@ -345,20 +297,9 @@ export default async function TripDetailPage({
   // gone from this page with `PackingSection`: what to bring and when to be
   // there is preparation, and preparation belongs to the thread the diver
   // reaches after booking (ADR 20260827-the-divers-thread, decision 2).
-  // Pay-at-booking is offered only when the shop's own Stripe account can
-  // take a charge, the trip carries a price, and a canonical origin exists
-  // for the return links; otherwise the flow is book-now-pay-later as before.
   const passThroughFee = parsePassThroughFee(shop.passThroughFee);
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
-  const payablePerDiverCents =
-    perDiverPriceCents === null ? null : perDiverPriceCents + (passThroughFee?.amountCents ?? 0);
-  const stripeAccount = payablePerDiverCents ? await getShopStripeAccount(db, shop.id) : null;
-  const payAtBooking = Boolean(
-    payablePerDiverCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
-  );
-  const offerCodeField = payAtBooking
-    ? await tripMayTakeACode(db, { shopId: shop.id, tripId: trip.id })
-    : false;
+  const { stripeAccount, payAtBooking, offerCodeField } = payment;
   // The money lines the form's one block states, resolved here so the deposit
   // and course-fee arithmetic (src/lib/deposits.ts, src/lib/courses.ts) never
   // ships to the browser — the same reason `TripTerms` is a server component.
@@ -381,10 +322,7 @@ export default async function TripDetailPage({
   // paid, and found out at the dock (DOM-M6). A trip's requirement is a
   // property of the trip: it discloses nothing about any person, so it belongs
   // above the form.
-  const [requirement, siteRequirement] = await Promise.all([
-    getTripRequirements(db, shop.id, tripId),
-    getTripSiteRequirement(db, shop.id, tripId),
-  ]);
+  // (Both read in the wave above.)
   // Course sessions are left out on purpose: a course states its own admission
   // rule on its own page, and its itinerary's gate is deliberately *not* a
   // booking gate (src/lib/trip-admission.ts) — repeating the site's demand here
@@ -419,10 +357,8 @@ export default async function TripDetailPage({
   // 20260820-one-page-after-booking).
   //
   // Only say "two emails are on their way" when both actually went — a party
-  // member booked without an address of their own gets neither.
-  const emailsOnTheWay = confirmed
-    ? await bookingConfirmationAndWaiverEmailsSent(db, shop.id, confirmed.booking.id)
-    : false;
+  // member booked without an address of their own gets neither
+  // (`emailsOnTheWay`, read in the wave above).
   // The door out to `/ready` is a *path*, resolved by `./ready/route.ts` when
   // the diver taps it. This render mints no capability: a readiness token is
   // stored hashed and so cannot be read back, and minting a fresh one per
@@ -438,7 +374,6 @@ export default async function TripDetailPage({
   // case lands on the departure's public page rather than nowhere.
   const readinessLink = `${publicTripPath(shopSlug, tripId)}/ready?booking=${encodeURIComponent(bookingToken ?? "")}`;
 
-  const now = nowDate();
   const inPast = hasSailed(trip.startsAt, now);
   // Where this departure stands against the head count it needs, if it named
   // one. A departure that already sailed has nothing conditional left to
@@ -463,17 +398,8 @@ export default async function TripDetailPage({
   // for a full boat; D01 asks the same question of a departure a diver can
   // still get on, and reading the schedule twice for two lists that are never
   // both on screen would be a query nobody asked for either way.
+  // (`board`, read in the wave above under exactly this condition.)
   const offersAnotherBoat = !inPast && !trip.conditionsHold && !confirmed && !waitlistConfirmation;
-  const board = !offersAnotherBoat
-    ? []
-    : (
-        await pagedUpcomingTripsWithCounts(db, shop.id, {
-          now,
-          limit: 50,
-          hasSpace: true,
-          publicOnly: true,
-        })
-      ).trips;
   const alternatives = full
     ? similarDepartures({
         full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
@@ -542,8 +468,6 @@ export default async function TripDetailPage({
   // URLs would be the duplication the canonical exists to resolve (docs ADR
   // 20260729-booking-page-structured-data). The shop's rating rides along as
   // the organizer's `aggregateRating`.
-  const reviewAggregate =
-    isEmbed || !shop.reviewsEnabled ? null : await getShopReviewAggregate(db, shop.id);
   const structuredData = isEmbed
     ? null
     : tripPageJsonLd(

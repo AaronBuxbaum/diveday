@@ -810,7 +810,8 @@
   **snorkeler**, or a **rider** (`bookings.participant_type`, codes in
   `src/lib/participant-types.ts`). Every booking has exactly one, and it defaults to diver. All
   three hold a seat, are counted at every roll-call checkpoint, appear on the manifest, and sign
-  the shop's waiver and medical form. Only a diver is asked for a certification, may request
+  the shop's waiver; a diver and a snorkeler are held to its medical, a rider never (H-109). Only a
+  diver is asked for a certification, may request
   nitrox, goes on a buddy team, is packed tanks for, uses a dive package, or counts against the
   departure's **diver seats**. A course session sells divers only. Staff change a booking's type
   from the roster ("Coming as"): joining the dive runs the card check and needs "Change anyway" (an
@@ -820,8 +821,10 @@
 - **Booked as** — the participant type a booking was made with (`bookings.booked_as`), set once by
   every writer and never changed. A seat whose type moved since shows a warning-tone
   note on the roster, the roll call and the offline copy: "Snorkeling, booked as diver" when it
-  left the dive, "Diving, booked as snorkeler" when it joined. Leaving the dive clears card checks
-  only, never a medical one, and joining a seat already boarded re-asks the boarding gate.
+  left the dive, "Diving, booked as snorkeler" when it joined. Leaving the dive for snorkeling clears
+  card checks only, never a medical one. Leaving it for riding also lifts a medical referral or a
+  physician's "no" as a boarding hold (H-109), and the crew still sees it at the rail as a
+  "riding only" warning. Joining a seat already boarded re-asks the boarding gate.
 - **Snorkeler** — a participant who is in the water at the surface with no tank. Needs no card,
   rents surface kit only (mask and fins, wetsuit, boots, hood and gloves, camera), and pays the
   departure's snorkeler price (`trips.snorkeler_price_cents`). The public form offers a snorkeler
@@ -830,7 +833,10 @@
   (`DivePrepChecklist.snorkelVests`).
 - **Rider** — a participant who stays on the boat: a partner, a parent, a photographer. Needs no
   card, rents nothing, and pays the departure's rider price (`trips.rider_price_cents`) under the
-  same rule as a snorkeler's. A rider is still a body aboard and is counted at roll call.
+  same rule as a snorkeler's. A rider is still a body aboard and is counted at roll call, and is
+  never held at boarding on a medical referral or refusal (H-109); the roll call, its printed
+  sheet and the offline copy show it instead as "Physician did not clear: riding only" or
+  "Medical referral open: riding only", with the date.
 - **Diver seats** — an optional cap on how many **divers** a departure carries
   (`trips.diver_capacity`), for a boat whose tanks or guides run out before its deck does. The
   boat's own capacity always counts everyone aboard; the diver cap only refuses a diver, and a cap

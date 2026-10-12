@@ -43,8 +43,8 @@ import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   blockedAtDock,
-  isRollCallCheckpoint,
   type ManifestBuddyTeam,
+  manifestAtCheckpoint,
   type RollCallCheckpoint,
   rollCallCheckpoints,
   rollCallRowState,
@@ -342,12 +342,11 @@ export default async function TripManifestPage({
 
   const plannedDiveCount = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDiveCount);
-  const checkpoint: RollCallCheckpoint =
-    requestedCheckpoint && isRollCallCheckpoint(requestedCheckpoint, plannedDiveCount)
-      ? requestedCheckpoint
-      : "departure";
-  const checkpointManifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
-  if (!checkpointManifest) notFound();
+  // An unknown or absent checkpoint opens the departure list.
+  const checkpointManifest =
+    manifestAtCheckpoint(completeManifests, requestedCheckpoint ?? "departure") ??
+    departureManifest;
+  const checkpoint: RollCallCheckpoint = checkpointManifest.checkpoint;
   // Held seats are settled once, here, so every reader below — the
   // not-back-aboard alarm, the buddy builder, both roll calls — sees the seat
   // and never the matched person's particulars (issue #1690).

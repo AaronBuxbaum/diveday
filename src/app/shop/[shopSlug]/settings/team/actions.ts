@@ -29,6 +29,7 @@ import { toDiverLocale } from "@/i18n/settings";
 import { inviteLinkPath } from "@/lib/account-tokens";
 import { type Role, STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { formValue, readForm, text } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -59,8 +60,30 @@ async function teamManagementBlock(session: {
   if (!allowed) redirect(noticeUrl(path, "not-authorized"));
 }
 
+/**
+ * Every field the team forms post, each read as `FormData.get` read it, with
+ * a `role_<role>` and `language_<code>` tick per option on the catch-all; each
+ * action narrows what it reads itself.
+ */
+const teamForm = z
+  .object({
+    baseline: formValue(),
+    credentialId: formValue(),
+    emergencyContactName: text(),
+    emergencyContactPhone: text(),
+    fullName: text(),
+    personId: text(),
+    reviewNote: text(),
+    roles: text(),
+    status: formValue(),
+    undo: formValue(),
+    userAccountId: text(),
+  })
+  .catchall(formValue());
+
 function rolesFromFormData(formData: FormData): Role[] {
-  return STAFF_ROLES.filter((role) => formData.get(`role_${role}`) === "on");
+  const fields = readForm(teamForm, formData);
+  return STAFF_ROLES.filter((role) => fields[`role_${role}`] === "on");
 }
 
 /** One set of roles as a value two requests can compare — order-free. */
@@ -180,11 +203,12 @@ async function findTeamMember(shopId: string, userAccountId: string) {
 }
 
 export async function resendInviteAction(formData: FormData) {
+  const fields = readForm(teamForm, formData);
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
 
-  const userAccountId = String(formData.get("userAccountId") ?? "");
+  const userAccountId = fields.userAccountId;
   const member = await findTeamMember(session.user.shopId, userAccountId);
   if (member?.accountStatus !== "invited") redirect(path);
 
@@ -230,11 +254,12 @@ export async function resendInviteAction(formData: FormData) {
  * were — they never waited for the retired button and do not wait for this.
  */
 export async function saveStaffRolesAction(formData: FormData) {
+  const fields = readForm(teamForm, formData);
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
 
-  const personId = String(formData.get("personId") ?? "");
+  const personId = fields.personId;
   if (!personId) redirect(path);
   const rowPath = `${path}#staff-${personId}`;
 
@@ -260,7 +285,7 @@ export async function saveStaffRolesAction(formData: FormData) {
   // not an authorization one — `teamManagementBlock` above is what a hand-made
   // post has to get past, and a caller who omits the field only forfeits being
   // told that somebody moved first.
-  const baseline = formData.get("baseline");
+  const baseline = fields.baseline;
   if (
     typeof baseline === "string" &&
     rolesKey(baseline.split(",").filter(Boolean)) !== rolesKey(before)
@@ -274,7 +299,7 @@ export async function saveStaffRolesAction(formData: FormData) {
     return;
   }
 
-  const isUndo = formData.get("undo") === "1";
+  const isUndo = fields.undo === "1";
   const changed = rolesKey(before) !== rolesKey(roles);
   revalidateAndRedirect(
     path,
@@ -294,18 +319,19 @@ export async function saveStaffRolesAction(formData: FormData) {
  * can open the settings page.
  */
 export async function saveStaffEmergencyContactAction(formData: FormData) {
+  const fields = readForm(teamForm, formData);
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
 
-  const personId = String(formData.get("personId") ?? "");
+  const personId = fields.personId;
   if (!personId) redirect(path);
 
   const result = await setStaffEmergencyContact(await getDb(), {
     shopId: session.user.shopId,
     personId,
-    name: String(formData.get("emergencyContactName") ?? ""),
-    phone: String(formData.get("emergencyContactPhone") ?? ""),
+    name: fields.emergencyContactName,
+    phone: fields.emergencyContactPhone,
   });
   // `contactFor` names the row that produced this, so the outcome renders in
   // that card's own action row rather than as a banner at the top of a page of
@@ -323,14 +349,15 @@ export async function saveStaffEmergencyContactAction(formData: FormData) {
  * Behind `teamManagementBlock`, the same gate every other mutation here uses.
  */
 export async function saveStaffLanguagesAction(formData: FormData) {
+  const fields = readForm(teamForm, formData);
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
 
-  const personId = String(formData.get("personId") ?? "");
+  const personId = fields.personId;
   if (!personId) redirect(path);
 
-  const languages = COMMON_SPOKEN_LANGUAGES.filter((code) => formData.get(`language_${code}`));
+  const languages = COMMON_SPOKEN_LANGUAGES.filter((code) => fields[`language_${code}`]);
   const saved = await setStaffLanguages(await getDb(), {
     shopId: session.user.shopId,
     personId,
@@ -345,13 +372,14 @@ export async function saveStaffLanguagesAction(formData: FormData) {
 }
 
 export async function setStaffStatusAction(formData: FormData) {
+  const fields = readForm(teamForm, formData);
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
 
-  const personId = String(formData.get("personId") ?? "");
-  const userAccountId = String(formData.get("userAccountId") ?? "");
-  const status = formData.get("status") === "active" ? "active" : "disabled";
+  const personId = fields.personId;
+  const userAccountId = fields.userAccountId;
+  const status = fields.status === "active" ? "active" : "disabled";
   if (!personId || !userAccountId) redirect(path);
 
   const result = await setStaffAccountStatus(await getDb(), {
@@ -365,13 +393,14 @@ export async function setStaffStatusAction(formData: FormData) {
 }
 
 export async function removeStaffAction(formData: FormData) {
+  const fields = readForm(teamForm, formData);
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
 
-  const personId = String(formData.get("personId") ?? "");
-  const userAccountId = String(formData.get("userAccountId") ?? "");
-  const fullName = String(formData.get("fullName") ?? "");
+  const personId = fields.personId;
+  const userAccountId = fields.userAccountId;
+  const fullName = fields.fullName;
   if (!personId || !userAccountId) redirect(path);
 
   const db = await getDb();
@@ -412,13 +441,14 @@ export async function removeStaffAction(formData: FormData) {
 }
 
 export async function restoreStaffAction(formData: FormData) {
+  const fields = readForm(teamForm, formData);
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
 
-  const personId = String(formData.get("personId") ?? "");
-  const userAccountId = String(formData.get("userAccountId") ?? "");
-  const roles = String(formData.get("roles") ?? "")
+  const personId = fields.personId;
+  const userAccountId = fields.userAccountId;
+  const roles = fields.roles
     .split(",")
     .filter((value): value is Role => (STAFF_ROLES as readonly string[]).includes(value));
   if (!personId || !userAccountId || roles.length === 0) redirect(path);
@@ -472,30 +502,29 @@ export async function saveStaffCredentialAction(formData: FormData) {
 }
 
 export async function reviewStaffCredentialAction(formData: FormData) {
+  const fields = readForm(teamForm, formData);
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
-  const id = z.string().uuid().safeParse(formData.get("credentialId"));
-  const status = z.enum(["pending", "verified"]).safeParse(formData.get("status"));
+  const id = z.string().uuid().safeParse(fields.credentialId);
+  const status = z.enum(["pending", "verified"]).safeParse(fields.status);
   if (!id.success || !status.success) redirect(noticeUrl(path, "credential-invalid"));
   const row = await reviewStaffCredential(await getDb(), {
     shopId: session.user.shopId,
     credentialId: id.data,
     status: status.data,
-    reviewNote:
-      String(formData.get("reviewNote") ?? "")
-        .trim()
-        .slice(0, 300) || null,
+    reviewNote: fields.reviewNote.trim().slice(0, 300) || null,
     reviewedByPersonId: session.user.personId,
   });
   revalidateAndRedirect(path, noticeUrl(path, row ? "credential-reviewed" : "credential-invalid"));
 }
 
 export async function deleteStaffCredentialAction(formData: FormData) {
+  const fields = readForm(teamForm, formData);
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
-  const id = z.string().uuid().safeParse(formData.get("credentialId"));
+  const id = z.string().uuid().safeParse(fields.credentialId);
   if (!id.success) redirect(noticeUrl(path, "credential-invalid"));
   const deleted = await deleteStaffCredential(
     await getDb(),
