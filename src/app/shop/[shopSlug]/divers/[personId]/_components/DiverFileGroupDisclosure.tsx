@@ -231,8 +231,11 @@ export function DiverFileGroupDisclosure({
               label
             )}
           </h2>
+          {/* Before the fact in the markup, so a stacked fact wraps under the
+              label on a phone and the arrow keeps the label's line; from
+              `sm` it ends the row. */}
+          {href ? <DoorChevron className="sm:order-last" /> : null}
           <span className={summaryFactClass}>{summary}</span>
-          {href ? <DoorChevron /> : null}
           {detailLine}
         </div>
       </section>
