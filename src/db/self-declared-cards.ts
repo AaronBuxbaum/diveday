@@ -640,6 +640,14 @@ export type CertificationSummary = {
   nitrox: boolean;
   /** True when the nitrox card behind `nitrox` is a still-unsighted claim. */
   nitroxSelfDeclared: boolean;
+  /**
+   * The highest level on a card the shop has **verified** (`status =
+   * 'verified'`), or null. Not the same as `!levelSelfDeclared`: a card a
+   * staffer typed and nobody has verified carries no self-declared stamp, so
+   * `level` reads it as held. The dock line's greeting names only this
+   * (`welcomeDockLine`; dive-domain review of the demo layer).
+   */
+  verifiedLevel: CertificationLevel | null;
 };
 
 /**
@@ -717,9 +725,14 @@ export async function listCertificationSummaries(
       (current.levelSelfDeclared && !selfDeclared) ||
       (current.levelSelfDeclared === selfDeclared &&
         certificationRank(row.level) > certificationRank(current.level));
+    const verifiedBetter =
+      row.status === "verified" &&
+      (current.verifiedLevel === null ||
+        certificationRank(row.level) > certificationRank(current.verifiedLevel));
     summaries.set(row.personId, {
       ...current,
       ...(better ? { level: row.level, levelSelfDeclared: selfDeclared } : undefined),
+      ...(verifiedBetter ? { verifiedLevel: row.level } : undefined),
     });
   }
 
@@ -795,6 +808,7 @@ function blankSummary(): CertificationSummary {
     noCertificationDeclared: false,
     nitrox: false,
     nitroxSelfDeclared: false,
+    verifiedLevel: null,
   };
 }
 

@@ -191,7 +191,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await page.getByLabel("Email").fill(diverEmail);
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You.re on the boat/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You.ve got a seat/ })).toBeVisible();
 });
 
 /**

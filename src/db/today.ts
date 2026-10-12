@@ -114,8 +114,8 @@ import {
   type TodayAction,
   urgencyFor,
 } from "@/lib/today";
-import { type TripPhase, tripPhaseOf } from "@/lib/trip-phase";
-import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
+import { boatStageOf, tripPhaseOf } from "@/lib/trip-phase";
+import type { TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -297,17 +297,12 @@ export type DepartureSummary = {
   crewReason: CrewIncompleteReason | null;
   /**
    * Where the crew last said this boat was, and when (ADR
-   * 20260904-reef-all-the-way-down, Budget rule 4). Null when nobody has said
-   * anything, which is most departures and renders nothing.
+   * 20260904-reef-all-the-way-down, Budget rule 4), by `boatStageOf`: the
+   * same reading the departure header and the manifest strip print, so the
+   * three say one word (UX review 2026-10-10, item 1). Null when nobody has
+   * said anything today, which renders nothing.
    */
   stage: TripStageReading | null;
-  /**
-   * Where the departure is in its own day — Prep, Check-in, Aboard, Back
-   * (`tripPhaseOf`, ADR 20261001-logbook). Read from the crew's raw tap, never
-   * `stage` above: that one stops speaking two hours past the return, which is
-   * exactly when a late boat must not turn Back.
-   */
-  phase: TripPhase | null;
   /**
    * **What the divers aboard came for, as counts** (D12/#1172 with D23/#1183,
    * issue #1386). Empty on a departure nobody answered on — which renders
@@ -936,16 +931,20 @@ async function standingCrewClashes(
       started.map((trip) => trip.id),
     ),
   ]);
-  // The crew's "home" tap beats the clock, as in `tripPhaseOf`, but only a tap
-  // from the departure's last shop day: a course whose crew said home after
-  // day one is still out on day two.
-  const saidHome = (trip: { id: string; endsAt: Date }) => {
-    const tap = stages.get(trip.id);
-    return (
-      tap?.stage === "home" &&
-      tap.recordedAt.getTime() >= shopDayBounds(trip.endsAt, timeZone).from.getTime()
-    );
-  };
+  // Out is the departure phase's own answer (`tripPhaseOf`), the rule
+  // `blockedAboardOnBoatsOut` reads too: one rule, one answer. A `home` from
+  // the last day brings a boat in; a course whose crew said home after day
+  // one is still out on day two. Every row here is short of `hasReturned`
+  // (the scan bound), where no other tap can turn a departure Back.
+  const isOut = (trip: { id: string; startsAt: Date; endsAt: Date }) =>
+    tripPhaseOf({
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      now,
+      timeZone,
+      stage: stages.get(trip.id) ?? null,
+      cancelled: false,
+    }) === "aboard";
   return {
     clashes,
     divers,
@@ -955,9 +954,7 @@ async function standingCrewClashes(
     // row about it at the desk once it has dropped out of the stations
     // (`assembleDaySpine`). Started is the departure's own `startsAt`, so a
     // course between two of its days still counts as out.
-    outTripIds: started
-      .filter((trip) => !hasReturned(trip.endsAt, now) && !saidHome(trip))
-      .map((trip) => trip.id),
+    outTripIds: started.filter(isOut).map((trip) => trip.id),
   };
 }
 
@@ -1530,13 +1527,10 @@ function summarizeDepartures(
       crew: tripCrew,
       crewAccountedFor: completeness.crewAccountedFor,
       crewReason: completeness.crewReason,
-      // The same staleness rule every other reader applies: a word older than
-      // the boat's own day stops speaking, so a crew that tapped Underway and
-      // then got busy does not leave the home saying it at midnight. The
-      // manifest is the exception and reads the raw ledger — that strip is the
-      // crew's own control, and it shows them their last answer.
-      stage: liveStageOf(stagesByTrip.get(trip.id) ?? null, trip.endsAt, now),
-      phase: tripPhaseOf({
+      // The chip's one rule (`boatStageOf`), read off the raw tap like the
+      // header and the manifest strip, so a card cannot say a word the boat's
+      // own pages do not.
+      stage: boatStageOf({
         startsAt: trip.startsAt,
         endsAt: trip.endsAt,
         now,

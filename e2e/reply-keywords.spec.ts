@@ -64,7 +64,7 @@ test.describe("reply keywords", () => {
     await page.getByLabel("Name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(email);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
     // The first `C`. Nothing is cancelled by it, by design.
     const asked = await request.post("/api/test/inbound-message", {
@@ -149,7 +149,7 @@ test.describe("reply keywords", () => {
     await page.getByLabel("Name").fill("Ivan Petrov");
     await page.getByLabel("Email").fill(email);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You’re on the boat, Ivan/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat, Ivan/ })).toBeVisible();
 
     // A message that happens to contain the word: read as prose, not a command.
     const prose = await request.post("/api/test/inbound-message", {
