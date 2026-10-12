@@ -413,26 +413,28 @@ async function publicTripPageReads(db: AppDb, shopSlug: string, tripId: string) 
   ]);
 }
 
-/** `/ready`'s reads on the night-before visit, as the page awaits them. */
+/**
+ * `/ready`'s reads on the night-before visit, as the page awaits them: the
+ * capability, `getReadyPageData`'s two chains side by side, then the thread's
+ * one wave (code review 2026-10-11, item 3).
+ */
 async function readyPageReads(db: AppDb, token: string) {
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
   if (!capability) throw new Error("the readiness link did not verify");
   const data = await getReadyPageData(db, capability.bookingId);
   if (!data) throw new Error("no ready page data");
-  // The thread body: party seats, the trip fan-out, the receipt, the course
-  // forms and the package dives.
-  await issuePartySeatClaims(db, { shopId: data.shop.id, leadBookingId: capability.bookingId });
   await Promise.all([
+    issuePartySeatClaims(db, { shopId: data.shop.id, leadBookingId: capability.bookingId }),
     getShopBySlug(db, data.shop.slug),
     getTripWithBooked(db, data.shop.id, data.trip.id),
     listTripDives(db, data.shop.id, data.trip.id),
     listTripChangeEvents(db, data.shop.id, data.trip.id),
     tripPublicCrew(db, data.shop.id, data.trip.id),
     latestTripStage(db, data.shop.id, data.trip.id),
+    getBookingPayment(db, data.shop.id, capability.bookingId),
+    data.trip.course ? getCourseFormsForBooking(db, data.shop.id, capability.bookingId) : null,
+    countSpendableDives(db, data.shop.id, data.person.id),
   ]);
-  await getBookingPayment(db, data.shop.id, capability.bookingId);
-  if (data.trip.course) await getCourseFormsForBooking(db, data.shop.id, capability.bookingId);
-  await countSpendableDives(db, data.shop.id, data.person.id);
 }
 
 describe("what a diver's page sends", () => {
@@ -540,4 +542,7 @@ const READY_CEILING = 36;
 // trip row through `cache()` — a statement saved in a render, not in this
 // replay, which reads the body alone.
 const PUBLIC_TRIP_PHASE_CEILING = 4;
-const READY_PHASE_CEILING = 12;
+// 12 → 5 (item 3): the capability; the readiness detail beside the booking
+// row and its fan-out (`getReadyPageData`); the readiness pass's one wave; and
+// the thread's one wave.
+const READY_PHASE_CEILING = 5;
