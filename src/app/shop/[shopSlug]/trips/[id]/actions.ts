@@ -113,6 +113,7 @@ import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { uuidParam } from "@/lib/uuid";
+import { isRosterBooking, requireRosterBooking, tripPath } from "./roster-booking";
 
 const detailsSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -285,8 +286,6 @@ function parseAddDiver(formData: FormData) {
 // after it so the refusal renders nowhere. Every segment is escaped, so a
 // hostile value stays inside one path segment and 404s
 // (src/lib/staff-notices.ts).
-const backPath = (shopSlug: string, tripId: string) => shopPath(shopSlug, "trips", tripId);
-const tripPath = (shopSlug: string, tripId: string) => shopPath(shopSlug, "trips", tripId);
 /**
  * Record the Trip surface's complete trip-packet action. The printable route
  * is opened by the browser in the same click, while this server action keeps
@@ -368,7 +367,7 @@ const WAITLIST_NOTICE: Record<Extract<WaitlistOutcome, { ok: false }>["reason"],
  */
 
 export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "details" }));
@@ -566,7 +565,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
 }
 
 export async function saveConditionsAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   // Predicted conditions are crew-entered — the divemaster/captain on the water
   // record water temp, viz, and surface state and own the go/no-go call
   // (glossary). This is operating work, not trip definition, so it stays open to
@@ -642,7 +641,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
 }
 
 export async function clearConditionsAction(shopSlug: string, tripId: string) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   // Crew-entered conditions (see saveConditionsAction) — operating work, open to
   // all staff.
   const s = (await requireShopSurface(shopSlug)).session;
@@ -656,7 +655,7 @@ export async function clearConditionsAction(shopSlug: string, tripId: string) {
 }
 
 export async function cancelTripAction(shopSlug: string, tripId: string) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   // A single trip's cancellation is the crew's weather go/no-go call (glossary):
   // the on-water lead must be able to take today's charter off the board so
   // divers are notified. It only flips status (no money moves — refunds stay
@@ -673,7 +672,7 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
 }
 
 export async function reinstateTripAction(shopSlug: string, tripId: string) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   // Status and minimum in one statement. Putting a departure back **is** the
   // shop saying "run it anyway", so the minimum it was cancelled under is
@@ -694,7 +693,7 @@ export async function reinstateTripAction(shopSlug: string, tripId: string) {
 
 /** Push this date's editable details across every upcoming date in the series. */
 export async function applySeriesDetailsAction(shopSlug: string, tripId: string, seriesId: string) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const result = await applyDetailsToFutureSeries(await getDb(), s.user.shopId, seriesId, tripId);
   const notice = !result
@@ -707,7 +706,7 @@ export async function applySeriesDetailsAction(shopSlug: string, tripId: string,
 
 /** Cancel every upcoming date in the series at once; each stays reinstatable. */
 export async function cancelSeriesAction(shopSlug: string, tripId: string, seriesId: string) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const cancelled = await cancelFutureSeriesTrips(await getDb(), s.user.shopId, seriesId);
   revalidateAndRedirect(back, noticeUrl(back, cancelled > 0 ? "series-cancelled" : "series-error"));
@@ -728,7 +727,7 @@ export async function setSeriesRepeatAction(
   seriesId: string,
   formData: FormData,
 ) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const keepRepeating = formData.get("keepRepeating") === "yes";
   const result = await setSeriesRepeat(await getDb(), s.user.shopId, seriesId, keepRepeating);
@@ -762,7 +761,7 @@ export async function updateSeriesCadenceAction(
   seriesId: string,
   formData: FormData,
 ) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const parsed = cadenceSchema.safeParse(Object.fromEntries(formData));
   // The weekday chips repeat one field name, which `Object.fromEntries`
@@ -795,7 +794,7 @@ export async function cancelOffCadenceSeriesAction(
   tripId: string,
   seriesId: string,
 ) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const cancelled = await cancelOffCadenceSeriesTrips(await getDb(), s.user.shopId, seriesId);
   const notice = cancelled > 0 ? "series-off-cadence-cancelled" : "series-error";
@@ -823,7 +822,9 @@ export async function addInternalNoteAction(shopSlug: string, tripId: string, fo
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const body = String(formData.get("note") ?? "");
-  const saved = await addInternalNote(await getDb(), {
+  const dbi = await getDb();
+  await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, noticeUrl(back, "invalid"));
+  const saved = await addInternalNote(dbi, {
     shopId: s.user.shopId,
     tripId,
     actorPersonId: s.user.personId,
@@ -884,15 +885,15 @@ export async function restoreInternalNoteAction(
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const body = String(formData.get("body") ?? "");
-  const restored = bookingId
-    ? await addInternalNote(await getDb(), {
-        shopId: s.user.shopId,
-        tripId,
-        actorPersonId: s.user.personId,
-        bookingId,
-        body,
-      })
-    : null;
+  const dbi = await getDb();
+  await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, noticeUrl(back, "invalid"));
+  const restored = await addInternalNote(dbi, {
+    shopId: s.user.shopId,
+    tripId,
+    actorPersonId: s.user.personId,
+    bookingId,
+    body,
+  });
   // Reuses the "note-added" notice: a restore is, from the banner's
   // perspective, indistinguishable from adding a fresh note with the same
   // text — no dedicated "note-restored" code needed.
@@ -1049,6 +1050,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
+  await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
   const cancelled = await cancelBooking(dbi, s.user.shopId, bookingId);
   const from = cancelled?.previousStatus ?? "cancelled";
   await trackEvent({ name: "booking_cancelled", source: "staff" });
@@ -1152,6 +1154,7 @@ export async function setParticipantTypeAction(
   const { bookingId, participantType: to } = parsed.data;
   const confirmCertBlock = parsed.data.confirmCertBlock === "1";
   const dbi = await getDb();
+  await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
   if (
     confirmCertBlock &&
     !(await canPersonOverrideCertBlock(dbi, s.user.shopId, s.user.personId))
@@ -1202,6 +1205,7 @@ export async function undoRemoveBookingAction(
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
+  await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
   const outcome = await restoreBooking(dbi, s.user.shopId, bookingId);
   if (outcome === "not_found") redirect(back);
   // The undo can be refused three ways, and they need different things done
@@ -1255,6 +1259,7 @@ export async function sendNewWaiverAction(shopSlug: string, tripId: string, form
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
+  await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
   if (!(await canPersonRetireMedicalRefusal(dbi, s.user.shopId, s.user.personId))) {
     redirect(noticeUrl(back, "not-authorized"));
   }
@@ -1304,6 +1309,7 @@ export async function confirmDiverIdentityAction(
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
   const db = await getDb();
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
   const confirmed = await confirmBookingIdentity(db, {
     shopId: s.user.shopId,
     bookingId,
@@ -1341,6 +1347,8 @@ export async function splitDiverIdentityAction(
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
+  const db = await getDb();
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
   // Who the new diver is, beyond a name (issue #2081). The email is checked
   // for shape here; whether another record holds it is the writer's call.
   const email = blankableDiverEmailSchema.safeParse(String(formData.get("email") ?? "").trim());
@@ -1353,7 +1361,6 @@ export async function splitDiverIdentityAction(
       }),
     );
   }
-  const db = await getDb();
   const split = await splitBookingIdentity(db, {
     shopId: s.user.shopId,
     bookingId,
@@ -1456,8 +1463,12 @@ export async function markWaiverInPersonAction(
   // No seat on the request at all: the form always carries one here, so this is
   // not a submission the form made. Answered in the form anyway rather than
   // redirected, so there is exactly one shape of refusal to read.
-  if (!bookingId) return paperWaiverRefused("booking_not_found", formData);
-  const outcome = await recordInPersonWaiver(await getDb(), {
+  const dbi = await getDb();
+  // A seat from another departure is answered the way a missing one is.
+  if (!(await isRosterBooking(dbi, s.user.shopId, tripId, bookingId))) {
+    return paperWaiverRefused("booking_not_found", formData);
+  }
+  const outcome = await recordInPersonWaiver(dbi, {
     shopId: s.user.shopId,
     subject: { bookingId },
     recordedByPersonId: s.user.personId,
@@ -1496,10 +1507,12 @@ export async function saveRosterEmergencyContactAction(
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
-  if (!bookingId || !parsed.success) redirect(noticeUrl(back, "invalid"));
+  if (!parsed.success) redirect(noticeUrl(back, "invalid"));
+  const dbi = await getDb();
+  await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, noticeUrl(back, "invalid"));
   const name = (parsed.data.emergencyContactName ?? "").trim();
   const phone = (parsed.data.emergencyContactPhone ?? "").trim();
-  await saveBookingEmergencyContact(await getDb(), {
+  await saveBookingEmergencyContact(dbi, {
     shopId: s.user.shopId,
     bookingId,
     name,
@@ -1542,7 +1555,8 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // `security-reviewer` after #714 shipped.
   const db = await getDb();
   const s = (await requireShopSurface(shopSlug)).session;
-  const current = bookingId ? await getBookingPayment(db, s.user.shopId, bookingId) : null;
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, noticeUrl(back, "invalid"));
+  const current = await getBookingPayment(db, s.user.shopId, bookingId);
   // Checked before the gate: the control keeps a booking's *current* status
   // selectable, so a captain looking at a waived seat can submit `waived`
   // unchanged. Nothing is decided by a tap that changes nothing, and refusing
@@ -1609,7 +1623,7 @@ export async function saveParticipantTermsAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const db = await getDb();
   const trip = await getTripWithBooked(db, s.user.shopId, tripId);
@@ -1635,7 +1649,7 @@ export async function saveParticipantTermsAction(
 }
 
 export async function saveRequirementsAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const db = await getDb();
   // Re-derive the course flag server-side rather than trusting a client field:
@@ -1761,12 +1775,13 @@ export async function updateBookingPickupAction(
   formData: FormData,
 ) {
   const s = (await requireShopSurface(shopSlug)).session;
-  const back = shopPath(shopSlug, "trips", tripId);
+  const back = tripPath(shopSlug, tripId);
   const parsed = updatePickupSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     redirect(noticeUrl(back, "pickup-invalid", { bid: bookingId }));
   }
   const db = await getDb();
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
   const pickupTime = parsed.data.pickupTime ? parsed.data.pickupTime.trim() || null : null;
   const hotelPickupLocation = parsed.data.hotelPickupLocation
     ? parsed.data.hotelPickupLocation.trim() || null
