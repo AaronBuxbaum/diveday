@@ -232,7 +232,7 @@
     "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
     "src/components/DateRequestForm.tsx#DateRequestForm": 418,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
-    "src/components/search/CommandPalette.tsx#CommandPalette": 658,
+    "src/components/search/CommandPalette.tsx#CommandPalette": 649,
     "src/db/bookings.ts#createBookingRecord": 470,
     "src/db/checkouts.ts#startBookingCheckout": 443,
     "src/db/export.ts#loadShopExportContext": 508,
