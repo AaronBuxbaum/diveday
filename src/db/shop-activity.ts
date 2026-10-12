@@ -333,6 +333,30 @@ export async function recordShopActivity(
   }
 }
 
+/**
+ * {@link recordShopActivity} from inside the transaction of the act it
+ * describes (#2313): the line goes in its own savepoint, so a refused insert
+ * rolls back only the line and never aborts the act. A plain try/catch is not
+ * enough inside a transaction — on Postgres a failed statement poisons the
+ * whole block until it is rolled back (the same reason `findOrCreatePerson`
+ * inserts in a savepoint).
+ */
+export async function recordShopActivityWithin(
+  tx: DbExecutor,
+  input: { shopId: string; actorPersonId: string; write: ShopActivityWrite },
+): Promise<boolean> {
+  try {
+    return await tx.transaction((savepoint) => writeShopActivity(savepoint, input));
+  } catch (error) {
+    log("shop_activity.write_failed", "error", {
+      shopId: input.shopId,
+      code: input.write.code,
+      error: error instanceof Error ? error.name : "unknown",
+    });
+    return false;
+  }
+}
+
 async function writeShopActivity(
   db: DbExecutor,
   input: { shopId: string; actorPersonId: string; write: ShopActivityWrite },

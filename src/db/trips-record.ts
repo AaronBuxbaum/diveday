@@ -33,6 +33,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
+import { recordShopActivityWithin } from "./shop-activity";
 import { recordTripChangeEvent } from "./trip-change-events";
 import {
   normalizedDiveCount,
@@ -462,6 +463,8 @@ export async function updateTrip(
         // calendar client re-alerts on are when the boat leaves and where it
         // goes, so both have to be compared against what the patch asks for.
         startsAt: trips.startsAt,
+        // Read so a changed return time files the activity line too (#2313).
+        endsAt: trips.endsAt,
         diveSiteId: trips.diveSiteId,
         meetingPointLabel: trips.meetingPointLabel,
         meetingPointAddress: trips.meetingPointAddress,
@@ -649,6 +652,20 @@ export async function updateTrip(
         kind: "meeting_point",
         actorPersonId: patch.changeActorPersonId,
         occurredAt: changedAt,
+      });
+    }
+    // The line the schedule builder's move files, for the same act made from
+    // the departure's own form (#2313). Only when the times actually moved, in
+    // this transaction, and in its own savepoint so the line can never undo the
+    // edit.
+    const timesMoved =
+      existing.startsAt.getTime() !== patch.startsAt.getTime() ||
+      existing.endsAt.getTime() !== patch.endsAt.getTime();
+    if (timesMoved && patch.changeActorPersonId) {
+      await recordShopActivityWithin(tx, {
+        shopId,
+        actorPersonId: patch.changeActorPersonId,
+        write: { code: "departure_moved", tripId },
       });
     }
     return { ok: true, trip };
