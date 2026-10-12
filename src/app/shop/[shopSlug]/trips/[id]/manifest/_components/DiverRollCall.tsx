@@ -5,6 +5,7 @@ import type {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { type PrivateNoteAction, PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { RollCallMark } from "@/components/RollCallMark";
+import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { rollCallRowTone } from "@/components/row-tones";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
@@ -1081,6 +1082,8 @@ export function DiverRollCall({
           );
         })}
       </ul>
+      {/* The words for a press the touch guard refused, crew rows included (issue #2328). */}
+      <RollCallTouchCue message={t("manifest.touchRefused")} />
     </section>
   );
 }

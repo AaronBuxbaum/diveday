@@ -376,9 +376,7 @@ describe("OfflineManifestView — one column, one text edge", () => {
     touch("pointerUp", 2);
     touch("pointerUp", 1);
     expect(mark).toHaveAttribute("data-touch-refused");
-    expect(screen.getAllByRole("status").map((region) => region.textContent)).toContain(
-      "Tap again with one finger.",
-    );
+    expect(await screen.findByText("Tap again with one finger.")).toHaveAttribute("role", "status");
     expect(vi.mocked(appendOfflineRollCall)).not.toHaveBeenCalled();
   });
 

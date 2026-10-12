@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { motionMs } from "@/lib/motion";
 import { ROLL_CALL_TOUCH_CUE_MS, RollCallTouchCue } from "./RollCallTouchCue";
 import { TOUCH_REFUSED_EVENT } from "./roll-call-touch-guard";
 
@@ -34,8 +33,9 @@ describe("the roll call's touch cue", () => {
     render(<RollCallTouchCue message={LINE} />);
     act(refuse);
     expect(screen.getByRole("status")).toHaveTextContent(LINE);
+    // It takes no taps: the roll-call controls stay reachable under it.
+    expect(screen.getByRole("status").parentElement?.className).toContain("pointer-events-none");
     act(() => vi.advanceTimersByTime(ROLL_CALL_TOUCH_CUE_MS));
-    act(() => vi.advanceTimersByTime(motionMs("base")));
     expect(screen.queryByRole("status")).toBeNull();
   });
 
