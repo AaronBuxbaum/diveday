@@ -1,4 +1,5 @@
-import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
+import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAs, test } from "./fixtures";
 import { signInAsOwner, signOut } from "./helpers";
 

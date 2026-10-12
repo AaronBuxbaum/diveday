@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDiver } from "@/db/divers";
-import { people } from "@/db/schema";
+import { people, shops } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 
@@ -65,4 +65,25 @@ describe("POST /api/test/pin-added-date", () => {
       .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Tom Okafor")));
     expect(tom?.created.getTime()).not.toBe(nowDate().getTime());
   }, 60_000);
+
+  it("refuses a shop that is not the demo, and pins nothing", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+
+    const response = await POST(pinRequest({ fullName: "Priya Sharma" }));
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "not_available" });
+
+    const [priya] = await db
+      .select({ created: people.createdAt })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Priya Sharma")));
+    expect(priya?.created.getTime()).not.toBe(nowDate().getTime());
+  }, 60_000);
+
+  it("refuses a name longer than any person's", async () => {
+    const response = await POST(pinRequest({ fullName: "x".repeat(201) }));
+    expect(response.status).toBe(400);
+  });
 });

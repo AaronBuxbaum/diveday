@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { people } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { nowDate } from "@/lib/clock";
@@ -26,7 +26,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * `seed-trouble-states`. Safe to mutate because each Playwright worker owns
  * its own database, reset before every test (`e2e/servers.ts`).
  */
-const bodySchema = z.object({ fullName: z.string().trim().min(1) });
+const bodySchema = z.object({ fullName: z.string().trim().min(1).max(200) });
 
 export async function POST(request: Request) {
   if (!e2eTestRouteAuthorized(request)) {

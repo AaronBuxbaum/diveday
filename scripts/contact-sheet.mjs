@@ -37,12 +37,12 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-import credentials from "../src/db/dev-credentials.json" with { type: "json" };
+import demoShop from "../src/db/demo-shop.json" with { type: "json" };
 import { loadCoverage } from "./check-route-coverage.mjs";
 
 /** `check:design-canvases` refuses any canvas file of 400,000 bytes or more. */
 export const MAX_SHEET_BYTES = 390_000;
-export const DEMO_SHOP_SLUG = credentials.demoShopSlug;
+export const DEMO_SHOP_SLUG = demoShop.slug;
 export const TILE = { width: 390, height: 844 };
 
 /**

@@ -2,7 +2,8 @@ import { and, count, eq, gt, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { requestCrewAssignment } from "@/db/crew-requests";
-import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
+import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { createDiveSite } from "@/db/dive-sites";
 import { createGearItem, recordGearService } from "@/db/gear";
 import { recordRollCall } from "@/db/manifests";
@@ -1204,9 +1205,9 @@ async function unstaffTomorrowsDeparture(
  * due inside `GEAR_SERVICE_DUE_SOON_DAYS`.
  *
  * The reef boat rather than the wreck trip the demo assigns units on
- * (`seed-gear.ts`), because this route cancels that departure above to owe a
- * refund on it; a Gear tab photographed on a cancelled trip shows the wrong
- * page. The four units are the wreck trip's, reserved for the reef boat's own
+ * (`seed-gear.ts`), because `?owedRefund=1` cancels that departure to owe a
+ * refund on it, and a Gear tab photographed on a cancelled trip shows the
+ * wrong page. The four units are the wreck trip's, reserved for the reef boat's own
  * window, which does not overlap it.
  *
  * Written straight to the rows, because each state is a fact about the unit's
@@ -1762,6 +1763,9 @@ async function cancelADepartureSomebodyPaidFor(
     )
     .limit(1);
   if (paidSeat) {
-    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, paidSeat.tripId));
+    await db
+      .update(trips)
+      .set({ status: "cancelled" })
+      .where(and(eq(trips.id, paidSeat.tripId), eq(trips.shopId, shopId)));
   }
 }

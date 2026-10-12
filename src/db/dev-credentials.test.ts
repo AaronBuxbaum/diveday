@@ -1,11 +1,14 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
+import { DEMO_SHOP_SLUG } from "./demo-shop";
+import demoShop from "./demo-shop.json";
+import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import credentials from "./dev-credentials.json";
 
 /**
- * The dev logins and the demo slug have one source, `dev-credentials.json`, so
+ * The dev logins and the demo slug have one source each (`dev-credentials.json`,
+ * `demo-shop.json`), so
  * a `.mjs` script that cannot import TypeScript still cannot drift from the
  * seed: a copy that fell behind signed the contact sheet in as nobody and
  * photographed the sign-in page for every route (issue #2339).
@@ -21,12 +24,12 @@ function scriptFiles(dir: string): string[] {
 }
 
 describe("dev credentials", () => {
-  it("re-exports the JSON file unchanged", () => {
+  it("re-exports the JSON files unchanged", () => {
     expect(DEV_STAFF_LOGINS).toEqual(credentials.staffLogins);
-    expect(DEMO_SHOP_SLUG).toBe(credentials.demoShopSlug);
+    expect(DEMO_SHOP_SLUG).toBe(demoShop.slug);
   });
 
-  it("is declared nowhere in scripts/ but the JSON file", () => {
+  it("is declared nowhere in scripts/ but the JSON files", () => {
     const copies = scriptFiles(SCRIPTS).flatMap((file) => {
       const source = readFileSync(file, "utf8");
       const found: string[] = [];
