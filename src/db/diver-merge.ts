@@ -118,7 +118,12 @@ export type DiverMergeWarning =
 
 export type DiverMergeResult =
   | { ok: true; survivorId: string; mergedPersonId: string }
-  | { ok: false; reason: DiverMergeRefusal };
+  | {
+      ok: false;
+      reason: DiverMergeRefusal;
+      /** The first departure a `booking_conflict` collided on, so the notice can name it (issue #2333). */
+      conflictTripId?: string;
+    };
 
 /**
  * One row per person by construction, so the blanket repoint below cannot move
@@ -202,6 +207,9 @@ export const DIVER_HISTORY_TABLES = [
   // "running late" the crew acted on sits on a record nobody opens.
   "inbound_messages",
   "staff_replies",
+  // Something the crew found aboard with this diver's name on it (batch 4,
+  // J2). It is the diver's, so it follows them: the survivor is who gets told.
+  "lost_items",
 ] as const;
 
 /** These rows identify a staff account or crew assignment, not a diver history. */
@@ -231,6 +239,13 @@ export const STAFF_HISTORY_TABLES = [
   // Only somebody on a crew is ever its subject, so either side of a merge
   // holding one is a staff record and the merge is refused.
   "crew_notices",
+  // A staffer named in an incident report (ADR 20261012-incident-reports). A
+  // diver is named there by booking, which moves with the seat; only staff are
+  // named by person, so a record holding one is a staff record.
+  "incident_report_people",
+  // A repeating trip's standing crew (`trip_series_crew`): only staff sail on
+  // it, so a record holding one is a staff record and the merge is refused.
+  "trip_series_crew",
 ] as const;
 export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
 
@@ -286,6 +301,9 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "gear_items.deleted_by_person_id": "who retired the unit",
   "gear_reservations.released_by_person_id": "who let go of the hold",
   "gear_service_events.recorded_by_person_id": "who serviced the unit",
+  "incident_report_addenda.author_person_id": "who wrote the addendum",
+  "incident_reports.created_by_person_id": "who started the incident report",
+  "incident_reports.filed_by_person_id": "who filed the incident report",
   "internal_notes.created_by_person_id": "who wrote the note",
   "marine_life_requests.requested_by_person_id": "which staffer asked for the species",
   "nitrox_certifications.deleted_by_person_id": "who removed the card",
@@ -305,6 +323,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "recap_pulses.addressed_by_person_id": "which staffer picked the pulse up",
   "staff_replies.sent_by_person_id": "which staffer wrote the reply",
   "review_moderation_events.recorded_by_person_id": "who published or withheld the review",
+  "review_replies.written_by_person_id": "which staffer wrote the shop's reply",
   "roll_call_crew_events.recorded_by_person_id": "who called the crew roll",
   "roll_call_events.recorded_by_person_id": "who called the roll",
   "shop_promo_codes.created_by_person_id": "who wrote the code",
@@ -343,6 +362,9 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "waiver_records.moved_from_person_id": "where a refiled release sat before; inside its seal",
   "waiver_records.recorded_by_person_id": "who witnessed the signature",
   "course_form_records.recorded_by_person_id": "who recorded the paper form",
+  "lost_items.recorded_by_person_id": "which crew member found the item",
+  "lost_items.resolved_by_person_id": "who handed it back or let it go",
+  "departure_notes.sent_by_person_id": "who sent the note to the departure",
   "course_form_records.anonymized_by_person_id": "who erased the signer's names from the form",
   "course_form_versions.created_by_person_id": "who wrote that version of the form",
 };
@@ -899,6 +921,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "rental_fit_profiles",
     "customer_gear_items",
     "work_orders",
+    "lost_items",
   ],
   history: ["prior_visits"],
   lists: [
@@ -1154,7 +1177,12 @@ export async function mergeDiverRecords(input: {
       }
 
       const assessment = await assessMerge(tx, input.shopId, source, survivor);
-      if (!assessment.ok) return { ok: false, reason: assessment.reason };
+      if (!assessment.ok) {
+        const conflictTripId = assessment.sharedDepartures[0]?.tripId;
+        return conflictTripId
+          ? { ok: false, reason: assessment.reason, conflictTripId }
+          : { ok: false, reason: assessment.reason };
+      }
       if (assessment.warnings.length > 0) {
         if (!input.acknowledged) return { ok: false, reason: "different_people_unacknowledged" };
         if (

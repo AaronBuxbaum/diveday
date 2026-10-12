@@ -16,7 +16,7 @@ import {
   type RequiredCourseForm,
 } from "./course-forms";
 import { guardianSignatureMissing } from "./guardian";
-import { isDiver, type ParticipantType } from "./participant-types";
+import { isDiver, isHeldToMedical, type ParticipantType } from "./participant-types";
 import { type WaiverStateFields, waiverState } from "./waivers";
 
 /**
@@ -468,10 +468,11 @@ export type ReadinessInput = {
    * What this person is doing on the boat (ADR 20261007-participant-types).
    * Absent is a diver.
    *
-   * A snorkeler or a rider is held to the trip's **waiver** — the release and
-   * its medical questions are the same for everyone aboard until H-01/H-03 say
-   * otherwise — and to its **payment** gate, and to the identity and minimum-age
-   * checks, which are about the person rather than the dive. They are held to
+   * A snorkeler or a rider is held to the trip's **waiver** (H-01/H-03) and a
+   * snorkeler to its medical too; a rider is never held on a medical referral
+   * or refusal (H-109, `isHeldToMedical`). Both are held to its **payment**
+   * gate, and to the identity and minimum-age checks, which are about the
+   * person rather than the dive. They are held to
    * **no** certification, specialty or nitrox requirement: there is no dive for
    * a card to qualify, and the trip's or a site's gate composes to nothing for
    * them, exactly as `decideTripAdmission` composes it at the sale.
@@ -832,7 +833,16 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     }
   }
 
-  const state = waiverState(input.waiver, now);
+  const rawState = waiverState(input.waiver, now);
+  // A rider is never held on a medical (H-109, issue #2212): a release a
+  // referral parked or a physician refused is still the release they signed,
+  // and the caller hands in the one `effectiveReleaseForRiderSeat` chose, which
+  // has already been checked for currency. A snorkeler keeps the dive medical.
+  const state =
+    !isHeldToMedical(input.participantType) &&
+    (rawState === "medical_review" || rawState === "medical_not_cleared")
+      ? "complete"
+      : rawState;
 
   // A medical answer is a fact about the diver, not about the departure
   // (H-104, issue #2096): a referral nobody has cleared, or a physician's "no",

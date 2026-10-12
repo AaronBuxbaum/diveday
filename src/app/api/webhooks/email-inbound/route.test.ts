@@ -15,6 +15,11 @@ vi.mock("@/db/inbound-messages", () => ({
 vi.mock("@/db/reply-keywords", () => ({ handleInboundReplyKeyword: vi.fn() }));
 // The after-hours desk ping, likewise: its rule is `src/db/desk-pings.test.ts`.
 vi.mock("@/db/desk-pings", () => ({ pingDeskAfterHoursSafely: vi.fn() }));
+// The ping runs after the response (#2311); the test runs what was deferred.
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: vi.fn() };
+});
 vi.mock("@/lib/notifications/inbound-mail-store", () => ({
   inboundMailStoreFromEnvironment: vi.fn(),
 }));
@@ -27,6 +32,14 @@ const { getDb } = await import("@/db/client");
 const { recordInboundMessage, shopIdForInboundEmailToken } = await import("@/db/inbound-messages");
 const { handleInboundReplyKeyword } = await import("@/db/reply-keywords");
 const { pingDeskAfterHoursSafely } = await import("@/db/desk-pings");
+const { after } = await import("next/server");
+
+/** Run whatever the route handed to `after()`, as Next does once it has answered. */
+async function runDeferred() {
+  for (const [task] of vi.mocked(after).mock.calls) {
+    await (typeof task === "function" ? task() : task);
+  }
+}
 const { inboundMailStoreFromEnvironment } = await import("@/lib/notifications/inbound-mail-store");
 const sns = await import("@/lib/notifications/sns");
 const { verifySnsMessage, confirmSnsSubscription } = sns;
@@ -61,6 +74,7 @@ function receivedMessage(overrides: Record<string, unknown> = {}) {
     notificationType: "Received",
     receipt: {
       recipients: [`reply+${TOKEN}@inbound.ses.dive.day`],
+      spamVerdict: { status: "PASS" },
       virusVerdict: { status: "PASS" },
       spfVerdict: { status: "PASS" },
       dkimVerdict: { status: "PASS" },
@@ -107,6 +121,7 @@ beforeEach(() => {
   vi.mocked(shopIdForInboundEmailToken).mockReset().mockResolvedValue(SHOP_ID);
   vi.mocked(handleInboundReplyKeyword).mockReset().mockResolvedValue("not_a_keyword");
   vi.mocked(pingDeskAfterHoursSafely).mockReset();
+  vi.mocked(after).mockReset();
   read.mockReset().mockResolvedValue({ status: "ok", message: RAW_MESSAGE });
   vi.mocked(inboundMailStoreFromEnvironment)
     .mockReset()
@@ -187,13 +202,19 @@ describe("email-inbound webhook — filing a reply", () => {
       emailMessageId: "<abc@mail.example.com>",
       inReplyToProviderMessageId: "0100019abc-1234",
       senderAuthenticated: true,
+      spamFlagged: false,
     });
     // And hands the filed row to the keyword path (ADR 20260909-reply-keywords).
     expect(handleInboundReplyKeyword).toHaveBeenCalledWith(FAKE_DB, {
       shopId: SHOP_ID,
       inboundMessageId: "im1",
     });
-    // And tells the desk, if it is closed, by the message's own time.
+    // And tells the desk, if it is closed, by the message's own time — after
+    // the webhook has answered, so a slow mail provider cannot make SNS wait
+    // and retry (#2311).
+    expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
+    expect(after).toHaveBeenCalledTimes(1);
+    await runDeferred();
     expect(pingDeskAfterHoursSafely).toHaveBeenCalledWith(FAKE_DB, {
       shopId: SHOP_ID,
       receivedAt: new Date("2026-07-21T12:59:58.000Z"),
@@ -212,6 +233,7 @@ describe("email-inbound webhook — filing a reply", () => {
     expect((await POST(webhookRequest("{}"))).status).toBe(200);
     expect(recordInboundMessage).toHaveBeenCalled();
     expect(handleInboundReplyKeyword).not.toHaveBeenCalled();
+    await runDeferred();
     expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
   });
 
@@ -250,6 +272,25 @@ describe("email-inbound webhook — filing a reply", () => {
       }),
     );
     // A spoofed burst to the reply-to address must not page the owner.
+    await runDeferred();
+    expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
+  });
+
+  /**
+   * **Junk from a real domain still never pages anyone** (#2311). SES's spam
+   * verdict does not refuse the message — a diver's reply from hotel Wi-Fi
+   * trips it — but it is filed as flagged, and the desk's ping is not run.
+   */
+  it("files spam the scanner flagged, and never pings the desk for it", async () => {
+    vi.mocked(verifySnsMessage).mockResolvedValue(
+      verifiedNotification(receivedMessage({ receipt: { spamVerdict: { status: "FAIL" } } })),
+    );
+    expect((await POST(webhookRequest("{}"))).status).toBe(200);
+    expect(recordInboundMessage).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({ senderAuthenticated: true, spamFlagged: true }),
+    );
+    await runDeferred();
     expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
   });
 

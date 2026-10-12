@@ -179,6 +179,26 @@ describe("dive-site library", () => {
    * worded to mention them rather than sending someone hunting for a site they
    * cannot see.
    */
+  // Issue #2295: the refusal runs in a savepoint, so a caller's transaction
+  // (here the file's shared one) is still usable after it.
+  it("leaves a caller's transaction usable after a name clash", async () => {
+    const { db, shop } = ctx;
+    await createDiveSite(db, { shopId: shop.id, name: "Savepoint Shoal" });
+    expect(await createDiveSiteForForm(db, { shopId: shop.id, name: "Savepoint Shoal" })).toBe(
+      SITE_NAME_TAKEN,
+    );
+    const other = await createDiveSite(db, { shopId: shop.id, name: "Savepoint Spur" });
+    expect(
+      await updateDiveSiteForForm(db, shop.id, other.id, {
+        shopId: shop.id,
+        name: "Savepoint Shoal",
+      }),
+    ).toBe(SITE_NAME_TAKEN);
+    expect(
+      (await listDiveSites(db, shop.id)).filter((site) => site.name.startsWith("Savepoint")),
+    ).toHaveLength(2);
+  });
+
   it("refuses a name an archived site still holds", async () => {
     const { db, shop } = ctx;
     const archived = await createDiveSite(db, { shopId: shop.id, name: "Retired Ledge" });

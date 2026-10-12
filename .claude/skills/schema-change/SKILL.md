@@ -34,7 +34,7 @@ questions — read the schema module.
    unclassified `person_id` is the expensive one: a merge silently leaves rows pointing at a
    removed diver. `pnpm test:changed` selects these too, but after a schema edit it selects
    the *whole* suite (9,391 of 9,391 entries, measured 2026-09-06) — that run belongs to CI.
-6. **Local sanity**: `pnpm db:reset && pnpm e2e` exercises the auto-migrate + auto-seed boot
+6. **Local sanity**: `pnpm db:reset && pnpm e2e e2e/<the spec your change touches>.spec.ts --reporter=line` exercises the auto-migrate + auto-seed boot
    from zero.
 7. **Commit together**: the schema module, `drizzle/**`, seed, tests, docs. One schema change per PR
    where possible.
@@ -66,6 +66,8 @@ value nothing writes any more:
   ```
 - **Expand/contract** still applies for the same reason: if the *currently deployed* code reads the
   thing you are dropping, split it across two deploys regardless of how worthless the data is.
+  For a column the guard enforces it: a `drop-column` marker is refused while the previous
+  release's or this branch's `src/db/schema/` still declares the column, whatever the reason says.
 - **H-02's retention windows and the erasure path** stand. Those are promises about data we *will*
   hold, not tolerance for data we already have.
 

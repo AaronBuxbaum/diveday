@@ -94,6 +94,19 @@ describe("GET /s/[shopSlug]/trips/[id]/calendar", () => {
     expect(file).toMatch(/DESCRIPTION:.*Meet at Blue Mantis dock/);
   });
 
+  it("has no file for a rehearsal, which has no public URL", async () => {
+    const { db, shop, tripId } = await aDeparture(null);
+    await db
+      .update(trips)
+      .set({ isRehearsal: true, isPrivate: true, priceCents: null })
+      .where(eq(trips.id, tripId));
+    const response = await GET(
+      new Request(`https://diveday.example/s/${shop.slug}/trips/${tripId}/calendar`) as never,
+      { params: Promise.resolve({ shopSlug: shop.slug, id: tripId }) },
+    );
+    expect(response.status).toBe(404);
+  });
+
   it("says nothing about packing, because it cannot know", async () => {
     // The restraint D05's boundary asks for. This route is public and holds no
     // booking, so what *this* diver rented, is bringing, or is provided is not

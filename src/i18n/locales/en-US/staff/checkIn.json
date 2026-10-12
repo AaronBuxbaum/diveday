@@ -25,6 +25,9 @@
     "waitingDoor": "Open the wait list",
     "rebook": "Nobody is waiting. Offer {name} another day.",
     "rebookDoor": "Add them to {title}, {when}",
+    "offerSend": "Email them this date",
+    "offerSending": "Sending…",
+    "offerAriaLabel": "Email {name} an offer for {title}, {when}",
     "nothing": "Nobody is waiting, and no similar departure has room for them.",
     "money": "Marking someone not here does not charge or refund anything.",
     "moneyDoor": "Open their orders"
@@ -45,6 +48,10 @@
   "undoAriaLabel": "Undo check-in for {name}",
   "undoing": "Undoing…",
   "notice": {
+    "offerUnavailable": "Nothing was sent: that departure is gone or full, or they can’t book it.",
+    "offerOptedOut": "Nothing was sent: they turned off emails from the shop. Call them with the date.",
+    "offerNotSent": "Nothing was sent: there’s no email on file for them, or email isn’t set up. Call them with the date.",
+    "offerSent": "Offer emailed. They book the seat themselves from the link.",
     "notReady": "Something changed and they can’t board yet. Their row says what’s in the way.",
     "notBookable": "That booking is no longer available for check-in.",
     "alreadyCheckedIn": "That diver was already checked in.",

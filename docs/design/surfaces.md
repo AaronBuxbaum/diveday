@@ -242,9 +242,10 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 **Shipped 2026-08-28** (slice 6g) — same ADR and canvas. The phone keeps grouped lists.
 
 - **One idea:** every switch in the shop, findable in one look.
-- **The question it arrives with:** "where do I change X?" — answered by the rail: all ten groups
-  (Shop, Team, Boats & sites, Bookings & waivers, Rentals, Money, Messages, Website, Data, Account;
-  ADR 20261001-logbook) in the pane's own order, with the group being read named at the top of the column (its label is
+- **The question it arrives with:** "where do I change X?" — answered by the rail: all twelve groups
+  (Shop, Team, Boats & sites, Bookings & waivers, Rentals, Money, Messages, Notifications, Website,
+  Data, Account, Rarely changed; the ten of ADR 20261001-logbook plus the mail rows gathered and the
+  set-once rows kept last) in the pane's own order, with the group being read named at the top of the column (its label is
   sticky inside the rail's scroll area) and the group holding the current row tinted. Forty rows
   do not fit beside the bar on any viewport at a legible row height, so the rail scrolls in its own
   right; what it must never do is let a reader believe the groups below the first are not there.
@@ -299,6 +300,8 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
   ashore.
 
 ### The public schedule — `/s/[shopSlug]`
+
+**Extended 2026-10-12** (UX review 2026-10-11, items 11 and 12). The board's last month no longer reads as the shop's last month: under it, each open-ended public run says it keeps going in its own cadence words ("Saturday Two-Tank runs every Saturday. Later dates open as the season goes.") and the date request stands open there, its collapsed row under "More ways" standing down. On an empty board, the off-season card can now name a date the shop typed in Settings ("Back on the water", beside Season start); a scheduled departure always outranks it, and it says nothing once the date has passed (`src/lib/off-season.ts`).
 
 **Widened 2026-10-03.** From `lg` up the next boat with space (and any other band panel) stands in a 20rem column beside the photograph, as ADR 20260827-clearwater-surface-language decision 8 drew it. Stacked, the photograph, its name band and the card filled the first screen at 1280×900 and the schedule started 1,220px down; now it starts on the first screen. A shop with no panel keeps the full-width photograph, and a phone keeps the stack.
 

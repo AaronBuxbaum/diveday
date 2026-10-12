@@ -64,7 +64,14 @@ export function PanelHeight({
   }, []);
 
   return (
-    <section ref={ref} aria-labelledby={labelledBy} className={className}>
+    <section
+      ref={ref}
+      aria-labelledby={labelledBy}
+      className={className}
+      // The touch cue's line sits just under this card (issue #2328):
+      // `ROLL_CALL_PANEL_ATTRIBUTE`, which `PanelHeight.test.tsx` ties to this.
+      data-roll-call-panel=""
+    >
       {children}
     </section>
   );

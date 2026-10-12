@@ -41,7 +41,7 @@ import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { isCallOutcome } from "@/lib/took-a-call";
-import { spotsRemaining } from "@/lib/trips";
+import { seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import type { DeparturePickerDay } from "./_components/DeparturePicker";
 import { DepartureWindowSection } from "./_components/DepartureWindowSection";
@@ -154,7 +154,7 @@ export default async function NewBookingPage({
   ]);
   // The wait list is only for a full boat, so the call form offers only those.
   const fullDepartures: CallDeparture[] = upcoming.trips
-    .filter((trip) => spotsRemaining(trip) === 0)
+    .filter((trip) => spotsRemaining(seatsOnSale(trip)) === 0)
     .map((trip) => ({
       id: trip.id,
       label: t("calls.departureFull", {
@@ -164,7 +164,7 @@ export default async function NewBookingPage({
       }),
     }));
   const callNotice = noticeFromParam(notice, CALL_NOTICES);
-  const trips = tripPage.trips;
+  const trips = tripPage.trips.map(seatsOnSale);
   // An empty window says where the next open seat is, rather than leaving the
   // staffer to step through empty days to find it; nothing open anywhere
   // ahead is the board's empty state below.

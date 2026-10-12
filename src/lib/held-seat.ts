@@ -132,6 +132,7 @@ export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver
     welcomeCue: null,
     depthAdvisory: undefined,
     medicalWaiver: null,
+    riderMedicalHold: null,
     readiness: { status: "blocked", blockers: kept },
   };
 }

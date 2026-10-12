@@ -19,6 +19,10 @@
 //   node scripts/expire-claims.mjs            report what would expire (needs gh)
 //   node scripts/expire-claims.mjs --apply    remove the label and comment (follow-ups.yml, daily)
 //
+// Every read and write tries gh's GraphQL commands first and falls back to the REST API through
+// `gh api`: a cloud container's proxy refuses GraphQL with a 403 but serves REST, so without the
+// fallback this only ever acted from follow-ups.yml (issue #2355).
+//
 // Issue text is untrusted: a claim's branch is only ever compared against git's and gh's own
 // output, never passed to a subprocess.
 
@@ -81,6 +85,119 @@ export function expiryComment(verdict) {
   ].join("\n");
 }
 
+/** One JSON value per non-empty line, which is what `gh api --paginate --jq '.[] | …'` prints. */
+export function jsonLines(text) {
+  return String(text)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+/** `first()`, or `fallback()` when it throws — GraphQL, then REST. */
+function eitherOf(first, fallback) {
+  try {
+    return first();
+  } catch {
+    return fallback();
+  }
+}
+
+const REPO = "repos/{owner}/{repo}";
+
+/**
+ * The open in-progress issues as `{ number, title, comments: [{ body, createdAt }] }`, the shape
+ * `gh issue list --json number,title,comments` prints and `claimVerdict` reads.
+ */
+export function readInProgressIssues(run) {
+  return eitherOf(
+    () =>
+      JSON.parse(
+        run("gh", [
+          "issue",
+          "list",
+          "--label",
+          IN_PROGRESS_LABEL,
+          "--state",
+          "open",
+          "--limit",
+          "200",
+          "--json",
+          "number,title,comments",
+        ]),
+      ),
+    () =>
+      jsonLines(
+        run("gh", [
+          "api",
+          "--paginate",
+          `${REPO}/issues?labels=${IN_PROGRESS_LABEL}&state=open&per_page=100`,
+          "--jq",
+          ".[] | select(.pull_request | not) | {number, title}",
+        ]),
+      ).map((issue) => ({
+        ...issue,
+        comments: jsonLines(
+          run("gh", [
+            "api",
+            "--paginate",
+            `${REPO}/issues/${Number(issue.number)}/comments?per_page=100`,
+            "--jq",
+            ".[] | {body, createdAt: .created_at}",
+          ]),
+        ),
+      })),
+  );
+}
+
+/** The head branch of every open pull request. */
+export function readOpenHeads(run) {
+  return eitherOf(
+    () =>
+      JSON.parse(
+        run("gh", ["pr", "list", "--state", "open", "--limit", "500", "--json", "headRefName"]),
+      ).map((pr) => pr.headRefName),
+    () =>
+      run("gh", [
+        "api",
+        "--paginate",
+        `${REPO}/pulls?state=open&per_page=100`,
+        "--jq",
+        ".[].head.ref",
+      ])
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+  );
+}
+
+/** Drop the label and say why, on one issue. */
+export function expireClaim(run, number, verdict) {
+  const issue = String(Number(number));
+  eitherOf(
+    () => run("gh", ["issue", "edit", issue, "--remove-label", IN_PROGRESS_LABEL]),
+    () =>
+      run("gh", [
+        "api",
+        "--method",
+        "DELETE",
+        `${REPO}/issues/${issue}/labels/${IN_PROGRESS_LABEL}`,
+      ]),
+  );
+  eitherOf(
+    () => run("gh", ["issue", "comment", issue, "--body", expiryComment(verdict)]),
+    () =>
+      run("gh", [
+        "api",
+        "--method",
+        "POST",
+        `${REPO}/issues/${issue}/comments`,
+        "-f",
+        `body=${expiryComment(verdict)}`,
+      ]),
+  );
+}
+
 function run(command, args) {
   const result = runBounded(command, args, {
     encoding: "utf8",
@@ -95,31 +212,14 @@ function run(command, args) {
 
 function main() {
   const apply = process.argv.includes("--apply");
-  const issues = JSON.parse(
-    run("gh", [
-      "issue",
-      "list",
-      "--label",
-      IN_PROGRESS_LABEL,
-      "--state",
-      "open",
-      "--limit",
-      "200",
-      "--json",
-      "number,title,comments",
-    ]),
-  );
+  const issues = readInProgressIssues(run);
   const branches = new Set(
     run("git", ["ls-remote", "--heads", "origin"])
       .split("\n")
       .map((line) => line.split("\t")[1]?.replace(/^refs\/heads\//, ""))
       .filter(Boolean),
   );
-  const openHeads = new Set(
-    JSON.parse(
-      run("gh", ["pr", "list", "--state", "open", "--limit", "500", "--json", "headRefName"]),
-    ).map((pr) => pr.headRefName),
-  );
+  const openHeads = new Set(readOpenHeads(run));
   const now = new Date();
   let expired = 0;
   for (const issue of issues) {
@@ -129,8 +229,7 @@ function main() {
     if (!verdict.expire) continue;
     expired++;
     if (!apply) continue;
-    run("gh", ["issue", "edit", String(issue.number), "--remove-label", IN_PROGRESS_LABEL]);
-    run("gh", ["issue", "comment", String(issue.number), "--body", expiryComment(verdict)]);
+    expireClaim(run, issue.number, verdict);
   }
   console.log(
     `${expired} of ${issues.length} claims ${apply ? "expired" : "would expire (dry run; --apply to act)"}`,

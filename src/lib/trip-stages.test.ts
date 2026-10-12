@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import {
   liveStageOf,
   STAGE_SENTENCE_KEYS,
-  STAGE_TAP_KEYS,
   STAGE_WORD_KEYS,
   TRIP_STAGES,
   type TripStageReading,
@@ -68,21 +67,18 @@ describe("the five stages", () => {
     expect(TRIP_STAGES).toEqual(["boarding", "underway", "surface", "heading_in", "home"]);
   });
 
-  it("gives every stage a word, a tap and a sentence", () => {
+  it("gives every stage a word and a sentence", () => {
     for (const stage of TRIP_STAGES) {
       expect(STAGE_WORD_KEYS[stage]).toBeTruthy();
-      expect(STAGE_TAP_KEYS[stage]).toBeTruthy();
       expect(STAGE_SENTENCE_KEYS[stage]).toBeTruthy();
     }
   });
 
   it("names no key that could render the word this app refuses to say", () => {
     // A stage nobody set is absent, never "Unknown" — so no key exists for it.
-    const keys = [
-      ...Object.values(STAGE_WORD_KEYS),
-      ...Object.values(STAGE_TAP_KEYS),
-      ...Object.values(STAGE_SENTENCE_KEYS),
-    ].join(" ");
+    const keys = [...Object.values(STAGE_WORD_KEYS), ...Object.values(STAGE_SENTENCE_KEYS)].join(
+      " ",
+    );
     expect(keys.toLowerCase()).not.toContain("unknown");
   });
 });

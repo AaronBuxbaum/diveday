@@ -3,6 +3,7 @@ import type { WaiverRecord } from "@/db/schema";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "./medical";
 import { localTypedConsentProvider, namesakeAttestationProvider } from "./signatures";
 import {
+  effectiveReleaseForRiderSeat,
   effectiveWaiverForBooking,
   isCleanCompletion,
   isCompletedWaiverCurrent,
@@ -14,6 +15,7 @@ import {
   overriddenReferral,
   overriddenReferralAt,
   overriddenRefusal,
+  riderMedicalHold,
   shopWaiverStatus,
   WAIVER_SIGNATURE_VALIDITY_MS,
   waiverState,
@@ -690,6 +692,7 @@ describe("overriddenRefusal", () => {
   it("names the refused record a clean new release stands over, retired or not", () => {
     const expected = {
       recordId: "refusal",
+      personId: "person-1",
       at: refusal().medicalClearanceDeclinedAt,
       evaluatedOn: null,
     };
@@ -803,6 +806,7 @@ describe("overriddenRefusal", () => {
     });
     expect(overriddenRefusal(earlyYes, [lateNo, earlyYes])).toEqual({
       recordId: "refusal",
+      personId: "person-1",
       at: lateNo.medicalClearanceDeclinedAt,
       evaluatedOn: "2026-07-10",
     });
@@ -976,6 +980,7 @@ describe("medicalWarningDays", () => {
   it("dates a refusal by the physician's evaluation, not by when it was typed in", () => {
     const refusal = {
       recordId: "r",
+      personId: "p",
       at: new Date("2026-05-20T13:00:00.000Z"),
       evaluatedOn: "2026-05-02" as const,
     };
@@ -986,7 +991,12 @@ describe("medicalWarningDays", () => {
 
   it("falls back to the shop's day the refusal was recorded", () => {
     // 01:00 UTC on May 3 is still May 2 in Miami.
-    const refusal = { recordId: "r", at: new Date("2026-05-03T01:00:00.000Z"), evaluatedOn: null };
+    const refusal = {
+      recordId: "r",
+      personId: "p",
+      at: new Date("2026-05-03T01:00:00.000Z"),
+      evaluatedOn: null,
+    };
     expect(medicalWarningDays(mark({ overriddenRefusal: refusal }), "America/New_York")).toEqual({
       refusedOn: "2026-05-02",
     });
@@ -999,5 +1009,180 @@ describe("medicalWarningDays", () => {
         "America/New_York",
       ),
     ).toEqual({ referredOn: "2026-06-10" });
+  });
+});
+
+/**
+ * **The release a rider's seat stands on** (H-109, issue #2212). A rider is
+ * held to the shop's release and to nothing in the medical, so a signature a
+ * referral parked or a physician refused is still a signature, and an older
+ * clean one is not outranked by a later hold. Everything else about the
+ * signature still applies: current terms, inside the year, not superseded.
+ */
+describe("effectiveReleaseForRiderSeat", () => {
+  const args = (over: Partial<Parameters<typeof effectiveReleaseForRiderSeat>[0]>) => ({
+    bookingWaiver: null,
+    personSignedWaivers: [],
+    currentTemplateVersion: 1 as number | null,
+    now: SIGN_NOW,
+    ...over,
+  });
+
+  it("stands on a signature a referral or a refusal held", () => {
+    const held = completedWaiver({ status: "medical_review" });
+    expect(effectiveReleaseForRiderSeat(args({ personSignedWaivers: [held] }))).toBe(held);
+    const refused = completedWaiver({
+      status: "medical_review",
+      medicalClearanceDeclinedAt: SIGN_NOW,
+    });
+    expect(effectiveReleaseForRiderSeat(args({ bookingWaiver: refused }))).toBe(refused);
+  });
+
+  it("takes the newest signature, held or clean", () => {
+    const olderClean = completedWaiver({
+      id: "clean",
+      signedAt: new Date(SIGN_NOW.getTime() - 200_000),
+    });
+    const newerHold = completedWaiver({ id: "hold", status: "medical_review" });
+    expect(
+      effectiveReleaseForRiderSeat(args({ personSignedWaivers: [olderClean, newerHold] }))?.id,
+    ).toBe("hold");
+  });
+
+  it("refuses a held signature past the year, or against terms the shop has since changed", () => {
+    const aged = completedWaiver({
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1),
+    });
+    expect(effectiveReleaseForRiderSeat(args({ personSignedWaivers: [aged] }))).toBeNull();
+    expect(effectiveReleaseForRiderSeat(args({ bookingWaiver: aged }))).toBeNull();
+    const oldTerms = completedWaiver({
+      status: "medical_review",
+      templateVersion: 0,
+      templateGeneration: 0,
+    });
+    expect(effectiveReleaseForRiderSeat(args({ personSignedWaivers: [oldTerms] }))).toBeNull();
+  });
+
+  it("refuses a superseded signature, a retired refusal included", () => {
+    const retired = completedWaiver({
+      status: "medical_review",
+      medicalClearanceDeclinedAt: SIGN_NOW,
+      supersededAt: SIGN_NOW,
+    });
+    expect(effectiveReleaseForRiderSeat(args({ personSignedWaivers: [retired] }))).toBeNull();
+  });
+
+  it("refuses a held record with no signature time on it", () => {
+    const unsigned = completedWaiver({
+      status: "medical_review",
+      signedAt: null,
+      completedAt: null,
+    });
+    expect(effectiveReleaseForRiderSeat(args({ bookingWaiver: unsigned }))).toBeNull();
+  });
+
+  it("hands back the seat's own unsigned link when nothing is signed, for the send flow", () => {
+    const pending = completedWaiver({ status: "pending", signedAt: null, completedAt: null });
+    expect(effectiveReleaseForRiderSeat(args({ bookingWaiver: pending }))).toBe(pending);
+  });
+
+  it("hands back a lapsed unsigned link too, so the desk reads expired, as for a diver's seat", () => {
+    const lapsed = completedWaiver({
+      status: "pending",
+      signedAt: null,
+      completedAt: null,
+      expiresAt: new Date(SIGN_NOW.getTime() - 1),
+    });
+    const rider = effectiveReleaseForRiderSeat(args({ bookingWaiver: lapsed }));
+    expect(rider).toBe(lapsed);
+    expect(rider).toBe(effectiveWaiverForBooking(args({ bookingWaiver: lapsed })));
+    expect(waiverState(rider, SIGN_NOW)).toBe("expired");
+  });
+});
+
+/**
+ * **What the crew reads for a rider boarding past a medical** (H-109;
+ * dive-domain review of #2212): never a blocker, always a warning.
+ */
+describe("riderMedicalHold", () => {
+  it("names a physician's no on the rider's own release, by the evaluation day", () => {
+    const refused = completedWaiver({
+      status: "medical_review",
+      medicalClearanceDeclinedAt: SIGN_NOW,
+      medicalClearanceEvaluatedOn: "2026-07-01",
+    });
+    expect(riderMedicalHold(refused, [refused])).toEqual({
+      kind: "not_cleared",
+      at: SIGN_NOW,
+      evaluatedOn: "2026-07-01",
+    });
+  });
+
+  it("names an open referral, and a no on an earlier release outranks it", () => {
+    const referral = completedWaiver({ id: "referral", status: "medical_review" });
+    expect(riderMedicalHold(referral, [referral])?.kind).toBe("referral");
+    const earlierNo = completedWaiver({
+      id: "earlier-no",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 100_000),
+      medicalClearanceDeclinedAt: new Date(SIGN_NOW.getTime() - 50_000),
+    });
+    expect(riderMedicalHold(referral, [referral, earlierNo])?.kind).toBe("not_cleared");
+  });
+
+  it("names a retired refusal signed after the clean release the rider stands on", () => {
+    const s1 = completedWaiver({
+      id: "s1-clean",
+      signedAt: new Date(SIGN_NOW.getTime() - 200_000),
+    });
+    const s2 = completedWaiver({
+      id: "s2-refused",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 100_000),
+      medicalClearanceDeclinedAt: new Date(SIGN_NOW.getTime() - 50_000),
+      medicalClearanceEvaluatedOn: "2026-07-01",
+      supersededAt: SIGN_NOW,
+    });
+    // The rider path skips the retired "no" and stands on the clean release.
+    const release = effectiveReleaseForRiderSeat({
+      bookingWaiver: null,
+      personSignedWaivers: [s1, s2],
+      currentTemplateVersion: 1,
+      now: SIGN_NOW,
+    });
+    expect(release?.id).toBe("s1-clean");
+    expect(overriddenRefusal(release, [s1, s2])).toBeNull();
+    expect(riderMedicalHold(release, [s1, s2])).toMatchObject({
+      kind: "not_cleared",
+      evaluatedOn: "2026-07-01",
+    });
+  });
+
+  it("leaves an earlier refusal under a clean release to the ordinary warning", () => {
+    const earlierNo = completedWaiver({
+      id: "earlier-no",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 200_000),
+      medicalClearanceDeclinedAt: new Date(SIGN_NOW.getTime() - 150_000),
+    });
+    const clean = completedWaiver({ id: "clean" });
+    expect(riderMedicalHold(clean, [earlierNo, clean])).toBeNull();
+    expect(overriddenRefusal(clean, [earlierNo, clean])).not.toBeNull();
+  });
+
+  it("says nothing for a clean release or none", () => {
+    expect(riderMedicalHold(completedWaiver({}), [])).toBeNull();
+    expect(riderMedicalHold(null, [])).toBeNull();
+  });
+
+  it("dates the riding-only warning in the shop's zone", () => {
+    const referral = completedWaiver({
+      status: "medical_review",
+      signedAt: new Date("2026-07-02T02:00:00.000Z"),
+    });
+    expect(
+      medicalWarningDays(null, "America/New_York", riderMedicalHold(referral, [referral])),
+    ).toEqual({ ridingReferredOn: "2026-07-01" });
   });
 });

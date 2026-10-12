@@ -74,6 +74,8 @@ export async function POST(request: Request) {
     body: parsed.data.body,
     receivedAt: nowDate(),
     providerMessageId: `e2e-${crypto.randomUUID()}`,
+    // The fixture stands in for a provider that vouched for the sender.
+    senderAuthenticated: true,
   });
   if (received.status !== "recorded") {
     return NextResponse.json({ error: received.status }, { status: 409 });

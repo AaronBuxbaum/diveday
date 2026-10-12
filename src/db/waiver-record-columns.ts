@@ -1,4 +1,5 @@
 import { getTableColumns } from "drizzle-orm";
+import { WAIVER_SEALED_FIELDS, type WaiverSealedField } from "@/lib/waiver-integrity";
 import type { WaiverStateFields } from "@/lib/waivers";
 import { waiverRecords } from "./schema";
 
@@ -10,13 +11,14 @@ import { waiverRecords } from "./schema";
  * - `templateBody` — the full release text as signed, the widest column on the
  *   row and the one a roster, a readiness pass or a booking handoff never
  *   shows. The signed copy (`getSignedWaiverRecordForShop`) and the
- *   integrity audit read it, whole-row, because the seal covers it.
+ *   integrity audit read it through {@link WAIVER_SEALED_COLUMNS}, because
+ *   the seal covers it.
  * - `draftSignerName`, `draftMedicalAnswers`, `draftGuardian` — what a bearer
  *   typed before signing. Nothing about readiness reads an unsigned draft.
  * - `tokenHash`, `tokenSealed` — the bearer link. A status read must never be
  *   able to hand it back out.
- * - `integrityHash` — only the integrity check reads the seal, and it reads
- *   the whole record with it.
+ * - `integrityHash` — only the integrity check reads the seal, through
+ *   {@link WAIVER_SEALED_COLUMNS}.
  *
  * `medicalAnswers` stays: the roster's medical-hold summary
  * (`flaggedMedicalPrompts`) reads it on a `medical_review` record.
@@ -44,3 +46,16 @@ export const WAIVER_STATE_COLUMNS = stateColumns;
  * read.
  */
 export type WaiverStateRecord = WaiverStateFields;
+
+const allColumns = getTableColumns(waiverRecords);
+
+/**
+ * **A waiver record as the integrity readers need it** (#2358): every column
+ * any seal version covers, and the seal (`WAIVER_SEALED_FIELDS`,
+ * src/lib/waiver-integrity.ts). Never the bearer token, the unsigned draft,
+ * the delivery columns or the shop's later acts on the row, none of which a
+ * seal covers or a signature log shows.
+ */
+export const WAIVER_SEALED_COLUMNS = Object.fromEntries(
+  WAIVER_SEALED_FIELDS.map((field) => [field, allColumns[field]]),
+) as { [Field in WaiverSealedField]: (typeof allColumns)[Field] };

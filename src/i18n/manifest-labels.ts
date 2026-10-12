@@ -1,4 +1,5 @@
 import type { RollCallCheckpoint, RollCallLabel } from "@/lib/manifests";
+import type { MedicalWarningDays } from "@/lib/waivers";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
@@ -57,4 +58,38 @@ const ROLL_CALL_STATE_KEYS: Record<RollCallLabel, StaffMessageKey> = {
  */
 export function rollCallLabelText(t: StaffTranslator, label: RollCallLabel): string {
   return t(ROLL_CALL_STATE_KEYS[label]);
+}
+
+/**
+ * **A row's medical warnings, strongest first**, as the chip words and the
+ * dated sentences, in the same order: a rider boarding riding only under a
+ * physician's "no", then under an open referral (H-109), then an earlier
+ * refusal a clean release stands over (H-98), then a referral it replaced
+ * (issue #1282). The live roll call, its printed sheet and the offline copy
+ * all read this one list, so the capsule is always the first entry and paper
+ * prints the rest.
+ */
+export function medicalWarningChips(t: StaffTranslator, days: MedicalWarningDays): string[] {
+  return [
+    days.ridingNotClearedOn ? t("manifest.medicalRidingOnlyNotClearedChip") : null,
+    days.ridingReferredOn ? t("manifest.medicalRidingOnlyReferralChip") : null,
+    days.refusedOn ? t("manifest.medicalEarlierRefusalChip") : null,
+    days.referredOn ? t("manifest.medicalReferralUnresolvedChip") : null,
+  ].filter((chip): chip is string => chip !== null);
+}
+
+/** The riding-only sentences of {@link medicalWarningChips}, dated. */
+export function ridingOnlyMedicalSentences(
+  t: StaffTranslator,
+  days: MedicalWarningDays,
+  formatDay: (day: NonNullable<MedicalWarningDays["ridingNotClearedOn"]>) => string,
+): string[] {
+  return [
+    days.ridingNotClearedOn
+      ? t("manifest.medicalRidingOnlyNotCleared", { date: formatDay(days.ridingNotClearedOn) })
+      : null,
+    days.ridingReferredOn
+      ? t("manifest.medicalRidingOnlyReferral", { date: formatDay(days.ridingReferredOn) })
+      : null,
+  ].filter((line): line is string => line !== null);
 }

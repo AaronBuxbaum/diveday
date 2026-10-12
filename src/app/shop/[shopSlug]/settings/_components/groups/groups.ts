@@ -5,6 +5,8 @@ export { BookingsGroup } from "./BookingsGroup";
 export { DataGroup } from "./DataGroup";
 export { MessagesGroup } from "./MessagesGroup";
 export { MoneyGroup } from "./MoneyGroup";
+export { NotificationsGroup } from "./NotificationsGroup";
+export { RarelyChangedGroup } from "./RarelyChangedGroup";
 export { RentalsGroup } from "./RentalsGroup";
 export { ShopGroup } from "./ShopGroup";
 export { TeamGroup } from "./TeamGroup";

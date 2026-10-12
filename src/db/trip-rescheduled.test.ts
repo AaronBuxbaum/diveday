@@ -1,0 +1,438 @@
+import { randomUUID } from "node:crypto";
+import { and, eq, inArray } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import { fileScopedShopContext } from "@/test/db";
+import { fakeEmail, fakeSms } from "@/test/fakes";
+import { createBookingParty } from "./bookings";
+import { claimDueHeldSends } from "./held-sends";
+import {
+  bookingCapabilities,
+  bookings,
+  heldSends,
+  notificationDeliveries,
+  people,
+  trips,
+} from "./schema";
+import { holdRescheduleNotice, sendRescheduleNotices } from "./trip-rescheduled";
+import { moveTrip, upcomingTripsWithCounts } from "./trips";
+
+/**
+ * **The reschedule notice** (ux review 2026-10-11, item 1). The security
+ * property first: one message per seat, to the address on *that seat's own*
+ * person record, and to nobody else — not the party lead who booked it, not a
+ * held seat's matched record, not a cancelled seat, not another shop's divers.
+ */
+
+const ORIGIN = "https://diveday.example";
+const ctx = fileScopedShopContext();
+
+async function movedTrip() {
+  const { db, shop } = ctx;
+  const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+  const reef = upcoming.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
+  if (!reef) throw new Error("demo reef trip missing");
+  // Everybody the seed already put on this departure is somebody else's
+  // test: cancel them so the audience is exactly the seats made below.
+  await db
+    .update(bookings)
+    .set({ status: "cancelled" })
+    .where(and(eq(bookings.tripId, reef.id), eq(bookings.shopId, shop.id)));
+  const party = await createBookingParty(db, [
+    {
+      actor: "public",
+      shopId: shop.id,
+      tripId: reef.id,
+      fullName: "Priya Shah",
+      email: "reschedule-priya@example.com",
+    },
+    {
+      actor: "public",
+      shopId: shop.id,
+      tripId: reef.id,
+      fullName: "Sam Shah",
+      email: "reschedule-sam@example.com",
+    },
+    { actor: "public", shopId: shop.id, tripId: reef.id, fullName: "Kid Shah" },
+  ]);
+  if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+  const [priya, sam, kid] = party.bookings.map((b) => b.bookingId);
+  const previousStartsAt = reef.startsAt;
+  const moved = await moveTrip(
+    db,
+    shop.id,
+    reef.id,
+    new Date(reef.startsAt.getTime() + 24 * 60 * 60 * 1000),
+  );
+  if (!moved.ok) throw new Error("move failed");
+  const now = new Date(previousStartsAt.getTime() - 5 * 24 * 60 * 60 * 1000);
+  return { db, shop, reef, priya, sam, kid, previousStartsAt, moved: moved.trip, now };
+}
+
+function providers() {
+  const email = fakeEmail();
+  const sms = fakeSms();
+  return {
+    email,
+    sms,
+    options: {
+      emailProvider: email.provider,
+      smsProvider: sms.provider,
+      whatsAppProviders: new Map(),
+      appOrigin: ORIGIN,
+    },
+  };
+}
+
+async function deliveriesFor(db: typeof ctx.db, bookingIds: string[]) {
+  return db
+    .select()
+    .from(notificationDeliveries)
+    .where(
+      and(
+        inArray(notificationDeliveries.bookingId, bookingIds),
+        eq(notificationDeliveries.kind, "trip_rescheduled"),
+      ),
+    );
+}
+
+describe("sendRescheduleNotices", () => {
+  it("tells each seat at its own address, and never the party lead about someone else's seat", async () => {
+    const { db, shop, reef, priya, sam, kid, previousStartsAt, moved, now } = await movedTrip();
+    const { email, options } = providers();
+    const outcome = await sendRescheduleNotices(
+      db,
+      shop.id,
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: previousStartsAt.toISOString(),
+        meetingPointMoved: false,
+      },
+      { ...options, now },
+    );
+    expect(outcome).toEqual({ told: 2, failed: 1, identityHeld: 0 });
+
+    // Every message's address is the address on its own booking's person.
+    const addressed = await db
+      .select({ bookingId: bookings.id, email: people.email })
+      .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(inArray(bookings.id, [priya, sam, kid]));
+    const own = new Map(addressed.map((row) => [row.bookingId, row.email]));
+    expect(email.sent).toHaveLength(2);
+    for (const sent of email.sent) {
+      if (sent.kind !== "trip_rescheduled") throw new Error(`unexpected ${sent.kind}`);
+      expect(sent.to).toBe(own.get(sent.bookingId));
+      expect(sent.previousStartsAt).toEqual(previousStartsAt);
+      expect(sent.startsAt).toEqual(moved.startsAt);
+      expect(sent.revision).toBe(moved.revision);
+      expect(sent.readinessUrl).toMatch(/^https:\/\/diveday\.example\/ready\//);
+      // The meeting point did not move, so the message does not restate it.
+      expect(sent.meetingPoint).toBeUndefined();
+    }
+    // The kid has no address of their own: the gap is recorded against the
+    // kid's seat, and nothing about it went to the lead who booked it.
+    expect(email.sent.map((n) => ("bookingId" in n ? n.bookingId : null)).sort()).toEqual(
+      [priya, sam].sort(),
+    );
+    const rows = await deliveriesFor(db, [priya, sam, kid]);
+    expect(Object.fromEntries(rows.map((row) => [row.bookingId, row.status]))).toEqual({
+      [priya]: "sent",
+      [sam]: "sent",
+      [kid]: "not_configured",
+    });
+  });
+
+  it("skips a held seat, a cancelled seat and a no-show", async () => {
+    const { db, shop, reef, priya, sam, kid, previousStartsAt, now } = await movedTrip();
+    await db.update(bookings).set({ identityUnconfirmedAt: now }).where(eq(bookings.id, priya));
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, sam));
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, kid));
+    const { email, sms, options } = providers();
+    const outcome = await sendRescheduleNotices(
+      db,
+      shop.id,
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: previousStartsAt.toISOString(),
+        meetingPointMoved: false,
+      },
+      { ...options, now },
+    );
+    expect(outcome).toEqual({ told: 0, failed: 0, identityHeld: 1 });
+    expect(email.sent).toHaveLength(0);
+    expect(sms.sent).toHaveLength(0);
+    expect(await deliveriesFor(db, [priya, sam, kid])).toHaveLength(0);
+  });
+
+  it("sends nothing for a trip id that is not this shop's", async () => {
+    const { db, reef, previousStartsAt, now } = await movedTrip();
+    const { email, sms, options } = providers();
+    const outcome = await sendRescheduleNotices(
+      db,
+      randomUUID(),
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: previousStartsAt.toISOString(),
+        meetingPointMoved: false,
+      },
+      { ...options, now },
+    );
+    expect(outcome.told + outcome.failed).toBe(0);
+    expect(email.sent).toHaveLength(0);
+    expect(sms.sent).toHaveLength(0);
+  });
+
+  it("texts a phone-only diver with the new time, where to meet and their trip prep", async () => {
+    const { db, shop, reef, kid, previousStartsAt, now } = await movedTrip();
+    const [kidRow] = await db.select().from(bookings).where(eq(bookings.id, kid));
+    await db.update(people).set({ phone: "+13055550142" }).where(eq(people.id, kidRow.personId));
+    await db
+      .update(trips)
+      .set({ meetingPointLabel: "North Pier", meetingPointAddress: "1 Dock St" })
+      .where(eq(trips.id, reef.id));
+    const { sms, options } = providers();
+    await sendRescheduleNotices(
+      db,
+      shop.id,
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: previousStartsAt.toISOString(),
+        meetingPointMoved: true,
+      },
+      { ...options, now },
+    );
+    const texts = sms.sent.filter((m) => m.to === "+13055550142");
+    expect(texts).toHaveLength(1);
+    expect(texts[0].body).toContain(`${shop.name}: we moved ${reef.title} to`);
+    expect(texts[0].body).toContain("Meet at North Pier, 1 Dock St.");
+    expect(texts[0].body).toMatch(/Your trip prep: https:\/\/diveday\.example\/ready\//);
+    expect((await deliveriesFor(db, [kid])).map((row) => [row.bookingId, row.status])).toEqual([
+      [kid, "sent"],
+    ]);
+  });
+
+  it("tells nobody about a rehearsal departure, by email or by text", async () => {
+    const { db, shop, reef, previousStartsAt, now } = await movedTrip();
+    await db.update(trips).set({ isRehearsal: true, isPrivate: true }).where(eq(trips.id, reef.id));
+    const { email, sms, options } = providers();
+    const outcome = await sendRescheduleNotices(
+      db,
+      shop.id,
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: previousStartsAt.toISOString(),
+        meetingPointMoved: false,
+      },
+      { ...options, now },
+    );
+    expect(outcome.told + outcome.failed).toBe(0);
+    expect(email.sent).toHaveLength(0);
+    expect(sms.sent).toHaveLength(0);
+  });
+
+  it("says nothing when the departure is back at the time the divers were told", async () => {
+    const { db, shop, reef, moved, now } = await movedTrip();
+    const { email, options } = providers();
+    const outcome = await sendRescheduleNotices(
+      db,
+      shop.id,
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: moved.startsAt.toISOString(),
+        meetingPointMoved: false,
+      },
+      { ...options, now },
+    );
+    expect(outcome.told).toBe(0);
+    expect(email.sent).toHaveLength(0);
+  });
+  it("mints no trip-prep link for a seat with no email and no phone", async () => {
+    const { db, shop, reef, kid, previousStartsAt, now } = await movedTrip();
+    const { options } = providers();
+    await sendRescheduleNotices(
+      db,
+      shop.id,
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: previousStartsAt.toISOString(),
+        meetingPointMoved: false,
+      },
+      { ...options, now },
+    );
+    expect(
+      await db.select().from(bookingCapabilities).where(eq(bookingCapabilities.bookingId, kid)),
+    ).toEqual([]);
+    expect((await deliveriesFor(db, [kid])).map((row) => row.status)).toEqual(["not_configured"]);
+  });
+});
+
+describe("holdRescheduleNotice", () => {
+  it("holds one notice for the seats on board, and two moves inside the hold are one", async () => {
+    const { db, shop, reef, previousStartsAt, moved, now } = await movedTrip();
+    const first = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: previousStartsAt,
+      meetingPointMoved: false,
+      actorPersonId: null,
+      now,
+    });
+    expect(first?.told).toBe(3);
+
+    const again = await moveTrip(
+      db,
+      shop.id,
+      reef.id,
+      new Date(moved.startsAt.getTime() + 60 * 60 * 1000),
+    );
+    if (!again.ok) throw new Error("second move failed");
+    const second = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: again.previousStartsAt,
+      meetingPointMoved: false,
+      actorPersonId: null,
+      now,
+    });
+    const held = await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id));
+    expect(held.map((row) => row.id)).toEqual([second?.id]);
+    // The divers were told the original time, so that is what the one notice says.
+    expect(held[0].payload).toMatchObject({ previousStartsAt: previousStartsAt.toISOString() });
+
+    // Drained by the sweep, it sends once per seat with an address.
+    const { email, options } = providers();
+    const due = await claimDueHeldSends(db, new Date(now.getTime() + 60_000));
+    const mine = due.filter((row) => row.id === second?.id);
+    expect(mine).toHaveLength(1);
+    const payload = mine[0].payload;
+    if (payload.kind !== "trip_rescheduled") throw new Error("wrong kind");
+    await sendRescheduleNotices(db, shop.id, payload, { ...options, now });
+    expect(email.sent).toHaveLength(2);
+  });
+
+  it("holds nothing when the move put the departure back where the divers were told", async () => {
+    const { db, shop, reef, previousStartsAt, now } = await movedTrip();
+    await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: previousStartsAt,
+      meetingPointMoved: false,
+      actorPersonId: null,
+      now,
+    });
+    const back = await moveTrip(db, shop.id, reef.id, previousStartsAt);
+    if (!back.ok) throw new Error("move back failed");
+    const held = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: back.previousStartsAt,
+      meetingPointMoved: false,
+      actorPersonId: null,
+      now,
+    });
+    expect(held).toBeNull();
+    expect(await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toHaveLength(0);
+  });
+
+  it("holds nothing for a rehearsal departure", async () => {
+    const { db, shop, reef, previousStartsAt, now } = await movedTrip();
+    await db.update(trips).set({ isRehearsal: true, isPrivate: true }).where(eq(trips.id, reef.id));
+    expect(
+      await holdRescheduleNotice(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        movedFrom: previousStartsAt,
+        meetingPointMoved: false,
+        actorPersonId: null,
+        now,
+      }),
+    ).toBeNull();
+  });
+
+  it("holds nothing for a departure nobody is booked on", async () => {
+    const { db, shop, reef, previousStartsAt, now } = await movedTrip();
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.tripId, reef.id));
+    expect(
+      await holdRescheduleNotice(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        movedFrom: previousStartsAt,
+        meetingPointMoved: false,
+        actorPersonId: null,
+        now,
+      }),
+    ).toBeNull();
+  });
+
+  it("records the time the divers were told, and Tell them reads it back", async () => {
+    const { db, shop, reef, previousStartsAt, moved, now } = await movedTrip();
+    const first = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: previousStartsAt,
+      meetingPointMoved: false,
+      actorPersonId: null,
+      now,
+    });
+    const [trip] = await db.select().from(trips).where(eq(trips.id, reef.id));
+    expect(trip.diversToldStartsAt).toEqual(previousStartsAt);
+
+    // Undo, then "Tell them": no time comes with it, the record supplies one.
+    await db.delete(heldSends).where(eq(heldSends.id, first?.id ?? ""));
+    const tell = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      meetingPointMoved: false,
+      actorPersonId: null,
+      now,
+    });
+    const [held] = await db
+      .select()
+      .from(heldSends)
+      .where(eq(heldSends.id, tell?.id ?? ""));
+    expect(held.payload).toMatchObject({ previousStartsAt: previousStartsAt.toISOString() });
+
+    // Once sent, the divers know the time: nothing more to tell.
+    await db.delete(heldSends).where(eq(heldSends.id, tell?.id ?? ""));
+    const { options } = providers();
+    await sendRescheduleNotices(
+      db,
+      shop.id,
+      held.payload as Parameters<typeof sendRescheduleNotices>[2],
+      { ...options, now },
+    );
+    const [after] = await db.select().from(trips).where(eq(trips.id, reef.id));
+    expect(after.diversToldStartsAt).toBeNull();
+    expect(after.startsAt).toEqual(moved.startsAt);
+    expect(
+      await holdRescheduleNotice(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        meetingPointMoved: false,
+        actorPersonId: null,
+        now,
+      }),
+    ).toBeNull();
+  });
+
+  it("holds nothing for Tell them when no move was ever recorded", async () => {
+    const { db, shop, reef, now } = await movedTrip();
+    expect(
+      await holdRescheduleNotice(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        meetingPointMoved: false,
+        actorPersonId: null,
+        now,
+      }),
+    ).toBeNull();
+    expect(await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toHaveLength(0);
+  });
+});

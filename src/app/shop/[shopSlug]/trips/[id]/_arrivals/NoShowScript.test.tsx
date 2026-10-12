@@ -173,4 +173,59 @@ describe("NoShowSalvage", () => {
     expect(container.querySelectorAll("button")).toHaveLength(0);
     expect(container.querySelectorAll("form")).toHaveLength(0);
   });
+
+  /**
+   * **The rebooking offer goes to the diver in one tap** (UX review
+   * 2026-10-11, item 14): beside each day's seating link, one button that
+   * posts the departure and the diver, and nothing that charges or refunds.
+   */
+  it("puts one send button beside each offered day, posting the day and the diver", () => {
+    const { container } = render(
+      <NoShowSalvage
+        offerAction={vi.fn()}
+        copy={salvage({
+          line: "Nobody is waiting. Offer Nadia Petrov another day.",
+          links: [
+            {
+              href: "/shop/blue-mantis/bookings/new/trip-2?diverq=Nadia%20Petrov",
+              label: "Add them to Two-Tank Reef, Sat 8:00 AM",
+              offer: {
+                tripId: "trip-2",
+                ariaLabel: "Email Nadia Petrov an offer for Two-Tank Reef, Sat 8:00 AM",
+              },
+            },
+          ],
+          offerCopy: {
+            personId: "person-1",
+            label: "Email them this date",
+            pending: "Sending…",
+            sendFailed: "That didn’t send. Tap it again.",
+          },
+        })}
+      />,
+    );
+    const send = screen.getByRole("button", {
+      name: "Email Nadia Petrov an offer for Two-Tank Reef, Sat 8:00 AM",
+    });
+    const form = send.closest("form");
+    expect(form?.querySelector<HTMLInputElement>('input[name="offerTripId"]')?.value).toBe(
+      "trip-2",
+    );
+    expect(form?.querySelector<HTMLInputElement>('input[name="personId"]')?.value).toBe("person-1");
+    expect(container.querySelectorAll("button")).toHaveLength(1);
+  });
+
+  it("draws no send button without an action to post to", () => {
+    const { container } = render(
+      <NoShowSalvage
+        copy={salvage({
+          links: [
+            { href: "/x", label: "Add them", offer: { tripId: "trip-2", ariaLabel: "Email" } },
+          ],
+          offerCopy: { personId: "person-1", label: "Email", pending: "…", sendFailed: "!" },
+        })}
+      />,
+    );
+    expect(container.querySelectorAll("button")).toHaveLength(0);
+  });
 });

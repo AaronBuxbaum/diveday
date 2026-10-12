@@ -145,6 +145,11 @@ export const notificationKind = pgEnum("notification_kind", [
   // money (src/db/booking-cancelled-notice.ts). Tracked per booking so the
   // shop can see the diver was told.
   "booking_cancelled",
+  // The departure moved: old time, new time, where to go if that moved too
+  // (src/db/trip-rescheduled.ts, ux review 2026-10-11 item 1). Tracked per
+  // booking, by whichever channel carried it, so the roster can show who
+  // heard.
+  "trip_rescheduled",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [
@@ -492,6 +497,23 @@ export const inboundMessages = pgTable(
      * sentences, which is nearly all of them.
      */
     keywordIntent: inboundKeywordIntent("keyword_intent"),
+    /**
+     * Whether the channel vouched for `from_address` (#2311): WhatsApp
+     * always, email only when SES's DMARC or aligned SPF check passed — the
+     * same answer that decides whether the message may be matched to a diver
+     * (`recordInboundMessage`). Stored so the after-hours ping's count reads
+     * the same gate its trigger does. False by default: a writer that forgot
+     * to say leaves a message nobody vouched for, never one that pages staff.
+     */
+    senderAuthenticated: boolean("sender_authenticated").notNull().default(false),
+    /**
+     * SES did not pass it as not-spam (#2311): FAIL, GRAY, PROCESSING_FAILED
+     * or no verdict at all. Filed anyway — a diver's reply from hotel Wi-Fi
+     * trips it often enough that dropping it would lose real answers — but it
+     * never pages a staffer and is never counted as a diver waiting. False on
+     * every other channel, which gives no verdict to read.
+     */
+    spamFlagged: boolean("spam_flagged").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -592,22 +614,25 @@ export const shopWhatsappAccounts = pgTable(
     shopId: uuid("shop_id")
       .primaryKey()
       .references(() => shops.id),
-    /** Meta's id for the sending number — the path segment of the Cloud API send endpoint. */
+    /**
+     * Meta's id for the sending number — the path segment of the Cloud API send
+     * endpoint, and **the tenant key for everything inbound** (H-83, issue
+     * #1767). Meta names it in `value.metadata.phone_number_id` on every
+     * webhook change, and `shopIdForWhatsAppEvent` turns it into the shop whose
+     * bookings a reply keyword acts on. The unique index below is why that
+     * resolution has one answer.
+     */
     phoneNumberId: text("phone_number_id").notNull(),
     /** The human-readable number Meta reports for it, shown back to staff for confirmation. */
     displayPhoneNumber: text("display_phone_number"),
     /**
-     * The WhatsApp Business Account the number belongs to — and the **tenant key
-     * for everything inbound**, not merely a support note. Meta names the WABA in
-     * `entry[].id` on every webhook delivery, and `shopIdForWhatsAppWaba` is what
-     * turns that into the shop whose bookings a reply keyword acts on. The unique
-     * index below is why that resolution has one answer: without it a chain
-     * completing Embedded Signup for two of its DiveDay shops against one Meta
-     * Business put two rows here, and a diver's message — up to a cancellation —
-     * landed in whichever came back first (issue #1715).
+     * The WhatsApp Business Account the number belongs to. **Shared across
+     * shops on purpose** (H-83): a chain with one Meta Business and a number
+     * per location connects each shop to its own number under the one WABA.
+     * It is never the tenant key: an event naming a WABA is placed only when
+     * its number's row records that same WABA (`shopIdForWhatsAppEvent`).
      *
-     * Nullable on purpose, and Postgres lets nulls repeat under a unique index:
-     * a row connected before a WABA was recorded stays legal.
+     * Nullable: a row connected before a WABA was recorded stays legal.
      */
     wabaId: text("waba_id"),
     /**
@@ -637,7 +662,10 @@ export const shopWhatsappAccounts = pgTable(
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("shop_whatsapp_accounts_waba_unique").on(table.wabaId)],
+  (table) => [
+    uniqueIndex("shop_whatsapp_accounts_phone_number_unique").on(table.phoneNumberId),
+    index("shop_whatsapp_accounts_waba_idx").on(table.wabaId),
+  ],
 );
 
 /**

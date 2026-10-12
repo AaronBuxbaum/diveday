@@ -360,6 +360,34 @@ describe("the terminal outcomes are flat", () => {
     expect(named.container.textContent).not.toContain("DiveDay.");
     expect(named.container.textContent).toContain("Blue Mantis Divers");
   });
+
+  /**
+   * UX review 2026-10-10, item 11: the shopless card ended on "Ask your dive
+   * shop for a fresh link" with nothing to tap. It now has DiveDay's door; a
+   * card that names its shop offers the shop's contact and never DiveDay's.
+   */
+  it("ExpiredLinkCard gives a shopless dead link a door, and a shop's never DiveDay's", () => {
+    const t = diverTranslator("en-US");
+    const { unmount } = render(
+      <ExpiredLinkCard
+        title="This link isn’t available"
+        text="Ask your dive shop for a fresh link."
+        t={t}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Go to DiveDay" }).getAttribute("href")).toBe("/");
+    unmount();
+    render(
+      <ExpiredLinkCard
+        title="Expired"
+        text="Ask the shop."
+        shop={{ name: "Blue Mantis Divers", contactEmail: "desk@example.com", contactPhone: null }}
+        t={t}
+      />,
+    );
+    expect(screen.queryByRole("link", { name: "Go to DiveDay" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Contact Blue Mantis Divers" })).toBeTruthy();
+  });
 });
 
 /**

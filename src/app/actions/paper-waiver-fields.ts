@@ -1,9 +1,25 @@
+import { z } from "zod";
 import type { InPersonWaiverOutcome } from "@/db/waivers";
+import { checkbox, formValue, parseForm } from "@/lib/form-parse";
 import type {
   PaperWaiverFormState,
   PaperWaiverRefusal,
   PaperWaiverTypedValues,
 } from "@/lib/paper-waiver-form";
+
+/** Read raw, never refused: the writer is what validates (see below). */
+const paperWaiverForm = z.object({
+  guardianName: formValue(),
+  guardianRelationship: formValue(),
+  guardianNamesakeAttested: checkbox(),
+  medicalAttested: checkbox(),
+});
+
+function paperWaiverFields(formData: FormData): z.infer<typeof paperWaiverForm> {
+  const parsed = parseForm(paperWaiverForm, formData);
+  if (!parsed.ok) throw new Error("unreadable paper waiver form");
+  return parsed.data;
+}
 
 /**
  * **The fields `PaperWaiverControl` submits for a minor**, read back
@@ -31,14 +47,15 @@ import type {
 export function paperGuardianFrom(
   formData: FormData,
 ): { name: string; relationship: string; namesakeAttested: boolean } | undefined {
-  const name = formData.get("guardianName");
-  const relationship = formData.get("guardianRelationship");
+  const form = paperWaiverFields(formData);
+  const name = form.guardianName;
+  const relationship = form.guardianRelationship;
   if (typeof name !== "string" || typeof relationship !== "string") return undefined;
   if (!name.trim() || !relationship.trim()) return undefined;
   return {
     name,
     relationship,
-    namesakeAttested: formData.get("guardianNamesakeAttested") === "on",
+    namesakeAttested: form.guardianNamesakeAttested,
   };
 }
 
@@ -61,10 +78,11 @@ export function paperGuardianFrom(
  * refusal would re-assert something the staffer did not re-assert.
  */
 export function paperWaiverTypedFrom(formData: FormData): PaperWaiverTypedValues {
-  const name = formData.get("guardianName");
-  const relationship = formData.get("guardianRelationship");
+  const form = paperWaiverFields(formData);
+  const name = form.guardianName;
+  const relationship = form.guardianRelationship;
   return {
-    medicalAttested: formData.get("medicalAttested") === "on",
+    medicalAttested: form.medicalAttested,
     guardianName: typeof name === "string" ? name : "",
     guardianRelationship: typeof relationship === "string" ? relationship : "",
   };

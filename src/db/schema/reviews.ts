@@ -131,6 +131,48 @@ export const tripReviews = pgTable(
 );
 
 /**
+ * **The shop's public answer under a review** (batch 4, K2; glossary
+ * "Review reply").
+ *
+ * One live reply per review: the partial unique index holds it, so an edit
+ * rewrites the row and a removal soft-deletes it (ADR
+ * 20260820-every-delete-is-soft), after which a new reply may be written. It
+ * renders under the review wherever published reviews render, signed with the
+ * shop's name rather than the staffer's: the shop is the one answering.
+ *
+ * Plain text, bounded by `MAX_REVIEW_REPLY_LENGTH` (src/lib/reviews.ts) in
+ * the writer and by the check below, and rendered as a React text child, never
+ * as markup.
+ */
+export const reviewReplies = pgTable(
+  "review_replies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => tripReviews.id),
+    body: text("body").notNull(),
+    /** Who wrote or last edited the reply. Not shown publicly. */
+    writtenByPersonId: uuid("written_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("review_replies_review_live_unique")
+      .on(table.reviewId)
+      .where(sql`${table.deletedAt} is null`),
+    index("review_replies_shop_idx").on(table.shopId),
+    check("review_replies_body_length", sql`length(trim(${table.body})) between 1 and 400`),
+  ],
+);
+
+/**
  * Why a shop took a review down. A code, never a sentence — the UI picks the
  * words (ADR 20260731-domain-layer-copy-leaks) — and a deliberately short list,
  * because the list *is* the constraint: an unconstrained hide button plus a

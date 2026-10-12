@@ -27,7 +27,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * Pending crew news and the hourly pass that tells it (ADR
@@ -45,6 +45,8 @@ export type CrewNoticeInput = {
   change: CrewNoticeChange;
   /** Who made the change; `null` when no person did. */
   actorPersonId: string | null;
+  /** On `time_moved`: when the departure left before the move. */
+  previousStartsAt?: Date | null;
 };
 
 /**
@@ -59,7 +61,23 @@ export async function recordCrewNotices(
   notices: readonly CrewNoticeInput[],
   now: Date = nowDate(),
 ): Promise<void> {
-  const told = notices.filter((notice) => notice.personId !== notice.actorPersonId);
+  const addressed = notices.filter((notice) => notice.personId !== notice.actorPersonId);
+  if (addressed.length === 0) return;
+  // A rehearsal tells its crew nothing (ADR 20261012-rehearsal-departures), so
+  // its news is never written down to be told later.
+  const rehearsals = await tx
+    .select({ id: trips.id })
+    .from(trips)
+    // diveday:allow-deleted-trips: only asks which of these are rehearsals.
+    // diveday:allow-rehearsal: the same question.
+    .where(
+      and(
+        inArray(trips.id, [...new Set(addressed.map((notice) => notice.tripId))]),
+        eq(trips.isRehearsal, true),
+      ),
+    );
+  const rehearsalIds = new Set(rehearsals.map((row) => row.id));
+  const told = addressed.filter((notice) => !rehearsalIds.has(notice.tripId));
   if (told.length === 0) return;
   await tx.insert(crewNotices).values(told.map((notice) => ({ ...notice, createdAt: now })));
 }
@@ -82,7 +100,21 @@ type ShopRow = {
   isDemo: boolean;
 };
 
-type ClaimedRow = { id: string; tripId: string; change: CrewNoticeChange; seq: number };
+type ClaimedRow = {
+  id: string;
+  tripId: string;
+  change: CrewNoticeChange;
+  seq: number;
+  previousStartsAt: Date | null;
+};
+
+const claimedColumns = {
+  id: crewNotices.id,
+  tripId: crewNotices.tripId,
+  change: crewNotices.change,
+  seq: crewNotices.seq,
+  previousStartsAt: crewNotices.previousStartsAt,
+};
 
 /** What one person's settled notices make, and what became of each row. */
 type CrewNewsDraft = {
@@ -113,7 +145,7 @@ async function draftCrewNews(
     now: Date;
   },
 ): Promise<CrewNewsDraft> {
-  const news = netCrewNotices(input.rows);
+  let news = netCrewNotices(input.rows);
   const newsTripIds = new Set(news.map((entry) => entry.tripId));
   const draft: CrewNewsDraft = {
     notification: null,
@@ -122,7 +154,6 @@ async function draftCrewNews(
     newsTripIds,
   };
   if (news.length === 0) return draft;
-  const changeByTrip = new Map(news.map((entry) => [entry.tripId, entry.change]));
   const tripRows = await db
     .select({
       id: trips.id,
@@ -136,12 +167,32 @@ async function draftCrewNews(
       tripAssignments,
       and(eq(tripAssignments.tripId, trips.id), eq(tripAssignments.personId, input.personId)),
     )
-    .where(and(liveTrip(), eq(trips.shopId, input.shop.id), inArray(trips.id, [...newsTripIds])))
+    .where(
+      and(
+        liveTrip(),
+        notRehearsal(),
+        eq(trips.shopId, input.shop.id),
+        inArray(trips.id, [...newsTripIds]),
+      ),
+    )
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
+  // A departure moved and moved back before the news settled leaves at the
+  // time its crew already knew: no news, so its rows are stamped `netted`.
+  const startsAtById = new Map(tripRows.map((trip) => [trip.id, trip.startsAt.getTime()]));
+  news = news.filter((entry) => {
+    const movedBack =
+      entry.change === "time_moved" &&
+      entry.previousStartsAt?.getTime() === startsAtById.get(entry.tripId);
+    if (movedBack) newsTripIds.delete(entry.tripId);
+    return !movedBack;
+  });
+  const newsByTrip = new Map(news.map((entry) => [entry.tripId, entry]));
+  const changeByTrip = new Map(news.map((entry) => [entry.tripId, entry.change]));
   // A departure is told while it is still ahead, and — unless the news is that
   // it was called off — still running.
   const tellable = tripRows.filter(
     (trip) =>
+      newsByTrip.has(trip.id) &&
       trip.startsAt > input.now &&
       (trip.status === "scheduled" || changeByTrip.get(trip.id) === "called_off"),
   );
@@ -202,6 +253,9 @@ async function draftCrewNews(
     timezone: input.shop.timezone,
     changes: listed.map((trip) => ({
       change: changeByTrip.get(trip.id) as CrewNoticeChange,
+      ...(newsByTrip.get(trip.id)?.previousStartsAt
+        ? { previousStartsAt: newsByTrip.get(trip.id)?.previousStartsAt }
+        : {}),
       role: trip.role,
       tripTitle: trip.title,
       startsAt: trip.startsAt,
@@ -347,13 +401,22 @@ export async function flushUrgentCrewNotices(
     const due = await db
       .selectDistinct({ shopId: crewNotices.shopId, personId: crewNotices.personId })
       .from(crewNotices)
+      // diveday:allow-rehearsal: `recordCrewNotices` never writes a rehearsal's
+      // notice, and the tell above reads the trip again with the filter.
       .innerJoin(trips, eq(trips.id, crewNotices.tripId))
       .where(
         and(
           eq(crewNotices.shopId, input.shopId),
           isNull(crewNotices.settledAt),
           inArray(crewNotices.tripId, [...input.tripIds]),
-          or(eq(crewNotices.change, "called_off"), lte(trips.startsAt, urgentBy)),
+          or(
+            eq(crewNotices.change, "called_off"),
+            lte(trips.startsAt, urgentBy),
+            // A departure moved *away* from the next day is as late a piece
+            // of news as one moved into it: the crew would still turn up at
+            // the old time (#2283).
+            and(eq(crewNotices.change, "time_moved"), lte(crewNotices.previousStartsAt, urgentBy)),
+          ),
         ),
       );
     await tellEach(db, due, { now, provider: input.provider, origin }, summary, null);
@@ -401,12 +464,7 @@ async function tellEach(
             cutoff ? lte(crewNotices.createdAt, cutoff) : undefined,
           ),
         )
-        .returning({
-          id: crewNotices.id,
-          tripId: crewNotices.tripId,
-          change: crewNotices.change,
-          seq: crewNotices.seq,
-        });
+        .returning(claimedColumns);
       if (claimed.length === 0) continue;
       summary.settled += 1;
       const told = await tellCrewMember(db, shop, personId, claimed, options);
@@ -440,6 +498,7 @@ export async function recordCrewCalledOff(
     .where(
       and(
         liveTrip(),
+        notRehearsal(),
         eq(trips.shopId, input.shopId),
         inArray(tripAssignments.tripId, [...input.tripIds]),
       ),
@@ -451,6 +510,43 @@ export async function recordCrewCalledOff(
       tripId: row.tripId,
       personId: row.personId,
       change: "called_off" as const,
+      actorPersonId: input.actorPersonId,
+    })),
+    input.now,
+  );
+}
+
+/**
+ * Record a moved start time for everyone on the crew of this departure, inside
+ * the transaction that moves it (`moveTrip`, `updateTrip`; #2283). The caller
+ * tells them once it commits (`flushUrgentCrewNotices`), which sends at once
+ * when either the old or the new time is within the urgent window.
+ */
+export async function recordCrewTimeMoved(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    tripId: string;
+    previousStartsAt: Date;
+    actorPersonId: string | null;
+    now: Date;
+  },
+): Promise<void> {
+  const crew = await tx
+    .select({ personId: tripAssignments.personId })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(
+      and(liveTrip(), eq(trips.shopId, input.shopId), eq(tripAssignments.tripId, input.tripId)),
+    );
+  await recordCrewNotices(
+    tx,
+    crew.map((row) => ({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      personId: row.personId,
+      change: "time_moved" as const,
+      previousStartsAt: input.previousStartsAt,
       actorPersonId: input.actorPersonId,
     })),
     input.now,
@@ -470,12 +566,7 @@ export async function previewCrewNotices(
   const [shop] = await db.select(shopColumns).from(shops).where(eq(shops.id, input.shopId));
   if (!shop) return null;
   const rows = await db
-    .select({
-      id: crewNotices.id,
-      tripId: crewNotices.tripId,
-      change: crewNotices.change,
-      seq: crewNotices.seq,
-    })
+    .select(claimedColumns)
     .from(crewNotices)
     .where(
       and(

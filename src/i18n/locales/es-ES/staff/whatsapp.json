@@ -46,7 +46,7 @@
     "signup-failed-subscribe": "Tu número se conectó, pero DiveDay no pudo suscribirse a sus actualizaciones de entrega. Presiona Conectar para intentarlo de nuevo.",
     "signup-failed-template": "Tu número se conectó, pero no se pudo enviar la plantilla de mensaje a revisión. Presiona Conectar para intentarlo de nuevo.",
     "signup-busy": "Ya hay otra conexión de WhatsApp en curso. Vuelve a intentarlo en un minuto.",
-    "waba-already-connected": "Esa cuenta de WhatsApp Business ya está conectada a otro centro de DiveDay, y una cuenta sirve a un solo centro. Desconectarla allí la libera para este."
+    "phone-number-already-connected": "Ese número de WhatsApp ya está conectado a otro centro de DiveDay. Desconéctalo allí o conecta otro número."
   },
   "signup": {
     "connect": "Conectar WhatsApp",

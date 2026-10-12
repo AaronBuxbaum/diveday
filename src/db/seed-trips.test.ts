@@ -4,7 +4,7 @@ import { inWaterCrewRole } from "@/lib/crew-roles";
 import { seededShopContext } from "@/test/db";
 import { people, personRoles, tripAssignments, trips } from "./schema";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed-cast";
-import { crewClashes } from "./trips-crew";
+import { crewClashes, setTripCrew } from "./trips-crew";
 
 /**
  * DOM-M7 (review 20260802). `crew-roles.test.ts` asserts the rule abstractly —
@@ -169,5 +169,59 @@ describe("the seeded board holds no standing crew clash", () => {
     }
 
     expect(clashing).toEqual([]);
+  });
+});
+
+/**
+ * **Every seeded crew is one `setTripCrew` would write (issue #1813).** The
+ * five seed modules insert `trip_assignments` directly, and Aaron ruled (2026-09-16) that the
+ * question of routing them through the product writer be measured before
+ * anything was converted. Measured on 2026-10-12: `setTripCrew` accepted all
+ * twelve of `seed-trips`' crews unchanged, at no measurable cost to the
+ * template build — but it records a pending crew notice for every assignment
+ * (26 rows), flushes the urgent ones and publishes a manifest event per trip,
+ * which is news about changes that never happened sitting in the fixture. So
+ * the inserts stay direct, and this asks the writer's whole question instead,
+ * for every module's crews at once: replay each seeded roster through
+ * `setTripCrew` unchanged and expect it accepted. It covers every constraint
+ * the writer enforces — unknown staff, overlap, an unstaffed course session,
+ * an instructor rostered off the water — where the clash walk above covers one.
+ */
+describe("every seeded crew passes the product's own crew writer", () => {
+  it("accepts each seeded roster, unchanged, through setTripCrew", async () => {
+    const { db, shop } = await seededShopContext();
+
+    const rows = await db
+      .select({
+        tripId: tripAssignments.tripId,
+        title: trips.title,
+        personId: tripAssignments.personId,
+        tripRole: tripAssignments.tripRole,
+      })
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .where(
+        and(eq(trips.shopId, shop.id), ne(trips.status, "cancelled"), isNull(trips.deletedAt)),
+      );
+    const rosters = new Map<string, { title: string; crew: typeof rows }>();
+    for (const row of rows) {
+      const roster = rosters.get(row.tripId) ?? { title: row.title, crew: [] };
+      roster.crew.push(row);
+      rosters.set(row.tripId, roster);
+    }
+    expect(rosters.size).toBeGreaterThan(0);
+
+    const refused: string[] = [];
+    for (const [tripId, { title, crew }] of rosters) {
+      const accepted = await setTripCrew(
+        db,
+        shop.id,
+        tripId,
+        crew.map(({ personId, tripRole }) => ({ personId, tripRole })),
+      );
+      if (!accepted) refused.push(title);
+    }
+
+    expect(refused).toEqual([]);
   });
 });

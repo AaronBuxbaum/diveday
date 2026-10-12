@@ -1,4 +1,18 @@
-import { and, countDistinct, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  countDistinct,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import {
   checkoutKeptRatio,
   type OrderLineKind,
@@ -11,19 +25,22 @@ import {
 } from "@/lib/report-lines";
 import type { DbExecutor } from "./client";
 import { packageOrderStillBacks } from "./dive-packages";
+import { listShopPayoutsArriving, type ShopPayout } from "./payouts";
 import { queryAll } from "./query-helpers";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
+  bookingPayments,
   bookings,
   divePackageEntitlements,
   divePackages,
+  importedPaymentHistory,
   orderLineItems,
   orders,
   trips,
   workOrderBills,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * The three facts the Reports page adds under the month's headline figures
@@ -39,6 +56,16 @@ export type MonthMoneyDetail = {
   packageDivesOwed: { dives: number; valueCents: number };
   /** Distinct divers on this month's departures, and how many had dived with the shop before. */
   divers: { total: number; returning: number };
+  /**
+   * What left the month's money (UX review 2026-10-11, item 17), on the same
+   * paid-in-the-month basis as `lines`: refunds of money paid this month, what
+   * discount codes took off this month's checkouts, and Stripe's fees on the
+   * payouts that reached the bank this month — null when no payout this month
+   * says what its fees were, which is not the same as none.
+   */
+  out: { refundedCents: number; discountedCents: number; stripeFeesCents: number | null };
+  /** Stripe payouts arriving at the bank this month, oldest first (ADR 20261012-payouts-reach-diveday). */
+  payouts: ShopPayout[];
 };
 
 /** Same set the roster and every other report figure count as "on the boat". */
@@ -46,19 +73,98 @@ const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
 /** An order the shop still holds money on; a fully refunded one holds none. */
 const KEPT_ORDER_STATUSES = ["paid", "partly_refunded"] as const;
 
+/** Money a staff member marked by hand: what the booking holds now, not a refunded or waived one. */
+const MARKED_PAYMENT_STATUSES = ["paid", "deposit_paid", "partly_refunded"] as const;
+
+/** A month's UTC calendar bounds, or the given window when no month is named. */
+function payoutWindow(
+  month: { year: number; month: number } | undefined,
+  from: Date,
+  to: Date,
+): { from: Date; to: Date } {
+  if (!month) return { from, to };
+  return {
+    from: new Date(Date.UTC(month.year, month.month - 1, 1)),
+    to: new Date(Date.UTC(month.year, month.month, 1)),
+  };
+}
+
 export async function getMonthMoneyDetail(
   db: DbExecutor,
   shopId: string,
   startUtc: Date,
   endUtc: Date,
   now: Date,
+  /** The shop's currency and zone: imported history is counted in that currency, by its own calendar day. */
+  shopMoney: { currency: string; timeZone: string },
+  /**
+   * The calendar month a payout's arrival day is read against. Stripe states
+   * that day at UTC midnight, so payouts are read over the month's UTC
+   * calendar bounds rather than the shop's: a shop's month starts hours after
+   * a payout that arrives on its first day. Absent, the month's own bounds.
+   */
+  payoutMonth?: { year: number; month: number },
 ): Promise<MonthMoneyDetail> {
-  const [lines, packageDivesOwed, divers] = await queryAll(db, [
-    () => moneyByLine(db, shopId, startUtc, endUtc),
+  const [lines, packageDivesOwed, divers, out, payouts] = await queryAll(db, [
+    () => moneyByLine(db, shopId, startUtc, endUtc, shopMoney),
     () => packageDivesOwedAt(db, shopId, endUtc < now ? endUtc : now),
     () => returningDivers(db, shopId, startUtc, endUtc),
+    () => moneyOut(db, shopId, startUtc, endUtc),
+    () => listShopPayoutsArriving(db, shopId, payoutWindow(payoutMonth, startUtc, endUtc)),
   ]);
-  return { lines, packageDivesOwed, divers };
+  const paidFees = payouts.flatMap((payout) =>
+    payout.status === "paid" && payout.feeCents !== null ? [payout.feeCents] : [],
+  );
+  return {
+    lines,
+    packageDivesOwed,
+    divers,
+    out: {
+      ...out,
+      stripeFeesCents: paidFees.length > 0 ? paidFees.reduce((sum, fee) => sum + fee, 0) : null,
+    },
+    payouts,
+  };
+}
+
+/**
+ * Refunds and discounts on the money paid in the window. Every figure is a
+ * stored row's own: `refunded_cents` is what Stripe reported reversing (or
+ * DiveDay refunded), and a checkout's discount is the snapshot taken when the
+ * code was handed to Stripe (`applied_discount_cents`, or the percent of the
+ * asked total), never re-derived from a code as it reads today.
+ */
+async function moneyOut(
+  db: DbExecutor,
+  shopId: string,
+  startUtc: Date,
+  endUtc: Date,
+): Promise<{ refundedCents: number; discountedCents: number }> {
+  const [orderRefunds] = await db
+    .select({ total: sql<string>`coalesce(sum(${orders.refundedCents}), 0)` })
+    .from(orders)
+    .where(and(eq(orders.shopId, shopId), gte(orders.paidAt, startUtc), lt(orders.paidAt, endUtc)));
+  const [checkoutMoney] = await db
+    .select({
+      refunded: sql<string>`coalesce(sum(${bookingCheckouts.refundedCents}), 0)`,
+      discounted: sql<string>`coalesce(sum(coalesce(
+        ${bookingCheckouts.appliedDiscountCents},
+        round(${bookingCheckouts.totalCents} * ${bookingCheckouts.appliedDiscountPercent} / 100.0)
+      )), 0)`,
+    })
+    .from(bookingCheckouts)
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "completed"),
+        gte(bookingCheckouts.completedAt, startUtc),
+        lt(bookingCheckouts.completedAt, endUtc),
+      ),
+    );
+  return {
+    refundedCents: Number(orderRefunds?.total ?? 0) + Number(checkoutMoney?.refunded ?? 0),
+    discountedCents: Number(checkoutMoney?.discounted ?? 0),
+  };
 }
 
 async function moneyByLine(
@@ -66,6 +172,7 @@ async function moneyByLine(
   shopId: string,
   startUtc: Date,
   endUtc: Date,
+  shopMoney: { currency: string; timeZone: string },
 ): Promise<Array<{ line: RevenueLine; cents: number }>> {
   // Every line of every invoice paid in the window. Whether the invoice bills
   // a gear-bench job, and whether its booking's departure is a course session,
@@ -83,6 +190,8 @@ async function moneyByLine(
     .from(orderLineItems)
     .innerJoin(orders, and(eq(orders.id, orderLineItems.orderId), eq(orders.shopId, shopId)))
     .leftJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
+    // diveday:allow-rehearsal: money only, and a rehearsal can never be
+    // invoiced (`issueOrder` refuses its seats).
     .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
     .where(
       and(
@@ -114,6 +223,8 @@ async function moneyByLine(
         eq(bookingCheckouts.shopId, shopId),
       ),
     )
+    // diveday:allow-rehearsal: money only, and a rehearsal can never be
+    // checked out (`startBookingCheckout` refuses it).
     .innerJoin(trips, and(eq(trips.id, bookingCheckouts.tripId), eq(trips.shopId, shopId)))
     .where(
       and(
@@ -121,6 +232,58 @@ async function moneyByLine(
         eq(bookingCheckouts.status, "completed"),
         gte(bookingCheckouts.completedAt, startUtc),
         lt(bookingCheckouts.completedAt, endUtc),
+      ),
+    );
+
+  // Every booking a staff member marked paid by hand (cash at the desk, a
+  // transfer), on its departure's line, by the day the mark was last set
+  // (issue #2305). Only rows no provider wrote: a Stripe-settled seat is
+  // counted through its checkout or invoice above, and a prepaid package dive
+  // was money on the day the package sold. `amount_cents` is what the booking
+  // still holds, so a part refund is already off it.
+  const markedSeats = await db
+    .select({
+      amountCents: bookingPayments.amountCents,
+      courseTrip: sql<boolean>`${trips.courseId} is not null`,
+    })
+    .from(bookingPayments)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingPayments.bookingId), eq(bookings.shopId, shopId)),
+    )
+    // diveday:allow-deleted-trips: a departure with a booking cannot be deleted (`deleteTrip`'s `has_roster`), and money marked is money taken; a cleared rehearsal is left out by `notRehearsal()`.
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId), notRehearsal()))
+    .where(
+      and(
+        eq(bookingPayments.shopId, shopId),
+        isNull(bookingPayments.provider),
+        inArray(bookingPayments.status, [...MARKED_PAYMENT_STATUSES]),
+        isNotNull(bookingPayments.amountCents),
+        gte(bookingPayments.updatedAt, startUtc),
+        lt(bookingPayments.updatedAt, endUtc),
+      ),
+    );
+
+  // History carried from the shop's previous system, net of its refunds, on
+  // the rule the month's Revenue already counts it by (`getMonthlyReport`):
+  // only amounts the import could read in the shop's own currency, on the
+  // shop's own calendar days. It names no line of its own, so it is one.
+  const [importedNet] = await db
+    .select({
+      cents: sql<string>`coalesce(sum(case when ${importedPaymentHistory.direction} = 'payment' then ${importedPaymentHistory.amountCents} else -${importedPaymentHistory.amountCents} end), 0)`,
+    })
+    .from(importedPaymentHistory)
+    .where(
+      and(
+        eq(importedPaymentHistory.shopId, shopId),
+        eq(importedPaymentHistory.currency, shopMoney.currency),
+        isNotNull(importedPaymentHistory.amountCents),
+        inArray(importedPaymentHistory.direction, ["payment", "refund"]),
+        gte(
+          importedPaymentHistory.occurredOn,
+          calendarDateInTimezone(startUtc, shopMoney.timeZone),
+        ),
+        lt(importedPaymentHistory.occurredOn, calendarDateInTimezone(endUtc, shopMoney.timeZone)),
       ),
     );
 
@@ -146,6 +309,14 @@ async function moneyByLine(
     });
     parts.push({ line: "rentals", cents: row.gearCents, keptRatio });
   }
+  for (const row of markedSeats) {
+    parts.push({
+      line: row.courseTrip ? "courses" : "funDives",
+      cents: row.amountCents ?? 0,
+      keptRatio: 1,
+    });
+  }
+  parts.push({ line: "imported", cents: Number(importedNet?.cents ?? 0), keptRatio: 1 });
   return revenueByLine(parts);
 }
 
@@ -239,6 +410,7 @@ async function returningDivers(
           and earlier_trip.shop_id = ${shopId}
           and earlier_trip.status = 'scheduled'
           and earlier_trip.deleted_at is null
+          and not earlier_trip.is_rehearsal
           and earlier_trip.starts_at < ${startUtc.toISOString()}::timestamptz
       ))`,
     })
@@ -250,6 +422,7 @@ async function returningDivers(
         inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
         ne(trips.status, "cancelled"),
         liveTrip(),
+        notRehearsal(),
         gte(trips.startsAt, startUtc),
         lt(trips.startsAt, endUtc),
       ),

@@ -11,7 +11,7 @@ import { ShopNav, ShopNavSidebar } from "@/components/ShopNav";
 import { SkipLink } from "@/components/SkipLink";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { countGearItems } from "@/db/gear";
 import { people, personRoles } from "@/db/schema";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -26,6 +26,7 @@ import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
+import { settingsShortcutsFor } from "../settings/settings-groups";
 
 /**
  * **Everything above a staff page that has to be asked of this request** — the
@@ -296,6 +297,11 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
           locale={locale}
           setLocale={setLocaleAction}
           createDiverAction={createDiverFromSearchAction}
+          settingsShortcuts={
+            navGates.settings
+              ? settingsShortcutsFor(shop, session.user.roles, shopSlug, staffT)
+              : undefined
+          }
         />
       ) : null}
       {/* Keeps every trip in the shop's near-term board saved offline, not just

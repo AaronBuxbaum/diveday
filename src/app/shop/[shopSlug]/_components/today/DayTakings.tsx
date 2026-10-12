@@ -2,6 +2,7 @@ import { GroupLabel } from "@/components/ui/ledger";
 import { FIGURE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
+import { formatTime } from "@/lib/format";
 import { formatReportMoney } from "@/lib/reporting";
 
 /**
@@ -54,11 +55,13 @@ export function DayTakings({
   takings,
   currency,
   locale,
+  timeZone,
   t,
 }: {
   takings: DayTakingsReading;
   currency: string;
   locale: string;
+  timeZone: string;
   t: StaffTranslator;
 }) {
   return (
@@ -82,6 +85,23 @@ export function DayTakings({
             amount: formatReportMoney(takings.tipsCents, currency, locale),
           })}
         </p>
+      ) : null}
+      {/* **Which boat the tips came off** (UX review 2026-10-11, item 18): a
+          diver tips "the crew", and this is where the crew of each boat can
+          see it. Only when two or more boats were tipped; with one, the
+          sentence above already says it all. */}
+      {takings.boatTips.length > 1 ? (
+        <ul className="mt-1 text-sm text-muted tabular-nums">
+          {takings.boatTips.map((boat) => (
+            <li key={boat.tripId}>
+              {t("closeout.takings.boatTips", {
+                time: formatTime(boat.startsAt, locale, timeZone),
+                boat: boat.label,
+                amount: formatReportMoney(boat.cents, currency, locale),
+              })}
+            </li>
+          ))}
+        </ul>
       ) : null}
       {/* Money inside the figure that Stripe never confirmed, named where the
           figure is read — the month's revenue card says the same thing, and a

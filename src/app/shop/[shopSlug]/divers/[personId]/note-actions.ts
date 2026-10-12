@@ -1,10 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { addDiverNote, deleteDiverNote } from "@/db/operations";
+import { readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { noticeUrl } from "@/lib/staff-notices";
 import { backTo, requireDiverActionContext } from "./action-helpers";
+
+const noteForm = z.object({ note: text() });
+const noteIdForm = z.object({ noteId: text() });
+const noteBodyForm = z.object({ body: text() });
 
 /**
  * Add a note to the diver record. The successful path revalidates in place so
@@ -25,7 +31,7 @@ export async function addDiverNoteAction(shopSlug: string, personId: string, for
     shopId: staff.user.shopId,
     personId,
     actorPersonId: staff.user.personId,
-    body: String(formData.get("note") ?? ""),
+    body: readForm(noteForm, formData).note,
   });
   if (!note) {
     revalidateAndRedirect(base, backTo(base, "invalid", "notes"));
@@ -52,7 +58,7 @@ export async function deleteDiverNoteAction(
     shopId: staff.user.shopId,
     personId,
     actorPersonId: staff.user.personId,
-    noteId: String(formData.get("noteId") ?? ""),
+    noteId: readForm(noteIdForm, formData).noteId,
   });
   revalidateAndRedirect(
     base,
@@ -80,7 +86,7 @@ export async function restoreDiverNoteAction(
     shopId: staff.user.shopId,
     personId,
     actorPersonId: staff.user.personId,
-    body: String(formData.get("body") ?? ""),
+    body: readForm(noteBodyForm, formData).body,
   });
   revalidateAndRedirect(base, backTo(base, restored ? "note-added" : "invalid", "notes"));
 }

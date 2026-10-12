@@ -106,7 +106,14 @@ export async function sendLastMinuteDealBlast(
     getTripRequirements(db, input.shopId, input.tripId),
     getTripSiteRequirement(db, input.shopId, input.tripId),
   ]);
-  if (!shop || !tripRow || tripRow.status !== "scheduled" || tripRow.startsAt <= nowDate()) {
+  if (
+    !shop ||
+    !tripRow ||
+    // A rehearsal is never sold or announced (ADR 20261012-rehearsal-departures).
+    tripRow.isRehearsal ||
+    tripRow.status !== "scheduled" ||
+    tripRow.startsAt <= nowDate()
+  ) {
     return { ok: false, reason: "trip_unavailable" };
   }
   const openSeats = spotsRemaining({ capacity: tripRow.capacity, booked: tripRow.booked });

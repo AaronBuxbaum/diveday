@@ -528,6 +528,37 @@ describe("form wiring", () => {
   });
 });
 
+/**
+ * **A list, not a card per statement** (UX review 2026-10-10, item 14). The
+ * statements are rows of one panel with a rule between them and the answers
+ * directly under the words; no question carries a border or a fill of its
+ * own. The wording is untouched (H-01, H-03): the groups are still named by
+ * the published prompts, which the tests above read.
+ */
+describe("the questionnaire's layout", () => {
+  it("draws the statements as rows of one list, with no card around any one of them", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <MedicalQuestionnaireFields questionnaire={RSTC_QUESTIONNAIRE} {...LABELS} />,
+    );
+    const opener = RSTC_QUESTIONNAIRE.questions.find((q) => q.boxSection);
+    if (!opener) throw new Error("the published form must have a box-opening question");
+    await user.click(radiosFor(opener.prompt).yes);
+    const lists = container.querySelectorAll("ul");
+    expect(lists[0]).toHaveClass("divide-y", "border-y");
+    const primaries = RSTC_QUESTIONNAIRE.questions.filter((q) => q.section === "primary");
+    expect(lists[0]?.querySelectorAll(":scope > li")).toHaveLength(primaries.length);
+    for (const group of screen.getAllByRole("group")) {
+      const classes = [...group.classList];
+      expect(classes.filter((name) => /^(border|rounded|bg-|p-|px-|py-)/.test(name))).toEqual([]);
+      // Yes and No sit directly under the statement, side by side.
+      const answers = group.querySelector("legend")?.nextElementSibling;
+      expect(answers).toHaveClass("flex");
+      expect(answers?.querySelectorAll('input[type="radio"]')).toHaveLength(2);
+    }
+  });
+});
+
 describe("the real published questionnaire", () => {
   it("never leaves a question's last word alone on its line", () => {
     // A prompt is the `<legend>` that names its group, and the app's pretty

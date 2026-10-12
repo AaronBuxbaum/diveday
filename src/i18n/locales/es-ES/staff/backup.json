@@ -83,7 +83,7 @@
     "bundle_failed": "No se pudo armar el paquete de exportación.",
     "encryption_key_unset": "Esta instancia de DiveDay no está preparada para guardar credenciales de forma segura.",
     "encryption_key_invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada.",
-    "unknown": "Algo salió mal."
+    "unknown": "La entrega se detuvo sin un motivo que reconozcamos. Haz una entrega de prueba abajo; si vuelve a fallar, revisa el endpoint, el bucket y la clave."
   },
   "disconnect": {
     "heading": "Quitar destino",

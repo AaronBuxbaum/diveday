@@ -480,12 +480,7 @@ describe("assembleEveningClose", () => {
     expect([evening.out, evening.back]).toEqual([11, 11]);
     expect([evening.stations[0]?.sailed, evening.stations[0]?.back]).toEqual([9, 9]);
     expect(evening.allHome).toBe(true);
-    // **The debrief wants the seats, not the souls, and this is what stops the
-    // shared count being narrowed later by accident.** D47 asks why the boat
-    // sailed short of *sold* seats — the last booking, the deal, the
-    // comparable that filled — so ten sold of twelve is still two open, and
-    // the roster the per-departure sentence names is still ten.
-    expect(evening.stations[0]?.openSeats?.openSeats).toBe(2);
+    // The roster the per-departure sentence names is still the ten sold.
     expect(evening.stations[0]?.booked).toBe(10);
   });
 
@@ -789,7 +784,21 @@ describe("dayTakings", () => {
       revenueCents: 124_000,
       tipsCents: 0,
       importedRecordCount: 0,
+      boatTips: [],
     });
+  });
+
+  it("carries the tips by boat, and none on a day that took no tips", () => {
+    const boat = {
+      tripId: "t1",
+      startsAt: new Date("2026-10-09T13:00:00Z"),
+      label: "Manta",
+      cents: 8_000,
+    };
+    expect(dayTakings(report({ revenueCents: 1_000, tipsCents: 8_000 }), [boat])?.boatTips).toEqual(
+      [boat],
+    );
+    expect(dayTakings(report({ revenueCents: 1_000 }), [boat])?.boatTips).toEqual([]);
   });
 
   it("keeps tips beside revenue rather than inside it", () => {

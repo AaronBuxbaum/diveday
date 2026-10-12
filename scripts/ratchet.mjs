@@ -82,10 +82,15 @@ const sortedEntries = (counts) =>
  * guard's own sentence saying what to do instead). `--absorb "<why>"` is `--write` for growth that arrived in a merge from a branch
  * that predates the guard: it prints every increase it accepts and appends `{ why, files }`
  * to the section's `//absorbed` log, so the rise and its reason are in the diff.
+ *
+ * `script` is the basename of the guard script that banks this section, for the hint a
+ * refusal prints; it defaults to `check-<guard>`, which is wrong for a section banked by a
+ * script of another name (`function-length` lives in `check-page-length.mjs`).
  */
 export async function bankCounts({
   root,
   guard,
+  script = `check-${guard}`,
   counts,
   allowed,
   exists,
@@ -108,7 +113,7 @@ export async function bankCounts({
       console.error(`Refusing to write a baseline that grows. ${refusal}:`);
       for (const entry of grew) console.error(describe(entry));
       console.error(
-        `If this growth arrived in a merge from a branch that predates the check, \`node scripts/check-${guard}.mjs --absorb "<why>"\` records it explicitly.`,
+        `If this growth arrived in a merge from a branch that predates the check, \`node scripts/${script}.mjs --absorb "<why>"\` records it explicitly.`,
       );
       return 1;
     }

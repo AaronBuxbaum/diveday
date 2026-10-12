@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { config as configureZod } from "zod/v4/core";
-import { redactBreadcrumb, redactEvent } from "@/app/observability";
+import { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION } from "@/app/observability";
 import { SENTRY_DSN } from "@/lib/sentry-dsn";
 
 // Zod compiles a faster object parser with `new Function`, and finds out whether
@@ -25,6 +25,7 @@ if (SENTRY_DSN) {
     // @sentry/nextjs 11; nothing here calls `Sentry.logger`, so its flush
     // timer never arms.
     tracesSampleRate: 0,
+    dataCollection: SENTRY_DATA_COLLECTION,
     beforeSend: redactEvent,
     beforeBreadcrumb: redactBreadcrumb,
   });

@@ -52,6 +52,22 @@ type PaletteItem = {
 type PaletteGroup = { id: string; heading?: string; items: PaletteItem[] };
 
 /**
+ * One row of the Settings rail, offered under "Go to" (the rail's own label,
+ * its group's name as the row's detail, and where it leads). Built where the
+ * rail is (`settings-groups.ts`) and already filtered for this reader, so the
+ * palette never decides who may see a setting.
+ */
+export type SettingsShortcut = { id: string; label: string; group: string; href: string };
+
+/**
+ * How many settings rows one query may add. "e" matches most of the rail, and
+ * forty rows of settings under every keystroke would bury the diver a desk
+ * was looking for.
+ */
+const MAX_SETTINGS_SHORTCUTS = 6;
+const NO_SETTINGS_SHORTCUTS: readonly SettingsShortcut[] = [];
+
+/**
  * The palette's own key cap — smaller than the header button's ⌘K badge.
  *
  * A fixed 16px box that centres what it holds, because the caps hold two
@@ -119,6 +135,26 @@ export type CommandPaletteCopy = {
   goToOfflineRollCall: string;
 };
 
+// ⌘K / Ctrl-K from anywhere toggles the palette. Returns true once the
+// listener is attached: the trigger publishes it as the staff surfaces'
+// `data-hydrated` flag, so a test that presses ⌘K on a fresh page can wait for
+// it rather than lose the keypress to the server-rendered button (issue #2366).
+function useCommandKey(setOpen: (update: (current: boolean) => boolean) => void): boolean {
+  const [listening, setListening] = useState(false);
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setOpen((current) => !current);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    setListening(true);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setOpen]);
+  return listening;
+}
+
 /**
  * Global search for the front desk: "pull up Priya" without navigating to a
  * list first. Opened by ⌘K / Ctrl-K or the nav button. A hand-rolled combobox
@@ -127,6 +163,93 @@ export type CommandPaletteCopy = {
  * and a shortcut its surface; a diver opens as a sheet over the day, because a
  * person is the one answer here that has no hour of its own (slice 23e).
  */
+/**
+ * The "Go to" rows for one query: the boarding and offline doors, every
+ * destination the nav offers this reader, and the Settings rail's rows by
+ * name. Pure, so the palette's memo only re-runs it when its inputs move.
+ */
+function gotoItems({
+  q,
+  root,
+  boatBoardingHref,
+  gates,
+  crewSchedule,
+  settingsShortcuts,
+  copy,
+}: {
+  /** The trimmed, lower-cased query; "" lists every door. */
+  q: string;
+  root: string;
+  boatBoardingHref: string | undefined;
+  gates: StaffDestinationGates;
+  crewSchedule: boolean;
+  settingsShortcuts: readonly SettingsShortcut[];
+  copy: CommandPaletteCopy;
+}): PaletteItem[] {
+  const goto: PaletteItem[] = [];
+  if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
+    goto.push({
+      key: "goto:boarding",
+      label: copy.goToBoarding,
+      href: boatBoardingHref,
+      icon: <PaletteGlyph name="boarding" />,
+    });
+  }
+  // Not shop-scoped (the offline snapshot lives per-device, not per-shop
+  // route) so this doesn't need a `boatBoardingHref`-style prop — it's
+  // always the same URL and always findable, per task 77 (persona 10, Sal):
+  // the entry point used to be only a button below the live manifest
+  // header, easy to miss on a device that's about to lose signal.
+  if (q === "" || "offline".includes(q) || "roll call".includes(q) || "manifest".includes(q)) {
+    goto.push({
+      key: "goto:offline-roll-call",
+      label: copy.goToOfflineRollCall,
+      href: "/offline-manifest",
+      icon: <PaletteGlyph name="offline" />,
+    });
+  }
+  // One list with the nav and the keyboard shortcuts, already filtered for
+  // this viewer's permissions.
+  for (const destination of staffPaletteDestinations(gates, { crew: crewSchedule })) {
+    const label = copy.destinationLabels[destination.id];
+    const title = copy.destinationTitles[destination.id];
+    if (q === "" || label.toLowerCase().includes(q) || title?.toLowerCase().includes(q)) {
+      goto.push({
+        key: `goto:${destination.id}`,
+        label,
+        href: staffDestinationHref(root, destination),
+        // The registry's own artwork, so the palette and the phone dock can
+        // never draw one destination two ways.
+        icon: <StaffDestinationIcon id={destination.id} className="size-5" />,
+      });
+    }
+  }
+  // "Tips", "desk hours", "counter card": the rail is where an owner hunts,
+  // so its rows answer by name too. A row whose page is already a
+  // destination above (Team, Activity, Email) is that row, not a second one.
+  if (q !== "") {
+    const offered = new Set(goto.map((item) => item.href));
+    let added = 0;
+    for (const shortcut of settingsShortcuts) {
+      if (added >= MAX_SETTINGS_SHORTCUTS) break;
+      if (offered.has(shortcut.href)) continue;
+      const label = shortcut.label.toLowerCase();
+      const group = shortcut.group.toLowerCase();
+      if (!label.includes(q) && !group.includes(q)) continue;
+      offered.add(shortcut.href);
+      added += 1;
+      goto.push({
+        key: `goto:settings:${shortcut.id}`,
+        label: shortcut.label,
+        detail: shortcut.group,
+        href: shortcut.href,
+        icon: <StaffDestinationIcon id="settings" className="size-5" />,
+      });
+    }
+  }
+  return goto;
+}
+
 export function CommandPalette({
   shopSlug,
   boatBoardingHref,
@@ -137,8 +260,16 @@ export function CommandPalette({
   setLocaleAction,
   signOutAction,
   createDiverAction,
+  settingsShortcuts = NO_SETTINGS_SHORTCUTS,
   copy,
+  variant = "bar",
 }: {
+  /**
+   * `bar` is the shell's own control, a field from `sm` and an icon below it.
+   * `field` is the same palette as a full-width field at every width, for a
+   * page with no shell to hold the bar (the staff 404).
+   */
+  variant?: "bar" | "field";
   shopSlug: string;
   boatBoardingHref?: string;
   /**
@@ -157,6 +288,12 @@ export function CommandPalette({
   signOutAction: () => Promise<void>;
   /** Creates a typed search identity and lands on its Diver record. */
   createDiverAction: (formData: FormData) => Promise<void>;
+  /**
+   * The Settings rail's rows this reader may open (none for anyone outside
+   * the settings gate). Offered only once something is typed, matched on the
+   * row's label or its group's name.
+   */
+  settingsShortcuts?: readonly SettingsShortcut[];
   copy: CommandPaletteCopy;
 }) {
   const router = useRouter();
@@ -181,17 +318,7 @@ export function CommandPalette({
     exitMs: motionMs("base"),
   });
 
-  // ⌘K / Ctrl-K from anywhere opens the palette.
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setOpen((current) => !current);
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  const listening = useCommandKey(setOpen);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -237,44 +364,15 @@ export function CommandPalette({
   const groups = useMemo<PaletteGroup[]>(() => {
     const rawQuery = query.trim();
     const q = rawQuery.toLowerCase();
-    const goto: PaletteItem[] = [];
-    if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
-      goto.push({
-        key: "goto:boarding",
-        label: copy.goToBoarding,
-        href: boatBoardingHref,
-        icon: <PaletteGlyph name="boarding" />,
-      });
-    }
-    // Not shop-scoped (the offline snapshot lives per-device, not per-shop
-    // route) so this doesn't need a `boatBoardingHref`-style prop — it's
-    // always the same URL and always findable, per task 77 (persona 10, Sal):
-    // the entry point used to be only a button below the live manifest
-    // header, easy to miss on a device that's about to lose signal.
-    if (q === "" || "offline".includes(q) || "roll call".includes(q) || "manifest".includes(q)) {
-      goto.push({
-        key: "goto:offline-roll-call",
-        label: copy.goToOfflineRollCall,
-        href: "/offline-manifest",
-        icon: <PaletteGlyph name="offline" />,
-      });
-    }
-    // One list with the nav and the keyboard shortcuts, already filtered for
-    // this viewer's permissions.
-    for (const destination of staffPaletteDestinations(gates, { crew: crewSchedule })) {
-      const label = copy.destinationLabels[destination.id];
-      const title = copy.destinationTitles[destination.id];
-      if (q === "" || label.toLowerCase().includes(q) || title?.toLowerCase().includes(q)) {
-        goto.push({
-          key: `goto:${destination.id}`,
-          label,
-          href: staffDestinationHref(root, destination),
-          // The registry's own artwork, so the palette and the phone dock can
-          // never draw one destination two ways.
-          icon: <StaffDestinationIcon id={destination.id} className="size-5" />,
-        });
-      }
-    }
+    const goto = gotoItems({
+      q,
+      root,
+      boatBoardingHref,
+      gates,
+      crewSchedule,
+      settingsShortcuts,
+      copy,
+    });
     const out: PaletteGroup[] = [];
     // **Ask it, and it answers.** The first row when the query names one
     // thing: the fact, and the primary act the home's ledger rows would
@@ -488,6 +586,7 @@ export function CommandPalette({
     setLocaleAction,
     signOutAction,
     createDiverAction,
+    settingsShortcuts,
   ]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
@@ -541,52 +640,13 @@ export function CommandPalette({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-keyshortcuts="Meta+K Control+K"
-        aria-label={copy.search}
-        // **The transition names its two properties rather than saying
-        // `transition-colors`.** That shorthand covers `border-color`, and the
-        // border below arrives at `sm` — so crossing that breakpoint started
-        // four longhand transitions (one per side) on the very resize
-        // `capture()` performs, and a screenshot taken during the fade catches
-        // a half-drawn border. `e2e/visual.spec.ts`'s capture-harness canary is
-        // what found it. Hover changes the text and the background and nothing
-        // else, so those are what may move.
-        //
-        // **A field's box only where it is a field.** From `sm` up this reads
-        // as one — a magnifier, the word, the shortcut, bordered like an
-        // input. Below it the word and the ⌘K hide and the border stayed, a
-        // box drawn around a bare icon and the one control in the bar that did
-        // not match the date beside it (`Tide.dc.html` draws both as plain
-        // strokes). So the border, the padding and the auto width all arrive
-        // at `sm` together with the text that earns them.
-        className="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium text-muted transition-[color,background-color] hover:bg-surface-sunken hover:text-foreground sm:size-auto sm:min-h-11 sm:justify-start sm:rounded-lg sm:border sm:border-border sm:px-3"
-      >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          // 20px beside the date, 16px beside its own word. `Tide.dc.html`
-          // sizes the two the same way — the pocket's marks at 22px, the desk
-          // bar's magnifier at 18px next to "Search anyone, any day" — because
-          // an icon standing alone is the control and an icon labelling a
-          // field is punctuation.
-          className="size-5 sm:size-4"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
-        <span className="hidden sm:inline">{copy.search}</span>
-        <kbd className="hidden rounded border border-border bg-surface-sunken px-1.5 text-xs font-semibold text-muted sm:inline">
-          ⌘K
-        </kbd>
-      </button>
+      <PaletteTrigger
+        variant={variant}
+        onOpen={() => setOpen(true)}
+        hydrated={listening}
+        search={copy.search}
+        placeholder={copy.placeholder}
+      />
 
       {mounted
         ? createPortal(
@@ -783,5 +843,102 @@ export function CommandPalette({
           )
         : null}
     </>
+  );
+}
+
+/**
+ * The control that opens the palette. `bar` is the shell's own, a field from
+ * `sm` and an icon below it; `field` is the same palette as a full-width field
+ * at every width, for a page with no shell to hold the bar (the staff 404).
+ */
+function PaletteTrigger({
+  variant,
+  onOpen,
+  hydrated,
+  search,
+  placeholder,
+}: {
+  variant: "bar" | "field";
+  onOpen: () => void;
+  search: string;
+  placeholder: string;
+  /** True once the ⌘K listener is attached; drawn as `data-hydrated`. */
+  hydrated: boolean;
+}) {
+  return variant === "field" ? (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-keyshortcuts="Meta+K Control+K"
+      aria-label={search}
+      data-hydrated={hydrated ? "true" : undefined}
+      className="flex min-h-11 w-full items-center gap-2 rounded-lg border border-border bg-surface px-3 text-start text-sm text-muted transition-[color,background-color] hover:bg-surface-sunken hover:text-foreground"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="size-4 shrink-0"
+      >
+        <circle cx="11" cy="11" r="7" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <span className="min-w-0 flex-1 truncate">{placeholder}</span>
+      <kbd className="hidden rounded border border-border bg-surface-sunken px-1.5 text-xs font-semibold text-muted sm:inline">
+        ⌘K
+      </kbd>
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-keyshortcuts="Meta+K Control+K"
+      aria-label={search}
+      data-hydrated={hydrated ? "true" : undefined}
+      // **The transition names its two properties rather than saying
+      // `transition-colors`.** That shorthand covers `border-color`, and the
+      // border below arrives at `sm` — so crossing that breakpoint started
+      // four longhand transitions (one per side) on the very resize
+      // `capture()` performs, and a screenshot taken during the fade catches
+      // a half-drawn border. `e2e/visual.spec.ts`'s capture-harness canary is
+      // what found it. Hover changes the text and the background and nothing
+      // else, so those are what may move.
+      //
+      // **A field's box only where it is a field.** From `sm` up this reads
+      // as one — a magnifier, the word, the shortcut, bordered like an
+      // input. Below it the word and the ⌘K hide and the border stayed, a
+      // box drawn around a bare icon and the one control in the bar that did
+      // not match the date beside it (`Tide.dc.html` draws both as plain
+      // strokes). So the border, the padding and the auto width all arrive
+      // at `sm` together with the text that earns them.
+      className="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium text-muted transition-[color,background-color] hover:bg-surface-sunken hover:text-foreground sm:size-auto sm:min-h-11 sm:justify-start sm:rounded-lg sm:border sm:border-border sm:px-3"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        // 20px beside the date, 16px beside its own word. `Tide.dc.html`
+        // sizes the two the same way — the pocket's marks at 22px, the desk
+        // bar's magnifier at 18px next to "Search anyone, any day" — because
+        // an icon standing alone is the control and an icon labelling a
+        // field is punctuation.
+        className="size-5 sm:size-4"
+      >
+        <circle cx="11" cy="11" r="7" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <span className="hidden sm:inline">{search}</span>
+      <kbd className="hidden rounded border border-border bg-surface-sunken px-1.5 text-xs font-semibold text-muted sm:inline">
+        ⌘K
+      </kbd>
+    </button>
   );
 }

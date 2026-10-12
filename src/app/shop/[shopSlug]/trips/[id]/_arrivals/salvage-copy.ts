@@ -64,7 +64,22 @@ export function noShowSalvageCopy(input: {
           title: departure.title,
           when: input.formatWhen(departure.startsAt),
         }),
+        // The same day, sent rather than seated (UX review 2026-10-11, item 14).
+        offer: {
+          tripId: departure.tripId,
+          ariaLabel: t("checkIn.noShow.offerAriaLabel", {
+            name: diver.name,
+            title: departure.title,
+            when: input.formatWhen(departure.startsAt),
+          }),
+        },
       })),
+      offerCopy: {
+        personId: diver.id,
+        label: t("checkIn.noShow.offerSend"),
+        pending: t("checkIn.noShow.offerSending"),
+        sendFailed: t("checkIn.sendFailedButton"),
+      },
       money,
     };
   }

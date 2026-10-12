@@ -12,6 +12,7 @@ import { requestLocale } from "@/i18n/request";
 import { toDiverLocale } from "@/i18n/settings";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { COURSE_INQUIRY_EXPERIENCE, type InquiryFormState } from "@/lib/course-inquiry";
+import { blankAsAbsent, formValue, parseForm } from "@/lib/form-parse";
 import { deliverableShopContactEmail } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -20,17 +21,17 @@ import { clientIp } from "@/lib/request-ip";
 const calendarDate = z.string().refine(isValidCalendarDate);
 
 const inquirySchema = z.object({
-  interest: z.string().trim().max(200).optional(),
-  name: z.string().trim().max(120).optional(),
-  email: z.email().max(200).optional(),
-  phone: z.string().trim().max(30).optional(),
-  preferredDate: calendarDate.optional(),
-  alternateDate: calendarDate.optional(),
-  dateFlexible: z.boolean(),
-  timing: z.string().trim().max(200).optional(),
-  divers: z.coerce.number().int().min(1).max(12).optional(),
-  experience: z.enum(COURSE_INQUIRY_EXPERIENCE).optional(),
-  message: z.string().trim().max(1500).optional(),
+  interest: blankAsAbsent(z.string().trim().max(200)),
+  name: blankAsAbsent(z.string().trim().max(120)),
+  email: blankAsAbsent(z.email().max(200)),
+  phone: blankAsAbsent(z.string().trim().max(30)),
+  preferredDate: blankAsAbsent(calendarDate),
+  alternateDate: blankAsAbsent(calendarDate),
+  dateFlexible: formValue().transform(Boolean),
+  timing: blankAsAbsent(z.string().trim().max(200)),
+  divers: blankAsAbsent(z.coerce.number().int().min(1).max(12)),
+  experience: blankAsAbsent(z.enum(COURSE_INQUIRY_EXPERIENCE)),
+  message: blankAsAbsent(z.string().trim().max(1500)),
 });
 
 /**
@@ -77,20 +78,8 @@ export async function submitInquiryAction(
     return { error: t("common.rateLimited") };
   }
 
-  const parsed = inquirySchema.safeParse({
-    interest: formData.get("interest") || undefined,
-    name: formData.get("name") || undefined,
-    email: formData.get("email") || undefined,
-    phone: formData.get("phone") || undefined,
-    preferredDate: formData.get("preferredDate") || undefined,
-    alternateDate: formData.get("alternateDate") || undefined,
-    dateFlexible: Boolean(formData.get("dateFlexible")),
-    timing: formData.get("timing") || undefined,
-    divers: formData.get("divers") || undefined,
-    experience: formData.get("experience") || undefined,
-    message: formData.get("message") || undefined,
-  });
-  if (!parsed.success) return { error: t("inquiry.errors.invalid") };
+  const parsed = parseForm(inquirySchema, formData);
+  if (!parsed.ok) return { error: t("inquiry.errors.invalid") };
   if (!hasReplyPath(parsed.data)) return { error: t("inquiry.errors.contactRequired") };
 
   const db = await getDb();

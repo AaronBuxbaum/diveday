@@ -238,7 +238,9 @@ async function deliverCourseFormsLink(
   const path = courseFormsLinkPath(issued.token);
   const origin = publicAppUrl();
   const url = origin ? new URL(path, `${origin}/`).toString() : null;
-  const channel = options.channel ?? "email";
+  // A rehearsal sends nothing (ADR 20261012-rehearsal-departures): the link is
+  // still issued, for the staffer to hand over in person.
+  const channel = ctx.trip.isRehearsal ? "link" : (options.channel ?? "email");
   const locale = recipientLocale(ctx.person.locale, ctx.shop.defaultLocale);
   let delivery: WaiverDelivery = "no_app_origin";
   if (!url) {
@@ -346,7 +348,9 @@ export async function issueAndDeliverWaiver(
   const diverName = ctx?.person.fullName ?? "";
   const email = ctx?.person.email ?? null;
   const origin = publicAppUrl();
-  const channel = options.channel ?? "email";
+  // A rehearsal sends nothing (ADR 20261012-rehearsal-departures): the link is
+  // still issued, for the staffer to hand over in person.
+  const channel = ctx?.trip.isRehearsal ? "link" : (options.channel ?? "email");
   const completionUrl = origin
     ? new URL(`/waivers/${outcome.token}`, `${origin}/`).toString()
     : null;
@@ -531,9 +535,19 @@ export async function issueWaiverOnJoin(
   shopId: string,
   bookingId: string,
 ): Promise<IssueAndDeliverWaiverResult | null> {
+  if (!(await joinWaiverOwed(db, shopId, bookingId))) return null;
+  return issueAndDeliverWaiver(db, shopId, bookingId);
+}
+
+/**
+ * The join-send's "is one owed?" rule, shared by the two ways a joining diver
+ * receives the link: on its own (`issueWaiverOnJoin`) or inside the booking
+ * confirmation (`issueJoinWaiverLink`).
+ */
+async function joinWaiverOwed(db: AppDb, shopId: string, bookingId: string): Promise<boolean> {
   const readiness = await getBookingReadiness(db, shopId, bookingId);
   const needsWaiver = readiness?.blockers.some((blocker) => blocker.code === "waiver_not_sent");
-  if (!needsWaiver) return null;
+  if (!needsWaiver) return false;
   // A held seat is owed nothing yet: its link would open on a record that may
   // be somebody else's, so `issueWaiverRequest` refuses it. Nothing to report
   // as a failure; confirming the seat sends it (issue #2125).
@@ -542,8 +556,67 @@ export async function issueWaiverOnJoin(
     .from(bookings)
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
-  if (seat?.identityUnconfirmedAt) return null;
-  return issueAndDeliverWaiver(db, shopId, bookingId);
+  return !seat?.identityUnconfirmedAt;
+}
+
+/** A waiver link issued for the booking confirmation to carry. */
+export type JoinWaiverLink = { url: string; expiresAt: Date; waiverRecordId: string };
+
+/**
+ * **One booking, one email** (UX review 2026-10-11, item 7). The lead
+ * booker's waiver link, issued by the same rule as `issueWaiverOnJoin` but
+ * sent with nothing: the booking confirmation carries it as its first step,
+ * and `settleJoinWaiverDelivery` then records how it went. Null when no
+ * waiver is owed (a signature still covers the trip, the trip asks for none,
+ * the seat is held) or there is no origin to build a link on; the caller then
+ * falls back to `issueWaiverOnJoin`, which says why on the record.
+ */
+export async function issueJoinWaiverLink(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  now: Date = nowDate(),
+): Promise<JoinWaiverLink | null> {
+  const origin = publicAppUrl();
+  if (!origin) return null;
+  if (!(await joinWaiverOwed(db, shopId, bookingId))) return null;
+  const outcome = await issueWaiverRequest(db, { shopId, bookingId, now });
+  if (!outcome.ok) return null;
+  return {
+    url: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
+    expiresAt: outcome.expiresAt,
+    waiverRecordId: outcome.recordId,
+  };
+}
+
+/**
+ * After the confirmation that carried `link` was attempted: when it went out,
+ * the waiver went with it, and the record says it was emailed; when it did
+ * not, the waiver goes on its own the old way, which hands back the same live
+ * link (ADR 20260820-waiver-links-are-reused-not-reissued) rather than
+ * minting a second one. Either way the diver is never left holding nothing.
+ */
+export async function settleJoinWaiverDelivery(
+  db: AppDb,
+  input: {
+    shopId: string;
+    bookingId: string;
+    link: JoinWaiverLink;
+    confirmationSent: boolean;
+    now?: Date;
+  },
+): Promise<void> {
+  if (!input.confirmationSent) {
+    await issueAndDeliverWaiver(db, input.shopId, input.bookingId, { now: input.now });
+    return;
+  }
+  await recordWaiverDelivery(db, {
+    shopId: input.shopId,
+    waiverRecordId: input.link.waiverRecordId,
+    channel: "email",
+    delivery: { status: "sent" },
+    now: input.now,
+  });
 }
 
 /**

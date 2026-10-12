@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { capacityLabel, isFull, type TripCapacity } from "@/lib/trips";
+import { capacityLabel, isFull, seatsOnSale, type TripCapacity } from "@/lib/trips";
 
 /**
  * How full the boat is, or that it isn't sailing — the one pill that leads the
@@ -18,20 +18,42 @@ import { capacityLabel, isFull, type TripCapacity } from "@/lib/trips";
 export function TripCapacityBadge({
   trip,
   cancelledLabel,
+  finished = false,
   t,
 }: {
-  trip: TripCapacity & { status: string };
+  trip: TripCapacity & { status: string; sellableCapacity: number };
   cancelledLabel: string;
+  /**
+   * The departure is back (`tripPhaseOf`): nothing is for sale, so "4 spots
+   * left" would be a live-day word on a record (UX review 2026-10-10, item 10).
+   */
+  finished?: boolean;
   t: StaffTranslator;
 }) {
   if (trip.status === "cancelled") return <Badge tone="danger">{cancelledLabel}</Badge>;
-  const capacity = capacityLabel(trip);
+  if (finished) return null;
+  // **The seats the boat may sell, not the seats stated** (H-107, #2321): the
+  // booking transaction stops at the certificate, so the desk counts there too.
+  // When the certificate binds, the stated number rides beside it, so the
+  // details form's figure is never a mystery.
+  const onSale = seatsOnSale(trip);
+  const capacity = capacityLabel(onSale);
   return (
-    <Badge tone={isFull(trip) ? "success" : "primary"} tabularNums>
-      {capacity.kind === "full"
-        ? t("shared.capacity.full")
-        : t("shared.capacity.spotsLeft", { count: capacity.remaining })}
-    </Badge>
+    <>
+      <Badge tone={isFull(onSale) ? "success" : "primary"} tabularNums>
+        {capacity.kind === "full"
+          ? t("shared.capacity.full")
+          : t("shared.capacity.spotsLeft", { count: capacity.remaining })}
+      </Badge>
+      {trip.sellableCapacity < trip.capacity ? (
+        <span className="text-muted tabular-nums">
+          {t("shared.capacity.certificateCap", {
+            sellable: trip.sellableCapacity,
+            stated: trip.capacity,
+          })}
+        </span>
+      ) : null}
+    </>
   );
 }
 

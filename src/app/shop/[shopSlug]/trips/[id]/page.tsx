@@ -39,15 +39,14 @@ import { automatedForecastForDeparture, hasCrewPrediction } from "@/lib/marine-f
 import { toShopCurrency } from "@/lib/money";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicTripPath } from "@/lib/public-routes";
-import { recurrenceSummary } from "@/lib/recurrence";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { tripPhaseOf } from "@/lib/trip-phase";
-import { acceptsNewDivers, isFull } from "@/lib/trips";
+import { departureStage } from "@/lib/trip-phase";
+import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { buildArrivalDesk } from "./_arrivals/arrival-desk";
+import { diversTabState } from "./_arrivals/departure-record";
 import { DESK_NOTICES } from "./_arrivals/notices";
 import { BlowoutDoors } from "./_components/BlowoutDoors";
 import { ConditionsOutlookSlot, ConditionsSection } from "./_components/ConditionsSection";
@@ -56,23 +55,22 @@ import { CrewSection } from "./_components/CrewSection";
 import { courseRosterActions } from "./_components/course-roster-actions";
 import { DepartureLogLink } from "./_components/DepartureLogLink";
 import { DeskRefresh } from "./_components/DeskRefresh";
-import { DetailsSection } from "./_components/DetailsSection";
+import { DetailsEditor } from "./_components/DetailsEditor";
+import { openSeatsDetailsRows, repeatsRowText } from "./_components/details-rows";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { participantTermsRows } from "./_components/ParticipantTermsSection";
 import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
-import { PulseFacts } from "./_components/PulseFacts";
+import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { RequirementsSection } from "./_components/RequirementsSection";
-import {
-  recurrenceSummaryText,
-  SeriesCadenceEditor,
-  SeriesMoreActions,
-} from "./_components/SeriesSection";
+import { SeriesCadenceEditor, SeriesMoreActions } from "./_components/SeriesSection";
 import { TripAboutSection, TripMoreDisclosure } from "./_components/TripAboutSection";
+import { TripIncidentReports } from "./_components/TripIncidentReports";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { DETAILS_FORMS, ROSTER_FORMS } from "./_components/trip-notice-tabs";
+import type { TripPageSearchParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import {
   addInternalNoteAction,
@@ -139,25 +137,7 @@ export default async function ManageTripPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{
-    notice?: string;
-    bid?: string;
-    diverq?: string;
-    inviteq?: string;
-    count?: string;
-    /** Which form on this page the notice answers — see `resolveTripNotice`. */
-    form?: string;
-    /** Signed, and verified against this route's own `id` — src/lib/trip-admission-gate.ts. */
-    gate?: string | string[];
-    rf?: string;
-    noteBookingId?: string;
-    noteBody?: string;
-    confirmName?: string;
-    confirmEmail?: string;
-    confirmPhone?: string;
-    /** `details` opens the Details tab; anything else is the Divers tab. */
-    view?: string;
-  }>;
+  searchParams: Promise<TripPageSearchParams>;
 }) {
   const [
     { shopSlug, id: tripId },
@@ -174,6 +154,8 @@ export default async function ManageTripPage({
       confirmEmail,
       confirmPhone,
       view,
+      held,
+      tell,
     },
   ] = await Promise.all([params, searchParams]);
   // An unparseable id names no row. Guarded here rather than in the query
@@ -410,6 +392,7 @@ export default async function ManageTripPage({
   // **Details is its own tab**, and a save on it lands back on it.
   const showDetails =
     view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
+  const openSeatsRows = openSeatsDetailsRows({ db, shop, tripId, t, locale, shown: showDetails });
   const siteWithForecast = tripDiveList.find(
     ({ diveSite }) =>
       diveSite && diveSite.forecastLatitude !== null && diveSite.forecastLongitude !== null,
@@ -467,7 +450,7 @@ export default async function ManageTripPage({
   const rosterPageNotice = tripNotice && tripNotice.form === "roster" ? tripNotice : undefined;
   const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const phase = tripPhaseOf({
+  const { shown: shownStage, finished } = departureStage({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -475,26 +458,20 @@ export default async function ManageTripPage({
     stage: stageReading,
     cancelled,
   });
-  // The desk, on the Divers tab of a departure whose arrivals are open; null
-  // otherwise, and the roster is exactly what it is the rest of the week.
-  const desk = showDetails
-    ? null
-    : await buildArrivalDesk({
-        db,
-        shopId: shop.id,
-        shopSlug,
-        tripId,
-        trip,
-        now,
-        locale,
-        timeZone: shop.timezone,
-        t,
-      });
-  // The count leads the desk and says "1 person can't board yet" itself, so the
-  // pulse's door to the same rows stands down while it is on screen.
-  const shownPulseFacts = desk?.arrival.instrument
-    ? pulseFacts.filter((fact) => !fact.href.endsWith("#roster"))
-    : pulseFacts;
+  // The desk while arrivals are open, or a finished departure's record.
+  const { desk, record } = await diversTabState({
+    db,
+    shopId: shop.id,
+    shopSlug,
+    tripId,
+    trip,
+    now,
+    locale,
+    timeZone: shop.timezone,
+    t,
+    onDivers: !showDetails,
+    finished,
+  });
 
   const siteNames = diveSites.sites.map((site) => site.name);
   const planSummary = siteNames.length > 0 ? siteNames.join(" + ") : t("trips.about.noneSet");
@@ -559,29 +536,6 @@ export default async function ManageTripPage({
   const boatCrewSummary = boatAndCrew.join(" · ") || t("trips.about.noBoat");
 
   const tabsCopy = tripTabsCopy(t);
-  const repeatsSummary = series
-    ? recurrenceSummaryText(
-        t,
-        locale,
-        recurrenceSummary({
-          intervalWeeks: series.intervalWeeks,
-          weekdays: series.weekdayMask,
-          endsOn: series.endsOn,
-        }),
-      )
-    : t("trips.about.oneTime");
-  // How much of the run is still on the board — a fact the cadence sentence
-  // alone does not carry, and the one the "cancel every upcoming date" confirm
-  // is counting. It rides on the row rather than on the collapsed strip, which
-  // is one truncating line and has the cadence to fit first.
-  const repeatsRowValue = series
-    ? series.futureScheduledCount > 0
-      ? t("tripSeries.panel.summaryWithFuture", {
-          summary: repeatsSummary,
-          count: series.futureScheduledCount,
-        })
-      : t("tripSeries.panel.summaryAllDone", { summary: repeatsSummary })
-    : repeatsSummary;
   // The clash is a fact about two boats that will both sail, so a called-off
   // departure drops it with the rest of the live-trip nudges — `crewClashes`
   // answers nothing for one anyway, and this keeps the two from ever
@@ -669,9 +623,10 @@ export default async function ManageTripPage({
           timeZone={shop.timezone}
           badge={
             <>
-              <TripStageBadge phase={phase} copy={tabsCopy} />
+              <TripStageBadge stage={shownStage?.stage ?? null} copy={tabsCopy} />
               <TripCapacityBadge
                 trip={trip}
+                finished={finished}
                 cancelledLabel={t("trips.detail.cancelledBadge")}
                 t={t}
               />
@@ -706,7 +661,7 @@ export default async function ManageTripPage({
           // cancelled, and the header offers nothing (owner, 2026-10-06). A
           // full boat's wait list stays in the roster's own Add band.
           actions={
-            !acceptsDivers || isFull(trip) ? undefined : (
+            !acceptsDivers || isFull(seatsOnSale(trip)) ? undefined : (
               <TripAddDiverLink
                 // The roster's own band, on the Divers tab: from Details the
                 // anchor is not on the page.
@@ -755,7 +710,7 @@ export default async function ManageTripPage({
                   href={shopPath(shopSlug, "schedule", "blowout", tripId)}
                   className={buttonClass({ variant: "secondary" })}
                 >
-                  {t("trips.detail.viewBlowout")}
+                  {t("trips.detail.viewBlowout", { cause: blowoutCalled })}
                 </Link>
               ) : null}
             </div>
@@ -787,9 +742,11 @@ export default async function ManageTripPage({
                   editLabel: t("trips.details.edit"),
                   editorOpen: Boolean(detailsStatus),
                   editor: canConfigure ? (
-                    <DetailsSection
+                    <DetailsEditor
                       action={saveDetails.bind(null, shopSlug, tripId)}
                       status={detailsStatus}
+                      held={notice === "saved" ? held : undefined}
+                      tell={tell}
                       trip={trip}
                       diveSiteList={diveSiteList}
                       tripDiveList={tripDiveList}
@@ -978,7 +935,7 @@ export default async function ManageTripPage({
                 {
                   id: "series",
                   label: t("trips.about.repeats"),
-                  value: repeatsRowValue,
+                  value: repeatsRowText(t, locale, series),
                   editLabel: t("tripSeries.panel.editCadence"),
                   editorOpen: Boolean(seriesStatus),
                   editor:
@@ -1015,6 +972,7 @@ export default async function ManageTripPage({
                       />
                     ) : undefined,
                 },
+                ...(await openSeatsRows),
               ]}
               actions={
                 <>
@@ -1043,17 +1001,11 @@ export default async function ManageTripPage({
                     recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
                     flush
                   />
-                  <DepartureLogLink
-                    db={db}
-                    shopId={shop.id}
-                    personId={session.user.personId}
-                    shopSlug={shopSlug}
-                    tripId={tripId}
-                    label={t("incidentExport.openLink")}
-                  />
+                  <DepartureLogLink shop={shop} personId={session.user.personId} tripId={tripId} />
                 </>
               }
             />
+            <TripIncidentReports shop={shop} personId={session.user.personId} tripId={tripId} />
             <TripPromoteAndActivity
               guests={guests}
               shopSlug={shopSlug}
@@ -1069,8 +1021,8 @@ export default async function ManageTripPage({
                     </FormStatus>
                     {canConfigure && series ? (
                       <SeriesMoreActions
-                        futureScheduledCount={series.futureScheduledCount}
-                        endsOn={series.endsOn}
+                        series={series}
+                        crewNames={assignedCrew}
                         applyAction={applySeriesDetailsAction.bind(
                           null,
                           shopSlug,
@@ -1119,7 +1071,7 @@ export default async function ManageTripPage({
               refreshing: t("checkIn.pullToRefresh.refreshing"),
             }}
           >
-            {pulseNeeded ? (
+            {pulseNeeded && !finished ? (
               <MinimumSeatsBand
                 trip={trip}
                 booked={trip.booked}
@@ -1130,12 +1082,13 @@ export default async function ManageTripPage({
             ) : null}
 
             <PulseFacts
-              facts={shownPulseFacts}
+              facts={shownPulseFacts(pulseFacts, { desk, finished })}
               foldLabel={(count) => t("trips.pulse.toSort", { count })}
             />
 
             <TripRosterContent
               arrival={desk?.arrival}
+              record={record}
               walkInOpen={desk?.walkInOpen}
               acceptsDivers={acceptsDivers}
               guests={guests}

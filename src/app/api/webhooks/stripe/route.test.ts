@@ -24,7 +24,9 @@ vi.mock("@/db/orders", () => ({
   recordOrderPaymentIntent: vi.fn(),
 }));
 vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
+vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
 vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
+vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn() }));
 vi.mock("@/db/stripe-accounts", () => ({
   setShopStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
@@ -51,7 +53,9 @@ const { markTipPaidBySessionId, markTipExpiredBySessionId, recordTipStripeCustom
 const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } =
   await import("@/db/orders");
 const { recordStripeChargeRefund } = await import("@/db/refunds");
+const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
+const { recordStripePayout } = await import("@/db/payouts");
 const { setShopStripeAccountStatus, disconnectShopStripeAccount, stripeAccountHolder } =
   await import("@/db/stripe-accounts");
 const { claimStripeWebhookEvent, hasNewerAccountUpdate, releaseStripeWebhookEventClaim } =
@@ -113,6 +117,7 @@ beforeEach(() => {
   vi.mocked(recordOrderPaymentIntent).mockReset().mockResolvedValue(true);
   vi.mocked(recordStripeChargeRefund).mockReset();
   vi.mocked(recordStripeDispute).mockReset();
+  vi.mocked(recordStripePayout).mockReset();
   vi.mocked(recordTipStripeCustomer).mockReset().mockResolvedValue(false);
   vi.mocked(claimStripeWebhookEvent).mockReset().mockResolvedValue(true);
   vi.mocked(hasNewerAccountUpdate).mockReset().mockResolvedValue(false);
@@ -285,14 +290,27 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 0, undefined, null);
   });
 
-  it("invoice.voided marks the order void", async () => {
+  it("invoice.voided marks the order void, on the event's own account", async () => {
+    const response = await post({
+      id: "evt_1",
+      type: "invoice.voided",
+      account: "acct_123",
+      data: { object: { id: "in_123" } },
+    });
+    expect(response.status).toBe(200);
+    expect(markOrderVoidedByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", "acct_123");
+  });
+
+  // Security review: with no account to cross-check, an invoice id alone
+  // could name any shop's order, so nothing is voided.
+  it("invoice.voided without an account voids nothing", async () => {
     const response = await post({
       id: "evt_1",
       type: "invoice.voided",
       data: { object: { id: "in_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderVoidedByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", undefined);
+    expect(markOrderVoidedByInvoiceId).not.toHaveBeenCalled();
   });
 
   it("invoice.paid passes the event's top-level account through for the row's own cross-check", async () => {
@@ -692,6 +710,86 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       expect(Sentry.captureException).not.toHaveBeenCalled();
     });
 
+    it("charge.refund.updated hands the refund, its status and its PaymentIntent over (issue 2291)", async () => {
+      vi.mocked(recordStripeRefundFailure).mockResolvedValue({ status: "reversed" });
+      const response = await post({
+        id: "evt_refund_failed",
+        type: "charge.refund.updated",
+        account: "acct_1",
+        data: {
+          object: {
+            id: "re_1",
+            amount: 6_000,
+            currency: "usd",
+            status: "failed",
+            failure_reason: "expired_or_canceled_card",
+            payment_intent: { id: "pi_1" },
+            charge: "ch_1",
+          },
+        },
+      });
+      expect(response.status).toBe(200);
+      expect(recordStripeRefundFailure).toHaveBeenCalledWith(
+        FAKE_DB,
+        {
+          stripeAccountId: "acct_1",
+          paymentIntentId: "pi_1",
+          refund: {
+            id: "re_1",
+            amountCents: 6_000,
+            currency: "usd",
+            status: "failed",
+            failureReason: "expired_or_canceled_card",
+          },
+          occurredAt: expect.any(Date),
+        },
+        expect.anything(),
+      );
+    });
+
+    it("charge.refund.updated stores a failure reason Stripe never documented as `unknown`, not its text", async () => {
+      vi.mocked(recordStripeRefundFailure).mockResolvedValue({ status: "reversed" });
+      const object = {
+        id: "re_9",
+        amount: 100,
+        currency: "usd",
+        status: "failed",
+        payment_intent: "pi_1",
+      };
+      await post({
+        id: "evt_rf_odd",
+        type: "charge.refund.updated",
+        account: "acct_1",
+        data: { object: { ...object, failure_reason: "call Jane Doe on +1 555 0100" } },
+      });
+      await post({
+        id: "evt_rf_none",
+        type: "charge.refund.updated",
+        account: "acct_1",
+        data: { object },
+      });
+      const reasons = vi
+        .mocked(recordStripeRefundFailure)
+        .mock.calls.map(([, input]) => input.refund.failureReason);
+      expect(reasons).toEqual(["unknown", null]);
+    });
+
+    it("charge.refund.updated with no account or no PaymentIntent records nothing", async () => {
+      const refund = { id: "re_2", amount: 100, currency: "usd", status: "failed" };
+      await post({
+        id: "evt_rf2",
+        type: "charge.refund.updated",
+        data: { object: { ...refund, payment_intent: "pi_1" } },
+      });
+      await post({
+        id: "evt_rf3",
+        type: "charge.refund.updated",
+        account: "acct_1",
+        data: { object: { ...refund, payment_intent: null } },
+      });
+      expect(recordStripeRefundFailure).not.toHaveBeenCalled();
+    });
+
     it("charge.dispute.* passes the dispute, its deadline and the event's own time", async () => {
       vi.mocked(recordStripeDispute).mockResolvedValue({ status: "not_found" });
       const created = 1_800_000_000;
@@ -733,6 +831,125 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
         },
         expect.anything(),
       );
+    });
+
+    it("payout.paid passes the payout, its arrival day and the event's own account and time", async () => {
+      vi.mocked(recordStripePayout).mockResolvedValue({ status: "not_found" });
+      const created = 1_800_000_000;
+      const response = await post({
+        id: "evt_payout",
+        type: "payout.paid",
+        account: "acct_1",
+        created,
+        data: {
+          object: {
+            id: "po_1",
+            amount: 184_200,
+            currency: "usd",
+            arrival_date: created - 3_600,
+            status: "paid",
+            automatic: true,
+            failure_code: null,
+          },
+        },
+      });
+      expect(response.status).toBe(200);
+      expect(recordStripePayout).toHaveBeenCalledWith(
+        FAKE_DB,
+        {
+          stripeAccountId: "acct_1",
+          occurredAt: new Date(created * 1000),
+          payout: {
+            id: "po_1",
+            amountCents: 184_200,
+            currency: "usd",
+            status: "paid",
+            arrivalDate: new Date((created - 3_600) * 1000),
+            automatic: true,
+            failureCode: null,
+          },
+        },
+        expect.anything(),
+      );
+    });
+
+    it("a payout with no connected account, or a malformed one, changes nothing", async () => {
+      const object = {
+        id: "po_1",
+        amount: 100,
+        currency: "usd",
+        arrival_date: 1_800_000_000,
+        status: "failed",
+        failure_code: "account_closed",
+      };
+      expect(
+        (await post({ id: "evt_po_noacct", type: "payout.failed", data: { object } })).status,
+      ).toBe(200);
+      expect(
+        (
+          await post({
+            id: "evt_po_bad",
+            type: "payout.failed",
+            account: "acct_1",
+            data: { object: { id: "po_1", amount: "lots" } },
+          })
+        ).status,
+      ).toBe(200);
+      expect(recordStripePayout).not.toHaveBeenCalled();
+    });
+
+    it("refuses a payout whose status is neither paid nor failed, or whose amount is negative", async () => {
+      const object = {
+        id: "po_1",
+        amount: 100,
+        currency: "usd",
+        arrival_date: 1_800_000_000,
+        status: "paid",
+        automatic: true,
+      };
+      expect(
+        (
+          await post({
+            id: "evt_po_pending",
+            type: "payout.paid",
+            account: "acct_1",
+            data: { object: { ...object, status: "pending" } },
+          })
+        ).status,
+      ).toBe(200);
+      expect(
+        (
+          await post({
+            id: "evt_po_negative",
+            type: "payout.paid",
+            account: "acct_1",
+            data: { object: { ...object, amount: -100 } },
+          })
+        ).status,
+      ).toBe(200);
+      expect(recordStripePayout).not.toHaveBeenCalled();
+    });
+
+    it("a deferred payout answers 503 and gives its claim back, without paging anyone", async () => {
+      vi.mocked(recordStripePayout).mockResolvedValue({ status: "deferred" });
+      const response = await post({
+        id: "evt_po_defer",
+        type: "payout.paid",
+        account: "acct_1",
+        data: {
+          object: {
+            id: "po_1",
+            amount: 100,
+            currency: "usd",
+            arrival_date: 1_800_000_000,
+            status: "paid",
+            automatic: true,
+          },
+        },
+      });
+      expect(response.status).toBe(503);
+      expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, "evt_po_defer");
+      expect(Sentry.captureException).not.toHaveBeenCalled();
     });
 
     it("records the PaymentIntent a settling session and a paid invoice name", async () => {
@@ -1147,7 +1364,12 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     },
     {
       name: "invoice.voided",
-      event: { id: "evt_fail_void", type: "invoice.voided", data: { object: { id: "in_1" } } },
+      event: {
+        id: "evt_fail_void",
+        type: "invoice.voided",
+        account: "acct_1",
+        data: { object: { id: "in_1" } },
+      },
       arrange: () => vi.mocked(markOrderVoidedByInvoiceId).mockRejectedValue(boom),
     },
     {
@@ -1281,6 +1503,24 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
       },
       arrange: () => vi.mocked(recordStripeDispute).mockRejectedValue(boom),
     },
+    {
+      name: "payout.paid",
+      event: {
+        id: "evt_fail_payout",
+        type: "payout.paid",
+        account: "acct_1",
+        data: {
+          object: {
+            id: "po_1",
+            amount: 500,
+            currency: "usd",
+            arrival_date: 1_800_000_000,
+            status: "paid",
+          },
+        },
+      },
+      arrange: () => vi.mocked(recordStripePayout).mockRejectedValue(boom),
+    },
   ];
 
   for (const arm of arms) {
@@ -1291,10 +1531,57 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
       // Non-2xx, or Stripe treats this delivery as done and never retries.
       expect(response.status).toBe(500);
       expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, arm.event.id);
-      // The original error, not a replacement, is what an operator sees.
-      expect(Sentry.captureException).toHaveBeenCalledWith(boom, expect.anything());
+      // Reported, but as a scrubbed stand-in (issue #2334): see below.
+      expect(Sentry.captureException).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          tags: expect.objectContaining({ stripe_webhook_stage: "handler", error_class: "Error" }),
+        }),
+      );
     });
   }
+
+  // Issue #2334. Sentry's beforeSend (`redactEvent`) scrubs URLs and headers,
+  // not exception text, and a handler's error can quote the row it refused. So
+  // Sentry gets a fixed message, the original's stack frames and its class as a
+  // tag, never the original message and never the original as `cause`.
+  it("sends Sentry a scrubbed error, never the handler's own message", async () => {
+    const leaky = new TypeError('duplicate key: (email)=(nora@example.com) for "Nora Diaz"');
+    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(leaky);
+
+    const response = await post({
+      id: "evt_leaky",
+      type: "invoice.paid",
+      data: { object: { id: "in_1" } },
+    });
+
+    expect(response.status).toBe(500);
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+    const [sent, context] = vi.mocked(Sentry.captureException).mock.calls[0];
+    expect(sent).not.toBe(leaky);
+    expect(sent).toBeInstanceOf(Error);
+    const scrubbed = sent as Error;
+    expect(scrubbed.cause).toBeUndefined();
+    for (const text of [
+      scrubbed.message,
+      scrubbed.name,
+      scrubbed.stack ?? "",
+      JSON.stringify(context),
+    ]) {
+      expect(text).not.toContain("nora@example.com");
+      expect(text).not.toContain("Nora Diaz");
+    }
+    expect(context).toEqual({
+      tags: {
+        stripe_event_id: "evt_leaky",
+        stripe_webhook_event_type: "invoice.paid",
+        stripe_webhook_stage: "handler",
+        error_class: "TypeError",
+      },
+    });
+    // The frames survive, so the report still says where it broke.
+    expect(scrubbed.stack).toMatch(/\n\s+at /);
+  });
 
   it("re-runs the handler and advances state on the redelivery after a failure", async () => {
     const event = {
@@ -1344,6 +1631,65 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     expect(releaseStripeWebhookEventClaim).not.toHaveBeenCalled();
   });
 
+  // A database error wraps the driver's own: its class and SQLSTATE say what
+  // went wrong without the bound parameters the outer message quotes.
+  it("tags and logs a failure by class and the driver's code, never a message", async () => {
+    const cause = Object.assign(new Error("Key (email)=(nora@example.com) already exists"), {
+      name: "PostgresError",
+      code: "23505",
+    });
+    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(
+      new Error("Failed query: update orders params: nora@example.com", { cause }),
+    );
+    const releaseCause = Object.assign(new Error("terminating connection"), { code: "57P01" });
+    vi.mocked(releaseStripeWebhookEventClaim).mockRejectedValue(
+      new Error("Failed query: update stripe_webhook_events", { cause: releaseCause }),
+    );
+
+    expect(
+      (await post({ id: "evt_sql", type: "invoice.paid", data: { object: { id: "in_1" } } }))
+        .status,
+    ).toBe(500);
+
+    const tags = vi
+      .mocked(Sentry.captureException)
+      .mock.calls.map(([, context]) => (context as { tags: Record<string, string> }).tags);
+    expect(tags).toContainEqual({
+      stripe_event_id: "evt_sql",
+      stripe_webhook_event_type: "invoice.paid",
+      stripe_webhook_stage: "handler",
+      error_class: "Error",
+      cause_name: "PostgresError",
+      cause_code: "23505",
+    });
+    expect(tags).toContainEqual(
+      expect.objectContaining({ stripe_webhook_stage: "claim_release", cause_code: "57P01" }),
+    );
+
+    const lines = [
+      ...vi.mocked(console.log).mock.calls,
+      ...vi.mocked(console.error).mock.calls,
+    ].map((call) => JSON.parse(call[0] as string));
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.handler_outcome",
+        outcome: "handler_failed",
+        errorCode: "Error",
+        causeName: "PostgresError",
+        causeCode: "23505",
+      }),
+    );
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.claim_release_failed",
+        errorCode: "Error",
+        causeCode: "57P01",
+      }),
+    );
+    const written = JSON.stringify([lines, vi.mocked(Sentry.captureException).mock.calls]);
+    expect(written).not.toContain("nora@example.com");
+  });
+
   it("a release that itself fails never masks the original error", async () => {
     const releaseBoom = new Error("release failed too");
     vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(boom);
@@ -1359,8 +1705,15 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     // handler's own error above all, since a swallowed release error would
     // otherwise be the only thing anyone saw.
     expect(response.status).toBe(500);
-    expect(Sentry.captureException).toHaveBeenCalledWith(boom, expect.anything());
-    expect(Sentry.captureException).toHaveBeenCalledWith(releaseBoom, expect.anything());
+    const stages = vi
+      .mocked(Sentry.captureException)
+      .mock.calls.map(
+        ([, context]) => (context as { tags: Record<string, string> }).tags.stripe_webhook_stage,
+      );
+    expect(stages).toEqual(expect.arrayContaining(["handler", "claim_release"]));
+    for (const [sent] of vi.mocked(Sentry.captureException).mock.calls) {
+      expect((sent as Error).message).not.toMatch(/db is down|release failed too/);
+    }
   });
 
   it("never releases a claim it never took (a duplicate is not a failure)", async () => {

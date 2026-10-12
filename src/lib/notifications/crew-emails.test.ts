@@ -135,6 +135,38 @@ describe("crewScheduleChangeEmail", () => {
     expect(email.text).toContain("Your request to crew Wreck");
     expect(email.text).toContain("couldn’t be added");
   });
+
+  it("tells the crew a moved departure's new time beside the one they knew, in the shop's zone", () => {
+    const email = crewScheduleChangeEmail({
+      ...base,
+      changes: [
+        {
+          change: "time_moved",
+          tripTitle: "Night <Dive>",
+          startsAt: SUNDAY,
+          previousStartsAt: SATURDAY,
+          tripUrl: "https://x.example/1",
+        },
+      ],
+    });
+    expect(email.subject).toMatch(/^Blue <Mantis>: Night <Dive> now leaves Oct\s18/);
+    expect(email.text).toMatch(/Night <Dive> now leaves Oct\s18, 8:00.+, not Oct\s17, 8:00/);
+    expect(email.html).toContain("Night &lt;Dive&gt;");
+    const es = crewScheduleChangeEmail({
+      ...base,
+      locale: "es-ES",
+      changes: [
+        {
+          change: "time_moved",
+          tripTitle: "Nocturna",
+          startsAt: SUNDAY,
+          previousStartsAt: SATURDAY,
+          tripUrl: "https://x.example/1",
+        },
+      ],
+    });
+    expect(es.text).toContain("Nocturna cambió de hora");
+  });
 });
 
 describe("the crew_schedule_change kind", () => {

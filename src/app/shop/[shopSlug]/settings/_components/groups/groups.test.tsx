@@ -14,6 +14,8 @@ import {
   DataGroup,
   MessagesGroup,
   MoneyGroup,
+  NotificationsGroup,
+  RarelyChangedGroup,
   RentalsGroup,
   ShopGroup,
   TeamGroup,
@@ -67,25 +69,38 @@ describe("each settings group renders as its own component", () => {
       RentalsGroup({ view }),
       MoneyGroup({ view, canPayments: true, account: null, connectConfigured: false }),
       MessagesGroup({ view, canManageMessaging: true }),
+      NotificationsGroup({ view }),
       WebsiteGroup({ view }),
       await DataGroup({ view, db, personId, canExport: true, canImport: true }),
       AccountGroup({ view, canViewBilling: true }),
+      RarelyChangedGroup({ view, canPayments: true }),
     ].map(shape);
 
     expect(rendered.map((group) => group.id)).toEqual(SETTINGS_GROUPS.map((group) => group.id));
-    expect(rendered[0]?.rows).toEqual(["timezone", "season", "units", "contact", "address"]);
+    expect(rendered[0]?.rows).toEqual(["timezone", "units", "address"]);
     expect(rendered[1]?.rows).toEqual(["crewSchedule"]);
-    expect(rendered[2]?.rows).toEqual(["divingOptions"]);
-    expect(rendered[4]?.rows).toEqual(["rentalTerms"]);
-    expect(rendered[5]?.rows).toEqual(["tax", "passThrough", "tips", "stripe"]);
-    expect(rendered[6]?.rows).toEqual(["reviews", "reviewLink", "deskHours"]);
-    expect(rendered[7]?.rows).toEqual([
+    expect(rendered[2]?.rows).toEqual([]);
+    expect(rendered[4]?.rows).toEqual(["rentalTerms", "regulatorService"]);
+    expect(rendered[5]?.rows).toEqual(["tax", "tips", "stripe"]);
+    expect(rendered[6]?.rows).toEqual(["reviews", "reviewLink"]);
+    // Every row that decides where mail goes, in one group (they were in
+    // Shop, Messages and Account).
+    expect(rendered[7]?.rows).toEqual(["contact", "deskHours"]);
+    expect(hrefsIn(NotificationsGroup({ view }))).toEqual([
+      `/shop/${view.shopSlug}/settings/email`,
+    ]);
+    expect(rendered[8]?.rows).toEqual([
       "shopPhotos",
-      "searchListing",
       "dateRequests",
       "lastMinuteList",
+      "publicYear",
     ]);
-    expect(rendered[9]?.rows).toEqual([]);
+    expect(rendered[10]?.rows).toEqual([]);
+    // The set-once rows, last.
+    expect(rendered[11]?.rows).toEqual(["season", "divingOptions", "passThrough", "searchListing"]);
+    expect(hrefsIn(RarelyChangedGroup({ view, canPayments: true }))).toEqual([
+      `/shop/${view.shopSlug}/settings/trip-tags`,
+    ]);
     expect(hrefsIn(AccountGroup({ view, canViewBilling: true }))).toContain(
       `/shop/${view.shopSlug}/settings/billing`,
     );
@@ -97,12 +112,18 @@ describe("each settings group renders as its own component", () => {
     expect(shape(money).rows).toEqual([]);
 
     const data = await DataGroup({ view, db, personId, canExport: false, canImport: false });
+    expect(hrefsIn(data)).toEqual([`/shop/${view.shopSlug}/settings/integrations`]);
+
     // The activity log needs no gate of its own here: the hub is already
     // owner and manager reading, the log's own set, and the page re-checks.
-    expect(hrefsIn(data)).toEqual([
-      `/shop/${view.shopSlug}/settings/activity`,
-      `/shop/${view.shopSlug}/settings/integrations`,
-    ]);
+    // So Team draws for a reader who cannot manage staff, with only that door.
+    const team = TeamGroup({ view, canManageTeam: false });
+    expect(shape(team).rows).toEqual([]);
+    expect(hrefsIn(team)).toEqual([`/shop/${view.shopSlug}/settings/activity`]);
+
+    expect(shape(RarelyChangedGroup({ view, canPayments: false })).rows).not.toContain(
+      "passThrough",
+    );
 
     const messages = MessagesGroup({ view, canManageMessaging: false });
     expect(hrefsIn(messages)).not.toContain(`/shop/${view.shopSlug}/settings/whatsapp`);

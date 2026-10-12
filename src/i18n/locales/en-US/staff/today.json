@@ -51,6 +51,11 @@
     "blockedCount": "{count} blocked",
     "openRoster": "Open roster"
   },
+  "yourWeek": {
+    "heading": "Your week",
+    "openTrip": "Open {title}",
+    "roleUnset": "On the crew"
+  },
   "actionKind": {
     "rollCallMissingDiver": "Missing diver",
     "rollCallUnfinished": "Roll call",
@@ -209,12 +214,6 @@
     "openStaffing": "Open staffing",
     "openUnits": "Open units",
     "openDiver": "Open diver record"
-  },
-  "greeting": {
-    "morning": "Good morning, {name}",
-    "afternoon": "Good afternoon, {name}",
-    "evening": "Good evening, {name}",
-    "night": "Working late, {name}"
   },
   "seasonalBriefing": {
     "summer": "Enjoy the surface interval. Grab some shade{hasShop, select, true { at {shopName}} other {}}, drink some water, and we’ll see you on the next boat.",

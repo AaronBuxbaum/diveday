@@ -1,4 +1,4 @@
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { diverTranslator } from "@/i18n/messages";
 import { TripTerms } from "./TripTerms";
 import type { Shop, Trip } from "./types";

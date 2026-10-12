@@ -103,6 +103,8 @@ const TOLD_THE_DATE_KINDS: readonly DeliveryKind[] = [
   "booking_confirmation",
   "trip_reminder_7d",
   "trip_reminder_24h",
+  // The reschedule notice states the new date as squarely as a reminder does.
+  "trip_rescheduled",
 ];
 
 /**
@@ -134,8 +136,10 @@ export const DELIVERY_KIND_CLASSIFICATION = {
 } as const;
 
 /**
- * Seats that have already been sent this departure's date — the number that
- * turns a move from a click into work, because nothing goes back out to them.
+ * Seats that have already been sent this departure's date — the number a move
+ * now writes to: since ux review 2026-10-11 (item 1) the move holds a
+ * reschedule notice for every booked seat (`src/db/trip-rescheduled.ts`), and
+ * the panel says so before the staffer presses Move.
  *
  * `countDistinct` on the booking, because `notification_deliveries` holds one
  * row per (booking, kind): a diver who has had a confirmation *and* both
