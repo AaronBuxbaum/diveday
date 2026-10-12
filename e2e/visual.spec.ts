@@ -4132,7 +4132,9 @@ for (const scheme of ["light", "dark"] as const) {
        * in this file photographs: `InlineConfirm`'s message mode replaces the
        * trigger with a bordered `role="alert"` block carrying a sentence and
        * two buttons, *inside* a blocked roster row that already holds a badge
-       * and a reason. The unarmed half is `trip-guests-identity`, so the armed
+       * and a reason. Since issue #1789 (H-79) the armed block also carries
+       * the matched diver's last dive day here, or "No dive days here yet",
+       * which `e2e/check-in.spec.ts` asserts. The unarmed half is `trip-guests-identity`, so the armed
        * state is the one worth a baseline here.
        *
        * Seeded through `/api/test/seed-trouble-states?identityHeld=1` rather
