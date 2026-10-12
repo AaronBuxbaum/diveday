@@ -13,9 +13,12 @@ import {
   authVerifications,
   bookings,
   buddyTeamEvents,
+  divePackageEntitlements,
+  divePackages,
   globalDiveSites,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
+  orders,
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
@@ -251,6 +254,54 @@ describe("deleteDemoShopCascade", () => {
 
     expect(await findShop(db, slug)).toBeUndefined();
     expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBe(0);
+  });
+
+  /**
+   * A package sold on a minted shop (`e2e/package-purchase.spec.ts`) left its
+   * entitlements naming the order, and the cascade deleted the order first:
+   * 23503 on `dive_package_entitlements.order_id`, so every later
+   * `/api/test/reset` 500'd in `purgeMintedDemoShops` and a whole Playwright
+   * shard went red behind it. Entitlements go before the order they name.
+   */
+  it("deletes a package's entitlements before the order they were paid on", async () => {
+    const db = await seededTestDb();
+    const { slug } = await createDemoShop(db);
+    const shop = await requireShop(db, slug);
+    const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!person) throw new Error("test setup: demo shop has no people");
+    const [pkg] = await db
+      .insert(divePackages)
+      .values({ shopId: shop.id, name: "Ten-dive card", diveCount: 10, priceCents: 40000 })
+      .returning();
+    if (!pkg) throw new Error("test setup: package insert returned no row");
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: person.id,
+        createdByPersonId: person.id,
+        currency: "usd",
+        totalCents: 40000,
+        collection: "cash",
+      })
+      .returning();
+    if (!order) throw new Error("test setup: order insert returned no row");
+    await db
+      .insert(divePackageEntitlements)
+      .values({ shopId: shop.id, packageId: pkg.id, personId: person.id, orderId: order.id });
+
+    // No FK violation here is the real assertion.
+    await deleteDemoShopCascade(db, shop.id);
+
+    expect(await findShop(db, slug)).toBeUndefined();
+    expect(
+      (
+        await db
+          .select()
+          .from(divePackageEntitlements)
+          .where(eq(divePackageEntitlements.shopId, shop.id))
+      ).length,
+    ).toBe(0);
   });
 
   /**
