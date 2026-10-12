@@ -339,8 +339,9 @@
   [20260810-open-ended-recurring-trips](../../architecture/decisions/20260810-open-ended-recurring-trips.md),
   addendum 2026-10-12).
 - **Back on the water** — the date a shop types beside its season start for when it reopens
-  (`shops.reopens_on`). The public schedule's off-season card names it only while the board is
-  empty and the date is still ahead; any scheduled departure outranks it.
+  (`shops.reopens_on`). The public schedule's off-season card names it while the board is quiet
+  and the date is still ahead, unless a departure is scheduled sooner: the card names whichever
+  comes first.
 - **Skipped occurrence** — a date staff deleted outright from a repeating trip. Recorded so the
   horizon never puts it back (`trip_series_skips`); cancelling a date, by contrast, keeps the trip
   and can be reinstated.

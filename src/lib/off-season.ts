@@ -14,12 +14,14 @@ import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "
  * honestly say about when it is not.** Codes and instants —
  * never sentences.
  *
- * **A departure outranks anything typed.** A departure the shop put on the
- * board is the strongest possible statement that it is running that day, so it
- * is always the date named when there is one. Only a board with nothing on it
- * at all falls back to the date the shop typed in Settings
- * (`shops.reopens_on`, 2026-10-12): a shop between seasons, with next year not
- * yet scheduled, could otherwise tell nobody when it reopens. That date speaks
+ * **The sooner of a departure and the typed date.** A departure the shop put
+ * on the board is the strongest possible statement that it is running that
+ * day, so it is named unless the date the shop typed in Settings
+ * (`shops.reopens_on`, 2026-10-12) comes before it: a shop back out on 1
+ * February with only a May trip scheduled so far is open in between, and
+ * naming May would say otherwise (review 3b). On an empty board the typed date
+ * is all there is: a shop between seasons, with next year not yet scheduled,
+ * could otherwise tell nobody when it reopens. That date speaks
  * only while it is still ahead, so one nobody updated goes quiet by itself the
  * day it passes rather than naming a reopening that has come and gone.
  */
@@ -42,14 +44,14 @@ export type OffSeason = {
   quiet: boolean;
   /**
    * The first public departure back on the board, when the shop has scheduled
-   * one beyond the window. Null while the board is empty outright — there is
-   * then no departure to name, and inventing a date is not this module's job.
+   * one beyond the window and has typed no sooner date. Null while the board
+   * is empty outright — inventing a date is not this module's job.
    */
   opensAt: Date | null;
   /**
-   * The shop's own "back out on" date, only while the board is empty outright
-   * and the date is still ahead of the shop's today. Null whenever `opensAt` is
-   * set: a scheduled departure is the fact, and the typed date only a plan.
+   * The shop's own "back out on" date, only while it is still ahead of the
+   * shop's today and before the first departure scheduled, if any. Null
+   * whenever `opensAt` is set: at most one date is named.
    */
   reopensOn: CalendarDate | null;
 };
@@ -82,11 +84,11 @@ export function offSeason({
     firstDeparture === null || firstDeparture.getTime() - now.getTime() > quietDays * DAY_MS;
   const typed =
     quiet &&
-    firstDeparture === null &&
     reopensOn !== null &&
     isValidCalendarDate(reopensOn) &&
-    reopensOn > calendarDateInTimezone(now, timeZone)
+    reopensOn > calendarDateInTimezone(now, timeZone) &&
+    (firstDeparture === null || reopensOn < calendarDateInTimezone(firstDeparture, timeZone))
       ? reopensOn
       : null;
-  return { quiet, opensAt: quiet ? firstDeparture : null, reopensOn: typed };
+  return { quiet, opensAt: quiet && typed === null ? firstDeparture : null, reopensOn: typed };
 }

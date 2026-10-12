@@ -5,9 +5,28 @@ import type { RunningPublicSeries } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { dateRequestCopy } from "@/i18n/date-request-copy";
 import type { DiverTranslator } from "@/i18n/messages";
+import { compareMonths, type MonthRef } from "@/lib/calendar";
 import { weekdayNames } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { recurrenceSummary } from "@/lib/recurrence";
+
+/**
+ * Whether the viewed month is at or past the end of what the board holds, so
+ * the open-ended runs say they keep going. Any month from the last one with a
+ * date on it onwards (review 3a, 2026-10-12): a reader who jumps past the
+ * horizon is the one most owed the sentence. The default, uncursored view says
+ * it only once its own list has nothing further to page to.
+ */
+export function viewsBoardsEnd(input: {
+  viewed: MonthRef;
+  lastTripMonth: MonthRef | null;
+  explicitMonth: boolean;
+  morePages: boolean;
+}): boolean {
+  if (input.lastTripMonth === null) return false;
+  if (compareMonths(input.viewed, input.lastTripMonth) < 0) return false;
+  return input.explicitMonth || !input.morePages;
+}
 
 /**
  * "Saturday Reef runs every Saturday." One sentence per run, in the run's own
@@ -75,7 +94,7 @@ export function PromotedDateAsk({
   /** The off-season card is up (`src/lib/off-season.ts`). */
   quiet: boolean;
   dateRequestsEnabled: boolean;
-  /** {@link seriesHorizonLines}, on the board's last month only; else empty. */
+  /** {@link seriesHorizonLines}, from the board's last month on ({@link viewsBoardsEnd}); else empty. */
   runningLines: readonly string[];
   className: string;
 }) {

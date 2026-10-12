@@ -78,7 +78,7 @@ import { MonthRail } from "./_components/MonthRail";
 import { MonthSightingsSection } from "./_components/MonthSightingsShelf";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel, offSeasonLine } from "./_components/OffSeasonPanel";
-import { PromotedDateAsk, seriesHorizonLines } from "./_components/PromotedDateAsk";
+import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_components/PromotedDateAsk";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import { ShopPhotoStrip } from "./_components/ShopPhotoStrip";
@@ -507,10 +507,12 @@ export default async function SchedulePage({
   const atBoardsEnd =
     !isEmbed &&
     !quiet.quiet &&
-    lastTripMonth !== null &&
-    nextMonthKey === null &&
-    ordinal(currentMonth) === ordinal(lastTripMonth) &&
-    (explicitMonth !== null || !nextCursor);
+    viewsBoardsEnd({
+      viewed: currentMonth,
+      lastTripMonth,
+      explicitMonth: explicitMonth !== null,
+      morePages: Boolean(nextCursor),
+    });
   const runningLines = atBoardsEnd
     ? seriesHorizonLines(t, locale, await listRunningPublicSeries(db, shop.id, now))
     : [];

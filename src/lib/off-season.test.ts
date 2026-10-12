@@ -48,15 +48,24 @@ describe("offSeason", () => {
       ).toEqual({ quiet: true, opensAt: null, reopensOn: "2026-03-01" });
     });
 
-    it("never outranks a departure the shop scheduled, earlier or later", () => {
+    it("never outranks a departure the shop scheduled sooner", () => {
       const scheduled = inDays(90);
-      for (const reopensOn of ["2026-02-01", "2026-06-01"]) {
+      for (const reopensOn of ["2026-06-01", "2026-04-15"]) {
         expect(offSeason({ now, timeZone: TZ, firstDeparture: scheduled, reopensOn })).toEqual({
           quiet: true,
           opensAt: scheduled,
           reopensOn: null,
         });
       }
+    });
+
+    // Review 3b (2026-10-12): back out on 1 February, with only a May trip
+    // scheduled so far. Naming May would tell a stranger the shop is shut for
+    // three months it is open.
+    it("names the typed date when it comes before the first departure scheduled", () => {
+      expect(
+        offSeason({ now, timeZone: TZ, firstDeparture: inDays(110), reopensOn: "2026-02-01" }),
+      ).toEqual({ quiet: true, opensAt: null, reopensOn: "2026-02-01" });
     });
 
     it("goes quiet once the date is today or past, read in the shop's own zone", () => {

@@ -1690,6 +1690,45 @@ describe("a run's standing crew (2026-10-12): applied per date, never assumed", 
 });
 
 describe("what keeps running past the public board's last month (2026-10-12)", () => {
+  // Review 3a: the board's promise matches the nightly roll's own test of a
+  // run that will generate — never one the roll skips or fails every night.
+  it("never names a run the nightly roll cannot extend", async () => {
+    const { db, shop } = ctx;
+    const now = at("2030-08-15T00:00:00.000Z");
+    const [course] = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.isActive, true)))
+      .limit(1);
+    if (!course) throw new Error("seeded shop has no active course");
+    const courseRun = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, title: "Weekly Open Water", courseId: course.id }),
+    );
+    const unanchored = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Sunday Drift",
+        weekdays: weekdaySetFrom([SUN]),
+        anchorDate: "2030-09-08",
+        template: {
+          startsAt: at("2030-09-08T11:00:00.000Z"),
+          endsAt: at("2030-09-08T15:00:00.000Z"),
+        },
+      }),
+    );
+    if (!courseRun || !unanchored) throw new Error("series not created");
+    // The course is archived: the roll refuses to guess its cert gate.
+    await db.update(courses).set({ isActive: false }).where(eq(courses.id, course.id));
+    // A run on its inert pre-cadence default, which the sweep never considers.
+    await db
+      .update(tripSeries)
+      .set({ anchorDate: "" })
+      .where(eq(tripSeries.id, unanchored.series.id));
+    expect(await listRunningPublicSeries(db, shop.id, now)).toEqual([]);
+  });
+
   it("names open-ended public runs, never a finite, private or cancelled one", async () => {
     const { db, shop } = ctx;
     const now = at("2030-08-15T00:00:00.000Z");

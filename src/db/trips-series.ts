@@ -32,6 +32,7 @@ import {
   boats,
   bookingPayments,
   bookings,
+  courses,
   rollCallEvents,
   shops,
   tripDives,
@@ -755,7 +756,10 @@ export async function listRunningPublicSeries(
       and(
         eq(tripSeries.shopId, shopId),
         isNull(tripSeries.endsOn),
+        // The sweep's own `runnable` test (`rollAllSeriesForward`): a run it
+        // never considers is not one the board may promise more of.
         gt(tripSeries.weekdayMask, 0),
+        ne(tripSeries.anchorDate, ""),
         liveTrip(),
         eq(trips.status, "scheduled"),
         eq(trips.isPrivate, false),
@@ -766,15 +770,40 @@ export async function listRunningPublicSeries(
   const bySeries = new Map<string, RunningPublicSeries>();
   for (const row of rows) {
     // Rows run soonest first, so the last one per run is its furthest date.
-    const entry = bySeries.get(row.seriesId);
-    if (!entry && bySeries.size >= limit) continue;
     bySeries.set(row.seriesId, {
       title: row.title,
       intervalWeeks: row.intervalWeeks,
       weekdayMask: row.weekdayMask,
     });
   }
-  return [...bySeries.values()];
+  const running: RunningPublicSeries[] = [];
+  for (const [seriesId, entry] of bySeries) {
+    if (running.length >= limit) break;
+    if (await seriesTemplateCanRoll(db, shopId, seriesId)) running.push(entry);
+  }
+  return running;
+}
+
+/**
+ * Whether the roll can copy this run's template: the furthest-out date's
+ * course, if it has one, is still active. The roll refuses to guess a cert
+ * gate (`materializeWindow`), so a run whose course was archived adds no date,
+ * however long it says it runs.
+ */
+async function seriesTemplateCanRoll(
+  db: AppDb,
+  shopId: string,
+  seriesId: string,
+): Promise<boolean> {
+  const [template] = await db
+    .select({ courseId: trips.courseId, courseActive: courses.isActive })
+    .from(trips)
+    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
+    .where(and(eq(trips.seriesId, seriesId), eq(trips.shopId, shopId), liveTrip()))
+    .orderBy(desc(trips.startsAt))
+    .limit(1);
+  if (!template) return false;
+  return template.courseId === null || template.courseActive === true;
 }
 
 /** The series row itself, scoped to a shop — cadence for a horizon-roll. */
