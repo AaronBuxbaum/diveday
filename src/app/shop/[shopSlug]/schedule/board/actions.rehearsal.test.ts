@@ -28,11 +28,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireShopSurface } = await import("@/lib/session");
 const { addDepartureAction } = await import("./actions");
 
 const pad = (value: number) => String(value).padStart(2, "0");
@@ -42,9 +42,11 @@ async function signedInOwner() {
   const { db, shop } = await seededShopContext();
   vi.mocked(getDb).mockResolvedValue(db);
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
-  vi.mocked(requireStaffSession).mockResolvedValue(
-    staffSession({ shopId: shop.id, shopSlug: shop.slug, personId: owner }) as never,
-  );
+  vi.mocked(requireShopSurface).mockResolvedValue({
+    session: staffSession({ shopId: shop.id, shopSlug: shop.slug, personId: owner }),
+    db,
+    shop,
+  } as never);
   return { db, shop };
 }
 
