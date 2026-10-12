@@ -123,7 +123,7 @@
   "medicalReferralUnresolvedChip": "Referral still open",
   "medicalReferralLink": "View the referral",
   "medicalRefusalLink": "View the refusal",
-  "resolveBlockersLink": "Resolve blockers on Guests →",
+  "resolveBlockersLink": "Resolve blockers on Divers →",
   "addNoteSummary": "Add a note",
   "rollCallRecordedByPlain": "{label} {date} by {name}",
   "carriedForwardFromDock": "Ashore since the dock",

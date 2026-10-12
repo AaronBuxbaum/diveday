@@ -86,6 +86,7 @@
     "eyebrow": "Orden de trabajo",
     "ownUnitSubject": "Equipo del centro · {kind}",
     "statusHeading": "Estado",
+    "moveTo": "Pasar a",
     "technicianNotes": "Notas del taller",
     "technicianNotesHint": "(solo para el personal)",
     "workPerformed": "Trabajo realizado",

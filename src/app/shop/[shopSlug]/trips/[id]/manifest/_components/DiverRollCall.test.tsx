@@ -2,7 +2,12 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { RollCallCheckpoint, RollCallRecord, TripManifest } from "@/lib/manifests";
+import {
+  buddyAlertFor,
+  type RollCallCheckpoint,
+  type RollCallRecord,
+  type TripManifest,
+} from "@/lib/manifests";
 import { DiverRollCall } from "./DiverRollCall";
 import { rollCallScrollMargin } from "./RollCallControls";
 
@@ -599,7 +604,7 @@ describe("the earlier-refusal capsule", () => {
         }),
       ],
     });
-    expect(capsuleOf(split.container)).toHaveTextContent("Someone unaccounted for");
+    expect(capsuleOf(split.container)).toHaveTextContent("Buddy not back aboard");
     expect(capsuleOf(split.container)).not.toHaveTextContent(CAPSULE);
     split.unmount();
 
@@ -816,6 +821,50 @@ describe("an unanswered referral's warning", () => {
  * for, and the head count above already says so. Only a split team after a
  * dive outranks the blocker.
  */
+/**
+ * **The split-team chip names the buddy, on the row of the one aboard** (UX
+ * review 2026-10-10, item 23). It read "Someone not aboard" on the diver who
+ * *was* aboard, which a crew read as that diver missing. The alert belongs on
+ * the boarded diver's row (`buddyAlertFor`), so the words have to say whose
+ * absence it is; the teammate still ashore wears no chip, because their own
+ * row already says they are not aboard.
+ */
+describe("a buddy team split at the dock", () => {
+  it("says the buddy is not aboard yet on the boarded row, and nothing on the ashore one", () => {
+    const team = { teamId: "t-1", others: [] };
+    const aboard = boardedAt();
+    const ashore = undefined;
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          fullName: "Meera Iyer",
+          rollCall: aboard,
+          buddyAlert: buddyAlertFor("departure", aboard, [ashore]),
+          buddyTeam: team,
+        }),
+        diver({
+          bookingId: "00000000-0000-4000-8000-000000000002",
+          fullName: "Ravi Iyer",
+          rollCall: ashore,
+          buddyAlert: buddyAlertFor("departure", ashore, [aboard]),
+          buddyTeam: team,
+        }),
+      ],
+    });
+    const rows = screen.getAllByRole("listitem");
+    const rowOf = (name: string) => {
+      const row = rows.find((item) => within(item).queryByText(name));
+      if (!row) throw new Error(`no row for ${name}`);
+      return row;
+    };
+    expect(within(rowOf("Meera Iyer")).getAllByText("Buddy not aboard yet").length).toBeGreaterThan(
+      0,
+    );
+    expect(within(rowOf("Ravi Iyer")).queryByText(/not aboard yet|Someone/)).toBeNull();
+  });
+});
+
 describe("a blocked diver marked aboard at the dock", () => {
   const blocked: TripManifest["divers"][number]["readiness"] = {
     status: "blocked",
@@ -871,7 +920,7 @@ describe("a blocked diver marked aboard at the dock", () => {
         }),
       ],
     });
-    expect(onScreen("Someone unaccounted for").length).toBeGreaterThan(0);
+    expect(onScreen("Buddy not back aboard").length).toBeGreaterThan(0);
     expect(onScreen("Blocked")).toHaveLength(0);
   });
 });
@@ -917,8 +966,8 @@ describe("the unresolved-referral capsule", () => {
 
 /**
  * **The capsule has the whole row's width** (issue #2008). A Badge never wraps,
- * and the longest capsule ("Someone unaccounted for", "Alguien sin
- * contabilizar") is wider than the name column at 390px, so beside the name it
+ * and the longest capsule ("Buddy not back aboard", "Compañero sin
+ * regresar a bordo") is wider than the name column at 390px, so beside the name it
  * would spill over the caret and the mark. It takes its own line under the
  * row, from the index's edge to the caret's, still inside the name button:
  * the tap target and what the button opens are unchanged. jsdom has no
@@ -1224,7 +1273,7 @@ describe("the person panel's spacing", () => {
   });
 
   /**
-   * **The rule under "Resolve blockers on Guests →" sits as far from the link's
+   * **The rule under "Resolve blockers on Divers →" sits as far from the link's
    * words as from the next line's** (pixel-craft class 4, K-362). The link is a
    * 44px target round a 24px line, so about 15px of its box is already air under
    * its words; the rule's `my-3` added 12px more above and 12 below — 27px of
@@ -1466,7 +1515,7 @@ describe("a diver with no earlier boarding, after a dive", () => {
       ],
     });
     const onScreen = screen
-      .queryAllByText("Someone unaccounted for")
+      .queryAllByText("Buddy not back aboard")
       .filter((element) => !element.closest(".hidden.print\\:block"));
     expect(onScreen.length).toBeGreaterThan(0);
   });

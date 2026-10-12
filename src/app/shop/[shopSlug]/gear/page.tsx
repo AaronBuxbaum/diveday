@@ -383,16 +383,15 @@ export default async function GearRegisterPage({
           </section>
         )}
 
-        {/* `AddUnitDetails` rather than `SectionCard as="details"` (the shared
-            component has no `open` prop, a closed set on purpose) or a plain
-            `<details>` (its own React state is what lets `AddUnitLink`
-            elsewhere on the page open it reliably — see both components'
-            comments). `initialOpen` layers a second, independent reason to
-            start open: a refusal from this form to show. */}
+        {/* `AddUnitDetails`, not `SectionCard as="details"` (no `open` prop)
+            or a plain `<details>`: its React state lets `AddUnitLink` open it
+            reliably. `initialOpen` also opens it on a refusal to show. On an
+            empty register the closed band hides, so the empty state's "Add
+            gear" is the one door to it (UX review 2026-10-10, item 30). */}
         <AddUnitDetails
           className={sectionCardClass({
             padding: "none",
-            className: "group/add-unit scroll-mt-24",
+            className: `group/add-unit scroll-mt-24${fleetTotal === 0 && !showDeleted ? " hidden open:block" : ""}`,
           })}
           initialOpen={Boolean(addStatus)}
         >

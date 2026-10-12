@@ -168,6 +168,79 @@ describe("the edge refusal covers the public route tree", () => {
 });
 
 /**
+ * **Every route under a shop is still served, now that the edge refuses the
+ * paths that are not** (UX review 2026-10-10, item 11).
+ *
+ * `publicRouteShape` calls a path under `/s/<shop>` that names no route
+ * `malformed`, so the 404 wears the shop's frame instead of DiveDay's. That is
+ * only safe while the function knows every route in the storefront: a new
+ * `page.tsx` or `route.ts` it was never taught would be refused at the edge
+ * before it could render. This walks the storefront's own tree, files and
+ * handlers alike, and fails on the first one the shape module would refuse.
+ */
+const SHOP_DIR = join(APP_DIR, "s", "[shopSlug]");
+
+/** Every `page.tsx`, `route.ts` and `opengraph-image.tsx` under the storefront, as a URL path. */
+function storefrontRoutes(dir = SHOP_DIR, trail: string[] = []): string[] {
+  const found: string[] = [];
+  const entries = readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isFile() && ["page.tsx", "route.ts"].includes(entry.name))
+      found.push(["/s/[shopSlug]", ...trail].join("/"));
+    if (entry.isFile() && entry.name === "opengraph-image.tsx")
+      found.push(["/s/[shopSlug]", ...trail, "opengraph-image"].join("/"));
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith("_")) continue;
+    found.push(...storefrontRoutes(join(dir, entry.name), [...trail, entry.name]));
+  }
+  return found;
+}
+
+/**
+ * The two framed pages' internal segments, which the proxy refuses *by name*
+ * before it asks for a shape (`isInternalEmbedRoute`): nobody may request
+ * them, so the shape module calls them malformed on purpose.
+ */
+const INTERNAL_RENDER_ROUTES = new Set([
+  "/s/[shopSlug]/embed/schedule",
+  "/s/[shopSlug]/trips/[id]/embed",
+]);
+
+/** A concrete, live-shaped URL: each segment is a value its own page would accept. */
+const storefrontProbe = (route: string) =>
+  route
+    .replace("[shopSlug]", "blue-mantis")
+    .replace("[id]", "11111111-2222-4333-8444-555555555555")
+    .replace("[siteSlug]", "molasses-reef")
+    .replace("[slug]", "open-water")
+    .replace("[widget]", "grid");
+
+describe("the edge refusal leaves every storefront route served", () => {
+  const routes = storefrontRoutes();
+
+  it("finds the storefront tree", () => {
+    expect(routes).toContain("/s/[shopSlug]");
+    expect(routes).toContain("/s/[shopSlug]/trips/[id]/calendar");
+    expect(routes).toContain("/s/[shopSlug]/opengraph-image");
+    expect(routes.length).toBeGreaterThan(10);
+  });
+
+  it("never calls a real storefront route malformed", () => {
+    const failures = routes
+      .filter((route) => !INTERNAL_RENDER_ROUTES.has(route))
+      .filter((route) => publicRouteShape(storefrontProbe(route))?.kind === "malformed")
+      .map(
+        (route) =>
+          `${route}: publicRouteShape calls ${storefrontProbe(route)} malformed, so the edge ` +
+          `refuses a page that would have rendered. Teach shopNamespaceShape in ` +
+          `src/lib/public-route-shape.ts the new route.`,
+      );
+    expect(failures).toEqual([]);
+  });
+});
+
+/**
  * The proxy's `config.matcher`, read off the source. Next reads `config` from
  * `src/proxy.ts` statically, so it has to be a literal there; importing the
  * module would evaluate the database client for one string.

@@ -86,6 +86,7 @@ function contextFor(status: "ready" | "blocked"): RosterRowContext {
       saveEmergencyContactAction: noop,
     },
     arrival: undefined,
+    record: false,
     sharedAdvisoryTexts: new Set(),
     waiverControls: waiverControls(t),
     paymentStatusCopy: rosterPaymentStatusCopy(t),
@@ -113,6 +114,34 @@ describe("RosterRow", () => {
       </ul>,
     );
     expect(container.querySelector("#booking-b-1 summary svg")).not.toBeNull();
+  });
+
+  /**
+   * **A finished departure's row is a record** (UX review 2026-10-10, item
+   * 10): the blocked diver who did not sail is listed, not chased. No
+   * "Blocked" capsule and no reason line asking for a fix.
+   */
+  it("in the record, names the diver and asks for nothing", () => {
+    render(
+      <ul>
+        <RosterRow
+          entry={seat}
+          settled={false}
+          context={{ ...contextFor("blocked"), record: true }}
+        />
+      </ul>,
+    );
+    expect(screen.getAllByText("Asha Osei").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Blocked")).toBeNull();
+  });
+
+  it("outside the record, still says Blocked", () => {
+    render(
+      <ul>
+        <RosterRow entry={seat} settled={false} context={contextFor("blocked")} />
+      </ul>,
+    );
+    expect(screen.getAllByText("Blocked").length).toBeGreaterThan(0);
   });
 });
 
