@@ -2,6 +2,17 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-12
+- **Amended:** 2026-10-12 — inside `/s/<shop>`, a path that names no route at all is now refused
+  as `malformed` rather than passed through. Next did already answer it 404, but from the root
+  boundary, which knows no shop, so `/s/blue-mantis/anything-wrong` showed DiveDay's refusal and a
+  button to DiveDay's sales page to a diver on a shop's site (UX review 2026-10-10, item 11). That
+  is the "refuse what I have not been taught" this decision called not negotiable below, and the
+  reason it gave was the silent case: a route added later and never taught to the shape module
+  would be refused before it could render. That case is no longer silent.
+  `src/app/edge-refusal-coverage.test.ts` walks the storefront's own tree (`page.tsx`, `route.ts`
+  and `opengraph-image.tsx`) and fails by name on any route the shape module would call
+  `malformed`, and the link-preview images stay `null` by name. Outside `/s/**` nothing changed:
+  an unknown path there has no shop to frame it, so passing it through still costs nothing.
 
 ## Context
 

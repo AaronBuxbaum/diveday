@@ -13,6 +13,7 @@
     "backToSchedule": "Back to the schedule",
     "needHelpContact": "Need help? <link>Contact {shop}</link>.",
     "needHelpPlain": "Need help? Contact {shop} directly.",
+    "diveDayDoor": "Go to DiveDay",
     "perDiver": "per diver",
     "optional": "(optional)",
     "name": "Name",
@@ -217,8 +218,7 @@
     "seen": {
       "heading": "Seen here this month",
       "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}}",
-      "lastSeen": "Last seen {date}",
-      "honest": "What the crew logged, and when. It says what was seen, not what you will see."
+      "lastSeen": "Last seen {date}"
     },
     "dayProfile": {
       "bottomTime": "Usually {minutes, plural, one {# minute} other {# minutes}} in the water",
@@ -307,7 +307,8 @@
       "crew": "Crew"
     },
     "pitchDoor": "The rest of the briefing",
-    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}"
+    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}",
+    "logEntryWaiting": "After you dive, your log entry is waiting for you."
   },
   "factSource": {
     "forecast": "Forecast",
@@ -374,7 +375,7 @@
     "holdBody": "See the conditions update above. Divers who already booked keep their seats and can follow it live here.",
     "certBelowRequirement": "This trip is for {required} divers. Bring your certification card and we’ll check it at the shop.",
     "certNoneOnGatedTrip": "This trip is for certified divers. Book if you like, then talk to the shop: they run courses and easier dives too.",
-    "confirmedHeading": "You’re on the boat, {name}!",
+    "confirmedHeading": "You’ve got a seat, {name}.",
     "confirmedDockCall": "{date}, {time}. Be at the dock {minutes, plural, one {# minute} other {# minutes}} early and we’ll take it from there.",
     "paymentDepositBalance": "Your seat’s locked in. The {balance} balance is due at the dock.",
     "paymentStillOpen": "Your spot is safe and payment’s still open",
@@ -587,7 +588,8 @@
     "savedError": "That didn’t save. Pick a rating and try again.",
     "yourRating": "You rated this {rating} out of 5.",
     "average": "{average} out of 5",
-    "count": "{count, plural, one {# review} other {# reviews}}",
+    "ratingsCount": "{count, plural, one {# rating} other {# ratings}}",
+    "ratingsAndReviews": "{ratings, plural, one {# rating} other {# ratings}} · {reviews, plural, one {# review} other {# reviews}}",
     "allTitle": "All reviews",
     "allDescription": "Read what divers who were on the boat said about their day.",
     "allEmptyHeading": "No written reviews yet",
@@ -726,6 +728,7 @@
     "agencyLabel": "Agency",
     "agencyNone": "Not certified yet",
     "levelLabel": "Level",
+    "levelPlaceholder": "Choose your level",
     "identifierLabel": "Card number",
     "sizesHeading": "Your sizes",
     "sizesHint": "Only if you rent from us. It saves a fitting at the counter.",
@@ -743,6 +746,7 @@
   "packages": {
     "title": "Dive packages",
     "navLabel": "Packages",
+    "none": "No packages right now",
     "metaDescription": "Prepaid dives at {shopName}: pay once, then book the dives as you go.",
     "dives": "{count, plural, one {# dive} other {# dives}}",
     "perDive": "{amount} a dive",
@@ -858,6 +862,7 @@
     "certInvalid": "Check the agency, level, and certification number, then try again.",
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep. Bookmark it, and it stays up to date until you sail.",
+    "logEntryWaiting": "After you dive, your log entry is waiting here.",
     "gearOnFile": "Your sizes are with the crew.",
     "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
     "changesSizesLabel": "Sizes",
@@ -939,8 +944,27 @@
     "savedCourseForms": "Course forms signed."
   },
   "thread": {
-    "stepsDoneSuffix": "of {total} done",
-    "nextStep": "Next: {step}",
+    "stepsDone": "{done} of {total} done",
+    "next": {
+      "signWaiver": "Next: sign your waiver.",
+      "signGuardian": "Next: a parent or guardian signs the waiver.",
+      "freshWaiver": "Next: get a fresh waiver link.",
+      "signForms": "Next: sign your course forms.",
+      "signFormsGuardian": "Next: a parent or guardian signs your course forms.",
+      "askForWaiver": "Next: ask the shop for your waiver.",
+      "medical": "Next: talk to the shop about your medical answers.",
+      "certification": "Next: add your certification.",
+      "certificationLevel": "Next: check your certification level with the shop.",
+      "specialty": "Next: add your specialty card.",
+      "nitrox": "Next: add your Nitrox card.",
+      "certificationMultiple": "Next: add the cards this dive needs.",
+      "certificationInTraining": "Next: finish your course.",
+      "cardWithShop": "Next: nothing from you. The shop is checking your card.",
+      "pay": "Next: pay for this trip.",
+      "gear": "Next: your gear, renting or bringing your own?",
+      "changes": "Next: check that nothing has changed.",
+      "dayof": "Next: a few details for the day."
+    },
     "withShopHead": "Nothing on your side. The shop is finishing up.",
     "stepSign": "Sign",
     "stepCertification": "Your certification",

@@ -916,7 +916,17 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
 
   it("raises the dock heads-up while one is aboard and another is not yet", () => {
     expect(buddyAlertFor("departure", boardedAt(), [undefined])).toBe("separated_dock");
-    expect(buddyAlertFor("departure", boardedAt(), [notBoardedAt()])).toBe("separated_dock");
+  });
+
+  it("says nothing at the dock about a teammate the crew recorded staying ashore", () => {
+    // `not_boarded` at the dock is a decision somebody made, not a buddy still
+    // to gather: the heads-up is for someone the crew may yet bring aboard
+    // (dive-domain review of UX batch 1).
+    expect(buddyAlertFor("departure", boardedAt(), [notBoardedAt()])).toBeNull();
+    // A second teammate still to gather keeps it.
+    expect(buddyAlertFor("departure", boardedAt(), [notBoardedAt(), undefined])).toBe(
+      "separated_dock",
+    );
   });
 
   it("raises the loud alert after a dive only once a teammate is recorded not back", () => {

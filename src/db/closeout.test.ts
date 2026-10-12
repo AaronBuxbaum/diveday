@@ -8,6 +8,7 @@ import { standingArrivalStatus } from "./arrival-provenance";
 import { getDayCloseout, listHeadCountCloses } from "./closeout";
 import { recordRollCall } from "./manifests";
 import { markBookingNoShow } from "./no-show";
+import { getTripOpenSeatsDebrief } from "./open-seats";
 import { addCrewRecapPhoto } from "./recap";
 import {
   bookingArrivalEvents,
@@ -474,8 +475,10 @@ describe("day close-out (in-memory PGlite)", () => {
       const evening = assembleEveningClose([after], now);
       expect([evening.divers, evening.back]).toEqual([1, 1]);
       // **The debrief still reads the seats.** Ten of twelve went unsold, and
-      // narrowing the shared count would have quietly made it eleven.
-      expect(after.openSeats?.openSeats).toBe(10);
+      // narrowing the shared count would have quietly made it eleven. It lives
+      // on the departure's Details tab now, read off the same bookings.
+      const debrief = await getTripOpenSeatsDebrief(db, shop.id, trip.id, shop.timezone, now);
+      expect(debrief?.openSeats).toBe(10);
       expect(sailing.status).toBe("booked");
     });
 
@@ -609,7 +612,8 @@ describe("day close-out (in-memory PGlite)", () => {
       expect(after.status).toBe("all_home");
       const evening = assembleEveningClose([after], now);
       expect([evening.divers, evening.back]).toEqual([1, 1]);
-      expect(after.openSeats?.openSeats).toBe(10);
+      const debrief = await getTripOpenSeatsDebrief(db, shop.id, trip.id, shop.timezone, now);
+      expect(debrief?.openSeats).toBe(10);
     });
 
     /**
