@@ -275,6 +275,12 @@ function refusedSubmitPath(token: string, field: WaiverInvalidField | undefined)
 }
 
 /**
+ * The questionnaire's answers are named by question id, so every field rides
+ * the catch-all, each read by its first value as `FormData.get` read it.
+ */
+const medicalAnswerFields = z.object({}).catchall(formValue());
+
+/**
  * This form's questionnaire answers.
  *
  * The rule itself lives in `src/lib/medical.ts` — it is the one function that
@@ -282,12 +288,6 @@ function refusedSubmitPath(token: string, field: WaiverInvalidField | undefined)
  * that have to agree, and it had no test while it was a private helper here.
  * This is the `FormData` adapter over it.
  */
-/**
- * The questionnaire's answers are named by question id, so every field rides
- * the catch-all, each read by its first value as `FormData.get` read it.
- */
-const medicalAnswerFields = z.object({}).catchall(formValue());
-
 function readFormMedicalAnswers(
   formData: FormData,
   questionnaire: MedicalQuestionnaire,

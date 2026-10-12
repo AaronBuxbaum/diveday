@@ -17,6 +17,10 @@ import { backTo, requireDiverActionContext, successUrl } from "./action-helpers"
 
 const medicalAttestedField = z.object({ medicalAttested: checkbox() });
 
+/**
+ * A clearance as posted. The outcome is narrowed by the action itself, so a
+ * missing or unknown one is refused before any file is stored.
+ */
 const evaluationForm = z.object({
   outcome: text(),
   evaluatedOn: trimmedText(),
@@ -24,10 +28,6 @@ const evaluationForm = z.object({
   medicalClearanceDocument: formValue(),
 });
 
-/**
- * A clearance as posted. The outcome is narrowed by the action itself, so a
- * missing or unknown one is refused before any file is stored.
- */
 /**
  * "This diver signed on paper", recorded from their own record.
  *
