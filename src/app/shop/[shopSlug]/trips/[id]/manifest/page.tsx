@@ -66,7 +66,7 @@ import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CrewRollCall } from "./_components/CrewRollCall";
-import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
+import { DiverRollCall } from "./_components/DiverRollCall";
 import { departureBoatSafetySection } from "./_components/departure-boat-safety";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
@@ -78,6 +78,7 @@ import {
 } from "./_components/PrintedBoatProcedure";
 import { personTrailIndex } from "./_components/person-trail";
 import { SeenGroup } from "./_components/SeenGroup";
+import { manifestNoteThreads } from "./_components/StaffNotes";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import { TripPlanSection } from "./_components/TripPlanSection";
@@ -546,37 +547,7 @@ export default async function TripManifestPage({
   // forms and has no single home, so it stays at the top of the panel.
   const buddyErrorForm = buddyErrorText ? (buddyError === "few" ? "builder" : "panel") : null;
 
-  // One chronological note thread per booking. A person-scoped note and a
-  // booking note are two contexts in the same `internal_notes` source, not two
-  // lists the crew has to compare — the scope is retained only where it helps
-  // explain why a note follows a diver beyond this departure.
-  const notesByBooking = new Map<string, ManifestNote[]>();
-  for (const { note, authorName } of bookingNotes) {
-    if (!note.bookingId) continue;
-    const rows = notesByBooking.get(note.bookingId) ?? [];
-    rows.push({
-      id: note.id,
-      body: note.body,
-      authorName,
-      createdAt: note.createdAt,
-      scope: "booking",
-    });
-    notesByBooking.set(note.bookingId, rows);
-  }
-  for (const { note, authorName, bookingId } of diverNotes) {
-    const rows = notesByBooking.get(bookingId) ?? [];
-    rows.push({
-      id: note.id,
-      body: note.body,
-      authorName,
-      createdAt: note.createdAt,
-      scope: "diver",
-    });
-    notesByBooking.set(bookingId, rows);
-  }
-  for (const rows of notesByBooking.values()) {
-    rows.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
-  }
+  const notesByBooking = manifestNoteThreads(bookingNotes, diverNotes);
 
   const errorRefusal = t("trips.rollCall.errorRefusal");
   // Crew have no readiness, so the `not_ready` refusal can never be returned by
@@ -819,22 +790,24 @@ export default async function TripManifestPage({
             whole buddy-team builder — so a captain on a phone scrolled past six
             screens of context to reach the first name at roll call. */}
         <DiverRollCall
-          idPrefix={idPrefix}
-          divers={manifest.divers}
-          crew={manifest.crew}
-          checkpoint={checkpoint}
-          isDeparture={isDeparture}
-          shopSlug={shopSlug}
-          tripId={tripId}
-          locale={locale}
-          timezone={shop.timezone}
-          notesByBooking={notesByBooking}
-          todayTrailByBooking={todayTrailBySubject}
-          rollCallAction={boundRollCallAction}
-          addPrivateNoteAction={boundAddPrivateNoteAction}
-          rollCallButtonCopy={rollCallButtonCopy}
-          buddyTeamLabel={buddyTeamLabel}
-          t={t}
+          context={{
+            idPrefix,
+            divers: manifest.divers,
+            crew: manifest.crew,
+            checkpoint,
+            isDeparture,
+            shopSlug,
+            tripId,
+            locale,
+            timezone: shop.timezone,
+            notesByBooking,
+            todayTrailByBooking: todayTrailBySubject,
+            rollCallAction: boundRollCallAction,
+            addPrivateNoteAction: boundAddPrivateNoteAction,
+            rollCallButtonCopy,
+            buddyTeamLabel,
+            t,
+          }}
         />
 
         {/* Crew close the checkpoint (DOM-H1) — they come straight after the

@@ -421,7 +421,7 @@ function classStringsWith(source: string, anchor: string, needs: readonly string
  * the storefront's course cards (CoursesShelf.test.tsx), the About card
  * (TripAboutSection.test.tsx), the command palette's field
  * (CommandPalette.test.tsx), `RowLink` (table.test.tsx), the tip picker
- * (TipAmountPicker.test.tsx), the roll-call mark (DiverRollCall.test.tsx,
+ * (TipAmountPicker.test.tsx), the roll-call mark (DiverRollCallRow.test.tsx,
  * CrewRollCall.test.tsx),
  * "Remove address" (AddressSearch.test.tsx) and the roster seat's foot row
  * (RosterSection.test.tsx).
