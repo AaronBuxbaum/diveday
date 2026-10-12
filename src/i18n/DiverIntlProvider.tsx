@@ -1,7 +1,7 @@
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { nowDate } from "@/lib/clock";
-import { type DiverMessageNamespace, messagesForNamespaces } from "./messages";
+import { type ClientDiverMessageNamespace, messagesForNamespaces } from "./messages";
 import { toDiverLocale } from "./settings";
 
 /**
@@ -45,7 +45,7 @@ export function DiverIntlProvider({
 }: {
   locale: string;
   timeZone: string;
-  namespaces: readonly DiverMessageNamespace[];
+  namespaces: readonly ClientDiverMessageNamespace[];
   children: ReactNode;
 }) {
   const resolved = toDiverLocale(locale);

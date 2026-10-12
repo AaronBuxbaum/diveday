@@ -2,7 +2,14 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { DIVER_MESSAGES, diverTranslator, messagesFor, messagesForNamespaces } from "./messages";
+import {
+  type ClientDiverMessageNamespace,
+  DIVER_MESSAGES,
+  diverTranslator,
+  messagesFor,
+  messagesForNamespaces,
+  SERVER_ONLY_DIVER_NAMESPACES,
+} from "./messages";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, isDiverLocale, toDiverLocale } from "./settings";
 
 /** Every leaf as `dotted.path` → message. */
@@ -165,5 +172,22 @@ describe("locale narrowing", () => {
     expect(toDiverLocale("fr-FR")).toBe(DEFAULT_DIVER_LOCALE);
     expect(toDiverLocale(null)).toBe(DEFAULT_DIVER_LOCALE);
     expect(messagesFor("fr-FR")).toBe(DIVER_MESSAGES[DEFAULT_DIVER_LOCALE]);
+  });
+});
+
+describe("the namespaces only a server reads", () => {
+  it("names real namespaces of the bundle, in every locale", () => {
+    for (const locale of DIVER_LOCALES) {
+      for (const namespace of SERVER_ONLY_DIVER_NAMESPACES) {
+        expect(Object.keys(DIVER_MESSAGES[locale]), `${locale} ${namespace}`).toContain(namespace);
+      }
+    }
+  });
+
+  it("are refused by type as a client provider's namespace", () => {
+    // @ts-expect-error marketing never reaches DiverIntlProvider
+    const marketing: ClientDiverMessageNamespace = "marketing";
+    const fallback: ClientDiverMessageNamespace = "fallback";
+    expect([marketing, fallback]).toEqual(["marketing", "fallback"]);
   });
 });
