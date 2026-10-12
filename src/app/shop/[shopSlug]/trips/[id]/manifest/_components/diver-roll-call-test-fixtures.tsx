@@ -70,6 +70,7 @@ export function renderList({
     <DiverRollCall
       context={{
         divers,
+        crew: [],
         checkpoint,
         isDeparture: checkpoint === "departure",
         shopSlug: "blue-mantis",
@@ -112,6 +113,7 @@ export function exceptionControl(row: HTMLElement, name: string) {
 export function diverContext(overrides: Partial<DiverRollCallContext> = {}): DiverRollCallContext {
   return {
     divers: [],
+    crew: [],
     checkpoint: "after_dive_1",
     isDeparture: false,
     shopSlug: "blue-mantis",
