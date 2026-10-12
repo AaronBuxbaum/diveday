@@ -9,6 +9,7 @@ import { localeEndonym } from "@/i18n/language-labels";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { getAuth } from "@/lib/auth";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import {
   STAFF_DESTINATION_LABEL_KEYS,
   STAFF_DESTINATION_TITLE_KEYS,
@@ -180,12 +181,17 @@ export function ShopNav({
               locale={locale}
               languages={languages}
               setLocaleAction={setLocale}
+              tellUs={{ to: SUPPORT_EMAIL }}
               copy={{
                 boatMode: t("shared.shopNav.boatMode"),
                 language: t("shared.shopNav.language"),
                 signOut: t("shared.shopNav.signOut"),
                 signOutConfirm: t("shared.shopNav.signOutConfirm"),
                 signOutPending: t("shared.shopNav.signOutPending"),
+                tellUs: t("shared.shopNav.tellUs"),
+                tellUsSubject: t("shared.shopNav.tellUsSubject", { shop: shopSlug }),
+                // `{path}` is filled on the client, from the page on screen.
+                tellUsBody: t("shared.shopNav.tellUsBody", { path: "{path}" }),
               }}
             />
             {/* **Where the page's title lands when the bar folds** (ADR
