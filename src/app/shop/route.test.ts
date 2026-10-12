@@ -36,6 +36,8 @@ describe("GET /shop", () => {
     expect(response.status).toBe(307);
     // Relative, so the hop keeps the host the cookie was set on.
     expect(response.headers.get("Location")).toBe("/shop/reef-life");
+    // Per person: no shared cache may hand one staffer's shop to the next.
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     // The session's shop, never a slug the cookie carried.
     expect(getShopById).toHaveBeenCalledWith({}, "shop-1");
   });

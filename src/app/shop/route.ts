@@ -33,5 +33,10 @@ export async function GET() {
   if (!shop) notFound();
   // A relative `Location`, by hand, as `trips/new/route.ts` explains: an
   // absolute one pins the visitor to whichever host it resolved.
-  return new Response(null, { status: 307, headers: { Location: shopPath(shop.slug) } });
+  // `private, no-store`: the answer is this staffer's own shop, and no shared
+  // cache may hand it to the next person who asks.
+  return new Response(null, {
+    status: 307,
+    headers: { Location: shopPath(shop.slug), "Cache-Control": "private, no-store" },
+  });
 }
