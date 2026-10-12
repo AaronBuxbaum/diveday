@@ -517,7 +517,12 @@ const TRIP_CEILING = 50;
 // evidence in one wave (item 13), and the payment rows' Stripe reads joined the
 // queue's wave (item 26).
 const TODAY_PHASE_CEILING = 5;
-const TRIP_PHASE_CEILING = 10;
+// 10 → 9: the readiness pass's payments, course forms and evidence go out in
+// one wave (code review 2026-10-11, item 13). `getTripGuests`' five trailing
+// reads are one wave too (item 12); on the departure measured here four of them
+// skip themselves (no held seat, wait list or course), so that one shows in
+// the code rather than the count. What is left is `getTripOverview`'s chain.
+const TRIP_PHASE_CEILING = 9;
 
 /**
  * The diver pages, measured 2026-10-12 before their reads were grouped (code
