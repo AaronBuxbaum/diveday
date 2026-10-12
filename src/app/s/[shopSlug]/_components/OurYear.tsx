@@ -38,7 +38,13 @@ export async function OurYearSection({
       className={className}
       heading={t("shopYear.panel.heading")}
       range={copy.range}
-      sentence={copy.sentence}
+      sentence={
+        // A shop that plans no site still went to sea; "0 reefs and wrecks"
+        // would publish a gap in its records as a fact about its year.
+        year.siteCount > 0
+          ? copy.sentence
+          : t("shopYear.panel.sentenceNoSites", { divers: year.divers, boats: year.boatsOut })
+      }
     />
   );
 }

@@ -4441,7 +4441,8 @@
       "divers": "Buceadores"
     },
     "panel": {
-      "heading": "Nuestro año"
+      "heading": "Nuestro año",
+      "sentenceNoSites": "{divers, plural, one {# buceador} other {# buceadores}}. {boats, plural, one {# salida} other {# salidas}}."
     }
   },
   "participants": {

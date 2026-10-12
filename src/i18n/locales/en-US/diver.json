@@ -4441,7 +4441,8 @@
       "divers": "Divers"
     },
     "panel": {
-      "heading": "Our year"
+      "heading": "Our year",
+      "sentenceNoSites": "{divers, plural, one {# diver} other {# divers}}. {boats, plural, one {# boat out} other {# boats out}}."
     }
   },
   "participants": {
