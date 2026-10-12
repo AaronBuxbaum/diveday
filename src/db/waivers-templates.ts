@@ -75,15 +75,6 @@ export async function getCurrentWaiverGeneration(
   return template ?? null;
 }
 
-/** The full version history, newest first, for a read-only audit trail. */
-export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) {
-  return db
-    .select()
-    .from(waiverTemplates)
-    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
-    .orderBy(desc(waiverTemplates.version));
-}
-
 export type SaveWaiverTemplateResult = {
   template: typeof waiverTemplates.$inferSelect;
   /**

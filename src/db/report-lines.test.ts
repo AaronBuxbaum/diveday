@@ -6,10 +6,12 @@ import { getMonthMoneyDetail } from "./report-lines";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
+  bookingPayments,
   bookings,
   courses,
   divePackageEntitlements,
   divePackages,
+  importedPaymentHistory,
   orderLineItems,
   orders,
   people,
@@ -29,6 +31,7 @@ const JUNE = new Date("2031-06-01T00:00:00Z");
 const JULY = new Date("2031-07-01T00:00:00Z");
 const MID_JUNE = new Date("2031-06-15T15:00:00Z");
 const NOW = new Date("2031-08-01T00:00:00Z");
+const SHOP_MONEY = { currency: "usd", timeZone: "UTC" };
 
 let seq = 0;
 
@@ -148,7 +151,7 @@ describe("the month's money by line", () => {
       paidAt: new Date("2031-05-31T23:00:00Z"),
     });
 
-    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW);
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
     expect(detail.lines).toEqual([
       { line: "courses", cents: 25_000 },
       { line: "rentals", cents: 4_000 },
@@ -177,7 +180,7 @@ describe("the month's money by line", () => {
       .insert(workOrderBills)
       .values({ shopId: shop.shopId, workOrderId: ticket.id, orderId: order.id });
 
-    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW);
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
     expect(detail.lines).toEqual([{ line: "gearBench", cents: 7_500 }]);
   });
 
@@ -245,7 +248,7 @@ describe("the month's money by line", () => {
       { settledTotalCents: 40_000, taxCents: 0, refundedCents: 10_000 },
     );
 
-    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW);
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
     expect(detail.lines).toEqual([
       { line: "courses", cents: 30_000 },
       { line: "funDives", cents: 18_000 },
@@ -333,7 +336,7 @@ describe("what left the month's money", () => {
     });
     await payout(db, shop.shopId, { id: "po_july", arrivalDate: JULY });
 
-    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW);
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
     expect(detail.out).toEqual({
       refundedCents: 7_500,
       discountedCents: 3_300,
@@ -353,7 +356,7 @@ describe("what left the month's money", () => {
     const other = await freshShop(db);
     await payout(db, other.shopId, { id: "po_other", arrivalDate: MID_JUNE });
 
-    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW);
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
     expect(detail.out).toEqual({ refundedCents: 0, discountedCents: 0, stripeFeesCents: null });
     expect(detail.payouts).toHaveLength(1);
   });
@@ -369,12 +372,107 @@ describe("what left the month's money", () => {
     await payout(db, shop.shopId, { id: "po_june_first", arrivalDate: JUNE });
     await payout(db, shop.shopId, { id: "po_july_first", arrivalDate: JULY });
 
-    const detail = await getMonthMoneyDetail(db, shop.shopId, miamiJune, miamiJuly, NOW, {
-      year: 2031,
-      month: 6,
-    });
+    const detail = await getMonthMoneyDetail(
+      db,
+      shop.shopId,
+      miamiJune,
+      miamiJuly,
+      NOW,
+      SHOP_MONEY,
+      {
+        year: 2031,
+        month: 6,
+      },
+    );
     expect(detail.payouts).toHaveLength(1);
     expect(detail.payouts[0]?.arrivalDate).toEqual(JUNE);
+  });
+});
+
+// Issue #2305: the lines add up to every kind of money the month took in.
+describe("money taken outside Stripe", () => {
+  it("puts a staff cash mark on its departure's line, by the day it was marked", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    const [course] = await db
+      .insert(courses)
+      .values({ shopId: shop.shopId, title: "Open Water", slug: "open-water" })
+      .returning();
+    if (!course) throw new Error("course insert failed");
+    const reef = await trip(db, shop.shopId, new Date("2031-07-04T13:00:00Z"));
+    const lesson = await trip(db, shop.shopId, new Date("2031-06-20T13:00:00Z"), course.id);
+
+    async function marked(
+      tripId: string,
+      values: Partial<typeof bookingPayments.$inferInsert> & { updatedAt: Date },
+    ) {
+      seq += 1;
+      const bookingId = await book(
+        db,
+        shop.shopId,
+        tripId,
+        await person(db, shop.shopId, `D${seq}`),
+      );
+      await db.insert(bookingPayments).values({
+        shopId: shop.shopId,
+        bookingId,
+        status: "paid",
+        amountCents: 9_000,
+        currency: "usd",
+        provider: null,
+        ...values,
+      });
+    }
+
+    await marked(reef, { updatedAt: MID_JUNE });
+    await marked(lesson, { updatedAt: MID_JUNE, status: "deposit_paid", amountCents: 5_000 });
+    // Marked in July: July's money.
+    await marked(reef, { updatedAt: new Date("2031-07-02T09:00:00Z") });
+    // Stripe's own rows reach the lines through their checkout or invoice, not here.
+    await marked(reef, { updatedAt: MID_JUNE, provider: "stripe", providerRef: "cs_x" });
+    // A prepaid package dive was money when the package sold.
+    await marked(reef, { updatedAt: MID_JUNE, provider: "dive_package" });
+    // Waived, or refunded in full: nothing kept.
+    await marked(reef, { updatedAt: MID_JUNE, status: "waived", amountCents: null });
+    await marked(reef, { updatedAt: MID_JUNE, status: "refunded", amountCents: 0 });
+
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
+    expect(detail.lines).toEqual([
+      { line: "courses", cents: 5_000 },
+      { line: "funDives", cents: 9_000 },
+    ]);
+  });
+
+  it("adds the shop's imported history, net of its refunds, in the shop's currency only", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    async function imported(
+      occurredOn: string,
+      direction: "payment" | "refund",
+      amountCents: number | null,
+      currency: string | null = "usd",
+    ) {
+      seq += 1;
+      await db.insert(importedPaymentHistory).values({
+        shopId: shop.shopId,
+        personId: shop.personId,
+        occurredOn,
+        direction,
+        amountLabel: "source text",
+        amountCents,
+        currency: amountCents === null ? null : currency,
+        dedupeKey: `lines-import-${seq}`,
+        importedAt: NOW,
+      });
+    }
+    await imported("2031-06-01", "payment", 50_000);
+    await imported("2031-06-30", "refund", 10_000);
+    await imported("2031-07-01", "payment", 7_700);
+    await imported("2031-06-10", "payment", 3_300, "eur");
+    await imported("2031-06-10", "payment", null);
+
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
+    expect(detail.lines).toEqual([{ line: "imported", cents: 40_000 }]);
   });
 });
 
@@ -428,7 +526,7 @@ describe("package dives the shop still owes", () => {
       .set({ expiresAt: new Date("2031-06-25T23:59:59Z") })
       .where(eqId(rows[4]?.id ?? ""));
 
-    const june = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW);
+    const june = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
     // 10 − 3 spent − 1 lapsed = 6, at the $400 paid over 10 dives.
     expect(june.packageDivesOwed).toEqual({ dives: 6, valueCents: 24_000 });
     // May's report predates the sale.
@@ -438,6 +536,7 @@ describe("package dives the shop still owes", () => {
       new Date("2031-05-01T00:00:00Z"),
       JUNE,
       NOW,
+      SHOP_MONEY,
     );
     expect(may.packageDivesOwed).toEqual({ dives: 0, valueCents: 0 });
   });
@@ -450,7 +549,7 @@ describe("package dives the shop still owes", () => {
       .update(orders)
       .set({ status: "refunded", amountPaidCents: 0 })
       .where(eqOrder(order.id));
-    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW);
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
     expect(detail.packageDivesOwed).toEqual({ dives: 0, valueCents: 0 });
   });
 });
@@ -471,7 +570,7 @@ describe("returning divers", () => {
     await book(db, shop.shopId, juneOne, newcomer);
     await book(db, shop.shopId, juneTwo, newcomer);
 
-    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW);
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
     expect(detail.divers).toEqual({ total: 2, returning: 1 });
   });
 });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { log } from "@/lib/log";
+import { type StripeKeySource, StripeKeyUnavailableError, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -54,14 +55,30 @@ const sessionListSchema = z.object({
   data: z.array(z.object({ id: z.string().min(1) })),
 });
 
+/** `true` for a live key, `false` for a test key, null when the prefix says neither. */
+export function keyLivemode(secretKey: string): boolean | null {
+  if (/^(sk|rk)_live_/.test(secretKey)) return true;
+  if (/^(sk|rk)_test_/.test(secretKey)) return false;
+  return null;
+}
+
+/**
+ * The lookup over a key source, for an event of the given mode. Each question
+ * is asked with the key chosen for the event's own account
+ * (`stripeSecretKeyFor`, ADR 20261009-demo-test-mode-payments), so the demo's
+ * account is asked with its test-mode key on a live deployment (issue #2296).
+ * A key of the other mode than the event's would only earn a 4xx, so it answers
+ * `not_configured` without a call; so does an account that may have no key.
+ */
 export function stripePaymentSourceLookup(
-  config: { secretKey: string },
+  keys: StripeKeySource,
   fetchImpl: Fetch,
+  event: { livemode?: boolean } = {},
 ): PaymentSourceLookup {
-  const get = (stripeAccountId: string, path: string) =>
+  const get = (secretKey: string, stripeAccountId: string, path: string) =>
     fetchImpl(`https://api.stripe.com/v1${path}`, {
       headers: {
-        Authorization: `Bearer ${config.secretKey}`,
+        Authorization: `Bearer ${secretKey}`,
         "Stripe-Account": stripeAccountId,
       },
     });
@@ -75,6 +92,17 @@ export function stripePaymentSourceLookup(
 
   return {
     async findSource(stripeAccountId, paymentIntentId) {
+      let secretKey: string;
+      try {
+        secretKey = await secretKeyForCall(keys, stripeAccountId);
+      } catch (error) {
+        if (error instanceof StripeKeyUnavailableError) return { status: "not_configured" };
+        throw error;
+      }
+      const mode = keyLivemode(secretKey);
+      if (event.livemode !== undefined && mode !== null && mode !== event.livemode) {
+        return { status: "not_configured" };
+      }
       try {
         const invoiceQuery = new URLSearchParams({
           "payment[type]": "payment_intent",
@@ -82,6 +110,7 @@ export function stripePaymentSourceLookup(
           limit: "1",
         });
         const invoiceResponse = await get(
+          secretKey,
           stripeAccountId,
           `/invoice_payments?${invoiceQuery.toString()}`,
         );
@@ -98,6 +127,7 @@ export function stripePaymentSourceLookup(
 
         const sessionQuery = new URLSearchParams({ payment_intent: paymentIntentId, limit: "1" });
         const sessionResponse = await get(
+          secretKey,
           stripeAccountId,
           `/checkout/sessions?${sessionQuery.toString()}`,
         );
@@ -122,29 +152,16 @@ const disabledPaymentSourceLookup: PaymentSourceLookup = {
   },
 };
 
-/** `true` for a live key, `false` for a test key, null when the prefix says neither. */
-export function keyLivemode(secretKey: string): boolean | null {
-  if (/^(sk|rk)_live_/.test(secretKey)) return true;
-  if (/^(sk|rk)_test_/.test(secretKey)) return false;
-  return null;
-}
-
 /**
- * The lookup the environment's platform key allows, for an event of the given
- * mode. A test-mode event (verified by `STRIPE_TEST_WEBHOOK_SECRET`) names
- * test objects a live key cannot see, and the reverse: asking would only earn
- * a 4xx, so a key of the other mode answers `not_configured` without a call.
+ * The lookup for a key source, or one that answers `not_configured` when there
+ * is none. The environment's key source reads who holds each account from the
+ * database, so it is built in `src/db/stripe-providers.ts`
+ * (`paymentSourceLookupFromEnvironment`).
  */
-export function paymentSourceLookupFromEnvironment(
-  env: Readonly<Record<string, string | undefined>> = process.env,
+export function paymentSourceLookupFor(
+  keys: StripeKeySource | null,
   fetchImpl: Fetch = fetch,
   event: { livemode?: boolean } = {},
 ): PaymentSourceLookup {
-  const secretKey = env.STRIPE_SECRET_KEY?.trim();
-  if (!secretKey) return disabledPaymentSourceLookup;
-  const mode = keyLivemode(secretKey);
-  if (event.livemode !== undefined && mode !== null && mode !== event.livemode) {
-    return disabledPaymentSourceLookup;
-  }
-  return stripePaymentSourceLookup({ secretKey }, fetchImpl);
+  return keys ? stripePaymentSourceLookup(keys, fetchImpl, event) : disabledPaymentSourceLookup;
 }

@@ -29,13 +29,17 @@ Crew changes reach the database through three functions, and every surface calls
 - `crew_notices` holds one row per real change, with the person, the departure, the actor and a
   `seq`. The changes are `assigned`, `removed`, `role_changed` (still aboard in a different role),
   `request_approved`, `request_declined`, `request_refused` (approved, then refused by the boat) and
-  `called_off` (the departure was cancelled). The write functions insert it inside their transaction,
+  `called_off` (the departure was cancelled), and `time_moved` (its start time changed, with
+  `previous_starts_at` holding the time it left before; amended 2026-10-12, #2283). The write functions insert it inside their transaction,
   so a notice exists exactly when its change does. A refused change writes nothing, and the same role
   again writes nothing.
 - **Call-offs** are recorded for everyone on the crew by `setTripStatus` (blow-out, day call, plain
   cancel), the minimum-seats sweep and both series cancellations, inside the cancelling transaction.
+- **Moves** are recorded for everyone on the crew by `moveTrip` (the schedule board) and `updateTrip`
+  (the departure's own page) when the start instant changes, and never when it does not.
 - **Late news goes now.** After a change commits, `flushUrgentCrewNotices` sends at once for every
-  call-off, and for any change on a departure leaving within 24 hours (`CREW_NOTICE_URGENT_MS`).
+  call-off, and for any change on a departure leaving within 24 hours (`CREW_NOTICE_URGENT_MS`) —
+  for a move, when either the old or the new time is within them.
   Everything else waits for the hourly pass. The flush never throws: a mail failure must not read as
   the change failing, and rows it cannot send stay pending for the pass.
 - **The actor is never told.** `recordCrewNotices` drops a row whose person is its actor. Every staff
@@ -51,11 +55,14 @@ Crew changes reach the database through three functions, and every surface calls
   4. An approval that put them aboard is said once, as the approval. An approval the boat then
      refused (ratio, course rules) is said as the refusal: they asked, and they are not on it.
   5. A decline is said, unless an assignment on the same departure outranks it.
-  6. A role change is said only to somebody aboard before and after.
-  7. What is left goes out as one `crew_schedule_change` email per person, one line per departure in
+  6. A moved start time is said to somebody aboard before and after, from the earliest time they
+     knew in the batch to the time it leaves now, both in the shop's zone. It outranks a role
+     change; an assignment already says the new time; a move back to the time they knew is netted.
+  7. A role change is said only to somebody aboard before and after.
+  8. What is left goes out as one `crew_schedule_change` email per person, one line per departure in
      date order. Each line names their role when they are aboard and links to the staff departure
      page. The shop's name leads the subject. A copied week is one email.
-  8. **A row is never settled in silence.** Each claimed row gets an `outcome`: `sent`, `failed`,
+  9. **A row is never settled in silence.** Each claimed row gets an `outcome`: `sent`, `failed`,
      `netted`, `skipped` (the departure had started, or was deleted or no longer running, before
      the news went out; also logged), `no_recipient` or `demo`.
 - **Staff mail in the staffer's own language**: `recipientLocale(people.locale, shops.default_locale)`,
@@ -97,5 +104,6 @@ Crew changes reach the database through three functions, and every surface calls
 ## Consequences
 
 Crew hear about their boats within the hour of a change settling. A planning session reaches them as
-one email, and anything within the next day, or any call-off, reaches them at once. Moving a
-departure's time does not notify crew yet; it is a candidate for the same table and pass.
+one email, and anything within the next day, or any call-off, reaches them at once. A departure whose
+start time moves tells its crew the old and the new time (#2283); a change of boat or meeting point
+alone does not.

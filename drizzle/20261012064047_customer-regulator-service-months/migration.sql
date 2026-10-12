@@ -1,0 +1,2 @@
+ALTER TABLE "shops" ADD COLUMN "customer_regulator_service_months" integer DEFAULT 12 NOT NULL;--> statement-breakpoint
+ALTER TABLE "shops" ADD CONSTRAINT "shops_customer_regulator_service_months_choice" CHECK ("customer_regulator_service_months" in (12, 24));

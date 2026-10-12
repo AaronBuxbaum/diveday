@@ -238,7 +238,9 @@ async function deliverCourseFormsLink(
   const path = courseFormsLinkPath(issued.token);
   const origin = publicAppUrl();
   const url = origin ? new URL(path, `${origin}/`).toString() : null;
-  const channel = options.channel ?? "email";
+  // A rehearsal sends nothing (ADR 20261012-rehearsal-departures): the link is
+  // still issued, for the staffer to hand over in person.
+  const channel = ctx.trip.isRehearsal ? "link" : (options.channel ?? "email");
   const locale = recipientLocale(ctx.person.locale, ctx.shop.defaultLocale);
   let delivery: WaiverDelivery = "no_app_origin";
   if (!url) {
@@ -346,7 +348,9 @@ export async function issueAndDeliverWaiver(
   const diverName = ctx?.person.fullName ?? "";
   const email = ctx?.person.email ?? null;
   const origin = publicAppUrl();
-  const channel = options.channel ?? "email";
+  // A rehearsal sends nothing (ADR 20261012-rehearsal-departures): the link is
+  // still issued, for the staffer to hand over in person.
+  const channel = ctx?.trip.isRehearsal ? "link" : (options.channel ?? "email");
   const completionUrl = origin
     ? new URL(`/waivers/${outcome.token}`, `${origin}/`).toString()
     : null;

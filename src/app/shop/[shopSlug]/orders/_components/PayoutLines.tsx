@@ -1,13 +1,15 @@
 import { ShopNotice } from "@/components/ShopPageHeader";
+import { listPaidAfterCloseCheckouts } from "@/db/checkouts-paid-after-close";
 import type { AppDb } from "@/db/client";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { latestShopPayouts, type ShopPayout } from "@/db/payouts";
+import { listFailedRefunds } from "@/db/refund-failures";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
- * The Orders index's three back-office reads, each behind
+ * The Orders index's back-office reads, each behind
  * `canPersonManagePaymentSettings` and none of them run for a reader who
  * cannot see it.
  *
@@ -19,6 +21,12 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  *   affected diver the shop will be in touch; until this panel there was
  *   nothing on any screen that said so (ADR
  *   20260813-shop-cancellation-refunds-itself's own consequence).
+ * - **Paid after close**: money Stripe captured on a checkout DiveDay had
+ *   already closed (issue #2335): no seat was marked paid from it, so it is
+ *   owed back.
+ * - **Failed refunds**: refunds Stripe accepted and then reported failed
+ *   (issue #2291): the money is back in the shop's balance and the diver is
+ *   owed it again.
  * - **Payouts**: what Stripe last paid into the bank, and a payout that failed
  *   since (ADR 20261012-payouts-reach-diveday). Stored rows only, never a
  *   Stripe call.
@@ -28,15 +36,20 @@ export async function readBackOffice(db: AppDb, shopId: string, visible: boolean
     return {
       stuckPaymentOperations: [],
       owedRefunds: [],
+      paidAfterClose: [],
+      failedRefunds: [],
       payouts: { paid: null, failed: null },
     };
   }
-  const [stuckPaymentOperations, owedRefunds, payouts] = await Promise.all([
-    listStuckPaymentOperations(db, shopId),
-    listOwedShopCancellationRefunds(db, shopId),
-    latestShopPayouts(db, shopId),
-  ]);
-  return { stuckPaymentOperations, owedRefunds, payouts };
+  const [stuckPaymentOperations, owedRefunds, paidAfterClose, failedRefunds, payouts] =
+    await Promise.all([
+      listStuckPaymentOperations(db, shopId),
+      listOwedShopCancellationRefunds(db, shopId),
+      listPaidAfterCloseCheckouts(db, shopId),
+      listFailedRefunds(db, shopId),
+      latestShopPayouts(db, shopId),
+    ]);
+  return { stuckPaymentOperations, owedRefunds, paidAfterClose, failedRefunds, payouts };
 }
 
 /**

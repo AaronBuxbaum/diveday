@@ -17,6 +17,8 @@
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
       "rentalTermsSaved": "Condiciones de alquiler guardadas. Todas las boletas de alquiler las imprimen.",
       "rentalTermsInvalid": "Las condiciones de alquiler no pueden pasar de 1500 caracteres.",
+      "regulatorServiceSaved": "Intervalo de revisión de reguladores guardado.",
+      "regulatorServiceInvalid": "Elige 12 o 24 meses.",
       "contactSaved": "Datos de contacto guardados.",
       "contactConfirmationSent": "Datos de contacto guardados. Abre el correo de confirmación que enviamos a esa dirección para que lleguen allí las respuestas de los buceadores.",
       "contactInvalid": "Usa una dirección de correo completa, o vacía el campo para quitarla de tus páginas públicas.",
@@ -43,6 +45,8 @@
       "timezoneSaved": "Zona horaria guardada.",
       "seasonSaved": "Inicio de temporada guardado.",
       "seasonInvalid": "Elige un día que ese mes tenga.",
+      "reopensSaved": "Guardado. Tu página pública muestra esta fecha mientras su calendario esté tranquilo.",
+      "reopensInvalid": "Esa fecha no existe en el calendario. Elige una en el campo.",
       "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
       "emergencySaved": "Referencia de emergencia guardada.",
       "packageSaved": "Paquete añadido.",
@@ -95,7 +99,10 @@
       "monthLabel": "Mes",
       "dayLabel": "Día",
       "submitting": "Guardando…",
-      "submit": "Guardar inicio de temporada"
+      "submit": "Guardar inicio de temporada",
+      "reopensLabel": "De vuelta en el agua",
+      "reopensHint": "Mientras tu calendario público no tenga nada en el próximo mes, dirá que vuelves a salir en esta fecha, o en tu primera salida si es antes.",
+      "reopensSubmit": "Guardar la fecha"
     },
     "contact": {
       "heading": "Datos de contacto públicos",
@@ -288,7 +295,7 @@
     },
     "rentals": {
       "heading": "Qué alquilamos",
-      "detail": "Marca lo que alquilas. Lo que no marques desaparece del formulario de equipo y de la lista de preparación.",
+      "detail": "Marca lo que alquilas. Lo que no marques sale del formulario de equipo, y los ajustes de alquiler que ya lo piden siguen en la lista de preparación, marcados.",
       "legend": "Equipo y servicios de alquiler",
       "submit": "Guardar catálogo de alquiler",
       "submitting": "Guardando…",
@@ -313,6 +320,14 @@
       "submit": "Guardar condiciones de alquiler",
       "submitting": "Guardando…",
       "value": "En cada boleta"
+    },
+    "regulatorService": {
+      "heading": "Revisión de reguladores de clientes",
+      "description": "Cuándo vuelve a tocar la revisión del regulador de un cliente. Tus propias unidades mantienen sus propios plazos.",
+      "label": "Revisar cada",
+      "months": "{months} meses",
+      "submit": "Guardar intervalo de revisión",
+      "submitting": "Guardando…"
     },
     "stripe": {
       "notConnectedHeading": "Ninguna cuenta de Stripe conectada",

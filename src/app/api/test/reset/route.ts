@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { purgeMintedDemoShops, resetDemoSchedule } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";

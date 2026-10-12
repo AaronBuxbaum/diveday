@@ -1,4 +1,4 @@
-import { inArray, lt } from "drizzle-orm";
+import { and, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -16,10 +16,13 @@ import {
   bookingPaymentEvents,
   crewNotices,
   demoEntries,
+  departureNotes,
   formDrafts,
   inboundMessages,
+  incidentReports,
   integrationEvents,
   integrationOauthStates,
+  lostItems,
   notificationDeliveries,
   notificationDeliveryAttempts,
   pushSubscriptions,
@@ -355,6 +358,37 @@ export async function pruneExpiredRecords(
     ),
   );
 
+  // Found items, only once resolved: an open one is still the shop's to hold,
+  // so `resolved_at` is both the clock and the filter (batch 4, J2).
+  outcomes.push(
+    await pruneBatch(
+      "lost_items",
+      () =>
+        db
+          .select({ id: lostItems.id })
+          .from(lostItems)
+          .where(
+            and(isNotNull(lostItems.resolvedAt), lt(lostItems.resolvedAt, cutoff("lost_items"))),
+          )
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(lostItems).where(inArray(lostItems.id, ids)),
+    ),
+  );
+
+  // Notes sent to a whole departure, on the send's own time (batch 4, J4).
+  outcomes.push(
+    await pruneBatch(
+      "departure_notes",
+      () =>
+        db
+          .select({ id: departureNotes.id })
+          .from(departureNotes)
+          .where(lt(departureNotes.sentAt, cutoff("departure_notes")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(departureNotes).where(inArray(departureNotes.id, ids)),
+    ),
+  );
+
   // The manifest's shift catch-up (issues #1202, #1187). Pruned on the event's
   // own `occurred_at`: a desk act is a same-day handoff, so its age is the only
   // thing that decides, and a departure that was moved or never sailed is
@@ -446,6 +480,27 @@ export async function pruneExpiredRecords(
           .where(lt(inboundMessages.receivedAt, cutoff("inbound_messages")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(inboundMessages).where(inArray(inboundMessages.id, ids)),
+    ),
+  );
+
+  // Incident reports (ADR 20261012-incident-reports): seven years from when the
+  // incident happened, or from when a draft that never said so was started.
+  // Its people and addenda cascade with it.
+  outcomes.push(
+    await pruneBatch(
+      "incident_reports",
+      () =>
+        db
+          .select({ id: incidentReports.id })
+          .from(incidentReports)
+          .where(
+            lt(
+              sql`coalesce(${incidentReports.occurredAt}, ${incidentReports.createdAt})`,
+              cutoff("incident_reports"),
+            ),
+          )
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(incidentReports).where(inArray(incidentReports.id, ids)),
     ),
   );
 

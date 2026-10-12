@@ -7,6 +7,8 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookingPayments,
   bookings,
   importedPaymentHistory,
@@ -14,6 +16,7 @@ import {
   paymentOperationIntents,
   people,
   stripePayouts,
+  stripeRefundFailures,
   trips,
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
@@ -26,7 +29,7 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
 import { seededTestDb } from "@/test/db";
-import { ariaLabelsIn, findElements, hrefsIn } from "@/test/jsx-inspect";
+import { ariaLabelsIn, findElements, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
@@ -50,6 +53,9 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 };
 const auth = authModule.auth;
 const OrdersIndexPage = (await import("./page")).default;
+const { FailedRefundsQueue, OwedRefundsQueue, PaidAfterCloseQueue } = await import(
+  "./_components/OwedMoneyQueues"
+);
 
 const SHOP_SLUG = "blue-mantis";
 
@@ -76,11 +82,29 @@ async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySess
 }
 
 /** The page, rendered for whatever `?…` a test wants to put to it. */
-function renderWith(searchParams: Record<string, string> = {}) {
-  return OrdersIndexPage({
-    params: Promise.resolve({ shopSlug: SHOP_SLUG }),
-    searchParams: Promise.resolve(searchParams),
-  });
+/** The back-office queues, rendered in place so the tree walkers can read them. */
+const QUEUES = new Set<unknown>([OwedRefundsQueue, PaidAfterCloseQueue, FailedRefundsQueue]);
+
+function expandQueues(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(expandQueues);
+  if (node === null || typeof node !== "object" || !("props" in node)) return node;
+  const element = node as { type: unknown; props: Record<string, unknown> };
+  if (QUEUES.has(element.type)) {
+    return expandQueues((element.type as (props: unknown) => unknown)(element.props));
+  }
+  return {
+    ...element,
+    props: { ...element.props, children: expandQueues(element.props.children) },
+  };
+}
+
+async function renderWith(searchParams: Record<string, string> = {}) {
+  return expandQueues(
+    await OrdersIndexPage({
+      params: Promise.resolve({ shopSlug: SHOP_SLUG }),
+      searchParams: Promise.resolve(searchParams),
+    }),
+  ) as Awaited<ReturnType<typeof OrdersIndexPage>>;
 }
 
 async function renderOrders(
@@ -227,6 +251,133 @@ describe("what Stripe paid into the bank (ADR 20261012-payouts-reach-diveday)", 
     const text = textIn(await renderOrders("divemaster", recordPayouts));
     expect(text).not.toContain("Paid out");
     expect(text).not.toContain("A payout of");
+  });
+});
+
+/**
+ * A diver paid on a checkout DiveDay had already closed (issue #2335): the
+ * captured money waits here, with who paid and how much, and a refund.
+ */
+async function paidAfterCheckoutClosed(db: AppDb, session: DiveDaySession) {
+  const [seat] = await db
+    .select({ id: bookings.id, tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, session.user.shopId), ne(bookings.status, "cancelled")))
+    .limit(1);
+  if (!seat) throw new Error("the seed has no booking");
+  const [checkout] = await db
+    .insert(bookingCheckouts)
+    .values({
+      shopId: session.user.shopId,
+      tripId: seat.tripId,
+      status: "expired",
+      stripeAccountId: "acct_late",
+      stripeSessionId: "cs_paid_after_close",
+      currency: "usd",
+      amountPerDiverCents: 12_500,
+      totalCents: 12_500,
+      paidAfterCloseAt: nowDate(),
+      paidAfterCloseCents: 12_500,
+    })
+    .returning({ id: bookingCheckouts.id });
+  if (!checkout) throw new Error("checkout insert returned no row");
+  await db
+    .insert(bookingCheckoutBookings)
+    .values({ shopId: session.user.shopId, checkoutId: checkout.id, bookingId: seat.id });
+}
+
+const PAID_AFTER_CLOSE = "Paid after the checkout closed";
+
+describe("the paid-after-close queue", () => {
+  it("renders nothing when nothing was paid after closing", async () => {
+    expect(ariaLabelsIn(await renderOrders("owner"))).not.toContain(PAID_AFTER_CLOSE);
+  });
+
+  it("shows an owner the money, the departure and a refund", async () => {
+    const element = await renderOrders("owner", paidAfterCheckoutClosed);
+    expect(ariaLabelsIn(element)).toContain(PAID_AFTER_CLOSE);
+    expect(hiddenInputNamesIn(element)).toContain("checkoutId");
+    const section = findElements<{ "aria-label"?: string; children?: unknown }>(
+      element,
+      "section",
+    ).find((node) => node.props["aria-label"] === PAID_AFTER_CLOSE);
+    expect(hrefsIn(section).some((href) => href.includes("/trips/"))).toBe(true);
+    const texts: string[] = [];
+    const collect = (node: unknown): void => {
+      if (typeof node === "string") texts.push(node);
+      else if (Array.isArray(node)) node.forEach(collect);
+      else if (node && typeof node === "object" && "props" in node) {
+        collect((node as { props: { children?: unknown } }).props.children);
+      }
+    };
+    collect(section);
+    expect(texts.join("")).toContain("$125.00");
+  });
+
+  it("hides it from a divemaster", async () => {
+    expect(ariaLabelsIn(await renderOrders("divemaster", paidAfterCheckoutClosed))).not.toContain(
+      PAID_AFTER_CLOSE,
+    );
+  });
+});
+
+/** A refund Stripe accepted and later reported failed (issue #2291). */
+async function aRefundFailed(db: AppDb, session: DiveDaySession) {
+  const [order] = await db
+    .insert(orders)
+    .values({
+      shopId: session.user.shopId,
+      personId: session.user.personId,
+      createdByPersonId: session.user.personId,
+      status: "paid",
+      currency: "usd",
+      totalCents: 4_200,
+      amountPaidCents: 4_200,
+      stripeAccountId: "acct_bounced",
+      stripeCustomerId: "cus_bounced",
+      stripeInvoiceId: "in_bounced",
+    })
+    .returning({ id: orders.id, refundedCents: orders.refundedCents, currency: orders.currency });
+  if (!order) throw new Error("order insert returned no row");
+  await db.insert(stripeRefundFailures).values({
+    shopId: session.user.shopId,
+    stripeAccountId: "acct_bounced",
+    stripeRefundId: "re_bounced",
+    orderId: order.id,
+    amountCents: 4_200,
+    currency: order.currency,
+    refundStatus: "failed",
+    failureReason: "expired_or_canceled_card",
+    owedUntilRefundedCents: order.refundedCents + 4_200,
+    failedAt: nowDate(),
+  });
+  return order.id;
+}
+
+const FAILED_REFUNDS = "Refunds that failed";
+
+describe("the failed-refunds queue", () => {
+  it("renders nothing when no refund failed", async () => {
+    expect(ariaLabelsIn(await renderOrders("owner"))).not.toContain(FAILED_REFUNDS);
+  });
+
+  it("shows an owner the bounced refund and the order it belongs to", async () => {
+    let orderId = "";
+    const element = await renderOrders("owner", async (db, session) => {
+      orderId = await aRefundFailed(db, session);
+    });
+    expect(ariaLabelsIn(element)).toContain(FAILED_REFUNDS);
+    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/orders/${orderId}`);
+  });
+
+  it("hides it from a divemaster", async () => {
+    expect(
+      ariaLabelsIn(
+        await renderOrders("divemaster", async (db, session) => {
+          await aRefundFailed(db, session);
+        }),
+      ),
+    ).not.toContain(FAILED_REFUNDS);
   });
 });
 

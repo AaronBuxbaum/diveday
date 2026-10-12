@@ -11,7 +11,6 @@ import {
   factOfScaleFor,
   filterActionsForRoles,
   getSeasonalBriefing,
-  getTimeOfDayGreeting,
   type OwedRefundInput,
   primaryBlocker,
   roleLensFor,
@@ -439,28 +438,6 @@ describe("getSeasonalBriefing", () => {
     const instant = new Date("2026-08-31T23:30:00Z");
     expect(getSeasonalBriefing(instant, "Pacific/Auckland")).toBe("autumn");
     expect(getSeasonalBriefing(instant, "Pacific/Honolulu")).toBe("summer");
-  });
-});
-
-describe("getTimeOfDayGreeting", () => {
-  it("returns morning for 8 AM local time", () => {
-    const date = new Date("2026-11-15T13:00:00Z"); // 13:00 UTC -> 8:00 AM America/New_York
-    expect(getTimeOfDayGreeting(date, "America/New_York")).toBe("morning");
-  });
-
-  it("returns afternoon for 2 PM local time", () => {
-    const date = new Date("2026-11-15T19:00:00Z"); // 19:00 UTC -> 2:00 PM America/New_York
-    expect(getTimeOfDayGreeting(date, "America/New_York")).toBe("afternoon");
-  });
-
-  it("returns evening for 7 PM local time", () => {
-    const date = new Date("2026-11-15T24:00:00Z"); // 00:00 UTC next day -> 7:00 PM America/New_York
-    expect(getTimeOfDayGreeting(date, "America/New_York")).toBe("evening");
-  });
-
-  it("returns night for 11 PM local time", () => {
-    const dateNight = new Date("2026-11-16T04:00:00Z"); // 04:00 UTC -> 11:00 PM America/New_York
-    expect(getTimeOfDayGreeting(dateNight, "America/New_York")).toBe("night");
   });
 });
 

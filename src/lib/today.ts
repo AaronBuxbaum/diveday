@@ -1473,30 +1473,6 @@ export function getSeasonalBriefing(date: Date, timezone: string): TodaySeason {
   return "spring"; // March, April, May
 }
 
-/** Which time-of-day greeting band the shop's local hour falls into. */
-export type TodayGreetingBand = "morning" | "afternoon" | "evening" | "night";
-
-/**
- * Which time-of-day-aware greeting band a moment falls into, in the shop's
- * local timezone. The greeting itself — reading like dive briefing copy
- * rather than cutesy filler — lives in `src/i18n/today-labels.ts`'s
- * `GREETING_KEYS`.
- *
- * `night` is a *band*, not a sign-off: from 22:00 it is a staffer still at the
- * desk building tomorrow's board, so the English reads "Working late" rather
- * than "Good night", which in English is what you say on the way out the door.
- * (Spanish has no such split — "buenas noches" is both — so its evening and
- * night strings are allowed to differ in shape from the English pair.)
- */
-export function getTimeOfDayGreeting(date: Date, timezone: string): TodayGreetingBand {
-  const wall = utcToWallTime(date, timezone);
-  const hour = wall.hour;
-  if (hour >= 5 && hour < 12) return "morning";
-  if (hour >= 12 && hour < 17) return "afternoon";
-  if (hour >= 17 && hour < 22) return "evening";
-  return "night";
-}
-
 /**
  * **The day spine** — ADR 20260827-clearwater-surface-language, decision 4.
  *

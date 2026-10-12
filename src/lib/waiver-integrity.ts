@@ -81,6 +81,58 @@ export function isWaiverIntegrityVersion(value: number | null): value is WaiverI
  * has been refiled, otherwise version 1. Erasure of the diver is not this
  * question; it always seals version 2.
  */
+/**
+ * **Every column a seal can cover, under any version, and the seal itself.**
+ * The integrity readers (the signature log, one signed record) select exactly
+ * these (`WAIVER_SEALED_COLUMNS`, src/db/waiver-record-columns.ts), never the
+ * bearer token or the unsigned draft. Every field set below takes
+ * {@link WaiverSealedFields}, so a field a version starts sealing that is
+ * missing here fails to compile rather than hashing `undefined`.
+ */
+export const WAIVER_SEALED_FIELDS = [
+  "id",
+  "shopId",
+  "bookingId",
+  "personId",
+  "templateId",
+  "templateTitle",
+  "templateVersion",
+  "templateBody",
+  "status",
+  "signedName",
+  "signatureMethod",
+  "recordedByPersonId",
+  "consentedAt",
+  "signedAt",
+  "medicalAnswers",
+  "medicalReviewRequired",
+  "guardianName",
+  "guardianRelationship",
+  "guardianEmail",
+  "guardianSignatureMethod",
+  "guardianConsentedAt",
+  "guardianSignedAt",
+  "completedAt",
+  "importedFromLabel",
+  "importSourceDocumentUrl",
+  "importSourceMedicalDocumentUrl",
+  "createdAt",
+  "anonymizedAt",
+  "anonymizedByPersonId",
+  "movedFromPersonId",
+  "movedAt",
+  "movedByPersonId",
+  "guardianEmailErasedAt",
+  "guardianEmailErasedByPersonId",
+  "integrityHash",
+  "integrityVersion",
+] as const satisfies readonly (keyof WaiverRecord)[];
+
+export type WaiverSealedField = (typeof WAIVER_SEALED_FIELDS)[number];
+
+/** A waiver record as far as its seal reaches: what verifying it needs, and nothing else. */
+export type WaiverSealedFields = Pick<WaiverRecord, WaiverSealedField>;
+
 export function signedIntegrityVersionFor(
   record: Pick<WaiverRecord, "guardianEmailErasedAt" | "movedAt">,
 ): WaiverIntegrityVersion {
@@ -115,7 +167,7 @@ export function signedIntegrityVersionFor(
  * transaction, with the two fields that survive erasure added to
  * `erasedMetadata` as well (security review M4).
  */
-function signedMetadata(record: WaiverRecord): { [key: string]: IntegrityValue } {
+function signedMetadata(record: WaiverSealedFields): { [key: string]: IntegrityValue } {
   return {
     id: record.id,
     shopId: record.shopId,
@@ -167,7 +219,7 @@ function signedMetadata(record: WaiverRecord): { [key: string]: IntegrityValue }
  * all happen to be null (an imported record with no medical answers, for
  * instance).
  */
-function erasedMetadata(record: WaiverRecord): IntegrityValue {
+function erasedMetadata(record: WaiverSealedFields): IntegrityValue {
   return {
     version: WAIVER_INTEGRITY_VERSION_ERASED,
     id: record.id,
@@ -208,7 +260,7 @@ function erasedMetadata(record: WaiverRecord): IntegrityValue {
  * the erasure skeleton and drops the move: the record is then evidence that
  * somebody signed, not of whose record it sat on.
  */
-function movedMetadata(record: WaiverRecord): IntegrityValue {
+function movedMetadata(record: WaiverSealedFields): IntegrityValue {
   return {
     ...signedMetadata(record),
     version: WAIVER_INTEGRITY_VERSION_MOVED,
@@ -231,7 +283,7 @@ function movedMetadata(record: WaiverRecord): IntegrityValue {
  * the erasure (`eraseGuardianEmail`), so it can never launder an earlier edit.
  * The `version: 4` key separates it from every other digest.
  */
-function guardianRedactedMetadata(record: WaiverRecord): IntegrityValue {
+function guardianRedactedMetadata(record: WaiverSealedFields): IntegrityValue {
   const { guardianEmail: _redacted, ...signed } = signedMetadata(record);
   return {
     ...signed,
@@ -245,7 +297,7 @@ function guardianRedactedMetadata(record: WaiverRecord): IntegrityValue {
 }
 
 export function waiverIntegrityMetadata(
-  record: WaiverRecord,
+  record: WaiverSealedFields,
   version: WaiverIntegrityVersion = WAIVER_INTEGRITY_VERSION_SIGNED,
 ): IntegrityValue {
   if (version === WAIVER_INTEGRITY_VERSION_ERASED) return erasedMetadata(record);
@@ -275,13 +327,13 @@ export function integrityDigest(value: IntegrityValue): string {
 }
 
 export function computeWaiverIntegrityHash(
-  record: WaiverRecord,
+  record: WaiverSealedFields,
   version: WaiverIntegrityVersion = WAIVER_INTEGRITY_VERSION_SIGNED,
 ): string {
   return integrityDigest(waiverIntegrityMetadata(record, version));
 }
 
-export function verifyWaiverIntegrity(record: WaiverRecord): WaiverIntegrityState {
+export function verifyWaiverIntegrity(record: WaiverSealedFields): WaiverIntegrityState {
   if (!record.integrityHash || !record.integrityVersion) return "unsealed";
   if (!isWaiverIntegrityVersion(record.integrityVersion)) return "invalid";
   // A version 4 seal is the shop's own redaction, and only means that while

@@ -13,7 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { certificationStatus, people, shops } from "./core";
-import { trips } from "./trips";
+import { tripSeries, trips } from "./trips";
 
 /**
  * Staff credentials, trip crew assignments, shifts, availability and assignment
@@ -127,6 +127,40 @@ export const tripAssignments = pgTable(
     tripRole: tripAssignmentRole("trip_role"),
   },
   (table) => [primaryKey({ columns: [table.tripId, table.personId] })],
+);
+
+/**
+ * **A repeating trip's standing crew** — who sails with the run, and the job
+ * each does, as a fact of the run itself (ADR 20260810-open-ended-recurring-trips,
+ * addendum 2026-10-12). The rows are the switch: a run with none has no standing
+ * crew. Written whole by `setSeriesStandingCrew` from the date staff applied, and
+ * read by the horizon roll for every date it adds, which seats each person only
+ * if they are still on the staff and free in that date's hours
+ * (`seatStandingCrew`). Reading the run's crew here, rather than off the
+ * furthest-out date, is what keeps a date the roll had to leave short from
+ * becoming every later date's crew. Like `trip_assignments`, a roster: replaced
+ * as a set, never edited row by row.
+ */
+export const tripSeriesCrew = pgTable(
+  "trip_series_crew",
+  {
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    seriesId: uuid("series_id")
+      .notNull()
+      .references(() => tripSeries.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    /** The job on every date, or null for not specified, as on `trip_assignments`. */
+    tripRole: tripAssignmentRole("trip_role"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.seriesId, table.personId] }),
+    index("trip_series_crew_shop_idx").on(table.shopId),
+    index("trip_series_crew_person_idx").on(table.personId),
+  ],
 );
 
 /** A dated working window; trip assignments remain the authoritative crew list. */
@@ -283,6 +317,8 @@ export const crewNoticeChange = pgEnum("crew_notice_change", [
   "role_changed",
   /** The departure itself was cancelled (a blow-out, a day call, a plain cancel). */
   "called_off",
+  /** The departure's start time moved (#2283); `previous_starts_at` is when it left before. */
+  "time_moved",
 ]);
 
 /**
@@ -328,6 +364,12 @@ export const crewNotices = pgTable(
       .notNull()
       .references(() => trips.id, { onDelete: "cascade" }),
     change: crewNoticeChange("change").notNull(),
+    /**
+     * On a `time_moved` row, when the departure left before that move, so the
+     * crew are told the time they knew beside the time it leaves now. Null on
+     * every other change.
+     */
+    previousStartsAt: timestamp("previous_starts_at", { withTimezone: true }),
     /** Who made the change; null when no person did (a seed, a system pass). */
     actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

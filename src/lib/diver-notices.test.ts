@@ -93,3 +93,37 @@ describe("the diver record's notice", () => {
     expect(resolve({ notice: "booked" })?.link).toBeUndefined();
   });
 });
+
+/**
+ * **A refused merge names the departure it is about** (issue #2333). The
+ * departure is read by the page from the shop's own trips, never from words in
+ * the URL, and a refusal with none to name keeps the general sentence.
+ */
+describe("the merge booking-conflict notice", () => {
+  it("names the departure when the page found one", () => {
+    const notice = resolveDiverNotice({
+      notice: "merge-booking-conflict",
+      personId: "person-1",
+      locale: "en-US",
+      conflictDeparture: "Two-Tank Reef · Sat, Jul 25, 8:00 AM EDT",
+    });
+    expect(notice?.text).toContain("Two-Tank Reef · Sat, Jul 25, 8:00 AM EDT");
+    expect(notice?.tone).toBe("danger");
+  });
+
+  it("keeps the general sentence without one, and never names a departure on another notice", () => {
+    const t = staffTranslator("en-US");
+    expect(
+      resolveDiverNotice({ notice: "merge-booking-conflict", personId: "p", locale: "en-US" })
+        ?.text,
+    ).toBe(t("divers.notices.mergeBookingConflict"));
+    expect(
+      resolveDiverNotice({
+        notice: "merge-invalid",
+        personId: "p",
+        locale: "en-US",
+        conflictDeparture: "Two-Tank Reef",
+      })?.text,
+    ).toBe(t("divers.notices.mergeInvalid"));
+  });
+});

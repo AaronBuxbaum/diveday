@@ -52,6 +52,7 @@ export type StripeEventFixture =
   | "account.updated"
   | "charge.dispute.closed"
   | "charge.dispute.created"
+  | "charge.refund.updated"
   | "charge.refunded"
   | "checkout.session.async_payment_failed"
   | "checkout.session.async_payment_succeeded"
@@ -82,6 +83,7 @@ export const STRIPE_EVENT_FIXTURES: readonly StripeEventFixture[] = [
   "account.updated",
   "charge.dispute.closed",
   "charge.dispute.created",
+  "charge.refund.updated",
   "charge.refunded",
   "checkout.session.async_payment_failed",
   "checkout.session.async_payment_succeeded",

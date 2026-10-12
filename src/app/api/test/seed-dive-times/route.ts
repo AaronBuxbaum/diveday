@@ -1,7 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { upsertExecutedDive } from "@/db/executed-dives";
 import { bookings, tripDives, trips } from "@/db/schema";
 import { DEMO_RECAP_BOOKING_ID } from "@/db/seed";

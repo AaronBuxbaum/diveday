@@ -94,3 +94,12 @@ writes each one as a bank transaction rather than an invoice.**
   not a refactor.
 - **Escape hatch:** unchanged from 20260827. `xero.ts`, its registry entry, its callback route, its
   card, its two env keys and its rows; nothing else depends on it.
+
+## Amendment 2026-10-12: a void takes the sale back (issue #2309)
+
+Xero and QuickBooks now also take `order.voided`, queued in the transaction that voids the order
+(`order:<id>:void`). Xero deletes the `RECEIVE` transaction it booked (`Status: DELETED`; Xero
+refuses this for a reconciled one, and the refusal stays on the delivery log for the bookkeeper);
+QuickBooks voids its sales receipt in place. An order neither ever booked is left alone, and a
+sale whose void is already queued is never booked. A shop connected before this picks up the new
+event when it reconnects or saves its integration settings.

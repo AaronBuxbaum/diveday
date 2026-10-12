@@ -66,6 +66,9 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Change ledger
 - Conditions hold
 - Day-of help request
+- Departure note
+- Dock rider
+- Lost item
 - Staff note
 
 ## Modeling notes
@@ -92,8 +95,10 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Cancellation notice
 - Card dispute
 - Dashboard refund
+- Failed refund
 - First paid month
 - Free term
+- Paid after close
 - Pass-through fee
 - Payout
 - Subscription (DiveDay billing)
@@ -109,6 +114,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Arrivals window
 - Automated cancellation refund
 - Automated marine outlook
+- Back on the water
 - Backup delivery
 - Backup destination
 - Blocked / Ready
@@ -135,6 +141,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Crew news
 - Crew roll-call event
 - Crew schedule
+- Crew warning
 - DAN
 - Default course page
 - Delivery receipt
@@ -161,6 +168,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Imported payment history
 - Imported waiver acceptance
 - In-water certified assistant
+- Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
 - Invoice
@@ -195,9 +203,12 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Private session / private course
 - Progression order
 - Reconciliation
+- Rehearsal
 - Reminder cadence
 - Reply keyword
+- Reschedule notice
 - Retention window
+- Review reply
 - Review request
 - Rider
 - Roll-call checkpoint
@@ -222,6 +233,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Snorkeler
 - Souls on board
 - Staff invite
+- Standing crew
 - Station acknowledgement
 - Station echo
 - STOP list
@@ -257,6 +269,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Staff credential
 - Supervision claim
 - Surface interval
+- What you might see
 
 ## Rental fit and prep
 

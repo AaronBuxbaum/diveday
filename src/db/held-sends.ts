@@ -9,8 +9,10 @@ import {
 } from "@/lib/held-sends";
 import { log } from "@/lib/log";
 import type { AppDb } from "./client";
+import { type SendDepartureNoteOutcome, sendDepartureNote } from "./departure-notes";
 import { heldSends } from "./schema";
 import { type SendLastMinuteDealOutcome, sendLastMinuteDealBlast } from "./trip-promos";
+import type { RescheduleNoticeOutcome } from "./trip-rescheduled";
 import { inviteWaitlistDiver } from "./waitlist";
 import { deliverWaiverBatch, type WaiverBatchOutcome } from "./waiver-issue";
 
@@ -36,7 +38,9 @@ export type HeldSendRow = {
 export type HeldSendOutcome =
   | ({ kind: "waiver_send" } & WaiverBatchOutcome)
   | { kind: "last_minute_deal"; outcome: SendLastMinuteDealOutcome }
-  | { kind: "waitlist_invite"; result: "sent" | "fallback" };
+  | { kind: "waitlist_invite"; result: "sent" | "fallback" }
+  | ({ kind: "trip_rescheduled" } & RescheduleNoticeOutcome)
+  | { kind: "departure_note"; outcome: SendDepartureNoteOutcome };
 
 export async function holdSend(
   db: AppDb,
@@ -85,6 +89,23 @@ export async function undoHeldSend(
     .where(and(eq(heldSends.id, id), eq(heldSends.shopId, shopId)))
     .returning({ id: heldSends.id });
   return deleted.length > 0;
+}
+
+/**
+ * One held send that has not left yet, for a page that shows its hold
+ * draining (the reschedule notice the board's move held). Null once it was
+ * sent, undone, or never this shop's.
+ */
+export async function pendingHeldSend(
+  db: AppDb,
+  shopId: string,
+  id: string,
+): Promise<HeldSendRow | null> {
+  const [row] = await db
+    .select()
+    .from(heldSends)
+    .where(and(eq(heldSends.id, id), eq(heldSends.shopId, shopId)));
+  return row ? toRow(row) : null;
 }
 
 export type HeldSendClaim =
@@ -165,6 +186,17 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
       });
       return { kind: "last_minute_deal", outcome };
     }
+    // Checked again inside: a departure cancelled or sailed during the hold
+    // is refused here and nobody is messaged (`sendDepartureNote`).
+    case "departure_note": {
+      const outcome = await sendDepartureNote(db, {
+        shopId: row.shopId,
+        tripId: payload.tripId,
+        body: payload.body,
+        actorPersonId: row.actorPersonId,
+      });
+      return { kind: "departure_note", outcome };
+    }
     case "waitlist_invite": {
       const result = await inviteWaitlistDiver(db, {
         shopId: row.shopId,
@@ -175,6 +207,12 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
         kind: "waitlist_invite",
         result: result.ok && result.delivery === "sent" ? "sent" : "fallback",
       };
+    }
+    case "trip_rescheduled": {
+      // Imported at call time: `trip-rescheduled` holds through this module.
+      const { sendRescheduleNotices } = await import("./trip-rescheduled");
+      const outcome = await sendRescheduleNotices(db, row.shopId, payload);
+      return { kind: "trip_rescheduled", ...outcome };
     }
   }
 }

@@ -37,6 +37,7 @@ const COPY: WeekBoardCopy = {
   rollCallOpen: "Roll call · {count} not counted",
   rollCallOpenAria: "Finish the dive {dive} roll call for {ref}",
   noBoats: "No boats",
+  quietDays: "{first} to {last}",
   asked: "Asked for",
   addDeparture: "Add a departure",
   crewLabel: "Crew:",
@@ -253,7 +254,10 @@ describe("the day rail (K-326, K-327, K-328)", () => {
 
   it("starts every numeral at one x: each weekday is one fixed width", () => {
     // The numerals sat at x = 45.9 to 56.3 at 390, each after its own word.
-    board(week());
+    // A week still ahead, so every weekday has a row of its own: days gone
+    // by with no boats fold into one (item 24, below).
+    const ahead = week();
+    board({ ...ahead, days: ahead.days.map((day) => ({ ...day, isPast: false })) });
     const widths = WEEKDAYS.map((day) => token(screen.getByText(day), /^w-(\d+)$/));
     expect(new Set(widths).size).toBe(1);
     for (const day of WEEKDAYS) expect(screen.getByText(day)).toHaveClass("shrink-0");
@@ -274,7 +278,9 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     const weekday = screen.getByText("Thu");
     const time = screen.getByText("7:00 AM");
     const empty = screen.getAllByText("No boats").map((none) => none.parentElement as HTMLElement);
-    expect(empty).toHaveLength(6);
+    // Three empty days ahead, and Mon–Wed folded into one row that sits on
+    // the same line (UX review 2026-10-10, item 24).
+    expect(empty).toHaveLength(4);
     // The weekday and its numeral share one line at every width: stacked
     // from `sm` up, every day was two lines tall and an empty one twice the
     // height of what it says.
@@ -523,5 +529,35 @@ describe("the crew line and the crew schedule switch", () => {
     board(week({}, [entry({ dateIso: "2026-08-27", crew: null })]));
     expect(screen.queryByText("nobody yet")).toBeNull();
     expect(screen.queryByText(new RegExp(COPY.crewLabel))).toBeNull();
+  });
+});
+
+describe("days gone by with no boats (UX review 2026-10-10, item 24)", () => {
+  it("fold into one row naming the run, ahead of today's own row", () => {
+    // Mon 24 – Wed 26 are past and empty; Thursday the 27th is today.
+    const { container } = board(week({}, [entry()]));
+    const quiet = container.querySelectorAll("[data-week-quiet-days]");
+    expect(quiet).toHaveLength(1);
+    expect(within(quiet[0] as HTMLElement).getByRole("heading", { level: 3 })).toHaveTextContent(
+      "Day 24 to Day 26",
+    );
+    expect(quiet[0]).toHaveTextContent("Mon–Wed");
+    expect(within(quiet[0] as HTMLElement).getByText("No boats")).toBeInTheDocument();
+    // No add on days gone by, folded or not.
+    expect(within(quiet[0] as HTMLElement).queryByRole("button")).toBeNull();
+    // The days that each keep a row: today, and every day still ahead.
+    for (const label of ["Day 27", "Day 28", "Day 29", "Day 30"]) {
+      expect(screen.getByRole("heading", { level: 3, name: label })).toBeInTheDocument();
+    }
+    for (const label of ["Day 24", "Day 25", "Day 26"]) {
+      expect(screen.queryByRole("heading", { level: 3, name: label })).toBeNull();
+    }
+  });
+
+  it("keeps a past day that sailed a boat as its own row", () => {
+    const { container } = board(week({}, [entry({ tripId: "t0", dateIso: "2026-08-25" })]));
+    // Monday alone before it, Wednesday alone after it: neither is a run.
+    expect(container.querySelectorAll("[data-week-quiet-days]")).toHaveLength(0);
+    expect(screen.getByRole("heading", { level: 3, name: "Day 25" })).toBeInTheDocument();
   });
 });

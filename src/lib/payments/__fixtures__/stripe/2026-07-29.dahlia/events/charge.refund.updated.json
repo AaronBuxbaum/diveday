@@ -1,0 +1,47 @@
+{
+  "id": "evt_3QsAVgLkdIwHu7ix1RefFail",
+  "object": "event",
+  "account": "acct_1Nv0FGQ9RKHgCVdK",
+  "api_version": "2026-07-29.dahlia",
+  "created": 1784818200,
+  "data": {
+    "object": {
+      "id": "re_3QsAVgLkdIwHu7ix1KpQrStU",
+      "object": "refund",
+      "amount": 12000,
+      "balance_transaction": "txn_3QsAVgLkdIwHu7ix1VwXyZ0A",
+      "charge": "ch_3QsAVgLkdIwHu7ix1ZpMrX8L",
+      "created": 1784645400,
+      "currency": "usd",
+      "destination_details": {
+        "card": {
+          "reference_status": "pending",
+          "reference_type": "acquirer_reference_number",
+          "type": "refund"
+        },
+        "type": "card"
+      },
+      "metadata": {},
+      "payment_intent": "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
+      "reason": null,
+      "receipt_number": null,
+      "source_transfer_reversal": null,
+      "status": "failed",
+      "transfer_reversal": null,
+      "failure_reason": "expired_or_canceled_card",
+      "failure_balance_transaction": "txn_3QsAVgLkdIwHu7ix1FailBk"
+    },
+    "previous_attributes": {
+      "failure_balance_transaction": null,
+      "failure_reason": null,
+      "status": "succeeded"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "charge.refund.updated"
+}

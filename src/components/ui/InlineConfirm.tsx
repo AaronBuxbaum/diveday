@@ -44,6 +44,12 @@ type MessageModeProps = SharedProps & {
    * (issue #1789). Optional; absent, nothing is drawn.
    */
   evidence?: string;
+  /**
+   * A choice that rides on this confirm, shown once armed under the message:
+   * a series apply's "and its crew" box. Its fields belong to the surrounding
+   * form, so they post with the confirm and with nothing else.
+   */
+  extra?: React.ReactNode;
   cancelLabel: string;
   /**
    * The size the armed block's Cancel is drawn at, which should be the size
@@ -56,6 +62,7 @@ type MessageModeProps = SharedProps & {
 type CompactModeProps = SharedProps & {
   message?: undefined;
   evidence?: undefined;
+  extra?: undefined;
   cancelLabel?: undefined;
   /** No Cancel to size: the trigger is the whole control. */
   size?: undefined;
@@ -116,6 +123,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
     formAction,
     message,
     evidence,
+    extra,
     cancelLabel,
     size = "sm",
   } = props;
@@ -205,6 +213,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
       <div className="rise-in rounded-lg border border-border bg-surface-sunken p-4" role="alert">
         <p className="text-sm">{message}</p>
         {evidence ? <p className="mt-1 text-sm text-muted">{evidence}</p> : null}
+        {extra ? <div className="mt-3">{extra}</div> : null}
         <div className="mt-3 flex flex-wrap gap-3">
           {Object.entries(confirmFields ?? {}).map(([name, value]) => (
             <input key={name} type="hidden" name={name} value={value} />

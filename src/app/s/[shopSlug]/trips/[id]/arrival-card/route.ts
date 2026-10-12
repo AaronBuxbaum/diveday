@@ -89,7 +89,10 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
   const trip = await getTripWithBooked(db, shop.id, id);
-  if (trip?.status !== "scheduled") return new NextResponse("Not found", { status: 404 });
+  // A rehearsal has no public URL (ADR 20261012-rehearsal-departures), so no file either.
+  if (trip?.status !== "scheduled" || trip.isRehearsal) {
+    return new NextResponse("Not found", { status: 404 });
+  }
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);

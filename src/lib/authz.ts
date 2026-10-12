@@ -312,6 +312,17 @@ export function canReadPrivateRecapPulse(roles: readonly Role[] | undefined): bo
 }
 
 /**
+ * **Answer a review in public** (batch 4, K2): write, change or delete the
+ * shop's reply under it. Owner or manager. Moderating a review stays open to
+ * every staff role, because publishing releases a diver's own words; a reply
+ * is the shop speaking in its own name on its own public page, which is the
+ * owner's voice to lend.
+ */
+export function canReplyToReviews(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * Open a departure's incident-ready export — the single document a shop hands
  * to authorities or an insurer after something goes wrong. Owner only, the same
  * strictness as `canErasePersonalData` and deliberately tighter than the
@@ -329,6 +340,15 @@ export function canReadPrivateRecapPulse(roles: readonly Role[] | undefined): bo
  */
 export function canExportIncidentRecord(roles: readonly Role[] | undefined): boolean {
   return (roles ?? []).some((role) => role === "owner");
+}
+
+/**
+ * Read every incident report in the shop, whoever wrote it (ADR
+ * 20261012-incident-reports). Owners and managers. Anyone else on staff reads
+ * only the reports they started, which `src/lib/incident-reports.ts` decides.
+ */
+export function canReadEveryIncidentReport(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner" || role === "manager");
 }
 
 /**

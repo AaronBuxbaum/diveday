@@ -16,6 +16,7 @@ import {
 } from "@/db/orders";
 import { recordStripeDispute } from "@/db/payment-disputes";
 import { recordStripePayout } from "@/db/payouts";
+import { recordStripeRefundFailure } from "@/db/refund-failures";
 import { recordStripeChargeRefund } from "@/db/refunds";
 import {
   disconnectShopStripeAccount,
@@ -23,6 +24,7 @@ import {
   stripeAccountHolder,
 } from "@/db/stripe-accounts";
 import { recordTipPaymentIntent } from "@/db/stripe-payment-targets";
+import { paymentSourceLookupFromEnvironment } from "@/db/stripe-providers";
 import {
   markTipExpiredBySessionId,
   markTipPaidBySessionId,
@@ -35,12 +37,10 @@ import {
 } from "@/db/webhook-events";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { nowDate } from "@/lib/clock";
+import { errorCauseTokens, errorClassToken } from "@/lib/error-token";
 import { type LogContext, log } from "@/lib/log";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
-import {
-  type PaymentSourceLookup,
-  paymentSourceLookupFromEnvironment,
-} from "@/lib/payments/payment-sources";
+import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { payoutSummaryLookupFromEnvironment } from "@/lib/payments/payout-summary";
 import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
 import { type StripeWebhookEvent, verifyStripeWebhook } from "@/lib/payments/webhook";
@@ -107,6 +107,73 @@ const chargeObjectSchema = z.object({
     .nullable()
     .optional(),
 });
+
+/**
+ * The Refund a `charge.refund.updated` event carries. Only a refund whose
+ * status became `failed` or `canceled` changes anything here (issue #2291).
+ */
+const refundObjectSchema = z.object({
+  id: z.string().min(1),
+  amount: z.number().int().nonnegative(),
+  currency: z.string().min(1),
+  status: z.string().nullable().optional(),
+  failure_reason: z.string().nullable().optional(),
+  payment_intent: z
+    .union([z.string().min(1), z.object({ id: z.string().min(1) })])
+    .nullable()
+    .optional(),
+});
+
+/**
+ * Void the order an invoice backs, and tell the integrations (`order.voided`,
+ * issue #2309). Returns the outcome to log.
+ */
+async function handleInvoiceVoided(db: AppDb, event: StripeWebhookEvent): Promise<string> {
+  const invoice = invoiceObjectSchema.safeParse(event.data.object);
+  if (!invoice.success) return "malformed_payload";
+  // An invoice id with no account to cross-check could name any shop's order.
+  if (!event.account) return "missing_account";
+  const order = await markOrderVoidedByInvoiceId(db, invoice.data.id, event.account);
+  if (!order) return "order_not_found";
+  dispatchIntegrationsAfterResponse();
+  return "order_voided";
+}
+
+/**
+ * A refund Stripe accepted can still fail later — the card closed, the bank
+ * returned it (issue #2291). The money is back in the shop's balance, so the
+ * refund recorded here is reversed and the diver shows as owed on the Orders
+ * index. Any other status changes nothing. Returns the outcome to log.
+ */
+async function handleRefundUpdated(
+  db: AppDb,
+  event: StripeWebhookEvent,
+  occurredAt: Date,
+  sourceLookup: PaymentSourceLookup,
+): Promise<string> {
+  const refund = refundObjectSchema.safeParse(event.data.object);
+  if (!refund.success) return "malformed_payload";
+  if (!event.account) return "missing_account";
+  const paymentIntentId = idOf(refund.data.payment_intent);
+  if (!paymentIntentId) return "refund_target_not_found";
+  const outcome = await recordStripeRefundFailure(
+    db,
+    {
+      stripeAccountId: event.account,
+      paymentIntentId,
+      refund: {
+        id: refund.data.id,
+        amountCents: refund.data.amount,
+        currency: refund.data.currency,
+        status: refund.data.status ?? "",
+        failureReason: refund.data.failure_reason ?? null,
+      },
+      occurredAt,
+    },
+    sourceLookup,
+  );
+  return `refund_failure_${outcome.status}`;
+}
 
 /** The Dispute every `charge.dispute.*` event carries. */
 const disputeObjectSchema = z.object({
@@ -406,10 +473,11 @@ export async function POST(request: Request) {
     logOutcome("livemode_mismatch", { verifiedWith, livemode: event.livemode ?? null });
     return new Response(null, { status: 200 });
   }
-  // Which charge a reversal is about, asked of Stripe only with a key of this
-  // event's own mode (ADR 20261009-stripe-reversals-reach-diveday).
+  // Which charge a reversal is about, asked of Stripe with the event account's
+  // own key, of the event's mode (ADR 20261009-stripe-reversals-reach-diveday).
   const sourceLookup = paymentSourceLookupFromEnvironment(process.env, fetch, {
     livemode: expectedLivemode,
+    db: async () => db,
   });
 
   // On a deployment that takes real money, the only test-mode traffic with
@@ -500,13 +568,7 @@ export async function POST(request: Request) {
         break;
       }
       case "invoice.voided": {
-        const invoice = invoiceObjectSchema.safeParse(event.data.object);
-        if (invoice.success) {
-          const order = await markOrderVoidedByInvoiceId(db, invoice.data.id, event.account);
-          logOutcome(order ? "order_voided" : "order_not_found");
-        } else {
-          logOutcome("malformed_payload");
-        }
+        logOutcome(await handleInvoiceVoided(db, event));
         break;
       }
       case "checkout.session.completed": {
@@ -700,6 +762,10 @@ export async function POST(request: Request) {
         }
         break;
       }
+      case "charge.refund.updated": {
+        logOutcome(await handleRefundUpdated(db, event, occurredAt, sourceLookup));
+        break;
+      }
       case "charge.dispute.created":
       case "charge.dispute.updated":
       case "charge.dispute.closed":
@@ -733,6 +799,7 @@ export async function POST(request: Request) {
     // `markTipPaidBySessionId` early-returns once paid, both
     // `*ExpiredBySessionId` and `markCheckoutPaymentFailedBySessionId` only
     // touch a `pending` row,
+    // `recordStripeRefundFailure` writes one row per refund, reversing with it,
     // `setShopStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
     // `disconnectShopStripeAccount` neither moves `disconnectedAt` on a row
     // that is already disconnected nor touches one reconnected since this
@@ -753,27 +820,13 @@ export async function POST(request: Request) {
     // without handling. That delivery is then a no-op — but *this* one answers
     // 5xx, so Stripe retries it, and the retry finds the claim released and
     // runs the handler. The event is delayed, never dropped.
-    let released = false;
-    try {
-      released = await releaseStripeWebhookEventClaim(db, event.id);
-    } catch (releaseError) {
-      // Never let the release mask the original failure. A claim we could not
-      // give back is the one case a redelivery cannot self-heal, so it is
-      // reported in its own right.
-      Sentry.captureException(releaseError, {
-        tags: { stripe_webhook_event_type: event.type, stripe_webhook_stage: "claim_release" },
-      });
-      log("stripe_webhook.claim_release_failed", "error", {
-        eventId: event.id,
-        eventType: event.type,
-        account: accountId,
-      });
-    }
-    // The original error, unwrapped and unreplaced, is what reaches Sentry.
-    Sentry.captureException(error, {
-      tags: { stripe_webhook_event_type: event.type, stripe_webhook_stage: "handler" },
+    const released = await releaseClaimAfterFailure(db, event, accountId);
+    reportToSentry(error, event, "handler");
+    logOutcome("handler_failed", {
+      claimReleased: released,
+      errorCode: errorClassToken(error),
+      ...errorCauseTokens(error),
     });
-    logOutcome("handler_failed", { claimReleased: released });
     return new Response(null, { status: 500 });
   }
 
@@ -782,9 +835,7 @@ export async function POST(request: Request) {
     // the retry must reach the handler. A release that fails is the one case a
     // retry cannot heal, so it is reported like the failure path reports it.
     const released = await releaseStripeWebhookEventClaim(db, event.id).catch((releaseError) => {
-      Sentry.captureException(releaseError, {
-        tags: { stripe_webhook_event_type: event.type, stripe_webhook_stage: "claim_release" },
-      });
+      reportToSentry(releaseError, event, "claim_release");
       return false;
     });
     logOutcome("deferred", { claimReleased: released });
@@ -792,6 +843,68 @@ export async function POST(request: Request) {
   }
 
   return new Response(null, { status: 200 });
+}
+
+/**
+ * Give the claim back after a failed handle. Never lets the release mask the
+ * original failure: a claim that could not be given back is the one case a
+ * redelivery cannot self-heal, so it is reported in its own right, by class
+ * and code, never message.
+ */
+async function releaseClaimAfterFailure(
+  db: AppDb,
+  event: { id: string; type: string },
+  accountId: string | null,
+): Promise<boolean> {
+  try {
+    return await releaseStripeWebhookEventClaim(db, event.id);
+  } catch (releaseError) {
+    reportToSentry(releaseError, event, "claim_release");
+    log("stripe_webhook.claim_release_failed", "error", {
+      eventId: event.id,
+      eventType: event.type,
+      account: accountId,
+      errorCode: errorClassToken(releaseError),
+      ...errorCauseTokens(releaseError),
+    });
+    return false;
+  }
+}
+
+/**
+ * Report a webhook failure to Sentry without its message (issue #2334).
+ * Sentry's `beforeSend` (`redactEvent` in src/app/observability.ts) scrubs
+ * capability URLs and headers, not exception text, and a handler's or a
+ * database's error can quote the row it refused: a diver's name or email. So
+ * Sentry gets a stand-in with a fixed message, the original's stack frames
+ * (where it broke, not what it said), and as tags the event id, the original's
+ * class and, when it wraps one, its cause's class and code (a SQLSTATE). The
+ * original is never attached as `cause`, which Sentry would send in full.
+ */
+function reportToSentry(
+  error: unknown,
+  event: { id: string; type: string },
+  stage: "handler" | "claim_release",
+) {
+  const scrubbed = new Error(`Stripe webhook ${stage} failed`);
+  scrubbed.name = "StripeWebhookError";
+  if (error instanceof Error && error.stack) {
+    const frames = error.stack.split("\n").filter((line) => /^\s+at /.test(line));
+    scrubbed.stack = [`${scrubbed.name}: ${scrubbed.message}`, ...frames].join("\n");
+  }
+  const { causeName, causeCode } = errorCauseTokens(error);
+  Sentry.captureException(scrubbed, {
+    tags: {
+      stripe_event_id: event.id,
+      stripe_webhook_event_type: event.type,
+      stripe_webhook_stage: stage,
+      error_class: errorClassToken(error),
+      // A database error wraps the driver's own: its class and SQLSTATE say
+      // what failed without the parameters the outer message quotes.
+      ...(causeName ? { cause_name: causeName } : {}),
+      ...(causeCode ? { cause_code: causeCode } : {}),
+    },
+  });
 }
 
 /** Whether this deployment moves real money: any one sign is enough. */

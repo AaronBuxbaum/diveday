@@ -249,6 +249,23 @@ export function workOrderCareKinds(kind: GearItemKind): readonly GearServiceKind
 const CUSTOMER_SERVICE_SUGGESTED: ReadonlySet<GearItemKind> = new Set(["regulator", "bcd"]);
 
 /**
+ * The two regulator service intervals a shop may run its customers' reminders
+ * on (issue #2272). Most current regulator lines publish 24 months, many shops
+ * still service annually; a shop picks one in its Rental gear settings
+ * (`shops.customer_regulator_service_months`), and 12 stays the default because
+ * it errs early. Only a customer's regulator reads it: a shop unit carries its
+ * own clock forward, and a BCD keeps the register's convention.
+ */
+export const CUSTOMER_REGULATOR_SERVICE_MONTHS = [12, 24] as const;
+export type CustomerRegulatorServiceMonths = (typeof CUSTOMER_REGULATOR_SERVICE_MONTHS)[number];
+
+export function isCustomerRegulatorServiceMonths(
+  value: number,
+): value is CustomerRegulatorServiceMonths {
+  return (CUSTOMER_REGULATOR_SERVICE_MONTHS as readonly number[]).includes(value);
+}
+
+/**
  * The next-due date a "Work done" row is prefilled with, counted from the day
  * the work was **performed** (never the day the gear was collected).
  *
@@ -257,7 +274,8 @@ const CUSTOMER_SERVICE_SUGGESTED: ReadonlySet<GearItemKind> = new Set(["regulato
  * 6-month regulator service keeps running it. With nothing to carry, a unit
  * borrows the register's convention — except a cylinder, which gets no default
  * clock, ever. A customer's piece gets a suggestion only where
- * `CUSTOMER_SERVICE_SUGGESTED` says so.
+ * `CUSTOMER_SERVICE_SUGGESTED` says so, and a customer's regulator counts the
+ * shop's own interval (`CUSTOMER_REGULATOR_SERVICE_MONTHS`).
  *
  * Always a suggestion: the technician confirms or clears it, and what they
  * confirm is what is written.
@@ -269,6 +287,8 @@ export function suggestCareDueOn(input: {
   performedOn: CalendarDate;
   /** A unit's last reading of this clock, when it has one. */
   previous?: { servicedOn: CalendarDate; nextDueOn: CalendarDate | null } | null;
+  /** The shop's interval for a customer's regulator; 12 months when absent. */
+  customerRegulatorMonths?: CustomerRegulatorServiceMonths;
 }): CalendarDate | null {
   if (input.careKind === "note") return null;
   if (input.subject === "unit" && input.previous?.nextDueOn) {
@@ -279,6 +299,9 @@ export function suggestCareDueOn(input: {
   if (input.subject === "customer") {
     if (input.careKind !== "service" || !CUSTOMER_SERVICE_SUGGESTED.has(input.itemKind)) {
       return null;
+    }
+    if (input.itemKind === "regulator") {
+      return shiftCalendarDateMonths(input.performedOn, input.customerRegulatorMonths ?? 12);
     }
   }
   const months = GEAR_SERVICE_INTERVAL_MONTHS[input.careKind];

@@ -8,6 +8,7 @@ import {
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
+import { listTripBuddyTeams } from "./buddy-pairs";
 import {
   DIVER_HISTORY_TABLES,
   DIVER_MERGE_COUNT_GROUPS,
@@ -21,10 +22,13 @@ import {
   STAFF_HISTORY_TABLES,
   STAFF_PERSON_ONLY_TABLES,
 } from "./diver-merge";
+import { getIncidentExport } from "./incident-export";
+import { survivingPersonNames } from "./people";
 import { getBookingReadiness } from "./readiness";
 import {
   activityEvents,
   bookings,
+  buddyPairMembers,
   certifications,
   gearItems,
   gearReservations,
@@ -34,6 +38,7 @@ import {
   priorVisits,
   recapPulses,
   rentalFitProfiles,
+  rollCallEvents,
   shops,
   tripDeskEvents,
   tripInvitations,
@@ -248,7 +253,7 @@ describe("diver record merge", () => {
         survivorId: survivor.id,
         actorPersonId: owner.id,
       }),
-    ).toEqual({ ok: false, reason: "booking_conflict" });
+    ).toMatchObject({ ok: false, reason: "booking_conflict" });
 
     const [sourceAfterConflict] = await db.select().from(people).where(eq(people.id, source.id));
     expect(sourceAfterConflict?.mergedIntoPersonId).toBeNull();
@@ -357,7 +362,7 @@ describe("diver record merge, a seat that is already over", () => {
     const f = await mergeFixtures();
     await seatBoth(f, "booked", "booked");
     await f.db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, f.trip.id));
-    expect(await merge(f)).toEqual({ ok: false, reason: "booking_conflict" });
+    expect(await merge(f)).toMatchObject({ ok: false, reason: "booking_conflict" });
   });
 
   it("leaves a cancelled seat behind on a deleted departure too", async () => {
@@ -510,6 +515,130 @@ describe("diver record merge, a seat that is already over", () => {
     expect((await getBookingReadiness(db, shop.id, kept.id))?.status).toBe("ready");
   });
 
+  it("shows a seat left behind under the kept record's name, without rewriting it (issue #2333)", async () => {
+    const f = await mergeFixtures();
+    await f.db.update(people).set({ fullName: "Maya R." }).where(eq(people.id, f.source.id));
+    const { sourceSeat } = await seatBoth(f, "cancelled", "booked");
+    // The seat was counted at the dock before it was cancelled.
+    await f.db.insert(rollCallEvents).values({
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      bookingId: sourceSeat.id,
+      recordedByPersonId: f.owner.id,
+      status: "not_boarded",
+      occurredAt: nowDate(),
+    });
+    expect((await merge(f)).ok).toBe(true);
+
+    const log = await getIncidentExport(f.db, f.shop.id, f.trip.id, f.owner.id);
+    const names = (log?.timeline ?? []).flatMap((entry) =>
+      "subjectName" in entry ? [entry.subjectName] : [],
+    );
+    expect(names).toContain("Maya Rivera");
+    expect(names).not.toContain("Maya R.");
+    // Display only: the seat and the merged-away row are untouched.
+    expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
+    const [kept] = await f.db.select().from(people).where(eq(people.id, f.source.id));
+    expect(kept?.fullName).toBe("Maya R.");
+  });
+
+  it("keeps a held seat left behind named as booked, never as the kept record (issue #2333)", async () => {
+    const f = await mergeFixtures();
+    const { sourceSeat, survivorSeat } = await seatBoth(f, "cancelled", "booked");
+    await f.db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Marisol Reyes" })
+      .where(eq(bookings.id, sourceSeat.id));
+    await f.db.insert(rollCallEvents).values({
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      bookingId: sourceSeat.id,
+      recordedByPersonId: f.owner.id,
+      status: "not_boarded",
+      occurredAt: nowDate(),
+    });
+    const pairId = crypto.randomUUID();
+    await f.db.insert(buddyPairMembers).values([
+      {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        pairId,
+        bookingId: sourceSeat.id,
+        pairedByPersonId: f.owner.id,
+      },
+      {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        pairId,
+        bookingId: survivorSeat.id,
+        pairedByPersonId: f.owner.id,
+      },
+    ]);
+    await f.db.update(people).set({ fullName: "Maya Kept" }).where(eq(people.id, f.survivor.id));
+    expect((await merge(f)).ok).toBe(true);
+
+    const log = await getIncidentExport(f.db, f.shop.id, f.trip.id, f.owner.id);
+    const logNames = (log?.timeline ?? []).flatMap((entry) =>
+      "subjectName" in entry ? [entry.subjectName] : [],
+    );
+    expect(logNames).toContain("Marisol Reyes");
+    expect(logNames).not.toContain("Maya Kept");
+
+    const teams = await listTripBuddyTeams(f.db, f.shop.id, f.trip.id);
+    const held = teams
+      .flatMap((team) => team.members)
+      .find((member) => member.kind === "diver" && member.bookingId === sourceSeat.id);
+    expect(held?.fullName).toBe("Marisol Reyes");
+  });
+
+  it("follows a chain of merges to the record that is live now, and only within the shop", async () => {
+    const f = await mergeFixtures();
+    const [third] = await f.db
+      .insert(people)
+      .values({ shopId: f.shop.id, fullName: "Maya Rivera-Soto" })
+      .returning();
+    if (!third) throw new Error("third person insert failed");
+    await f.db.insert(personRoles).values({ personId: third.id, role: "diver" });
+    expect((await merge(f)).ok).toBe(true);
+    const second = await mergeDiverRecords({
+      db: f.db,
+      shopId: f.shop.id,
+      personId: f.survivor.id,
+      survivorId: third.id,
+      actorPersonId: f.owner.id,
+    });
+    expect(second.ok).toBe(true);
+    const names = await survivingPersonNames(f.db, f.shop.id, [f.source.id, third.id]);
+    expect(names.get(f.source.id)).toBe("Maya Rivera-Soto");
+    // A record nobody merged away is not in the map: its own name stands.
+    expect(names.has(third.id)).toBe(false);
+  });
+
+  it("never follows a merge pointer into another shop's record (issue #2333)", async () => {
+    const f = await mergeFixtures();
+    expect((await merge(f)).ok).toBe(true);
+    const [otherShop] = await f.db
+      .insert(shops)
+      .values({ slug: `other-${f.source.id.slice(0, 8)}`, name: "Other Shop", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("second shop insert failed");
+    const [foreign] = await f.db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Someone Elsewhere" })
+      .returning();
+    if (!foreign) throw new Error("foreign person insert failed");
+    // A corrupt pointer: the merged-away row now names another shop's person.
+    await f.db
+      .update(people)
+      .set({ mergedIntoPersonId: foreign.id })
+      .where(eq(people.id, f.source.id));
+    expect((await survivingPersonNames(f.db, f.shop.id, [f.source.id])).has(f.source.id)).toBe(
+      false,
+    );
+    // And asked from the other shop, this shop's row is not there at all.
+    expect((await survivingPersonNames(f.db, otherShop.id, [f.source.id])).size).toBe(0);
+  });
+
   it("still moves the merged-away record's other seats to the kept record", async () => {
     const f = await mergeFixtures();
     const { sourceSeat } = await seatBoth(f, "cancelled", "booked");
@@ -539,7 +668,7 @@ describe("diver record merge, a seat that is already over", () => {
   it("refuses a live seat onto a kept record whose seat is cancelled, and merges the other way", async () => {
     const f = await mergeFixtures();
     const { sourceSeat, survivorSeat } = await seatBoth(f, "booked", "cancelled");
-    expect(await merge(f)).toEqual({ ok: false, reason: "booking_conflict" });
+    expect(await merge(f)).toMatchObject({ ok: false, reason: "booking_conflict" });
     expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
     const [untouched] = await f.db.select().from(people).where(eq(people.id, f.source.id));
     expect(untouched?.mergedIntoPersonId).toBeNull();
@@ -552,11 +681,16 @@ describe("diver record merge, a seat that is already over", () => {
     expect(merged?.mergedIntoPersonId).toBe(f.source.id);
   });
 
-  it("still refuses two live seats on one departure", async () => {
+  it("still refuses two live seats on one departure, naming it", async () => {
     const f = await mergeFixtures();
     await seatBoth(f, "booked", "booked");
-    expect(await merge(f)).toEqual({ ok: false, reason: "booking_conflict" });
-    expect(await merge(f, true)).toEqual({ ok: false, reason: "booking_conflict" });
+    expect(await merge(f)).toEqual({
+      ok: false,
+      reason: "booking_conflict",
+      conflictTripId: f.trip.id,
+    });
+    expect(await merge(f)).toMatchObject({ ok: false, reason: "booking_conflict" });
+    expect(await merge(f, true)).toMatchObject({ ok: false, reason: "booking_conflict" });
   });
 });
 

@@ -468,7 +468,8 @@ export type TripActivityEntry =
         | "identity_confirmed"
         | "identity_split"
         | "seat_added"
-        | "seat_added_walk_in";
+        | "seat_added_walk_in"
+        | "rider_added_at_dock";
       diver: string;
     }
   | {
@@ -485,10 +486,14 @@ export type TripActivityEntry =
   | {
       code:
         | "blowout_called"
+        | "series_cancelled"
         | "booking_link_requested"
         | "seat_claimed"
         | "seat_self_cancelled"
-        | "seat_self_refunded";
+        | "seat_self_refunded"
+        | "incident_report_filed"
+        | "incident_report_addendum_added"
+        | "departure_note_sent";
     };
 
 export async function recordTripActivity(

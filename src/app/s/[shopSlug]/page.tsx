@@ -20,6 +20,7 @@ import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { listTripLenses } from "@/db/trip-lenses";
 import {
+  listRunningPublicSeries,
   nextSessionStartByCourse,
   pagedUpcomingTripsWithCounts,
   upcomingScheduleRange,
@@ -74,8 +75,10 @@ import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { FindMyBookingForm } from "./_components/FindMyBookingForm";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 import { MonthRail } from "./_components/MonthRail";
+import { MonthSightingsSection } from "./_components/MonthSightingsShelf";
 import { NextBoatCard } from "./_components/NextBoatCard";
-import { OffSeasonPanel } from "./_components/OffSeasonPanel";
+import { OffSeasonPanel, offSeasonLine } from "./_components/OffSeasonPanel";
+import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_components/PromotedDateAsk";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import { ShopPhotoStrip } from "./_components/ShopPhotoStrip";
@@ -391,17 +394,9 @@ export default async function SchedulePage({
    * the widget already keeps its own terminal state below.
    */
   const quiet = isEmbed
-    ? { quiet: false, opensAt: null }
-    : offSeason({ now, firstDeparture: range.first });
-  /**
-   * The one sentence the card is allowed, already zoned and already worded.
-   *
-   * `formatShortDate` for the departure (a real instant, read in the shop's
-   * own zone, the same words the week rows below use).
-   */
-  const quietLine = quiet.opensAt
-    ? t("schedule.offSeason.back", { date: formatShortDate(quiet.opensAt, locale, tz) })
-    : null;
+    ? { quiet: false, opensAt: null, reopensOn: null }
+    : offSeason({ now, firstDeparture: range.first, reopensOn: shop.reopensOn, timeZone: tz });
+  const quietLine = offSeasonLine(t, quiet, locale, tz);
 
   // Which departures ask for more than the reader said they hold.
   //
@@ -507,6 +502,14 @@ export default async function SchedulePage({
     firstTripMonth && ordinal(prev) >= ordinal(firstTripMonth) ? monthKey(prev) : null;
   const nextMonthKey =
     lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
+
+  // The board's last month says which runs keep going (`PromotedDateAsk`).
+  const settled = explicitMonth !== null || !nextCursor;
+  const atBoardsEnd =
+    !isEmbed && !quiet.quiet && viewsBoardsEnd(currentMonth, lastTripMonth, settled);
+  const runningLines = atBoardsEnd
+    ? seriesHorizonLines(t, locale, await listRunningPublicSeries(db, shop.id, now))
+    : [];
 
   // Structured data describes the canonical standalone page only — see
   // generateMetadata above. The graph's `aggregateRating` and `review` items
@@ -1017,35 +1020,16 @@ export default async function SchedulePage({
           ) : null}
         </div>
       ) : null}
-      {/* **The ask, promoted** (N-45). On a quiet board this is the page's one
-          primary and its whole job, so it stands as its own section with the
-          form already open rather than as the first collapsed row of a group
-          of three — a shop between seasons cannot afford its one available
-          conversion to be behind a chevron. It is the same component, the same
-          action and the same `#request-a-date` anchor; only the heading and the
-          disclosure change, and the collapsed row below stands down so the id
-          is never rendered twice.
-
-          Its own provider, matching the course page's exactly: this form is
-          the only Client Component in it, and `inquiry` is the only namespace
-          it reads. */}
-      {quiet.quiet && shop.dateRequestsEnabled ? (
-        <DiverIntlProvider locale={locale} timeZone={tz} namespaces={["inquiry"]}>
-          <DateRequestForm
-            submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
-            askInterest
-            sectionId="request-a-date"
-            className={SECTION_GAP}
-            headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}
-            contactEmail={null}
-            contactPhone={null}
-            copy={{
-              ...dateRequestCopy(t, "dive"),
-              heading: t("schedule.offSeason.requestHeading"),
-            }}
-          />
-        </DiverIntlProvider>
-      ) : null}
+      <PromotedDateAsk
+        t={t}
+        shopSlug={shopSlug}
+        locale={locale}
+        timeZone={tz}
+        quiet={quiet.quiet}
+        dateRequestsEnabled={shop.dateRequestsEnabled}
+        runningLines={runningLines}
+        className={SECTION_GAP}
+      />
       {/* **The shelves.** What the shop teaches, then what divers said about
           it — the two things a diver weighs after the boats and before the
           three asks below. Neither renders inside the frame, which stays the
@@ -1099,15 +1083,14 @@ export default async function SchedulePage({
           </ul>
         </section>
       )}
-      {/* Reviews are a full-page, diver-facing signal: the embed stays a
-          compact booking widget (docs ADR 20260726-schedule-embed), and staff
-          moderate from /shop/[shopSlug]/reviews rather than reading them here.
-          The published-review list streams in behind the shell and trip list
-          instead of gating them (docs task 119 follow-up: streaming the
-          schedule); the section also carries the page's structured-data script
-          tag, since its `review` items come from the same fetch. The aggregate
-          is already in hand — it belongs to the hero now, and is handed down
-          here rather than read a second time. */}
+      {isEmbed ? null : <MonthSightingsSection shopId={shop.id} tz={tz} locale={locale} t={t} />}
+      {/* Reviews are a full-page, diver-facing signal: the embed stays a compact booking widget
+          (docs ADR 20260726-schedule-embed), and staff moderate from /shop/[shopSlug]/reviews
+          rather than reading them here. The published-review list streams in behind the shell and
+          trip list instead of gating them (docs task 119 follow-up: streaming the schedule); the
+          section also carries the page's structured-data script tag, since its `review` items
+          come from the same fetch. The aggregate is already in hand — it belongs to the hero now,
+          and is handed down here rather than read a second time. */}
       {showReviews ? (
         <Suspense fallback={<ShopReviewsSkeleton className={SECTION_GAP} />}>
           <ScheduleReviewsSection
@@ -1182,7 +1165,7 @@ export default async function SchedulePage({
                   `#request-a-date` id twice (N-45). */}
               {/* And not for a shop that switched date requests off (ADR
                   20261005-optional-shop-features). */}
-              {quiet.quiet || !shop.dateRequestsEnabled ? null : (
+              {quiet.quiet || runningLines.length > 0 || !shop.dateRequestsEnabled ? null : (
                 <DateRequestForm
                   submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
                   askInterest

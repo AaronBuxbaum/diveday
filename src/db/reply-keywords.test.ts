@@ -410,6 +410,59 @@ describe("handleInboundReplyKeyword — what it does", () => {
   });
 
   /**
+   * **The written record every other cancel path sends** (issue #2294). The
+   * reply line says the seat is gone; the `booking_cancelled` email is what
+   * the diver still has tomorrow, with the money line in it. It goes to the
+   * address on the record whichever channel the code came in on, because a
+   * diver who cancelled by WhatsApp is owed the same receipt.
+   */
+  it.each([
+    { channel: "email" as const, from: DIVER.email },
+    { channel: "whatsapp" as const, from: "447700900123" },
+  ])("sends the booking-cancelled email after a $channel code", async ({ channel, from }) => {
+    const { db, shop, bookingId, personId, now } = await context();
+    const provider = acceptingProvider();
+    // A number nobody else in the seeded shop holds, stored as every writer
+    // stores one (E.164).
+    await db.update(people).set({ phone: "+447700900123" }).where(eq(people.id, personId));
+    await handleInboundReplyKeyword(db, {
+      shopId: shop.id,
+      inboundMessageId: await inbound(db, shop.id, "C", { channel, from, receivedAt: now }),
+      now,
+      provider,
+    });
+    // The first `C` changes nothing, and says nothing about a cancellation.
+    expect(provider.sent.some((sent) => sent.kind === "booking_cancelled")).toBe(false);
+
+    const code = confirmationCode(
+      { shopId: shop.id, bookingId, personId, channel, toAddress: from },
+      now.getTime(),
+    );
+    const later = new Date(now.getTime() + 60_000);
+    expect(
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: await inbound(db, shop.id, code, { channel, from, receivedAt: later }),
+        now: later,
+        provider,
+      }),
+    ).toBe("cancelled");
+
+    const notices = provider.sent.filter((sent) => sent.kind === "booking_cancelled");
+    expect(notices).toEqual([
+      expect.objectContaining({
+        kind: "booking_cancelled",
+        bookingId,
+        to: DIVER.email,
+        cancelledBy: "diver",
+        cancelledAt: later,
+        // An unpaid seat: there is no money to speak of.
+        money: { story: "none" },
+      }),
+    ]);
+  });
+
+  /**
    * **Two messages can share an instant.** The pending-request lookup used to
    * ask for a `C` strictly *before* the code that answers it, and a `received_at`
    * is only as fine-grained as whatever wrote it: the e2e fleet freezes the

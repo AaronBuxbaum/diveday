@@ -17,6 +17,8 @@
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
       "rentalTermsSaved": "Rental terms saved. Every rental ticket prints them.",
       "rentalTermsInvalid": "Keep rental terms under 1,500 characters.",
+      "regulatorServiceSaved": "Regulator service interval saved.",
+      "regulatorServiceInvalid": "Choose 12 or 24 months.",
       "contactSaved": "Contact details saved.",
       "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers’ replies reach it.",
       "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
@@ -43,6 +45,8 @@
       "timezoneSaved": "Timezone saved.",
       "seasonSaved": "Season start saved.",
       "seasonInvalid": "Pick a day that month has.",
+      "reopensSaved": "Saved. Your public page names this date while its schedule is quiet.",
+      "reopensInvalid": "That isn’t a date on the calendar. Pick one from the box.",
       "timezoneInvalid": "That isn’t a timezone we recognize. Pick one from the list.",
       "emergencySaved": "Emergency reference saved.",
       "packageSaved": "Package added.",
@@ -95,7 +99,10 @@
       "monthLabel": "Month",
       "dayLabel": "Day",
       "submitting": "Saving…",
-      "submit": "Save season start"
+      "submit": "Save season start",
+      "reopensLabel": "Back on the water",
+      "reopensHint": "While your public schedule has nothing in the next month, it says you’re back out on this date, or on your first trip if that comes sooner.",
+      "reopensSubmit": "Save the date"
     },
     "contact": {
       "heading": "Public contact details",
@@ -288,7 +295,7 @@
     },
     "rentals": {
       "heading": "What we rent",
-      "detail": "Tick what you rent. Anything unticked drops off the kit form and the prep list.",
+      "detail": "Tick what you rent. Unticked gear leaves the kit form, and fits that already ask for it stay on the prep list, marked.",
       "legend": "Rentable gear and services",
       "submit": "Save rental catalog",
       "submitting": "Saving…",
@@ -313,6 +320,14 @@
       "submit": "Save rental terms",
       "submitting": "Saving…",
       "value": "On every ticket"
+    },
+    "regulatorService": {
+      "heading": "Customer regulator service",
+      "description": "When a customer’s regulator is due again after a service. Your own units keep their own clocks.",
+      "label": "Service every",
+      "months": "{months} months",
+      "submit": "Save service interval",
+      "submitting": "Saving…"
     },
     "stripe": {
       "notConnectedHeading": "No Stripe account connected",

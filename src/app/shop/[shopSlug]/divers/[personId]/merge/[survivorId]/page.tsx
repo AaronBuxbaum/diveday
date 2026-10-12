@@ -2,9 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { canPersonMergeDiver } from "@/db/authz";
 import { getDiverMergePreview } from "@/db/diver-merge";
+import { getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { resolveDiverNotice } from "@/lib/diver-notices";
+import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -29,11 +31,11 @@ export default async function MergeDiverPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; personId: string; survivorId: string }>;
-  searchParams: Promise<{ notice?: string; form?: string }>;
+  searchParams: Promise<{ notice?: string; form?: string; trip?: string }>;
 }) {
   const { shopSlug, personId, survivorId } = await params;
   if (!uuidParam(personId) || !uuidParam(survivorId)) notFound();
-  const { notice, form } = await searchParams;
+  const { notice, form, trip } = await searchParams;
   const { db, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonMergeDiver,
     refusal: { notice: "not-authorized-merge", landing: ["divers", personId] },
@@ -51,9 +53,29 @@ export default async function MergeDiverPage({
   // A refusal the preview already states in place is not said twice: the
   // notice only speaks when the page itself shows nothing wrong (a race, or
   // the different-people box left unticked).
+  //
+  // A refused merge names the departure it collided on (issue #2333). The URL
+  // carries only its id; the words come from this shop's own trip row, so a
+  // crafted link can name nothing the shop does not hold.
+  const conflictTripId = notice === "merge-booking-conflict" ? uuidParam(trip ?? "") : null;
+  const conflictTrip =
+    !preview.refusal && conflictTripId
+      ? await getTripWithBooked(db, shop.id, conflictTripId)
+      : null;
   const status = preview.refusal
     ? undefined
-    : noticeForForm(resolveDiverNotice({ notice, form, personId, locale }), "merge");
+    : noticeForForm(
+        resolveDiverNotice({
+          notice,
+          form,
+          personId,
+          locale,
+          conflictDeparture: conflictTrip
+            ? `${conflictTrip.title} · ${formatDateTimeTz(conflictTrip.startsAt, locale, shop.timezone)}`
+            : undefined,
+        }),
+        "merge",
+      );
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">

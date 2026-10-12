@@ -12,6 +12,7 @@ import {
   setShopSearchListing,
 } from "@/db/shops";
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
+import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -32,6 +33,21 @@ const profileSchema = z.object({
     .pipe(z.number().int().min(1900).max(2100).nullable()),
 });
 
+/** The profile form as posted; `profileSchema` and the brand parsers hold it to its bounds. */
+const profileForm = z.object({
+  tagline: trimmedText(),
+  description: trimmedText(),
+  brandHeroImageAlt: trimmedText(),
+  establishedYear: text(),
+  brandColor: formValue(),
+  brandDisplayFont: text(),
+  logoFile: formValue(),
+  removeLogo: checkbox("true"),
+  brandHeroFile: formValue(),
+  removeHero: checkbox("true"),
+});
+const searchListingForm = z.object({ searchListed: checkbox() });
+
 /**
  * Shop profile & branding — tagline, about/description, the logo, and the
  * brand the storefront wears (Harbor, ADR 20260901-diveday-reimagined,
@@ -44,16 +60,17 @@ export async function saveProfileAction(formData: FormData) {
   const page = shopPath(session.user.shopSlug, "settings", "profile");
   await settingsBlock(session);
 
+  const form = readForm(profileForm, formData);
   const parsed = profileSchema.safeParse({
-    tagline: String(formData.get("tagline") ?? "").trim(),
-    description: String(formData.get("description") ?? "").trim(),
-    brandHeroImageAlt: String(formData.get("brandHeroImageAlt") ?? "").trim(),
-    establishedYear: String(formData.get("establishedYear") ?? ""),
+    tagline: form.tagline,
+    description: form.description,
+    brandHeroImageAlt: form.brandHeroImageAlt,
+    establishedYear: form.establishedYear,
   });
   if (!parsed.success) redirect(noticeUrl(page, "profile-invalid"));
-  const brandColor = parseBrandColor(formData.get("brandColor"));
+  const brandColor = parseBrandColor(form.brandColor);
   if (!brandColor.valid) redirect(noticeUrl(page, "profile-invalid"));
-  const fontInput = String(formData.get("brandDisplayFont") ?? "");
+  const fontInput = form.brandDisplayFont;
   const brandDisplayFont = isBrandDisplayFontCode(fontInput) ? fontInput : null;
   const brandBadges = parseBrandBadges(formData.getAll("badge"));
 
@@ -61,8 +78,8 @@ export async function saveProfileAction(formData: FormData) {
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect(noticeUrl(page, "profile-invalid"));
 
-  const logoFile = formData.get("logoFile");
-  const removeLogo = formData.get("removeLogo") === "true";
+  const logoFile = form.logoFile;
+  const removeLogo = form.removeLogo;
 
   let logoUrl: string | null | undefined;
 
@@ -81,8 +98,8 @@ export async function saveProfileAction(formData: FormData) {
     }
   }
 
-  const heroFile = formData.get("brandHeroFile");
-  const removeHero = formData.get("removeHero") === "true";
+  const heroFile = form.brandHeroFile;
+  const removeHero = form.removeHero;
   let brandHeroImageUrl: string | null | undefined;
   if (removeHero) {
     brandHeroImageUrl = null;
@@ -220,7 +237,7 @@ export async function saveSearchListingAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
-  const listed = formData.get("searchListed") === "on";
+  const listed = readForm(searchListingForm, formData).searchListed;
   await setShopSearchListing(await getDb(), session.user.shopId, listed);
   const notice = listed ? "search-listing-on" : "search-listing-off";
   revalidateAndRedirect(settings, noticeUrl(settings, notice, { saved: "searchListing" }));

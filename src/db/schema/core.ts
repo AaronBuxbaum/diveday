@@ -271,6 +271,17 @@ export const shops = pgTable(
      */
     rentalTerms: text("rental_terms"),
     /**
+     * **How often the shop services a customer's regulator**, in months: 12 or
+     * 24 (issue #2272). Read only by the work-order bench's suggested next-due
+     * date for a customer's own regulator, which drives that customer's service
+     * reminder (`suggestCareDueOn`, `src/lib/work-orders.ts`). The shop's own
+     * fleet never reads it — each unit carries its own clock. Defaults to 12,
+     * which errs early.
+     */
+    customerRegulatorServiceMonths: integer("customer_regulator_service_months")
+      .notNull()
+      .default(12),
+    /**
      * **The numbers a crew reaches for during, not after** — the shop's own
      * chamber, dive-accident hotline, coastguard, vessel and shore contact, and
      * its emergency action plan (`src/lib/emergency-reference.ts`).
@@ -328,6 +339,14 @@ export const shops = pgTable(
      */
     seasonStartMonth: integer("season_start_month").notNull().default(1),
     seasonStartDay: integer("season_start_day").notNull().default(1),
+    /**
+     * **When the shop is back on the water**, as a shop-local calendar date, or
+     * null for nothing to say. Read only while the public board has nothing in
+     * its quiet window (`src/lib/off-season.ts`): a scheduled departure always
+     * outranks it, and once the date has passed it says nothing, so a date
+     * nobody updated goes quiet by itself rather than misleading anybody.
+     */
+    reopensOn: text("reopens_on"),
     /**
      * **When somebody is at the desk**, as minutes after shop-local midnight:
      * opens inclusive, closes exclusive, the same window every day. A diver
@@ -404,12 +423,22 @@ export const shops = pgTable(
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    check(
+      "shops_customer_regulator_service_months_choice",
+      sql`${table.customerRegulatorServiceMonths} in (12, 24)`,
+    ),
     // The same window `parseDeskHours` accepts (`src/lib/desk-hours.ts`): a
     // day's minutes, opening before closing.
     check(
       "shops_desk_hours_in_day",
       sql`${table.deskOpensMinute} >= 0 and ${table.deskClosesMinute} <= 1440
         and ${table.deskOpensMinute} < ${table.deskClosesMinute}`,
+    ),
+    // The shape `isValidCalendarDate` checks in full (src/lib/calendar-date.ts);
+    // the settings action refuses an impossible day before it gets here.
+    check(
+      "shops_reopens_on_is_a_date",
+      sql`${table.reopensOn} is null or ${table.reopensOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'`,
     ),
     // The same days `parseSeasonStart` accepts (`src/lib/season.ts`). A
     // constraint looser than the action it backs lets any other caller

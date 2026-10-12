@@ -186,7 +186,7 @@
     "cancelConfirm": "Sí, cancelar esta salida",
     "weatherBlowout": "Cancelación por mal tiempo…",
     "dayBlowout": "Cancelar el día entero por mal tiempo…",
-    "viewBlowout": "Ver la cascada de la cancelación"
+    "viewBlowout": "{cause, select, run_ended {Ver a quién se avisó} other {Ver la cascada de la cancelación}}"
   },
   "details": {
     "titleLabel": "Título",
@@ -200,6 +200,8 @@
     "capacityLabel": "Capacidad",
     "dayCountLabel": "Días",
     "priceLabel": "Precio por buceador",
+    "exceedsNoDecoLabel": "Buceo con descompresión",
+    "exceedsNoDecoHint": "Estas inmersiones superan los límites sin descompresión, así que el resumen no dice nada sobre cuándo pueden volar los buceadores.",
     "payAtBookingLegend": "Pago al reservar",
     "payAtBookingDescription": "Opcional. Deja el depósito en blanco para cobrar la tarifa completa cuando un buceador reserve en línea.",
     "depositLabel": "Depósito por buceador",
@@ -640,5 +642,11 @@
     "checkedLabel": "Verificado — presiona para quitar la marca",
     "uncheckedLabel": "Sin verificar — presiona para marcarlo",
     "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
+  },
+  "rehearsal": {
+    "label": "Ensayo",
+    "title": "Salida de práctica para el día de formación",
+    "body": "Nada de esta salida se envía, se cobra, se muestra en público ni cuenta en los informes. Se elimina {days, plural, one {# día} other {# días}} después de volver, cuando ninguna salida posterior cuenta sus inmersiones para la espera antes de volar.",
+    "kept": "Este ensayo tiene un pase de lista o una inmersión registrada, así que no se elimina solo."
   }
 }

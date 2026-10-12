@@ -119,7 +119,10 @@ export type RetainedTable =
   | "inbound_messages"
   | "staff_replies"
   | "weekly_digest_sends"
-  | "crew_notices";
+  | "crew_notices"
+  | "incident_reports"
+  | "lost_items"
+  | "departure_notes";
 
 /**
  * The append-only trails this mechanism deliberately leaves unbounded, as a
@@ -330,6 +333,31 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * "did the pass tell Ana?" and nothing more.
    */
   crew_notices: 30,
+  /**
+   * 2555 days (7 years), measured from when the incident happened (a draft
+   * that never said when is measured from when it was started). A record, not
+   * a trail, and listed here for the reason `booking_payment_events` is: the
+   * window is liability-driven, so "how long does a shop keep an incident
+   * report?" needs a stated answer (ADR 20261012-incident-reports). The people
+   * in a report and its addenda go with it by cascade. Erasure does not wait
+   * for this: `anonymizeDiver` redacts a diver's identity in a report at once.
+   */
+  incident_reports: 2555,
+  /**
+   * 90 days **past being resolved** (batch 4, J2). An item found aboard is
+   * the shop's to hold while it is `open`, so an open one is never eligible
+   * however old; once it went home (`returned`) or was given up on
+   * (`discarded`), the row is a note about somebody's belongings with nothing
+   * left to do, and a season's margin is room to answer "did my mask turn up?".
+   */
+  lost_items: 90,
+  /**
+   * 400 days, the notification trails' own window (batch 4, J4). A note to a
+   * whole departure is the record a "nobody told us the lot was closed"
+   * conversation turns on, and it is answerable for as long as the deliveries
+   * it describes are.
+   */
+  departure_notes: 400,
 };
 
 /**
