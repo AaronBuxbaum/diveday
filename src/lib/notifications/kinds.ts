@@ -613,6 +613,13 @@ const tripBlowoutSchema = z.object({
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   /**
+   * Why the shop called it off: the weather, or a repeating trip whose upcoming
+   * dates the shop cancelled together (`run_ended`). Optional so a message
+   * queued before the cause existed still parses on retry, and reads as the
+   * weather it was.
+   */
+  cause: z.enum(["weather", "run_ended"]).optional(),
+  /**
    * The diver's money position, as data. Never an amount.
    *
    * `refunded` — the capture has been reversed to their card, which is what a

@@ -45,6 +45,8 @@
       "timezoneSaved": "Timezone saved.",
       "seasonSaved": "Season start saved.",
       "seasonInvalid": "Pick a day that month has.",
+      "reopensSaved": "Saved. Your public page names this date while its schedule is quiet.",
+      "reopensInvalid": "That isn’t a date on the calendar. Pick one from the box.",
       "timezoneInvalid": "That isn’t a timezone we recognize. Pick one from the list.",
       "emergencySaved": "Emergency reference saved.",
       "packageSaved": "Package added.",
@@ -97,7 +99,10 @@
       "monthLabel": "Month",
       "dayLabel": "Day",
       "submitting": "Saving…",
-      "submit": "Save season start"
+      "submit": "Save season start",
+      "reopensLabel": "Back on the water",
+      "reopensHint": "While your public schedule has nothing in the next month, it says you’re back out on this date, or on your first trip if that comes sooner.",
+      "reopensSubmit": "Save the date"
     },
     "contact": {
       "heading": "Public contact details",

@@ -16,6 +16,7 @@ import {
   setShopCurrency,
   setShopDepthUnit,
   setShopFeature,
+  setShopReopensOn,
   setShopSeasonStart,
   setShopTemperatureUnit,
   setShopTimezone,
@@ -26,12 +27,14 @@ import {
   addressLookupConfigFromEnvironment,
   isLookupWorthy,
 } from "@/lib/address-lookup";
+import { isValidCalendarDate } from "@/lib/calendar-date";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { isValidTimeZone } from "@/lib/format";
 import { isShopCurrency, type ShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { parseSeasonStart } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
@@ -323,6 +326,24 @@ export async function saveSeasonStartAction(formData: FormData) {
   }
   await setShopSeasonStart(await getDb(), session.user.shopId, season);
   revalidateAndRedirect(settings, noticeUrl(settings, "season-saved", { saved: "season" }));
+}
+
+/**
+ * When the shop is back on the water, for the public page's off-season line
+ * (`shops.reopens_on`). Blank clears it; anything that is not a real calendar
+ * date is refused on the form rather than stored.
+ */
+export async function saveReopensOnAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const submitted = String(formData.get("reopensOn") ?? "").trim();
+  if (submitted !== "" && !isValidCalendarDate(submitted)) {
+    redirect(noticeUrl(settings, "reopens-invalid", { saved: "season" }));
+  }
+  await setShopReopensOn(await getDb(), session.user.shopId, submitted === "" ? null : submitted);
+  revalidatePath(publicSchedulePath(session.user.shopSlug));
+  revalidateAndRedirect(settings, noticeUrl(settings, "reopens-saved", { saved: "season" }));
 }
 
 /**

@@ -176,6 +176,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // from a year the shop never named.
       "season_start_month",
       "season_start_day",
+      // The day the shop says it is back on the water, typed beside the
+      // season start in Settings. Exported for the same reason: a restore
+      // must not quietly drop the date its off-season page promises.
+      "reopens_on",
       // When somebody is at the desk, a window the shop chose (the
       // after-hours ping, `src/lib/desk-hours.ts`). Exported for the reason
       // the season is: a restore must not quietly move the shop's hours.
@@ -241,6 +245,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(shop.emergencyReference),
         shop.seasonStartMonth,
         shop.seasonStartDay,
+        shop.reopensOn,
         shop.deskOpensMinute,
         shop.deskClosesMinute,
         shop.searchListingOptOutAt,
@@ -717,6 +722,19 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["trip_series.csv"],
+  },
+  {
+    file: "trip_series_crew.csv",
+    header: ["series_id", "series_title", "person_id", "person_name", "trip_role"],
+    rows: ({ seriesTitle, personName, seriesCrewRows }) =>
+      seriesCrewRows.map((row) => [
+        row.seriesId,
+        seriesTitle.get(row.seriesId),
+        row.personId,
+        personName.get(row.personId),
+        row.tripRole,
+      ]),
+    note: EXPORT_FILE_NOTES["trip_series_crew.csv"],
   },
   {
     file: "trip_series_skips.csv",

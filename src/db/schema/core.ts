@@ -340,6 +340,14 @@ export const shops = pgTable(
     seasonStartMonth: integer("season_start_month").notNull().default(1),
     seasonStartDay: integer("season_start_day").notNull().default(1),
     /**
+     * **When the shop is back on the water**, as a shop-local calendar date, or
+     * null for nothing to say. Read only while the public board has nothing in
+     * its quiet window (`src/lib/off-season.ts`): a scheduled departure always
+     * outranks it, and once the date has passed it says nothing, so a date
+     * nobody updated goes quiet by itself rather than misleading anybody.
+     */
+    reopensOn: text("reopens_on"),
+    /**
      * **When somebody is at the desk**, as minutes after shop-local midnight:
      * opens inclusive, closes exclusive, the same window every day. A diver
      * message that lands outside it pings the staff who asked to hear
@@ -425,6 +433,12 @@ export const shops = pgTable(
       "shops_desk_hours_in_day",
       sql`${table.deskOpensMinute} >= 0 and ${table.deskClosesMinute} <= 1440
         and ${table.deskOpensMinute} < ${table.deskClosesMinute}`,
+    ),
+    // The shape `isValidCalendarDate` checks in full (src/lib/calendar-date.ts);
+    // the settings action refuses an impossible day before it gets here.
+    check(
+      "shops_reopens_on_is_a_date",
+      sql`${table.reopensOn} is null or ${table.reopensOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'`,
     ),
     // The same days `parseSeasonStart` accepts (`src/lib/season.ts`). A
     // constraint looser than the action it backs lets any other caller

@@ -1,6 +1,7 @@
 import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
 import { cache } from "react";
 import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
@@ -147,6 +148,20 @@ export async function setShopSeasonStart(db: AppDb, shopId: string, season: Seas
     .set({ seasonStartMonth: season.month, seasonStartDay: season.day })
     .where(eq(shops.id, shopId))
     .returning();
+  return shop ?? null;
+}
+
+/**
+ * The shop's "back on the water" date, or null to say nothing. The public
+ * off-season line reads it only while the board is empty and the date is ahead
+ * (`src/lib/off-season.ts`); the caller validates the date.
+ */
+export async function setShopReopensOn(db: AppDb, shopId: string, reopensOn: CalendarDate | null) {
+  const [shop] = await db
+    .update(shops)
+    .set({ reopensOn })
+    .where(eq(shops.id, shopId))
+    .returning({ id: shops.id });
   return shop ?? null;
 }
 

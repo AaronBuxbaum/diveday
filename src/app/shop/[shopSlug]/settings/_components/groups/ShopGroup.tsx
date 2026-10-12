@@ -4,7 +4,7 @@ import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneO
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { stripeCurrencyMismatch } from "@/db/stripe-accounts";
 import { currencyOptions } from "@/i18n/currency-labels";
@@ -20,6 +20,7 @@ import { AddressSearch } from "../../AddressSearch";
 import {
   resendContactConfirmationAction,
   saveContactAction,
+  saveReopensOnAction,
   saveSeasonStartAction,
   saveTimezoneAction,
   saveUnitsAction,
@@ -242,6 +243,26 @@ export function ShopGroup({
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.season.submit")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
+          {/* The other date a season has: when the boat goes back out. Only
+              the public page's empty board reads it (`src/lib/off-season.ts`),
+              and only while it is still ahead, so it is its own small form
+              rather than a third field the counting would have to ignore. */}
+          <FieldGrid as="form" action={saveReopensOnAction} columns={2} className="mt-6">
+            <Field
+              label={t("settings.main.season.reopensLabel")}
+              description={t("settings.main.season.reopensHint")}
+            >
+              <DateField name="reopensOn" defaultValue={shop.reopensOn ?? ""} />
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.main.season.submitting")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("settings.main.season.reopensSubmit")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>

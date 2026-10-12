@@ -188,6 +188,11 @@ type ActivityParamShapes = {
   departure_copied: { actor: string };
   departure_deleted: { actor: string };
   /**
+   * The departure came off the board with the rest of its repeating run
+   * ("Cancel every upcoming date"), through the blow-out cascade.
+   */
+  series_cancelled: { actor: string };
+  /**
    * **The shop answered a review in public** (batch 4, K2): wrote the reply
    * under it, changed it, or took it down. Filed on the departure the review
    * is about, and naming no reviewer, like the moderation lines beside it.
@@ -287,6 +292,7 @@ export const ACTIVITY_CODES = [
   "departure_moved",
   "departure_copied",
   "departure_deleted",
+  "series_cancelled",
   "review_replied",
   "review_reply_edited",
   "review_reply_deleted",

@@ -243,6 +243,9 @@ export const STAFF_HISTORY_TABLES = [
   // diver is named there by booking, which moves with the seat; only staff are
   // named by person, so a record holding one is a staff record.
   "incident_report_people",
+  // A repeating trip's standing crew (`trip_series_crew`): only staff sail on
+  // it, so a record holding one is a staff record and the merge is refused.
+  "trip_series_crew",
 ] as const;
 export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
 

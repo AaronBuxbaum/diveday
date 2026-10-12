@@ -486,6 +486,7 @@ export type TripActivityEntry =
   | {
       code:
         | "blowout_called"
+        | "series_cancelled"
         | "booking_link_requested"
         | "seat_claimed"
         | "incident_report_filed"

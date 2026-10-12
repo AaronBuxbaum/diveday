@@ -51,6 +51,8 @@ export const EXPORT_FILE_NOTES = {
     "Where each departure was, in the crew's own word, with the time they said it and who said it. Five stages, appended and never edited; the newest row is what the shop's website and each diver's link showed. No position of any kind is recorded.",
   "trip_series.csv":
     "Recurring-trip cadences; every materialized instance is its own row in trips.csv carrying series_id. A blank ends_on means the trip simply keeps repeating.",
+  "trip_series_crew.csv":
+    "Each recurring trip's standing crew: who sails with every new date as it opens, and the job each does. A run with no rows here has no standing crew.",
   "trip_series_skips.csv":
     "Dates removed from a recurring trip. One row per date staff deleted outright, so it is never put back on the board.",
   "trip_schedule_days.csv":

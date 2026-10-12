@@ -297,6 +297,8 @@ const ERASURE_KEEPS: Record<string, string> = {
   push_subscriptions:
     "`person_id` is the staff member who opted a device in, and the erasure refuses anyone holding a staff role. This becomes a gap the day a diver-facing push subscription ships",
   trip_assignments: "which crew member works which departure — a staff roster row",
+  trip_series_crew:
+    "who sails with a repeating departure on every new date — a staff roster row, like `trip_assignments`",
   customer_gear_notices:
     "that a ready message or a service reminder went to a diver, on which channel and how it went — a kind, a status and a date. Never the address or the words",
   customer_gear_reminder_settings:

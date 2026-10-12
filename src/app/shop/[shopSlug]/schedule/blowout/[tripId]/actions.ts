@@ -20,9 +20,10 @@ const blowoutPath = (shopSlug: string, tripId: string) =>
 /**
  * The one-tap blow-out (docs ADR 20260804-blowout-cascade). Open to all staff,
  * same as `cancelTripAction`: the weather go/no-go is the crew's call
- * (glossary), and this moves no money — the cascade reports payment positions
- * to staff instead of refunding, so the H-14 refund role gate is never
- * bypassed by whoever is on the dock at 6am.
+ * (glossary). It does move money: the cascade refunds each seat's card
+ * capture by itself (ADR 20260813-shop-cancellation-refunds-itself), so this
+ * door reaches a refund without the H-14 refund role (`canRefund`); a counter
+ * payment, a disconnected account or a Stripe refusal is still left to staff.
  *
  * Safe to re-run: the cascade resumes pending rows and re-sends nobody
  * (`callTripBlowout`'s idempotency contract).

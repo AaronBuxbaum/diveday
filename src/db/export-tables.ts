@@ -60,6 +60,7 @@ import {
   tripLenses,
   tripRequirements,
   tripSeries,
+  tripSeriesCrew,
   tripSeriesSkips,
   tripSightings,
   tripStageEvents,
@@ -176,6 +177,11 @@ export const EXPORT_TABLES = {
     table: tripSeries,
     order: [asc(tripSeries.createdAt), asc(tripSeries.id)],
     scope: { shopColumn: tripSeries.shopId },
+  },
+  tripSeriesCrew: {
+    table: tripSeriesCrew,
+    order: [asc(tripSeriesCrew.seriesId), asc(tripSeriesCrew.personId)],
+    scope: { shopColumn: tripSeriesCrew.shopId },
   },
   tripSeriesSkips: {
     table: tripSeriesSkips,

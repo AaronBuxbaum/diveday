@@ -83,6 +83,15 @@
       "back": "We’re back out {date}.",
       "requestHeading": "Ask us for a day"
     },
+    "horizon": {
+      "heading": "Later dates",
+      "runs": "{title} runs {cadence}.",
+      "cadenceDaily": "every day",
+      "cadenceWeekly": "every {days}",
+      "cadenceEveryNWeeks": "{weeks, plural, one {every week on {days}} other {every # weeks on {days}}}",
+      "later": "Later dates open as the season goes.",
+      "requestHeading": "Planning further out? Ask us for a day"
+    },
     "filters": {
       "disclosure": "Filter",
       "tripType": "Trip type",
@@ -4112,6 +4121,7 @@
     "tripBlowout": {
       "subject": "Trip canceled — {tripTitle}",
       "body": "We’ve had to cancel {tripTitle} on {date} because of the weather. Your seat is released, and there’s nothing you need to do.",
+      "bodyRunEnded": "We’ve stopped running {tripTitle} for now, so the departure on {date} is canceled. Your seat is released, and there’s nothing you need to do.",
       "moneyNone": "You haven’t been charged anything for this trip.",
       "moneyDeposit": "Your deposit is safe. We’ll be in touch to move it to a new date or arrange your refund.",
       "moneyPaid": "Your payment is safe. We’ll be in touch to move it to a new date or arrange your refund.",

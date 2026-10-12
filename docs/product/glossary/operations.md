@@ -327,7 +327,25 @@
   [20260810-open-ended-recurring-trips](../../architecture/decisions/20260810-open-ended-recurring-trips.md).
 - **Horizon** — how far ahead a repeating trip's dates are actually on the board (120 days). Not a
   limit on the run: a nightly pass keeps the window full ahead of today, so an open-ended series
-  never runs out.
+  never runs out. The public schedule's last month says so for each open-ended public run, in its
+  cadence words, with the date request beneath.
+- **Standing crew** — the crew a repeating trip sails with on every date, kept on the run itself
+  (`trip_series_crew`: who, and the job each does; a run with no rows has none). Set by "Apply this
+  date's details" with its crew switch on, which records this date's crew as the run's, crews every
+  upcoming date like it, and makes the horizon roll seat that same crew on each new date. The roll
+  reads the run's crew, never the furthest-out date's, so a date left short does not shorten the
+  dates after it. Every date is still asked on its own: a person already on an overlapping
+  scheduled departure, or no longer on the staff, is left off that date; a course session the rest
+  would leave without an instructor gets nobody; and ratio gaps are read per date as for any
+  departure. A crew member's own blackout does not keep them off a rolled date: it informs, as
+  everywhere, and the staffing week shows the clash. Not a lock: every date's crew stays editable
+  on its own (ADR
+  [20260810-open-ended-recurring-trips](../../architecture/decisions/20260810-open-ended-recurring-trips.md),
+  addendum 2026-10-12).
+- **Back on the water** — the date a shop types beside its season start for when it reopens
+  (`shops.reopens_on`). The public schedule's off-season card names it while the board is quiet
+  and the date is still ahead, unless a departure is scheduled sooner: the card names whichever
+  comes first.
 - **Skipped occurrence** — a date staff deleted outright from a repeating trip. Recorded so the
   horizon never puts it back (`trip_series_skips`); cancelling a date, by contrast, keeps the trip
   and can be reinstated.
