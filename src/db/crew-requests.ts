@@ -11,6 +11,7 @@ import type {
 } from "@/lib/crew-requests";
 import { inWaterCrewRole, lapsedRungs, lastDayOfDeparture } from "@/lib/crew-roles";
 import type { AppDb, DbExecutor } from "./client";
+import { courseCrewCountsByTrip } from "./course-crew-counts";
 import { recordCrewNotices } from "./crew-notices";
 import {
   bookings,
@@ -23,7 +24,6 @@ import {
   trips,
 } from "./schema";
 import { ratingCredentialsByPerson } from "./staff-credentials";
-import { courseCrewCountsByTrip } from "./today";
 import { liveTrip } from "./trips-live";
 
 /**

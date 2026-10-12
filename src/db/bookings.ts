@@ -453,7 +453,7 @@ class PartyBookingError extends Error {
  *
  * **The roster's claim, deliberately — not the supervision claim** (issue
  * #1853). Today, the staffing week and the trip page read each professional's
- * recorded ratings (`courseCrewCountsByTrip`, src/db/today.ts), so a lapsed
+ * recorded ratings (`courseCrewCountsByTrip`, src/db/course-crew-counts.ts), so a lapsed
  * instructor stops counting there. This passes no `lapsedRungs`, so the sale
  * gate, the seat cap and the no-show hand-back go on counting them: H-59
  * (docs/product/human-decisions/README.md) closed new-sale refusal on a locally

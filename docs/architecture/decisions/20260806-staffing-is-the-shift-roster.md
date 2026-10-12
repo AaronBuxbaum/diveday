@@ -46,7 +46,7 @@ that hands over to Today.**
   departures and zero gaps each get their own quiet sentence; the link appears only when there is
   something to fix.
 - The count is composed from **the reader Today's own detection runs on** —
-  `courseCrewCountsByTrip` (`src/db/today.ts`, now exported for exactly this) fed into
+  `courseCrewCountsByTrip` (`src/db/course-crew-counts.ts`, exported for exactly this) fed into
   `courseCrewGap`. `src/db/staffing.ts` no longer counts in-water crew itself. The one addition is
   the zero-crew case, read straight off the assignment rows: a departure with nobody rostered is a
   fact, not a rule, and a fun-dive charter has no course ratio to be outside of.
