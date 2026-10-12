@@ -415,6 +415,12 @@ export const RATE_LIMITS = {
   demoCreate: perHour(10),
   /** Marking a browser as the founder's (`/api/demo/quiet`), per IP — a key-guessing oracle otherwise. */
   demoQuiet: perHour(10),
+  /**
+   * The demo banner's role switch, per IP. It takes a shop slug from the
+   * browser, and demo slugs are dictionary words: this bounds how fast one IP
+   * can try them, on top of the seat check the action makes.
+   */
+  demoSwitch: perHour(30),
   /** Credentials sign-in attempts, per IP — the wider net. */
   signInByIp: per15Min(20),
   /** Credentials sign-in attempts, per attempted email — the narrow net. */
