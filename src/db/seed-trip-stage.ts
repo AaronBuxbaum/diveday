@@ -3,7 +3,7 @@ import { MINUTE_MS, nowDate } from "@/lib/clock";
 import type { TripStage } from "@/lib/trip-stages";
 import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
-import { tripDives, tripStageEvents, trips } from "./schema";
+import { tripAssignments, tripDives, tripStageEvents, trips } from "./schema";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { liveTrip } from "./trips-live";
 
@@ -46,14 +46,15 @@ export function demoStageTaps(
  * one within half an hour of sailing reads boarding; one later in the day
  * reads nothing yet, and its stepper falls back to the clock.
  *
- * A tap is a thing a person did, so it is recorded by the crew member who is
- * on the boat, and the site comes off the departure's own plan exactly as the
- * writer would stamp it.
+ * A tap is a thing a person did, so it is recorded by somebody on that boat:
+ * the departure's own captain, else the first of its crew, and only for a
+ * departure with no crew at all the shop's captain (`fallbackRecorderId`). The
+ * site comes off the departure's own plan exactly as the writer would stamp it.
  */
 export async function seedTripStage(
   db: DbExecutor,
   shopId: string,
-  recordedByPersonId: string,
+  fallbackRecorderId: string,
 ): Promise<void> {
   const now = nowDate();
   const today = shopDayBounds(now, DEMO_SHOP_TIMEZONE);
@@ -80,6 +81,15 @@ export async function seedTripStage(
       .where(eq(tripDives.tripId, departure.id))
       .orderBy(asc(tripDives.diveNumber))
       .limit(1);
+    const crew = await db
+      .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
+      .from(tripAssignments)
+      .where(eq(tripAssignments.tripId, departure.id))
+      .orderBy(asc(tripAssignments.personId));
+    const recordedByPersonId =
+      crew.find((member) => member.tripRole === "captain")?.personId ??
+      crew[0]?.personId ??
+      fallbackRecorderId;
     await db.insert(tripStageEvents).values(
       taps.map((tap) => ({
         shopId,

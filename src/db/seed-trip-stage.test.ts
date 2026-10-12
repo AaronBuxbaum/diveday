@@ -1,5 +1,8 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { MINUTE_MS } from "@/lib/clock";
+import { seededShopContext } from "@/test/db";
+import { tripAssignments, tripStageEvents } from "./schema";
 import { demoStageTaps } from "./seed-trip-stage";
 
 /**
@@ -48,5 +51,29 @@ describe("demoStageTaps", () => {
     const taps = demoStageTaps(startsAt, endsAt, new Date(endsAt.getTime() + 60 * MINUTE_MS));
     const times = taps.map((tap) => tap.recordedAt.getTime());
     expect([...times].sort((a, b) => a - b)).toEqual(times);
+  });
+});
+
+/**
+ * A tap is recorded by somebody on that boat (dive-domain review of the demo
+ * layer): the seed stamped the shop's one captain on every departure, whoever
+ * crewed it.
+ */
+describe("seedTripStage", () => {
+  it("stamps each tap with a crew member of that departure", async () => {
+    const { db, shop } = await seededShopContext();
+    const taps = await db
+      .select({ tripId: tripStageEvents.tripId, by: tripStageEvents.recordedByPersonId })
+      .from(tripStageEvents)
+      .where(eq(tripStageEvents.shopId, shop.id));
+    expect(taps.length).toBeGreaterThan(0);
+    for (const tap of taps) {
+      const crew = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, tap.tripId));
+      if (crew.length === 0) continue;
+      expect(crew.map((member) => member.personId)).toContain(tap.by);
+    }
   });
 });
