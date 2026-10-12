@@ -404,13 +404,11 @@ export async function returnTripGearSet(
     note?: string;
     pullGearItemIds?: readonly string[];
   },
-): Promise<GearReservationActionOutcome> {
+): Promise<GearSetReturnOutcome> {
   const note = optional(input.note);
   if (input.outcome === "service_concern" && !note) {
     return { ok: false, reason: "concern_needs_words" };
   }
-  const pull =
-    input.outcome === "service_concern" ? new Set(input.pullGearItemIds ?? []) : new Set<string>();
   return db.transaction(async (tx) => {
     const returned = await tx
       .update(gearReservations)
@@ -425,30 +423,77 @@ export async function returnTripGearSet(
       )
       .returning({ id: gearReservations.id, gearItemId: gearReservations.gearItemId });
     if (returned.length === 0) return { ok: false, reason: "not_found" } as const;
-    const toPull = returned.map((row) => row.gearItemId).filter((id) => pull.has(id));
-    if (toPull.length > 0) {
-      const onTheWall = await tx
-        .select({ id: gearItems.id })
-        .from(gearItems)
-        .where(
-          and(
-            eq(gearItems.shopId, input.shopId),
-            inArray(gearItems.id, toPull),
-            eq(gearItems.status, "in_service"),
-            liveGearItem(),
-          ),
-        );
-      for (const unit of onTheWall) {
-        await setGearItemStatus(tx, {
-          shopId: input.shopId,
-          gearItemId: unit.id,
-          status: "needs_service",
-          serviceNote: note ?? undefined,
-        });
-      }
-    }
-    return { ok: true } as const;
+    const pulled = await pullReturnedUnitsForService(tx, {
+      shopId: input.shopId,
+      outcome: input.outcome,
+      note,
+      returnedGearItemIds: returned.map((row) => row.gearItemId),
+      pullGearItemIds: input.pullGearItemIds,
+    });
+    return { ok: true, pulled } as const;
   });
+}
+
+/**
+ * What a set return answers: how many units it pulled to the bench, so the
+ * desk is told "Pulled for service" only when a unit really moved (issue
+ * #2345). A tick on a unit already off the wall pulls nothing.
+ */
+export type GearSetReturnOutcome =
+  | { ok: true; pulled: number }
+  | Extract<GearReservationActionOutcome, { ok: false }>;
+
+/**
+ * **The one pull step both set returns share** (issues #2205, #2345): a
+ * departure's set and a counter rental. Inside the return's transaction, it
+ * moves each ticked unit to `needs_service` with the concern's note as its
+ * service note, and only:
+ *
+ * - on a service concern (never automatic, never on another outcome),
+ * - for units this return actually closed (a forged id from elsewhere is
+ *   ignored),
+ * - for units still `in_service` (a technician's note on a unit already off
+ *   the wall is never overwritten).
+ *
+ * It writes no `gear_service_events` row: a concern is a flag, not a service
+ * record (the `gearReturnOutcome` schema comment). Returns how many it moved.
+ */
+export async function pullReturnedUnitsForService(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    outcome: GearReturnOutcome;
+    note: string | null;
+    returnedGearItemIds: readonly string[];
+    pullGearItemIds?: readonly string[];
+  },
+): Promise<number> {
+  if (input.outcome !== "service_concern") return 0;
+  const ticked = new Set(input.pullGearItemIds ?? []);
+  const toPull = input.returnedGearItemIds.filter((id) => ticked.has(id));
+  if (toPull.length === 0) return 0;
+  const onTheWall = await tx
+    .select({ id: gearItems.id })
+    .from(gearItems)
+    .where(
+      and(
+        eq(gearItems.shopId, input.shopId),
+        inArray(gearItems.id, toPull),
+        eq(gearItems.status, "in_service"),
+        liveGearItem(),
+      ),
+    );
+  let pulled = 0;
+  for (const unit of onTheWall) {
+    const moved = await setGearItemStatus(tx, {
+      shopId: input.shopId,
+      gearItemId: unit.id,
+      status: "needs_service",
+      serviceNote: input.note ?? undefined,
+    });
+    if (moved.ok) pulled += 1;
+  }
+  return pulled;
 }
 
 /**

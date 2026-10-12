@@ -26,7 +26,7 @@ export const SEND_HOLD_TOLERANCE_MS = 750;
 export const HELD_SEND_KINDS = ["waiver_send", "last_minute_deal", "waitlist_invite"] as const;
 export type HeldSendKind = (typeof HELD_SEND_KINDS)[number];
 
-export const WAIVER_SEND_SURFACES = ["today", "roster", "diver"] as const;
+export const WAIVER_SEND_SURFACES = ["today", "roster", "diver", "counter"] as const;
 
 const waiverSendPayload = z
   .object({
@@ -37,6 +37,8 @@ const waiverSendPayload = z
     channel: z.enum(["email", "text", "link"]),
     surface: z.enum(WAIVER_SEND_SURFACES),
     tripId: z.uuid().optional(),
+    /** The counter rental's ticket a `counter` send was made from, when there is one yet. */
+    ticketId: z.uuid().optional(),
   })
   // A send with nobody to send to is not a send; refused here so no row is
   // ever held for it.

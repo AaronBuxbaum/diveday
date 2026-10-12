@@ -64,6 +64,52 @@ describe("stripe customer provider", () => {
     expect(result).toEqual({ status: "failed", error: "HTTP 401: account_invalid" });
   });
 
+  // Issue #2334: Stripe's free-text `message` can quote the object or input it
+  // refused, and this result lands in the erasure ledger. Only the status and
+  // Stripe's own code or type vocabulary may reach it.
+  it("records the error type, never the message, when Stripe sends no code", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        error: {
+          type: "invalid_request_error",
+          message: "No such customer: 'cus_1' (nora@example.com)",
+        },
+      }),
+    });
+    const provider = providerWith(CONFIGURED, fetchImpl);
+    const result = await provider.deleteCustomer("acct_1", "cus_1", "key");
+    expect(result).toEqual({ status: "failed", error: "HTTP 400: invalid_request_error" });
+    expect(JSON.stringify(result)).not.toContain("nora@example.com");
+  });
+
+  it("records only the status when Stripe sends a message and nothing else", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: { message: "Invalid email: nora@example.com" } }),
+    });
+    const provider = providerWith(CONFIGURED, fetchImpl);
+    expect(await provider.deleteCustomer("acct_1", "cus_1", "key")).toEqual({
+      status: "failed",
+      error: "HTTP 400",
+    });
+  });
+
+  it("drops a code that is not a plain token", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: { code: "bad email nora@example.com" } }),
+    });
+    const provider = providerWith(CONFIGURED, fetchImpl);
+    expect(await provider.deleteCustomer("acct_1", "cus_1", "key")).toEqual({
+      status: "failed",
+      error: "HTTP 400",
+    });
+  });
+
   it("survives a non-JSON error body", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: false,

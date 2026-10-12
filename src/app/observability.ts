@@ -53,18 +53,51 @@ function redactQueryString(
   return Array.isArray(query) ? [...redacted.entries()] : Object.fromEntries(redacted.entries());
 }
 
-/** Same redaction applied to Sentry event URLs, query strings and referrer header. */
+/**
+ * What the Sentry SDKs collect on their own, for both `Sentry.init` calls
+ * (`src/instrumentation.ts`, `src/instrumentation-client.ts`). @sentry/core 11
+ * defaults every one of these on (`resolveDataCollectionOptions`): request and
+ * response bodies, cookies, the user's IP and identity, local variables in
+ * stack frames and database query values. A Stripe webhook body carries a
+ * customer's name, email and address, a server action's carries a form, and a
+ * cookie is a session (issue #2334, security review). Headers and query strings
+ * stay on, cleaned by `redactEvent`, because they are how an error is placed.
+ */
+export const SENTRY_DATA_COLLECTION = {
+  httpBodies: [],
+  cookies: false,
+  userInfo: false,
+  stackFrameVariables: false,
+  databaseQueryData: false,
+} satisfies NonNullable<Parameters<typeof Sentry.init>[0]>["dataCollection"];
+
+/** Request headers that carry a credential, compared lower-cased. */
+const CREDENTIAL_HEADERS = new Set(["cookie", "authorization", "stripe-signature"]);
+
+/**
+ * Redaction applied to every Sentry event: capability URLs in the URL, query
+ * string and referer, and nothing of the request that can carry a person or a
+ * credential. The body and cookies are deleted outright and the credential
+ * headers dropped, the second layer behind `SENTRY_DATA_COLLECTION` for
+ * anything an integration attaches regardless.
+ */
 export function redactEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
-  if (event.request?.url) {
-    event.request.url = redactCapabilityUrl(event.request.url);
+  const request = event.request;
+  if (!request) return event;
+  if (request.url) {
+    request.url = redactCapabilityUrl(request.url);
   }
-  if (event.request?.query_string) {
-    event.request.query_string = redactQueryString(event.request.query_string);
+  if (request.query_string) {
+    request.query_string = redactQueryString(request.query_string);
   }
-  const headers = event.request?.headers;
+  delete request.data;
+  delete request.cookies;
+  const headers = request.headers;
   if (headers) {
     for (const key of Object.keys(headers)) {
-      if (key.toLowerCase() === "referer") headers[key] = redactCapabilityUrl(headers[key]);
+      const name = key.toLowerCase();
+      if (CREDENTIAL_HEADERS.has(name)) delete headers[key];
+      else if (name === "referer") headers[key] = redactCapabilityUrl(headers[key]);
     }
   }
   return event;

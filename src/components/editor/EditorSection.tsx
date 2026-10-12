@@ -1,5 +1,9 @@
-import type { ReactNode } from "react";
-import { GroupLabel, groupLabelClass } from "@/components/ui/ledger";
+"use client";
+
+import { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { groupLabelClass } from "@/components/ui/ledger";
+import { EDITOR_REVEAL_EVENT } from "@/components/ui/reveal-event";
 
 /**
  * One section of a long-form editor, and the entry the rail beside it makes
@@ -79,14 +83,86 @@ export function EditorSection({
   lead?: boolean;
   children: ReactNode;
 }) {
+  const rootRef = useRef<HTMLElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const [open, setOpen] = useState(lead);
+  const [preview, setPreview] = useState("");
+  const labelId = `${id}-label`;
+  const bodyId = `${id}-body`;
+
+  // Opening is the one move that closes the others: a header tap or a jump to
+  // the section. A refused control opening its own section does not, because
+  // two sections can each hold one and the browser wants both visible.
+  const openAlone = useCallback(() => {
+    setOpen(true);
+    document.dispatchEvent(new CustomEvent(EDITOR_SECTION_OPEN_EVENT, { detail: id }));
+  }, [id]);
+
+  useSectionWiring({ id, rootRef, bodyRef, setOpen, setPreview, openAlone });
+
   // Hairlines between, never above the first: the rule separates two sections,
-  // and a rule under the page header separates nothing.
-  const rule = lead ? "" : " border-t border-border pt-6";
+  // and a rule under the page header separates nothing. Below `lg` the header
+  // is a 48px button that carries its own air, so the rule's `pt-6` is a
+  // desktop measure only.
+  const rule = lead ? "" : " border-t border-border lg:pt-6";
   // The attribute the unsaved-note hook traces a typed control back to, and
   // the one thing that makes a section findable without knowing its id. Written
   // out rather than spread from a constant so JSX keeps its typing.
-  const marker = { "data-editor-section": id };
-  const body = <div className="mt-4 flex flex-col gap-5">{children}</div>;
+  const marker = { "data-editor-section": id, "data-open": open ? "" : undefined };
+  // **Hidden, never unmounted.** A closed section's controls stay in the form,
+  // so what was typed in them survives the fold and still posts with Save; the
+  // fold is a class below `lg`, where the rail no longer fits, and from `lg` up
+  // every section stands open beside the rail as it always has.
+  const body = (
+    <div
+      ref={bodyRef}
+      id={bodyId}
+      className={`mt-4 flex flex-col gap-5 max-lg:mb-6${open ? "" : " max-lg:hidden"}`}
+    >
+      {children}
+    </div>
+  );
+  const heading = (
+    <>
+      <span id={labelId} className="max-lg:hidden">
+        {label}
+      </span>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={bodyId}
+        onClick={() => {
+          if (open) return setOpen(false);
+          openAlone();
+          // The section above may just have folded, which moves this one up
+          // under the chrome bar: bring its header back to the top.
+          requestAnimationFrame(() => rootRef.current?.scrollIntoView?.({ block: "start" }));
+        }}
+        className="flex min-h-12 w-full items-center gap-3 rounded-lg py-3 text-start focus-visible:focus-ring lg:hidden"
+      >
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span>{label}</span>
+          {/* The line under a folded section's name says what is in it, read
+              off its own fields; the space is kept while it is empty so the
+              row does not grow when the page wakes up. */}
+          <span
+            data-section-preview=""
+            className="block h-5 truncate text-sm font-normal tracking-normal text-muted normal-case"
+          >
+            {open ? "" : preview}
+          </span>
+        </span>
+        <DisclosureCaret
+          direction="down"
+          className={`size-4 text-muted ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+    </>
+  );
+  const describe =
+    description == null ? null : (
+      <SectionDescription hidden={!open}>{description}</SectionDescription>
+    );
   if (as === "fieldset") {
     return (
       // The rule and its air go on the legend, full width, and never on the
@@ -102,28 +178,183 @@ export function EditorSection({
       // id, and `FieldErrorFocus` focuses what carries it. A box around the
       // fieldset took that focus with no role or name; the group says which
       // section to fix.
-      <fieldset id={id} {...marker} className="min-w-0 scroll-mt-6">
+      //
+      // Named by the label alone (`aria-labelledby`), not by the legend's
+      // text: the legend also holds the phone's header button, whose preview
+      // line is not the group's name.
+      <fieldset
+        ref={(element) => {
+          rootRef.current = element;
+        }}
+        id={id}
+        {...marker}
+        aria-labelledby={labelId}
+        className="min-w-0 scroll-mt-6"
+      >
         {/* `<legend>` has to be the fieldset's first child, so the label is
             spelled with `groupLabelClass()` rather than `GroupLabel` — the one
             documented use of the exported class: the same spelling, on the
             element this element has to be. */}
-        <legend className={`${groupLabelClass()} w-full${rule}`}>{label}</legend>
-        {description == null ? null : <SectionDescription>{description}</SectionDescription>}
+        <legend className={`${groupLabelClass()} w-full${rule}`}>{heading}</legend>
+        {describe}
         {body}
       </fieldset>
     );
   }
   return (
-    <section id={id} {...marker} aria-labelledby={`${id}-label`} className={`scroll-mt-6${rule}`}>
-      <GroupLabel as="h2" id={`${id}-label`}>
-        {label}
-      </GroupLabel>
-      {description == null ? null : <SectionDescription>{description}</SectionDescription>}
+    <section
+      ref={(element) => {
+        rootRef.current = element;
+      }}
+      id={id}
+      {...marker}
+      aria-labelledby={labelId}
+      className={`scroll-mt-6${rule}`}
+    >
+      <h2 className={groupLabelClass()}>{heading}</h2>
+      {describe}
       {body}
     </section>
   );
 }
 
-function SectionDescription({ children }: { children: ReactNode }) {
-  return <p className="mt-2 max-w-2xl text-sm text-muted">{children}</p>;
+/** Announced on the document when a section opens by itself; the rest fold. */
+const EDITOR_SECTION_OPEN_EVENT = "editor-section-open";
+
+/**
+ * Everything that opens a folded section without its header being tapped,
+ * and the preview line a folded one shows.
+ *
+ * **Layout effects, on purpose.** They run before any component's passive
+ * effect in the same commit, so a section is listening (and has already opened
+ * for the URL's `#hash` or `?field=`) by the time `FieldErrorFocus` moves the
+ * cursor.
+ */
+function useSectionWiring({
+  id,
+  rootRef,
+  bodyRef,
+  setOpen,
+  setPreview,
+  openAlone,
+}: {
+  id: string;
+  rootRef: { current: HTMLElement | null };
+  bodyRef: { current: HTMLDivElement | null };
+  setOpen: (open: boolean) => void;
+  setPreview: (preview: string) => void;
+  openAlone: () => void;
+}) {
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const body = bodyRef.current;
+    if (!root || !body) return;
+
+    // The DOM is shown at once and the state follows: the browser's own
+    // validation and `FieldErrorFocus` both focus straight after telling us,
+    // and neither can wait for a render.
+    const reveal = () => {
+      body.classList.remove("max-lg:hidden");
+      setOpen(true);
+    };
+    const holds = (target: string | null) => {
+      if (!target) return false;
+      const element = document.getElementById(target);
+      return element !== null && root.contains(element);
+    };
+    const jump = (target: string | null) => {
+      if (!holds(target)) return;
+      reveal();
+      openAlone();
+      requestAnimationFrame(() => root.scrollIntoView?.({ block: "start" }));
+    };
+
+    const onOtherOpened = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== id) setOpen(false);
+    };
+    const onHashChange = () => jump(decodeURIComponent(window.location.hash.slice(1)));
+    const onClick = (event: MouseEvent) => {
+      const link = event.target instanceof Element ? event.target.closest("a") : null;
+      const href = link?.getAttribute("href");
+      if (href?.startsWith("#")) jump(decodeURIComponent(href.slice(1)));
+    };
+    const refreshPreview = () => setPreview(sectionPreview(body));
+
+    // Arriving at an address that names something in here.
+    const field = new URLSearchParams(window.location.search).get("field");
+    if (holds(field)) {
+      reveal();
+      openAlone();
+    }
+    onHashChange();
+    refreshPreview();
+
+    document.addEventListener(EDITOR_SECTION_OPEN_EVENT, onOtherOpened);
+    document.addEventListener("click", onClick, true);
+    window.addEventListener("hashchange", onHashChange);
+    root.addEventListener(EDITOR_REVEAL_EVENT, reveal);
+    // `invalid` does not bubble, so it is heard on the way down.
+    root.addEventListener("invalid", reveal, true);
+    root.addEventListener("input", refreshPreview, true);
+    root.addEventListener("change", refreshPreview, true);
+    return () => {
+      document.removeEventListener(EDITOR_SECTION_OPEN_EVENT, onOtherOpened);
+      document.removeEventListener("click", onClick, true);
+      window.removeEventListener("hashchange", onHashChange);
+      root.removeEventListener(EDITOR_REVEAL_EVENT, reveal);
+      root.removeEventListener("invalid", reveal, true);
+      root.removeEventListener("input", refreshPreview, true);
+      root.removeEventListener("change", refreshPreview, true);
+    };
+  }, [id, rootRef, bodyRef, setOpen, setPreview, openAlone]);
+}
+
+/** Controls whose value is words a person typed or picked. */
+const PREVIEW_INPUT_TYPES = new Set([
+  "",
+  "text",
+  "email",
+  "url",
+  "tel",
+  "search",
+  "number",
+  "date",
+  "time",
+  "datetime-local",
+]);
+
+/**
+ * **What a folded section holds**, in its own words: the first two of its
+ * fields that have something in them, in page order, joined by a middle dot.
+ * A pick list says the option's words, never its code.
+ *
+ * Read off the section's own controls, so there is nothing per section to keep
+ * in step with the fields, and nothing to translate: it is the shop's text.
+ * A section whose content is a drawn route or a photo grid says nothing here
+ * rather than guess.
+ */
+export function sectionPreview(body: Element): string {
+  const parts: string[] = [];
+  for (const control of body.querySelectorAll("input, textarea, select")) {
+    let text = "";
+    if (control instanceof HTMLSelectElement) {
+      if (control.value !== "") text = control.selectedOptions[0]?.textContent ?? "";
+    } else if (control instanceof HTMLTextAreaElement) {
+      text = control.value;
+    } else if (control instanceof HTMLInputElement) {
+      if (PREVIEW_INPUT_TYPES.has(control.getAttribute("type") ?? "")) text = control.value;
+    }
+    const trimmed = text.replace(/\s+/g, " ").trim();
+    if (trimmed) parts.push(trimmed.length > 60 ? `${trimmed.slice(0, 60).trimEnd()}…` : trimmed);
+    if (parts.length === 2) break;
+  }
+  return parts.join(" · ");
+}
+
+function SectionDescription({ children, hidden }: { children: ReactNode; hidden: boolean }) {
+  return (
+    <p className={`mt-2 max-w-2xl text-sm text-muted${hidden ? " max-lg:hidden" : ""}`}>
+      {children}
+    </p>
+  );
 }

@@ -1364,10 +1364,57 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
       // Non-2xx, or Stripe treats this delivery as done and never retries.
       expect(response.status).toBe(500);
       expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, arm.event.id);
-      // The original error, not a replacement, is what an operator sees.
-      expect(Sentry.captureException).toHaveBeenCalledWith(boom, expect.anything());
+      // Reported, but as a scrubbed stand-in (issue #2334): see below.
+      expect(Sentry.captureException).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          tags: expect.objectContaining({ stripe_webhook_stage: "handler", error_class: "Error" }),
+        }),
+      );
     });
   }
+
+  // Issue #2334. Sentry's beforeSend (`redactEvent`) scrubs URLs and headers,
+  // not exception text, and a handler's error can quote the row it refused. So
+  // Sentry gets a fixed message, the original's stack frames and its class as a
+  // tag, never the original message and never the original as `cause`.
+  it("sends Sentry a scrubbed error, never the handler's own message", async () => {
+    const leaky = new TypeError('duplicate key: (email)=(nora@example.com) for "Nora Diaz"');
+    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(leaky);
+
+    const response = await post({
+      id: "evt_leaky",
+      type: "invoice.paid",
+      data: { object: { id: "in_1" } },
+    });
+
+    expect(response.status).toBe(500);
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+    const [sent, context] = vi.mocked(Sentry.captureException).mock.calls[0];
+    expect(sent).not.toBe(leaky);
+    expect(sent).toBeInstanceOf(Error);
+    const scrubbed = sent as Error;
+    expect(scrubbed.cause).toBeUndefined();
+    for (const text of [
+      scrubbed.message,
+      scrubbed.name,
+      scrubbed.stack ?? "",
+      JSON.stringify(context),
+    ]) {
+      expect(text).not.toContain("nora@example.com");
+      expect(text).not.toContain("Nora Diaz");
+    }
+    expect(context).toEqual({
+      tags: {
+        stripe_event_id: "evt_leaky",
+        stripe_webhook_event_type: "invoice.paid",
+        stripe_webhook_stage: "handler",
+        error_class: "TypeError",
+      },
+    });
+    // The frames survive, so the report still says where it broke.
+    expect(scrubbed.stack).toMatch(/\n\s+at /);
+  });
 
   it("re-runs the handler and advances state on the redelivery after a failure", async () => {
     const event = {
@@ -1417,6 +1464,65 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     expect(releaseStripeWebhookEventClaim).not.toHaveBeenCalled();
   });
 
+  // A database error wraps the driver's own: its class and SQLSTATE say what
+  // went wrong without the bound parameters the outer message quotes.
+  it("tags and logs a failure by class and the driver's code, never a message", async () => {
+    const cause = Object.assign(new Error("Key (email)=(nora@example.com) already exists"), {
+      name: "PostgresError",
+      code: "23505",
+    });
+    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(
+      new Error("Failed query: update orders params: nora@example.com", { cause }),
+    );
+    const releaseCause = Object.assign(new Error("terminating connection"), { code: "57P01" });
+    vi.mocked(releaseStripeWebhookEventClaim).mockRejectedValue(
+      new Error("Failed query: update stripe_webhook_events", { cause: releaseCause }),
+    );
+
+    expect(
+      (await post({ id: "evt_sql", type: "invoice.paid", data: { object: { id: "in_1" } } }))
+        .status,
+    ).toBe(500);
+
+    const tags = vi
+      .mocked(Sentry.captureException)
+      .mock.calls.map(([, context]) => (context as { tags: Record<string, string> }).tags);
+    expect(tags).toContainEqual({
+      stripe_event_id: "evt_sql",
+      stripe_webhook_event_type: "invoice.paid",
+      stripe_webhook_stage: "handler",
+      error_class: "Error",
+      cause_name: "PostgresError",
+      cause_code: "23505",
+    });
+    expect(tags).toContainEqual(
+      expect.objectContaining({ stripe_webhook_stage: "claim_release", cause_code: "57P01" }),
+    );
+
+    const lines = [
+      ...vi.mocked(console.log).mock.calls,
+      ...vi.mocked(console.error).mock.calls,
+    ].map((call) => JSON.parse(call[0] as string));
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.handler_outcome",
+        outcome: "handler_failed",
+        errorCode: "Error",
+        causeName: "PostgresError",
+        causeCode: "23505",
+      }),
+    );
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.claim_release_failed",
+        errorCode: "Error",
+        causeCode: "57P01",
+      }),
+    );
+    const written = JSON.stringify([lines, vi.mocked(Sentry.captureException).mock.calls]);
+    expect(written).not.toContain("nora@example.com");
+  });
+
   it("a release that itself fails never masks the original error", async () => {
     const releaseBoom = new Error("release failed too");
     vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(boom);
@@ -1432,8 +1538,15 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     // handler's own error above all, since a swallowed release error would
     // otherwise be the only thing anyone saw.
     expect(response.status).toBe(500);
-    expect(Sentry.captureException).toHaveBeenCalledWith(boom, expect.anything());
-    expect(Sentry.captureException).toHaveBeenCalledWith(releaseBoom, expect.anything());
+    const stages = vi
+      .mocked(Sentry.captureException)
+      .mock.calls.map(
+        ([, context]) => (context as { tags: Record<string, string> }).tags.stripe_webhook_stage,
+      );
+    expect(stages).toEqual(expect.arrayContaining(["handler", "claim_release"]));
+    for (const [sent] of vi.mocked(Sentry.captureException).mock.calls) {
+      expect((sent as Error).message).not.toMatch(/db is down|release failed too/);
+    }
   });
 
   it("never releases a claim it never took (a duplicate is not a failure)", async () => {

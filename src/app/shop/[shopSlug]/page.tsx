@@ -427,7 +427,7 @@ async function TodayBody({
               shop.id,
               eveningClose.stations
                 .filter((station) => station.status === "all_home")
-                .map((station) => station.tripId),
+                .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
             ),
             canPersonExportIncidentRecord(db, shop.id, session.user.personId),
           ])

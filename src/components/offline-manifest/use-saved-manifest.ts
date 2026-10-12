@@ -216,10 +216,13 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       // whatever this device already has rather than asking for a trip id.
       const showList = (saved: OfflineManifestEnvelope[]) => {
         setList(saved);
+        // Nothing saved says nothing here: the empty page's heading already
+        // says it, and the status line under it repeated it word for word
+        // (UX review 2026-10-10, item 33).
         setMessage(
           saved.length > 0
             ? t("shared.offlineManifest.reconcile.savedCount", { count: saved.length })
-            : t("shared.offlineManifest.reconcile.noneSavedYet"),
+            : "",
         );
       };
 

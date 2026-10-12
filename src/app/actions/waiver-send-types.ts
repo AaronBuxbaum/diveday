@@ -11,8 +11,12 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  * a client component can import, which is why they live here.
  */
 
-/** Where the send happened, so the right route is revalidated after it lands. */
-export type WaiverSendSurface = "today" | "roster" | "diver";
+/**
+ * Where the send happened, so the right route is revalidated after it lands
+ * and the send is counted where it was made. `counter` is a counter rental:
+ * its ticket, or the new-rental form before there is one (issue #2346).
+ */
+export type WaiverSendSurface = "today" | "roster" | "diver" | "counter";
 
 /**
  * Which way the shop asked DiveDay to hand the link over. Structurally the same

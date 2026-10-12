@@ -3,9 +3,11 @@ import { expect, READ_ONLY, test } from "./fixtures";
 import { STAFF_DAY_HEADING, signOut } from "./helpers";
 
 /**
- * READ_ONLY holds here: a session is a JWT in a cookie (`session: { strategy: "jwt" }`,
- * src/lib/auth.config.ts) — signing in, failing to sign in, and signing out all write
- * no row, and the fleet disables the rate limiter that would otherwise keep counters.
+ * A session is a database row under Better Auth (`account_sessions`, the `session` model in
+ * `src/lib/auth.ts`): a live sign-in through the form inserts one and signing out deletes it.
+ * So READ_ONLY holds only where no sign-in succeeds. The redirect reads nothing, and a refused
+ * password reads the account and writes nothing, since the fleet disables the rate limiter
+ * that would otherwise keep counters. The sign-in-and-out test writes, and carries no tag.
  */
 
 test("unauthenticated /shop redirects to sign-in", { tag: READ_ONLY }, async ({ page }) => {
@@ -29,9 +31,7 @@ test("wrong password shows a friendly error and stays signed out", { tag: READ_O
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
-test("staff sign-in lands on the shop dashboard and sign-out locks it again", {
-  tag: READ_ONLY,
-}, async ({ page }) => {
+test("staff sign-in lands on the shop dashboard and sign-out locks it again", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
   await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
@@ -47,4 +47,34 @@ test("staff sign-in lands on the shop dashboard and sign-out locks it again", {
   await signOut(page);
   await page.goto("/shop");
   await expect(page).toHaveURL(/\/sign-in/);
+});
+
+/**
+ * The installed app opens on `/shop` (`start_url`, src/app/manifest.ts). With
+ * the cookie cache cold, which it is after five idle minutes, the edge proxy
+ * cannot say which shop to open and lets the request through. The server's
+ * `/shop` handler then decides from the session itself (issue #2342). Dropping
+ * the cache cookie is that cold start: the session cookie stays.
+ */
+test("/shop opens a signed-in staffer's shop even when the edge cannot decide", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.goto("/sign-in");
+  await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
+  await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
+
+  await page.context().clearCookies({ name: "better-auth.session_data" });
+  const sessionCookies = (await page.context().cookies()).map((cookie) => cookie.name);
+  expect(sessionCookies).toContain("better-auth.session_token");
+  expect(sessionCookies).not.toContain("better-auth.session_data");
+
+  const response = await page.request.get("/shop", { maxRedirects: 0 });
+  expect(response.status()).toBe(307);
+  expect(response.headers().location).toMatch(/^\/shop\/[^/]+$/);
+
+  await page.goto("/shop");
+  await expect(page).toHaveURL(/\/shop\/[^/]+$/);
+  await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
 });
