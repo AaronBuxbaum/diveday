@@ -9,7 +9,7 @@ export type SubSurfaceRippleCopy = { iconTitle: string; message: string };
  * false to true. `prevComplete` assumes a monotonic same-trip, same-checkpoint
  * lifecycle — it only knows "just became complete", not which trip or
  * checkpoint that was. The caller (the manifest's `ManifestMilestones`) must render this with
- * `key={`${tripId}-${checkpoint}`}` so a trip or checkpoint switch fully
+ * `key={`${tripId}-${checkpoint}-ripple`}` so a trip or checkpoint switch fully
  * remounts it instead of comparing against a different trip's carried-forward
  * ref (docs ADR 20260801-cache-components-activity-state).
  */

@@ -8,7 +8,7 @@ import { vibrate } from "./haptics";
  * `prevPct`/`isInitial` assume a monotonic same-trip, same-checkpoint
  * lifecycle — they only know "went up from last render", not which trip or
  * checkpoint that was. The caller (the manifest's `ManifestMilestones`) must render this with
- * `key={`${tripId}-${checkpoint}`}` so a trip or checkpoint switch fully
+ * `key={`${tripId}-${checkpoint}-haptics`}` so a trip or checkpoint switch fully
  * remounts it instead of comparing today's numbers against a different
  * trip's carried-forward refs (docs ADR 20260801-cache-components-activity-state).
  */
