@@ -26,7 +26,7 @@ import {
 } from "./notifications";
 import { bookings, heldSends, people, shops, trips } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /**
@@ -128,7 +128,11 @@ export async function holdRescheduleNotice(
       diversToldStartsAt: trips.diversToldStartsAt,
     })
     .from(trips)
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+    // A rehearsal tells nobody anything (ADR 20261012-rehearsal-departures):
+    // its moves hold no notice, so "Tell them" has nothing to send.
+    .where(
+      and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip(), notRehearsal()),
+    )
     .limit(1);
   if (trip?.status !== "scheduled") return null;
   const toldStartsAt = trip.diversToldStartsAt ?? input.movedFrom ?? null;
@@ -218,7 +222,9 @@ export async function sendRescheduleNotices(
     .select({ trip: trips, shop: shops })
     .from(trips)
     .innerJoin(shops, eq(shops.id, trips.shopId))
-    .where(and(eq(trips.id, payload.tripId), eq(trips.shopId, shopId), liveTrip()))
+    // The text path below goes straight to the courtesy primitive, so the
+    // rehearsal guard sits on this read rather than at the email chokepoint.
+    .where(and(eq(trips.id, payload.tripId), eq(trips.shopId, shopId), liveTrip(), notRehearsal()))
     .limit(1);
   if (row?.trip.status !== "scheduled") return outcome;
   const { trip, shop } = row;
