@@ -14,6 +14,10 @@ import {
   parseReplyKeyword,
 } from "@/lib/reply-keywords";
 import { hasSailed } from "@/lib/trips";
+import {
+  type CancellationRefundSeen,
+  sendBookingCancelledNotice,
+} from "./booking-cancelled-notice";
 import { selfCancelBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { getInboundMessage } from "./inbound-messages";
@@ -422,13 +426,12 @@ export async function handleInboundReplyKeyword(
   // `/ready` both use (H-07). Caught for the same reason `cancelMyBookingAction`
   // catches it: the seat is already released and the diver is owed a confirmation
   // either way; a refund a transient failure lost is a thing staff can see and fix.
-  let refunded: number | null = null;
+  let refund: CancellationRefundSeen = { status: "not_attempted" };
   try {
-    const refund = await refundBookingOnCancellation(db, {
+    refund = await refundBookingOnCancellation(db, {
       shopId: input.shopId,
       bookingId: matched.bookingId,
     });
-    if (refund.status === "refunded") refunded = refund.amountCents;
     if (refund.status !== "no_policy" && refund.status !== "unpaid") {
       await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
     }
@@ -441,10 +444,26 @@ export async function handleInboundReplyKeyword(
 
   const named = departure(matched);
   await answer(
-    refunded === null
-      ? t("notifications.replyKeyword.cancelled", named)
-      : `${t("notifications.replyKeyword.cancelled", named)} ${t("notifications.replyKeyword.refundOnItsWay")}`,
+    refund.status === "refunded"
+      ? `${t("notifications.replyKeyword.cancelled", named)} ${t("notifications.replyKeyword.refundOnItsWay")}`
+      : t("notifications.replyKeyword.cancelled", named),
     true,
+  );
+  // The written record every other cancel path sends, with the money line in
+  // it (issue #2294). The reply above answers on the channel the diver used;
+  // this goes to the address on their record, as it does from `/ready` and the
+  // roster. Never throws, so a mail failure cannot undo the outcome.
+  await sendBookingCancelledNotice(
+    db,
+    {
+      shopId: input.shopId,
+      bookingId: matched.bookingId,
+      cancelledBy: "diver",
+      // `selfCancelBooking` only ever cancels a booked seat.
+      from: "booked",
+      refund,
+    },
+    { provider: input.provider, now },
   );
   return "cancelled";
 }

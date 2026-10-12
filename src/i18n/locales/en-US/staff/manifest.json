@@ -122,6 +122,7 @@
   "medicalReferralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file",
   "medicalReferralUnresolvedChip": "Referral still open",
   "medicalReferralLink": "View the referral",
+  "medicalRefusalLink": "View the refusal",
   "resolveBlockersLink": "Resolve blockers on Divers →",
   "addNoteSummary": "Add a note",
   "rollCallRecordedByPlain": "{label} {date} by {name}",
@@ -192,6 +193,7 @@
   "personTrailDetail": "{time} · {name}",
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Mark back aboard",
+  "touchRefused": "Tap again with one finger.",
   "crewMarkBackAboard": "Mark back aboard",
   "emergency": {
     "heading": "In an emergency",

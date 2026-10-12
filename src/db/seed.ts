@@ -9,7 +9,8 @@ import { generateDemoShopIdentity, pinnedDemoShopIdentity } from "@/lib/demo-ide
 import { demoEmail } from "@/lib/simulator-email";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
-import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
+import { DEMO_SHOP_SLUG } from "./demo-shop";
+import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   accountSecurity,

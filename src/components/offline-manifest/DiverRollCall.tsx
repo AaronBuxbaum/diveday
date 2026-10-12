@@ -236,7 +236,7 @@ function OfflineDiverRow({
               row's state in words, read across a wet deck, and
               the defect was the pill's edge, never the word. */}
             {missing ? (
-              <span className="rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger">
+              <span className="rounded-full border border-danger bg-danger-tint px-3 py-1 text-sm font-bold text-danger">
                 {stateWord}
               </span>
             ) : (

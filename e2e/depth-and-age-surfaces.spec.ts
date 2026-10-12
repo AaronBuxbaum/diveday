@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openSettingsRow, openTripAbout, tripPathByTitle } from "./helpers";
 

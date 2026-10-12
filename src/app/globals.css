@@ -899,6 +899,20 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 /*
+ * **A roll-call press the touch guard refused** (issue #2328). A wet palm or
+ * spray lands as several contacts, `roll-call-touch-guard.ts` drops the press,
+ * and the control it landed on wears this for a moment while the surface's
+ * toast says "Tap again with one finger". An outline in the warning ink, the
+ * focus ring's weight, and no motion: it has to read on a wet phone in
+ * sunlight, and a new movement would need its own argument. On both Boat
+ * palettes the warning ink clears 7:1 against the surface it sits on.
+ */
+[data-touch-refused] {
+  outline: 3px solid var(--warning);
+  outline-offset: 2px;
+}
+
+/*
  * **The same list as the focus rule above, and for the same reason.**
  *
  * A phone paints its own highlight over the element you touch, and it paints

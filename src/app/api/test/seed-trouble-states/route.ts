@@ -2,7 +2,8 @@ import { and, count, eq, gt, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { requestCrewAssignment } from "@/db/crew-requests";
-import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
+import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { createDiveSite } from "@/db/dive-sites";
 import { createGearItem, recordGearService } from "@/db/gear";
 import { recordRollCall } from "@/db/manifests";
@@ -147,23 +148,9 @@ export async function POST(request: Request) {
     })
     .onConflictDoNothing();
 
-  // 2. Somebody is owed money: a departure the shop cancelled that still
-  //    carries a paid seat. `listOwedShopCancellationRefunds` joins a paid
-  //    booking_payment to a `cancelled` trip whose booking is *not* cancelled
-  //    (the forfeit carve-out), so cancelling the trip is the whole edit.
-  const [paidSeat] = await db
-    .select({ tripId: bookings.tripId })
-    .from(bookingPayments)
-    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
-    .where(
-      and(
-        eq(bookingPayments.shopId, shop.id),
-        inArray(bookingPayments.status, ["paid", "deposit_paid"]),
-      ),
-    )
-    .limit(1);
-  if (paidSeat) {
-    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, paidSeat.tripId));
+  // 2. Somebody is owed money, on request only (`owedRefund`, below).
+  if (new URL(request.url).searchParams.get("owedRefund") === "1") {
+    await cancelADepartureSomebodyPaidFor(db, shop.id);
   }
 
   // 3. A photo delete the provider refused, and
@@ -317,7 +304,7 @@ export async function POST(request: Request) {
       );
   }
 
-  // **Opt-in, unlike every other state here.** The rest write self-contained
+  // **Opt-in, like the owed refund above.** The back-office states write self-contained
   // back-office rows — a stuck deletion, an owed erasure — that only the panel
   // they belong to reads. This one changes a diver's **readiness**, which the
   // nav badges, the close-out and every blocked count read too, so seeding it
@@ -1218,9 +1205,9 @@ async function unstaffTomorrowsDeparture(
  * due inside `GEAR_SERVICE_DUE_SOON_DAYS`.
  *
  * The reef boat rather than the wreck trip the demo assigns units on
- * (`seed-gear.ts`), because this route cancels that departure above to owe a
- * refund on it; a Gear tab photographed on a cancelled trip shows the wrong
- * page. The four units are the wreck trip's, reserved for the reef boat's own
+ * (`seed-gear.ts`), because `?owedRefund=1` cancels that departure to owe a
+ * refund on it, and a Gear tab photographed on a cancelled trip shows the
+ * wrong page. The four units are the wreck trip's, reserved for the reef boat's own
  * window, which does not overlap it.
  *
  * Written straight to the rows, because each state is a fact about the unit's
@@ -1746,5 +1733,39 @@ async function hideEnoughReviewsToWithholdTheRating(
       recordedByPersonId,
       reason: "spam",
     });
+  }
+}
+
+/**
+ * **Somebody is owed money**: a departure the shop cancelled that still
+ * carries a paid seat. `listOwedShopCancellationRefunds` joins a paid
+ * booking_payment to a `cancelled` trip whose booking is *not* cancelled (the
+ * forfeit carve-out), so cancelling the trip is the whole edit.
+ *
+ * **Opt-in** (`?owedRefund=1`, issue #2338): the departure it cancels is one of
+ * the demo's upcoming boats, which Today, the board and the booking pages all
+ * read, so running it on every call made every caller's picture depend on
+ * whether this state had been seeded first.
+ */
+async function cancelADepartureSomebodyPaidFor(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+) {
+  const [paidSeat] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookingPayments)
+    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
+    .where(
+      and(
+        eq(bookingPayments.shopId, shopId),
+        inArray(bookingPayments.status, ["paid", "deposit_paid"]),
+      ),
+    )
+    .limit(1);
+  if (paidSeat) {
+    await db
+      .update(trips)
+      .set({ status: "cancelled" })
+      .where(and(eq(trips.id, paidSeat.tripId), eq(trips.shopId, shopId)));
   }
 }

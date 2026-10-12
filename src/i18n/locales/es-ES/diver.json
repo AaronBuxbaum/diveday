@@ -2719,7 +2719,7 @@
       "priceLine": "Un precio único de {price} {cadence}, congelado dos años para los centros fundadores.",
       "seeIncluded": "Ver qué incluye →",
       "contactTitle": "Pregúntanos primero",
-      "contactBody": "Escríbenos con lo que te haría decidir. Lo lee una persona real.",
+      "contactBody": "Escríbenos con lo que te haría decidir.",
       "contactCta": "Escribir a {email}",
       "stepLink": "{name} →"
     },

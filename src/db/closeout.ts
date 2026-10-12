@@ -390,42 +390,93 @@ export async function getDayCloseout(
  * stays `listRollCallGaps`'s answer alone (an absent gap), which is why this
  * can be a plain read.
  *
- * The diver half only. A trip whose last mark was a crew one reads a few
- * minutes early, which is a rounding error in a sentence about an evening; the
- * alternative is a second table, a merge, and two ways for one line to be
- * wrong. A trip with no roll call at all is simply absent from the map, and
- * the station drops the clause rather than guessing at one.
+ * **Both halves of the count, once both are closed** (issue #2331): the
+ * newest diver mark and the newest crew mark per trip, and the later of the two
+ * supplies the time *and* the name. Reading diver marks alone named whoever
+ * made the last diver mark when a crew member's own back-aboard mark closed the
+ * count. But a trip whose crew are not all accounted for (`crewClosed` false)
+ * keeps the diver-only sentence, "8 of 8 back by {time}", and a crew mark is
+ * no part of that claim: the divers were back when the last diver was, so the
+ * diver half alone answers both the time and the name there (dive-domain review
+ * of #2331). A trip with no roll call at all is simply absent from the map,
+ * and the station drops the clause rather than guessing at one.
  *
- * Ordered by the trio every roll-call read in this repo orders by — `occurredAt`,
- * then `createdAt`, then `seq` — because the first two tie constantly (a frozen
- * test clock, an offline batch applied in one transaction) and `seq` is the
- * only column that records what actually came first (ADR
- * 20260815-roll-call-order-is-a-property-of-the-data).
+ * Each half is ordered by the trio every roll-call read in this repo orders by
+ * — `occurredAt`, then `createdAt`, then `seq` — because the first two tie
+ * constantly (a frozen test clock, an offline batch applied in one
+ * transaction) and `seq` is the only column that records what actually came
+ * first (ADR 20260815-roll-call-order-is-a-property-of-the-data). Between the
+ * halves only `occurredAt` and `createdAt` compare: each table has its own
+ * sequence, so a diver `seq` says nothing against a crew one. On a tie on both,
+ * the diver mark stands, as it did before crew marks were read here.
  */
 export async function listHeadCountCloses(
   db: AppDb,
   shopId: string,
-  tripIds: readonly string[],
+  stations: readonly { tripId: string; crewClosed: boolean }[],
 ): Promise<Map<string, { closedAt: Date; closedBy: string }>> {
   const closes = new Map<string, { closedAt: Date; closedBy: string }>();
-  if (tripIds.length === 0) return closes;
-  const rows = await db
-    .select({
-      tripId: rollCallEvents.tripId,
-      occurredAt: rollCallEvents.occurredAt,
-      closedBy: people.fullName,
-    })
-    .from(rollCallEvents)
-    .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
-    .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    );
-  for (const row of rows) {
-    if (closes.has(row.tripId)) continue;
-    closes.set(row.tripId, { closedAt: row.occurredAt, closedBy: row.closedBy });
+  if (stations.length === 0) return closes;
+  const tripIds = stations.map((station) => station.tripId);
+  const crewClosedTripIds = stations
+    .filter((station) => station.crewClosed)
+    .map((station) => station.tripId);
+  const [diverRows, crewRows] = await Promise.all([
+    db
+      .select({
+        tripId: rollCallEvents.tripId,
+        occurredAt: rollCallEvents.occurredAt,
+        createdAt: rollCallEvents.createdAt,
+        closedBy: people.fullName,
+      })
+      .from(rollCallEvents)
+      .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
+      .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
+      .orderBy(
+        desc(rollCallEvents.occurredAt),
+        desc(rollCallEvents.createdAt),
+        desc(rollCallEvents.seq),
+      ),
+    crewClosedTripIds.length === 0
+      ? []
+      : db
+          .select({
+            tripId: rollCallCrewEvents.tripId,
+            occurredAt: rollCallCrewEvents.occurredAt,
+            createdAt: rollCallCrewEvents.createdAt,
+            closedBy: people.fullName,
+          })
+          .from(rollCallCrewEvents)
+          .innerJoin(people, eq(people.id, rollCallCrewEvents.recordedByPersonId))
+          .where(
+            and(
+              eq(rollCallCrewEvents.shopId, shopId),
+              inArray(rollCallCrewEvents.tripId, crewClosedTripIds),
+            ),
+          )
+          .orderBy(
+            desc(rollCallCrewEvents.occurredAt),
+            desc(rollCallCrewEvents.createdAt),
+            desc(rollCallCrewEvents.seq),
+          ),
+  ]);
+  type Mark = (typeof diverRows)[number];
+  const newestPerTrip = (rows: readonly Mark[]) => {
+    const newest = new Map<string, Mark>();
+    for (const row of rows) if (!newest.has(row.tripId)) newest.set(row.tripId, row);
+    return newest;
+  };
+  const diverLast = newestPerTrip(diverRows);
+  const crewLast = newestPerTrip(crewRows);
+  const crewIsLater = (crew: Mark, diver: Mark) =>
+    crew.occurredAt.getTime() !== diver.occurredAt.getTime()
+      ? crew.occurredAt > diver.occurredAt
+      : crew.createdAt > diver.createdAt;
+  for (const tripId of new Set([...diverLast.keys(), ...crewLast.keys()])) {
+    const diver = diverLast.get(tripId);
+    const crew = crewLast.get(tripId);
+    const last = diver && crew ? (crewIsLater(crew, diver) ? crew : diver) : (diver ?? crew);
+    if (last) closes.set(tripId, { closedAt: last.occurredAt, closedBy: last.closedBy });
   }
   return closes;
 }

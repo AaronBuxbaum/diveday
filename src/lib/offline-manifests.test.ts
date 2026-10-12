@@ -1184,6 +1184,7 @@ describe("offline manifest policy", () => {
           overriddenReferralAt: new Date("2026-06-10T14:00:00.000Z"),
           overriddenRefusal: {
             recordId: "refused-record-secret",
+            personId: "refused-person-secret",
             at: new Date("2026-05-02T13:00:00.000Z"),
           },
         }),
@@ -1196,6 +1197,7 @@ describe("offline manifest policy", () => {
       });
       const json = JSON.stringify(payload);
       expect(json).not.toContain("refused-record-secret");
+      expect(json).not.toContain("refused-person-secret");
       expect(json).not.toContain("clearance-record-secret");
       expect(json).not.toContain("medicalWaiver");
       // The release's own date is not a warning, so it does not ride.
@@ -1210,7 +1212,11 @@ describe("offline manifest policy", () => {
       expect(
         save(
           mark({
-            overriddenRefusal: { recordId: "r", at: new Date("2026-05-02T13:00:00.000Z") },
+            overriddenRefusal: {
+              recordId: "r",
+              personId: "p",
+              at: new Date("2026-05-02T13:00:00.000Z"),
+            },
           }),
         ).manifests[0]?.divers[0]?.medicalWarnings,
       ).toEqual({ refusedOn: "2026-05-02" });
@@ -1222,6 +1228,7 @@ describe("offline manifest policy", () => {
           mark({
             overriddenRefusal: {
               recordId: "r",
+              personId: "p",
               at: new Date("2026-05-20T13:00:00.000Z"),
               evaluatedOn: "2026-05-02",
             },
@@ -1240,7 +1247,11 @@ describe("offline manifest policy", () => {
     it("never writes a held seat's warnings, which belong to a person nobody confirmed", () => {
       const payload = save(
         mark({
-          overriddenRefusal: { recordId: "r", at: new Date("2026-05-02T13:00:00.000Z") },
+          overriddenRefusal: {
+            recordId: "r",
+            personId: "p",
+            at: new Date("2026-05-02T13:00:00.000Z"),
+          },
         }),
         true,
       );

@@ -122,6 +122,7 @@
   "medicalReferralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada",
   "medicalReferralUnresolvedChip": "Derivación aún abierta",
   "medicalReferralLink": "Ver la derivación",
+  "medicalRefusalLink": "Ver el rechazo",
   "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
   "addNoteSummary": "Añadir una nota",
   "rollCallRecordedByPlain": "{label} {date} por {name}",
@@ -192,6 +193,7 @@
   "personTrailDetail": "{time} · {name}",
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Marcar de vuelta a bordo",
+  "touchRefused": "Vuelve a tocar con un solo dedo.",
   "crewMarkBackAboard": "Marcar de vuelta a bordo",
   "emergency": {
     "heading": "En una emergencia",
