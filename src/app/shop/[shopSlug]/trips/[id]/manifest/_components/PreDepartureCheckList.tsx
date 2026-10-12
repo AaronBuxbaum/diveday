@@ -60,7 +60,7 @@ function PreDepartureCheckRow({
           aria-pressed={checked}
           className={buttonClass({
             variant: checked ? "primary" : "secondary",
-            size: "sm",
+            size: "md",
             className: "w-full justify-start gap-2 text-start",
           })}
         >
