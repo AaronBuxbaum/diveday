@@ -430,6 +430,7 @@
     "mergeAnonymized": "These records cannot be merged because one has already been erased.",
     "mergeAssessmentChanged": "Something on these records changed since you opened this comparison. Read it again before merging. Nothing was moved.",
     "mergeBookingConflict": "Both records hold a seat on the same departure, which usually means two people. Nothing was moved.",
+    "mergeBookingConflictOn": "Both records hold a seat on {departure}, which usually means two people. Nothing was moved.",
     "mergeDepartureUnderway": "One of these records is on a departure that is out now. Merge after the boat is back.",
     "mergeDifferentPeopleUnacknowledged": "Check that these records are the same person before merging. Nothing was moved.",
     "mergeInvalid": "Choose one of the possible duplicate records and try again.",

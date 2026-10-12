@@ -63,7 +63,15 @@ export async function mergeDiverAction(shopSlug: string, personId: string, formD
       return;
     }
     const preview = shopPath(staff.user.shopSlug, "divers", personId, "merge", survivorId);
-    revalidateAndRedirect(preview, noticeUrl(preview, `merge-${result.reason}`, { form: "merge" }));
+    revalidateAndRedirect(
+      preview,
+      noticeUrl(preview, `merge-${result.reason}`, {
+        form: "merge",
+        // The departure the conflict is on, by id only: the page reads its
+        // title and time from the shop's own trips (issue #2333).
+        trip: result.conflictTripId,
+      }),
+    );
     return;
   }
 
