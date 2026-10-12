@@ -38,9 +38,11 @@ booking would face (on a course session the course's own card gate, fail-closed 
 `createBookingRecord`'s `course_prerequisite`; otherwise `tripAdmissionFor` on the claimant's own
 evidence; course minimum age deliberately not re-checked — an age refusal keyed to a typed email
 is an oracle about someone else's record (H-22), and readiness still catches it), then refuse
-`already_booked` if the claimant already holds a live seat on the trip — checked after the gates
-and worded on the page as a neutral "can't be claimed with these details, contact the shop", so
-the refusal never confirms that a typed email is on the trip (#2288) — then re-point `person_id`,
+`already_booked` if the claimant already holds a live seat on the trip — checked after the gates,
+so a gate refusal no longer depends on whether the typed email is booked, and worded on the page
+as a neutral "can't be claimed with these details, contact the shop" (#2288). It still differs
+from a successful claim, so a link holder can still tell a booked email from an unbooked one, as
+on the public booking form — then re-point `person_id`,
 stamp `claimed_at`, supersede any current waiver record on
 the booking that belongs to a different person (readiness's booking-scoped waiver join would
 otherwise let the claimant board on the placeholder's signature), and revoke **every** outstanding

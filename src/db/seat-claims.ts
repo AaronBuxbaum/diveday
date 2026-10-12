@@ -363,9 +363,11 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
   // on this trip, re-pointing this one would put them on the manifest twice
   // (and violate bookings_trip_person_unique). The organizer's other seats
   // stay untouched — this refusal is about the claimant, not the party.
-  // It runs after every gate, so a claimant the gates refuse hears the same
-  // refusal whether or not they hold a seat here, and the claim page words it
-  // so it never says who is on the trip (H-22, issue #2288).
+  // It runs after every gate, so a gate refusal no longer depends on whether
+  // the typed email holds a seat here (issue #2288). What it does not close:
+  // a claimant the gates admit still gets this refusal where a stranger's
+  // claim would succeed, so the outcome still differs for a booked email, as
+  // it does on the public booking form (H-22).
   if (existing && existing.id !== booking.personId) {
     const [clash] = await tx
       .select({ id: bookings.id })
