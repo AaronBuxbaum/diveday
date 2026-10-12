@@ -143,6 +143,93 @@ export type CommandPaletteCopy = {
  * and a shortcut its surface; a diver opens as a sheet over the day, because a
  * person is the one answer here that has no hour of its own (slice 23e).
  */
+/**
+ * The "Go to" rows for one query: the boarding and offline doors, every
+ * destination the nav offers this reader, and the Settings rail's rows by
+ * name. Pure, so the palette's memo only re-runs it when its inputs move.
+ */
+function gotoItems({
+  q,
+  root,
+  boatBoardingHref,
+  gates,
+  crewSchedule,
+  settingsShortcuts,
+  copy,
+}: {
+  /** The trimmed, lower-cased query; "" lists every door. */
+  q: string;
+  root: string;
+  boatBoardingHref: string | undefined;
+  gates: StaffDestinationGates;
+  crewSchedule: boolean;
+  settingsShortcuts: readonly SettingsShortcut[];
+  copy: CommandPaletteCopy;
+}): PaletteItem[] {
+  const goto: PaletteItem[] = [];
+  if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
+    goto.push({
+      key: "goto:boarding",
+      label: copy.goToBoarding,
+      href: boatBoardingHref,
+      icon: <PaletteGlyph name="boarding" />,
+    });
+  }
+  // Not shop-scoped (the offline snapshot lives per-device, not per-shop
+  // route) so this doesn't need a `boatBoardingHref`-style prop — it's
+  // always the same URL and always findable, per task 77 (persona 10, Sal):
+  // the entry point used to be only a button below the live manifest
+  // header, easy to miss on a device that's about to lose signal.
+  if (q === "" || "offline".includes(q) || "roll call".includes(q) || "manifest".includes(q)) {
+    goto.push({
+      key: "goto:offline-roll-call",
+      label: copy.goToOfflineRollCall,
+      href: "/offline-manifest",
+      icon: <PaletteGlyph name="offline" />,
+    });
+  }
+  // One list with the nav and the keyboard shortcuts, already filtered for
+  // this viewer's permissions.
+  for (const destination of staffPaletteDestinations(gates, { crew: crewSchedule })) {
+    const label = copy.destinationLabels[destination.id];
+    const title = copy.destinationTitles[destination.id];
+    if (q === "" || label.toLowerCase().includes(q) || title?.toLowerCase().includes(q)) {
+      goto.push({
+        key: `goto:${destination.id}`,
+        label,
+        href: staffDestinationHref(root, destination),
+        // The registry's own artwork, so the palette and the phone dock can
+        // never draw one destination two ways.
+        icon: <StaffDestinationIcon id={destination.id} className="size-5" />,
+      });
+    }
+  }
+  // "Tips", "desk hours", "counter card": the rail is where an owner hunts,
+  // so its rows answer by name too. A row whose page is already a
+  // destination above (Team, Activity, Email) is that row, not a second one.
+  if (q !== "") {
+    const offered = new Set(goto.map((item) => item.href));
+    let added = 0;
+    for (const shortcut of settingsShortcuts) {
+      if (added >= MAX_SETTINGS_SHORTCUTS) break;
+      if (offered.has(shortcut.href)) continue;
+      const label = shortcut.label.toLowerCase();
+      const group = shortcut.group.toLowerCase();
+      if (!label.includes(q) && !group.includes(q)) continue;
+      offered.add(shortcut.href);
+      added += 1;
+      goto.push({
+        key: `goto:settings:${shortcut.id}`,
+        label: shortcut.label,
+        detail: shortcut.group,
+        href: shortcut.href,
+        icon: <StaffDestinationIcon id="settings" className="size-5" />,
+      });
+    }
+  }
+  return goto;
+}
+
 export function CommandPalette({
   shopSlug,
   boatBoardingHref,
@@ -260,67 +347,15 @@ export function CommandPalette({
   const groups = useMemo<PaletteGroup[]>(() => {
     const rawQuery = query.trim();
     const q = rawQuery.toLowerCase();
-    const goto: PaletteItem[] = [];
-    if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
-      goto.push({
-        key: "goto:boarding",
-        label: copy.goToBoarding,
-        href: boatBoardingHref,
-        icon: <PaletteGlyph name="boarding" />,
-      });
-    }
-    // Not shop-scoped (the offline snapshot lives per-device, not per-shop
-    // route) so this doesn't need a `boatBoardingHref`-style prop — it's
-    // always the same URL and always findable, per task 77 (persona 10, Sal):
-    // the entry point used to be only a button below the live manifest
-    // header, easy to miss on a device that's about to lose signal.
-    if (q === "" || "offline".includes(q) || "roll call".includes(q) || "manifest".includes(q)) {
-      goto.push({
-        key: "goto:offline-roll-call",
-        label: copy.goToOfflineRollCall,
-        href: "/offline-manifest",
-        icon: <PaletteGlyph name="offline" />,
-      });
-    }
-    // One list with the nav and the keyboard shortcuts, already filtered for
-    // this viewer's permissions.
-    for (const destination of staffPaletteDestinations(gates, { crew: crewSchedule })) {
-      const label = copy.destinationLabels[destination.id];
-      const title = copy.destinationTitles[destination.id];
-      if (q === "" || label.toLowerCase().includes(q) || title?.toLowerCase().includes(q)) {
-        goto.push({
-          key: `goto:${destination.id}`,
-          label,
-          href: staffDestinationHref(root, destination),
-          // The registry's own artwork, so the palette and the phone dock can
-          // never draw one destination two ways.
-          icon: <StaffDestinationIcon id={destination.id} className="size-5" />,
-        });
-      }
-    }
-    // "Tips", "desk hours", "counter card": the rail is where an owner hunts,
-    // so its rows answer by name too. A row whose page is already a
-    // destination above (Team, Activity, Email) is that row, not a second one.
-    if (q !== "") {
-      const offered = new Set(goto.map((item) => item.href));
-      let added = 0;
-      for (const shortcut of settingsShortcuts) {
-        if (added >= MAX_SETTINGS_SHORTCUTS) break;
-        if (offered.has(shortcut.href)) continue;
-        const label = shortcut.label.toLowerCase();
-        const group = shortcut.group.toLowerCase();
-        if (!label.includes(q) && !group.includes(q)) continue;
-        offered.add(shortcut.href);
-        added += 1;
-        goto.push({
-          key: `goto:settings:${shortcut.id}`,
-          label: shortcut.label,
-          detail: shortcut.group,
-          href: shortcut.href,
-          icon: <StaffDestinationIcon id="settings" className="size-5" />,
-        });
-      }
-    }
+    const goto = gotoItems({
+      q,
+      root,
+      boatBoardingHref,
+      gates,
+      crewSchedule,
+      settingsShortcuts,
+      copy,
+    });
     const out: PaletteGroup[] = [];
     // **Ask it, and it answers.** The first row when the query names one
     // thing: the fact, and the primary act the home's ledger rows would
