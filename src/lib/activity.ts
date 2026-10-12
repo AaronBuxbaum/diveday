@@ -135,6 +135,10 @@ type ActivityParamShapes = {
   booking_link_requested: { actor: string };
   /** A diver claimed the seat somebody else had booked for them. */
   seat_claimed: { actor: string };
+  /** A diver gave up their own seat from their trip-prep link, with no card refund. */
+  seat_self_cancelled: { actor: string };
+  /** …and the shop's cancellation window refunded them by card. */
+  seat_self_refunded: { actor: string };
   /** A staffer opened a diver's physician's evaluation. */
   medical_clearance_opened: { actor: string; diver: string };
   /** A staffer downloaded a diver's own record. */
@@ -244,6 +248,8 @@ export const ACTIVITY_CODES = [
   "seat_added_walk_in",
   "booking_link_requested",
   "seat_claimed",
+  "seat_self_cancelled",
+  "seat_self_refunded",
   "medical_clearance_opened",
   "record_exported",
   "order_refunded",

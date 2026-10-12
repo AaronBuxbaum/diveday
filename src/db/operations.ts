@@ -482,7 +482,14 @@ export type TripActivityEntry =
       cleared: string;
     }
   | { code: "crew_assigned" | "crew_removed"; crew: string }
-  | { code: "blowout_called" | "booking_link_requested" | "seat_claimed" };
+  | {
+      code:
+        | "blowout_called"
+        | "booking_link_requested"
+        | "seat_claimed"
+        | "seat_self_cancelled"
+        | "seat_self_refunded";
+    };
 
 export async function recordTripActivity(
   db: DbExecutor,
@@ -516,4 +523,32 @@ export async function recordTripActivity(
     })
     .returning();
   return event ?? null;
+}
+
+/**
+ * **A diver gave up their own seat** from their trip-prep link (UX review
+ * 2026-10-11, item 19), and whether the card refund went through, on the
+ * departure's trail. The owner's "who refunded what" question has an answer
+ * that is not a staffer: the diver, by the shop's own cancellation window.
+ *
+ * Read off the booking itself, scoped to the shop the capability named, so
+ * the line names the seat's own diver and lands on that seat's departure. A
+ * booking that is not this shop's writes nothing.
+ */
+export async function recordDiverSelfCancel(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; refunded: boolean },
+) {
+  const [booking] = await db
+    .select({ tripId: bookings.tripId, personId: bookings.personId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!booking) return null;
+  return recordTripActivity(db, {
+    shopId: input.shopId,
+    tripId: booking.tripId,
+    actorPersonId: booking.personId,
+    entry: { code: input.refunded ? "seat_self_refunded" : "seat_self_cancelled" },
+  });
 }

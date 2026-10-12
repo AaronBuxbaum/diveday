@@ -22,6 +22,8 @@
     "seat_added_walk_in": "{actor} agregó a {diver} a la salida sin reserva",
     "booking_link_requested": "{actor} pidió un enlace nuevo para su reserva",
     "seat_claimed": "{actor} reclamó su lugar",
+    "seat_self_cancelled": "{actor} canceló su propia plaza desde su enlace de la salida",
+    "seat_self_refunded": "{actor} canceló su propia plaza desde su enlace de la salida y recibió el reembolso en su tarjeta",
     "medical_clearance_opened": "{actor} abrió la evaluación médica de {diver}",
     "record_exported": "{actor} descargó una copia del registro de {diver}",
     "order_refunded": "{actor} reembolsó un pedido",
