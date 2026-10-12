@@ -78,9 +78,11 @@
   it, because DAN publishes 12 and 18 and a shop may sit above them. The lead-in states the interval
   for the same reason. It read "Fly-safe from {when}:" until issue #1433, and DAN's interval is a
   minimum that lowers DCS risk without removing it, so "safe" was the one word in the sentence that
-  read as a verdict — in Spanish twice over, where "Puedes volar" is literally *you can fly*. Three
-  things it deliberately cannot know: whether a dive took decompression stops, which DAN says needs
-  substantially longer than 18 hours; any dive not booked at this shop, so a week with another
+  read as a verdict — in Spanish twice over, where "Puedes volar" is literally *you can fly*. A
+  departure the shop marks as **decompression diving** (`trips.exceeds_no_deco_limits`, H-84,
+  issue #1555) gets no earliest flight at all, because DAN gives no figure for a dive that took
+  stops; one nobody marked is read as no-decompression. Two things it deliberately cannot know:
+  any dive not booked at this shop, so a week with another
   operator is invisible; and that two days belong to one diver when the bookings carry no email — a
   walk-up is a fresh `people` row each time. Informs and gates nothing; never computed from a depth
   profile, which is a dive computer's job.

@@ -410,6 +410,8 @@ export type TripPatch = {
   isPrivate?: boolean;
   /** The shop's own divemaster target stops applying to this departure (issue #973). */
   selfGuided?: boolean;
+  /** The dives went past no-decompression limits, so the recap says nothing about flying (H-84). */
+  exceedsNoDecoLimits?: boolean;
 };
 
 export type UpdateTripOutcome =
@@ -599,6 +601,9 @@ export async function updateTrip(
         ...(patch.selfGuided === undefined
           ? {}
           : { selfGuided: existing.courseId ? false : patch.selfGuided }),
+        ...(patch.exceedsNoDecoLimits === undefined
+          ? {}
+          : { exceedsNoDecoLimits: patch.exceedsNoDecoLimits }),
         ...(patch.diveSiteId === undefined
           ? {}
           : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),

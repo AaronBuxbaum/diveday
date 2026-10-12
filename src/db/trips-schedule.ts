@@ -378,6 +378,8 @@ export async function duplicateTrip(
       // marked a charter self-guided and then copied it to next Saturday must
       // not find the copy raising the row the mark exists to silence.
       selfGuided: source.selfGuided,
+      // Copied too: a copy of a decompression charter is one (H-84).
+      exceedsNoDecoLimits: source.exceedsNoDecoLimits,
       diveMode: source.diveMode,
       // Copied outright, and deliberately *not* re-checked through
       // `getTripLens` the way `boatId` is below. A boat id is re-validated

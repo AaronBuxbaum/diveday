@@ -775,6 +775,7 @@ async function loadRecapPageData(
     plannedDives: trip.plannedDives,
     endsAt: trip.endsAt,
     divedRecently: divedRecentlyIds.has(row.personId),
+    exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
     now: nowDate(),
     hours: DEFAULT_FLY_SAFE_HOURS,
   });
@@ -1520,6 +1521,7 @@ async function sendRecaps(
             plannedDives: first.trip.plannedDives,
             endsAt: first.trip.endsAt,
             divedRecently: divedRecentlyIds.has(r.booking.personId),
+            exceedsNoDecoLimits: first.trip.exceedsNoDecoLimits,
             now,
             hours: DEFAULT_FLY_SAFE_HOURS,
           }),

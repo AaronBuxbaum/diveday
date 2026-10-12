@@ -558,6 +558,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // The shop's own answer about this departure, not a derived fact,
       // so it leaves with the shop (issue #973).
       "self_guided",
+      "exceeds_no_deco_limits",
       // The bundle carries deleted departures (they are still the shop's
       // rows), so it has to carry the stamp that says which — a file that
       // hands back a deleted departure looking live is worse than one
@@ -609,6 +610,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.arrivalPhotoUrl,
         row.isPrivate,
         row.selfGuided,
+        row.exceedsNoDecoLimits,
         row.deletedAt,
         row.createdAt,
       ]),
