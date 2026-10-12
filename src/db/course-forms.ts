@@ -404,12 +404,23 @@ export async function attachStandardCourseForms(
   let position = current.reduce((max, row) => Math.max(max, row.position + 1), 0);
   let created = 0;
   let attached = 0;
+  // `listCourseForms` reads oldest first, and every row a transaction writes
+  // shares its `now()`, so each new form is stamped a millisecond after the
+  // shop's newest: the forms list in the order the course names them, not by
+  // random id.
+  const [newest] = await db
+    .select({ createdAt: courseForms.createdAt })
+    .from(courseForms)
+    .where(eq(courseForms.shopId, input.shopId))
+    .orderBy(desc(courseForms.createdAt))
+    .limit(1);
+  let stamp = Math.max(nowDate().getTime(), (newest?.createdAt.getTime() ?? 0) + 1);
   for (const title of titles) {
     let formId = formByTitle.get(titleKey(title));
     if (!formId) {
       const [form] = await db
         .insert(courseForms)
-        .values({ shopId: input.shopId })
+        .values({ shopId: input.shopId, createdAt: new Date(stamp++) })
         .returning({ id: courseForms.id });
       if (!form) throw new Error("attachStandardCourseForms: insert returned no row");
       await db.insert(courseFormVersions).values({
