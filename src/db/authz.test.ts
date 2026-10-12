@@ -11,6 +11,7 @@ import {
   canPersonManageStaffAccounts,
   canPersonManageWaiverTemplates,
   canPersonOverrideGearRequest,
+  canPersonReadEveryIncidentReport,
   canPersonReadPrivateRecapPulse,
   canPersonRefund,
   loadActiveStaffRoles,
@@ -136,6 +137,8 @@ describe("H-14 owner/manager surfaces", () => {
       // reports gate it used to borrow, because the recap form promises the
       // diver this reader set by name (src/lib/authz.ts).
       canPersonReadPrivateRecapPulse,
+      // Every incident report, whoever wrote it (ADR 20261012-incident-reports).
+      canPersonReadEveryIncidentReport,
     ]) {
       expect(await gate(db, shop.id, owner)).toBe(true);
       expect(await gate(db, shop.id, manager)).toBe(true);
@@ -152,6 +155,7 @@ describe("H-14 owner/manager surfaces", () => {
 
     expect(await canPersonRefund(db, shop.id, disabled)).toBe(false);
     expect(await canPersonDeleteDiver(db, shop.id, deleted)).toBe(false);
+    expect(await canPersonReadEveryIncidentReport(db, shop.id, disabled)).toBe(false);
     // The strictest gate closes the same window.
     expect(await canPersonExportIncidentRecord(db, shop.id, disabled)).toBe(false);
     expect(await canPersonExportIncidentRecord(db, shop.id, deleted)).toBe(false);

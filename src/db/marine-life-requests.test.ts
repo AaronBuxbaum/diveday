@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { listMarineLifeRequests, recordMarineLifeRequest } from "./marine-life-requests";
-import { people } from "./schema";
+import { recordMarineLifeRequest } from "./marine-life-requests";
+import { marineLifeRequests, people } from "./schema";
 
 /**
  * The field guide only shows species DiveDay carries, so a shop outside the
@@ -14,6 +14,9 @@ describe("marine-life requests", () => {
   let db: Awaited<ReturnType<typeof seededShopContext>>["db"];
   let shopId: string;
   let personId: string;
+
+  // Read straight from the table: nothing in the app reads these back.
+  const requests = () => db.select().from(marineLifeRequests);
 
   beforeEach(async () => {
     const context = await seededShopContext();
@@ -31,7 +34,7 @@ describe("marine-life requests", () => {
       query: "Pygmy seahorse",
     });
 
-    const [row] = await listMarineLifeRequests(db);
+    const [row] = await requests();
     expect(row).toMatchObject({ shopId, requestedByPersonId: personId, query: "Pygmy seahorse" });
   });
 
@@ -42,7 +45,7 @@ describe("marine-life requests", () => {
       await recordMarineLifeRequest(db, { shopId, requestedByPersonId: personId, query });
     }
 
-    expect(await listMarineLifeRequests(db)).toHaveLength(2);
+    expect(await requests()).toHaveLength(2);
   });
 
   it("refuses a blank ask without writing a row", async () => {
@@ -50,7 +53,7 @@ describe("marine-life requests", () => {
     // post cannot fill the table with empty rows either.
     await recordMarineLifeRequest(db, { shopId, requestedByPersonId: personId, query: "   " });
 
-    expect(await listMarineLifeRequests(db)).toEqual([]);
+    expect(await requests()).toEqual([]);
   });
 
   it("trims and bounds what it stores", async () => {
@@ -60,7 +63,7 @@ describe("marine-life requests", () => {
       query: `  ${"a".repeat(400)}  `,
     });
 
-    const [row] = await listMarineLifeRequests(db);
+    const [row] = await requests();
     expect(row?.query).toHaveLength(120);
   });
 });

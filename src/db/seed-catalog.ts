@@ -4,10 +4,11 @@ import {
   type CourseTemplate,
   courseTemplateSnapshot,
 } from "@/content/course-templates";
+import { nowDate } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
 import type { DbExecutor } from "./client";
 import { attachStandardCourseForms } from "./course-forms";
-import { courses } from "./schema";
+import { courseForms, courseFormVersions, courses } from "./schema";
 
 /**
  * **One display title per course, disambiguated by agency where two agencies
@@ -300,6 +301,17 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
       titles: (template.standardForms ?? []).map((form) => form.title),
     });
   }
+  // Stamped from the app's clock rather than left to `defaultNow()`: the
+  // waivers page prints each form's version date, and Postgres's `now()` is
+  // the wall clock, which `DIVEDAY_CLOCK` does not reach, so every capture of
+  // that page changed at midnight (issue #2297). The writers keep the
+  // database's clock in production; only the seed pins it.
+  const seededAt = nowDate();
+  await db.update(courseForms).set({ createdAt: seededAt }).where(eq(courseForms.shopId, shopId));
+  await db
+    .update(courseFormVersions)
+    .set({ createdAt: seededAt })
+    .where(eq(courseFormVersions.shopId, shopId));
   const openWaterCourse = courseRows.find((course) => course.title === "Open Water Diver");
   const courseIdByTitle = new Map(courseRows.map((course) => [course.title, course.id]));
 

@@ -1,5 +1,6 @@
 import {
   type CourtesyTemplateCopy,
+  confirmNumberInWaba,
   confirmWabaAccess,
   exchangeSignupCode,
   finishEmbeddedSignup,
@@ -9,7 +10,7 @@ import {
 } from "@/lib/notifications/whatsapp-signup";
 import type { AppDb } from "./client";
 import {
-  claimWhatsAppWaba,
+  claimWhatsAppNumber,
   connectShopWhatsAppAccount,
   getShopWhatsAppRegistration,
   isWhatsAppSetupComplete,
@@ -63,16 +64,19 @@ function registerMayHaveBound(failure: { step: SignupStep; errorCode?: string })
  * **Finish an Embedded Signup, in the one order that is safe** (issues #1766
  * and #1769).
  *
- * 1. **Exchange the code** and **read the posted WABA with the token it
- *    returns**, with no lock and no transaction open. Neither changes anything
- *    at Meta. A junk code, or a token whose business cannot see the WABA id
- *    posted beside it, fails here as `signup_failed_exchange` — before anyone
- *    learns whether another DiveDay shop holds that WABA. That is what closes
- *    #1766's existence oracle: the answer now costs access, at Meta, to the
- *    account being asked about.
- * 2. **Claim** the shop and the WABA (`claimWhatsAppWaba`): a Connect already
- *    in flight for either is refused as `signup_busy` without waiting, and a
- *    WABA another shop holds is refused as `waba_already_connected`. Both
+ * 1. **Exchange the code**, **read the posted WABA with the token it
+ *    returns**, and **find the posted number among that WABA's numbers**, with
+ *    no lock and no transaction open. None of it changes anything at Meta. A
+ *    junk code, a token whose business cannot see the WABA, or a number that is
+ *    not that WABA's fails here as `signup_failed_exchange` — before anyone
+ *    learns whether another DiveDay shop holds that number. That is what
+ *    closes #1766's existence oracle: the answer now costs access, at Meta, to
+ *    the account being asked about.
+ * 2. **Claim** the shop, the WABA and the number (`claimWhatsAppNumber`): a
+ *    Connect already in flight for any of them is refused as `signup_busy`
+ *    without waiting, and a number another shop holds is refused as
+ *    `phone_number_already_connected`. A WABA another shop holds is not
+ *    refused: a chain shares one across its shops, a number each (H-83). Both
  *    refusals happen before any number is registered, so no PIN is minted for
  *    a row that would then be refused.
  * 3. **Under the claim**: register (only a number this shop has not already
@@ -100,10 +104,17 @@ export async function completeWhatsAppSignup(
   if (exchanged.status === "failed") return "signup_failed_exchange";
   const access = await confirmWabaAccess(input.wabaId, exchanged.accessToken, fetchImpl);
   if (access.status === "failed") return "signup_failed_exchange";
+  const number = await confirmNumberInWaba(
+    input.wabaId,
+    input.phoneNumberId,
+    exchanged.accessToken,
+    fetchImpl,
+  );
+  if (number.status === "failed") return "signup_failed_exchange";
 
-  const claim = await claimWhatsAppWaba(
+  const claim = await claimWhatsAppNumber(
     db,
-    { shopId: input.shopId, wabaId: input.wabaId },
+    { shopId: input.shopId, wabaId: input.wabaId, phoneNumberId: input.phoneNumberId },
     async (tx): Promise<WhatsAppSignupOutcome> => {
       // A finished row for this same phone number id means registration
       // already succeeded once, and Meta binds a number to its first PIN — so
@@ -164,6 +175,6 @@ export async function completeWhatsAppSignup(
     },
   );
   if (claim.status === "busy") return "signup_busy";
-  if (claim.status === "held_elsewhere") return "waba_already_connected";
+  if (claim.status === "held_elsewhere") return "phone_number_already_connected";
   return claim.value;
 }

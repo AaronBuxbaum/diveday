@@ -232,7 +232,10 @@
     "language": "Language",
     "signOut": "Sign out",
     "signOutConfirm": "Sign out? Confirm",
-    "signOutPending": "Signing out…"
+    "signOutPending": "Signing out…",
+    "tellUs": "Tell us",
+    "tellUsSubject": "DiveDay note from {shop}",
+    "tellUsBody": "Page: {path}\n\n"
   },
   "shopNavLinks": {
     "badgeBlocked": "{count, plural, one {# person blocked, aboard or on the next boats} other {# people blocked, aboard or on the next boats}}",
@@ -241,6 +244,7 @@
     "board": "Schedule",
     "addBooking": "Add a booking",
     "staffing": "Crew schedule",
+    "lostFound": "Lost and found",
     "diveSites": "Dive sites",
     "gear": "Gear",
     "registerTab": "Register",
@@ -254,6 +258,7 @@
     "orders": "Orders",
     "waivers": "Waivers",
     "reports": "Reports",
+    "safety": "Safety",
     "promoCodes": "Discounts",
     "settings": "Settings",
     "team": "Team",
@@ -324,7 +329,6 @@
       "listLoadError": "This device couldn’t open its saved manifests. Save a fresh copy while you have signal.",
       "singleLoadError": "This device couldn’t open its saved manifest. Save a fresh copy while you have signal.",
       "savedCount": "{count, plural, one {# saved manifest} other {# saved manifests}} on this device.",
-      "noneSavedYet": "Nothing saved on this device yet.",
       "listPendingRejected": "{count, plural, one {# change needs a look. Open that trip to sort it out.} other {# changes need a look. Open that trip to sort it out.}}",
       "listAllCaughtUp": "Everything’s sent across these trips.",
       "ready": "The manifest saved on this device is ready.",
@@ -333,10 +337,10 @@
     "list": {
       "eyebrow": "Offline manifests",
       "headingWithTrips": "Saved on this device",
-      "headingEmpty": "Nothing saved on this device yet",
+      "headingEmpty": "No manifest saved on this phone yet",
       "diverCount": "{count, plural, one {# diver} other {# divers}}",
       "expiredViewOnly": "Expired — view only",
-      "emptyHint": "While you still have signal, open any shop page. DiveDay keeps this device’s copy of the next two days current on its own.",
+      "emptyHint": "Open a departure’s manifest while online and it is kept here.",
       "freshnessAllCurrent": "All up to date.",
       "freshnessNeedRefresh": "{count, plural, one {# copy needs refreshing.} other {# copies need refreshing.}}",
       "savedAgo": "Saved {ago}",
@@ -534,6 +538,13 @@
   "sendHold": {
     "sendingNow": "Sending…",
     "undo": "Undo"
+  },
+  "rescheduleHold": {
+    "telling": "{count, plural, one {Telling # diver the new time…} other {Telling # divers the new time…}}",
+    "told": "{count, plural, one {Told # diver the new time.} other {Told # divers the new time.}}",
+    "someMissed": "{count, plural, one {# diver could not be reached by email or text.} other {# divers could not be reached by email or text.}}",
+    "notTold": "Not told. The divers still have the old time.",
+    "tellThem": "Tell them"
   },
   "formDraft": {
     "pickedUp": "Picked up from the desk, {time}.",

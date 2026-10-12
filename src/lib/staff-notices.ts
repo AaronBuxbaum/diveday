@@ -217,6 +217,17 @@ export function noticeRole(tone: NoticeTone): "status" | "alert" {
 }
 
 /**
+ * The `?count=` a notice names, as a whole number from 1 to 999, or nothing.
+ * The param is hand-editable like the notice itself, so a page whose sentence
+ * needs the count renders no banner rather than "Back. -3 pulled" when this
+ * answers null.
+ */
+export function noticeCountParam(raw: string | undefined): number | null {
+  if (raw === undefined || !/^[1-9]\d{0,2}$/.test(raw)) return null;
+  return Number(raw);
+}
+
+/**
  * Looks a `?notice=` value up in a page's own code→definition map.
  * `Object.hasOwn`, not a bare `notices[notice]`: `notice` is an
  * attacker-supplied query param, and `?notice=constructor` would otherwise

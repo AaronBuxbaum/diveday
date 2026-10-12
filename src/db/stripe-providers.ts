@@ -1,6 +1,7 @@
 import { type CheckoutProvider, checkoutProviderFor } from "@/lib/payments/checkout";
 import { type CustomerProvider, customerProviderFor } from "@/lib/payments/customers";
 import { type InvoicingProvider, invoicingProviderFor } from "@/lib/payments/invoicing";
+import { type PaymentSourceLookup, paymentSourceLookupFor } from "@/lib/payments/payment-sources";
 import { type PromotionProvider, promotionProviderFor } from "@/lib/payments/promotions";
 import {
   demoStripeAccount,
@@ -92,4 +93,21 @@ export function promotionProviderFromEnvironment(
   fetchImpl: Fetch = fetch,
 ): PromotionProvider {
   return promotionProviderFor(stripeKeySourceFromEnvironment({ env }), fetchImpl);
+}
+
+/**
+ * Which DiveDay object a PaymentIntent paid for, asked of Stripe with the key
+ * chosen for the event's own account and of the event's own mode (ADR
+ * 20261009-stripe-reversals-reach-diveday). The demo's account is asked with
+ * its test-mode key while the canonical demo holds it, so a refund made in the
+ * demo's test dashboard still reaches its checkout (issue #2296).
+ */
+export function paymentSourceLookupFromEnvironment(
+  env: PaymentEnvironment = process.env,
+  fetchImpl: Fetch = fetch,
+  event: { livemode?: boolean; db?: () => Promise<DbExecutor> } = {},
+): PaymentSourceLookup {
+  return paymentSourceLookupFor(stripeKeySourceFromEnvironment({ env, db: event.db }), fetchImpl, {
+    livemode: event.livemode,
+  });
 }

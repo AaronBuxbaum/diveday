@@ -43,6 +43,7 @@ import {
   type TripInvitationDelivery,
 } from "@/db/trip-invitations";
 import { getTripLens } from "@/db/trip-lenses";
+import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
@@ -80,6 +81,7 @@ import { emergencyContactSchema } from "@/lib/contact";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { parseForm } from "@/lib/form-parse";
 import { log } from "@/lib/log";
+import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -155,6 +157,9 @@ const detailsSchema = z.object({
   // else moves: an agency training ratio still refuses a seat, and readiness,
   // admission and capacity never see this (issue #973).
   selfGuided: z.preprocess((value) => value === "on", z.boolean()),
+  // The dives went past no-decompression limits: the recap then says nothing
+  // about flying (H-84, issue #1555). Nothing else reads it.
+  exceedsNoDecoLimits: z.preprocess((value) => value === "on", z.boolean()),
   // How many consecutive days this departure meets on (src/lib/trip-days.ts).
   // Absent from an older cached form is one day, the shape every trip had
   // before multi-day existed.
@@ -400,6 +405,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     lensId,
     isPrivate,
     selfGuided,
+    exceedsNoDecoLimits,
   } = parsed.data;
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
@@ -524,6 +530,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     lensId: lensId ?? null,
     isPrivate,
     selfGuided,
+    exceedsNoDecoLimits,
     priceCents: details.patch.priceCents,
     depositCents: details.patch.depositCents,
     cancellationWindowHours: details.patch.cancellationWindowHours,
@@ -553,6 +560,15 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     }
     redirect(noticeUrl(back, "invalid", { form: "details" }));
   }
+  // The board's move writes this line too: the log names whoever moved the
+  // departure, whichever screen they used (issue #2313).
+  if (outcome.startMoved) {
+    await recordShopActivity(dbi, {
+      shopId: s.user.shopId,
+      actorPersonId: s.user.personId,
+      write: { code: "departure_moved", tripId },
+    });
+  }
   if (
     nextArrivalPhotoUrl !== undefined &&
     previousArrivalPhotoUrl &&
@@ -564,7 +580,31 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
       url: previousArrivalPhotoUrl,
     });
   }
-  revalidateAndRedirect(back, noticeUrl(back, "saved"));
+  // **A retime tells the divers** (ux review 2026-10-11, item 1), the same
+  // held send the board's move takes, and says where too when the meeting
+  // point moved in the same save.
+  const notice =
+    tripNow && tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
+      ? await holdRescheduleNotice(dbi, {
+          shopId: s.user.shopId,
+          tripId,
+          movedFrom: tripNow.startsAt,
+          meetingPointMoved: meetingPointMoved(
+            meetingPointOfRows(shopNow, tripNow),
+            meetingPointOfRows(shopNow, {
+              meetingPointLabel: meetingPointLabel || null,
+              meetingPointAddress: meetingPointAddress || null,
+              arrivalLandmark: null,
+              arrivalParkingNote: null,
+            }),
+          ),
+          actorPersonId: s.user.personId,
+        })
+      : null;
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, "saved", notice ? { held: notice.id, tell: notice.told } : undefined),
+  );
 }
 
 export async function saveConditionsAction(shopSlug: string, tripId: string, formData: FormData) {
@@ -874,7 +914,13 @@ export async function cancelOffCadenceSeriesAction(
 ) {
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  const cancelled = await cancelOffCadenceSeriesTrips(await getDb(), s.user.shopId, seriesId);
+  const cancelled = await cancelOffCadenceSeriesTrips(
+    await getDb(),
+    s.user.shopId,
+    seriesId,
+    nowDate(),
+    { actorPersonId: s.user.personId },
+  );
   const notice = cancelled > 0 ? "series-off-cadence-cancelled" : "series-error";
   revalidateAndRedirect(back, noticeUrl(back, notice));
 }

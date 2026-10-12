@@ -1,3 +1,5 @@
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+
 /**
  * The backup cadence's unit of idempotency: one ISO-8601 week, in UTC.
  *
@@ -24,7 +26,7 @@ export function backupPeriodKey(now: Date): string {
 
 /** "2026-08-12" — the UTC calendar date, which is what a platform run is filed under. */
 export function backupRunDate(now: Date): string {
-  return now.toISOString().slice(0, 10);
+  return calendarDateInTimezone(now, "UTC");
 }
 
 /**

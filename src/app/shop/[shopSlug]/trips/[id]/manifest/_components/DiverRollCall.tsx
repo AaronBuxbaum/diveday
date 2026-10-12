@@ -5,6 +5,7 @@ import type {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { type PrivateNoteAction, PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { RollCallMark } from "@/components/RollCallMark";
+import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { rollCallRowTone } from "@/components/row-tones";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
@@ -15,7 +16,12 @@ import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
-import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
+import {
+  medicalWarningChips,
+  ridingOnlyMedicalSentences,
+  rollCallCheckpointText,
+  rollCallLabelText,
+} from "@/i18n/manifest-labels";
 import { staffParticipantTypeLabel, staffSeatTypeNote } from "@/i18n/participant-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
@@ -27,6 +33,7 @@ import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
+  blockedAtRail,
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
   rollCallLabel,
@@ -89,7 +96,7 @@ function DiverFacts({
   locale,
   timezone,
   columns,
-  referralHref,
+  waiverHref,
   t,
 }: {
   diver: TripManifest["divers"][number];
@@ -109,17 +116,23 @@ function DiverFacts({
    */
   columns: 1 | 2;
   /**
-   * Where an unanswered referral's warning links, on screen only (issue
-   * #2195): paper has nothing to tap. Absent, the warning is drawn unlinked.
+   * Where a medical-history warning links to the record it is about, on
+   * screen only: an unanswered referral (issue #2195) and an earlier refusal
+   * (issue #2348). Paper has nothing to tap. Absent, both are drawn unlinked.
    */
-  referralHref?: (referral: { personId: string; recordId: string }) => string;
+  waiverHref?: (record: { personId: string; recordId: string }) => string;
   t: StaffTranslator;
 }) {
   // The pickup belongs to the booking, not to the matched person, so a held
   // seat keeps it.
   // The two warning days, in the shop's zone and with the year: the refusal by
   // the physician's evaluation (dive-domain review of #2163).
-  const warningDays = medicalWarningDays(diver.medicalWaiver, timezone);
+  const warningDays = medicalWarningDays(diver.medicalWaiver, timezone, diver.riderMedicalHold);
+  // A rider boarding riding only under a medical hold (H-109): said in full on
+  // screen and paper alike, with no medical mark to hang it on.
+  const ridingOnly = ridingOnlyMedicalSentences(t, warningDays, (day) =>
+    formatCalendarDate(day, locale),
+  );
   const pickup = diver.hotelPickupLocation ? (
     <p>
       <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
@@ -193,6 +206,15 @@ function DiverFacts({
         </p>
       ) : null}
       {pickup}
+      {ridingOnly.length > 0 ? (
+        <p className="font-medium text-warning-strong">
+          {ridingOnly.map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
+        </p>
+      ) : null}
       {diver.medicalWaiver ? (
         <p>
           <span className="font-bold">
@@ -227,6 +249,19 @@ function DiverFacts({
               {t("manifest.medicalEarlierRefusal", {
                 date: formatCalendarDate(warningDays.refusedOn ?? "", locale),
               })}
+              {/* The refused record, one tap away, as the weaker referral
+                  warning below already is (issue #2348). */}
+              {waiverHref ? (
+                <>
+                  {" "}
+                  <Link
+                    href={waiverHref(diver.medicalWaiver.overriddenRefusal)}
+                    className="font-semibold text-primary hover:underline"
+                  >
+                    {t("manifest.medicalRefusalLink")}
+                  </Link>
+                </>
+              ) : null}
             </span>
           ) : null}
           {/* The signature standing here replaced a referral instead of
@@ -239,11 +274,11 @@ function DiverFacts({
               })}
               {/* The override stands, and the warning links back to the
                   referral (Aaron, 2026-10-09, issue #2195, amending H-98). */}
-              {referralHref && diver.medicalWaiver.overriddenReferral ? (
+              {waiverHref && diver.medicalWaiver.overriddenReferral ? (
                 <>
                   {" "}
                   <Link
-                    href={referralHref(diver.medicalWaiver.overriddenReferral)}
+                    href={waiverHref(diver.medicalWaiver.overriddenReferral)}
                     className="font-semibold text-primary hover:underline"
                   >
                     {t("manifest.medicalReferralLink")}
@@ -504,14 +539,14 @@ export function DiverRollCall({
           // red on the page that means somebody is in the water (DD9), which is
           // also decision 4's rule: an alarm is earned by a recorded fact.
           //
-          // A diver tapped aboard after a dive with no earlier boarding is
-          // boarding *now* — they joined at the second site — so their row
-          // reads as the dock's would (domain review of #2123). The tap stays.
-          // Not once the crew has recorded them not back aboard: that row is
-          // the alarm, and no paperwork word may sit on it (DD9).
+          // After a dive, a first boarding reads as the dock's (`blockedAtRail`).
           const recordedTone = rollCallRecordedTone(rowState);
-          const blockedAtDock =
-            !ready && (isDeparture || (diver.boardedEarlier === false && !rowState.notBackAboard));
+          const blockedAtDock = blockedAtRail({
+            ready,
+            isDeparture,
+            boardedEarlier: diver.boardedEarlier,
+            notBackAboard: rowState.notBackAboard,
+          });
           // Every row is a jump target — the count panel's chips link to any
           // uncalled person — so every row carries the scroll margin that keeps
           // its name clear of the sticky panel. Shared with the crew rows.
@@ -553,24 +588,22 @@ export function DiverRollCall({
           // at rest is a name and a mark; the expected state is quiet. This is
           // the priority when a diver is several things at once, loudest first
           // — a team that did not come back after a dive outranks a desk
-          // blocker outranks a split buddy team at the dock outranks a physician's
-          // earlier "no" outranks the crew's duty of care to a minor outranks
+          // blocker outranks a split buddy team at the dock outranks a medical
+          // warning outranks the crew's duty of care to a minor outranks
           // an advisory outranks a birthday. Everything not chosen here still
           // reaches the reader: it is in the panel one tap away, and
           // unconditionally on paper.
           //
-          // **The earlier refusal** (H-98; dive-domain review of #2096): a
-          // clean new release cleared a diver a physician had refused. It
-          // boards them, so it is never a blocker, but the crew at the rail
-          // decides with it in view, which a sentence one tap away is not.
-          // Which of the six the capsule ended up being, so the printed block
-          // below can say the *other* five without repeating this one. Paper
-          // carries every fact the screen tucks away; it does not carry the
-          // same fact twice.
-          const earlierRefusal = Boolean(diver.medicalWaiver?.overriddenRefusal);
-          // A release standing over a referral nobody answered (issue #1282):
-          // the next capsule down from the refusal (dive-domain review of #2163).
-          const referralUnresolved = Boolean(diver.medicalWaiver?.overriddenReferralAt);
+          // **The medical warnings** (`medicalWarningChips`, strongest first):
+          // a rider riding only under a "no" or an open referral (H-109), an
+          // earlier refusal (H-98), a referral replaced (#1282). Each boards,
+          // so none is a blocker, but the crew at the rail decides with it in
+          // view. The capsule takes the first; paper prints the rest, and
+          // every other fact the capsule did not take, never one twice.
+          const medicalChips = medicalWarningChips(
+            t,
+            medicalWarningDays(diver.medicalWaiver, timezone, diver.riderMedicalHold),
+          );
           // A diver recorded not back aboard carries the alarm and nothing
           // else: no birthday, minor or advisory word beside someone in the
           // water (DD9). A split buddy team still shows — it is part of the
@@ -582,51 +615,49 @@ export function DiverRollCall({
           // a boat it is not cleared for. The row read "Someone not aboard"
           // under a head count saying "1 blocked person aboard".
           const splitAfterDive = diver.buddyAlert === "separated_after_dive";
-          const capsuleKind = splitAfterDive
-            ? "buddy"
-            : alarmed
-              ? null
-              : blockedAtDock
-                ? "blocked"
-                : diver.buddyAlert
-                  ? "buddy"
-                  : earlierRefusal
-                    ? "refusal"
-                    : referralUnresolved
-                      ? "referral"
-                      : diver.minor && diver.age !== null && diver.age !== undefined
+          // A buddy alert earns the capsule only with a team to name, so the
+          // kind below is the capsule the row actually draws.
+          const buddyAlerted = Boolean(diver.buddyAlert && diver.buddyTeam);
+          const minorAge = diver.minor && diver.age !== null && diver.age !== undefined;
+          // **One chain** (issue #2307): the kind is decided once, and the
+          // capsule is drawn from the kind, so the screen and the printed block
+          // below can never disagree about which fact the row already carries.
+          const capsuleKind =
+            splitAfterDive && buddyAlerted
+              ? "buddy"
+              : alarmed
+                ? null
+                : blockedAtDock
+                  ? "blocked"
+                  : buddyAlerted
+                    ? "buddy"
+                    : medicalChips[0]
+                      ? "medical"
+                      : minorAge
                         ? "minor"
                         : diver.depthAdvisory?.status === "exceeds"
                           ? "depth"
                           : diver.birthday
                             ? "birthday"
                             : null;
-          const buddyCapsule =
-            diver.buddyAlert && diver.buddyTeam ? (
+          const capsule =
+            capsuleKind === "buddy" && diver.buddyAlert ? (
               <Badge tone={splitAfterDive ? "danger" : "warning"}>
                 {buddyAlertText(t, diver.buddyAlert)}
               </Badge>
-            ) : null;
-          const capsule =
-            splitAfterDive && buddyCapsule ? (
-              buddyCapsule
-            ) : alarmed ? null : blockedAtDock ? (
+            ) : capsuleKind === "blocked" ? (
               <Badge tone={readinessStatusTone(diverStatus)}>
                 {readinessStatusText(t, diverStatus)}
               </Badge>
-            ) : buddyCapsule ? (
-              buddyCapsule
-            ) : earlierRefusal ? (
-              <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
-            ) : referralUnresolved ? (
-              <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
-            ) : diver.minor && diver.age !== null && diver.age !== undefined ? (
+            ) : capsuleKind === "medical" ? (
+              <Badge tone="warning">{medicalChips[0]}</Badge>
+            ) : capsuleKind === "minor" ? (
               <Badge tone="warning" tabularNums>
-                {t("manifest.minorAge", { age: diver.age })}
+                {t("manifest.minorAge", { age: diver.age ?? 0 })}
               </Badge>
-            ) : diver.depthAdvisory?.status === "exceeds" ? (
+            ) : capsuleKind === "depth" ? (
               <Badge tone="warning">{t("manifest.depthChip")}</Badge>
-            ) : diver.birthday ? (
+            ) : capsuleKind === "birthday" && diver.birthday ? (
               <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
             ) : null;
           // **Snorkeler or rider, in words** (ADR 20261007-participant-types).
@@ -873,14 +904,8 @@ export function DiverRollCall({
                       locale={locale}
                       timezone={timezone}
                       columns={1}
-                      referralHref={(referral) =>
-                        shopPath(
-                          shopSlug,
-                          "divers",
-                          referral.personId,
-                          "waivers",
-                          referral.recordId,
-                        )
+                      waiverHref={(record) =>
+                        shopPath(shopSlug, "divers", record.personId, "waivers", record.recordId)
                       }
                       t={t}
                     />
@@ -1013,12 +1038,11 @@ export function DiverRollCall({
                           : t("manifest.age", { age: diver.age })}
                       </Badge>
                     ) : null}
-                    {earlierRefusal && capsuleKind !== "refusal" ? (
-                      <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
-                    ) : null}
-                    {referralUnresolved && capsuleKind !== "referral" ? (
-                      <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
-                    ) : null}
+                    {medicalChips.slice(capsuleKind === "medical" ? 1 : 0).map((chip) => (
+                      <Badge key={chip} tone="warning">
+                        {chip}
+                      </Badge>
+                    ))}
                     {diver.birthday && capsuleKind !== "birthday" ? (
                       <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
                     ) : null}
@@ -1071,6 +1095,8 @@ export function DiverRollCall({
           );
         })}
       </ul>
+      {/* The words for a press the touch guard refused, crew rows included (issue #2328). */}
+      <RollCallTouchCue message={t("manifest.touchRefused")} />
     </section>
   );
 }

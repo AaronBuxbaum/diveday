@@ -158,6 +158,41 @@ describe("sendDueReminders", () => {
     expect(mine).toHaveLength(1);
   });
 
+  it("texts where to meet and the diver's own trip-prep link (ux review 2026-10-11, items 4 and 6)", async () => {
+    const { db, reef, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
+    await db
+      .update(trips)
+      .set({
+        meetingPointLabel: "North Pier",
+        meetingPointAddress: "1 Dock St",
+        arrivalLandmark: "Blue awning",
+      })
+      .where(eq(trips.id, reef.id));
+    const sms = fakeSms();
+    const email = fakeEmail();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: email.provider,
+      smsProvider: sms.provider,
+      appOrigin: ORIGIN,
+    });
+    const [text] = sms.sent.filter((m) => m.to === PHONE);
+    expect(text.body).toContain("Meet at North Pier, 1 Dock St.");
+    // The short form: the landmark is the email's, not the text's.
+    expect(text.body).not.toContain("Blue awning");
+    expect(text.body).toMatch(/Your trip prep: https:\/\/diveday\.example\/ready\//);
+    const [mail] = emailsFor(email, bookingId);
+    if (mail.kind !== "trip_reminder_7d") throw new Error(`unexpected ${mail.kind}`);
+    expect(mail.meetingPoint).toMatchObject({
+      label: "North Pier",
+      address: "1 Dock St",
+      landmark: "Blue awning",
+    });
+    // One capability, the same link on both channels.
+    expect(text.body).toContain(mail.readinessUrl);
+  });
+
   it("sends the courtesy text over the shop's WhatsApp when it has connected one", async () => {
     const { db, shop, personId, inWeekBucket } = await reminderContext();
     await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));

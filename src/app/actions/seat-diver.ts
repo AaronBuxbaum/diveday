@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { findSimilarDivers } from "@/db/divers";
 import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
+import { blankAsAbsent, formValue, parseForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
@@ -35,15 +36,15 @@ import {
  */
 
 const existingDiverSchema = z.object({
-  tripId: z.uuid(),
-  personId: z.uuid(),
+  tripId: single(z.uuid()),
+  personId: single(z.uuid()),
   /**
    * Present only on the candidate forms of the "is this the same diver?"
    * prompt (issue #1556). A literal rather than a boolean because a form field
    * is a string and absence is the ordinary case: every other door submits
    * nothing here, and nothing must read as "this was a real pick".
    */
-  fromNameMatch: z.literal("true").optional(),
+  fromNameMatch: single(z.literal("true").optional()),
   /**
    * What the staffer typed to raise that prompt. The prompt also fires on an
    * exact spelling, so the tap by itself says nothing about whether the
@@ -51,10 +52,17 @@ const existingDiverSchema = z.object({
    * diver's name on file. Unbounded on purpose: it is compared and discarded,
    * never stored.
    */
-  nameMatchQuery: z.string().optional(),
+  nameMatchQuery: single(z.string().optional()),
   /** What the seat is for (ADR 20261007-participant-types); absent is a diver's. */
-  participantType: z.enum(PARTICIPANT_TYPES).optional(),
+  participantType: blankAsAbsent(z.enum(PARTICIPANT_TYPES)),
 });
+
+/**
+ * The fields a refused seating lands back by, read raw: the staffer must get
+ * back to the page they submitted from even when what they submitted was
+ * unusable.
+ */
+const landingFields = z.object({ tripId: formValue(), personId: formValue(), force: formValue() });
 
 /**
  * Email optional here and required by refinement per surface, rather than two
@@ -62,13 +70,19 @@ const existingDiverSchema = z.object({
  * required surfaces need that to read as "missing", not as an invalid address.
  */
 const newDiverSchema = z.object({
-  tripId: z.uuid(),
+  tripId: single(z.uuid()),
   // Shared diver person-field bounds (src/lib/person-fields.ts).
-  fullName: diverNameSchema,
-  email: blankableDiverEmailSchema.optional(),
-  phone: diverPhoneSchema.optional(),
-  participantType: z.enum(PARTICIPANT_TYPES).optional(),
+  fullName: single(diverNameSchema),
+  email: blankAsAbsent(blankableDiverEmailSchema),
+  phone: blankAsAbsent(diverPhoneSchema),
+  participantType: blankAsAbsent(z.enum(PARTICIPANT_TYPES)),
 });
+
+/** {@link landingFields}, which cannot refuse: every field is optional. */
+function rawLanding(formData: FormData): z.infer<typeof landingFields> {
+  const parsed = parseForm(landingFields, formData);
+  return parsed.ok ? parsed.data : { tripId: null, personId: null, force: null };
+}
 
 function surfaceFor(surfaceId: SeatSurfaceId): SeatSurface {
   // The id arrives as an encrypted bound argument, so it cannot be forged from
@@ -189,21 +203,14 @@ export async function seatExistingDiverAction(
 ) {
   const surface = surfaceFor(surfaceId);
   const session = await requireStaffSession();
-  const parsed = existingDiverSchema.safeParse({
-    tripId: formData.get("tripId"),
-    personId: formData.get("personId"),
-    fromNameMatch: formData.get("fromNameMatch") ?? undefined,
-    nameMatchQuery: formData.get("nameMatchQuery") ?? undefined,
-    participantType: formData.get("participantType") || undefined,
-  });
-  // A landing built from the raw fields: the staffer must get back to the page
-  // they submitted from even when what they submitted was unusable.
+  const parsed = parseForm(existingDiverSchema, formData);
+  const raw = rawLanding(formData);
   const landing: SeatLanding = {
     shopSlug,
-    tripId: parsed.success ? parsed.data.tripId : String(formData.get("tripId") ?? ""),
-    personId: parsed.success ? parsed.data.personId : String(formData.get("personId") ?? ""),
+    tripId: parsed.ok ? parsed.data.tripId : String(raw.tripId ?? ""),
+    personId: parsed.ok ? parsed.data.personId : String(raw.personId ?? ""),
   };
-  if (!parsed.success) refuse(surface, landing, surface.invalidNotice);
+  if (!parsed.ok) refuse(surface, landing, surface.invalidNotice);
   await seat(
     surface,
     landing,
@@ -236,24 +243,19 @@ export async function seatNewDiverAction(
 ) {
   const surface = surfaceFor(surfaceId);
   const session = await requireStaffSession();
-  const parsed = newDiverSchema.safeParse({
-    tripId: formData.get("tripId"),
-    fullName: formData.get("fullName"),
-    email: formData.get("email") || undefined,
-    phone: formData.get("phone") || undefined,
-    participantType: formData.get("participantType") || undefined,
-  });
-  const email = parsed.success ? parsed.data.email || undefined : undefined;
+  const parsed = parseForm(newDiverSchema, formData);
+  const raw = rawLanding(formData);
+  const email = parsed.ok ? parsed.data.email || undefined : undefined;
   const landing: SeatLanding = {
     shopSlug,
-    tripId: parsed.success ? parsed.data.tripId : String(formData.get("tripId") ?? ""),
+    tripId: parsed.ok ? parsed.data.tripId : String(raw.tripId ?? ""),
     personId: "",
   };
-  if (!parsed.success || (surface.email === "required" && !email)) {
+  if (!parsed.ok || (surface.email === "required" && !email)) {
     refuse(surface, landing, surface.invalidNotice);
   }
 
-  const force = formData.get("force") === "true";
+  const force = raw.force === "true";
   if (!force) {
     const db = await getDb();
     const matches = await findSimilarDivers(db, session.user.shopId, parsed.data.fullName);

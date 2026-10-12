@@ -559,6 +559,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_recap_photos",
   "trip_reviews",
   "review_moderation_events",
+  // The shop's public reply under a review (batch 4, K2): lives as long as the
+  // review it answers, and goes the way the review goes.
+  "review_replies",
   "recap_pulses",
   // Waivers. H-02's question about these is whether signed evidence may be
   // erased at all — the opposite end of the same question from a window, and
@@ -589,6 +592,10 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // dispute, kept current by Stripe, the shop's books like the order it is
   // about (ADR 20261009-stripe-reversals-reach-diveday). Not a trail.
   "payment_disputes",
+  // A refund Stripe reported failed after accepting it (issue #2291): one row
+  // per Stripe refund, the books' record that money said to have gone back
+  // did not, owed until it is refunded again. The shop's books, not a trail.
+  "stripe_refund_failures",
   "dive_package_entitlements",
   "shop_promo_redemptions",
   // Credentials that live and die with the thing they open: revoked, spent, or
@@ -635,6 +642,11 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // `integration_events` with ON DELETE CASCADE, so its rows leave when that
   // 400-day window takes the event they belong to.
   "integration_deliveries",
+  // The same shape: a report's people and addenda are its children with ON
+  // DELETE CASCADE, so they leave when the 7-year window takes the report
+  // (ADR 20261012-incident-reports).
+  "incident_report_people",
+  "incident_report_addenda",
 ];
 
 /** What the guard's failure says, so a session reads the rule and not the list. */

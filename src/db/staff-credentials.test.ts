@@ -139,6 +139,19 @@ describe("createStaffCredential", () => {
     expect(await listStaffCredentials(db, shop.id)).toHaveLength(1);
   });
 
+  // Issue #2295: the refusal runs in a savepoint, so a caller's transaction
+  // (here the file's shared one) is still usable after it.
+  it("leaves a caller's transaction usable after refusing a duplicate card", async () => {
+    const { db, shop, staff } = await context();
+    expect(await createStaffCredential(db, card(staff, shop.id, "SSI-777"))).not.toBeNull();
+    expect(await createStaffCredential(db, card(staff, shop.id, "ssi-777"))).toBeNull();
+    expect(
+      (await listStaffCredentials(db, shop.id)).filter(
+        (row) => row.credential.identifier === "SSI-777",
+      ),
+    ).toHaveLength(1);
+  });
+
   it("lets the same identifier stand under a different kind, and again once the first is deleted", async () => {
     const { db, shop, staff } = await context();
     const first = await createStaffCredential(db, card(staff, shop.id));

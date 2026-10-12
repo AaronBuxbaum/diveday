@@ -1,3 +1,4 @@
+import { calendarDateInTimezone } from "../calendar-date";
 import { nowMs } from "../clock";
 import { batchRecords, type LogRecord, MAX_BATCH_RECORDS } from "./cloudwatch-batch";
 import { type CloudWatchLogsConfig, readCloudWatchLogsConfig } from "./cloudwatch-config";
@@ -140,7 +141,7 @@ function config(): CloudWatchLogsConfig | null {
  * across midnight keeps writing here and its lines still land on the right day.
  */
 function streamNameFor(environment: string): string {
-  const day = new Date(nowMs()).toISOString().slice(0, 10);
+  const day = calendarDateInTimezone(new Date(nowMs()), "UTC");
   const instance = globalThis.crypto?.randomUUID?.().slice(0, 8) ?? `${nowMs().toString(36)}`;
   return `${day}/${environment}/${instance}`;
 }

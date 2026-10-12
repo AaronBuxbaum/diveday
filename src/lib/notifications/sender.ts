@@ -1,5 +1,8 @@
 import { z } from "zod";
+import { parseBrandColor } from "@/lib/brand";
 import { shopAddressLines } from "@/lib/shop-address";
+import { isManagedStorageUrl } from "@/lib/storage/blob-host";
+import { publicAppUrl } from "./app-url";
 import { shopInboundReplyAddress } from "./inbound-address";
 import { type NotificationSender, notificationSenderSchema } from "./kinds";
 import type { NotificationEnvironment } from "./provider";
@@ -26,7 +29,36 @@ export type ShopSenderSource = {
   addressCountry: string | null;
   /** `shops.is_demo`: its seeded people's mail goes to the SES simulator. */
   isDemo?: boolean;
+  /** `shops.logo_url`: a first-party storage URL, or a path on DiveDay's own origin. */
+  logoUrl?: string | null;
+  /** `shops.brand_color`, `#rrggbb`. */
+  brandColor?: string | null;
 };
+
+/**
+ * The shop's logo as a URL a mail client can fetch, or null.
+ *
+ * Only two shapes pass, and both are DiveDay's own: a URL our managed storage
+ * produced (`isManagedStorageUrl`, the same predicate that guards every other
+ * media decision), or a root-relative path resolved against the public app
+ * origin (the demo shop's logo is one). Anything else — a third-party host, a
+ * `//` scheme-relative URL, a path with no configured origin to put it on — is
+ * dropped, because an `<img>` in an email is a request the diver's own client
+ * makes to that host, and nobody but DiveDay gets to be that host.
+ */
+export function emailLogoUrl(
+  logoUrl: string | null | undefined,
+  env: NotificationEnvironment = process.env,
+): string | null {
+  const value = logoUrl?.trim();
+  if (!value) return null;
+  if (value.startsWith("/") && !value.startsWith("//")) {
+    const origin = publicAppUrl(env);
+    if (!origin?.startsWith("https://")) return null;
+    return new URL(value, `${origin}/`).toString();
+  }
+  return isManagedStorageUrl(value, env) ? value : null;
+}
 
 const replyToSchema = z.email().max(200);
 
@@ -100,10 +132,16 @@ export function shopSenderOf(
       country: shop.addressCountry,
     }).join(", ") || undefined,
   );
+  const logoUrl = notificationSenderSchema.shape.logoUrl.safeParse(
+    emailLogoUrl(shop.logoUrl, env) ?? undefined,
+  );
+  const brandColor = parseBrandColor(shop.brandColor).value;
   const sender: NotificationSender = {
     ...(replyTo && { replyTo }),
     ...(postalAddress.success && postalAddress.data && { postalAddress: postalAddress.data }),
     ...(shop.isDemo === true && { demoShop: true as const }),
+    ...(logoUrl.success && logoUrl.data && { logoUrl: logoUrl.data }),
+    ...(brandColor && { brandColor }),
   };
   return Object.keys(sender).length > 0 ? sender : undefined;
 }

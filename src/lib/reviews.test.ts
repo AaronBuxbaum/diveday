@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_REVIEW_AGGREGATE,
   MAX_REVIEW_COMMENT_LENGTH,
+  MAX_REVIEW_REPLY_LENGTH,
   normalizeReviewComment,
+  normalizeReviewReply,
   parseReviewRating,
   publishesImmediately,
   ratingIsRepresentative,
@@ -215,5 +217,41 @@ describe("reviewsToRepublishForRating", () => {
         ).toBe(false);
       }
     }
+  });
+});
+
+describe("normalizeReviewReply", () => {
+  it("collapses whitespace into one plain paragraph", () => {
+    expect(normalizeReviewReply("  Thanks,\n\nAna!  See you   soon. ")).toEqual({
+      ok: true,
+      body: "Thanks, Ana! See you soon.",
+    });
+  });
+
+  it("drops control characters", () => {
+    expect(normalizeReviewReply("Thanks\u0000\u0007 Ana")).toEqual({
+      ok: true,
+      body: "Thanks Ana",
+    });
+  });
+
+  it("refuses an empty reply", () => {
+    expect(normalizeReviewReply("   ")).toEqual({ ok: false, reason: "empty" });
+    expect(normalizeReviewReply(undefined)).toEqual({ ok: false, reason: "empty" });
+  });
+
+  it("refuses rather than truncates a reply over the limit", () => {
+    expect(normalizeReviewReply("a".repeat(MAX_REVIEW_REPLY_LENGTH + 1))).toEqual({
+      ok: false,
+      reason: "too_long",
+    });
+    expect(normalizeReviewReply("a".repeat(MAX_REVIEW_REPLY_LENGTH)).ok).toBe(true);
+  });
+
+  it("keeps markup as literal text for the renderer to escape", () => {
+    expect(normalizeReviewReply("<script>alert(1)</script>")).toEqual({
+      ok: true,
+      body: "<script>alert(1)</script>",
+    });
   });
 });

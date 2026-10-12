@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -10,6 +11,7 @@ import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { isBoatModeOn, setBoatMode } from "@/lib/boat-mode";
 import { motionMs } from "@/lib/motion";
+import { tellUsMailto, tellUsPath } from "@/lib/tell-us";
 
 export type ShopIdentityMenuCopy = {
   boatMode: string;
@@ -17,6 +19,20 @@ export type ShopIdentityMenuCopy = {
   signOut: string;
   signOutConfirm: string;
   signOutPending: string;
+  /** "Tell us": the row that opens a note to DiveDay support. */
+  tellUs: string;
+  /** The note's subject, the shop's slug already in it. */
+  tellUsSubject: string;
+  /** The body's opening line, with `{path}` where the page's path goes. */
+  tellUsBody: string;
+};
+
+/**
+ * Where "Tell us" writes to, and the shop it is about. Optional, so a test that
+ * is about the language rows need not invent a mailbox.
+ */
+export type TellUsTarget = {
+  to: string;
 };
 
 /**
@@ -60,6 +76,7 @@ export function ShopIdentityMenu({
   locale,
   languages,
   setLocaleAction,
+  tellUs,
   copy,
 }: {
   shopName: string;
@@ -70,6 +87,7 @@ export function ShopIdentityMenu({
   /** Every language DiveDay carries, each named in itself. */
   languages: readonly LanguageChoice[];
   setLocaleAction: (locale: string) => Promise<void>;
+  tellUs?: TellUsTarget;
   copy: ShopIdentityMenuCopy;
 }) {
   const [open, setOpen] = useState(false);
@@ -180,6 +198,7 @@ export function ShopIdentityMenu({
           </div>
           <div className="mt-1 border-t border-border pt-1">
             <BoatModeRow label={copy.boatMode} />
+            {tellUs ? <TellUsRow to={tellUs.to} copy={copy} /> : null}
           </div>
           {/* Signing out is the destructive end of the menu, so it sits below
               the rule rather than in the same stack as the language rows. */}
@@ -204,6 +223,26 @@ export function ShopIdentityMenu({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * **Tell us** (batch 4, M2): a note to DiveDay support, addressed and opened
+ * on the page the staffer was reading. Read at click time rather than render
+ * time, so the path is the one on screen even after a client navigation.
+ * Only the path goes in (`tellUsPath` drops the query string).
+ */
+function TellUsRow({ to, copy }: { to: string; copy: ShopIdentityMenuCopy }) {
+  const pathname = usePathname() ?? "/";
+  const href = tellUsMailto({
+    to,
+    subject: copy.tellUsSubject,
+    body: copy.tellUsBody.replace("{path}", tellUsPath(pathname)),
+  });
+  return (
+    <a href={href} data-tell-us="" className={menuRowClass("quiet")}>
+      {copy.tellUs}
+    </a>
   );
 }
 

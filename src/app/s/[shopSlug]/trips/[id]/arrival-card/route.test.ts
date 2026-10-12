@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { cancelBooking, setBookingPickupDetails } from "@/db/bookings";
-import { bookingCapabilities, shops } from "@/db/schema";
+import { bookingCapabilities, shops, trips } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import { formatTime } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications/app-url";
@@ -101,6 +101,18 @@ describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
     expect(body).not.toContain(encodeURIComponent(token));
     expect(body).not.toContain(bookingId);
     expect(body).not.toContain("<img");
+  });
+
+  it("refuses a rehearsal's seat, even with a live token", async () => {
+    const { db, shop, trip, token } = await bookedDiver();
+    await db
+      .update(trips)
+      .set({ isRehearsal: true, isPrivate: true, priceCents: null })
+      .where(eq(trips.id, trip.id));
+
+    const response = await card(shop.slug, trip.id, token);
+
+    expect(response.status).toBe(404);
   });
 
   it("refuses a request with no booking token", async () => {

@@ -32,6 +32,7 @@ import {
   people,
   reviewModerationEvents,
   reviewModerationReason,
+  reviewReplies,
   shops,
   tripReviews,
   trips,
@@ -227,7 +228,24 @@ export type PublicReview = {
   tripTitle: string;
   divedAt: Date;
   publishedAt: Date;
+  /**
+   * The shop's public answer under it (batch 4, K2), signed with the shop's
+   * name — or null. Plain text; the renderer prints it as a text child.
+   */
+  reply: { body: string; shopName: string } | null;
 };
+
+/**
+ * The live reply under a review, as a join condition: one row at most, by the
+ * partial unique index `review_replies_review_live_unique`.
+ */
+function liveReplyJoin() {
+  return and(
+    eq(reviewReplies.reviewId, tripReviews.id),
+    eq(reviewReplies.shopId, tripReviews.shopId),
+    isNull(reviewReplies.deletedAt),
+  );
+}
 
 /** How many reviews the schedule shows at once — a curated 2x2 on wide screens. */
 export const PUBLIC_REVIEW_PAGE_SIZE = PAGE_SIZE.preview;
@@ -289,6 +307,8 @@ function publicReviewFromRow(row: {
   tripTitle: string;
   divedAt: Date;
   publishedAt: Date | null;
+  replyBody: string | null;
+  shopName: string;
 }): PublicReview | null {
   if (!row.publishedAt) return null;
   return {
@@ -300,6 +320,7 @@ function publicReviewFromRow(row: {
     tripTitle: row.tripTitle,
     divedAt: row.divedAt,
     publishedAt: row.publishedAt,
+    reply: row.replyBody ? { body: row.replyBody, shopName: row.shopName } : null,
   };
 }
 
@@ -321,11 +342,14 @@ async function fetchPublicReviewRows(
       tripTitle: trips.title,
       divedAt: trips.startsAt,
       publishedAt: tripReviews.publishedAt,
+      replyBody: reviewReplies.body,
+      shopName: shops.name,
     })
     .from(tripReviews)
     .innerJoin(people, eq(people.id, tripReviews.personId))
     .innerJoin(trips, eq(trips.id, tripReviews.tripId))
     .innerJoin(shops, eq(shops.id, tripReviews.shopId))
+    .leftJoin(reviewReplies, liveReplyJoin())
     .where(scope)
     .orderBy(...publicReviewOrder())
     .limit(options.limit ?? Number.MAX_SAFE_INTEGER)
@@ -340,7 +364,7 @@ async function fetchPublicReviewRows(
 export async function listPublishedShopReviews(
   db: DbExecutor,
   shopId: string,
-  limit = PUBLIC_REVIEW_PAGE_SIZE,
+  limit: number = PUBLIC_REVIEW_PAGE_SIZE,
 ): Promise<PublicReview[]> {
   const rows = await fetchPublicReviewRows(db, shopId, { limit });
   return rows.flatMap((row) => {
@@ -438,6 +462,8 @@ export type StaffReview = {
   tripTitle: string;
   divedAt: Date;
   createdAt: Date;
+  /** The shop's live public reply under it, or null (batch 4, K2). */
+  replyBody: string | null;
 };
 
 /** How many reviews the moderation queue shows per page. */
@@ -527,10 +553,12 @@ export async function listShopReviewsForStaff(
           divedAt: trips.startsAt,
           createdAt: tripReviews.createdAt,
           updatedAt: tripReviews.updatedAt,
+          replyBody: reviewReplies.body,
         })
         .from(tripReviews)
         .innerJoin(people, eq(people.id, tripReviews.personId))
         .innerJoin(trips, eq(trips.id, tripReviews.tripId))
+        .leftJoin(reviewReplies, liveReplyJoin())
         .where(scope)
         .orderBy(...order)
         .limit(limit)

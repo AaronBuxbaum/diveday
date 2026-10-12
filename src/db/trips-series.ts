@@ -299,6 +299,9 @@ async function materializeWindow(
       // would otherwise raise `uncrewed_departure` on every instance the
       // nightly horizon roll materializes, forever (issue #973).
       selfGuided: template.trip.selfGuided,
+      // A standing staged-deco charter keeps its silence about flying on
+      // every instance (H-84).
+      exceedsNoDecoLimits: template.trip.exceedsNoDecoLimits,
       diveMode: template.trip.diveMode,
       // Every Saturday carries the same trip tag, so every instance inherits
       // it exactly as it inherits the hull and the legs. Dropping it here
@@ -875,6 +878,14 @@ export async function listOffCadenceSeriesTrips(
 }
 
 /**
+ * Who called a run's dates off. Both series cancels are a staffer's act, never
+ * a system pass, so the crew's "called off" news names them, and they are not
+ * told about their own act (issue #2284). `null` only for a caller with no
+ * person behind it.
+ */
+export type SeriesCallOffOptions = { actorPersonId?: string | null };
+
+/**
  * Take the off-cadence upcoming dates off the public schedule — the second,
  * explicit half of narrowing a run.
  *
@@ -891,6 +902,7 @@ export async function cancelOffCadenceSeriesTrips(
   shopId: string,
   seriesId: string,
   now: Date = nowDate(),
+  options: SeriesCallOffOptions = {},
 ): Promise<number> {
   const stale = await listOffCadenceSeriesTrips(db, shopId, seriesId, now);
   if (stale.length === 0) return 0;
@@ -925,7 +937,7 @@ export async function cancelOffCadenceSeriesTrips(
     await recordCrewCalledOff(tx, {
       shopId,
       tripIds: cancelled.map((trip) => trip.id),
-      actorPersonId: null,
+      actorPersonId: options.actorPersonId ?? null,
       now,
     });
     return cancelled.map((trip) => trip.id);

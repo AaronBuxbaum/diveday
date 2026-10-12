@@ -142,6 +142,12 @@ export const EXPORT_FILE_NOTES = {
     "Unverified payment, refund, and receipt source history carried from a previous system. These rows are not DiveDay orders, booking payments, live Stripe charges, or reusable payment credentials. amount_cents and currency exist only where the source amount was clearly parsed; a matching-currency payment/refund can be included in a clearly labeled report aggregate, but every row remains source evidence that staff must review. receipt_document_url points to a re-stored document when one was available.",
   "internal_notes.csv":
     "The shop's own private notes about its divers and their bookings — what the front desk wrote down so the next person on the counter would know. Never shown to a diver, and never part of any gate: a note is context, not evidence, so nothing in readiness, boarding, or medical clearance has ever read one. They are here because they are the shop's own words about its own customers, and a shop that leaves without them arrives somewhere else having forgotten everything it knew.",
+  "incident_reports.csv":
+    "The shop's own incident reports: one row per incident on a departure, in the shop's words. when, where, what happened, first aid, oxygen (and for how many minutes), whether emergency services were called, who took the person over and when, and follow-up notes. An empty yes/no means nobody answered it, never no. status 'draft' is unfinished; 'filed' is final and changed afterwards only by an erasure redacting a diver's name. Personal and medical data: keep this file where the waivers are kept.",
+  "incident_report_people.csv":
+    "Who each incident report names, and how (affected, witness or responder): a diver by their booking, a staffer by their person record, or anyone else by the name staff typed. A diver erased since reads under the erased name.",
+  "incident_report_addenda.csv":
+    "What was added to a filed incident report afterwards, oldest first, with who wrote it and when. A filed report is never edited; this is how it grows.",
   "activity_events.csv":
     "The staff activity trail: who did what, to which trip or booking or about which diver, and when. Append-only and never edited, so reading it in order reconstructs how a departure got to the state the other files describe. Each row names the kind of event in `code` and the names its sentence uses in `params`; the words themselves are DiveDay's and are written fresh in whichever language the reader has chosen, so they are not carried here.",
   "notification_deliveries.csv":

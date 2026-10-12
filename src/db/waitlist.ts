@@ -10,7 +10,7 @@ import { sendNotification } from "./notifications";
 import { findOrCreatePerson } from "./people";
 import { bookings, people, shops, trips, tripWaitlistEntries } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 
 /**
@@ -161,7 +161,10 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
     const [trip] = await tx
       .select()
       .from(trips)
-      .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip()))
+      // A rehearsal has no wait list (ADR 20261012-rehearsal-departures).
+      .where(
+        and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip(), notRehearsal()),
+      )
       .limit(1)
       .for("update");
     if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {

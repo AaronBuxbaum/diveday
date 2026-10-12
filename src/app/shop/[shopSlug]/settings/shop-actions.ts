@@ -29,6 +29,7 @@ import {
 } from "@/lib/address-lookup";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
+import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { isValidTimeZone } from "@/lib/format";
 import { isShopCurrency, type ShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -68,6 +69,16 @@ const addressSchema = z.object({
     .nullable(),
 });
 
+/** Read raw: each action narrows its own values and refuses with its own notice. */
+const unitsForm = z.object({
+  depthUnit: formValue(),
+  temperatureUnit: formValue(),
+  currency: formValue(),
+});
+const timezoneForm = z.object({ timezone: formValue() });
+const seasonStartForm = z.object({ seasonStartMonth: formValue(), seasonStartDay: formValue() });
+const shopFeatureForm = z.object({ feature: formValue(), enabled: checkbox() });
+
 /**
  * The three units a shop reads its own numbers in — depth, water temperature,
  * and money — saved together from one card.
@@ -97,17 +108,16 @@ export async function saveUnitsAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
-  const depthUnit = z.enum(["meters", "feet"]).safeParse(formData.get("depthUnit"));
-  const temperatureUnit = z
-    .enum(["celsius", "fahrenheit"])
-    .safeParse(formData.get("temperatureUnit"));
+  const units = readForm(unitsForm, formData);
+  const depthUnit = z.enum(["meters", "feet"]).safeParse(units.depthUnit);
+  const temperatureUnit = z.enum(["celsius", "fahrenheit"]).safeParse(units.temperatureUnit);
   if (!depthUnit.success || !temperatureUnit.success) {
     redirect(noticeUrl(settings, "units-invalid", { saved: "units" }));
   }
 
   // `null` means the field was never rendered (the actor cannot manage payment
   // settings), which is the ordinary case for most staff — not a refusal.
-  const submittedCurrency = formData.get("currency");
+  const submittedCurrency = units.currency;
   let currency: ShopCurrency | null = null;
   if (submittedCurrency !== null) {
     await paymentSettingsBlock(session);
@@ -287,7 +297,7 @@ export async function saveTimezoneAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
-  const submitted = formData.get("timezone");
+  const submitted = readForm(timezoneForm, formData).timezone;
   // An id this runtime can't resolve would make every date formatter on every
   // surface throw, so an unrecognized value is a refusal, never a fallback.
   if (typeof submitted !== "string" || !isValidTimeZone(submitted)) {
@@ -309,7 +319,8 @@ export async function saveSeasonStartAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
-  const season = parseSeasonStart(formData.get("seasonStartMonth"), formData.get("seasonStartDay"));
+  const { seasonStartMonth, seasonStartDay } = readForm(seasonStartForm, formData);
+  const season = parseSeasonStart(seasonStartMonth, seasonStartDay);
   if (!season) {
     redirect(noticeUrl(settings, "season-invalid", { saved: "season" }));
   }
@@ -431,18 +442,14 @@ export async function saveShopFeatureAction(formData: FormData) {
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
 
-  const feature = parseShopFeature(formData.get("feature"));
+  const featureForm = readForm(shopFeatureForm, formData);
+  const feature = parseShopFeature(featureForm.feature);
   // Only a hand-built post names no feature; it gets the hub back unchanged.
   if (!feature) {
     revalidateAndRedirect(settings, settings);
     return;
   }
-  await setShopFeature(
-    await getDb(),
-    session.user.shopId,
-    feature,
-    formData.get("enabled") === "on",
-  );
+  await setShopFeature(await getDb(), session.user.shopId, feature, featureForm.enabled);
 
   revalidateAndRedirect(settings, noticeUrl(settings, "feature-saved", { saved: feature }));
 }

@@ -9,8 +9,9 @@ decision that a trip may state a certification gate looser than one of its dive 
 The open questions at the end were not answered by a human. Each shipped with the conservative
 default, and each can still be reversed:
 
-1. A rider **signs the waiver and the medical form**, the same as everyone aboard, until H-01/H-03
-   say otherwise. The dive medical for a rider is a known overreach, filed as issue #2212.
+1. A rider **signs the waiver**, the same as everyone aboard, until H-01/H-03 say otherwise. A
+   rider is never held on a medical (H-109); the link still asks them the dive medical until a
+   release can say it carries none.
 2. The diver limit is an optional column on the **trip** (`trips.diver_capacity`), and the boat's
    own `capacity` counts everyone. It moves with the boat once ADR 20260804-boat-resource-model is
    accepted.

@@ -4,12 +4,7 @@ import type { DepthUnit } from "@/lib/depth-units";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
-import type {
-  RollCallGapReason,
-  TodayActionKind,
-  TodayGreetingBand,
-  TodaySeason,
-} from "@/lib/today";
+import type { RollCallGapReason, TodayActionKind, TodaySeason } from "@/lib/today";
 import { SPECIALTY_KEYS } from "./readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -1056,14 +1051,6 @@ export function daySpineSummaryText(
     : t("shopHome.spine.summaryAfter", { count: summary.jobs });
   return `${boats} ${jobs}`;
 }
-
-/** Every `TodayGreetingBand`, to its greeting key (`{name}` is the only placeholder). */
-export const GREETING_KEYS: Record<TodayGreetingBand, StaffMessageKey> = {
-  morning: "today.greeting.morning",
-  afternoon: "today.greeting.afternoon",
-  evening: "today.greeting.evening",
-  night: "today.greeting.night",
-};
 
 const SEASONAL_BRIEFING_KEYS: Record<TodaySeason, StaffMessageKey> = {
   summer: "today.seasonalBriefing.summer",

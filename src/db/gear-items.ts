@@ -257,21 +257,26 @@ export type RestoreGearItemOutcome =
  * rather than putting two "BCD #14"s on one wall.
  */
 export async function restoreGearItem(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; gearItemId: string },
 ): Promise<RestoreGearItemOutcome> {
   try {
-    const [item] = await db
-      .update(gearItems)
-      .set({ deletedAt: null, deletedByPersonId: null, updatedAt: nowDate() })
-      .where(
-        and(
-          eq(gearItems.id, input.gearItemId),
-          eq(gearItems.shopId, input.shopId),
-          isNotNull(gearItems.deletedAt),
-        ),
-      )
-      .returning();
+    // In its own savepoint (a transaction when `db` is not one), so a taken
+    // tag rolls back only this update and a caller's transaction stays usable:
+    // a bare 23505 there aborts it (issue #2295, the #1769 pattern).
+    const [item] = await db.transaction((savepoint) =>
+      savepoint
+        .update(gearItems)
+        .set({ deletedAt: null, deletedByPersonId: null, updatedAt: nowDate() })
+        .where(
+          and(
+            eq(gearItems.id, input.gearItemId),
+            eq(gearItems.shopId, input.shopId),
+            isNotNull(gearItems.deletedAt),
+          ),
+        )
+        .returning(),
+    );
     return item ? { ok: true, item } : { ok: false, reason: "not_found" };
   } catch (error) {
     if (violatesUniqueIndex(error, "gear_items_shop_label_unique")) {

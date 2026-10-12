@@ -271,6 +271,17 @@ export const shops = pgTable(
      */
     rentalTerms: text("rental_terms"),
     /**
+     * **How often the shop services a customer's regulator**, in months: 12 or
+     * 24 (issue #2272). Read only by the work-order bench's suggested next-due
+     * date for a customer's own regulator, which drives that customer's service
+     * reminder (`suggestCareDueOn`, `src/lib/work-orders.ts`). The shop's own
+     * fleet never reads it — each unit carries its own clock. Defaults to 12,
+     * which errs early.
+     */
+    customerRegulatorServiceMonths: integer("customer_regulator_service_months")
+      .notNull()
+      .default(12),
+    /**
      * **The numbers a crew reaches for during, not after** — the shop's own
      * chamber, dive-accident hotline, coastguard, vessel and shore contact, and
      * its emergency action plan (`src/lib/emergency-reference.ts`).
@@ -412,6 +423,10 @@ export const shops = pgTable(
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    check(
+      "shops_customer_regulator_service_months_choice",
+      sql`${table.customerRegulatorServiceMonths} in (12, 24)`,
+    ),
     // The same window `parseDeskHours` accepts (`src/lib/desk-hours.ts`): a
     // day's minutes, opening before closing.
     check(

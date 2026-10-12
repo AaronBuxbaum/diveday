@@ -116,6 +116,7 @@ describe("the reviews widget", () => {
     tripTitle: "Two-Tank Reef",
     divedAt: new Date("2026-09-20T13:00:00Z"),
     publishedAt: new Date("2026-09-21T13:00:00Z"),
+    reply: null,
   };
 
   async function renderReviews() {

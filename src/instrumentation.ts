@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
-import { redactBreadcrumb, redactEvent } from "@/app/observability";
+import { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION } from "@/app/observability";
 import { SENTRY_DSN } from "@/lib/sentry-dsn";
 
 /**
@@ -56,6 +56,7 @@ export async function register() {
       dsn: SENTRY_DSN,
       environment: process.env.NODE_ENV,
       tracesSampleRate: 0,
+      dataCollection: SENTRY_DATA_COLLECTION,
       beforeSend: redactEvent,
       beforeBreadcrumb: redactBreadcrumb,
     });

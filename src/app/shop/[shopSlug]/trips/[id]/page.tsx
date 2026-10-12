@@ -56,7 +56,7 @@ import { CrewSection } from "./_components/CrewSection";
 import { courseRosterActions } from "./_components/course-roster-actions";
 import { DepartureLogLink } from "./_components/DepartureLogLink";
 import { DeskRefresh } from "./_components/DeskRefresh";
-import { DetailsSection } from "./_components/DetailsSection";
+import { DetailsEditor } from "./_components/DetailsEditor";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { participantTermsRows } from "./_components/ParticipantTermsSection";
 import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
@@ -68,11 +68,13 @@ import {
   SeriesMoreActions,
 } from "./_components/SeriesSection";
 import { TripAboutSection, TripMoreDisclosure } from "./_components/TripAboutSection";
+import { TripIncidentReports } from "./_components/TripIncidentReports";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { DETAILS_FORMS, ROSTER_FORMS } from "./_components/trip-notice-tabs";
+import type { TripPageSearchParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import {
   addInternalNoteAction,
@@ -139,25 +141,7 @@ export default async function ManageTripPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{
-    notice?: string;
-    bid?: string;
-    diverq?: string;
-    inviteq?: string;
-    count?: string;
-    /** Which form on this page the notice answers — see `resolveTripNotice`. */
-    form?: string;
-    /** Signed, and verified against this route's own `id` — src/lib/trip-admission-gate.ts. */
-    gate?: string | string[];
-    rf?: string;
-    noteBookingId?: string;
-    noteBody?: string;
-    confirmName?: string;
-    confirmEmail?: string;
-    confirmPhone?: string;
-    /** `details` opens the Details tab; anything else is the Divers tab. */
-    view?: string;
-  }>;
+  searchParams: Promise<TripPageSearchParams>;
 }) {
   const [
     { shopSlug, id: tripId },
@@ -174,6 +158,8 @@ export default async function ManageTripPage({
       confirmEmail,
       confirmPhone,
       view,
+      held,
+      tell,
     },
   ] = await Promise.all([params, searchParams]);
   // An unparseable id names no row. Guarded here rather than in the query
@@ -787,9 +773,11 @@ export default async function ManageTripPage({
                   editLabel: t("trips.details.edit"),
                   editorOpen: Boolean(detailsStatus),
                   editor: canConfigure ? (
-                    <DetailsSection
+                    <DetailsEditor
                       action={saveDetails.bind(null, shopSlug, tripId)}
                       status={detailsStatus}
+                      held={notice === "saved" ? held : undefined}
+                      tell={tell}
                       trip={trip}
                       diveSiteList={diveSiteList}
                       tripDiveList={tripDiveList}
@@ -1043,17 +1031,11 @@ export default async function ManageTripPage({
                     recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
                     flush
                   />
-                  <DepartureLogLink
-                    db={db}
-                    shopId={shop.id}
-                    personId={session.user.personId}
-                    shopSlug={shopSlug}
-                    tripId={tripId}
-                    label={t("incidentExport.openLink")}
-                  />
+                  <DepartureLogLink shop={shop} personId={session.user.personId} tripId={tripId} />
                 </>
               }
             />
+            <TripIncidentReports shop={shop} personId={session.user.personId} tripId={tripId} />
             <TripPromoteAndActivity
               guests={guests}
               shopSlug={shopSlug}

@@ -24,6 +24,7 @@ import {
   sanitizeScheduleDays,
   splitCourseImageUrls,
 } from "@/lib/courses";
+import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicCoursePath } from "@/lib/public-routes";
@@ -77,6 +78,21 @@ const contentSchemaFor = (currency: string) =>
     privatePrice: moneyFor(currency),
   });
 
+/**
+ * The course form's photo, concurrency and nitrox fields, read as
+ * `FormData.get` read them; `contentSchemaFor` holds the words and prices.
+ */
+const courseExtrasForm = z.object({
+  heroImageFile: formValue(),
+  removeHero: checkbox("true"),
+  heroImageAlt: trimmedText(),
+  expectedVersion: text(),
+  nitroxCompatible: checkbox("true"),
+});
+
+/** Each form's place in the order is posted as `order-<formId>`. */
+const formOrderFields = z.object({}).catchall(text());
+
 /** Upload one picked file; an empty file input is "no change", not a failure. */
 async function uploadImage(file: FormDataEntryValue | null) {
   if (!(file instanceof File) || file.size === 0) return { url: undefined };
@@ -119,7 +135,8 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     redirect(`${base}?error=too-many-photos`);
   }
 
-  const hero = await uploadImage(formData.get("heroImageFile"));
+  const extras = readForm(courseExtrasForm, formData);
+  const hero = await uploadImage(extras.heroImageFile);
   const gallery = await Promise.all(newGalleryFiles.map(uploadImage));
   if (hero.failed || gallery.some((image) => image.failed)) redirect(`${base}?error=upload`);
 
@@ -152,12 +169,11 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const altByUrl = new Map(altUrls.map((url, index) => [url, altValues[index]?.trim() ?? ""]));
   const galleryPhotos = imageUrls.map((url) => ({ url, alt: altByUrl.get(url) ?? "" }));
 
-  const removeHero = formData.get("removeHero") === "true";
+  const removeHero = extras.removeHero;
   const heroImageUrl = hero.url ?? (removeHero ? "" : (course.heroImageUrl ?? ""));
   // A freshly-uploaded or removed hero has no caption input on screen yet —
   // starts blank rather than carrying over the previous photo's caption.
-  const heroImageAlt =
-    hero.url || removeHero ? "" : String(formData.get("heroImageAlt") ?? "").trim();
+  const heroImageAlt = hero.url || removeHero ? "" : extras.heroImageAlt;
 
   let scheduleDays: ReturnType<typeof sanitizeScheduleDays>;
   try {
@@ -233,7 +249,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   // the only thing that writes the field, so a bad one means an old release or
   // a hand-crafted post, and neither is worth a 500 over an input that can only
   // ever tighten the write.
-  const expectedVersion = Number.parseInt(String(formData.get("expectedVersion") ?? ""), 10);
+  const expectedVersion = Number.parseInt(extras.expectedVersion, 10);
 
   const saved = await updateCourseContent(
     db,
@@ -276,7 +292,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     priceCents: centsFromAmount(value.price, currency),
     eLearningPriceCents: centsFromAmount(value.eLearningPrice, currency),
     privatePriceCents: centsFromAmount(value.privatePrice, currency),
-    nitroxCompatible: formData.get("nitroxCompatible") === "true",
+    nitroxCompatible: extras.nitroxCompatible,
   });
 
   // Once the content row is durably saved, any photo it no longer references
@@ -368,8 +384,9 @@ export async function saveCourseFormRequirementsAction(slug: string, formData: F
   if (!ids.every((id) => z.uuid().safeParse(id).success)) {
     redirect(noticeUrl(anchor, "forms-invalid"));
   }
+  const orderFields = readForm(formOrderFields, formData);
   const orderOf = (id: string) => {
-    const value = Number.parseInt(String(formData.get(`order-${id}`) ?? ""), 10);
+    const value = Number.parseInt(orderFields[`order-${id}`] ?? "", 10);
     return Number.isFinite(value) && value > 0 ? value : Number.POSITIVE_INFINITY;
   };
   const ordered = ids

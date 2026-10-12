@@ -642,6 +642,9 @@
   roster, because a released seat never came back to the shelf. Its reader is the evening's
   **souls on board** line, whose crew half is the same idea: assigned crew less the ones a human
   recorded ashore at the dock.
+  A **crew sailing** is one crew member on one departure that is home, unless the crew marked
+  them ashore at the dock; the Safety tab reads each against the crew member's credentials as they
+  stand today, on the departure's last day.
 - **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
   left with: passengers (divers, snorkelers and riders) plus crew, one number, no distinction
   between who paid and who works. It is
@@ -675,6 +678,21 @@
   footer — tamper-evidence, not a signature: regenerating the export from unchanged records
   reproduces the code, so two copies can be checked against each other. Staff-only, one tap from
   the manifest (`/shop/<slug>/trips/<id>/incident-export`).
+- **Incident report** — the shop's own written account of something that went wrong on a
+  departure, for an insurer or an authority: when (in the shop's zone) and where, what happened,
+  first aid, oxygen (and for how many minutes), whether emergency services were called, the
+  **handover** (nobody — they stayed with the crew — or EMS, a hospital, a chamber, the person
+  themselves released on scene, or someone else, and when), and follow-up notes. It names the
+  people involved — a diver by their seat, a staffer by their record, anyone else by name — as
+  affected, witness or gave aid. A **draft** is edited; filing needs the time, the place, what
+  happened, the three yes/no answers, and the handover once emergency services or oxygen were
+  involved, and a **filed** report is never
+  edited again: what comes later is an **addendum**, dated and attributed. The departure's crew
+  start one and read their own; owners and managers read all of them, on the trip's Details tab
+  and the Reports **Safety** tab. Nothing a diver sees, and never a gate. It is not the
+  **departure log**, which prints recorded facts and judges nothing; the report is the shop's
+  narrative beside it
+  ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking
@@ -705,13 +723,20 @@
   (an empty crew list, or a whole crew marked ashore) raises no queue row: it fires on trips whose
   crew was never recorded at all, and would bury the rows that mean a person is in the water. The manifest states it; the queue chases what somebody
   actually recorded.
+  **Roll-call closure** is the same rule read once per departure that is home, on the Reports
+  **Safety** tab (`rollCallClosure`, `src/lib/safety-report.ts`; the population predicate is
+  `src/lib/roll-call-population.ts`): **closed** when every seat has a dock result and everybody in
+  each after-dive count, divers and crew alike, is recorded back aboard; **open** when any of that
+  is missing; **none** when the departure has no roll-call event of either kind. A date nobody
+  booked and nobody counted is an empty occurrence and is left out.
 - **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
   an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
   invented, and it is **only "on file" when both the name and the phone are present** — a name with
   no number is unreachable when it matters, so it counts as missing on the manifest and in the
   Today nudge. It is never a boarding blocker: a missing contact is an administrative gap, not a
   fitness-to-dive gap, so it surfaces only as a low-priority, dock-settleable nudge on boats within
-  three days.
+  three days. It also comes in at the dock door: a **dock rider** added from the Boat tab carries
+  the contact the captain asks for on the spot, written onto the new person.
 - **Emergency reference** — the **shop's** own card of numbers a crew dials *during* an incident:
   its nearest chamber, the dive-accident hotline, the coastguard, the vessel's name, who to raise on
   shore, and the shop's emergency action plan as prose (`src/lib/emergency-reference.ts`, stored
@@ -823,7 +848,8 @@
   **snorkeler**, or a **rider** (`bookings.participant_type`, codes in
   `src/lib/participant-types.ts`). Every booking has exactly one, and it defaults to diver. All
   three hold a seat, are counted at every roll-call checkpoint, appear on the manifest, and sign
-  the shop's waiver and medical form. Only a diver is asked for a certification, may request
+  the shop's waiver; a diver and a snorkeler are held to its medical, a rider never (H-109). Only a
+  diver is asked for a certification, may request
   nitrox, goes on a buddy team, is packed tanks for, uses a dive package, or counts against the
   departure's **diver seats**. A course session sells divers only. Staff change a booking's type
   from the roster ("Coming as"): joining the dive runs the card check and needs "Change anyway" (an
@@ -833,8 +859,10 @@
 - **Booked as** — the participant type a booking was made with (`bookings.booked_as`), set once by
   every writer and never changed. A seat whose type moved since shows a warning-tone
   note on the roster, the roll call and the offline copy: "Snorkeling, booked as diver" when it
-  left the dive, "Diving, booked as snorkeler" when it joined. Leaving the dive clears card checks
-  only, never a medical one, and joining a seat already boarded re-asks the boarding gate.
+  left the dive, "Diving, booked as snorkeler" when it joined. Leaving the dive for snorkeling clears
+  card checks only, never a medical one. Leaving it for riding also lifts a medical referral or a
+  physician's "no" as a boarding hold (H-109), and the crew still sees it at the rail as a
+  "riding only" warning. Joining a seat already boarded re-asks the boarding gate.
 - **Snorkeler** — a participant who is in the water at the surface with no tank. Needs no card,
   rents surface kit only (mask and fins, wetsuit, boots, hood and gloves, camera), and pays the
   departure's snorkeler price (`trips.snorkeler_price_cents`). The public form offers a snorkeler
@@ -843,7 +871,10 @@
   (`DivePrepChecklist.snorkelVests`).
 - **Rider** — a participant who stays on the boat: a partner, a parent, a photographer. Needs no
   card, rents nothing, and pays the departure's rider price (`trips.rider_price_cents`) under the
-  same rule as a snorkeler's. A rider is still a body aboard and is counted at roll call.
+  same rule as a snorkeler's. A rider is still a body aboard and is counted at roll call, and is
+  never held at boarding on a medical referral or refusal (H-109); the roll call, its printed
+  sheet and the offline copy show it instead as "Physician did not clear: riding only" or
+  "Medical referral open: riding only", with the date.
 - **Diver seats** — an optional cap on how many **divers** a departure carries
   (`trips.diver_capacity`), for a boat whose tanks or guides run out before its deck does. The
   boat's own capacity always counts everyone aboard; the diver cap only refuses a diver, and a cap
@@ -1186,6 +1217,7 @@
   departure into buckets, so a late booking gets only the accurate reminder, never a stale one. An
   external scheduler drives an idempotent cron endpoint; the app holds no timer. See
   [20260721-scheduled-reminder-cadence](../../architecture/decisions/20260721-scheduled-reminder-cadence.md).
+- **Reschedule notice** — the message every booked seat gets when a staffer moves its departure: on the board (Move) or by changing the start on the trip page. Notification kind `trip_rescheduled`: the new date and time, the old one under it, the meeting point only when it moved in the same save, and the diver's own trip-prep link, by the diver's usual channel (email with a courtesy text, or the text alone for a phone-only diver). The move *holds* it as a **held send** (`held_sends`, the eight seconds and Undo every staff send takes, ADR 20260906-before-you-ask); a second move inside the hold folds into the first, and a move back to the time the divers were told sends nothing. Addressed only to each seat's own person record (`booked` or `checked_in`, never a seat whose identity is still held), read off the trip when the hold drains. Rule in `src/lib/held-sends.ts`, the send in `src/db/trip-rescheduled.ts`.
 - **Night-before brief** — the 24-hour reminder cadence enriched into a full pre-departure brief:
   the crew's plain-language conditions read, what to bring (the shop's packing list), a concrete
   dock-arrival time, and who to text on the day. It is the same `trip_reminder_24h` send, not a new
@@ -1273,13 +1305,35 @@
   even when the booking or the departure was marked `cancelled` afterwards, logged dives or not,
   because both cancel doors check neither the clock nor the roll call and being wrong there hands a
   two-day diver the single-day flying wait. The name-match prompt and the recap deliberately make
-  the opposite trade. Not the **Dive day (north star)**: that one is a shop's day, counted by roll
-  call for the founder metrics, and never a diver's history.
+  the opposite trade. **A rehearsal's seat is a day to the fly-safe reader** (a rehearsal in the
+  water is real nitrogen), and a deleted departure is not, so the nightly delete leaves a
+  **Rehearsal** until the fly-safe look-back plus a day has passed (`rehearsalMayClear`). Not the
+  **Dive day (north star)**: that one is a shop's day, counted by roll call for the founder
+  metrics, and never a diver's history.
 - **Milestone stamp** — the drawn double-ring roundel beside the dive record, on the dive days
   `src/lib/visit-milestones.ts` names and no others: the 1st, 10th, 25th, 50th and 100th. Exact
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.
   Primary ink, never coral (the thread spends its accent three times and this is not one of them),
   and on every other visit the plain ordinal line renders in its place.
+- **Rehearsal** — a departure staff add from the schedule builder for training day, to seat test
+  divers and practice the boat side: check-in, roll call, close-out. Set when it is created and
+  never changed (`trips.is_rehearsal`). It is always private, never priced, never part of a series,
+  and only staff seat anyone on it. Nothing about it is sent by any channel, shown in public,
+  charged (a seat spends no prepaid dive), exported or counted in Reports; a signed release, a
+  course form and the roll call are exported as evidence with their trip and seat ids blanked.
+  The nightly cron deletes it once it was due home before yesterday began in the shop's zone
+  **and** the fly-safe look-back plus a day has passed, so a later boat still counts its divers'
+  **Dive day** (`rehearsalMayClear`), giving back prepaid dives and unclaimed gear. **Never one
+  with evidence**: a boarding, any after-dive count, or a logged dive keeps it live, and its
+  banner says so. A warning panel says it is a rehearsal above every trip surface, and the paper
+  manifest prints "Rehearsal" beside souls on board. See
+  [20261012-rehearsal-departures](../../architecture/decisions/20261012-rehearsal-departures.md).
+- **Review reply** — the shop's one public answer under a published review with words, written,
+  edited or deleted by an owner or manager on the staff Reviews page and signed with the shop's
+  name ("Reply from Blue Reef Divers"). Plain text, at most 400 characters
+  (`MAX_REVIEW_REPLY_LENGTH`), shown wherever the review is: the public reviews page, the
+  storefront's reviews and the reviews embed. It goes dark with its review if the review is
+  hidden, and is blanked when the reviewer is erased (`review_replies`, `src/db/review-replies.ts`).
 - **Review request** — a "Leave a review" section on the post-trip recap page, shown only when the
   shop has set a single, optional outbound link (`shops.review_url`) in Settings — DiveDay never
   integrates with a review platform's API, never tracks whether a diver actually left a review, and
@@ -1388,3 +1442,12 @@
   their own password, which flips the account to **active**. A shop may never end up with zero
   people holding the `owner` role: removing, disabling, or demoting the shop's last owner is
   refused. See [20260726-staff-invite-accounts](../../architecture/decisions/20260726-staff-invite-accounts.md).
+- **Crew warning** — a line above the staffing week that informs and never blocks. Four checks: a
+  departure whose rostered crew holds no current oxygen-provider credential; separately, one whose
+  crew holds no current first aid / CPR credential; a person whose **crewed departures** run past
+  12 hours in one shop-local day (a shift is availability, not duty, and never counts); and
+  somebody crewing this week whose credential has expired, except a dive-professional rating, whose
+  lapse the crew editor's supervision claim already shows on the departure. A credential with no
+  renewal date counts as current, a renewal date is good through the end of that day, and a kind
+  the shop has never recorded for anybody raises nothing. Pure logic in
+  `src/lib/staffing-warnings.ts`; words in `src/i18n/staffing-warning-labels.ts`.

@@ -31,6 +31,9 @@ export type PassBooking = {
   boatName: string | null;
   meetingPointLabel: string | null;
   meetingPointAddress: string | null;
+  /** The two finding-the-place notes the trip page shows (ux review 2026-10-11, item 27). */
+  arrivalLandmark: string | null;
+  arrivalParkingNote: string | null;
 };
 
 export async function getPassBooking(
@@ -48,10 +51,14 @@ export async function getPassBooking(
       boatName: boats.name,
       meetingPointLabel: trips.meetingPointLabel,
       meetingPointAddress: trips.meetingPointAddress,
+      arrivalLandmark: trips.arrivalLandmark,
+      arrivalParkingNote: trips.arrivalParkingNote,
     })
     .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // The diver and the departure are read within the caller's shop too, as
+    // the reschedule reader does: the name on the paper is this shop's record.
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
     .leftJoin(boats, eq(boats.id, trips.boatId))
     .where(
       and(

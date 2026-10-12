@@ -61,6 +61,8 @@ export {
   countOpenTripGearReservations,
   type GearPickScreen,
   type GearReservationActionOutcome,
+  type GearSetReturnOutcome,
+  pullReturnedUnitsForService,
   type ReserveGearUnitOutcome,
   releaseGearReservation,
   releaseUnclaimedGearReservations,

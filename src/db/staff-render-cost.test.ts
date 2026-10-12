@@ -310,8 +310,10 @@ const TRIP_CEILING = 50;
  * review 2026-10-10, item 2: `getTodayWork` awaited thirteen single reads one
  * after another after its one fan-out); they now go out in one wave, and what
  * is left is the readiness pass's own chain and the readers' internal steps.
- * The trip page's 10 is its shared reads, then `getTripOverview`'s four steps
- * after its fan-out (`src/db/trips-overview.ts`).
+ * The trip page measured 10: its shared reads, then `getTripOverview`'s four
+ * steps after its fan-out. 10 → 7: the overview's dependent reads (ratings and
+ * shifts on the crew, the off-cadence list, both clash reads) now chain inside
+ * its one wave (`src/db/trips-overview.ts`, issue #2353).
  */
 const TODAY_PHASE_CEILING = 7;
-const TRIP_PHASE_CEILING = 10;
+const TRIP_PHASE_CEILING = 7;

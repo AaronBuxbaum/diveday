@@ -59,8 +59,9 @@ ended (done, declined, unserviceable, condemned; the last two with a reason) and
 each check performed: which care (service, visual inspection, hydro test, O2 clean, or other work
 with no clock), passed or failed, the day it was performed, and the next due date they confirm. The
 form prefills that date: a shop unit carries its own previous interval forward, dive count
-included; a customer's regulator or BCD gets the conventional service interval; a cylinder, a
-computer, a torch and everything else get none. Then:
+included; a customer's regulator gets the shop's own regulator interval (12 or 24 months, set in
+the Rental gear settings, 12 unless the shop says otherwise; #2272) and a customer's BCD the
+conventional service interval; a cylinder, a computer, a torch and everything else get none. Then:
 
 - **A shop unit**: each passed check is written through the register's `recordGearService`, and the
   unit returns to service only when every check passed and one of them answers a concern on that
