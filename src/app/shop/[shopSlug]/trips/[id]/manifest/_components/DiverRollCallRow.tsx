@@ -153,7 +153,7 @@ export function DiverRollCallRow({
               <PersonBuddyList
                 teammates={diver.buddyTeam.others}
                 divers={divers}
-                crew={crew ?? []}
+                crew={crew}
                 checkpoint={checkpoint}
                 t={t}
               />

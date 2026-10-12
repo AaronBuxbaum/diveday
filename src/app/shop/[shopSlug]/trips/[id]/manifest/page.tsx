@@ -365,7 +365,7 @@ export default async function TripManifestPage({
           isDeparture={isDeparture}
           startsAt={departureManifest.trip.startsAt}
           stage={stage}
-          seats={departureManifest.divers}
+          seats={manifest.divers}
         />
 
         {/* **The plan** (issue #1184, D24).

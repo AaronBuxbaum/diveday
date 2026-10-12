@@ -19,7 +19,7 @@ export type DiverRollCallContext = {
   idPrefix?: string;
   divers: TripManifest["divers"];
   /** Full crew rows for resolving buddy states inside a diver's sheet. */
-  crew?: TripManifest["crew"];
+  crew: TripManifest["crew"];
   checkpoint: RollCallCheckpoint;
   isDeparture: boolean;
   shopSlug: string;
