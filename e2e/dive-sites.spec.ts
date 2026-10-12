@@ -619,6 +619,9 @@ test.describe("staff", () => {
     const site = new URL(page.url()).pathname;
 
     const note = page.getByLabel("What to remember about running this site");
+    // Typed only once React owns the form: an edit that lands mid-hydration
+    // can lose its selection and save the note minus its first letter.
+    await expect(page.locator("form[data-hydrated]")).toHaveCount(1);
     await expect(note).toHaveValue("");
     await note.fill("The mooring ball moved south. Brief the swim-through first.");
     await page.getByRole("button", { name: "Save dive site" }).click();
@@ -654,6 +657,7 @@ test.describe("staff", () => {
     await page.goto(site);
     await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
     const cleared = page.getByLabel("What to remember about running this site");
+    await expect(page.locator("form[data-hydrated]")).toHaveCount(1);
     await cleared.fill("");
     await page.getByRole("button", { name: "Save dive site" }).click();
     // Same reason, and worse here: the field is empty before the save too, so
