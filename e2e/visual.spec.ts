@@ -7020,6 +7020,10 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
+        // Same wait as the full-page shot: the folded sections' preview lines
+        // are filled in after hydration, and the server-rendered field alone
+        // let this capture land with them empty.
+        await page.getByRole("navigation", { name: "Sections", exact: true }).waitFor();
         await page.getByLabel("Day 1 — what happens").waitFor();
         await captureStickyFoot(page, "course-edit-save-bar", scheme);
       });
