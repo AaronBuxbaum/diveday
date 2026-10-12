@@ -237,6 +237,18 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     ).toEqual({ created: 0, attached: 0 });
   });
 
+  it("lists forms set up in one transaction in the order the course names them", async () => {
+    const ctx = await courseContext();
+    const titles = ["Form Echo", "Form Alpha", "Form Delta", "Form Bravo", "Form Charlie"];
+    await ctx.db.transaction((tx) =>
+      attachStandardCourseForms(tx, { shopId: ctx.shop.id, courseId: ctx.seat.courseId, titles }),
+    );
+    const listed = (await listCourseForms(ctx.db, ctx.shop.id))
+      .map((form) => form.title)
+      .filter((title) => titles.includes(title));
+    expect(listed).toEqual(titles);
+  });
+
   it("writes nothing for another shop's course", async () => {
     const ctx = await courseContext();
     const other = await otherShop(ctx.db);
