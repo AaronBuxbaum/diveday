@@ -4,6 +4,7 @@
   "diveCount": "{count, plural, one {# dive} other {# dives}}",
   "oneTankPerDiver": "one tank per diver per dive",
   "noDivers": "No divers booked yet, so there’s nothing to prepare.",
+  "nitroxCountNote": "Nitrox counts seats with a verified card. Every mix is still analyzed and signed for at the fill station.",
   "tanksHeading": "Tanks",
   "total": "Total",
   "air": "Air",

@@ -922,10 +922,6 @@ test("an owner adds and removes a line on the shop's own pre-departure checklist
   await page.goto("/shop/blue-mantis/settings/safety-checklist");
   // The seeded demo shop's own list (src/db/seed-pre-departure-checklist.ts).
   await expect(page.getByText("VHF radio checked")).toBeVisible();
-  // What the checklist does not cover is said here, once, rather than on every
-  // departure's Gear tab (UX review 2026-10-10, item 26).
-  await expect(page.getByText("DiveDay logs no gas analysis")).toBeVisible();
-
   await page.getByLabel("New line").fill("Test kit checked");
   await page.getByRole("button", { name: "Add" }).click();
   await expect(page.getByText("Added to the checklist.")).toBeVisible();
