@@ -23,7 +23,7 @@
       "profileSaved": "Perfil y marca del centro guardados.",
       "profileInvalid": "Revisa el lema, la descripción y el archivo del logotipo.",
       "shopPhotosSaved": "Fotos del centro guardadas.",
-      "shopPhotosInvalid": "Esas fotos no se guardaron. Usa JPG, PNG, WebP o HEIC de menos de {maxMb}\u00a0MB, y no pases de {max} en total.",
+      "shopPhotosInvalid": "Esas fotos no se guardaron. Usa JPG, PNG, WebP o HEIC de menos de {maxMb} MB, y no pases de {max} en total.",
       "addressSaved": "Dirección del centro guardada.",
       "addressRemoved": "Dirección del centro quitada.",
       "addressInvalid": "No se pudo guardar esa dirección. Busca otra vez y elige tu centro en la lista.",
@@ -702,7 +702,7 @@
       },
       "waiverDocuments": {
         "what": "Documentos de exención / médicos",
-        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5\u00a0MB."
+        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5 MB."
       },
       "role": {
         "what": "Rol",
@@ -898,7 +898,7 @@
       "notOwnerOrManager": "Importar contactos está limitado al propietario o gerente del centro.",
       "csvRequired": "Elige un archivo CSV para importar.",
       "noImportableRows": "No se pudo importar ninguna fila. A todas les faltaba un nombre o estaban duplicadas.",
-      "fileTooLarge": "El archivo es demasiado grande. El límite es {limitMb}\u00a0MB.",
+      "fileTooLarge": "El archivo es demasiado grande. El límite es {limitMb} MB.",
       "fileEmpty": "El archivo está vacío.",
       "tooManyColumns": "Demasiadas columnas ({count}). El límite es {limit}.",
       "tooManyRows": "Demasiadas filas ({count}). El límite es {limit} por importación, así que divide el archivo e impórtalo en lotes.",

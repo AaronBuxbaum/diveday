@@ -13,7 +13,11 @@ import {
   setCourseFormRequirements,
   signCourseForm,
 } from "./course-forms";
-import { applyProviderEmailEvent } from "./notifications";
+import {
+  applyProviderEmailEvent,
+  bookingConfirmationMailState,
+  recordNotificationDelivery,
+} from "./notifications";
 import type { MedicalAnswers } from "./schema";
 import {
   bookingCapabilities,
@@ -28,8 +32,10 @@ import {
   emailFreshWaiverLink,
   issueAndDeliverPersonWaiver,
   issueAndDeliverWaiver,
+  issueJoinWaiverLink,
   issueWaiverOnJoin,
   sendReleasesOnceIdentityKnown,
+  settleJoinWaiverDelivery,
 } from "./waiver-issue";
 import {
   completeWaiver,
@@ -737,6 +743,131 @@ describe("issueWaiverOnJoin", () => {
       .set({ identityUnconfirmedAt: null, identityBookedAs: null })
       .where(eq(bookings.id, bookingId));
     expect(await issueWaiverOnJoin(db, shop.id, bookingId)).toMatchObject({ ok: true });
+  });
+});
+
+/**
+ * **One booking, one email** (UX review 2026-10-11, item 7). The lead's waiver
+ * link is issued for the confirmation to carry, and settled by how that
+ * confirmation went: recorded as emailed when it left, mailed on its own (the
+ * same live link) when it did not.
+ */
+describe("issueJoinWaiverLink and settleJoinWaiverDelivery", () => {
+  it("issues one link and sends nothing on its own", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    sesSend.mockReset();
+    const { db, shop, bookingId } = await seededBooking();
+    const link = await issueJoinWaiverLink(db, shop.id, bookingId);
+    expect(link?.url).toMatch(/^https:\/\/diveday\.example\/waivers\//);
+    expect(sesSend).not.toHaveBeenCalled();
+    // The join rule still holds: a second ask finds the link already issued.
+    expect(await issueJoinWaiverLink(db, shop.id, bookingId)).toBeNull();
+    expect(await issueWaiverOnJoin(db, shop.id, bookingId)).toBeNull();
+  });
+
+  it("issues nothing for a diver whose signature still covers the trip", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const { db, shop, bookingId } = await seededBooking();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+    });
+    expect(await issueJoinWaiverLink(db, shop.id, bookingId)).toBeNull();
+  });
+
+  it("issues nothing on a held seat", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const { db, shop, bookingId } = await seededBooking();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Tom Quinn" })
+      .where(eq(bookings.id, bookingId));
+    expect(await issueJoinWaiverLink(db, shop.id, bookingId)).toBeNull();
+  });
+
+  it("records the link as emailed when the confirmation carried it, and mails nothing more", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    sesSend.mockReset();
+    const { db, shop, bookingId } = await seededBooking();
+    const link = await issueJoinWaiverLink(db, shop.id, bookingId);
+    if (!link) throw new Error("no link");
+    await settleJoinWaiverDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      link,
+      confirmationSent: true,
+    });
+    expect(sesSend).not.toHaveBeenCalled();
+    const [record] = await db
+      .select({ deliveryStatus: waiverRecords.deliveryStatus })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, link.waiverRecordId));
+    expect(record?.deliveryStatus).toBe("sent");
+  });
+
+  it("mails the same live link on its own when the confirmation did not go", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+    sesSend.mockReset().mockResolvedValue({ MessageId: "ses-id" });
+    const { db, shop, bookingId } = await seededBooking();
+    const link = await issueJoinWaiverLink(db, shop.id, bookingId);
+    if (!link) throw new Error("no link");
+    await settleJoinWaiverDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      link,
+      confirmationSent: false,
+    });
+    expect(sesSend).toHaveBeenCalledOnce();
+    const records = await db
+      .select({ id: waiverRecords.id })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, bookingId));
+    expect(records.map((row) => row.id)).toEqual([link.waiverRecordId]);
+  });
+});
+
+describe("bookingConfirmationMailState", () => {
+  async function confirmationSent(
+    db: Awaited<ReturnType<typeof seededBooking>>["db"],
+    shopId: string,
+    bookingId: string,
+  ) {
+    await recordNotificationDelivery(db, {
+      shopId,
+      bookingId,
+      kind: "booking_confirmation",
+      delivery: { status: "sent", providerMessageId: "ses-confirmation" },
+    });
+  }
+
+  it("promises nothing until the confirmation actually left", async () => {
+    const { db, shop, bookingId } = await seededBooking();
+    expect(await bookingConfirmationMailState(db, shop.id, bookingId)).toBe("none");
+  });
+
+  it("names the waiver only when the confirmation carried an unsigned link", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const { db, shop, bookingId } = await seededBooking();
+    await confirmationSent(db, shop.id, bookingId);
+    expect(await bookingConfirmationMailState(db, shop.id, bookingId)).toBe("confirmation");
+    const link = await issueJoinWaiverLink(db, shop.id, bookingId);
+    if (!link) throw new Error("no link");
+    await settleJoinWaiverDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      link,
+      confirmationSent: true,
+    });
+    expect(await bookingConfirmationMailState(db, shop.id, bookingId)).toBe(
+      "confirmationWithWaiver",
+    );
   });
 });
 

@@ -23,7 +23,11 @@ import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
-import { issueWaiverOnJoin } from "@/db/waiver-issue";
+import {
+  issueJoinWaiverLink,
+  issueWaiverOnJoin,
+  settleJoinWaiverDelivery,
+} from "@/db/waiver-issue";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
@@ -486,6 +490,20 @@ export async function bookSpot(
     bookingId: primaryBookingId,
     locale: ownLocale,
   });
+  // One booking, one email (UX review 2026-10-11, item 7): the lead's waiver,
+  // when one is owed, rides in the confirmation as its first step instead of
+  // following it seconds later in a mail of its own. Issued before the send
+  // so the confirmation can carry it; settled after, by how the send went.
+  const leadWaiver = await issueJoinWaiverLink(dbi, shopNow.id, primaryBookingId).catch(
+    (error: unknown) => {
+      log("booking.waiver_link_failed", "error", {
+        bookingId: primaryBookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+      return null;
+    },
+  );
+  let confirmationSent = false;
   if (confirmedBooking?.person.email && tripNow) {
     try {
       const delivery = await sendAndRecordNotification(dbi, {
@@ -504,6 +522,8 @@ export async function bookSpot(
         readinessUrl: readinessCapability
           ? readinessEmailUrl(readinessCapability.token)
           : undefined,
+        waiverUrl: leadWaiver?.url,
+        waiverExpiresAt: leadWaiver?.expiresAt,
         packingList: shopNow.packingList,
         // A course session's learning materials, delivered with the seat
         // (ADR 20261008-course-learning-materials).
@@ -511,6 +531,7 @@ export async function bookSpot(
           ? readLearningMaterials(tripNow.course.learningMaterials)
           : undefined,
       });
+      confirmationSent = delivery.status === "sent";
       if (delivery.status === "failed") {
         log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });
       }
@@ -524,11 +545,22 @@ export async function bookSpot(
   }
   // Send each diver their waiver the moment they join, when the trip needs one
   // and they aren't already covered (issueWaiverOnJoin makes that call). The
-  // seats are already committed, so a delivery failure is logged and dropped —
-  // it must never turn a completed booking into an error.
+  // lead's already rode in the confirmation; settling it records that, or
+  // mails it on its own when the confirmation did not go. The seats are
+  // already committed, so a delivery failure is logged and dropped — it must
+  // never turn a completed booking into an error.
   await Promise.all(
     outcome.bookings.map(async ({ bookingId }) => {
       try {
+        if (bookingId === primaryBookingId && leadWaiver) {
+          await settleJoinWaiverDelivery(dbi, {
+            shopId: shopNow.id,
+            bookingId,
+            link: leadWaiver,
+            confirmationSent,
+          });
+          return;
+        }
         await issueWaiverOnJoin(dbi, shopNow.id, bookingId);
       } catch (error) {
         log("booking.waiver_on_join_failed", "error", {

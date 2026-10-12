@@ -66,6 +66,39 @@ describe("bookingConfirmationEmail", () => {
     expect(email.text).not.toContain("Pre-Trip Checklist Reminder:");
     expect(email.html).not.toContain("Pre-Trip Checklist Reminder:");
   });
+  /** UX review 2026-10-11, item 7: one booking, one email, the waiver its first step. */
+  it("carries the waiver as its first step, above the dock call", () => {
+    const email = bookingConfirmationEmail({
+      ...base,
+      readinessUrl: "https://dive.day/ready/abc",
+      waiverUrl: "https://dive.day/waivers/xyz",
+      waiverExpiresAt: new Date("2026-07-30T13:00:00.000Z"),
+    });
+    const lead = "First, sign your waiver. Blue Mantis needs it before you board.";
+    expect(email.text).toContain(lead);
+    expect(email.text).toContain("https://dive.day/waivers/xyz");
+    expect(email.text).toContain("This private link expires");
+    expect(email.text.indexOf(lead)).toBeLessThan(email.text.indexOf("be at the dock"));
+    expect(email.text.indexOf("waivers/xyz")).toBeLessThan(email.text.indexOf("ready/abc"));
+    expect(email.html).toContain('href="https://dive.day/waivers/xyz"');
+    expect(email.html).toContain("Sign your waiver");
+  });
+
+  it("says nothing about a waiver when none is owed", () => {
+    const email = bookingConfirmationEmail({ ...base, readinessUrl: "https://dive.day/ready/abc" });
+    expect(email.text).toContain("ready/abc");
+    expect(email.text.toLowerCase()).not.toContain("waiver");
+    expect(email.html.toLowerCase()).not.toContain("waiver");
+  });
+
+  it("escapes the shop name inside the waiver step", () => {
+    const email = bookingConfirmationEmail({
+      ...base,
+      shopName: "<b>Mantis</b>",
+      waiverUrl: "https://dive.day/waivers/xyz",
+    });
+    expect(email.html).not.toContain("<b>Mantis</b>");
+  });
 });
 
 describe("course learning materials (ADR 20261008-course-learning-materials)", () => {

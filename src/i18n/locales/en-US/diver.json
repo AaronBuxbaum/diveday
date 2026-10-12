@@ -405,7 +405,8 @@
       "promoInvalid": "That code isn’t active.",
       "participantTypeInvalid": "Pick one of the options listed."
     },
-    "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver.",
+    "confirmationOnTheWay": "Your confirmation is on its way by email.",
+    "confirmationWithWaiverOnTheWay": "Your confirmation is on its way by email. Signing your waiver is its first step.",
     "embedPayNext": "Your seat’s held. Paying opens on DiveDay’s secure page, outside this window.",
     "continueToPayment": "Continue to payment",
     "alsoOnTheSchedule": "Also on the schedule",
@@ -4096,6 +4097,8 @@
       "subject": "You’re on the boat — {tripTitle}",
       "confirmed": "Your spot on {tripTitle} is confirmed.",
       "dockNote": "Please be at the dock {dock} early. {shopName} will take it from there.",
+      "waiverStep": "First, sign your waiver. {shopName} needs it before you board.",
+      "waiverLink": "Sign your waiver",
       "packingHeading": "Pre-Trip Checklist Reminder:"
     },
     "waitlistInvite": {

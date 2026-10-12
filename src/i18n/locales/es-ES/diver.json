@@ -405,7 +405,8 @@
       "promoInvalid": "Ese código no está activo.",
       "participantTypeInvalid": "Elige una de las opciones de la lista."
     },
-    "emailsOnTheWay": "Te llegarán dos correos: la confirmación de tu reserva y el enlace para firmar tu exención.",
+    "confirmationOnTheWay": "Tu confirmación va en camino por correo.",
+    "confirmationWithWaiverOnTheWay": "Tu confirmación va en camino por correo. Firmar tu exención es el primer paso.",
     "embedPayNext": "Tu plaza está reservada. El pago se abre en la página segura de DiveDay, fuera de esta ventana.",
     "continueToPayment": "Continuar al pago",
     "alsoOnTheSchedule": "También en el calendario",
@@ -4096,6 +4097,8 @@
       "subject": "Estás a bordo — {tripTitle}",
       "confirmed": "Tu plaza en {tripTitle} está confirmada.",
       "dockNote": "Preséntate en el muelle {dock} antes. {shopName} se encargará del resto.",
+      "waiverStep": "Primero, firma tu exención. {shopName} la necesita antes de que subas a bordo.",
+      "waiverLink": "Firmar tu exención",
       "packingHeading": "Recordatorio de la lista de equipo:"
     },
     "waitlistInvite": {
