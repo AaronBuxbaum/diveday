@@ -81,12 +81,23 @@ export function PublicShopNav({
 }) {
   const pathname = usePathname();
   const active = activeNavIndex(pathname, items);
+  // Three destinations do not fit a phone's bar beside the shop's name: at
+  // 390px the name, Schedule, Courses, Packages and the language control would
+  // need about 420 of the row's 358 points, and the name is the slot that gave
+  // (it ellipsed to "Blue Mantis Div…" on a shop with a package on sale). The
+  // row stays one fixed height and the type stays 16px, so below `sm` the
+  // schedule tab folds into the name beside it, which already links to the
+  // schedule; the two tabs the name cannot stand in for stay.
+  const foldsScheduleIntoName = items.length >= 3;
 
   return (
     <nav aria-label={ariaLabel}>
       <ul className="flex items-center gap-0.5 sm:gap-1">
         {items.map((item, index) => (
-          <li key={item.href}>
+          <li
+            key={item.href}
+            className={foldsScheduleIntoName && index === 0 ? "hidden sm:block" : undefined}
+          >
             <Link
               href={item.href}
               aria-current={index === active ? "page" : undefined}
