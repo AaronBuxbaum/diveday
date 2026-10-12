@@ -18,6 +18,7 @@ import {
   unpauseTripRecapAutoSend,
 } from "@/db/recap";
 import { confirmRentalFitSize } from "@/db/rental-fit";
+import { dismissOrientation } from "@/db/user-accounts";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -253,5 +254,15 @@ export async function toggleRecapAutoSendPauseAction(formData: FormData) {
   } else {
     await unpauseTripRecapAutoSend(db, staff.user.shopId, tripId);
   }
+  revalidateAndRedirect(home);
+}
+
+/**
+ * "Got it" on the first-week orientation: this staffer has read it, so the home
+ * stops offering it to them. The person is the session's own, never a field.
+ */
+export async function dismissOrientationAction() {
+  const { staff, home } = await shopHome();
+  await dismissOrientation(await getDb(), staff.user.personId);
   revalidateAndRedirect(home);
 }

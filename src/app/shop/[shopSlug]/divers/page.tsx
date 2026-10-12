@@ -1,31 +1,26 @@
 import type { Metadata } from "next";
 import { after } from "next/server";
-import { z } from "zod";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
-import { canPersonDeleteDiver, loadActiveStaffRoles } from "@/db/authz";
-import { getDb } from "@/db/client";
+import { loadActiveStaffRoles } from "@/db/authz";
 import { listDiverMergeDuplicateIds } from "@/db/diver-merge";
-import { isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
+import { isDiverFilter, listDiverSummaries } from "@/db/divers";
 import { rosterFacts } from "@/db/roster-facts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { canDeleteDiver, canImportShopData, canMergeDiver } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { parseForm } from "@/lib/form-parse";
 import { formatShortDate, formatTime } from "@/lib/format";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import type { AboardBlockerKind } from "@/lib/readiness";
 import { rosterLetter, rosterRowFact } from "@/lib/roster-rows";
-import { requireShopSurface, requireStaffSession } from "@/lib/session";
-import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
+import { requireShopSurface } from "@/lib/session";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { DiverList, type RosterBadge, type RosterRow } from "./_components/DiverList";
-
-const restoreForm = z.object({ personId: z.string().default("") });
+import { restoreDiverAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -142,22 +137,6 @@ export default async function DiversPage({
     const roster = shopPath(shopSlug, "divers");
     return search.size ? `${roster}?${search}` : roster;
   };
-
-  async function restoreDiverAction(formData: FormData) {
-    "use server";
-    const staff = await requireStaffSession();
-    const activeDb = await getDb();
-    // Restoring is the inverse of the owner/manager-only deletion, so it takes
-    // the same gate (H-14, ADR 20260724-role-authorization).
-    const roster = shopPath(staff.user.shopSlug, "divers");
-    if (!(await canPersonDeleteDiver(activeDb, staff.user.shopId, staff.user.personId))) {
-      revalidateAndRedirect(roster, noticeUrl(roster, "not-authorized"));
-    }
-    const parsed = parseForm(restoreForm, formData);
-    const personId = parsed.ok ? parsed.data.personId : "";
-    const restored = personId && (await restoreDiver(activeDb, staff.user.shopId, personId));
-    revalidateAndRedirect(roster, noticeUrl(roster, restored ? "restored" : "restore-refused"));
-  }
 
   /** What a diver is blocked on, as a badge word — one key per kind. */
   const BLOCKED_LABELS: Record<AboardBlockerKind, StaffMessageKey> = {

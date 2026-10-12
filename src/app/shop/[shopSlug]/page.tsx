@@ -39,7 +39,7 @@ import { shopByIdCached } from "@/db/shops";
 import { canAcceptPayments, shopStripeAccountForRender } from "@/db/stripe-accounts";
 import { getShopDayDepartures, getTodayWork } from "@/db/today";
 import { countShopTrips } from "@/db/trips";
-import { dismissOrientation, isOrientationDismissed } from "@/db/user-accounts";
+import { isOrientationDismissed } from "@/db/user-accounts";
 import {
   orientationRoleFor,
   orientationTourHref,
@@ -60,7 +60,6 @@ import {
   formatTime,
   formatWeekday,
 } from "@/lib/format";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
@@ -91,6 +90,7 @@ import { AUTH_NOTICES } from "./_components/auth-notices";
 import {
   deleteCrewRecapPhotoAction,
   deleteRecapPhotoAction,
+  dismissOrientationAction,
   saveRecapNoteAction,
   sendRecapAction,
   toggleRecapAutoSendPauseAction,
@@ -449,12 +449,6 @@ async function TodayBody({
     (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
   );
   const firstBoatEver = eveningClose.allHome && !sailedBefore;
-  async function dismissOrientationAction() {
-    "use server";
-    const staff = await requireStaffSession();
-    await dismissOrientation(await getDb(), staff.user.personId);
-    revalidateAndRedirect(`/shop/${staff.user.shopSlug}`);
-  }
   // **First run is "never had a departure", not "none coming up".**
   //
   // `nextDeparture` is null in three different situations, and only one of them is a new shop:
