@@ -137,11 +137,30 @@ export async function peopleWhoDivedBefore(
   departureStartsAt: Date,
   timeZone: string,
 ): Promise<Set<string>> {
+  return (await diveDaysBefore(db, shopId, personIds, departureStartsAt, timeZone)).dived;
+}
+
+/**
+ * {@link peopleWhoDivedBefore}, plus who among them sailed on a departure in
+ * the window that the shop marked past no-decompression limits
+ * (`trips.exceeds_no_deco_limits`, H-84). DAN gives no preflight figure for
+ * such a dive, so a morning decompression boat silences the afternoon boat's
+ * figure too (`flySafeFrom`'s `decompressionRecently`; dive-domain review of
+ * issue #1555). Same evidence rule, seat by seat: a flagged seat counts when
+ * the desk or the roll call says that seat sailed.
+ */
+export async function diveDaysBefore(
+  db: DbExecutor,
+  shopId: string,
+  personIds: readonly string[],
+  departureStartsAt: Date,
+  timeZone: string,
+): Promise<{ dived: Set<string>; decompression: Set<string> }> {
   // Nobody to ask about: skip the round trip. Drizzle answers an empty
   // `inArray` with no rows rather than an error, so this is speed, not
   // correctness — the recap run reaches this for every departure whose roster
   // is entirely cancelled.
-  if (personIds.length === 0) return new Set();
+  if (personIds.length === 0) return { dived: new Set(), decompression: new Set() };
 
   const firstDay = shiftCalendarDate(
     calendarDateInTimezone(departureStartsAt, timeZone),
@@ -160,6 +179,7 @@ export async function peopleWhoDivedBefore(
       bookingId: bookings.id,
       tripId: trips.id,
       startsAt: trips.startsAt,
+      exceedsNoDecoLimits: trips.exceedsNoDecoLimits,
       // The desk's words on this seat (`deskCountsDiveDay`), which only this
       // reader lets the roll call outrank; see `sailedByRollCall`.
       deskCounts: sql<boolean>`${deskCountsDiveDay()}`,
@@ -188,6 +208,7 @@ export async function peopleWhoDivedBefore(
     );
 
   const dived = new Set<string>();
+  const decompression = new Set<string>();
   // Seats whose day only the desk's status words strike, kept to ask the roll
   // call about, keyed by booking.
   const contested = new Map<string, ContestedSeat>();
@@ -200,19 +221,35 @@ export async function peopleWhoDivedBefore(
     // departure's dives and would otherwise read a two-boat day as a single.
     if (row.startsAt.getTime() >= departureStartsAt.getTime()) continue;
     if (calendarDateInTimezone(row.startsAt, timeZone) < firstDay) continue;
-    if (row.deskCounts) dived.add(row.personId);
-    else contested.set(row.bookingId, { personId: row.personId, tripId: row.tripId });
+    if (row.deskCounts) {
+      dived.add(row.personId);
+      if (row.exceedsNoDecoLimits) decompression.add(row.personId);
+    } else {
+      contested.set(row.bookingId, {
+        personId: row.personId,
+        tripId: row.tripId,
+        exceedsNoDecoLimits: row.exceedsNoDecoLimits,
+      });
+    }
   }
+  // A contested seat is only worth asking about when its answer could add
+  // something: a dive day the person lacks, or a flagged day they lack.
   for (const [bookingId, seat] of contested) {
-    if (dived.has(seat.personId)) contested.delete(bookingId);
+    const flaggedAnswered = !seat.exceedsNoDecoLimits || decompression.has(seat.personId);
+    if (dived.has(seat.personId) && flaggedAnswered) contested.delete(bookingId);
   }
-  if (contested.size === 0) return dived;
+  if (contested.size === 0) return { dived, decompression };
 
-  for (const personId of await sailedByRollCall(db, shopId, contested)) dived.add(personId);
-  return dived;
+  for (const bookingId of await sailedByRollCall(db, shopId, contested)) {
+    const seat = contested.get(bookingId);
+    if (!seat) continue;
+    dived.add(seat.personId);
+    if (seat.exceedsNoDecoLimits) decompression.add(seat.personId);
+  }
+  return { dived, decompression };
 }
 
-type ContestedSeat = { personId: string; tripId: string };
+type ContestedSeat = { personId: string; tripId: string; exceedsNoDecoLimits: boolean };
 
 /**
  * Which people a standing roll-call result puts at sea on their contested
@@ -230,6 +267,9 @@ type ContestedSeat = { personId: string; tripId: string };
  * The crew trail is not narrowed to the departure's current crew list: taking
  * somebody off it after the boat came back is one more desk word written later,
  * and a recorded boarding is still the better evidence.
+ *
+ * Answers with the contested seats' booking ids, so a caller can tell which
+ * departure put the person at sea.
  */
 async function sailedByRollCall(
   db: DbExecutor,
@@ -259,11 +299,10 @@ async function sailedByRollCall(
       desc(rollCallEvents.seq),
     );
   for (const bookingId of standingSailedSubjects(diverRows, (row) => row.bookingId)) {
-    const seat = contested.get(bookingId);
-    if (seat) sailed.add(seat.personId);
+    if (contested.has(bookingId)) sailed.add(bookingId);
   }
 
-  const unanswered = seats.filter((seat) => !sailed.has(seat.personId));
+  const unanswered = [...contested].filter(([bookingId]) => !sailed.has(bookingId));
   if (unanswered.length === 0) return sailed;
   const crewRows = await db
     .select({
@@ -276,8 +315,10 @@ async function sailedByRollCall(
     .where(
       and(
         eq(rollCallCrewEvents.shopId, shopId),
-        inArray(rollCallCrewEvents.tripId, [...new Set(unanswered.map((seat) => seat.tripId))]),
-        inArray(rollCallCrewEvents.personId, [...new Set(unanswered.map((seat) => seat.personId))]),
+        inArray(rollCallCrewEvents.tripId, [...new Set(unanswered.map(([, seat]) => seat.tripId))]),
+        inArray(rollCallCrewEvents.personId, [
+          ...new Set(unanswered.map(([, seat]) => seat.personId)),
+        ]),
       ),
     )
     .orderBy(
@@ -288,8 +329,8 @@ async function sailedByRollCall(
   // A crew result answers only for the departure the contested seat is on,
   // never for another boat that person crewed in the window.
   const crewSailed = standingSailedSubjects(crewRows, (row) => `${row.tripId}|${row.personId}`);
-  for (const seat of unanswered) {
-    if (crewSailed.has(`${seat.tripId}|${seat.personId}`)) sailed.add(seat.personId);
+  for (const [bookingId, seat] of unanswered) {
+    if (crewSailed.has(`${seat.tripId}|${seat.personId}`)) sailed.add(bookingId);
   }
   return sailed;
 }

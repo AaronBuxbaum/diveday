@@ -81,7 +81,9 @@
   read as a verdict — in Spanish twice over, where "Puedes volar" is literally *you can fly*. A
   departure the shop marks as **decompression diving** (`trips.exceeds_no_deco_limits`, H-84,
   issue #1555) gets no earliest flight at all, because DAN gives no figure for a dive that took
-  stops; one nobody marked is read as no-decompression. Two things it deliberately cannot know:
+  stops, and neither does a later departure for a diver who sailed on a marked one earlier in the
+  same lookback window (a morning decompression boat before an afternoon one); one nobody marked is
+  read as no-decompression. Two things it deliberately cannot know:
   any dive not booked at this shop, so a week with another
   operator is invisible; and that two days belong to one diver when the bookings carry no email — a
   walk-up is a fresh `people` row each time. Informs and gates nothing; never computed from a depth

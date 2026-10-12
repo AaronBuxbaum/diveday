@@ -158,6 +158,13 @@ export type FlySafeInput = {
    * column's own default.
    */
   exceedsNoDecoLimits?: boolean;
+  /**
+   * This diver sailed on an *earlier* departure in the same lookback window
+   * that the shop marked past no-decompression limits — a morning
+   * decompression boat before this afternoon one. A fact about a person, like
+   * {@link FlySafeInput.divedRecently}. Absent reads as no.
+   */
+  decompressionRecently?: boolean;
   now: Date;
   /** Always {@link DEFAULT_FLY_SAFE_HOURS} in the product; a parameter so the arithmetic stays pure. */
   hours: FlySafeHours;
@@ -191,8 +198,9 @@ export type FlySafeResult = {
  *   None of the three can ever *shorten* a wait: {@link DEFAULT_FLY_SAFE_HOURS}
  *   has a `repetitive` longer than its `single`, so reaching repetitive is
  *   monotonic by construction.
- * - **Past no-decompression limits.** A departure the shop marked so gets
- *   null before anything else is read (H-84).
+ * - **Past no-decompression limits.** A departure the shop marked so, or a
+ *   diver who sailed on an earlier one in the lookback window, gets null
+ *   before anything else is read (H-84).
  * - **Anchor.** The latest recorded exit, provided the record is whole — as
  *   many dives logged as the departure planned, none of them later-numbered
  *   and missing its exit. Otherwise the *buffered* return — the scheduled time
@@ -207,7 +215,7 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   // the shop marked past no-decompression limits gets no answer at all — the
   // same silence as a boat still at sea, never the recreational number with
   // DAN's name beside it (H-84, issue #1555).
-  if (input.exceedsNoDecoLimits) return null;
+  if (input.exceedsNoDecoLimits || input.decompressionRecently) return null;
   // The recorded count is read first so a day the crew logged as two tanks
   // says so, rather than being explained by a plan or by yesterday.
   const reason: FlySafeReason =

@@ -486,6 +486,11 @@ describe("flySafeFrom — a departure past no-decompression limits (H-84)", () =
     ).toBeNull();
   });
 
+  it("answers nothing after an earlier flagged departure in the window, though this one is not", () => {
+    expect(flySafeFrom({ ...base, decompressionRecently: true })).toBeNull();
+    expect(flySafeFrom({ ...base, decompressionRecently: false })).toEqual(flySafeFrom(base));
+  });
+
   it("answers as before for a departure that is not flagged, or says nothing about it", () => {
     expect(flySafeFrom({ ...base, exceedsNoDecoLimits: false })).toEqual(flySafeFrom(base));
     expect(flySafeFrom(base)).not.toBeNull();
