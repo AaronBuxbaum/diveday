@@ -762,6 +762,7 @@ export default async function DiverReadinessPage({
       <ExpiredLinkCard
         title={anonT("ready.unavailableHeading")}
         text={anonT("ready.unavailableBody")}
+        t={anonT}
       />
     );
   }
@@ -778,6 +779,7 @@ export default async function DiverReadinessPage({
       <ExpiredLinkCard
         title={anonT("ready.unavailableHeading")}
         text={anonT("ready.unavailableBody")}
+        t={anonT}
       />
     );
   }

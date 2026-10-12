@@ -654,3 +654,24 @@ test("a dead departure link keeps the diver at the shop they were trying to reac
   await expect(page).toHaveURL(/\/s\/blue-mantis$/);
   await expect(page.getByRole("heading", { name: "Schedule" })).toBeVisible();
 });
+
+/**
+ * **A path under a shop that names no page at all is that shop's dead link
+ * too** (UX review 2026-10-10, item 11). Next answered it 404 already, but from
+ * the root boundary, which knows no shop: DiveDay's eyebrow and a "Back to the
+ * homepage" button into DiveDay's sales site, for a diver who was on a shop's
+ * link. The edge now refuses it as the shop's own.
+ */
+test("a mistyped page under a shop keeps the diver at that shop", async ({ page }) => {
+  const dead = "/s/blue-mantis/anything-wrong";
+  const response = await page.goto(dead);
+  expect(response?.status(), dead).toBe(404);
+
+  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("Blue Mantis Divers")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to the homepage" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "See what’s coming up" })).toHaveAttribute(
+    "href",
+    "/s/blue-mantis",
+  );
+});

@@ -13,6 +13,7 @@
     "backToSchedule": "Volver al calendario",
     "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
     "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
+    "diveDayDoor": "Ir a DiveDay",
     "perDiver": "por buceador",
     "optional": "(opcional)",
     "name": "Nombre",
@@ -217,8 +218,7 @@
     "seen": {
       "heading": "Visto aquí este mes",
       "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}}",
-      "lastSeen": "Visto por última vez el {date}",
-      "honest": "Lo que registró la tripulación, y cuándo. Dice lo que se vio, no lo que verás."
+      "lastSeen": "Visto por última vez el {date}"
     },
     "dayProfile": {
       "bottomTime": "{minutes, plural, one {Alrededor de # minuto en el agua} other {Alrededor de # minutos en el agua}}",
@@ -726,6 +726,7 @@
     "agencyLabel": "Agencia",
     "agencyNone": "Aún sin certificar",
     "levelLabel": "Nivel",
+    "levelPlaceholder": "Elige tu nivel",
     "identifierLabel": "Número de tarjeta",
     "sizesHeading": "Tus tallas",
     "sizesHint": "Solo si alquilas con nosotros. Te ahorra la prueba en el mostrador.",

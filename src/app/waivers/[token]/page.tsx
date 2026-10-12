@@ -186,6 +186,7 @@ export default async function WaiverPage({
       <ExpiredLinkCard
         title={anonT("waiver.unavailableHeading")}
         text={anonT("waiver.unavailableBody")}
+        t={anonT}
       />
     );
   }
@@ -199,6 +200,7 @@ export default async function WaiverPage({
       <ExpiredLinkCard
         title={anonT("waiver.unavailableHeading")}
         text={anonT("waiver.unavailableBody")}
+        t={anonT}
       />
     );
   }

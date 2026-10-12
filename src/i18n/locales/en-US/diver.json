@@ -13,6 +13,7 @@
     "backToSchedule": "Back to the schedule",
     "needHelpContact": "Need help? <link>Contact {shop}</link>.",
     "needHelpPlain": "Need help? Contact {shop} directly.",
+    "diveDayDoor": "Go to DiveDay",
     "perDiver": "per diver",
     "optional": "(optional)",
     "name": "Name",
@@ -217,8 +218,7 @@
     "seen": {
       "heading": "Seen here this month",
       "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}}",
-      "lastSeen": "Last seen {date}",
-      "honest": "What the crew logged, and when. It says what was seen, not what you will see."
+      "lastSeen": "Last seen {date}"
     },
     "dayProfile": {
       "bottomTime": "Usually {minutes, plural, one {# minute} other {# minutes}} in the water",
@@ -726,6 +726,7 @@
     "agencyLabel": "Agency",
     "agencyNone": "Not certified yet",
     "levelLabel": "Level",
+    "levelPlaceholder": "Choose your level",
     "identifierLabel": "Card number",
     "sizesHeading": "Your sizes",
     "sizesHint": "Only if you rent from us. It saves a fitting at the counter.",

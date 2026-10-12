@@ -258,9 +258,12 @@ test.describe("staff-prepared trip", () => {
   });
 });
 
-test("a tampered readiness token reveals nothing", async ({ page }) => {
+test("a tampered readiness token reveals nothing, and still leaves a door", async ({ page }) => {
   await page.goto("/ready/not-a-real-token");
   await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
+  // No shop to name, so DiveDay's own door rather than a dead end (UX review
+  // 2026-10-10, item 11).
+  await expect(page.getByRole("link", { name: "Go to DiveDay" })).toHaveAttribute("href", "/");
 });
 
 /**

@@ -207,6 +207,42 @@ describe("TripDayPlan's profile", () => {
     for (const line of lines()) expect(line).toHaveClass("last:border-b");
   });
 
+  it("lets the months' heading and lines carry themselves, with no disclaimer under the plan", () => {
+    // "What the crew logged, and when. It says what was seen, not what you
+    // will see." used to close the day (UX review 2026-10-10, item 22): a
+    // disclaimer the diver never asked for, under a heading that already says
+    // "Seen here this month" and lines that already say "logged dives".
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        sightings={
+          new Map([
+            [
+              "site-1",
+              {
+                diveSiteId: "site-1",
+                dives: 6,
+                species: [
+                  {
+                    speciesSlug: "green-sea-turtle",
+                    dives: 4,
+                    total: 5,
+                    lastSeenAt: new Date("2026-07-18T14:00:00Z"),
+                  },
+                ],
+              },
+            ],
+          ])
+        }
+      />,
+    );
+    expect(screen.getByText("Seen here this month")).toBeInTheDocument();
+    expect(screen.queryByText(/what was seen/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/What the crew logged/)).not.toBeInTheDocument();
+  });
+
   it("says nothing about a surface interval on a one-tank day", () => {
     render(
       <TripDayPlan
