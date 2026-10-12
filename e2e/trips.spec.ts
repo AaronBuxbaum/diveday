@@ -118,8 +118,14 @@ test("a tank with no site yet says so on the booking page, so one site and two d
     .getByRole("link", { name: "Two-Tank Reef — Benwood & Elbow" })
     .click();
   await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
-  // Tank one has a site; tank two is the crew's call at the dock.
-  await expect(page.getByText("Benwood Wreck", { exact: true })).toBeVisible();
+  // Tank one has a site; tank two is the crew's call at the dock. Read off the
+  // dive list itself: the log-entry preview under it names the day's sites too.
+  const dives = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "The day" }) })
+    .getByRole("list")
+    .first();
+  await expect(dives.getByText("Benwood Wreck", { exact: true })).toBeVisible();
   await expect(page.getByText("Site to be confirmed")).toHaveCount(1);
 });
 
