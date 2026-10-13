@@ -26,7 +26,8 @@ provider-specific folders are adapters and must not introduce unique requirement
 - Read `foo.test.ts` before `foo.ts`: tests are the contract.
 - Iterate with one focused test and quiet output. The whole suite belongs to CI; the shell guard
   refuses a bare `pnpm test` / `pnpm e2e` / `pnpm check`.
-- Redirect a long run to a file and read the failing part; never pipe it through `tail`.
+- Redirect a long run to a file in your scratchpad (or `$TMPDIR`), never beside the checkouts,
+  and read the failing part; never pipe it through `tail`.
 - Send a broad search or a verbose run to a subagent; the `Explore` agent does not load this file.
 
 ## Commands

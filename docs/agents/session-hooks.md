@@ -38,7 +38,7 @@ what is currently wired.
 | `PreToolUse` on `Read` | `scripts/guard-read.mjs` | refuses a generated artifact and a whole-file read of a large source file |
 | `PostToolUse` on `Edit`/`Write` | `scripts/format-touched.mjs` | Biome over the one file just touched; hands back what its safe fixes could not clear |
 | `PostToolUseFailure` on `Bash` | `scripts/explain-failure.mjs` | attaches the written answer to a failure the debug skill already explains |
-| `Stop` | `scripts/stray-processes.mjs` | reports background shells still alive after ten minutes and dev/test processes reparented to init |
+| `Stop` | `scripts/stray-processes.mjs` | reports background shells still alive after ten minutes, dev/test processes reparented to init, and files the session wrote in the directory the checkouts sit in (`*-orig.ts` copies and logs belong in the scratchpad) |
 | `Stop` | `scripts/unfinished-promises.mjs` | blocks a closing message that promises work while the tree is dirty |
 | `Stop` | `scripts/unpushed-work.mjs` | in a cloud container, blocks a plain ending with commits on no remote branch |
 | `SubagentStop` | `scripts/stray-processes.mjs` | the same report for a subagent's shells |
