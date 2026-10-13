@@ -1,8 +1,11 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
+import {
+  type CounterRentalWaiverStanding,
+  counterRentalWaiverStanding,
+} from "@/lib/counter-rentals";
 import type { GearItemKind } from "@/lib/gear";
 import { type GearRentalHolder, groupGearRentals } from "@/lib/gear-rentals";
-import type { ShopWaiverStatus } from "@/lib/waivers";
 import type { AppDb } from "./client";
 import { openGearReservation } from "./gear";
 import { counterRentalWaiverStandings } from "./gear-counter-rentals";
@@ -64,8 +67,10 @@ export type GearRentalsPage = OffsetPage<GearRentalHolder<GearRentalUnit>> & {
    * release (issue #2261, H-108), said on their counter rows and never a
    * gate. A trip rental's waiver is the booking's readiness, said on the
    * departure, so only a holder with a counter rental on the page is read.
+   * A current release carries the days of an earlier refusal or an open
+   * referral it stands over, so the list warns as the ticket does (#2540).
    */
-  counterWaivers?: ReadonlyMap<string, ShopWaiverStatus["state"]>;
+  counterWaivers?: ReadonlyMap<string, CounterRentalWaiverStanding>;
 };
 
 /**
@@ -111,8 +116,11 @@ export async function listGearRentals(
       .filter((holder) => holder.rentals.some((rental) => !rental.bookingId))
       .map((holder) => holder.personId),
   });
+  const timezone = options.timezone;
   const counterWaivers = new Map(
-    [...standings].map(([personId, status]) => [personId, status.state] as const),
+    [...standings].map(
+      ([personId, status]) => [personId, counterRentalWaiverStanding(status, timezone)] as const,
+    ),
   );
   return { ...page, counterWaivers };
 }

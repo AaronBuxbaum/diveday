@@ -701,3 +701,45 @@ export function serviceConcernStillOpen(
           event.createdAt.getTime() >= lastReturn.returnedAt.getTime())),
   );
 }
+
+/**
+ * **A concern returned while the unit is already on the bench** (#2540). A
+ * set return that flags a unit already pulled leaves the technician's note
+ * alone (`pullReturnedUnitsForService`), so the concern would otherwise live
+ * only in the rental history further down the page. The status card names
+ * each one, newest first, while the unit is off the wall: a service-concern
+ * return with words, returned on or after the last recorded service, and not
+ * already the unit's own note.
+ */
+export function benchReturnConcerns(
+  item: { status: "in_service" | "needs_service"; serviceNote: string | null },
+  reservations: ReadonlyArray<{
+    returnOutcome: GearReturnOutcome | null;
+    returnNote: string | null;
+    returnedAt: Date | null;
+  }>,
+  history: ReadonlyArray<{ servicedOn: CalendarDate; kind: GearServiceKind }>,
+  timeZone: string,
+): { note: string; returnedOn: CalendarDate }[] {
+  if (item.status !== "needs_service") return [];
+  // A condition note answers no concern; any real work on the unit does.
+  const lastServiced = history.reduce<CalendarDate | null>(
+    (latest, event) =>
+      event.kind !== "note" && (latest === null || event.servicedOn > latest)
+        ? event.servicedOn
+        : latest,
+    null,
+  );
+  const ownNote = item.serviceNote?.trim() ?? "";
+  return reservations
+    .flatMap((reservation) => {
+      const note = reservation.returnNote?.trim() ?? "";
+      if (reservation.returnOutcome !== "service_concern" || !reservation.returnedAt) return [];
+      if (note === "" || note === ownNote) return [];
+      const returnedOn = calendarDateInTimezone(reservation.returnedAt, timeZone);
+      if (lastServiced !== null && returnedOn < lastServiced) return [];
+      return [{ note, returnedOn, at: reservation.returnedAt.getTime() }];
+    })
+    .sort((a, b) => b.at - a.at)
+    .map(({ note, returnedOn }) => ({ note, returnedOn }));
+}
