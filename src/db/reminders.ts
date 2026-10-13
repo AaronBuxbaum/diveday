@@ -35,7 +35,7 @@ import {
 } from "@/lib/reminders";
 import { maySendNow } from "@/lib/send-window";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { type IssuedCapability, issueBookingCapabilities } from "./booking-capabilities";
+import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import {
@@ -114,6 +114,12 @@ export type ReminderRunSummary = {
   settled: number;
   /** Reminders whose tracked channel failed or was not configured. */
   failed: number;
+};
+
+/** What a reminder that earns its send carries, decided before its link is minted. */
+type ReminderContent = {
+  checklist: ReturnType<typeof buildDiverChecklist> | null;
+  materialsDue: ReturnType<typeof readLearningMaterials>;
 };
 
 export type SendDueRemindersOptions = {
@@ -254,6 +260,68 @@ function reminderSmsBody(
   // Last, and only on a channel that can hear the answer.
   const keywords = input.replyKeywords ? ` ${t("notifications.replyKeyword.offer")}` : "";
   return `${body}${conditions}${meet}${todoText}${materialsText}${ready}${contact}${late}${keywords}`;
+}
+
+/**
+ * Every meeting of each due trip, in day order — one read for the whole pass.
+ * A multi-day course's reminder lists each day; one meeting (or none on file)
+ * keeps the single date and time it always had.
+ */
+async function readMeetingsByTrip(
+  db: AppDb,
+  tripIds: string[],
+): Promise<Map<string, { startsAt: Date; endsAt: Date }[]>> {
+  const meetingsByTrip = new Map<string, { startsAt: Date; endsAt: Date }[]>();
+  if (tripIds.length === 0) return meetingsByTrip;
+  const meetings = await db
+    .select({
+      tripId: tripScheduleDays.tripId,
+      startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
+    })
+    .from(tripScheduleDays)
+    .where(inArray(tripScheduleDays.tripId, tripIds))
+    .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
+  for (const meeting of meetings) {
+    const list = meetingsByTrip.get(meeting.tripId) ?? [];
+    list.push({ startsAt: meeting.startsAt, endsAt: meeting.endsAt });
+    meetingsByTrip.set(meeting.tripId, list);
+  }
+  return meetingsByTrip;
+}
+
+/**
+ * The trip-prep link each sending reminder carries, by booking id, carried by
+ * both the email's button and the text (ux review 2026-10-11, item 6). Minted
+ * in one insert per shop for exactly the reminders that earn their send (code
+ * review 2026-10-13b, item 36): the send loop used to mint one capability per
+ * reminder, three statements each, between its sends. Empty with no public
+ * origin configured.
+ */
+async function mintReminderLinks(
+  db: AppDb,
+  origin: string | null,
+  seats: ReadonlyArray<{ shopId: string; bookingId: string }>,
+  now: Date,
+): Promise<Map<string, string>> {
+  const links = new Map<string, string>();
+  if (!origin) return links;
+  const byShop = new Map<string, string[]>();
+  for (const { shopId, bookingId } of seats) {
+    byShop.set(shopId, [...(byShop.get(shopId) ?? []), bookingId]);
+  }
+  for (const [shopId, bookingIds] of byShop) {
+    const issued = await issueBookingCapabilities(db, {
+      shopId,
+      bookingIds,
+      purpose: "readiness",
+      now,
+    });
+    for (const [bookingId, { token }] of issued) {
+      links.set(bookingId, new URL(readinessLinkPath(token), `${origin}/`).toString());
+    }
+  }
+  return links;
 }
 
 /**
@@ -454,39 +522,12 @@ export async function sendDueReminders(
     }),
   );
 
-  // Every meeting of each due trip, in day order — one read for the whole
-  // pass. A multi-day course's reminder lists each day; one meeting (or none
-  // on file) keeps the single date and time it always had.
-  const dueTripIds = [...new Set(dueRows.map(({ row }) => row.trip.id))];
-  const meetingsByTrip = new Map<string, { startsAt: Date; endsAt: Date }[]>();
-  if (dueTripIds.length > 0) {
-    const meetings = await db
-      .select({
-        tripId: tripScheduleDays.tripId,
-        startsAt: tripScheduleDays.startsAt,
-        endsAt: tripScheduleDays.endsAt,
-      })
-      .from(tripScheduleDays)
-      .where(inArray(tripScheduleDays.tripId, dueTripIds))
-      .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
-    for (const meeting of meetings) {
-      const list = meetingsByTrip.get(meeting.tripId) ?? [];
-      list.push({ startsAt: meeting.startsAt, endsAt: meeting.endsAt });
-      meetingsByTrip.set(meeting.tripId, list);
-    }
-  }
+  const meetingsByTrip = await readMeetingsByTrip(db, [
+    ...new Set(dueRows.map(({ row }) => row.trip.id)),
+  ]);
 
-  // **First which reminders send, then every link they carry, then the
-  // sends** (code review 2026-10-13b, item 36). The loop minted one readiness
-  // capability per reminder, three statements each, between its sends; the
-  // links now go out in one insert per shop (`issueBookingCapabilities`), for
-  // exactly the reminders that earn their send, the set the loop minted for.
-  const sending: Array<{
-    row: (typeof dueRows)[number]["row"];
-    cadence: (typeof dueRows)[number]["cadence"];
-    checklist: ReturnType<typeof buildDiverChecklist> | null;
-    materialsDue: ReturnType<typeof readLearningMaterials>;
-  }> = [];
+  // First which reminders send, then every link they carry, then the sends.
+  const sending: Array<(typeof dueRows)[number] & ReminderContent> = [];
   for (const {
     row,
     row: { booking, person, trip, shop, courseMaterials },
@@ -543,25 +584,12 @@ export async function sendDueReminders(
     sending.push({ row, cadence, checklist, materialsDue });
   }
 
-  const sendingByShop = new Map<string, string[]>();
-  for (const { row } of sending) {
-    const ids = sendingByShop.get(row.shop.id) ?? [];
-    ids.push(row.booking.id);
-    sendingByShop.set(row.shop.id, ids);
-  }
-  const links = new Map<string, IssuedCapability>();
-  if (origin) {
-    for (const [shopId, bookingIds] of sendingByShop) {
-      for (const [bookingId, capability] of await issueBookingCapabilities(db, {
-        shopId,
-        bookingIds,
-        purpose: "readiness",
-        now,
-      })) {
-        links.set(bookingId, capability);
-      }
-    }
-  }
+  const links = await mintReminderLinks(
+    db,
+    origin,
+    sending.map(({ row }) => ({ shopId: row.shop.id, bookingId: row.booking.id })),
+    now,
+  );
 
   for (const {
     row: { booking, person, trip, shop },
@@ -580,11 +608,7 @@ export async function sendDueReminders(
     // different languages.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
-    const capability = links.get(booking.id);
-    const readinessUrl =
-      origin && capability
-        ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
-        : undefined;
+    const readinessUrl = links.get(booking.id);
     const phone = smsRecipient(person.phone);
     // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
     const meetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));

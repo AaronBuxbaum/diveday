@@ -487,11 +487,7 @@ function TemplatePreview({
       </div>
 
       {facts.length > 0 ? (
-        <dl
-          className={sectionCardClass({
-            className: "mt-6 grid gap-4 sm:grid-cols-2",
-          })}
-        >
+        <dl className={sectionCardClass({ className: "mt-6 grid gap-4 sm:grid-cols-2" })}>
           {facts.map((fact) => (
             <div key={fact.label}>
               <dt className={groupLabelClass()}>{fact.label}</dt>
