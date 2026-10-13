@@ -1,6 +1,6 @@
 ---
 name: stacked-prs
-description: Open work as stacked pull requests — chained bases, GitHub stacks, cascading rebase, bottom-up merge. Use when cutting a branch or opening a PR while another of yours is open, related or not, or when reviewing, rebasing, or landing a stack.
+description: Open work as stacked pull requests — chained bases, GitHub stacks, cascading rebase, bottom-up merge, one PR's CI at a time. Use when cutting a branch or opening a PR while any stack is open, or pushing, rebasing, or landing one.
 ---
 
 # Stacked pull requests
@@ -10,11 +10,13 @@ above targets the head branch of the one below. GitHub runs the cascading rebase
 bottom-up and atomically, and retargets what is left onto `main`
 (ADR [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md)).
 
-## Stack by default
+## Stack everything, and run one PR's CI at a time
 
-**Cut every branch from the branch you opened last, not from `main`, whenever that one is still
-open.** Related or unrelated, a schema migration or a padding change, one file or forty — the shape
-is the same, and it is the default rather than a special case for dependent chains (ADR
+**Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
+newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
+the stack pushes one layer at a time, because concurrent runs cancel each other** (AGENTS.md's
+*Parallel work*). Related or unrelated, a schema migration or a padding change, one file or forty —
+the shape is the same, and it is the default rather than a special case for dependent chains (ADR
 [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
 "Widened: stack by default"). Two different arguments arrive at that one habit.
 
@@ -53,13 +55,14 @@ under *What our pipeline does with it* below — never a reason to cut from `mai
 
 ### What still goes on its own branch off `main`
 
-1. **Nothing of yours is open.** `git fetch origin main` first, every time: if the branch below has
-   merged, the next one cuts from the refreshed `origin/main` and there is no stack at all.
+1. **No stack is open.** `git fetch origin main` first, every time: if the branch below has merged,
+   the next one cuts from the refreshed `origin/main` and there is no stack at all.
 2. **A fix that must merge now** — a red `main`, a hotfix, a race in a spec you did not touch found
    while triaging someone else's diff. It should be able to merge without waiting for the layers
    beneath it.
-3. **The branch below belongs to another session.** Stack on your own work. Someone else's
-   force-push is your cascading rebase, and their claim is not yours to extend.
+
+Another thread's stack is not on that list either: stack on it, and leave the push order to the
+thread that owns it. Its claims stay its own; yours name your layer.
 
 **Depth is not on that list.** A stack has no maximum length — fifteen layers is as legitimate as
 three, and a long chain is the shape this repository wants. Every layer already contains the ones
@@ -69,7 +72,7 @@ branch later and by hand. That saving *grows* with depth: the thirteen branches 
 conflicted with each other thirteen ways, and the same thirteen stacked conflict zero. The reason
 to cut from `main` never grows the same way.
 
-CI does not bound depth either. **Every layer runs the whole gate**, wherever it sits in the stack
+CI does not bound depth, but it does set the pace. **Every layer runs the whole gate**, wherever it sits in the stack
 (ADR [20261003-every-stack-layer-runs-ci](../../../docs/architecture/decisions/20261003-every-stack-layer-runs-ci.md)), so a green check on any layer
 means that layer was tested. The middle-layer skip and cancel of
 [20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md) are gone. The only hard ceiling is GitHub's own — a registered stack holds at most 100 pull
@@ -206,13 +209,13 @@ to its own change.
      `merge-base` of the PR's base sha and HEAD) has a published snapshot, the layer compares
      against it and the sticky comment says so; otherwise it falls back to the stack's fork point
      from `main`, and the diff is **cumulative** (ADR [20261012-visual-baseline-layer-below](../../../docs/architecture/decisions/20261012-visual-baseline-layer-below.md)).
-  2. **Opening a layer above does not cancel the run below.** Only a new push to the same branch
-     supersedes a run (per-ref concurrency in `ci.yml`).
-  3. **Push several layers a layer at a time, bottom first.** Push the bottom layer, wait until its
-     run's `Build` job has finished (about two minutes), then push the next, so no more than two
-     full runs overlap. Each layer is a ~25-job run against the account's 20-concurrent-job cap:
-     four layers pushed within 46 s on 2026-10-10 (runs 4558, 4559, 4562, 4563) queued jobs for up
-     to 740 s and took 23.0–28.4 min each, against 13.6–16.8 min for a run on its own.
+  2. **One PR's CI at a time, bottom first, driven by the thread that owns the stack.** Push a
+     layer, let its run finish, then push the next. Concurrent runs cancel each other: on
+     2026-10-12, 15 to 19 layers pushed together cost 126 cancelled runs and 90 failed jobs as each
+     break rode up the stack. Each layer is a ~25-job run against the account's 20-concurrent-job
+     cap, so even two overlapping runs queue (runs 4558 to 4563 on 2026-10-10 took 23 to 28 min
+     each against 14 to 17 alone). The per-prompt context line counts the account's open pull
+     requests, so a second run in flight is visible before you push.
 - **`pnpm test:changed` and the destructive-migration guard** anchor on
   `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
   layers re-run lower layers' affected tests and re-check their migrations. Slower, never wrong —

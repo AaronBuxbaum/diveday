@@ -54,9 +54,13 @@ runs. Pass args directly. The shell guard refuses the bare form.
   collision-resistant `YYYYMMDD-short-slug` ids; do not allocate the next integer. No branch-local
   reservation ledgers. Split work by vertical slice or non-overlapping paths, and trial-merge the
   target branch before calling work complete.
-- **Stack by default: cut every branch from the branch you opened last, not from `main`, whenever
-  that one is still open** — related or unrelated, a schema migration or a padding change. A
-  dependent chain (`src/db/schema.ts` + migration → the `src/db` reader → the surface) has no other
+- **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
+  newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
+  the stack pushes one layer at a time, because concurrent runs cancel each other.** That is
+  Aaron's rule; the CI half dates from 2026-10-12, when 15 to 19 layers pushed together cost 126
+  cancelled runs and 90 failed jobs. Push a layer, let its run finish, then push the next; a thread
+  whose layer sits on another thread's stack leaves the push order to the thread that owns it. A
+  dependent chain (`src/db/schema/` + migration → the `src/db` reader → the surface) has no other
   honest shape; unrelated work stacks because a second branch cut from `main` re-edits the same
   shared files (a `check:repo` row, a baseline, a message bundle), and on a stack those merge once,
   while the change is being written. Pixels are not an exception. Cut each branch from the one
@@ -64,8 +68,8 @@ runs. Pass args directly. The shell guard refuses the bare form.
   first, every body naming its position; `.github/workflows/stack.yml` registers the chain as a
   GitHub stack. Never open the parts as independent PRs off `main`. Every layer runs the whole CI
   gate.
-  What still goes on its own branch off `main` (nothing of yours open, a fix that must merge now,
-  another session's branch — never depth: a stack has no cap, and a long one is the point) and the
+  What still goes on its own branch off `main` (no stack open, or a fix that must merge now — never
+  depth: a stack has no cap, and a long one is the point) and the
   mechanics are in the **stacked-prs** skill and ADRs 20260821-stacked-pull-requests,
   20261003-every-stack-layer-runs-ci and 20260907-a-runner-registers-the-stack.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same spec

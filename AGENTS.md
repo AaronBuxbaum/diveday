@@ -142,10 +142,9 @@ Other sessions share this checkout. The full statement of each rule:
 - A unique branch slug and an early draft PR naming owned paths, schema changes and ADR ids; ADR
   ids are `YYYYMMDD-short-slug`, never the next integer. Trial-merge the target before calling
   work complete.
-- **Stack by default**: cut every branch from the one you opened last while it is still open,
-  related or not, pixels included; open each as a draft at its first commit with `base` on the
-  branch below; never independent PRs off `main`. The **stacked-prs** skill has the mechanics and
-  the exceptions.
+- **Stack everything, across threads, and run one PR's CI at a time**: cut every branch from the
+  newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
+  the stack pushes one layer at a time, because concurrent runs cancel each other (**stacked-prs**).
 
 ## Hard rules
 
