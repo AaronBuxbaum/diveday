@@ -890,6 +890,46 @@ async function latestCheckoutForBookingIds(
   return row?.checkout ?? null;
 }
 
+/**
+ * **What the party paid by card**, for the lead's confirmation (#2447): the
+ * completed checkout this booking leads, the total Stripe itself reported as
+ * settled (`settled_total_cents`, discount and tax already in it), and how
+ * many seats it covered. Display only.
+ *
+ * Null unless every part is Stripe's own: no completed checkout, no settled
+ * figure (never the asked total in its place, which a discount or tax makes
+ * wrong), or a booking that is a party member's own seat rather than the one
+ * that paid.
+ */
+export async function settledPartyPayment(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<{ amountCents: number; currency: string; seats: number } | null> {
+  const [booking] = await db
+    .select({ partyLeadBookingId: bookings.partyLeadBookingId })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  if (!booking || booking.partyLeadBookingId) return null;
+  const checkout = await latestCheckoutForBookingIds(db, shopId, [bookingId]);
+  if (checkout?.status !== "completed" || !checkout.settledTotalCents) return null;
+  const covered = await db
+    .select({ bookingId: bookingCheckoutBookings.bookingId })
+    .from(bookingCheckoutBookings)
+    .where(
+      and(
+        eq(bookingCheckoutBookings.shopId, shopId),
+        eq(bookingCheckoutBookings.checkoutId, checkout.id),
+      ),
+    );
+  return {
+    amountCents: checkout.settledTotalCents,
+    currency: checkout.currency,
+    seats: Math.max(1, covered.length),
+  };
+}
+
 /** The most recent checkout for one booking — drives the confirmation page's payment panel. */
 export async function getLatestCheckoutForBooking(
   db: DbExecutor,

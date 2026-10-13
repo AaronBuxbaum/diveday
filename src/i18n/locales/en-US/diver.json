@@ -4161,7 +4161,8 @@
       "packingHeading": "Bring",
       "moneyOnline": "Your seat: {amount}, by card online.",
       "moneyDeposit": "Your seat: {deposit} by card online, then {balance} at the dock on {date}.",
-      "moneyAtShop": "Your seat: {amount}, due at the shop."
+      "moneyAtShop": "Your seat: {amount}, due at the shop.",
+      "partyPaid": "{seats, plural, one {Paid by card: {amount}.} other {Paid by card for # seats: {amount}.}}"
     },
     "waitlistInvite": {
       "subject": "A spot opened up on {tripTitle}",

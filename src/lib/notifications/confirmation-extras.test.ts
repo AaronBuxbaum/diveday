@@ -49,6 +49,23 @@ describe("confirmationExtras", () => {
     });
   });
 
+  it("carries what the party's card checkout settled, beside the seat's own line (#2447)", () => {
+    expect(
+      confirmationExtras({
+        shop,
+        trip,
+        course: null,
+        participantType: "diver",
+        chargesOnline: true,
+        origin: null,
+        partyPaid: { amountCents: 63_180, currency: "usd", seats: 4 },
+      }),
+    ).toMatchObject({
+      money: { due: "deposit" },
+      partyPaid: { amountCents: 63_180, currency: "usd", seats: 4 },
+    });
+  });
+
   it("owes the whole seat at the shop when nothing went to a checkout", () => {
     expect(
       confirmationExtras({
