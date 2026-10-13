@@ -52,7 +52,12 @@ import {
   type TripScheduleDayInput,
   validateDiveSites,
 } from "./trips-create";
-import { getTripCrewAssignments, seatStandingCrew, setTripCrew } from "./trips-crew";
+import {
+  getTripCrewAssignments,
+  getTripCrewAssignmentsByTrip,
+  seatStandingCrew,
+  setTripCrew,
+} from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { boatCertifiedPassengers, liveBookingJoin } from "./trips-queries";
 
@@ -1256,11 +1261,18 @@ export async function setSeriesStandingCrew(
     )
     .orderBy(asc(trips.startsAt));
   const wanted = crewKey(crew);
+  // Every date's crew in one read, not one per date (code review 2026-10-13,
+  // item 35); the writes stay one at a time, each through `setTripCrew`.
+  const crewByTrip = await getTripCrewAssignmentsByTrip(
+    db,
+    input.shopId,
+    siblings.map((sibling) => sibling.id),
+  );
   let updated = 0;
   let skipped = 0;
   for (const sibling of siblings) {
     // A date already crewed exactly so is left alone: no write, no news.
-    if (crewKey(await getTripCrewAssignments(db, input.shopId, sibling.id)) === wanted) {
+    if (crewKey(crewByTrip.get(sibling.id) ?? []) === wanted) {
       updated += 1;
       continue;
     }

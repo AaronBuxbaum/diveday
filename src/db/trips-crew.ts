@@ -513,6 +513,36 @@ export async function getTripCrewAssignments(
 }
 
 /**
+ * {@link getTripCrewAssignments} for many departures in one statement, keyed by
+ * trip; a departure with no crew is absent. The series' standing-crew apply
+ * compares every upcoming date at once rather than reading them one by one
+ * (code review 2026-10-13, item 35).
+ */
+export async function getTripCrewAssignmentsByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, { personId: string; tripRole: TripCrewRole | null }[]>> {
+  const byTrip = new Map<string, { personId: string; tripRole: TripCrewRole | null }[]>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: tripAssignments.tripId,
+      personId: tripAssignments.personId,
+      tripRole: tripAssignments.tripRole,
+    })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(and(inArray(tripAssignments.tripId, tripIds), eq(trips.shopId, shopId), liveTrip()));
+  for (const { tripId, personId, tripRole } of rows) {
+    const crew = byTrip.get(tripId) ?? [];
+    crew.push({ personId, tripRole });
+    byTrip.set(tripId, crew);
+  }
+  return byTrip;
+}
+
+/**
  * One entry in a crew replacement. A bare id means "this person, leave their
  * per-trip role alone"; the object form sets it, and an explicit `null` clears
  * it back to unspecified.
