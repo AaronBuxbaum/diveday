@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useActionState, useLayoutEffect, useRef } from "react";
+import { useActionState, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { FormStatus, StickyFormActions } from "@/components/ui/form";
 import type { DiveSiteFormError, SubmittedFormValues } from "@/lib/dive-sites";
@@ -112,8 +112,20 @@ export function SiteFormShell({
     for (const field of Array.from(form.elements)) restore(field, state.values);
   }, [state]);
 
+  // Set once React owns the form. A field edited while the server-rendered
+  // markup is still being hydrated can lose the edit's selection half-way (a
+  // cleared note saved as itself minus its first letter, CI 2026-10-12), so
+  // the e2e suite waits on this before it types, never on a timer.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-6">
+    <form
+      ref={formRef}
+      action={formAction}
+      className="flex flex-col gap-6"
+      data-hydrated={hydrated ? "true" : undefined}
+    >
       {children}
       {/* The refusal used to render *above* the form. On a twenty-field
           briefing that put it a full screen above the Save button the staffer
