@@ -148,6 +148,8 @@
     "certOverridesLink": "La actividad de seguridad del mes",
     "crew": "Tripulación con una acreditación caducada",
     "crewValue": "{lapsed} de {sailings}",
+    "crewValueNoneOnFile": "Nada registrado",
+    "crewDetailUnrecorded": "Sin acreditación registrada en {unrecorded} de {sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "crewDetail": "{sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "incidents": "Informes de incidentes",
     "boardingNote": "El recuento del muelle rechaza a un buceador que la verificación de preparación no ha aprobado. Un buceador contado por primera vez en un recuento posterior no está en esta cifra.",
@@ -159,6 +161,8 @@
     "closureNone": "Sin recuento",
     "lapsedTitle": "Tripulantes que salieron con una acreditación caducada",
     "lapsedEmpty": "Nadie salió con una acreditación caducada.",
+    "unrecordedTitle": "Tripulantes que salieron sin acreditación registrada",
+    "unrecordedSailings": "{count, plural, one {# salida} other {# salidas}} este mes",
     "noDepartures": "Ninguna salida volvió este mes."
   }
 }

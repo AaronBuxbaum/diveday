@@ -612,7 +612,6 @@
       "label": "Emergency contact",
       "addValue": "Add"
     },
-    "languagesEmpty": "Not set",
     "publicNameSeen": "Divers see “{name}”, agreed on {date}"
   },
   "safetyChecklist": {

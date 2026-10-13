@@ -45,6 +45,7 @@
     "removing": "Quitando…",
     "saving": "Guardando…",
     "add": "Añadir una credencial",
+    "noneOnFile": "Ninguna registrada",
     "kinds": {
       "instructor_rating": "Titulación de instructor",
       "assistant_instructor_rating": "Titulación de Instructor Asistente",

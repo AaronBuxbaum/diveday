@@ -209,6 +209,51 @@ describe("summarizeSafetyMonth: crew credentials", () => {
   });
 });
 
+describe("summarizeSafetyMonth: crew with nothing on file", () => {
+  it("never reads a crew member with no credential recorded as sailing clean", () => {
+    const summary = summarizeSafetyMonth(month());
+    expect(summary.crewSailings).toBe(1);
+    expect(summary.lapsedSailings).toEqual([]);
+    expect(summary.unrecordedSailings).toBe(1);
+    expect(summary.unrecordedCrew).toEqual([{ personId: "c1", name: "Keiko Tanaka", sailings: 1 }]);
+  });
+
+  it("counts each sailing and names each person once, by name", () => {
+    const second: SafetyDepartureInput = {
+      ...departure,
+      tripId: "t2",
+      startsAt: new Date("2026-10-04T13:00:00Z"),
+      endsAt: new Date("2026-10-04T17:00:00Z"),
+      crewIds: ["c1", "c2"],
+    };
+    const summary = summarizeSafetyMonth(
+      month({
+        departures: [departure, second],
+        credentials: [{ personId: "c2", kind: "captain_license", renewsAt: null }],
+        personNames: new Map([
+          ["c1", "Sal Moretti"],
+          ["c2", "Keiko Tanaka"],
+        ]),
+      }),
+    );
+    expect(summary.crewSailings).toBe(3);
+    expect(summary.unrecordedSailings).toBe(2);
+    expect(summary.unrecordedCrew).toEqual([{ personId: "c1", name: "Sal Moretti", sailings: 2 }]);
+  });
+
+  it("does not count a crew member recorded ashore at the dock", () => {
+    const summary = summarizeSafetyMonth(
+      month({
+        crewEvents: [
+          { tripId: "t1", subjectId: "c1", checkpoint: "departure", status: "not_boarded" },
+        ],
+      }),
+    );
+    expect(summary.unrecordedSailings).toBe(0);
+    expect(summary.unrecordedCrew).toEqual([]);
+  });
+});
+
 describe("lapsedCredentialKinds", () => {
   it("is good through the renewal day itself", () => {
     expect(

@@ -115,13 +115,28 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
 /** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
 const RENEWAL_WINDOW_DAYS = 30;
 
+/**
+ * The roles that sail on a card: an instructor's or divemaster's rating, a
+ * captain's license. A card for one of these with nothing recorded says so,
+ * because absence is what the Safety tab cannot judge (third review, item 2).
+ */
+const CREDENTIALED_ROLES: readonly Role[] = [
+  "instructor",
+  "assistant_instructor",
+  "divemaster",
+  "captain",
+];
+
+/** One person's credentials, as their own card reads them. */
+type CardCredential = { id: string; name: string; renewalWord: string | null };
+
 /** The ledger's rows, each renewal measured against the shop's own today. */
 function credentialRowsFor(
   credentials: Awaited<ReturnType<typeof listStaffCredentials>>,
   today: string,
   locale: string,
   t: StaffTranslator,
-): CredentialRow[] {
+): (CredentialRow & { personId: string; name: string })[] {
   const dueSoonThrough = shiftCalendarDate(today, RENEWAL_WINDOW_DAYS);
   return credentials.map(({ credential, person }) => {
     const renewal: RenewalState = !credential.renewsAt
@@ -157,6 +172,8 @@ function credentialRowsFor(
                 })
               : null,
       renewal,
+      personId: person.id,
+      name: credential.name,
       reviewed: credential.status === "verified",
       reviewLabel:
         credential.status === "verified"
@@ -283,6 +300,7 @@ function publicName(member: StaffMember): string {
 
 function StaffRow({
   member,
+  credentials,
   notice,
   priorRoles,
   locale,
@@ -290,6 +308,8 @@ function StaffRow({
   t,
 }: {
   member: StaffMember;
+  /** This person's credentials on file, from the ledger at the foot. */
+  credentials: readonly CardCredential[];
   /** The page's one resolved notice, already told which form it belongs to. */
   notice: FormNotice | undefined;
   /** The roles this row held before the save it just made — its Undo, or nothing. */
@@ -403,7 +423,7 @@ function StaffRow({
                     (language) => languageNameIn(language, locale) ?? language,
                   ),
                 )
-              : t("settings.team.languagesEmpty")
+              : t("settings.team.emergencyContact.addValue")
           }
           open={Boolean(languagesStatus)}
         >
@@ -422,6 +442,44 @@ function StaffRow({
           </form>
         </CompactDisclosureRow>
       </div>
+
+      {/* What this person sails on, on the person: the ledger at the foot is
+          where a credential is added and reviewed, and this row is how an
+          owner reading Sal's card learns he has no license recorded. A role
+          that sails on a card says "None on file"; anyone else with nothing
+          recorded gets no row (third review, items 2 and 36). */}
+      {credentials.length > 0 || member.roles.some((role) => CREDENTIALED_ROLES.includes(role)) ? (
+        <div className="mt-4">
+          <CompactDisclosureRow
+            id={`credentials-${member.personId}`}
+            label={t("staffing.credentials.heading")}
+            value={
+              credentials.length > 0
+                ? cachedListFormat(locale).format(credentials.map((credential) => credential.name))
+                : t("staffing.credentials.noneOnFile")
+            }
+          >
+            {credentials.length > 0 ? (
+              <ul className="flex flex-col gap-1 text-sm">
+                {credentials.map((credential) => (
+                  <li key={credential.id}>
+                    <span className="font-medium">{credential.name}</span>
+                    {credential.renewalWord ? (
+                      <span className="text-muted"> · {credential.renewalWord}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <a
+              href="#add-credential"
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+            >
+              {t("staffing.credentials.add")}
+            </a>
+          </CompactDisclosureRow>
+        </div>
+      ) : null}
 
       {/* Who to call for this person, and the one place a shop can say so.
           Behind a disclosure because it is the rare edit — a contact is typed
@@ -776,6 +834,9 @@ export default async function TeamSettingsPage({
                 <StaffRow
                   key={member.personId}
                   member={member}
+                  credentials={credentialRows
+                    .filter((row) => row.personId === member.personId)
+                    .map(({ id, name, renewalWord }) => ({ id, name, renewalWord }))}
                   notice={pageNotice}
                   priorRoles={rolesFor === member.personId ? undoRolesFor : []}
                   locale={locale}

@@ -80,6 +80,14 @@ export type SafetyMonth = {
     name: string;
     kinds: string[];
   }[];
+  /**
+   * …of which sailed with no credential of any kind on file. Absence is not a
+   * clean record: the lapsed count can only judge what was recorded, so the
+   * tile says how much it could not judge (third review, item 2).
+   */
+  unrecordedSailings: number;
+  /** The people behind `unrecordedSailings`, once each, in the order they first sailed. */
+  unrecordedCrew: { personId: string; name: string; sailings: number }[];
 };
 
 /** The newest standing result per subject and checkpoint; a `cleared` undo leaves none. */
@@ -183,6 +191,8 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
   let crewSailings = 0;
   const openRollCalls: SafetyMonth["openRollCalls"] = [];
   const lapsedSailings: SafetyMonth["lapsedSailings"] = [];
+  const unrecorded = new Map<string, SafetyMonth["unrecordedCrew"][number]>();
+  let unrecordedSailings = 0;
 
   // An occurrence nobody booked and nobody counted is a date on the board,
   // not a departure that sailed — the same skip the Today queue makes.
@@ -217,7 +227,19 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
       // A crew member recorded ashore at the dock did not sail.
       if (crewResult(departure.tripId, personId, dock) === "not_boarded") continue;
       crewSailings += 1;
-      const kinds = lapsedCredentialKinds(credentialsByPerson.get(personId) ?? [], divesOn);
+      const onFile = credentialsByPerson.get(personId) ?? [];
+      if (onFile.length === 0) {
+        unrecordedSailings += 1;
+        const entry = unrecorded.get(personId) ?? {
+          personId,
+          name: input.personNames.get(personId) ?? "",
+          sailings: 0,
+        };
+        entry.sailings += 1;
+        unrecorded.set(personId, entry);
+        continue;
+      }
+      const kinds = lapsedCredentialKinds(onFile, divesOn);
       if (kinds.length > 0) {
         lapsedSailings.push({
           tripId: departure.tripId,
@@ -240,5 +262,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
     certOverrides: input.certOverrides,
     crewSailings,
     lapsedSailings,
+    unrecordedSailings,
+    unrecordedCrew: [...unrecorded.values()],
   };
 }

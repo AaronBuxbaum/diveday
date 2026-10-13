@@ -17,6 +17,15 @@ test("an owner records a captain's languages, and the public schedule says so", 
 
   await page.goto(`/shop/${privateShop.slug}/settings/team`);
   const captainCard = page.locator("li").filter({ hasText: "Sal Moretti" });
+  // A captain with nothing recorded says so on his own card, and a row
+  // nobody filled in invites rather than reads as an error (third review,
+  // items 2 and 36).
+  await expect(captainCard.locator("summary").filter({ hasText: "Credentials" })).toContainText(
+    "None on file",
+  );
+  await expect(captainCard.locator("summary").filter({ hasText: "Languages" })).toContainText(
+    "Add",
+  );
   // Each option is named in the *staffer's own reading language* here
   // ("German", "Japanese") — unlike the public badge below, which uses each
   // language's own endonym. A Spanish-reading staffer would see "alemán",
