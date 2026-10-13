@@ -609,7 +609,12 @@ body {
   --primary: #0a141c;
   --primary-hover: #1d3140;
   --primary-foreground: #ffd23f;
-  --primary-tint: #fff0b3;
+  /* The selected wash is Boat's navy, never its yellow (#2401). Every
+     `bg-primary-tint` in the app means selected or info (the rail's current
+     row, a checked choice, a chosen filter, a primary badge), and yellow is
+     the deck's colour for warning and for the one action; a pale yellow wash
+     put "attention" on every selected row. Navy ink on it 14.1:1. */
+  --primary-tint: #d6e2ec;
   --accent: #0a141c;
   --accent-foreground: #ffd23f;
   --accent-deep: #0a141c;
@@ -651,7 +656,8 @@ body {
     --primary: #ffd23f;
     --primary-hover: #ffe38a;
     --primary-foreground: #1a1500;
-    --primary-tint: #2e2a12;
+    /* Navy lifted off the surface, not a dark yellow (#2401): yellow ink on it 8.2:1. */
+    --primary-tint: #223a4b;
     --accent: #ffd23f;
     --accent-foreground: #241400;
     --accent-deep: #ffe38a;
