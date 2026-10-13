@@ -43,7 +43,7 @@ describe("RehearsalBanner", () => {
     vi.mocked(rehearsalsWithEvidence).mockResolvedValueOnce(new Set([TRIP]));
     await renderBanner();
     expect(screen.getByRole("region").textContent).toContain(
-      "This rehearsal has a roll call or a logged dive, so it is not deleted on its own.",
+      "This rehearsal has a roll call, a logged dive or an incident report, so it is not deleted on its own.",
     );
   });
 

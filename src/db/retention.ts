@@ -52,7 +52,8 @@ import {
  *
  * - **Bounded.** At most {@link PRUNE_BATCH_LIMIT} rows per table per pass, so
  *   one run can never outlive the platform's function ceiling. A backlog
- *   converges over successive daily ticks instead of failing forever.
+ *   converges over successive weekly ticks (`vercel.json`, Sundays 03:30 UTC)
+ *   instead of failing forever.
  * - **Independent.** One arm throwing does not starve the rest; it is reported
  *   with its own table code and the pass carries on, the same shape the daily
  *   reminders tick uses for its scans.
@@ -80,7 +81,11 @@ export type PruneSummary = {
   failedTables: RetainedTable[];
 };
 
-/** `clock < cutoff`, for a column or an expression (drizzle types the two apart). */
+/**
+ * `clock < cutoff`, for a column or an expression. The two branches are the
+ * same call: drizzle's `lt` overloads take a column or an `SQL`, never the
+ * union, so the narrowing is what lets one arm table hold both kinds of clock.
+ */
 function olderThan(clock: PgColumn | SQL, cutoff: Date): SQL {
   return clock instanceof SQL ? lt(clock, cutoff) : lt(clock, cutoff);
 }

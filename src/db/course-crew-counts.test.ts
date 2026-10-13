@@ -82,6 +82,21 @@ describe("courseCrewCountsByTrip", () => {
     expect(counts).toMatchObject({ instructorCount: 1, assistantCount: 1, lapsed: [] });
   });
 
+  it("counts a person who holds several roles once, at their highest rung", async () => {
+    // One person, three role rows: the join to `person_roles` must not turn
+    // them into an instructor *and* an assistant, or into two instructors.
+    const { db, shop } = ctx;
+    const fay = await staffer(db, shop.id, "Fay", "instructor");
+    await db.insert(personRoles).values([
+      { personId: fay, role: "divemaster" },
+      { personId: fay, role: "diver" },
+    ]);
+    const id = await trip(db, shop.id, [{ personId: fay }]);
+    const counts = (await courseCrewCountsByTrip(db, shop.id, [id])).get(id);
+    expect(counts).toMatchObject({ instructorCount: 1, assistantCount: 0, lapsed: [] });
+    expect(counts?.roster).toMatchObject({ instructorCount: 1, assistantCount: 0 });
+  });
+
   it("answers every departure asked about, a departure nobody is on included", async () => {
     const { db, shop } = ctx;
     const id = await trip(db, shop.id, []);

@@ -1047,7 +1047,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "customer_gear_reminder_settings",
   "work_order_bills",
   "buddy_pair_members",
-  "pre_departure_check_events",
   "gear_reservations",
   // The bench (ADR 20261008-gear-work-orders): a ticket, the customer's own
   // gear it is about, its parts and labor, its Work done record, and its

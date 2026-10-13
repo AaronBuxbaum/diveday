@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { shopDayOf } from "@/lib/closeout";
 import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
-import { hasReturned } from "@/lib/trips";
+import { DEPARTURE_BUFFER_MS, hasReturned } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices, recordCrewNotices } from "./crew-notices";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
@@ -937,13 +937,16 @@ export type TripCrewOutcome = { ok: true } | { ok: false; refusal: TripCrewRefus
  * UI, rather than a value nobody can reach without SQL (review 20260803, D4/D5).
  */
 /**
- * How many departures still ahead this person is crew on, in this shop. Removing
- * a person takes them off every crew picker and away from sign-in
- * (`livePerson()`), but an assignment already on a boat stays where it is, on
- * the manifest and in the crew ratio; the diver record's Remove refuses while
- * this is above zero, so nobody is left crewing a boat they can no longer see.
+ * How many departures this person is crew on that are not home yet, in this
+ * shop: still ahead, or sailed and out. Removing a person takes them off every
+ * crew picker and away from sign-in (`livePerson()`), but an assignment
+ * already on a boat stays where it is, on the manifest and in the crew ratio;
+ * and every roll-call writer refuses someone removed, so crew still aboard
+ * could not be counted back in. The diver record's Remove refuses while this
+ * is above zero. "Home" is `hasReturned` (`src/lib/trips.ts`): the scheduled
+ * return plus the departure buffer.
  */
-export async function countUpcomingCrewDepartures(
+export async function countCrewDeparturesNotHome(
   db: DbExecutor,
   shopId: string,
   personId: string,
@@ -959,7 +962,8 @@ export async function countUpcomingCrewDepartures(
         eq(tripAssignments.personId, personId),
         liveTrip(),
         ne(trips.status, "cancelled"),
-        sql`${trips.startsAt} > ${now}`,
+        // Not `hasReturned`: due home, plus the buffer, still ahead of now.
+        sql`${trips.endsAt} > ${new Date(now.getTime() - DEPARTURE_BUFFER_MS)}`,
       ),
     );
   return row?.count ?? 0;

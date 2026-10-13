@@ -13,8 +13,10 @@ import {
 import {
   bookings,
   executedDives,
+  incidentReports,
   people,
   personRoles,
+  rollCallCrewEvents,
   rollCallEvents,
   shops,
   trips,
@@ -168,6 +170,93 @@ describe("clearFinishedRehearsals", () => {
     const { trip } = await rehearsal(db, shop.id);
     await db.insert(executedDives).values({ shopId: shop.id, tripId: trip.id, diveNumber: 1 });
     expect(await clearFinishedRehearsals(db, late(trip))).toBe(0);
+  });
+
+  // The staff delete door (`countRollCallEvidence`) refuses on any crew row
+  // too; the sweep must not quietly clear what that door would keep.
+  it.each([
+    ["a crew boarding at the dock", "boarded", "departure"],
+    ["a crew member unaccounted for after a dive", "not_boarded", "after_dive_1"],
+  ] as const)("keeps a rehearsal whose only evidence is %s", async (_label, status, checkpoint) => {
+    const { db, shop } = ctx;
+    const ownerId = await ownerOf(db, shop.id);
+    const { trip } = await rehearsal(db, shop.id);
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: ownerId,
+      recordedByPersonId: ownerId,
+      occurredAt: NOW,
+      status,
+      checkpoint,
+    });
+    expect(await clearFinishedRehearsals(db, late(trip))).toBe(0);
+  });
+
+  it("clears a rehearsal whose only crew row is a dockside not-boarded", async () => {
+    const { db, shop } = ctx;
+    const ownerId = await ownerOf(db, shop.id);
+    const { trip } = await rehearsal(db, shop.id);
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: ownerId,
+      recordedByPersonId: ownerId,
+      occurredAt: NOW,
+      status: "not_boarded",
+      checkpoint: "departure",
+    });
+    expect(await clearFinishedRehearsals(db, late(trip))).toBe(1);
+  });
+
+  it.each(["draft", "filed"] as const)(
+    "keeps a rehearsal with an incident report, %s",
+    async (status) => {
+      // The Safety list joins a live trip; a swept rehearsal would hide its report.
+      const { db, shop } = ctx;
+      const ownerId = await ownerOf(db, shop.id);
+      const { trip } = await rehearsal(db, shop.id);
+      await db.insert(incidentReports).values(
+        status === "draft"
+          ? { shopId: shop.id, tripId: trip.id, createdByPersonId: ownerId }
+          : {
+              shopId: shop.id,
+              tripId: trip.id,
+              createdByPersonId: ownerId,
+              status,
+              filedAt: NOW,
+              filedByPersonId: ownerId,
+              occurredAt: NOW,
+              whatHappened: "Drill casualty",
+              firstAidGiven: false,
+              oxygenGiven: false,
+              emergencyServicesCalled: false,
+              locationText: "Pool",
+            },
+      );
+      expect(await clearFinishedRehearsals(db, late(trip))).toBe(0);
+    },
+  );
+
+  it("reads crew rows and incident reports only inside the shop asked about", async () => {
+    const { db, shop } = ctx;
+    const other = await otherShop(db);
+    const ownerId = await ownerOf(db, shop.id);
+    const { trip } = await rehearsal(db, shop.id);
+    await db.insert(rollCallCrewEvents).values({
+      shopId: other.id,
+      tripId: trip.id,
+      personId: ownerId,
+      recordedByPersonId: ownerId,
+      occurredAt: NOW,
+      status: "boarded",
+      checkpoint: "departure",
+    });
+    await db
+      .insert(incidentReports)
+      .values({ shopId: other.id, tripId: trip.id, createdByPersonId: ownerId });
+    expect((await rehearsalsWithEvidence(db, shop.id, [trip.id])).size).toBe(0);
+    expect((await rehearsalsWithEvidence(db, other.id, [trip.id])).size).toBe(1);
   });
 
   it("never touches a real departure", async () => {

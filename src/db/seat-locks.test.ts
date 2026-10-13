@@ -10,9 +10,9 @@ import { lockSeatDeparture } from "./seat-locks";
 import { createTrip } from "./trips";
 
 /**
- * `lockSeatDeparture` is the lock order three counter paths depend on against
- * the #2324 deadlock (`check-in.ts`, `no-show.ts`, `manifests.ts`): **the
- * departure, then the seat**. `seat-lock-order.postgres.test.ts` races those
+ * `lockSeatDeparture` is the lock order five call sites depend on against the
+ * #2324 deadlock (two in `check-in.ts`, two in `no-show.ts`, one in
+ * `manifests.ts`): **the departure, then the seat**. `seat-lock-order.postgres.test.ts` races those
  * callers; this file pins the helper itself.
  */
 

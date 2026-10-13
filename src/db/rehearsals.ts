@@ -12,6 +12,8 @@ import {
   bookingCheckouts,
   bookings,
   executedDives,
+  incidentReports,
+  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripInvitations,
@@ -188,8 +190,9 @@ export async function notificationHeldForRehearsal(
  * fly-safe look-back run out, so no later boat still counts its divers' day.
  *
  * **A rehearsal with real evidence is never cleared here** (see
- * {@link rehearsalsWithEvidence}): a boarding, an after-dive count or a logged
- * dive is a record of people in the water, and only an owner deletes that.
+ * {@link rehearsalsWithEvidence}): a diver or crew boarding, an after-dive
+ * count, a logged dive or an incident report is a record of people in the
+ * water, and only an owner deletes that.
  * The trip page says so on its banner.
  *
  * Soft, like every delete (ADR 20260820-every-delete-is-soft): the departure
@@ -257,9 +260,18 @@ async function clearShopRehearsals(
 
 /**
  * The rehearsals among this shop's `tripIds` that carry real evidence: a
- * boarding at the dock, any after-dive count, or a logged dive. A dockside
- * `not_boarded` is clerical and is not evidence. Only rows stamped with this
- * shop count, and both reads lead with `shop_id` like their indexes.
+ * diver or crew boarding at the dock, any after-dive count of either, a
+ * logged dive, or an incident report, draft or filed. Only rows stamped with
+ * this shop count, and every read leads with `shop_id` like its index.
+ *
+ * Two policies, stated side by side so neither is "fixed" to match the other:
+ * - **This sweep** treats a dockside `not_boarded` as clerical. A drill where
+ *   nobody left the dock has nothing an investigator would ask for, so the
+ *   nightly delete may clear it.
+ * - **The staff delete door** (`countRollCallEvidence` in `trips-schedule.ts`)
+ *   refuses on *any* roll-call row, dockside ones included: a person pressing
+ *   Delete on a departure someone has started calling is told no, and the
+ *   automatic sweep is the only thing that clears a clerical-only rehearsal.
  */
 export async function rehearsalsWithEvidence(
   db: DbExecutor,
@@ -277,6 +289,23 @@ export async function rehearsalsWithEvidence(
         or(eq(rollCallEvents.status, "boarded"), ne(rollCallEvents.checkpoint, "departure")),
       ),
     );
+  const crew = await db
+    .selectDistinct({ tripId: rollCallCrewEvents.tripId })
+    .from(rollCallCrewEvents)
+    .where(
+      and(
+        eq(rollCallCrewEvents.shopId, shopId),
+        inArray(rollCallCrewEvents.tripId, [...tripIds]),
+        or(
+          eq(rollCallCrewEvents.status, "boarded"),
+          ne(rollCallCrewEvents.checkpoint, "departure"),
+        ),
+      ),
+    );
+  const reported = await db
+    .selectDistinct({ tripId: incidentReports.tripId })
+    .from(incidentReports)
+    .where(and(eq(incidentReports.shopId, shopId), inArray(incidentReports.tripId, [...tripIds])));
   const logged = await db
     .selectDistinct({ tripId: executedDives.tripId })
     .from(executedDives)
@@ -287,7 +316,7 @@ export async function rehearsalsWithEvidence(
         isNull(executedDives.deletedAt),
       ),
     );
-  return new Set([...counted, ...logged].map((row) => row.tripId));
+  return new Set([...counted, ...crew, ...reported, ...logged].map((row) => row.tripId));
 }
 
 /**

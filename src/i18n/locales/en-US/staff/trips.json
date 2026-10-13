@@ -654,6 +654,6 @@
     "label": "Rehearsal",
     "title": "Practice departure for training day",
     "body": "Nothing about it is sent, charged, shown publicly or counted in reports. It is deleted {days, plural, one {# day} other {# days}} after it comes home, once no later boat counts its dives toward the wait before flying.",
-    "kept": "This rehearsal has a roll call or a logged dive, so it is not deleted on its own."
+    "kept": "This rehearsal has a roll call, a logged dive or an incident report, so it is not deleted on its own."
   }
 }
