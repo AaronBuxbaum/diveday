@@ -80,10 +80,7 @@ describe("the seeded dawn boat's record", () => {
 
   it("logged its dives inside the time it was out", async () => {
     const { db, dawn } = await dawnBoat();
-    const dives = await db
-      .select()
-      .from(executedDives)
-      .where(eq(executedDives.tripId, dawn.id));
+    const dives = await db.select().from(executedDives).where(eq(executedDives.tripId, dawn.id));
     expect(dives.length).toBeGreaterThan(0);
     for (const dive of dives) {
       expect(dive.enteredAt?.getTime()).toBeGreaterThan(dawn.startsAt.getTime());

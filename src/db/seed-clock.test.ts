@@ -129,18 +129,12 @@ describe("demoTodayShifts", () => {
     // "10:30 PM – 12:00 AM" shift beside the crew.
     const now = new Date("2026-10-12T22:30:00Z"); // 6:30 PM EDT → the 11:30 PM boat
     expect(spans(demoTodayShifts(now, TZ, { crew: false }))).toEqual(["09:00-17:00"]);
-    expect(spans(demoTodayShifts(now, TZ, { crew: true }))).toEqual([
-      "04:30-09:30",
-      "22:30-00:00",
-    ]);
+    expect(spans(demoTodayShifts(now, TZ, { crew: true }))).toEqual(["04:30-09:30", "22:30-00:00"]);
   });
 
   it("gives the dawn crew a 4:30 to 9:30 shift of its own when today's boat sails in the evening", () => {
     const now = new Date("2026-10-10T17:18:00Z"); // 1:18 PM EDT → a 6:30 PM boat
-    expect(spans(demoTodayShifts(now, TZ, { crew: true }))).toEqual([
-      "04:30-09:30",
-      "17:30-23:00",
-    ]);
+    expect(spans(demoTodayShifts(now, TZ, { crew: true }))).toEqual(["04:30-09:30", "17:30-23:00"]);
   });
 });
 

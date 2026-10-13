@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  boatStageOf,
-  checkInOpen,
-  departureStage,
-  TRIP_PHASES,
-  tripPhaseOf,
-} from "./trip-phase";
+import { boatStageOf, checkInOpen, departureStage, TRIP_PHASES, tripPhaseOf } from "./trip-phase";
 import type { TripStage } from "./trip-stages";
 
 const ZONE = "America/New_York";

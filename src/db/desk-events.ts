@@ -2,14 +2,7 @@ import { and, eq, gt, inArray, isNull, max, ne, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DeskEvent, DeskEventKind } from "@/lib/desk-events";
 import type { AppDb, DbExecutor } from "./client";
-import {
-  bookings,
-  people,
-  tripDeskEvents,
-  tripHelpRequests,
-  tripReadMarks,
-  trips,
-} from "./schema";
+import { bookings, people, tripDeskEvents, tripHelpRequests, tripReadMarks, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -161,10 +154,7 @@ export async function listDeskEventsSince(
     .from(tripDeskEvents)
     .innerJoin(trips, eq(trips.id, tripDeskEvents.tripId))
     .leftJoin(people, eq(people.id, tripDeskEvents.subjectPersonId))
-    .leftJoin(
-      bookings,
-      and(eq(bookings.id, tripDeskEvents.bookingId), eq(bookings.shopId, shopId)),
-    )
+    .leftJoin(bookings, and(eq(bookings.id, tripDeskEvents.bookingId), eq(bookings.shopId, shopId)))
     .leftJoin(
       tripHelpRequests,
       and(

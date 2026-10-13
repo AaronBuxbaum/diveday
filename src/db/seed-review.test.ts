@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { and, eq, gt, isNotNull, isNull, lt, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { nowDate } from "@/lib/clock";
 import {
   bookings,
   certifications,

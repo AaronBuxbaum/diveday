@@ -120,8 +120,7 @@ export async function seedMoreTrips(
         )
     ).map((row) => row.personId),
   );
-  const hasReviewedCard = (index: number) =>
-    reviewedCardHolders.has(customers[index]?.id ?? "");
+  const hasReviewedCard = (index: number) => reviewedCardHolders.has(customers[index]?.id ?? "");
   const drawBoarded = (n: number): number[] => {
     const drawn = draw(n);
     const spares = [...generalPool]
@@ -703,7 +702,8 @@ export async function seedMoreTrips(
     await seedDawnBoatRecord(db, shopId, {
       trip: completedTrip,
       recorderId: rollCallRecorderId,
-      checkpointTimes: (index) => new Date(completedTrip.startsAt.getTime() + index * 90 * 60 * 1000),
+      checkpointTimes: (index) =>
+        new Date(completedTrip.startsAt.getTime() + index * 90 * 60 * 1000),
     });
 
     // A partially completed report run is more useful demo state than an empty

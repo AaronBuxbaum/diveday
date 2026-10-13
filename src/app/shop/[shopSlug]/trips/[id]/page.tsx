@@ -23,8 +23,8 @@ import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips"
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents, formatTime } from "@/lib/format";
 import { dockCallAt } from "@/lib/dock-call";
+import { formatMoneyCents, formatTime } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
