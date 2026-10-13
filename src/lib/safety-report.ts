@@ -88,6 +88,11 @@ export type SafetyMonth = {
   unrecordedSailings: number;
   /** The people behind `unrecordedSailings`, once each, in the order they first sailed. */
   unrecordedCrew: { personId: string; name: string; sailings: number }[];
+  /**
+   * Sailings the lapsed check judged: `crewSailings` less `unrecordedSailings`.
+   * The lapsed count's denominator, so a skipped sailing never reads as clean.
+   */
+  checkedSailings: number;
 };
 
 /** The newest standing result per subject and checkpoint; a `cleared` undo leaves none. */
@@ -264,5 +269,6 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
     lapsedSailings,
     unrecordedSailings,
     unrecordedCrew: [...unrecorded.values()],
+    checkedSailings: crewSailings - unrecordedSailings,
   };
 }

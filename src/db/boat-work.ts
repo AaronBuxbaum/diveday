@@ -2,7 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { authorizesNitroxFill } from "./nitrox";
-import { countOpenOrdersByTrip } from "./orders";
+import { countOpenOrdersBySeat } from "./orders";
 import { bookings, nitroxCertifications, people, rentalFitProfiles, shops } from "./schema";
 
 /**
@@ -35,9 +35,10 @@ export async function readBoatWork(
   bookingIdsByTrip: ReadonlyMap<string, readonly string[]>,
 ): Promise<Map<string, BoatWork>> {
   const tripIds = [...bookingIdsByTrip.keys()];
+  const bookingIds = [...bookingIdsByTrip.values()].flat();
   const [seats, openOrders] = await Promise.all([
-    readSeatWork(db, shopId, [...bookingIdsByTrip.values()].flat()),
-    countOpenOrdersByTrip(db, shopId, tripIds),
+    readSeatWork(db, shopId, bookingIds),
+    countOpenOrdersBySeat(db, shopId, bookingIds),
   ]);
   const divers = (ids: readonly string[], gap: (seat: SeatWork) => boolean) =>
     ids.flatMap((id) => {

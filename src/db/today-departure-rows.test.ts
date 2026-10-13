@@ -5,9 +5,10 @@ import { nowDate, nowMs } from "@/lib/clock";
 import type { TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
 import { setBookingNitrox } from "./nitrox";
-import { nitroxCertifications, people, tripWaitlistEntries } from "./schema";
+import { nitroxCertifications, orders, people, tripWaitlistEntries } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { pushDepartureRows } from "./today-departure-rows";
@@ -293,5 +294,48 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     for (const item of band) expect(onToday).toContain(prefix[item.code]);
     const workPrefixes = new Set<string>(Object.values(prefix));
     expect(onToday.filter((id) => id && workPrefixes.has(id))).toHaveLength(band.length);
+  });
+
+  // Layer 1 review, finding 3: the orders count read every booking on the
+  // departure, so an unpaid invoice on a seat the diver gave up still said
+  // "1 order awaiting payment" while sizes, nitrox and contacts read only the
+  // seats still on the boat. All four now count the same seats.
+  it("does not count an open order on a cancelled seat as the boat's work", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const [seat] = await getTripRoster(db, shop.id, reef.id);
+    if (!seat) throw new Error("demo bookings missing");
+    const owner = (await listStaff(db, shop.id)).find((entry) => entry.roles.includes("owner"));
+    if (!owner) throw new Error("seeded shop has no owner");
+    await db.insert(orders).values({
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      personId: seat.person.id,
+      createdByPersonId: owner.person.id,
+      status: "open",
+      currency: "usd",
+      totalCents: 17_500,
+      amountPaidCents: 0,
+      description: "Two-tank charter balance",
+      stripeAccountId: "acct_demo",
+      stripeCustomerId: "cus_test_cancelled_seat",
+      stripeInvoiceId: "in_test_cancelled_seat",
+      finalizedAt: nowDate(),
+    });
+    const ordersRow = `orders:${reef.id}`;
+
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(before.actions.some((action) => action.id === ordersRow)).toBe(true);
+
+    await cancelBooking(db, shop.id, seat.booking.id);
+
+    const [today, overview] = await Promise.all([
+      getTodayWork(db, shop.id, shop.slug, shop.timezone),
+      getTripOverview(db, shop, reef.id, owner.person.id),
+    ]);
+    expect(today.actions.some((action) => action.id === ordersRow)).toBe(false);
+    expect(overview?.pulse.work.openOrders).toBe(0);
   });
 });

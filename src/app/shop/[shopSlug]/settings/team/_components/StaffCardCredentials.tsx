@@ -9,7 +9,7 @@ import { type CardCredential, CREDENTIALED_ROLES } from "../credential-rows";
  * What this person sails on, on the person (third review, items 2 and 36).
  * The ledger at the foot of the page is where a credential is added and
  * reviewed; this row is how an owner reading Sal's card learns he has no
- * license recorded. A role that sails on a card says "None on file"; anyone
+ * license recorded. A role that sails on a card says "No credentials on file"; anyone
  * else with nothing recorded gets no row.
  */
 export function StaffCardCredentials({

@@ -118,15 +118,15 @@ export default async function SafetyReportPage({
       key: "crew",
       label: t("incidents.safety.crew"),
       // A zero over crew with nothing on file is not a clean record: the
-      // lapsed count judges only what was recorded, so the detail says how
+      // lapsed count stands over the sailings it judged, the detail says how
       // much it could not judge, and a month with nothing on file at all
       // shows no ratio (third review, item 2).
       value:
-        safety.crewSailings > 0 && safety.unrecordedSailings === safety.crewSailings
-          ? t("incidents.safety.crewValueNoneOnFile")
+        safety.crewSailings > 0 && safety.checkedSailings === 0
+          ? t("staffing.credentials.noneOnFile")
           : t("incidents.safety.crewValue", {
               lapsed: safety.lapsedSailings.length,
-              sailings: safety.crewSailings,
+              sailings: safety.checkedSailings,
             }),
       detail:
         safety.unrecordedSailings > 0

@@ -239,6 +239,9 @@ describe("summarizeSafetyMonth: crew with nothing on file", () => {
     expect(summary.crewSailings).toBe(3);
     expect(summary.unrecordedSailings).toBe(2);
     expect(summary.unrecordedCrew).toEqual([{ personId: "c1", name: "Sal Moretti", sailings: 2 }]);
+    // The lapsed ratio stands over the sailings it judged, not over the two
+    // it skipped for having nothing on file (layer 1 review, finding 2).
+    expect(summary.checkedSailings).toBe(1);
   });
 
   it("does not count a crew member recorded ashore at the dock", () => {

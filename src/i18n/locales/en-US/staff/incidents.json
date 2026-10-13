@@ -148,7 +148,6 @@
     "certOverridesLink": "The month’s safety activity",
     "crew": "Crew sailing on a lapsed credential",
     "crewValue": "{lapsed} of {sailings}",
-    "crewValueNoneOnFile": "None on file",
     "crewDetailUnrecorded": "No credential on file for {unrecorded} of {sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "crewDetail": "{sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "incidents": "Incident reports",

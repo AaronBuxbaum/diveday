@@ -1280,29 +1280,33 @@ export async function countOpenTripOrders(
   shopId: string,
   tripId: string,
 ): Promise<number> {
-  return (await countOpenOrdersByTrip(db, shopId, [tripId])).get(tripId) ?? 0;
+  return countTripOrders(db, shopId, tripId, "open");
 }
 
 /**
- * The same count for many departures in one read, keyed by trip: the boat's
- * work (`src/db/boat-work.ts`) asks it for every departure on Today and for
- * the one the trip page opens, so the two can never count a boat's open
- * orders differently. One `shopOrderWhere`, the index's own joins, grouped by
- * the booking's departure; a trip with none is absent from the map.
+ * Open orders on the given seats, in one read keyed by their departure: the
+ * boat's work (`src/db/boat-work.ts`) asks it for every departure on Today and
+ * for the one the trip page opens, so the two can never count a boat's open
+ * orders differently. Keyed by seat rather than by trip so it counts the same
+ * seats as the boat's other work, which leaves out a cancelled seat's unpaid
+ * invoice (layer 1 review, finding 3). One `shopOrderWhere`, the index's own
+ * joins; a trip with none is absent from the map.
  */
-export async function countOpenOrdersByTrip(
+export async function countOpenOrdersBySeat(
   db: DbExecutor,
   shopId: string,
-  tripIds: readonly string[],
+  bookingIds: readonly string[],
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
-  if (tripIds.length === 0) return counts;
+  if (bookingIds.length === 0) return counts;
   const rows = await db
     .select({ tripId: bookings.tripId, total: count() })
     .from(orders)
     .innerJoin(people, eq(people.id, orders.personId))
-    .leftJoin(bookings, eq(bookings.id, orders.bookingId))
-    .where(and(shopOrderWhere(shopId, { status: "open" }), inArray(bookings.tripId, [...tripIds])))
+    .innerJoin(bookings, eq(bookings.id, orders.bookingId))
+    .where(
+      and(shopOrderWhere(shopId, { status: "open" }), inArray(orders.bookingId, [...bookingIds])),
+    )
     .groupBy(bookings.tripId);
   for (const row of rows) if (row.tripId) counts.set(row.tripId, row.total);
   return counts;

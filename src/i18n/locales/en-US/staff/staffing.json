@@ -45,7 +45,7 @@
     "removing": "Removing…",
     "saving": "Saving…",
     "add": "Add a credential",
-    "noneOnFile": "None on file",
+    "noneOnFile": "No credentials on file",
     "kinds": {
       "instructor_rating": "Instructor rating",
       "assistant_instructor_rating": "Assistant Instructor rating",

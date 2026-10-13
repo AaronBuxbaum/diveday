@@ -148,7 +148,6 @@
     "certOverridesLink": "La actividad de seguridad del mes",
     "crew": "Tripulación con una acreditación caducada",
     "crewValue": "{lapsed} de {sailings}",
-    "crewValueNoneOnFile": "Nada registrado",
     "crewDetailUnrecorded": "Sin acreditación registrada en {unrecorded} de {sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "crewDetail": "{sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "incidents": "Informes de incidentes",

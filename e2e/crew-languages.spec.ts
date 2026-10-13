@@ -21,7 +21,7 @@ test("an owner records a captain's languages, and the public schedule says so", 
   // nobody filled in invites rather than reads as an error (third review,
   // items 2 and 36).
   await expect(captainCard.locator("summary").filter({ hasText: "Credentials" })).toContainText(
-    "None on file",
+    "No credentials on file",
   );
   await expect(captainCard.locator("summary").filter({ hasText: "Languages" })).toContainText(
     "Add",
