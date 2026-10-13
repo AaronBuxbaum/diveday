@@ -142,6 +142,24 @@ describe("the share row", () => {
     expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
   });
 
+  /** The path is a door a thumb can hit (#2405): the 44px floor, the line unmoved. */
+  it("gives the schedule's path the 44px floor", () => {
+    render(
+      <FirstRunChecklist
+        shopSlug="blue-mantis"
+        scheduleUrl="https://app.diveday.example/s/blue-mantis"
+        contactDone={false}
+        profileDone={false}
+        diveSiteCount={0}
+        unitsDone={false}
+        stripeDone={false}
+        copy={COPY}
+      />,
+    );
+    const path = screen.getByRole("link", { name: "/s/blue-mantis" });
+    expect(path).toHaveClass("-my-3", "min-h-11", "items-center");
+  });
+
   it("keeps a relative address as it is", () => {
     expect(schedulePathOf("/s/blue-mantis")).toBe("/s/blue-mantis");
   });
