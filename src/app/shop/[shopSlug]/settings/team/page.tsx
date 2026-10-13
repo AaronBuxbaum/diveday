@@ -88,6 +88,7 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     restored: { tone: "success", text: t("settings.team.notice.restored") },
     "restore-failed": { tone: "danger", text: t("settings.team.notice.restoreFailed") },
     "invite-invalid": { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
+    "send-limit": { tone: "warning", text: t("settings.team.notice.sendLimit") },
     "roles-invalid": { tone: "danger", text: t("settings.team.notice.rolesInvalid") },
     "roles-conflict": { tone: "danger", text: t("settings.team.notice.rolesConflict") },
     "invite-already-on-team": {
