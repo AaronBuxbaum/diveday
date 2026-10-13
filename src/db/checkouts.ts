@@ -899,7 +899,8 @@ async function latestCheckoutForBookingIds(
  * Null unless every part is Stripe's own: no completed checkout, no settled
  * figure (never the asked total in its place, which a discount or tax makes
  * wrong), or a booking that is a party member's own seat rather than the one
- * that paid.
+ * that paid. Null too once anything was refunded or a seat it covered was
+ * cancelled: the figure would no longer be what the party paid for.
  */
 export async function settledPartyPayment(
   db: DbExecutor,
@@ -914,15 +915,23 @@ export async function settledPartyPayment(
   if (!booking || booking.partyLeadBookingId) return null;
   const checkout = await latestCheckoutForBookingIds(db, shopId, [bookingId]);
   if (checkout?.status !== "completed" || !checkout.settledTotalCents) return null;
+  // Only while it is still the whole truth: a refund or a cancelled seat
+  // since means the settled total no longer says what the party paid for.
+  if (checkout.refundedCents > 0) return null;
   const covered = await db
-    .select({ bookingId: bookingCheckoutBookings.bookingId })
+    .select({ bookingId: bookingCheckoutBookings.bookingId, status: bookings.status })
     .from(bookingCheckoutBookings)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
+    )
     .where(
       and(
         eq(bookingCheckoutBookings.shopId, shopId),
         eq(bookingCheckoutBookings.checkoutId, checkout.id),
       ),
     );
+  if (covered.some((seat) => seat.status === "cancelled")) return null;
   return {
     amountCents: checkout.settledTotalCents,
     currency: checkout.currency,
