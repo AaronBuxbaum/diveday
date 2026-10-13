@@ -319,6 +319,58 @@ describe("staffWeek", () => {
     expect(on("2026-08-30")).toEqual([]);
   });
 
+  /**
+   * UX review 2026-10-13, item 21: the second day's chip printed the whole
+   * "11:30 PM – 3:00 AM" window above that morning's dawn boat, which read as
+   * a second night boat. Each placement now says whether it is the day the
+   * window began, and whether it ends there.
+   */
+  it("marks the later days of a window with the day it began and whether it ends there", () => {
+    const week = build({
+      people: [
+        person({
+          crewingTrips: [
+            {
+              tripId: "night",
+              // 11:30 PM Monday to 3:00 AM Tuesday, Key Largo.
+              title: "Night Dive",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-25T03:30:00.000Z"),
+                  endsAt: new Date("2026-08-25T07:00:00.000Z"),
+                },
+              ],
+            },
+            {
+              tripId: "liveaboard",
+              // 8:00 PM Wednesday to 9:00 AM Friday: Thursday is a middle day.
+              title: "Overnight",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-27T00:00:00.000Z"),
+                  endsAt: new Date("2026-08-28T13:00:00.000Z"),
+                },
+              ],
+            },
+          ],
+        }),
+      ],
+    });
+
+    const days = week.people[0]?.days ?? [];
+    const placed = (date: string) =>
+      (days.find((day) => day.date === date)?.crewing ?? []).map((trip) => ({
+        id: trip.tripId,
+        from: trip.continuesFrom,
+        ends: trip.endsThisDay,
+      }));
+    expect(placed("2026-08-24")).toEqual([{ id: "night", from: null, ends: false }]);
+    expect(placed("2026-08-25")).toEqual([{ id: "night", from: "2026-08-24", ends: true }]);
+    expect(placed("2026-08-26")).toEqual([{ id: "liveaboard", from: null, ends: false }]);
+    expect(placed("2026-08-27")).toEqual([{ id: "liveaboard", from: "2026-08-26", ends: false }]);
+    expect(placed("2026-08-28")).toEqual([{ id: "liveaboard", from: "2026-08-26", ends: true }]);
+  });
+
   it("orders a day's shifts and gaps by when they start", () => {
     const week = build({
       people: [
