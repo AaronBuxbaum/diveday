@@ -5,28 +5,37 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { pagedInboxMessages } from "@/db/inbound-messages";
+import { messageSeats } from "@/db/running-late";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { InboxRow } from "./_components/InboxRow";
-import { deleteInboxMessageAction, setInboxMessageDoneAction } from "./actions";
+import {
+  deleteInboxMessageAction,
+  markInboxSenderLateAction,
+  setInboxMessageDoneAction,
+} from "./actions";
 
 /**
  * `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
  * attacker-supplied (src/lib/staff-notices.ts).
  *
- * Two codes, because from here there are two outcomes: the row went, or it was
- * not there to go. `gone` covers a second click on a row a colleague already
- * deleted, an id belonging to another shop, and an id that is not an id at all
- * — all of which name no row, and all of which leave the staffer in the same
- * place.
+ * A delete has two outcomes: the row went, or it was not there to go. `gone`
+ * covers a second click on a row a colleague already deleted, an id belonging
+ * to another shop, and an id that is not an id at all — all of which name no
+ * row, and all of which leave the staffer in the same place. Marking a sender
+ * running late has two more: the seat took it (or already had it), or the seat
+ * closed between the read and the tap.
  */
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   deleted: { tone: "success", key: "inbox.notices.deleted" },
   gone: { tone: "warning", key: "inbox.notices.gone" },
+  "late-marked": { tone: "success", key: "inbox.notices.lateMarked" },
+  "late-closed": { tone: "warning", key: "inbox.notices.lateClosed" },
 };
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -76,6 +85,13 @@ export default async function InboxPage({
   const messages = await pagedInboxMessages(db, shop.id, {
     page: Number.parseInt(page ?? "", 10),
   });
+  // The departure each message could be about (UX review 2026-10-13, item 19).
+  const seats = await messageSeats(
+    db,
+    shop.id,
+    messages.rows.map((row) => row.message),
+    nowDate(),
+  );
   const waiting = messages.rows.filter((row) => row.message.answeredAt === null);
   const answered = messages.rows.filter((row) => row.message.answeredAt !== null);
   const banner = noticeFromParam(notice, NOTICES);
@@ -116,6 +132,8 @@ export default async function InboxPage({
                     t={t}
                     deleteAction={deleteInboxMessageAction}
                     doneAction={setInboxMessageDoneAction}
+                    seat={seats.get(row.message.id) ?? null}
+                    lateAction={markInboxSenderLateAction}
                   />
                 ))}
               </ul>
@@ -135,6 +153,8 @@ export default async function InboxPage({
                     t={t}
                     deleteAction={deleteInboxMessageAction}
                     doneAction={setInboxMessageDoneAction}
+                    seat={seats.get(row.message.id) ?? null}
+                    lateAction={markInboxSenderLateAction}
                   />
                 ))}
               </ul>

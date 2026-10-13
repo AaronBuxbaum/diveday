@@ -6,8 +6,10 @@ import { createBooking, createBookingParty } from "./bookings";
 import { listCheckInQueue } from "./check-in";
 import {
   markBookingRunningLate,
+  markMessageRunningLate,
   markPersonRunningLate,
   markPhoneRunningLate,
+  messageSeats,
 } from "./running-late";
 import { bookings, people, trips } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
@@ -156,6 +158,71 @@ describe("markPersonRunningLate (a LATE reply)", () => {
     expect(await markPersonRunningLate(db, { shopId: shop.id, personId, now: tooEarly })).toEqual({
       status: "closed",
     });
+  });
+});
+
+/**
+ * UX review 2026-10-13, item 19: a running-late message in the diver's own
+ * words. The Inbox row names the seat it could be about, and a staffer marks
+ * it; the instant stored is when the diver wrote.
+ */
+describe("a message in the diver's own words (the Inbox)", () => {
+  const MESSAGE_ID = "8f000000-1111-4222-8333-444444444444";
+
+  it("names the seat open when they wrote, and marks it with the moment they wrote", async () => {
+    const { db, shop, trip, bookingId, personId, now } = await context();
+    const receivedAt = new Date(now.getTime() - 10 * MINUTE_MS);
+    const seats = await messageSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
+    expect(seats.get(MESSAGE_ID)).toMatchObject({
+      bookingId,
+      tripId: trip.id,
+      title: trip.title,
+      runningLateAt: null,
+    });
+
+    expect(
+      await markMessageRunningLate(db, { shopId: shop.id, personId, receivedAt, now }),
+    ).toEqual({ status: "marked", bookingId, at: receivedAt });
+    expect(await lateAt(bookingId)).toEqual(receivedAt);
+    const after = await messageSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
+    expect(after.get(MESSAGE_ID)?.runningLateAt).toEqual(receivedAt);
+  });
+
+  it("names nothing for words written before this boat's window opened", async () => {
+    const { db, shop, trip, bookingId, personId, now } = await context();
+    // Two days out: about some other boat, or none, never this one.
+    const receivedAt = new Date(trip.startsAt.getTime() - 48 * HOUR_MS);
+    const seats = await messageSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
+    expect(seats.size).toBe(0);
+    expect(
+      await markMessageRunningLate(db, { shopId: shop.id, personId, receivedAt, now }),
+    ).toEqual({ status: "closed" });
+    expect(await lateAt(bookingId)).toBeNull();
+  });
+
+  it("names nothing for a stranger, and closes once the diver has checked in", async () => {
+    const { db, shop, bookingId, personId, now } = await context();
+    const receivedAt = new Date(now.getTime() - 5 * MINUTE_MS);
+    const stranger = await messageSeats(
+      db,
+      shop.id,
+      [{ id: MESSAGE_ID, personId: null, receivedAt }],
+      now,
+    );
+    expect(stranger.size).toBe(0);
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    expect(
+      await markMessageRunningLate(db, { shopId: shop.id, personId, receivedAt, now }),
+    ).toEqual({ status: "closed" });
+  });
+
+  it("never reaches another shop's seat", async () => {
+    const { db, bookingId, personId, now } = await context();
+    const otherShop = "00000000-0000-4000-8000-000000000000";
+    expect(
+      await markMessageRunningLate(db, { shopId: otherShop, personId, receivedAt: now, now }),
+    ).toEqual({ status: "closed" });
+    expect(await lateAt(bookingId)).toBeNull();
   });
 });
 

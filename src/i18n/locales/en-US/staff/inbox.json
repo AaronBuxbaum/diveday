@@ -18,6 +18,12 @@
     "late": "Running late"
   },
   "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
+  "seat": "Booked on {trip}, {when}",
+  "late": {
+    "action": "Mark running late",
+    "actionFor": "Mark {name} running late for {trip}",
+    "marked": "On the manifest: running late, said {time}"
+  },
   "openRecord": "Open the record for {name}",
   "delete": {
     "action": "Delete",
@@ -67,6 +73,8 @@
     "whatsappWindowClosed": "WhatsApp takes a typed reply for 24 hours after a diver’s last message. Theirs is older than that.",
     "whatsappNotConnected": "Answering on WhatsApp needs the sender you connect in Settings.",
     "notAuthorized": "Your account can’t answer divers for this shop any more. Ask an owner or manager to check your access.",
+    "lateMarked": "Marked running late. The roster and the manifest show it.",
+    "lateClosed": "That seat is past running late: checked in, canceled, or the boat has sailed.",
     "deleted": "Message deleted.",
     "gone": "That message is no longer in the inbox."
   }
