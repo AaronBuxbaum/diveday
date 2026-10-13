@@ -3470,6 +3470,13 @@ describe("roll call on a cancelled trip that is already counting heads", () => {
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, tripId));
   }
 
+  it("says so on the manifest, so the dock-rider form stays shut (#2394)", async () => {
+    const { db, shop, reef } = await manifestContext();
+    expect((await getTripManifest(db, shop.id, reef.id))?.trip.cancelled).toBe(false);
+    await cancel(db, reef.id);
+    expect((await getTripManifest(db, shop.id, reef.id))?.trip.cancelled).toBe(true);
+  });
+
   it("keeps accepting a diver's roll call after the trip is cancelled mid-count", async () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const first = await recordRollCall(db, {
