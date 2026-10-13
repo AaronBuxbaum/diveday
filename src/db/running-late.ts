@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, lte, ne } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lte, ne, or } from "drizzle-orm";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { AppDb } from "./client";
@@ -17,7 +17,8 @@ import { liveTrip } from "./trips-live";
  *   check-in landing between the read and the write wins.
  * - **The first statement stands.** A second tap, or a provider redelivering
  *   the same reply, changes nothing: "said 7:42" stays the moment the diver
- *   first said it.
+ *   first said it. Only the diver's own link takes it back
+ *   (`clearBookingRunningLate`), while the seat could still say it.
  *
  * It gates nothing (see `src/lib/running-late.ts`), which is why a reply
  * channel authenticated by an address alone may write it.
@@ -103,6 +104,65 @@ export async function markBookingRunningLate(
   input: { shopId: string; bookingId: string; now: Date },
 ): Promise<RunningLateOutcome> {
   return stampWithParty(db, input.shopId, input.bookingId, input.now);
+}
+
+/**
+ * **"I'm on time after all"**, from the `/ready` link that said it (third UX
+ * review, item 26): a statement made the night before by a stray thumb read
+ * "running late" on the arrivals list until the diver checked in. Clears this
+ * seat and, for an organizer, the party seats their tap stamped (the same
+ * instant, so a member who said it for themselves keeps their own word).
+ * Only while the seat could still say it: once the boat has sailed or the
+ * diver checked in, the line has stopped mattering and the record stands.
+ */
+export async function clearBookingRunningLate(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; now: Date },
+): Promise<{ status: "cleared" } | { status: "closed" }> {
+  const [row] = await db
+    .select({
+      status: bookings.status,
+      runningLateAt: bookings.runningLateAt,
+      tripStatus: trips.status,
+      startsAt: trips.startsAt,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(trips.shopId, input.shopId),
+        eq(bookings.id, input.bookingId),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  if (
+    !row?.runningLateAt ||
+    !canSayRunningLate({
+      bookingStatus: row.status,
+      tripStatus: row.tripStatus,
+      startsAt: row.startsAt,
+      now: input.now,
+    })
+  ) {
+    return { status: "closed" };
+  }
+  await db
+    .update(bookings)
+    .set({ runningLateAt: null })
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.status, "booked"),
+        eq(bookings.runningLateAt, row.runningLateAt),
+        or(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.partyLeadBookingId, input.bookingId),
+        ),
+      ),
+    );
+  return { status: "cleared" };
 }
 
 /**

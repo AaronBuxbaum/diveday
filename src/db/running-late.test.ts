@@ -5,6 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking, createBookingParty } from "./bookings";
 import { listCheckInQueue } from "./check-in";
 import {
+  clearBookingRunningLate,
   markBookingRunningLate,
   markPersonRunningLate,
   markPhoneRunningLate,
@@ -264,5 +265,69 @@ describe("one statement for the people travelling together", () => {
     expect(await lateAt(bookingId)).toEqual(now);
     expect(await lateAt(sibling.bookingId)).toEqual(now);
     expect(await lateAt(stranger.bookingId)).toBeNull();
+  });
+});
+
+/**
+ * **Taken back from the link that said it** (third UX review, item 26): a tap
+ * the night before used to stand until the diver checked in.
+ */
+describe("clearBookingRunningLate", () => {
+  it("clears a seat's statement while the seat could still make it", async () => {
+    const { db, shop, bookingId, now } = await context();
+    await markBookingRunningLate(db, { shopId: shop.id, bookingId, now });
+    expect(await clearBookingRunningLate(db, { shopId: shop.id, bookingId, now })).toEqual({
+      status: "cleared",
+    });
+    expect(await lateAt(bookingId)).toBeNull();
+    // And it can be said again.
+    expect(await markBookingRunningLate(db, { shopId: shop.id, bookingId, now })).toMatchObject({
+      status: "marked",
+    });
+  });
+
+  it("leaves the record alone once the boat has sailed or the diver checked in", async () => {
+    const { db, shop, trip, bookingId, now } = await context();
+    await markBookingRunningLate(db, { shopId: shop.id, bookingId, now });
+    const sailed = new Date(trip.startsAt.getTime() + 61 * MINUTE_MS);
+    expect(await clearBookingRunningLate(db, { shopId: shop.id, bookingId, now: sailed })).toEqual(
+      { status: "closed" },
+    );
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    expect(await clearBookingRunningLate(db, { shopId: shop.id, bookingId, now })).toEqual({
+      status: "closed",
+    });
+    expect(await lateAt(bookingId)).toEqual(now);
+  });
+
+  it("never reaches another shop's booking", async () => {
+    const { db, shop, bookingId, now } = await context();
+    await markBookingRunningLate(db, { shopId: shop.id, bookingId, now });
+    const otherShop = "00000000-0000-4000-8000-000000000000";
+    expect(await clearBookingRunningLate(db, { shopId: otherShop, bookingId, now })).toEqual({
+      status: "closed",
+    });
+    expect(await lateAt(bookingId)).toEqual(now);
+  });
+
+  it("clears the party seats the organizer's tap stamped, not a member's own word", async () => {
+    const { db, shop, trip, now } = await context();
+    const party = await createBookingParty(db, [
+      { actor: "staff", shopId: shop.id, tripId: trip.id, fullName: "Cy Lead", email: "cy.lead@example.com" },
+      { actor: "staff", shopId: shop.id, tripId: trip.id, fullName: "Di Lead", email: "di.lead@example.com" },
+      { actor: "staff", shopId: shop.id, tripId: trip.id, fullName: "Ed Lead", email: "ed.lead@example.com" },
+    ]);
+    if (!party.ok) throw new Error(`party failed: ${party.reason}`);
+    const [lead, member, ownWord] = party.bookings;
+    if (!lead || !member || !ownWord) throw new Error("party seats missing");
+    const earlier = new Date(now.getTime() - 5 * MINUTE_MS);
+    await markBookingRunningLate(db, { shopId: shop.id, bookingId: ownWord.bookingId, now: earlier });
+    await markBookingRunningLate(db, { shopId: shop.id, bookingId: lead.bookingId, now });
+    expect(await lateAt(member.bookingId)).toEqual(now);
+
+    await clearBookingRunningLate(db, { shopId: shop.id, bookingId: lead.bookingId, now });
+    expect(await lateAt(lead.bookingId)).toBeNull();
+    expect(await lateAt(member.bookingId)).toBeNull();
+    expect(await lateAt(ownWord.bookingId)).toEqual(earlier);
   });
 });

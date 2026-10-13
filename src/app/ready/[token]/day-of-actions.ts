@@ -10,7 +10,7 @@ import {
 } from "@/db/bookings";
 import { saveHelpRequest } from "@/db/help-requests";
 import { saveRentalFitNote } from "@/db/rental-fit";
-import { markBookingRunningLate } from "@/db/running-late";
+import { clearBookingRunningLate, markBookingRunningLate } from "@/db/running-late";
 import { setWelcomeConsent } from "@/db/welcome-cues";
 import { nowDate } from "@/lib/clock";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
@@ -135,6 +135,22 @@ export async function sayRunningLateAction(token: string) {
     revalidateAndRedirect(base(token), `${base(token)}?error=late`);
   }
   // No banner: the block's own line now says what was said and when.
+  revalidateAndRedirect(base(token));
+}
+
+/**
+ * **Taking "running late" back** (third UX review, item 26): the second tap
+ * on the same control. A closed seat (checked in, the boat gone) keeps its
+ * record and the page simply reloads, since the block is no longer drawn.
+ */
+export async function clearRunningLateAction(token: string) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  await clearBookingRunningLate(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    now: nowDate(),
+  });
   revalidateAndRedirect(base(token));
 }
 

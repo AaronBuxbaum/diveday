@@ -39,7 +39,13 @@ test("a diver taps Running late on their link, and the desk sees when they said 
   const name = `Lena Late ${stamp}`;
   await bookOnTodaysBoat(page, name, `lena-late-${stamp}@example.com`);
 
+  // Asked first, naming the call (third UX review, item 26): "Never mind"
+  // leaves nothing said.
   await page.getByRole("button", { name: "Running late" }).click();
+  await expect(page.getByText(/^Tell the shop you’re running late for the \d.* call\?/)).toBeVisible();
+  await page.getByRole("button", { name: "Never mind" }).click();
+  await page.getByRole("button", { name: "Running late" }).click();
+  await page.getByRole("button", { name: "Yes, tell them" }).click();
   // The block's own line is the confirmation, in the shop's zone.
   await expect(page.getByText(/^At \d.* you told the shop you’re running late\./)).toBeVisible();
   await expect(page.getByRole("button", { name: "Running late" })).toHaveCount(0);
@@ -55,6 +61,25 @@ test("a diver taps Running late on their link, and the desk sees when they said 
     .filter({ visible: true })
     .filter({ has: page.getByRole("link", { name, exact: true }) });
   await expect(row.getByText(/^Running late, said \d/)).toBeVisible();
+});
+
+test("a diver who said Running late by mistake takes it back from the same link", async ({
+  page,
+}) => {
+  const stamp = e2eNow().getTime();
+  const name = `Tara Ontime ${stamp}`;
+  await bookOnTodaysBoat(page, name, `tara-ontime-${stamp}@example.com`);
+
+  await page.getByRole("button", { name: "Running late" }).click();
+  await page.getByRole("button", { name: "Yes, tell them" }).click();
+  await page.getByRole("button", { name: "I’m on time after all" }).click();
+  await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
+  await expect(page.getByText(/you told the shop you’re running late/)).toHaveCount(0);
+
+  await signInAsOwner(page);
+  await page.goto(`/shop/blue-mantis?q=${encodeURIComponent(name)}`);
+  await expect(page.getByText(name).first()).toBeVisible();
+  await expect(page.getByText(/^Running late, said \d/)).toHaveCount(0);
 });
 
 test("a LATE reply marks the seat, and the inbox says what the word meant", async ({
