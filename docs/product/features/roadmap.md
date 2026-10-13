@@ -1041,7 +1041,7 @@ ADR rather than letting this become an unbounded second backlog.
    AGENTS.md route-map paths, or `task:context` doc paths drift. Still open: the per-provider
    adapters themselves and checking *them* against the canonical layer.
 2. **Path-aware CI.** Run the smallest trustworthy check set for a change while preserving the full
-   `pnpm check` gate before merge. The per-developer half of this shipped (`pnpm test:changed`,
+   `pnpm check` gate before merge. The per-developer half of this shipped (`pnpm verify:push`,
    `pnpm e2e:run`); what's open is job selection in `.github/workflows/ci.yml` based on changed
    paths. Changed-UI evidence is already covered — reg-suit posts a visual report per PR and
    AGENTS.md makes accounting for every diff a hard rule.

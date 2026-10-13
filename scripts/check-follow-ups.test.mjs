@@ -6,10 +6,14 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import {
   findIssueProblems,
+  INBOX_CEILING,
+  inboxProblem,
   missingTouchedProblem,
+  nearDuplicate,
   readyIssueProblems,
   SKIPPED_EXIT,
   TOUCHED_TIMEOUT,
+  titleKey,
   touchedPathAccepted,
   touchedPathExists,
   unverifiedTouchedProblem,
@@ -661,5 +665,32 @@ describe("--body, the pre-flight for one drafted issue", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/matched no files/);
     expect(result.stderr).toMatch(/“\*”/);
+  });
+});
+
+describe("the inbox ceiling", () => {
+  it("fails the scheduled run only above the ceiling", () => {
+    expect(INBOX_CEILING).toBe(40);
+    expect(inboxProblem(40)).toBeNull();
+    expect(inboxProblem(128)).toMatch(/128 issues are open under label:needs-triage/);
+  });
+});
+
+describe("near-duplicate titles", () => {
+  it("keys a title on its first six words, case and punctuation aside", () => {
+    expect(titleKey("Add a visual capture of the empty Gear page")).toBe(
+      "add a visual capture of the",
+    );
+    expect(titleKey("Don't: refuse `x`")).toBe("dont refuse x");
+  });
+
+  it("finds the open issue that starts the same way, and leaves a different one alone", () => {
+    const open = [
+      { number: 2412, title: "Add a visual capture of the empty Gear page on the fresh demo shop" },
+      { number: 2461, title: "Subscribe the Stripe Connect webhook to payout.paid" },
+    ];
+    expect(nearDuplicate("Add a visual capture of the staff 404", open)?.number).toBe(2412);
+    expect(nearDuplicate("Add a visual capture for diver pages", open)).toBeNull();
+    expect(nearDuplicate("", open)).toBeNull();
   });
 });

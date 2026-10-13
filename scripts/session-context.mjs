@@ -35,23 +35,38 @@
 // something wrong: a session that starts without its context line loses a few tokens of
 // convenience; a session that starts with a stale or invented branch name loses more.
 
-import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { gatherFacts, summaryLines } from "./agent-doctor.mjs";
-import { appendEntry, lastSessionRefusals, readLog, refusalLine } from "./hook-log.mjs";
+import {
+  appendEntry,
+  lastSessionRefusals,
+  papercutLine,
+  readLog,
+  refusalLine,
+  repeatedRefusal,
+} from "./hook-log.mjs";
 import { install as installMergeDrivers } from "./merge-drivers.mjs";
 import { readStack, gitReader as stackGit, stackSummary } from "./stack-map.mjs";
 import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { repoSlug } from "./tracker.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
  * The one fetch a session makes on its own, at startup and resume: `main`, which
- * `test:changed`, `check:closing-keywords` and the migration guard all measure from, and the
+ * `verify:push`, `check:closing-keywords` and the migration guard all measure from, and the
  * `claude/*` thread branches `stack-map.mjs` derives the stack from. A container's refs are
  * whatever its clone saw, and on 2026-10-10 that was an `origin/main` five days and 650 commits
  * old. `--prune` drops refs of merged-and-deleted branches, so a merged layer leaves the stack.
@@ -259,10 +274,90 @@ export function selectPinnedNode(
 }
 
 /**
- * The one-line form for `UserPromptSubmit`: the checkout, then (when there is one) the stack
- * position from `stack-map.mjs`, then (once per session) the previous session's hook refusals.
+ * **The author's open pull requests, on every prompt.** Aaron's rule since 2026-10-12 is one
+ * pull request's CI at a time, driven by the thread that owns the stack, because concurrent runs
+ * cancel each other (AGENTS.md's Parallel work); on 2026-10-12, 126 runs were cancelled and 90
+ * jobs failed while 15 to 19 layers ran at once. A session cannot keep to that rule without
+ * seeing what is already open, so the per-prompt line says it. Every session pushes as the same
+ * GitHub account, so "the author's" is the whole account's count, which is the one that matters.
+ *
+ * Two REST reads (`gh api user`, then the repository's open pulls), cached in the clone's git
+ * common dir for OPEN_PULLS_TTL_MS so most prompts read a file; each read is bounded well under
+ * the hook's 10 s timeout, and any failure prints nothing.
  */
-export function promptLine(state, { stack = "", refusals = "" } = {}) {
+export const OPEN_PULLS_TTL_MS = 10 * 60_000;
+export const OPEN_PULLS_CACHE = "diveday-open-pulls.json";
+const OPEN_PULLS_READ_MS = 3_000;
+
+/** `{ login, numbers }` from GitHub, or null. `run` is `runBounded`'s shape, injectable. */
+export function fetchOpenPulls({ run = runBounded, repo = repoSlug() } = {}) {
+  const api = (args) => {
+    const result = run("gh", ["api", ...args], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeoutMs: OPEN_PULLS_READ_MS,
+    });
+    if (result?.status !== 0) return null;
+    try {
+      return JSON.parse(String(result.stdout ?? ""));
+    } catch {
+      return null;
+    }
+  };
+  const login = api(["user"])?.login;
+  if (!login) return null;
+  const pulls = api([`repos/${repo}/pulls?state=open&per_page=100`]);
+  if (!Array.isArray(pulls)) return null;
+  const numbers = pulls
+    .filter((pull) => pull.user?.login === login)
+    .map((pull) => pull.number)
+    .sort((a, b) => a - b);
+  return { login, numbers };
+}
+
+/** The cached record when it is fresh, else a fetched one (written back), else null. */
+export function readOpenPulls(
+  cacheFile,
+  { now = Date.now(), fetch = fetchOpenPulls, read = readFileSync, write = writeFileSync } = {},
+) {
+  if (cacheFile) {
+    try {
+      const cached = JSON.parse(read(cacheFile, "utf8"));
+      if (now - cached.at <= OPEN_PULLS_TTL_MS && Array.isArray(cached.numbers)) return cached;
+    } catch {
+      // No cache yet, or a torn one: read GitHub.
+    }
+  }
+  const fetched = fetch();
+  if (!fetched) return null;
+  const record = { at: now, ...fetched };
+  if (cacheFile) {
+    try {
+      write(cacheFile, JSON.stringify(record));
+    } catch {
+      // An unwritable cache costs a read next prompt, nothing more.
+    }
+  }
+  return record;
+}
+
+/** "2 open PRs by <login> (#1, #2)", or "" when unknown. */
+export function openPullsText(record) {
+  if (!record?.login || !Array.isArray(record.numbers)) return "";
+  const n = record.numbers.length;
+  const list = n > 0 ? ` (${record.numbers.map((number) => `#${number}`).join(", ")})` : "";
+  return `${n} open PR${n === 1 ? "" : "s"} by ${record.login}${list}`;
+}
+
+/**
+ * The one-line form for `UserPromptSubmit`: the checkout, then (when there is one) the stack
+ * position from `stack-map.mjs` and the author's open pull requests, then (once per session)
+ * the previous session's hook refusals and the ask for a papercut when one rule keeps refusing.
+ */
+export function promptLine(
+  state,
+  { stack = "", refusals = "", openPulls = "", papercut = "" } = {},
+) {
   if (!state) return "";
   const parts = [state.detached ? "git: detached HEAD (no upstream)" : `git: ${state.branch}`];
   if (state.uncommitted !== null) {
@@ -272,8 +367,8 @@ export function promptLine(state, { stack = "", refusals = "" } = {}) {
     parts.push(`${state.unpushed} unpushed commit${state.unpushed === 1 ? "" : "s"}`);
   if (state.behind) parts.push(`${state.behind} behind ${state.upstream}`);
   if (stack) parts.push(stack);
-  const line = parts.join(" · ");
-  return refusals ? `${line}\n${refusals}` : line;
+  if (openPulls) parts.push(openPulls);
+  return [parts.join(" · "), refusals, papercut].filter(Boolean).join("\n");
 }
 
 /** The block for `SessionStart`, given the state and the session's `source`. */
@@ -286,13 +381,19 @@ export function sessionBlock(
     installed,
     nodeSelection = null,
     fetched = null,
+    mergeDrivers = null,
     doctor = [],
   } = {},
 ) {
   const lines = [];
+  if (mergeDrivers === "not installed") {
+    lines.push(
+      "Merge drivers: not installed (git config failed), so a merge or restack can stop on scripts/ratchets.json and the generated files — run `node scripts/merge-drivers.mjs install`.",
+    );
+  }
   if (fetched === "failed") {
     lines.push(
-      "`git fetch origin main` failed or timed out at session start: origin/main may be stale, so `pnpm test:changed` and `check:closing-keywords` may measure from an old base.",
+      "`git fetch origin main` failed or timed out at session start: origin/main may be stale, so `pnpm verify:push` and `check:closing-keywords` may measure from an old base.",
     );
   }
   if (state) {
@@ -352,13 +453,25 @@ export function sessionBlock(
       "",
       "After compaction, the rules a summary drops:",
       "- Re-read TaskList; the task list is the queue, a sentence in a message is not.",
-      "- Before you commit: the guard you touched, `pnpm test <file>`, `pnpm typecheck`, `pnpm lint`; before you push, `pnpm test:changed`. The whole suite belongs to CI.",
+      "- Before you commit: the guard you touched, `pnpm test <file>`, `pnpm typecheck`, `pnpm lint`; before you push, `pnpm verify:push`. The whole suite belongs to CI.",
       "- A thought you are not acting on becomes a `needs-triage` GitHub issue, never a closing remark.",
       "- A turn ends done, filed, or handed over in as many words. Never on an intention.",
       "- Read a large file by range after a Grep, never whole; the hooks refuse the whole-file form.",
     );
   }
   return lines.join("\n");
+}
+
+/** The repeated refusal, unless a papercut with its slug is already in the tree. */
+export function unwrittenPapercut(repeat, root, { list = readdirSync } = {}) {
+  if (!repeat) return null;
+  try {
+    const written = list(path.join(root, "docs/agents/papercuts"));
+    if (written.some((name) => name.endsWith(`-${repeat.slug}.md`))) return null;
+  } catch {
+    // No papercuts directory: nothing written yet.
+  }
+  return repeat;
 }
 
 function readPayload() {
@@ -412,11 +525,24 @@ function main() {
 
   if (process.argv.includes("--prompt")) {
     const session = payload.session_id ?? "unknown";
-    const summary = lastSessionRefusals(readLog({ root: cwd }), session);
-    if (summary) appendEntry({ session, hook: "session-context", kind: "noted" }, { root: cwd });
+    const log = readLog({ root: cwd });
+    const noted = log.some((e) => e.kind === "noted" && e.session === session);
+    const summary = lastSessionRefusals(log, session);
+    const papercut = noted ? "" : papercutLine(unwrittenPapercut(repeatedRefusal(log), cwd));
+    if (summary || papercut) {
+      appendEntry({ session, hook: "session-context", kind: "noted" }, { root: cwd });
+    }
+    const common = git(["rev-parse", "--git-common-dir"]);
     const line = promptLine(checkoutState(git), {
       stack: stackSummary(readStack(stackGit(cwd))),
+      openPulls:
+        process.env.DIVEDAY_OPEN_PULLS === "0"
+          ? ""
+          : openPullsText(
+              readOpenPulls(common ? path.join(path.resolve(cwd, common), OPEN_PULLS_CACHE) : null),
+            ),
       refusals: refusalLine(summary),
+      papercut,
     });
     if (line) process.stdout.write(`${line}\n`);
     return;
@@ -432,7 +558,7 @@ function main() {
   const nodeSelection = selectPinnedNode({ nodeMajor, pinnedMajor });
   const installed = installIfNeeded(cwd);
   // So a restack merge never stops on a generated file (scripts/merge-drivers.mjs).
-  installMergeDrivers(cwd);
+  const mergeDrivers = installMergeDrivers(cwd) ? "installed" : "not installed";
   const block = sessionBlock(state, {
     source,
     nodeMajor,
@@ -440,7 +566,9 @@ function main() {
     nodeSelection,
     installed,
     fetched,
-    doctor: summaryLines(gatherFacts(cwd)),
+    mergeDrivers,
+    // After the fetch above, so origin/main's row reads this session's refs.
+    doctor: summaryLines(gatherFacts(cwd, { fetched })),
   });
   if (block) process.stdout.write(`${block}\n`);
 }

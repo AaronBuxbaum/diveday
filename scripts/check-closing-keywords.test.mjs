@@ -147,7 +147,7 @@ describe("reading the commits this branch adds", () => {
   /**
    * A reason, not a skip: exit 2 is a deliberate one-off for the one guard that
    * makes a network call, and a clone this cannot read is one `pnpm
-   * test:changed` and the destructive-migration guard cannot read either.
+   * verify:push` and the destructive-migration guard cannot read either.
    */
   it("reports a reason naming the remedy when no trunk is reachable", () => {
     const read = readBranchCommits(

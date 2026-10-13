@@ -418,7 +418,7 @@ recorded here so the next person does not have to rediscover the problem.
   duration, backfill runtime, and constraints that existing rows violate are all still discovered in
   production. `pnpm check` alone proves even less: it runs on PGlite, which differs from Neon in
   extension availability, some locking behaviour, and concurrency semantics.
-- **No schema drift detection.** Nothing checks that Neon's actual schema matches `src/db/schema.ts`.
+- **No schema drift detection.** Nothing checks that Neon's actual schema matches `src/db/schema/`.
   A hand-run statement in the Neon console would go unnoticed until a later migration failed.
 - **Vercel's own rollback of *environment variables* is not covered** — Instant Rollback repoints
   code, and env-var changes are a separate, manual undo.

@@ -384,6 +384,14 @@ So the decision is the owner's and it is open on #1403, which carries the four o
 
 Re-measure before re-proposing this; the number is what the argument turns on and it is cheap to get, while re-deriving it from scratch is a day. The sweep's definitions and script are in #1403's own comment thread. If a variant is ever built, it needs a statement-scope hook rather than a per-line `pattern` — five of the 98 have their locator on a preceding line — and it should be built on the `statementStart` helper already in the script rather than re-deriving a walker that will drift from it.
 
+### pre-hydration-click
+
+A press on a server-rendered staff page before React owns it is lost: the button has no handler yet, so nothing is sent and the spec waits on an answer that never comes. It was the flake class of 2026-10-12/13 (code re-review 2026-10-13, item 15): `dive-sites`, `schedule-builder`, `staffing` and `blowout` each lost one, four red runs in 21, and each was being fixed by its own hand-written wait on some `data-hydrated` flag.
+
+The wait now lives in one place. `makeActivitySafe` in `e2e/fixtures.ts`, which every fixture page and every second actor's page goes through, wraps `goto`, `reload`, `goBack`, `goForward` and `waitForURL`: when the page that loaded is under `/shop/` and carries the header's Search trigger, the call returns only once every trigger draws `data-hydrated="true"` (`settleStaffHydration`). A client navigation finds the flag already drawn; a public page, a redirect to sign-in, or a `waitUntil: "commit"` with no DOM yet has no trigger and is not waited on.
+
+That last case is the one door left, so the `pre-hydration-click` rule in `scripts/check-e2e-hygiene.mjs` refuses a `.click()` whose nearest navigation in the same test opted out with `waitUntil: "commit"`, unless a `data-hydrated` assertion or `settleStaffHydration(page)` stands between them. `e2e/staff-nav.spec.ts` acknowledges its one, because beating the sidebar's hydration is what that test is about (#2273). The trigger is a proxy: it lives in the staff chrome's Suspense boundary, so a control inside a later-streaming page boundary can still publish its own flag (`PaperWaiverControl`, the course editor, the orders search) and a spec should keep waiting on it.
+
 ### loading-skeleton
 
 The loading-skeleton one (`scripts/check-loading-skeletons.mjs`) requires every `page.tsx` under `src/app` to have a sibling `loading.tsx`, and where both declare a container the two widths to match — the hard rule below and `docs/design/principles.md` §10, neither of which anything checked. A route with no boundary of its own does not go without one: Next falls back to the nearest **ancestor**, so the defect is a skeleton that is a picture of a *different page*. Three routes were in that state until 2026-08-23 — a diver tapping "83 reviews" watched the public schedule's day headers and departure rows at `max-w-6xl` before the page snapped to a `max-w-4xl` column of cards, and a staffer tapping "Add a dive site" watched the site *library* before landing on a narrow form. It is invisible in a diff (each page is individually fine; the missing file is the defect) and invisible locally, where the data is instant — it needs a cold navigation over a slow link. The width half compares the first `mx-auto w-full max-w-*` container each file declares and no further: a page that delegates its container to a component (the legal pages render `LegalDocument`) is reported as delegated and skipped rather than guessed at; a pair that spells no width in either file (the trip family under its layout, every settings route through `settingsPaneClass`) counts as owning none, its parity resting on that owner (the one layout, or `settings-pane.test.ts`) rather than on this guard; and the counts print on success so the coverage is stated rather than implied. A route that genuinely needs no skeleton — the five with no ancestor boundary to fall back to — goes in the script's `SKELETON_EXEMPT` with its reason.
@@ -402,11 +410,11 @@ The closing-keywords one (`scripts/check-closing-keywords.mjs`) fails a commit m
 
 It cost eight issues on 2026-09-12. `Closes #1392, #1393, #1395, #1506, #1511, #1632` (#1740) and `Closes #1356, #1394, #1497, #1498` (#1743) closed #1392 and #1356 between them and left the other eight open over work that had already shipped — found days afterwards by reading the tracker against the tree, and closed by hand. Both lines are still legible in `git log origin/main`.
 
-**It reads commit messages rather than pull request bodies, and that is not a compromise.** The keyword has to reach the default branch to fire at all, and on a stack it gets there through the commit: a layer merges into the layer below, and what finally lands on `main` is the commit carrying whatever its message says. Both incidents above are in `main`'s history for exactly that reason. Reading the commit also means the guard runs on the branch, before the pull request exists, where the message can still be amended — and it is the same range `pnpm test:changed` uses, `git merge-base origin/main HEAD` to `HEAD`, so on a stack it reads every layer and never `main`'s own history. A keyword written *only* in a pull request body is a second way to lose a closure and is out of reach from here; [issue-tracker.md](issue-tracker.md) asks for the keyword in the commit message for that reason.
+**It reads commit messages rather than pull request bodies, and that is not a compromise.** The keyword has to reach the default branch to fire at all, and on a stack it gets there through the commit: a layer merges into the layer below, and what finally lands on `main` is the commit carrying whatever its message says. Both incidents above are in `main`'s history for exactly that reason. Reading the commit also means the guard runs on the branch, before the pull request exists, where the message can still be amended — and it is the same range the destructive-migration guard uses, `git merge-base origin/main HEAD` to `HEAD`, so on a stack it reads every layer and never `main`'s own history. A keyword written *only* in a pull request body is a second way to lose a closure and is out of reach from here; [issue-tracker.md](issue-tracker.md) asks for the keyword in the commit message for that reason.
 
 **A finding stops at anything that is not a comma or `and`.** `Closes #12. Related: #13, #14` is two sentences and only the first is a closure, so #13 and #14 are never claimed. That bound is what makes the rule affordable: half of every message in this repository is cross-reference — "the same defect a reviewer flagged in #1687", "filed rather than widened: #1724, #1725" — and a rule that read those as intended closures would fail honest branches constantly and be routed around inside a week. A bare `#N` that no keyword governs is never a finding.
 
-**Failure is a reason, not a skip.** A clone with neither `origin/main` nor `main` exits 1 naming the remedy (`actions/checkout` with `fetch-depth: 0`, or `git fetch --unshallow`), the same message and the same trunk fallback `scripts/previous-release-migrations.mjs` uses. Exit 2 belongs to the one guard that makes a network call, which is not in `check:repo` at all (see follow-ups below). A checkout this guard cannot read is one the destructive-migration guard and `pnpm test:changed` cannot read either.
+**Failure is a reason, not a skip.** A clone with neither `origin/main` nor `main` exits 1 naming the remedy (`actions/checkout` with `fetch-depth: 0`, or `git fetch --unshallow`), the same message and the same trunk fallback `scripts/previous-release-migrations.mjs` uses. Exit 2 belongs to the one guard that makes a network call, which is not in `check:repo` at all (see follow-ups below). A checkout this guard cannot read is one the destructive-migration guard and `pnpm verify:push` cannot read either.
 
 **Quoting a broken line is itself refused, and there is no exemption for it.** This guard's own first commit was rejected, because its message quoted the two incident lines verbatim as evidence. That is the right answer rather than a rough edge: a keyword in a commit message is live wherever it appears, so a message quoting `Closes #1392, #1393` really would close #1392 on merge, and nothing downstream can tell an illustration from an intention. Write about the shape without executing it — name the keyword and the numbers separately, as the paragraphs above do — and the guard has nothing to find. An exemption marker was considered and left out: the one thing it would be reached for is the one case the rule cannot distinguish from the failure.
 
@@ -718,8 +726,8 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
 
 #### Where things are
 
-- **Schema** (source of truth — never read `drizzle/`): `src/db/schema.ts`. Locate a table with
-  Grep and read the range; the file is 8,700 lines and the Read guard refuses it whole.
+- **Schema** (source of truth — never read `drizzle/`): `src/db/schema/`, one file per area (26
+  files, three over the Read guard's 900 lines). Locate a table with Grep and read the range.
 - **Client / test db factory**: `src/db/client.ts` (`getDb()`, `createTestDb()`).
 - **Queries and seed data**: `src/db/shops.ts`, plus two barrels over sibling modules —
   `src/db/trips.ts` re-exports `trips-create/-series/-record/-schedule/-crew/-roster.ts`, and
@@ -754,8 +762,8 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
 - **Buddy teams**: `src/db/buddy-pairs.ts` (named for its table, `buddy_pair_members`; every word a
   human reads says "team"). A team is two or more, a member is a booking **or** a crew person, and
   every act appends to `buddy_team_events` — informs, never gates (ADR 20260804-buddy-teams).
-- **Starting content a shop copies and then owns**: `src/db/dive-site-templates.ts` and
-  `src/db/course-templates.ts`, both `i18n-exempt-file` — picking one **copies** its words onto the
+- **Starting content a shop copies and then owns**: `src/content/dive-site-templates.ts` and
+  `src/content/course-templates.ts`, both `i18n-exempt-file` — picking one **copies** its words onto the
   shop's row, and nothing is read back at render, so a later correction never rewrites what a shop
   published. The **opposite** contract is `src/db/marine-life-catalog.ts`: 148 species as slug +
   Latin binomial + category code and no prose; DiveDay writes the words once in every language
@@ -771,12 +779,12 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
 
 #### Changing the schema
 
-Follow the **schema-change** skill. The short form: edit `src/db/schema.ts`, `pnpm db:generate`
+Follow the **schema-change** skill. The short form: edit `src/db/schema/`, `pnpm db:generate`
 with a `--name`, review the generated SQL once, seed if e2e needs rows, and **before you push** run
-the four coverage guards that assert over `schema.ts` from files you will never touch (the
+the four coverage guards that assert over `src/db/schema/` from files you will never touch (the
 **verify** skill's checklist, step 3, carries the command).
 
-Touching `schema.ts` at all is the trigger, not the shape of the change — `pnpm test:changed`
+Touching `src/db/schema/` at all is the trigger, not the shape of the change — an import-graph run
 selects the whole suite after a schema edit, and that run belongs to CI
 ([docs/agents/verifying.md](verifying.md)). Never hand-edit or hand-merge
 anything under `drizzle/`; a migration is generated, and a conflict there is resolved by reverting
@@ -1086,7 +1094,10 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
   linked in from `.agents/skills/` included; every local skill is in `.claude/skills/README.md` and
   mentioned in `AGENTS.md`, and every linked one has a `skills-lock.json` entry and keeps the local
   lines a sync would undo (`VENDORED_SKILL_OVERRIDES`); every reviewer agent is in the index; every `task:context` path exists; every backticked repo path in `AGENTS.md` and in
-  `.claude/rules/*.md` exists; every allowlist entry and every hook command in
+  `.claude/rules/*.md` exists, and in the handoff docs (`docs/agents/*.md`, the local skills'
+  `SKILL.md`, `.claude/agents/*.md`) too, except on a line telling history ("(was …)", "until
+  2026-…") or naming a gitignored output — ten live instructions there pointed at moved files on
+  2026-10-13; every allowlist entry and every hook command in
   `.claude/settings.json` names a real script or package script; nothing in `.mcp.json` launches
   through a package manager.
 - **Always-loaded context is budgeted** (`scripts/check-context-budget.mjs`): `AGENTS.md`,

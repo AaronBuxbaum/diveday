@@ -28,7 +28,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { recordRefusal } from "./hook-log.mjs";
+import { recordOverride, recordRefusal } from "./hook-log.mjs";
 import { gitReader } from "./stack-map.mjs";
 
 export const OVERRIDE = "DIVEDAY_PUSH_UNVERIFIED";
@@ -109,6 +109,16 @@ export function pushViolation(command, read) {
   return null;
 }
 
+/** The reason a push in `command` gives for skipping verify:push, when it is long enough to count. */
+export function overrideReason(command) {
+  if (typeof command !== "string") return null;
+  for (const segment of segments(command)) {
+    const push = parsePush(segment);
+    if (push?.reason && push.reason.length >= MIN_REASON) return push.reason;
+  }
+  return null;
+}
+
 /** The answers `pushViolation` needs, from the repository at `cwd`. */
 export function gitAnswers(cwd) {
   const git = gitReader(cwd);
@@ -140,7 +150,15 @@ async function main() {
   if (parsed.tool_name !== "Bash") return;
   const command = parsed.tool_input?.command;
   if (typeof command !== "string" || !/\bgit\b[^\n]*\bpush\b/.test(command)) return;
-  const reason = pushViolation(command, gitAnswers(parsed.cwd ?? process.cwd()));
+  const cwd = parsed.cwd ?? process.cwd();
+  const reason = pushViolation(command, gitAnswers(cwd));
+  const override = overrideReason(command);
+  if (!reason && override) {
+    recordOverride("guard-push", override, {
+      session: parsed.session_id,
+      detail: gitAnswers(cwd).head(),
+    });
+  }
   if (!reason) return;
   recordRefusal("guard-push", reason, { session: parsed.session_id });
   console.error(`Refused by scripts/guard-push.mjs: ${reason}`);

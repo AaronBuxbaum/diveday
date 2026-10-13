@@ -157,8 +157,9 @@ the restriction was disqualifying the ordinary case. What it costs is a re-read,
 regression — see [stacked-prs](../stacked-prs/SKILL.md) and ADR
 [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md).
 
-None of this is particular to the backlog any more: **stack by default** is the repository-wide shape
-as of 2026-08-23 (AGENTS.md's *Parallel work*, the `stacked-prs` skill). This routine states it in
+None of this is particular to the backlog any more: **stack everything, across threads, and run one
+PR's CI at a time** is the repository-wide shape (AGENTS.md's *Parallel work*, the `stacked-prs`
+skill; stacking since 2026-08-23, the CI half since 2026-10-12). This routine states it in
 its own terms because it is where the habit is most load-bearing, not because it is the only place
 it applies.
 
@@ -197,7 +198,8 @@ the next ticket stacks on it, because anything else means resolving the same con
 should expect a long one: ticket twelve stacks on ticket eleven exactly the way ticket two stacked
 on ticket one. Every layer runs the whole CI gate (ADR 20261003-every-stack-layer-runs-ci; the
 **stacked-prs** skill), so a deep stack costs runners, and that is the accepted price of every
-layer's green meaning it was tested. The stack restarts when the one below it **merges**, not at a layer count.
+layer's green meaning it was tested. Push one layer, let its run finish, then the next: concurrent
+runs cancel each other. The stack restarts when the one below it **merges**, not at a layer count.
 
 **A fix that is not the ticket goes on its own branch off `main`**, not into the stack — an
 unordered crew query found while triaging a diff, a race in a spec you did not touch. It should be

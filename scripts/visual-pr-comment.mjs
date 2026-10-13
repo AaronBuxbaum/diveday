@@ -182,7 +182,12 @@ async function main() {
   writeStepOutput("compared", String(comparedAnything(summary)));
   // Set by scripts/wait-for-baseline.mjs when it substituted an older baseline
   // for one that was never published; empty on the ordinary path.
-  const note = process.env.REG_BASELINE_NOTE || "";
+  // And by scripts/visual-compare.mjs when a pull request captured only what its
+  // diff can reach (scripts/visual-fill.mjs), so the reader knows the rest are
+  // the baseline's own images.
+  const note = [process.env.REG_BASELINE_NOTE, process.env.VISUAL_SELECTION_NOTE]
+    .filter(Boolean)
+    .join(" ");
 
   // The comment this run will edit names the head it last reported on, which is
   // the only way to say what *entered* and *left* the changed set since then.

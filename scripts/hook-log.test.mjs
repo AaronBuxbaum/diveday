@@ -8,10 +8,15 @@ import {
   appendEntry,
   HOOK_LOG,
   lastSessionRefusals,
+  PAPERCUT_THRESHOLD,
+  papercutLine,
   parseLog,
   readLog,
+  recordOverride,
   recordRefusal,
   refusalLine,
+  repeatedRefusal,
+  ruleOf,
 } from "./hook-log.mjs";
 
 const refusal = (session, hook) => ({ session, hook, kind: "refusal", reason: "r" });
@@ -54,6 +59,7 @@ describe("the previous session's tally", () => {
       session: "prev",
       count: 3,
       byHook: { "guard-bash": 2, "guard-read": 1 },
+      overrides: 0,
     });
   });
 
@@ -69,5 +75,78 @@ describe("the previous session's tally", () => {
       "1 hook refusal last session (guard-read 1): if one fought you, add a papercut (docs/agents/papercuts.md)",
     );
     expect(refusalLine(null)).toBe("");
+  });
+});
+
+describe("asking for a papercut", () => {
+  const now = new Date("2026-10-13T12:00:00Z");
+  const at = (days) => new Date(now.getTime() - days * 86_400_000).toISOString();
+  const tail = (cmd, days, session = "s1") => ({
+    at: at(days),
+    session,
+    hook: "guard-bash",
+    kind: "refusal",
+    reason: `\`${cmd} | tail -8\` — never pipe a long-running command through \`tail\` or \`head\`.`,
+  });
+
+  it("reads one rule out of reasons that quote different commands", () => {
+    expect(ruleOf(tail("pnpm test a.test.ts", 0).reason)).toBe(
+      ruleOf(tail("pnpm e2e b.spec.ts --reporter=line", 0).reason),
+    );
+    expect(ruleOf("`a very long command cut off at one hundred and sixty char")).toBe("");
+  });
+
+  it("names the rule refused three times this week, across sessions, with a slug", () => {
+    const entries = [
+      tail("pnpm test a", 0.1, "s1"),
+      tail("pnpm test b", 2, "s2"),
+      tail("pnpm e2e c", 6, "s3"),
+      { at: at(0), session: "s1", hook: "guard-read", kind: "refusal", reason: "too long" },
+    ];
+    const repeat = repeatedRefusal(entries, { now });
+    expect(repeat).toMatchObject({ hook: "guard-bash", count: PAPERCUT_THRESHOLD });
+    expect(repeat.slug).toMatch(/^guard-bash-never-pipe-a-long/);
+    expect(papercutLine(repeat)).toContain(
+      `write a papercut: node scripts/file-follow-up.mjs --papercut ${repeat.slug}`,
+    );
+  });
+
+  it("says nothing under three, or for refusals older than a week", () => {
+    expect(repeatedRefusal([tail("a", 0), tail("b", 1)], { now })).toBeNull();
+    expect(repeatedRefusal([tail("a", 0), tail("b", 1), tail("c", 8)], { now })).toBeNull();
+    expect(papercutLine(null)).toBe("");
+  });
+});
+
+describe("an escape hatch someone used", () => {
+  it("is logged with its reason, apart from the refusals", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "hook-log-"));
+    mkdirSync(path.join(root, ".claude"));
+    recordOverride("guard-push", "saving work before the container is reclaimed", {
+      session: "s1",
+      root,
+      detail: "abc123",
+    });
+    expect(readLog({ root })).toEqual([
+      expect.objectContaining({
+        session: "s1",
+        hook: "guard-push",
+        kind: "override",
+        reason: "saving work before the container is reclaimed",
+        detail: "abc123",
+      }),
+    ]);
+  });
+
+  it("is counted in the previous session's line, even in a session nothing refused", () => {
+    const entries = [{ session: "prev", hook: "guard-push", kind: "override", reason: "r" }];
+    const summary = lastSessionRefusals(entries, "now");
+    expect(summary).toEqual({ session: "prev", count: 0, byHook: {}, overrides: 1 });
+    expect(refusalLine(summary)).toBe(
+      "1 push past verify:push last session (DIVEDAY_PUSH_UNVERIFIED): say why in the PR",
+    );
+    expect(refusalLine({ count: 2, byHook: { "guard-bash": 2 }, overrides: 2 })).toBe(
+      "2 hook refusals last session (guard-bash 2): if one fought you, add a papercut (docs/agents/papercuts.md); 2 pushes past verify:push (DIVEDAY_PUSH_UNVERIFIED): say why in the PR",
+    );
   });
 });

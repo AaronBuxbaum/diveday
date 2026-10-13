@@ -3,11 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   checkoutState,
   fetchNeed,
+  fetchOpenPulls,
   findInstalledNode,
   installNeed,
+  OPEN_PULLS_TTL_MS,
+  openPullsText,
   promptLine,
+  readOpenPulls,
   selectPinnedNode,
   sessionBlock,
+  unwrittenPapercut,
 } from "./session-context.mjs";
 
 /**
@@ -164,7 +169,7 @@ describe("the session-start block", () => {
   it("adds the post-compaction reminders only after a compaction", () => {
     const block = sessionBlock(checkoutState(tracked), { source: "compact" });
     expect(block).toContain("After compaction");
-    expect(block).toContain("test:changed");
+    expect(block).toContain("verify:push");
     expect(block).toContain("needs-triage");
   });
 
@@ -183,6 +188,14 @@ describe("the session-start block", () => {
     const block = sessionBlock(null, { source: "resume" });
     expect(block).not.toContain("Checkout");
     expect(block).toContain(".claude/rules/");
+  });
+
+  it("says the merge drivers are not installed only when the install returned false", () => {
+    expect(sessionBlock(null, { mergeDrivers: "not installed" })).toContain(
+      "Merge drivers: not installed",
+    );
+    expect(sessionBlock(null, { mergeDrivers: "installed" })).not.toContain("Merge drivers");
+    expect(sessionBlock(null)).not.toContain("Merge drivers");
   });
 
   it("asks for a papercut when a guard or hook fights the session, on every start", () => {
@@ -308,5 +321,75 @@ describe("deciding whether node_modules needs an install", () => {
   it("names a refresh distinctly from a first install", () => {
     const state = checkoutState(tracked);
     expect(sessionBlock(state, { installed: "refreshed" })).toContain("older than pnpm-lock.yaml");
+  });
+});
+
+describe("the author's open pull requests on the prompt line", () => {
+  const ok = (value) => ({ status: 0, stdout: JSON.stringify(value) });
+
+  it("counts the open pulls whose author is the token's own login", () => {
+    const run = (_gh, args) =>
+      args[1] === "user"
+        ? ok({ login: "me" })
+        : ok([
+            { number: 12, user: { login: "me" } },
+            { number: 3, user: { login: "someone" } },
+            { number: 7, user: { login: "me" } },
+          ]);
+    expect(fetchOpenPulls({ run, repo: "o/r" })).toEqual({ login: "me", numbers: [7, 12] });
+    expect(fetchOpenPulls({ run: () => ({ status: 1, stdout: "" }), repo: "o/r" })).toBeNull();
+  });
+
+  it("reads a fresh cache without asking GitHub, and refreshes a stale one", () => {
+    let asked = 0;
+    const fetch = () => {
+      asked += 1;
+      return { login: "me", numbers: [1] };
+    };
+    const written = [];
+    const fresh = JSON.stringify({ at: 1_000, login: "me", numbers: [4, 5] });
+    const io = { fetch, read: () => fresh, write: (_f, text) => written.push(text) };
+    expect(readOpenPulls("/c", { now: 2_000, ...io }).numbers).toEqual([4, 5]);
+    expect(asked).toBe(0);
+    expect(readOpenPulls("/c", { now: 1_000 + OPEN_PULLS_TTL_MS + 1, ...io }).numbers).toEqual([1]);
+    expect(asked).toBe(1);
+    expect(JSON.parse(written[0]).numbers).toEqual([1]);
+    expect(readOpenPulls("/c", { fetch: () => null, read: () => "torn" })).toBeNull();
+  });
+
+  it("says the count and the numbers, and nothing when it does not know", () => {
+    expect(openPullsText({ login: "me", numbers: [7, 12] })).toBe("2 open PRs by me (#7, #12)");
+    expect(openPullsText({ login: "me", numbers: [] })).toBe("0 open PRs by me");
+    expect(openPullsText(null)).toBe("");
+    const state = checkoutState(tracked);
+    expect(promptLine(state, { openPulls: "1 open PR by me (#7)" })).toMatch(
+      / · 1 open PR by me \(#7\)$/,
+    );
+  });
+});
+
+describe("the papercut ask on the prompt line", () => {
+  const repeat = {
+    hook: "guard-bash",
+    rule: "never pipe",
+    count: 3,
+    slug: "guard-bash-never-pipe",
+  };
+
+  it("puts it on a line of its own, after the refusal tally", () => {
+    const line = promptLine(checkoutState(tracked), {
+      refusals: "3 hook refusals last session (guard-bash 3)",
+      papercut: "write a papercut: …",
+    });
+    expect(line.split("\n")).toHaveLength(3);
+    expect(line.split("\n")[2]).toBe("write a papercut: …");
+  });
+
+  it("is dropped once a papercut with that slug is in the tree", () => {
+    expect(unwrittenPapercut(repeat, "/r", { list: () => ["2026-10-13-other.md"] })).toBe(repeat);
+    expect(
+      unwrittenPapercut(repeat, "/r", { list: () => ["2026-10-13-guard-bash-never-pipe.md"] }),
+    ).toBeNull();
+    expect(unwrittenPapercut(null, "/r")).toBeNull();
   });
 });

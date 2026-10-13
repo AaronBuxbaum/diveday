@@ -29,8 +29,8 @@ what is currently wired.
 
 | Event | Script | What it does |
 | --- | --- | --- |
-| `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`) and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
-| `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position; on the first prompt of a session, the last session's hook refusals |
+| `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`, read after the fetch), "Merge drivers: not installed" when `scripts/merge-drivers.mjs install` could not write them and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
+| `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position, and the account's open pull requests (`gh api`, cached ten minutes in the git common dir; `DIVEDAY_OPEN_PULLS=0` turns it off), because one PR's CI runs at a time; on the first prompt of a session, the last session's hook refusals, and "write a papercut" with a ready `file-follow-up.mjs --papercut` command when one rule has refused three or more times this week and no papercut has its slug |
 | `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form |
 | `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
 | `PreToolUse` on `Bash` | `scripts/guard-push.mjs` | refuses a `git push` of a commit `pnpm verify:push` has not stamped, unless a reason is written in front |
@@ -82,7 +82,7 @@ read "650 unpushed commits" on every prompt. A detached HEAD now says "detached 
 and counts nothing; a branch with no upstream yet is still counted against every remote, which is
 honest for a branch nobody has pushed. At startup and resume the hook also runs
 `git fetch --quiet --prune origin main claude/*` (20 s bound, skipped when `FETCH_HEAD` is under ten
-minutes old, `DIVEDAY_SESSION_FETCH=0` to opt out) before reading anything, so `test:changed`,
+minutes old, `DIVEDAY_SESSION_FETCH=0` to opt out) before reading anything, so `verify:push`,
 `check:closing-keywords` and the migration guard measure from a current base, and the
 `unpushed-work` hook below sees current remote refs. A failed fetch is said in the block.
 
@@ -165,11 +165,12 @@ except a migration's own `migration.sql` (the schema-change skill asks for the g
 reviewed once), `.next/`, `playwright-report/`, `test-results/` — is never read whole; a specific
 lookup goes through Grep, which is what "diagnosing a specific failure in that artifact" means. And
 a **whole-file read of a source file over 900 lines** without an `offset` or `limit`: the Read tool
-returns up to 2,000 lines when no range is given, so `src/db/schema.ts` at 8,700 lines costs
-roughly 25,000 tokens per open and answers a question Grep answers in fifty. An explicit range is
-always allowed — a range is a decision, and the guard never second-guesses one. Markdown is exempt
-(a document is read to be read; it has no symbol to search for), and so is anything outside the
-repository, which is where `node_modules/next/dist/docs/` lives.
+returns up to 2,000 lines when no range is given, so the 8,700-line schema file it was written for
+(until 2026-10-07 `src/db/schema.ts`, now a directory) cost roughly 25,000 tokens per open and
+answered a question Grep answers in fifty. An explicit range is always allowed — a range is a
+decision, and the guard never second-guesses one. Markdown is exempt (a document is read to be read;
+it has no symbol to search for), and so is anything outside the repository, which is where
+`node_modules/next/dist/docs/` lives.
 
 The threshold is 900 lines: 135 of the ~2,800 source files are over it, and every one of those is a
 file a session reads by symbol, not front to back. It was 600 until 2026-10-07, when 242 files sat

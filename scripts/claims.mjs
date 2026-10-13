@@ -74,6 +74,27 @@ function field(body, label) {
   return bare && !/^(?:—|-|n\/a|tbd|todo)$/i.test(bare) ? bare : null;
 }
 
+/**
+ * The other branches a claim's Branch line names in parentheses: `(assembled into X)` (the
+ * claimed work lands through X's pull request) and `(sub-branch Y)` (it is built on Y and merged
+ * up). #2284 was claimed as `…-s3-gear (assembled into claude/project-thread-f9bes8)`; #2368, whose
+ * head was f9bes8, merged closing 23 issues and not #2284, because only the first token was read
+ * (2026-10-13 re-review, item 19). Each alias is one ref-shaped token; anything else is prose.
+ */
+const ALIAS = /\(\s*(?:assembled\s+into|sub-branch(?:\s+of)?)\s*:?\s+([^()]+?)\s*\)/gi;
+const REF = /^[\w./-]+$/;
+
+function aliasesIn(value) {
+  const aliases = [];
+  for (const match of String(value ?? "").matchAll(ALIAS)) {
+    for (const token of match[1].split(/[\s,]+/)) {
+      const ref = token.replace(/[`*]/g, "").trim();
+      if (ref && REF.test(ref) && !ref.startsWith("-") && !aliases.includes(ref)) aliases.push(ref);
+    }
+  }
+  return aliases;
+}
+
 /** A comma- or space-separated path list, backticks stripped, empties dropped. */
 function pathList(value) {
   if (!value) return [];
@@ -93,8 +114,9 @@ export function parseClaim(body) {
   const text = straight(body ?? "");
   if (!/^\s*#{1,4}\s*Claim\s*$/im.test(text)) return null;
 
-  // A branch is one ref name; anything after it (`(sub-branch …)`) is commentary.
-  const branch = field(text, FIELDS.branch)?.split(/\s+/)[0] ?? null;
+  // A branch is one ref name; what follows it in parentheses names its aliases.
+  const branchLine = field(text, FIELDS.branch);
+  const branch = branchLine?.split(/\s+/)[0] ?? null;
   const worktree = field(text, FIELDS.worktree)?.split(/\s+/)[0] ?? null;
   const startedAt = field(text, FIELDS.startedAt);
   if (!branch || !worktree || !startedAt) return null;
@@ -104,6 +126,8 @@ export function parseClaim(body) {
 
   return {
     branch,
+    // Every branch this claim's work may arrive on: its own first, then the aliases.
+    branches: [branch, ...aliasesIn(branchLine).filter((alias) => alias !== branch)],
     worktree,
     startedAt: new Date(started),
     owns: pathList(field(text, FIELDS.owns)),

@@ -339,7 +339,7 @@ function promptLines(entry, probe, touches, judged = false) {
       "",
       `If they do not, close this issue with the answer — that is a finished piece of work, and a closed judged finding is suppressed forever rather than re-filed next Monday. If they do, the fix is usually the words: a sentence comes from a message bundle under src/i18n/ (en-US and es-ES both, every time), never from the component, and \`pnpm check:copy\` refuses a string written in one. Some of these lists ask for behaviour instead — a confirm before a session-ending action, a path that stays reachable without a login — and that fix is in the surface. Start in ${paths}.`,
       "",
-      "Done is: the surface says something the persona's own list would accept, `pnpm check:copy` and `pnpm test:changed` pass, and any e2e assertion keyed on the old wording has been updated rather than deleted. Close this issue either way — with the fix, or with the reason the claim was wrong.",
+      "Done is: the surface says something the persona's own list would accept, `pnpm check:copy` and `pnpm verify:push` pass, and any e2e assertion keyed on the old wording has been updated rather than deleted. Close this issue either way — with the fix, or with the reason the claim was wrong.",
     ];
   }
   return [

@@ -6,7 +6,7 @@ The provider register in `registry.ts` is the extension point for future
 integrations. Each provider gets one definition, one credential/API handler,
 and one settings action surface. Connection rows, encrypted credentials,
 OAuth state, order events, retries, and sync mappings stay provider-agnostic
-in `src/db/schema.ts` and the integration database modules.
+in `src/db/schema/` and the integration database modules.
 
 ## Safety contract
 

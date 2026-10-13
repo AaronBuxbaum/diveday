@@ -52,6 +52,16 @@ cannot rebase yet — `main` is red, or the fix is still in review — say so in
 the inherited surfaces explicitly by naming the PR each one came from; a reviewer cannot tell them
 apart from yours by looking.
 
+**A pull request captures what its diff can reach, not everything.** `visual-plan` in `ci.yml`
+(`scripts/visual-affected.mjs`) picks the captures whose test visits a route the diff reaches,
+through its pages, layouts and importers, plus a smoke set; every other surface is copied from the
+baseline before the compare (`scripts/visual-fill.mjs`), so it reads as passed, and the sticky
+comment says how many were captured. A diff it cannot bound (the e2e harness, the seed or schema,
+a stylesheet, a locale bundle, `public/`, a config, `ci.yml`) captures everything, and the push to
+`main` always captures everything and is the only baseline. If a surface you expected to move
+reads as passed, the selection missed it: add the `visual-all` label to the pull request and push
+again, and file what it missed.
+
 **On a stacked pull request, read that comment on every layer.** A layer's baseline is its fork
 point from `main`, like any branch's (`scripts/reg-suit-keys.mjs`, ADR
 20260919-stack-ci-cancels-superseded-layers), so its diff carries every surface the layers below it

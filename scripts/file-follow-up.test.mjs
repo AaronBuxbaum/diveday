@@ -18,8 +18,12 @@ import { findIssueProblems } from "./check-follow-ups.mjs";
 import {
   FOLLOW_UP_QUOTA,
   filedInWindow,
+  ledgerPath,
   parseFileArgs,
+  parsePapercutArgs,
+  QUOTA_LEDGER_ENV,
   renderFollowUpBody,
+  renderPapercut,
 } from "./file-follow-up.mjs";
 
 const root = path.join(import.meta.dirname, "..");
@@ -121,6 +125,13 @@ describe("parseFileArgs", () => {
     expect(parsed.labels).toEqual(["needs-triage", "parked"]);
   });
 
+  it("routes a question to the human queue instead of the agent inbox", () => {
+    const asked = complete.map((item) => (item === "improvement" ? "question" : item));
+    const parsed = parseFileArgs([...asked, "--label", "parked", "--parked", "until spring"]);
+    expect(parsed.error).toBeUndefined();
+    expect(parsed.labels).toEqual(["ready-for-human", "parked"]);
+  });
+
   it("refuses two flags both reading stdin", () => {
     const both = complete.map((item) => (item === "why.md" || item === "prompt.md" ? "-" : item));
     expect(parseFileArgs(both).error).toMatch(/only one flag can read stdin/);
@@ -137,8 +148,62 @@ describe("the filing quota", () => {
     expect(FOLLOW_UP_QUOTA).toBe(10);
   });
 
+  it("reads ledger lines that carry the filing branch after a tab", () => {
+    const lines = [`${hoursAgo(1)}\tclaude/x-3`, `${hoursAgo(2)}\t`, `${hoursAgo(20)}\tclaude/x-1`];
+    expect(filedInWindow(lines, now)).toBe(2);
+  });
+
+  it("keeps one ledger per clone, so every worktree of a stack shares one quota", () => {
+    const env = {};
+    const worktree = ledgerPath("/clone/wt-3", { env, git: () => "/clone/main/.git" });
+    const main = ledgerPath("/clone/main", { env, git: () => ".git" });
+    expect(worktree).toBe("/clone/main/.git/diveday-follow-up-log");
+    expect(main).toBe(worktree);
+    expect(ledgerPath("/plain", { env, git: () => null })).toBe("/plain/.claude/.follow-up-log");
+    expect(
+      ledgerPath("/clone/wt-3", { env: { [QUOTA_LEDGER_ENV]: "/tmp/l" }, git: () => "x" }),
+    ).toBe("/tmp/l");
+  });
+
   it("accepts --over-quota as a value flag", () => {
     expect(parseFileArgs(["--over-quota"]).error).toMatch(/needs a value/);
+  });
+});
+
+describe("--papercut", () => {
+  const args = [
+    "--papercut",
+    "tail-refused",
+    "--project",
+    "tooling",
+    "--symptom",
+    "a",
+    "--fix",
+    "b",
+  ];
+
+  it("reads the four fields and a slug", () => {
+    expect(parsePapercutArgs(args)).toEqual({
+      slug: "tail-refused",
+      project: "tooling",
+      symptom: "a",
+      fix: "b",
+      dryRun: false,
+    });
+  });
+
+  it("refuses a missing field, a stray flag, and a slug that is not one", () => {
+    expect(parsePapercutArgs(args.slice(0, 6)).error).toMatch(/missing --fix/);
+    expect(parsePapercutArgs([...args, "--title", "x"]).error).toMatch(/unrecognised/);
+    expect(parsePapercutArgs(["--papercut", "Bad Slug", ...args.slice(2)]).error).toMatch(
+      /not a slug/,
+    );
+  });
+
+  it("writes the four lines the papercuts doc asks for, one line each", () => {
+    expect(
+      renderPapercut({ date: "2026-10-13", project: "e2e", symptom: "one\ntwo", fix: "three" }),
+    ).toBe("Date: 2026-10-13\nProject: e2e\nSymptom: one two\nFix: three\n");
   });
 });
 
@@ -170,12 +235,19 @@ describe("the refusal, at the process boundary", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "file-follow-up-"));
   const stubDir = mkdtempSync(path.join(tmpdir(), "file-follow-up-gh-"));
   const marker = path.join(stubDir, "gh-was-called");
+  const openIssues = path.join(stubDir, "open-issues.json");
+  const ledger = path.join(stubDir, "ledger");
+  const setOpen = (issues) => writeFileSync(openIssues, JSON.stringify(issues));
+  setOpen([]);
 
   writeFileSync(
     path.join(stubDir, "gh"),
     // Answers as `gh api --method POST repos/…/issues` does, and records its argv so the
     // test can see the request went to REST rather than `gh issue create` (GraphQL).
-    `#!/bin/sh\necho "$*" >> "${marker}"\necho '{"number":9999,"html_url":"https://github.com/AaronBuxbaum/diveday/issues/9999"}'\n`,
+    // A read (no --method) answers with the open issues in `openIssues` (one line of JSON, read
+    // with shell builtins: nothing else is on PATH), so the duplicate and inbox checks have
+    // something to read.
+    `#!/bin/sh\necho "$*" >> "${marker}"\ncase "$*" in\n  *--method*) echo '{"number":9999,"html_url":"https://github.com/AaronBuxbaum/diveday/issues/9999"}' ;;\n  *) IFS= read -r line < "${openIssues}"; echo "$line" ;;\nesac\n`,
     { mode: 0o755 },
   );
 
@@ -222,10 +294,17 @@ describe("the refusal, at the process boundary", () => {
       [path.join(import.meta.dirname, "file-follow-up.mjs"), ...args],
       // Only the stub dir on PATH: an inherited one would let a real `gh` file
       // a real issue from a test run.
-      { cwd: root, env: { ...process.env, PATH: stubDir }, encoding: "utf8" },
+      // The ledger goes to the stub dir: a test filing must not spend the clone's quota.
+      {
+        cwd: root,
+        env: { ...process.env, PATH: stubDir, [QUOTA_LEDGER_ENV]: ledger },
+        encoding: "utf8",
+      },
     );
-    return { ...result, spawnedGh: existsSync(marker) };
+    return { ...result, spawnedGh: existsSync(marker), filed: wasFiled() };
   };
+
+  const wasFiled = () => existsSync(marker) && /--method POST/.test(readFileSync(marker, "utf8"));
 
   afterAll(() => {
     rmSync(dir, { recursive: true, force: true });
@@ -353,5 +432,55 @@ describe("the refusal, at the process boundary", () => {
     expect(result.status).toBe(1);
     expect(result.spawnedGh).toBe(false);
     expect(result.stderr).toMatch(/could not read --why/);
+  });
+
+  it("refuses a title that starts with the same six words as an open issue", () => {
+    setOpen([{ number: 2412, title: "Refuse a follow-up body the guard would reject sometimes" }]);
+    const result = run(...argsFor());
+    setOpen([]);
+    expect(result.status).toBe(1);
+    expect(result.filed).toBe(false);
+    expect(result.stderr).toMatch(/#2412 .* starts with the same words/);
+  });
+
+  it("refuses a needs-triage filing while the inbox is over its ceiling, unless over quota", () => {
+    const full = Array.from({ length: 41 }, (_, n) => ({
+      number: n + 1,
+      title: `Unrelated follow-up number ${n}`,
+      labels: [{ name: "needs-triage" }],
+    }));
+    setOpen(full);
+    const refused = run(...argsFor());
+    const allowed = run(...argsFor(), "--over-quota", "the stack cannot land without it");
+    setOpen([]);
+    expect(refused.status).toBe(1);
+    expect(refused.filed).toBe(false);
+    expect(refused.stderr).toMatch(/41 issues are open under label:needs-triage/);
+    expect(allowed.status).toBe(0);
+    expect(allowed.filed).toBe(true);
+  });
+
+  it("records each filing in the clone's ledger, not the checkout", () => {
+    rmSync(ledger, { force: true });
+    expect(run(...argsFor()).status).toBe(0);
+    expect(readFileSync(ledger, "utf8")).toMatch(/^\d{4}-\d\d-\d\dT[^\t]+\t.*\n$/);
+  });
+
+  it("writes nothing under --papercut --dry-run, and names the file it would write", () => {
+    const result = run(
+      "--papercut",
+      "tail-refused",
+      "--project",
+      "tooling",
+      "--symptom",
+      "guard-bash refused a piped tail",
+      "--fix",
+      "redirect to a file",
+      "--dry-run",
+    );
+    expect(result.status).toBe(0);
+    expect(result.spawnedGh).toBe(false);
+    expect(result.stdout).toMatch(/^docs\/agents\/papercuts\/\d{4}-\d\d-\d\d-tail-refused\.md$/m);
+    expect(result.stdout).toMatch(/^Fix: redirect to a file$/m);
   });
 });

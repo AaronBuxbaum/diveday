@@ -1,7 +1,8 @@
 /**
  * The pure halves of `scripts/check-agents.mjs`, which runs top to bottom on import and so
- * cannot be tested by importing it.
+ * cannot be tested by importing it, plus the one git question its doc-path rule asks.
  */
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 /**
  * Every place that states how many guards `pnpm check:repo` runs, and the phrase the number
@@ -88,4 +89,65 @@ export function vendoredSkillProblems(contentsByName) {
       if (contents.includes(phrase))
         problems.push(`.agents/skills/${name}/SKILL.md: names \`${phrase}\`; ${fix}`);
   return problems;
+}
+
+/**
+ * A backticked token that names a repo path: it starts at one of the repo's top-level
+ * directories. Globs and placeholders (`*`, `<feature>`, `…`, anything called `example`) are
+ * prose, not a path; a bracketed Next.js segment such as `[shopSlug]` is literal, because the
+ * directory is named exactly that.
+ */
+const DOC_PATH = /`((?:src|scripts|docs|e2e|config|infra|\.claude)\/[^`\s]*)`/g;
+
+/**
+ * A line that tells history or names a path by its absence rather than giving an instruction:
+ * "(was …)", "until 2026-10-07", "used to", "was deleted", "exist nowhere". Its paths are left
+ * alone, so a doc can still say where a file used to be (2026-10-13 re-review, item 18).
+ */
+const NOT_AN_INSTRUCTION =
+  /\(was\b|\bwas `|\buntil 20\d\d-|\bused to\b|\bis gone\b|\bno longer\b|\b(?:was|were) (?:deleted|removed|renamed|moved)\b|\bbefore 20\d\d-|\bformerly\b|\bexists? nowhere\b/i;
+
+/** A module specifier resolves with any of these, so `e2e/fixtures` names `e2e/fixtures.ts`. */
+const MODULE_EXTENSIONS = ["", ".ts", ".tsx", ".mjs", ".js"];
+
+/**
+ * The backticked repo paths in one Markdown file that resolve to nothing. `exists` answers for a
+ * repo-relative path. The caller drops gitignored outputs (`.claude/.hook-log`), which a doc may
+ * name though no checkout of main contains them.
+ */
+export function missingDocPaths(contents, exists) {
+  const missing = [];
+  const seen = new Set();
+  for (const line of String(contents).split("\n")) {
+    if (NOT_AN_INSTRUCTION.test(line)) continue;
+    for (const match of line.matchAll(DOC_PATH)) {
+      const token = match[1].replace(/[.,;:]+$/, "").replace(/:\d+(?:-\d+)?$/, "");
+      if (seen.has(token) || /[*<…]|example/.test(token)) continue;
+      seen.add(token);
+      const bare = token.replace(/\/$/, "");
+      if (!MODULE_EXTENSIONS.some((ext) => exists(`${bare}${ext}`))) missing.push(token);
+    }
+  }
+  return missing;
+}
+
+/**
+ * Which of `tokens` .gitignore covers, in one bounded `git check-ignore`. Asked by pattern
+ * (`--no-index`), never by disk, so `e2e/screenshots/` counts in a fresh clone that has not made
+ * it yet (CI) exactly as in a checkout that has. Exit 1 means none.
+ */
+export function gitignoredPaths(root, tokens) {
+  const unique = [...new Set(tokens)];
+  if (unique.length === 0) return new Set();
+  const result = runBounded("git", ["check-ignore", "--no-index", "--stdin"], {
+    cwd: root,
+    encoding: "utf8",
+    input: unique.join("\n"),
+    timeoutMs: SUBPROCESS_TIMEOUTS.git,
+  });
+  return new Set(
+    String(result.stdout ?? "")
+      .split("\n")
+      .filter(Boolean),
+  );
 }

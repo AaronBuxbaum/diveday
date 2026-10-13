@@ -17,6 +17,9 @@ as the path is actually new.
   app/area, e.g. `manifests`, `stripe-connect`, `e2e`), `Symptom:`, `Fix:`. If that path already
   exists (two sessions hit the same kind of papercut the same day), pick a different slug rather
   than overwrite it — the collision is the signal that the fix is worth reading twice.
+  `node scripts/file-follow-up.mjs --papercut <slug> --project <area> --symptom "<text>" --fix "<text>"`
+  writes it for you and refuses an existing path. The per-prompt line asks for one when a hook has
+  refused the same rule three or more times this week (`scripts/session-context.mjs`).
 - Before spending time on a tooling failure that looks unrelated to the actual task (an obscure
   CLI error, an environment quirk, a flaky-looking command that isn't a known flake), grep
   `docs/agents/papercuts/` for the symptom — the fix may already be recorded.

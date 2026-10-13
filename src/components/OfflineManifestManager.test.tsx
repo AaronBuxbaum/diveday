@@ -297,4 +297,41 @@ describe("OfflineManifestManager", () => {
     for (const token of cardSummaryClass().split(" ")) expect(summary).toHaveClass(token);
     expect(summary).not.toHaveClass("rounded-lg");
   });
+
+  /**
+   * The freshness pill arrives when the mount's save lands, which is whenever
+   * the service worker answers. The visual suite shot `manifest-running-late`
+   * with "Online" alone on one run and "Online · Fresh copy" on the next
+   * (#2509), so the card says when that first save has settled, and the
+   * capture waits for it.
+   */
+  it("says the device copy is pending until the mount's save settles, then settled", async () => {
+    setOnline(true);
+    const save = deferred<OfflineManifestEnvelope>();
+    vi.mocked(loadOfflineManifest).mockResolvedValue(null);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockReturnValue(save.promise);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(envelope());
+
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+    const card = (await screen.findByRole("heading", { name: "On this phone" })).closest(
+      "[data-offline-copy]",
+    );
+    expect(card).toHaveAttribute("data-offline-copy", "pending");
+    expect(screen.queryByText("Fresh copy")).toBeNull();
+
+    save.resolve(envelope());
+    await waitFor(() => expect(card).toHaveAttribute("data-offline-copy", "settled"));
+    expect(screen.getByText("Fresh copy")).toBeVisible();
+  });
+
+  it("settles at once when there is no signal to save over", async () => {
+    setOnline(false);
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope());
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+    const card = (await screen.findByRole("heading", { name: "On this phone" })).closest(
+      "[data-offline-copy]",
+    );
+    await waitFor(() => expect(card).toHaveAttribute("data-offline-copy", "settled"));
+  });
 });

@@ -48,7 +48,7 @@ Add the `in-progress` label and post one comment:
 **Branch:** claude/course-templates-a1b2c3
 **Worktree:** .claude/worktrees/course-templates-a1b2c3
 **Started:** 2026-08-21T09:00:00Z
-**Owns:** src/db/course-templates.ts, public/marine-life/
+**Owns:** src/content/course-templates.ts, public/marine-life/
 **Also touches:** src/i18n/locales/en-US/staff/courses.json
 ```
 
@@ -62,7 +62,12 @@ EOF
 ```
 
 The parser (`scripts/claims.mjs`) reads each field in any of three spellings: `**Branch:** x`,
-`- Branch: x` and `- **Branch:** x`. `Branch:` is one ref name; anything after it on the line is
+`- Branch: x` and `- **Branch:** x`. `Branch:` is one ref name, and a parenthesis after it may name
+the other branches the work arrives on: `(assembled into claude/x)` when a sub-branch's work lands
+through another branch's pull request, `(sub-branch claude/x-l2)` when it is built on one. Those
+are aliases: the `Closes #n` check (`scripts/check-pr-body.mjs`) matches a pull request whose head
+is any of them, and claim expiry treats any of them as the claim's branch. #2284 and #2233 stayed
+open after their work merged because only the first name was read. Anything else after the name is
 commentary. `Owned paths:` is read as `Owns:`.
 
 `Owns` is the paths you expect to be the only writer of. `Also touches` is everything else you
@@ -122,6 +127,9 @@ removes `in-progress` and posts a `## Claim expired` comment saying why when eit
 
 - the claim's branch is not on origin and the claim is more than a day old, or
 - the claim is more than 7 days old and no open pull request has its branch as head.
+
+When a pull request from one of the claim's branches (aliases included) has merged, the comment
+names it first, so the issue says where its work went before it returns to the queue.
 
 - the issue carries `in-progress` with no parseable claim comment, and the label was added more than
   7 days ago (the date comes from the issue's events).
@@ -239,7 +247,7 @@ whether or not anything failed.
 
 A glob is accepted on that line when it expands to at least one file in the tree the check runs in, so a change that edits the same namespace in every locale says `src/i18n/locales/*/staff/trips.json` once rather than listing each locale and going stale when a third arrives. Issue #1339 wrote it that way, correctly, and the literal lookup failed it.
 
-A path with a dynamic route segment in it — `src/app/ready/[token]/actions.ts` — is a real path and a glob character class at the same time, and it is checked literally first, so write it exactly as it is on disk. Reading it only as a pattern was how a correctly spelled path got told it "does not exist": the brackets expand to `src/app/ready/t/actions.ts` and friends, which exist nowhere. Issue #1755 named that path on 2026-09-12 and the scan went red for it on PR #1746, a branch with nothing to do with that issue (#1761). If such a path is refused now, the file really is not there under that spelling — and the sentence names the characters that made the token a pattern, so a `*` or `{` you did not mean to type says so.
+A path with a dynamic route segment in it — `src/app/waivers/[token]/actions.ts` — is a real path and a glob character class at the same time, and it is checked literally first, so write it exactly as it is on disk. Reading it only as a pattern was how a correctly spelled path got told it "does not exist": the brackets expand to single-letter directories such as `t/` and `o/`, which exist nowhere. Issue #1755 named such a path (under `/ready/`) on 2026-09-12 and the scan went red for it on PR #1746, a branch with nothing to do with that issue (#1761). If such a path is refused now, the file really is not there under that spelling — and the sentence names the characters that made the token a pattern, so a `*` or `{` you did not mean to type says so.
 
 
 An issue blocked on somebody *outside this repo* — an upstream release, a third party's answer, a
@@ -282,9 +290,19 @@ comment saying what would un-park it, so the next reader does not re-triage it f
   `needs-triage` issues. Backlog sweeps filed 54 in three bursts on 2026-10-09 and 2026-10-10, and none
   had been triaged a day later: a queue written faster than anyone reads it is no memory. Past ten, do the most
   valuable of what is left, fold related notes into one issue, or name what you did not file in the
-  hand-off. `scripts/file-follow-up.mjs` counts its filings in a gitignored `.claude/.follow-up-log`
-  and refuses the eleventh in twelve hours unless `--over-quota "<why>"` says why it cannot wait; an
-  issue filed through the GitHub MCP counts the same, by your own tally.
+  hand-off. `scripts/file-follow-up.mjs` counts its filings in one ledger per clone
+  (`<git common dir>/diveday-follow-up-log`), so every worktree of a stack shares one quota, and
+  refuses the eleventh in twelve hours unless `--over-quota "<why>"` says why it cannot wait; an
+  issue filed through the GitHub MCP counts the same, by your own tally. Until 2026-10-13 the
+  ledger was per checkout, and one day's stack filed 128.
+- **At most 40 waiting.** Above 40 open `needs-triage` issues the scheduled `check:follow-ups` run
+  fails and `file-follow-up` refuses to add one (the same `--over-quota` overrides it). The inbox
+  is read daily by the [triage routine](triage-routine.md).
+- **A question goes to the human.** `--kind question` files with `ready-for-human` instead of
+  `needs-triage`: it is a decision only a human can make, and the agent inbox is not where one
+  reads those.
+- **No near-duplicates.** `file-follow-up` refuses a title that starts with the same six words as
+  an open issue; add to that issue, or fold both into one.
 - **One issue per item**, labelled `needs-triage`.
 - **Every section filled**, including a runnable prompt that names real paths and tells the session
   to close the issue.

@@ -956,7 +956,7 @@ structure* live; none of them may contain an English sentence:
 | Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` | `account.onboard.*` in the bundles |
 | Why DiveDay exists, who builds it, and how a shop gets set up | `src/app/about/page.tsx` | `marketing.about.*` in the bundles |
 | Mockup copy | `src/components/MarketingScreenFallbacks.tsx`, and the feature pages' screens in `src/components/MarketingFeatureScreens.tsx` | `fallback.*` in the bundles |
-| Nav / footer | `src/components/MarketingNav.tsx` / `MarketingFooter.tsx` | `nav.*` in the bundles |
+| Nav / footer | `src/components/MarketingNavView.tsx` / `MarketingFooter.tsx` | `nav.*` in the bundles |
 | Switching-guide content (per incumbent) | `src/lib/migration-guides.ts` (key registry; slugs, URLs, source citations); pages in `src/app/switching/` | `marketing.guides.*` in the bundles |
 
 A claim used on more than one page belongs in `src/lib/marketing.ts` as a shared *key*, not
@@ -1047,7 +1047,7 @@ at the dock, the blocker queue, the no-login diver arc.
 - **A claim is invalidated** (feature removed, behavior changed) → fix the page in the same PR
   that invalidates it. If code and copy disagree, one of them is the bug.
 - **Verification is the product bar**: the local gate green (`pnpm check:repo`, `pnpm lint`,
-  `pnpm typecheck`, `pnpm test:changed`) and CI's `pnpm check`; `pnpm e2e marketing.spec.ts`;
+  `pnpm typecheck`, `pnpm verify:push`) and CI's `pnpm check`; `pnpm e2e marketing.spec.ts`;
   screenshots of every touched page in light + dark, desktop + phone, actually looked at
   (design-review skill); visual triage after push (visual-triage skill).
 - Copy changes update the e2e assertions that pin headlines/price visibility — deliberately: a

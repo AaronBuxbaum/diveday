@@ -114,19 +114,39 @@ function generated([base, ours, theirs, file]) {
   return 0;
 }
 
-/** Writes the driver definitions into this clone's git config. Idempotent. */
-export function install(cwd = ROOT) {
+/**
+ * The git runner `install` uses: `(args) => { status, stdout }`. Injectable so the tests can
+ * count writes without a repository.
+ */
+function gitRunner(cwd) {
+  return (args) =>
+    runBounded("git", args, { cwd, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.git });
+}
+
+/**
+ * Writes the driver definitions into this clone's git config, and returns whether they are
+ * there afterwards. Idempotent, and reads before it writes.
+ *
+ * Every session start calls this. In a linked worktree `--local` is the clone's one shared
+ * `.git/config`, so parallel starts used to contend for `config.lock` with eight writes each;
+ * the loser returned false, nobody read it, and its next restack stopped on `ratchets.json`
+ * exactly as before the drivers existed (2026-10-13 re-review, item 20). Now a definition that
+ * already reads back as wanted is not written at all, so the usual start writes nothing, and a
+ * write that loses the race still counts as installed when the winner wrote the same value.
+ */
+export function install(cwd = ROOT, { git = gitRunner(cwd) } = {}) {
+  const current = (key) => {
+    const result = git(["config", "--local", "--get", key]);
+    return result.status === 0 ? String(result.stdout ?? "").trim() : null;
+  };
   for (const [id, { name, driver }] of Object.entries(DRIVERS)) {
     for (const [key, value] of [
       [`merge.${id}.name`, name],
       [`merge.${id}.driver`, driver],
     ]) {
-      const result = runBounded("git", ["config", "--local", key, value], {
-        cwd,
-        encoding: "utf8",
-        timeoutMs: SUBPROCESS_TIMEOUTS.git,
-      });
-      if (result.status !== 0) return false;
+      if (current(key) === value) continue;
+      const result = git(["config", "--local", key, value]);
+      if (result.status !== 0 && current(key) !== value) return false;
     }
   }
   return true;

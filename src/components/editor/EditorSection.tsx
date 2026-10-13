@@ -86,7 +86,9 @@ export function EditorSection({
   const rootRef = useRef<HTMLElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(lead);
-  const [preview, setPreview] = useState("");
+  // `null` until the wiring has read the fields once (after hydration), so
+  // the line can say it is ready: the visual suite waits on that (#2509).
+  const [preview, setPreview] = useState<string | null>(null);
   const labelId = `${id}-label`;
   const bodyId = `${id}-body`;
 
@@ -147,9 +149,10 @@ export function EditorSection({
               row does not grow when the page wakes up. */}
           <span
             data-section-preview=""
+            data-preview-ready={preview === null ? undefined : ""}
             className="block h-5 truncate text-sm font-normal tracking-normal text-muted normal-case"
           >
-            {open ? "" : preview}
+            {open ? "" : (preview ?? "")}
           </span>
         </span>
         <DisclosureCaret

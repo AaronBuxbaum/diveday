@@ -172,6 +172,23 @@ describe("closing the issues this branch claimed", () => {
     expect(issuesClaimedBy(issues, "")).toEqual([]);
   });
 
+  it("matches a head the claim names as an alias, both ways round", () => {
+    // #2284's claim: built on a sub-branch, assembled into the layer whose PR merged.
+    const assembled = {
+      number: 2284,
+      comments: [
+        {
+          body: "## Claim\n\n- Branch: `claude/project-thread-f9bes8-s3-gear` (assembled into `claude/project-thread-f9bes8`)\n- Worktree: `/home/claude/wt-rfa-s3-gear`\n- Started: 2026-10-11T09:00Z\n",
+          createdAt: "2026-10-11T09:01:00Z",
+        },
+      ],
+    };
+    expect(issuesClaimedBy([assembled], "claude/project-thread-f9bes8")).toEqual([2284]);
+    expect(issuesClaimedBy([assembled], "claude/project-thread-f9bes8-s3-gear")).toEqual([2284]);
+    expect(issuesClaimedBy(issues, "claude/project-thread-f9bes8-l2")).toEqual([2241]);
+    expect(issuesClaimedBy([assembled], "claude/project-thread")).toEqual([]);
+  });
+
   it("reads every closing keyword, one per issue", () => {
     expect([...closedByBody("Closes #1\nfixes #2\nResolved: #3\nSee #4\nCloses #5, #6")]).toEqual([
       1, 2, 3, 5,

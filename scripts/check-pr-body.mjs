@@ -141,13 +141,14 @@ export function reviewAnswered(section, agent) {
 }
 
 /**
- * The open issues whose newest `## Claim` names `head` as its branch, from issues labelled
- * in-progress (a claim always carries the label; one whose label expired is not a live claim).
+ * The open issues whose newest `## Claim` names `head` as its branch or as one of its aliases
+ * (`(assembled into X)`, `(sub-branch Y)`), from issues labelled in-progress (a claim always
+ * carries the label; one whose label expired is not a live claim).
  */
 export function issuesClaimedBy(issues, head) {
   if (!head) return [];
   return (issues ?? [])
-    .filter((issue) => latestClaimIn(issue.comments)?.branch === head)
+    .filter((issue) => latestClaimIn(issue.comments)?.branches?.includes(head))
     .map((issue) => issue.number);
 }
 

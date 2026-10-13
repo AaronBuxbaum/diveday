@@ -34,7 +34,7 @@ history we cannot produce.
 
 | Store | What's in it | Primary recovery | Secondary copy |
 | --- | --- | --- | --- |
-| Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema.ts` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | The weekly full-cluster dump in `diveday-database-dumps` (§2c — the only copy that carries accounts and tokens), plus the per-shop export bundles in `diveday-backups` under `exports/` |
+| Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema/` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | The weekly full-cluster dump in `diveday-database-dumps` (§2c — the only copy that carries accounts and tokens), plus the per-shop export bundles in `diveday-backups` under `exports/` |
 | AWS S3 Media Bucket (`diveday-media`) | Recap photos, course/dive-site media, shop logos, imported waiver source documents | S3-managed storage (versioned/retained) | The `photos/` directory inside each export bundle (see the gap below) |
 | Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, Stripe/AWS keys | Not backed up by design — secrets never enter the repo | Owner's password manager (`TODO(owner)`, below) |
 

@@ -11,8 +11,8 @@ in AGENTS.md's one-liner in the same commit.
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000, supervised by `scripts/dev-server.mjs`. Wait for its **`dev: serving … — warmed in Ns`**; Next's `✓ Ready` lands ~26s earlier and means only "listening". The supervisor restarts an OOM-bound `next dev` before the kernel does and says so. One dev server per *checkout*: the lock is `.next/dev/lock`, so `--port` does not buy a second (ADR 20260903-the-dev-server-is-supervised; the **run** skill) |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task; with no area, the list of areas |
-| `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm test:changed`, `pnpm e2e:affected`, `pnpm verify:push`, `pnpm e2e <spec>`, `pnpm check` | the pre-commit and pre-push checklist, and which of them CI runs instead, is the **verify** skill; the reasoning is [verifying.md](verifying.md) |
-| `pnpm agent:doctor` | Node against `.nvmrc`, `gh`, the GitHub MCP, `origin/main`'s age, `node_modules`, stray processes, remote branches with no open PR and the stack, each with its fix; the session-start block carries its two-line summary |
+| `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push`, `pnpm e2e <spec>`, `pnpm check` | the pre-commit and pre-push checklist, and which of them CI runs instead, is the **verify** skill; the reasoning is [verifying.md](verifying.md) |
+| `pnpm agent:doctor` | Node against `.nvmrc`, `gh`, `origin/main`'s age, `node_modules`, stray processes, remote branches with no open PR and the stack, each with its fix; a row only a human can change (the Node, the branches) is `info` and stays out of the two-line summary the session-start block carries |
 | `node scripts/stack-map.mjs` | the stack HEAD is in — layers bottom to top, the top, other tips, merged sub-branches, each layer's paths — derived from remote refs (`--json` for a machine); the per-prompt line carries the position |
 | `pnpm check:env` / `pnpm env:manual` | the two structural facts about configuration, and the one file a human edits — see `.claude/rules/infra.md` |
 | `pnpm check:repo` | 50 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md) |
@@ -23,7 +23,7 @@ in AGENTS.md's one-liner in the same commit.
 | `pnpm gates` | report (never a gate): ages of human decisions, every `in-progress` claim checked against `git` (**live** / **stale** / **unverifiable**), and every open `needs-triage` issue oldest first. Nothing it reports is an agent's to close ([docs/agents/issue-tracker.md](issue-tracker.md)) |
 | `pnpm agent:health` | report (never a gate): what the agent environment costs and covers — always-loaded context by file, the path-scoped rules and what each costs when it loads, visual and axe coverage of routes, guards with no test beside them, and the hooks wired into the session lifecycle |
 | `pnpm build` | production build |
-| `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (the **schema-change** skill) |
+| `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema/` (the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds. **Refuses while a dev server is running**, naming the pid (ADR 20260903-one-process-per-pglite-directory) |
 | `node scripts/screenshot.mjs <path…>` | look at a page against a running `pnpm dev` — light-mode phone/desktop PNGs into `screenshots/`, with dev-credential sign-in for `/shop/**`. Review-grade captures come from a filtered visual-spec run (the **verify** skill) |
 | `pnpm visual` | capture the visual surfaces and compare them against the S3 baseline for this branch's parent commit (baselines are rendered on CI's Linux runners; triage from the CI report) |
@@ -54,9 +54,13 @@ runs. Pass args directly. The shell guard refuses the bare form.
   collision-resistant `YYYYMMDD-short-slug` ids; do not allocate the next integer. No branch-local
   reservation ledgers. Split work by vertical slice or non-overlapping paths, and trial-merge the
   target branch before calling work complete.
-- **Stack by default: cut every branch from the branch you opened last, not from `main`, whenever
-  that one is still open** — related or unrelated, a schema migration or a padding change. A
-  dependent chain (`src/db/schema.ts` + migration → the `src/db` reader → the surface) has no other
+- **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
+  newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
+  the stack pushes one layer at a time, because concurrent runs cancel each other.** That is
+  Aaron's rule; the CI half dates from 2026-10-12, when 15 to 19 layers pushed together cost 126
+  cancelled runs and 90 failed jobs. Push a layer, let its run finish, then push the next; a thread
+  whose layer sits on another thread's stack leaves the push order to the thread that owns it. A
+  dependent chain (`src/db/schema/` + migration → the `src/db` reader → the surface) has no other
   honest shape; unrelated work stacks because a second branch cut from `main` re-edits the same
   shared files (a `check:repo` row, a baseline, a message bundle), and on a stack those merge once,
   while the change is being written. Pixels are not an exception. Cut each branch from the one
@@ -64,8 +68,8 @@ runs. Pass args directly. The shell guard refuses the bare form.
   first, every body naming its position; `.github/workflows/stack.yml` registers the chain as a
   GitHub stack. Never open the parts as independent PRs off `main`. Every layer runs the whole CI
   gate.
-  What still goes on its own branch off `main` (nothing of yours open, a fix that must merge now,
-  another session's branch — never depth: a stack has no cap, and a long one is the point) and the
+  What still goes on its own branch off `main` (no stack open, or a fix that must merge now — never
+  depth: a stack has no cap, and a long one is the point) and the
   mechanics are in the **stacked-prs** skill and ADRs 20260821-stacked-pull-requests,
   20261003-every-stack-layer-runs-ci and 20260907-a-runner-registers-the-stack.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same spec

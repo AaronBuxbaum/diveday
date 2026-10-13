@@ -22,6 +22,9 @@ red run. Each rule names what enforces it; the reasoning and the incidents are i
   runs `retries: 0`.
 - **Never navigate straight off a submit**: wait on the action's `?notice=` redirect or on what the
   row shows; reading the field back is not a wait (`check:e2e-hygiene`, `action-race`).
+- **A click lands after React owns the page**: every `goto`/`reload`/`waitForURL` on a fixture page
+  waits for the staff Search trigger's `data-hydrated` (`settleStaffHydration`, `e2e/fixtures.ts`);
+  a click after a `waitUntil: "commit"` opt-out fails `check:e2e-hygiene`, `pre-hydration-click`.
 - **An absence assertion pairs with a positive query** of the same string elsewhere in the spec.
   A convention, not a guard (#1403).
 - **A failing or flaky test is part of the work**, even when unrelated; search open PRs for a fix
