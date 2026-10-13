@@ -1,10 +1,35 @@
+import { cacheLife } from "next/cache";
 import { yearCardCopy } from "@/app/_og/year-card-copy";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { DbExecutor } from "@/db/client";
+import { getDb } from "@/db/client";
 import { getShopYear } from "@/db/reporting";
 import type { DiverTranslator } from "@/i18n/messages";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { summarizeShopYear } from "@/lib/shop-year";
+
+/**
+ * **The year's counts, read at most once an hour per shop and day** (code
+ * review 2026-10-13, item 12): a five-statement aggregate over the whole
+ * year, for a sentence that changes once a day, used to run on every
+ * anonymous view of the shopfront. The first cache under `/s`.
+ *
+ * Keyed on the shop, its zone and the shop's own day, so the entry turns over
+ * at the shop's midnight rather than the server's; `hours` refreshes it within
+ * the day, so a boat that came home this morning is counted by the afternoon.
+ * The executor is not an argument (a cache key must serialize): the cached
+ * scope opens the database itself.
+ */
+async function publicShopYear(
+  shopId: string,
+  timeZone: string,
+  // Read by nothing in the body: it is here to be part of the cache key.
+  _shopDay: CalendarDate,
+) {
+  "use cache";
+  cacheLife("hours");
+  return getShopYear(await getDb(), shopId, { timeZone, now: nowDate() });
+}
 
 /**
  * **"Our year" at the foot of the shopfront** — the Reports year card's
@@ -16,21 +41,18 @@ import { summarizeShopYear } from "@/lib/shop-year";
  * not something a shop would choose to publish.
  */
 export async function OurYearSection({
-  db,
   shop,
   locale,
   t,
   className = "",
 }: {
-  db: DbExecutor;
   shop: { id: string; name: string; timezone: string };
   locale: string;
   t: DiverTranslator;
   className?: string;
 }) {
-  const year = summarizeShopYear(
-    await getShopYear(db, shop.id, { timeZone: shop.timezone, now: nowDate() }),
-  );
+  const shopDay = calendarDateInTimezone(nowDate(), shop.timezone);
+  const year = summarizeShopYear(await publicShopYear(shop.id, shop.timezone, shopDay));
   if (!year.hasActivity) return null;
   const copy = yearCardCopy({ shopName: shop.name, year, t, locale });
   return (
