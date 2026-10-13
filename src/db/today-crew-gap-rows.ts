@@ -8,12 +8,9 @@ import {
   uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
 } from "@/i18n/today-labels";
-import { courseCrewGap } from "@/lib/course-ratios";
-import {
-  DEFAULT_DIVERS_PER_DIVEMASTER,
-  divemasterRatioGap,
-  inWaterDivemasterCount,
-} from "@/lib/divemaster-ratio";
+import type { InWaterCrewCount } from "@/lib/crew-roles";
+import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
+import { crewGapFor } from "@/lib/staffing-week";
 import { type TodayAction, urgencyFor } from "@/lib/today";
 import { NO_SUPERVISION } from "./course-crew-counts";
 import type { TodayRowsContext } from "./today-rows-context";
@@ -43,80 +40,39 @@ export function pushCrewGapRows(
 ): void {
   const { t, now, locale, diversPerDivemaster } = ctx;
   const { courseCrewCounts } = ctx.wave;
-  // The one "course crew gap" computation (Lens 17 task 151) — also
-  // consumed by the trip page and the staffing coverage list, and all three
-  // report its two codes separately, so a session Today flags as over its
-  // ratio can neither read as "Covered" on staffing nor be filed there under
-  // "needs an instructor" when it already has one.
+  // **One decision, shared with the staffing week** (`crewGapFor`,
+  // src/lib/staffing-week.ts; issue #2482): the agency training ratio, the
+  // shop's own target, and which of them a departure's one row names. The
+  // trip page and the staffing coverage list read the same course crew gap
+  // (Lens 17 task 151), so a session Today flags as over its ratio can
+  // neither read as "Covered" on staffing nor be filed there under "needs an
+  // instructor" when it already has one. A departure the shop has marked
+  // self-guided raises no row (issue #973).
   const counts = courseCrewCounts.get(trip.id) ?? NO_SUPERVISION;
-  const crewGap = courseCrewGap({
-    course: trip.course,
-    instructorCount: counts.instructorCount,
-    assistantCount: counts.assistantCount,
-    booked: trip.booked,
-  });
-  // The shop's own divemaster target is resolved before either row is
-  // pushed, because the zero-crew case outranks the instructor gap and needs
-  // this answer to know whether it applies (issue #1338, and the matching
-  // walk in `staffingWeek`, src/db/staffing.ts).
-  const ratioGap = divemasterRatioGap({
-    divers: trip.bookedDivers,
-    divemasterCount: inWaterDivemasterCount(counts),
-    diversPerDivemaster,
-    // A departure the shop has marked self-guided raises neither of the
-    // two rows below. Read here rather than branched on afterwards, so
-    // this queue and the trip page cannot disagree (issue #973).
-    selfGuided: trip.selfGuided,
-  });
-  // **No divemaster outranks the instructor gap.** A course session
-  // with no crew at all satisfies both rules, and issue #732 settled that a
-  // departure carries one row for one underlying fact — but that rule is
-  // about the count, not about which code wins. The course gap winning
-  // outright meant an empty boat said "This course session has no instructor
-  // assigned", a sentence that mentions no divemaster and so reads as though
-  // one is already aboard.
-  //
-  // `divemasterRatioGap` decides rather than a bare `inWaterDivemasterCount
-  // === 0`, because the count alone is also true where "no crew" would be
-  // the wrong thing to say: a self-guided departure wants no supervisor, and
-  // one with nobody booked has no one to supervise. Both keep the instructor
-  // sentence, which stays true and actionable for them — a session without
-  // an instructor cannot take an enrolment however empty it is.
-  //
-  // Two things this is safe because of, neither obvious from the code.
-  // `over_ratio` can never be the suppressed code: it requires
-  // `instructorCount >= 1` (src/lib/course-ratios.ts), which forces a
-  // non-zero in-water count, so `uncrewed` is always false when it fires and
-  // a ratio breach can never hide behind a zero-crew row. And the shop's own
-  // `diversPerDivemaster` cannot route a departure between these rows —
-  // with divers aboard and nobody in the water, `ceil(divers / ratio) >= 1`
-  // across the whole legal range (`MIN_`/`MAX_DIVERS_PER_DIVEMASTER`), so
-  // `under_target` always holds and only the two exemptions decide. A
-  // shop-set preference deciding whether a supervision signal appears would
-  // be alarming; it cannot.
-  const uncrewed = ratioGap.code === "under_target" && ratioGap.divemasterCount === 0;
+  const decide = (claim: InWaterCrewCount) =>
+    crewGapFor({
+      course: trip.course,
+      counts: claim,
+      booked: trip.booked,
+      bookedDivers: trip.bookedDivers,
+      diversPerDivemaster,
+      selfGuided: trip.selfGuided,
+    });
+  const gap = decide(counts);
+  if (gap.code === null) return;
+  const { courseGap: crewGap, ratioGap, uncrewed } = gap;
   // **A gap a lapse opened says so, and only that gap** (issue #1853).
   // `counts` reads each rostered professional's recorded ratings, so a crew
   // list with an instructor's name on it can still raise these rows. The
-  // same three answers are taken again on the roster's claim, and a row
-  // carries the lapse only when the roster would not have raised it: a
-  // divemaster's lapsed card beside a session nobody rostered an instructor
-  // on is not why it has no instructor (dive-domain review). Never a refusal
-  // — the booking gate still reads the roster's claim (H-59).
-  const rosterCrewGap = courseCrewGap({
-    course: trip.course,
-    instructorCount: counts.roster.instructorCount,
-    assistantCount: counts.roster.assistantCount,
-    booked: trip.booked,
-  });
-  const rosterRatioGap = divemasterRatioGap({
-    divers: trip.bookedDivers,
-    divemasterCount: inWaterDivemasterCount(counts.roster),
-    diversPerDivemaster,
-    selfGuided: trip.selfGuided,
-  });
-  const rosterUncrewed =
-    rosterRatioGap.code === "under_target" && rosterRatioGap.divemasterCount === 0;
+  // same decision is taken again on the roster's claim, and a row carries
+  // the lapse only when the roster would not have raised it: a divemaster's
+  // lapsed card beside a session nobody rostered an instructor on is not why
+  // it has no instructor (dive-domain review). Never a refusal — the booking
+  // gate still reads the roster's claim (H-59).
+  const roster = decide(counts.roster);
+  const rosterCrewGap = roster.courseGap;
+  const rosterRatioGap = roster.ratioGap;
+  const rosterUncrewed = roster.uncrewed;
   const lapseNote =
     counts.lapsed.length > 0 ? ratingLapsedDetailText(t, locale, counts.lapsed) : null;
   const explainedIf = (opened: boolean, detail: string) =>
