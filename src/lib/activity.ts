@@ -158,6 +158,12 @@ type ActivityParamShapes = {
   /** A staffer downloaded a diver's own record. */
   record_exported: { actor: string; diver: string };
   /**
+   * A staffer marked a diver running late from a message they wrote (UX
+   * review 2026-10-13, item 19), so the roster's "said {time}" has a name
+   * behind it that is not the diver's own tap.
+   */
+  running_late_from_message: { actor: string; diver: string };
+  /**
    * **Money a staffer decided about**, below — the lines the shop's activity
    * log (`src/db/shop-activity.ts`) exists to answer "who refunded this?"
    * with. Nothing recorded the person behind any of them before: the payment
@@ -288,6 +294,7 @@ export const ACTIVITY_CODES = [
   "seat_self_refunded",
   "medical_clearance_opened",
   "record_exported",
+  "running_late_from_message",
   "order_refunded",
   "paid_after_close_refunded",
   "seat_refunded",

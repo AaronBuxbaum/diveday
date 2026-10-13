@@ -129,7 +129,8 @@ export type DiverActivityCode =
   | "identity_confirmed"
   | "identity_split_off"
   | "medical_clearance_opened"
-  | "record_exported";
+  | "record_exported"
+  | "running_late_from_message";
 
 /**
  * One line on the diver-record trail, subject-only — the same shape

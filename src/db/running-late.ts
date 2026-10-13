@@ -2,6 +2,7 @@ import { and, asc, eq, gt, inArray, isNull, lte, ne } from "drizzle-orm";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { AppDb } from "./client";
+import { recordDiverActivity } from "./operations";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -346,13 +347,26 @@ export async function messageSeats(
  * names the seat and a person decides. The seat is the one the row named
  * (`seatForMessage`), the instant stored is when the diver wrote, and an
  * organizer's party travels with them as on every other door.
+ *
+ * A fresh mark files a line on the diver's record naming the staffer
+ * (`running_late_from_message`), because the roster's "said {time}" reads as
+ * the diver's own tap otherwise. A repeat changes nothing and files nothing.
  */
 export async function markMessageRunningLate(
   db: AppDb,
-  input: { shopId: string; personId: string; receivedAt: Date; now: Date },
+  input: { shopId: string; personId: string; receivedAt: Date; now: Date; actorPersonId: string },
 ): Promise<RunningLateOutcome> {
   const seats = await openSeatsOf(db, input.shopId, [input.personId], input.now);
   const seat = seatForMessage(seats, input.personId, input.receivedAt);
   if (!seat) return { status: "closed" };
-  return stampWithParty(db, input.shopId, seat.bookingId, input.now, input.receivedAt);
+  const outcome = await stampWithParty(db, input.shopId, seat.bookingId, input.now, input.receivedAt);
+  if (outcome.status === "marked") {
+    await recordDiverActivity(db, {
+      shopId: input.shopId,
+      personId: input.personId,
+      actorPersonId: input.actorPersonId,
+      code: "running_late_from_message",
+    });
+  }
+  return outcome;
 }

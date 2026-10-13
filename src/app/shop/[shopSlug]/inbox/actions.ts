@@ -134,7 +134,7 @@ export async function markInboxSenderLateAction(formData: FormData): Promise<voi
 
   const parsed = parseForm(messageForm, formData);
   const messageId = parsed.ok ? uuidParam(parsed.data.messageId) : null;
-  if (!messageId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
+  if (!parsed.ok || !messageId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
 
   const message = await getInboundMessage(db, session.user.shopId, messageId);
   if (!message?.personId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
@@ -144,6 +144,7 @@ export async function markInboxSenderLateAction(formData: FormData): Promise<voi
     personId: message.personId,
     receivedAt: message.receivedAt,
     now: nowDate(),
+    actorPersonId: session.user.personId,
   });
   revalidateAndRedirect(
     inbox,

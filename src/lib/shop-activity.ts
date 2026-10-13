@@ -84,6 +84,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   note_added: "records",
   note_deleted: "records",
   record_exported: "records",
+  running_late_from_message: "seats",
   diver_merged: "records",
   redacted: "records",
   demo_charter_confirmed: "departures",
