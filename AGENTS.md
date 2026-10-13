@@ -26,8 +26,7 @@ provider-specific folders are adapters and must not introduce unique requirement
 - Read `foo.test.ts` before `foo.ts`: tests are the contract.
 - Iterate with one focused test and quiet output. The whole suite belongs to CI; the shell guard
   refuses a bare `pnpm test` / `pnpm e2e` / `pnpm check`.
-- Redirect a long run to a file in your scratchpad (or `$TMPDIR`), never beside the checkouts,
-  and read the failing part; never pipe it through `tail`.
+- Redirect a long run to a scratchpad file, not beside the checkouts; never pipe through `tail`.
 - Send a broad search or a verbose run to a subagent; the `Explore` agent does not load this file.
 
 ## Commands
@@ -145,7 +144,7 @@ Other sessions share this checkout. The full statement of each rule:
   work complete.
 - **Stack everything, across threads, and run one PR's CI at a time**: cut every branch from the
   newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
-  the stack pushes one layer at a time, because overlapping runs queue on a 20-job cap (**stacked-prs**).
+  the stack pushes one layer at a time, because runs queue on a 20-job cap (**stacked-prs**).
 
 ## Hard rules
 
