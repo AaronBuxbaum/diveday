@@ -665,6 +665,7 @@ export async function carriedPreparationForDiver(
     db
       .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
       .from(people)
+      // diveday:allow-deleted-people: the diver's own date of birth on their own token page.
       .innerJoin(shops, eq(shops.id, people.shopId))
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
       .limit(1),

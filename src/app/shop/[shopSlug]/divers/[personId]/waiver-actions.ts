@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
+import { paperWaiverAttestation, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
   hasUnansweredMedicalHold,
@@ -9,13 +9,11 @@ import {
   recordInPersonWaiver,
   recordMedicalEvaluation,
 } from "@/db/waivers";
-import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
+import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import type { PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { storeMedicalClearanceDocument } from "@/lib/storage";
 import { backTo, requireDiverActionContext, successUrl } from "./action-helpers";
-
-const medicalAttestedField = z.object({ medicalAttested: checkbox() });
 
 /**
  * A clearance as posted. The outcome is narrowed by the action itself, so a
@@ -60,12 +58,11 @@ export async function markWaiverInPersonAction(
     shopId: staff.user.shopId,
     subject: { personId },
     recordedByPersonId: staff.user.personId,
-    medicalAttested: readForm(medicalAttestedField, formData).medicalAttested,
-    // A minor's paper release names its co-signer (ADR
+    // The medical tick and, for a minor, the co-signer (ADR
     // 20260907-guardian-co-signature). Passed as typed; `recordInPersonWaiver`
-    // decides from the date of birth on file whether it is needed at all, and
-    // refuses a section that is not a signature.
-    guardian: paperGuardianFrom(formData),
+    // decides from the date of birth on file whether a guardian is needed at
+    // all, and refuses a section that is not a signature.
+    ...paperWaiverAttestation(formData),
   });
   // **Only success navigates.** A refusal used to redirect with its own
   // `?notice=` — including the one an honest submission produces, a guardian

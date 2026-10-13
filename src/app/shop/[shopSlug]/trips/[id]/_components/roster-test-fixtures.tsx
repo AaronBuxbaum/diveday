@@ -169,7 +169,7 @@ function rosterProps({
       packageDivesByBooking,
     },
     actions: {
-      markWaiverInPersonAction: noRefusal,
+      markRosterWaiverInPersonAction: noRefusal,
       markPaymentAction: noop,
       removeBookingAction: noop,
       confirmIdentityAction: noop,

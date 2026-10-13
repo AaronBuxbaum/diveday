@@ -396,8 +396,14 @@ export async function recapClosedReason(
   if (row.tripStatus !== "scheduled") return "departure-cancelled";
   if (row.identityUnconfirmedAt) return "dead";
   const one = [{ booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } }];
-  if ((await bookingsLeftAtTheDock(db, one)).has(bookingId)) return "dead";
-  if ((await bookingsWaitingOnAMissingPerson(db, one, now)).has(bookingId)) return "waiting";
+  // Both asked at once, then answered in the disclosure order above: the dock
+  // before the wait (code review 2026-10-13, item 29).
+  const [leftAtTheDock, waitingOnAMissingPerson] = await Promise.all([
+    bookingsLeftAtTheDock(db, one),
+    bookingsWaitingOnAMissingPerson(db, one, now),
+  ]);
+  if (leftAtTheDock.has(bookingId)) return "dead";
+  if (waitingOnAMissingPerson.has(bookingId)) return "waiting";
   return null;
 }
 
@@ -662,7 +668,7 @@ async function loadRecapPageData(
       })
       .from(priorVisits)
       .where(and(eq(priorVisits.shopId, row.shopId), eq(priorVisits.personId, row.personId))),
-    listRecapPhotosForBooking(db, bookingId, row.tripId),
+    listRecapPhotosForBooking(db, row.shopId, bookingId, row.tripId),
     getShopStripeAccount(db, row.shopId),
     getLatestTipForBooking(db, row.shopId, bookingId),
     // **The overclaim guard, as a query** (issues #1196, #1205). Three
@@ -695,6 +701,7 @@ async function loadRecapPageData(
       ? db
           .select({ fullName: people.fullName })
           .from(people)
+          // diveday:allow-deleted-people: the name of who wrote the course's next step.
           .where(eq(people.id, row.courseNextStepByPersonId))
           .limit(1)
       : Promise.resolve([]),
@@ -881,6 +888,7 @@ async function loadRecapPageData(
 /** A diver's recap photos, including staff-shared departure photos, newest first. */
 async function listRecapPhotosForBooking(
   db: AppDb,
+  shopId: string,
   bookingId: string,
   tripId?: string,
 ): Promise<RecapPhotoView[]> {
@@ -893,7 +901,7 @@ async function listRecapPhotosForBooking(
         createdAt: recapPhotos.createdAt,
       })
       .from(recapPhotos)
-      .where(eq(recapPhotos.bookingId, bookingId))
+      .where(and(eq(recapPhotos.shopId, shopId), eq(recapPhotos.bookingId, bookingId)))
       .orderBy(desc(recapPhotos.createdAt)),
     tripId
       ? db
@@ -903,7 +911,7 @@ async function listRecapPhotosForBooking(
             createdAt: tripRecapPhotos.createdAt,
           })
           .from(tripRecapPhotos)
-          .where(eq(tripRecapPhotos.tripId, tripId))
+          .where(and(eq(tripRecapPhotos.shopId, shopId), eq(tripRecapPhotos.tripId, tripId)))
           .orderBy(desc(tripRecapPhotos.createdAt))
       : Promise.resolve([]),
   ]);
@@ -939,7 +947,7 @@ export async function canAddRecapPhoto(
   bookingId: string,
 ): Promise<RecapPhotoEligibility> {
   const [booking] = await db
-    .select({ status: bookings.status })
+    .select({ shopId: bookings.shopId, status: bookings.status })
     .from(bookings)
     .where(eq(bookings.id, bookingId))
     .limit(1);
@@ -950,7 +958,7 @@ export async function canAddRecapPhoto(
   const [{ count: existing } = { count: 0 }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(recapPhotos)
-    .where(eq(recapPhotos.bookingId, bookingId));
+    .where(and(eq(recapPhotos.shopId, booking.shopId), eq(recapPhotos.bookingId, bookingId)));
   if (existing >= MAX_RECAP_PHOTOS_PER_BOOKING) return { ok: false, reason: "limit" };
   return { ok: true };
 }
@@ -993,7 +1001,9 @@ export async function addRecapPhoto(
     const [{ count: existing } = { count: 0 }] = await tx
       .select({ count: sql<number>`count(*)::int` })
       .from(recapPhotos)
-      .where(eq(recapPhotos.bookingId, input.bookingId));
+      .where(
+        and(eq(recapPhotos.shopId, booking.shopId), eq(recapPhotos.bookingId, input.bookingId)),
+      );
     if (existing >= MAX_RECAP_PHOTOS_PER_BOOKING) return { ok: false, reason: "limit" };
 
     const caption = input.caption?.trim().slice(0, MAX_RECAP_CAPTION_LENGTH) || null;

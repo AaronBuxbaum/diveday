@@ -26,11 +26,11 @@ remembers it.
   releases, course forms and the roll call.
 - **Still a dive day** for the fly-safe advisory: a rehearsal in the water is real nitrogen.
 - **Deleted by the nightly trip-series cron** (`clearFinishedRehearsals`, rule in
-  `rehearsalMayClear`) once both hold: it was due home before yesterday began in the shop's zone,
-  and the fly-safe look-back plus a day has passed since, so no later boat still counts its divers'
-  day. Soft-deleted; seats cancelled silently; prepaid dives and unclaimed gear given back.
-  **Never one with evidence**: a boarding, any after-dive count, or a logged dive. That one stays
-  live and its banner says why.
+  `rehearsalMayClear`) once it was due home before yesterday began in the shop's zone,
+  and the fly-safe look-back plus a day has passed, so no later boat counts its divers' day.
+  Soft-deleted; seats cancelled silently; prepaid dives and unclaimed gear returned.
+  **Never one with evidence**: a diver or crew boarding, an after-dive count, a logged dive or an
+  incident report. That one stays live; its banner says why.
 - **A warning panel** on every trip surface; "Rehearsal" printed beside souls on board.
 
 ### Where it is honored

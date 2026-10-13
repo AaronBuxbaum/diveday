@@ -1369,6 +1369,13 @@ export const paymentOperationIntents = pgTable(
     // single index scan can walk. (The review that raised DATA-M1 prescribed a
     // bare `(started_at)`; the query also filters `kind`, and including it costs
     // nothing on an index this small.)
+    // A Stripe object back to the intent that made it: the refund and
+    // paid-after-close readers (`refunds.ts`, `checkouts-paid-after-close.ts`)
+    // look an intent up by `stripe_object_id` alone, on a table every Stripe
+    // call appends to. Partial: an intent that never reached Stripe has none.
+    index("payment_operation_intents_stripe_object_idx")
+      .on(table.stripeObjectId)
+      .where(sql`${table.stripeObjectId} is not null`),
     index("payment_operation_intents_stale_scan_idx")
       .on(table.kind, table.startedAt)
       .where(sql`${table.status} = 'started'`),

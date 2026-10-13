@@ -22,6 +22,13 @@ export type OtherBoatsWhere = {
  * #1166, D06), off the one read of the shop's own board. Each row's day is
  * preformatted in the shop's own zone, like every other date the booking page
  * hands a client component.
+ *
+ * The candidate pool is the storefront's own schedule reader with `hasSpace`,
+ * so a departure offered here is one a diver can actually get onto, and a
+ * private charter is never offered to the public. Bounded at 50 rather than
+ * paged: `similarDepartures` needs a pool, not a page, and a shop whose next
+ * matching departure is past the fiftieth is a shop the "find another trip"
+ * link serves better anyway.
  */
 export function fullTripAlternatives(trip: PublicTrip, board: Board, where: OtherBoatsWhere) {
   return similarDepartures({

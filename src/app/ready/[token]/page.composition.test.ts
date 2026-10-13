@@ -22,6 +22,21 @@ import { describe, expect, it } from "vitest";
  */
 
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+/** The after-dive reads the page asks first (code review 2026-10-13, item 29). */
+const AFTER_DIVE_READS = readFileSync(join(__dirname, "_components/after-dive-reads.ts"), "utf8");
+
+/**
+ * The source of a file the page composes, read by name: under the route's
+ * `_components/`, or under `src/components/`. A section that moves out of the
+ * page moves its pins with it by changing only the name passed here.
+ */
+function component(file: string): string {
+  try {
+    return readFileSync(join(__dirname, "_components", file), "utf8");
+  } catch {
+    return readFileSync(join(__dirname, "..", "..", "..", "components", file), "utf8");
+  }
+}
 
 /** Where a marker first appears in the route's source, or -1. */
 function positionOf(marker: string): number {
@@ -33,7 +48,7 @@ function countOf(marker: string): number {
   return SOURCE.split(marker).length - 1;
 }
 
-const MASTHEAD = readFileSync(join(__dirname, "_components/ReadyMasthead.tsx"), "utf8");
+const MASTHEAD = component("ReadyMasthead.tsx");
 
 /** The thread's own boundary: the last one in the file, inside `DiverReadinessPage`. */
 const THREAD_SUSPENSE = "<Suspense fallback={<ReadyThreadBodySkeleton />}>{threadBody}</Suspense>";
@@ -43,7 +58,7 @@ const THREAD_SUSPENSE = "<Suspense fallback={<ReadyThreadBodySkeleton />}>{threa
  * and spelled in their own file. The order and spacing rules below read them
  * there, with the same markers they read in the page before the split.
  */
-const SECTIONS = readFileSync(join(__dirname, "_components/ThreadSections.tsx"), "utf8");
+const SECTIONS = component("ThreadSections.tsx");
 
 /** Where a marker first appears in the sections' source, or -1. */
 function sectionPositionOf(marker: string): number {
@@ -193,15 +208,12 @@ describe("the thread page's order", () => {
  */
 describe("the thread column's cards", () => {
   it("share the md inset", () => {
-    for (const component of ["TripArrivalCard", "TripChangeLedger", "PartyClaimPanel"]) {
-      const source = readFileSync(
-        join(__dirname, "..", "..", "..", "components", `${component}.tsx`),
-        "utf8",
-      );
-      expect(source.includes("<SectionCard"), `${component} renders a SectionCard`).toBe(true);
+    for (const name of ["TripArrivalCard", "TripChangeLedger", "PartyClaimPanel"]) {
+      const source = component(`${name}.tsx`);
+      expect(source.includes("<SectionCard"), `${name} renders a SectionCard`).toBe(true);
       expect(
         /<SectionCard\b[^>]*?\bpadding="(?!md")/.test(source),
-        `${component} steps off the column's inset`,
+        `${name} steps off the column's inset`,
       ).toBe(false);
     }
   });
@@ -263,15 +275,12 @@ describe("the thread's sections under the spine", () => {
     // This page was the only caller that passed either one, and all it ever
     // passed was the top margin the run now owns (K-233 review). A prop no
     // caller uses is an invitation to put that margin back.
-    for (const component of ["TripArrivalCard", "PartyClaimPanel"]) {
-      const source = readFileSync(
-        join(__dirname, "..", "..", "..", "components", `${component}.tsx`),
-        "utf8",
-      );
-      const start = source.indexOf(`export function ${component}(`);
-      expect(start, component).toBeGreaterThan(-1);
+    for (const name of ["TripArrivalCard", "PartyClaimPanel"]) {
+      const source = component(`${name}.tsx`);
+      const start = source.indexOf(`export function ${name}(`);
+      expect(start, name).toBeGreaterThan(-1);
       const props = source.slice(start, source.indexOf("}) {", start));
-      expect(props, component).not.toMatch(/\bclassName\b/);
+      expect(props, name).not.toMatch(/\bclassName\b/);
     }
   });
 });
@@ -312,7 +321,7 @@ describe("the cancel door", () => {
 describe("day-of details", () => {
   // Its own component since the route grew past its line budget; the rules
   // are the same, read where the forms now live.
-  const DAY_OF = readFileSync(join(__dirname, "_components/DayOfDetails.tsx"), "utf8");
+  const DAY_OF = component("DayOfDetails.tsx");
   /** The source of the form posting to `action`, from `<form` to `</form>`. */
   const formFor = (action: string) => {
     const at = DAY_OF.indexOf(action);
@@ -487,8 +496,10 @@ describe("after the dive", () => {
     // late-arrival buffer and the four-hour recap floor. A literal
     // `60 * 60 * 1000` here is how "has it sailed" and "is it over" drift an
     // hour apart.
-    expect(SOURCE).toContain("isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })");
+    expect(AFTER_DIVE_READS).toContain("isAfterTheDive({ endsAt, boarded })");
+    expect(SOURCE).toContain("endsAt: detail.trip.endsAt,");
     expect(SOURCE).not.toContain("60 * 60 * 1000");
+    expect(AFTER_DIVE_READS).not.toContain("60 * 60 * 1000");
   });
 
   it("asks the crew's own roll call before it says anybody dived", () => {
@@ -499,12 +510,17 @@ describe("after the dive", () => {
     // day, and an invitation to tip the crew who dived without them.
     // `roll_call_events` is the only direct evidence DiveDay holds about who
     // got on the boat, and the page consults it before composing the afterglow.
-    const rollCall = positionOf("departureRollCallForBooking(");
+    // The reads live beside the page (`_components/after-dive-reads.ts`), and
+    // the page asks them before it composes the afterglow.
+    expect(positionOf("await readAfterTheDive(db, {")).toBeGreaterThan(-1);
+    expect(positionOf("await readAfterTheDive(db, {")).toBeLessThan(positionOf("<AfterState"));
+    const rollCall = AFTER_DIVE_READS.indexOf("departureRollCallForBooking(db,");
     expect(rollCall).toBeGreaterThan(-1);
-    expect(rollCall).toBeLessThan(positionOf("isAfterTheDive("));
+    expect(rollCall).toBeLessThan(AFTER_DIVE_READS.indexOf("isAfterTheDive({ endsAt, boarded })"));
     // Only once the boat is scheduled home: an ordinary night-before page load
     // never pays for the query.
-    expect(SOURCE).toContain("theBoatIsHome({ endsAt: detail.trip.endsAt })");
+    expect(AFTER_DIVE_READS).toContain("const boatIsHome = theBoatIsHome({ endsAt });");
+    expect(AFTER_DIVE_READS).toMatch(/boatIsHome\s*\?\s*await departureRollCallForBooking\(/);
   });
 
   it("answers a canceled departure on the branch a canceled departure reaches", () => {
@@ -530,7 +546,7 @@ describe("after the dive", () => {
     // The block's body is `readyDeadLink` (`_components/dead-link.tsx`), called
     // from inside it and from nowhere else, so the departure check is read
     // there and the call is pinned inside the block.
-    const DEAD_LINK = readFileSync(join(__dirname, "_components/dead-link.tsx"), "utf8");
+    const DEAD_LINK = component("dead-link.tsx");
     const gate = positionOf("const capability = await verifyBookingCapability");
     const deadEnd = positionOf("if (!capability) {");
     const deadLink = positionOf("return readyDeadLink(");
@@ -566,7 +582,7 @@ describe("after the dive", () => {
     expect(countOf("shop={shopContact}")).toBe(3);
     expect(SOURCE).toContain("<NoShowCard shop={shopContact} t={t} />");
     expect(SOURCE).toContain("<RecapWaitingCard shop={shopContact} t={t} />");
-    const doors = readFileSync(join(__dirname, "_components/AfterDiveDoors.tsx"), "utf8");
+    const doors = component("AfterDiveDoors.tsx");
     expect(doors).toContain('t("recap.noShowHeading")');
     // And never the pair of sentences it replaced — "This readiness link isn't
     // available" over "This booking didn't sail" — both false for this reader.
@@ -614,7 +630,7 @@ describe("the boat's line on the thread", () => {
 describe("the sign step's actions", () => {
   // The step's controls live in their own component since course forms joined
   // the release there (ADR 20261008-course-forms); the page hands it the step.
-  const SIGN_STEP = readFileSync(join(__dirname, "_components/SignStepActions.tsx"), "utf8");
+  const SIGN_STEP = component("SignStepActions.tsx");
 
   it("offers a control for every waiver blocker it calls the reader's to fix", () => {
     expect(SOURCE).toMatch(/<SignStepActions\s+token=\{token\}\s+item=\{step\.item\}/);
@@ -661,14 +677,26 @@ describe("a held seat after the dive", () => {
   it("answers with its own card before the recap is read", () => {
     const held = positionOf("if (data.identityHeld) return <HeldAfterDiveCard");
     expect(held).toBeGreaterThan(-1);
-    expect(held).toBeLessThan(positionOf("await getRecapPageState(db, bookingId)"));
+    expect(held).toBeLessThan(positionOf("await afterDive.recap()"));
+    // The recap starts early beside the roll call (code review 2026-10-13,
+    // item 29), but never for a held seat.
+    const AFTER_DIVE_READS = readFileSync(
+      join(__dirname, "_components/after-dive-reads.ts"),
+      "utf8",
+    );
+    expect(AFTER_DIVE_READS).toContain(
+      "const speculate = boatIsHome && !input.identityHeld && isAfterTheDive({ endsAt });",
+    );
+    expect(AFTER_DIVE_READS).toContain(
+      "const recapRead = speculate ? getRecapPageState(db, bookingId) : null;",
+    );
     expect(positionOf("<NoShowCard")).toBeGreaterThan(held);
   });
 });
 
 /** UX review 2026-10-11, item 13: "Add a seat" lives with the group's seats, and only when allowed. */
 describe("adding a seat from the diver's page", () => {
-  const PARTY_SECTION = readFileSync(join(__dirname, "_components/PartySection.tsx"), "utf8");
+  const PARTY_SECTION = component("PartySection.tsx");
 
   it("hands the party section the action only when the booking may lead a seat", () => {
     // The party section is one of the sections under the spine (ThreadSections).

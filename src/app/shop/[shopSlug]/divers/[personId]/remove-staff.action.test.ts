@@ -1,7 +1,7 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { people, personRoles, tripAssignments, trips } from "@/db/schema";
-import { nowDate } from "@/lib/clock";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -19,7 +19,7 @@ const ctx = fileScopedShopContext();
  * review). Removal now takes a person off every crew picker and away from
  * sign-in (`livePerson()`), but an assignment already on a boat stays where
  * it is, still counted on the manifest and toward the crew ratio. So Remove
- * refuses while they are crew on a departure still ahead, and the staffer
+ * refuses while they are crew on a departure ahead or still out, and the staffer
  * takes them off those boats first.
  */
 
@@ -36,7 +36,9 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/lib/session", async () =>
+  (await import("@/test/staff-session")).sessionMockOverStaffSession(),
+);
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
@@ -98,6 +100,44 @@ describe("removing a person who also holds a staff role", () => {
 
     expect(to).toContain("notice=remove-crew-upcoming");
     expect(await isRemoved(personId)).toBe(false);
+  });
+
+  it("refuses while a boat they crew is out: sailed, not yet home", async () => {
+    // A removed person fails every roll-call writer's live-staff check, so
+    // the crew left aboard could no longer be counted back in.
+    const personId = await dualRolePerson();
+    const tripId = await anUpcomingTrip();
+    const now = nowDate().getTime();
+    await ctx.db
+      .update(trips)
+      .set({ startsAt: new Date(now - 2 * HOUR_MS), endsAt: new Date(now + 2 * HOUR_MS) })
+      .where(eq(trips.id, tripId));
+    await ctx.db.insert(tripAssignments).values({ tripId, personId });
+
+    const to = await redirectedTo(() =>
+      deletePersonAction(ctx.shop.slug, personId, new FormData()),
+    );
+
+    expect(to).toContain("notice=remove-crew-upcoming");
+    expect(await isRemoved(personId)).toBe(false);
+  });
+
+  it("proceeds when the only boat they crewed is long home", async () => {
+    const personId = await dualRolePerson();
+    const tripId = await anUpcomingTrip();
+    const now = nowDate().getTime();
+    await ctx.db
+      .update(trips)
+      .set({ startsAt: new Date(now - 30 * HOUR_MS), endsAt: new Date(now - 26 * HOUR_MS) })
+      .where(eq(trips.id, tripId));
+    await ctx.db.insert(tripAssignments).values({ tripId, personId });
+
+    const to = await redirectedTo(() =>
+      deletePersonAction(ctx.shop.slug, personId, new FormData()),
+    );
+
+    expect(to).toContain("notice=deleted");
+    expect(await isRemoved(personId)).toBe(true);
   });
 
   it("proceeds when they crew nothing ahead", async () => {

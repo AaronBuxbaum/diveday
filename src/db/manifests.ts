@@ -1391,6 +1391,7 @@ async function reclaimReleasedSeat(
   const named = await tx
     .select({ id: people.id, fullName: people.fullName })
     .from(people)
+    // diveday:allow-deleted-people: names for the trail line about this seat.
     .where(
       and(
         eq(people.shopId, input.shopId),

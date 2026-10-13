@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import {
@@ -8,6 +7,7 @@ import {
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 
 export const maxDuration = 300;
 
@@ -59,19 +59,19 @@ export async function GET(request: Request) {
   const refusal = requireCronSecret(request);
   if (refusal) return refusal;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
   try {
     const summary = await dispatchDueIntegrationDeliveries(await getDb(), { limit: 50 });
     log("cron_integrations.scan_complete", "info", summary);
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
     return NextResponse.json(summary);
   } catch (error) {
-    Sentry.captureException(error, { tags: { cron_scan: "integrations" } });
+    await sentry.captureException(error, { tags: { cron_scan: "integrations" } });
     log("cron_integrations.scan_failed", "error", { scan: "integrations" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });
   } finally {
     await flushLogs();

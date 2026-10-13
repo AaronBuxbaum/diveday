@@ -52,7 +52,12 @@ import {
   type TripScheduleDayInput,
   validateDiveSites,
 } from "./trips-create";
-import { getTripCrewAssignments, seatStandingCrew, setTripCrew } from "./trips-crew";
+import {
+  getTripCrewAssignments,
+  getTripCrewAssignmentsByTrip,
+  seatStandingCrew,
+  setTripCrew,
+} from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { boatCertifiedPassengers, liveBookingJoin } from "./trips-queries";
 
@@ -776,34 +781,42 @@ export async function listRunningPublicSeries(
       weekdayMask: row.weekdayMask,
     });
   }
-  const running: RunningPublicSeries[] = [];
-  for (const [seriesId, entry] of bySeries) {
-    if (running.length >= limit) break;
-    if (await seriesTemplateCanRoll(db, shopId, seriesId)) running.push(entry);
-  }
-  return running;
+  if (bySeries.size === 0) return [];
+  // One read for every run's template, not one per run (code review
+  // 2026-10-13, item 29): this sits in the public schedule's body.
+  const rollable = await seriesTemplatesThatCanRoll(db, shopId, [...bySeries.keys()]);
+  return [...bySeries]
+    .filter(([seriesId]) => rollable.has(seriesId))
+    .slice(0, limit)
+    .map(([, entry]) => entry);
 }
 
 /**
- * Whether the roll can copy this run's template: the furthest-out date's
+ * The runs whose template the roll can copy: each run's furthest-out date's
  * course, if it has one, is still active. The roll refuses to guess a cert
  * gate (`materializeWindow`), so a run whose course was archived adds no date,
  * however long it says it runs.
  */
-async function seriesTemplateCanRoll(
+async function seriesTemplatesThatCanRoll(
   db: AppDb,
   shopId: string,
-  seriesId: string,
-): Promise<boolean> {
-  const [template] = await db
-    .select({ courseId: trips.courseId, courseActive: courses.isActive })
+  seriesIds: string[],
+): Promise<Set<string>> {
+  const templates = await db
+    .selectDistinctOn([trips.seriesId], {
+      seriesId: trips.seriesId,
+      courseId: trips.courseId,
+      courseActive: courses.isActive,
+    })
     .from(trips)
     .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
-    .where(and(eq(trips.seriesId, seriesId), eq(trips.shopId, shopId), liveTrip()))
-    .orderBy(desc(trips.startsAt))
-    .limit(1);
-  if (!template) return false;
-  return template.courseId === null || template.courseActive === true;
+    .where(and(inArray(trips.seriesId, seriesIds), eq(trips.shopId, shopId), liveTrip()))
+    .orderBy(trips.seriesId, desc(trips.startsAt));
+  return new Set(
+    templates
+      .filter((template) => template.courseId === null || template.courseActive === true)
+      .flatMap((template) => (template.seriesId ? [template.seriesId] : [])),
+  );
 }
 
 /** The series row itself, scoped to a shop — cadence for a horizon-roll. */
@@ -1248,11 +1261,18 @@ export async function setSeriesStandingCrew(
     )
     .orderBy(asc(trips.startsAt));
   const wanted = crewKey(crew);
+  // Every date's crew in one read, not one per date (code review 2026-10-13,
+  // item 35); the writes stay one at a time, each through `setTripCrew`.
+  const crewByTrip = await getTripCrewAssignmentsByTrip(
+    db,
+    input.shopId,
+    siblings.map((sibling) => sibling.id),
+  );
   let updated = 0;
   let skipped = 0;
   for (const sibling of siblings) {
     // A date already crewed exactly so is left alone: no write, no news.
-    if (crewKey(await getTripCrewAssignments(db, input.shopId, sibling.id)) === wanted) {
+    if (crewKey(crewByTrip.get(sibling.id) ?? []) === wanted) {
       updated += 1;
       continue;
     }

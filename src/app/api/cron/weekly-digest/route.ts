@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { sendDueWeeklyDigests } from "@/db/weekly-digest";
@@ -6,6 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 import { WEEKLY_DIGEST_CRON_CRONTAB, weeklyDigestMayBeDueSomewhere } from "@/lib/weekly-digest";
 
 /** A Monday morning can fall due for many shops in one pass. */
@@ -40,23 +40,23 @@ export async function GET(request: Request) {
   const refused = requireCronSecret(request);
   if (refused) return refused;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
   try {
     if (!weeklyDigestMayBeDueSomewhere(nowDate())) {
-      Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
+      await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
       return NextResponse.json({ skipped: "no_shop_in_its_monday" });
     }
     const summary = await sendDueWeeklyDigests(await getDb());
     log("cron_weekly_digest.scan_complete", "info", summary);
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
     return NextResponse.json(summary);
   } catch (error) {
-    Sentry.captureException(error, { tags: { cron_scan: "weekly_digest" } });
+    await sentry.captureException(error, { tags: { cron_scan: "weekly_digest" } });
     log("cron_weekly_digest.scan_failed", "error", { scan: "weekly_digest" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });
   } finally {
     await flushLogs();

@@ -60,6 +60,7 @@ export async function getIncidentExport(
       db
         .select({ fullName: people.fullName })
         .from(people)
+        // diveday:allow-deleted-people: an incident document names who was there, removed since or not.
         .where(and(eq(people.id, generatedByPersonId), eq(people.shopId, shopId)))
         .limit(1),
       // The full history, oldest first — not the latest-per-subject reduction
@@ -137,6 +138,7 @@ export async function getIncidentExport(
       : await db
           .select({ id: people.id, fullName: people.fullName })
           .from(people)
+          // diveday:allow-deleted-people: an incident document names who was there, removed since or not.
           .where(and(eq(people.shopId, shopId), inArray(people.id, [...accountableStaffIds])));
   const accountableStaffNameById = new Map(
     accountableStaff.map((staff) => [staff.id, staff.fullName]),

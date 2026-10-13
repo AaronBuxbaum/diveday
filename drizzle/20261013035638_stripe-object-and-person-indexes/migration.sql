@@ -1,0 +1,3 @@
+CREATE INDEX "lost_items_shop_person_idx" ON "lost_items" ("shop_id","person_id") WHERE "person_id" is not null;--> statement-breakpoint
+CREATE INDEX "incident_report_people_person_idx" ON "incident_report_people" ("person_id") WHERE "person_id" is not null;--> statement-breakpoint
+CREATE INDEX "payment_operation_intents_stripe_object_idx" ON "payment_operation_intents" ("stripe_object_id") WHERE "stripe_object_id" is not null;

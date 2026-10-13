@@ -1086,6 +1086,7 @@ export async function getDiverMergePreview(
   const rows = await db
     .select()
     .from(people)
+    // diveday:allow-deleted-people: both records as they stand; the merge's own checks decide what may merge.
     .where(and(eq(people.shopId, shopId), inArray(people.id, [personId, survivorId])));
   const source = rows.find((row) => row.id === personId);
   const survivor = rows.find((row) => row.id === survivorId);
@@ -1161,6 +1162,7 @@ export async function mergeDiverRecords(input: {
       const locked = await tx
         .select()
         .from(people)
+        // diveday:allow-deleted-people: both records locked as they stand; the merge's own checks decide.
         .where(and(eq(people.shopId, input.shopId), inArray(people.id, lockedIds)))
         .orderBy(asc(people.id))
         .for("update");
@@ -1330,6 +1332,7 @@ export async function mergeDiverRecords(input: {
       const [actor] = await tx
         .select({ name: people.fullName })
         .from(people)
+        // diveday:allow-deleted-people: the actor's name for the activity line.
         .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
         .limit(1);
       await tx.insert(activityEvents).values({

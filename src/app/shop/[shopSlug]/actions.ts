@@ -21,6 +21,7 @@ import { confirmRentalFitSize } from "@/db/rental-fit";
 import { dismissOrientation } from "@/db/user-accounts";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
@@ -195,6 +196,13 @@ export async function deleteCrewRecapPhotoAction(tripId: string, formData: FormD
 export async function sendRecapAction(tripId: string) {
   const { staff, home } = await shopHome();
   if (!uuidParam(tripId)) revalidateAndRedirect(home, noticeUrl(home, "invalid"));
+  // A recap is a message to everyone who was aboard; bound how many sends one
+  // staff member can fire in an hour, like every other one-tap send.
+  const sendAllowed = await checkRateLimit(
+    rateLimitKey("staff-send", "recap", staff.user.personId),
+    RATE_LIMITS.staffSendByActor,
+  );
+  if (!sendAllowed.allowed) revalidateAndRedirect(home, noticeUrl(home, "recap-send-limit"));
   const result = await sendTripRecaps(await getDb(), { shopId: staff.user.shopId, tripId });
   // Somebody on the boat is still "not back aboard" (#2123): nothing went out,
   // and the staffer is told why rather than that it failed.

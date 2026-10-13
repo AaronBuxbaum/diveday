@@ -8,8 +8,8 @@ import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
 import type { ParticipantType } from "@/lib/participant-types";
-import { loadReturningDiver, type ReturningDiver } from "@/lib/returning-diver";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
+import { emptyMember, usePartyMembers } from "./use-party-members";
 
 // **One slot per bookable seat, derived rather than listed.** This was a
 // six-name tuple, which silently became the real cap the moment
@@ -31,10 +31,6 @@ const diverSlots = Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, (_, index) => `
  * branch below (ADR 20260827-the-divers-thread, decision 2).
  */
 const SEGMENTED_PARTY_LIMIT = 6;
-
-type PartyMember = { fullName: string; email: string };
-
-const emptyMember: PartyMember = { fullName: "", email: "" };
 
 /** Per-input error keyed by the field's form name, e.g. `email-0` or `phone`. */
 export type BookingFieldErrors = Record<string, string>;
@@ -121,16 +117,12 @@ export function BookingPartyFields({
   const t = useTranslations();
   const [size, setSize] = useState(1);
   const [hydrated, setHydrated] = useState(false);
-  const [party, setParty] = useState<PartyMember[]>(() =>
-    Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, (_, index) =>
-      index === 0 && lead
-        ? { fullName: lead.fullName, email: lead.email ?? "" }
-        : { ...emptyMember },
-    ),
+  const { party, updateMember, rememberedDiver, forgetRememberedDiver } = usePartyMembers(
+    lead,
+    remember,
   );
   const [phone, setPhone] = useState(lead?.phone ?? "");
   const [blurred, setBlurred] = useState<Record<number, boolean>>({});
-  const [rememberedDiver, setRememberedDiver] = useState<ReturningDiver | null>(null);
   // Per-member (index > 0 only): "use the main contact's email instead of
   // typing one" (task 21) — Priya's kids don't each need their own address.
   // The field is simply left out of the submission when checked (a disabled
@@ -149,24 +141,6 @@ export function BookingPartyFields({
   useEffect(() => setHydrated(true), []);
   useEffect(() => onSizeChange?.(size), [size, onSizeChange]);
   useEffect(() => onTypesChange?.(types.slice(0, size)), [types, size, onTypesChange]);
-
-  function updateMember(index: number, patch: Partial<PartyMember>) {
-    setParty((current) => current.map((m, i) => (i === index ? { ...m, ...patch } : m)));
-  }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only ever applied once on mount
-  useEffect(() => {
-    if (!remember || lead) return;
-    const stored = loadReturningDiver();
-    if (!stored) return;
-    setRememberedDiver(stored);
-    updateMember(0, { fullName: stored.fullName, email: stored.email });
-  }, [remember]);
-
-  function forgetRememberedDiver() {
-    setRememberedDiver(null);
-    updateMember(0, { fullName: "", email: "" });
-  }
 
   const counts = Array.from({ length: limit }, (_, index) => index + 1);
   return (

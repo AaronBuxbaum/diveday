@@ -170,6 +170,293 @@ function useCommandKey(setOpen: (update: (current: boolean) => boolean) => void)
  * and a shortcut its surface; a diver opens as a sheet over the day, because a
  * person is the one answer here that has no hour of its own (slice 23e).
  */
+
+/**
+ * Debounced, race-safe shop search. Only queries of 2+ chars hit the server.
+ * A GET (rather than the old `searchShopAction` Server Action) so keystrokes
+ * don't queue behind Next's per-client Server Action serialization or any
+ * in-flight mutation action, and so a stale request can be `AbortController`
+ * cancelled instead of merely ignored.
+ */
+function useShopSearch(query: string, setResults: (results: SearchResults) => void) {
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      setResults(EMPTY);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          setResults(EMPTY);
+          return;
+        }
+        setResults((await response.json()) as SearchResults);
+      } catch (error) {
+        if ((error as { name?: string }).name !== "AbortError") setResults(EMPTY);
+      }
+    }, 150);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [query, setResults]);
+}
+
+/**
+ * **What the palette offers for this query**, group by group: the places to
+ * go, the shop's own records the search answered, the settings rows, the
+ * languages, the account's own doors, and "Add a diver called …" last. Pure
+ * over its inputs; `CommandPalette` memoises it per query and result set.
+ */
+function paletteGroups({
+  results,
+  query,
+  boatBoardingHref,
+  root,
+  gates,
+  crewSchedule,
+  copy,
+  languages,
+  locale,
+  setLocaleAction,
+  signOutAction,
+  createDiverAction,
+  settingsShortcuts,
+  startTransition,
+}: {
+  results: SearchResults;
+  query: string;
+  boatBoardingHref: string | undefined;
+  root: string;
+  gates: StaffDestinationGates;
+  crewSchedule: boolean;
+  copy: CommandPaletteCopy;
+  languages: readonly LanguageChoice[];
+  locale: string;
+  setLocaleAction: (locale: string) => Promise<void>;
+  signOutAction: () => Promise<void>;
+  createDiverAction: (formData: FormData) => Promise<void>;
+  settingsShortcuts: readonly SettingsShortcut[];
+  startTransition: (action: () => void | Promise<void>) => void;
+}): PaletteGroup[] {
+  const rawQuery = query.trim();
+  const q = rawQuery.toLowerCase();
+  const goto = gotoItems({
+    q,
+    root,
+    boatBoardingHref,
+    gates,
+    crewSchedule,
+    settingsShortcuts,
+    copy,
+  });
+  const out: PaletteGroup[] = [];
+  // **Ask it, and it answers.** The first row when the query names one
+  // thing: the fact, and the primary act the home's ledger rows would
+  // offer. The doors that ship today render beneath; a query that names
+  // nothing never has this row.
+  if (results.answer) {
+    const { answer } = results;
+    const glyph = answer.kind === "diver" ? "diver" : answer.kind === "day" ? "boarding" : "trip";
+    const items: PaletteItem[] = [
+      {
+        key: "answer",
+        label: answer.title,
+        href: answer.act.href,
+        card: { lines: answer.lines, act: answer.act.label },
+        icon: <PaletteGlyph name={glyph} />,
+      },
+    ];
+    if (answer.more) {
+      items.push({
+        key: "answer:more",
+        label: answer.more.label,
+        href: answer.more.href,
+        icon: <PaletteGlyph name={glyph} />,
+      });
+    }
+    out.push({ id: "answer", items });
+  }
+  // A diver opens their record (ADR 20261001-logbook).
+  const diverItems: PaletteItem[] = results.divers.map((diver) => ({
+    key: `diver:${diver.id}`,
+    label: diver.fullName,
+    detail: diver.detail ?? undefined,
+    href: `${root}/divers/${diver.id}`,
+    icon: <PaletteGlyph name="diver" />,
+  }));
+  // "Add a diver called <whatever you typed>" matches *every* query by
+  // construction, so it is the one row that can never lose a ranking contest
+  // — which is how typing "sign out" used to offer to create a diver named
+  // "sign out" above the actual Sign out command. It is appended after every
+  // real match instead of sitting inside Divers, so it is always the last
+  // thing an arrow key reaches and never what Enter takes on a query that
+  // matched something real.
+  const addDiver: PaletteItem | null =
+    q.length >= 2
+      ? (() => {
+          const formData = new FormData();
+          formData.set("query", rawQuery);
+          return {
+            key: "diver:add",
+            label: copy.addDiver,
+            detail: rawQuery,
+            icon: <PaletteGlyph name="diver" />,
+            run: () => startTransition(() => createDiverAction(formData)),
+          };
+        })()
+      : null;
+  if (goto.length > 0) out.push({ id: "go-to", heading: copy.groupGoTo, items: goto });
+  if (diverItems.length > 0) {
+    out.push({
+      id: "divers",
+      heading: copy.groupDivers,
+      items: diverItems,
+    });
+  }
+  if (results.trips.length > 0) {
+    out.push({
+      id: "trips",
+      heading: copy.groupTrips,
+      items: results.trips.map((trip) => ({
+        key: `trip:${trip.id}`,
+        label: trip.title,
+        detail: trip.detail,
+        href: `${root}/trips/${trip.id}`,
+        icon: <PaletteGlyph name="trip" />,
+      })),
+    });
+  }
+  if (results.diveSites.length > 0) {
+    out.push({
+      id: "dive-sites",
+      heading: copy.groupDiveSites,
+      items: results.diveSites.map((site) => ({
+        key: `dive-site:${site.id}`,
+        label: site.name,
+        href: `${root}/dive-sites/${site.id}`,
+        icon: <PaletteGlyph name="diveSite" />,
+      })),
+    });
+  }
+  if (results.courses.length > 0) {
+    out.push({
+      id: "courses",
+      heading: copy.groupCourses,
+      items: results.courses.map((course) => ({
+        key: `course:${course.id}`,
+        label: course.title,
+        href: `${root}/courses/${course.slug}/edit`,
+        icon: <PaletteGlyph name="course" />,
+      })),
+    });
+  }
+  // **The tag is the point.** `gear_items.label` carries a schema comment
+  // saying it is "how a wet hand finds the row", and it was the one
+  // identifier the palette could not find (issue #719). The status rides
+  // along because finding "BCD #14" and learning it is out for service in the
+  // same glance is the whole value.
+  if (results.gear.length > 0) {
+    out.push({
+      id: "gear",
+      heading: copy.groupGear,
+      items: results.gear.map((unit) => ({
+        key: `gear:${unit.id}`,
+        label: unit.label,
+        detail: unit.detail
+          ? `${copy.gearStatuses[unit.status]} · ${unit.detail}`
+          : copy.gearStatuses[unit.status],
+        href: `${root}/gear/${unit.id}`,
+        icon: <PaletteGlyph name="gear" />,
+      })),
+    });
+  }
+  if (results.orders.length > 0) {
+    out.push({
+      id: "orders",
+      heading: copy.groupOrders,
+      items: results.orders.map((order) => ({
+        key: `order:${order.id}`,
+        label: order.personName,
+        detail: order.detail,
+        href: `${root}/orders/${order.id}`,
+        icon: <PaletteGlyph name="order" />,
+      })),
+    });
+  }
+  // The second door to the language switcher, beside the one behind the
+  // shop's name. Only the languages *not* in force: a row that changes
+  // nothing is not a command. Matched on the group heading and on each
+  // language's own name, so both "language" and "español" find it.
+  const headingMatch = copy.language.toLowerCase().includes(q);
+  const otherLanguages = languages
+    .filter((choice) => choice.locale !== locale)
+    .filter(
+      (choice) =>
+        q === "" ||
+        headingMatch ||
+        choice.label.toLowerCase().includes(q) ||
+        choice.locale.toLowerCase().includes(q),
+    );
+  if (otherLanguages.length > 0) {
+    out.push({
+      id: "language",
+      heading: copy.language,
+      items: otherLanguages.map((choice) => ({
+        key: `language:${choice.locale}`,
+        label: choice.label,
+        run: () => startTransition(() => setLocaleAction(choice.locale)),
+        icon: <PaletteGlyph name="language" />,
+      })),
+    });
+  }
+  // Sign out, last. The palette is where a staffer who is already typing
+  // looks for anything at all, and until now the one control that is about
+  // *ending this session* could only be reached by finding the shop's name
+  // and opening the menu behind it — which is exactly the disclosure a
+  // person handing the tablet on is least likely to go hunting through.
+  //
+  // Filed with Language rather than under "Go to": neither is a page, both
+  // are about this reader on this device, and the sign-out act is the same
+  // one the shop-name menu performs — the same Server Action under the same
+  // word, never a second way to end a session. Matched on the heading too,
+  // so "session" finds it as readily as "sign out".
+  //
+  // Bottom of the list on purpose. The menu's Sign out is two taps
+  // (`InlineConfirm`) because it must be deliberate on a shared device; a
+  // palette row cannot borrow that shape without inventing a confirm step
+  // inside a combobox, so deliberateness comes from position instead — it is
+  // never the row an arrow key lands on first.
+  if (
+    q === "" ||
+    copy.groupSession.toLowerCase().includes(q) ||
+    copy.signOut.toLowerCase().includes(q)
+  ) {
+    out.push({
+      id: "session",
+      heading: copy.groupSession,
+      items: [
+        {
+          key: "session:sign-out",
+          label: copy.signOut,
+          run: () => startTransition(() => signOutAction()),
+          icon: <PaletteGlyph name="signOut" />,
+        },
+      ],
+    });
+  }
+  // Last, under everything, with no heading of its own: the row states the
+  // act and carries the typed name as its detail, so a heading over a group
+  // of one would only repeat it.
+  if (addDiver) out.push({ id: "add-diver", items: [addDiver] });
+  return out;
+}
+
 /**
  * The "Go to" rows for one query: the boarding and offline doors, every
  * destination the nav offers this reader, and the Settings rail's rows by
@@ -337,265 +624,42 @@ export function CommandPalette({
     }
   }, [open]);
 
-  // Debounced, race-safe shop search. Only queries of 2+ chars hit the server.
-  // A GET (rather than the old `searchShopAction` Server Action) so keystrokes
-  // don't queue behind Next's per-client Server Action serialization or any
-  // in-flight mutation action, and so a stale request can be `AbortController`
-  // cancelled instead of merely ignored.
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < 2) {
-      setResults(EMPTY);
-      return;
-    }
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          setResults(EMPTY);
-          return;
-        }
-        setResults((await response.json()) as SearchResults);
-      } catch (error) {
-        if ((error as { name?: string }).name !== "AbortError") setResults(EMPTY);
-      }
-    }, 150);
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [query]);
+  useShopSearch(query, setResults);
 
-  const groups = useMemo<PaletteGroup[]>(() => {
-    const rawQuery = query.trim();
-    const q = rawQuery.toLowerCase();
-    const goto = gotoItems({
-      q,
-      root,
+  const groups = useMemo(
+    () =>
+      paletteGroups({
+        results,
+        query,
+        boatBoardingHref,
+        root,
+        gates,
+        crewSchedule,
+        copy,
+        languages,
+        locale,
+        setLocaleAction,
+        signOutAction,
+        createDiverAction,
+        settingsShortcuts,
+        startTransition,
+      }),
+    [
+      results,
+      query,
       boatBoardingHref,
+      root,
       gates,
       crewSchedule,
-      settingsShortcuts,
       copy,
-    });
-    const out: PaletteGroup[] = [];
-    // **Ask it, and it answers.** The first row when the query names one
-    // thing: the fact, and the primary act the home's ledger rows would
-    // offer. The doors that ship today render beneath; a query that names
-    // nothing never has this row.
-    if (results.answer) {
-      const { answer } = results;
-      const glyph = answer.kind === "diver" ? "diver" : answer.kind === "day" ? "boarding" : "trip";
-      const items: PaletteItem[] = [
-        {
-          key: "answer",
-          label: answer.title,
-          href: answer.act.href,
-          card: { lines: answer.lines, act: answer.act.label },
-          icon: <PaletteGlyph name={glyph} />,
-        },
-      ];
-      if (answer.more) {
-        items.push({
-          key: "answer:more",
-          label: answer.more.label,
-          href: answer.more.href,
-          icon: <PaletteGlyph name={glyph} />,
-        });
-      }
-      out.push({ id: "answer", items });
-    }
-    // A diver opens their record (ADR 20261001-logbook).
-    const diverItems: PaletteItem[] = results.divers.map((diver) => ({
-      key: `diver:${diver.id}`,
-      label: diver.fullName,
-      detail: diver.detail ?? undefined,
-      href: `${root}/divers/${diver.id}`,
-      icon: <PaletteGlyph name="diver" />,
-    }));
-    // "Add a diver called <whatever you typed>" matches *every* query by
-    // construction, so it is the one row that can never lose a ranking contest
-    // — which is how typing "sign out" used to offer to create a diver named
-    // "sign out" above the actual Sign out command. It is appended after every
-    // real match instead of sitting inside Divers, so it is always the last
-    // thing an arrow key reaches and never what Enter takes on a query that
-    // matched something real.
-    const addDiver: PaletteItem | null =
-      q.length >= 2
-        ? (() => {
-            const formData = new FormData();
-            formData.set("query", rawQuery);
-            return {
-              key: "diver:add",
-              label: copy.addDiver,
-              detail: rawQuery,
-              icon: <PaletteGlyph name="diver" />,
-              run: () => startTransition(() => createDiverAction(formData)),
-            };
-          })()
-        : null;
-    if (goto.length > 0) out.push({ id: "go-to", heading: copy.groupGoTo, items: goto });
-    if (diverItems.length > 0) {
-      out.push({
-        id: "divers",
-        heading: copy.groupDivers,
-        items: diverItems,
-      });
-    }
-    if (results.trips.length > 0) {
-      out.push({
-        id: "trips",
-        heading: copy.groupTrips,
-        items: results.trips.map((trip) => ({
-          key: `trip:${trip.id}`,
-          label: trip.title,
-          detail: trip.detail,
-          href: `${root}/trips/${trip.id}`,
-          icon: <PaletteGlyph name="trip" />,
-        })),
-      });
-    }
-    if (results.diveSites.length > 0) {
-      out.push({
-        id: "dive-sites",
-        heading: copy.groupDiveSites,
-        items: results.diveSites.map((site) => ({
-          key: `dive-site:${site.id}`,
-          label: site.name,
-          href: `${root}/dive-sites/${site.id}`,
-          icon: <PaletteGlyph name="diveSite" />,
-        })),
-      });
-    }
-    if (results.courses.length > 0) {
-      out.push({
-        id: "courses",
-        heading: copy.groupCourses,
-        items: results.courses.map((course) => ({
-          key: `course:${course.id}`,
-          label: course.title,
-          href: `${root}/courses/${course.slug}/edit`,
-          icon: <PaletteGlyph name="course" />,
-        })),
-      });
-    }
-    // **The tag is the point.** `gear_items.label` carries a schema comment
-    // saying it is "how a wet hand finds the row", and it was the one
-    // identifier the palette could not find (issue #719). The status rides
-    // along because finding "BCD #14" and learning it is out for service in the
-    // same glance is the whole value.
-    if (results.gear.length > 0) {
-      out.push({
-        id: "gear",
-        heading: copy.groupGear,
-        items: results.gear.map((unit) => ({
-          key: `gear:${unit.id}`,
-          label: unit.label,
-          detail: unit.detail
-            ? `${copy.gearStatuses[unit.status]} · ${unit.detail}`
-            : copy.gearStatuses[unit.status],
-          href: `${root}/gear/${unit.id}`,
-          icon: <PaletteGlyph name="gear" />,
-        })),
-      });
-    }
-    if (results.orders.length > 0) {
-      out.push({
-        id: "orders",
-        heading: copy.groupOrders,
-        items: results.orders.map((order) => ({
-          key: `order:${order.id}`,
-          label: order.personName,
-          detail: order.detail,
-          href: `${root}/orders/${order.id}`,
-          icon: <PaletteGlyph name="order" />,
-        })),
-      });
-    }
-    // The second door to the language switcher, beside the one behind the
-    // shop's name. Only the languages *not* in force: a row that changes
-    // nothing is not a command. Matched on the group heading and on each
-    // language's own name, so both "language" and "español" find it.
-    const headingMatch = copy.language.toLowerCase().includes(q);
-    const otherLanguages = languages
-      .filter((choice) => choice.locale !== locale)
-      .filter(
-        (choice) =>
-          q === "" ||
-          headingMatch ||
-          choice.label.toLowerCase().includes(q) ||
-          choice.locale.toLowerCase().includes(q),
-      );
-    if (otherLanguages.length > 0) {
-      out.push({
-        id: "language",
-        heading: copy.language,
-        items: otherLanguages.map((choice) => ({
-          key: `language:${choice.locale}`,
-          label: choice.label,
-          run: () => startTransition(() => setLocaleAction(choice.locale)),
-          icon: <PaletteGlyph name="language" />,
-        })),
-      });
-    }
-    // Sign out, last. The palette is where a staffer who is already typing
-    // looks for anything at all, and until now the one control that is about
-    // *ending this session* could only be reached by finding the shop's name
-    // and opening the menu behind it — which is exactly the disclosure a
-    // person handing the tablet on is least likely to go hunting through.
-    //
-    // Filed with Language rather than under "Go to": neither is a page, both
-    // are about this reader on this device, and the sign-out act is the same
-    // one the shop-name menu performs — the same Server Action under the same
-    // word, never a second way to end a session. Matched on the heading too,
-    // so "session" finds it as readily as "sign out".
-    //
-    // Bottom of the list on purpose. The menu's Sign out is two taps
-    // (`InlineConfirm`) because it must be deliberate on a shared device; a
-    // palette row cannot borrow that shape without inventing a confirm step
-    // inside a combobox, so deliberateness comes from position instead — it is
-    // never the row an arrow key lands on first.
-    if (
-      q === "" ||
-      copy.groupSession.toLowerCase().includes(q) ||
-      copy.signOut.toLowerCase().includes(q)
-    ) {
-      out.push({
-        id: "session",
-        heading: copy.groupSession,
-        items: [
-          {
-            key: "session:sign-out",
-            label: copy.signOut,
-            run: () => startTransition(() => signOutAction()),
-            icon: <PaletteGlyph name="signOut" />,
-          },
-        ],
-      });
-    }
-    // Last, under everything, with no heading of its own: the row states the
-    // act and carries the typed name as its detail, so a heading over a group
-    // of one would only repeat it.
-    if (addDiver) out.push({ id: "add-diver", items: [addDiver] });
-    return out;
-  }, [
-    results,
-    query,
-    boatBoardingHref,
-    root,
-    gates,
-    crewSchedule,
-    copy,
-    languages,
-    locale,
-    setLocaleAction,
-    signOutAction,
-    createDiverAction,
-    settingsShortcuts,
-  ]);
+      languages,
+      locale,
+      setLocaleAction,
+      signOutAction,
+      createDiverAction,
+      settingsShortcuts,
+    ],
+  );
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 

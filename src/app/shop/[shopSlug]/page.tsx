@@ -119,9 +119,8 @@ type EveningNotice = { key: StaffMessageKey; tone: NoticeTone };
  */
 type FitKeepRefusalCode = NoticeCodeOf<Exclude<ConfirmRentalFitOutcome, "saved">>;
 
-type BorrowedEveningNotices = Record<string, EveningNotice>;
 /** Loose in the keys it accepts, exact in the ones it demands. */
-type EveningNoticeMap = BorrowedEveningNotices & Record<FitKeepRefusalCode, EveningNotice>;
+type EveningNoticeMap = Record<string, EveningNotice> & Record<FitKeepRefusalCode, EveningNotice>;
 
 /**
  * The evening's own `?notice=` codes, re-homed here when `/close-out` folded
@@ -138,6 +137,7 @@ const EVENING_NOTICES: EveningNoticeMap = {
   "recap-send-attention": { key: "closeout.notice.recapAttention", tone: "warning" },
   "recap-not-ready": { key: "closeout.notice.recapNotReady", tone: "neutral" },
   "recap-held": { key: "closeout.notice.recapHeld", tone: "warning" },
+  "recap-send-limit": { key: "closeout.notice.recapSendLimit", tone: "warning" },
   "recap-locked": { key: "closeout.notice.recapLocked", tone: "neutral" },
   "recap-photo-removed": { key: "trips.notices.recapPhotoRemoved", tone: "success" },
   "crew-photo-added": { key: "closeout.notice.crewPhotoAdded", tone: "success" },

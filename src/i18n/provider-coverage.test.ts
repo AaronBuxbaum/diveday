@@ -84,6 +84,12 @@ function providedNamespaces(source: string): Set<string> | null {
   for (const block of source.matchAll(/namespaces=\{\[([^\]]*)\]\}/g)) {
     for (const name of block[1].matchAll(/"([^"]+)"/g)) offered.add(name[1]);
   }
+  // A list named once at module scope (`namespaces={TRIP_PAGE_NAMESPACES}`) is
+  // read off its `const NAME = [...]` in the same file; an import is not followed.
+  for (const prop of source.matchAll(/namespaces=\{([A-Z_][A-Z0-9_]*)\}/g)) {
+    const list = source.match(new RegExp(`const ${prop[1]} = \\[([^\\]]*)\\]`));
+    for (const name of list?.[1].matchAll(/"([^"]+)"/g) ?? []) offered.add(name[1]);
+  }
   return offered;
 }
 

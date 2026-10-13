@@ -275,6 +275,7 @@ async function saveEmergencyContact(
  */
 export async function getEmergencyContactForBearer(
   db: AppDb,
+  shopId: string,
   bookingId: string,
 ): Promise<{ name: string | null; phone: string | null; held: boolean } | null> {
   const [row] = await db
@@ -285,7 +286,7 @@ export async function getEmergencyContactForBearer(
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(eq(bookings.id, bookingId))
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   if (!row) return null;
   if (row.identityUnconfirmedAt) return { name: null, phone: null, held: true };
@@ -301,6 +302,7 @@ export async function getEmergencyContactForPerson(
   const [row] = await db
     .select({ name: people.emergencyContactName, phone: people.emergencyContactPhone })
     .from(people)
+    // diveday:allow-deleted-people: the emergency contact of a person on this manifest.
     .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
     .limit(1);
   return row ?? null;
@@ -426,6 +428,7 @@ export async function completeWaiver(
   const [signer] = await db
     .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
     .from(people)
+    // diveday:allow-deleted-people: the signer of a release already issued.
     .where(eq(people.id, state.record.personId))
     .limit(1);
   if (!signer || !personNamesMatch(evidence.signerName, signer.fullName)) {

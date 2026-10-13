@@ -14,7 +14,7 @@ import {
 import { MAX_DIVER_SEATS } from "@/lib/participant-terms";
 import { diverSeatLimit } from "@/lib/participant-types";
 import { type FormNotice, noticeForForm } from "@/lib/staff-notices";
-import { saveParticipantTermsAction } from "../details-actions";
+import { saveParticipantTermsAction } from "../terms-actions";
 import type { TripAboutRow } from "./TripAboutSection";
 import type { Trip } from "./types";
 

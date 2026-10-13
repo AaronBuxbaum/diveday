@@ -244,6 +244,7 @@ export function PhotoDoor({
               type="text"
               name="caption"
               maxLength={140}
+              aria-label={t("recap.captionLabel")}
               placeholder={t("recap.captionLabel")}
               className={controlClass}
             />

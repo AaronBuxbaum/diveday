@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { recordNotificationDelivery, shopSenderFor } from "@/db/notifications";
@@ -10,6 +9,7 @@ import { MINIMUM_SEATS_CRON_CRONTAB } from "@/lib/minimum-seats";
 import { notify, publicAppUrl } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 import { publicSchedulePath } from "@/lib/public-routes";
 
 /**
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
   const refusal = requireCronSecret(request);
   if (refusal) return refusal;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
@@ -152,7 +152,7 @@ export async function GET(request: Request) {
       refundsOwed,
     });
 
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
     return NextResponse.json({
       considered: sweep.considered,
       cancelled: sweep.cancelled.length,
@@ -163,9 +163,9 @@ export async function GET(request: Request) {
       refundsOwed,
     });
   } catch (error) {
-    Sentry.captureException(error, { tags: { cron_scan: "minimum_seats" } });
+    await sentry.captureException(error, { tags: { cron_scan: "minimum_seats" } });
     log("cron_minimum_seats.sweep_failed", "error", { scan: "sweep" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "sweep_unavailable" }, { status: 503 });
   } finally {
     await flushLogs();

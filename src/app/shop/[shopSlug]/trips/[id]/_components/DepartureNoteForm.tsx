@@ -18,6 +18,7 @@ export type DepartureNoteRefusalCopy = {
   past: string;
   limit: string;
   no_recipients: string;
+  rate_limited: string;
   other: string;
 };
 

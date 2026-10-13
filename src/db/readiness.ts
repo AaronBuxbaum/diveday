@@ -342,6 +342,7 @@ export async function createCertification(db: AppDb, input: NewCertification) {
   const [person] = await db
     .select({ id: people.id })
     .from(people)
+    // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
   if (!person) return null;
@@ -475,6 +476,7 @@ export async function issueShopCertification(
     const [person] = await tx
       .select({ id: people.id })
       .from(people)
+      // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
       .limit(1)
       .for("update");
@@ -885,6 +887,7 @@ export async function createSpecialtyCertification(db: AppDb, input: NewSpecialt
   const [person] = await db
     .select({ id: people.id })
     .from(people)
+    // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
   if (!person) return null;
@@ -1087,6 +1090,7 @@ async function shopIssuedCourseContext(
   const [person] = await tx
     .select({ id: people.id })
     .from(people)
+    // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1)
     .for("update");

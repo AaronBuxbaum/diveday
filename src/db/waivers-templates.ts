@@ -18,7 +18,7 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { livePerson, liveTrip } from "./trips-live";
 
 /** The three ways a shop hands a link over — the schema enum, named for callers. */
 export type WaiverDeliveryChannel = (typeof waiverDeliveryChannel.enumValues)[number];
@@ -176,7 +176,9 @@ export async function saveWaiverTemplate(
       const [actor] = await tx
         .select({ id: people.id })
         .from(people)
-        .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+        .where(
+          and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()),
+        )
         .limit(1);
       if (!actor) throw new Error("waiver materiality actor is not a person of this shop");
       await tx.insert(waiverMaterialityDecisions).values({

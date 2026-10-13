@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
@@ -81,9 +82,13 @@ test.describe("staff-prepared trip", () => {
     await expect(page.getByLabel("Where you’re staying")).toBeVisible();
   });
 
-  test("a booked diver's readiness page lets them act, answers its questions, and releases the seat", async ({
-    page,
-  }) => {
+  /**
+   * **A staff-prepared departure, booked by a visitor**, landing on the
+   * booking's own `/ready` page. Shared by the two tests below, which used to
+   * be one: the readiness page's questions and the seat release each fit the
+   * 15s budget on their own, and together they did not on a loaded machine.
+   */
+  async function bookStaffPreparedTrip(page: Page): Promise<string> {
     // Unique title for this spec's own trip; the e2eNow() suffix keeps every
     // test-side timestamp anchored to the frozen clock (helpers.ts).
     // Isolation from other specs — including the visual suite — comes from
@@ -120,6 +125,13 @@ test.describe("staff-prepared trip", () => {
     await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toBeVisible();
 
     await expect(page).toHaveURL(/\/ready\//);
+    return title;
+  }
+
+  test("a booked diver's readiness page lets them act and answers its questions", async ({
+    page,
+  }) => {
+    await bookStaffPreparedTrip(page);
     // **The status is said once** (ADR 20260827-the-divers-thread, decision 3):
     // a figure and the next step, and nothing else on the page states it.
     await expect(threadStatus(page)).toHaveCount(1);
@@ -198,13 +210,18 @@ test.describe("staff-prepared trip", () => {
     // opening anything — and the step has moved the figure, which is the
     // whole point of counting only steps a diver can finish.
     await expect(page.getByText("More than five years ago")).toBeVisible();
+  });
 
+  test("a booked diver releases their own seat, and the dead link still names the shop", async ({
+    page,
+  }) => {
+    const title = await bookStaffPreparedTrip(page);
     // The diver releases their own seat (ADR
     // 20260821-the-diver-may-release-their-own-seat). Cancelling revokes this
     // very token, so the confirmation the diver lands on is served through the
     // relaxed-revocation branch — which is the half of this that a unit test
-    // cannot reach. Asserted last because it ends the booking; every check
-    // above needs a live seat.
+    // cannot reach. Its own test because it ends the booking, which every
+    // check in the test above needs live.
     await page.getByRole("button", { name: "Cancel my spot" }).click();
     await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
     await expect(page.getByRole("heading", { name: "This booking was canceled" })).toBeVisible();

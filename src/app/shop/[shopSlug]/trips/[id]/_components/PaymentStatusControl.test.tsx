@@ -7,6 +7,7 @@ afterEach(cleanup);
 
 const COPY: PaymentStatusControlCopy = {
   prefix: "Payment:",
+  label: "Payment status",
   statuses: {
     unpaid: "Unpaid",
     deposit_paid: "Deposit paid",
@@ -40,7 +41,7 @@ describe("PaymentStatusControl control row", () => {
         copy={COPY}
       />,
     );
-    const select = screen.getByRole("combobox");
+    const select = screen.getByRole("combobox", { name: "Payment status" });
     expect(select).toHaveClass("min-h-12", "text-base");
     expect(select).not.toHaveClass("min-h-11");
     expect(select).not.toHaveClass("text-sm");

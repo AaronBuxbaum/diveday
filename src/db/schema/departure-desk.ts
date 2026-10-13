@@ -58,6 +58,11 @@ export const lostItems = pgTable(
   (table) => [
     index("lost_items_shop_status_idx").on(table.shopId, table.status, table.createdAt),
     index("lost_items_shop_trip_idx").on(table.shopId, table.tripId),
+    // Erasure deletes a diver's found items by `(shop_id, person_id)`
+    // (`anonymize.ts`), and the people FK is checked on every person write.
+    index("lost_items_shop_person_idx")
+      .on(table.shopId, table.personId)
+      .where(sql`${table.personId} is not null`),
     check(
       "lost_items_description_length",
       sql`length(trim(${table.description})) between 1 and 120`,

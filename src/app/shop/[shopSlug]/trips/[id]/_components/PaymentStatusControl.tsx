@@ -25,6 +25,11 @@ export type PaymentStatus =
  * note in src/i18n/staff-messages.ts. */
 export type PaymentStatusControlCopy = {
   prefix: string;
+  /**
+   * The select's accessible name ("Payment status"). The visible prefix beside
+   * it reads as a sentence with the current status, not as the select's label.
+   */
+  label: string;
   statuses: Record<PaymentStatus, string>;
   update: string;
   updating: string;
@@ -119,7 +124,12 @@ export function PaymentStatusControl({
             `sm` Update; a control's type is 16px (K-45), and a 16px box beside
             a 14px label is the mismatch `controlClass` names. */}
         <span className="w-fit">
-          <select name="status" defaultValue={status} className={controlClass}>
+          <select
+            name="status"
+            aria-label={copy.label}
+            defaultValue={status}
+            className={controlClass}
+          >
             {/* The booking's current status is always among the options, even
                 when this staffer could not have set it. Without that, a captain
                 opening a booking an owner had waived would find the select

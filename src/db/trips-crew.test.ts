@@ -29,7 +29,7 @@ import {
 // Direct, not through the `./trips` barrel: the outcome-carrying door is read
 // by the trip page's crew panel and by this file, and both name the module
 // that owns the transaction.
-import { changeTripCrewOutcome } from "./trips-crew";
+import { changeTripCrewOutcome, getTripCrewAssignmentsByTrip } from "./trips-crew";
 
 const FOREIGN_SHOP_ID = "00000000-0000-4000-8000-000000000099";
 
@@ -168,6 +168,23 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       if (!first || !second) throw new Error("expected two seeded staff");
       return { db, shop, trip, first: first.person, second: second.person };
     }
+
+    it("reads many departures' crews at once, the same as one at a time, and only this shop's", async () => {
+      const { db, shop, trip, first, second } = await context();
+      const [, other] = await upcomingTripsWithCounts(db, shop.id);
+      if (!other) throw new Error("expected two seeded trips");
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [{ personId: first.id, tripRole: "captain" }]),
+      ).toBe(true);
+      expect(await setTripCrew(db, shop.id, other.id, [second.id])).toBe(true);
+      const byTrip = await getTripCrewAssignmentsByTrip(db, shop.id, [trip.id, other.id]);
+      for (const id of [trip.id, other.id]) {
+        expect(new Map((byTrip.get(id) ?? []).map(byPerson))).toEqual(
+          new Map((await getTripCrewAssignments(db, shop.id, id)).map(byPerson)),
+        );
+      }
+      expect((await getTripCrewAssignmentsByTrip(db, FOREIGN_SHOP_ID, [trip.id])).size).toBe(0);
+    });
 
     it("round-trips a role through setTripCrew instead of wiping it", async () => {
       const { db, shop, trip, first, second } = await context();

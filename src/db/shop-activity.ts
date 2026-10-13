@@ -23,6 +23,7 @@ import {
   tripReviews,
   trips,
 } from "./schema";
+import { livePerson } from "./trips-live";
 
 /**
  * **The shop's activity log** (D5): who refunded, who wrote a seat past a
@@ -229,6 +230,7 @@ export async function pagedShopActivity(
       ? db
           .select({ id: people.id, name: people.fullName })
           .from(people)
+          // diveday:allow-deleted-people: names for the trail, removed staff included.
           .where(and(eq(people.shopId, shopId), inArray(people.id, actorIds)))
       : Promise.resolve([]),
     tripIds.length > 0
@@ -377,7 +379,7 @@ async function writeShopActivity(
   const [actor] = await db
     .select({ name: people.fullName })
     .from(people)
-    .where(and(eq(people.id, actorPersonId), eq(people.shopId, shopId)))
+    .where(and(eq(people.id, actorPersonId), eq(people.shopId, shopId), livePerson()))
     .limit(1);
   if (!actor) return false;
 

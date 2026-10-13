@@ -43,6 +43,7 @@ import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
 import { seededShopContext } from "@/test/db";
+import { phaseCountingDb, report } from "@/test/render-phases";
 
 /**
  * **What the three busiest staff renders cost, in statements** — the evidence
@@ -112,13 +113,6 @@ async function timedSeededShop() {
   return { db, plain, shop, ownerId: owner.personId };
 }
 
-function report(label: string, queries: number): number {
-  if (process.env.DIVEDAY_PRINT_QUERY_COUNTS === "1") {
-    console.info(`[query-count] ${label}: ${queries}`);
-  }
-  return queries;
-}
-
 describe("what a staff render sends", () => {
   it("gates a staff page", async () => {
     const { shop } = await timedSeededShop();
@@ -186,75 +180,6 @@ describe("what a staff render sends", () => {
     expect(report("trip (overview + guests)", stats.queries)).toBeLessThanOrEqual(TRIP_CEILING);
   });
 });
-
-/**
- * A client that runs every statement at once but **hands answers back in
- * rounds**: it holds each result until nothing is running and nothing new has
- * been sent for {@link QUIET_MS}, then releases every held answer together.
- * Statements sent in one round therefore cannot depend on one another — none
- * of them has an answer yet — so the number of rounds is the length of the
- * longest chain of statements each waiting on the one before: the render's
- * serial round trips, whatever the machine's speed.
- */
-const QUIET_MS = 50;
-
-function phaseCountingDb(client: PGlite) {
-  let rounds = 0;
-  let running = 0;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const held: Array<() => void> = [];
-  // Answers from outside the database that are **slower than any chain of
-  // statements**, as a provider with a four-second timeout is: each comes back
-  // only once the database has nothing left to answer, in a round of its own.
-  // A render that awaits one waits that extra phase; one that streams it
-  // finishes first.
-  const slow: Array<() => void> = [];
-  const settleLater = () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      if (running > 0) return;
-      const due = held.length > 0 ? held.splice(0) : slow.splice(0);
-      if (due.length === 0) return;
-      rounds += 1;
-      for (const release of due) release();
-      if (slow.length > 0) settleLater();
-    }, QUIET_MS);
-  };
-  /** A value from outside the database, answered after the database goes quiet. */
-  const slowly = <T>(value: () => T) =>
-    new Promise<T>((resolve) => {
-      slow.push(() => resolve(value()));
-      settleLater();
-    });
-  const delayed = new Proxy(client, {
-    get(target, property, receiver) {
-      if (property === "query") {
-        return (...args: Parameters<PGlite["query"]>) => {
-          running += 1;
-          settleLater();
-          return target.query(...args).then(
-            (result) =>
-              new Promise<typeof result>((resolve) => {
-                running -= 1;
-                held.push(() => resolve(result));
-                settleLater();
-              }),
-            (error: unknown) =>
-              new Promise<never>((_resolve, reject) => {
-                running -= 1;
-                held.push(() => reject(error));
-                settleLater();
-              }),
-          );
-        };
-      }
-      const value = Reflect.get(target, property, receiver);
-      return typeof value === "function" ? value.bind(target) : value;
-    },
-  });
-  const db = drizzle({ client: delayed as PGlite }) as unknown as AppDb;
-  return { db, phases: () => rounds, slowly };
-}
 
 describe("how many round trips a staff render waits for, one after another", () => {
   beforeEach(() => {
@@ -330,7 +255,9 @@ describe("how many round trips a staff render waits for, one after another", () 
  * each is replayed here in the page's own shape, for an anonymous visitor on
  * the standalone page and for the night-before visit to `/ready` (no Stripe
  * return, no roll call yet). A change to either page's waves changes the
- * replay beside it.
+ * replay beside it. The public schedule and `/ready` after the dive replay
+ * readers that live in `src/app`, so they are measured beside them, in
+ * `src/app/diver-render-cost.test.ts`.
  */
 async function upcomingBookableTrip(plain: AppDb, shopId: string) {
   const [trip] = await plain

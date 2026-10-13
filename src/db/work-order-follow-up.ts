@@ -172,7 +172,11 @@ export async function sendWorkOrderReadyNotice(
       .select({ id: workOrderEvents.id })
       .from(workOrderEvents)
       .where(
-        and(eq(workOrderEvents.workOrderId, workOrder.id), eq(workOrderEvents.toStatus, "ready")),
+        and(
+          eq(workOrderEvents.shopId, workOrder.shopId),
+          eq(workOrderEvents.workOrderId, workOrder.id),
+          eq(workOrderEvents.toStatus, "ready"),
+        ),
       )
       .orderBy(desc(workOrderEvents.seq))
       .limit(1);
@@ -847,6 +851,7 @@ export async function billAndPickupFacts(
       db
         .select({ email: people.email })
         .from(people)
+        // diveday:allow-deleted-people: the email of the ticket's own customer.
         .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
         .limit(1),
   ]);
