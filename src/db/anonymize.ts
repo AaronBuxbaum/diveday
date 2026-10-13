@@ -396,6 +396,7 @@ export async function anonymizeDiver(
     const [person] = await tx
       .select()
       .from(people)
+      // diveday:allow-deleted-people: erasure acts on a removed record; it is the usual subject.
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
       .limit(1);
     if (!person) return { ok: false, reason: "not_found" } as const;
@@ -506,6 +507,7 @@ async function mergedIntoChain(
     const rows = await tx
       .select({ id: people.id })
       .from(people)
+      // diveday:allow-deleted-people: a merge chain is made of merged-away rows, which are removed by design.
       .where(and(eq(people.shopId, shopId), inArray(people.mergedIntoPersonId, frontier)));
     frontier = [];
     for (const row of rows) {

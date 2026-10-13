@@ -550,8 +550,9 @@ export const trips = pgTable(
      * walks them, so a new read model that forgets it fails a test.
      *
      * The nightly cron deletes a rehearsal once fly-safe's look-back has run
-     * out, and never one with a boarding, an after-dive count or a logged dive
-     * (`clearFinishedRehearsals`, src/db/rehearsals.ts).
+     * out, and never one with a diver or crew boarding, an after-dive count, a
+     * logged dive or an incident report (`clearFinishedRehearsals`,
+     * src/db/rehearsals.ts).
      */
     isRehearsal: boolean("is_rehearsal").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

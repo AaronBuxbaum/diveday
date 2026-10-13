@@ -53,6 +53,7 @@
       "past": "Esta salida ya zarpó.",
       "limit": "Esta salida ya tuvo {max, plural, one {su # aviso} other {sus # avisos}}.",
       "noRecipients": "Todavía no hay nadie reservado.",
+      "sendLimit": "Has enviado muchos avisos en esta hora. Vuelve a intentarlo en un rato.",
       "other": "No se pudo enviar."
     },
     "sentCount": "{count, plural, one {# enviado} other {# enviados}}"

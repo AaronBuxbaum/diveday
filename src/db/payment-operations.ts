@@ -317,6 +317,7 @@ export async function listStuckPaymentOperations(
       ? db
           .select({ id: people.id, fullName: people.fullName })
           .from(people)
+          // diveday:allow-deleted-people: names for the stuck-operation queue, removed people included.
           .where(and(inArray(people.id, personIds), eq(people.shopId, shopId)))
       : [],
   ]);

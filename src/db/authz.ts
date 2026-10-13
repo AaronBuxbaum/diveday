@@ -28,6 +28,7 @@ import {
 } from "@/lib/authz";
 import type { DbExecutor } from "./client";
 import { people, personRoles, userAccounts } from "./schema";
+import { livePerson } from "./trips-live";
 
 /**
  * The account-and-roles half shared by both functions below: given a person
@@ -74,11 +75,11 @@ async function readActiveStaffRoles(
   personId: string,
 ): Promise<Role[] | null> {
   const [person] = await db
-    .select({ id: people.id, deletedAt: people.deletedAt })
+    .select({ id: people.id })
     .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson()))
     .limit(1);
-  if (!person || person.deletedAt) return null;
+  if (!person) return null;
   return activeStaffRolesFor(db, personId);
 }
 
@@ -99,11 +100,11 @@ async function readActiveStaffRolesByPerson(
   personId: string,
 ): Promise<Role[] | null> {
   const [person] = await db
-    .select({ id: people.id, deletedAt: people.deletedAt })
+    .select({ id: people.id })
     .from(people)
-    .where(eq(people.id, personId))
+    .where(and(eq(people.id, personId), livePerson()))
     .limit(1);
-  if (!person || person.deletedAt) return null;
+  if (!person) return null;
   return activeStaffRolesFor(db, personId);
 }
 

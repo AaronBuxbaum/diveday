@@ -34,6 +34,7 @@ export async function getWaiverSignerOnFile(
   const [row] = await db
     .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
     .from(people)
+    // diveday:allow-deleted-people: the signer of a release already issued.
     .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
     .limit(1);
   return row;

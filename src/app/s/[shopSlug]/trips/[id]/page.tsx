@@ -6,7 +6,6 @@ import { PhoneFootBar } from "@/components/PhoneFootBar";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
-import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { checkoutMode } from "@/db/stripe-accounts";
@@ -198,6 +197,7 @@ export default async function TripDetailPage({
     siteRequirement,
     payment,
     mailState,
+    paymentUrl,
     board,
     reviewAggregate,
   } = await readTripPage(db, shop, {
@@ -206,6 +206,7 @@ export default async function TripDetailPage({
     bookingToken,
     waitlistId,
     handoffToken,
+    payDue: pay === "due",
     session,
     now,
   });
@@ -446,12 +447,7 @@ export default async function TripDetailPage({
                   readinessLink={readinessLink}
                   mailState={mailState}
                   payNotice={pay}
-                  paymentUrl={
-                    pay === "due"
-                      ? ((await getLatestCheckoutForBooking(db, shop.id, confirmed.booking.id))
-                          ?.checkoutUrl ?? null)
-                      : null
-                  }
+                  paymentUrl={paymentUrl}
                 />
               ) : waitlistConfirmation ? (
                 <WaitlistConfirmation

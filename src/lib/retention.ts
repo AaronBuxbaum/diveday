@@ -70,6 +70,16 @@
  * `src/db/schema.ts`, which points back at this file for the statement this
  * paragraph now makes).
  *
+ * **`pre_departure_check_events` is deliberately unbounded too.** It is the
+ * pre-departure safety check (ADR 20260824-pre-departure-safety-check): who
+ * confirmed each item of the shop's own checklist (life jackets, oxygen, the
+ * radio) before a boat left, and when. That is the document an insurer or an
+ * investigator asks for after an incident, and an incident is reconstructed
+ * long after any window short enough to matter for growth. It is one row per
+ * tap on a departure, so it grows with the schedule, not with traffic. Classified on the dive-domain
+ * review of code review 2026-10-13 (layer B), which moved it here from the
+ * out-of-scope list.
+ *
  * **`notification_send_queue` empties its own rows of personal data, and the
  * window below only bounds what is left.** It holds a rendered outbound
  * message, a recipient and a subject's address and phone while a row is being
@@ -89,7 +99,7 @@
  * answer for every one of them; ADR 20260803-append-only-retention carries the
  * same list. Safety records about a departure: `roll_call_events`,
  * `roll_call_crew_events`, `booking_arrival_events`, `buddy_team_events`,
- * `trip_stage_events` (argued above). Equipment evidence:
+ * `trip_stage_events`, `pre_departure_check_events` (argued above). Equipment evidence:
  * `gear_service_events` (argued above). Records of who changed what on a
  * departure or a ticket, read as the record itself: `trip_change_events`,
  * `work_order_events`. Queues and obligations deleted by their own work:
@@ -163,6 +173,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "roll_call_events",
   "roll_call_crew_events",
   "booking_arrival_events",
+  "pre_departure_check_events",
 ];
 
 /**
@@ -414,9 +425,11 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
 
 /**
  * The most rows one prune pass may delete per table. A bound, not a target:
- * the pass runs daily, so a table that is over its window by more than this
- * simply converges over a few ticks instead of trying to delete a decade of
- * backlog inside one function invocation's time limit. Raising it trades
+ * the pass runs weekly (`vercel.json`, Sundays 03:30 UTC), so a table that is
+ * over its window by more than this converges over a few weeks rather than
+ * trying to delete a decade of backlog inside one function invocation's time
+ * limit; at 5,000 rows a week a table that gains more than that each week
+ * never converges, and the `capped` outcome is the signal to raise this. Raising it trades
  * convergence speed for the risk of a run that outlives the platform's
  * function ceiling and is killed halfway.
  */

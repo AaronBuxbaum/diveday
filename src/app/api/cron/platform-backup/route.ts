@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import {
@@ -15,6 +14,7 @@ import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 
 /**
  * Same ceiling as the shop-owned pass: a bundle is real megabytes for a
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "not_configured" }, { status: 501 });
   }
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
@@ -138,7 +138,7 @@ export async function GET(request: Request) {
       if (result.status === "stored") stored += 1;
       if (result.status === "failed") {
         failed += 1;
-        Sentry.captureMessage("platform backup failed for a shop", {
+        await sentry.captureMessage("platform backup failed for a shop", {
           level: "error",
           tags: { backup_shop: shop.slug, backup_error: result.errorCode },
         });
@@ -178,7 +178,7 @@ export async function GET(request: Request) {
           .join(",") || undefined,
     });
 
-    Sentry.captureCheckIn({
+    await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
       status: failed > 0 ? "error" : "ok",
@@ -194,9 +194,9 @@ export async function GET(request: Request) {
   } catch (error) {
     // Only reachable before the loop or between shops -- `getDb()` failing, or
     // the shop listing itself. The check-in still has to be closed out.
-    Sentry.captureException(error, { tags: { cron_scan: "platform_backup_bootstrap" } });
+    await sentry.captureException(error, { tags: { cron_scan: "platform_backup_bootstrap" } });
     log("cron_platform_backup.pass_failed", "error", { scan: "bootstrap" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "backup_unavailable" }, { status: 503 });
   } finally {
     // A pass's log line is the record of what was stored, so it is shipped

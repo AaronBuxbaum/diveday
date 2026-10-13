@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 import {
   markCheckoutExpiredBySessionId,
@@ -39,6 +38,7 @@ import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { nowDate } from "@/lib/clock";
 import { errorCauseTokens, errorClassToken } from "@/lib/error-token";
 import { type LogContext, log } from "@/lib/log";
+import { reportScrubbedError } from "@/lib/observability/sentry";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { payoutSummaryLookupFromEnvironment } from "@/lib/payments/payout-summary";
@@ -824,7 +824,7 @@ export async function POST(request: Request) {
     // 5xx, so Stripe retries it, and the retry finds the claim released and
     // runs the handler. The event is delayed, never dropped.
     const released = await releaseClaimAfterFailure(db, event, accountId);
-    reportToSentry(error, event, "handler");
+    await reportToSentry(error, event, "handler");
     logOutcome("handler_failed", {
       claimReleased: released,
       errorCode: errorClassToken(error),
@@ -837,10 +837,9 @@ export async function POST(request: Request) {
     // Released the same way a failed handle releases, for the same reason:
     // the retry must reach the handler. A release that fails is the one case a
     // retry cannot heal, so it is reported like the failure path reports it.
-    const released = await releaseStripeWebhookEventClaim(db, event.id).catch((releaseError) => {
-      reportToSentry(releaseError, event, "claim_release");
-      return false;
-    });
+    const released = await releaseStripeWebhookEventClaim(db, event.id).catch((releaseError) =>
+      reportToSentry(releaseError, event, "claim_release").then(() => false),
+    );
     logOutcome("deferred", { claimReleased: released });
     return new Response(null, { status: 503 });
   }
@@ -862,7 +861,7 @@ async function releaseClaimAfterFailure(
   try {
     return await releaseStripeWebhookEventClaim(db, event.id);
   } catch (releaseError) {
-    reportToSentry(releaseError, event, "claim_release");
+    await reportToSentry(releaseError, event, "claim_release");
     log("stripe_webhook.claim_release_failed", "error", {
       eventId: event.id,
       eventType: event.type,
@@ -874,38 +873,19 @@ async function releaseClaimAfterFailure(
   }
 }
 
-/**
- * Report a webhook failure to Sentry without its message (issue #2334).
- * Sentry's `beforeSend` (`redactEvent` in src/app/observability.ts) scrubs
- * capability URLs and headers, not exception text, and a handler's or a
- * database's error can quote the row it refused: a diver's name or email. So
- * Sentry gets a stand-in with a fixed message, the original's stack frames
- * (where it broke, not what it said), and as tags the event id, the original's
- * class and, when it wraps one, its cause's class and code (a SQLSTATE). The
- * original is never attached as `cause`, which Sentry would send in full.
- */
-function reportToSentry(
+/** A webhook failure, reported without its message (`reportScrubbedError`). */
+async function reportToSentry(
   error: unknown,
   event: { id: string; type: string },
   stage: "handler" | "claim_release",
 ) {
-  const scrubbed = new Error(`Stripe webhook ${stage} failed`);
-  scrubbed.name = "StripeWebhookError";
-  if (error instanceof Error && error.stack) {
-    const frames = error.stack.split("\n").filter((line) => /^\s+at /.test(line));
-    scrubbed.stack = [`${scrubbed.name}: ${scrubbed.message}`, ...frames].join("\n");
-  }
-  const { causeName, causeCode } = errorCauseTokens(error);
-  Sentry.captureException(scrubbed, {
+  await reportScrubbedError(error, {
+    name: "StripeWebhookError",
+    message: `Stripe webhook ${stage} failed`,
     tags: {
       stripe_event_id: event.id,
       stripe_webhook_event_type: event.type,
       stripe_webhook_stage: stage,
-      error_class: errorClassToken(error),
-      // A database error wraps the driver's own: its class and SQLSTATE say
-      // what failed without the parameters the outer message quotes.
-      ...(causeName ? { cause_name: causeName } : {}),
-      ...(causeCode ? { cause_code: causeCode } : {}),
     },
   });
 }

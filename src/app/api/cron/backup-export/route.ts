@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { backupPeriodKey, listShopsDueForBackup, runShopBackup } from "@/features/backup-export";
@@ -9,6 +8,7 @@ import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 
 /**
  * A pass is one bundle build and one PUT per due shop — bounded work, but a
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
   const refusal = requireCronSecret(request);
   if (refusal) return refusal;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
       if (result.status === "delivered") delivered += 1;
       if (result.status === "failed") {
         failed += 1;
-        Sentry.captureMessage("backup export delivery failed", {
+        await sentry.captureMessage("backup export delivery failed", {
           level: "error",
           tags: { backup_shop: entry.shopSlug, backup_error: result.errorCode },
         });
@@ -122,7 +122,7 @@ export async function GET(request: Request) {
           .join(",") || undefined,
     });
 
-    Sentry.captureCheckIn({
+    await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
       status: failed > 0 ? "error" : "ok",
@@ -138,9 +138,9 @@ export async function GET(request: Request) {
   } catch (error) {
     // Only reachable before the loop or between shops — `getDb()` failing, or
     // the due-list query itself. The check-in still has to be closed out.
-    Sentry.captureException(error, { tags: { cron_scan: "backup_export_bootstrap" } });
+    await sentry.captureException(error, { tags: { cron_scan: "backup_export_bootstrap" } });
     log("cron_backup_export.pass_failed", "error", { scan: "bootstrap" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "backup_unavailable" }, { status: 503 });
   } finally {
     // See the identical block in the retention cron: a pass's log line is the

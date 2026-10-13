@@ -255,6 +255,14 @@ describe("undo and early release", () => {
     return { ...ctx, held };
   }
 
+  it("answers a malformed id with nothing done rather than a throw", async () => {
+    const { db, shop, owner, held } = await heldNotice();
+    signIn(shop, owner);
+    expect(await undoHeldSendAction("not-a-uuid")).toBe(false);
+    expect(await releaseHeldSendAction("not-a-uuid")).toEqual({ status: "gone" });
+    expect((await heldRows(db, shop.id)).map((row) => row.id)).toEqual([held.id]);
+  });
+
   it("refuses a captain's Undo of a manager's reschedule notice", async () => {
     const { db, shop, captain, held } = await heldNotice();
     signIn(shop, captain);

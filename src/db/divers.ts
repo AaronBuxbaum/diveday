@@ -274,6 +274,7 @@ export async function isDiverRemoved(db: AppDb, shopId: string, personId: string
   const [row] = await db
     .select({ deletedAt: people.deletedAt })
     .from(people)
+    // diveday:allow-deleted-people: whether the diver was removed is the question.
     .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
     .limit(1);
   return Boolean(row?.deletedAt);

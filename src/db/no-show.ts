@@ -412,22 +412,35 @@ export async function noShowSalvage(
   input: {
     shopId: string;
     tripId: string;
-    /** The diver who missed: a day is offered only if they could book it. */
-    personId: string;
+    /** The divers who missed: a day is offered to each only if they could book it. */
+    personIds: string[];
     now?: Date;
   },
-): Promise<SalvageOffer> {
+): Promise<Map<string, SalvageOffer>> {
   const now = input.now ?? nowDate();
-  const waitlist = await getTripWaitlist(db, input.shopId, input.tripId);
-  const waitlistCount = waitlist.filter((row) => !row.entry.invitedAt).length;
-  if (waitlistCount > 0) return salvageOffer({ waitlistCount, alternatives: [] });
+  const offers = new Map<string, SalvageOffer>();
+  const personIds = [...new Set(input.personIds)];
+  if (personIds.length === 0) return offers;
+  const offerEach = (offer: SalvageOffer) => {
+    for (const personId of personIds) offers.set(personId, offer);
+    return offers;
+  };
 
-  const [trip] = await db
-    .select({ id: trips.id, courseId: trips.courseId, diveSiteId: trips.diveSiteId })
-    .from(trips)
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
-    .limit(1);
-  if (!trip) return salvageOffer({ waitlistCount: 0, alternatives: [] });
+  // **One read of the trip, its wait list and the board for every no-show**
+  // (code review 2026-10-13, item 13): the desk used to run this whole chain
+  // once per diver who missed, one after another. The wait list and the trip
+  // go out together; the board only when nobody is waiting.
+  const [waitlist, [trip]] = await Promise.all([
+    getTripWaitlist(db, input.shopId, input.tripId),
+    db
+      .select({ id: trips.id, courseId: trips.courseId, diveSiteId: trips.diveSiteId })
+      .from(trips)
+      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+      .limit(1),
+  ]);
+  const waitlistCount = waitlist.filter((row) => !row.entry.invitedAt).length;
+  if (waitlistCount > 0) return offerEach(salvageOffer({ waitlistCount, alternatives: [] }));
+  if (!trip) return offerEach(salvageOffer({ waitlistCount: 0, alternatives: [] }));
 
   // The storefront's own reader, with `hasSpace`, so a day offered at the
   // counter is one the diver who missed could actually be moved onto, and a
@@ -439,10 +452,6 @@ export async function noShowSalvage(
     hasSpace: true,
     publicOnly: true,
   });
-  // Every similar day, ranked, then only those this diver could book from the
-  // offer's link (`departureOpenToDiver`: a seat they already hold, a card the
-  // day asks that they lack, a course at its ratio). Dive-domain review of
-  // layer 8, F1: the panel promises the day is theirs to take.
   const similar = similarDepartures({
     full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
     candidates: board.trips.map((candidate) => ({
@@ -454,21 +463,31 @@ export async function noShowSalvage(
     })),
     limit: board.trips.length,
   });
-  const alternatives: SimilarDeparture[] = [];
-  for (const departure of similar) {
-    if (alternatives.length === SALVAGE_DAYS) break;
-    if (
-      await departureOpenToDiver(db, {
-        shopId: input.shopId,
-        tripId: departure.tripId,
-        personId: input.personId,
-        now,
-      })
-    ) {
-      alternatives.push(departure);
-    }
-  }
-  return salvageOffer({ waitlistCount: 0, alternatives });
+  // Every similar day, ranked, then only those *this* diver could book from
+  // the offer's link (`departureOpenToDiver`: a seat they already hold, a card
+  // the day asks that they lack, a course at its ratio). Dive-domain review of
+  // layer 8, F1: the panel promises the day is theirs to take. Each diver's
+  // walk is their own, and the divers go side by side.
+  await Promise.all(
+    personIds.map(async (personId) => {
+      const alternatives: SimilarDeparture[] = [];
+      for (const departure of similar) {
+        if (alternatives.length === SALVAGE_DAYS) break;
+        if (
+          await departureOpenToDiver(db, {
+            shopId: input.shopId,
+            tripId: departure.tripId,
+            personId,
+            now,
+          })
+        ) {
+          alternatives.push(departure);
+        }
+      }
+      offers.set(personId, salvageOffer({ waitlistCount: 0, alternatives }));
+    }),
+  );
+  return offers;
 }
 
 /** As many days as `similarDepartures` offers by default, for the same reason. */

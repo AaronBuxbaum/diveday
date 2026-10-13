@@ -19,9 +19,9 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
-import { issueBookingCapability } from "./booking-capabilities";
+import { type IssuedCapability, issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
-import { notificationProviderForDb, sendNotification } from "./notifications";
+import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { recordTripActivity } from "./operations";
 import { bookings, departureNotes, heldSends, lostItems, people, shops, trips } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
@@ -218,71 +218,105 @@ export async function sendDepartureNote(
   const senders = providers.whatsAppProviders ?? (await whatsAppProvidersForShops(db, [shop.id]));
   const sms = stopListedSmsProvider(db, providers.smsProvider ?? smsProviderFromEnvironment());
 
-  let delivered = 0;
-  for (const { booking, person } of seats) {
+  // **One insert for every seat's link, then the sends** (code review
+  // 2026-10-13, item 35). A 20-seat note used to mint its links one seat at a
+  // time inside the send loop, about sixty serial round trips before the last
+  // diver heard. A failed mint costs the links, never the note: the message
+  // still goes, without the readiness link, as it does with no public origin.
+  let links = new Map<string, IssuedCapability>();
+  if (origin) {
     try {
-      const capability = origin
-        ? await issueBookingCapability(db, {
-            shopId: shop.id,
-            bookingId: booking.id,
-            purpose: "readiness",
-          })
-        : null;
-      const readinessUrl =
-        origin && capability
-          ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
-          : undefined;
-      const locale = recipientLocale(person.locale, shop.defaultLocale);
-      if (person.email) {
-        const delivery = await sendNotification(
-          db,
+      links = await issueBookingCapabilities(db, {
+        shopId: shop.id,
+        bookingIds: seats.map(({ booking }) => booking.id),
+        purpose: "readiness",
+      });
+    } catch (error) {
+      log("departure_note.links_failed", "error", {
+        noteId: note.id,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
+  }
+  const readinessUrlFor = (bookingId: string) => {
+    const capability = links.get(bookingId);
+    return origin && capability
+      ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
+      : undefined;
+  };
+
+  let delivered = 0;
+  // Email first, as one batch through the queue's own fan-out
+  // (`sendNotificationBatch`), which holds a rehearsal, refuses a bad payload
+  // and queues a retryable failure per member, exactly as one send does.
+  const emailed = seats.flatMap(({ booking, person }) =>
+    person.email
+      ? [
           {
-            kind: "departure_note",
+            kind: "departure_note" as const,
             noteId: note.id,
             seatId: booking.id,
             shopId: shop.id,
             to: person.email,
-            locale,
+            locale: recipientLocale(person.locale, shop.defaultLocale),
             diverName: person.fullName,
             shopName: shop.name,
             tripTitle: trip.title,
             startsAt: trip.startsAt,
             timezone: shop.timezone,
             body,
-            readinessUrl,
+            readinessUrl: readinessUrlFor(booking.id),
           },
-          emailProvider,
-        );
-        if (delivery.status === "sent") delivered += 1;
-        continue;
-      }
-      const phone = smsRecipient(person.phone);
-      if (!phone) continue;
-      const t = diverTranslator(locale);
-      const { delivery } = await sendCourtesyMessage(
-        {
-          to: phone,
-          body: departureNoteText({
-            locale,
-            shopName: shop.name,
-            tripTitle: trip.title,
-            body,
-            readinessUrl,
-          }),
-          smsStopLine: t("notifications.sms.stopLine"),
-          shopName: shop.name,
-        },
-        { sms, whatsapp: senders.get(shop.id) ?? null },
-      );
-      if (delivery.status === "sent") delivered += 1;
+        ]
+      : [],
+  );
+  if (emailed.length > 0) {
+    try {
+      const deliveries = await sendNotificationBatch(db, emailed, emailProvider);
+      delivered += deliveries.filter((delivery) => delivery.status === "sent").length;
     } catch (error) {
-      // One seat's failure never stops the rest of the departure hearing.
       log("departure_note.send_failed", "error", {
         noteId: note.id,
         errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
   }
+  // Then a text to every seat with no address, side by side.
+  const texted = await Promise.all(
+    seats.map(async ({ booking, person }) => {
+      if (person.email) return false;
+      const phone = smsRecipient(person.phone);
+      if (!phone) return false;
+      try {
+        const locale = recipientLocale(person.locale, shop.defaultLocale);
+        const t = diverTranslator(locale);
+        const { delivery } = await sendCourtesyMessage(
+          {
+            to: phone,
+            body: departureNoteText({
+              locale,
+              shopName: shop.name,
+              tripTitle: trip.title,
+              body,
+              readinessUrl: readinessUrlFor(booking.id),
+            }),
+            smsStopLine: t("notifications.sms.stopLine"),
+            shopName: shop.name,
+          },
+          { sms, whatsapp: senders.get(shop.id) ?? null },
+        );
+        return delivery.status === "sent";
+      } catch (error) {
+        // One seat's failure never stops the rest of the departure hearing.
+        log("departure_note.send_failed", "error", {
+          noteId: note.id,
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
+        return false;
+      }
+    }),
+  );
+  delivered += texted.filter(Boolean).length;
 
   await db.update(departureNotes).set({ delivered }).where(eq(departureNotes.id, note.id));
   if (input.actorPersonId) {

@@ -58,7 +58,9 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/lib/session", async () =>
+  (await import("@/test/staff-session")).sessionMockOverStaffSession(),
+);
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");

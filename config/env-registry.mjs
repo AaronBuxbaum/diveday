@@ -99,6 +99,8 @@ export const ENV_GROUPS = [
       "mode at runtime and during migrations. DATABASE_URL_UNPOOLED is the direct",
       "connection used for schema migrations (`pnpm db:migrate`), since DDL over a",
       "transaction-mode pooler is unreliable; it falls back to DATABASE_URL.",
+      "The three DATABASE_POOL_* values tune the request-time pool for load testing",
+      "or a different plan; each falls back to a default in src/lib/db-pool-config.ts.",
     ],
     keys: [
       {
@@ -114,6 +116,24 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_VERCEL,
         absent: "migrations fall back to DATABASE_URL",
       },
+      {
+        key: "DATABASE_POOL_MAX",
+        from: "manual",
+        targets: VERCEL,
+        absent: "the pool size is src/lib/db-pool-config.ts's default",
+      },
+      {
+        key: "DATABASE_POOL_IDLE_TIMEOUT_MS",
+        from: "manual",
+        targets: VERCEL,
+        absent: "as DATABASE_POOL_MAX",
+      },
+      {
+        key: "DATABASE_POOL_CONNECTION_TIMEOUT_MS",
+        from: "manual",
+        targets: VERCEL,
+        absent: "as DATABASE_POOL_MAX",
+      },
     ],
   },
   {
@@ -123,6 +143,38 @@ export const ENV_GROUPS = [
       "below. Do not generate or rotate it alone.",
     ],
     keys: [{ key: "AUTH_SECRET", from: "derived", targets: LOCAL_AND_VERCEL }],
+  },
+  {
+    doc: [
+      "Dedicated signing keys for three bearer-token families, each optional. Unset,",
+      "recap links (src/lib/recap-links.ts) and buddy links (src/lib/buddy-tokens.ts)",
+      "sign with a key derived from AUTH_SECRET, and the waiver integrity seal",
+      "(src/lib/waiver-integrity.ts) signs with AUTH_SECRET itself. So rotating",
+      "AUTH_SECRET with these unset breaks every recap and buddy link in flight and",
+      "makes every sealed waiver verify as invalid. Setting or changing one later has",
+      "the same effect on what it signs: set WAIVER_INTEGRITY_SECRET only before the",
+      "first waiver is sealed, and never rotate it without re-sealing.",
+    ],
+    keys: [
+      {
+        key: "RECAP_LINK_SECRET",
+        from: "manual",
+        targets: VERCEL,
+        absent: "recap links sign with a key derived from AUTH_SECRET",
+      },
+      {
+        key: "BUDDY_LINK_SECRET",
+        from: "manual",
+        targets: VERCEL,
+        absent: "buddy links sign with a key derived from AUTH_SECRET",
+      },
+      {
+        key: "WAIVER_INTEGRITY_SECRET",
+        from: "manual",
+        targets: VERCEL,
+        absent: "waiver integrity seals sign with AUTH_SECRET",
+      },
+    ],
   },
   {
     doc: [
@@ -223,7 +275,9 @@ export const ENV_GROUPS = [
       "shop's staff accounts, and only a demo shop's. `off` turns that off for a",
       "deployment that should never have a demo tenant (a self-hosted install, a",
       "compliance-scoped environment); `on` turns it back on. Anything else is read",
-      "as off, so a typo never reads as consent.",
+      "as off, so a typo never reads as consent. DEMO_SHOP_TTL_DAYS and",
+      "DEMO_SHOP_MAX_LIVE bound the per-visitor demo shops: how long one lives before",
+      "the nightly reaper clears it, and how many may exist at once.",
     ],
     keys: [
       {
@@ -231,6 +285,20 @@ export const ENV_GROUPS = [
         from: "manual",
         targets: VERCEL,
         absent: "the demo bypass is on",
+      },
+      {
+        key: "DEMO_SHOP_TTL_DAYS",
+        from: "manual",
+        targets: VERCEL,
+        absent:
+          "a minted demo shop is reaped after 7 days (a non-positive or non-numeric value reads as unset)",
+      },
+      {
+        key: "DEMO_SHOP_MAX_LIVE",
+        from: "manual",
+        targets: VERCEL,
+        absent:
+          "at most 200 minted demo shops exist at once (a non-positive or non-numeric value reads as unset)",
       },
     ],
   },
@@ -451,6 +519,34 @@ export const ENV_GROUPS = [
         from: "stack",
         targets: LOCAL_AND_VERCEL,
         absent: "the address card is exactly the five text boxes it has always been",
+      },
+    ],
+  },
+  {
+    doc: [
+      "Web Push for manifest changes (ADR 20260804-manifest-web-push). A VAPID keypair",
+      "(`npx web-push generate-vapid-keys`) and a mailto: or https: contact the push",
+      "service can reach. All three or none: a partial set reads as unset. Keep the",
+      "private key in 1Password; rotating the pair orphans every existing subscription.",
+    ],
+    keys: [
+      {
+        key: "VAPID_PUBLIC_KEY",
+        from: "manual",
+        targets: VERCEL,
+        absent: "the push opt-in does not render and no manifest change is pushed",
+      },
+      {
+        key: "VAPID_PRIVATE_KEY",
+        from: "manual",
+        targets: VERCEL,
+        absent: "as VAPID_PUBLIC_KEY",
+      },
+      {
+        key: "VAPID_SUBJECT",
+        from: "manual",
+        targets: VERCEL,
+        absent: "as VAPID_PUBLIC_KEY",
       },
     ],
   },

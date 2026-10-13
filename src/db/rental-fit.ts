@@ -193,6 +193,7 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
   const [person] = await db
     .select({ id: people.id })
     .from(people)
+    // diveday:allow-deleted-people: tenant proof for a fit write; a removed record keeps its fit and may be restored.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
   if (!person) return null;
@@ -269,6 +270,7 @@ export async function saveRentalFitNote(
   const [person] = await db
     .select({ id: people.id })
     .from(people)
+    // diveday:allow-deleted-people: tenant proof for a fit write; a removed record keeps its fit and may be restored.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
   if (!person) return null;
@@ -352,6 +354,7 @@ export async function confirmRentalFitSize(
   const [person] = await db
     .select({ id: people.id })
     .from(people)
+    // diveday:allow-deleted-people: tenant proof for a fit write; a removed record keeps its fit and may be restored.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
   if (!person) return "unknown_person";

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { auditPeopleBaseline, findUnfilteredPeopleReads } from "./check-live-people.mjs";
+import {
+  auditPeopleBaseline,
+  carriersIn,
+  findUnfilteredPeopleReads,
+} from "./check-live-people.mjs";
 
 const lines = (source) => findUnfilteredPeopleReads(source).findings.map((finding) => finding.line);
 
@@ -105,5 +109,42 @@ describe("the baseline", () => {
     expect(auditPeopleBaseline(new Map([["src/db/a.ts", hits(2)]]), { "src/db/a.ts": 2 })).toEqual(
       [],
     );
+  });
+});
+
+describe("a read through a listed carrier", () => {
+  const source = `
+function activeDiverWhere(shopId: string) {
+  return and(eq(people.shopId, shopId), isNull(people.deletedAt));
+}
+
+function looseWhere(shopId: string) {
+  return eq(people.shopId, shopId);
+}
+
+const a = await db.select().from(people).where(activeDiverWhere(shopId));
+const b = await db.select().from(people).where(looseWhere(shopId));
+`;
+
+  it("passes when its carrier's definition holds the filter", () => {
+    const carriers = carriersIn(source, ["activeDiverWhere", "looseWhere"]);
+    expect(carriers).toEqual(["activeDiverWhere"]);
+    expect(
+      findUnfilteredPeopleReads(source, carriers).findings.map((finding) => finding.line),
+    ).toEqual([11]);
+  });
+
+  it("follows one carrier through another", () => {
+    const chained = `
+function removalScope(filter) {
+  return filter === "removed" ? isNotNull(people.deletedAt) : isNull(people.deletedAt);
+}
+
+const scope = and(eq(people.shopId, shopId), removalScope(filter));
+`;
+    expect(carriersIn(chained, ["scope", "removalScope"]).sort()).toEqual([
+      "removalScope",
+      "scope",
+    ]);
   });
 });

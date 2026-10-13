@@ -64,7 +64,13 @@ export async function issueCalendarFeed(
     const [locked] = await tx
       .select({ id: people.id })
       .from(people)
-      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+      .where(
+        and(
+          eq(people.id, input.personId),
+          eq(people.shopId, input.shopId),
+          isNull(people.deletedAt),
+        ),
+      )
       .limit(1)
       .for("update");
     if (!locked) return null;
@@ -240,7 +246,13 @@ export async function revokeFeedsForFormerStaff(
     .selectDistinct({ personId: people.id })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, input.shopId), inArray(personRoles.role, [...STAFF_ROLES])));
+    .where(
+      and(
+        eq(people.shopId, input.shopId),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+        isNull(people.deletedAt),
+      ),
+    );
   const staffIds = staff.map((row) => row.personId);
   const conditions = [eq(calendarFeeds.shopId, input.shopId), isNull(calendarFeeds.revokedAt)];
   await db

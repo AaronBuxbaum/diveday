@@ -102,6 +102,11 @@ export type MoveTripOutcome =
  * guard does (`src/db/move-preflight.ts`, issue #1203). A preview with its own
  * copy of this rule would drift, and the drift would show up as a panel
  * promising a move the mutation then refuses.
+ *
+ * Deliberately stricter than the rehearsal sweep's `rehearsalsWithEvidence`
+ * (`src/db/rehearsals.ts`), which treats a dockside `not_boarded` as
+ * clerical: a person is refused on any row, and only the automatic sweep
+ * clears a clerical-only rehearsal. Both policies are stated there.
  */
 export async function countRollCallEvidence(
   tx: DbExecutor,

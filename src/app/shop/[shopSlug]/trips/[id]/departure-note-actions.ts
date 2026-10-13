@@ -10,6 +10,7 @@ import {
 } from "@/db/departure-notes";
 import { holdSend } from "@/db/held-sends";
 import { nowMs } from "@/lib/clock";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { requireStaffSession } from "@/lib/session";
 
 /**
@@ -22,7 +23,7 @@ import { requireStaffSession } from "@/lib/session";
 
 export type HoldDepartureNoteResult =
   | { ok: true; ticket: HeldTicket }
-  | { ok: false; reason: DepartureNoteRefusal | "no_recipients" | "invalid" };
+  | { ok: false; reason: DepartureNoteRefusal | "no_recipients" | "invalid" | "rate_limited" };
 
 export async function holdDepartureNoteAction(
   tripId: string,
@@ -30,6 +31,13 @@ export async function holdDepartureNoteAction(
 ): Promise<HoldDepartureNoteResult> {
   const session = await requireStaffSession();
   if (!z.uuid().safeParse(tripId).success) return { ok: false, reason: "invalid" };
+  // A note goes to everyone on the departure; bound how many one staff member
+  // can hold in an hour, like every other one-tap send.
+  const sendAllowed = await checkRateLimit(
+    rateLimitKey("staff-send", "departure-note", session.user.personId),
+    RATE_LIMITS.staffSendByActor,
+  );
+  if (!sendAllowed.allowed) return { ok: false, reason: "rate_limited" };
   const body = String(formData.get("body") ?? "");
   const db = await getDb();
   const shopId = session.user.shopId;

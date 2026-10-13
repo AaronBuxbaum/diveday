@@ -2,6 +2,7 @@ import { cache } from "react";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { readKnownDiver } from "@/db/booking-handoff";
 import { getBookingForTrip } from "@/db/bookings";
+import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { bookingConfirmationMailState } from "@/db/notifications";
@@ -50,6 +51,8 @@ export type TripPageRequest = {
   bookingToken: string | undefined;
   waitlistId: string | undefined;
   handoffToken: string | null;
+  /** `?pay=due`: the embed's confirmation links the booking's open checkout. */
+  payDue: boolean;
   /** Started by the page, never awaited before the wave: the live-staff check chains off it. */
   session: ReturnType<typeof auth>;
   now: Date;
@@ -63,7 +66,16 @@ export type TripPageRequest = {
 export async function readTripPage(
   db: AppDb,
   shop: Shop,
-  { tripId, isEmbed, bookingToken, waitlistId, handoffToken, session, now }: TripPageRequest,
+  {
+    tripId,
+    isEmbed,
+    bookingToken,
+    waitlistId,
+    handoffToken,
+    payDue,
+    session,
+    now,
+  }: TripPageRequest,
 ) {
   // **Every read this page makes is one wave** (issue #2353). A read that
   // needs another's answer chains off that one promise inside the wave — the
@@ -88,7 +100,8 @@ export async function readTripPage(
   const confirmedRead =
     isEmbed && bookingToken
       ? verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" }).then(
-          (capability) => (capability ? getBookingForTrip(db, tripId, capability.bookingId) : null),
+          (capability) =>
+            capability ? getBookingForTrip(db, shop.id, tripId, capability.bookingId) : null,
         )
       : Promise.resolve(null);
   const waitlistRead = waitlistId
@@ -110,6 +123,7 @@ export async function readTripPage(
     siteRequirement,
     payment,
     mailState,
+    paymentUrl,
     board,
     reviewAggregate,
   ] = await Promise.all([
@@ -185,6 +199,14 @@ export async function readTripPage(
     confirmedRead.then((booked) =>
       booked ? bookingConfirmationMailState(db, shop.id, booked.booking.id) : ("none" as const),
     ),
+    // The checkout a `?pay=due` confirmation links to, chained off the
+    // verified booking inside the wave rather than awaited in the JSX after
+    // it (code review 2026-10-13, item 29).
+    confirmedRead.then(async (booked) =>
+      payDue && booked
+        ? ((await getLatestCheckoutForBooking(db, shop.id, booked.booking.id))?.checkoutUrl ?? null)
+        : null,
+    ),
     // One read of the shop's own board, feeding both lists of other boats
     // below (issues #1166 and #1161), and only when one could show.
     Promise.all([tripRead, confirmedRead, waitlistRead]).then(async ([found, booked, waiting]) =>
@@ -219,6 +241,7 @@ export async function readTripPage(
     siteRequirement,
     payment,
     mailState,
+    paymentUrl,
     board,
     reviewAggregate,
   };

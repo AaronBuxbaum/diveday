@@ -81,6 +81,7 @@ import {
   workOrderCare,
   workOrderLines,
 } from "./schema";
+import { livePerson } from "./trips-live";
 
 /** Whose bundle to load: one shop's whole, or one diver's own inside it. */
 export type ExportBundleScope =
@@ -818,6 +819,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   const [person] = await tx
     .select()
     .from(people)
+    // diveday:allow-deleted-people: a diver's own export covers a removed record too; it is still theirs.
     .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
     .limit(1);
   if (!person) return null;
@@ -875,6 +877,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   const staffRows = await tx
     .select({ id: people.id, fullName: people.fullName })
     .from(people)
+    // diveday:allow-deleted-people: names for every row in the bundle, removed staff included.
     .where(eq(people.shopId, shopId));
   const personName = new Map(staffRows.map((row) => [row.id, row.fullName]));
 
@@ -1330,11 +1333,11 @@ export async function canPersonExportShopData(
   personId: string,
 ): Promise<boolean> {
   const [person] = await db
-    .select({ id: people.id, deletedAt: people.deletedAt })
+    .select({ id: people.id })
     .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson()))
     .limit(1);
-  if (!person || person.deletedAt) return false;
+  if (!person) return false;
 
   const [account] = await db
     .select({ status: userAccounts.status })

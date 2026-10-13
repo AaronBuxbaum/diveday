@@ -27,6 +27,19 @@ import { pathToFileURL } from "node:url";
  * take no slug build their paths from `session.user.shopSlug` and may keep
  * `requireStaffSession`.
  *
+ * And the positive half (2026-10-13 review): a slug-taking export in a module
+ * under `src/app/shop/`, or one that calls `auth(` itself, must **reach**
+ * `requireShopSurface(` — directly, through a function of the same module, or
+ * through a helper it imports from a module of this repository where that
+ * helper reaches it (the diver record's `requireDiverActionContext`).
+ * `requireStaffSession(` and `auth(` are resolved across modules the same
+ * way, so a wrapper imported from another file counts as if written here. Without
+ * this half an action that compared the slug by hand, called `auth()`, or
+ * checked nothing passed. A public action under `src/app/s/` checks no session
+ * and is outside the rule; an action that reads the session before there is a
+ * shop to be inside (the demo role switch) says
+ * `diveday:slug-action-before-sign-in: <why>`.
+ *
  * The reading is textual, top-level declarations only: a `function` or a
  * `const name = (async) (…) =>` starting at column zero, running to the next
  * statement at column zero. Comments and string contents are blanked first, so
@@ -38,6 +51,17 @@ const GUARDED_ROOTS = ["src"];
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const IS_TEST = /\.test\.tsx?$/;
 const GATE = /\brequireStaffSession\s*\(/;
+/** The call that proves the slug is the session's shop. */
+const SURFACE = /\brequireShopSurface\s*\(/;
+/** Signing in by hand: a staff action that skipped both gates. */
+const AUTH = /\bauth\s*\(/;
+/**
+ * Said inside an action that reads the session but is not yet inside a shop
+ * (the demo role switch, which is how a visitor gets one).
+ */
+const OUTSIDE_A_SHOP = /diveday:slug-action-before-sign-in:/;
+/** Every action in a module here is a staff action. */
+const STAFF_ROOT = path.normalize("src/app/shop/");
 
 /**
  * The source with every comment and every string or template body replaced by
@@ -115,7 +139,8 @@ export function topLevelFunctions(source) {
     const end = starts[position + 1]?.offset ?? code.length;
     const text = code.slice(start.offset, end);
     const params = parenthesized(text, match[0].length - 1);
-    functions.push({ name, exported, params, body: text, line: start.index + 1 });
+    const raw = source.slice(start.offset, end);
+    functions.push({ name, exported, params, body: text, raw, line: start.index + 1 });
   });
   return functions;
 }
@@ -124,16 +149,17 @@ export function topLevelFunctions(source) {
  * The exported, slug-taking actions of one module that reach
  * `requireStaffSession`, directly or through the module's own functions.
  */
-export function findSlugActionsOnStaffSession(source) {
-  if (!isServerModule(source)) return [];
-  const functions = topLevelFunctions(source);
-  const byName = new Map(functions.map((fn) => [fn.name, fn]));
+/**
+ * Whether a function of the module calls `pattern`, in its own body or
+ * through another function of the same module it calls.
+ */
+function reachesThrough(byName, pattern) {
   const memo = new Map();
   const reaches = (fn, seen = new Set()) => {
     if (memo.has(fn.name)) return memo.get(fn.name);
     if (seen.has(fn.name)) return false;
     seen.add(fn.name);
-    let result = GATE.test(fn.body);
+    let result = pattern.test(fn.body);
     if (!result) {
       for (const other of byName.values()) {
         if (other.name === fn.name) continue;
@@ -146,6 +172,20 @@ export function findSlugActionsOnStaffSession(source) {
     memo.set(fn.name, result);
     return result;
   };
+  return reaches;
+}
+
+export function findSlugActionsOnStaffSession(source, options = {}) {
+  if (!isServerModule(source)) return [];
+  const {
+    staffModule = false,
+    importedGates = [],
+    importedStaffGates = [],
+    importedSignIns = [],
+  } = options;
+  const functions = topLevelFunctions(source);
+  const byName = new Map(functions.map((fn) => [fn.name, fn]));
+  const reaches = reachesThrough(byName, callPattern(GATE, importedStaffGates));
   const slugMemo = new Map();
   const takesSlug = (fn, seen = new Set()) => {
     if (slugMemo.has(fn.name)) return slugMemo.get(fn.name);
@@ -176,9 +216,56 @@ export function findSlugActionsOnStaffSession(source) {
     slugMemo.set(fn.name, result);
     return result;
   };
+  const surfaces = reachesThrough(byName, callPattern(SURFACE, importedGates));
+  const signsIn = reachesThrough(byName, callPattern(AUTH, importedSignIns));
   return functions
-    .filter((fn) => fn.exported && takesSlug(fn) && reaches(fn))
-    .map((fn) => ({ line: fn.line, name: fn.name }));
+    .filter((fn) => fn.exported && takesSlug(fn))
+    .flatMap((fn) => {
+      if (reaches(fn)) return [{ line: fn.line, name: fn.name, problem: "staff-session" }];
+      const staff = staffModule || signsIn(fn);
+      if (staff && !surfaces(fn) && !OUTSIDE_A_SHOP.test(fn.raw))
+        return [{ line: fn.line, name: fn.name, problem: "no-surface" }];
+      return [];
+    });
+}
+
+/**
+ * `pattern` (a call), or a call to any of `imported`: helpers imported from a
+ * module where they reach that call. Each of the three calls the rule reads
+ * (`requireShopSurface(`, `requireStaffSession(`, `auth(`) is resolved across
+ * modules the same way, so a wrapper in another file hides none of them.
+ */
+function callPattern(pattern, imported) {
+  if (imported.length === 0) return pattern;
+  return new RegExp(`${pattern.source}|\\b(?:${imported.join("|")})\\s*\\(`);
+}
+
+/**
+ * The names a module imports from another module of this repository (`./x`,
+ * `../x`, `@/x`), with the import's specifier.
+ */
+export function repositoryImports(source) {
+  const imports = [];
+  const pattern = /import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*["']((?:\.{1,2}\/|@\/)[^"']+)["']/g;
+  for (const match of source.matchAll(pattern)) {
+    for (const part of match[1].split(",")) {
+      const named = /^\s*(?:type\s+)?(\w+)(?:\s+as\s+(\w+))?\s*$/.exec(part);
+      if (named) imports.push({ name: named[1], local: named[2] ?? named[1], from: match[2] });
+    }
+  }
+  return imports;
+}
+
+/** Whether `name`, a top-level function of `source`, reaches a call matching `pattern`. */
+export function exportReaches(source, name, pattern) {
+  const byName = new Map(topLevelFunctions(source).map((fn) => [fn.name, fn]));
+  const fn = byName.get(name);
+  return fn ? reachesThrough(byName, pattern)(fn) : false;
+}
+
+/** Whether `name`, a top-level function of `source`, reaches `requireShopSurface(`. */
+export function exportReachesSurface(source, name) {
+  return exportReaches(source, name, SURFACE);
 }
 
 /**
@@ -214,8 +301,45 @@ async function walk(relativeDirectory) {
   return files;
 }
 
+/** Resolve `./x`, `../x` or `@/x` from `file` to a source file, or null. */
+async function resolveImport(file, specifier) {
+  const base = specifier.startsWith("@/")
+    ? path.join("src", specifier.slice(2))
+    : path.join(path.dirname(file), specifier);
+  for (const candidate of [`${base}.ts`, `${base}.tsx`, path.join(base, "index.ts")]) {
+    try {
+      return { file: candidate, source: await readFile(path.join(ROOT, candidate), "utf8") };
+    } catch {}
+  }
+  return null;
+}
+
+/**
+ * The imported helpers of `file`, sorted by which of the three calls each
+ * reaches in its own module: `requireShopSurface(` (`importedGates`),
+ * `requireStaffSession(` (`importedStaffGates`) and `auth(` (`importedSignIns`).
+ * `@/lib/session` itself is skipped: it is where the gates are defined, and its
+ * exports are matched by name.
+ */
+async function importedCalls(file, source) {
+  const found = { importedGates: [], importedStaffGates: [], importedSignIns: [] };
+  for (const imported of repositoryImports(source)) {
+    if (imported.from === "@/lib/session") continue;
+    const target = await resolveImport(file, imported.from);
+    if (!target) continue;
+    if (exportReaches(target.source, imported.name, SURFACE))
+      found.importedGates.push(imported.local);
+    if (exportReaches(target.source, imported.name, GATE))
+      found.importedStaffGates.push(imported.local);
+    if (exportReaches(target.source, imported.name, AUTH))
+      found.importedSignIns.push(imported.local);
+  }
+  return found;
+}
+
 async function main() {
   const violations = [];
+  const unproven = [];
   let modules = 0;
   for (const root of GUARDED_ROOTS) {
     for (const file of await walk(root)) {
@@ -223,10 +347,26 @@ async function main() {
       const source = await readFile(path.join(ROOT, file), "utf8");
       if (!isServerModule(source)) continue;
       modules++;
-      for (const finding of findSlugActionsOnStaffSession(source)) {
-        violations.push(`${file}:${finding.line}: ${finding.name}`);
+      const options = {
+        staffModule: path.normalize(file).startsWith(STAFF_ROOT),
+        ...(await importedCalls(file, source)),
+      };
+      for (const finding of findSlugActionsOnStaffSession(source, options)) {
+        (finding.problem === "staff-session" ? violations : unproven).push(
+          `${file}:${finding.line}: ${finding.name}`,
+        );
       }
     }
+  }
+  if (unproven.length > 0) {
+    console.error(
+      `Staff server actions that take a shopSlug and never reach requireShopSurface:\n${unproven
+        .map((violation) => `- ${violation}`)
+        .join("\n")}`,
+    );
+    console.error(
+      "Open the action with `requireShopSurface(shopSlug)` (src/lib/session.ts), or call a helper (in this module or imported) that does. Checking the slug against session.user.shopSlug by hand, calling auth() directly, or checking nothing, all leave the slug steering another shop's revalidation and redirect.",
+    );
   }
   if (violations.length > 0) {
     console.error(
@@ -237,10 +377,10 @@ async function main() {
     console.error(
       "Open the action with `requireShopSurface(shopSlug)` (src/lib/session.ts), which is a 404 for a slug that is not the session's shop, or drop the slug and build paths from `session.user.shopSlug`. Writes scoped by session.user.shopId are not enough: the slug still steers the revalidation and the redirect.",
     );
-    process.exit(1);
   }
+  if (violations.length > 0 || unproven.length > 0) process.exit(1);
   console.log(
-    `slug-actions: ${modules} "use server" modules; no slug-taking action gates on requireStaffSession`,
+    `slug-actions: ${modules} "use server" modules; every slug-taking staff action reaches requireShopSurface`,
   );
 }
 

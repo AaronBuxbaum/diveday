@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import {
@@ -28,6 +27,7 @@ import {
 import { log } from "@/lib/log";
 import { notify } from "@/lib/notifications";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 import { founderDigestRecipient } from "@/lib/platform-mail";
 
 /** A handful of grouped reads and, on Mondays, one mail. */
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
   const refused = requireCronSecret(request);
   if (refused) return refused;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
     const digest = isDigestDay(now) ? await sendDigest(now) : "not_today";
     log("cron_founder_metrics.digest", digest === "failed" ? "error" : "info", { digest });
 
-    Sentry.captureCheckIn({
+    await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
       status: digest === "failed" ? "error" : "ok",
@@ -110,9 +110,9 @@ export async function GET(request: Request) {
       { status: digest === "failed" ? 500 : 200 },
     );
   } catch (error) {
-    Sentry.captureException(error, { tags: { cron_scan: "founder_metrics" } });
+    await sentry.captureException(error, { tags: { cron_scan: "founder_metrics" } });
     log("cron_founder_metrics.failed", "error", {});
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "founder_metrics_unavailable" }, { status: 503 });
   } finally {
     await flushLogs();

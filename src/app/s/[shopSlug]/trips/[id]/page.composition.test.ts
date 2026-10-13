@@ -368,8 +368,8 @@ describe("the trip page's order", () => {
     // The booking is read only off a capability that verified, and nowhere else.
     expect(SOURCE).not.toContain("getBookingForTrip(");
     expect(READS_SOURCE.split("getBookingForTrip(").length - 1).toBe(1);
-    expect(READS_SOURCE).toContain(
-      "(capability) => (capability ? getBookingForTrip(db, tripId, capability.bookingId) : null)",
+    expect(READS_SOURCE).toMatch(
+      /\(capability\) =>\s*capability \? getBookingForTrip\(db, shop\.id, tripId, capability\.bookingId\) : null,/,
     );
     expect(READS_SOURCE).toContain(
       "isEmbed || !shop.reviewsEnabled ? null : getShopReviewAggregate(db, shop.id)",
