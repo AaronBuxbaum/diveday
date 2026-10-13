@@ -10,6 +10,7 @@ import {
   filterReport,
   helperBodies,
   literalPaths,
+  parseHunks,
   SMOKE,
   selectCaptures,
   shardCount,
@@ -64,17 +65,16 @@ const source = [
   "});", // 21
 ].join("\n");
 
-const helpers = new Map([
-  ...helperBodies(source),
-  ...helperBodies(
-    [
-      "async function openSailedTrip(page: Page) {",
-      '  await page.goto("/shop/blue-mantis/schedule/board");',
-      '  await page.getByRole("link", { name: SAILED }).click();',
-      "}",
-    ].join("\n"),
-  ),
-]);
+const helpersSource = [
+  'import { expect } from "@playwright/test";', // 1
+  "", // 2
+  "async function openSailedTrip(page: Page) {", // 3
+  '  await page.goto("/shop/blue-mantis/schedule/board");', // 4
+  '  await page.getByRole("link", { name: SAILED }).click();', // 5
+  "}", // 6
+].join("\n");
+
+const helpers = new Map([...helperBodies(source), ...helperBodies(helpersSource)]);
 
 /** The import graph `e2e-affected.mjs` builds, by hand: two pages and what they import. */
 const graph = new Map([
@@ -159,8 +159,96 @@ describe("what a pull request captures", () => {
         "e2e/booking.spec.ts",
         "scripts/verify-push.mjs",
         ".github/workflows/durations-refresh.yml",
+        ".env.example",
+        ".coderabbit.yaml",
+        ".agents/skills/tdd/SKILL.md",
+        "vercel.json",
+        ".gitattributes",
       ]),
     ).toHaveLength(2);
+    // Imported by next.config.ts and src/, so never inert.
+    expect(picked(["config/env-registry.mjs"]).mode).toBe("all");
+  });
+});
+
+describe("an edit to the visual spec or the helpers, read by its hunks", () => {
+  const pickedByHunks = (changed, hunks) => {
+    const result = selectCaptures({
+      changed,
+      graph,
+      report,
+      source,
+      helpers,
+      hunks,
+      helpersSource,
+    });
+    return result.mode === "all"
+      ? result
+      : [...result.lines].map((line) => line.split(" › ").at(-1));
+  };
+  const ALWAYS = [
+    "the day spine renders true to the design (light)",
+    "the walk-in counter renders true to the design (light)",
+  ];
+
+  it("captures the capture whose own lines a hunk touches", () => {
+    expect(pickedByHunks(["e2e/visual.spec.ts"], { "e2e/visual.spec.ts": [[16, 16]] })).toEqual([
+      ALWAYS[0],
+      "the public course page renders true to the design (light)",
+      ALWAYS[1],
+    ]);
+  });
+
+  it("captures every capture that calls a helper or constant the diff edits", () => {
+    expect(pickedByHunks(["e2e/visual.spec.ts"], { "e2e/visual.spec.ts": [[1, 1]] })).toEqual([
+      "the gear register renders true to the design (light)",
+      ...ALWAYS,
+    ]);
+    expect(pickedByHunks(["e2e/helpers.ts"], { "e2e/helpers.ts": [[4, 4]] })).toEqual([
+      ALWAYS[0],
+      "a trip's crew renders true to the design (light)",
+      ALWAYS[1],
+    ]);
+  });
+
+  it("captures everything for a hunk in no capture and no helper, or with no hunks to read", () => {
+    expect(pickedByHunks(["e2e/visual.spec.ts"], { "e2e/visual.spec.ts": [[6, 6]] }).mode).toBe(
+      "all",
+    );
+    expect(pickedByHunks(["e2e/helpers.ts"], { "e2e/helpers.ts": [[1, 1]] }).mode).toBe("all");
+    expect(picked(["e2e/visual.spec.ts"]).mode).toBe("all");
+    expect(picked(["e2e/helpers.ts"]).mode).toBe("all");
+  });
+
+  it("still captures everything when another file in the diff is unbounded", () => {
+    expect(
+      pickedByHunks(["e2e/visual.spec.ts", "src/app/globals.css"], {
+        "e2e/visual.spec.ts": [[16, 16]],
+      }).mode,
+    ).toBe("all");
+  });
+
+  it("parses a zero-context diff into new-side ranges, a deletion as the lines around it", () => {
+    const diff = [
+      "diff --git a/e2e/visual.spec.ts b/e2e/visual.spec.ts",
+      "--- a/e2e/visual.spec.ts",
+      "+++ b/e2e/visual.spec.ts",
+      "@@ -10,2 +10,3 @@ test(",
+      "@@ -40 +41 @@",
+      "@@ -50,4 +51,0 @@",
+      "diff --git a/e2e/helpers.ts b/e2e/helpers.ts",
+      "--- a/e2e/helpers.ts",
+      "+++ b/e2e/helpers.ts",
+      "@@ -7,0 +8,2 @@",
+    ].join("\n");
+    expect(parseHunks(diff)).toEqual({
+      "e2e/visual.spec.ts": [
+        [10, 12],
+        [41, 41],
+        [51, 52],
+      ],
+      "e2e/helpers.ts": [[8, 9]],
+    });
   });
 });
 
