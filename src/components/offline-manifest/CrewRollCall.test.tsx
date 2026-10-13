@@ -7,6 +7,8 @@ import {
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import { OfflineManifestView } from "../OfflineManifestView";
+import { OfflineCrewRollCall } from "./CrewRollCall";
+import { controls as sectionControls, view as sectionView } from "./section-fixtures";
 import { FROZEN_MS, identityResponse, richEnvelope, setOnline } from "./view-fixtures";
 
 let searchParams = new URLSearchParams();
@@ -291,5 +293,15 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
     expect(screen.getByText(/Sal Ortiz · Boarded/)).toBeInTheDocument();
     expect(screen.getByText(/Sal Ortiz · Awaiting/)).toBeInTheDocument();
+  });
+});
+
+describe("OfflineCrewRollCall, drawn alone", () => {
+  it("draws the crew half under its own heading", () => {
+    const { container } = render(
+      <OfflineCrewRollCall view={sectionView()} controls={sectionControls()} />,
+    );
+    expect(container.querySelector("#offline-crew-heading")).not.toBeNull();
+    expect(container.textContent).toContain("Dana Divemaster");
   });
 });

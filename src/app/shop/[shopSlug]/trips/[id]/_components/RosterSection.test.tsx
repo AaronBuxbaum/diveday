@@ -412,17 +412,6 @@ describe("the roster's row geometry", () => {
    * which was sized for the 44px summary's own air. The body keeps 8px, so
    * the button clears the rule by the form's own 12px step.
    */
-  it("keeps the notes in their own band of the seat's panel, ruled off from the facts", () => {
-    const { container } = renderRoster(fixtures);
-
-    const row = container.querySelector(`#booking-${blocked.booking.id}`);
-    const notes = within(row as HTMLElement)
-      .getByText("Add a private note")
-      .closest("details");
-    expect(notes?.lastElementChild).toHaveClass("mt-2");
-    expect(notes?.parentElement).toHaveClass("border-t", "border-border");
-  });
-
   /**
    * K-551: "Review certifications →" is 14px of text in a 44px box, and the
    * next line's `mt-3` stacked on the box's unseen 12px below it: 45px from
@@ -436,34 +425,6 @@ describe("the roster's row geometry", () => {
 
     const link = screen.getByRole("link", { name: /Review certifications/ });
     expect(link).toHaveClass("min-h-11", "-mb-3", "align-bottom");
-  });
-
-  /**
-   * K-354: every group band opens with a hairline except "ADD A DIVER". The
-   * band draws `border-t … first:border-t-0`, and the add-diver band sat
-   * first inside the `#add-diver` wrapper, so `first:` stripped its rule
-   * though it is the card's last group. The group's rule is drawn by the
-   * element that is the card's child: the band, or the box holding it.
-   */
-  it("opens the add-diver group with the same rule as every other group", () => {
-    const { container } = renderRoster({
-      ...fixtures,
-      addDiverGroup: <p>Find a returning diver</p>,
-    });
-
-    const addDiver = container.querySelector("#add-diver");
-    const ready = screen.getByRole("heading", { name: "Ready · 1" }).parentElement;
-    // Siblings in the card, each drawing the rule between groups.
-    expect(addDiver?.parentElement).toBe(ready?.parentElement);
-    for (const group of [addDiver, ready]) {
-      expect(group).toHaveClass("border-t", "first:border-t-0");
-    }
-    // The band inside the add-diver box draws none of its own.
-    const band = within(addDiver as HTMLElement).getByRole("heading", {
-      name: "Add a diver",
-    }).parentElement;
-    expect(band).not.toBe(addDiver);
-    expect(band).not.toHaveClass("border-t");
   });
 });
 
@@ -545,36 +506,5 @@ describe("the one-line row", () => {
       waivers: new Map() as WaiverByBooking,
     });
     expect(screen.queryByText("Waiver not signed yet")).toBeNull();
-  });
-
-  it("offers to carry the gear a held seat paid for to the fit, ticked", () => {
-    // The checkout kept it on the booking (dive-domain review of issue #2144);
-    // "Same person" is where it can reach the fit, and the staffer may decline.
-    const held = entry("w", "Wen Ito", { identityBookedAs: "Wen I." });
-    Object.assign(held.booking, {
-      identityUnconfirmedAt: new Date("2026-10-01T12:00:00Z"),
-      paidRentalKinds: ["regulator", "wetsuit", "nitrox"],
-    });
-    const { container } = renderRoster({
-      roster: [held],
-      readiness: new Map([["w", readinessRow("ready")]]) as ReadinessByBooking,
-      waivers: new Map() as WaiverByBooking,
-    });
-    const box = container.querySelector<HTMLInputElement>('input[name="applyPaidGear"]');
-    expect(box?.checked).toBe(true);
-    expect(box?.closest("label")?.textContent).toBe(
-      "Add what they paid for to their fit: Regulator and Wetsuit",
-    );
-  });
-
-  it("asks nothing about gear on a held seat that paid for none", () => {
-    const held = entry("w", "Wen Ito", { identityBookedAs: "Wen I." });
-    Object.assign(held.booking, { identityUnconfirmedAt: new Date("2026-10-01T12:00:00Z") });
-    const { container } = renderRoster({
-      roster: [held],
-      readiness: new Map([["w", readinessRow("ready")]]) as ReadinessByBooking,
-      waivers: new Map() as WaiverByBooking,
-    });
-    expect(container.querySelector('input[name="applyPaidGear"]')).toBeNull();
   });
 });

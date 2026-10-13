@@ -14,51 +14,8 @@ import { RecapSendControl } from "./RecapSendControl";
 /** Thumbnails, not panels: a recap's photos are checked at a glance, not studied. */
 const RECAP_GALLERY_CLASS = "mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6";
 
-/**
- * The crew's post-trip note, written where the crew is standing when they still
- * remember the day: the shop home's evening reading, on the settled station of
- * the departure it belongs to (ADR 20260827-clearwater-surface-language,
- * decision 4 — the close-out page it used to live on folded into the home).
- *
- * The note rides out on every diver's recap, which the dedicated hourly scan
- * sends no earlier than four hours after the trip ends (`sendDueRecaps`,
- * src/db/recap.ts) — so the evening the boat came back is both the last moment
- * to add one and the only moment anyone can still name the highlight. It used
- * to live only on the trip's setup page and only *before* the trip, which is to
- * say it asked for the highlight of a day that had not happened.
- *
- * Deliberately a `<details>` rather than an always-open box: the spine is a
- * reconciliation ("did everyone come home?") and a column of open textareas
- * would bury the head counts. The note as written is the summary, so a station
- * that already has one says so without opening.
- *
- * Its own `<form>` is why it rides its station rather than sitting inside the
- * closing block: a form cannot nest in a form, and the closing act below must
- * survive a note being saved.
- */
-export function RecapNoteEditor({
-  action,
-  shoutout,
-  saved,
-  t,
-  photos = [],
-  deletePhotoAction,
-  crewPhotos = [],
-  crewPhotoInputId = "crew-recap-photo",
-  uploadCrewPhotoAction,
-  deleteCrewPhotoAction,
-  tripId,
-  recapSendAction,
-  toggleRecapAutoSendPauseAction,
-  recapAutoSendAt,
-  recapAutoSendAtLabel,
-  recapAutoSendPaused = false,
-  recapFailed = false,
-  recapNowMs,
-  recapSentAt,
-  recapSentAtLabel,
-  recapStatusSummary,
-}: {
+/** Everything `RecapNoteEditor` draws, assembled once by its caller and handed over as one object. */
+export type RecapNoteEditorContext = {
   action: (formData: FormData) => void;
   shoutout: string | null;
   /** True right after this row's own save, which is also what holds it open. */
@@ -91,7 +48,54 @@ export function RecapNoteEditor({
   recapSentAt?: Date | null;
   recapSentAtLabel?: string;
   recapStatusSummary?: string;
-}) {
+};
+
+/**
+ * The crew's post-trip note, written where the crew is standing when they still
+ * remember the day: the shop home's evening reading, on the settled station of
+ * the departure it belongs to (ADR 20260827-clearwater-surface-language,
+ * decision 4 — the close-out page it used to live on folded into the home).
+ *
+ * The note rides out on every diver's recap, which the dedicated hourly scan
+ * sends no earlier than four hours after the trip ends (`sendDueRecaps`,
+ * src/db/recap.ts) — so the evening the boat came back is both the last moment
+ * to add one and the only moment anyone can still name the highlight. It used
+ * to live only on the trip's setup page and only *before* the trip, which is to
+ * say it asked for the highlight of a day that had not happened.
+ *
+ * Deliberately a `<details>` rather than an always-open box: the spine is a
+ * reconciliation ("did everyone come home?") and a column of open textareas
+ * would bury the head counts. The note as written is the summary, so a station
+ * that already has one says so without opening.
+ *
+ * Its own `<form>` is why it rides its station rather than sitting inside the
+ * closing block: a form cannot nest in a form, and the closing act below must
+ * survive a note being saved.
+ */
+export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }) {
+  const {
+    action,
+    shoutout,
+    saved,
+    t,
+    photos = [],
+    deletePhotoAction,
+    crewPhotos = [],
+    crewPhotoInputId = "crew-recap-photo",
+    uploadCrewPhotoAction,
+    deleteCrewPhotoAction,
+    tripId,
+    recapSendAction,
+    toggleRecapAutoSendPauseAction,
+    recapAutoSendAt,
+    recapAutoSendAtLabel,
+    recapAutoSendPaused = false,
+    recapFailed = false,
+    recapNowMs,
+    recapSentAt,
+    recapSentAtLabel,
+    recapStatusSummary,
+  } = context;
   const recapLocked = Boolean(recapSentAt);
   const statusSummary =
     recapStatusSummary ??

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { EditorRail } from "@/components/editor/EditorRail";
 import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
@@ -25,14 +24,13 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
-import { getDb } from "@/db/client";
-import { getCourseBySlug, getCourseTemplateUpdate, setCourseVisibility } from "@/db/courses";
+import { getCourseBySlug, getCourseTemplateUpdate } from "@/db/courses";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
-import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
@@ -52,6 +50,7 @@ import {
   pullCourseTemplateUpdatesAction,
   saveCourseContentAction,
   saveCourseFormRequirementsAction,
+  setCourseVisibilityAction,
 } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -84,52 +83,9 @@ export default async function EditCoursePage({
 
   const saveAction = saveCourseContentAction.bind(null, shopSlug, slug);
 
-  /**
-   * Take the course off the diver-facing catalog, or put it back.
-   *
-   * It lives here rather than on the roster because it is rare and the roster
-   * is not: a Hide button on every one of 55 rows was 55 standing controls for
-   * an act a shop performs a handful of times a year, on a list whose job is
-   * to be read. Here it is one control, on the page that already says whether
-   * this course is live and where.
-   *
-   * No redirect and no notice: the header line and the button's own word both
-   * flip on the render this revalidation causes, and a same-page redirect
-   * would reset scroll to the top of a four-thousand-pixel form.
-   *
-   * The course id is closed over rather than posted, so there is no
-   * attacker-supplied id to scope; `setCourseVisibility` still matches on the
-   * session's own `shopId` as well, which is the layer that must never be the
-   * only one (ADR-0006).
-   *
-   * **"Is this course for sale" is trip-definition work** — what the dive is
-   * and who it admits (H-14, ADR 20260724-role-authorization) — so the closure
-   * re-checks live roles rather than settling for "is staff". The control
-   * below is drawn on the same answer, but the gate is here: a form that is
-   * not rendered is not a form that cannot be posted.
-   *
-   * **The live row decides the flip, not the render's snapshot.** Closing over
-   * `course.isActive` meant a tab left open while a colleague hid the course
-   * posted "make it hidden" a second time and put it back on the catalog. Only
-   * the id is captured; the standing is read inside the action, and a slug
-   * that no longer names that course is refused rather than toggled.
-   */
-  const courseId = course.id;
-  async function visibilityAction() {
-    "use server";
-    const staff = await requireStaffSession();
-    const db = await getDb();
-    const refusal = `${shopPath(staff.user.shopSlug, "courses", slug, "edit")}?error=not-authorized`;
-    if (!(await canPersonConfigureTrips(db, staff.user.shopId, staff.user.personId))) {
-      redirect(refusal);
-    }
-    const live = await getCourseBySlug(db, staff.user.shopId, slug);
-    if (!live || live.id !== courseId) notFound();
-    await setCourseVisibility(db, staff.user.shopId, courseId, !live.isActive);
-    revalidatePath(`/shop/${staff.user.shopSlug}/courses/${slug}/edit`);
-    revalidatePath(`/shop/${staff.user.shopSlug}/courses`);
-  }
-  // The same question the closure asks, asked once for the reader: a control
+  // The catalog toggle's course, bound rather than posted (`setCourseVisibilityAction`).
+  const visibilityAction = setCourseVisibilityAction.bind(null, slug, course.id);
+  // The same question the action asks, asked once for the reader: a control
   // whose only outcome is a refusal is a control that should not be drawn.
   const canSetVisibility = await canPersonConfigureTrips(db, shop.id, session.user.personId);
   const templateUpdate = await getCourseTemplateUpdate(db, session.user.shopId, course.id);

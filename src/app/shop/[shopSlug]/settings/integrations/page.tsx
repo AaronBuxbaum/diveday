@@ -26,7 +26,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { requireShopSurface } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import {
   disconnectIntegrationAction,
@@ -45,26 +45,26 @@ import { EVENT_OPTIONS, type EventLabelKey } from "./event-options";
 export const instant = true;
 export const metadata: Metadata = { title: "Integrations — DiveDay" };
 
-function noticeMessages(t: StaffTranslator) {
+function noticeMessages(t: StaffTranslator): NoticeMessages {
   return {
-    connected: { tone: "success" as const, text: t("integrations.notice.connected") },
-    saved: { tone: "success" as const, text: t("integrations.notice.saved") },
-    disconnected: { tone: "success" as const, text: t("integrations.notice.disconnected") },
+    connected: { tone: "success", text: t("integrations.notice.connected") },
+    saved: { tone: "success", text: t("integrations.notice.saved") },
+    disconnected: { tone: "success", text: t("integrations.notice.disconnected") },
     "sync-complete": {
-      tone: "success" as const,
+      tone: "success",
       text: t("integrations.notice.sync-complete", { count: 0 }),
     },
-    "test-sent": { tone: "success" as const, text: t("integrations.notice.test-sent") },
-    invalid: { tone: "danger" as const, text: t("integrations.notice.invalid") },
-    "not-configured": { tone: "warning" as const, text: t("integrations.notice.not-configured") },
-    "not-authorized": { tone: "danger" as const, text: t("integrations.notice.not-authorized") },
-    failed: { tone: "danger" as const, text: t("integrations.notice.failed") },
+    "test-sent": { tone: "success", text: t("integrations.notice.test-sent") },
+    invalid: { tone: "danger", text: t("integrations.notice.invalid") },
+    "not-configured": { tone: "warning", text: t("integrations.notice.not-configured") },
+    "not-authorized": { tone: "danger", text: t("integrations.notice.not-authorized") },
+    failed: { tone: "danger", text: t("integrations.notice.failed") },
     "encryption-key-unset": {
-      tone: "danger" as const,
+      tone: "danger",
       text: t("integrations.notice.encryption-key-unset"),
     },
     "encryption-key-invalid": {
-      tone: "danger" as const,
+      tone: "danger",
       text: t("integrations.notice.encryption-key-invalid"),
     },
   };

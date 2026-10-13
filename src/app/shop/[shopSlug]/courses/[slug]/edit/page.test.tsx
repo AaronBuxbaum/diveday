@@ -26,6 +26,7 @@ vi.mock("./actions", () => ({
   pullCourseTemplateUpdatesAction: vi.fn(),
   saveCourseContentAction: vi.fn(),
   saveCourseFormRequirementsAction: vi.fn(),
+  setCourseVisibilityAction: vi.fn(),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/course-forms", () => ({

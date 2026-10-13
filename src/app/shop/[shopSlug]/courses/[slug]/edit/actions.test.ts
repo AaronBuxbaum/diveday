@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({
+  notFound: vi.fn(() => {
+    throw new Error("NOT_FOUND");
+  }),
   redirect: vi.fn((target: string) => {
     throw new Error(`REDIRECT:${target}`);
   }),
@@ -10,6 +13,7 @@ vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/courses", () => ({
   getCourseBySlug: vi.fn(),
   pullCourseTemplateUpdates: vi.fn(),
+  setCourseVisibility: vi.fn(),
   updateCourse: vi.fn(),
   updateCourseContent: vi.fn(),
 }));
@@ -38,13 +42,17 @@ vi.mock("@/db/course-forms", () => ({
 }));
 
 const { revalidatePath } = await import("next/cache");
-const { getCourseBySlug, pullCourseTemplateUpdates } = await import("@/db/courses");
+const { getCourseBySlug, pullCourseTemplateUpdates, setCourseVisibility } = await import(
+  "@/db/courses"
+);
 const { requireStaffSession } = await import("@/lib/session");
 const { canPersonConfigureTrips, canPersonManageWaiverTemplates } = await import("@/db/authz");
 const { listCourseFormRequirements, setCourseFormRequirements } = await import("@/db/course-forms");
-const { pullCourseTemplateUpdatesAction, saveCourseFormRequirementsAction } = await import(
-  "./actions"
-);
+const {
+  pullCourseTemplateUpdatesAction,
+  saveCourseFormRequirementsAction,
+  setCourseVisibilityAction,
+} = await import("./actions");
 
 const SHOP_ID = "3f4b1a2c-1111-4222-8333-444444444444";
 const COURSE_ID = "11111111-1111-4111-8111-111111111111";
@@ -191,5 +199,77 @@ describe("saveCourseFormRequirementsAction", () => {
     expect(await posted([["formId", FORM_A]])).toBe(
       "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-invalid#forms",
     );
+  });
+});
+
+/**
+ * **"Is this course for sale" is trip-definition work** (H-14, ADR
+ * 20260724-role-authorization). The page draws the toggle only for a reader
+ * whose roles allow it (`page.authz.test.tsx`); this is the gate itself, since a
+ * form that is not rendered is not a form that cannot be posted. It was an
+ * inline closure in `page.tsx` until the 2026-10-11 review moved it here, and
+ * these cases came with it.
+ */
+describe("setCourseVisibilityAction", () => {
+  const ACTIVE_COURSE = { id: COURSE_ID, slug: "open-water-diver", isActive: true };
+
+  beforeEach(() => {
+    vi.mocked(getCourseBySlug).mockResolvedValue(ACTIVE_COURSE as never);
+    vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
+  });
+
+  it("flips the course in the session's shop and revalidates the editor and the roster", async () => {
+    await setCourseVisibilityAction("open-water-diver", COURSE_ID);
+
+    expect(getCourseBySlug).toHaveBeenCalledWith({}, SHOP_ID, "open-water-diver");
+    expect(setCourseVisibility).toHaveBeenCalledWith({}, SHOP_ID, COURSE_ID, false);
+    expect(revalidatePath).toHaveBeenCalledWith("/shop/blue-mantis/courses/open-water-diver/edit");
+    expect(revalidatePath).toHaveBeenCalledWith("/shop/blue-mantis/courses");
+  });
+
+  /**
+   * A tab opened while the reader still had the role, posted after it was taken
+   * away. The action re-asks live roles and refuses; the row never moves.
+   */
+  it("refuses the post from a role that may not define trips", async () => {
+    vi.mocked(canPersonConfigureTrips).mockResolvedValue(false);
+    await expect(setCourseVisibilityAction("open-water-diver", COURSE_ID)).rejects.toThrow(
+      "REDIRECT:/shop/blue-mantis/courses/open-water-diver/edit?error=not-authorized",
+    );
+    expect(setCourseVisibility).not.toHaveBeenCalled();
+  });
+
+  /**
+   * **The live row decides the flip.** Binding the render's `isActive` meant a
+   * tab left open while a colleague hid the course posted "hide it" again and
+   * put it back on the diver-facing catalog.
+   */
+  it("flips the standing the row has now, not the one the page was rendered with", async () => {
+    // Somebody else hid it between the render and the tap.
+    vi.mocked(getCourseBySlug).mockResolvedValue({ ...ACTIVE_COURSE, isActive: false } as never);
+    await setCourseVisibilityAction("open-water-diver", COURSE_ID);
+
+    expect(setCourseVisibility).toHaveBeenCalledWith({}, SHOP_ID, COURSE_ID, true);
+  });
+
+  /**
+   * A slug that no longer names the course the page was rendered for, or a
+   * bound id edited on the way through the client: either way the pair no
+   * longer agrees, and nothing is toggled.
+   */
+  it("refuses when the slug and the bound id no longer name the same course", async () => {
+    vi.mocked(getCourseBySlug).mockResolvedValue({ ...ACTIVE_COURSE, id: "other-course" } as never);
+    await expect(setCourseVisibilityAction("open-water-diver", COURSE_ID)).rejects.toThrow(
+      "NOT_FOUND",
+    );
+    expect(setCourseVisibility).not.toHaveBeenCalled();
+  });
+
+  it("refuses a slug this shop has no course under", async () => {
+    vi.mocked(getCourseBySlug).mockResolvedValue(null as never);
+    await expect(setCourseVisibilityAction("someone-elses", COURSE_ID)).rejects.toThrow(
+      "NOT_FOUND",
+    );
+    expect(setCourseVisibility).not.toHaveBeenCalled();
   });
 });

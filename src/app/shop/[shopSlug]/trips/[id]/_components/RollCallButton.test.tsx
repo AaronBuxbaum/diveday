@@ -78,7 +78,7 @@ describe("RollCallButton", () => {
 
   it("links a readiness refusal to the Trip control", async () => {
     // `blockedMessage` is pre-rendered by the Server Component caller (see
-    // manifest/page.tsx's `t.rich` call) — the test stands in for that here.
+    // manifest's `roll-call-copy.tsx` `t.rich` call) — the test stands in for that here.
     setup(mockAction({ ok: false, reason: "not_ready" }), {
       ...DEFAULT_COPY,
       blockedMessage: (
@@ -99,7 +99,7 @@ describe("RollCallButton", () => {
   });
 
   it("keying by checkpoint (the caller's documented contract) drops a stale refusal on a checkpoint switch", async () => {
-    // manifest/page.tsx's real fix: the checkpoint switcher reuses the same
+    // the manifest's real fix: the checkpoint switcher reuses the same
     // route, so without a checkpoint-derived `key` this instance — and its
     // useActionState `result`, which has no external setter — would survive
     // a switch and misattribute a refusal to the wrong checkpoint. This

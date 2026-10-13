@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
  *
  * A button whose content *is* the fact says so with `data-print-content`, and
  * the rule lets it through. What that trigger carries is pinned where it is
- * rendered (`DiverRollCall.test.tsx`); this reads the rule itself and asks the
+ * rendered (`DiverRowPrint.test.tsx`); this reads the rule itself and asks the
  * DOM which elements it matches, because a selector read as a string cannot
  * say what `:is()` and `:not()` make of it.
  */

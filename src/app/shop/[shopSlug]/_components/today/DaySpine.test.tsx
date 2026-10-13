@@ -160,14 +160,16 @@ function renderSpine({
 } = {}) {
   return render(
     <DaySpine
-      spine={assembleDaySpine({ departures, actions }, { departures: tomorrow, actions: [] })}
-      shopSlug="blue-mantis"
-      shopName="Blue Mantis"
-      locale="en-US"
-      timeZone="America/New_York"
-      currency="usd"
-      now={NOW}
-      {...props}
+      context={{
+        spine: assembleDaySpine({ departures, actions }, { departures: tomorrow, actions: [] }),
+        shopSlug: "blue-mantis",
+        shopName: "Blue Mantis",
+        locale: "en-US",
+        timeZone: "America/New_York",
+        currency: "usd",
+        now: NOW,
+        ...props,
+      }}
     />,
   );
 }
@@ -572,17 +574,19 @@ describe("the good-news moments, beside a forecast still arriving", () => {
   ) {
     const { prelude } = await prerender(
       <DaySpine
-        spine={assembleDaySpine(
-          { departures: [departure()], actions },
-          { departures: [], actions: [] },
-        )}
-        highWind={highWind}
-        shopSlug="blue-mantis"
-        shopName="Blue Mantis"
-        locale="en-US"
-        timeZone="America/New_York"
-        currency="usd"
-        now={NOW}
+        context={{
+          spine: assembleDaySpine(
+            { departures: [departure()], actions },
+            { departures: [], actions: [] },
+          ),
+          highWind,
+          shopSlug: "blue-mantis",
+          shopName: "Blue Mantis",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          currency: "usd",
+          now: NOW,
+        }}
       />,
       { progressiveChunkSize: Number.POSITIVE_INFINITY, signal, onError: () => {} },
     );
@@ -1089,26 +1093,28 @@ describe("a row that performs keeps its place", () => {
     // send lands.
     rerender(
       <DaySpine
-        spine={assembleDaySpine(
-          {
-            departures: [departure()],
-            actions: [
-              action({
-                ...missing,
-                id: "blocker:booking-1:waiver_pending",
-                detail: "Waiver not signed. Link sent.",
-                actionLabel: "Nudge waiver",
-              }),
-            ],
-          },
-          { departures: [], actions: [] },
-        )}
-        shopSlug="blue-mantis"
-        shopName="Blue Mantis"
-        locale="en-US"
-        timeZone="America/New_York"
-        currency="usd"
-        now={NOW}
+        context={{
+          spine: assembleDaySpine(
+            {
+              departures: [departure()],
+              actions: [
+                action({
+                  ...missing,
+                  id: "blocker:booking-1:waiver_pending",
+                  detail: "Waiver not signed. Link sent.",
+                  actionLabel: "Nudge waiver",
+                }),
+              ],
+            },
+            { departures: [], actions: [] },
+          ),
+          shopSlug: "blue-mantis",
+          shopName: "Blue Mantis",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          currency: "usd",
+          now: NOW,
+        }}
       />,
     );
 

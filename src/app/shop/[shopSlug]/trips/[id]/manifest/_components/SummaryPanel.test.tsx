@@ -335,22 +335,25 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
           t={t}
         />
         <DiverRollCall
-          divers={roster}
-          checkpoint="after_dive_1"
-          isDeparture={false}
-          shopSlug="blue-mantis"
-          tripId="00000000-0000-4000-8000-0000000000ff"
-          locale="en-US"
-          timezone="America/New_York"
-          notesByBooking={new Map()}
-          rollCallAction={vi.fn(async () => ({ ok: true }) as const)}
-          addPrivateNoteAction={vi.fn(async () => undefined) as never}
-          rollCallButtonCopy={() => ({
-            errorRefusal: "Try again",
-            blockedMessage: "Still blocked",
-          })}
-          buddyTeamLabel={() => null}
-          t={t}
+          context={{
+            divers: roster,
+            crew: [],
+            checkpoint: "after_dive_1",
+            isDeparture: false,
+            shopSlug: "blue-mantis",
+            tripId: "00000000-0000-4000-8000-0000000000ff",
+            locale: "en-US",
+            timezone: "America/New_York",
+            notesByBooking: new Map(),
+            rollCallAction: vi.fn(async () => ({ ok: true }) as const),
+            addPrivateNoteAction: vi.fn(async () => undefined) as never,
+            rollCallButtonCopy: () => ({
+              errorRefusal: "Try again",
+              blockedMessage: "Still blocked",
+            }),
+            buddyTeamLabel: () => null,
+            t,
+          }}
         />
       </>,
     );
@@ -409,22 +412,25 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
             t={t}
           />
           <DiverRollCall
-            divers={[diver("b-1", "Ana Ruiz"), diver("b-3", "Priya Sharma")]}
-            checkpoint="after_dive_1"
-            isDeparture={false}
-            shopSlug="blue-mantis"
-            tripId="00000000-0000-4000-8000-0000000000ff"
-            locale="en-US"
-            timezone="America/New_York"
-            notesByBooking={new Map()}
-            rollCallAction={vi.fn(async () => ({ ok: true }) as const)}
-            addPrivateNoteAction={vi.fn(async () => undefined) as never}
-            rollCallButtonCopy={() => ({
-              errorRefusal: "Try again",
-              blockedMessage: "Still blocked",
-            })}
-            buddyTeamLabel={() => null}
-            t={t}
+            context={{
+              divers: [diver("b-1", "Ana Ruiz"), diver("b-3", "Priya Sharma")],
+              crew: [],
+              checkpoint: "after_dive_1",
+              isDeparture: false,
+              shopSlug: "blue-mantis",
+              tripId: "00000000-0000-4000-8000-0000000000ff",
+              locale: "en-US",
+              timezone: "America/New_York",
+              notesByBooking: new Map(),
+              rollCallAction: vi.fn(async () => ({ ok: true }) as const),
+              addPrivateNoteAction: vi.fn(async () => undefined) as never,
+              rollCallButtonCopy: () => ({
+                errorRefusal: "Try again",
+                blockedMessage: "Still blocked",
+              }),
+              buddyTeamLabel: () => null,
+              t,
+            }}
           />
         </div>,
       );

@@ -801,30 +801,8 @@ function CrewTipsLine({
   );
 }
 
-export function DaySpine({
-  spine,
-  shopSlug,
-  shopName,
-  locale,
-  timeZone,
-  currency,
-  crewedTripIds,
-  readerPersonId,
-  withheldCount = 0,
-  helpRequestAction,
-  drafts = [],
-  showPaymentsRow = false,
-  firstRun,
-  firstBooking,
-  factOfScale,
-  crewTipsCents = 0,
-  sessions,
-  evening,
-  highWind,
-  needsYou: needsYouRead,
-  blocked = 0,
-  now,
-}: {
+/** Everything `DaySpine` draws, assembled once by its caller and handed over as one object. */
+export type DaySpineContext = {
   spine: DaySpineData;
   shopSlug: string;
   shopName: string;
@@ -890,7 +868,33 @@ export function DaySpine({
   /** The day sentence's blocked figure, for the all-clear line when `needsYou` is omitted. */
   blocked?: number;
   now: Date;
-}) {
+};
+
+export function DaySpine({ context }: { context: DaySpineContext }) {
+  const {
+    spine,
+    shopSlug,
+    shopName,
+    locale,
+    timeZone,
+    currency,
+    crewedTripIds,
+    readerPersonId,
+    withheldCount = 0,
+    helpRequestAction,
+    drafts = [],
+    showPaymentsRow = false,
+    firstRun,
+    firstBooking,
+    factOfScale,
+    crewTipsCents = 0,
+    sessions,
+    evening,
+    highWind,
+    needsYou: needsYouRead,
+    blocked = 0,
+    now,
+  } = context;
   const t = staffTranslator(locale);
   const controls = rowControls({ shopSlug, shopName, helpRequestAction, t });
   const crewed = new Set(crewedTripIds ?? []);

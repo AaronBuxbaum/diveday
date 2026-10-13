@@ -19,6 +19,7 @@ import {
   RoleOrientationCard,
   RoleOrientationLine,
 } from "@/app/shop/[shopSlug]/_components/today/RoleOrientationCard";
+import { recapStatusLine } from "@/app/shop/[shopSlug]/_components/today/recap-status";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
 import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
@@ -42,7 +43,7 @@ import { shopByIdCached } from "@/db/shops";
 import { canAcceptPayments, shopStripeAccountForRender } from "@/db/stripe-accounts";
 import { getShopDayDepartures, getTodayWork } from "@/db/today";
 import { countShopTrips } from "@/db/trips";
-import { dismissOrientation, isOrientationDismissed } from "@/db/user-accounts";
+import { isOrientationDismissed } from "@/db/user-accounts";
 import {
   orientationRoleFor,
   orientationTourHref,
@@ -63,7 +64,6 @@ import {
   formatTime,
   formatWeekday,
 } from "@/lib/format";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicSchedulePath } from "@/lib/public-routes";
@@ -90,6 +90,7 @@ import { AUTH_NOTICES } from "./_components/auth-notices";
 import {
   deleteCrewRecapPhotoAction,
   deleteRecapPhotoAction,
+  dismissOrientationAction,
   saveRecapNoteAction,
   sendRecapAction,
   toggleRecapAutoSendPauseAction,
@@ -436,12 +437,6 @@ async function TodayBody({
     (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
   );
   const firstBoatEver = eveningClose.allHome && !sailedBefore;
-  async function dismissOrientationAction() {
-    "use server";
-    const staff = await requireStaffSession();
-    await dismissOrientation(await getDb(), staff.user.personId);
-    revalidateAndRedirect(`/shop/${staff.user.shopSlug}`);
-  }
   // **First run is "never had a departure", not "none coming up".**
   //
   // `nextDeparture` is null in three different situations, and only one of them is a new shop:
@@ -571,58 +566,40 @@ async function TodayBody({
   // they still remember the day. It rides its own station rather than a
   // page-level section, because the note is about one boat and the hourly scan
   // mails it four hours after that boat came in.
-  const recapDurationText = (durationMs: number) => {
-    const minutes = Math.max(1, Math.round(Math.abs(durationMs) / 60_000));
-    return minutes < 60
-      ? t("closeout.recap.aboutMinutes", { count: minutes })
-      : t("closeout.recap.aboutHours", { count: Math.max(1, Math.round(minutes / 60)) });
-  };
   const recapEditors = new Map<string, React.ReactNode>();
   for (const departure of closeout.departures) {
     // Only a returned boat: a trip still out has no day to write about yet,
     // and one that never left has no recap coming.
     if (!departure.ended) continue;
     const autoSendAt = recapAutoSendAt(departure.endsAt, departure.recapAutoSendAt);
-    const recapStatusSummary = departure.recapSentAt
-      ? t("closeout.recap.summarySent", {
-          duration: recapDurationText(now.getTime() - departure.recapSentAt.getTime()),
-        })
-      : departure.recapFailed
-        ? t("closeout.recap.summaryFailed")
-        : departure.recapAutoSendPaused
-          ? t("closeout.recap.summaryPaused")
-          : autoSendAt && autoSendAt.getTime() <= now.getTime()
-            ? t("closeout.recap.summaryDue")
-            : autoSendAt
-              ? t("closeout.recap.summaryWaiting", {
-                  duration: recapDurationText(autoSendAt.getTime() - now.getTime()),
-                })
-              : t("closeout.recap.summaryNoScheduled");
+    const recapStatusSummary = recapStatusLine(t, departure, autoSendAt, now);
     recapEditors.set(
       departure.tripId,
       <RecapNoteEditor
-        action={saveRecapNoteAction.bind(null, departure.tripId)}
-        shoutout={departure.recapShoutout}
-        saved={noted === departure.tripId}
-        t={t}
-        photos={departure.photos}
-        deletePhotoAction={deleteRecapPhotoAction.bind(null, departure.tripId)}
-        crewPhotos={departure.crewPhotos}
-        crewPhotoInputId={`crew-recap-photo-${departure.tripId}`}
-        uploadCrewPhotoAction={uploadCrewRecapPhotoAction.bind(null, departure.tripId)}
-        deleteCrewPhotoAction={deleteCrewRecapPhotoAction.bind(null, departure.tripId)}
-        tripId={departure.tripId}
-        recapSendAction={sendRecapAction.bind(null, departure.tripId)}
-        toggleRecapAutoSendPauseAction={toggleRecapAutoSendPauseAction}
-        recapAutoSendAt={autoSendAt}
-        recapAutoSendAtLabel={
-          autoSendAt ? formatDateTimeTz(autoSendAt, locale, shop.timezone) : undefined
-        }
-        recapAutoSendPaused={departure.recapAutoSendPaused}
-        recapFailed={departure.recapFailed}
-        recapNowMs={now.getTime()}
-        recapSentAt={departure.recapSentAt}
-        recapStatusSummary={recapStatusSummary}
+        context={{
+          action: saveRecapNoteAction.bind(null, departure.tripId),
+          shoutout: departure.recapShoutout,
+          saved: noted === departure.tripId,
+          t,
+          photos: departure.photos,
+          deletePhotoAction: deleteRecapPhotoAction.bind(null, departure.tripId),
+          crewPhotos: departure.crewPhotos,
+          crewPhotoInputId: `crew-recap-photo-${departure.tripId}`,
+          uploadCrewPhotoAction: uploadCrewRecapPhotoAction.bind(null, departure.tripId),
+          deleteCrewPhotoAction: deleteCrewRecapPhotoAction.bind(null, departure.tripId),
+          tripId: departure.tripId,
+          recapSendAction: sendRecapAction.bind(null, departure.tripId),
+          toggleRecapAutoSendPauseAction,
+          recapAutoSendAt: autoSendAt,
+          recapAutoSendAtLabel: autoSendAt
+            ? formatDateTimeTz(autoSendAt, locale, shop.timezone)
+            : undefined,
+          recapAutoSendPaused: departure.recapAutoSendPaused,
+          recapFailed: departure.recapFailed,
+          recapNowMs: now.getTime(),
+          recapSentAt: departure.recapSentAt,
+          recapStatusSummary,
+        }}
       />,
     );
   }
@@ -892,41 +869,40 @@ async function TodayBody({
         </div>
       ) : (
         <DaySpine
-          spine={spine}
-          highWind={work.highWind}
-          shopSlug={shopSlug}
-          shopName={shop.name}
-          locale={locale}
-          timeZone={shop.timezone}
-          currency={shop.currency}
-          crewedTripIds={lens === "boat" ? crewedTripIds : undefined}
-          readerPersonId={session.user.personId}
-          withheldCount={withheldCount}
-          drafts={spineDrafts}
-          helpRequestAction={updateHelpRequestAction}
-          showPaymentsRow={showPaymentsRow}
-          firstBooking={firstBooking}
-          factOfScale={factOfScale}
-          crewTipsCents={dayMoney.crewTipsCents}
-          evening={evening}
-          needsYou={needsYou}
-          now={now}
-          sessions={
-            lens === "sessions" ? (
-              <YourSessions
-                locale={locale}
-                sessions={crewedSessions}
-                shopSlug={shopSlug}
-                timeZone={shop.timezone}
-              />
-            ) : null
-          }
-          // **The spine's leading group, on the one morning it exists** (ADR
-          // 20260827-first-light, decision 6). Composed here rather than inside
-          // the spine because the five persisted facts behind it are this
-          // page's reads; the spine only decides where the group sits.
-          firstRun={
-            showFirstRunChecklist ? (
+          context={{
+            spine,
+            highWind: work.highWind,
+            shopSlug,
+            shopName: shop.name,
+            locale,
+            timeZone: shop.timezone,
+            currency: shop.currency,
+            crewedTripIds: lens === "boat" ? crewedTripIds : undefined,
+            readerPersonId: session.user.personId,
+            withheldCount,
+            drafts: spineDrafts,
+            helpRequestAction: updateHelpRequestAction,
+            showPaymentsRow,
+            firstBooking,
+            factOfScale,
+            crewTipsCents: dayMoney.crewTipsCents,
+            evening,
+            needsYou,
+            now,
+            sessions:
+              lens === "sessions" ? (
+                <YourSessions
+                  locale={locale}
+                  sessions={crewedSessions}
+                  shopSlug={shopSlug}
+                  timeZone={shop.timezone}
+                />
+              ) : null,
+            // **The spine's leading group, on the one morning it exists** (ADR
+            // 20260827-first-light, decision 6). Composed here rather than inside
+            // the spine because the five persisted facts behind it are this
+            // page's reads; the spine only decides where the group sits.
+            firstRun: showFirstRunChecklist ? (
               <FirstRunChecklist
                 shopSlug={shopSlug}
                 // No APP_HOST (local dev, some tests) means no origin for an absolute
@@ -942,8 +918,8 @@ async function TodayBody({
                   doneCount: firstRunDoneCount,
                 })}
               />
-            ) : null
-          }
+            ) : null,
+          }}
         />
       )}
 

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { Browser, Page } from "@playwright/test";
-import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/AfterState";
+import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";

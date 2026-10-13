@@ -2,7 +2,15 @@
 
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { entry, fixtures, readinessRow, renderRoster, signedWaiver } from "./roster-test-fixtures";
+import { rowReasonLines } from "./roster-row-reasons";
+import {
+  entry,
+  fixtures,
+  readinessRow,
+  renderRoster,
+  seatFacts,
+  signedWaiver,
+} from "./roster-test-fixtures";
 import type { ReadinessByBooking, RentalFitByBooking, WaiverByBooking } from "./types";
 
 afterEach(cleanup);
@@ -227,5 +235,40 @@ describe("an unanswered referral under a cleared release", () => {
       waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
     });
     expect(screen.queryByText(/Referred to a physician on/)).toBeNull();
+  });
+});
+
+/**
+ * `rowReasonLines` reads the seat's facts and six doors `rowNotices` drew; the
+ * test hands it those six as empty instead of running the builder before it.
+ */
+describe("rowReasonLines, from the seat's facts and six empty doors", () => {
+  const notices = {
+    recencyText: null,
+    linkAction: "",
+    medicalActions: null,
+    earlierRefusal: null,
+    earlierReferral: null,
+    moreHoldsBehindConfirmation: false,
+  };
+
+  it("says a blocker as a danger line", () => {
+    const seat = seatFacts(entry("x", "Asha Osei"), {
+      readiness: new Map([
+        ["x", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["x", signedWaiver]]) as WaiverByBooking,
+    });
+    const { reasonLines } = rowReasonLines({ ...seat, ...notices });
+    expect(reasonLines.length).toBeGreaterThan(0);
+    expect(reasonLines[0]?.tone).toBe("danger");
+  });
+
+  it("says nothing for a ready, paid, signed seat", () => {
+    const seat = seatFacts(entry("x", "Rene Marsh"), {
+      readiness: new Map([["x", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["x", signedWaiver]]) as WaiverByBooking,
+    });
+    expect(rowReasonLines({ ...seat, ...notices }).reasonLines).toEqual([]);
   });
 });

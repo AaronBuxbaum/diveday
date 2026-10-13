@@ -14,8 +14,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * catalog — or putting it back on — is exactly that.
  *
  * Two halves, and only one of them is the gate: the control is not drawn for a
- * reader who may not use it, and the closure refuses the post regardless,
- * because a form that is not rendered is not a form that cannot be posted.
+ * reader who may not use it (here), and `setCourseVisibilityAction` refuses the
+ * post regardless (`actions.test.ts`), because a form that is not rendered is
+ * not a form that cannot be posted.
  */
 
 vi.mock("next/navigation", () => ({
@@ -46,6 +47,7 @@ vi.mock("./actions", () => ({
   pullCourseTemplateUpdatesAction: vi.fn(),
   saveCourseContentAction: vi.fn(),
   saveCourseFormRequirementsAction: vi.fn(),
+  setCourseVisibilityAction: vi.fn(),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/course-forms", () => ({
@@ -56,7 +58,6 @@ vi.mock("@/db/course-forms", () => ({
 vi.mock("@/db/courses", () => ({
   getCourseBySlug: vi.fn(),
   getCourseTemplateUpdate: vi.fn(),
-  setCourseVisibility: vi.fn(),
 }));
 vi.mock("@/db/authz", () => ({
   canPersonConfigureTrips: vi.fn(),
@@ -80,9 +81,8 @@ vi.mock("@/i18n/staff-messages", () => ({
 }));
 
 const { canPersonConfigureTrips } = await import("@/db/authz");
-const { getCourseBySlug, getCourseTemplateUpdate, setCourseVisibility } = await import(
-  "@/db/courses"
-);
+const { getCourseBySlug, getCourseTemplateUpdate } = await import("@/db/courses");
+const { setCourseVisibilityAction } = await import("./actions");
 const { requireShopSurface, requireStaffSession } = await import("@/lib/session");
 const { default: EditCoursePage } = await import("./page");
 
@@ -121,9 +121,8 @@ const COURSE = {
 };
 
 /**
- * The closure is not exported — it is the `action` of one form on the page —
- * so the test reaches it the way the browser does: off the element the page
- * returned. Walking the tree rather than the DOM, because React renders a
+ * The bound action is the `action` of one form on the page, so the test
+ * reaches it the way the browser does: off the element the page returned. Walking the tree rather than the DOM, because React renders a
  * function `action` as its own transport and the attribute is not the
  * function.
  */
@@ -161,7 +160,6 @@ beforeEach(() => {
   } as never);
   vi.mocked(getCourseBySlug).mockResolvedValue(COURSE as never);
   vi.mocked(getCourseTemplateUpdate).mockResolvedValue(null as never);
-  vi.mocked(setCourseVisibility).mockResolvedValue(COURSE as never);
 });
 
 afterEach(() => {
@@ -195,45 +193,16 @@ describe("the course editor's visibility toggle", () => {
   });
 
   /**
-   * The gate, as opposed to the drawing of it: a tab opened while the reader
-   * still had the role, posted after it was taken away. The closure re-asks
-   * live roles and refuses; the row never moves.
+   * The gate itself is `setCourseVisibilityAction`'s, pinned in
+   * `actions.test.ts`. What the page owns is the wiring: the form posts that
+   * action with the slug and the id it rendered, and nothing the reader typed.
    */
-  it("refuses the post from a role that may not define trips", async () => {
+  it("binds the toggle to this course's slug and id", async () => {
     vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
     const action = visibilityActionOf(await renderPage());
     expect(action).toBeTruthy();
 
-    vi.mocked(canPersonConfigureTrips).mockResolvedValue(false);
-    await expect(action?.()).rejects.toThrow(
-      "REDIRECT:/shop/blue-mantis/courses/open-water-diver/edit?error=not-authorized",
-    );
-    expect(setCourseVisibility).not.toHaveBeenCalled();
-  });
-
-  /**
-   * **The live row decides the flip.** Closing over the render's `isActive`
-   * meant a tab left open while a colleague hid the course posted "hide it"
-   * again and put it back on the diver-facing catalog.
-   */
-  it("flips the standing the row has now, not the one the page was rendered with", async () => {
-    vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
-    const action = visibilityActionOf(await renderPage());
-
-    // Somebody else hid it between the render and the tap.
-    vi.mocked(getCourseBySlug).mockResolvedValue({ ...COURSE, isActive: false } as never);
     await action?.();
-
-    expect(setCourseVisibility).toHaveBeenCalledWith({}, SHOP_ID, COURSE_ID, true);
-  });
-
-  /** A slug that no longer names the course this page was rendered for. */
-  it("refuses when the slug has moved to another course", async () => {
-    vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
-    const action = visibilityActionOf(await renderPage());
-
-    vi.mocked(getCourseBySlug).mockResolvedValue({ ...COURSE, id: "other-course" } as never);
-    await expect(action?.()).rejects.toThrow("NOT_FOUND");
-    expect(setCourseVisibility).not.toHaveBeenCalled();
+    expect(setCourseVisibilityAction).toHaveBeenCalledWith("open-water-diver", COURSE_ID);
   });
 });

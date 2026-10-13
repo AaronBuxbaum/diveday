@@ -42,20 +42,22 @@ const wall = { year: 2026, month: 10, day: 3, hour: 8, minute: 0 };
 function renderDetails() {
   return render(
     <DetailsSection
-      action={() => {}}
-      trip={trip}
-      diveSiteList={[]}
-      tripDiveList={[]}
-      startWall={wall}
-      endWall={{ ...wall, hour: 12 }}
-      dayCount={1}
-      locale="en-US"
-      currency="USD"
-      boats={[]}
-      lenses={[]}
-      hasBoatDiving
-      hasShoreDiving={false}
-      hasPoolDiving={false}
+      context={{
+        action: () => {},
+        trip: trip,
+        diveSiteList: [],
+        tripDiveList: [],
+        startWall: wall,
+        endWall: { ...wall, hour: 12 },
+        dayCount: 1,
+        locale: "en-US",
+        currency: "USD",
+        boats: [],
+        lenses: [],
+        hasBoatDiving: true,
+        hasShoreDiving: false,
+        hasPoolDiving: false,
+      }}
     />,
   );
 }

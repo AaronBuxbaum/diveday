@@ -36,7 +36,12 @@ import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
-import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
+import {
+  type FormNotice,
+  type NoticeMessages,
+  noticeForForm,
+  noticeFromParam,
+} from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import {
   type CredentialRow,
@@ -71,15 +76,8 @@ export const instant = true;
 
 export const metadata: Metadata = { title: "Team — DiveDay" };
 
-/** One resolved `?notice=`: the tone it carries and the words for it. */
-type NoticeMessage = { tone: "success" | "danger" | "warning"; text: string };
-
-/**
- * Built inside the request, not at module scope, so the notice text tracks
- * the negotiated locale rather than freezing to whichever locale first
- * imported this file.
- */
-function noticeMessages(t: StaffTranslator): Record<string, NoticeMessage> {
+/** Built per request; see `NoticeMessages`. */
+function noticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     invited: { tone: "success", text: t("settings.team.notice.invited") },
     "invite-resent": { tone: "success", text: t("settings.team.notice.inviteResent") },

@@ -1,108 +1,63 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
-import { HapticsToggle } from "@/components/HapticsToggle";
-import { MilestoneHaptics } from "@/components/MilestoneHaptics";
-import {
-  OfflineManifestManager,
-  type OfflineManifestManagerCopy,
-} from "@/components/OfflineManifestManager";
-import { PushOptIn } from "@/components/PushOptIn";
+import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { SkipLink } from "@/components/SkipLink";
-import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { listTripBuddyTeams } from "@/db/buddy-pairs";
-import { listDeskEventsSince } from "@/db/desk-events";
-import { diveIntentTallyForTrip } from "@/db/dive-intent";
-import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
-import { listExecutedDives } from "@/db/executed-dives";
-import { getTripManifests } from "@/db/manifests";
-import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
-import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
-import type { ExecutedDive } from "@/db/schema";
-import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
-import { latestTripStage } from "@/db/trip-stages";
-import { listTripDives } from "@/db/trips";
-import { catchUpSentences } from "@/i18n/desk-event-labels";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
-import { crewBlockerText } from "@/i18n/identity-check-labels";
-import { rollCallCheckpointShortText, rollCallCheckpointText } from "@/i18n/manifest-labels";
-import { fieldGuideCards, marineLifeCatalogCards } from "@/i18n/marine-life-labels";
-import { diverTranslator } from "@/i18n/messages";
-import { staffSoulsOnBoardLine } from "@/i18n/participant-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
-import { groupCatchUp } from "@/lib/desk-events";
 import { scopedHash, scopedId } from "@/lib/element-id";
-import { formatDateTimeTz, formatTime, formatTimeRange } from "@/lib/format";
-import { withholdHeldSeatParticulars } from "@/lib/held-seat";
-import { cachedListFormat } from "@/lib/intl-cache";
-import {
-  blockedAtDock,
-  type ManifestBuddyTeam,
-  manifestAtCheckpoint,
-  type RollCallCheckpoint,
-  rollCallCheckpoints,
-  rollCallRowState,
-  splitBuddyTeamIds,
-} from "@/lib/manifests";
-import { webPushPublicKey } from "@/lib/notifications/web-push";
-import { serializeManifests } from "@/lib/offline-manifests";
-import { unteamedDivers as divingAndUnteamed } from "@/lib/participant-types";
 import { requireShopSurface } from "@/lib/session";
-import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { hasSailed } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
+import { bindManifestActions } from "./_components/bound-actions";
+import { buddyBuilderView } from "./_components/buddy-builder-view";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
+import { CheckpointSwitch } from "./_components/CheckpointSwitch";
 import { CrewRollCall } from "./_components/CrewRollCall";
-import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
+import { DiverRollCall } from "./_components/DiverRollCall";
 import { DockDesk } from "./_components/DockDesk";
 import { departureBoatSafetySection } from "./_components/departure-boat-safety";
-import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
+import { ExecutedDiveLog } from "./_components/ExecutedDiveLog";
+import { executedDiveLogView } from "./_components/executed-dive-copy";
+import { headCountView } from "./_components/head-count-view";
+import { ManifestDeviceSettings } from "./_components/ManifestDeviceSettings";
+import { ManifestMilestones } from "./_components/ManifestMilestones";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
+import {
+  catchUpStripView,
+  emergencyReferenceCopy,
+  offlineManifestManagerCopy,
+} from "./_components/manifest-copy";
+import { readManifestPage } from "./_components/manifest-reads";
+import { manifestSpecies } from "./_components/manifest-species";
+import { offlineManifestPayload } from "./_components/offline-payload";
+import { openCheckpoint } from "./_components/open-checkpoint";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import {
   PrintedKitBlanks,
   PrintedMissingProcedure,
   printedBoatProcedureCopy,
 } from "./_components/PrintedBoatProcedure";
+import { PrintedSoulsOnBoard } from "./_components/PrintedSoulsOnBoard";
 import { personTrailIndex } from "./_components/person-trail";
-import { pushOptInCopy } from "./_components/push-opt-in-copy";
+import { preDepartureCheckView } from "./_components/pre-departure-check-view";
+import { rollCallCopies } from "./_components/roll-call-copy";
 import { SeenGroup } from "./_components/SeenGroup";
+import { manifestNoteThreads } from "./_components/StaffNotes";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
+import { seenGroupView } from "./_components/seen-group-view";
 import { stageStripProps } from "./_components/stage-strip-props";
 import { TripPlanSection } from "./_components/TripPlanSection";
-import {
-  addBuddyTeamMemberAction,
-  addManifestPrivateNoteAction,
-  crewRollCallAction,
-  deleteSightingAction,
-  dissolveBuddyTeamAction,
-  formBuddyTeamAction,
-  isPushSubscribedAction,
-  isPushSubscribedAnywhereAction,
-  type ManifestActionContext,
-  markTripCaughtUpAction,
-  preDepartureCheckAction,
-  recordSightingAction,
-  removeBuddyTeamMemberAction,
-  rollCallAction,
-  saveExecutedDiveAction,
-  setTripStageAction,
-  subscribePushAction,
-  unsubscribePushAction,
-} from "./actions";
+import type { ManifestActionContext } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -117,129 +72,33 @@ export const metadata: Metadata = {
   title: "Boat manifest — DiveDay",
 };
 
-/**
- * The one line a collapsed dive shows: "Dive 1 — not recorded yet", or
- * "Dive 1 — Molasses Reef, 18 m, 8:05 – 8:47".
- *
- * Composed here rather than in the component for the reason `diveLabel` is: it
- * needs the translator, the shop's depth unit and the shop's zone, and
- * `ExecutedDiveLog` is a Client Component with none of them.
- *
- * Every part is optional except the site, which always resolves — a saved row
- * with no actual site means staff recorded it as unknown, and that is itself
- * the answer. A part nobody entered is simply absent; the line never invents a
- * dash or a zero to stand in for it.
- */
-function executedDiveSummary({
-  diveLabel,
-  row,
-  locale,
-  timeZone,
-  depthUnit,
-  t,
-}: {
-  diveLabel: string;
-  row?: { executed: ExecutedDive; actualSite: { id: string; name: string } | null };
-  locale: string;
-  timeZone: string;
-  depthUnit: DepthUnit;
-  t: StaffTranslator;
-}): string {
-  if (!row) return t("manifest.executedDive.summaryNotRecorded", { dive: diveLabel });
-  const parts: string[] = [row.actualSite?.name ?? t("manifest.executedDive.unknown")];
-  const depth = row.executed.maxDepthMeters;
-  if (depth != null && !row.executed.notRecorded.includes("depth")) {
-    parts.push(
-      t("manifest.executedDive.summaryDepth", {
-        depth: depthInUnit(depth, depthUnit),
-        unit: depthUnit === "feet" ? "ft" : "m",
-      }),
-    );
-  }
-  const { enteredAt, exitedAt } = row.executed;
-  if (enteredAt && exitedAt) {
-    parts.push(formatTimeRange(enteredAt, exitedAt, locale, timeZone));
-  } else if (enteredAt) {
-    parts.push(formatTime(enteredAt, locale, timeZone));
-  }
-  return t("manifest.executedDive.summaryRecorded", {
-    dive: diveLabel,
-    detail: parts.join(", "),
-  });
-}
-
-/**
- * The dive log's words, resolved here and handed down: `ExecutedDiveLog` is a
- * Client Component (it shows a typed refusal beside the field that caused it),
- * and `staffTranslator` is server-side only.
- */
-function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedDiveLabels {
-  return {
-    heading: t("manifest.executedDive.heading"),
-    actualSite: t("manifest.executedDive.actualSite"),
-    unknown: t("manifest.executedDive.unknown"),
-    maxDepth: t("manifest.executedDive.maxDepth", { unit: depthUnit === "feet" ? "ft" : "m" }),
-    enteredAt: t("manifest.executedDive.enteredAt"),
-    exitedAt: t("manifest.executedDive.exitedAt"),
-    visibility: t("manifest.executedDive.visibility"),
-    current: t("manifest.executedDive.current"),
-    notRecordedDepth: t("manifest.executedDive.notRecordedDepth"),
-    observedSpecies: t("manifest.executedDive.observedSpecies"),
-    observedSpeciesHint: t("manifest.executedDive.observedSpeciesHint"),
-    observedSpeciesNone: t("manifest.executedDive.observedSpeciesNone"),
-    planChangeReason: t("manifest.planChange.reasonLabel"),
-    planChangeReasonOptions: {
-      current: t("manifest.planChange.reason.current"),
-      weather: t("manifest.planChange.reason.weather"),
-      visibility: t("manifest.planChange.reason.visibility"),
-      crew_call: t("manifest.planChange.reason.crewCall"),
-    },
-    planChangeNote: t("manifest.planChange.noteLabel"),
-    planChangeNoteHint: t("manifest.planChange.noteHint"),
-    save: t("manifest.executedDive.save"),
-    saved: t("manifest.executedDive.saved"),
-    refusals: {
-      times_transposed: t("manifest.executedDive.refusal.timesTransposed"),
-      depth_out_of_range: t("manifest.executedDive.refusal.depthOutOfRange"),
-      dive_number_out_of_range: t("manifest.executedDive.refusal.diveNumberOutOfRange"),
-      unknown_site: t("manifest.executedDive.refusal.unknownSite"),
-      unknown_trip: t("manifest.executedDive.refusal.unknownTrip"),
-      unknown_recorder: t("manifest.executedDive.refusal.unknownRecorder"),
-      invalid_time: t("manifest.executedDive.refusal.invalidTime"),
-      invalid: t("manifest.executedDive.refusal.invalid"),
-      wrong_dive: t("manifest.executedDive.refusal.wrongDive"),
-      plan_change_note_without_reason: t(
-        "manifest.executedDive.refusal.planChangeNoteWithoutReason",
-      ),
-      plan_change_note_too_long: t("manifest.executedDive.refusal.planChangeNoteTooLong"),
-    },
-  };
-}
+/** What the manifest reads off its URL. */
+type ManifestSearchParams = {
+  checkpoint?: string;
+  buddyError?: string;
+  buddies?: string;
+  /**
+   * **Not part of this route's URL contract.** The paper day
+   * (`/shop/[shopSlug]/print`) composes this page once per departure of
+   * today, and duplicate element ids there silently point every
+   * `aria-labelledby` and `#roll-call-list` jump at the *first* departure's
+   * section (`src/lib/element-id.ts`). A page component's props are pinned
+   * to Next's `PageProps`, so an extra prop is a build error and this is the
+   * one channel a composing surface has.
+   *
+   * Narrowed by `uuidParam` below rather than trusted: anything that is not
+   * a departure id is dropped, so a hand-typed `?idPrefix=` on this route
+   * changes nothing.
+   */
+  idPrefix?: string;
+};
 
 export default async function TripManifestPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{
-    checkpoint?: string;
-    buddyError?: string;
-    buddies?: string;
-    /**
-     * **Not part of this route's URL contract.** The paper day
-     * (`/shop/[shopSlug]/print`) composes this page once per departure of
-     * today, and duplicate element ids there silently point every
-     * `aria-labelledby` and `#roll-call-list` jump at the *first* departure's
-     * section (`src/lib/element-id.ts`). A page component's props are pinned
-     * to Next's `PageProps`, so an extra prop is a build error and this is the
-     * one channel a composing surface has.
-     *
-     * Narrowed by `uuidParam` below rather than trusted: anything that is not
-     * a departure id is dropped, so a hand-typed `?idPrefix=` on this route
-     * changes nothing.
-     */
-    idPrefix?: string;
-  }>;
+  searchParams: Promise<ManifestSearchParams>;
 }) {
   const { shopSlug, id: tripId } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
@@ -258,9 +117,7 @@ export default async function TripManifestPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  // The manifest rows, the raw team membership, and the desk's own notes don't
-  // depend on one another — resolve them together instead of serially.
-  const [
+  const {
     completeManifests,
     buddyTeamsList,
     bookingNotes,
@@ -273,89 +130,20 @@ export default async function TripManifestPage({
     catchUp,
     diveIntents,
     stage,
-  ] = await Promise.all([
-    getTripManifests(db, shop.id, tripId),
-    // Raw membership rows, cancelled members included: the teams panel must show
-    // a team whose seat was cancelled (it still blocks re-teaming the survivors
-    // until dissolved), while the manifest derivation already dropped that
-    // member from every row's team (ADR 20260804-buddy-teams).
-    listTripBuddyTeams(db, shop.id, tripId),
-    // The private staff notes written on the Trip surface. Read here, never
-    // written here — see `StaffNotes`.
-    listBookingNotes(db, shop.id, tripId),
-    // Person-scoped notes written on the Diver record. Resolve them onto this
-    // trip's booking below so every interface reads the same source of truth.
-    listDiverNotesForTrip(db, shop.id, tripId),
-    listChecklistItems(db, shop.id),
-    latestPreDepartureChecksForTrip(db, shop.id, tripId),
-    listTripDives(db, shop.id, tripId),
-    listExecutedDives(db, shop.id, tripId),
-    listDiveSites(db, shop.id),
-    // What the desk did since *this* staffer last looked (issues #1202,
-    // #1187). Empty for somebody who has never worked this departure — there is
-    // nothing for a catch-up to be "since", and replaying the morning to a
-    // first-time reader is the surveillance feed the boundary refuses.
-    listDeskEventsSince(db, shop.id, tripId, session.user.personId),
-    // Codes and counts, never a row per seat (#1183's boundary).
-    diveIntentTallyForTrip(db, shop.id, tripId),
-    // The newest word the crew tapped; `stageStripProps` reads it by the rule
-    // Today's card and the departure header print, so the strip still speaks
-    // on a boat that is hours overdue.
-    latestTripStage(db, shop.id, tripId),
-  ]);
-  // Each live site's field guide, for the dive log's "one thing you saw"
-  // picker (issue #1190). Read after the sites resolve because it is keyed by
-  // their ids, and the species a crew may claim to have seen are exactly the
-  // ones the shop has said that reef shows.
-  const fieldGuides = await listSiteFieldGuides(
-    db,
-    shop.id,
-    liveDiveSites.map((site) => site.id),
-  );
-  // The crew's own tally for this departure, and every species the shop has
-  // picked anywhere — the two rungs under a site's own field guide in
-  // `seenChipSlugs`. Both are shop-wide reads with no dependency on which
-  // checkpoint is open, so they resolve together beside the guides.
-  const [loggedSightings, shopPickedSpecies] = await Promise.all([
-    listTripSightings(db, shop.id, tripId),
-    listShopPickedSpecies(db, shop.id),
-  ]);
-  // The **diver** translator, on a staff page, deliberately: these are the
-  // same words the diver will read on their record, and showing a divemaster
-  // a different name for the fish they are about to record would be the bug
-  // (`marine-life-labels.ts`, ADR 20260813-marine-life-is-diveday-copy).
-  const diverT = diverTranslator(locale);
-  const catalogSpecies = marineLifeCatalogCards(diverT).map((card) => ({
-    slug: card.slug,
-    name: card.name,
-  }));
-  const speciesBySite = Object.fromEntries(
-    [...fieldGuides].map(([siteId, rows]) => [
-      siteId,
-      fieldGuideCards(rows, diverT).map((card) => ({
-        slug: card.slug,
-        name: card.name,
-      })),
-    ]),
-  );
+    fieldGuides,
+    loggedSightings,
+    shopPickedSpecies,
+  } = await readManifestPage(db, shop.id, tripId, session.user.personId);
+  const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
   const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t);
 
-  const plannedDiveCount = departureManifest.trip.plannedDives;
-  const checkpoints = rollCallCheckpoints(plannedDiveCount);
-  // An unknown or absent checkpoint opens the departure list.
-  const checkpointManifest =
-    manifestAtCheckpoint(completeManifests, requestedCheckpoint ?? "departure") ??
-    departureManifest;
-  const checkpoint: RollCallCheckpoint = checkpointManifest.checkpoint;
-  // Held seats are settled once, here, so every reader below — the
-  // not-back-aboard alarm, the buddy builder, both roll calls — sees the seat
-  // and never the matched person's particulars (issue #1690).
-  const manifest = {
-    ...checkpointManifest,
-    divers: checkpointManifest.divers.map(withholdHeldSeatParticulars),
-  };
+  const { checkpoints, checkpoint, isDeparture, manifest } = openCheckpoint(
+    completeManifests,
+    departureManifest,
+    requestedCheckpoint,
+  );
   const todayTrailBySubject = personTrailIndex(completeManifests, locale, shop.timezone, t);
   // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
   // ADR 20260804-crew-roll-call-is-per-person). This used to be written inline
@@ -364,249 +152,34 @@ export default async function TripManifestPage({
   // a divemaster still in the water.
   const completeness = manifest.completeness;
   const rollCallComplete = completeness.complete;
-  // Readiness gates boarding at departure only. After a dive, roll call is a
-  // physical head count — a diver who is aboard is recorded present regardless
-  // of a paperwork state that changed after the boat left.
-  const isDeparture = checkpoint === "departure";
 
-  // Every mutation on this page lives in `./actions.ts` at module scope, bound
-  // here to the departure and checkpoint it is about. That context used to be
-  // captured from this render by inline `"use server"` closures — the same
-  // sealed channel, said out loud — and each action re-proves what it is
-  // handed rather than believing it (see the file's own note).
-  // One named context object, bound once — `shopSlug` and `tripId` are both
-  // opaque ids of the same shape, and as positional arguments swapping them was
-  // a silent, well-typed mistake that revalidated another shop's route.
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
-  const boundRollCallAction = rollCallAction.bind(null, actionContext);
-  const boundCrewRollCallAction = crewRollCallAction.bind(null, actionContext);
-  // The note carries its own checkpoint and the action re-proves it, so this
-  // one takes the narrower context that has none.
-  const boundAddPrivateNoteAction = addManifestPrivateNoteAction.bind(null, { shopSlug, tripId });
-  const boundSaveExecutedDiveAction = saveExecutedDiveAction.bind(null, actionContext);
-  // **Which reef these taps attach to.**
-  //
-  // **A recorded dive speaks for itself, and a plan only speaks for a dive with
-  // no record.** The two used to fall through one `??`, so a crew that recorded
-  // the actual site as *unknown* — the boat went somewhere else, or the dive was
-  // aborted — had their taps quietly attributed to the reef on the plan, and
-  // that attribution is what a diver later reads as "seen here". A saved null is
-  // staff saying they do not know where they were; the honest response is no
-  // group at all, and the dive log one disclosure above is where they say where
-  // they actually went.
-  //
-  // A dive with no site either way renders nothing: "seen here this month" is a
-  // claim about a place, and a sighting with nowhere to belong has no reader.
-  const seenDiveNumber = Number(/^after_dive_(\d+)$/.exec(checkpoint)?.[1] ?? 0);
-  const seenSite = seenSiteFor({
-    recorded: executedDives.find((row) => row.executed.diveNumber === seenDiveNumber),
-    planned: plannedDives.find(({ dive }) => dive.diveNumber === seenDiveNumber)?.diveSite ?? null,
+  const actions = bindManifestActions(actionContext);
+  const seen = seenGroupView({
+    checkpoint,
+    actionContext,
+    departureStartsAt: departureManifest.trip.startsAt,
+    executedDives,
+    plannedDives,
+    loggedSightings,
+    shopPickedSpecies,
+    catalogSpecies,
+    speciesBySite,
+    t,
   });
-  // **And a boat that has not left has seen nothing.** A checkpoint is a query
-  // parameter, so the after-dive view is reachable at the dock; the write
-  // refuses a tap there as well, and this is what keeps the crew from meeting
-  // that refusal instead of an absent group.
-  const seenDeparted = hasSailed(departureManifest.trip.startsAt, nowDate());
-  // A slug with no card is dropped rather than rendered raw — the same rule
-  // `fieldGuideCards` follows for a species DiveDay has since retired.
-  const speciesName = new Map<string, string>(
-    catalogSpecies.map((entry) => [entry.slug, entry.name]),
-  );
-  const seenTallies = seenSite
-    ? loggedSightings.flatMap((row) => {
-        const name = speciesName.get(row.speciesSlug);
-        if (row.diveSiteId !== seenSite.id || !name) return [];
-        return [
-          {
-            slug: row.speciesSlug,
-            name,
-            count: row.count,
-            deleteLabel: t("manifest.seen.deleteNamed", { species: name }),
-          },
-        ];
-      })
-    : [];
-  const seenChips = seenSite
-    ? seenChipSlugs({
-        siteGuide: (speciesBySite[seenSite.id] ?? []).map((entry) => entry.slug),
-        shopPicks: shopPickedSpecies,
-        catalog: catalogSpecies.map((entry) => entry.slug),
-      }).flatMap((slug) => {
-        const name = speciesName.get(slug);
-        return name ? [{ slug, name }] : [];
-      })
-    : [];
-  const sightingContext = seenSite ? { ...actionContext, diveSiteId: seenSite.id } : null;
-  const boundRecordSightingAction = sightingContext
-    ? recordSightingAction.bind(null, sightingContext)
-    : null;
-  const boundDeleteSightingAction = sightingContext
-    ? deleteSightingAction.bind(null, sightingContext)
-    : null;
-  // *Got it* is checkpoint-independent — the strip is about the departure, not
-  // about which list is open — so it takes the narrower context.
-  const boundMarkTripCaughtUpAction = markTripCaughtUpAction.bind(null, { shopSlug, tripId });
-  // One sentence per kind of desk act, in `DESK_EVENT_KINDS` order rather than
-  // the order the desk happened to work. Composed here because the names are
-  // joined by `Intl.ListFormat` in the reader's own locale.
-  const catchUpSentenceList = catchUpSentences(t, locale, groupCatchUp(catchUp.events));
-  // How many of the named crew another departure claims at the same hours
-  // (issue #1779) — the head figure's own qualification, printed beside it.
-  const crewToConfirm = manifest.crew.filter((member) => (member.clashes ?? []).length > 0).length;
-  // Same narrower context as the note above: the checklist is checkpoint-
-  // independent, so its action re-proves nothing about which one was open.
-  const boundPreDepartureCheckAction = preDepartureCheckAction.bind(null, { shopSlug, tripId });
-  const boundSetTripStageAction = setTripStageAction.bind(null, { shopSlug, tripId });
-  const checklistListItems = checklistItems.map((item) => {
-    const check = checklistChecks.get(item.id);
-    const checkedByLine = check
-      ? t("trips.preDepartureCheck.checkedBy", {
-          name: check.recordedByName,
-          date: formatDateTimeTz(check.occurredAt, locale, shop.timezone),
-        })
-      : undefined;
-    return {
-      id: item.id,
-      label: item.label,
-      checkedByLine,
-      // The trip packet's print stylesheet hides the interactive control
-      // this item otherwise renders as (a <button>) — this whole sentence is
-      // what survives on the printed sheet, composed here rather than in the
-      // client component so word order and the separator stay a locale
-      // choice, not a JSX literal's.
-      printLine: checkedByLine
-        ? t("trips.preDepartureCheck.printLineChecked", {
-            label: item.label,
-            status: checkedByLine,
-          })
-        : t("trips.preDepartureCheck.printLineNotChecked", { label: item.label }),
-    };
+  const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);
+  const checklist = preDepartureCheckView({
+    checklistItems,
+    checklistChecks,
+    locale,
+    timeZone: shop.timezone,
+    t,
   });
-
-  // Who can still join a *new* team: any active roster entry not already on
-  // one — including a member of a team whose other seat was cancelled, which
-  // must be dissolved first (the server refuses it too; this just keeps the
-  // picker honest). Crew are always offerable: one divemaster commonly leads
-  // several groups on one boat, so they carry no "at most one team" rule.
-  const teamedBookingIds = new Set(
-    buddyTeamsList.flatMap((team) =>
-      team.members.flatMap((member) => (member.kind === "diver" ? [member.bookingId] : [])),
-    ),
-  );
-  const unteamedDivers = divingAndUnteamed(manifest.divers, teamedBookingIds);
-  // Everyone the builder can offer, as `{ token, label }` — divers who are
-  // free, and every assigned crew member.
-  const diverOptions = unteamedDivers.map((diver) => ({
-    token: `diver:${diver.bookingId}`,
-    label: diver.fullName,
-  }));
-  const crewOptions = manifest.crew.map((member) => ({
-    token: `crew:${member.id}`,
-    label: member.fullName,
-  }));
-  // A count of split *teams*, not of rows wearing an alert: a team of four
-  // with three back puts the alert on three rows, and the line says "N teams
-  // are split" (`splitBuddyTeamIds`, src/lib/manifests.ts).
-  const separatedTeams = isDeparture ? 0 : splitBuddyTeamIds(manifest, "separated_after_dive").size;
-  // The other half of the same question, and the graver one: who has a stated
-  // "did not come back" against their name. Read through `rollCallRowState`,
-  // the one predicate the rows, the completeness verdict and the work queue
-  // all share, so the panel's names and its counts can never disagree.
-  const missingDivers = manifest.divers.filter(
-    (diver) => rollCallRowState(checkpoint, diver.rollCall).notBackAboard,
-  );
-  const missingCrew = manifest.crew.filter(
-    (member) => rollCallRowState(checkpoint, member.rollCall).notBackAboard,
-  );
-  // "Buddy team: Ana and Ben" — names de-duplicated (a divemaster on two teams
-  // with one diver in common is still one body to look for) and joined through
-  // `Intl.ListFormat` in the negotiated locale, never a hard-coded ", ".
-  const teamNameList = cachedListFormat(locale, { type: "conjunction" });
-  const buddyTeamLabel = (teams: ReadonlyArray<ManifestBuddyTeam>) => {
-    const names = [...new Set(teams.flatMap((team) => team.others.map((o) => o.fullName)))];
-    return names.length === 0
-      ? null
-      : t("shared.buddyTeam.with", { names: teamNameList.format(names) });
-  };
-  const buddyErrorText =
-    buddyError === "duplicate"
-      ? t("manifest.buddyErrorDuplicate")
-      : buddyError === "teamed"
-        ? t("manifest.buddyErrorAlreadyTeamed")
-        : buddyError === "few"
-          ? t("manifest.buddyErrorTooFew")
-          : buddyError === "not-diver"
-            ? t("manifest.buddyErrorNotDiver")
-            : buddyError
-              ? t("manifest.buddyErrorGeneric")
-              : null;
-  // A refusal renders beside the form that produced it
-  // (docs/design/forms-and-controls.md). `few` is the one code only the
-  // new-team builder can earn, so it lands in that fieldset's action row;
-  // every other code can come from any of the per-team add/remove/dissolve
-  // forms and has no single home, so it stays at the top of the panel.
-  const buddyErrorForm = buddyErrorText ? (buddyError === "few" ? "builder" : "panel") : null;
-
-  // One chronological note thread per booking. A person-scoped note and a
-  // booking note are two contexts in the same `internal_notes` source, not two
-  // lists the crew has to compare — the scope is retained only where it helps
-  // explain why a note follows a diver beyond this departure.
-  const notesByBooking = new Map<string, ManifestNote[]>();
-  for (const { note, authorName } of bookingNotes) {
-    if (!note.bookingId) continue;
-    const rows = notesByBooking.get(note.bookingId) ?? [];
-    rows.push({
-      id: note.id,
-      body: note.body,
-      authorName,
-      createdAt: note.createdAt,
-      scope: "booking",
-    });
-    notesByBooking.set(note.bookingId, rows);
-  }
-  for (const { note, authorName, bookingId } of diverNotes) {
-    const rows = notesByBooking.get(bookingId) ?? [];
-    rows.push({
-      id: note.id,
-      body: note.body,
-      authorName,
-      createdAt: note.createdAt,
-      scope: "diver",
-    });
-    notesByBooking.set(bookingId, rows);
-  }
-  for (const rows of notesByBooking.values()) {
-    rows.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
-  }
-
-  const errorRefusal = t("trips.rollCall.errorRefusal");
-  // Crew have no readiness, so the `not_ready` refusal can never be returned by
-  // `crewRollCallAction` — the blocked message is the plain error for the same
-  // reason the action collapses every server refusal into one: on a boat, the
-  // only thing that matters is that the tap did not stick.
-  const crewRollCallButtonCopy = { errorRefusal, blockedMessage: errorRefusal };
-  // One `RollCallButtonCopy` per diver: the "not ready" refusal embeds a rich
-  // link to that diver's own Guests anchor, so it is built here (server-side,
-  // with `t.rich`) rather than reassembled from string fragments in the
-  // Client Component — see the note on `RollCallButtonCopy`.
-  function rollCallButtonCopy(bookingId: string) {
-    return {
-      errorRefusal,
-      blockedMessage: t.rich("trips.rollCall.stillBlocked", {
-        tripLink: (chunks) => (
-          <Link href={`${shopPath(shopSlug, "trips", tripId)}#booking-${bookingId}`}>{chunks}</Link>
-        ),
-      }),
-    };
-  }
-
-  const emergencyCopy = {
-    heading: t("manifest.emergency.heading"),
-    empty: t("manifest.emergency.empty"),
-    vesselLabel: t("manifest.emergency.vesselLabel"),
-    shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
-    planLabel: t("manifest.emergency.planLabel"),
-  };
+  const buddyBuilder = buddyBuilderView({ manifest, buddyTeamsList, buddyError, locale, t });
+  const { buddyTeamLabel } = buddyBuilder;
+  const notesByBooking = manifestNoteThreads(bookingNotes, diverNotes);
+  const { crewRollCallButtonCopy, rollCallButtonCopy } = rollCallCopies(t, shopSlug, tripId);
+  const emergencyCopy = emergencyReferenceCopy(t);
   const printedProcedureCopy = printedBoatProcedureCopy(t);
 
   return (
@@ -660,45 +233,17 @@ export default async function TripManifestPage({
           reading of where the boat is, and a second one above it would be the
           same fact twice. */}
       <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
-      {/* Souls on board, on paper only: the sheet goes ashore or into a
-          coastguard's hands, and the first question is how many the boat left
-          with, which the screen answers with a live panel that does not print.
-          **Static facts** only (divers carried, crew named), never a live
-          count: "Boarded 6" printed at 07:12 is a lie by 07:20. A rehearsal
-          says so first, so a practice sheet is never read as a real boat. */}
-      <p className="mt-4 hidden text-base font-semibold tabular-nums print:block">
-        {manifest.trip.isRehearsal ? `${t("trips.rehearsal.label")} · ` : null}
-        {staffSoulsOnBoardLine(t, manifest.summary, manifest.crew.length)}
-        {/* **The count is the number read over the radio, and a crew member
-            rostered on two overlapping boats makes it wrong** (issue #1779).
-            Their row below says which other departure; this says the head
-            figure is not settled, because a qualification forty lines down
-            does not reach somebody reading a number aloud.
-
-            Still a static fact, like everything else on this line: how many of
-            the named crew are claimed by another boat, not how many have been
-            tapped. Nothing here moves after the sheet comes off the printer. */}
-        {crewToConfirm > 0 ? (
-          <span className="font-normal">
-            {" "}
-            {t("manifest.soulsOnBoardCrewToConfirm", { count: crewToConfirm })}
-          </span>
-        ) : null}
-      </p>
+      <PrintedSoulsOnBoard manifest={manifest} t={t} />
       {/* **The catch-up strip**, under the masthead and above the instrument,
           exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down
           slice 16d). It renders nothing when there is nothing new, and nothing
           at all to somebody who has never worked this departure — so on most
           openings of most manifests this line costs the page no pixels. */}
-      {catchUp.mark ? (
+      {catchUpStrip ? (
         <CatchUpStrip
           idPrefix={idPrefix}
-          label={t("manifest.catchUp.label", {
-            time: formatTime(catchUp.mark.at, locale, shop.timezone),
-          })}
-          sentences={catchUpSentenceList}
-          dismissLabel={t("manifest.catchUp.dismiss")}
-          dismissAction={boundMarkTripCaughtUpAction}
+          {...catchUpStrip}
+          dismissAction={actions.markTripCaughtUp}
         />
       ) : null}
       {/* **The count leads** (ADR 20260827-the-departure-is-two-working-surfaces,
@@ -716,16 +261,7 @@ export default async function TripManifestPage({
         rollCallComplete={rollCallComplete}
         completeness={completeness}
         summary={manifest.summary}
-        separatedTeams={separatedTeams}
-        notBackAboardDivers={missingDivers.map((diver) => ({
-          bookingId: diver.bookingId,
-          fullName: diver.fullName,
-        }))}
-        notBackAboardCrew={missingCrew.map((member) => ({
-          id: member.id,
-          fullName: member.fullName,
-        }))}
-        blockedAtDock={blockedAtDock(manifest.divers)}
+        {...headCountView({ manifest, checkpoint, isDeparture })}
         t={t}
       />
 
@@ -736,7 +272,7 @@ export default async function TripManifestPage({
           no coral and no motion: this is a safety surface, and the boat that
           drifts on the home and the storefront is deliberately not here. */}
       <StageStrip
-        action={boundSetTripStageAction}
+        action={actions.setTripStage}
         {...stageStripProps(t, {
           trip: departureManifest.trip,
           stage,
@@ -746,31 +282,12 @@ export default async function TripManifestPage({
         })}
       />
 
-      {/* A segmented control, not a row of buttons: the active checkpoint used
-          to wear the same filled-primary costume as "Mark boarded", which gave
-          the page a second primary that was not an action at all (principle
-          8). The same shared track the grouping switches use (`SegmentedControl`),
-          at boat size because this row is switched at the rail. */}
-      <SegmentedControl
-        ariaLabel={t("manifest.checkpointNavAriaLabel")}
-        items={checkpoints.map((value) => ({
-          key: value,
-          label: rollCallCheckpointText(t, value),
-          // Below `sm` the full names overran a 390px track and the row read as
-          // two — the one segmented control in the app that did (issue #1320).
-          // This is the call site that earns the short form, and what makes it
-          // a handle rather than a rename is `DiverRollCall`'s heading
-          // underneath: the condition is spelled out over
-          // `rollCallCheckpointShortText`.
-          shortLabel: rollCallCheckpointShortText(t, value),
-          href: `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`,
-        }))}
-        currentKey={checkpoint}
-        size="boat"
-        currentIsLink
-        ariaCurrentValue="true"
-        scroll={false}
-        className="mt-7"
+      <CheckpointSwitch
+        checkpoints={checkpoints}
+        checkpoint={checkpoint}
+        shopSlug={shopSlug}
+        tripId={tripId}
+        t={t}
       />
 
       {/* **Every section from the boat check down, at one gap** (K-189). Each
@@ -790,19 +307,10 @@ export default async function TripManifestPage({
         {boatSafety ? <BoatSafetyNotices idPrefix={idPrefix} {...boatSafety} /> : null}
         <PreDepartureCheckList
           idPrefix={idPrefix}
-          action={boundPreDepartureCheckAction}
-          items={checklistListItems}
+          action={actions.preDepartureCheck}
+          items={checklist.items}
           atDeparture={isDeparture}
-          copy={{
-            heading: t("trips.preDepartureCheck.heading"),
-            summary: t("trips.preDepartureCheck.summary", {
-              checked: checklistListItems.filter((item) => item.checkedByLine !== undefined).length,
-              total: checklistListItems.length,
-            }),
-            errorRefusal: t("trips.preDepartureCheck.errorRefusal"),
-            checkedLabel: t("trips.preDepartureCheck.checkedLabel"),
-            uncheckedLabel: t("trips.preDepartureCheck.uncheckedLabel"),
-          }}
+          copy={checklist.copy}
         />
         {/* The page's job, as high as it can go: the divers, immediately under
             the panel that counts them. It used to be the *last* section, below
@@ -810,22 +318,24 @@ export default async function TripManifestPage({
             whole buddy-team builder — so a captain on a phone scrolled past six
             screens of context to reach the first name at roll call. */}
         <DiverRollCall
-          idPrefix={idPrefix}
-          divers={manifest.divers}
-          crew={manifest.crew}
-          checkpoint={checkpoint}
-          isDeparture={isDeparture}
-          shopSlug={shopSlug}
-          tripId={tripId}
-          locale={locale}
-          timezone={shop.timezone}
-          notesByBooking={notesByBooking}
-          todayTrailByBooking={todayTrailBySubject}
-          rollCallAction={boundRollCallAction}
-          addPrivateNoteAction={boundAddPrivateNoteAction}
-          rollCallButtonCopy={rollCallButtonCopy}
-          buddyTeamLabel={buddyTeamLabel}
-          t={t}
+          context={{
+            idPrefix,
+            divers: manifest.divers,
+            crew: manifest.crew,
+            checkpoint,
+            isDeparture,
+            shopSlug,
+            tripId,
+            locale,
+            timezone: shop.timezone,
+            notesByBooking,
+            todayTrailByBooking: todayTrailBySubject,
+            rollCallAction: actions.rollCall,
+            addPrivateNoteAction: actions.addPrivateNote,
+            rollCallButtonCopy,
+            buddyTeamLabel,
+            t,
+          }}
         />
 
         {/* Crew close the checkpoint (DOM-H1) — they come straight after the
@@ -843,7 +353,7 @@ export default async function TripManifestPage({
           locale={locale}
           timezone={shop.timezone}
           todayTrailBySubject={todayTrailBySubject}
-          crewRollCallAction={boundCrewRollCallAction}
+          crewRollCallAction={actions.crewRollCall}
           crewRollCallButtonCopy={crewRollCallButtonCopy}
           buddyTeamLabel={buddyTeamLabel}
           t={t}
@@ -855,7 +365,7 @@ export default async function TripManifestPage({
           isDeparture={isDeparture}
           startsAt={departureManifest.trip.startsAt}
           stage={stage}
-          seats={departureManifest.divers}
+          seats={manifest.divers}
         />
 
         {/* **The plan** (issue #1184, D24).
@@ -881,30 +391,18 @@ export default async function TripManifestPage({
         {!isDeparture ? (
           <ExecutedDiveLog
             idPrefix={idPrefix}
-            planned={plannedDives.map(({ dive, diveSite }) => ({
-              diveNumber: dive.diveNumber,
-              diveSite: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
-              diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
-              plannedSiteLabel: t("manifest.executedDive.plannedSite", {
-                site: diveSite?.name ?? t("manifest.executedDive.unknown"),
-              }),
-              summaryLine: executedDiveSummary({
-                diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
-                row: executedDives.find((entry) => entry.executed.diveNumber === dive.diveNumber),
-                locale,
-                timeZone: shop.timezone,
-                depthUnit: shop.depthUnit,
-                t,
-              }),
-            }))}
-            executed={executedDives}
-            liveDiveSites={liveDiveSites.map((site) => ({ id: site.id, name: site.name }))}
-            catalogSpecies={catalogSpecies}
-            speciesBySite={speciesBySite}
-            action={boundSaveExecutedDiveAction}
-            labels={executedDiveLabels(t, shop.depthUnit)}
-            timeZone={shop.timezone}
-            depthUnit={shop.depthUnit}
+            {...executedDiveLogView({
+              plannedDives,
+              executedDives,
+              liveDiveSites,
+              catalogSpecies,
+              speciesBySite,
+              locale,
+              timeZone: shop.timezone,
+              depthUnit: shop.depthUnit,
+              t,
+            })}
+            action={actions.saveExecutedDive}
             checkpoint={checkpoint}
           />
         ) : null}
@@ -913,31 +411,7 @@ export default async function TripManifestPage({
             under the log they are already filling in and nowhere near the roll
             call's commit path or the head count above it. Nothing here gates
             anything; it reaches the shop's own public trip page. */}
-        {!isDeparture &&
-        seenDeparted &&
-        seenSite &&
-        boundRecordSightingAction &&
-        boundDeleteSightingAction ? (
-          <SeenGroup
-            idPrefix={idPrefix}
-            chips={seenChips}
-            tallies={seenTallies}
-            copy={{
-              heading: t("manifest.seen.heading"),
-              consequence: t("manifest.seen.consequence", { site: seenSite.name }),
-              delete: t("manifest.seen.delete"),
-              refusal: t("manifest.seen.refusal"),
-              offlineLabel: t("manifest.seen.offlineLabel"),
-              connectivity: {
-                online: t("shared.connectivity.online"),
-                onlineTitle: t("shared.connectivity.onlineTitle"),
-                offlineTitle: t("shared.connectivity.offlineTitle"),
-              },
-            }}
-            recordAction={boundRecordSightingAction}
-            deleteAction={boundDeleteSightingAction}
-          />
-        ) : null}
+        {!isDeparture && seen ? <SeenGroup idPrefix={idPrefix} {...seen} /> : null}
 
         {/* **The numbers a crew dials during** are a rare reference, behind the
             manifest-local ellipsis on a phone and a quiet footer line on desktop
@@ -971,15 +445,8 @@ export default async function TripManifestPage({
           defaultOpen={buddies === "open"}
           intentLine={staffDiveIntentLine(t, diveIntents, locale)}
           buddyTeamsList={buddyTeamsList}
-          diverOptions={diverOptions}
-          crewOptions={crewOptions}
-          unteamedDivers={unteamedDivers}
-          buddyErrorText={buddyErrorText}
-          buddyErrorForm={buddyErrorForm}
-          formBuddyTeamAction={formBuddyTeamAction.bind(null, actionContext)}
-          addBuddyTeamMemberAction={addBuddyTeamMemberAction.bind(null, actionContext)}
-          removeBuddyTeamMemberAction={removeBuddyTeamMemberAction.bind(null, actionContext)}
-          dissolveBuddyTeamAction={dissolveBuddyTeamAction.bind(null, actionContext)}
+          {...buddyBuilder.panel}
+          {...actions.buddyTeams}
           t={t}
         />
 
@@ -1000,82 +467,18 @@ export default async function TripManifestPage({
         <OfflineManifestManager
           idPrefix={idPrefix}
           locale={locale}
-          payload={serializeManifests(
+          payload={offlineManifestPayload({
             completeManifests,
-            {
-              slug: shopSlug,
-              name: shop.name,
-              timezone: shop.timezone,
-              emergencyReference: shop.emergencyReference,
-            },
-            (blocker, diver) => crewBlockerText(t, diver, blocker),
-            checklistItems.map((item) => ({
-              id: item.id,
-              label: item.label,
-              check: checklistChecks.get(item.id),
-            })),
+            shop,
+            shopSlug,
+            checklistItems,
+            checklistChecks,
             boatSafety,
-          )}
-          copy={
-            {
-              checkingDevice: t("trips.offlineManifestManager.checkingDevice"),
-              reconcileRejectedOne: t("trips.offlineManifestManager.reconcileRejectedOne"),
-              reconcileRejectedOther: t.raw("trips.offlineManifestManager.reconcileRejectedOther"),
-              reconcilePendingOne: t("trips.offlineManifestManager.reconcilePendingOne"),
-              reconcilePendingOther: t.raw("trips.offlineManifestManager.reconcilePendingOther"),
-              reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
-              reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
-              savingMessage: t("trips.offlineManifestManager.savingMessage"),
-              saveErrorFallback: t("trips.offlineManifestManager.saveErrorFallback"),
-              offlineWithSavedCopy: t("trips.offlineManifestManager.offlineWithSavedCopy"),
-              offlineNoSavedCopy: t("trips.offlineManifestManager.offlineNoSavedCopy"),
-              refreshNoSignal: t("trips.offlineManifestManager.refreshNoSignal"),
-              heading: t("trips.offlineManifestManager.heading"),
-              body: t("trips.offlineManifestManager.body"),
-              connectivityOfflineWithCopy: t(
-                "trips.offlineManifestManager.connectivityOfflineWithCopy",
-              ),
-              connectivityOffline: t("trips.offlineManifestManager.connectivityOffline"),
-              connectivityOnline: t("trips.offlineManifestManager.connectivityOnline"),
-              connectivityOnlineTitle: t("trips.offlineManifestManager.connectivityOnlineTitle"),
-              connectivityOfflineTitle: t("trips.offlineManifestManager.connectivityOfflineTitle"),
-              freshnessCurrent: t("trips.offlineManifestManager.freshnessCurrent"),
-              freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
-              freshnessStale: t("trips.offlineManifestManager.freshnessStale"),
-              savedSummary: t.raw("trips.offlineManifestManager.savedSummary"),
-              refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
-              refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
-              openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
-              groupHeading: t("manifest.onThisPhone"),
-            } satisfies OfflineManifestManagerCopy
-          }
+            t,
+          })}
+          copy={offlineManifestManagerCopy(t)}
         >
-          <div className="grid gap-5">
-            {/* Push is an optional device capability. The empty guard keeps a
-              browser without notification support from leaving a blank inset
-              behind while the device settings below keep their place. */}
-            <div className="rounded-inset bg-surface-sunken/70 p-4 empty:hidden">
-              <PushOptIn
-                publicKey={webPushPublicKey()}
-                subscribeAction={subscribePushAction.bind(null, tripId)}
-                unsubscribeAction={unsubscribePushAction.bind(null, tripId)}
-                isSubscribedAction={isPushSubscribedAction.bind(null, tripId)}
-                isSubscribedAnyAction={isPushSubscribedAnywhereAction}
-                copy={pushOptInCopy(t)}
-              />
-            </div>
-
-            {/* A *this device* preference, not a checkpoint destination. It
-              renders nothing on a phone with no vibration motor — which is
-              every iPhone (src/components/haptics.ts) — and the empty guard
-              keeps that from leaving a blank cell behind. */}
-            <div className="grid gap-3 empty:hidden sm:grid-cols-2">
-              <HapticsToggle
-                copy={{ label: t("shared.haptics.toggleLabel") }}
-                className="h-full w-full justify-start"
-              />
-            </div>
-          </div>
+          <ManifestDeviceSettings tripId={tripId} t={t} />
         </OfflineManifestManager>
       </div>
 
@@ -1092,29 +495,12 @@ export default async function TripManifestPage({
         />
       </ManifestMoreMenu>
 
-      {/* Keyed by trip id + checkpoint: each holds a `prevPct`/`isInitial`
-          (MilestoneHaptics) or `prevComplete` (SubSurfaceRipple) ref that
-          assumes a monotonic same-trip-same-checkpoint lifecycle. Rendered
-          once per manifest page, this route/key is otherwise identical
-          across a trip or checkpoint switch, so if `cacheComponents: true`'s
-          Activity-based navigation is ever re-enabled, an un-keyed instance
-          could survive one and fire a false completion ripple/haptic buzz
-          off the old numbers with no real remount to reset it (docs ADR
-          20260801-cache-components-activity-state, currently reverted,
-          commit 100fcf8). The `key` forces a full remount — and fresh refs — on either
-          change. */}
-      <MilestoneHaptics
-        key={`${tripId}-${checkpoint}`}
-        total={manifest.summary.totalDivers}
-        boarded={manifest.summary.boarded}
-      />
-      <SubSurfaceRipple
-        key={`${tripId}-${checkpoint}`}
+      <ManifestMilestones
+        tripId={tripId}
+        checkpoint={checkpoint}
+        summary={manifest.summary}
         complete={rollCallComplete}
-        copy={{
-          iconTitle: t("shared.subSurfaceRipple.iconTitle"),
-          message: t("shared.subSurfaceRipple.message"),
-        }}
+        t={t}
       />
     </div>
   );

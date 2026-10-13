@@ -59,39 +59,8 @@ export type TripRosterActions = {
   restoreInternalNoteAction: FormAction;
 };
 
-/**
- * The Trip ledger body, which the departure's Divers tab renders.
- */
-export function TripRosterContent({
-  guests,
-  shopSlug,
-  shopName,
-  locale,
-  timezone,
-  // Kept on the interface for the page's own plumbing; the ledger's depth
-  // sentences carry their own unit (`depthWarningText`).
-  depthUnit: _depthUnit,
-  shopRentalItems,
-  tripNotice,
-  pageNotice,
-  noteDeleted,
-  confirmName,
-  confirmEmail,
-  confirmPhone,
-  undoBookingId,
-  keepOpenBookingId,
-  namesakeRefusedBookingId,
-  participantTypeCertBookingId,
-  mayWriteOffPayment,
-  canManageOrders,
-  compact = false,
-  afterRoster = null,
-  arrival,
-  record,
-  walkInOpen = false,
-  acceptsDivers,
-  actions,
-}: {
+/** Everything `TripRosterContent` draws, assembled once by its caller and handed over as one object. */
+export type TripRosterContentContext = {
   guests: TripGuests;
   shopSlug: string;
   shopName: string;
@@ -139,7 +108,42 @@ export function TripRosterContent({
    */
   acceptsDivers: boolean;
   actions: TripRosterActions;
-}) {
+};
+
+/**
+ * The Trip ledger body, which the departure's Divers tab renders.
+ */
+export function TripRosterContent({ context }: { context: TripRosterContentContext }) {
+  const {
+    guests,
+    shopSlug,
+    shopName,
+    locale,
+    timezone,
+    // Kept on the interface for the page's own plumbing; the ledger's depth
+    // sentences carry their own unit (`depthWarningText`).
+    depthUnit: _depthUnit,
+    shopRentalItems,
+    tripNotice,
+    pageNotice,
+    noteDeleted,
+    confirmName,
+    confirmEmail,
+    confirmPhone,
+    undoBookingId,
+    keepOpenBookingId,
+    namesakeRefusedBookingId,
+    participantTypeCertBookingId,
+    mayWriteOffPayment,
+    canManageOrders,
+    compact = false,
+    afterRoster = null,
+    arrival,
+    record,
+    walkInOpen = false,
+    acceptsDivers,
+    actions,
+  } = context;
   const t = staffTranslator(locale);
   const {
     trip,

@@ -39,6 +39,23 @@ const MASTHEAD = readFileSync(join(__dirname, "_components/ReadyMasthead.tsx"), 
 const THREAD_SUSPENSE = "<Suspense fallback={<ReadyThreadBodySkeleton />}>{threadBody}</Suspense>";
 
 /**
+ * The sections under the spine, composed by the page as one `<ThreadSections>`
+ * and spelled in their own file. The order and spacing rules below read them
+ * there, with the same markers they read in the page before the split.
+ */
+const SECTIONS = readFileSync(join(__dirname, "_components/ThreadSections.tsx"), "utf8");
+
+/** Where a marker first appears in the sections' source, or -1. */
+function sectionPositionOf(marker: string): number {
+  return SECTIONS.indexOf(marker);
+}
+
+/** How many times it appears across the page and its sections. */
+function threadCountOf(marker: string): number {
+  return countOf(marker) + SECTIONS.split(marker).length - 1;
+}
+
+/**
  * **The confirmation in the first paint** (UX audit #5, then UX review
  * 2026-10-10, item 7). After a booking POST the diver used to land on a
  * whole-page skeleton while the page's reads ran, at the one moment they were
@@ -133,16 +150,17 @@ describe("the thread page's order", () => {
   it("runs status, spine, where to go, party, packing, then the rare acts", () => {
     const status = positionOf("<ThreadStatus");
     const spine = positionOf("<ThreadSpine");
-    const arrival = positionOf("<TripArrivalCard");
-    const party = positionOf("<PartySection");
-    const packing = positionOf("<PackingSection");
-    const cancel = positionOf("<InlineConfirm");
+    const sections = positionOf("<ThreadSections");
+    const arrival = sectionPositionOf("<TripArrivalCard");
+    const party = sectionPositionOf("<PartySection");
+    const packing = sectionPositionOf("<PackingSection");
+    const cancel = sectionPositionOf("<InlineConfirm");
 
-    for (const marker of [status, spine, arrival, party, packing, cancel]) {
+    for (const marker of [status, spine, sections, arrival, party, packing, cancel]) {
       expect(marker).toBeGreaterThan(-1);
     }
     expect(status).toBeLessThan(spine);
-    expect(spine).toBeLessThan(arrival);
+    expect(spine).toBeLessThan(sections);
     expect(arrival).toBeLessThan(party);
     expect(party).toBeLessThan(packing);
     expect(packing).toBeLessThan(cancel);
@@ -157,11 +175,11 @@ describe("the thread page's order", () => {
    * them now, and it is the one the diver opens the page for.
    */
   it("states the shop's address, contact and map in one card", () => {
-    expect(SOURCE).not.toContain("<ShopCard");
-    expect(countOf("<TripArrivalCard")).toBe(1);
+    expect(threadCountOf("<ShopCard")).toBe(0);
+    expect(threadCountOf("<TripArrivalCard")).toBe(1);
     // The one map on the page rides that card rather than a second panel.
-    expect(countOf("googleMapEmbedUrl")).toBe(0);
-    expect(countOf("showMap")).toBe(1);
+    expect(threadCountOf("googleMapEmbedUrl")).toBe(0);
+    expect(threadCountOf("showMap")).toBe(1);
   });
 });
 
@@ -210,7 +228,7 @@ describe("the thread column's cards", () => {
  */
 describe("the thread's sections under the spine", () => {
   const RUN = '<div className="mt-10 space-y-10">';
-  const SECTIONS = [
+  const RUN_SECTIONS = [
     "<TripArrivalCard",
     "<TripCrewLine",
     "<TripChangeLedger",
@@ -220,22 +238,24 @@ describe("the thread's sections under the spine", () => {
   ];
 
   it("stand in one space-y-10 run after the spine", () => {
-    expect(countOf(RUN)).toBe(1);
-    const run = positionOf(RUN);
-    expect(run).toBeGreaterThan(positionOf("<ThreadSpine"));
-    for (const section of SECTIONS) {
-      expect(positionOf(section), section).toBeGreaterThan(run);
+    expect(threadCountOf(RUN)).toBe(1);
+    expect(positionOf("<ThreadSections")).toBeGreaterThan(positionOf("<ThreadSpine"));
+    const run = sectionPositionOf(RUN);
+    expect(run).toBeGreaterThan(-1);
+    for (const section of RUN_SECTIONS) {
+      expect(sectionPositionOf(section), section).toBeGreaterThan(run);
     }
   });
 
   it("carry no top margin of their own", () => {
-    for (const section of SECTIONS.slice(0, 5)) {
-      const start = positionOf(section);
-      const tag = SOURCE.slice(start, SOURCE.indexOf("/>", start));
+    for (const section of RUN_SECTIONS.slice(0, 5)) {
+      const start = sectionPositionOf(section);
+      expect(start, section).toBeGreaterThan(-1);
+      const tag = SECTIONS.slice(start, SECTIONS.indexOf("/>", start));
       expect(tag, section).not.toMatch(/className="[^"]*\bmt-/);
     }
-    const door = SOURCE.lastIndexOf("<section", positionOf("<InlineConfirm"));
-    const doorTag = SOURCE.slice(door, SOURCE.indexOf(">", door));
+    const door = SECTIONS.lastIndexOf("<section", sectionPositionOf("<InlineConfirm"));
+    const doorTag = SECTIONS.slice(door, SECTIONS.indexOf(">", door));
     expect(doorTag).not.toMatch(/\bmt-\d/);
   });
 
@@ -265,8 +285,9 @@ describe("the thread's sections under the spine", () => {
  */
 describe("the cancel door", () => {
   const door = () => {
-    const start = SOURCE.lastIndexOf("<section", positionOf("<InlineConfirm"));
-    return SOURCE.slice(start, SOURCE.indexOf("</section>", start));
+    const start = SECTIONS.lastIndexOf("<section", sectionPositionOf("<InlineConfirm"));
+    expect(start).toBeGreaterThan(-1);
+    return SECTIONS.slice(start, SECTIONS.indexOf("</section>", start));
   };
 
   it("spaces the preview and the form by a gap, never by the form's own margin", () => {
@@ -438,7 +459,7 @@ describe("what the thread no longer carries", () => {
   });
 
   it("still carries the packing list", () => {
-    expect(SOURCE).toContain("<PackingSection");
+    expect(SECTIONS).toContain("<PackingSection");
   });
 });
 
@@ -505,19 +526,28 @@ describe("after the dive", () => {
     // So the rule is where the answer sits relative to the gate, not relative
     // to the afterglow: it is inside the `!capability` block, which is the only
     // place a cancelled departure's token ever arrives.
+    //
+    // The block's body is `readyDeadLink` (`_components/dead-link.tsx`), called
+    // from inside it and from nowhere else, so the departure check is read
+    // there and the call is pinned inside the block.
+    const DEAD_LINK = readFileSync(join(__dirname, "_components/dead-link.tsx"), "utf8");
     const gate = positionOf("const capability = await verifyBookingCapability");
     const deadEnd = positionOf("if (!capability) {");
-    const departure = positionOf("data?.departureCancelled");
+    const deadLink = positionOf("return readyDeadLink(");
     const liveShop = positionOf("const shopContact = {");
-    for (const marker of [gate, deadEnd, departure, liveShop]) {
+    for (const marker of [gate, deadEnd, deadLink, liveShop]) {
       expect(marker).toBeGreaterThan(-1);
     }
+    expect(countOf("readyDeadLink(")).toBe(1);
     expect(deadEnd).toBeGreaterThan(gate);
-    expect(departure).toBeGreaterThan(deadEnd);
-    expect(departure).toBeLessThan(liveShop);
+    expect(deadLink).toBeGreaterThan(deadEnd);
+    expect(deadLink).toBeLessThan(liveShop);
+    expect(SOURCE.slice(deadEnd, deadLink)).not.toContain("}");
+    expect(countOf("data?.departureCancelled")).toBe(0);
+    expect(DEAD_LINK).toContain("data?.departureCancelled");
     // And it resolves the token the relaxed way, since the strict one is the
     // thing that refused it.
-    expect(SOURCE).toContain(
+    expect(DEAD_LINK).toContain(
       'const stranded = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });',
     );
   });
@@ -641,10 +671,11 @@ describe("adding a seat from the diver's page", () => {
   const PARTY_SECTION = readFileSync(join(__dirname, "_components/PartySection.tsx"), "utf8");
 
   it("hands the party section the action only when the booking may lead a seat", () => {
-    expect(SOURCE).toMatch(
+    // The party section is one of the sections under the spine (ThreadSections).
+    expect(SECTIONS).toMatch(
       /<PartySection[^>]*addSeatAction=\{data\.canAddSeat \? addSeatFromReady\.bind\(null, token\) : null\}/,
     );
-    expect(countOf("<AddSeat")).toBe(0);
+    expect(threadCountOf("<AddSeat")).toBe(0);
   });
 
   it("draws the control inside the party section, after the seats", () => {

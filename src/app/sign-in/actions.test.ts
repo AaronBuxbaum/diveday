@@ -1,0 +1,103 @@
+import { APIError } from "better-auth/api";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { nextHeadersStub } from "@/test/next-headers";
+
+/**
+ * The sign-in form's one action. The credentials check, the rate limit and the
+ * second factor all live behind `signInDiveDayCredentials` (src/lib/auth.ts);
+ * what this file owns is the answer: every refusal is the same `?error=1`
+ * except the two second-factor ones, and success always lands on `/shop`.
+ */
+
+const hoisted = vi.hoisted(() => ({
+  signInDiveDayCredentials: vi.fn(async (_input: unknown) => ({})),
+}));
+
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn((to: string) => {
+    throw new Error(`REDIRECT:${to}`);
+  }),
+}));
+vi.mock("next/headers", () => nextHeadersStub());
+vi.mock("@/lib/auth", () => ({
+  getAuth: vi.fn(async () => ({
+    api: { signInDiveDayCredentials: hoisted.signInDiveDayCredentials },
+  })),
+}));
+
+const { authenticate } = await import("./actions");
+
+function form(fields: Record<string, string>): FormData {
+  const data = new FormData();
+  for (const [key, value] of Object.entries(fields)) data.set(key, value);
+  return data;
+}
+
+async function landing(data: FormData): Promise<string> {
+  try {
+    await authenticate(data);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
+    throw error;
+  }
+  throw new Error("expected authenticate to redirect");
+}
+
+beforeEach(() => {
+  hoisted.signInDiveDayCredentials.mockReset().mockResolvedValue({});
+});
+
+describe("authenticate", () => {
+  it("signs in with the typed credentials and lands on /shop, never a callback", async () => {
+    expect(
+      await landing(form({ email: "owner@example.com", password: "pw", totpCode: " 123456 " })),
+    ).toBe("/shop");
+    expect(hoisted.signInDiveDayCredentials).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: { email: "owner@example.com", password: "pw", totpCode: "123456" },
+      }),
+    );
+  });
+
+  it("sends a blank second factor as absent", async () => {
+    await landing(form({ email: "owner@example.com", password: "pw", totpCode: "  " }));
+    expect(hoisted.signInDiveDayCredentials).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: { email: "owner@example.com", password: "pw", totpCode: undefined },
+      }),
+    );
+  });
+
+  it("answers a wrong password with the one generic error", async () => {
+    hoisted.signInDiveDayCredentials.mockRejectedValueOnce(new APIError("UNAUTHORIZED"));
+    expect(await landing(form({ email: "owner@example.com", password: "nope" }))).toBe(
+      "/sign-in?error=1",
+    );
+  });
+
+  it("asks for the second factor when it is missing or wrong", async () => {
+    for (const message of ["two_factor_required", "invalid_two_factor"]) {
+      hoisted.signInDiveDayCredentials.mockRejectedValueOnce(
+        new APIError("UNAUTHORIZED", { message }),
+      );
+      expect(await landing(form({ email: "owner@example.com", password: "pw" }))).toBe(
+        "/sign-in?error=two-factor",
+      );
+    }
+  });
+
+  it("refuses a form that is not three strings the same way, without trying", async () => {
+    const data = new FormData();
+    data.set("email", new File(["x"], "x.txt"));
+    expect(await landing(data)).toBe("/sign-in?error=1");
+    expect(hoisted.signInDiveDayCredentials).not.toHaveBeenCalled();
+  });
+
+  it("lets an error that is not a refusal through", async () => {
+    hoisted.signInDiveDayCredentials.mockRejectedValueOnce(new Error("database down"));
+    await expect(authenticate(form({ email: "a@b.c", password: "pw" }))).rejects.toThrow(
+      "database down",
+    );
+  });
+});

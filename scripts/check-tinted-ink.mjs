@@ -83,7 +83,13 @@ const fillPattern = (hue) => new RegExp(`bg-${hue}\\/\\d+\\b`);
  */
 const BOAT_MODE_FILES = new Set(
   [
+    // The diver list and the parts of its row (split out of `DiverRollCall`).
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx",
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCallRow.tsx",
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRowPanel.tsx",
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRowPrint.tsx",
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverFacts.tsx",
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/SharedDepthAdvisories.tsx",
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CrewRollCall.tsx",
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/BuddyTeamChip.tsx",
     "src/components/OfflineManifestView.tsx",

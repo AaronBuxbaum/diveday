@@ -17,7 +17,17 @@ export type PersonCandidateContext = {
    */
   tripId: string;
   seatAction?: (formData: FormData) => void;
-  inviteAction?: (formData: FormData) => void;
+  /**
+   * The row's second button, offered only where a door can invite. One object
+   * so a door that offers it carries every word for it: a missing label used
+   * to fall back to English the copy guard could not see.
+   */
+  invite?: {
+    action: (formData: FormData) => void;
+    label: string;
+    pendingLabel: string;
+    personAriaLabel: (name: string) => string;
+  };
   /** Link the name at a diver's record, or `null` to render it as plain text. */
   personHref?: ((personId: string) => string) | null;
   /** An extra line under the contact line, per candidate. */
@@ -25,9 +35,6 @@ export type PersonCandidateContext = {
   addLabel?: string;
   pendingLabel?: string;
   addPersonAriaLabel?: (name: string) => string;
-  inviteLabel?: string;
-  invitePendingLabel?: string;
-  invitePersonAriaLabel?: (name: string) => string;
   noEmailOnFile: string;
 };
 
@@ -65,15 +72,12 @@ export function PersonCandidateList({
     candidates,
     tripId,
     seatAction,
-    inviteAction,
+    invite,
     personHref,
     extraLine,
     addLabel,
     pendingLabel,
     addPersonAriaLabel,
-    inviteLabel,
-    invitePendingLabel,
-    invitePersonAriaLabel,
     noEmailOnFile,
   } = context;
   return (
@@ -90,21 +94,17 @@ export function PersonCandidateList({
             className={rowClassName}
             trailing={
               <div className="flex flex-wrap items-center gap-2">
-                {inviteAction && inviteLabel ? (
-                  <form action={inviteAction}>
+                {invite ? (
+                  <form action={invite.action}>
                     <input type="hidden" name="tripId" value={tripId} />
                     <input type="hidden" name="personId" value={person.id} />
                     <SubmitButton
-                      pendingLabel={invitePendingLabel ?? "Inviting…"}
-                      ariaLabel={
-                        invitePersonAriaLabel
-                          ? invitePersonAriaLabel(person.fullName)
-                          : `Invite ${person.fullName}`
-                      }
+                      pendingLabel={invite.pendingLabel}
+                      ariaLabel={invite.personAriaLabel(person.fullName)}
                       disabled={!person.email}
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
-                      {inviteLabel}
+                      {invite.label}
                     </SubmitButton>
                   </form>
                 ) : null}

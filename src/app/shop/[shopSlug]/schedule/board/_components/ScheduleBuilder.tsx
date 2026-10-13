@@ -487,26 +487,8 @@ function CopyPanel({
  */
 const isAddKey = (key: string | null) => key === "add:top" || (key?.startsWith("w:add:") ?? false);
 
-export function ScheduleBuilder({
-  shopSlug,
-  locale,
-  addDraft = null,
-  loadPattern,
-  loadTideWindow,
-  loadMovePreflight,
-  loadOptions,
-  price,
-  actions,
-  defaultDateIso,
-  canConfigure,
-  copy,
-  more,
-  initialCourse,
-  initialSite,
-  requestPlan,
-  openAdd,
-  week,
-}: {
+/** Everything `ScheduleBuilder` draws, assembled once by its caller and handed over as one object. */
+export type ScheduleBuilderContext = {
   shopSlug: string;
   /** The reader's language, for the forgiving time fields' readings. */
   locale: string;
@@ -548,7 +530,29 @@ export function ScheduleBuilder({
    * nothing upcoming at all, where the empty state stands at every width.
    */
   week?: BuilderWeek | null;
-}) {
+};
+
+export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }) {
+  const {
+    shopSlug,
+    locale,
+    addDraft = null,
+    loadPattern,
+    loadTideWindow,
+    loadMovePreflight,
+    loadOptions,
+    price,
+    actions,
+    defaultDateIso,
+    canConfigure,
+    copy,
+    more,
+    initialCourse,
+    initialSite,
+    requestPlan,
+    openAdd,
+    week,
+  } = context;
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
   const [open, setOpen] = useState<string | null>(openAdd === "closed" ? null : "add:top");
 

@@ -12,6 +12,7 @@ import { listChecklistItems } from "@/db/pre-departure-check";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
+import type { NoticeMessages } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import {
   addChecklistItemAction,
@@ -23,10 +24,7 @@ export const instant = true;
 
 export const metadata: Metadata = { title: "Pre-departure checklist — DiveDay" };
 
-/** One resolved `?notice=`: the tone it carries and the words for it. */
-function noticeMessages(
-  t: StaffTranslator,
-): Record<string, { tone: "success" | "danger"; text: string }> {
+function noticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "checklist-item-added": { tone: "success", text: t("settings.safetyChecklist.notice.added") },
     "checklist-item-deleted": {

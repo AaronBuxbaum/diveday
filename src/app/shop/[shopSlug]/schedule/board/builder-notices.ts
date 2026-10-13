@@ -1,4 +1,5 @@
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import { noticeFromParam } from "@/lib/staff-notices";
 
 /**
  * What the board says after a builder action, keyed by the `outcome.reason`
@@ -51,4 +52,48 @@ export function builderNoticeMessage(
     });
   }
   return st(key);
+}
+
+/**
+ * The board's notice after a builder action, from the redirect's own params:
+ * the named form whenever the action passed a title back, the series count
+ * when a repeating submission put up several dates, and a warning when a move
+ * had to release gear. Undefined when `?builder=` names no known outcome.
+ */
+export function builderNoticeFor({
+  builder,
+  count,
+  created,
+  gear,
+  series,
+  st,
+}: {
+  builder: string | undefined;
+  count: string | undefined;
+  created: string | undefined;
+  gear: string | undefined;
+  series: string | undefined;
+  st: StaffTranslator;
+}): { tone: "success" | "danger" | "warning"; message: string } | undefined {
+  const builderNoticeEntry = noticeFromParam(builder, BUILDER_NOTICE_KEYS);
+  // The named form whenever the action passed a title back; the anonymous
+  // "It's on the board" survives for a URL that carries none.
+  const seriesCount = series ? Number.parseInt(series, 10) : 0;
+  // A move that could not carry its gear onto the new dates reports what it let
+  // go of, and in a warning tone rather than the plain success one: the schedule
+  // edit worked, and somebody now has kit to reassign on the prep page.
+  const gearReleased = gear ? Number.parseInt(gear, 10) : 0;
+  const movedWithGear = builderNoticeEntry?.key === "schedule.notices.moved" && gearReleased > 0;
+  return builderNoticeEntry
+    ? {
+        tone: movedWithGear ? ("warning" as const) : builderNoticeEntry.tone,
+        message: movedWithGear
+          ? st("schedule.notices.movedGearReleased", { count: gearReleased })
+          : builderNoticeEntry.key === "schedule.notices.added" && created
+            ? seriesCount > 1
+              ? st("schedule.notices.addedSeries", { title: created, count: seriesCount })
+              : st("schedule.notices.addedNamed", { title: created })
+            : builderNoticeMessage(st, builderNoticeEntry.key, count),
+      }
+    : undefined;
 }

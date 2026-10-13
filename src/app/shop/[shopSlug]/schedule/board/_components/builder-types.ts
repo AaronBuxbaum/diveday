@@ -239,14 +239,14 @@ export type BuilderCopy = {
   requestPlanBoatExceeded?: string;
   requestPlanCrewSuggestionOne?: string;
   requestPlanCrewSuggestionOther?: string;
-  diveModeLabel?: string;
-  modeBoat?: string;
-  modeShore?: string;
-  modePool?: string;
-  boatSelectLabel?: string;
-  unassignedBoat?: string;
-  lensLabel?: string;
-  lensNone?: string;
+  diveModeLabel: string;
+  modeBoat: string;
+  modeShore: string;
+  modePool: string;
+  boatSelectLabel: string;
+  unassignedBoat: string;
+  lensLabel: string;
+  lensNone: string;
 };
 
 /**

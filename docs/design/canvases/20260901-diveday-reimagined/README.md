@@ -119,7 +119,7 @@ hand's seventh drawing, because Key Largo dives one every week.
 | 13f — the drawn site mark | shipped | `src/components/illustration/SiteMark.tsx` | `src/components/illustration/SiteMark.test.tsx` |
 | 13g — the water closes over finished work | dropped | retired by ADR 20261001-logbook: Today's jobs are one list, not rows inside each departure | — |
 | 13h — the count that fills | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.test.tsx` |
-| 13i — the diver's day, drawn | shipped | `src/app/ready/[token]/_components/AfterState.tsx` | `src/app/ready/[token]/_components/AfterState.test.tsx` |
+| 13i — the diver's day, drawn | shipped | `src/app/ready/[token]/_components/DiveRecord.tsx` | `src/app/ready/[token]/_components/DiveRecord.test.tsx` |
 | 13j — the night palette | shipped | `src/app/globals.css` | `src/lib/night-palette.test.ts` |
 | the detail pass (2026-09-02) — the sheet's rungs (radius 10/18/28, rows 52, buttons 48/16, the type ladder, the water band), the rest of the hand (turtle, parrotfish, the swell as one component, the night tile, the coral cap), the home's four missing parts (glyph, dial, horizons, "First thing"), Harbor's headings, about line, boats' sentences and brand preview, and the embed catalogue's promises (payment handoff, button contrast, one credit) | shipped | `src/components/illustration/illustration.test.ts` | `src/components/ui/card.test.tsx`, `src/lib/embed-loader.test.ts` |
 

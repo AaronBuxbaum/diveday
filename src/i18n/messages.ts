@@ -31,6 +31,26 @@ export function messagesFor(locale: string | null | undefined): DiverMessages {
 export type DiverMessageNamespace = keyof DiverMessages;
 
 /**
+ * **The namespaces only a server reads**: the marketing site, the notification
+ * bodies, and the switching guides. Nothing on a diver's page renders them
+ * client-side, so `DiverIntlProvider` refuses them by type rather than letting
+ * a stray name serialize one of the bundle's largest sections into a page's
+ * RSC payload. `fallback` is not here: the public trip page's client booking
+ * form reads `fallback.full` and `fallback.spotsLeft`.
+ */
+export const SERVER_ONLY_DIVER_NAMESPACES = [
+  "marketing",
+  "notifications",
+  "switching",
+] as const satisfies readonly DiverMessageNamespace[];
+
+/** A namespace `DiverIntlProvider` may hand to the client. */
+export type ClientDiverMessageNamespace = Exclude<
+  DiverMessageNamespace,
+  (typeof SERVER_ONLY_DIVER_NAMESPACES)[number]
+>;
+
+/**
  * The bundle for a shop's locale, narrowed to only the requested top-level
  * namespaces — an object pick over `DIVER_MESSAGES`.
  *

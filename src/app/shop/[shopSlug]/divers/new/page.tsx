@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { z } from "zod";
 import { discardFormDraftAction, saveFormDraftAction } from "@/app/actions/form-drafts";
-import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
+import { seatExistingDiverAction } from "@/app/actions/seat-diver";
 import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
 import { FormDraft } from "@/components/FormDraft";
@@ -15,30 +13,16 @@ import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
-import { getDb } from "@/db/client";
-import { createDiver, findSimilarDivers } from "@/db/divers";
-import { discardFormDraft, readFormDraft } from "@/db/form-drafts";
+import { findSimilarDivers } from "@/db/divers";
+import { readFormDraft } from "@/db/form-drafts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { parseForm } from "@/lib/form-parse";
 import { formatTime } from "@/lib/format";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import {
-  blankableDiverEmailSchema,
-  blankableDiverNameSchema,
-  diverPhoneSchema,
-  diverSearchPrefill,
-} from "@/lib/person-fields";
-import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { diverSearchPrefill } from "@/lib/person-fields";
+import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
-
-const newDiverContextForm = z.object({
-  surface: z.string().optional(),
-  tripId: z.string().optional(),
-  waitlist: z.string().optional(),
-  force: z.string().optional(),
-});
+import { createDiverFormAction } from "./actions";
 
 export const instant = true;
 
@@ -59,14 +43,6 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "diver-unavailable": { tone: "danger", key: "trips.notices.diverUnavailable" },
   "diver-invalid": { tone: "danger", key: "divers.page.noticeInvalid" },
 };
-
-const diverSchema = z
-  .object({
-    fullName: blankableDiverNameSchema,
-    email: blankableDiverEmailSchema,
-    phone: diverPhoneSchema,
-  })
-  .refine(({ fullName, email, phone }) => Boolean(fullName || email || phone));
 
 export default async function NewDiverPage({
   params,
@@ -163,78 +139,6 @@ export default async function NewDiverPage({
           : surface === "new-booking"
             ? t("divers.page.addToTripButton")
             : t("divers.page.addDiver");
-
-  async function createDiverFormAction(formData: FormData) {
-    "use server";
-    const staff = await requireStaffSession();
-    const activeDb = await getDb();
-    const parsed = parseForm(diverSchema, formData);
-    // Where the form was opened from; a context that does not read as strings
-    // is no context, and the diver's own fields decide the rest.
-    const opened = parseForm(newDiverContextForm, formData);
-    const context = opened.ok ? opened.data : {};
-    const activeSurface = (context.surface ?? null) as SeatSurfaceId | null;
-    const activeTripId = context.tripId ? context.tripId : null;
-    const activeWaitlist = context.waitlist === "true";
-    const force = context.force === "true";
-
-    const buildNewDiverUrl = (extraParams: Record<string, string>) => {
-      const search = new URLSearchParams(extraParams);
-      return `${shopPath(staff.user.shopSlug, "divers", "new")}?${search.toString()}`;
-    };
-
-    if (!parsed.ok) {
-      const search: Record<string, string> = { notice: "invalid" };
-      if (activeSurface) search.surface = activeSurface;
-      if (activeTripId) search.tripId = activeTripId;
-      if (activeWaitlist) search.waitlist = "true";
-      redirect(buildNewDiverUrl(search));
-    }
-
-    if (!force) {
-      const matches = await findSimilarDivers(activeDb, staff.user.shopId, parsed.data.fullName);
-      if (matches.length > 0) {
-        const search: Record<string, string> = {
-          confirmName: parsed.data.fullName,
-        };
-        if (parsed.data.email) search.confirmEmail = parsed.data.email;
-        if (parsed.data.phone) search.confirmPhone = parsed.data.phone;
-        if (activeSurface) search.surface = activeSurface;
-        if (activeTripId) search.tripId = activeTripId;
-        if (activeWaitlist) search.waitlist = "true";
-        redirect(buildNewDiverUrl(search));
-      }
-    }
-    // The form was accepted: whatever draft of it was kept is finished with.
-    await discardFormDraft(activeDb, staff.user.shopId, staff.user.personId, "new_diver");
-
-    if (activeSurface === "trip-guests" && activeWaitlist && activeTripId) {
-      await addToWaitlistAction(staff.user.shopSlug, activeTripId, formData);
-    } else if (
-      activeSurface &&
-      activeTripId &&
-      Object.hasOwn(SEAT_SURFACES, activeSurface) &&
-      (activeSurface === "trip-guests" ||
-        activeSurface === "walk-in" ||
-        activeSurface === "new-booking")
-    ) {
-      await seatNewDiverAction(activeSurface, staff.user.shopSlug, formData);
-    } else {
-      const diver = await createDiver(activeDb, {
-        shopId: staff.user.shopId,
-        fullName: parsed.data.fullName,
-        email: parsed.data.email,
-        phone: parsed.data.phone,
-      });
-      if (!diver) {
-        redirect(buildNewDiverUrl({ notice: "duplicate" }));
-      }
-      revalidateAndRedirect(
-        shopPath(staff.user.shopSlug, "divers"),
-        `${shopPath(staff.user.shopSlug, "divers", diver.id)}?edit=1`,
-      );
-    }
-  }
 
   const banner = noticeFromParam(notice, NOTICES);
   const noticeText = banner ? t(banner.key) : null;

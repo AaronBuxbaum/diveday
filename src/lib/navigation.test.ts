@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
-import { revalidateAndRedirect } from "./navigation";
+import { revalidateAndRedirect, revalidateWithNotice } from "./navigation";
 
 describe("revalidateAndRedirect", () => {
   it("revalidates the mutated route before redirecting, so the write is visible immediately", () => {
@@ -40,5 +40,28 @@ describe("revalidateAndRedirect", () => {
 
     expect(() => revalidateAndRedirect("/shop/x/divers")).toThrow("NEXT_REDIRECT:/shop/x/divers");
     expect(mocks.redirect).toHaveBeenCalledWith("/shop/x/divers");
+  });
+});
+
+describe("revalidateWithNotice", () => {
+  it("revalidates the path and lands back on it with the notice and any extra params", () => {
+    mocks.revalidatePath.mockReset().mockImplementation(() => {});
+    mocks.redirect.mockReset().mockImplementation((url) => {
+      throw new Error(`NEXT_REDIRECT:${url}`);
+    });
+
+    expect(() =>
+      revalidateWithNotice("/shop/x/settings/integrations", "sync-complete", { count: 3 }),
+    ).toThrow("NEXT_REDIRECT:/shop/x/settings/integrations?notice=sync-complete&count=3");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/shop/x/settings/integrations");
+  });
+
+  it("drops an absent extra and normalises a snake_case refusal to the kebab code", () => {
+    mocks.redirect.mockReset().mockImplementation((url) => {
+      throw new Error(`NEXT_REDIRECT:${url}`);
+    });
+    expect(() =>
+      revalidateWithNotice("/shop/x/settings/export", "test_failed", { reason: undefined }),
+    ).toThrow("NEXT_REDIRECT:/shop/x/settings/export?notice=test-failed");
   });
 });

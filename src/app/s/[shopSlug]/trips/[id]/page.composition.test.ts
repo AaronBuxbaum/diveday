@@ -84,7 +84,7 @@ describe("the trip page's rules", () => {
     // line of the page's floating above the card, so there is no rule between
     // the boats and the note to negotiate any more.
     expect(SOURCE).not.toContain("{requirementNote ? (");
-    expect(SOURCE).toMatch(/<BookSpotSection[\s\S]*?requirement=\{requirementSentence\}/);
+    expect(SOURCE).toMatch(/<BookSpotSection[\s\S]*?requirement: requirementSentence,/);
     expect(SOURCE).toMatch(/<TripFullSection[\s\S]*?requirement=\{requirementSentence\}/);
   });
 });

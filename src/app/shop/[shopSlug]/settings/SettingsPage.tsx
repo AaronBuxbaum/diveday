@@ -24,7 +24,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { requireShopSurface } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_SHOPFRONT_PHOTOS } from "@/lib/storage/limits";
 import { AccountGroup } from "./_components/groups/AccountGroup";
 import { BoatsSitesGroup } from "./_components/groups/BoatsSitesGroup";
@@ -49,9 +49,7 @@ export const metadata: Metadata = { title: "Shop settings — DiveDay" };
  * translated against the negotiated locale — a module-level constant would
  * freeze it to whichever locale first imported this file.
  */
-function noticeMessages(
-  t: StaffTranslator,
-): Record<string, { tone: "success" | "danger" | "warning"; text: string }> {
+function noticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "packing-saved": { tone: "success", text: t("settings.main.notice.packingSaved") },
     "packing-invalid": { tone: "danger", text: t("settings.main.notice.packingInvalid") },

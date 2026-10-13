@@ -62,13 +62,10 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
-const {
-  markPaymentAction,
-  removeBookingAction,
-  reinstateTripAction,
-  saveRequirementsAction,
-  setParticipantTypeAction,
-} = await import("./actions");
+const { markPaymentAction, removeBookingAction, setParticipantTypeAction } = await import(
+  "./actions"
+);
+const { reinstateTripAction, saveRequirementsAction } = await import("./details-actions");
 const { certifyDiverFromRosterAction } = await import("./course-actions");
 
 /**
@@ -655,13 +652,16 @@ describe("who may run each action on the trip page", () => {
 
   /**
    * Every exported action's source, sliced from its `export` to its closing brace, across the
-   * departure's action files (`course-actions.ts` holds the course roster's doors; the
+   * departure's action files, one per tab (`details-actions.ts` the About and Details tab,
+   * `notes-actions.ts` the internal notes, `course-actions.ts` the course roster's doors; the
    * desk's three — the note, the dock rider, lost and found — have their own files).
    */
   function actionBodies(): Map<string, string> {
     const bodies = new Map<string, string>();
     for (const file of [
       "./actions.ts",
+      "./details-actions.ts",
+      "./notes-actions.ts",
       "./course-actions.ts",
       "./departure-note-actions.ts",
       "./manifest/dock-rider-actions.ts",

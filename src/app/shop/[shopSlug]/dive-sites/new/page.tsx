@@ -1,25 +1,17 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { z } from "zod";
 import { EditorRail, UnsavedSections } from "@/components/editor/EditorRail";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { getDb } from "@/db/client";
-import { createDiveSiteForForm, SITE_NAME_TAKEN } from "@/db/dive-sites";
-import { diveSpecialty } from "@/db/schema";
-import { getShopById } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
-import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
+import { SiteFormShell } from "../_components/SiteFormShell";
 import {
   fieldGuideEditorCopy,
   landmarkEditorCopy,
@@ -27,7 +19,7 @@ import {
 } from "../_components/site-editor-copy";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 import { siteFormSections, siteFormUnsavedCopy } from "../_components/site-form-sections";
-import { siteFormExtras } from "../site-forms";
+import { createDiveSiteAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -39,8 +31,6 @@ import { siteFormExtras } from "../site-forms";
 export const instant = true;
 
 export const metadata: Metadata = { title: "Create dive site — DiveDay" };
-
-const specialtySchema = z.enum(diveSpecialty.enumValues);
 
 // Not `instant = false` (a dev-time validation opt-out only, with zero
 // production effect — see ADR 20260801-cache-components-e2e-activity-migration's
@@ -71,87 +61,6 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
   const diverT = diverTranslator(locale);
   const depthUnit = shop.depthUnit ?? "meters";
 
-  async function createAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
-    "use server";
-    const activeSession = await requireStaffSession();
-    // Every refusal carries the whole submission back to the form, which is
-    // what lets a staffer fix the one field that was wrong instead of retyping
-    // a briefing (see `SiteFormShell`).
-    const refuse = (errorCode: DiveSiteFormError): SiteFormState => ({
-      errorCode,
-      values: submittedValues(formData),
-    });
-    // Depth arrives in whatever unit this shop works in; metres is what's
-    // stored. Re-read the shop rather than trusting a form field for the unit —
-    // a hidden input would let a crafted post store a depth 3.3× off.
-    const activeShop = await getShopById(await getDb(), activeSession.user.shopId);
-    const parsed = parseDiveSiteForm(
-      Object.fromEntries(formData),
-      activeShop?.depthUnit ?? "meters",
-    );
-    if (!parsed.ok) return refuse(parsed.error);
-    const specialties = z
-      .array(specialtySchema)
-      .safeParse(formData.getAll("specialty").map(String));
-    const extras = siteFormExtras(formData);
-    if (!specialties.success || !extras) return refuse("invalid");
-    // Uploaded from the staffer's own device straight into first-party
-    // storage — there is no pasted URL for a public page to fetch (CR-020).
-    const photos = await uploadDiveSitePhotos(formData);
-    if (!photos.ok) {
-      return refuse(photos.reason === "not_configured" ? "imagesUnconfigured" : "images");
-    }
-    // `maxDepth` and `expectedBottomTime` are the form's own fields, not
-    // columns — they became `parsed.maxDepthMeters` /
-    // `parsed.expectedBottomTimeMinutes`, so neither may reach the spread.
-    const {
-      maxDepth: _maxDepth,
-      expectedBottomTime: _expectedBottomTime,
-      // The note and its author are one value on the row (issue #1204).
-      planningNote: planningNoteWords,
-      ...siteFields
-    } = parsed.fields;
-    const site = await createDiveSiteForForm(await getDb(), {
-      shopId: activeSession.user.shopId,
-      ...siteFields,
-      forecastLatitude:
-        parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
-      forecastLongitude:
-        parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
-      satelliteImageUrl: photos.photos.satelliteImageUrl,
-      routeImageUrl: photos.photos.routeImageUrl,
-      imageUrls: photos.photos.imageUrls,
-      planningNote: { words: planningNoteWords, byPersonId: activeSession.user.personId },
-      minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
-      requiredSpecialties: specialties.data,
-      requiresNitrox: extras.requiresNitrox,
-      difficultyLevel: parsed.difficultyLevel,
-      depthRange: parsed.fields.depthRange,
-      maxDepthMeters: parsed.maxDepthMeters,
-      expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
-      currentNote: parsed.fields.currentNote,
-      divePlan: parsed.fields.divePlan,
-      conservationNote: parsed.fields.conservationNote,
-      fitTone: parsed.fields.fitTone,
-      fitNote: parsed.fields.fitNote,
-      fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,
-      landmarks: photos.photos.landmarks,
-      // The field guide is written on this same form now, so a brand-new site
-      // can arrive with one — every species the staffer picked from the
-      // catalog, in the order they put them.
-      creatures: parsed.creatures,
-      routePoints: parsed.route.points,
-      routeLabel: parsed.route.label,
-      routeNote: parsed.route.note,
-      routeZoom: parsed.route.zoom,
-    });
-    // The name is the one rule the parse above could not check — it takes the
-    // whole shop's library to know, and an archived site still holds its name —
-    // so the database refuses it and the briefing comes back to the form.
-    if (site === SITE_NAME_TAKEN) return refuse("nameTaken");
-    revalidateAndRedirect(back, `${back}/${site.id}`);
-  }
-
   const sections = siteFormSections(t);
 
   return (
@@ -173,7 +82,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
         <EditorRail sections={sections} navLabel={t("diveSites.form.sectionsLabel")} />
         <div className="min-w-0">
           <SiteFormShell
-            action={createAction}
+            action={createDiveSiteAction}
             errorMessages={siteFormErrorMessages(t, "diveSites.new.errorInvalid")}
             actions={
               <>

@@ -214,7 +214,7 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
       medicalAnswers: clearAnswers,
     });
     // Set up the same immutable shape `recordInPersonWaiver` writes. The
-    // production path is separately pinned in waivers.test.ts; this test pins
+    // production path is separately pinned in waivers-in-person.test.ts; this test pins
     // the incident export's tenant-scoped recorder projection.
     await db
       .update(waiverRecords)

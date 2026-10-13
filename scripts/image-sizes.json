@@ -66,7 +66,7 @@
   "src/app/s/[shopSlug]/trips/[id]/_components/TripDayPlan.tsx :: (min-width: 640px) 17rem, 100vw": {
     "exempt": "The two-or-more-moments branch of the same component. The demo's departures publish at most one moment, so no seeded surface renders the two-column grid and there is nothing to measure. Seed a second `dive_site_moments` row on a demo departure and this becomes measurable."
   },
-  "src/app/ready/[token]/_components/AfterState.tsx :: (min-width: 640px) 33vw, 50vw": {
+  "src/app/ready/[token]/_components/RecapDoors.tsx :: (min-width: 640px) 33vw, 50vw": {
     "exempt": "Not yet measured. Reaching it needs a recap bearer token for a departure carrying published photos, which the measuring pass did not mint. Same string as the course gallery next door, which turned out over-declared past its container's max-width, so this one is worth measuring rather than assuming."
   },
   "src/app/shop/[shopSlug]/_components/today/RecapNoteEditor.tsx :: 200px": {

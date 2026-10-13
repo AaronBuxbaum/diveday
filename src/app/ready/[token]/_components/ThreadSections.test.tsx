@@ -1,0 +1,150 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ReadyPageData } from "@/db/ready";
+import { diverTranslator } from "@/i18n/messages";
+import { type ReadyThreadSectionsContext, ThreadSections } from "./ThreadSections";
+
+const seen = vi.hoisted(() => ({
+  arrival: null as Record<string, unknown> | null,
+  packing: null as Record<string, unknown> | null,
+  party: null as Record<string, unknown> | null,
+}));
+
+vi.mock("../booking-actions", () => ({ cancelMyBookingAction: async () => {} }));
+vi.mock("./RunningLate", () => ({ RunningLate: () => <p>late</p> }));
+vi.mock("./CourseMaterials", () => ({ CourseMaterials: () => <p>materials</p> }));
+vi.mock("@/components/TripArrivalCard", () => ({
+  TripArrivalCard: (props: Record<string, unknown>) => {
+    seen.arrival = props;
+    return <p>arrival</p>;
+  },
+}));
+vi.mock("@/app/s/[shopSlug]/trips/[id]/_components/TripCrewLine", () => ({
+  TripCrewLine: () => <p>crew</p>,
+}));
+vi.mock("@/components/TripChangeLedger", () => ({ TripChangeLedger: () => <p>ledger</p> }));
+vi.mock("@/components/PartyClaimPanel", () => ({
+  PartyClaimPanel: (props: Record<string, unknown>) => {
+    seen.party = props;
+    return <p>party</p>;
+  },
+}));
+vi.mock("@/app/s/[shopSlug]/trips/[id]/_components/PackingSection", () => ({
+  PackingSection: (props: Record<string, unknown>) => {
+    seen.packing = props;
+    return <p>packing</p>;
+  },
+}));
+
+const t = diverTranslator("en-US");
+
+afterEach(() => {
+  cleanup();
+  seen.arrival = null;
+  seen.packing = null;
+  seen.party = null;
+});
+
+function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSectionsContext {
+  return {
+    token: "tok",
+    data: {
+      detail: { trip: { title: "Two-Tank Reef" }, shop: { timezone: "America/New_York" } },
+      shop: { dockCallMinutes: 30 },
+      pickupTime: null,
+      rentalFit: null,
+      canCancelBooking: true,
+      cancelPreview: "none",
+    } as unknown as ReadyPageData,
+    locale: "en-US",
+    t,
+    fullShop: {
+      name: "Blue Mantis Divers",
+      slug: "blue-mantis",
+      timezone: "America/New_York",
+      contactPhone: null,
+      contactEmail: null,
+      addressStreet: "1 Dock St",
+      addressLocality: "Key Largo",
+      addressRegion: "FL",
+      addressPostalCode: "33037",
+      addressCountry: "US",
+    } as unknown as ReadyThreadSectionsContext["fullShop"],
+    fullTrip: { id: "trip-1" } as unknown as ReadyThreadSectionsContext["fullTrip"],
+    tripDives: [
+      {
+        diveSite: { name: "Molasses", expectedBottomTimeMinutes: 45 },
+        dive: { travelMinutes: 20 },
+      },
+      { diveSite: null, dive: { travelMinutes: 15 } },
+    ] as unknown as ReadyThreadSectionsContext["tripDives"],
+    changeEvents: [],
+    publicCrew: [],
+    partySeatClaims: [],
+    partyAllSet: false,
+    ...over,
+  };
+}
+
+describe("ThreadSections", () => {
+  it("runs where to go, the crew, the ledger, the packing list, then the cancel door", () => {
+    const { container } = render(<ThreadSections context={context()} />);
+    const text = container.textContent ?? "";
+    const order = ["late", "arrival", "crew", "ledger", "materials", "packing"].map((word) =>
+      text.indexOf(word),
+    );
+    expect(order.every((at) => at > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(screen.getByRole("button", { name: t("ready.cancelSpot") })).toBeTruthy();
+  });
+
+  it("names the planned sites in order and the dock call unless a pickup replaces it", () => {
+    render(<ThreadSections context={context()} />);
+    expect(seen.arrival?.sites).toEqual(["Molasses"]);
+    expect(seen.arrival?.dockCallMinutes).toBe(30);
+    expect(seen.arrival?.downloadHref).toContain("?booking=tok");
+    expect(seen.packing?.siteBottomTimes).toEqual([45, undefined]);
+    expect(seen.packing?.legTravelTimes).toEqual([20, 15]);
+    cleanup();
+    const pickedUp = context();
+    (pickedUp.data as unknown as { pickupTime: string }).pickupTime = "7:00 AM";
+    render(<ThreadSections context={pickedUp} />);
+    expect(seen.arrival?.dockCallMinutes).toBeNull();
+  });
+
+  it("shows the party panel only to a party lead, with its all-set close", () => {
+    render(<ThreadSections context={context()} />);
+    expect(screen.queryByText("party")).toBeNull();
+    cleanup();
+    render(
+      <ThreadSections
+        context={context({
+          partySeatClaims: [
+            {
+              bookingId: "b2",
+              seatName: "Sam",
+              claimed: true,
+              waiverSigned: true,
+              claim: { token: "claim-token" },
+            },
+          ] as unknown as ReadyThreadSectionsContext["partySeatClaims"],
+          partyAllSet: true,
+        })}
+      />,
+    );
+    expect(screen.getByText("party")).toBeTruthy();
+    expect(screen.getByText(t("thread.partyAllSet"))).toBeTruthy();
+    const seats = seen.party?.seats as Array<{ claimUrl: string }>;
+    expect(seats[0].claimUrl).toContain("claim-token");
+  });
+
+  it("offers no cancel door the booking would refuse, and nothing without the trip on record", () => {
+    const closed = context({ fullShop: undefined, fullTrip: null });
+    (closed.data as unknown as { canCancelBooking: boolean }).canCancelBooking = false;
+    render(<ThreadSections context={closed} />);
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText("arrival")).toBeNull();
+    expect(screen.queryByText("packing")).toBeNull();
+  });
+});

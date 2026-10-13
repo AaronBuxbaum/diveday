@@ -203,7 +203,15 @@ export function AddDiverSection({
                     candidates,
                     tripId,
                     seatAction: addExistingDiverAction,
-                    inviteAction,
+                    invite: inviteAction
+                      ? {
+                          action: inviteAction,
+                          label: t("trips.invitations.directInvite"),
+                          pendingLabel: t("trips.invitations.directInviting"),
+                          personAriaLabel: (name) =>
+                            t("trips.invitations.directInviteAria", { name }),
+                        }
+                      : undefined,
                     personHref: (personId) => `/shop/${shopSlug}/divers/${personId}`,
                     // "Same as last time": the fit already on file carries onto the
                     // trip, so staff confirm rather than re-enter.
@@ -220,10 +228,6 @@ export function AddDiverSection({
                           : t("trips.addDiver.noRentalFitYet")}
                       </p>
                     ),
-                    inviteLabel: t("trips.invitations.directInvite"),
-                    invitePendingLabel: t("trips.invitations.directInviting"),
-                    invitePersonAriaLabel: (name) =>
-                      t("trips.invitations.directInviteAria", { name }),
                     addLabel: t("trips.addDiver.addToTrip"),
                     pendingLabel: t("seatDiver.adding"),
                     addPersonAriaLabel: (name) => t("trips.addDiver.addPersonAriaLabel", { name }),

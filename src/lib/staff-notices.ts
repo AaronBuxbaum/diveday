@@ -23,6 +23,18 @@
  * has to redeclare the union and risk drifting from what the banner renders. */
 export type NoticeTone = "success" | "danger" | "warning" | "neutral";
 
+/** One resolved `?notice=`: the tone it carries and the words for it. */
+export type NoticeMessage = { tone: NoticeTone; text: string };
+
+/**
+ * A page's notice map, code to words, the shape `noticeFromParam` reads. Built
+ * inside the request from the page's translator, never at module scope, so the
+ * text tracks the negotiated locale rather than freezing to whichever locale
+ * first imported the module. `Code` narrows the keys where the actions export
+ * their own union, so a code added there without words here is a compile error.
+ */
+export type NoticeMessages<Code extends string = string> = Record<Code, NoticeMessage>;
+
 /**
  * The one spelling a notice code is allowed to have: lower-case kebab.
  *

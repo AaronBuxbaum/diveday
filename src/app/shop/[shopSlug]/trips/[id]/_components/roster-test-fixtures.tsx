@@ -1,10 +1,16 @@
+// i18n-exempt-file: test fixture; only the roster's tests import it, and its names are seeded data.
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import { DIVER_LOCALES } from "@/i18n/settings";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
+import { signingDate } from "@/lib/guardian";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
+import type { RosterRowContext } from "./RosterRow";
 import { type RosterArrival, RosterSection } from "./RosterSection";
-import type { RosterRecord } from "./roster-model";
+import { type RosterRecord, rosterPaymentStatusCopy, waiverControls } from "./roster-model";
+import { type RosterSeat, rosterSeat } from "./roster-seat";
 import type {
   NitroxByBooking,
   ReadinessByBooking,
@@ -93,24 +99,8 @@ export function deepRow() {
   } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
 }
 
-export function renderRoster({
-  roster,
-  readiness,
-  waivers,
-  rentalFit,
-  compact = false,
-  addDiverGroup,
-  paymentsConnected = false,
-  canManageOrders = true,
-  requiresPayment = false,
-  arrival,
-  record,
-  sameNameHeldSeats,
-  heldSeatLastDiveDay,
-  packageDivesByBooking,
-  splitAsksDateOfBirth,
-  certifyDefaultLevel,
-}: {
+/** What `renderRoster` draws, and `seatFacts` reads, built from one set of options. */
+export type RosterFixtureOptions = {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
   waivers: WaiverByBooking;
@@ -128,52 +118,102 @@ export function renderRoster({
   splitAsksDateOfBirth?: boolean;
   /** Present means this is a course session's roster, with a Certify control. */
   certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
-}) {
-  return render(
-    <RosterSection
-      trip={{
-        shopSlug: "blue-mantis",
-        shopTimezone: "America/New_York",
-        // The source locale: these tests read the English bundle.
-        locale: DIVER_LOCALES[0],
-        tripId: "trip-1",
-        booked: roster.length,
-        capacity: 12,
-        tripDate: "2026-08-28",
-        requiresPayment,
-        paymentsConnected,
-        cancellationDeadline: null,
-        mayWriteOffPayment: false,
-        canManageOrders,
-        splitAsksDateOfBirth,
-        certifyDefaultLevel,
-        compact,
-      }}
-      rows={{
-        roster,
-        readinessByBooking: readiness,
-        waiverByBooking: waivers,
-        rentalFitByBooking: rentalFit ?? (new Map() as RentalFitByBooking),
-        nitroxByBooking: new Map() as NitroxByBooking,
-        notesByBooking: new Map(),
-        sameNameHeldSeats,
-        heldSeatLastDiveDay,
-        packageDivesByBooking,
-      }}
-      actions={{
-        markWaiverInPersonAction: noRefusal,
-        markPaymentAction: noop,
-        removeBookingAction: noop,
-        confirmIdentityAction: noop,
-        splitIdentityAction: noop,
-        addNoteAction: noop,
-        deleteNoteAction: noop,
-        saveEmergencyContactAction: noop,
-        certifyDiverAction: certifyDefaultLevel === undefined ? undefined : noop,
-      }}
-      slots={{ addDiverGroup, arrival, record }}
-    />,
-  );
+};
+
+function rosterProps({
+  roster,
+  readiness,
+  waivers,
+  rentalFit,
+  compact = false,
+  addDiverGroup,
+  paymentsConnected = false,
+  canManageOrders = true,
+  requiresPayment = false,
+  arrival,
+  record,
+  sameNameHeldSeats,
+  heldSeatLastDiveDay,
+  packageDivesByBooking,
+  splitAsksDateOfBirth,
+  certifyDefaultLevel,
+}: RosterFixtureOptions) {
+  return {
+    trip: {
+      shopSlug: "blue-mantis",
+      shopTimezone: "America/New_York",
+      // The source locale: these tests read the English bundle.
+      locale: DIVER_LOCALES[0],
+      tripId: "trip-1",
+      booked: roster.length,
+      capacity: 12,
+      tripDate: "2026-08-28",
+      requiresPayment,
+      paymentsConnected,
+      cancellationDeadline: null,
+      mayWriteOffPayment: false,
+      canManageOrders,
+      splitAsksDateOfBirth,
+      certifyDefaultLevel,
+      compact,
+    },
+    rows: {
+      roster,
+      readinessByBooking: readiness,
+      waiverByBooking: waivers,
+      rentalFitByBooking: rentalFit ?? (new Map() as RentalFitByBooking),
+      nitroxByBooking: new Map() as NitroxByBooking,
+      notesByBooking: new Map(),
+      sameNameHeldSeats,
+      heldSeatLastDiveDay,
+      packageDivesByBooking,
+    },
+    actions: {
+      markWaiverInPersonAction: noRefusal,
+      markPaymentAction: noop,
+      removeBookingAction: noop,
+      confirmIdentityAction: noop,
+      splitIdentityAction: noop,
+      addNoteAction: noop,
+      deleteNoteAction: noop,
+      saveEmergencyContactAction: noop,
+      certifyDiverAction: certifyDefaultLevel === undefined ? undefined : noop,
+    },
+    slots: { addDiverGroup, arrival, record },
+  };
+}
+
+export function renderRoster(options: RosterFixtureOptions) {
+  return render(<RosterSection {...rosterProps(options)} />);
+}
+
+/**
+ * **One seat's own facts, the first link of `RosterRow`'s builder chain and
+ * nothing after it**, read through the same context `RosterSection` hands every
+ * row. A builder's test spreads this and adds only the fields its `Pick` names
+ * from an earlier builder, so it never runs the chain to reach one input.
+ */
+export function seatFacts(
+  rosterEntry: RosterEntry,
+  options: Omit<RosterFixtureOptions, "roster"> & { settled?: boolean },
+): RosterSeat {
+  const { trip, rows, actions, slots } = rosterProps({ ...options, roster: [rosterEntry] });
+  const t = staffTranslator(trip.locale);
+  const context: RosterRowContext = {
+    t,
+    trip,
+    rows,
+    actions,
+    arrival: slots.arrival,
+    record: Boolean(slots.record),
+    sharedAdvisoryTexts: new Set(),
+    waiverControls: waiverControls(t),
+    paymentStatusCopy: rosterPaymentStatusCopy(t),
+    refundEligible: false,
+    signedToday: signingDate(nowDate(), trip.shopTimezone),
+    offersCreateOrder: trip.paymentsConnected && trip.canManageOrders,
+  };
+  return rosterSeat(rosterEntry, options.settled ?? false, context);
 }
 
 export const blocked = entry("a", "Asha Osei");

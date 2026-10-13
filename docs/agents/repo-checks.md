@@ -652,7 +652,8 @@ Biome's `timezone` rule enforces the rest ([Now Biome rules](#now-biome-rules)).
 
 Diver copy in `src/i18n/locales/<locale>/diver.json`, staff copy in
 `locales/<locale>/staff/<namespace>.json` (one file per area). `pnpm check:copy` is a full gate over
-`src/app`, `src/components` and `src/features`: any hard-coded copy fails it. **Never add English
+`src/app`, `src/components` and `src/features`, bar the three files its ratchet names: any hard-coded
+copy fails it, including an English fallback behind `||`, `??` or a ternary. **Never add English
 (or any language) as a string the user will read outside `src/i18n/locales/`** — every new sentence
 lands in *every* locale's bundle in the same change, and a key missing from one locale fails
 `pnpm check:locale`. Waiver/medical wording stays English pending H-01/H-03. **Any diver Client

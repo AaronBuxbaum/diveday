@@ -9,6 +9,7 @@ import { listCourseFormRequirements, setCourseFormRequirements } from "@/db/cour
 import {
   getCourseBySlug,
   pullCourseTemplateUpdates,
+  setCourseVisibility,
   updateCourse,
   updateCourseContent,
 } from "@/db/courses";
@@ -410,4 +411,51 @@ export async function saveCourseFormRequirementsAction(slug: string, formData: F
   // Every roster and prep page reading this course's readiness changes with it.
   revalidatePath(shopPath(staff.user.shopSlug), "layout");
   revalidateAndRedirect(base, noticeUrl(anchor, "forms-saved"));
+}
+
+/**
+ * Take the course off the diver-facing catalog, or put it back.
+ *
+ * It lives on the editor rather than on the roster because it is rare and the
+ * roster is not: a Hide button on every one of 55 rows was 55 standing controls
+ * for an act a shop performs a handful of times a year, on a list whose job is
+ * to be read. Here it is one control, on the page that already says whether
+ * this course is live and where.
+ *
+ * No redirect and no notice: the header line and the button's own word both
+ * flip on the render this revalidation causes, and a same-page redirect would
+ * reset scroll to the top of a four-thousand-pixel form.
+ *
+ * **Both arguments are claims.** The page binds the slug and the course id it
+ * rendered; bound arguments travel through the client unencrypted (a closure's
+ * captures did not, which is what this was until the 2026-10-11 review moved it
+ * here to be testable). So the tenant is the session's own `shopId`, the course
+ * is re-read by slug inside that shop, and a slug that no longer names the
+ * bound id is refused rather than toggled. `setCourseVisibility` matches on the
+ * session's `shopId` as well, which is the layer that must never be the only one
+ * (ADR-0006).
+ *
+ * **"Is this course for sale" is trip-definition work** (what the dive is and
+ * who it admits; H-14, ADR 20260724-role-authorization), so the action re-checks
+ * live roles rather than settling for "is staff". The page draws the control on
+ * the same answer, but the gate is here: a form that is not rendered is not a
+ * form that cannot be posted.
+ *
+ * **The live row decides the flip, not the render's snapshot.** Binding
+ * `course.isActive` meant a tab left open while a colleague hid the course
+ * posted "make it hidden" a second time and put it back on the catalog. Only the
+ * id is bound; the standing is read here.
+ */
+export async function setCourseVisibilityAction(slug: string, courseId: string) {
+  const staff = await requireStaffSession();
+  const db = await getDb();
+  const refusal = `${shopPath(staff.user.shopSlug, "courses", slug, "edit")}?error=not-authorized`;
+  if (!(await canPersonConfigureTrips(db, staff.user.shopId, staff.user.personId))) {
+    redirect(refusal);
+  }
+  const live = await getCourseBySlug(db, staff.user.shopId, slug);
+  if (!live || live.id !== courseId) notFound();
+  await setCourseVisibility(db, staff.user.shopId, courseId, !live.isActive);
+  revalidatePath(`/shop/${staff.user.shopSlug}/courses/${slug}/edit`);
+  revalidatePath(`/shop/${staff.user.shopSlug}/courses`);
 }

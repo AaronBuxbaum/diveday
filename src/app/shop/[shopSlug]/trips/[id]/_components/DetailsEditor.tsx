@@ -1,7 +1,6 @@
-import type { ComponentProps } from "react";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RescheduleNotice } from "../../../_components/RescheduleNotice";
-import { DetailsSection } from "./DetailsSection";
+import { DetailsSection, type DetailsSectionContext } from "./DetailsSection";
 
 /**
  * The details form, and under its Save row whatever the save set going: a
@@ -10,21 +9,25 @@ import { DetailsSection } from "./DetailsSection";
  * "Tell them" are a form of their own.
  */
 export function DetailsEditor({
+  context,
   held,
   tell,
-  ...props
-}: ComponentProps<typeof DetailsSection> & { held?: string; tell?: string }) {
+}: {
+  context: DetailsSectionContext;
+  held?: string;
+  tell?: string;
+}) {
   return (
     <>
-      <DetailsSection {...props} />
+      <DetailsSection context={context} />
       {held ? (
         <div className="mt-3">
           <RescheduleNotice
-            shopId={props.trip.shopId}
+            shopId={context.trip.shopId}
             heldId={held}
             tell={tell}
-            tripId={props.trip.id}
-            t={staffTranslator(props.locale)}
+            tripId={context.trip.id}
+            t={staffTranslator(context.locale)}
           />
         </div>
       ) : null}

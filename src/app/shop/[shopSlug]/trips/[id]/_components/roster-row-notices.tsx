@@ -8,13 +8,36 @@ import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { heldSeatBlockers } from "@/lib/identity-match";
 import { isDiver } from "@/lib/participant-types";
 import { shopPath } from "@/lib/staff-notices";
-import type { RowHeader } from "./roster-row-header";
 
 import type { RosterSeat } from "./roster-seat";
 import { SeatEmergencyContact } from "./SeatEmergencyContact";
 
 /** What stands in the open under the name: an emergency contact, a returning diver's ask, years dry, and a flagged medical answer's actions. */
-export function rowNotices(seat: RosterSeat & RowHeader) {
+/**
+ * What `rowNotices` reads, and from which builder: the notices read the seat's own facts and nothing a builder before it drew. A test
+ * builds this without running the chain.
+ */
+export type RowNoticesInput = Pick<
+  RosterSeat,
+  | "booking"
+  | "person"
+  | "t"
+  | "arrival"
+  | "shopSlug"
+  | "readinessByBooking"
+  | "sendNewWaiverAction"
+  | "saveEmergencyContactAction"
+  | "readiness"
+  | "currentWaiver"
+  | "waiverStatus"
+  | "refusalRetired"
+  | "identityUnconfirmed"
+  | "showsPersonDetail"
+  | "hasEmergencyContact"
+  | "holdOpen"
+>;
+
+export function rowNotices(seat: RowNoticesInput) {
   const {
     booking,
     person,

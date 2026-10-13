@@ -19,7 +19,6 @@
         }
       }
     ],
-    "src/app/shop/[shopSlug]/_components/ShopChrome.tsx": 1,
     "src/lib/auth.ts": 3,
     "src/lib/credentials.ts": 1,
     "src/lib/dive-declaration.ts": 1,
@@ -184,7 +183,18 @@
     ]
   },
   "copy": {
-    "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs."
+    "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs.",
+    "//absorbed": [
+      {
+        "why": "The guard learned the || / ?? / ternary fallback shape (2026-10-11 review, item 31); these English fallbacks predate it. Both need a translator where none is held. Each has a follow-up.",
+        "files": {
+          "src/app/actions/waiver-send-types.ts": "0 -> 1",
+          "src/app/shop/[shopSlug]/settings/team/actions.ts": "0 -> 2"
+        }
+      }
+    ],
+    "src/app/actions/waiver-send-types.ts": 1,
+    "src/app/shop/[shopSlug]/settings/team/actions.ts": 2
   },
   "domain-strings": {
     "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs."
@@ -207,33 +217,28 @@
       }
     ],
     "src/app/api/webhooks/stripe/route.ts#POST": 458,
-    "src/app/ready/[token]/_components/AfterState.tsx#AfterState": 476,
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 788,
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 1053,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 502,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 670,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 568,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx#TripDetailPage": 674,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 496,
-    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 705,
-    "src/app/shop/[shopSlug]/dive-sites/_components/SiteFields.tsx#SiteFields": 714,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx#TripDetailPage": 588,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 431,
+    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 662,
     "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 488,
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx#DiverDetailPage": 404,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 402,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 603,
-    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 723,
+    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 698,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 460,
     "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 565,
-    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 786,
-    "src/app/shop/[shopSlug]/schedule/board/page.tsx#ScheduleBoardPage": 864,
     "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 553,
     "src/app/shop/[shopSlug]/staffing/page.tsx#StaffingPage": 419,
     "src/app/shop/[shopSlug]/trips/[id]/_components/CrewSection.tsx#CrewSection": 442,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 491,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 471,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx#DiverRollCall": 731,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 903,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 1002,
-    "src/app/waivers/[token]/page.tsx#WaiverPage": 781,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 412,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 457,
+    "src/app/waivers/[token]/page.tsx#WaiverPage": 561,
     "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
     "src/components/DateRequestForm.tsx#DateRequestForm": 418,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
@@ -249,7 +254,6 @@
     "src/db/seed-more-trips.ts#seedMoreTrips": 747,
     "src/db/seed-trips.ts#seedTrips": 582,
     "src/db/seed.ts#resetDemoSchedule": 449,
-    "src/db/today.ts#getTodayWork": 1446,
     "src/lib/import.ts#prepareContactImport": 638
   },
   "live-people": {
@@ -343,31 +347,31 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 592,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 1590,
-    "src/app/s/[shopSlug]/page.tsx": 1292,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 789,
+    "src/app/ready/[token]/page.tsx": 687,
+    "src/app/s/[shopSlug]/page.tsx": 882,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 702,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
-    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 772,
+    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 728,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,
-    "src/app/shop/[shopSlug]/dive-sites/page.tsx": 630,
+    "src/app/shop/[shopSlug]/dive-sites/page.tsx": 621,
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 506,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 479,
     "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 404,
     "src/app/shop/[shopSlug]/orders/page.tsx": 781,
-    "src/app/shop/[shopSlug]/page.tsx": 1007,
+    "src/app/shop/[shopSlug]/page.tsx": 983,
     "src/app/shop/[shopSlug]/promos/page.tsx": 608,
     "src/app/shop/[shopSlug]/reports/page.tsx": 669,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 466,
-    "src/app/shop/[shopSlug]/schedule/board/page.tsx": 964,
+    "src/app/shop/[shopSlug]/schedule/board/page.tsx": 416,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/integrations/page.tsx": 489,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 873,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 871,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1121,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1136,
-    "src/app/waivers/[token]/page.tsx": 905
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 507,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 559,
+    "src/app/waivers/[token]/page.tsx": 665
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

@@ -1,14 +1,15 @@
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
-import type { RowHeader } from "./roster-row-header";
-import type { RowIdentity } from "./roster-row-identity";
-import type { RowNotices } from "./roster-row-notices";
 import type { RowReasonLines } from "./roster-row-reasons";
 import type { RosterSeat } from "./roster-seat";
 
+/**
+ * What `rowReasonList` reads, and from which builder: one seat fact and the
+ * lines `rowReasonLines` wrote. A test builds this without running the chain.
+ */
+export type RowReasonListInput = Pick<RosterSeat, "arrival"> & Pick<RowReasonLines, "reasonLines">;
+
 /** The reason lines split between the open row and the desk's private band. */
-export function rowReasonList(
-  seat: RosterSeat & RowHeader & RowNotices & RowReasonLines & RowIdentity,
-) {
+export function rowReasonList(seat: RowReasonListInput) {
   const { arrival, reasonLines } = seat;
   const privateAtDesk = (key: string) =>
     Boolean(arrival) && (key === "payment" || key === "recency");

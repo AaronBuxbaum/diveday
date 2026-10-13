@@ -1,94 +1,67 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { submitInquiryAction } from "@/app/actions/inquiry";
-import { DateRequestForm } from "@/components/DateRequestForm";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews, ShopReviewsSkeleton } from "@/components/ShopReviews";
-import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureRowList } from "@/components/ui/disclosure";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
-import { listActiveCourses } from "@/db/courses";
-import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
+import { listPublishedShopReviews } from "@/db/reviews";
 import { shopBySlugCached } from "@/db/shops-cached";
-import { listTripLenses } from "@/db/trip-lenses";
-import {
-  listRunningPublicSeries,
-  nextSessionStartByCourse,
-  pagedUpcomingTripsWithCounts,
-  upcomingScheduleRange,
-} from "@/db/trips";
+import { listRunningPublicSeries, type pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { dateRequestCopy } from "@/i18n/date-request-copy";
 import type { DiverTranslator } from "@/i18n/messages";
-import { DIVER_CERTIFICATION_LEVEL_KEYS, tripRequirementMarkers } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
-import { courseDepthFormat } from "@/i18n/unit-labels";
 import { parseBrandBadges } from "@/lib/brand";
-import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
+import { monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { courseTotalCents, resolveCourseContentDepths, resolveImageAlt } from "@/lib/courses";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
-import {
-  formatDayParts,
-  formatMoneyScanned,
-  formatRelativeDay,
-  formatShortDate,
-  formatTime,
-  formatTimeRange,
-} from "@/lib/format";
-import { cachedListFormat } from "@/lib/intl-cache";
+import { formatMoneyScanned, formatTime } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { connectionForRoute } from "@/lib/observability/render-connection";
-import { offSeason } from "@/lib/off-season";
 import {
   publicAvailabilityPath,
-  publicCoursePath,
   publicCoursesPath,
   publicSchedulePath,
   publicTripPath,
 } from "@/lib/public-routes";
-import { certificationRank } from "@/lib/readiness";
-import { EMPTY_REVIEW_AGGREGATE, type ReviewAggregate } from "@/lib/reviews";
-import {
-  decodeCursorStack,
-  encodeCursorStack,
-  popCursor,
-  pushCursor,
-} from "@/lib/schedule-pagination";
+import type { ReviewAggregate } from "@/lib/reviews";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
-import { resolveLens } from "@/lib/trip-lenses";
-import { capacityLabel, nextBookableDeparture, seatsOnSale } from "@/lib/trips";
-import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { CoursesShelf } from "./_components/CoursesShelf";
 import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { EmbedFooter } from "./_components/EmbedFooter";
-import { FindMyBookingForm } from "./_components/FindMyBookingForm";
-import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 import { MonthRail } from "./_components/MonthRail";
 import { MonthSightingsSection } from "./_components/MonthSightingsShelf";
+import { MoreWaysRows } from "./_components/MoreWaysRows";
 import { NextBoatCard } from "./_components/NextBoatCard";
-import { OffSeasonPanel, offSeasonLine } from "./_components/OffSeasonPanel";
+import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { OurYearSection } from "./_components/OurYear";
 import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_components/PromotedDateAsk";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
+import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import { ShopPhotoStrip } from "./_components/ShopPhotoStrip";
-import { everHadDepartureRead, listedDepartureSummaries } from "./_components/schedule-reads";
+import { readSchedulePage } from "./_components/schedule-reads";
+import { shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
 import {
-  WEEK_LEDGER_FOLLOWER_CLASS,
-  WeekLedger,
-  type WeekLedgerRow,
-} from "./_components/WeekLedger";
+  aboveStatedLevelIds,
+  type ScheduleView,
+  scheduleDayWords,
+  scheduleFilterCopy,
+  scheduleMonthBounds,
+  scheduleMonthRail,
+  scheduleNextBoat,
+  scheduleOffSeason,
+  schedulePagerHrefs,
+  scheduleSeatState,
+  scheduleViewLinks,
+} from "./_components/schedule-view";
+import { WeekLedger } from "./_components/WeekLedger";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -232,139 +205,44 @@ export default async function SchedulePage({
   const currency = toShopCurrency(shop.currency);
   const now = nowDate();
 
-  // Shop-local month boundaries, in UTC, for a given calendar month.
-  const monthBoundsUtc = (ref: MonthRef) => {
-    const monthStart = wallTimeToUtc(
-      { year: ref.year, month: ref.month, day: 1, hour: 0, minute: 0 },
-      tz,
-    );
-    const nextRef = addMonths(ref, 1);
-    const monthEnd = wallTimeToUtc(
-      { year: nextRef.year, month: nextRef.month, day: 1, hour: 0, minute: 0 },
-      tz,
-    );
-    return { monthStart, monthEnd };
-  };
-
   // When the diver has explicitly paged to a month on the rail, bound the trip list to that month —
   // the label above the list and the list itself must never disagree.
   const explicitMonth = parseMonthKey(month);
-  const listMonthBounds = explicitMonth ? monthBoundsUtc(explicitMonth) : null;
+  const listMonthBounds = explicitMonth ? scheduleMonthBounds(explicitMonth, tz) : null;
 
-  /**
-   * **The shop's trip tags** — ADR 20260904-reef-all-the-way-down, decision 2 (issue #1162).
-   *
-   * Read inside the batch below, and the list query waits on it only when the URL names a lens: the
-   * narrowing happens in SQL inside `upcomingTripScope`, so the keyset pages stay honest, and it
-   * needs the resolved lens id. With no `?lens=` (every first visit) the list starts beside it.
-   * Never in the frame — `FilterChips` renders a `<nav>` landmark and `?embed=1` promises the host
-   * page zero navigation landmarks.
-   *
-   * An unknown or malformed `?lens=` resolves to null and renders the whole board with "Every
-   * departure" current, which is what a link shared before the shop deleted a word should do.
-   */
-  const lensesRead = isEmbed ? Promise.resolve([]) : listTripLenses(db, shop.id);
-  const activeLensRead = lens
-    ? lensesRead.then((rows) => resolveLens(lens, rows))
-    : Promise.resolve(null);
-
-  // The published-review *list* still streams in separately (below, via <ScheduleReviewsSection>) —
-  // it is the slower, independent read the shell and trip list never needed to wait behind (docs
-  // task 119 follow-up: streaming the schedule).
-  //
-  // The **aggregate** joined this batch when the shopfront landed: it is one row, and it is now
-  // part of the identity band at the very top of the page (ADR
-  // 20260827-clearwater-surface-language, decision 8), where streaming it separately would either
-  // pop a rating line in under the shop's name or cost a reserved gap on every shop that has no
-  // reviews at all. It is handed down to the reviews section rather than read twice.
-  //
-  // Both, and the courses shelf, stand down inside the frame: `?embed=1` renders neither the hero
-  // nor the shelves.
-  //
-  // **One batch, its dependents chained inside it** (code review 2026-10-10, item 24).
-  const upcomingRead = activeLensRead.then((activeLens) =>
-    pagedUpcomingTripsWithCounts(db, shop.id, {
-      cursor: after,
-      now,
-      ...listMonthBounds,
-      hasSpace: hasSpaceFilter ? true : undefined,
-      tripType: tripTypeFilter,
-      publicOnly: true,
-      lensId: activeLens?.id,
-    }).then((page) => ({ ...page, trips: page.trips.map(seatsOnSale) })),
-  );
-  const rangeRead = upcomingScheduleRange(db, shop.id, now, { publicOnly: true });
-  const activeCoursesRead = isEmbed ? Promise.resolve([]) : listActiveCourses(db, shop.id);
-  const shelfIds = activeCoursesRead.then((shelf) => shelf.slice(0, 3).map((course) => course.id));
-  const [
+  const {
     lenses,
     activeLens,
     range,
-    { trips: upcoming, nextCursor },
+    upcoming,
+    nextCursor,
     reviewAggregate,
     activeCourses,
     boats,
     everHadDeparture,
-    [diveSitesByTrip, requirementsByTrip],
+    diveSitesByTrip,
+    requirementsByTrip,
     shelfNextStarts,
-  ] = await Promise.all([
-    lensesRead,
-    activeLensRead,
-    rangeRead,
-    upcomingRead,
-    // A shop that switched reviews off shows no stars anywhere, not an empty rating (ADR
-    // 20261005-optional-shop-features).
-    isEmbed || !shop.reviewsEnabled ? EMPTY_REVIEW_AGGREGATE : getShopReviewAggregate(db, shop.id),
-    activeCoursesRead,
-    // The fleet, for the storefront's boats section (Harbor). Not in the widget: an embed is the
-    // list-first window and names no hulls.
-    isEmbed ? [] : listBoats(db, shop.id),
-    rangeRead.then((scheduled) => everHadDepartureRead(db, shop.id, scheduled.first !== null)),
-    upcomingRead.then(({ trips: listed }) =>
-      listedDepartureSummaries(
-        db,
-        shop.id,
-        listed.map((trip) => trip.id),
-      ),
-    ),
-    // The shelf's next starts: a diver reads it, so only storefront sessions count.
-    shelfIds.then((ids) => nextSessionStartByCourse(db, shop.id, ids, "storefront")),
-  ]);
-  // The view a diver has built — month, embed mode, the lens, and every list filter — must survive
-  // every link that re-renders this page. A pager or month arrow that drops `hasSpace` quietly
-  // hands back the full unfiltered list with the checkbox reset, with nothing saying why.
-  const withViewParams = (params: URLSearchParams) => {
-    if (month) params.set("month", month);
-    if (isEmbed) params.set("embed", "1");
-    if (hasSpaceFilter) params.set("hasSpace", "1");
-    if (tripTypeFilter) params.set("tripType", tripTypeFilter);
-    if (canDiveFilter) params.set("canDive", canDiveFilter);
-    if (hideAboveFilter) params.set("hideAbove", "1");
-    // The *resolved* lens, never the raw parameter: carrying `?lens=nope`
-    // forward would leave every pager link claiming a view the rail says is
-    // not current.
-    if (activeLens) params.set("lens", activeLens.slug);
-    return params;
+  } = await readSchedulePage(db, shop, {
+    isEmbed,
+    lens,
+    after,
+    now,
+    listMonthBounds,
+    hasSpaceFilter,
+    tripTypeFilter,
+  });
+  const view: ScheduleView = {
+    shopSlug,
+    month,
+    isEmbed,
+    hasSpaceFilter,
+    tripTypeFilter,
+    canDiveFilter,
+    hideAboveFilter,
+    activeLens,
   };
-  /** The same filters as `withViewParams`, for links that already carry their own `?month=`. */
-  const filterSuffix = `${hasSpaceFilter ? "&hasSpace=1" : ""}${
-    tripTypeFilter ? `&tripType=${tripTypeFilter}` : ""
-  }${canDiveFilter ? `&canDive=${canDiveFilter}` : ""}${hideAboveFilter ? "&hideAbove=1" : ""}${
-    activeLens ? `&lens=${activeLens.slug}` : ""
-  }`;
-  /**
-   * A chip's destination: the current view with the lens swapped, and the
-   * cursor dropped. `after`/`back` describe a position in a *different* list,
-   * so carrying them across a lens change would open the narrowed board
-   * somewhere in its middle.
-   */
-  const lensHref = (slug: string | null) => {
-    const params = withViewParams(new URLSearchParams());
-    params.delete("lens");
-    if (slug) params.set("lens", slug);
-    const query = params.toString();
-    return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
-  };
+  const { filterSuffix, lensHref } = scheduleViewLinks(view);
 
   // The widget shows a window; the page shows the schedule. Sliced here rather
   // than asked for in the query so the two surfaces read the same list and can
@@ -385,96 +263,33 @@ export default async function SchedulePage({
       : null;
   const hasUpcoming = range.first !== null;
 
-  /**
-   * **The off-season as a designed state** (N-45).
-   *
-   * Nothing public on the board for the next thirty days is a state the
-   * storefront is now designed for rather than an empty list under "No trips
-   * on the books yet" — see `src/lib/off-season.ts` for why the answer is
-   * derived from a departure the shop scheduled, and never from a column
-   * somebody has to remember to update.
-   *
-   * Never inside the frame. `?embed=1` is a window onto the next few
-   * departures on somebody else's website; a card about the shop's year, and
-   * a composer under it, are both things the host page did not ask for, and
-   * the widget already keeps its own terminal state below.
-   */
-  const quiet = isEmbed
-    ? { quiet: false, opensAt: null, reopensOn: null }
-    : offSeason({ now, firstDeparture: range.first, reopensOn: shop.reopensOn, timeZone: tz });
-  const quietLine = offSeasonLine(t, quiet, locale, tz);
+  const { quiet, quietLine } = scheduleOffSeason({
+    isEmbed,
+    now,
+    range,
+    reopensOn: shop.reopensOn,
+    locale,
+    tz,
+    t,
+  });
 
-  // Which departures ask for more than the reader said they hold.
-  //
-  // The **ladder only**: `minimumCertificationLevel`, compared with
-  // `certificationRank`. Specialties and nitrox are deliberately outside it —
-  // asking in a filter row whether someone holds a Deep card is a form, not a
-  // filter, and the level is the question a diver answers without thinking.
-  // A course session is outside it too, for the same reason its requirement is
-  // not rendered on the card: a course exists to create the certification, so
-  // barring its own students from it reads as nonsense.
-  const aboveStatedLevel = new Set(
-    canDiveFilter
-      ? upcoming
-          .filter((trip) => {
-            if (trip.course) return false;
-            const required = requirementsByTrip.get(trip.id)?.minimumCertificationLevel;
-            return Boolean(
-              required && certificationRank(required) > certificationRank(canDiveFilter),
-            );
-          })
-          .map((trip) => trip.id)
-      : [],
-  );
+  const aboveStatedLevel = aboveStatedLevelIds(upcoming, requirementsByTrip, canDiveFilter);
 
   const visibleUpcoming = hideAboveFilter
     ? upcoming.filter((trip) => !aboveStatedLevel.has(trip.id))
     : upcoming;
   const listedTrips = isEmbed ? visibleUpcoming.slice(0, EMBED_TRIP_LIMIT) : visibleUpcoming;
 
-  // **The next boat out** — the storefront's one card and one primary (ADR
-  // 20260827-clearwater-surface-language, decision 8). The soonest departure
-  // with room, and it keeps its own row in the week below: the card is a pin,
-  // not a removal.
-  //
-  // Only on the default view, and only outside the frame. Once a diver has
-  // paged the calendar to a month or stepped the cursor, `upcoming` is bounded
-  // and its first bookable trip is no longer the shop's actual next departure —
-  // a card claiming otherwise would be confidently wrong. The embed is a
-  // *window* onto the schedule (issue #805): a card there would eat a third of
-  // a 900px frame to restate the row directly beneath it.
-  const nextBoat =
-    isEmbed || explicitMonth || after ? null : nextBookableDeparture(visibleUpcoming);
-  /**
-   * **Whether the card is answering a narrowed question** (issue #1391).
-   *
-   * Under any of these four, `visibleUpcoming` is a subset of the board and the
-   * card's boat is the next bookable one *in this view* — three are applied in
-   * SQL by the reader's `hasSpace` / `tripType` / `lensId` arguments, the fourth
-   * by the `hideAboveFilter` filter above. Unqualified, the eyebrow would claim
-   * the shop's next boat while a lens hid an earlier one.
-   *
-   * `canDiveFilter` on its own is deliberately not in the set: without
-   * `hideAbove` it dims and marks the over-level departures and removes none, so
-   * the card still names the shop's actual next boat and "in this view" would be
-   * a narrowing that did not happen. The empty state below reads the same flag
-   * for its "no matches" title, because it is the same question — whether what
-   * the reader is looking at is a slice of the board or the board.
-   */
-  const filteredView =
-    hasSpaceFilter || Boolean(tripTypeFilter) || hideAboveFilter || Boolean(activeLens);
-  /**
-   * **How many boats the card stepped over to find a seat** (issue #1374, ADR
-   * 20260904-reef-all-the-way-down).
-   *
-   * `nextBookableDeparture` has always skipped the full ones; until now the
-   * eyebrow said "Next boat out" and the diver was left to work out why the
-   * card and the week's first row disagreed. The card names them instead — and
-   * says nothing at all when this boat *is* the shop's next departure, which is
-   * the ordinary case.
-   */
-  const skippedBoats = nextBoat ? visibleUpcoming.indexOf(nextBoat) : 0;
-  const firstSkippedBoat = skippedBoats > 0 ? visibleUpcoming[0] : null;
+  const { nextBoat, filteredView, skippedBoats, firstSkippedBoat } = scheduleNextBoat({
+    visibleUpcoming,
+    isEmbed,
+    explicitMonth,
+    after,
+    hasSpaceFilter,
+    tripTypeFilter,
+    hideAboveFilter,
+    activeLens,
+  });
   /**
    * How many panels the identity band has to lay out. Counted rather than
    * inferred from the rendered children, because a grid wrapper around three
@@ -484,30 +299,12 @@ export default async function SchedulePage({
    */
   const identityPanels = (quiet.quiet ? 1 : 0) + (nextBoat ? 1 : 0);
 
-  // The month rail: one row of "where am I / step a month" instead of the
-  // full month grid this page used to open with. The grid duplicated every
-  // departure already listed below it (once as an unreadable chip on a phone),
-  // spent the whole first screen on empty cells, and stacked a second
-  // navigation system on top of the list's own pager — a shop-operator's
-  // month-planning view imposed on a diver who thinks in "this weekend."
-  // What the grid actually did for a diver — jump the list to a month —
-  // survives here as the same `?month=` links with the same accessible names.
-  const ordinal = (ref: MonthRef) => ref.year * 12 + (ref.month - 1);
-  const monthOf = (date: Date): MonthRef => {
-    const wall = utcToWallTime(date, tz);
-    return { year: wall.year, month: wall.month };
-  };
-  const todayWall = utcToWallTime(now, tz);
-  const firstTripMonth = range.first ? monthOf(range.first) : null;
-  const lastTripMonth = range.last ? monthOf(range.last) : null;
-  const currentMonth: MonthRef = explicitMonth ??
-    firstTripMonth ?? { year: todayWall.year, month: todayWall.month };
-  const prev = addMonths(currentMonth, -1);
-  const next = addMonths(currentMonth, 1);
-  const prevMonthKey =
-    firstTripMonth && ordinal(prev) >= ordinal(firstTripMonth) ? monthKey(prev) : null;
-  const nextMonthKey =
-    lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
+  const { currentMonth, lastTripMonth, prevMonthKey, nextMonthKey } = scheduleMonthRail({
+    range,
+    explicitMonth,
+    now,
+    tz,
+  });
 
   // The board's last month says which runs keep going (`PromotedDateAsk`).
   const settled = explicitMonth !== null || !nextCursor;
@@ -527,102 +324,21 @@ export default async function SchedulePage({
   // per-trip Event's organizer.
   const showReviews = !isEmbed;
 
-  // "Tomorrow · 7:00 AM" beats "Aug 28 · 7:00 AM" for the two days a diver is
-  // most likely to be booking, and nothing else does: `Intl.RelativeTimeFormat`
-  // renders anything further out as "in 5 days", which is worse than the date
-  // it replaced. So the relative word covers today and tomorrow and the short
-  // date covers the rest. Compared on the *shop-local calendar day*, never on a
-  // millisecond difference — a 6 AM departure tomorrow is not "today" because
-  // it is 14 hours away.
-  const dayKeyOf = (date: Date) => toDateInputValue(utcToWallTime(date, tz));
-  const nowDayKey = dayKeyOf(now);
-  const tomorrowDayKey = dayKeyOf(new Date(now.getTime() + 24 * 60 * 60 * 1000));
-  const whenWord = (date: Date) =>
-    dayKeyOf(date) === nowDayKey || dayKeyOf(date) === tomorrowDayKey
-      ? formatRelativeDay(date, now, locale, tz)
-      : formatShortDate(date, locale, tz);
+  const { dayKeyOf, whenWord } = scheduleDayWords(now, locale, tz);
 
-  // Seat state as a word plus the tone that decides whether it earns a badge.
-  // Low inventory keeps the urgent wording the booking form itself switches to
-  // ("Book the last spot") — never colour alone (WCAG 1.4.1).
-  const seatState = (trip: { capacity: number; booked: number }) => {
-    const label = capacityLabel(trip);
-    if (label.kind === "full") return { text: t("fallback.full"), tone: "full" as const };
-    if (label.remaining <= 2) {
-      return {
-        text: t("schedule.spotsLeftUrgent", { count: label.remaining }),
-        tone: "low" as const,
-      };
-    }
-    return { text: t("fallback.spotsLeft", { count: label.remaining }), tone: "quiet" as const };
-  };
-
-  // **One meta line per row.** Where it goes, what it asks of you, and — for a
-  // course session — which course it belongs to. Everything the row used to
-  // stack beneath its title (the shop's description, the dive-plan words and
-  // their two-sentence aside) is on the trip page one tap below.
-  // The shop's own word for each departure's kind of day, resolved from the
-  // vocabulary already read above rather than joined per row. A departure whose
-  // word has since been deleted resolves to null and renders nothing, which is
-  // the same silence a departure that never wore one gets.
-  const lensById = new Map(lenses.map((entry) => [entry.id, entry.name]));
-  const weekRows: WeekLedgerRow[] = listedTrips.map((trip) => {
-    const diveSites = diveSitesByTrip.get(trip.id) ?? { sites: [], undecidedDives: 0 };
-    // The title already naming every site with nothing left to confirm is the
-    // title restated, and stays off the row (principle 9).
-    const siteLineEarnsItsPlace =
-      diveSites.sites.length > 0 &&
-      !(
-        diveSites.undecidedDives === 0 &&
-        diveSites.sites.every((site) => trip.title.toLowerCase().includes(site.name.toLowerCase()))
-      );
-    // Course sessions are left out for the same reason the trip page leaves
-    // them out: a course exists to create the certification, so repeating the
-    // site's demand here would read as a bar on the very students it is for.
-    const requirement = trip.course ? null : (requirementsByTrip.get(trip.id) ?? null);
-    const seats = seatState(trip);
-    return {
-      id: trip.id,
-      dayKey: dayKeyOf(trip.startsAt),
-      dayParts: formatDayParts(trip.startsAt, locale, shop.timezone),
-      href: `${publicTripPath(shopSlug, trip.id)}${isEmbed ? "?embed=1" : ""}`,
-      linkLabel: t("schedule.tripCardLabel", {
-        when: `${formatShortDate(trip.startsAt, locale, shop.timezone)} · ${formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}`,
-        trip: trip.title,
-        capacity: seats.text,
-      }),
-      timeRange: formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone),
-      title: trip.title,
-      lens: trip.lensId ? (lensById.get(trip.lensId) ?? null) : null,
-      course: trip.course
-        ? {
-            label: t("schedule.courseSession"),
-            title: trip.course.title,
-            href: publicCoursePath(shopSlug, trip.course.slug),
-          }
-        : null,
-      site: siteLineEarnsItsPlace ? (
-        <>
-          {cachedListFormat(locale, { type: "conjunction" }).format(
-            diveSites.sites.map((site) => site.name),
-          )}
-          {/* The other half of the count: a two-tank day with one site is a
-              published plan ("second tank at the dock"), not a discrepancy —
-              but only if it says so. */}
-          {diveSites.undecidedDives > 0
-            ? ` · ${t("schedule.moreDivesToConfirm", { count: diveSites.undecidedDives })}`
-            : null}
-        </>
-      ) : null,
-      requirements: requirement ? tripRequirementMarkers(t, requirement) : [],
-      // Marked, never removed, unless the reader asked for the shorter list
-      // (issue #696) — and the word is what gives the dimming a name.
-      aboveLevel: aboveStatedLevel.has(trip.id) ? t("schedule.filters.aboveLevelChip") : null,
-      capacityText: seats.text,
-      capacityTone: seats.tone,
-      price:
-        trip.priceCents !== null ? formatMoneyScanned(trip.priceCents, currency, locale) : null,
-    };
+  const weekRows = weekLedgerRows({
+    listedTrips,
+    lenses,
+    diveSitesByTrip,
+    requirementsByTrip,
+    aboveStatedLevel,
+    dayKeyOf,
+    shopSlug,
+    isEmbed,
+    timezone: shop.timezone,
+    currency,
+    locale,
+    t,
   });
   /**
    * **The one gate for the week's list.** The list, or the state standing in
@@ -632,31 +348,16 @@ export default async function SchedulePage({
    * condition would disagree the day a state is added to one of them.
    */
   const showsWeekLedger = hasUpcoming && visibleUpcoming.length > 0;
+  const pager = schedulePagerHrefs({ view, after, back, nextCursor });
 
-  // The shelf takes the first three rungs in progression order; "All courses"
-  // is the rest. `{depth18}` markers resolve into the shop's own unit before
-  // anything reads a field, the same one-shot pass the catalog makes.
-  const depthFormat = courseDepthFormat(t, shop.depthUnit);
-  const shelfCourses = activeCourses.slice(0, 3).map((stored) => {
-    const course = resolveCourseContentDepths(stored, depthFormat);
-    const total = courseTotalCents(course);
-    const nextStart = shelfNextStarts.get(course.id) ?? null;
-    return {
-      duration: course.durationText,
-      nextStart: nextStart
-        ? t("courses.shelf.nextStart", { date: formatShortDate(nextStart, locale, shop.timezone) })
-        : null,
-      id: course.id,
-      title: course.title,
-      summary: course.summary,
-      heroImageUrl: course.heroImageUrl,
-      heroImageAlt: resolveImageAlt(
-        course.heroImageAlt,
-        t("course.photoAltFallback", { course: course.title, n: 1 }),
-      ),
-      href: publicCoursePath(shopSlug, course.slug),
-      price: total !== null ? formatMoneyScanned(total, currency, locale) : null,
-    };
+  const shelfCourses = shelfCourseCards({
+    activeCourses,
+    shelfNextStarts,
+    shop,
+    shopSlug,
+    currency,
+    locale,
+    t,
   });
 
   return (
@@ -746,7 +447,7 @@ export default async function SchedulePage({
                     time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
                     title={nextBoat.title}
                     description={nextBoat.description}
-                    spots={seatState(nextBoat).text}
+                    spots={scheduleSeatState(t, nextBoat).text}
                     price={
                       nextBoat.priceCents !== null
                         ? formatMoneyScanned(nextBoat.priceCents, currency, locale)
@@ -893,24 +594,7 @@ export default async function SchedulePage({
               hasSpaceFilter={hasSpaceFilter}
               canDiveFilter={canDiveFilter ?? null}
               hideAboveFilter={hideAboveFilter}
-              copy={{
-                disclosure: t("schedule.filters.disclosure"),
-                tripType: t("schedule.filters.tripType"),
-                allTrips: t("schedule.filters.allTrips"),
-                funDive: t("schedule.filters.funDive"),
-                course: t("schedule.filters.course"),
-                hasSpace: t("schedule.filters.hasSpace"),
-                canDive: t("schedule.filters.canDive"),
-                canDiveUnsaid: t("schedule.filters.canDiveUnsaid"),
-                // Ladder order, and the same words the public booking form's own
-                // certification select uses — the vocabulary a diver has already
-                // been asked in is the one to ask them in again.
-                canDiveLevels: DECLARABLE_CERTIFICATION_LEVELS.map((level) => ({
-                  value: level,
-                  label: t(DIVER_CERTIFICATION_LEVEL_KEYS[level]),
-                })),
-                hideAboveLevel: t("schedule.filters.hideAboveLevel"),
-              }}
+              copy={scheduleFilterCopy(t)}
             />
           ) : null}
 
@@ -955,66 +639,12 @@ export default async function SchedulePage({
           box. Under an empty state (a month or a filter with nothing in it)
           no room is handed back. */}
       {!isEmbed && (nextCursor || after || explicitMonth) ? (
-        <div
-          className={`flex flex-wrap items-center gap-3 ${showsWeekLedger ? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"}`}
-        >
-          {(() => {
-            const backStack = decodeCursorStack(back);
-            const previous = popCursor(backStack);
-            if (!previous) return null;
-            const params = new URLSearchParams();
-            if (previous.after) params.set("after", previous.after);
-            if (previous.stack.length > 0) params.set("back", encodeCursorStack(previous.stack));
-            withViewParams(params);
-            const query = params.toString();
-            return (
-              <Link
-                href={`${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`}
-                scroll={false}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("schedule.showEarlier")}
-              </Link>
-            );
-          })()}
-          {nextCursor ? (
-            <Link
-              href={(() => {
-                const params = new URLSearchParams();
-                params.set("after", nextCursor);
-                const nextStack = pushCursor(decodeCursorStack(back), after);
-                if (nextStack.length > 0) params.set("back", encodeCursorStack(nextStack));
-                withViewParams(params);
-                return `${publicSchedulePath(shopSlug)}?${params.toString()}`;
-              })()}
-              scroll={false}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("schedule.showLater")}
-            </Link>
-          ) : null}
-          {after || explicitMonth ? (
-            <Link
-              href={(() => {
-                // The whole point of this link is "start from the shop's next
-                // departure", so it keeps the filters but deliberately drops
-                // both the cursor and any month bound.
-                const params = new URLSearchParams();
-                if (isEmbed) params.set("embed", "1");
-                if (hasSpaceFilter) params.set("hasSpace", "1");
-                if (tripTypeFilter) params.set("tripType", tripTypeFilter);
-                if (canDiveFilter) params.set("canDive", canDiveFilter);
-                if (hideAboveFilter) params.set("hideAbove", "1");
-                const query = params.toString();
-                return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
-              })()}
-              scroll={false}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              {t("schedule.backToNext")}
-            </Link>
-          ) : null}
-        </div>
+        <SchedulePagerRow
+          pager={pager}
+          showsBackToNext={Boolean(after || explicitMonth)}
+          followsWeekLedger={showsWeekLedger}
+          t={t}
+        />
       ) : null}
       <PromotedDateAsk
         t={t}
@@ -1137,55 +767,15 @@ export default async function SchedulePage({
             // pages — `DiveDeclarationFields` inside the deal-list form reads them.
             namespaces={["lastMinute", "findMyBooking", "inquiry", "common", "course"]}
           >
-            <DisclosureRowList className="mt-4">
-              {/* The date request is the answer to the question this page
-                  raises and could not previously answer: the schedule shows the
-                  dates that exist and stops, so a diver who wants a two-tank on
-                  the Saturday nobody scheduled had nowhere to go. It is
-                  deliberately *not* the deal list below it — that one says "tell
-                  me when a seat frees on a departure that exists", and this one
-                  says "please create a departure".
-
-                  Not gated on `contactEmail`. The request lands in
-                  `course_inquiries` and staff read it at /shop/<slug>/requests,
-                  so the shop's email is only needed for the notification — which
-                  `submitInquiryAction` already skips when there is none.
-                  Guarding the form on it switched off the one conversion a shop
-                  with nothing on the books can still make (issue #710).
-
-                  The footer four rows below already carries the shop's email and
-                  phone, so omitting them here prevents duplicate contact lines
-                  on the same screen (issue #777). */}
-              {/* Not while the off-season card is up: the same composer is
-                  already open above, and two of them would render the same
-                  `#request-a-date` id twice (N-45). */}
-              {/* And not for a shop that switched date requests off (ADR
-                  20261005-optional-shop-features). */}
-              {quiet.quiet || runningLines.length > 0 || !shop.dateRequestsEnabled ? null : (
-                <DateRequestForm
-                  submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
-                  askInterest
-                  sectionId="request-a-date"
-                  contactEmail={null}
-                  contactPhone={null}
-                  collapsible
-                  copy={dateRequestCopy(t, "dive")}
-                />
-              )}
-              {/* The deal list stands down for a shop that has never had a
-                  departure. It asks a diver to be told when a boat needs to fill
-                  seats at a discount, and points them at "that trip's own page"
-                  — on a shop with no boats it collects addresses it will never
-                  mail, about trips that do not exist (issue #710).
-                  `everHadDeparture`, not `hasUpcoming`: see above. */}
-              {/* Nor for a shop that switched the list off. */}
-              {everHadDeparture && shop.lastMinuteListEnabled ? (
-                <LastMinuteListForm shopSlug={shopSlug} />
-              ) : null}
-              {/* Same gate, same reason: a shop that has never had a departure
-                  cannot have a real booking to recover (issue #723). */}
-              {everHadDeparture ? <FindMyBookingForm shopSlug={shopSlug} /> : null}
-            </DisclosureRowList>
+            <MoreWaysRows
+              shopSlug={shopSlug}
+              quiet={quiet.quiet}
+              promotedAsk={runningLines.length > 0}
+              dateRequestsEnabled={shop.dateRequestsEnabled}
+              lastMinuteListEnabled={shop.lastMinuteListEnabled}
+              everHadDeparture={everHadDeparture}
+              t={t}
+            />
           </DiverIntlProvider>
         </section>
       ) : null}

@@ -113,3 +113,22 @@ describe("the buddy panel's disclosure line", () => {
     for (const half of ["-mx-2", "-my-2", "px-2", "py-2"]) expect(classes).not.toContain(half);
   });
 });
+
+/**
+ * **A held seat's particulars stay withheld on every reader** (`held-seat.ts`,
+ * `open-checkpoint.ts`). `openCheckpoint` returns the manifest with
+ * `withholdHeldSeatParticulars` applied; `departureManifest` is the raw one.
+ * The dock desk's found-aboard picker lists seats by name, so it must read
+ * the withheld manifest, or a held seat shows the matched person's name
+ * instead of the booked-as name (dive-domain review, 2026-10-12).
+ */
+describe("the dock desk's seat list", () => {
+  it("reads the withheld manifest, never the raw departure one", () => {
+    const dockDesk = SOURCE.slice(
+      SOURCE.indexOf("<DockDesk"),
+      SOURCE.indexOf("/>", SOURCE.indexOf("<DockDesk")),
+    );
+    expect(dockDesk).toContain("seats={manifest.divers}");
+    expect(dockDesk).not.toContain("seats={departureManifest.divers}");
+  });
+});

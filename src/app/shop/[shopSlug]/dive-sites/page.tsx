@@ -37,12 +37,11 @@ import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { joinFacts } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
-import { importTemplateFromForm } from "./site-forms";
+import { importDiveSiteTemplateAction } from "./actions";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
@@ -324,14 +323,6 @@ async function CatalogView({
     shopCoordinates,
   });
   const pageHref = (target: number) => (target > 1 ? `${catalogHref}&page=${target}` : catalogHref);
-  async function importAction(formData: FormData) {
-    "use server";
-    const active = await requireStaffSession();
-    const site = await importTemplateFromForm(await getDb(), active.user.shopId, formData);
-    if (!site) revalidateAndRedirect(back);
-    revalidateAndRedirect(back, noticeUrl(`${back}/${site.id}`, "imported"));
-  }
-
   // Reading a template before taking it. Importing was a one-tap commitment
   // against a name and one sentence — so a shop found out what it had adopted
   // by opening the site it now owned and deleting it again. The whole briefing
@@ -343,7 +334,7 @@ async function CatalogView({
       <TemplatePreview
         template={preview}
         backHref={catalogHref}
-        importAction={importAction}
+        importAction={importDiveSiteTemplateAction}
         t={t}
         diverT={diverT}
       />
@@ -381,7 +372,7 @@ async function CatalogView({
             // paragraph to choose on.
             pad="lg"
             trailing={
-              <form action={importAction}>
+              <form action={importDiveSiteTemplateAction}>
                 <input type="hidden" name="templateId" value={template.id} />
                 <SubmitButton
                   pendingLabel={t("diveSites.catalog.importing")}
