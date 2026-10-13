@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p src/worker",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:changed": "vitest run --changed origin/main --reporter=dot",
     "verify:push": "node scripts/verify-push.mjs",
     "e2e:affected": "node scripts/e2e-affected.mjs",
     "test:lib": "vitest run --project lib --reporter=dot",
