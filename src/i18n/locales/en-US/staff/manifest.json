@@ -90,7 +90,7 @@
   "seen": {
     "heading": "Seen",
     "consequence": "At {site}. Divers read this on the trip page.",
-    "offlineLabel": "Offline — a tap will not save until the boat has bars",
+    "offlineLabel": "Offline: a tap will not save until the boat has bars",
     "delete": "Delete",
     "deleteNamed": "Delete {species}",
     "refusal": "No signal. Tap it again when the boat has bars."
@@ -146,7 +146,7 @@
   "buddyNewTeamHint": "Tick two or more. Crew count too, and a divemaster can lead several.",
   "buddyDiverGroupLabel": "Divers",
   "buddyCrewGroupLabel": "Crew",
-  "buddyDragHint": "Press and hold someone, then drag them onto their buddy. Ticking boxes still works.",
+  "buddyDragHint": "Press and hold someone, then drag them onto their buddy, or use the tick boxes.",
   "buddyDragHolding": "Holding {name}. Drag onto a buddy to pair them.",
   "buddyDragOver": "Release to pair {a} with {b}.",
   "buddyFormSubmit": "Form buddy team",

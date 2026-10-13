@@ -49,7 +49,7 @@
     "materialsNotACourse": "This departure isn’t a course session, so it has no learning materials.",
     "saved": "Changes saved.",
     "cancelled": "Trip canceled. It’s off the public schedule.",
-    "reinstated": "Back on! The trip is on the schedule again.",
+    "reinstated": "The trip is back on the schedule.",
     "crew": "Crew updated.",
     "crewConflict": "Crew wasn’t changed. Someone is already assigned during this time, or the course would fall below its teaching ratio.",
     "noteAdded": "Private staff note added.",
@@ -169,7 +169,7 @@
   "detail": {
     "viewBookingPage": "View booking page",
     "copyBookingLink": "Copy link",
-    "linkCopied": "Copied!",
+    "linkCopied": "Copied",
     "linkCopyFailed": "Couldn’t copy. Select the link above instead.",
     "cancelledBadge": "Canceled",
     "meetingDaysSummary": "{count} meeting days · same instructors each day",

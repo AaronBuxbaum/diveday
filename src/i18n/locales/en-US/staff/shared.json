@@ -51,7 +51,7 @@
     "outcomeNotCleared": "Not cleared",
     "evaluatedOnLabel": "Date of the physician’s evaluation",
     "physicianNameLabel": "Physician",
-    "evidenceHint": "Their name, or attach the evaluation below. One or the other.",
+    "evidenceHint": "Their name, the evaluation below, or both.",
     "documentLabel": "Physician’s evaluation form",
     "documentHint": "An image or PDF of the signed form.",
     "documentChoose": "Choose a file",

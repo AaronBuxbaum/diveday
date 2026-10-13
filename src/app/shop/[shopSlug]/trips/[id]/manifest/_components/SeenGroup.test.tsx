@@ -14,7 +14,7 @@ const copy: SeenGroupCopy = {
   consequence: "At Molasses Reef. Divers read this on the trip page.",
   delete: "Delete",
   refusal: "That did not save. Tap it again.",
-  offlineLabel: "Offline — a tap will not save until the boat has bars",
+  offlineLabel: "Offline: a tap will not save until the boat has bars",
   connectivity: {
     online: "Online",
     onlineTitle: "This device is online.",
@@ -191,7 +191,7 @@ describe("SeenGroup", () => {
       <SeenGroup chips={chips} tallies={[]} copy={copy} recordAction={noop} deleteAction={noop} />,
     );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Offline — a tap will not save until the boat has bars",
+      "Offline: a tap will not save until the boat has bars",
     );
     // The chips stay tappable under it. A dead chip on a wet deck reads as a
     // broken app rather than as a missing bar, and the browser's flag is not

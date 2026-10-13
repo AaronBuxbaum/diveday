@@ -49,7 +49,7 @@
     "materialsNotACourse": "Esta salida no es una sesión de curso, así que no tiene material de estudio.",
     "saved": "Cambios guardados.",
     "cancelled": "Salida cancelada. Ya no aparece en el calendario público.",
-    "reinstated": "¡De vuelta! La salida vuelve a estar en el calendario.",
+    "reinstated": "La salida vuelve a estar en el calendario.",
     "crew": "Tripulación actualizada.",
     "crewConflict": "No se cambió la tripulación. Alguien ya está asignado en este horario, o el curso quedaría por debajo de su ratio de enseñanza.",
     "noteAdded": "Nota privada del personal añadida.",
@@ -169,7 +169,7 @@
   "detail": {
     "viewBookingPage": "Ver página de reserva",
     "copyBookingLink": "Copiar enlace",
-    "linkCopied": "¡Copiado!",
+    "linkCopied": "Copiado",
     "linkCopyFailed": "No se pudo copiar. Selecciona el enlace de arriba.",
     "cancelledBadge": "Cancelada",
     "meetingDaysSummary": "{count, plural, one {# día de encuentro} other {# días de encuentro}} · mismos instructores cada día",
@@ -387,7 +387,7 @@
     "hoursAgo": "hace {hours} h",
     "daysAgo": "hace {days} d",
     "emailSubject": "Una invitación de {shopName}: {tripTitle}",
-    "emailBody": "Hola {firstName},\n\n{shopName} ha programado {tripTitle} ({tripWhen}) y quiere invitarte. Esto es una invitación, no una reserva, así que todavía no hay ninguna plaza apartada. Si quieres apuntarte, empieza aquí:\n{bookingUrl}\n\n¡Nos vemos en el agua!",
+    "emailBody": "Hola {firstName},\n\n{shopName} ha programado {tripTitle} ({tripWhen}) y quiere invitarte. Esto es una invitación, no una reserva, así que todavía no hay ninguna plaza apartada. Si quieres sumarte, empieza aquí:\n{bookingUrl}\n\n¡Nos vemos en el agua!",
     "directInvite": "Invitar",
     "directInviting": "Invitando…",
     "directInviteAria": "Invitar a {name} a la salida"

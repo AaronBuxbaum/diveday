@@ -161,6 +161,11 @@ Color rules:
 > refuses the straight one with **no ICU exemption** — unlike `'`, a `"` carries no meaning to ICU, so
 > no value needs it and the rule landed at zero.
 
+> **Settled 2026-10-13:** the ellipsis is `…` (U+2026), never three periods, in every bundle and
+> every locale. Five pending labels and placeholders ("Saving...", "Adding...") said it the other way
+> against 281 that did not, and the Spanish copied all five. `pnpm check:voice` refuses `...`, and it
+> landed at zero.
+
 
 The current product type system is:
 

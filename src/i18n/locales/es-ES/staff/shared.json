@@ -51,7 +51,7 @@
     "outcomeNotCleared": "No autorizado",
     "evaluatedOnLabel": "Fecha de la evaluación médica",
     "physicianNameLabel": "Médico",
-    "evidenceHint": "Su nombre, o adjunta la evaluación abajo. Una de las dos.",
+    "evidenceHint": "Su nombre, la evaluación de abajo, o ambos.",
     "documentLabel": "Formulario de evaluación médica",
     "documentHint": "Una imagen o un PDF del formulario firmado.",
     "documentChoose": "Elige un archivo",

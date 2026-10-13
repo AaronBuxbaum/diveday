@@ -123,7 +123,7 @@
       "tagline": "Lema",
       "taglinePlaceholder": "ej. Buceando en Key Largo y los Cayos de Florida desde 2012",
       "descriptionLabel": "Acerca de tu centro",
-      "descriptionPlaceholder": "Una breve presentación de tu centro, embarcaciones, equipo o buceo local...",
+      "descriptionPlaceholder": "Una breve presentación de tu centro, embarcaciones, equipo o buceo local…",
       "logo": "Logotipo del centro",
       "logoHint": "PNG, JPG o WebP. Se recomienda una imagen cuadrada.",
       "removeLogo": "Eliminar logotipo actual",
@@ -372,7 +372,7 @@
       "heading": "Integraciones del centro"
     },
     "support": {
-      "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo. Escribe cuando quieras.",
+      "description": "Escribe cuando quieras: una mala mañana en el mostrador, una función que te falta o un error.",
       "emailCta": "Escribir a {email}"
     },
     "groups": {

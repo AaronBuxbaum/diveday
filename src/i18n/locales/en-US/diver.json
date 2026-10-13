@@ -663,7 +663,7 @@
     "waterTemp": "Water temp",
     "photosBody": "They stay on your recap, and {shop} may love to see them.",
     "photoAlt": "A photo from {trip}",
-    "photoLimitReached": "You’ve added the most photos one recap holds. Nice haul!",
+    "photoLimitReached": "You’ve added the most photos one recap holds.",
     "addAPhoto": "Add a photo",
     "chooseDifferentPhotos": "Choose different photos",
     "photoWrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
