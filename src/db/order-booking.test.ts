@@ -59,7 +59,7 @@ describe("getOrderBookingContext", () => {
     const seat = await depositSeat();
     const [other] = await ctx.db
       .insert(shops)
-      .values({ name: "Elsewhere Diving", slug: `elsewhere-${Date.now()}`, timezone: "UTC" })
+      .values({ name: "Elsewhere Diving", slug: "elsewhere-order-booking", timezone: "UTC" })
       .returning({ id: shops.id });
     if (!other) throw new Error("shop insert failed");
     expect(await getOrderBookingContext(ctx.db, other.id, seat.bookingId)).toBeNull();
