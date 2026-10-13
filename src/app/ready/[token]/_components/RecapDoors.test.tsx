@@ -63,6 +63,13 @@ describe("the photo door's second and third controls", () => {
     expect(revealed?.textContent).toContain("recap.addToMyRecap");
   });
 
+  it("names the caption box by its own words, not only its placeholder", () => {
+    render(<PhotoDoorOf context={props()} />);
+    // `hidden: true` because the box rests collapsed until a file is picked.
+    const caption = screen.getByRole("textbox", { name: "recap.captionLabel", hidden: true });
+    expect(caption).toHaveAttribute("name", "caption");
+  });
+
   it("leaves one standing control in the door", () => {
     const { container } = render(<PhotoDoorOf context={props()} />);
     const peer = photoForm(container)?.querySelector(".peer");

@@ -508,6 +508,7 @@
     "paymentPaid": "Paid",
     "paymentPartlyRefunded": "Partly refunded",
     "paymentPrefix": "Payment:",
+    "paymentStatusLabel": "Payment status",
     "paymentRefunded": "Refunded",
     "paymentSourceCounter": "Marked paid at the counter",
     "paymentSourceOnline": "Paid online · Stripe",

@@ -377,6 +377,7 @@ export function waiverControls(t: StaffTranslator): WaiverControls {
 export function rosterPaymentStatusCopy(t: StaffTranslator): PaymentStatusControlCopy {
   return {
     prefix: t("trips.roster.paymentPrefix"),
+    label: t("trips.roster.paymentStatusLabel"),
     statuses: {
       unpaid: t("trips.roster.paymentUnpaid"),
       deposit_paid: t("trips.roster.paymentDepositPaid"),

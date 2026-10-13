@@ -508,6 +508,7 @@
     "paymentPaid": "Pagado",
     "paymentPartlyRefunded": "Reembolsado en parte",
     "paymentPrefix": "Pago:",
+    "paymentStatusLabel": "Estado del pago",
     "paymentRefunded": "Reembolsado",
     "paymentSourceCounter": "Marcado como pagado en el mostrador",
     "paymentSourceOnline": "Pagado en línea · Stripe",
