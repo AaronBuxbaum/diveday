@@ -235,7 +235,6 @@
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 412,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 457,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
-    "src/db/bookings.ts#createBookingRecord": 463,
     "src/db/checkouts.ts#startBookingCheckout": 443,
     "src/db/export.ts#loadShopExportContext": 495,
     "src/db/reminders.ts#sendDueReminders": 448,
