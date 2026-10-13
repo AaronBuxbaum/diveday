@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 48 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 49 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, live-trip-read, live-people-read, event-scope, slug-action, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -287,6 +287,10 @@ The event-scope one (`scripts/check-event-scope.mjs`) fails a `.from(<table>)` o
 ### slug-action
 
 The slug-action one (`scripts/check-slug-actions.mjs`) fails a `"use server"` module whose exported action takes `shopSlug` and reaches `requireStaffSession(`, in its own body or through a function of the same module it calls. A slug carried inside a parameter counts too: `ctx.shopSlug` read off a parameter, or a parameter handed to a same-module function that takes the slug (`manifestPath(ctx)` destructuring `{ shopSlug }`). The security review of the 2026-10-11 work found thirteen manifest actions that the parameter-name test could not see. A server action's arguments are whatever the browser posts, a slug bound into a form included. The writes behind these actions are scoped by `session.user.shopId`, so a foreign slug never reached another tenant's rows, but it steered the rest: `revalidatePath` on another shop's board, Today and public course page, and the redirect that carries a notice. `requireShopSurface(shopSlug)` (`src/lib/session.ts`) is a 404 for a slug that is not the session's shop; an action that takes no slug builds its paths from `session.user.shopSlug` and keeps `requireStaffSession`. #2367 fixed the diver record by hand; the 2026-10-11 review found fifteen more actions in five files with the same shape, and writing the guard found four more (`resendInvoiceAction`, `resendConfirmationAction`, both seat-diver actions), which is the argument for a guard over a sweep. It reads text, not a syntax tree: top-level declarations at column zero, with comments and string contents blanked first so a doc comment naming the gate is not a call.
+
+### env-reads
+
+The env-reads one (`scripts/check-env-reads.mjs`, also `pnpm check:env-reads`) fails an upper-case environment key read in `src/` (`process.env.KEY`, `process.env["KEY"]`, or `env.KEY` on a parameter defaulted to `process.env`) that `config/env-registry.mjs` does not hold and its `NOT_REGISTERED` list does not excuse with a reason. `pnpm check:env` compares `.env.example` and a deployment against the registry but never looked at the code, and the 2026-10-13 review found six keys read and unregistered, three of them signing secrets (`RECAP_LINK_SECRET`, `BUDDY_LINK_SECRET`, `WAIVER_INTEGRITY_SECRET`) that fall back to `AUTH_SECRET`: rotating `AUTH_SECRET` silently broke every recap and buddy link and made every sealed waiver verify as invalid, and nothing a human reads said so. Writing the guard found the VAPID keypair too. The excused keys are the platform's (`NODE_ENV`, `VERCEL_ENV`), the test and dev harness's (`DIVEDAY_CLOCK`, `PGLITE_DATA_DIR`), the Sentry cron monitor names, and the overrides of a value compiled into the code (`src/lib/configured.ts`: `APP_HOST`, `SES_FROM_EMAIL`, `STRIPE_CONNECT_CLIENT_ID`, `NEXT_PUBLIC_SENTRY_DSN`), which the registry's header says do not belong in it. An excuse nothing reads any more fails too.
 
 ### trip-revision
 
