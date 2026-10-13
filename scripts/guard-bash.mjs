@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// A `PreToolUse` hook on `Bash` that refuses three command shapes this repository has
+// A `PreToolUse` hook on `Bash` that refuses the command shapes this repository has
 // already been burned by, and names the correct form in the refusal.
 //
 // All three are written down as hard rules in AGENTS.md, and being written down is not
@@ -46,6 +46,15 @@
 //     `--force-with-lease`, and any push to `main`, are refused unconditionally: one
 //     overwrites a branch somebody else may have advanced, the other skips the pull request.
 //
+//  7. Cancelling a `push` run on `main` — `gh run cancel <id>`, or a POST to
+//     `actions/runs/<id>/cancel` (or `force-cancel`) through `gh api`. A main push run is
+//     what publishes that commit's visual snapshot, the baseline every branch cut from it
+//     compares against, which is why `ci.yml` gives each one a concurrency lane of its own.
+//     Five main runs cancelled on 2026-10-12 and -13 each carry "The run was canceled by
+//     @AaronBuxbaum", the identity every session's `gh` uses: explicit cancels, not
+//     concurrency (code review 2026-10-13). The run's event and branch are read with one
+//     `gh api` call; a run that cannot be read is let through, as every hook here fails open.
+//
 // The contract is Claude Code's: JSON on stdin, exit 2 with the reason on stderr to block,
 // exit 0 to stay out of the way. It **fails open** on anything it does not understand —
 // unparseable payload, unexpected shape, its own bug — because a guard that blocks the
@@ -85,6 +94,55 @@ function workingTreeChanges() {
     timeoutMs: SUBPROCESS_TIMEOUTS.git,
   });
   return status.split("\n").filter(Boolean);
+}
+
+/** `{ event, branch }` of an Actions run, or null when `gh` cannot say. */
+function actionsRun(repoPath, id) {
+  try {
+    const out = readBounded(
+      "gh",
+      ["api", `${repoPath}/actions/runs/${id}`, "--jq", '.event + " " + .head_branch'],
+      { cwd: ROOT, encoding: "utf8", timeoutMs: 5_000, stdio: ["ignore", "pipe", "ignore"] },
+    );
+    const [event, branch] = String(out).trim().split(" ");
+    return event && branch ? { event, branch } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The run a segment cancels, as `{ repoPath, id }`: `gh run cancel <id> [--repo o/r]`, or
+ * `gh api [-X POST] repos/o/r/actions/runs/<id>/cancel` (and `force-cancel`). Null otherwise.
+ */
+export function cancelledRun(segment) {
+  const cancel = segment.match(/^gh\s+run\s+cancel\b(.*)$/);
+  if (cancel) {
+    const id = cancel[1].match(/(?:^|\s)(\d+)(?=\s|$)/)?.[1];
+    if (!id) return null;
+    const repo = cancel[1].match(/(?:-R|--repo)[\s=]+([\w.-]+\/[\w.-]+)/)?.[1];
+    return { repoPath: repo ? `repos/${repo}` : "repos/{owner}/{repo}", id };
+  }
+  if (/^gh\s+api\b/.test(segment)) {
+    const endpoint = segment.match(
+      /\/?(repos\/[^/\s'"]+\/[^/\s'"]+)\/actions\/runs\/(\d+)\/(?:force-)?cancel\b/,
+    );
+    if (endpoint) return { repoPath: endpoint[1], id: endpoint[2] };
+  }
+  return null;
+}
+
+function cancelViolation(segment, runOf) {
+  const target = cancelledRun(segment);
+  if (!target) return null;
+  const run = runOf(target.repoPath, target.id);
+  if (run?.event !== "push" || run.branch !== "main") return null;
+  return (
+    `\`${segment}\` cancels run ${target.id}, a push to main. A main push run publishes that commit's ` +
+    "visual snapshot, the baseline every branch cut from it compares against, so ci.yml gives each one a " +
+    "lane of its own and never cancels it. Two overlapping main runs only queue behind the 20-job cap; " +
+    "they do not cancel each other. Let it finish. To stop your own pull request's run, cancel that one."
+  );
 }
 
 /** Commands whose output an agent has to wait minutes for. */
@@ -279,7 +337,7 @@ function discardViolation(segment, changes) {
 export function violationFor(
   command,
   scripts = packageScripts(),
-  { changes = workingTreeChanges } = {},
+  { changes = workingTreeChanges, runOf = actionsRun } = {},
 ) {
   for (const segment of segments(withoutInertText(command))) {
     const pnpmScript = segment.match(/^pnpm\s+(?:run\s+)?([\w:.-]+)\b/);
@@ -342,6 +400,9 @@ export function violationFor(
 
     const discard = discardViolation(segment, changes);
     if (discard) return discard;
+
+    const cancel = cancelViolation(segment, runOf);
+    if (cancel) return cancel;
   }
   return null;
 }

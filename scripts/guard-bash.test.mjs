@@ -209,3 +209,39 @@ describe("discarding a shared working tree", () => {
     expect(violationFor("git push -u origin claude/fix-domain", scripts, clean)).toBeNull();
   });
 });
+
+describe("cancelling a push run on main", () => {
+  const runs = {
+    "repos/{owner}/{repo}/101": { event: "push", branch: "main" },
+    "repos/AaronBuxbaum/diveday/101": { event: "push", branch: "main" },
+    "repos/{owner}/{repo}/202": { event: "pull_request", branch: "claude/x-1" },
+    "repos/{owner}/{repo}/303": { event: "schedule", branch: "main" },
+  };
+  const runOf = (repoPath, id) => runs[`${repoPath}/${id}`] ?? null;
+  const verdict = (command) => violationFor(command, scripts, { runOf, changes: () => [] });
+
+  it("refuses `gh run cancel` of a main push run, and says why", () => {
+    const reason = verdict("gh run cancel 101");
+    expect(reason).toMatch(/push to main/);
+    expect(reason).toMatch(/20-job cap/);
+    expect(verdict("gh run cancel 101 --repo AaronBuxbaum/diveday")).not.toBeNull();
+  });
+
+  it("refuses the REST endpoint, force-cancel included", () => {
+    expect(
+      verdict("gh api -X POST repos/AaronBuxbaum/diveday/actions/runs/101/cancel"),
+    ).not.toBeNull();
+    expect(
+      verdict("gh api --method POST /repos/AaronBuxbaum/diveday/actions/runs/101/force-cancel"),
+    ).not.toBeNull();
+  });
+
+  it("leaves alone a pull request's run, the nightly, a run it cannot read, and reading a run", () => {
+    expect(verdict("gh run cancel 202")).toBeNull();
+    expect(verdict("gh run cancel 303")).toBeNull();
+    expect(verdict("gh run cancel 999")).toBeNull();
+    expect(verdict("gh run cancel")).toBeNull();
+    expect(verdict("gh run view 101 --log-failed")).toBeNull();
+    expect(verdict("gh api repos/AaronBuxbaum/diveday/actions/runs/101")).toBeNull();
+  });
+});
