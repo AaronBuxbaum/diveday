@@ -32,8 +32,8 @@ afterEach(cleanup);
  * a dive is still not to go in the water.
  */
 describe("the rider's riding-only capsule", () => {
-  const NOT_CLEARED = "Physician did not clear: riding only";
-  const REFERRAL = "Medical referral open: riding only";
+  const NOT_CLEARED = "Riding only: not cleared";
+  const REFERRAL = "Riding only: referred";
   const notCleared = {
     kind: "not_cleared",
     at: new Date("2026-08-20T12:00:00.000Z"),
