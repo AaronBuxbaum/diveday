@@ -39,7 +39,7 @@ const FIELD_CLASS = "min-w-36 flex-1 sm:w-44 sm:flex-none";
 /** The From and To pair: a caption column and a box column, one row from `sm` up. */
 const DATE_RANGE_CLASS =
   "grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-3 sm:flex sm:w-auto";
-const DATE_BOX_CLASS = "min-w-0 sm:w-40";
+const DATE_BOX_CLASS = "min-w-0 sm:w-44";
 
 export function ActivityToolbar({
   personId,
