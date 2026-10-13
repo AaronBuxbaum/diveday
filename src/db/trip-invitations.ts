@@ -501,7 +501,7 @@ export async function offerDepartureToDiver(
     const [diver] = await db
       .select({ fullName: people.fullName })
       .from(people)
-      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId), livePerson()))
       .limit(1);
     await recordTripActivity(db, {
       shopId: input.shopId,
