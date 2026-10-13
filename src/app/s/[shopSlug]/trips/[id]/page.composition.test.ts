@@ -23,10 +23,21 @@ import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet"
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
 /** The page's one wave of reads, lifted beside it so the route stays a renderer (#2353). */
 const READS_SOURCE = readFileSync(join(__dirname, "_lib/page-reads.ts"), "utf8");
-const FOOT_BAR_SOURCE = readFileSync(
-  join(__dirname, "../../../../../components/PhoneFootBar.tsx"),
-  "utf8",
-);
+
+/**
+ * The source of a file the page composes, read by name: under the route's
+ * `_components/`, or under `src/components/`. A section that moves out of the
+ * page moves its pins with it by changing only the name passed here.
+ */
+function component(file: string): string {
+  try {
+    return readFileSync(join(__dirname, "_components", file), "utf8");
+  } catch {
+    return readFileSync(join(__dirname, "..", "..", "..", "..", "..", "components", file), "utf8");
+  }
+}
+
+const FOOT_BAR_SOURCE = component("PhoneFootBar.tsx");
 
 /**
  * Where a marker first appears in the route's source, or -1.
@@ -202,7 +213,7 @@ describe("the trip page's order", () => {
     // cancelled landing has no form and keeps the one column.
     const DEPARTURE = `${FRAME} lg:max-w-5xl`;
     const LOADING = readFileSync(join(__dirname, "loading.tsx"), "utf8");
-    const HEADER = readFileSync(join(__dirname, "_components", "TripHeader.tsx"), "utf8");
+    const HEADER = component("TripHeader.tsx");
     // Both of this page's non-embed columns — the departure and the cancelled
     // landing — and its loading skeleton.
     expect(SOURCE.split(`: "${FRAME}"`).length - 1).toBe(1);
@@ -257,11 +268,9 @@ describe("the trip page's order", () => {
   });
 
   it("leaves every section's own component without an outer margin", () => {
-    const component = (name: string) =>
-      readFileSync(join(__dirname, "_components", `${name}.tsx`), "utf8");
     // The day's run, the pitch and the other boats open on a bare section.
     // Counted rather than matched, so a failure names what it found.
-    const found = (name: string, pattern: RegExp) => component(name).match(pattern) ?? [];
+    const found = (name: string, pattern: RegExp) => component(`${name}.tsx`).match(pattern) ?? [];
     for (const name of ["TripDayPlan", "TripPitch", "TripAlternatives"]) {
       expect(found(name, /<section className="mt-8">/g), name).toEqual([]);
     }
@@ -359,7 +368,7 @@ describe("the trip page's order", () => {
  * because what is being pinned is which *inputs* a server page consults.
  */
 describe("the known diver's facts", () => {
-  const SECTIONS = readFileSync(join(__dirname, "_components", "BookingSections.tsx"), "utf8");
+  const SECTIONS = component("BookingSections.tsx");
 
   it("are read only through the handoff, and never on an embed", () => {
     const read = READS_SOURCE.indexOf("readKnownDiver(db, {");
