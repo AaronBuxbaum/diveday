@@ -252,6 +252,38 @@ describe("sendRescheduleNotices", () => {
     expect(outcome.told).toBe(0);
     expect(email.sent).toHaveLength(0);
   });
+  // #2443: the meeting point moved and the time did not. Booked divers
+  // would otherwise turn up at the old dock.
+  it("tells each seat where to meet when only the meeting point moved", async () => {
+    const { db, shop, reef, kid, moved, now } = await movedTrip();
+    const [kidRow] = await db.select().from(bookings).where(eq(bookings.id, kid));
+    await db.update(people).set({ phone: "+13055550143" }).where(eq(people.id, kidRow.personId));
+    await db
+      .update(trips)
+      .set({ meetingPointLabel: "North Pier", meetingPointAddress: "1 Dock St" })
+      .where(eq(trips.id, reef.id));
+    const { email, sms, options } = providers();
+    const outcome = await sendRescheduleNotices(
+      db,
+      shop.id,
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: moved.startsAt.toISOString(),
+        meetingPointMoved: true,
+      },
+      { ...options, now },
+    );
+    expect(outcome.told).toBe(3);
+    expect(email.sent).toHaveLength(2);
+    const [first] = email.sent;
+    if (first?.kind !== "trip_rescheduled") throw new Error("wrong kind");
+    expect(first.meetingPoint).toMatchObject({ label: "North Pier" });
+    const text = sms.sent.find((m) => m.to === "+13055550143");
+    expect(text?.body).toContain(`${shop.name}: we moved where we meet for ${reef.title}`);
+    expect(text?.body).toContain("Meet at North Pier, 1 Dock St.");
+  });
+
   it("mints no trip-prep link for a seat with no email and no phone", async () => {
     const { db, shop, reef, kid, previousStartsAt, now } = await movedTrip();
     const { options } = providers();
@@ -339,6 +371,28 @@ describe("holdRescheduleNotice", () => {
     });
     expect(held).toBeNull();
     expect(await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toHaveLength(0);
+  });
+
+  it("holds one notice for a save that moved only the meeting point (#2443)", async () => {
+    const { db, shop, reef, moved, now } = await movedTrip();
+    const held = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: moved.startsAt,
+      meetingPointMoved: true,
+      actorPersonId: null,
+      now,
+    });
+    expect(held?.told).toBe(3);
+    const rows = await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id));
+    expect(rows.map((row) => row.payload)).toEqual([
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: moved.startsAt.toISOString(),
+        meetingPointMoved: true,
+      },
+    ]);
   });
 
   it("holds nothing for a rehearsal departure", async () => {

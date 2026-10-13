@@ -86,6 +86,25 @@ export async function rescheduleAudienceCount(
 
 export type HeldRescheduleNotice = { id: string; runAt: Date; told: number };
 
+/**
+ * Whether a held notice is about the meeting point alone (#2443): the time it
+ * would tell the divers they had is the time the departure still has. The
+ * staff row says "the new meeting point" for it rather than "the new time".
+ */
+export async function heldRescheduleIsPlaceOnly(
+  db: AppDb,
+  shopId: string,
+  payload: TripRescheduledPayload,
+): Promise<boolean> {
+  if (!payload.meetingPointMoved) return false;
+  const [trip] = await db
+    .select({ startsAt: trips.startsAt })
+    .from(trips)
+    .where(and(eq(trips.id, payload.tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  return trip?.startsAt.getTime() === Date.parse(payload.previousStartsAt);
+}
+
 /** The divers know the current time again: nothing is owed them. */
 async function clearDiversTold(db: AppDb, shopId: string, tripId: string) {
   await db
@@ -229,8 +248,10 @@ export async function sendRescheduleNotices(
   if (row?.trip.status !== "scheduled") return outcome;
   const { trip, shop } = row;
   const previousStartsAt = new Date(payload.previousStartsAt);
-  // Moved and moved back before the cron swept a closed tab's hold.
-  if (previousStartsAt.getTime() === trip.startsAt.getTime()) return outcome;
+  const timeMoved = previousStartsAt.getTime() !== trip.startsAt.getTime();
+  // Moved and moved back before the cron swept a closed tab's hold. A save
+  // that moved only the meeting point still has that to say (#2443).
+  if (!timeMoved && !payload.meetingPointMoved) return outcome;
   // Nothing to tell about a departure that has already left.
   if (trip.startsAt.getTime() <= now.getTime()) return outcome;
 
@@ -296,14 +317,23 @@ export async function sendRescheduleNotices(
     const readinessUrl = capability
       ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
       : undefined;
+    const date = formatShortDate(trip.startsAt, locale, shop.timezone);
+    const time = formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone);
     const smsBody = [
-      t("notifications.sms.rescheduled", {
-        shopName: shop.name,
-        tripTitle: trip.title,
-        date: formatShortDate(trip.startsAt, locale, shop.timezone),
-        time: formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone),
-        previous: formatDateTimeTz(previousStartsAt, locale, shop.timezone),
-      }),
+      timeMoved
+        ? t("notifications.sms.rescheduled", {
+            shopName: shop.name,
+            tripTitle: trip.title,
+            date,
+            time,
+            previous: formatDateTimeTz(previousStartsAt, locale, shop.timezone),
+          })
+        : t("notifications.sms.meetingPointMoved", {
+            shopName: shop.name,
+            tripTitle: trip.title,
+            date,
+            time,
+          }),
       meetingPoint
         ? t("trip.calendarMeetingPoint", {
             place: [meetingPoint.label, meetingPoint.address].filter(Boolean).join(", "),

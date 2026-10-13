@@ -89,7 +89,10 @@ const tripRescheduledPayload = z.object({
   kind: z.literal("trip_rescheduled"),
   tripId: z.uuid(),
   previousStartsAt: z.iso.datetime({ offset: true }),
-  /** Whether the meeting point moved with the time, so the message says where too. */
+  /**
+   * Whether the meeting point moved, so the message says where. With
+   * `previousStartsAt` equal to the departure's start, it is all that moved.
+   */
   meetingPointMoved: z.boolean(),
 });
 
@@ -124,7 +127,9 @@ export type TripRescheduledPayload = z.infer<typeof tripRescheduledPayload>;
  * Two moves of one departure inside one hold are one message: the divers were
  * last told the *earliest* of the held "before" times, and the meeting point
  * moved if either move moved it. Null when the departure is back where the
- * divers were last told it was, so there is nothing to say.
+ * divers were last told it was and the meeting point did not move, so there is
+ * nothing to say. A meeting-point move with the time where it was is a
+ * place-only notice (#2443).
  */
 export function mergeRescheduleHolds(
   pending: TripRescheduledPayload[],
@@ -135,12 +140,15 @@ export function mergeRescheduleHolds(
   const told = all.reduce((earliest, held) =>
     Date.parse(held.previousStartsAt) < Date.parse(earliest.previousStartsAt) ? held : earliest,
   );
-  if (Date.parse(told.previousStartsAt) === currentStartsAt.getTime()) return null;
+  const meetingPointMoved = all.some((held) => held.meetingPointMoved);
+  if (Date.parse(told.previousStartsAt) === currentStartsAt.getTime() && !meetingPointMoved) {
+    return null;
+  }
   return {
     kind: "trip_rescheduled",
     tripId: next.tripId,
     previousStartsAt: told.previousStartsAt,
-    meetingPointMoved: all.some((held) => held.meetingPointMoved),
+    meetingPointMoved,
   };
 }
 

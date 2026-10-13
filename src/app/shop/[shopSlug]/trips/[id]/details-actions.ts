@@ -324,22 +324,30 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   }
   // **A retime tells the divers** (ux review 2026-10-11, item 1), the same
   // held send the board's move takes, and says where too when the meeting
-  // point moved in the same save.
+  // point moved in the same save. A save that moved only the meeting point
+  // holds the same notice, about the place alone (#2443): otherwise the
+  // divers turn up at the old dock.
+  const placeMoved =
+    !!tripNow &&
+    meetingPointMoved(
+      meetingPointOfRows(shopNow, tripNow),
+      meetingPointOfRows(shopNow, {
+        meetingPointLabel: meetingPointLabel || null,
+        meetingPointAddress: meetingPointAddress || null,
+        arrivalLandmark: null,
+        arrivalParkingNote: null,
+      }),
+    );
+  const timeMoved = tripNow
+    ? tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
+    : false;
   const notice =
-    tripNow && tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
+    tripNow && (timeMoved || placeMoved)
       ? await holdRescheduleNotice(dbi, {
           shopId: s.user.shopId,
           tripId,
           movedFrom: tripNow.startsAt,
-          meetingPointMoved: meetingPointMoved(
-            meetingPointOfRows(shopNow, tripNow),
-            meetingPointOfRows(shopNow, {
-              meetingPointLabel: meetingPointLabel || null,
-              meetingPointAddress: meetingPointAddress || null,
-              arrivalLandmark: null,
-              arrivalParkingNote: null,
-            }),
-          ),
+          meetingPointMoved: placeMoved,
           actorPersonId: s.user.personId,
         })
       : null;
