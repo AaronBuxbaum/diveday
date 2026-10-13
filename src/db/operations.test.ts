@@ -17,7 +17,7 @@ import {
   pagedDiverActivity,
   recordDiverSelfCancel,
 } from "./operations";
-import { activityEvents, bookings, people } from "./schema";
+import { activityEvents, bookings, people, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -637,6 +637,41 @@ describe("a diver's own cancellation on the departure's trail (UX review 2026-10
     expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
       code: "seat_self_cancelled",
     });
+  });
+
+  it("still records the diver's act when the shop called the departure off first (#2471)", async () => {
+    const { db, shop } = ctx;
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [entry] = await getTripRoster(db, shop.id, trip.id);
+    if (!entry) throw new Error("expected a seat");
+    await db
+      .update(trips)
+      .set({ status: "cancelled", cancelledAt: nowDate() })
+      .where(eq(trips.id, trip.id));
+
+    expect(
+      await recordDiverSelfCancel(db, { shopId: shop.id, bookingId: entry.booking.id, refunded: true }),
+    ).not.toBeNull();
+    expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
+      code: "seat_self_refunded",
+      params: { actor: entry.person.fullName },
+    });
+  });
+
+  it("writes nothing on a departure since deleted, and says so with a null (#2471)", async () => {
+    const { db, shop } = ctx;
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [entry] = await getTripRoster(db, shop.id, trip.id);
+    if (!entry) throw new Error("expected a seat");
+    await db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, trip.id));
+
+    // A deleted departure is off every trail a staffer reads, so the line has
+    // nowhere to be seen; the caller logs the null instead of dropping it.
+    expect(
+      await recordDiverSelfCancel(db, { shopId: shop.id, bookingId: entry.booking.id, refunded: false }),
+    ).toBeNull();
   });
 
   it("writes nothing for a booking that is not this shop's", async () => {
