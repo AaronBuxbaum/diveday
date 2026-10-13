@@ -138,6 +138,7 @@ const EVENING_NOTICES: EveningNoticeMap = {
   "recap-send-attention": { key: "closeout.notice.recapAttention", tone: "warning" },
   "recap-not-ready": { key: "closeout.notice.recapNotReady", tone: "neutral" },
   "recap-held": { key: "closeout.notice.recapHeld", tone: "warning" },
+  "recap-send-limit": { key: "closeout.notice.recapSendLimit", tone: "warning" },
   "recap-locked": { key: "closeout.notice.recapLocked", tone: "neutral" },
   "recap-photo-removed": { key: "trips.notices.recapPhotoRemoved", tone: "success" },
   "crew-photo-added": { key: "closeout.notice.crewPhotoAdded", tone: "success" },

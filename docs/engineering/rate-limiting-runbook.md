@@ -61,6 +61,8 @@ cannot see it.
 | Replying to a diver | `src/app/shop/[shopSlug]/divers/[personId]/details-actions.ts` `replyToDiverAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `reply-send-limit` notice |
 | Inviting a staff member, or resending the invite | `src/app/shop/[shopSlug]/settings/team/actions.ts` `inviteStaffAction` / `resendInviteAction` | signed-in staff member, one bucket per action | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `send-limit` notice |
 | Resending an invoice | `src/app/actions/invoices.ts` `resendInvoiceAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `rate_limited` reason |
+| Sending a departure's recaps | `src/app/shop/[shopSlug]/actions.ts` `sendRecapAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `recap-send-limit` notice |
+| A note to everyone on a departure | `src/app/shop/[shopSlug]/trips/[id]/departure-note-actions.ts` `holdDepartureNoteAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `rate_limited` reason |
 | Core Web Vitals beacon | `src/app/api/vitals/route.ts` | IP | `RATE_LIMITS.webVitalsBeacon` (300/hour) |
 | CSP violation report | `src/app/api/csp-report/route.ts` | IP | `RATE_LIMITS.cspReport` (120/hour) |
 

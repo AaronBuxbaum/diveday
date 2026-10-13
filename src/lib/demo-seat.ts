@@ -1,5 +1,5 @@
-import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
-import { DAY_MS } from "@/lib/clock";
+import { createHmac, hkdfSync, randomBytes, timingSafeEqual } from "node:crypto";
+import { DAY_MS, nowMs } from "@/lib/clock";
 import { authSecret } from "./auth-secret";
 
 /**
@@ -16,28 +16,54 @@ import { authSecret } from "./auth-secret";
  *
  * The key is HKDF-derived from `authSecret` under its own label, so a seat is
  * never interchangeable with a recap link or a session.
+ *
+ * **Each seat is its own, and it runs out** (security review 2026-10-13): the
+ * value is `<nonce>.<expires-at ms>.<HMAC over shop, nonce and expiry>`. A seat
+ * over the shop id alone was the same value for every visitor to that shop and
+ * was good until the reaper took the shop, so a copy lifted off a shared device
+ * was owner access for a week. A day covers the diver preview's round trip.
  */
 
 export const DEMO_SEAT_COOKIE = "diveday_demo_seat";
 
-/** As long as the reaper keeps a demo shop (ADR 20260724-per-visitor-demo-shops). */
-export const DEMO_SEAT_MAX_AGE_SECONDS = (7 * DAY_MS) / 1000;
+/** How long a seat is good for; the cookie carries the same age. */
+const DEMO_SEAT_LIFETIME_MS = DAY_MS;
+export const DEMO_SEAT_MAX_AGE_SECONDS = DEMO_SEAT_LIFETIME_MS / 1000;
 
 const PURPOSE = "demo-seat:";
-const BASE64URL_SIGNATURE = /^[A-Za-z0-9_-]{43}$/;
+const SEAT = /^([A-Za-z0-9_-]{22})\.(\d{1,15})\.([A-Za-z0-9_-]{43})$/;
 
 function seatKey(): Buffer {
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign a demo seat.");
   return Buffer.from(hkdfSync("sha256", authSecret, "", "diveday-demo-seat", 32));
 }
 
-/** The cookie value naming `shopId` as this browser's demo shop. */
-export function signDemoSeat(shopId: string): string {
-  return createHmac("sha256", seatKey()).update(`${PURPOSE}${shopId}`).digest("base64url");
+function seatSignature(shopId: string, nonce: string, expiresAt: number): string {
+  return createHmac("sha256", seatKey())
+    .update(`${PURPOSE}${shopId}.${nonce}.${expiresAt}`)
+    .digest("base64url");
 }
 
-/** True only for a seat signed for exactly `shopId`. */
-export function isDemoSeatFor(value: string | undefined, shopId: string): boolean {
-  if (!value || !BASE64URL_SIGNATURE.test(value)) return false;
-  return timingSafeEqual(Buffer.from(value), Buffer.from(signDemoSeat(shopId)));
+/** A fresh cookie value naming `shopId` as this browser's demo shop, good for a day. */
+export function signDemoSeat(shopId: string, now: number = nowMs()): string {
+  const nonce = randomBytes(16).toString("base64url");
+  const expiresAt = now + DEMO_SEAT_LIFETIME_MS;
+  return `${nonce}.${expiresAt}.${seatSignature(shopId, nonce, expiresAt)}`;
+}
+
+/** True only for an unexpired seat signed for exactly `shopId`. */
+export function isDemoSeatFor(
+  value: string | undefined,
+  shopId: string,
+  now: number = nowMs(),
+): boolean {
+  const seat = value ? SEAT.exec(value) : null;
+  if (!seat) return false;
+  const [, nonce, expiry, signature] = seat;
+  const expiresAt = Number(expiry);
+  if (!(expiresAt > now)) return false;
+  return timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(seatSignature(shopId, nonce, expiresAt)),
+  );
 }
