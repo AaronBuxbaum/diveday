@@ -78,6 +78,7 @@ function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
     crewAccountedFor: true,
     crewReason: null,
     ...overrides,
+    sellableCapacity: overrides.sellableCapacity ?? overrides.capacity ?? 12,
   };
 }
 
@@ -270,6 +271,18 @@ describe("a station owns its departure's facts", () => {
     renderSpine();
     expect(screen.getByText("10 of 10 ready")).toBeInTheDocument();
     expect(screen.queryByText(/blocked/)).toBeNull();
+  });
+
+  /** H-107, #2388: the seats on sale, which the booking transaction sells up to. */
+  it("counts open spots and the bar against the boat's certificate, not the stated seats", () => {
+    const { container } = renderSpine({
+      departures: [departure({ capacity: 14, sellableCapacity: 11, booked: 10 })],
+    });
+    expect(screen.getByText("1 spot open")).toBeInTheDocument();
+    const [, ready] = [
+      ...(container.querySelector("[data-readiness-bar]")?.children ?? []),
+    ] as HTMLElement[];
+    expect(ready?.style.transform).toBe(`scaleX(${Math.round((10 / 11) * 1e4) / 1e4})`);
   });
 
   it("says Full rather than nought spots open on a boat with no seats left", () => {
