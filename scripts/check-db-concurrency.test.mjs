@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { findMisplacedRealServerSuites, findTransactionFanOut } from "./check-db-concurrency.mjs";
+import {
+  findMisplacedRealServerSuites,
+  findParentUpdateLocks,
+  findTransactionFanOut,
+} from "./check-db-concurrency.mjs";
 
 const lines = (findings) => findings.map((finding) => finding.line);
 
@@ -247,5 +251,55 @@ describe("a real-Postgres suite", () => {
        */
     `;
     expect(findMisplacedRealServerSuites("src/db/seat-locks.test.ts", comment)).toEqual([]);
+  });
+});
+
+describe("a lock on a shops or people row", () => {
+  it("is refused for update, on one line or across a chain", () => {
+    const findings = findParentUpdateLocks(`
+      await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, id)).for("update");
+      const [person] = await tx
+        .select({ id: people.id })
+        .from(people)
+        .where(eq(people.id, personId))
+        .limit(1)
+        .for("update");
+    `);
+    expect(lines(findings)).toEqual([2, 8]);
+  });
+
+  it("leaves alone no key update, and a lock on any other table", () => {
+    const findings = findParentUpdateLocks(`
+      await tx.select().from(shops).where(eq(shops.id, id)).for("no key update");
+      await tx.select().from(bookings).where(eq(bookings.id, id)).for("update");
+    `);
+    expect(findings).toEqual([]);
+  });
+
+  it("does not reach past the statement's end into the next one", () => {
+    const findings = findParentUpdateLocks(`
+      const shop = await tx.select().from(shops).where(eq(shops.id, id));
+      await tx.select().from(trips).where(eq(trips.id, tripId)).for("update");
+    `);
+    expect(findings).toEqual([]);
+  });
+
+  it("accepts a stated reason inside the statement, and only a stated one", () => {
+    const reasoned = findParentUpdateLocks(`
+      const locked = await tx
+        .select()
+        .from(people)
+        // diveday:allow-update-lock: the merge repoints every key at the survivor.
+        .for("update");
+    `);
+    expect(reasoned).toEqual([]);
+    const bare = findParentUpdateLocks(`
+      const locked = await tx
+        .select()
+        .from(people)
+        // diveday:allow-update-lock:
+        .for("update");
+    `);
+    expect(lines(bare)).toEqual([6]);
   });
 });

@@ -357,7 +357,10 @@ export async function setCourseFormRequirements(
  *
  * Callers run it in the transaction that created or synced the course. The
  * shop row is locked first, so two courses synced at once cannot both create
- * the same title.
+ * the same title. `for no key update`, not `for update`: the caller has just
+ * inserted a course naming this shop, which holds a `KEY SHARE` on the row, so
+ * two concurrent syncs upgrading to `update` would deadlock on one row (the
+ * story is in `self-declared-cards.ts`).
  */
 export async function attachStandardCourseForms(
   db: DbExecutor,
@@ -378,7 +381,7 @@ export async function attachStandardCourseForms(
     .select({ id: shops.id })
     .from(shops)
     .where(eq(shops.id, input.shopId))
-    .for("update");
+    .for("no key update");
   const [course] = await db
     .select({ id: courses.id })
     .from(courses)

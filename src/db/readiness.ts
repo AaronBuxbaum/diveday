@@ -473,13 +473,15 @@ export async function issueShopCertification(
     // calls for the same person now serialize here, so the "already holds
     // this level" check below and the insert that follows it act as one
     // atomic unit rather than a race either could win.
+    // `no key update`, as `recordSelfDeclaredCards` takes it: a booking insert
+    // naming this diver holds a `KEY SHARE` here, and `update` would conflict.
     const [person] = await tx
       .select({ id: people.id })
       .from(people)
       // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
       .limit(1)
-      .for("update");
+      .for("no key update");
     if (!person) return null;
     const [trip] = await tx
       .select({ id: trips.id, courseId: trips.courseId })
@@ -1081,7 +1083,9 @@ export async function issueShopNitroxCertification(
  * The person row is locked and stays locked for the rest of the caller's
  * transaction, so two concurrent taps for the same diver serialize and the
  * "already holds this" check that follows acts as one atomic unit with its
- * insert rather than a race either could win.
+ * insert rather than a race either could win. `for no key update`, as
+ * `recordSelfDeclaredCards` takes it, so a foreign key naming the diver is
+ * never queued behind it.
  */
 async function shopIssuedCourseContext(
   tx: DbExecutor,
@@ -1093,7 +1097,7 @@ async function shopIssuedCourseContext(
     // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1)
-    .for("update");
+    .for("no key update");
   if (!person) return null;
   const [trip] = await tx
     .select({ id: trips.id, courseId: trips.courseId })

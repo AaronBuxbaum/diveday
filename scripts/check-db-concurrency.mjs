@@ -283,6 +283,46 @@ export function findTransactionFanOut(contents, { jsx = false } = {}) {
 }
 
 /**
+ * **The `shops` and `people` rows are locked `for no key update`, not `for update`.**
+ *
+ * Nearly every table names a shop (126 foreign keys) and many name a person, and
+ * every insert into one of them takes `FOR KEY SHARE` on the parent row until
+ * commit. `FOR UPDATE` conflicts with that; `FOR NO KEY UPDATE` does not, while
+ * still conflicting with itself. So a `for update` on a shop queues every
+ * booking, roll-call tap and activity line in that shop behind it, and a
+ * transaction that inserted a child and then upgrades deadlocks on one row
+ * (`self-declared-cards.ts` tells it; `bookings.ts` writes the same rule for
+ * trips). Five shop locks and two card-write person locks took `update` until
+ * 2026-10-13 (fourth review, row 16).
+ *
+ * A statement that really must exclude key-share holders, because it deletes the
+ * row or changes its key, says `diveday:allow-update-lock: <why>` inside it.
+ * Returns `{ line, text }` for the `.for("update")` of each unexplained one.
+ */
+const PARENT_FROM = /\.from\((shops|people)\)/g;
+const UPDATE_LOCK = /\.for\(\s*"update"/;
+const UPDATE_LOCK_REASON = /diveday:allow-update-lock:[ \t]*\S/;
+
+export function findParentUpdateLocks(contents) {
+  const lineOf = (position) => contents.slice(0, position).split("\n").length;
+  const lines = contents.split("\n");
+  const findings = [];
+  for (const match of contents.matchAll(PARENT_FROM)) {
+    const end = contents.indexOf(";", match.index);
+    const statement = contents.slice(match.index, end === -1 ? undefined : end);
+    const lock = UPDATE_LOCK.exec(statement);
+    if (!lock) continue;
+    // The reason may sit anywhere in the statement, including the lines of the
+    // chain above `.from(...)`, so read back to the previous statement's end.
+    const start = contents.lastIndexOf(";", match.index) + 1;
+    if (UPDATE_LOCK_REASON.test(contents.slice(start, match.index + statement.length))) continue;
+    const line = lineOf(match.index + lock.index);
+    findings.push({ line, text: (lines[line - 1] ?? "").trim() });
+  }
+  return findings;
+}
+
+/**
  * **A real-Postgres suite lives in a `*.postgres.test.ts` file, or it runs nowhere.**
  *
  * `describePostgres` (`src/test/postgres.ts`) skips unless
@@ -326,6 +366,26 @@ async function main() {
     }
   }
 
+  const parentLocks = [];
+  for (const root of [...GUARDED_ROOTS, "src/lib"]) {
+    for (const file of await walk(root)) {
+      if (file.endsWith(".test.ts")) continue;
+      const contents = await readFile(path.join(ROOT, file), "utf8");
+      if (!UPDATE_LOCK.test(contents)) continue;
+      for (const finding of findParentUpdateLocks(contents)) {
+        parentLocks.push(`${file}:${finding.line}: ${finding.text}`);
+      }
+    }
+  }
+  if (parentLocks.length > 0) {
+    console.error(
+      `A shops or people row locked for update:\n${parentLocks.map((v) => `- ${v}`).join("\n")}`,
+    );
+    console.error(
+      'Every insert naming that row holds FOR KEY SHARE on it, which FOR UPDATE waits on and can deadlock with. Take .for("no key update"): it still serializes with itself. If the statement deletes the row or changes its key, say so inside it: `diveday:allow-update-lock: <why>`.',
+    );
+  }
+
   const misplaced = [];
   for (const file of await walk("src")) {
     const contents = await readFile(path.join(ROOT, file), "utf8");
@@ -357,10 +417,10 @@ async function main() {
       "If the Promise.all is genuinely not over queries on that executor, say so on the line: `diveday:allow-db-concurrency: <why>`.",
     );
   }
-  if (violations.length > 0 || misplaced.length > 0) process.exit(1);
+  if (violations.length > 0 || misplaced.length > 0 || parentLocks.length > 0) process.exit(1);
 
   console.log(
-    "db-concurrency: no Promise.all over queries on a transaction executor; every real-Postgres suite is a *.postgres.test.ts",
+    "db-concurrency: no Promise.all over queries on a transaction executor; no shops or people row locked for update unexplained; every real-Postgres suite is a *.postgres.test.ts",
   );
 }
 
