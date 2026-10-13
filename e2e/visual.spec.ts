@@ -2486,7 +2486,7 @@ for (const scheme of ["light", "dark"] as const) {
       // prove is gone.
       test(`a dead link inside a shop renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/trips/00000000-0000-4000-8000-000000000000");
-        await page.getByRole("heading", { name: "That page isn’t here any more" }).waitFor();
+        await page.getByRole("heading", { name: "That page isn’t here" }).waitFor();
         await capture(page, "shop-not-found", scheme);
       });
 

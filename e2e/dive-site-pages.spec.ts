@@ -72,7 +72,7 @@ test("a departure's site name opens that site's own page, which leads back to a 
 test("a segment no shop could have minted is a 404, and a site belongs to one shop", {
   tag: READ_ONLY,
 }, async ({ page }) => {
-  const notFound = page.getByRole("heading", { name: "That page isn’t here any more" });
+  const notFound = page.getByRole("heading", { name: "That page isn’t here" });
   /**
    * Each refusal is read twice, because the two halves fail apart. The body is
    * this page's own contract — the diver still lands somewhere, framed by the

@@ -34,13 +34,16 @@ vi.mock("@/db/trips", () => ({
   getTripWithBooked: vi.fn(async () => null),
   pagedUpcomingTripsWithCounts: vi.fn(async () => ({ trips: [] })),
 }));
-vi.mock("@/db/courses", () => ({ listActiveCourses: vi.fn() }));
+vi.mock("@/db/courses", () => ({
+  listActiveCourses: vi.fn(),
+  activeCourseAgencies: vi.fn(async () => ["padi", "ssi"]),
+}));
 vi.mock("@/lib/notifications", () => ({ publicAppUrl: () => "" }));
 vi.mock("@/i18n/request", () => ({
   requestTranslator: vi.fn(async () => ({ locale: "en-US", t: diverTranslator("en-US") })),
 }));
 
-const { listActiveCourses } = await import("@/db/courses");
+const { activeCourseAgencies, listActiveCourses } = await import("@/db/courses");
 const { shopBySlugCached } = await import("@/db/shops-cached");
 const { getShopReviewAggregate, listPublishedShopReviewsPage } = await import("@/db/reviews");
 const { default: EmbedWidgetPage } = await import("./page");
@@ -194,5 +197,84 @@ describe("the reviews widget", () => {
     expect(container.textContent).toBe("");
     expect(getShopReviewAggregate).not.toHaveBeenCalled();
     expect(listPublishedShopReviewsPage).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **The course the frame sells is the course the page sells** (third UX
+ * review, items 22 and 25). The widget printed the fee alone ("$499") where
+ * the course page charges fee and eLearning together ("$709"), and it listed
+ * every agency's ladder flat, sixty cards on a shop's homepage.
+ */
+describe("the courses widget's catalog", () => {
+  const course = (n: number, extra: Partial<typeof deepDiver> = {}) => ({
+    ...deepDiver,
+    id: `course-${n}`,
+    slug: `course-${n}`,
+    title: `Course ${n}`,
+    summary: null,
+    durationText: null,
+    eLearningPriceCents: null,
+    ...extra,
+  });
+
+  async function renderCourses(rows: unknown[], show?: string) {
+    vi.mocked(listActiveCourses).mockReset().mockResolvedValue(rows as never);
+    render(
+      await EmbedWidgetPage({
+        params: Promise.resolve({ shopSlug: "blue-mantis", widget: "courses" }),
+        searchParams: Promise.resolve(show ? { show } : {}),
+      }),
+    );
+  }
+
+  it.each(["courses", "grid"] as const)(
+    "prices a course in the %s widget at fee plus eLearning, as the course page does",
+    async (widget) => {
+      vi.mocked(listActiveCourses)
+        .mockReset()
+        .mockResolvedValue([
+          course(1, { title: "Open Water Diver", priceCents: 49_900, eLearningPriceCents: 21_000 }),
+        ] as never);
+      render(
+        await EmbedWidgetPage({
+          params: Promise.resolve({ shopSlug: "blue-mantis", widget }),
+          searchParams: Promise.resolve({}),
+        }),
+      );
+
+      expect(screen.getByText("$709")).toBeInTheDocument();
+      expect(screen.queryByText("$499")).toBeNull();
+    },
+  );
+
+  it("lists the agency the catalog opens on, not every agency", async () => {
+    await renderCourses([course(1)]);
+
+    expect(activeCourseAgencies).toHaveBeenCalled();
+    expect(vi.mocked(listActiveCourses).mock.calls[0]?.[2]).toEqual({ agency: "padi" });
+  });
+
+  it("lists six, then hands over to the catalog", async () => {
+    await renderCourses(Array.from({ length: 9 }, (_, i) => course(i + 1)));
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(6);
+    expect(screen.getByRole("link", { name: "All courses" })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis/courses",
+    );
+  });
+
+  it("names no hand-over when the whole ladder fits", async () => {
+    await renderCourses([course(1), course(2)]);
+
+    expect(screen.queryByRole("link", { name: "All courses" })).toBeNull();
+  });
+
+  it("finds a named course in any agency", async () => {
+    await renderCourses([course(1), course(2, { slug: "ssi-nitrox" })], "ssi-nitrox");
+
+    expect(vi.mocked(listActiveCourses).mock.calls[0]?.[2]).toEqual({});
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
   });
 });

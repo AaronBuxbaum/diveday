@@ -7,7 +7,7 @@ import { StarRating } from "@/components/StarRating";
 import { buttonClass } from "@/components/ui/button";
 import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
-import { listActiveCourses } from "@/db/courses";
+import { activeCourseAgencies, listActiveCourses } from "@/db/courses";
 import { getShopReviewAggregate, listPublishedShopReviewsPage } from "@/db/reviews";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -15,7 +15,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
-import { resolveCourseContentDepths } from "@/lib/courses";
+import { courseTotalCents, resolveCourseContentDepths } from "@/lib/courses";
 import { isEmbedWidget } from "@/lib/embed-routes";
 import { formatDayParts, formatMoneyScanned, formatTimeRange } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
@@ -23,6 +23,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import {
   publicCoursePath,
+  publicCoursesPath,
   publicReviewsPath,
   publicSchedulePath,
   publicTripPath,
@@ -36,6 +37,9 @@ export const instant = true;
 
 /** How many diver quotes the reviews widget carries before it hands over to the archive. */
 const WIDGET_QUOTES = 3;
+
+/** How many courses the courses widget lists before it hands over to the catalog. */
+const WIDGET_COURSES = 6;
 
 /**
  * Four thin views of the shop's own content, each a fragment of a page a
@@ -83,10 +87,22 @@ export default async function EmbedWidgetPage({
   // catalog makes (src/lib/courses.ts). Rendered raw, a framed summary read
   // "How to dive between {depth18n} and {depth40}…" (K-376).
   const depthFormat = courseDepthFormat(t, shop.depthUnit);
-  const activeCourses = async () =>
-    (await listActiveCourses(db, shop.id)).map((course) =>
+  // **One agency's ladder, as the catalog opens.** The public courses page
+  // shows one agency at a time and opens on the first; a frame that printed
+  // every agency's Open Water, Advanced and Rescue flat was a 60-card wall on
+  // the shop's own homepage (third UX review, item 25). A named course (`show`)
+  // is looked up across every agency.
+  const activeCourses = async (scope: "primary" | "all") => {
+    const agency = scope === "primary" ? (await activeCourseAgencies(db, shop.id))[0] : undefined;
+    return (await listActiveCourses(db, shop.id, agency ? { agency } : {})).map((course) =>
       resolveCourseContentDepths(course, depthFormat),
     );
+  };
+  // What the diver is asked for at enrollment, fee and eLearning together,
+  // the number the course page itself prints. The fee alone made "$499" here
+  // and "$709" one click later (third UX review, item 22).
+  const coursePrice = (course: Parameters<typeof courseTotalCents>[0]) =>
+    money(courseTotalCents(course));
 
   const money = (cents: number | null) =>
     cents === null ? null : formatMoneyScanned(cents, currency, locale);
@@ -196,16 +212,20 @@ export default async function EmbedWidgetPage({
       />
     );
   } else if (widget === "courses") {
-    const active = await activeCourses();
+    const active = await activeCourses(showId ? "all" : "primary");
     // **One course, or the catalogue** (issue #1284, completing ADR
     // 20260901-diveday-reimagined decision 2's "what it shows"). A slug that
     // names no active course is a 404 rather than a silently empty list, the
     // same call the departure card makes one branch up: a shop that unpublished
     // the course its blog post frames should see the frame say so, not show an
     // empty panel that reads as a bug in DiveDay.
-    const courses = showId ? active.filter((course) => course.slug === showId) : active;
+    const courses = showId
+      ? active.filter((course) => course.slug === showId)
+      : active.slice(0, WIDGET_COURSES);
     if (showId && courses.length === 0) notFound();
+    const moreCourses = !showId && active.length > courses.length;
     body = (
+      <section>
       <ul className="divide-y divide-border rounded-panel border border-border bg-surface shadow-bed">
         {courses.map((course) => (
           <li
@@ -228,8 +248,8 @@ export default async function EmbedWidgetPage({
               ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              {course.priceCents !== null ? (
-                <span className="font-semibold tabular-nums">{money(course.priceCents)}</span>
+              {coursePrice(course) ? (
+                <span className="font-semibold tabular-nums">{coursePrice(course)}</span>
               ) : null}
               <Link
                 href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
@@ -242,11 +262,23 @@ export default async function EmbedWidgetPage({
           </li>
         ))}
       </ul>
+      {moreCourses ? (
+        <p className="mt-3 text-right">
+          <Link
+            href={`${origin}${publicCoursesPath(shopSlug)}`}
+            target="_top"
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("courses.shelf.allCourses")}
+          </Link>
+        </p>
+      ) : null}
+      </section>
     );
   } else {
     const [{ trips }, courses] = await Promise.all([
       pagedUpcomingTripsWithCounts(db, shop.id, { now, limit: 6, publicOnly: true }),
-      activeCourses(),
+      activeCourses("primary"),
     ]);
     body = (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -276,7 +308,7 @@ export default async function EmbedWidgetPage({
               <p className="line-clamp-2 text-sm text-muted">{course.summary}</p>
             ) : null}
             <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-              <span className="font-semibold tabular-nums">{money(course.priceCents) ?? ""}</span>
+              <span className="font-semibold tabular-nums">{coursePrice(course) ?? ""}</span>
               <Link
                 href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
                 target="_top"

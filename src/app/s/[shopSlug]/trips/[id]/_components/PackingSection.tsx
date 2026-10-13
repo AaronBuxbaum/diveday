@@ -47,7 +47,8 @@ const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
  * **"Departure" is a boat word.** A shore diver walks to the entry and a pool
  * session is already at the water, so the one beat anchored on `startsAt` needs
  * three spellings; every other beat reads the same however the diver gets wet.
- * `boatRide` never reaches here off a boat — `dockDayOffsets` drops it.
+ * `boatRide` never reaches here off a boat — `dockDayOffsets` drops it — and
+ * the ride out reaches it only as the departure's `rideMinutes`.
  */
 function timelineStepKey(step: DockDayStep, diveMode: DiveMode): DiverMessageKey {
   if (step === "departure") {
@@ -393,9 +394,13 @@ export function PackingSection({
                               {formatTime(entry.at, locale, shop.timezone)}
                             </span>
                             <span className="text-muted text-sm leading-6">
-                              {t(timelineStepKey(entry.step, trip.diveMode), {
-                                number: entry.number ?? 1,
-                              })}
+                              {entry.rideMinutes
+                                ? t("trip.timeline.departureWithRide", {
+                                    minutes: entry.rideMinutes,
+                                  })
+                                : t(timelineStepKey(entry.step, trip.diveMode), {
+                                    number: entry.number ?? 1,
+                                  })}
                               {/* Where this departure meets, when it isn't the
                                   shop's own front door — the exact line that
                                   should carry it and, until now, could not

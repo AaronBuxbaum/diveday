@@ -71,6 +71,19 @@ export function courseTemplateDisplayTitle(template: CourseTemplate): string {
  * seeded roster — DSD and Open Water welcome uncertified students, continuing
  * education admits only a verified card at the stated level.
  */
+/**
+ * What a seeded template course costs in the demo, by the card it requires: a
+ * short no-card course, a specialty, an advanced specialty, a professional rating.
+ */
+const DEMO_PRICE_BY_RUNG = {
+  none: 16500,
+  open_water: 27500,
+  advanced_open_water: 34500,
+  rescue: 95000,
+  divemaster: 95000,
+  instructor: 95000,
+} as const;
+
 export async function seedCatalog(db: DbExecutor, shopId: string) {
   const templateKey = (agency: string, title: string) => `${agency.toLowerCase()}:${title}`;
   const templateByKey = new Map(
@@ -237,9 +250,10 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
     title: courseTemplateDisplayTitle(template),
     description: template.description,
     // A template is a complete, bookable catalog entry. Prices remain shop
-    // editable; these conservative defaults keep the new rows useful in the
-    // demo without pretending they share the price of an existing course.
-    priceCents: template.minimumCertificationLevel === "rescue" ? 95000 : 22500,
+    // editable; a demo price follows the rung, so the catalog and the widget
+    // a shop frames do not read as one placeholder "$225" down the page
+    // (third UX review, item 25).
+    priceCents: DEMO_PRICE_BY_RUNG[template.minimumCertificationLevel ?? "none"],
     eLearningPriceCents: template.minimumCertificationLevel === null ? null : 15000,
     minimumCertificationLevel: template.minimumCertificationLevel,
     isIntroCourse: template.content.isIntroCourse,
