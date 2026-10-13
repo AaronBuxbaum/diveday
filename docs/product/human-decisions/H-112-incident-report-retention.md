@@ -19,7 +19,7 @@ Which option.
 **Decided 2026-10-13 (Product owner: Aaron Buxbaum, in the project thread):** (a). Incident reports are kept for ever.
 
 - `incident_reports`, `incident_report_people` and `incident_report_addenda` are in `UNBOUNDED_BY_DECISION` (`src/lib/retention.ts`), argued beside roll call. `RETENTION_DAYS` has no window for them and `src/db/retention.ts` no arm, so no prune pass deletes one.
-- **Erasure is unchanged** ([H-111](H-111-incident-report-erasure.md)): `anonymizeDiver` still removes a named diver's identity from a kept report, at once.
+- **Erasure is unchanged** ([H-111](H-111-incident-report-erasure.md)): `anonymizeDiver` still removes a named diver's identity from a kept report, at once. What it cannot match (a nickname, a first name alone, a description, a guardian written into a minor's report, or the person found again through the seat and the date: H-111's residual) now has no end date.
 
 Recorded as an amendment on [20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md) and in the kept-for-ever list of [20260803-append-only-retention](../../architecture/decisions/20260803-append-only-retention.md); the glossary's **Incident report** entry states it.
 

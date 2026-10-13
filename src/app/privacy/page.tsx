@@ -201,6 +201,7 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
             p("keep.push"),
           ]}
         />
+        <p>{p("keep.safety")}</p>
         <LegalTermList items={[{ term: p("keep.reviewTerm"), body: p("keep.reviewBody") }]} />
       </LegalSection>
 
