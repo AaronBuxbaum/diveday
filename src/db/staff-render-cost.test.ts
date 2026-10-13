@@ -494,8 +494,8 @@ async function readinessLinkForSeatAfterTheDive(plain: AppDb, shopId: string) {
 /**
  * `/ready`'s reads after the dive, as the page awaits them: the capability,
  * `getReadyPageData`, then the after-dive branch above the thread — the
- * departure roll call and late boarding, the recap, and the after-state's one
- * wave (`buildAfterStateProps`). The thread's own wave never runs on this
+ * departure roll call and late boarding with the recap started beside them,
+ * and the after-state's one wave (`buildAfterStateProps`). The thread's own wave never runs on this
  * branch.
  */
 async function readyAfterTheDiveReads(db: AppDb, token: string) {
@@ -505,7 +505,10 @@ async function readyAfterTheDiveReads(db: AppDb, token: string) {
   const data = await getReadyPageData(db, bookingId);
   if (!data) throw new Error("no ready page data");
   const { detail, shop } = data;
-  const departure = theBoatIsHome({ endsAt: detail.trip.endsAt })
+  const boatIsHome = theBoatIsHome({ endsAt: detail.trip.endsAt });
+  // The page starts the recap beside the roll call once the boat is home.
+  const recapRead = boatIsHome ? getRecapPageState(db, bookingId) : null;
+  const departure = boatIsHome
     ? await departureRollCallForBooking(db, shop.id, detail.trip.id, bookingId)
     : null;
   await departureAfterLateBoarding(db, departure, {
@@ -513,7 +516,8 @@ async function readyAfterTheDiveReads(db: AppDb, token: string) {
     shop: { id: shop.id },
     trip: { id: detail.trip.id },
   });
-  const recapState = await getRecapPageState(db, bookingId);
+  if (!recapRead) throw new Error("the boat is not home");
+  const recapState = await recapRead;
   if (recapState.kind !== "recap")
     throw new Error(`expected an open recap, got ${recapState.kind}`);
   const noop = async () => undefined;
@@ -751,9 +755,13 @@ const READY_PHASE_CEILING = 5;
 // items 11 and 29), before either page's tail was grouped.
 // After the dive: the capability and `getReadyPageData` (4 phases), the
 // departure roll call, then the recap (8) and the after-state's wave (5).
+// 18 → 16 (code review 2026-10-13, item 29): the recap starts beside the roll
+// call, and its two seat checks (left at the dock, waiting on a missing
+// person) go out together.
 const READY_AFTER_CEILING = 60;
-const READY_AFTER_PHASE_CEILING = 18;
+const READY_AFTER_PHASE_CEILING = 16;
 // The shop, `readSchedulePage`'s batch with its chained reads, then the
-// board's-end read: one select, then one template check per running series.
-const PUBLIC_SCHEDULE_CEILING = 16;
-const PUBLIC_SCHEDULE_PHASE_CEILING = 7;
+// board's-end read. 16 → 14 statements and 7 → 5 phases (item 29): the
+// running series' templates are one read, not one per series.
+const PUBLIC_SCHEDULE_CEILING = 14;
+const PUBLIC_SCHEDULE_PHASE_CEILING = 5;

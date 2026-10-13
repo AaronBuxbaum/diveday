@@ -258,7 +258,15 @@ async function DiverReadinessPage({
    * booking. The cost is that acting on one of them lands the diver on the
    * `/recap` URL, which renders this same surface.
    */
-  const departure = theBoatIsHome({ endsAt: detail.trip.endsAt })
+  const boatIsHome = theBoatIsHome({ endsAt: detail.trip.endsAt });
+  // **The recap is read beside the roll call, not after it** (code review
+  // 2026-10-13, item 29): once the boat is home it is the likely answer, and a
+  // read-only one. Awaited only if the page does turn to the afterglow; a held
+  // identity never reads it at all.
+  const recapRead = boatIsHome && !data.identityHeld ? getRecapPageState(db, bookingId) : null;
+  // Settled here so a page that stays on the thread never leaves it unhandled.
+  recapRead?.catch(() => null);
+  const departure = boatIsHome
     ? await departureRollCallForBooking(db, shop.id, detail.trip.id, bookingId)
     : null;
   const boarded = await departureAfterLateBoarding(db, departure, {
@@ -268,7 +276,7 @@ async function DiverReadinessPage({
   });
   if (isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })) {
     if (data.identityHeld) return <HeldAfterDiveCard shop={shopContact} t={t} />;
-    const recapState = await getRecapPageState(db, bookingId);
+    const recapState = await (recapRead ?? getRecapPageState(db, bookingId));
     if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
     const recap = recapState.kind === "recap" ? recapState.data : null;
     if (!recap) return <NoShowCard shop={shopContact} t={t} />;

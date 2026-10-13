@@ -661,7 +661,12 @@ describe("a held seat after the dive", () => {
   it("answers with its own card before the recap is read", () => {
     const held = positionOf("if (data.identityHeld) return <HeldAfterDiveCard");
     expect(held).toBeGreaterThan(-1);
-    expect(held).toBeLessThan(positionOf("await getRecapPageState(db, bookingId)"));
+    expect(held).toBeLessThan(positionOf("await (recapRead ?? getRecapPageState(db, bookingId))"));
+    // Started early beside the roll call (code review 2026-10-13, item 29),
+    // but never for a held seat.
+    expect(
+      positionOf("boatIsHome && !data.identityHeld ? getRecapPageState(db, bookingId) : null"),
+    ).toBeGreaterThan(-1);
     expect(positionOf("<NoShowCard")).toBeGreaterThan(held);
   });
 });
