@@ -60,8 +60,9 @@ export async function enableTotp(
   userAccountId: string,
   code: string,
 ): Promise<boolean> {
-  const secret = await resealedTotpSecret(db, userAccountId);
-  if (!secret || !verifyTotpCode(secret, code)) return false;
+  const opened = await openTotpSecret(db, userAccountId);
+  if (!opened || !verifyTotpCode(opened.plaintext, code)) return false;
+  await resealUnderCurrentKey(db, userAccountId, opened);
   await db
     .update(accountSecurity)
     .set({ totpEnabledAt: nowDate(), updatedAt: nowDate() })
@@ -84,11 +85,11 @@ export async function verifyAccountSecondFactor(
   const security = await getAccountSecurity(db, userAccountId);
   if (!security?.totpEnabledAt) return true;
 
-  const secret = await resealedTotpSecret(db, userAccountId);
+  const opened = await openTotpSecret(db, userAccountId);
   const now = nowMs();
   // The step the code was *for*, which with drift accepted is not always the
   // current one -- consuming the current step would leave the real one live.
-  const step = secret ? matchTotpStep(secret, code, now) : null;
+  const step = opened ? matchTotpStep(opened.plaintext, code, now) : null;
   if (step !== null) {
     const [row] = await db
       .update(accountSecurity)
@@ -100,6 +101,7 @@ export async function verifyAccountSecondFactor(
         ),
       )
       .returning({ userAccountId: accountSecurity.userAccountId });
+    if (row && opened) await resealUnderCurrentKey(db, userAccountId, opened);
     return Boolean(row);
   }
 
@@ -157,27 +159,27 @@ async function openTotpSecret(db: DbExecutor, userAccountId: string) {
 }
 
 /**
- * The TOTP secret for a check that writes anyway (enabling, verifying). A
- * secret still sealed under the previous key is sealed again under the current
- * one, so a rotation finishes for each account at its next sign-in. The write
- * is conditional on the old ciphertext: two checks at once cannot overwrite
- * each other with anything but the same secret.
+ * After a code has been accepted, a secret still sealed under the previous key
+ * is sealed again under the current one, so a rotation finishes for each
+ * account at its next sign-in. Only after acceptance: a wrong code writes
+ * nothing. The write is conditional on the old ciphertext, so a concurrent
+ * re-enrolment is never overwritten with the old secret.
  */
-async function resealedTotpSecret(db: DbExecutor, userAccountId: string) {
-  const opened = await openTotpSecret(db, userAccountId);
-  if (!opened) return null;
-  if (opened.sealedWithPrevious) {
-    await db
-      .update(accountSecurity)
-      .set({ totpSecretSealed: sealSecret(opened.plaintext, opened.key), updatedAt: nowDate() })
-      .where(
-        and(
-          eq(accountSecurity.userAccountId, userAccountId),
-          eq(accountSecurity.totpSecretSealed, opened.sealed),
-        ),
-      );
-  }
-  return opened.plaintext;
+async function resealUnderCurrentKey(
+  db: DbExecutor,
+  userAccountId: string,
+  opened: NonNullable<Awaited<ReturnType<typeof openTotpSecret>>>,
+) {
+  if (!opened.sealedWithPrevious) return;
+  await db
+    .update(accountSecurity)
+    .set({ totpSecretSealed: sealSecret(opened.plaintext, opened.key), updatedAt: nowDate() })
+    .where(
+      and(
+        eq(accountSecurity.userAccountId, userAccountId),
+        eq(accountSecurity.totpSecretSealed, opened.sealed),
+      ),
+    );
 }
 
 export async function listAccountSessions(db: DbExecutor, userAccountId: string) {

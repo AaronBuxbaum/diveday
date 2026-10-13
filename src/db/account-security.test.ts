@@ -246,6 +246,16 @@ describe("account-security across a key rotation", () => {
     expect(openSecret(sealed, next)).toBe(secret);
   });
 
+  it("leaves the secret under the previous key when the code is wrong", async () => {
+    const { db, account, secret } = await enrolledUnderSuiteKey();
+    rotate();
+    const before = (await getAccountSecurity(db, account.id))?.totpSecretSealed;
+    const wrong = totpCode(secret, nowMs() + 10 * TOTP_STEP_SECONDS * 1000);
+
+    expect(await verifyAccountSecondFactor(db, account.id, wrong)).toBe(false);
+    expect((await getAccountSecurity(db, account.id))?.totpSecretSealed).toBe(before);
+  });
+
   it("accepts a recovery code issued under the previous key, once", async () => {
     const { db, account, recoveryCodes } = await enrolledUnderSuiteKey();
     rotate();
