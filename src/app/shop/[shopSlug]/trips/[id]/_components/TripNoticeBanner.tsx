@@ -256,6 +256,7 @@ const NOTICE_KEYS: Record<
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },
+  "seat-busy": { form: "add-diver", tone: "danger", key: "seatDiver.busy" },
   "diver-full": { form: "add-diver", tone: "danger", key: "trips.notices.diverFull" },
   "diver-divers-full": {
     form: "add-diver",

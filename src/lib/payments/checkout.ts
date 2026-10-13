@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { boundedStripeFetch } from "./stripe-fetch";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -119,7 +120,13 @@ export type CheckoutSessionLookupResult =
   | { status: "failed" };
 
 export type RefundCheckoutResult = {
-  status: "refunded" | "not_configured" | "not_refundable" | "failed";
+  /**
+   * `unanswered`: the refund request went out and no answer came back (a
+   * timeout, a reset connection, a body that never arrived), so Stripe may
+   * have made it. Never `failed`, which a caller may safely retry: see
+   * `UNANSWERED_BY_STRIPE` in `src/db/payment-operations.ts`.
+   */
+  status: "refunded" | "not_configured" | "not_refundable" | "failed" | "unanswered";
   refundId?: string;
 };
 
@@ -215,8 +222,9 @@ function headersFor(secretKey: string, stripeAccountId: string): Record<string, 
 
 export function stripeCheckoutProvider(
   config: StripeKeySource,
-  fetchImpl: Fetch,
+  unboundedFetch: Fetch,
 ): CheckoutProvider {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   return {
     async createCheckoutSession(request) {
       if (request.lineItems.length === 0) return { status: "failed" };
@@ -289,6 +297,9 @@ export function stripeCheckoutProvider(
     },
 
     async refundCheckoutSession(stripeAccountId, stripeSessionId, idempotencyKey, amountCents) {
+      // Flips the moment the refund POST is dispatched: a throw before it is a
+      // lookup that moved no money, a throw after it may be a refund Stripe made.
+      let refundSent = false;
       try {
         // The session id alone can't be refunded — the money lives on its
         // payment intent, so expand it, then reverse that. Same shape as
@@ -314,6 +325,7 @@ export function stripeCheckoutProvider(
         // derived here from the payment intent and amount could not tell those
         // apart — Stripe would replay the first refund and both local rows
         // would claim money that moved once (PAY-C1).
+        refundSent = true;
         const response = await fetchImpl("https://api.stripe.com/v1/refunds", {
           method: "POST",
           headers: {
@@ -329,7 +341,7 @@ export function stripeCheckoutProvider(
           : { status: "failed" };
       } catch (error) {
         logStripeRequestThrew("refund_checkout_session", error);
-        return { status: "failed" };
+        return { status: refundSent ? "unanswered" : "failed" };
       }
     },
   };

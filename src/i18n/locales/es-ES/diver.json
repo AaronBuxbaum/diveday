@@ -412,6 +412,7 @@
       "pay": "No hemos podido abrir la página de pago en este momento. Tu plaza está segura. Inténtalo de nuevo en un momento, o paga en el centro.",
       "checkFields": "Revisa los campos resaltados e inténtalo de nuevo.",
       "diversFull": "Ya no quedan plazas de buceo en esta salida, así que no pudimos reservar a un buceador.",
+      "busy": "Muchos buceadores están reservando esta salida ahora mismo. Inténtalo de nuevo.",
       "typeUnavailable": "Esa opción no está disponible en esta salida. Elige otra y vuelve a intentarlo."
     },
     "fieldErrors": {

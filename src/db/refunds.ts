@@ -1,17 +1,4 @@
-import {
-  and,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  ne,
-  or,
-  type SQL,
-  sql,
-} from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, ne, or, type SQL, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { log } from "@/lib/log";
@@ -21,9 +8,12 @@ import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { boundLockWaits } from "./lock-bounds";
 import { applyStripeRefundedTotalToOrder } from "./orders";
 import {
+  awaitingStripeReconciliation,
   idempotencyKeyFor,
+  markPaymentOperationUnanswered,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
   STALE_AFTER_MS,
@@ -148,7 +138,9 @@ type BookingRefundClaim<Outcome> =
  * idempotency key (deliberately, PAY-C1) and Stripe would accept a second
  * reversal against the balance still on the charge, which on a party checkout
  * is somebody else's fare. It belongs on the stuck-payment-operations panel,
- * where a human reconciles it, and answers `needs_reconciliation` here.
+ * where a human reconciles it, and answers `needs_reconciliation` here. So does
+ * a stale intent marked unanswered: the refund went out, no answer came back,
+ * and Stripe may have made it (`UNANSWERED_BY_STRIPE`).
  *
  * **PGlite caveat**, the same one `claimOrderRefund` carries: the default test
  * database is single-connection, so `FOR UPDATE` never blocks there and the
@@ -176,6 +168,7 @@ async function claimBookingRefund<Outcome>(
     eq(paymentOperationIntents.status, "started"),
   );
   return db.transaction(async (tx): Promise<BookingRefundClaim<Outcome>> => {
+    await boundLockWaits(tx);
     const [booking] = await tx
       .select({ id: bookings.id })
       .from(bookings)
@@ -200,7 +193,7 @@ async function claimBookingRefund<Outcome>(
     const [settledByStripe] = await tx
       .select({ id: paymentOperationIntents.id })
       .from(paymentOperationIntents)
-      .where(and(refundIntentsForThisBooking, isNotNull(paymentOperationIntents.stripeObjectId)))
+      .where(and(refundIntentsForThisBooking, awaitingStripeReconciliation()))
       .limit(1);
     if (settledByStripe) return { status: "needs_reconciliation" };
 
@@ -249,7 +242,7 @@ async function checkoutHasUnreconciledReversal(
         eq(paymentOperationIntents.shopId, shopId),
         eq(paymentOperationIntents.kind, "refund"),
         eq(paymentOperationIntents.status, "started"),
-        isNotNull(paymentOperationIntents.stripeObjectId),
+        awaitingStripeReconciliation(),
         eq(bookingCheckouts.stripeSessionId, plan.providerRef),
         eq(bookingCheckouts.stripeAccountId, plan.stripeAccountId),
       ),
@@ -458,10 +451,15 @@ export async function refundBookingOnCancellation(
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
     return { status: "refunded", amountCents: plan.refundCents };
   }
-  // Left `started` only when Stripe answered *and* said no; a reversal Stripe
-  // did make has its id recorded above, and a crash before this line leaves the
-  // intent for `listStuckPaymentOperations` and for the reconciliation refusal
-  // in `claimBookingRefund`.
+  // Resolved `failed` only when Stripe answered *and* said no. A call that got
+  // no answer stays `started`, marked unanswered, because the reversal may
+  // exist: `claimBookingRefund` refuses on it and `listStuckPaymentOperations`
+  // shows it to a human. A reversal Stripe confirmed has its id recorded above,
+  // and a crash before this line leaves the intent for the same two.
+  if (result.status === "unanswered") {
+    await markPaymentOperationUnanswered(db, intent.id);
+    return { status: "needs_reconciliation" };
+  }
   await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
   if (result.status === "not_refundable") return { status: "manual", reason: "not_refundable" };
   if (result.status === "not_configured") return { status: "manual", reason: "not_connected" };
@@ -622,6 +620,11 @@ export async function refundBookingOnShopCancellation(
     });
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
     return { status: "refunded", amountCents: plan.refundCents };
+  }
+  // Unanswered is not failed: see `refundBookingOnCancellation`.
+  if (result.status === "unanswered") {
+    await markPaymentOperationUnanswered(db, intent.id);
+    return { status: "needs_reconciliation" };
   }
   await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
   if (result.status === "not_refundable") return { status: "manual", reason: "not_refundable" };
@@ -873,8 +876,10 @@ export type ExternalRefundInput = {
  * a `started` intent of any age that carries a Stripe object id: Stripe
  * confirmed that refund and the local write after it never landed, so this
  * event may be its echo, and counting it here would count it a second time
- * when a human reconciles the stuck operation. Only an old intent with no
- * Stripe object (the process died before Stripe answered) is ignored.
+ * when a human reconciles the stuck operation. So does one marked unanswered:
+ * the request went out and may have been honoured. Only an old intent with
+ * neither (the process died, and nothing says Stripe was ever reached) is
+ * ignored.
  */
 async function ownRefundInFlight(
   db: AppDb,
@@ -891,10 +896,7 @@ async function ownRefundInFlight(
         eq(paymentOperationIntents.shopId, shopId),
         eq(paymentOperationIntents.kind, "refund"),
         eq(paymentOperationIntents.status, "started"),
-        or(
-          gte(paymentOperationIntents.startedAt, staleBefore),
-          isNotNull(paymentOperationIntents.stripeObjectId),
-        ),
+        or(gte(paymentOperationIntents.startedAt, staleBefore), awaitingStripeReconciliation()),
         "orderId" in scope
           ? eq(paymentOperationIntents.orderId, scope.orderId)
           : inArray(paymentOperationIntents.bookingId, scope.bookingIds),
@@ -995,11 +997,9 @@ async function countPaidAfterCloseRefund(
           eq(paymentOperationIntents.checkoutId, current.id),
           eq(paymentOperationIntents.kind, "refund"),
           eq(paymentOperationIntents.status, "started"),
-          // Fresh, or confirmed by Stripe and never counted: `ownRefundInFlight`'s rule.
-          or(
-            gte(paymentOperationIntents.startedAt, staleBefore),
-            isNotNull(paymentOperationIntents.stripeObjectId),
-          ),
+          // Fresh, or confirmed or unanswered by Stripe and never counted:
+          // `ownRefundInFlight`'s rule.
+          or(gte(paymentOperationIntents.startedAt, staleBefore), awaitingStripeReconciliation()),
         ),
       )
       .limit(1);

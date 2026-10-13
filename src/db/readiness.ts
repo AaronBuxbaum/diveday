@@ -430,10 +430,11 @@ export type NewShopIssuedCertification = {
  * (any provenance) — a numberless row is invisible to the unique index that
  * would otherwise catch a repeat tap. That guard is a plain read inside the
  * same transaction as the write, serialized by locking the person's own row
- * `for("update")` first — without it, two genuinely concurrent taps (a
- * second tab, a retried submit over flaky boat wifi) could both pass the
- * check before either insert commits, since a numberless row has no unique
- * index to catch the duplicate the way every other write to this table does.
+ * `for("no key update")` first, which still conflicts with itself — without
+ * it, two genuinely concurrent taps (a second tab, a retried submit over flaky
+ * boat wifi) could both pass the check before either insert commits, since a
+ * numberless row has no unique index to catch the duplicate the way every
+ * other write to this table does.
  */
 /**
  * Whether a trip's course can certify anyone: `not_a_certifying_course` for a
@@ -473,13 +474,15 @@ export async function issueShopCertification(
     // calls for the same person now serialize here, so the "already holds
     // this level" check below and the insert that follows it act as one
     // atomic unit rather than a race either could win.
+    // `no key update`, as `recordSelfDeclaredCards` takes it: a booking insert
+    // naming this diver holds a `KEY SHARE` here, and `update` would conflict.
     const [person] = await tx
       .select({ id: people.id })
       .from(people)
       // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
       .limit(1)
-      .for("update");
+      .for("no key update");
     if (!person) return null;
     const [trip] = await tx
       .select({ id: trips.id, courseId: trips.courseId })
@@ -1081,7 +1084,9 @@ export async function issueShopNitroxCertification(
  * The person row is locked and stays locked for the rest of the caller's
  * transaction, so two concurrent taps for the same diver serialize and the
  * "already holds this" check that follows acts as one atomic unit with its
- * insert rather than a race either could win.
+ * insert rather than a race either could win. `for no key update`, as
+ * `recordSelfDeclaredCards` takes it, so a foreign key naming the diver is
+ * never queued behind it.
  */
 async function shopIssuedCourseContext(
   tx: DbExecutor,
@@ -1093,7 +1098,7 @@ async function shopIssuedCourseContext(
     // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1)
-    .for("update");
+    .for("no key update");
   if (!person) return null;
   const [trip] = await tx
     .select({ id: trips.id, courseId: trips.courseId })
