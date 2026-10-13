@@ -134,6 +134,7 @@
     "seatsOpen": "{count, plural, one {# plaza libre} other {# plazas libres}}",
     "full": "Completa",
     "until": "hasta las {time}",
+    "rangeEnd": "– {time}",
     "crewing": "Formas parte de la tripulación",
     "crewRollCallOpen": "Todos los buceadores están a bordo y falta pasar lista a la tripulación.",
     "allHome": "Todos los barcos están en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",

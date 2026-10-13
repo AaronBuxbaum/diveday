@@ -8,6 +8,7 @@ import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { formatMoneyScanned, formatTime } from "@/lib/format";
 import type { DayStation as DayStationData } from "@/lib/today";
 import { STAGE_TONE } from "@/lib/trip-stage-tone";
@@ -114,7 +115,17 @@ export function DayStation({
           {formatTime(station.startsAt, locale, timeZone)}
         </time>
         <span className="text-sm text-muted tabular-nums">
-          {t("shopHome.spine.until", { time: formatTime(station.endsAt, locale, timeZone) })}
+          {/* One range form across the app, the en-dash one the trip header
+              and the public card print; "until" is kept for a boat that comes
+              home the next day, where the dash would read as the same evening
+              (third review, item 9). */}
+          {t(
+            calendarDateInTimezone(station.startsAt, timeZone) ===
+              calendarDateInTimezone(station.endsAt, timeZone)
+              ? "shopHome.spine.rangeEnd"
+              : "shopHome.spine.until",
+            { time: formatTime(station.endsAt, locale, timeZone) },
+          )}
         </span>
         {stage ? (
           <>

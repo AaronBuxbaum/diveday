@@ -2474,7 +2474,7 @@
     },
     "today": "Hoy",
     "todayStart": "7:30",
-    "todayUntil": "hasta las 11:00",
+    "todayEnds": "– 11:00",
     "phaseCheckin": "Check-in",
     "readyCount": "Listos: 7 de 9",
     "blockedCount": "2 bloqueados",

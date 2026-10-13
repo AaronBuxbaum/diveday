@@ -242,6 +242,31 @@ describe("a station owns its departure's facts", () => {
     expect(line.textContent).not.toMatch(/Priya|Grace|Yara/);
   });
 
+  // Third review, item 9: one range form across the app. A same-day boat
+  // reads "7:00 AM – 10:30 AM" like the trip header; "until" stays for a boat
+  // that comes home the next day.
+  it("prints a same-day boat's return with the en dash, and an overnight one with until", () => {
+    const { unmount } = renderSpine({
+      departures: [
+        departure({
+          startsAt: new Date("2026-10-13T11:00:00Z"),
+          endsAt: new Date("2026-10-13T14:30:00Z"),
+        }),
+      ],
+    });
+    expect(screen.getByText("– 10:30 AM")).toBeInTheDocument();
+    unmount();
+    renderSpine({
+      departures: [
+        departure({
+          startsAt: new Date("2026-10-14T03:30:00Z"),
+          endsAt: new Date("2026-10-14T07:00:00Z"),
+        }),
+      ],
+    });
+    expect(screen.getByText("until 3:00 AM")).toBeInTheDocument();
+  });
+
   it("says the site, hull, crew and price on the station's own line", () => {
     renderSpine();
     const line = screen.getByText(
