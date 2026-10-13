@@ -52,7 +52,7 @@ import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPit
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
 import { departureJsonLd } from "./_lib/departure-json-ld";
-import { publicTripRecord, readTripPage } from "./_lib/page-reads";
+import { bookingFormTrip, publicTripRecord, readTripPage } from "./_lib/page-reads";
 import { readinessDoorPath } from "./_lib/readiness-door";
 import { requirementSentenceFor } from "./_lib/requirement-sentence";
 import { offerHandoff } from "./actions";
@@ -466,7 +466,7 @@ export default async function TripDetailPage({
               ) : full ? (
                 <TripFullSection
                   shopSlug={shopSlug}
-                  trip={trip}
+                  trip={bookingFormTrip(trip)}
                   tripRef={tripRef}
                   remaining={remaining}
                   errorMessage={errorMessage}
@@ -480,7 +480,7 @@ export default async function TripDetailPage({
               ) : (
                 <BookSpotSection
                   context={{
-                    trip,
+                    trip: bookingFormTrip(trip),
                     tripRef,
                     remaining,
                     errorMessage,

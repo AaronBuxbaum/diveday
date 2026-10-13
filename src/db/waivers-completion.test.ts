@@ -184,7 +184,7 @@ describe("emergency contact captured with the waiver", () => {
     });
     expect(outcome.ok).toBe(true);
 
-    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+    await expect(getEmergencyContactForBearer(db, shop.id, booking.id)).resolves.toMatchObject({
       name: "Sam Quinn",
       phone: "+1 305 555 0114",
     });
@@ -210,7 +210,7 @@ describe("emergency contact captured with the waiver", () => {
     });
 
     expect(outcome.ok).toBe(true);
-    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+    await expect(getEmergencyContactForBearer(db, shop.id, booking.id)).resolves.toMatchObject({
       name: "Old Contact",
       phone: "555-0000",
     });
@@ -233,7 +233,7 @@ describe("emergency contact captured with the waiver", () => {
       now,
     });
 
-    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+    await expect(getEmergencyContactForBearer(db, shop.id, booking.id)).resolves.toMatchObject({
       name: "Existing Contact",
       phone: "555-0000",
     });
@@ -255,14 +255,14 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       actor: "staff",
     });
     expect(saved).toBe(true);
-    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+    await expect(getEmergencyContactForBearer(db, shop.id, booking.id)).resolves.toMatchObject({
       name: "Alex Rivera",
       phone: "+1 305 555 0133",
     });
   });
 
   it("refuses to write when the booking belongs to a different shop", async () => {
-    const { db, booking } = await waiverContext();
+    const { db, shop, booking } = await waiverContext();
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Other Shop", slug: "other-shop-emergency-contact-test", timezone: "UTC" })
@@ -271,7 +271,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
     // The seeded demo diver may already carry a contact — capture whatever it
     // actually is rather than assume null, so this asserts nothing changed,
     // not a specific starting value.
-    const before = await getEmergencyContactForBearer(db, booking.id);
+    const before = await getEmergencyContactForBearer(db, shop.id, booking.id);
 
     const saved = await saveBookingEmergencyContact(db, {
       shopId: otherShop.id,
@@ -281,7 +281,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       actor: "staff",
     });
     expect(saved).toBe(false);
-    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toEqual(before);
+    await expect(getEmergencyContactForBearer(db, shop.id, booking.id)).resolves.toEqual(before);
   });
 
   // The splice these two refuse is written out over
@@ -304,7 +304,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
     });
 
     expect(saved).toBe(false);
-    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+    await expect(getEmergencyContactForBearer(db, shop.id, booking.id)).resolves.toMatchObject({
       name: "Old Contact",
       phone: "555-0000",
     });
@@ -326,7 +326,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
     });
 
     expect(saved).toBe(false);
-    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+    await expect(getEmergencyContactForBearer(db, shop.id, booking.id)).resolves.toMatchObject({
       name: "Old Contact",
       phone: "555-0000",
     });
@@ -392,7 +392,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       actor: "staff",
     });
     expect(saved).toBe(false);
-    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+    await expect(getEmergencyContactForBearer(db, shop.id, booking.id)).resolves.toMatchObject({
       name: "Kept Contact",
       phone: "555-0099",
     });
@@ -424,8 +424,8 @@ describe("an emergency contact on a held seat", () => {
   }
 
   it("reads back blank to the bearer page", async () => {
-    const { db, booking } = await heldSeat();
-    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+    const { db, shop, booking } = await heldSeat();
+    await expect(getEmergencyContactForBearer(db, shop.id, booking.id)).resolves.toMatchObject({
       name: null,
       phone: null,
       held: true,
@@ -434,7 +434,7 @@ describe("an emergency contact on a held seat", () => {
       .update(bookings)
       .set({ identityUnconfirmedAt: null })
       .where(eq(bookings.id, booking.id));
-    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+    await expect(getEmergencyContactForBearer(db, shop.id, booking.id)).resolves.toMatchObject({
       name: "Kept Contact",
       phone: "555-0099",
       held: false,

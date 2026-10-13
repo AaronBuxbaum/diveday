@@ -28,6 +28,9 @@ import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { isLiveShopStaff } from "@/lib/session";
 import { hasSailed, seatsOnSale } from "@/lib/trips";
 
+/** The trip the page hands its client booking form, projected (`booking-form-trip.ts`). */
+export { bookingFormTrip } from "./booking-form-trip";
+
 /**
  * **The departure, read once per render** (code review 2026-10-11, item 2):
  * `generateMetadata` and the page body both need the row, and two calls to

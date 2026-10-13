@@ -139,7 +139,9 @@ export default async function WaiverPage({
     // while every staff surface said cleared (issue #1252, security review N1).
     const needsReview = isUnresolvedMedicalHold(state.record);
     const bookingId = state.record.bookingId;
-    const bookingTripId = bookingId ? await getBookingTripId(db, bookingId) : null;
+    const bookingTripId = bookingId
+      ? await getBookingTripId(db, state.record.shopId, bookingId)
+      : null;
 
     const diveSitesList = bookingTripId ? await getTripDiveSitesPeek(db, bookingTripId) : [];
 
@@ -180,13 +182,13 @@ export default async function WaiverPage({
   const { record } = state;
   const recordBookingId = record.bookingId;
   const emergencyContact = recordBookingId
-    ? await getEmergencyContactForBearer(db, recordBookingId)
+    ? await getEmergencyContactForBearer(db, record.shopId, recordBookingId)
     : await getEmergencyContactForPerson(db, record.shopId, record.personId);
   // The name this release has to be signed under (`completeWaiver` refuses
   // anything else). Shown as the field's hint so the rule is guidance before
   // it is ever a refusal — and it discloses nothing this booking-scoped
   // bearer link doesn't already stand for.
-  const signerOnFile = await getWaiverSignerOnFile(db, record.personId);
+  const signerOnFile = await getWaiverSignerOnFile(db, record.shopId, record.personId);
   /**
    * **A minor signs twice** (ADR 20260907-guardian-co-signature). Decided from
    * the date of birth the shop holds, on the shop's calendar day this page is
@@ -211,7 +213,9 @@ export default async function WaiverPage({
   // The trip this waiver is for (task 42) — named on the page itself so the
   // diver can verify what they're signing for, rather than trusting a link
   // that names only the shop.
-  const tripHeader = recordBookingId ? await getWaiverTripHeader(db, recordBookingId) : null;
+  const tripHeader = recordBookingId
+    ? await getWaiverTripHeader(db, record.shopId, recordBookingId)
+    : null;
   /**
    * The fixed list of questions the diver is handed. The follow-ups their own
    * answers open are deliberately not in it — see `QuestionnaireProgress`.

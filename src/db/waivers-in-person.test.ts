@@ -251,8 +251,8 @@ describe("staff records a paper / in-person signature", () => {
  *
  * The refusal stays the writer's existing `staff_not_found`: it is the same
  * answer to the same question, and both server actions above it
- * (`markRosterWaiverInPersonAction`, `markWaiverInPersonFromCheckIn`) already fold
- * every non-medical refusal into one `waiver-error` notice.
+ * (`markRosterWaiverInPersonAction`, `markWaiverInPersonAction`) already fold it,
+ * through `paperWaiverRefused`, into the form's own `error` refusal.
  */
 describe("the in-person attestor must be live staff (defense in depth)", () => {
   async function liveStaff(db: Awaited<ReturnType<typeof waiverContext>>["db"], shopId: string) {

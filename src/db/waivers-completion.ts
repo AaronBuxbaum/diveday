@@ -275,6 +275,7 @@ async function saveEmergencyContact(
  */
 export async function getEmergencyContactForBearer(
   db: AppDb,
+  shopId: string,
   bookingId: string,
 ): Promise<{ name: string | null; phone: string | null; held: boolean } | null> {
   const [row] = await db
@@ -285,7 +286,7 @@ export async function getEmergencyContactForBearer(
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(eq(bookings.id, bookingId))
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   if (!row) return null;
   if (row.identityUnconfirmedAt) return { name: null, phone: null, held: true };

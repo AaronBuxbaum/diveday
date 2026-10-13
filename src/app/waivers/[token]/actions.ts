@@ -112,7 +112,7 @@ async function signingContext(token: string) {
   if (state.state !== "available") return null;
   const shop = await getShopById(db, state.record.shopId);
   if (!shop) return null;
-  const signerOnFile = await getWaiverSignerOnFile(db, state.record.personId);
+  const signerOnFile = await getWaiverSignerOnFile(db, state.record.shopId, state.record.personId);
   return {
     record: state.record,
     recordBookingId: state.record.bookingId,

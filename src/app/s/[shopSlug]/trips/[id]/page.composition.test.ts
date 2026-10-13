@@ -413,3 +413,33 @@ describe("the known diver's facts", () => {
     );
   });
 });
+
+/**
+ * **The booking form gets the departure's three public facts, not its row**
+ * (security review, code review 2026-10-13 layer C). `BookSpotSection` and
+ * `TripFullSection` are client components: whatever the page hands them is
+ * serialized into the public payload, so the page projects the trip through
+ * `bookingFormTrip` at both doors and the components accept nothing wider.
+ */
+describe("the trip the booking form is handed", () => {
+  const SECTIONS = component("BookingSections.tsx");
+
+  it("is projected at both client doors, never the raw row", () => {
+    expect(SOURCE).toContain("trip: bookingFormTrip(trip),");
+    expect(SOURCE).toContain(
+      "<TripFullSection\n                  shopSlug={shopSlug}\n                  trip={bookingFormTrip(trip)}",
+    );
+    // Neither door takes the row itself. (`BookingFinePrint` inside them may:
+    // it is a server component, rendered before anything crosses.)
+    expect(SOURCE).not.toContain("context={{\n                    trip,\n");
+    expect(SOURCE).not.toContain(
+      "<TripFullSection\n                  shopSlug={shopSlug}\n                  trip={trip}",
+    );
+  });
+
+  it("is typed as the projection on the client side", () => {
+    expect(SECTIONS).toContain('"use client"');
+    expect(SECTIONS).not.toMatch(/\btrip: Trip;/);
+    expect(SECTIONS.split("trip: BookingFormTrip;").length - 1).toBe(2);
+  });
+});

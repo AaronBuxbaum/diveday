@@ -22,12 +22,12 @@ import type { PassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
+import type { BookingFormTrip } from "../_lib/booking-form-trip";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
 import { AlreadyBookedDoor } from "./AlreadyBookedDoor";
 import { BookingGearFields } from "./BookingGearFields";
 import { KnownDiverPanel, type KnownDiverPanelProps } from "./KnownDiverPanel";
 import { MoneyBlock, type MoneyBlockSeatLine } from "./MoneyBlock";
-import type { Trip } from "./types";
 
 /**
  * Why the booking was refused, rendered inside the form beside the button that
@@ -172,7 +172,7 @@ export function TripFullSection({
   requirement = null,
 }: {
   shopSlug: string;
-  trip: Trip;
+  trip: BookingFormTrip;
   tripRef: TripRef;
   remaining: number;
   errorMessage?: string;
@@ -333,7 +333,7 @@ const GEAR_SLOTS = ["gear-one", "gear-two", "gear-three", "gear-four", "gear-fiv
 
 /** Everything `BookSpotSection` draws, assembled once by its caller and handed over as one object. */
 export type BookSpotSectionContext = {
-  trip: Trip;
+  trip: BookingFormTrip;
   tripRef: TripRef;
   remaining: number;
   /**
