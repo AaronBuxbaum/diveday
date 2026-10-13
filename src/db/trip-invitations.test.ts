@@ -263,6 +263,17 @@ describe("trip invitations", () => {
       expect(mail.sent).toHaveLength(1);
     });
 
+    it("sends one email for two taps that land together", async () => {
+      const { db, input } = await offerInput();
+      const mail = fakeEmail();
+      const outcomes = await Promise.all([
+        offerDepartureToDiver(db, input, mail.provider),
+        offerDepartureToDiver(db, input, mail.provider),
+      ]);
+      expect(outcomes.sort()).toEqual(["already_sent", "sent"]);
+      expect(mail.sent).toHaveLength(1);
+    });
+
     it("sends on the second tap when the first one's mail did not go", async () => {
       const { db, input } = await offerInput();
       const failed = fakeEmail({ status: "failed", retryable: false, errorCode: "rejected" });

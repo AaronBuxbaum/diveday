@@ -267,12 +267,19 @@ export type TripInvitationDelivery = "sent" | "fallback" | "opted_out";
  */
 export async function deliverTripInvitation(
   db: AppDb,
-  input: { shopId: string; shopSlug: string; tripId: string; invitationId: string },
+  input: {
+    shopId: string;
+    shopSlug: string;
+    tripId: string;
+    invitationId: string;
+    /** The stamp to write; an offer passes the one its claim took. */
+    invitedAt?: Date;
+  },
   provider?: NotificationProvider,
 ): Promise<TripInvitationDelivery> {
   const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
   if (!context) return "fallback";
-  const invitedAt = nowDate();
+  const invitedAt = input.invitedAt ?? nowDate();
   const recorded = await recordTripInvitation(db, {
     shopId: input.shopId,
     tripId: input.tripId,
@@ -484,9 +491,8 @@ export async function offerDepartureToDiver(
     )
     .limit(1);
   if (!standing) return "unavailable";
-  if (standing.invitedAt && (await offerSentSince(db, input, standing.invitedAt))) {
-    return "already_sent";
-  }
+  const claimedAt = await claimOffer(db, input, standing.id);
+  if (!claimedAt) return "already_sent";
   const delivery = await deliverTripInvitation(
     db,
     {
@@ -494,9 +500,11 @@ export async function offerDepartureToDiver(
       shopSlug: input.shopSlug,
       tripId: input.tripId,
       invitationId: standing.id,
+      invitedAt: claimedAt,
     },
     provider,
   );
+  if (delivery !== "sent") await releaseOffer(db, input.shopId, standing.id, claimedAt);
   if (delivery === "sent") {
     const [diver] = await db
       .select({ fullName: people.fullName })
@@ -515,13 +523,74 @@ export async function offerDepartureToDiver(
 }
 
 /**
+ * How long a fresh stamp with no "offered" line yet is an offer still
+ * sending. A second tap inside it is the same tap; a send takes seconds.
+ */
+const OFFER_IN_FLIGHT_MS = 2 * 60_000;
+
+/**
+ * **Take the offer's send, or learn it is not this tap's** (#2480). The
+ * invitation row is locked, read, and stamped in one transaction, so two taps
+ * that land together cannot both pass: the second waits for the first's
+ * stamp and finds it in flight. Refused when mail already went within the
+ * hour, or another tap is sending now. Returns the stamp the send writes.
+ */
+async function claimOffer(
+  db: AppDb,
+  input: { shopId: string; tripId: string; personId: string },
+  invitationId: string,
+): Promise<Date | null> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ invitedAt: tripInvitations.invitedAt })
+      .from(tripInvitations)
+      .where(and(eq(tripInvitations.id, invitationId), eq(tripInvitations.shopId, input.shopId)))
+      .limit(1)
+      .for("update");
+    if (!row) return null;
+    const now = nowDate();
+    if (row.invitedAt) {
+      if (now.getTime() - row.invitedAt.getTime() < OFFER_IN_FLIGHT_MS) {
+        // Inside the window: a send still going, or one that already went.
+        return null;
+      }
+      if (await offerSentSince(tx, input, row.invitedAt)) return null;
+    }
+    await tx
+      .update(tripInvitations)
+      .set({ invitedAt: now })
+      .where(and(eq(tripInvitations.id, invitationId), eq(tripInvitations.shopId, input.shopId)));
+    return now;
+  });
+}
+
+/**
+ * Give the claim back after mail that did not go. The stamp stays, because
+ * "Contacted" is still true (staff reach the diver by hand), but it moves to
+ * just outside the in-flight window so the next tap may try again; only while
+ * it is still this claim's.
+ */
+async function releaseOffer(db: AppDb, shopId: string, invitationId: string, claimedAt: Date) {
+  await db
+    .update(tripInvitations)
+    .set({ invitedAt: new Date(claimedAt.getTime() - OFFER_IN_FLIGHT_MS) })
+    .where(
+      and(
+        eq(tripInvitations.id, invitationId),
+        eq(tripInvitations.shopId, shopId),
+        eq(tripInvitations.invitedAt, claimedAt),
+      ),
+    );
+}
+
+/**
  * Whether this departure's offer reached this diver by email at or after the
  * standing invitation's last stamp, and under an hour ago. The stamp is
  * written before the send and the trail line only after a sent one, so a
  * last attempt that fell back has no line after its stamp.
  */
 async function offerSentSince(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; tripId: string; personId: string },
   invitedAt: Date,
 ): Promise<boolean> {
