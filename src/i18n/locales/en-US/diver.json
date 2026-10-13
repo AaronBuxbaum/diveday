@@ -4082,12 +4082,12 @@
     "reminderAction": {
       "waiverPending": "Sign your waiver",
       "waiverExpired": "Your waiver link expired. Grab a fresh one; it only takes about two minutes",
-      "certificationMissing": "Send your shop your certification details",
-      "certificationInsufficient": "Check your certification level with the shop",
-      "certificationSelfDeclared": "Bring your certification card so the shop can check it",
-      "nitroxSelfDeclared": "Bring your nitrox card so the shop can check it",
-      "specialtyMissing": "Send your shop your specialty certification details",
-      "nitroxMissing": "Send your shop your nitrox certification details",
+      "certificationMissing": "Send us your certification details",
+      "certificationInsufficient": "Check your certification level with us",
+      "certificationSelfDeclared": "Bring your certification card so we can check it",
+      "nitroxSelfDeclared": "Bring your nitrox card so we can check it",
+      "specialtyMissing": "Send us your specialty certification details",
+      "nitroxMissing": "Send us your nitrox certification details",
       "paymentDue": "Settle your balance",
       "courseFormUnsigned": "Sign your course forms"
     },

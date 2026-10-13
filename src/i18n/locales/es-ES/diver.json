@@ -4082,12 +4082,12 @@
     "reminderAction": {
       "waiverPending": "Firma tu waiver",
       "waiverExpired": "El enlace de tu exención caducó. Consigue uno nuevo; solo lleva unos dos minutos",
-      "certificationMissing": "Envía a tu centro los datos de tu certificación",
-      "certificationInsufficient": "Consulta tu nivel de certificación con el centro",
-      "certificationSelfDeclared": "Trae tu certificación para que el centro pueda verla",
-      "nitroxSelfDeclared": "Trae tu certificación de nitrox para que el centro pueda verla",
-      "specialtyMissing": "Envía a tu centro los datos de tu certificación de especialidad",
-      "nitroxMissing": "Envía a tu centro los datos de tu certificación de nitrox",
+      "certificationMissing": "Envíanos los datos de tu certificación",
+      "certificationInsufficient": "Consulta tu nivel de certificación con nosotros",
+      "certificationSelfDeclared": "Trae tu certificación para que podamos verla",
+      "nitroxSelfDeclared": "Trae tu certificación de nitrox para que podamos verla",
+      "specialtyMissing": "Envíanos los datos de tu certificación de especialidad",
+      "nitroxMissing": "Envíanos los datos de tu certificación de nitrox",
       "paymentDue": "Salda tu saldo pendiente",
       "courseFormUnsigned": "Firma los formularios del curso"
     },
