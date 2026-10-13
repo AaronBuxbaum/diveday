@@ -166,6 +166,33 @@ export type PrivateShop = {
 /** How many lines of browser activity a failure carries. See `browserActivity`. */
 const ACTIVITY_LIMIT = 400;
 
+/**
+ * **A React hydration error fails the test that saw it.**
+ *
+ * The flake class of 2026-10-12 and -13 was a #418: a `<form>` inside a `<p>`
+ * on the staffing page (`0e932c161`). React rebuilt the mismatched subtree on
+ * the client, so a click now and then landed on markup that was about to be
+ * thrown away, and `staffing.spec.ts:398` went red on three runs before anyone
+ * found the `<p>`. The header probe above cannot see it, since the header
+ * hydrates and the subtree is rebuilt afterwards. And this fixture printed the
+ * console only for a test that had already failed, so every green test that
+ * logged the same #418 said nothing (code review 2026-10-13, row 13).
+ *
+ * Production React says only the number: #418 is a hydration mismatch, #423
+ * an error while hydrating that switched the root to client rendering, #425
+ * text content that did not match. A development build says "Hydration
+ * failed". Matched on a `console.error` or a `pageerror` on the test's `page`.
+ */
+export const HYDRATION_ERROR =
+  /(?:Minified React error #|react\.dev\/errors\/)(?:418|423|425)\b|Hydration failed|didn't match the client/;
+
+/**
+ * Hydration errors the suite has decided to live with: each one names the
+ * message it matches and why. Empty, and it should stay short: the fix for a
+ * mismatch is the markup, as `0e932c161` was.
+ */
+export const HYDRATION_ALLOWLIST: readonly { match: RegExp; why: string }[] = [];
+
 export const test = base.extend<
   {
     demoReset: undefined;
@@ -291,6 +318,12 @@ export const test = base.extend<
       let pageErrors = 0;
       let lastPageError = "";
       let consoleErrors = 0;
+      const hydrationErrors: string[] = [];
+      const noteHydration = (text: string) => {
+        if (!HYDRATION_ERROR.test(text)) return;
+        if (HYDRATION_ALLOWLIST.some((allowed) => allowed.match.test(text))) return;
+        hydrationErrors.push(text);
+      };
       const verdict = () => {
         const pending = [...inFlight.values()];
         return [
@@ -315,6 +348,7 @@ export const test = base.extend<
         if (message.type() !== "error") return;
         consoleErrors += 1;
         record(`console.error  ${message.text()}`);
+        noteHydration(message.text());
       });
       // An uncaught exception in the client router is the leading candidate for
       // the failure above, and it is currently invisible to the report.
@@ -322,6 +356,7 @@ export const test = base.extend<
         pageErrors += 1;
         lastPageError = error.message;
         record(`pageerror      ${error.message}`);
+        noteHydration(error.message);
       });
       // A page turn is one of these two: a document navigation, or the client
       // router's RSC fetch for the destination. Everything this fixture was
@@ -371,11 +406,22 @@ export const test = base.extend<
 
       await use(undefined);
 
-      if (testInfo.status !== testInfo.expectedStatus && entries.length > 0) {
+      // A test that passed while React threw its hydration away fails here,
+      // naming the error, with the transcript a failure always gets.
+      const hydrationFailed = testInfo.status === "passed" && hydrationErrors.length > 0;
+      if ((testInfo.status !== testInfo.expectedStatus || hydrationFailed) && entries.length > 0) {
         await testInfo.attach("browser-activity", {
           body: [verdict(), "", ...entries].join("\n"),
           contentType: "text/plain",
         });
+      }
+      if (hydrationFailed) {
+        throw new Error(
+          `React hydration failed on this test's page (${hydrationErrors.length}x): ${hydrationErrors[0].slice(0, 300)}. ` +
+            "The server and the client rendered different markup, so React rebuilt part of the page after the test could already click it. " +
+            "Fix the markup (an element nested where HTML forbids it, a value that differs between server and client); " +
+            "HYDRATION_ALLOWLIST in e2e/fixtures.ts takes a named exception.",
+        );
       }
     },
     { auto: true },
