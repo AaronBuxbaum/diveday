@@ -119,9 +119,8 @@ type EveningNotice = { key: StaffMessageKey; tone: NoticeTone };
  */
 type FitKeepRefusalCode = NoticeCodeOf<Exclude<ConfirmRentalFitOutcome, "saved">>;
 
-type BorrowedEveningNotices = Record<string, EveningNotice>;
 /** Loose in the keys it accepts, exact in the ones it demands. */
-type EveningNoticeMap = BorrowedEveningNotices & Record<FitKeepRefusalCode, EveningNotice>;
+type EveningNoticeMap = Record<string, EveningNotice> & Record<FitKeepRefusalCode, EveningNotice>;
 
 /**
  * The evening's own `?notice=` codes, re-homed here when `/close-out` folded

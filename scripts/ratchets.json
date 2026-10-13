@@ -248,7 +248,6 @@
     "src/db/export.ts#loadShopExportContext": 495,
     "src/db/reminders.ts#sendDueReminders": 448,
     "src/db/reporting.ts#getMonthlyReport": 510,
-    "src/db/retention.ts#pruneExpiredRecords": 445,
     "src/db/seed-dive-sites.ts#seedDiveSites": 525,
     "src/db/seed-history.ts#seedHistory": 854,
     "src/db/seed-more-trips.ts#seedMoreTrips": 747,
