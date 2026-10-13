@@ -2,7 +2,7 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { sendHoldCopy } from "@/components/send-hold-copy";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { getDb } from "@/db/client";
-import { listDepartureNotes } from "@/db/departure-notes";
+import { lastDayStartsAt, listDepartureNotes } from "@/db/departure-notes";
 import { fill } from "@/i18n/fill";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -30,8 +30,12 @@ export async function DepartureNoteSection({
   const t = staffTranslator(locale);
   // A rehearsal tells nobody anything (ADR 20261012-rehearsal-departures).
   if (trip.isRehearsal) return null;
-  const notes = await listDepartureNotes(await getDb(), shop.id, trip.id);
-  const block = departureNoteBlock(trip, notes.length, nowDate());
+  const db = await getDb();
+  const [notes, lastDay] = await Promise.all([
+    listDepartureNotes(db, shop.id, trip.id),
+    lastDayStartsAt(db, trip.id),
+  ]);
+  const block = departureNoteBlock({ ...trip, lastDayStartsAt: lastDay }, notes.length, nowDate());
   if (block && block !== "limit" && notes.length === 0) return null;
   const limit = t("desk.departureNote.refusals.limit", { max: DEPARTURE_NOTES_PER_DEPARTURE });
   return (
