@@ -21,6 +21,12 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { lastSessionRefusals, readLog, refusalLine } from "./hook-log.mjs";
+import {
+  readScheduledRuns,
+  redScheduledText,
+  redScheduledWorkflows,
+  SCHEDULED_RUNS_CACHE,
+} from "./scheduled-runs.mjs";
 import { fetchHeadAgeMs, installNeed, pinnedNodeMajor } from "./session-context.mjs";
 import { gitReader, readStack, stackSummary } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
@@ -102,13 +108,21 @@ function openPullHeads() {
   }
 }
 
+/** Main's scheduled runs, through a cache in the clone's git common dir (scheduled-runs.mjs). */
+function scheduledRuns(root, git) {
+  const common = git(["rev-parse", "--git-common-dir"]);
+  return readScheduledRuns(
+    common ? path.join(path.resolve(root, common), SCHEDULED_RUNS_CACHE) : null,
+  );
+}
+
 /**
  * The raw facts, each null when it could not be read. Every reader is injectable through
  * `readers` so the tests need no git, no `gh` and no process table.
  */
 export function gatherFacts(
   root = ROOT,
-  { strays = true, remote = false, readers = {}, fetched = null } = {},
+  { strays = true, remote = false, scheduled = false, readers = {}, fetched = null } = {},
 ) {
   const git = readers.git ?? gitReader(root);
   const facts = {
@@ -125,6 +139,11 @@ export function gatherFacts(
     strays: strays ? (readers.strayCount ?? strayCount)(root) : undefined,
     stack: stackSummary((readers.readStack ?? readStack)(git)),
     refusals: refusalLine(lastSessionRefusals((readers.readLog ?? readLog)({ root }), null)),
+    // One cached network read: the session start asks for it (a red nightly is something a
+    // session can fix and nobody else is reading), the tests do not.
+    redScheduled: scheduled
+      ? redScheduledWorkflows((readers.scheduledRuns ?? scheduledRuns)(root, git))
+      : undefined,
     // Two network reads, so only the on-demand report makes them, never the session-start lines.
     orphanBranches: remote
       ? branchesWithoutPr(
@@ -209,6 +228,23 @@ export function checks(facts) {
           : "",
     });
   }
+  if (facts.redScheduled !== undefined) {
+    const red = facts.redScheduled ?? [];
+    rows.push({
+      name: "scheduled runs",
+      status: facts.redScheduled === null ? "unknown" : red.length > 0 ? "warn" : "ok",
+      detail:
+        facts.redScheduled === null
+          ? "could not read main's scheduled workflow runs"
+          : red.length > 0
+            ? redScheduledText(red)
+            : "no scheduled workflow is red twice running",
+      fix:
+        red.length > 0
+          ? `Nobody else reads these. Fix it like any red test (a failing test is part of the work): ${red.map((w) => `${w.path} (${w.url})`).join(", ")}; \`gh run view <id> --log-failed\` reads the failure, and \`gh api -X POST repos/<owner>/<repo>/actions/workflows/<file>/dispatches -f ref=<branch>\` proves the fix before main's next night.`
+          : "",
+    });
+  }
   rows.push({
     name: "stack",
     status: "ok",
@@ -254,7 +290,9 @@ export function renderReport(facts) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    process.stdout.write(`${renderReport(gatherFacts(process.cwd(), { remote: true }))}\n`);
+    process.stdout.write(
+      `${renderReport(gatherFacts(process.cwd(), { remote: true, scheduled: true }))}\n`,
+    );
   } catch (error) {
     process.stdout.write(`agent:doctor could not finish: ${error?.message ?? error}\n`);
   }

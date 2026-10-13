@@ -14,6 +14,7 @@ import {
   offlineCopySaved,
   openManifestPerson,
   openThreadStep,
+  STAFF_DAY_HEADING,
   signInAs,
   threadStatus,
   tripPathByTitle,
@@ -166,7 +167,7 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       await signInAs(staff, { email: minted.ownerEmail, password: minted.password });
 
       await staff.goto(shopPath());
-      await expect(staff.getByRole("heading", { name: /^Good morning,/ })).toBeVisible();
+      await expect(staff.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
       const shots = [await snap(staff, index, id)];
 
       // The morning read of the board: find the departure and open its manifest

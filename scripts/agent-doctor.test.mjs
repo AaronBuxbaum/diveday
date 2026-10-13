@@ -153,3 +153,61 @@ describe("branchesWithoutPr", () => {
     expect(row.status).toBe("unknown");
   });
 });
+
+describe("the scheduled-runs row", () => {
+  const red = [
+    {
+      name: "Simulate a day",
+      path: ".github/workflows/simulate-day.yml",
+      streak: 26,
+      since: "2026-09-18",
+      url: "https://github.com/o/r/actions/runs/36",
+    },
+  ];
+
+  it("warns at session start when a scheduled workflow is red twice running, with where to look", () => {
+    const facts = { ...healthy, redScheduled: red };
+    const row = checks(facts).find((r) => r.name === "scheduled runs");
+    expect(row.status).toBe("warn");
+    expect(row.fix).toContain(".github/workflows/simulate-day.yml");
+    expect(row.fix).toContain("https://github.com/o/r/actions/runs/36");
+    expect(summaryLines(facts)[0]).toBe(
+      "Doctor: scheduled Simulate a day red 26 runs running (since 2026-09-18).",
+    );
+  });
+
+  it("is ok when none is red, unknown when GitHub could not answer, and absent unless asked", () => {
+    expect(
+      checks({ ...healthy, redScheduled: [] }).find((r) => r.name === "scheduled runs"),
+    ).toMatchObject({ status: "ok" });
+    expect(
+      checks({ ...healthy, redScheduled: null }).find((r) => r.name === "scheduled runs"),
+    ).toMatchObject({ status: "unknown" });
+    expect(checks(healthy).some((r) => r.name === "scheduled runs")).toBe(false);
+  });
+
+  it("reads the runs only when asked, through an injectable reader", () => {
+    let asked = 0;
+    const readers = {
+      git: () => null,
+      pinnedMajor: () => 24,
+      commandWorks: () => true,
+      fetchAge: () => 5_000,
+      installNeed: () => null,
+      readStack: () => null,
+      readLog: () => [],
+      scheduledRuns: () => {
+        asked += 1;
+        return [
+          { ...red[0], conclusion: "failure", createdAt: "2026-10-13T06:30:00Z" },
+          { ...red[0], conclusion: "failure", createdAt: "2026-10-12T06:30:00Z" },
+        ];
+      },
+    };
+    expect(gatherFacts("/repo", { strays: false, readers }).redScheduled).toBeUndefined();
+    expect(asked).toBe(0);
+    const facts = gatherFacts("/repo", { strays: false, scheduled: true, readers });
+    expect(asked).toBe(1);
+    expect(facts.redScheduled).toMatchObject([{ name: "Simulate a day", streak: 2 }]);
+  });
+});

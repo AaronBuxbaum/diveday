@@ -568,7 +568,11 @@ function main() {
     fetched,
     mergeDrivers,
     // After the fetch above, so origin/main's row reads this session's refs.
-    doctor: summaryLines(gatherFacts(cwd, { fetched })),
+    // `scheduled`: a nightly red twice running is said here, because nothing else tells a
+    // session (scripts/scheduled-runs.mjs).
+    doctor: summaryLines(
+      gatherFacts(cwd, { fetched, scheduled: process.env.DIVEDAY_SCHEDULED_RUNS !== "0" }),
+    ),
   });
   if (block) process.stdout.write(`${block}\n`);
 }
