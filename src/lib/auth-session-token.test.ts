@@ -1,8 +1,10 @@
 import { createHash, createHmac } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { accountSessions, people, personRoles, shops, userAccounts } from "@/db/schema";
-import { createAuth } from "@/lib/auth";
+import { createAuth, DIGEST_BLIND_SESSION_PATHS } from "@/lib/auth";
 import { authSecret } from "@/lib/auth-secret";
 import { seededTestDb } from "@/test/db";
 
@@ -116,5 +118,53 @@ describe("a session token at rest", () => {
 
     await context.internalAdapter.deleteSession(session.token);
     expect(await storedToken()).toBeUndefined();
+  });
+});
+
+/**
+ * **better-auth's by-user session APIs are off** (issue #2493). They read
+ * sessions back without naming a token, so with digests at rest they would
+ * hand out or compare the digest and quietly miss: "sign out other devices"
+ * would sign out nothing. DiveDay revokes by session id
+ * (`src/db/account-security.ts`). The paths are disabled in the config for
+ * the day a route mounts the handler, and no source may call them in-process.
+ */
+describe("the session APIs that cannot work over digests", () => {
+  it("are refused by the handler", async () => {
+    const { auth, context, session, cookieFor } = await harness();
+    for (const path of DIGEST_BLIND_SESSION_PATHS) {
+      const response = await auth.handler(
+        new Request(`${context.baseURL}${path}`, {
+          method: path === "/list-sessions" ? "GET" : "POST",
+          headers: cookieFor(session.token),
+        }),
+      );
+      expect(response.status, path).toBe(404);
+    }
+  });
+
+  it("are called from no source file", () => {
+    const names = DIGEST_BLIND_SESSION_PATHS.map((path) =>
+      path.slice(1).replace(/-(\w)/g, (_, letter: string) => letter.toUpperCase()),
+    );
+    expect(names).toEqual([
+      "listSessions",
+      "revokeSession",
+      "revokeSessions",
+      "revokeOtherSessions",
+    ]);
+    const pattern = new RegExp(`\\.(${names.join("|")})\\b`);
+    const files = (function walk(dir: string): string[] {
+      return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) return walk(full);
+        return /\.(ts|tsx|mjs)$/.test(entry.name) ? [full] : [];
+      });
+    })(path.join(process.cwd(), "src"));
+    const callers = files.filter(
+      (file) =>
+        !file.endsWith("auth-session-token.test.ts") && pattern.test(readFileSync(file, "utf8")),
+    );
+    expect(callers).toEqual([]);
   });
 });
