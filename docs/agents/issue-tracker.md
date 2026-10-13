@@ -301,8 +301,14 @@ comment saying what would un-park it, so the next reader does not re-triage it f
 - **A question goes to the human.** `--kind question` files with `ready-for-human` instead of
   `needs-triage`: it is a decision only a human can make, and the agent inbox is not where one
   reads those.
-- **No near-duplicates.** `file-follow-up` refuses a title that starts with the same six words as
-  an open issue; add to that issue, or fold both into one.
+- **No near-duplicates.** `file-follow-up` warns, naming the twin, when a title's words overlap an
+  open issue's by 80 percent or more (leading verb and stopwords aside); add to that issue, or fold
+  both into one. It warns rather than refuses because word overlap cannot tell three different
+  capture requests from one item filed twice.
+- **Closed means no queue label.** `tracker.closeIssue` and the `closed-issue-labels.yml` workflow
+  strip `in-progress` and `ready-for-agent` from a closed issue, whichever door closed it;
+  `node scripts/check-follow-ups.mjs --sweep-closed` sweeps the ones closed before. `needs-triage`
+  stays, since `persona-bots.mjs` reads closed ones to avoid refiling a finding.
 - **One issue per item**, labelled `needs-triage`.
 - **Every section filled**, including a runnable prompt that names real paths and tells the session
   to close the issue.

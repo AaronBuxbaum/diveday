@@ -36,6 +36,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      # A `**Kind:** question` is a decision only a human can make: file-follow-up routes it to
+      # ready-for-human at filing, and this moves any that reached the inbox another way (31 on
+      # 2026-10-13), before the ceiling below counts them.
+      - name: Route questions to ready-for-human
+        run: node scripts/check-follow-ups.mjs --apply-routing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: pnpm check:follow-ups
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

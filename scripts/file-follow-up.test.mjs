@@ -434,13 +434,13 @@ describe("the refusal, at the process boundary", () => {
     expect(result.stderr).toMatch(/could not read --why/);
   });
 
-  it("refuses a title that starts with the same six words as an open issue", () => {
+  it("files a title that reads like an open issue, and names the twin to fold into", () => {
     setOpen([{ number: 2412, title: "Refuse a follow-up body the guard would reject sometimes" }]);
     const result = run(...argsFor());
     setOpen([]);
-    expect(result.status).toBe(1);
-    expect(result.filed).toBe(false);
-    expect(result.stderr).toMatch(/#2412 .* starts with the same words/);
+    expect(result.status).toBe(0);
+    expect(result.filed).toBe(true);
+    expect(result.stderr).toMatch(/#2412 .* reads like this one/);
   });
 
   it("refuses a needs-triage filing while the inbox is over its ceiling, unless over quota", () => {
