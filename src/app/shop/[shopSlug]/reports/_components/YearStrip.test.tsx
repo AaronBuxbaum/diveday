@@ -18,7 +18,10 @@ const YEAR = summarizeShopYear({
   sites: [],
 });
 
-const COPY = { day: (cell: { day: string | null }) => String(cell.day), monthsLabel: "Choose month" };
+const COPY = {
+  day: (cell: { day: string | null }) => String(cell.day),
+  monthsLabel: "Choose month",
+};
 
 function renderStrip(months: Parameters<typeof YearStrip>[0]["months"] = []) {
   return render(<YearStrip cells={YEAR.strip} months={months} copy={COPY} />);
