@@ -8252,11 +8252,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/calendar");
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         // The keypress is lost if it lands before the palette's listener is
-        // attached; its trigger says when it is (issue #2366).
-        await expect(page.getByRole("button", { name: "Search", exact: true })).toHaveAttribute(
-          "data-hydrated",
-          "true",
-        );
+        // attached; the fixture's `goto` waits for its trigger to say it is
+        // (issue #2366, `settleStaffHydration` in e2e/fixtures.ts).
         await page.keyboard.press("ControlOrMeta+k");
         const box = page.getByRole("combobox", { name: /Search divers/ });
         await expect(box).toBeFocused();
@@ -8276,11 +8273,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/calendar");
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         // The keypress is lost if it lands before the palette's listener is
-        // attached; its trigger says when it is (issue #2366).
-        await expect(page.getByRole("button", { name: "Search", exact: true })).toHaveAttribute(
-          "data-hydrated",
-          "true",
-        );
+        // attached; the fixture's `goto` waits for its trigger to say it is
+        // (issue #2366, `settleStaffHydration` in e2e/fixtures.ts).
         await page.keyboard.press("ControlOrMeta+k");
         const box = page.getByRole("combobox", { name: /Search divers/ });
         await expect(box).toBeFocused();
