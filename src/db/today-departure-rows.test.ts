@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { boatWorkItems } from "@/lib/boat-work";
 import { nowDate, nowMs } from "@/lib/clock";
 import type { TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
@@ -13,11 +14,11 @@ import { pushDepartureRows } from "./today-departure-rows";
 import { rowsContext } from "./today-rows-test-fixtures";
 import { sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips-crew";
+import { getTripOverview } from "./trips-overview";
 
 const emptyWave = {
-  missingFit: new Map(),
-  ungatedNitrox: new Map(),
-  missingContact: new Map(),
+  boatWork: new Map(),
   waitlisted: new Map(),
   courseCrewCounts: new Map(),
   deliveryIssues: [],
@@ -252,5 +253,45 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     }
     const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(cleared.actions.some((action) => action.id === `contact:${reef.id}`)).toBe(false);
+  });
+
+  // Third review, item 4: Today said four jobs for a boat whose own band said
+  // two. Both now read one reader, so the boat's work on Today is exactly the
+  // band's, row for row, in the same words.
+  it("lists a boat's work on Today exactly as the boat's own band does", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    for (const entry of roster) {
+      await db
+        .update(people)
+        .set({ emergencyContactName: null, emergencyContactPhone: null })
+        .where(eq(people.id, entry.person.id));
+    }
+    const owner = (await listStaff(db, shop.id)).find((entry) => entry.roles.includes("owner"));
+    if (!owner) throw new Error("seeded shop has no owner");
+
+    const [today, overview] = await Promise.all([
+      getTodayWork(db, shop.id, shop.slug, shop.timezone),
+      getTripOverview(db, shop, reef.id, owner.person.id),
+    ]);
+    if (!overview) throw new Error("overview missing");
+    const band = boatWorkItems(overview.pulse.work, { startsAt: reef.startsAt, now: nowDate() });
+    expect(band.map((item) => item.code)).toContain("missing_contact");
+
+    const prefix = {
+      missing_sizes: "prep",
+      ungated_nitrox: "nitrox",
+      missing_contact: "contact",
+      open_orders: "orders",
+    } as const;
+    const onToday = today.actions
+      .filter((action) => action.departure?.tripId === reef.id)
+      .map((action) => action.id.split(":")[0]);
+    for (const item of band) expect(onToday).toContain(prefix[item.code]);
+    const workPrefixes = new Set<string>(Object.values(prefix));
+    expect(onToday.filter((id) => id && workPrefixes.has(id))).toHaveLength(band.length);
   });
 });

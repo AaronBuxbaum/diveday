@@ -575,6 +575,12 @@
     "split": "Crear su propia ficha",
     "splitting": "Creando…"
   },
+  "boatWork": {
+    "missingSizes": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler",
+    "ungatedNitrox": "{count, plural, one {# buceador quiere} other {# buceadores quieren}} nitrox sin certificación verificada",
+    "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia",
+    "openOrders": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"
+  },
   "payouts": {
     "paid": "Pago de {amount} a tu banco el {date}, por lo cobrado del {from} al {to}",
     "paidOneDay": "Pago de {amount} a tu banco el {date}, por lo cobrado el {from}",

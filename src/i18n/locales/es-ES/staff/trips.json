@@ -161,8 +161,6 @@
     "overRatioInstructor": "Ratio de alumnos excedida: añade un instructor",
     "overIntroRatio": "Ratio de bautismo excedida: añade un instructor",
     "toSort": "{count, plural, one {# cosa por resolver} other {# cosas por resolver}}",
-    "prepGaps": "{count, plural, one {A # persona le faltan tallas de alquiler} other {A # personas les faltan tallas de alquiler}}",
-    "awaitingPayment": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}",
     "noRequirements": "Define los requisitos para que alguien pueda embarcar",
     "boatClash": "{boat} también está asignado a {departure}"
   },

@@ -212,6 +212,7 @@ export default async function ManageTripPage({
       : undefined);
   const lifecycleStatus = noticeForForm(tripNotice, "lifecycle");
 
+  const now = nowDate();
   const pulseFacts = tripPulseFacts({
     pulseNeeded,
     pulse,
@@ -222,6 +223,8 @@ export default async function ManageTripPage({
     liveBoatClashes,
     shopSlug,
     tripId,
+    startsAt: trip.startsAt,
+    now,
     t,
   });
 
@@ -240,7 +243,6 @@ export default async function ManageTripPage({
   });
 
   const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
-  const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
   const { shown: shownStage, finished } = departureStage({
     startsAt: trip.startsAt,

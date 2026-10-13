@@ -161,8 +161,6 @@
     "overRatioInstructor": "Over student ratio: add an instructor",
     "overIntroRatio": "Over intro ratio: add an instructor",
     "toSort": "{count, plural, one {# thing to sort} other {# things to sort}}",
-    "prepGaps": "{count, plural, one {# person is missing rental sizes} other {# people are missing rental sizes}}",
-    "awaitingPayment": "{count, plural, one {# order is awaiting payment} other {# orders are awaiting payment}}",
     "noRequirements": "Set the requirements before anyone can board",
     "boatClash": "{boat} is also on {departure}"
   },

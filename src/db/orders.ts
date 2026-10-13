@@ -1280,7 +1280,32 @@ export async function countOpenTripOrders(
   shopId: string,
   tripId: string,
 ): Promise<number> {
-  return countTripOrders(db, shopId, tripId, "open");
+  return (await countOpenOrdersByTrip(db, shopId, [tripId])).get(tripId) ?? 0;
+}
+
+/**
+ * The same count for many departures in one read, keyed by trip: the boat's
+ * work (`src/db/boat-work.ts`) asks it for every departure on Today and for
+ * the one the trip page opens, so the two can never count a boat's open
+ * orders differently. One `shopOrderWhere`, the index's own joins, grouped by
+ * the booking's departure; a trip with none is absent from the map.
+ */
+export async function countOpenOrdersByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (tripIds.length === 0) return counts;
+  const rows = await db
+    .select({ tripId: bookings.tripId, total: count() })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+    .where(and(shopOrderWhere(shopId, { status: "open" }), inArray(bookings.tripId, [...tripIds])))
+    .groupBy(bookings.tripId);
+  for (const row of rows) if (row.tripId) counts.set(row.tripId, row.total);
+  return counts;
 }
 
 /**

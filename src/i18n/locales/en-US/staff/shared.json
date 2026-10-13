@@ -575,6 +575,12 @@
     "split": "Give them their own record",
     "splitting": "Creating…"
   },
+  "boatWork": {
+    "missingSizes": "{count, plural, one {# person} other {# people}} missing rental sizes",
+    "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} nitrox with no verified card",
+    "missingContact": "{count, plural, one {# person has} other {# people have}} no emergency contact",
+    "openOrders": "{count, plural, one {# order} other {# orders}} awaiting payment"
+  },
   "payouts": {
     "paid": "Paid out {amount} on {date}, covering {from} to {to}",
     "paidOneDay": "Paid out {amount} on {date}, covering {from}",

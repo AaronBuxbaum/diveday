@@ -172,9 +172,8 @@
     "openCrewRollCallStale": "El recuento de tripulación de la inmersión {dive} nunca se cerró: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Reconstrúyelo desde el manifiesto.",
     "departureCountOpen": "Recuento en el muelle sin terminar: {uncounted, plural, one {# de {total, plural, one {# persona} other {# personas}} no tiene} other {# de {total, plural, one {# persona} other {# personas}} no tienen}} resultado.",
     "noRollCall": "Sin recuento registrado para {total, plural, one {# persona} other {# personas}}.",
-    "missingFit": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler.",
+    "boatWork": "{work}.",
     "missingFitNamed": "Le faltan tallas de alquiler.",
-    "ungatedNitrox": "{count, plural, one {# buceador quiere} other {# buceadores quieren}} nitrox sin certificación verificada.",
     "ungatedNitroxNamed": "Quiere nitrox, sin certificación verificada.",
     "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes {, rachas de {gusts} nudos} other {}}.",
     "instructorMissing": "Sin instructor asignado.",
@@ -187,7 +186,6 @@
     "crewClashSailedConfirm": "Confirma quién va a bordo.",
     "crewBelowTarget": "{divers, plural, one {# buceador} other {# buceadores}}, {divemasterCount, plural, one {# supervisor} other {# supervisores}}. Tu objetivo es {ratio}:1.",
     "ratingLapsed": "{names} {count, plural, one {tiene una titulación vencida} other {tienen titulaciones vencidas}} para esta salida.",
-    "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia.",
     "missingContactNamed": "Sin contacto de emergencia.",
     "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}}, sin oferta de última hora enviada.",
     "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera."
