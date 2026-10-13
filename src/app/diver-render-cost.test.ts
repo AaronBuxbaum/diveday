@@ -1,5 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { and, asc, desc, eq, gt, inArray, lt } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { describe, expect, it, vi } from "vitest";
 import { readAfterTheDive } from "@/app/ready/[token]/_components/after-dive-reads";
@@ -8,14 +8,15 @@ import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-ca
 import type { AppDb } from "@/db/client";
 import { getReadyPageData } from "@/db/ready";
 import { getRecapPageState } from "@/db/recap";
-import { bookings, tripSeries, trips } from "@/db/schema";
+import { bookings, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { listRunningPublicSeries } from "@/db/trips";
+import { createTripSeries, listRunningPublicSeries } from "@/db/trips";
 import { liveTrip } from "@/db/trips-live";
 import { buildAfterStateProps } from "@/features/recap-after-state";
 import { diverTranslator } from "@/i18n/messages";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
+import { EVERY_WEEKDAY } from "@/lib/recurrence";
 import { seededShopContext } from "@/test/db";
 import { phaseCountingDb, report } from "@/test/render-phases";
 
@@ -162,37 +163,28 @@ async function recapPageReads(db: AppDb, bookingId: string) {
  * shop (code review 2026-10-13, item 29).
  */
 async function withRunningSeries(plain: AppDb, shopId: string) {
-  const upcoming = await plain
-    .select({ id: trips.id })
-    .from(trips)
-    .where(
-      and(
-        eq(trips.shopId, shopId),
-        liveTrip(),
-        eq(trips.status, "scheduled"),
-        eq(trips.isPrivate, false),
-        gt(trips.startsAt, nowDate()),
-      ),
-    )
-    .orderBy(asc(trips.startsAt))
-    .limit(3);
-  if (upcoming.length < 3) throw new Error("the seeded shop has too few public departures");
-  for (const trip of upcoming) {
-    const [series] = await plain
-      .insert(tripSeries)
-      .values({
-        shopId,
-        title: "Measured run",
-        weekdayMask: 0b1111111,
-        anchorDate: "2026-01-01",
-        occurrenceCount: 1,
-      })
-      .returning({ id: tripSeries.id });
-    if (!series) throw new Error("series insert failed");
-    await plain
-      .update(trips)
-      .set({ seriesId: series.id })
-      .where(and(eq(trips.shopId, shopId), inArray(trips.id, [trip.id])));
+  // Three open-ended daily runs, each materialized over the whole horizon:
+  // the board's-end read used to ship every one of their future dates to
+  // keep one line per run (code review 2026-10-13b, item 40), and a replay
+  // with one date per run could not see it.
+  for (const title of ["Dawn reef", "Midday wreck", "Night dive"]) {
+    const created = await createTripSeries(plain, {
+      shopId,
+      title,
+      capacity: 12,
+      plannedDives: 1,
+      frequency: "weekly",
+      intervalWeeks: 1,
+      weekdays: EVERY_WEEKDAY,
+      anchorDate: "2030-09-07",
+      endsOn: null,
+      timeZone: "America/New_York",
+      template: {
+        startsAt: new Date("2030-09-07T11:00:00.000Z"),
+        endsAt: new Date("2030-09-07T15:00:00.000Z"),
+      },
+    });
+    if (!created || created.trips.length < 100) throw new Error("the run did not fill its horizon");
   }
 }
 
