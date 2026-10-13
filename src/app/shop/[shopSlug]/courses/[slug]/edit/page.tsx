@@ -298,7 +298,13 @@ export default async function EditCoursePage({
               the previous section's last field, so eight sections read as one
               undifferentiated column. */}
               <div className="flex flex-col gap-10">
-                <EditorSection id={pitch.id} label={pitch.label} as="fieldset" lead>
+                <EditorSection
+                  unsavedTag={t("shared.formDraft.unsavedSection")}
+                  id={pitch.id}
+                  label={pitch.label}
+                  as="fieldset"
+                  lead
+                >
                   <FieldGrid columns={1} className="gap-y-5">
                     <Field
                       label={t("courses.edit.subheadLabel")}
@@ -342,6 +348,7 @@ export default async function EditCoursePage({
                 </EditorSection>
 
                 <EditorSection
+                  unsavedTag={t("shared.formDraft.unsavedSection")}
                   as="fieldset"
                   id={pricing.id}
                   label={pricing.label}
@@ -389,6 +396,7 @@ export default async function EditCoursePage({
                     rest. What a description is for is said once, in the
                     section's line, not after every box (Aaron, 2026-10-05). */}
                 <EditorSection
+                  unsavedTag={t("shared.formDraft.unsavedSection")}
                   as="fieldset"
                   id={photos.id}
                   label={photos.label}
@@ -477,7 +485,12 @@ export default async function EditCoursePage({
                   </FieldGrid>
                 </EditorSection>
 
-                <EditorSection as="fieldset" id={glance.id} label={glance.label}>
+                <EditorSection
+                  unsavedTag={t("shared.formDraft.unsavedSection")}
+                  as="fieldset"
+                  id={glance.id}
+                  label={glance.label}
+                >
                   <FieldGrid columns={2} className="gap-y-5">
                     <Field label={t("courses.edit.durationLabel")}>
                       <input
@@ -534,6 +547,7 @@ export default async function EditCoursePage({
                 </EditorSection>
 
                 <EditorSection
+                  unsavedTag={t("shared.formDraft.unsavedSection")}
                   as="fieldset"
                   id={enroll.id}
                   label={enroll.label}
@@ -570,7 +584,12 @@ export default async function EditCoursePage({
                   </FieldGrid>
                 </EditorSection>
 
-                <EditorSection id={feeCovers.id} label={feeCovers.label} as="fieldset">
+                <EditorSection
+                  unsavedTag={t("shared.formDraft.unsavedSection")}
+                  id={feeCovers.id}
+                  label={feeCovers.label}
+                  as="fieldset"
+                >
                   <FieldGrid columns={2} className="gap-y-5">
                     <Field
                       label={t("courses.edit.includedLabel")}
@@ -610,7 +629,12 @@ export default async function EditCoursePage({
                   t={t}
                 />
 
-                <EditorSection id={dayByDay.id} label={dayByDay.label} as="fieldset">
+                <EditorSection
+                  unsavedTag={t("shared.formDraft.unsavedSection")}
+                  id={dayByDay.id}
+                  label={dayByDay.label}
+                  as="fieldset"
+                >
                   <DayByDayEditor
                     initialDays={course.scheduleDays}
                     storageKey={`course-draft:${course.id}`}
@@ -637,7 +661,12 @@ export default async function EditCoursePage({
                   />
                 </EditorSection>
 
-                <EditorSection id={faq.id} label={faq.label} as="fieldset">
+                <EditorSection
+                  unsavedTag={t("shared.formDraft.unsavedSection")}
+                  id={faq.id}
+                  label={faq.label}
+                  as="fieldset"
+                >
                   <FaqEditor
                     initialFaqs={course.faqs}
                     storageKey={`course-draft:${course.id}`}
