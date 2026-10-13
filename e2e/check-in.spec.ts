@@ -183,6 +183,36 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   await expect(page.getByRole("link", { name: "Add as a walk-in" })).toHaveCount(0);
 });
 
+/**
+ * **The all-clear never paints over a diver who cannot board** (#2410). A
+ * diver checked in at the counter whose release is then taken back is
+ * `checked_in` and blocked at once: the counter keeps them under "Still to
+ * clear", says somebody can't board yet, and draws no "Everyone's checked in".
+ * The rule is unit-tested in `CounterInstrument.test.tsx`; this is the browser.
+ */
+test("a checked-in diver who is blocked again stays still to clear", async ({ page, request }) => {
+  const seeded = await request.post("/api/test/seed-trouble-states?checkedInBlocked=1");
+  expect(seeded.ok()).toBe(true);
+  const { checkedInBlocked } = (await seeded.json()) as {
+    checkedInBlocked?: { tripId: string; personName: string };
+  };
+  if (!checkedInBlocked) throw new Error("seed-trouble-states made no checked-in blocked diver");
+  const { tripId, personName } = checkedInBlocked;
+
+  await page.goto(counterPath("blue-mantis", tripId));
+  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+  const stillToClear = page.getByRole("heading", { name: /^Still to clear · \d+$/ });
+  await expect(stillToClear).toBeVisible();
+  await expect(
+    stillToClear
+      .locator("xpath=following::ul[1]")
+      .getByRole("link", { name: personName, exact: true }),
+  ).toBeVisible();
+  await expect(deskRow(page, personName).getByText("Blocked", { exact: true })).toBeVisible();
+  await expect(page.getByText(/can’t board yet$/).first()).toBeVisible();
+  await expect(page.getByText("Everyone’s checked in")).toHaveCount(0);
+});
+
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
   const counter = counterPath("blue-mantis", tripId);
