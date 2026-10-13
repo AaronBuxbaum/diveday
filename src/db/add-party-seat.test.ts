@@ -51,7 +51,11 @@ describe("addPartySeat", () => {
 
   it("puts the lead's act on the departure's trail, naming the friend (#2475)", async () => {
     const { db, shop, open, leadBookingId } = await soloBooking();
-    const outcome = await addPartySeat(db, { shopId: shop.id, leadBookingId, seatName: "Milo Quinn" });
+    const outcome = await addPartySeat(db, {
+      shopId: shop.id,
+      leadBookingId,
+      seatName: "Milo Quinn",
+    });
     expect(outcome.ok).toBe(true);
     const [latest] = await listTripActivity(db, shop.id, open.id);
     expect(latest).toMatchObject({
@@ -63,7 +67,9 @@ describe("addPartySeat", () => {
   it("writes no trail line when the seat is refused", async () => {
     const { db, shop, open, leadBookingId } = await soloBooking();
     const before = await listTripActivity(db, shop.id, open.id);
-    const booked = (await upcomingTripsWithCounts(db, shop.id)).find((t) => t.id === open.id)?.booked;
+    const booked = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (t) => t.id === open.id,
+    )?.booked;
     await db.update(trips).set({ capacity: booked }).where(eq(trips.id, open.id));
     const outcome = await addPartySeat(db, { shopId: shop.id, leadBookingId, seatName: "Milo" });
     expect(outcome.ok).toBe(false);
