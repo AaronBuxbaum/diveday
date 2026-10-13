@@ -48,11 +48,13 @@ import { gzipSync } from "node:zlib";
 /**
  * Gzipped-KB ceiling for the shared first-load JS.
  *
- * The floor is 237.8 KB as measured. The headroom is deliberately small: a
- * dependency arriving in the root layout's client graph is the failure this
- * exists to catch, and the cheapest one of those on record was 83.5 KB.
+ * The floor is 163.7 KB as measured on 2026-10-13, after the staff palette and
+ * the Sentry SDK left it (code review 2026-10-13b, items 7 and 34). The headroom
+ * is deliberately small: a dependency arriving in the root layout's client
+ * graph is the failure this exists to catch, and the cheapest one of those on
+ * record was 83.5 KB.
  */
-const SHARED_FIRST_LOAD_BUDGET_KB = 242;
+const SHARED_FIRST_LOAD_BUDGET_KB = 170;
 
 const NEXT_DIR = ".next";
 const ROUTE_STATS = path.join(NEXT_DIR, "diagnostics", "route-bundle-stats.json");
