@@ -3,12 +3,11 @@ import {
   staleBookingCapabilityForToken,
 } from "@/db/booking-capabilities";
 import type { getDb } from "@/db/client";
-import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData } from "@/db/ready";
 import { getShopById } from "@/db/shops";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { cancelledNotice } from "./CancelledNotice";
+import { cancelledNoticeForReady } from "./CancelledNotice";
 import { ExpiredLink, UnavailableReadyLink } from "./ExpiredLink";
 import { TripCancelledCard } from "./TripCancelledCard";
 
@@ -50,19 +49,8 @@ export async function readyDeadLink({
     if (resolved) {
       const data = await getReadyPageData(db, resolved.bookingId);
       if (data?.detail.cancelled) {
-        const payment = await getBookingPayment(db, data.shop.id, resolved.bookingId);
-        return cancelledNotice(db, {
-          paymentStatus: payment?.status,
-          trip: { id: data.trip.id, title: data.detail.trip.title },
-          shop: {
-            id: data.shop.id,
-            slug: data.shop.slug,
-            name: data.detail.shop.name,
-            timezone: data.detail.shop.timezone,
-          },
-          locale: await requestLocale(data.shop.defaultLocale),
-          t: anonT,
-        });
+        const locale = await requestLocale(data.shop.defaultLocale);
+        return cancelledNoticeForReady(db, data, resolved.bookingId, locale, anonT);
       }
     }
   }
