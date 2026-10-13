@@ -1,51 +1,43 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { StoredPhoto } from "@/components/StoredPhoto";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
-import { TONE_PANEL_CLASS, TONE_PANEL_LG_CLASS } from "@/components/ui/card";
+import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
 import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { checkoutMode } from "@/db/stripe-accounts";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
-import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { checkoutSeatTerms } from "@/lib/deposits";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
-import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
 import { automatedForecastForDeparture, hasCrewPrediction } from "@/lib/marine-forecast";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
-import { publicAppUrl } from "@/lib/notifications";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
-import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
+import { publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
-import { tripPageJsonLd } from "@/lib/structured-data";
 import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { BookingFinePrint } from "./_components/BookingFinePrint";
 import {
   BookSpotSection,
-  CancelledTripNotice,
   ConditionsHoldSection,
   TripFullSection,
   TripSailedNotice,
   WaitlistConfirmation,
 } from "./_components/BookingSections";
+import { CancelledTripLanding } from "./_components/CancelledTripLanding";
 import { ConditionsLine } from "./_components/ConditionsLine";
 import { bookingCourseFees } from "./_components/course-fees";
 import { crewLanguagesSentence } from "./_components/crew-languages";
@@ -53,13 +45,16 @@ import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { knownDiverFactLines } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
-import { TripActions } from "./_components/TripActions";
 import { TripAlternatives } from "./_components/TripAlternatives";
 import { dayCoverPhoto, TripDayPlan } from "./_components/TripDayPlan";
-import { TripHeader } from "./_components/TripHeader";
+import { TripHero } from "./_components/TripHero";
 import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
+import { dayBriefings } from "./_lib/day-briefings";
+import { departureJsonLd } from "./_lib/departure-json-ld";
 import { publicTripRecord, readTripPage } from "./_lib/page-reads";
+import { readinessDoorPath } from "./_lib/readiness-door";
+import { requirementSentenceFor } from "./_lib/requirement-sentence";
 import { offerHandoff } from "./actions";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -111,6 +106,31 @@ export async function generateMetadata({
     },
   };
 }
+
+// The booking form and its sibling notices are Client Components, so the
+// shop's locale and messages have to cross the boundary explicitly — see
+// src/i18n/settings.ts for why the locale isn't in the URL. The namespace
+// list is the union of every Client Component this subtree can render
+// (TripActions, BookingSections' several outcome sections + the
+// BookingPartyFields it shares with the wait list, RentalFitForm reached
+// through BookingConfirmation) — see each's `useTranslations(...)` call.
+//
+// `bookingGear` is BookingGearFields' own namespace; without it every
+// string in the checkout gear picker rendered as its raw key.
+// `course` carries the certification-level words `DiveDeclarationFields`
+// renders in the wait-list form's optional "what can you dive?" select.
+const TRIP_PAGE_NAMESPACES = [
+  "booking",
+  "bookingGear",
+  "common",
+  "course",
+  "fallback",
+  "findMyBooking",
+  "participants",
+  "party",
+  "rental",
+  "trip",
+] as const;
 
 export default async function TripDetailPage({
   params,
@@ -190,15 +210,8 @@ export default async function TripDetailPage({
     now,
   });
   if (!trip || trip.isRehearsal) notFound();
-  // Staff words come from the staff bundle even here — the rest of this page
-  // speaks to divers, and mixing the two vocabularies in one file is exactly
-  // what the two bundles exist to prevent.
   const staffPreviewBar = staffPreview ? (
-    <StaffPreviewBar
-      message={staffTranslator(locale)("trips.publicPreview.banner")}
-      manageLabel={staffTranslator(locale)("trips.publicPreview.manage")}
-      manageHref={`/shop/${shopSlug}/trips/${tripId}`}
-    />
+    <StaffPreviewBar locale={locale} shopSlug={shopSlug} tripId={tripId} />
   ) : null;
   // A cancelled trip gets its own soft landing (task 13) rather than the same
   // bare `notFound()` as a typo'd URL — a diver who followed a saved or
@@ -208,36 +221,15 @@ export default async function TripDetailPage({
   // any of that is fetched.
   if (trip.status === "cancelled") {
     return (
-      <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["booking"]}>
-        <main
-          className={
-            isEmbed
-              ? "w-full flex-1 px-3 py-4"
-              : "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
-          }
-        >
-          {staffPreviewBar}
-          {/* The way back and the notice, a section apart: the page's
-              `space-y-10`, never a margin on the notice (pixel-craft class
-              4, K-162). */}
-          <div className="space-y-10">
-            {isEmbed ? null : (
-              <Link
-                href={publicSchedulePath(shopSlug)}
-                className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
-              >
-                <DiveDayIcon name="arrow-left" className="size-4" />
-                {t("trip.backToAllTrips")}
-              </Link>
-            )}
-            <CancelledTripNotice
-              shopSlug={shopSlug}
-              embed={isEmbed}
-              contactEmail={shop.contactEmail}
-            />
-          </div>
-        </main>
-      </DiverIntlProvider>
+      <CancelledTripLanding
+        locale={locale}
+        timeZone={shop.timezone}
+        isEmbed={isEmbed}
+        shopSlug={shopSlug}
+        contactEmail={shop.contactEmail}
+        staffPreviewBar={staffPreviewBar}
+        t={t}
+      />
     );
   }
   const crewLanguagesLine = crewLanguagesSentence(crewLanguages, locale);
@@ -255,23 +247,12 @@ export default async function TripDetailPage({
         lines: knownDiverFactLines(knownDiver.facts, t, { locale, timeZone: shop.timezone }),
       }
     : null;
-  const briefingExtras = briefing.extras;
-  const seenBySite = briefing.seen;
-  const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
-    dive,
-    diveSite,
-    creatures: fieldGuideCards(
-      diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
-      t,
-    ),
-    moments: diveSite ? (briefingExtras.moments.get(diveSite.id) ?? []) : [],
-  }));
+  const diveBriefings = dayBriefings(tripDives, briefing.extras, t);
   const coverPhoto = dayCoverPhoto(diveBriefings);
   // The dock-day rhythm's inputs (per-site bottom times, per-leg travel) are
   // gone from this page with `PackingSection`: what to bring and when to be
   // there is preparation, and preparation belongs to the thread the diver
   // reaches after booking (ADR 20260827-the-divers-thread, decision 2).
-  const passThroughFee = parsePassThroughFee(shop.passThroughFee);
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const { stripeAccount, payAtBooking, offerCodeField } = payment;
   // The money lines the form's one block states, resolved here so the deposit
@@ -301,41 +282,8 @@ export default async function TripDetailPage({
         },
         siteRequirement,
       );
-  const requirementNote = combinedRequirement
-    ? tripRequirementList(t, combinedRequirement, locale)
-    : null;
-  // Who this trip is for: one line, no box, and the form's own first line (UX
-  // audit #25), so it is read with the party-size control it governs rather
-  // than floating above the card. It says only what the *trip* demands, never
-  // anything about the reader, which is what makes it safe on an anonymous
-  // page (DOM-M6), and nothing at all on a course session, whose own page
-  // states its admission rule.
-  const requirementSentence = requirementNote
-    ? t("trip.requirementNote", { list: requirementNote })
-    : null;
-  // The embed's short confirmation needs exactly one fact beyond the booking
-  // itself: what mail went. Everything the old in-page confirmation read (the
-  // payment panel, readiness, rental fit, the nitrox card, the party's claim
-  // links) now belongs to `/ready`, which reads it on every visit rather than
-  // only the one right after booking (ADR 20260820-one-page-after-booking).
-  // Only say mail is on its way when it actually went — a party member booked
-  // without an address of their own gets none — and mention the waiver only
-  // when the confirmation carried one (UX review 2026-10-11, item 7;
-  // `mailState`, read in the wave above).
-  // The door out to `/ready` is a *path*, resolved by `./ready/route.ts` when
-  // the diver taps it. This render mints no capability: a readiness token is
-  // stored hashed and so cannot be read back, and minting a fresh one per
-  // render both wrote a row per reload and — past
-  // `MAX_LIVE_CAPABILITIES_PER_PURPOSE` — retired the readiness link `bookSpot`
-  // had already emailed (`coderabbitai`).
-  //
-  // Always a real destination, which is the other half of what that costs: the
-  // link used to be `href="#"` whenever no capability came back, and `#` under
-  // `target="_top"` is not inert — a keyboard Enter replaced the shop's own
-  // page with the embed route. `bookingToken` is a string wherever this
-  // renders (`confirmed` exists only downstream of verifying it), and the empty
-  // case lands on the departure's public page rather than nowhere.
-  const readinessLink = `${publicTripPath(shopSlug, tripId)}/ready?booking=${encodeURIComponent(bookingToken ?? "")}`;
+  const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale);
+  const readinessLink = readinessDoorPath(shopSlug, tripId, bookingToken);
 
   const inPast = hasSailed(trip.startsAt, now);
   // Where this departure stands against the head count it needs, if it named
@@ -344,24 +292,6 @@ export default async function TripDetailPage({
   // check that renders `CancelledTripNotice` instead of the booking page.
   const minimumSeats = inPast ? ({ kind: "none" } as const) : minimumSeatsState(trip, trip.booked);
   const full = isFull(trip);
-  /**
-   * **What else this shop is running, for a boat with no seats left** (issue
-   * #1166, D06). Read only when the trip is actually full: on every other
-   * render this is a query nobody asked for, and the surface it feeds does not
-   * exist.
-   *
-   * The candidate pool is the storefront's own schedule reader with
-   * `hasSpace`, so a departure offered here is one a diver can actually get
-   * onto, and a private charter is never offered to the public. Bounded at 50
-   * rather than paged: `similarDepartures` needs a pool, not a page, and a
-   * shop whose next matching departure is past the fiftieth is a shop the
-   * "find another trip" link serves better anyway.
-   */
-  // One read of the shop's own board, feeding both lists. It used to run only
-  // for a full boat; D01 asks the same question of a departure a diver can
-  // still get on, and reading the schedule twice for two lists that are never
-  // both on screen would be a query nobody asked for either way.
-  // (`board`, read in the wave above under exactly this condition.)
   const where = { shopSlug, isEmbed, locale, timeZone: shop.timezone };
   const offersAnotherBoat = !inPast && !trip.conditionsHold && !confirmed && !waitlistConfirmation;
   const alternatives = full ? fullTripAlternatives(trip, board, where) : [];
@@ -378,52 +308,10 @@ export default async function TripDetailPage({
   // the organizer's `aggregateRating`.
   const structuredData = isEmbed
     ? null
-    : tripPageJsonLd(
-        shop,
-        {
-          id: trip.id,
-          title: trip.title,
-          description: trip.description,
-          startsAt: trip.startsAt,
-          endsAt: trip.endsAt,
-          capacity: trip.capacity,
-          booked: trip.booked,
-          priceCents: perDiverPriceCents,
-          diveSiteName: trip.diveSite?.name ?? null,
-          conditionsHold: trip.conditionsHold,
-        },
-        publicAppUrl(),
-        reviewAggregate,
-      );
+    : departureJsonLd(shop, trip, perDiverPriceCents, reviewAggregate);
 
   return (
-    // The booking form and its sibling notices are Client Components, so the
-    // shop's locale and messages have to cross the boundary explicitly — see
-    // src/i18n/settings.ts for why the locale isn't in the URL. The namespace
-    // list is the union of every Client Component this subtree can render
-    // (TripActions, BookingSections' several outcome sections + the
-    // BookingPartyFields it shares with the wait list, RentalFitForm reached
-    // through BookingConfirmation) — see each's `useTranslations(...)` call.
-    <DiverIntlProvider
-      locale={locale}
-      timeZone={shop.timezone}
-      // `bookingGear` is BookingGearFields' own namespace; without it every
-      // string in the checkout gear picker rendered as its raw key.
-      // `course` carries the certification-level words `DiveDeclarationFields`
-      // renders in the wait-list form's optional "what can you dive?" select.
-      namespaces={[
-        "booking",
-        "bookingGear",
-        "common",
-        "course",
-        "fallback",
-        "findMyBooking",
-        "participants",
-        "party",
-        "rental",
-        "trip",
-      ]}
-    >
+    <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={TRIP_PAGE_NAMESPACES}>
       <main
         className={
           isEmbed
@@ -447,73 +335,17 @@ export default async function TripDetailPage({
             20260827-the-divers-thread, decision 2 and its 2026-10-03
             amendment). */}
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
-          <div>
-            {/* No standalone "← All trips" link: the header's own eyebrow is the
-                way up outside the frame (2026-08-28 diver-views review, finding
-                8 — see TripHeader). */}
-            <TripHeader
-              shop={shop}
-              trip={trip}
-              meetingDays={meetingDays}
-              locale={locale}
-              embed={isEmbed}
-              showMeetingPoint={false}
-            />
-            {/* The hero's two conveniences, inside the hero rather than as a row of
-                buttons under it. */}
-            {isEmbed ? null : (
-              <TripActions calendarUrl={publicTripCalendarPath(shopSlug, tripId)} />
-            )}
-            {/* The place, before the words about it: the day's first site
-                photo (`dayCoverPhoto`). Decorative, as the site page's own
-                cover is — the title and "The day" name the place. Not inside
-                an embed, where the frame is a list-first window. */}
-            {coverPhoto && !isEmbed ? (
-              <StoredPhoto
-                src={coverPhoto}
-                alt=""
-                className="mt-6 aspect-[3/2] w-full rounded-panel"
-                sizes="(min-width: 640px) 33rem, 92vw"
-                priority
-              />
-            ) : null}
-            {/* The one warning panel this page ever wears — the same radius,
-                border and tone as the conditions-changed panel below, on purpose.
-                Two amber boxes with different radii and border weights read as two
-                different systems warning about one weather call. Each is a card in
-                a tone on its neighbour's inset. A hold replaces the booking form
-                with plain type, so this banner never stands beside the form's
-                card: the box beside it is the minimum-seats note directly under
-                it, 16px in, so it takes the default tone panel (`TONE_PANEL_CLASS`),
-                level with that note on a phone. */}
-            {trip.conditionsHold ? (
-              <div
-                role="status"
-                className={`mt-5 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/10`}
-              >
-                <h2 className="font-semibold">{t("trip.conditionsHoldHeading")}</h2>
-                <p className="mt-1 text-sm text-muted">{t("trip.conditionsHoldBody")}</p>
-              </div>
-            ) : null}
-            {/* The promise, stated before anyone pays: what this departure needs to
-                run, and the exact moment the answer arrives. It is what makes the
-                automatic cancellation fair rather than abrupt — a diver who books
-                a boat that needs four people knows that, and knows when they'll
-                hear (ADR 20260813-minimum-head-count-departures). Dropped once the
-                count is met, because then there is nothing conditional left to
-                say, and on a departure that already sailed or was cancelled. */}
-            {minimumSeats.kind === "short" || minimumSeats.kind === "due" ? (
-              // Sunken fill, no border: a stated fact about the departure, not a
-              // warning — it wears the same quiet material as the supporting
-              // reading, one step below the amber conditions banner above.
-              <p className="mt-5 rounded-inset bg-surface-sunken p-4 text-sm text-muted">
-                {t("trip.minimumSeatsNotice", {
-                  minimum: minimumSeats.minimum,
-                  deadline: formatDateTimeTz(minimumSeats.decidesAt, locale, shop.timezone),
-                })}
-              </p>
-            ) : null}
-          </div>
+          <TripHero
+            shop={shop}
+            trip={trip}
+            meetingDays={meetingDays}
+            locale={locale}
+            isEmbed={isEmbed}
+            shopSlug={shopSlug}
+            coverPhoto={coverPhoto}
+            minimumSeats={minimumSeats}
+            t={t}
+          />
           {/* **One rhythm below the hero** (pixel-craft class 4, K-162;
               forms-and-controls.md's section rhythm): every section from the
               day's run to the shop's contact line stands 40px from the next, on
@@ -539,7 +371,7 @@ export default async function TripDetailPage({
             <TripDayPlan
               briefings={diveBriefings}
               nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
-              sightings={seenBySite}
+              sightings={briefing.seen}
               shop={shop}
               locale={locale}
               logEntry={inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course }}
@@ -662,7 +494,7 @@ export default async function TripDetailPage({
                     contactPhone: shop.contactPhone,
                     rentalItems: shop.rentalItems,
                     rentalPricing: shop.rentalPricing,
-                    passThroughFee,
+                    passThroughFee: parsePassThroughFee(shop.passThroughFee),
                     taxEnabled: shop.taxEnabled,
                     courseFeeCents,
                     eLearningFeeCents,
