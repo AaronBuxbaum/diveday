@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { type WaiverSendCopy, waiverSendCopy } from "@/app/actions/waiver-send-types";
 import {
   WaitlistInvite,
@@ -113,6 +114,65 @@ type RowControls = {
   helpRequestAction?: SpineHelpRequestAction;
   t: StaffTranslator;
 };
+
+/**
+ * The copy and context every row's control needs, composed once per render on
+ * the server: the controls are Client Components, so a translator never
+ * crosses the boundary.
+ */
+function rowControls(
+  base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "t">,
+): RowControls {
+  const { t } = base;
+  return {
+    ...base,
+    waiverCopy: waiverSendCopy(t),
+    resendCopy: {
+      resending: t("today.resendConfirmation.resending"),
+      confirmationResent: t("today.resendConfirmation.confirmationResent"),
+      confirmationsResent: t("today.resendConfirmation.confirmationsResent"),
+      errors: {
+        invalid: t("today.resendConfirmation.errors.invalid"),
+        noEmail: t("today.resendConfirmation.errors.noEmail"),
+        notConfigured: t("today.resendConfirmation.errors.notConfigured"),
+        failed: t("today.resendConfirmation.errors.failed"),
+      },
+    },
+    // Same keys `WaitlistSection.tsx` uses — `WaitlistInvite` is a Client
+    // Component, so the full copy object is composed here rather than passing
+    // a translator across the boundary.
+    inviteCopy: {
+      hold: sendHoldCopy(t),
+      invitedRelative: t.raw("trips.waitlist.invitedRelative"),
+      inviteEmailed: t("trips.waitlist.inviteEmailed"),
+      reSendInvite: t("trips.waitlist.reSendInvite"),
+      emailAnInvite: t.raw("trips.waitlist.emailAnInvite"),
+      copied: t("trips.waitlist.copied"),
+      copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
+      copyFailed: t("trips.waitlist.copyFailed"),
+      justNow: t("trips.waitlist.justNow"),
+      minutesAgo: t.raw("trips.waitlist.minutesAgo"),
+      hoursAgo: t.raw("trips.waitlist.hoursAgo"),
+      daysAgo: t.raw("trips.waitlist.daysAgo"),
+      emailSubject: t.raw("trips.waitlist.emailSubject"),
+      emailBody: t.raw("trips.waitlist.emailBody"),
+    },
+    paymentCopy: {
+      copyLink: t("today.paymentAction.copyLink"),
+      linkCopied: t("today.paymentAction.linkCopied"),
+      copyFailed: t("today.paymentAction.copyFailed"),
+      resendInvoice: t("today.paymentAction.resendInvoice"),
+      resending: t("today.paymentAction.resending"),
+      invoiceResent: t("today.paymentAction.invoiceResent"),
+      errors: {
+        notFound: t("today.paymentAction.errors.notFound"),
+        notOpen: t("today.paymentAction.errors.notOpen"),
+        notConfigured: t("today.paymentAction.errors.notConfigured"),
+        failed: t("today.paymentAction.errors.failed"),
+      },
+    },
+  };
+}
 
 /**
  * One job, as a ledger row: its kind as a word in the row's own type, the one
@@ -477,6 +537,131 @@ function StationRows({ rows, controls }: { rows: readonly TodayAction[]; control
   );
 }
 
+/**
+ * **The high-wind rows, streamed** (code review 2026-10-11, item 1). The
+ * forecast is the one read on this page that is not the database, so the queue
+ * answers without it (`getTodayWork`'s `highWind`) and these rows arrive under
+ * their own `<Suspense>` once the provider does — after the rows they rank
+ * beside, which is why they render below them rather than pushing painted rows
+ * down. They are not in any count on the page: the list's total, the summary
+ * under the date and the empty state all read the queue as it answered.
+ */
+async function HighWindRows({
+  rows,
+  tripIds,
+  controls,
+  className,
+  closed,
+}: {
+  rows: Promise<readonly TodayAction[]>;
+  /** The departures this list stands for; a row about any other boat files elsewhere. */
+  tripIds: ReadonlySet<string>;
+  controls: RowControls;
+  className?: string;
+  /** `false` inside a station's panel, as `StationRows` passes it. */
+  closed?: boolean;
+}) {
+  const wind = (await rows).filter(
+    (action) => action.departure != null && tripIds.has(action.departure.tripId),
+  );
+  if (wind.length === 0) return null;
+  return (
+    <ul className={className}>
+      {wind.map((action) => (
+        <StationRow key={rowKey(action)} action={action} controls={controls} closed={closed} />
+      ))}
+    </ul>
+  );
+}
+
+/** The wind rows' place while the forecast is out: a late warning is never mistaken for none. */
+function ForecastPending({ t, className }: { t: StaffTranslator; className?: string }) {
+  return (
+    <p className={`text-sm text-muted ${className ?? ""}`}>
+      {t("today.todayQueue.checkingForecast")}
+    </p>
+  );
+}
+
+async function WindGate({
+  wind,
+  show,
+  children,
+}: {
+  wind: Promise<readonly TodayAction[]>;
+  show: (rows: readonly TodayAction[]) => boolean;
+  children: React.ReactNode;
+}) {
+  return show(await wind) ? children : null;
+}
+
+/**
+ * **A claim a wind row would contradict waits for the wind** (code review
+ * 2026-10-11, item 1, dive-domain review). "Today's boats are all clear" and
+ * "nothing is waiting on you" are statements about every row, and the
+ * high-wind rows stream in after the queue: painted first, either line could
+ * stand above a 25 kt warning a second later. So each renders only once the
+ * forecast has answered and `show` agrees; nothing else on the page waits.
+ * Without a forecast promise it decides at once, from no wind.
+ */
+function UnlessWindy({
+  wind,
+  show,
+  children,
+}: {
+  wind?: Promise<readonly TodayAction[]>;
+  show: (rows: readonly TodayAction[]) => boolean;
+  children: React.ReactNode;
+}) {
+  if (!wind) return show([]) ? children : null;
+  return (
+    <Suspense fallback={null}>
+      <WindGate wind={wind} show={show}>
+        {children}
+      </WindGate>
+    </Suspense>
+  );
+}
+
+/**
+ * The whole week is in order — the queue's own good-news moment, and the only
+ * thing that stands where the work would be.
+ */
+function QueueEmpty({
+  t,
+  now,
+  timeZone,
+  shopName,
+  shopSlug,
+}: {
+  t: StaffTranslator;
+  now: Date;
+  timeZone: string;
+  shopName: string;
+  shopSlug: string;
+}) {
+  return (
+    <EmptyState
+      titleId="queue-heading"
+      title={t("today.todayQueue.emptyHeading")}
+      body={
+        <>
+          {t("today.todayQueue.emptyBody")}{" "}
+          {seasonalBriefingText(t, getSeasonalBriefing(now, timeZone), shopName)}
+        </>
+      }
+      action={
+        <Link
+          href={`/shop/${shopSlug}/schedule/board`}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("today.todayQueue.emptyAction")}
+        </Link>
+      }
+    />
+  );
+}
+
 function Stations({
   stations,
   crewedTripIds,
@@ -567,6 +752,49 @@ export type EveningReading = {
   firstEver: boolean;
 };
 
+/** The desk's "take card payments" row, for a shop with no Stripe account yet. */
+function DeskPaymentsRow({ shopSlug, t }: { shopSlug: string; t: StaffTranslator }) {
+  return (
+    <SpineRow
+      tone="neutral"
+      icon="orders"
+      kind={t("shopHome.spine.deskPaymentsKind")}
+      door={{
+        href: `/shop/${shopSlug}/settings#stripe`,
+        linkLabel: t("shopHome.spine.deskPaymentsAction"),
+      }}
+    >
+      <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
+    </SpineRow>
+  );
+}
+
+/**
+ * **What the divers left the reader's boats** (UX review 2026-10-11, item 18):
+ * paid tips on the boats this reader crewed this week (`crewTipsOnBoats`), in
+ * the shop's minor units. The diver was told the shop passes tips on to the
+ * crew; this is the crew seeing that it did. A plain line, not a coral moment:
+ * it is money, and the coral table never carries money. Zero renders nothing.
+ */
+function CrewTipsLine({
+  cents,
+  currency,
+  locale,
+  t,
+}: {
+  cents: number;
+  currency: string;
+  locale: string;
+  t: StaffTranslator;
+}) {
+  if (cents <= 0) return null;
+  return (
+    <p className="text-sm text-muted tabular-nums">
+      {t("shopHome.spine.crewTips", { amount: formatMoneyScanned(cents, currency, locale) })}
+    </p>
+  );
+}
+
 export function DaySpine({
   spine,
   shopSlug,
@@ -583,8 +811,10 @@ export function DaySpine({
   firstRun,
   firstBooking,
   factOfScale,
+  crewTipsCents = 0,
   sessions,
   evening,
+  highWind,
   needsYou: needsYouRead,
   blocked = 0,
   now,
@@ -638,10 +868,17 @@ export function DaySpine({
    * renders, and on most days it is null.
    */
   factOfScale?: FactOfScale | null;
+  /** Paid tips on the reader's boats this week (`CrewTipsLine`). */
+  crewTipsCents?: number;
   /** The instructor lens's own labeled group, above the first station. */
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */
   evening?: EveningReading;
+  /**
+   * The high-wind rows, still arriving (`getTodayWork`'s `highWind`): today's
+   * under the Needs you list, tomorrow's inside its disclosure. Omitted, none.
+   */
+  highWind?: Promise<readonly TodayAction[]>;
   /** The page's `readNeedsYou`, which the date's sentence counted (UX review 2026-10-10, item 2). */
   needsYou?: NeedsYouReading;
   /** The day sentence's blocked figure, for the all-clear line when `needsYou` is omitted. */
@@ -649,57 +886,7 @@ export function DaySpine({
   now: Date;
 }) {
   const t = staffTranslator(locale);
-  const controls: RowControls = {
-    shopSlug,
-    shopName,
-    helpRequestAction,
-    t,
-    waiverCopy: waiverSendCopy(t),
-    resendCopy: {
-      resending: t("today.resendConfirmation.resending"),
-      confirmationResent: t("today.resendConfirmation.confirmationResent"),
-      confirmationsResent: t("today.resendConfirmation.confirmationsResent"),
-      errors: {
-        invalid: t("today.resendConfirmation.errors.invalid"),
-        noEmail: t("today.resendConfirmation.errors.noEmail"),
-        notConfigured: t("today.resendConfirmation.errors.notConfigured"),
-        failed: t("today.resendConfirmation.errors.failed"),
-      },
-    },
-    // Same keys `WaitlistSection.tsx` uses — `WaitlistInvite` is a Client
-    // Component, so the full copy object is composed here rather than passing
-    // a translator across the boundary.
-    inviteCopy: {
-      hold: sendHoldCopy(t),
-      invitedRelative: t.raw("trips.waitlist.invitedRelative"),
-      inviteEmailed: t("trips.waitlist.inviteEmailed"),
-      reSendInvite: t("trips.waitlist.reSendInvite"),
-      emailAnInvite: t.raw("trips.waitlist.emailAnInvite"),
-      copied: t("trips.waitlist.copied"),
-      copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
-      copyFailed: t("trips.waitlist.copyFailed"),
-      justNow: t("trips.waitlist.justNow"),
-      minutesAgo: t.raw("trips.waitlist.minutesAgo"),
-      hoursAgo: t.raw("trips.waitlist.hoursAgo"),
-      daysAgo: t.raw("trips.waitlist.daysAgo"),
-      emailSubject: t.raw("trips.waitlist.emailSubject"),
-      emailBody: t.raw("trips.waitlist.emailBody"),
-    },
-    paymentCopy: {
-      copyLink: t("today.paymentAction.copyLink"),
-      linkCopied: t("today.paymentAction.linkCopied"),
-      copyFailed: t("today.paymentAction.copyFailed"),
-      resendInvoice: t("today.paymentAction.resendInvoice"),
-      resending: t("today.paymentAction.resending"),
-      invoiceResent: t("today.paymentAction.invoiceResent"),
-      errors: {
-        notFound: t("today.paymentAction.errors.notFound"),
-        notOpen: t("today.paymentAction.errors.notOpen"),
-        notConfigured: t("today.paymentAction.errors.notConfigured"),
-        failed: t("today.paymentAction.errors.failed"),
-      },
-    },
-  };
+  const controls = rowControls({ shopSlug, shopName, helpRequestAction, t });
   const crewed = new Set(crewedTripIds ?? []);
   const jobs = spineJobCount(spine);
   const tomorrowDate = spine.tomorrow.stations[0]?.startsAt ?? null;
@@ -744,25 +931,25 @@ export function DaySpine({
       blocked,
       now,
     });
-  const boatsClearLine =
-    !allHomeLine && !firstBookingMark && !factOfScaleLine && needsYouReading.boatsClear;
+  // Clear of everything the queue answered; the wind decides the rest
+  // (`UnlessWindy`). With no job at all the reading says not clear only for
+  // want of one, so a wind row can still be the job the line stands over.
+  const clearUnlessWindy =
+    !allHomeLine &&
+    !firstBookingMark &&
+    !factOfScaleLine &&
+    (needsYouReading.boatsClear ||
+      (jobs === 0 &&
+        spine.stations.length > 0 &&
+        blocked === 0 &&
+        !spine.stations.some((station) => station.blocked > 0)));
+  const windOnToday = (wind: readonly TodayAction[]) =>
+    wind.some((row) => row.departure != null && liveTripIds.has(row.departure.tripId));
   const closing = evening?.close.closing === true;
   // **One "Needs you" list**, read once (`readNeedsYou`) with the header's sentence.
   const { lead, folded: deskFold, count: needsYouCount } = needsYouReading;
   const paymentsRows = showPaymentsRow ? 1 : 0;
-  const paymentsRow = showPaymentsRow ? (
-    <SpineRow
-      tone="neutral"
-      icon="orders"
-      kind={t("shopHome.spine.deskPaymentsKind")}
-      door={{
-        href: `/shop/${shopSlug}/settings#stripe`,
-        linkLabel: t("shopHome.spine.deskPaymentsAction"),
-      }}
-    >
-      <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
-    </SpineRow>
-  ) : null;
+  const paymentsRow = showPaymentsRow ? <DeskPaymentsRow shopSlug={shopSlug} t={t} /> : null;
 
   return (
     <div className="flex flex-col gap-10">
@@ -802,8 +989,10 @@ export function DaySpine({
             back: evening.close.back,
           })}
         </EarnedMomentLine>
-      ) : boatsClearLine ? (
-        <BoatsClearLine>{t("today.todayQueue.boatsClear")}</BoatsClearLine>
+      ) : clearUnlessWindy ? (
+        <UnlessWindy wind={highWind} show={(wind) => jobs + wind.length > 0 && !windOnToday(wind)}>
+          <BoatsClearLine>{t("today.todayQueue.boatsClear")}</BoatsClearLine>
+        </UnlessWindy>
       ) : null}
 
       {/* **One fact of scale, on the day it is true** (ADR
@@ -836,6 +1025,8 @@ export function DaySpine({
           </span>
         </EarnedMomentLine>
       ) : null}
+
+      <CrewTipsLine cents={crewTipsCents} currency={currency} locale={locale} t={t} />
 
       {/* **The first booking ever, and then never again.** The word, the coral
           dot, and the seat itself — one row, because the moment *is* that
@@ -985,35 +1176,32 @@ export function DaySpine({
         </LedgerGroup>
       ) : null}
 
+      {highWind ? (
+        <Suspense fallback={<ForecastPending t={t} />}>
+          <HighWindRows rows={highWind} tripIds={liveTripIds} controls={controls} />
+        </Suspense>
+      ) : null}
+
       {/* The whole week is in order — the queue's own good-news moment, and the
           only thing that stands where the work would be. It never renders for
           a shop still in first-run: that shop has no roster to make a claim
           about (issue #711), and its setup ledger leads the page. */}
       {jobs === 0 && !closing && !firstRun ? (
-        <EmptyState
-          titleId="queue-heading"
-          title={t("today.todayQueue.emptyHeading")}
-          body={
-            <>
-              {t("today.todayQueue.emptyBody")}{" "}
-              {seasonalBriefingText(t, getSeasonalBriefing(now, timeZone), shopName)}
-            </>
-          }
-          action={
-            <Link
-              href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("today.todayQueue.emptyAction")}
-            </Link>
-          }
-        />
+        <UnlessWindy wind={highWind} show={(wind) => wind.length === 0}>
+          <QueueEmpty t={t} now={now} timeZone={timeZone} shopName={shopName} shopSlug={shopSlug} />
+        </UnlessWindy>
       ) : null}
 
       {/* **What today made** (issue #1930). While one boat is out there is no
           day to have made anything yet. */}
       {closing && evening?.takings ? (
-        <DayTakings takings={evening.takings} currency={currency} locale={locale} t={t} />
+        <DayTakings
+          takings={evening.takings}
+          currency={currency}
+          locale={locale}
+          timeZone={timeZone}
+          t={t}
+        />
       ) : null}
 
       {/* The two horizons, collapsed. Tomorrow expands in place through the
@@ -1059,6 +1247,17 @@ export function DaySpine({
                   currency={currency}
                   controls={controls}
                 />
+                {highWind ? (
+                  <Suspense fallback={<ForecastPending t={t} className="mt-4" />}>
+                    <HighWindRows
+                      rows={highWind}
+                      tripIds={new Set(spine.tomorrow.stations.map((station) => station.tripId))}
+                      controls={controls}
+                      className="mt-4"
+                      closed={false}
+                    />
+                  </Suspense>
+                ) : null}
               </div>
             </LedgerGroup>
           ) : null}

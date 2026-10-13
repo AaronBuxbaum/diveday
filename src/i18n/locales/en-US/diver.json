@@ -61,6 +61,8 @@
     "languageHeading": "Language",
     "footerLine": "{shop}",
     "spokenLanguages": "We speak {languages}",
+    "deskHours": "Desk open {opens} to {closes}",
+    "whatsApp": "Message us on WhatsApp",
     "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in.",
     "credit": "Bookings by DiveDay"
   },
@@ -420,7 +422,12 @@
       "promoInvalid": "That code isn’t active.",
       "participantTypeInvalid": "Pick one of the options listed."
     },
-    "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver.",
+    "confirmationOnTheWay": "Your confirmation is on its way by email.",
+    "confirmationWithWaiverOnTheWay": "Your confirmation is on its way by email. Signing your waiver is its first step.",
+    "alreadyDoor": {
+      "sendLink": "Send me my link",
+      "addSeat": "Bringing someone? Open your link and add a seat for them there."
+    },
     "embedPayNext": "Your seat’s held. Paying opens on DiveDay’s secure page, outside this window.",
     "continueToPayment": "Continue to payment",
     "alsoOnTheSchedule": "Also on the schedule",
@@ -626,7 +633,7 @@
     "seenOnTheDay": "Seen on the day",
     "yourPhotos": "Your photos",
     "captionLabel": "Add a caption (optional)",
-    "tipCrew": "Tip your crew",
+    "tipCrew": "Tip the crew",
     "unavailableHeading": "This recap link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
     "didNotDiveBody": "There’s no recap for this booking to rate or add a photo to.",
@@ -645,11 +652,11 @@
     "tipCancelled": "No worries, the tip wasn’t charged.",
     "tipRange": "Enter a tip amount between $1 and $500.",
     "tipFailed": "That didn’t go through. Try again in a moment.",
-    "tipThanksNotice": "Thanks for tipping your crew!",
+    "tipThanksNotice": "Thanks for the tip. The shop passes it on to the crew.",
     "tipConfirming": "Confirming your payment, which usually takes a few seconds. Refresh if it doesn’t update.",
     "photoLimit": "That’s the most photos one recap holds ({max}).",
-    "tipPaid": "Thanks. Your tip goes straight to {shop}. They’ll make sure the crew hears about it.",
-    "tipAllGoes": "100% goes to {shop}, with nothing held back and no account needed.",
+    "tipPaid": "Thanks. Your tip goes to {shop}, and they pass it on to the crew.",
+    "tipAllGoes": "It goes to {shop}, and they pass it on to the crew. No account needed.",
     "tipFinish": "Finish your {amount} tip",
     "tipLeave": "Leave a tip",
     "fromYourCrew": "From your crew",
@@ -878,6 +885,7 @@
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep. Bookmark it, and it stays up to date until you sail.",
     "logEntryWaiting": "After you dive, your log entry is waiting here.",
+    "offlineCopy": "No signal: this is the copy your phone saved. Anything you change here needs signal.",
     "gearOnFile": "Your sizes are with the crew.",
     "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
     "changesSizesLabel": "Sizes",
@@ -1090,6 +1098,17 @@
     "waiverDone": "That’s the paperwork done"
   },
   "seatClaim": {
+    "addNameMissing": "Type their name to add a seat.",
+    "addPartyFull": "Your group has as many seats as one booking can hold. Ask the shop to add more.",
+    "addAskShop": "The shop needs to check who’s coming on this departure first. Contact them to add a seat.",
+    "addFull": "The boat is full, so there’s no seat to add. Ask the shop about another day.",
+    "addUnavailable": "A seat can’t be added to this booking now. Contact the shop and they can add one.",
+    "addedNotice": "Seat added. Send them the link under their name below.",
+    "addPending": "Adding…",
+    "addSubmit": "Add a seat",
+    "addNameLabel": "Their name",
+    "addBody": "Add a seat to your booking. They claim it from their own link, with their own waiver and payment.",
+    "addHeading": "Bring someone",
     "metaTitle": "Claim your seat",
     "heading": "A seat on {trip} is waiting for you",
     "body": "Your organizer booked this seat with {shop} and held it as “{seatName}”. Your waiver and trip prep will come straight to you instead of through them.",
@@ -4136,6 +4155,8 @@
       "subject": "You’re on the boat — {tripTitle}",
       "confirmed": "Your spot on {tripTitle} is confirmed.",
       "dockNote": "Please be at the dock {dock} early. We’ll take it from there.",
+      "waiverStep": "First, sign your waiver. {shopName} needs it before you board.",
+      "waiverLink": "Sign your waiver",
       "packingHeading": "Bring",
       "moneyOnline": "Your seat: {amount}, by card online.",
       "moneyDeposit": "Your seat: {deposit} by card online, then {balance} at the dock on {date}.",
@@ -4492,6 +4513,10 @@
       "daysAtSea": "Days at sea",
       "mostDived": "Most dived · {times, number}",
       "divers": "Divers"
+    },
+    "panel": {
+      "heading": "Our year",
+      "sentenceNoSites": "{divers, plural, one {# diver} other {# divers}}. {boats, plural, one {# boat out} other {# boats out}}."
     }
   },
   "participants": {

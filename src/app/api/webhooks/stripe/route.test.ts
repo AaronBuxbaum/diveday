@@ -26,6 +26,7 @@ vi.mock("@/db/orders", () => ({
 vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
 vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
 vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
+vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn() }));
 vi.mock("@/db/stripe-accounts", () => ({
   setShopStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
@@ -54,6 +55,7 @@ const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPayment
 const { recordStripeChargeRefund } = await import("@/db/refunds");
 const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
+const { recordStripePayout } = await import("@/db/payouts");
 const { setShopStripeAccountStatus, disconnectShopStripeAccount, stripeAccountHolder } =
   await import("@/db/stripe-accounts");
 const { claimStripeWebhookEvent, hasNewerAccountUpdate, releaseStripeWebhookEventClaim } =
@@ -115,6 +117,7 @@ beforeEach(() => {
   vi.mocked(recordOrderPaymentIntent).mockReset().mockResolvedValue(true);
   vi.mocked(recordStripeChargeRefund).mockReset();
   vi.mocked(recordStripeDispute).mockReset();
+  vi.mocked(recordStripePayout).mockReset();
   vi.mocked(recordTipStripeCustomer).mockReset().mockResolvedValue(false);
   vi.mocked(claimStripeWebhookEvent).mockReset().mockResolvedValue(true);
   vi.mocked(hasNewerAccountUpdate).mockReset().mockResolvedValue(false);
@@ -830,6 +833,125 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       );
     });
 
+    it("payout.paid passes the payout, its arrival day and the event's own account and time", async () => {
+      vi.mocked(recordStripePayout).mockResolvedValue({ status: "not_found" });
+      const created = 1_800_000_000;
+      const response = await post({
+        id: "evt_payout",
+        type: "payout.paid",
+        account: "acct_1",
+        created,
+        data: {
+          object: {
+            id: "po_1",
+            amount: 184_200,
+            currency: "usd",
+            arrival_date: created - 3_600,
+            status: "paid",
+            automatic: true,
+            failure_code: null,
+          },
+        },
+      });
+      expect(response.status).toBe(200);
+      expect(recordStripePayout).toHaveBeenCalledWith(
+        FAKE_DB,
+        {
+          stripeAccountId: "acct_1",
+          occurredAt: new Date(created * 1000),
+          payout: {
+            id: "po_1",
+            amountCents: 184_200,
+            currency: "usd",
+            status: "paid",
+            arrivalDate: new Date((created - 3_600) * 1000),
+            automatic: true,
+            failureCode: null,
+          },
+        },
+        expect.anything(),
+      );
+    });
+
+    it("a payout with no connected account, or a malformed one, changes nothing", async () => {
+      const object = {
+        id: "po_1",
+        amount: 100,
+        currency: "usd",
+        arrival_date: 1_800_000_000,
+        status: "failed",
+        failure_code: "account_closed",
+      };
+      expect(
+        (await post({ id: "evt_po_noacct", type: "payout.failed", data: { object } })).status,
+      ).toBe(200);
+      expect(
+        (
+          await post({
+            id: "evt_po_bad",
+            type: "payout.failed",
+            account: "acct_1",
+            data: { object: { id: "po_1", amount: "lots" } },
+          })
+        ).status,
+      ).toBe(200);
+      expect(recordStripePayout).not.toHaveBeenCalled();
+    });
+
+    it("refuses a payout whose status is neither paid nor failed, or whose amount is negative", async () => {
+      const object = {
+        id: "po_1",
+        amount: 100,
+        currency: "usd",
+        arrival_date: 1_800_000_000,
+        status: "paid",
+        automatic: true,
+      };
+      expect(
+        (
+          await post({
+            id: "evt_po_pending",
+            type: "payout.paid",
+            account: "acct_1",
+            data: { object: { ...object, status: "pending" } },
+          })
+        ).status,
+      ).toBe(200);
+      expect(
+        (
+          await post({
+            id: "evt_po_negative",
+            type: "payout.paid",
+            account: "acct_1",
+            data: { object: { ...object, amount: -100 } },
+          })
+        ).status,
+      ).toBe(200);
+      expect(recordStripePayout).not.toHaveBeenCalled();
+    });
+
+    it("a deferred payout answers 503 and gives its claim back, without paging anyone", async () => {
+      vi.mocked(recordStripePayout).mockResolvedValue({ status: "deferred" });
+      const response = await post({
+        id: "evt_po_defer",
+        type: "payout.paid",
+        account: "acct_1",
+        data: {
+          object: {
+            id: "po_1",
+            amount: 100,
+            currency: "usd",
+            arrival_date: 1_800_000_000,
+            status: "paid",
+            automatic: true,
+          },
+        },
+      });
+      expect(response.status).toBe(503);
+      expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, "evt_po_defer");
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+    });
+
     it("records the PaymentIntent a settling session and a paid invoice name", async () => {
       vi.mocked(markOrderPaidByInvoiceId).mockResolvedValue({ id: "order_1" } as never);
       await post({
@@ -1380,6 +1502,24 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
         },
       },
       arrange: () => vi.mocked(recordStripeDispute).mockRejectedValue(boom),
+    },
+    {
+      name: "payout.paid",
+      event: {
+        id: "evt_fail_payout",
+        type: "payout.paid",
+        account: "acct_1",
+        data: {
+          object: {
+            id: "po_1",
+            amount: 500,
+            currency: "usd",
+            arrival_date: 1_800_000_000,
+            status: "paid",
+          },
+        },
+      },
+      arrange: () => vi.mocked(recordStripePayout).mockRejectedValue(boom),
     },
   ];
 

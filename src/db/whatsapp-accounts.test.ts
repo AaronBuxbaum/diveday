@@ -15,6 +15,7 @@ import {
   PARKED_REGISTRATION_STALE_MS,
   SETUP_INCOMPLETE_TEMPLATE,
   shopIdForWhatsAppEvent,
+  shopPublicWhatsAppNumber,
   whatsAppAccountForPhoneNumber,
   whatsAppProviderForAccount,
   whatsAppProvidersForShops,
@@ -596,5 +597,27 @@ describe("whatsAppProviderForAccount", () => {
     const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
     expect(body.template.name).toBe("buceo_aviso");
     expect(body.template.language.code).toBe("es_ES");
+  });
+});
+
+describe("shopPublicWhatsAppNumber", () => {
+  it("gives the public footer the printed number of a finished signup, and nothing else", async () => {
+    const { db, shop } = ctx;
+    expect(await shopPublicWhatsAppNumber(db, shop.id)).toBeNull();
+    await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
+    expect(await shopPublicWhatsAppNumber(db, shop.id)).toBe("+1 305-555-0100");
+  });
+
+  it("gives nothing for a row parked mid-signup, or for another shop's sender", async () => {
+    const { db, shop } = ctx;
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(shop.id, { templateName: SETUP_INCOMPLETE_TEMPLATE }),
+      { key },
+    );
+    expect(await shopPublicWhatsAppNumber(db, shop.id)).toBeNull();
+
+    const sibling = await siblingShop(db, "public-number-sibling");
+    expect(await shopPublicWhatsAppNumber(db, sibling.id)).toBeNull();
   });
 });

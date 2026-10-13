@@ -1571,18 +1571,24 @@ export async function listNotificationDeliveryIssues(
 }
 
 /**
- * Whether this booking's confirmation email *and* its waiver-link email both
- * actually left the building. A page may only promise mail it can see went out
- * — a walk-in party member with no address of their own, an unconfigured
- * provider, or a rejected recipient all leave the promise unearned
- * (design/principles.md #4). Returns a plain fact, not words.
+ * What a page may say about this booking's mail (UX review 2026-10-11, item
+ * 7): nothing (`none`), that the confirmation left (`confirmation`), or that
+ * it left carrying the waiver as its first step (`confirmationWithWaiver`).
+ * A page may only promise mail it can see went out — a walk-in party member
+ * with no address of their own, an unconfigured provider, or a rejected
+ * recipient all leave the promise unearned (design/principles.md #4) — and a
+ * diver whose signature still covers the trip is never told a waiver link is
+ * coming, because no unsigned link was emailed for this booking. Returns a
+ * plain fact, not words.
  */
-export async function bookingConfirmationAndWaiverEmailsSent(
+export type BookingMailState = "none" | "confirmation" | "confirmationWithWaiver";
+
+export async function bookingConfirmationMailState(
   db: AppDb,
   shopId: string,
   bookingId: string,
-): Promise<boolean> {
-  const rows = await db
+): Promise<BookingMailState> {
+  const [confirmation] = await db
     .select({ kind: notificationDeliveries.kind })
     .from(notificationDeliveries)
     .where(
@@ -1590,9 +1596,24 @@ export async function bookingConfirmationAndWaiverEmailsSent(
         eq(notificationDeliveries.shopId, shopId),
         eq(notificationDeliveries.bookingId, bookingId),
         eq(notificationDeliveries.status, "sent"),
-        inArray(notificationDeliveries.kind, ["booking_confirmation", "waiver_request"]),
+        eq(notificationDeliveries.kind, "booking_confirmation"),
       ),
-    );
-  const sent = new Set(rows.map((row) => row.kind));
-  return sent.has("booking_confirmation") && sent.has("waiver_request");
+    )
+    .limit(1);
+  if (!confirmation) return "none";
+  const [waiver] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .innerJoin(waiverDeliveries, eq(waiverDeliveries.waiverRecordId, waiverRecords.id))
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.bookingId, bookingId),
+        eq(waiverRecords.status, "pending"),
+        eq(waiverDeliveries.channel, "email"),
+        eq(waiverDeliveries.status, "sent"),
+      ),
+    )
+    .limit(1);
+  return waiver ? "confirmationWithWaiver" : "confirmation";
 }

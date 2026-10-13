@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { submitInquiryAction } from "@/app/actions/inquiry";
 import { DateRequestForm } from "@/components/DateRequestForm";
-import { EmbedCredit } from "@/components/EmbedCredit";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews, ShopReviewsSkeleton } from "@/components/ShopReviews";
@@ -72,12 +71,14 @@ import { capacityLabel, nextBookableDeparture, seatsOnSale } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { CoursesShelf } from "./_components/CoursesShelf";
 import { DayJumpStrip } from "./_components/DayJumpStrip";
+import { EmbedFooter } from "./_components/EmbedFooter";
 import { FindMyBookingForm } from "./_components/FindMyBookingForm";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 import { MonthRail } from "./_components/MonthRail";
 import { MonthSightingsSection } from "./_components/MonthSightingsShelf";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel, offSeasonLine } from "./_components/OffSeasonPanel";
+import { OurYearSection } from "./_components/OurYear";
 import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_components/PromotedDateAsk";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
@@ -293,6 +294,8 @@ export default async function SchedulePage({
     }).then((page) => ({ ...page, trips: page.trips.map(seatsOnSale) })),
   );
   const rangeRead = upcomingScheduleRange(db, shop.id, now, { publicOnly: true });
+  const activeCoursesRead = isEmbed ? Promise.resolve([]) : listActiveCourses(db, shop.id);
+  const shelfIds = activeCoursesRead.then((shelf) => shelf.slice(0, 3).map((course) => course.id));
   const [
     lenses,
     activeLens,
@@ -303,6 +306,7 @@ export default async function SchedulePage({
     boats,
     everHadDeparture,
     [diveSitesByTrip, requirementsByTrip],
+    shelfNextStarts,
   ] = await Promise.all([
     lensesRead,
     activeLensRead,
@@ -311,7 +315,7 @@ export default async function SchedulePage({
     // A shop that switched reviews off shows no stars anywhere, not an empty rating (ADR
     // 20261005-optional-shop-features).
     isEmbed || !shop.reviewsEnabled ? EMPTY_REVIEW_AGGREGATE : getShopReviewAggregate(db, shop.id),
-    isEmbed ? [] : listActiveCourses(db, shop.id),
+    activeCoursesRead,
     // The fleet, for the storefront's boats section (Harbor). Not in the widget: an embed is the
     // list-first window and names no hulls.
     isEmbed ? [] : listBoats(db, shop.id),
@@ -323,6 +327,8 @@ export default async function SchedulePage({
         listed.map((trip) => trip.id),
       ),
     ),
+    // The shelf's next starts: a diver reads it, so only storefront sessions count.
+    shelfIds.then((ids) => nextSessionStartByCourse(db, shop.id, ids, "storefront")),
   ]);
   // The view a diver has built — month, embed mode, the lens, and every list filter — must survive
   // every link that re-renders this page. A pager or month arrow that drops `hasSpace` quietly
@@ -631,16 +637,6 @@ export default async function SchedulePage({
   // is the rest. `{depth18}` markers resolve into the shop's own unit before
   // anything reads a field, the same one-shot pass the catalog makes.
   const depthFormat = courseDepthFormat(t, shop.depthUnit);
-  const shelfNextStarts = isEmbed
-    ? new Map<string, Date>()
-    : await nextSessionStartByCourse(
-        db,
-        shop.id,
-        activeCourses.slice(0, 3).map((course) => course.id),
-        // A diver reads this shelf, so a private session is not a date they
-        // may turn up to.
-        "storefront",
-      );
   const shelfCourses = activeCourses.slice(0, 3).map((stored) => {
     const course = resolveCourseContentDepths(stored, depthFormat);
     const total = courseTotalCents(course);
@@ -1193,43 +1189,20 @@ export default async function SchedulePage({
           </DiverIntlProvider>
         </section>
       ) : null}
-      {/* Human-discovery footer, embed mode only — a single small line, not a
-          banner, so the widget stays compact and booking-focused (docs ADR
-          20260726-schedule-embed). A relative href resolves against the
-          iframe's own document (this page's origin), not the parent page, so
-          it reaches the DiveDay homepage regardless of what site framed it. */}
-      {isEmbed ? (
-        <div className="mt-8 flex flex-col items-center gap-2 border-t border-border pt-6">
-          {/* **The way out of the frame.** The widget shows the next few
-              departures; everything else is one tap away on a real page, which
-              is a better answer than a scrollbar inside somebody else's site.
-              `target="_blank"` for the same reason the DiveDay link below has
-              it — a schedule opened *inside* a 900px frame is the nested scroll
-              this change exists to remove (issue #805). */}
-          <Link
-            href={publicSchedulePath(shopSlug)}
-            target="_blank"
-            rel="noopener"
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("schedule.embedSeeFullSchedule")}
-          </Link>
-          {zoneNote ? <p className="text-xs text-muted">{zoneNote}</p> : null}
-        </div>
+      {/* "Our year": the shop's own year in counts, last, and only with its yes. */}
+      {!isEmbed && shop.publicYearEnabled ? (
+        <Suspense fallback={null}>
+          <OurYearSection db={db} shop={shop} locale={locale} t={t} className={SECTION_GAP} />
+        </Suspense>
       ) : null}
-      {isEmbed && hostCarriesCredit ? null : isEmbed ? (
-        <EmbedCredit
-          href={`/?${new URLSearchParams({
-            utm_source: "embed",
-            utm_medium: "widget",
-            utm_campaign: shopSlug,
-          }).toString()}`}
-          target="_blank"
-          rel="noopener"
-        >
-          {t("schedule.poweredByDiveDay")}
-        </EmbedCredit>
-      ) : null}
+      {/* Human-discovery footer, embed mode only. */}
+      <EmbedFooter
+        isEmbed={isEmbed}
+        hostCarriesCredit={hostCarriesCredit}
+        shopSlug={shopSlug}
+        zoneNote={zoneNote}
+        t={t}
+      />
     </main>
   );
 }

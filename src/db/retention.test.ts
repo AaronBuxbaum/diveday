@@ -593,6 +593,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // dispute, kept current by Stripe, the shop's books like the order it is
   // about (ADR 20261009-stripe-reversals-reach-diveday). Not a trail.
   "payment_disputes",
+  // A payout to the shop's bank: one mutable row per Stripe payout, the books
+  // a bank statement is reconciled against (ADR 20261012-payouts-reach-diveday).
+  "stripe_payouts",
   // A refund Stripe reported failed after accepting it (issue #2291): one row
   // per Stripe refund, the books' record that money said to have gone back
   // did not, owed until it is refunded again. The shop's books, not a trail.

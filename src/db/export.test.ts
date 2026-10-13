@@ -225,6 +225,10 @@ const EXCLUDED_TABLES = [
   // the shop's Stripe dashboard is where a dispute is answered and exported.
   // The money it concerns is already on orders.csv and booking_checkouts.csv.
   "payment_disputes",
+  // Stripe payouts (ADR 20261012-payouts-reach-diveday), on the same footing:
+  // Stripe's own record of money it moved to the shop's bank, mirrored so
+  // Reports can name it, and exported from the shop's Stripe dashboard.
+  "stripe_payouts",
   // Failed refunds (issue #2291): Stripe's record of a refund that bounced,
   // mirrored so the Orders index can say who is owed. The money it moved is
   // already on orders.csv and booking_checkouts.csv (`refunded_cents`).

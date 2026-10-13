@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { buttonClass } from "@/components/ui/button";
+import type { BookingMailState } from "@/db/notifications";
 import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
@@ -33,7 +34,7 @@ export function EmbedBookedNotice({
   trip,
   confirmed,
   readinessLink,
-  emailsOnTheWay,
+  mailState,
   payNotice,
   paymentUrl = null,
 }: {
@@ -59,12 +60,13 @@ export function EmbedBookedNotice({
    */
   readinessLink: string;
   /**
-   * True only when this booking's confirmation email *and* its waiver-link
-   * email both actually went out. A walk-in party member with no address of
-   * their own gets neither, so the page must not promise them — see
-   * `bookingConfirmationAndWaiverEmailsSent`.
+   * What mail actually went for this booking — see
+   * `bookingConfirmationMailState`. One email per booking (UX review
+   * 2026-10-11, item 7): the confirmation, carrying the waiver as its first
+   * step when one is owed. A walk-in party member with no address of their
+   * own gets none, so the page must not promise it.
    */
-  emailsOnTheWay: boolean;
+  mailState: BookingMailState;
   /**
    * The hosted Stripe page for this booking, when paying was part of booking
    * and the diver is inside the embed — where that page cannot be framed, so
@@ -95,11 +97,14 @@ export function EmbedBookedNotice({
         </p>
       </EarnedMoment>
 
-      {/* Two messages land within seconds of each other; saying so up front
-          stops the second one reading as a duplicate or a mistake. Claimed
-          only when both actually left the building. */}
-      {emailsOnTheWay ? (
-        <p className="mt-3 text-sm text-muted">{t("booking.emailsOnTheWay")}</p>
+      {/* Where to look next. Claimed only when the mail actually left the
+          building, and the waiver named only when the confirmation carried
+          one, so a diver whose signature still covers this trip is never
+          told a link is coming. */}
+      {mailState === "confirmationWithWaiver" ? (
+        <p className="mt-3 text-sm text-muted">{t("booking.confirmationWithWaiverOnTheWay")}</p>
+      ) : mailState === "confirmation" ? (
+        <p className="mt-3 text-sm text-muted">{t("booking.confirmationOnTheWay")}</p>
       ) : null}
 
       {payNotice === "cancelled" ? (

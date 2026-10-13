@@ -26,6 +26,8 @@
     "departure_note_sent": "{actor} sent a note to everyone on the departure",
     "booking_link_requested": "{actor} requested a fresh link to their booking",
     "seat_claimed": "{actor} claimed their seat",
+    "seat_self_cancelled": "{actor} canceled their own seat from their trip link",
+    "seat_self_refunded": "{actor} canceled their own seat from their trip link and was refunded by card",
     "medical_clearance_opened": "{actor} opened the physician’s evaluation for {diver}",
     "record_exported": "{actor} downloaded a copy of {diver}’s record",
     "order_refunded": "{actor} refunded an order",

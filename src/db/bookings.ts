@@ -32,7 +32,7 @@ import {
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
-import { hasReturned, hasSailed } from "@/lib/trips";
+import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
@@ -444,6 +444,91 @@ export async function createBookingParty(
       }
       throw error;
     });
+}
+
+/**
+ * Why a seat could not be added to a booking from the diver's own page.
+ * `lead_unavailable` covers every reason the booking itself cannot lead one
+ * (cancelled, held, a party member's own seat, not this shop's), never
+ * distinguished to a diver; `party_full` is the public form's own party cap.
+ */
+export type AddPartySeatOutcome =
+  | { ok: true; bookingId: string }
+  | { ok: false; reason: "lead_unavailable" | "party_full" }
+  | BookingRefusal;
+
+/**
+ * **"Add a seat" from `/ready`** (UX review 2026-10-11, item 13; owner
+ * decision of the same review, §5.5: yes, because it adds a booking rather than
+ * changing one). A diver who booked alone and now wants to bring a friend gets
+ * a new seat in their party, held under the name they type, with a claim link
+ * the organizer's panel then shows (docs ADR 20260804-seat-claim-links), so
+ * the friend fills in their own details, waiver and card.
+ *
+ * **The same gates as booking a seat**, because it is one: the seat goes
+ * through `createBookingRecord` as an anonymous public booking, so capacity,
+ * the divers-only limit, the course ratio and the trip's admission rule are
+ * re-checked inside this transaction exactly as the schedule's form checks
+ * them, and a departed or cancelled trip refuses. The party never grows past
+ * the public form's own cap. An unpaid seat raises `payment_due`, which the
+ * boarding gate already holds, so nothing here can put an unpaid diver aboard.
+ *
+ * Authorization is the caller's: a verified readiness capability over
+ * `leadBookingId`. This only refuses a lead that cannot lead a party — a held
+ * seat (whose record may be somebody else's, issue #2125), a party member's
+ * own seat, or a cancelled one.
+ */
+export async function addPartySeat(
+  db: AppDb,
+  input: { shopId: string; leadBookingId: string; seatName: string },
+): Promise<AddPartySeatOutcome> {
+  return db.transaction(async (tx): Promise<AddPartySeatOutcome> => {
+    const [lead] = await tx
+      .select({
+        id: bookings.id,
+        tripId: bookings.tripId,
+        status: bookings.status,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+        partyLeadBookingId: bookings.partyLeadBookingId,
+      })
+      .from(bookings)
+      .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+      .limit(1)
+      // One add at a time per party, so two taps cannot both pass the cap.
+      .for("update");
+    if (
+      !lead ||
+      lead.status === "cancelled" ||
+      lead.identityUnconfirmedAt ||
+      lead.partyLeadBookingId
+    ) {
+      return { ok: false, reason: "lead_unavailable" };
+    }
+    const members = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.partyLeadBookingId, lead.id),
+          ne(bookings.status, "cancelled"),
+        ),
+      );
+    if (members.length + 1 >= MAX_PUBLIC_PARTY_SIZE) return { ok: false, reason: "party_full" };
+    const pending: PendingDeclaration[] = [];
+    const outcome = await createBookingRecord(
+      tx,
+      { actor: "public", shopId: input.shopId, tripId: lead.tripId, fullName: input.seatName },
+      pending,
+    );
+    if (!outcome.ok) return outcome;
+    await tx
+      .update(bookings)
+      .set({ partyLeadBookingId: lead.id })
+      .where(eq(bookings.id, outcome.bookingId));
+    await flushDeclarations(tx, pending);
+    return { ok: true, bookingId: outcome.bookingId };
+  });
 }
 
 class PartyBookingError extends Error {

@@ -90,6 +90,7 @@ import {
   staffCredentials,
   staffReplies,
   staffShifts,
+  stripePayouts,
   stripeRefundFailures,
   tips,
   tripAssignments,
@@ -423,6 +424,11 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // has not answered is photographed through
       // `/api/test/seed-trouble-states?unitsUnconfirmed=1`.
       unitsConfirmedAt: nowDate(),
+      // Its desk hours are its own, saved (the default 08:00 to 18:00), so the
+      // storefront footer prints them; and it said yes to "Our year" on its
+      // schedule, so the panel is photographed and exercised.
+      deskHoursConfirmedAt: nowDate(),
+      publicYearEnabled: true,
       // **Blue Mantis plans its crew in DiveDay** — the setting is off for a
       // new shop (`shops.crew_schedule_enabled`), and the demo is where every
       // crew surface is photographed and exercised.
@@ -1215,7 +1221,11 @@ export async function seedDemoSchedule(
 async function deleteStripeReversals(db: DbExecutor, shopId: string): Promise<void> {
   await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
   await db.delete(stripeRefundFailures).where(eq(stripeRefundFailures.shopId, shopId));
+  // A payout names no order or seat (ADR 20261012-payouts-reach-diveday); it
+  // goes with the money it reported.
+  await db.delete(stripePayouts).where(eq(stripePayouts.shopId, shopId));
 }
+
 /**
  * Restore the demo playground to its seeded state. Wipes everything a visitor
  * can touch — trips and their sessions, bookings and everything hanging off

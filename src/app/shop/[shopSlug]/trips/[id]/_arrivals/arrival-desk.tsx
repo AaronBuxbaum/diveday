@@ -16,14 +16,20 @@ import {
 } from "@/i18n/welcome-cue-labels";
 import { counterIsClear, counterTally, isNoShowAtCounter } from "@/lib/check-in";
 import { formatTime, formatWeekdayTime } from "@/lib/format";
-import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
+import { type NoShowClaim, noShowClaim, noShowGate, type SalvageOffer } from "@/lib/no-show";
 import { arrivalsWindow } from "@/lib/operational-window";
 import { paperPassPath } from "@/lib/print-sheets";
 import { hasSailed } from "@/lib/trips";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import type { RosterArrival } from "../_components/RosterSection";
 import { ArrivalTap } from "./ArrivalTap";
-import { checkInAction, markNoShowAction, undoCheckInAction, undoNoShowAction } from "./actions";
+import {
+  checkInAction,
+  markNoShowAction,
+  offerAnotherDayAction,
+  undoCheckInAction,
+  undoNoShowAction,
+} from "./actions";
 import { CounterInstrument } from "./CounterInstrument";
 import { NoShowSalvage, NoShowScript } from "./NoShowScript";
 import { RowActionForm } from "./RowActionForm";
@@ -97,6 +103,7 @@ export async function buildArrivalDesk({
   const undo = undoCheckInAction.bind(null, shopSlug, tripId);
   const markNoShow = markNoShowAction.bind(null, shopSlug, tripId);
   const undoNoShow = undoNoShowAction.bind(null, shopSlug, tripId);
+  const offerAnotherDay = offerAnotherDayAction.bind(null, shopSlug, tripId);
 
   // **"Not here" opens when the boat leaves without them**, and says something
   // different once it is gone. `markBookingNoShow` runs the same gate again
@@ -113,10 +120,16 @@ export async function buildArrivalDesk({
       ? noShowClaim({ startsAt: row.startsAt, now })
       : null;
 
-  // One salvage read, and only when the boat actually holds a released seat.
-  const salvage = rows.some(isNoShowAtCounter)
-    ? await noShowSalvage(db, { shopId, tripId, now })
-    : null;
+  // One salvage read per released seat, and none when the boat holds none:
+  // the days offered are the ones *that* diver could book (F1, layer 8).
+  const salvageFor = new Map<string, SalvageOffer>();
+  for (const row of rows) {
+    if (!isNoShowAtCounter(row) || salvageFor.has(row.personId)) continue;
+    salvageFor.set(
+      row.personId,
+      await noShowSalvage(db, { shopId, tripId, personId: row.personId, now }),
+    );
+  }
 
   const controls = new Map<string, ReactNode>();
   const below = new Map<string, ReactNode>();
@@ -139,10 +152,12 @@ export async function buildArrivalDesk({
           </SubmitButton>
         </RowActionForm>,
       );
+      const salvage = salvageFor.get(row.personId);
       if (salvage) {
         below.set(
           row.bookingId,
           <NoShowSalvage
+            offerAction={offerAnotherDay}
             copy={noShowSalvageCopy({
               t,
               offer: salvage,

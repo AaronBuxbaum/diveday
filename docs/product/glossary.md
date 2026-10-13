@@ -70,6 +70,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Dock line
 - Dock rider
 - Lost item
+- Saved trip-prep copy
 - Staff note
 
 ## Modeling notes
@@ -101,6 +102,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Free term
 - Paid after close
 - Pass-through fee
+- Payout
 - Subscription (DiveDay billing)
 
 ## Operations
@@ -256,6 +258,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Waiver completion
 - WhatsApp sender
 - Working shift
+- Your week
 
 ## Records and evidence
 
@@ -330,3 +333,5 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Conservation note
 - Crew public name
 - Lens
+- Our year
+- Published desk hours

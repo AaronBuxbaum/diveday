@@ -90,7 +90,8 @@
     "profileAction": "Set up profile",
     "profileDone": "Shop profile configured.",
     "siteTitle": "Add your first dive site",
-    "siteBody": "The catalog has 34 Florida sites ready to copy",
+    "siteBody": "{count, plural, one {The catalog has # Florida site ready to copy} other {The catalog has # Florida sites ready to copy}}",
+    "siteBodyOwn": "Add your first dive site, the place you’ll pin your trips to",
     "siteAction": "Add a dive site",
     "siteDone": "{count, plural, one {# dive site added.} other {# dive sites added.}}",
     "tripTitle": "Add your first departure",
@@ -170,7 +171,8 @@
     "departuresLabel": "Departures",
     "needsYouCount": "{count, plural, one {# thing} other {# things}}",
     "deskFoldLabel": "{count, plural, one {# more for other boats and the desk} other {# more for other boats and the desk}}",
-    "needsYouLabel": "Needs you"
+    "needsYouLabel": "Needs you",
+    "crewTips": "Your boats earned {amount} in tips this week."
   },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",

@@ -7,7 +7,7 @@
       "notConnected": "Connect a Stripe account in Shop settings before creating an order.",
       "taxLocationRequired": "Tax is enabled. Add the customer’s billing address before sending this invoice.",
       "stripeFailed": "Stripe couldn’t create that invoice. Try again in a moment.",
-      "fallback": "That order couldn’t be created."
+      "fallback": "That order wasn’t created and nothing was sent. Check the customer and each line, then send it again; if it fails twice, open Orders to see whether it went through."
     },
     "linkedTo": "Linked to {personName}’s booking on {tripTitle} ({date}).",
     "courseNote": "Clear the e-learning line if this student already completed it elsewhere.",

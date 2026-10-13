@@ -462,4 +462,15 @@ describe("the shop's desk hours", () => {
       setShopDeskHours(db, shop.id, { opensMinute: 18 * 60, closesMinute: 8 * 60 }),
     ).rejects.toThrow();
   });
+
+  it("stamps the hours as the shop's own once saved, which is what lets the footer print them", async () => {
+    const { db, shop } = await context();
+    const at = new Date("2026-10-12T14:00:00.000Z");
+    await setShopDeskHours(db, shop.id, { opensMinute: 7 * 60, closesMinute: 17 * 60 }, at);
+    const [row] = await db
+      .select({ confirmedAt: shops.deskHoursConfirmedAt, opens: shops.deskOpensMinute })
+      .from(shops)
+      .where(eq(shops.id, shop.id));
+    expect(row).toEqual({ confirmedAt: at, opens: 7 * 60 });
+  });
 });

@@ -148,6 +148,15 @@ const bookingConfirmationSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
   dockCallMinutes: z.number().int().min(5).max(180).optional(),
   readinessUrl: z.url().max(2_000).optional(),
+  /**
+   * The diver's waiver link, carried as the confirmation's first step so one
+   * booking is one email (UX review 2026-10-11, item 7). Present only when the
+   * trip needs a waiver this diver has not signed; `issueJoinWaiverLink`
+   * decides. A diver whose signature still covers the trip gets no waiver line.
+   */
+  waiverUrl: z.url().max(2_000).optional(),
+  /** When `waiverUrl` stops working; required with it so the line can say so. */
+  waiverExpiresAt: z.date().optional(),
   packingList: z.array(z.string().trim().min(1).max(100)).max(12).optional(),
   learningMaterials: learningMaterialsSchema,
   meetingPoint: meetingPointSchema.optional(),

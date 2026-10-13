@@ -1,9 +1,10 @@
+import { cache } from "react";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { readKnownDiver } from "@/db/booking-handoff";
 import { getBookingForTrip } from "@/db/bookings";
-import type { AppDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
-import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
+import { bookingConfirmationMailState } from "@/db/notifications";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { tripMayTakeACode } from "@/db/shop-promos";
@@ -27,6 +28,16 @@ import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { isLiveShopStaff } from "@/lib/session";
 import { hasSailed, seatsOnSale } from "@/lib/trips";
 
+/**
+ * **The departure, read once per render** (code review 2026-10-11, item 2):
+ * `generateMetadata` and the page body both need the row, and two calls to
+ * `getTripWithBooked` were two statements for one fact. Keyed on the shop id and
+ * the trip id, request-scoped like `shopBySlugCached`.
+ */
+export const publicTripRecord = cache(async (shopId: string, tripId: string) =>
+  getTripWithBooked(await getDb(), shopId, tripId),
+);
+
 type Shop = NonNullable<Awaited<ReturnType<typeof shopBySlugCached>>>;
 
 /** What the request asked this page for, already narrowed by the page. */
@@ -36,7 +47,8 @@ export type TripPageRequest = {
   bookingToken: string | undefined;
   waitlistId: string | undefined;
   handoffToken: string | null;
-  session: Awaited<ReturnType<typeof auth>>;
+  /** Started by the page, never awaited before the wave: the live-staff check chains off it. */
+  session: ReturnType<typeof auth>;
   now: Date;
 };
 
@@ -58,7 +70,7 @@ export async function readTripPage(
   // its own notice below, pays for the wave like any other; it is the rare
   // visit, and every booking visit used to pay a dozen round trips for it.
   // Seats on sale are capped at the boat's certificate (#2321).
-  const tripRead = getTripWithBooked(db, shop.id, tripId).then((row) => row && seatsOnSale(row));
+  const tripRead = publicTripRecord(shop.id, tripId).then((row) => row && seatsOnSale(row));
   const tripDivesRead = listTripDives(db, shop.id, tripId);
   // The embed's short confirmation renders only from a verified `confirm`
   // capability — never from a raw booking id in the URL (design principle 6:
@@ -94,7 +106,7 @@ export async function readTripPage(
     requirement,
     siteRequirement,
     payment,
-    emailsOnTheWay,
+    mailState,
     board,
     reviewAggregate,
   ] = await Promise.all([
@@ -109,7 +121,7 @@ export async function readTripPage(
     // frame instead of the compact booking widget. Live-checked (issue #966):
     // the "manage this trip" link it discloses is separately live-gated on
     // click, but the banner itself used to trust the cached JWT alone.
-    !isEmbed && isLiveShopStaff(db, shop.id, session),
+    !isEmbed && session.then((reader) => isLiveShopStaff(db, shop.id, reader)),
     tripRead,
     tripDivesRead,
     // Shop-scoped by the query's own join on `trips.shop_id`, like every other
@@ -165,10 +177,10 @@ export async function readTripPage(
           : false,
       };
     }),
-    // Only say "two emails are on their way" when both actually went — see
-    // the note at `readinessLink` below.
+    // Only say mail is on its way when it actually went, and name the waiver
+    // only when the confirmation carried one (UX review 2026-10-11, item 7).
     confirmedRead.then((booked) =>
-      booked ? bookingConfirmationAndWaiverEmailsSent(db, shop.id, booked.booking.id) : false,
+      booked ? bookingConfirmationMailState(db, shop.id, booked.booking.id) : ("none" as const),
     ),
     // One read of the shop's own board, feeding both lists of other boats
     // below (issues #1166 and #1161), and only when one could show.
@@ -203,7 +215,7 @@ export async function readTripPage(
     requirement,
     siteRequirement,
     payment,
-    emailsOnTheWay,
+    mailState,
     board,
     reviewAggregate,
   };

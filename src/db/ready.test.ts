@@ -5,7 +5,13 @@ import { DIVER_LOCALES } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
-import { cancelBooking, confirmCarriedFacts, createBooking, setBookingLastDived } from "./bookings";
+import {
+  addPartySeat,
+  cancelBooking,
+  confirmCarriedFacts,
+  createBooking,
+  setBookingLastDived,
+} from "./bookings";
 import { setBookingPayment } from "./payments";
 import {
   createCertification,
@@ -101,6 +107,64 @@ describe("getReadyPageData", () => {
   // page renders it from — and `canCancelBooking` has to agree with
   // `selfCancelBooking`'s own pre-checks exactly, or the page offers a button
   // that can only come back refused.
+  /** UX review 2026-10-11, item 13: the page draws "Add a seat" only where it can work. */
+  it("offers a seat to add on a booking that may lead one, never on a party member's seat", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
+    const added = await addPartySeat(db, {
+      shopId: shop.id,
+      leadBookingId: bookingId,
+      seatName: "Milo",
+    });
+    if (!added.ok) throw new Error("add failed");
+    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
+    expect((await getReadyPageData(db, added.bookingId))?.canAddSeat).toBe(false);
+  });
+
+  /**
+   * Security review of layer 8, D3: the link is shared by design, so a lead
+   * who has not paid on a page that takes payment cannot fill the boat with
+   * unpaid seats. Paying (or a page that takes no payment) opens the door.
+   */
+  it("offers no seat to add until a lead the page could charge has paid", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await upsertShopStripeAccount(db, shop.id, "acct_ready_add_seat");
+    await setShopStripeAccountStatus(db, "acct_ready_add_seat", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const owing = await getReadyPageData(db, bookingId);
+    expect(owing?.canPay).toBe(true);
+    expect(owing?.canAddSeat).toBe(false);
+
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "stripe",
+      providerRef: "pi_ready_add_seat",
+    });
+    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
+  });
+
+  it("offers no seat to add on a held seat or a canceled one", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Nora Q" })
+      .where(eq(bookings.id, bookingId));
+    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(false);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null, identityBookedAs: null })
+      .where(eq(bookings.id, bookingId));
+    await cancelBooking(db, shop.id, bookingId);
+    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(false);
+  });
+
   it("offers the cancel for a plain booked seat on a future departure", async () => {
     const { db, bookingId } = await unpaidBooking();
     const data = await getReadyPageData(db, bookingId);

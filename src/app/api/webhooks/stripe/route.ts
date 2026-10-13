@@ -15,6 +15,7 @@ import {
   recordOrderPaymentIntent,
 } from "@/db/orders";
 import { recordStripeDispute } from "@/db/payment-disputes";
+import { recordStripePayout } from "@/db/payouts";
 import { recordStripeRefundFailure } from "@/db/refund-failures";
 import { recordStripeChargeRefund } from "@/db/refunds";
 import {
@@ -40,6 +41,7 @@ import { errorCauseTokens, errorClassToken } from "@/lib/error-token";
 import { type LogContext, log } from "@/lib/log";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
+import { payoutSummaryLookupFromEnvironment } from "@/lib/payments/payout-summary";
 import { refundFailureReasonOf } from "@/lib/payments/refund-failure-reason";
 import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
 import { type StripeWebhookEvent, verifyStripeWebhook } from "@/lib/payments/webhook";
@@ -195,6 +197,23 @@ const disputeObjectSchema = z.object({
 });
 
 /**
+ * The Payout every `payout.*` event carries (ADR 20261012-payouts-reach-diveday).
+ * Only what the owner's line needs: the amount and currency, the day it reaches
+ * the bank, whether Stripe will itemize it, and why it failed.
+ */
+const payoutObjectSchema = z.object({
+  id: z.string().min(1),
+  amount: z.number().int().nonnegative(),
+  currency: z.string().min(1),
+  arrival_date: z.number().int(),
+  // The only two statuses a `payout.paid` / `payout.failed` event carries;
+  // anything else is refused rather than stored as "Paid out".
+  status: z.enum(["paid", "failed"]),
+  automatic: z.boolean().optional(),
+  failure_code: z.string().nullable().optional(),
+});
+
+/**
  * Record the PaymentIntent a session settled through, on whichever checkout
  * owns the session. Best-effort for the same reason the Customer write above
  * is: it must never swallow a settlement, and a refund that later finds no
@@ -270,6 +289,82 @@ async function recordSessionCustomer(
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
   }
+}
+
+/**
+ * A `charge.dispute.*` event, scoped to the event's own `account` (ADR
+ * 20261009-stripe-reversals-reach-diveday). Returns the outcome to log.
+ */
+async function applyDisputeEvent(
+  db: AppDb,
+  event: StripeWebhookEvent,
+  occurredAt: Date,
+  sourceLookup: PaymentSourceLookup,
+): Promise<string> {
+  const dispute = disputeObjectSchema.safeParse(event.data.object);
+  if (!dispute.success) return "malformed_payload";
+  if (!event.account) return "missing_account";
+  const paymentIntentId = idOf(dispute.data.payment_intent);
+  if (!paymentIntentId) return "dispute_target_not_found";
+  const dueBy = dispute.data.evidence_details?.due_by;
+  const outcome = await recordStripeDispute(
+    db,
+    {
+      stripeAccountId: event.account,
+      eventType: event.type,
+      occurredAt,
+      dispute: {
+        id: dispute.data.id,
+        paymentIntentId,
+        amountCents: dispute.data.amount,
+        currency: dispute.data.currency,
+        reason: dispute.data.reason ?? null,
+        status: dispute.data.status,
+        evidenceDueBy: dueBy ? new Date(dueBy * 1000) : null,
+        createdAt: new Date(dispute.data.created * 1000),
+      },
+    },
+    sourceLookup,
+  );
+  if (outcome.status === "recorded") return "dispute_recorded";
+  return outcome.status === "stale" ? "stale_dispute_event" : "dispute_target_not_found";
+}
+
+/**
+ * A `payout.paid` or `payout.failed` event (ADR 20261012-payouts-reach-diveday).
+ * Whose payout it is comes from the event's own `account` alone, the same way
+ * every reversal is scoped. Returns the outcome to log, or `"deferred"` when
+ * Stripe could not be asked what the payout carried.
+ */
+async function applyPayoutEvent(
+  db: AppDb,
+  event: StripeWebhookEvent,
+  occurredAt: Date,
+  livemode: boolean,
+): Promise<string> {
+  const payout = payoutObjectSchema.safeParse(event.data.object);
+  if (!payout.success) return "malformed_payload";
+  if (!event.account) return "missing_account";
+  const outcome = await recordStripePayout(
+    db,
+    {
+      stripeAccountId: event.account,
+      occurredAt,
+      payout: {
+        id: payout.data.id,
+        amountCents: payout.data.amount,
+        currency: payout.data.currency,
+        status: payout.data.status,
+        arrivalDate: new Date(payout.data.arrival_date * 1000),
+        automatic: payout.data.automatic ?? false,
+        failureCode: payout.data.failure_code ?? null,
+      },
+    },
+    payoutSummaryLookupFromEnvironment(process.env, fetch, { livemode }),
+  );
+  if (outcome.status === "deferred") return "deferred";
+  if (outcome.status === "recorded") return "payout_recorded";
+  return outcome.status === "stale" ? "stale_payout_event" : "payout_account_not_found";
 }
 
 function invoiceTaxCents(invoice: z.infer<typeof invoiceObjectSchema>): number | null {
@@ -676,44 +771,16 @@ export async function POST(request: Request) {
       }
       case "charge.dispute.created":
       case "charge.dispute.updated":
-      case "charge.dispute.closed": {
-        const dispute = disputeObjectSchema.safeParse(event.data.object);
-        const paymentIntentId = dispute.success ? idOf(dispute.data.payment_intent) : null;
-        if (!dispute.success) {
-          logOutcome("malformed_payload");
-        } else if (!event.account) {
-          logOutcome("missing_account");
-        } else if (!paymentIntentId) {
-          logOutcome("dispute_target_not_found");
-        } else {
-          const dueBy = dispute.data.evidence_details?.due_by;
-          const outcome = await recordStripeDispute(
-            db,
-            {
-              stripeAccountId: event.account,
-              eventType: event.type,
-              occurredAt,
-              dispute: {
-                id: dispute.data.id,
-                paymentIntentId,
-                amountCents: dispute.data.amount,
-                currency: dispute.data.currency,
-                reason: dispute.data.reason ?? null,
-                status: dispute.data.status,
-                evidenceDueBy: dueBy ? new Date(dueBy * 1000) : null,
-                createdAt: new Date(dispute.data.created * 1000),
-              },
-            },
-            sourceLookup,
-          );
-          logOutcome(
-            outcome.status === "recorded"
-              ? "dispute_recorded"
-              : outcome.status === "stale"
-                ? "stale_dispute_event"
-                : "dispute_target_not_found",
-          );
-        }
+      case "charge.dispute.closed":
+        logOutcome(await applyDisputeEvent(db, event, occurredAt, sourceLookup));
+        break;
+      case "payout.paid":
+      case "payout.failed": {
+        // Money Stripe moved to the shop's bank, or tried to (ADR
+        // 20261012-payouts-reach-diveday).
+        const outcome = await applyPayoutEvent(db, event, occurredAt, expectedLivemode);
+        if (outcome === "deferred") deferred = true;
+        else logOutcome(outcome);
         break;
       }
       default:
@@ -741,7 +808,8 @@ export async function POST(request: Request) {
     // that is already disconnected nor touches one reconnected since this
     // event's own `created` time, `recordStripeChargeRefund` only ever raises a
     // refunded total to Stripe's cumulative figure, and `recordStripeDispute`
-    // upserts one row per dispute ordered by the event's `created` time.
+    // and `recordStripePayout` each upsert one row per Stripe object ordered by
+    // the event's `created` time.
     //
     // The two ordering checks above are what a release must not undermine, and
     // the reason it nulls `claimed_at` instead of deleting the row: the ledger

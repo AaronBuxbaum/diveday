@@ -186,9 +186,13 @@
   counter points at the departure's own invite control rather than growing a second sender beside
   it. The second offer is about the **diver**, not the seat: a departure cannot take a seat on
   another departure, so it names the person and links to the door that seats them on a **similar
-  departure**. The third is said plainly, because a surface that invents an offer here is worse than
-  one that says nobody is waiting. No branch moves money; the money is one sentence and a link to
-  that diver's orders.
+  departure**, and beside each day carries a one-tap **direct invitation** to it
+  (`offerDepartureToDiver`, `src/db/trip-invitations.ts`): the diver books the seat themselves from
+  the link, and a diver who turned off shop email is not emailed. Only a day that diver could book
+  is named or sent: open, not private, not yet left, with a sellable seat, and one their cards admit
+  them to (`departureOpenToDiver`). The third is said plainly, because a surface that invents an
+  offer here is worse than one that says nobody is waiting. No branch seats anyone or moves money;
+  the money is one sentence and a link to that diver's orders.
 - **Crew schedule** — whether a shop plans its crew in DiveDay (`shops.crew_schedule_enabled`, Settings
   → Team, **off for a new shop**). On, the shop has the Crew view of Schedule (working shifts, days
   away, crew asking for a departure), the crew line on the week, and the nudges measured against
@@ -1267,7 +1271,7 @@
 - **First-timer track** — the night-before brief in a softer, what-happens-on-the-boat voice for a
   diver with no prior non-cancelled booking on a departed trip with the shop. Same data, extra
   reassurance; the signal is derived at send time, not stored.
-- **Desk hours** and the **after-hours ping** — when somebody is at the shop's desk: one window every day in the shop's own zone (`shops.desk_opens_minute`, `shops.desk_closes_minute`, 08:00–18:00 until the shop changes it under Settings → Messages). A diver message filed by the inbound email or WhatsApp webhook while the desk is closed sends a `desk_after_hours` email to each staffer who wants it: on by default for an owner or a manager, off for everyone else, and each staffer's own answer (`user_accounts.after_hours_ping`) wins, from their Email settings. At most one per person per half hour (`user_accounts.after_hours_pinged_at`, claimed by one conditional update), naming how many divers (distinct senders) wrote in since the desk closed and are still unanswered, with a link to the Inbox. Only a message whose sender the channel vouched for (`inbound_messages.sender_authenticated`) and that SES did not flag as spam (`inbound_messages.spam_flagged`) pings or is counted. A message batched behind a ping gets one trailing catch-up from the hourly `/api/cron/desk-pings` sweep once that staffer's half hour has run out, if it is still unanswered and the desk is still closed. The webhooks run the ping after they have answered (`after()`). Never the sender, the subject or a word of the message. Staff operational mail under H-09: no unsubscribe, no postal footer, not queued for retry, and never from a demo shop. Rule in `src/lib/desk-hours.ts`, reads and the send in `src/db/desk-pings.ts`.
+- **Desk hours** and the **after-hours ping** — when somebody is at the shop's desk: one window every day in the shop's own zone (`shops.desk_opens_minute`, `shops.desk_closes_minute`, 08:00–18:00 until the shop changes it under Settings → Messages; once saved, `shops.desk_hours_confirmed_at` lets the public footer print them). A diver message filed by the inbound email or WhatsApp webhook while the desk is closed sends a `desk_after_hours` email to each staffer who wants it: on by default for an owner or a manager, off for everyone else, and each staffer's own answer (`user_accounts.after_hours_ping`) wins, from their Email settings. At most one per person per half hour (`user_accounts.after_hours_pinged_at`, claimed by one conditional update), naming how many divers (distinct senders) wrote in since the desk closed and are still unanswered, with a link to the Inbox. Only a message whose sender the channel vouched for (`inbound_messages.sender_authenticated`) and that SES did not flag as spam (`inbound_messages.spam_flagged`) pings or is counted. A message batched behind a ping gets one trailing catch-up from the hourly `/api/cron/desk-pings` sweep once that staffer's half hour has run out, if it is still unanswered and the desk is still closed. The webhooks run the ping after they have answered (`after()`). Never the sender, the subject or a word of the message. Staff operational mail under H-09: no unsubscribe, no postal footer, not queued for retry, and never from a demo shop. Rule in `src/lib/desk-hours.ts`, reads and the send in `src/db/desk-pings.ts`.
 - **Monday email** (weekly digest) — the owner's service email about their own shop's week, sent once per person per shop-local week on Monday between 08:00 and 20:00 shop time (`/api/cron/weekly-digest`, hourly). Sections, each a count and a link into the staff app, appear only when they have something to say: last week's bookings made and seats filled against capacity (Reports' own query), this week's departures and seat fill and the divers still owing a waiver (the shared readiness horizon), reviews received and waiting on moderation, date requests still waiting, and Today rows that are past due. A week with none of these sends nothing. Last week's figures and Today's money and platform chores go only to someone Reports' gate admits (`canViewShopReports`, read from live roles); anyone else who opts in gets the rest. On by default for an owner, off for everyone else, and each staffer's own answer (`user_accounts.weekly_digest`) wins; it is turned off from the staffer's Email settings or the email's own one-click link. Transactional under H-09 (staff, about their own operation), so it carries no commercial postal footer. Demo shops never send; any staffer can preview this week's at `/shop/<slug>/settings/email/preview`. Logic in `src/lib/weekly-digest.ts`, reads and the send claim (`weekly_digest_sends`) in `src/db/weekly-digest.ts`.
 - **Post-trip recap** — the per-diver-per-trip reading of the day, delivered once per booking as the
   `trip_recap` kind no earlier than four hours after the departure ends. It rides the same
@@ -1482,6 +1486,14 @@
   their own password, which flips the account to **active**. A shop may never end up with zero
   people holding the `owner` role: removing, disabling, or demoting the shop's last owner is
   refused. See [20260726-staff-invite-accounts](../../architecture/decisions/20260726-staff-invite-accounts.md).
+- **Your week** — a crew member's next three departures, on their Today below the day: the boat
+  and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the roster
+  did not say), and the one crew gap the staffing week would draw on it, from the same pass
+  (`getStaffingView`'s `gapTrips`). The window is tomorrow and the six days after it in the shop's
+  zone; today's boat is already badged on the spine. Shown to a reader the Today lens files under
+  boat work, or a deckhand, at a shop that plans its crew (`shops.crew_schedule_enabled`); absent
+  for a reader rostered on nothing. Read in `src/db/crew-week.ts`, drawn by
+  `_components/today/YourWeek.tsx`.
 - **Crew warning** — a line above the staffing week that informs and never blocks. Four checks: a
   departure whose rostered crew holds no current oxygen-provider credential; separately, one whose
   crew holds no current first aid / CPR credential; a person whose **crewed departures** run past

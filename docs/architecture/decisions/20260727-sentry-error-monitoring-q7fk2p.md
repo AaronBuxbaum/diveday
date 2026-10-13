@@ -36,10 +36,15 @@ Zero new dependency, zero new cost.
 
 
 - `src/app/observability.ts` centralizes the capability-URL redaction hooks, imported by both entry points below.
-- `src/instrumentation.ts` (`register()`) calls it server-side and exports `onRequestError` as
-  `Sentry.captureRequestError` — the SDK's purpose-built adapter for Next's
+- `src/instrumentation.ts` (`register()`) calls it server-side and exports `onRequestError`, which
+  hands each error to `Sentry.captureRequestError` — the SDK's purpose-built adapter for Next's
   `Instrumentation.onRequestError` hook, covering Server Components, Route Handlers, and Server
-  Actions.
+  Actions. *Amended 2026-10-12 (code review 2026-10-11, item 22):* both import the SDK only when a
+  DSN is set, and the server starts it with `defaultIntegrations: false` and a named list (event
+  filters, linked errors, dedupe, request data, uncaught exceptions and rejections, context
+  lines, runtime context). An errors-only server has no use for the SDK's OpenTelemetry HTTP and
+  fetch instrumentation, console breadcrumbs or local variables, and a static import put its
+  runtime in the two largest server chunks of every route. The client side is unchanged.
 - `src/instrumentation-client.ts` calls it client-side; the SDK's default `GlobalHandlers`
   integration then covers uncaught exceptions and unhandled promise rejections without any manual
   listener code.

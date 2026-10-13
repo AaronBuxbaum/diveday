@@ -49,6 +49,7 @@ vi.mock("@/db/orders", () => ({
 vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
 vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
 vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
+vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn() }));
 vi.mock("@/db/stripe-accounts", () => ({
   setShopStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
@@ -73,6 +74,7 @@ const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPayment
 const { recordStripeChargeRefund } = await import("@/db/refunds");
 const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
+const { recordStripePayout } = await import("@/db/payouts");
 const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );
@@ -137,6 +139,7 @@ beforeEach(() => {
   vi.mocked(recordCheckoutPaymentIntent).mockReset().mockResolvedValue(true);
   vi.mocked(recordStripeChargeRefund).mockReset().mockResolvedValue({ status: "already_recorded" });
   vi.mocked(recordStripeDispute).mockReset().mockResolvedValue({ status: "not_found" });
+  vi.mocked(recordStripePayout).mockReset().mockResolvedValue({ status: "not_found" });
   vi.mocked(setShopStripeAccountStatus).mockReset();
   vi.mocked(disconnectShopStripeAccount).mockReset();
   vi.mocked(markTipPaidBySessionId).mockReset();
@@ -334,6 +337,40 @@ describe("money reversed outside DiveDay (ADR 20261009-stripe-reversals-reach-di
       expect.objectContaining({
         eventType: "charge.dispute.closed",
         dispute: expect.objectContaining({ status: "won", evidenceDueBy: null }),
+      }),
+      expect.anything(),
+    );
+  });
+});
+
+describe("payouts (ADR 20261012-payouts-reach-diveday)", () => {
+  it("payout.paid reads the amount, arrival day and automatic flag off a real Payout", async () => {
+    expect((await deliver("payout.paid")).status).toBe(200);
+    expect(recordStripePayout).toHaveBeenCalledWith(
+      FAKE_DB,
+      {
+        stripeAccountId: ACCOUNT,
+        occurredAt: new Date(1785060000 * 1000),
+        payout: {
+          id: "po_1QsAVmLkdIwHu7ixPayoutA",
+          amountCents: 184_200,
+          currency: "usd",
+          status: "paid",
+          arrivalDate: new Date(1785024000 * 1000),
+          automatic: true,
+          failureCode: null,
+        },
+      },
+      expect.anything(),
+    );
+  });
+
+  it("payout.failed carries Stripe's failure code", async () => {
+    await deliver("payout.failed");
+    expect(recordStripePayout).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({
+        payout: expect.objectContaining({ status: "failed", failureCode: "account_closed" }),
       }),
       expect.anything(),
     );

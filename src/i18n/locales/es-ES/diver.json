@@ -61,6 +61,8 @@
     "languageHeading": "Idioma",
     "footerLine": "{shop}",
     "spokenLanguages": "Hablamos {languages}",
+    "deskHours": "Mostrador abierto de {opens} a {closes}",
+    "whatsApp": "Escríbenos por WhatsApp",
     "languageFallback": "DiveDay todavía no está en {requested}. Esta página está en {shown}, el idioma en el que trabaja {shop}.",
     "credit": "Reservas con DiveDay"
   },
@@ -420,7 +422,12 @@
       "promoInvalid": "Ese código no está activo.",
       "participantTypeInvalid": "Elige una de las opciones de la lista."
     },
-    "emailsOnTheWay": "Te llegarán dos correos: la confirmación de tu reserva y el enlace para firmar tu exención.",
+    "confirmationOnTheWay": "Tu confirmación va en camino por correo.",
+    "confirmationWithWaiverOnTheWay": "Tu confirmación va en camino por correo. Firmar tu exención es el primer paso.",
+    "alreadyDoor": {
+      "sendLink": "Envíame mi enlace",
+      "addSeat": "¿Vienes con alguien? Abre tu enlace y agrega una plaza para esa persona."
+    },
     "embedPayNext": "Tu plaza está reservada. El pago se abre en la página segura de DiveDay, fuera de esta ventana.",
     "continueToPayment": "Continuar al pago",
     "alsoOnTheSchedule": "También en el calendario",
@@ -645,11 +652,11 @@
     "tipCancelled": "Sin problema, no se ha cobrado la propina.",
     "tipRange": "Introduce una propina de entre 1 y 500 $.",
     "tipFailed": "No ha salido bien. Inténtalo de nuevo en un momento.",
-    "tipThanksNotice": "¡Gracias por la propina a la tripulación!",
+    "tipThanksNotice": "Gracias por la propina. El centro se la pasa a la tripulación.",
     "tipConfirming": "Estamos confirmando tu pago, que normalmente tarda unos segundos. Actualiza la página si no se actualiza solo.",
     "photoLimit": "Es el máximo de fotos que admite un resumen ({max}).",
-    "tipPaid": "Gracias. Tu propina va directa a {shop}. Se encargarán de que la tripulación lo sepa.",
-    "tipAllGoes": "El 100 % va a {shop}, sin retenciones y sin necesidad de cuenta.",
+    "tipPaid": "Gracias. Tu propina va a {shop}, que se la pasa a la tripulación.",
+    "tipAllGoes": "Va a {shop}, que se la pasa a la tripulación. No necesitas cuenta.",
     "tipFinish": "Completa tu propina de {amount}",
     "tipLeave": "Dejar propina",
     "fromYourCrew": "De tu tripulación",
@@ -878,6 +885,7 @@
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
     "logEntryWaiting": "Después de bucear, tu página de bitácora te espera aquí.",
+    "offlineCopy": "Sin cobertura: esta es la copia que guardó tu teléfono. Para cambiar algo aquí necesitas cobertura.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
     "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
     "changesSizesLabel": "Tallas",
@@ -1090,6 +1098,17 @@
     "waiverDone": "Papeleo terminado"
   },
   "seatClaim": {
+    "addNameMissing": "Escribe su nombre para agregar una plaza.",
+    "addPartyFull": "Tu grupo ya tiene todas las plazas que admite una reserva. Pide al centro que agregue más.",
+    "addAskShop": "El centro necesita revisar primero quién viene en esta salida. Contáctalo para agregar una plaza.",
+    "addFull": "El barco está lleno, así que no hay plaza que agregar. Pregunta al centro por otro día.",
+    "addUnavailable": "Ahora no se puede agregar una plaza a esta reserva. Contacta al centro y la agregan.",
+    "addedNotice": "Plaza agregada. Envíale el enlace que aparece bajo su nombre.",
+    "addPending": "Agregando…",
+    "addSubmit": "Agregar una plaza",
+    "addNameLabel": "Su nombre",
+    "addBody": "Agrega una plaza a tu reserva. La otra persona la reclama con su propio enlace, con su propia exención y su propio pago.",
+    "addHeading": "Trae a alguien",
     "metaTitle": "Reclama tu plaza",
     "heading": "Hay una plaza en {trip} esperándote",
     "body": "Quien organiza tu grupo reservó esta plaza con {shop} y la guardó como “{seatName}”. Tu exención y tu preparación llegarán directamente a ti, no a través de esa persona.",
@@ -4136,6 +4155,8 @@
       "subject": "Estás a bordo — {tripTitle}",
       "confirmed": "Tu plaza en {tripTitle} está confirmada.",
       "dockNote": "Preséntate en el muelle {dock} antes. Nosotros nos encargamos del resto.",
+      "waiverStep": "Primero, firma tu exención. {shopName} la necesita antes de que subas a bordo.",
+      "waiverLink": "Firmar tu exención",
       "packingHeading": "Trae",
       "moneyOnline": "Tu plaza: {amount}, con tarjeta en línea.",
       "moneyDeposit": "Tu plaza: {deposit} con tarjeta en línea y {balance} en el muelle el {date}.",
@@ -4492,6 +4513,10 @@
       "daysAtSea": "Días en el mar",
       "mostDived": "El más buceado · {times, number}",
       "divers": "Buceadores"
+    },
+    "panel": {
+      "heading": "Nuestro año",
+      "sentenceNoSites": "{divers, plural, one {# buceador} other {# buceadores}}. {boats, plural, one {# salida} other {# salidas}}."
     }
   },
   "participants": {

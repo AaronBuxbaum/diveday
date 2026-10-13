@@ -1,5 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
-import { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION } from "@/app/observability";
+import type { captureRequestError } from "@sentry/nextjs";
 import { SENTRY_DSN } from "@/lib/sentry-dsn";
 
 /**
@@ -51,17 +50,64 @@ export async function register() {
     throw new Error(`Invalid APP_HOST configuration: ${result.reason}`);
   }
 
-  if (SENTRY_DSN) {
-    Sentry.init({
-      dsn: SENTRY_DSN,
-      environment: process.env.NODE_ENV,
-      tracesSampleRate: 0,
-      dataCollection: SENTRY_DATA_COLLECTION,
-      beforeSend: redactEvent,
-      beforeBreadcrumb: redactBreadcrumb,
-    });
-  }
+  if (SENTRY_DSN) await initSentry(SENTRY_DSN);
 }
 
-/** Server-side errors (docs ADR 20260727-sentry-error-monitoring) */
-export const onRequestError = Sentry.captureRequestError;
+/**
+ * **Sentry on the server, as much of it as this app uses** (code review
+ * 2026-10-11, item 22). Errors only: `tracesSampleRate` is 0, so none of the
+ * SDK's OpenTelemetry instrumentation (HTTP, fetch, the frameworks), console
+ * breadcrumbs, local variables, process sessions or module lists has anything
+ * to do here but cost a cold start. `defaultIntegrations: false` and the list
+ * below are what `onRequestError` and the crons' `captureException`,
+ * `captureMessage` and `captureCheckIn` actually lean on — none of the three
+ * needs an integration of its own.
+ *
+ * Imported only when a DSN is set (`NEXT_PUBLIC_SENTRY_DSN=` empty switches it
+ * off, as `pnpm e2e:build` does), and from here rather than at module scope:
+ * this module is in every server entry's graph, and a static import put the
+ * SDK's runtime in the two largest server chunks of every route.
+ */
+async function initSentry(dsn: string) {
+  const [Sentry, { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION }] = await Promise.all([
+    import("@sentry/nextjs"),
+    import("@/app/observability"),
+  ]);
+  Sentry.init({
+    dsn,
+    environment: process.env.NODE_ENV,
+    tracesSampleRate: 0,
+    dataCollection: SENTRY_DATA_COLLECTION,
+    beforeSend: redactEvent,
+    beforeBreadcrumb: redactBreadcrumb,
+    defaultIntegrations: false,
+    integrations: [
+      // Which events are worth keeping, and how they read.
+      Sentry.eventFiltersIntegration(),
+      Sentry.functionToStringIntegration(),
+      Sentry.linkedErrorsIntegration(),
+      Sentry.dedupeIntegration(),
+      // The request an error happened in — URL and query redacted by `redactEvent`.
+      Sentry.requestDataIntegration(),
+      // A throw nothing caught, which `onRequestError` never sees.
+      Sentry.onUncaughtExceptionIntegration(),
+      Sentry.onUnhandledRejectionIntegration(),
+      // Source lines around each frame, and the runtime it ran on.
+      Sentry.contextLinesIntegration(),
+      Sentry.nodeContextIntegration(),
+    ],
+  });
+}
+
+/**
+ * Server-side errors (docs ADR 20260727-sentry-error-monitoring):
+ * `captureRequestError`, reached the same lazy way, and nothing at all when no
+ * DSN is set — there is no client to report to.
+ */
+export async function onRequestError(
+  ...args: Parameters<typeof captureRequestError>
+): Promise<void> {
+  if (!SENTRY_DSN) return;
+  const { captureRequestError } = await import("@sentry/nextjs");
+  captureRequestError(...args);
+}

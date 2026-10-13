@@ -10,7 +10,7 @@ import { consumeBookingHandoff, offerBookingHandoffByEmail } from "@/db/booking-
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals";
 import { type CheckoutPromo, startBookingCheckout } from "@/db/checkouts";
-import { getDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import { recordShopMilestone } from "@/db/founder-metrics";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
@@ -23,7 +23,11 @@ import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
-import { issueWaiverOnJoin } from "@/db/waiver-issue";
+import {
+  issueJoinWaiverLink,
+  issueWaiverOnJoin,
+  settleJoinWaiverDelivery,
+} from "@/db/waiver-issue";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
@@ -115,6 +119,14 @@ function embedParam(embed: boolean | undefined, delimiter: "&" | "?"): string {
 export type BookingFormState = {
   error?: string;
   fieldErrors?: Record<string, string>;
+  /**
+   * The address the "already on this trip" refusal was about, as the diver
+   * typed it, so the refusal can offer "Send me my link" to that inbox (UX
+   * review 2026-10-11, item 8). It goes through `requestFindMyBookingAction`,
+   * which answers the same whatever the address holds and mails only the
+   * address on file, so echoing it back reveals nothing the refusal did not.
+   */
+  alreadyBookedEmail?: string;
 };
 
 const bookSchema = z.object({
@@ -449,7 +461,9 @@ export async function bookSpot(
       code === "unavailable" && shopNow.contactEmail
         ? t("booking.errors.unavailableWithContact", { contact: shopNow.contactEmail })
         : t(ERROR_MESSAGE_KEYS[code]);
-    return { error: message, fieldErrors: memberFieldErrors };
+    const alreadyBookedEmail =
+      code === "already" ? validParty[outcome.failedIndex ?? 0]?.email || undefined : undefined;
+    return { error: message, fieldErrors: memberFieldErrors, alreadyBookedEmail };
   }
   await trackEvent({ name: "booking_completed", source: "diver", partySize: validParty.length });
   // The shop's first booking through its own public pages is an activation
@@ -486,16 +500,7 @@ export async function bookSpot(
     bookingId: primaryBookingId,
     purpose: "readiness",
   });
-  // The door remembers who opened it (ADR 20260906-before-you-ask, decision
-  // 3): the handoff this page was opened through is single-use, and the
-  // booking is its one use. A stale or forged value is a no-op.
-  const handoff = z
-    .string()
-    .regex(/^[A-Za-z0-9_-]{20,128}$/)
-    .safeParse(fields.handoff);
-  if (handoff.success) {
-    await consumeBookingHandoff(dbi, { shopId: shopNow.id, token: handoff.data });
-  }
+  await consumeHandoffFromForm(dbi, shopNow.id, fields.handoff);
   // This form is the diver's own — the public schedule page, submitted from
   // their device — so its `Accept-Language` is first-hand evidence of the
   // language the lead booker reads (docs ADR
@@ -511,52 +516,18 @@ export async function bookSpot(
     bookingId: primaryBookingId,
     locale: ownLocale,
   });
-  if (confirmedBooking?.person.email && tripNow) {
-    try {
-      const delivery = await sendAndRecordNotification(
-        dbi,
-        bookSpotConfirmation({
-          shop: shopNow,
-          trip: tripNow,
-          confirmed: confirmedBooking,
-          to: confirmedBooking.person.email,
-          locale: recipientLocale(
-            ownLocale ?? confirmedBooking.person.locale,
-            shopNow.defaultLocale,
-          ),
-          readinessUrl: readinessCapability
-            ? readinessEmailUrl(readinessCapability.token)
-            : undefined,
-          chargesOnline: payAtBookingForGear,
-        }),
-      );
-      if (delivery.status === "failed") {
-        log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });
-      }
-    } catch (error) {
-      // Email must never turn a completed, capacity-safe booking into an error page.
-      log("booking.confirmation_prepare_failed", "error", {
-        bookingId: primaryBookingId,
-        errorCode: error instanceof Error ? error.name : "unknown_error",
-      });
-    }
-  }
-  // Send each diver their waiver the moment they join, when the trip needs one
-  // and they aren't already covered (issueWaiverOnJoin makes that call). The
-  // seats are already committed, so a delivery failure is logged and dropped —
-  // it must never turn a completed booking into an error.
-  await Promise.all(
-    outcome.bookings.map(async ({ bookingId }) => {
-      try {
-        await issueWaiverOnJoin(dbi, shopNow.id, bookingId);
-      } catch (error) {
-        log("booking.waiver_on_join_failed", "error", {
-          bookingId,
-          errorCode: error instanceof Error ? error.name : "unknown_error",
-        });
-      }
-    }),
-  );
+  // The confirmation and every diver's waiver, after the seats are committed:
+  // nothing in it may turn a completed booking into an error.
+  await sendJoinMail(dbi, {
+    shop: shopNow,
+    trip: tripNow,
+    lead: confirmedBooking,
+    primaryBookingId,
+    bookings: outcome.bookings,
+    ownLocale,
+    readinessToken: readinessCapability?.token,
+    chargesOnline: payAtBookingForGear,
+  });
 
   // Persist each diver's chosen gear (and nitrox request) the moment their
   // booking exists — the same durable record `saveRentalFit`/`setBookingNitrox`
@@ -771,6 +742,122 @@ export async function bookSpot(
  * Never throws. A seat is a seat whether or not the shop gets to count where it
  * came from.
  */
+/**
+ * The door remembers who opened it (ADR 20260906-before-you-ask, decision 3):
+ * the handoff this page was opened through is single-use, and the booking is
+ * its one use. A stale or forged value is a no-op.
+ */
+async function consumeHandoffFromForm(dbi: AppDb, shopId: string, value: unknown): Promise<void> {
+  const handoff = z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{20,128}$/)
+    .safeParse(value);
+  if (handoff.success) {
+    await consumeBookingHandoff(dbi, { shopId, token: handoff.data });
+  }
+}
+
+/**
+ * The mail a completed booking sends, in order: the lead's confirmation, with
+ * their waiver riding in it as its first step when one is owed, then every
+ * other diver's waiver on its own. The seats are already committed before this
+ * runs, so every failure in here is logged and dropped — it must never turn a
+ * capacity-safe booking into an error page.
+ */
+async function sendJoinMail(
+  dbi: AppDb,
+  {
+    shop,
+    trip,
+    lead,
+    primaryBookingId,
+    bookings,
+    ownLocale,
+    readinessToken,
+    chargesOnline,
+  }: {
+    shop: NonNullable<Awaited<ReturnType<typeof getShopBySlug>>>;
+    trip: Awaited<ReturnType<typeof getTripWithBooked>>;
+    lead: Awaited<ReturnType<typeof getBookingForTrip>>;
+    primaryBookingId: string;
+    bookings: readonly { bookingId: string }[];
+    ownLocale: Awaited<ReturnType<typeof requestFirstHandLocale>>;
+    /** The lead's `/ready` capability, when one was minted. */
+    readinessToken: string | undefined;
+    /** Whether this booking went to a checkout, the rule the form used. */
+    chargesOnline: boolean;
+  },
+): Promise<void> {
+  // One booking, one email (UX review 2026-10-11, item 7): the lead's waiver,
+  // when one is owed, rides in the confirmation as its first step instead of
+  // following it seconds later in a mail of its own. Issued before the send
+  // so the confirmation can carry it; settled after, by how the send went.
+  const leadWaiver = await issueJoinWaiverLink(dbi, shop.id, primaryBookingId).catch(
+    (error: unknown) => {
+      log("booking.waiver_link_failed", "error", {
+        bookingId: primaryBookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+      return null;
+    },
+  );
+  let confirmationSent = false;
+  if (lead?.person.email && trip) {
+    try {
+      const delivery = await sendAndRecordNotification(
+        dbi,
+        bookSpotConfirmation({
+          shop,
+          trip,
+          confirmed: lead,
+          to: lead.person.email,
+          locale: recipientLocale(ownLocale ?? lead.person.locale, shop.defaultLocale),
+          readinessUrl: readinessToken ? readinessEmailUrl(readinessToken) : undefined,
+          waiver: leadWaiver,
+          chargesOnline,
+        }),
+      );
+      confirmationSent = delivery.status === "sent";
+      if (delivery.status === "failed") {
+        log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });
+      }
+    } catch (error) {
+      // Email must never turn a completed, capacity-safe booking into an error page.
+      log("booking.confirmation_prepare_failed", "error", {
+        bookingId: primaryBookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
+  }
+  // Send each diver their waiver the moment they join, when the trip needs one
+  // and they aren't already covered (issueWaiverOnJoin makes that call). The
+  // lead's already rode in the confirmation; settling it records that, or
+  // mails it on its own when the confirmation did not go. The seats are
+  // already committed, so a delivery failure is logged and dropped — it must
+  // never turn a completed booking into an error.
+  await Promise.all(
+    bookings.map(async ({ bookingId }) => {
+      try {
+        if (bookingId === primaryBookingId && leadWaiver) {
+          await settleJoinWaiverDelivery(dbi, {
+            shopId: shop.id,
+            bookingId,
+            link: leadWaiver,
+            confirmationSent,
+          });
+          return;
+        }
+        await issueWaiverOnJoin(dbi, shop.id, bookingId);
+      } catch (error) {
+        log("booking.waiver_on_join_failed", "error", {
+          bookingId,
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
+      }
+    }),
+  );
+}
+
 async function creditBuddyReferral(
   dbi: Awaited<ReturnType<typeof getDb>>,
   input: { shopId: string; shopSlug: string; bookingId: string },
@@ -977,6 +1064,8 @@ function bookSpotConfirmation(input: {
   to: string;
   locale: DiverLocale;
   readinessUrl: string | undefined;
+  /** The lead's waiver, riding in the confirmation as its first step when one is owed. */
+  waiver: { url: string; expiresAt: Date } | null;
   chargesOnline: boolean;
 }): Notification {
   const { shop, trip, confirmed } = input;
@@ -994,6 +1083,8 @@ function bookSpotConfirmation(input: {
     timezone: shop.timezone,
     dockCallMinutes: shop.dockCallMinutes,
     readinessUrl: input.readinessUrl,
+    waiverUrl: input.waiver?.url,
+    waiverExpiresAt: input.waiver?.expiresAt,
     packingList: shop.packingList,
     // A course session's learning materials, delivered with the seat
     // (ADR 20261008-course-learning-materials).

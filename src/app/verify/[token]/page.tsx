@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -9,6 +8,7 @@ import { checkAccountToken, wasAccountTokenConsumed } from "@/db/account-tokens"
 import { getDb } from "@/db/client";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { confirmEmailVerification } from "./actions";
 
 export const metadata: Metadata = {
@@ -36,7 +36,7 @@ export default async function VerifyAccountPage({
   params: Promise<{ token: string }>;
   searchParams: Promise<{ confirmed?: string }>;
 }) {
-  await connection();
+  await connectionForRoute("/verify/[token]");
   const { token } = await params;
   const { confirmed } = await searchParams;
   const db = await getDb();

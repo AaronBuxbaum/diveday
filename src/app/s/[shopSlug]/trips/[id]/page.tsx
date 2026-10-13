@@ -13,7 +13,6 @@ import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { checkoutMode } from "@/db/stripe-accounts";
-import { getTripWithBooked } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { languageEndonymList } from "@/i18n/language-labels";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
@@ -61,7 +60,7 @@ import { dayCoverPhoto, TripDayPlan } from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
 import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
-import { readTripPage } from "./_lib/page-reads";
+import { publicTripRecord, readTripPage } from "./_lib/page-reads";
 import { offerHandoff } from "./actions";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -86,10 +85,9 @@ export async function generateMetadata({
   // throw either: a junk id here would 500 the page before the body's
   // notFound() could render it.
   if (!uuidParam(id)) return { title: "Trip — DiveDay" };
-  const db = await getDb();
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) return { title: "Trip — DiveDay" };
-  const trip = await getTripWithBooked(db, shop.id, id);
+  const trip = await publicTripRecord(shop.id, id);
   if (!trip || trip.isRehearsal) return { title: "Trip — DiveDay" };
   const locale = await requestLocale(shop.defaultLocale);
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
@@ -163,7 +161,7 @@ export default async function TripDetailPage({
   // stored on their payment row instead (docs ADR 20260731-shop-currency).
   const shopCurrency = toShopCurrency(shop.currency);
   const t = diverTranslator(locale);
-  const session = await auth();
+  const session = auth();
   const now = nowDate();
   const {
     staffPreview,
@@ -180,7 +178,7 @@ export default async function TripDetailPage({
     requirement,
     siteRequirement,
     payment,
-    emailsOnTheWay,
+    mailState,
     board,
     reviewAggregate,
   } = await readTripPage(db, shop, {
@@ -350,15 +348,14 @@ export default async function TripDetailPage({
     ? t("trip.requirementNote", { list: requirementNote })
     : null;
   // The embed's short confirmation needs exactly one fact beyond the booking
-  // itself: whether both emails went. Everything the old in-page confirmation
-  // read — the payment panel, readiness, rental fit, the nitrox card, the
-  // party's claim links — now belongs to `/ready`, which reads it for every
-  // visit rather than only the one right after booking (ADR
-  // 20260820-one-page-after-booking).
-  //
-  // Only say "two emails are on their way" when both actually went — a party
-  // member booked without an address of their own gets neither
-  // (`emailsOnTheWay`, read in the wave above).
+  // itself: what mail went. Everything the old in-page confirmation read (the
+  // payment panel, readiness, rental fit, the nitrox card, the party's claim
+  // links) now belongs to `/ready`, which reads it on every visit rather than
+  // only the one right after booking (ADR 20260820-one-page-after-booking).
+  // Only say mail is on its way when it actually went — a party member booked
+  // without an address of their own gets none — and mention the waiver only
+  // when the confirmation carried one (UX review 2026-10-11, item 7;
+  // `mailState`, read in the wave above).
   // The door out to `/ready` is a *path*, resolved by `./ready/route.ts` when
   // the diver taps it. This render mints no capability: a readiness token is
   // stored hashed and so cannot be read back, and minting a fresh one per
@@ -509,6 +506,7 @@ export default async function TripDetailPage({
         "common",
         "course",
         "fallback",
+        "findMyBooking",
         "participants",
         "party",
         "rental",
@@ -703,7 +701,7 @@ export default async function TripDetailPage({
                   trip={trip}
                   confirmed={confirmed}
                   readinessLink={readinessLink}
-                  emailsOnTheWay={emailsOnTheWay}
+                  mailState={mailState}
                   payNotice={pay}
                   paymentUrl={
                     pay === "due"

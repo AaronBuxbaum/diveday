@@ -44,6 +44,10 @@ type BookingConfirmationEmailInput = {
   dockCallMinutes?: number;
   /** The diver's readiness page, so a closed tab never loses it. */
   readinessUrl?: string;
+  /** The waiver link this confirmation carries as its first step, when one is owed. */
+  waiverUrl?: string;
+  /** When `waiverUrl` expires. */
+  waiverExpiresAt?: Date;
   /** The shop's configured packing suggestions (`shops.packingList`). */
   packingList?: string[];
   /** A course session's learning materials, already read through `readLearningMaterials`. */
@@ -870,6 +874,37 @@ export type NotificationEmail = {
   html: string;
 };
 
+/**
+ * **The waiver, as the confirmation's first step** (UX review 2026-10-11, item
+ * 7). One booking is one email: the link that used to arrive seconds later in
+ * its own message sits right under the date, with its own button and its
+ * expiry. Empty strings when no waiver is owed, so a diver whose signature
+ * still covers the trip reads nothing about one.
+ */
+function waiverStep(
+  t: DiverTranslator,
+  input: Pick<
+    BookingConfirmationEmailInput,
+    "waiverUrl" | "waiverExpiresAt" | "shopName" | "locale" | "timezone"
+  >,
+) {
+  if (!input.waiverUrl) return { text: "", html: "" };
+  const lead = t("notifications.bookingConfirmation.waiverStep", { shopName: input.shopName });
+  const leadHtml = t("notifications.bookingConfirmation.waiverStep", {
+    shopName: escapeHtml(input.shopName),
+  });
+  const label = t("notifications.bookingConfirmation.waiverLink");
+  const expiry = input.waiverExpiresAt
+    ? t("notifications.waiverRequest.expiry", {
+        expiresAt: formatDateTimeTz(input.waiverExpiresAt, input.locale, input.timezone),
+      })
+    : "";
+  return {
+    text: `\n\n${lead}\n${label}:\n${input.waiverUrl}${expiry ? `\n${expiry}` : ""}`,
+    html: `<p><strong>${leadHtml}</strong></p>${emailButton(input.waiverUrl, label)}${expiry ? `<p style="font-size: 13px;">${escapeHtml(expiry)}</p>` : ""}`,
+  };
+}
+
 export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
@@ -908,6 +943,7 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   // A course's learning materials, above the packing list: the eLearning is
   // the one thing on this page with a deadline weeks before the boat.
   const materials = materialsSection(t, input.learningMaterials);
+  const waiver = waiverStep(t, input);
   const where = meetingPointSection(t, input.meetingPoint);
   // The terms the diver agreed to, under the time (ux review 2026-10-11, item
   // 5): what they pay and where, and until when they can walk away for free.
@@ -929,8 +965,8 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
 
   return {
     subject: t("notifications.bookingConfirmation.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirmed}\n\n${date}\n${time}${termsText}\n\n${dockNote}${where.text}${readyText}${calendarText}${materials.text}${reminderText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${termsHtml}<p>${dockNoteHtml}</p>${where.html}${readyHtml}${calendarHtml}${materials.html}${reminderHtml}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirmed}\n\n${date}\n${time}${termsText}${waiver.text}\n\n${dockNote}${where.text}${readyText}${calendarText}${materials.text}${reminderText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${termsHtml}${waiver.html}<p>${dockNoteHtml}</p>${where.html}${readyHtml}${calendarHtml}${materials.html}${reminderHtml}`,
   };
 }
 

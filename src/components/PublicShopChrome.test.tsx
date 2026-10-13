@@ -199,3 +199,49 @@ describe("the shop-wide spoken-languages line", () => {
     expect(screen.queryByText(/We speak/)).toBeNull();
   });
 });
+
+/** Item: the two facts a traveler comparing shops wants, when the shop has them. */
+describe("the footer's desk hours and WhatsApp", () => {
+  it("prints the desk hours line and a WhatsApp link when given them", () => {
+    render(
+      <PublicShopFooter
+        shop={shop}
+        spokenLanguagesLine={null}
+        deskHoursLine="Desk open 7:00 AM to 5:00 PM"
+        whatsAppHref="https://wa.me/13055550142"
+        t={t}
+      />,
+    );
+    expect(screen.getByText("Desk open 7:00 AM to 5:00 PM")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "Message us on WhatsApp" });
+    expect(link).toHaveAttribute("href", "https://wa.me/13055550142");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("prints neither when the shop has not saved hours or connected a sender", () => {
+    render(<PublicShopFooter shop={shop} spokenLanguagesLine={null} t={t} />);
+    expect(screen.queryByText(/Desk open/)).toBeNull();
+    expect(screen.queryByRole("link", { name: "Message us on WhatsApp" })).toBeNull();
+  });
+
+  it("draws the contact line for a shop whose only way in is WhatsApp", () => {
+    render(
+      <PublicShopFooter
+        shop={{
+          ...shop,
+          contactEmail: null,
+          contactPhone: null,
+          addressStreet: null,
+          addressLocality: null,
+          addressRegion: null,
+          addressPostalCode: null,
+          addressCountry: null,
+        }}
+        spokenLanguagesLine={null}
+        whatsAppHref="https://wa.me/13055550142"
+        t={t}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Message us on WhatsApp" })).toBeInTheDocument();
+  });
+});

@@ -17,7 +17,7 @@
   the log when its row is pruned, and an erased diver's lines read `[redacted]` there as they do
   everywhere. Refunds, write-offs and the schedule builder's acts (add, repeat, move, copy, delete)
   record their actor for it. Owners and managers only (`canViewShopActivity`); reached from
-  Settings' Data group at `/settings/activity`.
+  Settings' Team group at `/settings/activity`.
 
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive

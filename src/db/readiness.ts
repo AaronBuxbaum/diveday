@@ -1562,60 +1562,75 @@ export async function listTripsReadiness(
   const courseByTrip = new Map(courseRows.map((c) => [c.id, c]));
 
   const bookingIds = waiverRows.map((row) => row.booking.id);
-  const paymentByBooking = await paymentsByBooking(db, shopId, bookingIds);
   const personIds = waiverRows.map((row) => row.person.id);
-  // The forms each course session asks its students to sign, and every
-  // signature on these seats (ADR 20261008-course-forms). Sequential, not in
-  // `queryAll` above: both reads are skipped when no trip here is a course
-  // session, so a fun-dive render pays nothing for forms
-  // (`staff-render-cost.test.ts`).
   const courseTripIds = courseRows.filter((c) => c.courseId !== null).map((c) => c.id);
-  const courseFormsByTrip = await requiredCourseFormsForTrips(db, shopId, courseTripIds, now);
-  const courseFormSignatures =
-    courseFormsByTrip.size === 0
-      ? []
-      : await courseFormSignaturesForBookings(db, shopId, bookingIds);
-
-  const [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson, courseSeatRows] =
-    personIds.length === 0
-      ? [[], [], [], new Map<string, never[]>(), []]
-      : await queryAll(db, [
-          () =>
-            db
-              .select()
-              .from(certifications)
-              .where(
-                and(
-                  eq(certifications.shopId, shopId),
-                  inArray(certifications.personId, personIds),
-                  isNull(certifications.deletedAt),
-                ),
-              ),
-          () =>
-            db
-              .select()
-              .from(specialtyCertifications)
-              .where(
-                and(
-                  eq(specialtyCertifications.shopId, shopId),
-                  inArray(specialtyCertifications.personId, personIds),
-                  isNull(specialtyCertifications.deletedAt),
-                ),
-              ),
-          () =>
-            db
-              .select()
-              .from(nitroxCertifications)
-              .where(
-                and(
-                  eq(nitroxCertifications.shopId, shopId),
-                  inArray(nitroxCertifications.personId, personIds),
-                  isNull(nitroxCertifications.deletedAt),
-                ),
-              ),
-          () => listSignedWaiversByPerson(db, shopId, personIds),
-          () => listCourseSeatsInTraining(db, shopId, personIds),
-        ]);
+  // **One wave after the roster** (code review 2026-10-11, item 13): the
+  // payments, the course forms and the evidence each take only ids the first
+  // read returned, so none waits on another. They used to run as three steps,
+  // and every surface sharing this pass — the badge, Today, the roster,
+  // `/ready` — paid each one.
+  //
+  // The forms each course session asks its students to sign, and every
+  // signature on these seats (ADR 20261008-course-forms), chained so the
+  // signatures read is still skipped while no session here asks for a form,
+  // and both are skipped when no trip here is a course session: a fun-dive
+  // render pays nothing for forms (`staff-render-cost.test.ts`).
+  //
+  // `queryAll`, not `Promise.all`: inside `checkInBooking`'s transaction these
+  // run one after another on its one client (`./query-helpers`).
+  const evidence = () =>
+    queryAll(db, [
+      () =>
+        db
+          .select()
+          .from(certifications)
+          .where(
+            and(
+              eq(certifications.shopId, shopId),
+              inArray(certifications.personId, personIds),
+              isNull(certifications.deletedAt),
+            ),
+          ),
+      () =>
+        db
+          .select()
+          .from(specialtyCertifications)
+          .where(
+            and(
+              eq(specialtyCertifications.shopId, shopId),
+              inArray(specialtyCertifications.personId, personIds),
+              isNull(specialtyCertifications.deletedAt),
+            ),
+          ),
+      () =>
+        db
+          .select()
+          .from(nitroxCertifications)
+          .where(
+            and(
+              eq(nitroxCertifications.shopId, shopId),
+              inArray(nitroxCertifications.personId, personIds),
+              isNull(nitroxCertifications.deletedAt),
+            ),
+          ),
+      () => listSignedWaiversByPerson(db, shopId, personIds),
+      () => listCourseSeatsInTraining(db, shopId, personIds),
+    ]);
+  const noEvidence: Awaited<ReturnType<typeof evidence>> = [[], [], [], new Map(), []];
+  const [
+    paymentByBooking,
+    [courseFormsByTrip, courseFormSignatures],
+    [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson, courseSeatRows],
+  ] = await queryAll(db, [
+    () => paymentsByBooking(db, shopId, bookingIds),
+    async () => {
+      const forms = await requiredCourseFormsForTrips(db, shopId, courseTripIds, now);
+      const signatures =
+        forms.size === 0 ? [] : await courseFormSignaturesForBookings(db, shopId, bookingIds);
+      return [forms, signatures] as const;
+    },
+    () => (personIds.length === 0 ? Promise.resolve(noEvidence) : evidence()),
+  ]);
 
   const currentTemplateGeneration = currentTemplate?.materialGeneration ?? null;
 

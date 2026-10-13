@@ -378,6 +378,7 @@ script again.
 | [20261012-architecture-guard-stays-hand-written](20261012-architecture-guard-stays-hand-written.md) | Keep the architecture guard hand-written; do not adopt dependency-cruiser | Accepted |  |
 | [20261012-course-forms-on-charters-and-counter](20261012-course-forms-on-charters-and-counter.md) | Ask a course's forms on a charter seat staff mark as training, and sign students one at a time on a counter device | Proposed |  |
 | [20261012-incident-reports](20261012-incident-reports.md) | Keep an incident report on the departure, filed once and amended by addenda | Accepted |  |
+| [20261012-payouts-reach-diveday](20261012-payouts-reach-diveday.md) | Record Stripe payouts so Reports meets the bank statement | Accepted |  |
 | [20261012-rehearsal-departures](20261012-rehearsal-departures.md) | A rehearsal departure for training day, and every place that honors it | Accepted |  |
 
 <!-- adr-index:end -->

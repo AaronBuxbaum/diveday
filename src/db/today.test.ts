@@ -4110,8 +4110,12 @@ describe("staff credentials on Today (one row per staffer)", () => {
  * **The high-wind row reads the same forecast it always did, asked once per
  * site** (code review 2026-10-10, item 1). The queue used to await the
  * provider one departure at a time inside its loop; it now asks for every
- * booked departure's forecast at once, before the database wave, and the
- * forecast cache shares one request between departures to one site.
+ * booked departure's forecast at once, and the forecast cache shares one
+ * request between departures to one site.
+ *
+ * **And the queue does not wait for it** (code review 2026-10-11, item 1): the
+ * rows come back as `highWind`, a promise the page streams under its own
+ * `<Suspense>`, so a slow provider holds the wind rows and nothing else.
  */
 describe("the high-wind row (issue #722)", () => {
   afterEach(() => {
@@ -4138,8 +4142,10 @@ describe("the high-wind row (issue #722)", () => {
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
 
-    const windRows = work.actions.filter((action) => action.kind === "high_wind_alert");
+    expect(work.actions.filter((action) => action.kind === "high_wind_alert")).toEqual([]);
+    const windRows = await work.highWind;
     expect(windRows.length).toBeGreaterThan(0);
+    expect(windRows.every((action) => action.kind === "high_wind_alert")).toBe(true);
     expect(windRows[0]).toMatchObject({ urgency: "now", aboutDeparture: true });
     const urls = fetcher.mock.calls.map(([input]) => String(input));
     expect(urls.length).toBeGreaterThan(0);
@@ -4153,6 +4159,58 @@ describe("the high-wind row (issue #722)", () => {
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
 
-    expect(work.actions.filter((action) => action.kind === "high_wind_alert")).toEqual([]);
+    expect(await work.highWind).toEqual([]);
+  });
+
+  it("answers the queue while the provider has still said nothing", async () => {
+    const { db, shop } = ctx;
+    let answer: (response: Response) => void = () => {};
+    const fetcher = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() => new Promise<Response>((resolve) => (answer = resolve)));
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    // The queue is whole without the forecast; only the wind rows wait.
+    expect(fetcher).toHaveBeenCalled();
+    expect(work.actions.length).toBeGreaterThan(0);
+    let settled = false;
+    void work.highWind.then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    answer(new Response("{}", { status: 503 }));
+  });
+
+  it("hands a provider failure back as no rows, never a rejection", async () => {
+    const { db, shop } = ctx;
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    await expect(work.highWind).resolves.toEqual([]);
+  });
+
+  it("raises the row only for the roles that see it", async () => {
+    const { db, shop } = ctx;
+    stubProvider(30);
+
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shop.timezone,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      ["crew"],
+    );
+
+    expect(await work.highWind).toEqual([]);
   });
 });

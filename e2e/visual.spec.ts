@@ -2817,7 +2817,7 @@ for (const scheme of ["light", "dark"] as const) {
         // The tip door renders at all only for a shop that can take a tip, and
         // that is what the seed-stripe-account write above buys — so waiting on
         // it is what proves the whole run of doors is in the frame.
-        await page.getByText("Tip your crew", { exact: true }).waitFor();
+        await page.getByText("Tip the crew", { exact: true }).waitFor();
         await capture(page, "recap", scheme);
       });
 

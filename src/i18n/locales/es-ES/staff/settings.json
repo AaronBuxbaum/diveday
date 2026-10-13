@@ -9,7 +9,7 @@
       "unitsSaved": "Unidades guardadas.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
       "taxSaved": "Configuración de impuestos guardada.",
-      "taxInvalid": "No se pudo guardar la configuración de impuestos.",
+      "taxInvalid": "No cambió nada: el interruptor de impuestos envió un valor inesperado. Recarga Ajustes y vuelve a activarlo o desactivarlo.",
       "passThroughSaved": "Cuota repercutida guardada.",
       "passThroughInvalid": "Introduce el nombre y un importe positivo, o deja ambos vacíos para desactivarla.",
       "rentalsSaved": "Catálogo de alquiler guardado.",
@@ -383,9 +383,11 @@
       "rentals": "Alquiler",
       "money": "Dinero",
       "messages": "Mensajes",
+      "notifications": "Avisos",
       "website": "Sitio web",
       "data": "Datos",
-      "account": "Cuenta"
+      "account": "Cuenta",
+      "rarelyChanged": "Se cambia poco"
     },
     "rail": {
       "ariaLabel": "Secciones de configuración"
@@ -421,6 +423,11 @@
         "heading": "Propinas",
         "label": "Ofrecer una propina en el resumen de la salida",
         "description": "Los buceadores pueden dar propina a la tripulación con tarjeta después de bucear."
+      },
+      "publicYear": {
+        "heading": "Nuestro año",
+        "label": "Mostrar “Nuestro año” en tu calendario",
+        "description": "El año hasta hoy en cifras al pie de tu calendario público: buceadores, salidas y sitios. Nunca dinero. Apagado hasta que lo actives."
       }
     },
     "crewSchedule": {
@@ -962,7 +969,7 @@
       "codeInvalid": "No se aceptó ese código.",
       "stepUpRequired": "Verifica con tu aplicación de autenticación para continuar.",
       "unavailable": "La configuración de seguridad no está disponible hasta configurar la clave de cifrado del despliegue.",
-      "invalid": "No se pudo completar ese cambio de seguridad.",
+      "invalid": "No cambió nada: tu sesión venció o el formulario estaba desactualizado. Cierra sesión, vuelve a entrar e inténtalo de nuevo desde esta página.",
       "tooManyAttempts": "Demasiados intentos. Espera unos minutos e intÃ©ntalo de nuevo."
     }
   },

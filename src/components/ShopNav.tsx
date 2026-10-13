@@ -22,7 +22,11 @@ import {
   staffShopRoot,
 } from "@/lib/staff-destinations";
 import { type ShopSectionNavCopy, ShopSidebar, ShopTabBar } from "./ShopSectionNav";
-import { CommandPalette, type CommandPaletteCopy } from "./search/CommandPalette";
+import {
+  CommandPalette,
+  type CommandPaletteCopy,
+  type SettingsShortcut,
+} from "./search/CommandPalette";
 
 async function signOutAction() {
   "use server";
@@ -198,6 +202,7 @@ export function ShopNav({
   locale,
   setLocale,
   createDiverAction,
+  settingsShortcuts,
 }: {
   shopSlug: string;
   shopName: string;
@@ -219,6 +224,8 @@ export function ShopNav({
    */
   setLocale: (locale: string) => Promise<void>;
   createDiverAction: (formData: FormData) => Promise<void>;
+  /** The Settings rail's rows this reader may open, for ⌘K; built where the rail is. */
+  settingsShortcuts?: readonly SettingsShortcut[];
 }) {
   const root = staffShopRoot(shopSlug);
   const t = staffTranslator(locale);
@@ -286,6 +293,7 @@ export function ShopNav({
               setLocaleAction={setLocale}
               signOutAction={signOutAction}
               createDiverAction={createDiverAction}
+              settingsShortcuts={settingsShortcuts}
               copy={commandPaletteCopy(t)}
             />
           </>

@@ -16,6 +16,7 @@ import {
   orders,
   people,
   shops,
+  stripePayouts,
   trips,
   workOrderBills,
   workOrders,
@@ -253,6 +254,138 @@ describe("the month's money by line", () => {
       { line: "funDives", cents: 18_000 },
       { line: "rentals", cents: 4_000 },
     ]);
+  });
+});
+
+describe("what left the month's money", () => {
+  async function checkoutWith(
+    db: AppDb,
+    shopId: string,
+    money: {
+      totalCents: number;
+      refundedCents?: number;
+      appliedDiscountCents?: number;
+      appliedDiscountPercent?: number;
+      completedAt?: Date;
+    },
+  ) {
+    seq += 1;
+    const reef = await trip(db, shopId, new Date("2031-07-04T13:00:00Z"));
+    await db.insert(bookingCheckouts).values({
+      shopId,
+      currency: "usd",
+      tripId: reef,
+      status: "completed",
+      stripeAccountId: "acct_lines",
+      stripeSessionId: `cs_out_${seq}`,
+      amountPerDiverCents: money.totalCents,
+      totalCents: money.totalCents,
+      refundedCents: money.refundedCents ?? 0,
+      appliedDiscountCents: money.appliedDiscountCents ?? null,
+      appliedDiscountPercent: money.appliedDiscountPercent ?? null,
+      completedAt: money.completedAt ?? MID_JUNE,
+    });
+  }
+
+  async function payout(
+    db: AppDb,
+    shopId: string,
+    values: { id: string; arrivalDate: Date; status?: string; feeCents?: number | null },
+  ) {
+    await db.insert(stripePayouts).values({
+      shopId,
+      stripeAccountId: "acct_lines",
+      stripePayoutId: values.id,
+      amountCents: 100_000,
+      currency: "usd",
+      status: values.status ?? "paid",
+      arrivalDate: values.arrivalDate,
+      feeCents: values.feeCents === undefined ? 1_000 : values.feeCents,
+      lastEventAt: values.arrivalDate,
+    });
+  }
+
+  it("sums refunds, what the codes took off, and Stripe's fees on the month's payouts", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { refundedCents: 2_500 });
+    await checkoutWith(db, shop.shopId, { totalCents: 20_000, refundedCents: 5_000 });
+    // $15 off, and 10% of $180.
+    await checkoutWith(db, shop.shopId, { totalCents: 18_500, appliedDiscountCents: 1_500 });
+    await checkoutWith(db, shop.shopId, { totalCents: 18_000, appliedDiscountPercent: 10 });
+    // May's checkout: not June's discount.
+    await checkoutWith(db, shop.shopId, {
+      totalCents: 18_000,
+      appliedDiscountPercent: 50,
+      completedAt: new Date("2031-05-31T12:00:00Z"),
+    });
+    await payout(db, shop.shopId, {
+      id: "po_june_1",
+      arrivalDate: new Date("2031-06-03T00:00:00Z"),
+    });
+    await payout(db, shop.shopId, {
+      id: "po_june_2",
+      arrivalDate: new Date("2031-06-10T00:00:00Z"),
+      feeCents: 640,
+    });
+    // A failed payout's fees never reached the bank; one from July is July's.
+    await payout(db, shop.shopId, {
+      id: "po_june_failed",
+      arrivalDate: new Date("2031-06-17T00:00:00Z"),
+      status: "failed",
+    });
+    await payout(db, shop.shopId, { id: "po_july", arrivalDate: JULY });
+
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
+    expect(detail.out).toEqual({
+      refundedCents: 7_500,
+      discountedCents: 3_300,
+      stripeFeesCents: 1_640,
+    });
+    expect(detail.payouts.map((row) => row.status)).toEqual(["paid", "paid", "failed"]);
+  });
+
+  it("says nothing about fees when no payout this month said what they were", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    await payout(db, shop.shopId, {
+      id: "po_manual",
+      arrivalDate: new Date("2031-06-03T00:00:00Z"),
+      feeCents: null,
+    });
+    const other = await freshShop(db);
+    await payout(db, other.shopId, { id: "po_other", arrivalDate: MID_JUNE });
+
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
+    expect(detail.out).toEqual({ refundedCents: 0, discountedCents: 0, stripeFeesCents: null });
+    expect(detail.payouts).toHaveLength(1);
+  });
+
+  it("reads payouts by the UTC calendar month their arrival day falls in, not the shop's", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    // Miami's June runs 04:00Z Jun 1 to 04:00Z Jul 1. A payout due July 1
+    // (UTC midnight) falls inside those bounds but is July's; one due June 1
+    // falls outside them but is June's.
+    const miamiJune = new Date("2031-06-01T04:00:00Z");
+    const miamiJuly = new Date("2031-07-01T04:00:00Z");
+    await payout(db, shop.shopId, { id: "po_june_first", arrivalDate: JUNE });
+    await payout(db, shop.shopId, { id: "po_july_first", arrivalDate: JULY });
+
+    const detail = await getMonthMoneyDetail(
+      db,
+      shop.shopId,
+      miamiJune,
+      miamiJuly,
+      NOW,
+      SHOP_MONEY,
+      {
+        year: 2031,
+        month: 6,
+      },
+    );
+    expect(detail.payouts).toHaveLength(1);
+    expect(detail.payouts[0]?.arrivalDate).toEqual(JUNE);
   });
 });
 

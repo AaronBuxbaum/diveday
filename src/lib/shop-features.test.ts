@@ -6,6 +6,7 @@ const allOn = {
   dateRequestsEnabled: true,
   lastMinuteListEnabled: true,
   tipsEnabled: true,
+  publicYearEnabled: true,
 };
 
 describe("shopOffers", () => {

@@ -92,6 +92,7 @@ import {
   staffCredentials,
   staffReplies,
   staffShifts,
+  stripePayouts,
   stripeRefundFailures,
   tips,
   tripAssignments,
@@ -188,6 +189,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
   // A dispute references the order or checkout it is about, so it goes first.
   await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
+  await db.delete(stripePayouts).where(eq(stripePayouts.shopId, shopId));
   // So does a failed refund (issue #2291).
   await db.delete(stripeRefundFailures).where(eq(stripeRefundFailures.shopId, shopId));
   // The shop is going, so its prepaid dives go with it. Entitlements reference

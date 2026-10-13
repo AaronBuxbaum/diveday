@@ -131,6 +131,30 @@ export async function getShopWhatsAppAccount(
 }
 
 /**
+ * **The one fact about a shop's WhatsApp sender a stranger may read**: the
+ * number Meta printed for it, for the public footer's "Message us on
+ * WhatsApp". Only from a row whose signup finished, and only that column: the
+ * row also holds a sealed credential that can send as the business, and this
+ * select never reaches it.
+ */
+export async function shopPublicWhatsAppNumber(
+  db: DbExecutor,
+  shopId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ number: shopWhatsappAccounts.displayPhoneNumber })
+    .from(shopWhatsappAccounts)
+    .where(
+      and(
+        eq(shopWhatsappAccounts.shopId, shopId),
+        ne(shopWhatsappAccounts.templateName, SETUP_INCOMPLETE_TEMPLATE),
+      ),
+    )
+    .limit(1);
+  return row?.number ?? null;
+}
+
+/**
  * The shop's stored row whether or not signup finished — for the signup flow
  * alone, which needs a parked row's PIN back.
  */

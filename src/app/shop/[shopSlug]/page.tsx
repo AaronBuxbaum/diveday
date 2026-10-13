@@ -10,14 +10,17 @@ import {
   type EveningReading,
   type SpineDraft,
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
+import { readDayMoney } from "@/app/shop/[shopSlug]/_components/today/day-money";
 import { FirstBookableCard } from "@/app/shop/[shopSlug]/_components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
+import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
 import { RecapNoteEditor } from "@/app/shop/[shopSlug]/_components/today/RecapNoteEditor";
 import {
   RoleOrientationCard,
   RoleOrientationLine,
 } from "@/app/shop/[shopSlug]/_components/today/RoleOrientationCard";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
+import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
@@ -33,10 +36,10 @@ import { shopFirstBooking } from "@/db/first-booking";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
-import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
+import { canPersonViewShopReports } from "@/db/reporting";
 import { seasonScale } from "@/db/season-scale";
 import { shopByIdCached } from "@/db/shops";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { canAcceptPayments, shopStripeAccountForRender } from "@/db/stripe-accounts";
 import { getShopDayDepartures, getTodayWork } from "@/db/today";
 import { countShopTrips } from "@/db/trips";
 import { dismissOrientation, isOrientationDismissed } from "@/db/user-accounts";
@@ -50,7 +53,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose, dayTakings } from "@/lib/closeout";
+import { assembleEveningClose } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
@@ -63,10 +66,8 @@ import {
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
-import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
-import { summarizeMonth } from "@/lib/reporting";
 import { seasonStartInstant } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
 import {
@@ -348,7 +349,7 @@ async function TodayBody({
     // first-bookable moment's count, below. A demo shop sits out of both, so it is never asked.
     shop.isDemo ? null : countShopTrips(db, shop.id),
     // The setup ledger's Stripe step and the desk's payments row; a demo shop shows neither.
-    shop.isDemo ? null : getShopStripeAccount(db, shop.id),
+    shop.isDemo ? null : shopStripeAccountForRender(db, shop.id),
     shop.isDemo ? true : shopHasEverTakenAnOrder(db, shop.id),
     shop.isDemo ? null : shopFirstBooking(db, shop.id, now),
     seasonScale(db, shop.id, shop.timezone, seasonStartInstant(now, shop.timezone, season), now),
@@ -365,6 +366,10 @@ async function TodayBody({
   // and badges the boat they crew; an instructor's leads with their sessions. It never re-orders
   // the spine — clock order wins.
   const lens = roleLensFor(session.user.roles);
+  // "Your week" is the crew's: a reader the lens files under boat work, or a
+  // deckhand, at a shop that plans its crew in DiveDay.
+  const showCrewWeek =
+    shop.crewScheduleEnabled && (lens === "boat" || session.user.roles.includes("crew"));
   const eveningClose = assembleEveningClose(closeout.departures, now);
   // **The shop's own calendar day**, as the two UTC instants that bracket it. Four readers below
   // want it — the first-boat-ever question, the day strip's window and ticks, and the day's takings
@@ -383,23 +388,9 @@ async function TodayBody({
   // gate is checked against the database rather than the session's roles so a demotion takes effect
   // at once, and resolved once here rather than per station.
   //
-  // **What today made** — the evening's one money reading (issue #1930; ADR 20260919-one-idea,
-  // decision I · Tide: "money is what the day made"). It renders above the closing block and inside
-  // nothing; `DayTakings.tsx` carries the placement and its decision.
-  //
-  // **The month's own derivation, over the day's bounds.** `getMonthlyReport` is window-shaped —
-  // nothing in it is month-specific but its name — and it anchors every figure to `trips.startsAt`,
-  // so the day is the same query with `shopDayBounds` in place of `shopMonthBounds`. That is
-  // deliberate rather than convenient: a second derivation would let tonight's figure and the same
-  // day inside `/reports` disagree, and which of them a shop then believed would be a coin toss.
-  // `reporting.test.ts` pins the two together by summing the days of a month against the month
-  // itself.
-  //
-  // **Gated before it is read.** `canReadShopMoney` is the live role read resolved in the first
-  // wave, so a reader who may not have the number never causes the query that would produce it —
-  // and the whole thing is skipped until the day is closing, so the ordinary morning render pays
-  // nothing for it.
-  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMonthReport] =
+  // **The day's money** (`readDayMoney`): what today made, gated on `canReadShopMoney` (the live
+  // role read of the first wave) and the day closing; and the tips on the reader's own boats.
+  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMoney] =
     await Promise.all([
       getTodayWork(
         db,
@@ -432,12 +423,10 @@ async function TodayBody({
         : ([new Map(), false] as [Map<string, { closedAt: Date; closedBy: string }>, boolean]),
       // The once-ever wording, asked for only in the moment it could apply.
       eveningClose.allHome ? shopHasSailedBefore(db, shop.id, dayBounds.from) : true,
-      eveningClose.closing && canReadShopMoney
-        ? getMonthlyReport(db, shop.id, dayBounds.from, dayBounds.to, {
-            currency: shop.currency,
-            timeZone: shop.timezone,
-          })
-        : null,
+      readDayMoney(db, shop, dayBounds, {
+        personId: session.user.personId,
+        withTakings: eveningClose.closing && canReadShopMoney,
+      }),
     ]);
   const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
@@ -564,7 +553,7 @@ async function TodayBody({
           : null,
       });
   // What today made: the second wave's last read, gated there.
-  const dayTakingsReading = dayMonthReport ? dayTakings(summarizeMonth(dayMonthReport)) : null;
+  const dayTakingsReading = dayMoney.takings;
   // The whole page is empty at once, and collapses to a heading, one sentence
   // and the one act available — never a spine of empty groups. Every clause of
   // that rule lives with the spine (`spineIsQuiet`), first-run included: the
@@ -904,6 +893,7 @@ async function TodayBody({
       ) : (
         <DaySpine
           spine={spine}
+          highWind={work.highWind}
           shopSlug={shopSlug}
           shopName={shop.name}
           locale={locale}
@@ -917,6 +907,7 @@ async function TodayBody({
           showPaymentsRow={showPaymentsRow}
           firstBooking={firstBooking}
           factOfScale={factOfScale}
+          crewTipsCents={dayMoney.crewTipsCents}
           evening={evening}
           needsYou={needsYou}
           now={now}
@@ -938,66 +929,39 @@ async function TodayBody({
             showFirstRunChecklist ? (
               <FirstRunChecklist
                 shopSlug={shopSlug}
-                // No configured APP_HOST (local dev, some test environments) means no
-                // origin to build an absolute URL from — `publicScheduleUrl` falls
-                // back to the path alone rather than crash the page on a bad base URL.
+                // No APP_HOST (local dev, some tests) means no origin for an absolute
+                // URL: `publicScheduleUrl` falls back to the path rather than crash.
                 scheduleUrl={publicScheduleUrl}
                 contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
                 profileDone={Boolean(shop.tagline || shop.description || shop.logoUrl)}
                 diveSiteCount={firstRunDiveSites?.length ?? 0}
                 unitsDone={Boolean(shop.unitsConfirmedAt)}
                 stripeDone={canAcceptPayments(firstRunStripeAccount)}
-                copy={{
-                  groupLabel: t("shopHome.firstRun.groupLabel"),
-                  subtitle: t("shopHome.firstRun.subtitle"),
-                  progress: t("shopHome.firstRun.progress", {
-                    done: firstRunDoneCount,
-                    total: FIRST_RUN_STEP_COUNT,
-                  }),
-                  contactTitle: t("shopHome.firstRun.contactTitle"),
-                  contactBody: t("shopHome.firstRun.contactBody"),
-                  contactAction: t("shopHome.firstRun.contactAction"),
-                  contactDone: t("shopHome.firstRun.contactDone"),
-                  profileTitle: t("shopHome.firstRun.profileTitle"),
-                  profileBody: t("shopHome.firstRun.profileBody"),
-                  profileAction: t("shopHome.firstRun.profileAction"),
-                  profileDone: t("shopHome.firstRun.profileDone"),
-                  unitsTitle: t("shopHome.firstRun.unitsTitle"),
-                  unitsBody: t("shopHome.firstRun.unitsBody", {
-                    currency: shop.currency.toUpperCase(),
-                    depth: t(
-                      shop.depthUnit === "feet"
-                        ? "shopHome.firstRun.unitsFeet"
-                        : "shopHome.firstRun.unitsMeters",
-                    ),
-                  }),
-                  unitsAction: t("shopHome.firstRun.unitsAction"),
-                  unitsDone: t("shopHome.firstRun.unitsDone"),
-                  siteTitle: t("shopHome.firstRun.siteTitle"),
-                  siteBody: t("shopHome.firstRun.siteBody"),
-                  siteAction: t("shopHome.firstRun.siteAction"),
-                  siteDone: t("shopHome.firstRun.siteDone", {
-                    count: firstRunDiveSites?.length ?? 0,
-                  }),
-                  tripTitle: t("shopHome.firstRun.tripTitle"),
-                  tripBody: t("shopHome.firstRun.tripBody"),
-                  tripAction: t("shopHome.firstRun.tripAction"),
-                  scheduleTitle: t("shopHome.firstRun.scheduleTitle"),
-                  scheduleBody: t("shopHome.firstRun.scheduleBody"),
-                  scheduleCopy: t("shopHome.firstRun.scheduleCopy"),
-                  scheduleCopied: t("shopHome.firstRun.scheduleCopied"),
-                  scheduleCopyFailed: t("shopHome.firstRun.scheduleCopyFailed"),
-                  stripeTitle: t("shopHome.firstRun.stripeTitle"),
-                  stripeBody: t("shopHome.firstRun.stripeBody"),
-                  stripeAction: t("shopHome.firstRun.stripeAction"),
-                  stripeDone: t("shopHome.firstRun.stripeDone"),
-                  doneBadge: t("shopHome.firstRun.doneBadge"),
-                }}
+                copy={firstRunChecklistCopy(t, shop, {
+                  diveSiteCount: firstRunDiveSites?.length ?? 0,
+                  doneCount: firstRunDoneCount,
+                })}
               />
             ) : null
           }
         />
       )}
+
+      {/* A crew member's next three departures, on any day, quiet or not. */}
+      {showCrewWeek ? (
+        <Suspense fallback={null}>
+          <YourWeek
+            db={db}
+            shopId={shop.id}
+            shopSlug={shopSlug}
+            personId={session.user.personId}
+            timeZone={shop.timezone}
+            locale={locale}
+            now={now}
+            diversPerDivemaster={shop.diversPerDivemaster}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 }

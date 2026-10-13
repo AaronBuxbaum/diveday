@@ -40,14 +40,18 @@ import { listPackagesOnSale } from "@/db/dive-packages";
 import { listShopRolesPresent } from "@/db/shop-roles";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { listShopSpokenLanguages } from "@/db/staff-accounts";
+import { shopPublicWhatsAppNumber } from "@/db/whatsapp-accounts";
 import { languageEndonym, localeEndonym } from "@/i18n/language-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLanguageFallback, requestLocale } from "@/i18n/request";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
+import { nowDate } from "@/lib/clock";
+import { whatsAppChatHref } from "@/lib/contact-links";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
+import { deskTimeOn } from "@/lib/desk-hours";
 import {
   EMBED_BRAND_HEADER,
   EMBED_FONT_HEADER,
@@ -55,6 +59,7 @@ import {
   parseEmbedBrandParam,
   parseEmbedFontParam,
 } from "@/lib/embed-routes";
+import { formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { publicCoursesPath, publicPackagesPath, publicSchedulePath } from "@/lib/public-routes";
 import { isLiveShopStaff } from "@/lib/session";
@@ -85,13 +90,38 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
   // ordinary render is untouched. Gated on `!isEmbed` like every other band in
   // this component: an embed is framed by the shop's own site, which has already
   // told the visitor whose page they are on (ADR 20260726-schedule-embed).
-  const languageFallback = isEmbed ? null : await requestLanguageFallback(locale);
+  //
+  // **One wave after the shop row** (code review 2026-10-11, item 25), as
+  // `ShopChrome` reads the staff shell: the fallback, the demo roles, the two
+  // nav probes and the session each need only the shop, so none waits on
+  // another; the live staff check rides its session read. They used to be five
+  // waves one after another under this band's `<Suspense>`.
+  const [languageFallback, present, [teaches, packagesOnSale], { session, showStaffBar }] =
+    await Promise.all([
+      isEmbed ? null : requestLanguageFallback(locale),
+      showBanner && shop ? listShopRolesPresent(db, shop.id) : null,
+      // The nav's two existence probes (below), skipped for an embed, which
+      // drops the header anyway.
+      !isEmbed && shop
+        ? Promise.all([hasActiveCourses(db, shop.id), listPackagesOnSale(db, shop.id)])
+        : ([false, []] as const),
+      // Staff are no longer redirected off their own shop's public pages — this
+      // is the page divers buy from, and staff need to be able to look at it. A
+      // slim bar says "you work here" and points back at the operations board,
+      // so nobody is stranded on a diver surface with no staff chrome (task
+      // 153). Live-checked (issue #966): it discloses nothing sensitive, but
+      // the same stale-JWT gap the other public surfaces had is worth closing
+      // uniformly.
+      auth().then(async (session) => ({
+        session,
+        showStaffBar: !isEmbed && shop !== null && (await isLiveShopStaff(db, shop.id, session)),
+      })),
+    ]);
 
   // Owner and diver (public guest) are always offered; instructor/divemaster/
   // captain only appear when this shop actually seeded someone in that role.
   let availableRoles: string[] = ["owner", "diver"];
-  if (showBanner && shop) {
-    const present = await listShopRolesPresent(db, shop.id);
+  if (present) {
     availableRoles = [
       "owner",
       ...(["instructor", "divemaster", "captain"] as const).filter((role) => present.has(role)),
@@ -107,13 +137,8 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
   const navItems: PublicShopNavItem[] = [];
   if (!isEmbed && shop) {
     navItems.push({ href: publicSchedulePath(shop.slug), label: t("schedule.title") });
-    // The same probe, and two reads at once rather than one after the other.
     // Packages earns a tab only while one is on sale: a shop that has never
     // defined one, or whose packages have all lapsed, shows no such door.
-    const [teaches, packagesOnSale] = await Promise.all([
-      hasActiveCourses(db, shop.id),
-      listPackagesOnSale(db, shop.id),
-    ]);
     if (teaches) {
       navItems.push({ href: publicCoursesPath(shop.slug), label: t("courses.index.title") });
     }
@@ -122,7 +147,6 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
     }
   }
 
-  const session = await auth();
   let currentRole: "owner" | "instructor" | "divemaster" | "captain" | "diver" = "diver";
   if (session?.user) {
     if (session.user.roles.includes("owner") || session.user.roles.includes("manager")) {
@@ -136,13 +160,6 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
     }
   }
 
-  // Staff are no longer redirected off their own shop's public pages — this is
-  // the page divers buy from, and staff need to be able to look at it. A slim
-  // bar says "you work here" and points back at the operations board, so
-  // nobody is stranded on a diver surface with no staff chrome (task 153).
-  // Live-checked (issue #966): it discloses nothing sensitive, but the same
-  // stale-JWT gap the other public surfaces had is worth closing uniformly.
-  const showStaffBar = !isEmbed && shop !== null && (await isLiveShopStaff(db, shop.id, session));
   const staffT = staffTranslator(locale);
   // Each language named in itself (src/i18n/language-labels.ts): the reader
   // reaching for this is the one who cannot read the page around it.
@@ -278,7 +295,32 @@ export async function PublicShopFooterSection({
       : cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
           spokenLanguages.map((code) => languageEndonym(code) ?? code),
         );
-  return <PublicShopFooter shop={shop} spokenLanguagesLine={spokenLanguagesLine} t={t} />;
+  const deskHoursLine = shop.deskHoursConfirmedAt ? deskHoursText(shop, locale, t) : null;
+  const whatsAppHref = whatsAppChatHref(await shopPublicWhatsAppNumber(db, shop.id));
+  return (
+    <PublicShopFooter
+      shop={shop}
+      spokenLanguagesLine={spokenLanguagesLine}
+      deskHoursLine={deskHoursLine}
+      whatsAppHref={whatsAppHref}
+      t={t}
+    />
+  );
+}
+
+/** "Desk open 7:00 to 17:00", in the shop's zone and the reader's locale. */
+function deskHoursText(
+  shop: { deskOpensMinute: number; deskClosesMinute: number; timezone: string },
+  locale: string,
+  t: DiverTranslator,
+): string {
+  const now = nowDate();
+  const at = (minute: number) =>
+    formatTime(deskTimeOn(minute, now, shop.timezone), locale, shop.timezone);
+  return t("shopChrome.deskHours", {
+    opens: at(shop.deskOpensMinute),
+    closes: at(shop.deskClosesMinute),
+  });
 }
 
 /**

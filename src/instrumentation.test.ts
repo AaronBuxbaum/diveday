@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SENTRY_DATA_COLLECTION } from "@/app/observability";
 import { log, setLogSink } from "@/lib/log";
 import { register } from "./instrumentation";
 
@@ -76,5 +77,101 @@ describe("register", () => {
     log("test.edge", "info");
 
     expect(recordLogLine).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **Errors only, and only the integrations that serves** (code review
+ * 2026-10-11, item 22). The SDK is imported when a DSN is set and not before,
+ * and it starts without its default integrations: no OpenTelemetry HTTP or
+ * fetch instrumentation, console breadcrumbs or local variables for a server
+ * whose traces sample rate is 0.
+ */
+describe("Sentry on the server", () => {
+  const integrationNamed = (name: string) => () => ({ name });
+  const sdk = () => ({
+    init: vi.fn(),
+    captureRequestError: vi.fn(),
+    eventFiltersIntegration: integrationNamed("EventFilters"),
+    functionToStringIntegration: integrationNamed("FunctionToString"),
+    linkedErrorsIntegration: integrationNamed("LinkedErrors"),
+    dedupeIntegration: integrationNamed("Dedupe"),
+    requestDataIntegration: integrationNamed("RequestData"),
+    onUncaughtExceptionIntegration: integrationNamed("OnUncaughtException"),
+    onUnhandledRejectionIntegration: integrationNamed("OnUnhandledRejection"),
+    contextLinesIntegration: integrationNamed("ContextLines"),
+    nodeContextIntegration: integrationNamed("Context"),
+  });
+
+  afterEach(() => {
+    vi.doUnmock("@sentry/nextjs");
+    vi.doUnmock("@/lib/sentry-dsn");
+    vi.resetModules();
+  });
+
+  async function instrumentationWith(dsn: string | null) {
+    vi.resetModules();
+    const fake = sdk();
+    vi.doMock("@sentry/nextjs", () => fake);
+    vi.doMock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: dsn }));
+    return { fake, module: await import("./instrumentation") };
+  }
+
+  it("starts the SDK with its defaults off and the redaction hooks on", async () => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("NODE_ENV", "production");
+    const { fake, module } = await instrumentationWith("https://key@sentry.example.invalid/1");
+
+    await module.register();
+
+    expect(fake.init).toHaveBeenCalledTimes(1);
+    const options = fake.init.mock.calls[0]?.[0];
+    expect(options).toMatchObject({ tracesSampleRate: 0, defaultIntegrations: false });
+    // The SDK's own collection switch stays the first layer of redaction.
+    expect(options.dataCollection).toEqual(SENTRY_DATA_COLLECTION);
+    expect(options.beforeSend).toBeTypeOf("function");
+    expect(options.beforeBreadcrumb).toBeTypeOf("function");
+    const names = options.integrations.map((integration: { name: string }) => integration.name);
+    expect(names).toEqual(
+      expect.arrayContaining(["RequestData", "OnUncaughtException", "OnUnhandledRejection"]),
+    );
+    expect(names).not.toContain("Http");
+  });
+
+  it("starts nothing without a DSN", async () => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const { fake, module } = await instrumentationWith(null);
+
+    await module.register();
+
+    expect(fake.init).not.toHaveBeenCalled();
+  });
+
+  it("hands a request error to the SDK only when a DSN is set", async () => {
+    const args = [
+      new Error("boom"),
+      { path: "/", method: "GET", headers: {} },
+      {
+        routerKind: "App Router",
+        routePath: "/",
+        routeType: "render",
+        renderSource: "react-server-components",
+        revalidateReason: undefined,
+        renderType: "dynamic",
+      },
+    ] as const;
+    const off = await instrumentationWith(null);
+    await off.module.onRequestError(
+      ...(args as unknown as Parameters<typeof off.module.onRequestError>),
+    );
+    expect(off.fake.captureRequestError).not.toHaveBeenCalled();
+
+    const on = await instrumentationWith("https://key@sentry.example.invalid/1");
+    await on.module.onRequestError(
+      ...(args as unknown as Parameters<typeof on.module.onRequestError>),
+    );
+    expect(on.fake.captureRequestError).toHaveBeenCalledTimes(1);
   });
 });

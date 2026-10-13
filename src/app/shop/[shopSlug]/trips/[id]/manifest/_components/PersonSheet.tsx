@@ -177,17 +177,19 @@ export function PersonSheet({
                 <li key={`${entry.label}-${entry.detail}`}>
                   <div className="flex min-h-10 items-center gap-2.5">
                     <TrailMark state={entry.state} />
-                    <span className="min-w-0 flex-1 text-sm">
+                    <span className="min-w-0 flex-1 text-base">
                       <span
                         className={entry.state === "notBack" ? "font-semibold text-danger" : ""}
                       >
                         {entry.label}
                       </span>
                       {entry.note ? (
-                        <span className="mt-0.5 block text-sm text-muted">{entry.note}</span>
+                        <span className="mt-0.5 block text-base text-muted">{entry.note}</span>
                       ) : null}
                     </span>
-                    <span className="shrink-0 text-xs text-muted tabular-nums">{entry.detail}</span>
+                    <span className="shrink-0 text-base text-muted tabular-nums">
+                      {entry.detail}
+                    </span>
                   </div>
                   {index < trail.length - 1 ? (
                     <div aria-hidden="true" className="ms-[9px] border-s border-border py-1" />
