@@ -40,6 +40,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
+import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
 import { recordDiverActivity, recordTripActivity } from "./operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
@@ -878,6 +879,7 @@ async function createBookingRecord(
   pending: PendingDeclaration[],
 ): Promise<BookingOutcome> {
   const tx = db;
+  await boundLockWaits(tx);
   // FOR UPDATE serializes concurrent bookings on the same trip: under READ
   // COMMITTED two transactions could otherwise both read `booked = capacity-1`
   // and both insert. The unit suite runs on PGlite, which is single-connection

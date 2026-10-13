@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { PromoDiscount } from "../promo-codes";
+import { boundedStripeFetch } from "./stripe-fetch";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -110,8 +111,9 @@ function headersFor(secretKey: string, stripeAccountId: string): Record<string, 
 
 export function stripePromotionProvider(
   config: StripeKeySource,
-  fetchImpl: Fetch,
+  unboundedFetch: Fetch,
 ): PromotionProvider {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   /**
    * The coupon-then-promotion-code pair both flavors mint. Bounds are written
    * only when the caller has one: Stripe reads an absent `expires_at` or

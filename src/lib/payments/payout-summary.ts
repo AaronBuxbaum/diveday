@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { log } from "@/lib/log";
 import { keyLivemode } from "./payment-sources";
+import { boundedStripeFetch } from "./stripe-fetch";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -87,8 +88,9 @@ function summarized(span: Span): PayoutSummary {
 
 export function stripePayoutSummaryLookup(
   config: { secretKey: string },
-  fetchImpl: Fetch,
+  unboundedFetch: Fetch,
 ): PayoutSummaryLookup {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   const get = (stripeAccountId: string, query: URLSearchParams) =>
     fetchImpl(`https://api.stripe.com/v1/balance_transactions?${query.toString()}`, {
       headers: {

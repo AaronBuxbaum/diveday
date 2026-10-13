@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { boundedStripeFetch } from "./stripe-fetch";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -215,8 +216,9 @@ function headersFor(secretKey: string, stripeAccountId: string): Record<string, 
 
 export function stripeCheckoutProvider(
   config: StripeKeySource,
-  fetchImpl: Fetch,
+  unboundedFetch: Fetch,
 ): CheckoutProvider {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   return {
     async createCheckoutSession(request) {
       if (request.lineItems.length === 0) return { status: "failed" };

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { log } from "@/lib/log";
+import { boundedStripeFetch } from "./stripe-fetch";
 import { type StripeKeySource, StripeKeyUnavailableError, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -72,9 +73,10 @@ export function keyLivemode(secretKey: string): boolean | null {
  */
 export function stripePaymentSourceLookup(
   keys: StripeKeySource,
-  fetchImpl: Fetch,
+  unboundedFetch: Fetch,
   event: { livemode?: boolean } = {},
 ): PaymentSourceLookup {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   const get = (secretKey: string, stripeAccountId: string, path: string) =>
     fetchImpl(`https://api.stripe.com/v1${path}`, {
       headers: {

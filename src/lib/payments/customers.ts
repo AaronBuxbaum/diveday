@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ERASURE_FAILURE_DETAIL } from "./erasure-failure";
+import { boundedStripeFetch } from "./stripe-fetch";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 
 /**
@@ -93,8 +94,9 @@ async function failureFrom(response: Response): Promise<{ status: "failed"; erro
 
 export function stripeCustomerProvider(
   config: StripeKeySource,
-  fetchImpl: Fetch,
+  unboundedFetch: Fetch,
 ): CustomerProvider {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   return {
     async deleteCustomer(stripeAccountId, stripeCustomerId, idempotencyKey) {
       try {

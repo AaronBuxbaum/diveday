@@ -128,4 +128,51 @@ describePostgres("lockSeatDeparture on a real server", () => {
     release();
     await holder;
   });
+
+  it("gives up a wait on a stuck departure after five seconds rather than with its function", async () => {
+    const { pg, shopId, tripId, bookingId } = await fixture();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let acquired!: () => void;
+    const locked = new Promise<void>((resolve) => {
+      acquired = resolve;
+    });
+    // A holder that never lets go in time: the shape of a transaction waiting on Stripe.
+    const holder = pg.connect().transaction(async (tx) => {
+      await tx.execute(sql`select id from trips where id = ${tripId} for update`);
+      acquired();
+      await held;
+    });
+    await locked;
+    const started = performance.now();
+    try {
+      const waiter = pg.connect().transaction(async (tx) => {
+        await lockSeatDeparture(tx, shopId, bookingId);
+      });
+      const failure = await waiter.then(
+        () => null,
+        (error: unknown) => error,
+      );
+      const elapsed = performance.now() - started;
+      expect(sqlState(failure)).toBe("55P03");
+      expect(elapsed).toBeGreaterThanOrEqual(4_500);
+      expect(elapsed).toBeLessThan(9_000);
+    } finally {
+      release();
+      await holder;
+    }
+  });
 });
+
+/** The SQLSTATE under drizzle's wrapper. */
+function sqlState(error: unknown): string | undefined {
+  let current: unknown = error;
+  for (let hop = 0; hop < 5 && current; hop += 1) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === "string") return code;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return undefined;
+}

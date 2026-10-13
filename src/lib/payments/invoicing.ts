@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { boundedStripeFetch } from "./stripe-fetch";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -294,8 +295,9 @@ function toCreatedInvoice(body: z.infer<typeof invoiceResponseSchema>, stripeCus
 
 export function stripeInvoicingProvider(
   config: StripeKeySource,
-  fetchImpl: Fetch,
+  unboundedFetch: Fetch,
 ): InvoicingProvider {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   async function post(
     stripeAccountId: string,
     path: string,

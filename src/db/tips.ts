@@ -4,6 +4,7 @@ import { log } from "@/lib/log";
 import { majorToMinor, type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/checkout";
 import type { AppDb, DbExecutor } from "./client";
+import { boundLockWaits } from "./lock-bounds";
 import {
   idempotencyKeyFor,
   recordPaymentOperationStripeObject,
@@ -236,6 +237,9 @@ export async function startTipCheckout(
   // shop's own Stripe dashboard is the source of truth until someone
   // reconciles it by hand, never a lost or double charge.
   return db.transaction(async (tx) => {
+    // Bounded: this transaction holds the seat across a Stripe call, so a
+    // waiter behind it gives up in five seconds rather than with its function.
+    await boundLockWaits(tx);
     const [locked] = await tx
       .select({ status: bookings.status })
       .from(bookings)

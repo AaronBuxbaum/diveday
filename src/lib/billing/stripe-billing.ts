@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { boundedStripeFetch } from "../payments/stripe-fetch";
 
 /**
  * DiveDay's own subscription on DiveDay's own Stripe account — the money a
@@ -166,7 +167,11 @@ export interface BillingProvider {
   }): Promise<BillingCallResult<string>>;
 }
 
-export function stripeBillingProvider(config: BillingConfig, fetchImpl: Fetch): BillingProvider {
+export function stripeBillingProvider(
+  config: BillingConfig,
+  unboundedFetch: Fetch,
+): BillingProvider {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   async function call(
     method: "GET" | "POST",
     path: string,

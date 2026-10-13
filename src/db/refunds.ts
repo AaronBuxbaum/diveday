@@ -21,6 +21,7 @@ import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { boundLockWaits } from "./lock-bounds";
 import { applyStripeRefundedTotalToOrder } from "./orders";
 import {
   idempotencyKeyFor,
@@ -176,6 +177,7 @@ async function claimBookingRefund<Outcome>(
     eq(paymentOperationIntents.status, "started"),
   );
   return db.transaction(async (tx): Promise<BookingRefundClaim<Outcome>> => {
+    await boundLockWaits(tx);
     const [booking] = await tx
       .select({ id: bookings.id })
       .from(bookings)
