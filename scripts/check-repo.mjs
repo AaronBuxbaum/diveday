@@ -63,6 +63,7 @@ const checks = [
   ["event-scope", "check-event-scope.mjs"],
   ["slug-actions", "check-slug-actions.mjs"],
   ["env-reads", "check-env-reads.mjs"],
+  ["action-pins", "check-action-pins.mjs"],
   ["trip-revision", "check-trip-revision.mjs"],
   ["time-id-order", "check-time-id-order.mjs"],
   ["departure-buffer", "check-departure-buffer.mjs"],

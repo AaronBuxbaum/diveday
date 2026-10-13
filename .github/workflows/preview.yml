@@ -112,7 +112,7 @@ jobs:
     steps:
       # The exact commit the job above proved is ours, never a ref: a branch can
       # move between the two jobs, and a ref would build whatever it moved to.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.resolve.outputs.sha }}
       - uses: ./.github/actions/setup
