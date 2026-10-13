@@ -655,6 +655,11 @@ export const orders = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("orders_person_id_idx").on(table.personId),
     uniqueIndex("orders_stripe_invoice_unique").on(table.stripeInvoiceId),
     index("orders_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
     index("orders_shop_status_idx").on(table.shopId, table.status),

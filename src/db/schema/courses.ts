@@ -246,6 +246,20 @@ export const courses = pgTable(
   },
   (table) => [
     uniqueIndex("courses_shop_title_unique").on(table.shopId, table.title),
+    // The three prices reach Stripe line items (`src/lib/courses.ts`) and nothing
+    // else stops a negative one; `trips_price_nonnegative` is the same rule.
+    check(
+      "courses_price_nonnegative",
+      sql`${table.priceCents} is null or ${table.priceCents} >= 0`,
+    ),
+    check(
+      "courses_e_learning_price_nonnegative",
+      sql`${table.eLearningPriceCents} is null or ${table.eLearningPriceCents} >= 0`,
+    ),
+    check(
+      "courses_private_price_nonnegative",
+      sql`${table.privatePriceCents} is null or ${table.privatePriceCents} >= 0`,
+    ),
     uniqueIndex("courses_shop_slug_unique").on(table.shopId, table.slug),
     index("courses_shop_active_idx").on(table.shopId, table.isActive),
     // Backs the command-palette's courses arm (src/db/search.ts) — a leading
