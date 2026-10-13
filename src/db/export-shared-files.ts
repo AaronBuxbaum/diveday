@@ -1566,6 +1566,10 @@ export const COURSE_INQUIRIES_CSV = sharedFile<ShopRow<"inquiryRows">>({
     { header: "divers", in: "shop", value: (row) => row.divers },
     { header: "message", in: "both", value: (row) => row.message },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
+    // When the shop closed the request, and how: `booked` when a seat answered
+    // it, `done` when staff marked it. The shop's bookkeeping, not the diver's.
+    { header: "handled_at", in: "shop", value: (row) => row.handledAt },
+    { header: "handled_as", in: "shop", value: (row) => row.handledAs },
   ],
   shop: { rows: ({ inquiryRows }) => inquiryRows, note: EXPORT_FILE_NOTES["course_inquiries.csv"] },
   diver: {
