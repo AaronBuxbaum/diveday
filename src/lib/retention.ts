@@ -432,14 +432,14 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
 };
 
 /**
- * The most rows one prune pass may delete per table. A bound, not a target:
- * the pass runs weekly (`vercel.json`, Sundays 03:30 UTC), so a table that is
- * over its window by more than this converges over a few weeks rather than
- * trying to delete a decade of backlog inside one function invocation's time
- * limit; at 5,000 rows a week a table that gains more than that each week
- * never converges, and the `capped` outcome is the signal to raise this. Raising it trades
- * convergence speed for the risk of a run that outlives the platform's
- * function ceiling and is killed halfway.
+ * The most rows one prune **batch** may delete from a table: a bound per
+ * statement pair, not per run. The weekly run (`vercel.json`, Sundays 03:30
+ * UTC) keeps taking batches from a table still over its window until it is
+ * inside it or the run's time budget is spent (`PRUNE_TIME_BUDGET_MS`,
+ * `src/db/retention.ts`), so a backlog drains in one run rather than at 5,000
+ * rows a week. A table still `capped` when the budget runs out logs
+ * `cron_retention.prune_capped`, which alarms: the backlog then exceeds about 45
+ * seconds of deletes, and the fix is a faster arm or a more frequent run.
  */
 export const PRUNE_BATCH_LIMIT = 5_000;
 
