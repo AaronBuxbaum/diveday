@@ -4,6 +4,7 @@ import { HOUR_MS } from "@/lib/clock";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
+import { isLockWaitRefusal } from "./lock-bounds";
 import { bookings, shops } from "./schema";
 import { lockSeatDeparture } from "./seat-locks";
 import { createTrip } from "./trips";
@@ -157,6 +158,8 @@ describePostgres("lockSeatDeparture on a real server", () => {
       );
       const elapsed = performance.now() - started;
       expect(sqlState(failure)).toBe("55P03");
+      // What the seat and booking actions catch to say "busy, tap again".
+      expect(isLockWaitRefusal(failure)).toBe(true);
       expect(elapsed).toBeGreaterThanOrEqual(4_500);
       expect(elapsed).toBeLessThan(9_000);
     } finally {

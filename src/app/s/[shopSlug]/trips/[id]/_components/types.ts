@@ -70,6 +70,7 @@ export type ErrorCode =
   | "fit"
   | "pay"
   | "waiver"
+  | "busy"
   | "rate_limited";
 
 export const ERROR_MESSAGE_KEYS: Record<ErrorCode, DiverMessageKey> = {
@@ -88,6 +89,9 @@ export const ERROR_MESSAGE_KEYS: Record<ErrorCode, DiverMessageKey> = {
   // on it from either surface reads one sentence, not two.
   waiver: "ready.waiverUnavailable",
   rate_limited: "common.rateLimited",
+  // The booking transaction waited its five seconds for a held boat and gave
+  // up (`isLockWaitRefusal`): a crowd, not a refusal, so it says to try again.
+  busy: "booking.errors.busy",
 };
 
 /** True for any string this page knows how to translate into an error notice. */

@@ -99,3 +99,17 @@ describe("boundLockWaits", () => {
     }
   });
 });
+
+describe("isLockWaitRefusal", () => {
+  it("finds 55P03 under drizzle's wrapper, and nothing else", () => {
+    const driver = Object.assign(new Error("canceling statement due to lock timeout"), {
+      code: "55P03",
+    });
+    expect(bounds.isLockWaitRefusal(new Error("Failed query", { cause: driver }))).toBe(true);
+    expect(bounds.isLockWaitRefusal(driver)).toBe(true);
+    const deadlock = Object.assign(new Error("deadlock detected"), { code: "40P01" });
+    expect(bounds.isLockWaitRefusal(new Error("Failed query", { cause: deadlock }))).toBe(false);
+    expect(bounds.isLockWaitRefusal(new Error("plain"))).toBe(false);
+    expect(bounds.isLockWaitRefusal(undefined)).toBe(false);
+  });
+});

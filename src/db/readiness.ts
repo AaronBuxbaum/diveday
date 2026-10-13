@@ -430,10 +430,11 @@ export type NewShopIssuedCertification = {
  * (any provenance) — a numberless row is invisible to the unique index that
  * would otherwise catch a repeat tap. That guard is a plain read inside the
  * same transaction as the write, serialized by locking the person's own row
- * `for("update")` first — without it, two genuinely concurrent taps (a
- * second tab, a retried submit over flaky boat wifi) could both pass the
- * check before either insert commits, since a numberless row has no unique
- * index to catch the duplicate the way every other write to this table does.
+ * `for("no key update")` first, which still conflicts with itself — without
+ * it, two genuinely concurrent taps (a second tab, a retried submit over flaky
+ * boat wifi) could both pass the check before either insert commits, since a
+ * numberless row has no unique index to catch the duplicate the way every
+ * other write to this table does.
  */
 /**
  * Whether a trip's course can certify anyone: `not_a_certifying_course` for a

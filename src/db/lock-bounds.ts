@@ -30,3 +30,30 @@ export const LOCK_WAIT_BOUND = "5s";
 export async function boundLockWaits(tx: DbExecutor): Promise<void> {
   await tx.execute(sql.raw(`set local lock_timeout = '${LOCK_WAIT_BOUND}'`));
 }
+
+/**
+ * Whether `error` is that refusal: SQLSTATE `55P03`, on the error or anywhere
+ * down its `cause` chain (drizzle wraps the driver's error in its own). An
+ * action catches it to say "busy, tap again" in the reader's words instead of
+ * a crash page; nothing retries it for them, for the reason `flushDeclarations`
+ * gives about `40P01` in `bookings.ts`.
+ */
+export function isLockWaitRefusal(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 8 && current; depth += 1) {
+    if (typeof current === "object" && (current as { code?: unknown }).code === "55P03") {
+      return true;
+    }
+    current = typeof current === "object" ? (current as { cause?: unknown }).cause : undefined;
+  }
+  return false;
+}
+
+/**
+ * A `.catch` for an action's seat or booking call: the lock-wait refusal
+ * becomes `"busy"` for the action to word, and anything else is rethrown.
+ */
+export function busyOnLockWait(error: unknown): "busy" {
+  if (isLockWaitRefusal(error)) return "busy";
+  throw error;
+}

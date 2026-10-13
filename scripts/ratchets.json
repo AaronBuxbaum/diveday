@@ -220,7 +220,7 @@
     "src/app/ready/[token]/page.tsx#DiverReadinessPage": 501,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 670,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,
-    "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 568,
+    "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 557,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 662,
     "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 488,
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx#DiverDetailPage": 404,

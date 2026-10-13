@@ -12,8 +12,11 @@
  * Every Stripe adapter wraps the `fetch` it was handed in this, so a test's
  * fake sees the same signal production does, and `stripe-fetch.test.ts` fails
  * on an adapter that calls `api.stripe.com` without it. A timeout throws
- * `TimeoutError`, which each adapter already turns into `{ status: "failed" }`
- * and logs through `logStripeRequestThrew`.
+ * `TimeoutError`, which each adapter logs through `logStripeRequestThrew`. A
+ * read turns it into `{ status: "failed" }`; a refund or an invoice whose POST
+ * had already gone out turns it into `{ status: "unanswered" }`, because Stripe
+ * may have acted on it, and the caller leaves its intent `started` for a human
+ * rather than letting a retry mint a fresh idempotency key.
  */
 export const STRIPE_REQUEST_TIMEOUT_MS = 10_000;
 

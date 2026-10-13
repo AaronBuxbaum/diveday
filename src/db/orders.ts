@@ -1,18 +1,4 @@
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gte,
-  ilike,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -30,7 +16,9 @@ import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
 import {
+  awaitingStripeReconciliation,
   idempotencyKeyFor,
+  markPaymentOperationUnanswered,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
   STALE_AFTER_MS,
@@ -372,6 +360,12 @@ async function issueOrder(
     // on the customer/items/invoice Stripe already created (CR-005).
     idempotencyKey: idempotencyKeyFor(intent.id),
   });
+  if (result.status === "unanswered") {
+    // The invoice may exist at Stripe: left `started`, marked, so the stuck
+    // queue shows it to a human instead of a closed `failed` row hiding it.
+    await markPaymentOperationUnanswered(db, intent.id);
+    return { ok: false, reason: "stripe_failed" };
+  }
   if (result.status !== "created") {
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
     return { ok: false, reason: "stripe_failed" };
@@ -1994,7 +1988,9 @@ async function claimOrderRefund(
     // removes that backstop and is what makes this check load-bearing rather
     // than belt-and-braces (issue #699 security review). It belongs on the
     // stuck-payment-operations panel, where a human reconciles it against the
-    // Stripe dashboard, never behind a button that reverses more money.
+    // Stripe dashboard, never behind a button that reverses more money. The
+    // same goes for one marked unanswered: the refund was sent, no answer came
+    // back, and Stripe may have made it (`UNANSWERED_BY_STRIPE`).
     const [settledByStripe] = await tx
       .select({ id: paymentOperationIntents.id })
       .from(paymentOperationIntents)
@@ -2004,7 +2000,7 @@ async function claimOrderRefund(
           eq(paymentOperationIntents.orderId, order.id),
           eq(paymentOperationIntents.kind, "refund"),
           eq(paymentOperationIntents.status, "started"),
-          isNotNull(paymentOperationIntents.stripeObjectId),
+          awaitingStripeReconciliation(),
         ),
       )
       .limit(1);
@@ -2070,6 +2066,12 @@ export async function refundOrder(
     idempotencyKeyFor(intent.id),
     options.amountCents,
   );
+  if (result.status === "unanswered") {
+    // Never `failed`: the reversal may exist, and a failed intent is one
+    // `claimOrderRefund` would retry past with a fresh idempotency key.
+    await markPaymentOperationUnanswered(db, intent.id);
+    return { status: "needs_reconciliation" };
+  }
   if (result.status !== "refunded") {
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
     return { status: "failed" };

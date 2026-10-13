@@ -58,7 +58,7 @@ describe("the checkout adapter, the call a tip makes under a booking lock", () =
     expect(signal?.aborted).toBe(false);
   });
 
-  it("ends a timed-out request as failed, so the transaction holding the seat lets go", async () => {
+  it("ends a timed-out session request as failed: no money moves without the diver", async () => {
     const fetchImpl = vi
       .fn()
       .mockRejectedValue(new DOMException("The operation was aborted", "TimeoutError"));
@@ -70,33 +70,82 @@ describe("the checkout adapter, the call a tip makes under a booking lock", () =
   });
 });
 
-/** Every non-test source file under `src` that calls Stripe's API through an injected fetch. */
+describe("a refund Stripe never answers", () => {
+  const timedOut = () => new DOMException("The operation was aborted", "TimeoutError");
+  const session = {
+    id: "cs_1",
+    status: "complete",
+    payment_status: "paid",
+    amount_total: 1_000,
+    payment_intent: "pi_1",
+  };
+
+  it("is unanswered, never failed, once the refund itself went out", async () => {
+    // A `failed` here let the caller resolve the intent and the next press
+    // mint a fresh idempotency key: a second real reversal (fifth review).
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(session)))
+      .mockRejectedValueOnce(timedOut());
+    const provider = checkoutProviderFromEnvironment(
+      { STRIPE_SECRET_KEY: "sk_test_x" },
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(await provider.refundCheckoutSession("acct_123", "cs_1", "intent-1")).toEqual({
+      status: "unanswered",
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("is failed while only the lookup timed out, since nothing was asked of Stripe", async () => {
+    const fetchImpl = vi.fn().mockRejectedValueOnce(timedOut());
+    const provider = checkoutProviderFromEnvironment(
+      { STRIPE_SECRET_KEY: "sk_test_x" },
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(await provider.refundCheckoutSession("acct_123", "cs_1", "intent-1")).toEqual({
+      status: "failed",
+    });
+  });
+});
+
+/**
+ * The source files under `src` that name a Stripe host and make any fetch
+ * call: whatever the fetch is called, so a renamed parameter cannot hide one.
+ */
 function stripeCallers(dir: string): string[] {
   const found: string[] = [];
   for (const name of readdirSync(dir)) {
     const full = path.join(dir, name);
     if (statSync(full).isDirectory()) found.push(...stripeCallers(full));
-    else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) {
+    // The wrapper itself names the host in its docs and calls the fetch it wraps.
+    else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) && name !== "stripe-fetch.ts") {
       const source = readFileSync(full, "utf8");
-      if (
-        name !== "stripe-fetch.ts" &&
-        /(api|connect)\.stripe\.com/.test(source) &&
-        source.includes("fetchImpl(")
-      ) {
-        found.push(full);
+      if (/stripe\.com/.test(source) && /\b\w*[fF]etch\w*\s*\(/.test(source)) {
+        found.push(path.relative(process.cwd(), full));
       }
     }
   }
-  return found;
+  return found.sort();
 }
 
 describe("every Stripe adapter", () => {
-  it("wraps its fetch in boundedStripeFetch", () => {
-    const callers = stripeCallers(path.join(process.cwd(), "src"));
-    expect(callers.length).toBeGreaterThanOrEqual(8);
-    const unbounded = callers.filter(
+  it("is one of the eight known callers, each wrapping its fetch in boundedStripeFetch", () => {
+    // Pinned, not counted: a ninth file that reaches Stripe fails here until
+    // it is added to this list, and it can only be added wrapped.
+    expect(stripeCallers(path.join(process.cwd(), "src"))).toEqual([
+      "src/lib/billing/stripe-billing.ts",
+      "src/lib/payments/checkout.ts",
+      "src/lib/payments/connect.ts",
+      "src/lib/payments/customers.ts",
+      "src/lib/payments/invoicing.ts",
+      "src/lib/payments/payment-sources.ts",
+      "src/lib/payments/payout-summary.ts",
+      "src/lib/payments/promotions.ts",
+    ]);
+    const unbounded = stripeCallers(path.join(process.cwd(), "src")).filter(
       (file) => !readFileSync(file, "utf8").includes("boundedStripeFetch(unboundedFetch)"),
     );
-    expect(unbounded.map((file) => path.relative(process.cwd(), file))).toEqual([]);
+    expect(unbounded).toEqual([]);
   });
 });

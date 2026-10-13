@@ -94,7 +94,9 @@ export type CreatedInvoice = {
 export type CreateInvoiceResult =
   | ({ status: "created" } & CreatedInvoice)
   | { status: "not_configured" }
-  | { status: "failed" };
+  | { status: "failed" }
+  /** The invoice POST went out and no answer came back; it may exist. */
+  | { status: "unanswered" };
 
 export type InvoiceSnapshot = {
   status: string;
@@ -113,7 +115,11 @@ export type InvoiceLookupResult =
 export type VoidInvoiceResult = { status: "voided" | "not_configured" | "failed" };
 export type ResendInvoiceResult = { status: "sent" | "not_configured" | "failed" };
 export type RefundInvoiceResult = {
-  status: "refunded" | "not_configured" | "not_refundable" | "failed";
+  /**
+   * `unanswered`: the refund went out and no answer came back, so Stripe may
+   * have made it; never retried as if `failed` (`UNANSWERED_BY_STRIPE`).
+   */
+  status: "refunded" | "not_configured" | "not_refundable" | "failed" | "unanswered";
   refundId?: string;
   /**
    * What Stripe says it actually reversed, in minor units — read back off the
@@ -319,6 +325,9 @@ export function stripeInvoicingProvider(
       if (request.taxEnabled && !isUsableInvoiceCustomerAddress(request.customerAddress)) {
         return { status: "failed" };
       }
+      // Flips once the invoice POST is dispatched: before it only a customer and
+      // draft items can exist, which bill nobody; after it an invoice may.
+      let invoiceSent = false;
       try {
         const key = request.idempotencyKey;
         const customerForm = new URLSearchParams({
@@ -363,6 +372,7 @@ export function stripeInvoicingProvider(
           if (!itemResponse.ok) return { status: "failed" };
         }
 
+        invoiceSent = true;
         const invoiceResponse = await post(
           request.stripeAccountId,
           "/invoices",
@@ -402,7 +412,7 @@ export function stripeInvoicingProvider(
         return { status: "created", ...toCreatedInvoice(finalizeBody.data, stripeCustomerId) };
       } catch (error) {
         logStripeRequestThrew("create_invoice", error);
-        return { status: "failed" };
+        return invoiceSent ? { status: "unanswered" } : { status: "failed" };
       }
     },
 
@@ -435,6 +445,8 @@ export function stripeInvoicingProvider(
     },
 
     async refundInvoice(stripeAccountId, stripeInvoiceId, idempotencyKey, amountCents) {
+      // As `refundCheckoutSession`: a throw after the refund POST may be money moved.
+      let refundSent = false;
       try {
         // No `expand[]=payment_intent`. That parameter is not merely
         // redundant on a current account — Stripe rejects the whole request
@@ -459,6 +471,7 @@ export function stripeInvoicingProvider(
         // request that Stripe could reject on a rounding disagreement —
         // the same reason `refundCheckoutSession` omits it too.
         if (amountCents !== undefined) form.set("amount", String(amountCents));
+        refundSent = true;
         const response = await post(stripeAccountId, "/refunds", form, idempotencyKey);
         if (!response.ok) return { status: "failed" };
         const body = refundResponseSchema.safeParse(await response.json());
@@ -467,7 +480,7 @@ export function stripeInvoicingProvider(
           : { status: "failed" };
       } catch (error) {
         logStripeRequestThrew("refund_invoice", error);
-        return { status: "failed" };
+        return { status: refundSent ? "unanswered" : "failed" };
       }
     },
 
