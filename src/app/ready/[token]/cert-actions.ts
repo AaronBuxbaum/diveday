@@ -147,7 +147,7 @@ export async function saveNitroxCertificationFromReady(token: string, formData: 
  * (`card_on_file`) when the shop holds any real card for them; and it retracts
  * only the diver's own unsighted claims. It clears nothing: the seat stays
  * Blocked, now under `certification_not_yet`, which is what tells Today and the
- * roster to have the conversation at the dock. A staffer undoes it with
+ * roster to have the conversation before the day. A staffer undoes it with
  * `clearNoCertificationDeclaration`.
  *
  * A snorkeler or ride-along has no cert gate and no reason to say this, so a

@@ -217,7 +217,7 @@ export type ReadinessBlockerCode =
   /**
    * The diver said, on their own link, that they hold no card yet (third UX
    * review, item 23). Still a blocker, never a refusal: the sale stays open
-   * (`decideTripAdmission`), and the crew talks to them at the dock about a
+   * (`decideTripAdmission`), and the shop gets in touch before the day about a
    * Discover Scuba or the course. Its own code so Today and the roster say
    * "Says not certified yet" rather than "No certification on file", which
    * reads as paperwork the diver forgot.
@@ -751,7 +751,7 @@ function certificationBlocker(
   // course that gets them there: a verified card, a number waiting on review
   // or a course finishing first all answer more than the statement does. Above
   // a bare self-declared level and plain `missing`, because it is the one
-  // answer that tells the crew what conversation to have at the dock.
+  // answer that tells the desk what conversation to have before the day.
   if (noCertificationDeclared) {
     return { code: "certification_not_yet", params: { requiredLevel: minimumLevel } };
   }

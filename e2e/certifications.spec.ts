@@ -490,7 +490,7 @@ test("a diver with no card says so on the readiness page, and the desk sees why"
   await certification.getByText("No card yet?").waitFor();
   await certification.getByRole("button", { name: "I’m not certified yet" }).click();
   await expect(
-    page.getByRole("status").filter({ hasText: "The crew will talk to you at the dock" }),
+    page.getByRole("status").filter({ hasText: "The shop will get in touch about your options" }),
   ).toBeVisible();
 
   // Still Blocked, under its own reason, with the try-it course as the door

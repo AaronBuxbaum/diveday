@@ -274,7 +274,7 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
  * The sale does not ask for a rung (Aaron, 2026-08-27), so a first-timer meets
  * agency, level and number here with nothing to pick. One tap records their
  * word (`declareNoCertificationFromReady`); the step then says the crew will
- * talk to them at the dock, and Today names the reason. It clears nothing.
+ * get in touch before the day, and Today names the reason. It clears nothing.
  */
 function NotYetAnswer({ token, t }: { token: string; t: DiverTranslator }) {
   return (
@@ -296,7 +296,7 @@ function NotYetAnswer({ token, t }: { token: string; t: DiverTranslator }) {
 /**
  * Once the diver has said "not yet": the shop's try-it course, the one door
  * that gets a non-diver into the water. Absent when the shop publishes none,
- * and the checklist line already says the crew will talk to them at the dock.
+ * and the checklist line already says the shop will get in touch.
  */
 function IntroCourseDoor({
   course,
