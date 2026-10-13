@@ -40,6 +40,7 @@ describe("the checkout adapter, the call a tip makes under a booking lock", () =
     stripeAccountId: "acct_123",
     currency: "usd",
     lineItems: [{ description: "Tip", unitAmountCents: 1_000, quantity: 1 }],
+    customerEmail: "diver@example.com",
     successUrl: "https://diveday.example/ok",
     cancelUrl: "https://diveday.example/cancel",
     idempotencyKey: "intent-1",
