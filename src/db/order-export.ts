@@ -84,6 +84,7 @@ export async function listOrderLinesForExport(
       asc(people.fullName),
       desc(orders.id),
       asc(orderLineItems.createdAt),
+      asc(orderLineItems.description),
       asc(orderLineItems.id),
     )
     .limit(ORDER_EXPORT_MAX_LINES);

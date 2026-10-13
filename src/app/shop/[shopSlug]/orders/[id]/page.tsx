@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { PrintButton } from "@/components/PrintButton";
@@ -14,20 +13,21 @@ import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonManageOrders, canPersonRefund } from "@/db/authz";
 import { getOrderBookingContext } from "@/db/order-booking";
 import { getOrder } from "@/db/orders";
-import type { OrderStatus } from "@/db/schema";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { formatMoneyCents } from "@/lib/format";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { PaidAtCounterLine, VoidCounterOrderForm } from "./_components/CounterPayment";
 import { DisabledDemoButton } from "./_components/DisabledDemoButton";
+import { OrderBookingLine } from "./_components/OrderBookingLine";
 import { OrderDisputeBanner, OrderMeta } from "./_components/OrderMeta";
 import { refreshAction, refundAction, voidAction } from "./actions";
+import { KIND_KEYS, NOTICES, STATUS_KEYS } from "./order-detail-keys";
 import { loadOrderHeader } from "./order-header";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -40,56 +40,6 @@ import { loadOrderHeader } from "./order-header";
 export const instant = true;
 
 export const metadata: Metadata = { title: "Order — DiveDay" };
-
-/**
- * Keyed by the enum rather than by `string`, so a status added to the column
- * is a compile error here instead of a page rendering the raw value.
- *
- * It was `Record<string, …>` until `partly_refunded` arrived and this heading
- * read literally "partly_refunded" to the shop (issue #699) — the lookup falls
- * through to the enum value, which looks like data and reads like a bug. The
- * sibling map on the Orders index and `ORDER_STATUS_KEYS` in
- * `src/i18n/order-labels.ts` are the same shape for the same reason.
- */
-const STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
-  open: "orders.detail.status.open",
-  paid: "orders.detail.status.paid",
-  void: "orders.detail.status.void",
-  uncollectible: "orders.detail.status.uncollectible",
-  partly_refunded: "orders.detail.status.partlyRefunded",
-  refunded: "orders.detail.status.refunded",
-};
-
-const KIND_KEYS: Record<string, StaffMessageKey> = {
-  trip_fee: "orders.detail.kind.trip_fee",
-  course_fee: "orders.detail.kind.course_fee",
-  rental: "orders.detail.kind.rental",
-  nitrox: "orders.detail.kind.nitrox",
-  deposit: "orders.detail.kind.deposit",
-  merchandise: "orders.detail.kind.merchandise",
-  other: "orders.detail.kind.other",
-};
-
-// A notice query param maps to a message key, never to a sentence — the words
-// come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
-const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
-  refreshed: { tone: "success", key: "orders.detail.notice.refreshed" },
-  "refresh-failed": { tone: "danger", key: "orders.detail.notice.refreshFailed" },
-  voided: { tone: "success", key: "orders.detail.notice.voided" },
-  "void-failed": { tone: "danger", key: "orders.detail.notice.voidFailed" },
-  "void-not-authorized": { tone: "danger", key: "orders.detail.notice.voidNotAuthorized" },
-  refunded: { tone: "success", key: "orders.detail.notice.refunded" },
-  "partly-refunded": { tone: "success", key: "orders.detail.notice.partlyRefunded" },
-  "refund-invalid-amount": { tone: "danger", key: "orders.detail.notice.refundInvalidAmount" },
-  "refund-failed": { tone: "danger", key: "orders.detail.notice.refundFailed" },
-  "refund-in-progress": { tone: "warning", key: "orders.detail.notice.refundInProgress" },
-  "refund-needs-reconciliation": {
-    tone: "warning",
-    key: "orders.detail.notice.refundNeedsReconciliation",
-  },
-  "not-authorized": { tone: "danger", key: "orders.detail.notice.notAuthorized" },
-  "demo-disabled": { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
-};
 
 export default async function OrderDetailPage({
   params,
@@ -121,8 +71,7 @@ export default async function OrderDetailPage({
       orderId: order.order.id,
       personId: session.user.personId,
     }),
-    // The departure a deposit or a trip fee was raised for (third UX review,
-    // item 32): the new-order form named it and the sent order lost it.
+    // The departure a deposit or a trip fee was raised for (`OrderBookingLine`).
     order.order.bookingId ? getOrderBookingContext(db, shop.id, order.order.bookingId) : null,
   ]);
   // Money taken at the counter, in cash or on the shop's own card machine (ADR
@@ -200,33 +149,16 @@ export default async function OrderDetailPage({
           </span>
         </div>
 
-        {/* **Which departure, and what the seat still owes.** A deposit is
-            half a payment; the line names the booking it belongs to, in the
-            words the new-order form used, and the balance off the seat's own
-            price and payment row (`seatBalanceOwedCents`). */}
         {booking ? (
-          <div className="mt-3 text-sm">
-            <p>
-              {t("orders.new.linkedTo", {
-                personName: order.person.fullName,
-                tripTitle: booking.tripTitle,
-                date: formatShortDate(booking.tripStartsAt, locale, timezone),
-              })}{" "}
-              <Link
-                href={`/shop/${shopSlug}/trips/${booking.tripId}`}
-                className="font-medium text-primary hover:underline print:hidden"
-              >
-                {t("orders.detail.openTrip")}
-              </Link>
-            </p>
-            {booking.balanceOwedCents !== null ? (
-              <p className="mt-1 text-muted tabular-nums">
-                {t("orders.detail.balanceOwed", {
-                  amount: formatMoneyCents(booking.balanceOwedCents, order.order.currency, locale),
-                })}
-              </p>
-            ) : null}
-          </div>
+          <OrderBookingLine
+            booking={booking}
+            personName={order.person.fullName}
+            currency={order.order.currency}
+            shopSlug={shopSlug}
+            locale={locale}
+            timezone={timezone}
+            t={t}
+          />
         ) : null}
 
         {counterCollection && order.order.paidAt ? (

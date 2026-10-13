@@ -1,25 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
-import { Field, FieldGrid, FormStatus, SearchField, textareaClassFor } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/ledger";
-import { QueryForm } from "@/components/ui/QueryForm";
+import { Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { courseFormResignImpact, listCourseForms } from "@/db/course-forms";
 import {
   getCurrentWaiverTemplate,
   getSignedWaiverRecordForShop,
   listWaiverIntegrityAudit,
-  type SignedRecordView,
   signedRecordViewParam,
   standingWaiverExposure,
 } from "@/db/waivers";
@@ -33,7 +26,7 @@ import { uuidParam } from "@/lib/uuid";
 import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
 import { type CourseFormNotice, CourseFormsSection } from "./_components/CourseFormsSection";
 import { PublishRelease, type PublishReleaseCopy } from "./_components/PublishRelease";
-import { SignatureLog } from "./_components/SignatureLog";
+import { SignedRecordsSection } from "./_components/SignedRecordsSection";
 import { saveWaiverAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -113,7 +106,6 @@ export default async function WaiversPage({
   // diver's name, email or phone, and two views a reviewer goes looking for.
   const query = q?.trim() ?? "";
   const view = signedRecordViewParam(viewParam);
-  const narrowed = Boolean(query || view);
   // `waiver_records.id` is a `uuid` column, so a truncated or hand-edited
   // `?record=` does not resolve to nothing — it throws `invalid input syntax
   // for type uuid` and 500s this page. A malformed id is simply no pin: the
@@ -218,67 +210,6 @@ export default async function WaiversPage({
     confirm: t("waiversStaff.publish.confirm", { count: atRisk.divers }),
     pending: t("waiversStaff.pendingLabel"),
   };
-
-  // The pin renders inside its own day group below, so the page's own rows
-  // must not render it a second time. `SignatureRow` puts
-  // `id="waiver-record-<id>"` on its `<li>`, and a pinned record that also
-  // falls on the visible page produced **two elements with the same DOM id** —
-  // invalid HTML, two hit targets for one anchor, and the same evidence row
-  // shown twice on one screen.
-  //
-  // It only ever surfaced as a test failure because it depends on where the
-  // record lands: the list orders by `signedAt desc, id desc`, and `id` is a
-  // random UUID, so a record sitting on a page boundary among rows that share
-  // a timestamp crosses it or not depending on the UUIDs a given seed drew.
-  //
-  // Only the rendered rows are filtered. `auditPage`'s total and page count
-  // describe the whole log and stay untouched — the record has not gone
-  // anywhere, it is one day group further up.
-  const entries = auditPage.entries.filter((entry) => entry.id !== highlighted?.id);
-  const base = `/shop/${shopSlug}/waivers`;
-  // The `?record=` pin travels with the page rather than being dropped the
-  // moment a reviewer turns one, and the anchor keeps a page turn landing on
-  // the log instead of back at the release editor above it.
-  // The search and the view travel with every page turn and chip, so a
-  // narrowed log never widens behind the reader's back.
-  const logHref = ({
-    target = 1,
-    nextView = view,
-    keepQuery = true,
-  }: {
-    target?: number;
-    nextView?: SignedRecordView;
-    keepQuery?: boolean;
-  }) => {
-    const search = new URLSearchParams();
-    if (keepQuery && query) search.set("q", query);
-    if (nextView) search.set("view", nextView);
-    if (target > 1) search.set("page", String(target));
-    if (record) search.set("record", record);
-    const encoded = search.toString();
-    return `${encoded ? `${base}?${encoded}` : base}#signed-records-heading`;
-  };
-  const pageHref = (target: number) => logHref({ target });
-  const viewChips: FilterChip[] = [
-    {
-      key: "all",
-      label: t("waiversStaff.signatures.views.all"),
-      href: logHref({ nextView: undefined }),
-      active: !view,
-    },
-    {
-      key: "unchecked",
-      label: t("waiversStaff.signatures.views.unchecked"),
-      href: logHref({ nextView: "unchecked" }),
-      active: view === "unchecked",
-    },
-    {
-      key: "medical",
-      label: t("waiversStaff.signatures.medicalFlag"),
-      href: logHref({ nextView: "medical" }),
-      active: view === "medical",
-    },
-  ];
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -399,72 +330,17 @@ export default async function WaiversPage({
         t={t}
       />
 
-      <section className="mt-10" aria-labelledby="signed-records-heading">
-        <GroupLabel as="h2" id="signed-records-heading" className="scroll-mt-24">
-          {t("waiversStaff.signatures.heading")}
-        </GroupLabel>
-        {auditPage.total > 0 || narrowed ? (
-          <div className="mt-4 flex flex-col gap-3">
-            <QueryForm
-              aria-label={t("waiversStaff.signatures.searchLabel")}
-              keep={{ view }}
-              action={`${base}#signed-records-heading`}
-              className="flex items-center gap-2"
-            >
-              <SearchField
-                id="signed-record-search"
-                name="q"
-                label={t("waiversStaff.signatures.searchLabel")}
-                defaultValue={query}
-                placeholder={t("waiversStaff.signatures.searchPlaceholder")}
-                className="w-full min-w-0 sm:w-80"
-              />
-              {query ? (
-                <Link
-                  href={logHref({ keepQuery: false })}
-                  scroll={false}
-                  aria-label={t("waiversStaff.signatures.searchClear")}
-                  title={t("waiversStaff.signatures.searchClear")}
-                  className={buttonClass({ variant: "ghost", size: "icon" })}
-                >
-                  <DiveDayIcon name="close" className="size-4" />
-                </Link>
-              ) : null}
-            </QueryForm>
-            <FilterChips label={t("waiversStaff.signatures.views.label")} chips={viewChips} />
-          </div>
-        ) : null}
-        {auditPage.total === 0 ? (
-          <EmptyState
-            title={
-              narrowed
-                ? t("waiversStaff.signatures.noMatch")
-                : t("waiversStaff.signatures.noSignedRecords")
-            }
-            className="mt-4"
-          />
-        ) : (
-          <>
-            <div className="mt-4">
-              <SignatureLog
-                entries={entries}
-                pinned={highlighted}
-                shopSlug={shopSlug}
-                locale={locale}
-                timezone={shop.timezone}
-                t={t}
-              />
-            </div>
-            <Pager
-              page={auditPage.page}
-              pageCount={auditPage.pageCount}
-              href={pageHref}
-              total={t("waiversStaff.signatures.pagination.total", { count: auditPage.total })}
-              words={staffPagerWords(t)}
-            />
-          </>
-        )}
-      </section>
+      <SignedRecordsSection
+        auditPage={auditPage}
+        pinned={highlighted}
+        query={query}
+        view={view}
+        record={record}
+        shopSlug={shopSlug}
+        locale={locale}
+        timezone={shop.timezone}
+        t={t}
+      />
     </main>
   );
 }

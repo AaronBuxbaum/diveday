@@ -32,8 +32,8 @@ import { daySummaryBlocked, sharedInHorizonReadiness } from "@/db/blockers";
 import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
-import { listDiveSites } from "@/db/dive-sites";
 import { shopFirstBooking } from "@/db/first-booking";
+import { loadFirstRunFacts } from "@/db/first-run";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
@@ -44,7 +44,6 @@ import { canAcceptPayments, shopStripeAccountForRender } from "@/db/stripe-accou
 import { getShopDayDepartures, getTodayWork } from "@/db/today";
 import { countShopTrips } from "@/db/trips";
 import { isOrientationDismissed } from "@/db/user-accounts";
-import { getCurrentWaiverTemplate } from "@/db/waivers";
 import {
   orientationRoleFor,
   orientationTourHref,
@@ -86,7 +85,6 @@ import {
   spineIsQuiet,
   spineJobCount,
 } from "@/lib/today";
-import { isSampleRelease } from "@/lib/waivers";
 import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
 import {
@@ -452,25 +450,8 @@ async function TodayBody({
   // ledger would open on ticked boxes and a call to action nobody needs. Its count is never read
   // (`shopTripCount` is null for it).
   const showFirstRunChecklist = !nextDeparture && shopTripCount === 0;
-  // The one read only a first-run shop makes, so the one third wave.
-  const [firstRunDiveSites, firstRunRelease] = showFirstRunChecklist
-    ? await Promise.all([listDiveSites(db, shop.id), getCurrentWaiverTemplate(db, shop.id)])
-    : [null, null];
-  // The release step is done once the live text is the shop's own words, never
-  // DiveDay's sample that sign-up published (third UX review, item 30).
-  const firstRunReleaseDone = showFirstRunChecklist && !isSampleRelease(firstRunRelease?.body);
-  const firstRunStripeAccount = showFirstRunChecklist ? stripeAccount : null;
-  // A first-run shop gets one quiet progress fact, derived from persisted
-  // records. The trip and public-link rows are guided actions, not completion
-  // states, so they are intentionally excluded from the progress total.
-  const firstRunDoneCount = [
-    Boolean(shop.contactEmail || shop.contactPhone),
-    Boolean(shop.tagline || shop.description || shop.logoUrl),
-    Boolean(shop.unitsConfirmedAt),
-    Boolean(firstRunDiveSites?.length),
-    firstRunReleaseDone,
-    canAcceptPayments(firstRunStripeAccount),
-  ].filter(Boolean).length;
+  // The reads only a first-run shop makes, so the one third wave.
+  const firstRun = showFirstRunChecklist ? await loadFirstRunFacts(db, shop, stripeAccount) : null;
   // The desk group's one presence-derived row (ADR 20260827-first-light,
   // decision 6): the shop has departures, cannot take money online, and has
   // never taken an order at all. Two bounded reads, and only for a shop past
@@ -910,21 +891,16 @@ async function TodayBody({
             // 20260827-first-light, decision 6). Composed here rather than inside
             // the spine because the five persisted facts behind it are this
             // page's reads; the spine only decides where the group sits.
-            firstRun: showFirstRunChecklist ? (
+            firstRun: firstRun ? (
               <FirstRunChecklist
                 shopSlug={shopSlug}
                 // No APP_HOST (local dev, some tests) means no origin for an absolute
                 // URL: `publicScheduleUrl` falls back to the path rather than crash.
                 scheduleUrl={publicScheduleUrl}
-                contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
-                profileDone={Boolean(shop.tagline || shop.description || shop.logoUrl)}
-                diveSiteCount={firstRunDiveSites?.length ?? 0}
-                unitsDone={Boolean(shop.unitsConfirmedAt)}
-                releaseDone={firstRunReleaseDone}
-                stripeDone={canAcceptPayments(firstRunStripeAccount)}
+                {...firstRun.steps}
                 copy={firstRunChecklistCopy(t, shop, {
-                  diveSiteCount: firstRunDiveSites?.length ?? 0,
-                  doneCount: firstRunDoneCount,
+                  diveSiteCount: firstRun.steps.diveSiteCount,
+                  doneCount: firstRun.doneCount,
                 })}
               />
             ) : null,

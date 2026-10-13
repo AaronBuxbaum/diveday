@@ -383,17 +383,11 @@ export default async function GearRegisterPage({
           </section>
         )}
 
-        {/* `AddUnitDetails`, not `SectionCard as="details"` (no `open` prop)
-            or a plain `<details>`: its React state lets `AddUnitLink` open it
-            reliably. `initialOpen` also opens it on a refusal to show.
-
-            **One door, one name.** The closed band hides wherever a door
-            opens it: the header's "Add a unit" on a register with units, the
-            empty state's on one without (UX review 2026-10-10, item 30; third
-            review #36, which found the populated page still offering the
-            header, a differently named empty-state door and this band under
-            the last row). Only the deleted view of a register with nothing
-            live has no door, so the band stays there. */}
+        {/* `AddUnitDetails`: its React state lets `AddUnitLink` open it, and
+            `initialOpen` opens it on a refusal. The closed band hides wherever
+            a door opens it, header or empty state, so one door has one name
+            (2026-10-10 item 30; third review #36); only the deleted view of an
+            empty register has no door, so the band stays there. */}
         <AddUnitDetails
           className={sectionCardClass({
             padding: "none",

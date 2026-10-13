@@ -4,7 +4,6 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
-import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -42,6 +41,7 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { PromoConnectNotice } from "./_components/PromoConnectNotice";
 import { PromoDiscountFields, promoDiscountText } from "./_components/PromoDiscountFields";
 import {
   PromoCodeLedger,
@@ -230,20 +230,6 @@ export default async function PromosPage({
   // (src/lib/staff-notices.ts).
   const noticeField = noticeFromParam(notice, NOTICE_FIELD);
   const createStatus = notice && CREATE_FORM_NOTICES.has(notice) ? banner : undefined;
-  // Said once, shown in one of two places (see the banner's comment below).
-  const connectNotice = (className: string) => (
-    <PaymentsConnectCta
-      variant="banner"
-      className={className}
-      message={t.rich("promos.connectBanner", {
-        settingsLink: (chunks) => (
-          <Link href={`/shop/${shopSlug}/settings`} className="font-semibold underline">
-            {chunks}
-          </Link>
-        ),
-      })}
-    />
-  );
   const pageBanner = noticeField || createStatus ? undefined : banner;
   /** This box's refusal, already worded — or nothing, when the refusal was elsewhere. */
   const fieldError = (field: "code" | "discount" | "startsAt") =>
@@ -402,17 +388,12 @@ export default async function PromosPage({
         <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
       ) : null}
 
-      {/* **A form that cannot submit does not stand open.** Seven fields sat at
-          rest under a banner saying no code could be created until Stripe was
-          connected — a whole composer for an act the page had just refused.
-
-          **And the warning sits where it is true.** On a shop with codes on
-          its list, a page-wide "Connect your Stripe account… before creating a
-          code" stood over a live, redeemed REEF10 and read as if those codes
-          were broken (third review #36). It is about creating, so with codes
-          to show it lives inside the "New code" door below; only a shop with
-          no codes at all, where it is the one next move, keeps it up here. */}
-      {connected || promoPage.total > 0 ? null : connectNotice("mb-6")}
+      {/* **A form that cannot submit does not stand open**: unconnected, the
+          notice stands in for the composer, here when there are no codes and
+          inside "New code" when there are (`PromoConnectNotice`). */}
+      {connected || promoPage.total > 0 ? null : (
+        <PromoConnectNotice t={t} shopSlug={shopSlug} className="mb-6" />
+      )}
 
       {/* **And when it can submit, it is a door rather than a standing form.**
           Reading the ledger is daily; writing a code is a few times a season,
@@ -441,7 +422,7 @@ export default async function PromosPage({
                 (docs/design/settled-questions.md). */}
             <DisclosureCaret className="group-open/new-code:rotate-90" />
           </summary>
-          {connected ? null : connectNotice("mt-4")}
+          {connected ? null : <PromoConnectNotice t={t} shopSlug={shopSlug} className="mt-4" />}
           {connected ? (
             <SectionCard className="mt-4" padding="lg" description={t("promos.newCode.detail")}>
               <FieldGrid as="form" action={createPromoAction} columns={2}>
