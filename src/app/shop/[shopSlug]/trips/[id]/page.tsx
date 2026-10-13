@@ -23,8 +23,6 @@ import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips"
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyScanned } from "@/lib/format";
-import { toShopCurrency } from "@/lib/money";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -51,6 +49,7 @@ import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRos
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
 import { tripCrewNotes } from "./_components/trip-crew-notes";
+import { tripHeaderPrice } from "./_components/trip-header-price";
 import { DETAILS_FORMS, pageNoticesFor } from "./_components/trip-notice-tabs";
 import { tripPulseFacts } from "./_components/trip-pulse-facts";
 import type { TripPageSearchParams } from "./_components/trip-search-params";
@@ -362,13 +361,7 @@ export default async function ManageTripPage({
               />
             ) : undefined
           }
-          price={
-            trip.priceCents === null
-              ? undefined
-              : // The scanned form and the editor's own unit, as the board and the
-                // public hero print it: "$95 per diver" (third review, item 7).
-                `${formatMoneyScanned(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perDiver")}`
-          }
+          price={tripHeaderPrice(trip.priceCents, shop.currency, locale, t)}
           // Only while the boat can take a seat: full, sailed, held or
           // cancelled, and the header offers nothing (owner, 2026-10-06). A
           // full boat's wait list stays in the roster's own Add band.

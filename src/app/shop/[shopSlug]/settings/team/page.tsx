@@ -30,7 +30,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
-import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -43,11 +43,8 @@ import {
   noticeFromParam,
 } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
-import {
-  type CredentialRow,
-  type RenewalState,
-  StaffCredentials,
-} from "./_components/StaffCredentials";
+import { StaffCardCredentials } from "./_components/StaffCardCredentials";
+import { StaffCredentials } from "./_components/StaffCredentials";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import {
   deleteStaffCredentialAction,
@@ -63,6 +60,7 @@ import {
   setStaffStatusAction,
 } from "./actions";
 import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
+import { type CardCredential, credentialRowsFor } from "./credential-rows";
 import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -110,77 +108,6 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     "credential-deleted": { tone: "success", text: t("staffing.notice.credentialDeleted") },
     "credential-invalid": { tone: "danger", text: t("staffing.notice.credentialInvalid") },
   };
-}
-
-/** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
-const RENEWAL_WINDOW_DAYS = 30;
-
-/**
- * The roles that sail on a card: an instructor's or divemaster's rating, a
- * captain's license. A card for one of these with nothing recorded says so,
- * because absence is what the Safety tab cannot judge (third review, item 2).
- */
-const CREDENTIALED_ROLES: readonly Role[] = [
-  "instructor",
-  "assistant_instructor",
-  "divemaster",
-  "captain",
-];
-
-/** One person's credentials, as their own card reads them. */
-type CardCredential = { id: string; name: string; renewalWord: string | null };
-
-/** The ledger's rows, each renewal measured against the shop's own today. */
-function credentialRowsFor(
-  credentials: Awaited<ReturnType<typeof listStaffCredentials>>,
-  today: string,
-  locale: string,
-  t: StaffTranslator,
-): (CredentialRow & { personId: string; name: string })[] {
-  const dueSoonThrough = shiftCalendarDate(today, RENEWAL_WINDOW_DAYS);
-  return credentials.map(({ credential, person }) => {
-    const renewal: RenewalState = !credential.renewsAt
-      ? "not-recorded"
-      : credential.renewsAt < today
-        ? "overdue"
-        : credential.renewsAt <= dueSoonThrough
-          ? "due-soon"
-          : "current";
-    return {
-      id: credential.id,
-      title: `${person.fullName} · ${credential.name}`,
-      detail: [
-        credential.status === "verified"
-          ? t("staffing.credentials.verified")
-          : t("staffing.credentials.pending"),
-        t(CREDENTIAL_KIND_KEYS[credential.kind]),
-        credential.issuingBody,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      // The word is what carries the state; the ink only seconds it. A
-      // credential whose renewal is comfortably ahead says the date and
-      // nothing more, and one with no renewal recorded says nothing at all.
-      renewalWord:
-        renewal === "overdue"
-          ? t("staffing.credentials.overdue")
-          : renewal === "due-soon"
-            ? t("staffing.credentials.dueSoon")
-            : credential.renewsAt
-              ? t("staffing.credentials.renews", {
-                  date: formatCalendarDate(credential.renewsAt, locale),
-                })
-              : null,
-      renewal,
-      personId: person.id,
-      name: credential.name,
-      reviewed: credential.status === "verified",
-      reviewLabel:
-        credential.status === "verified"
-          ? t("staffing.credentials.markPending")
-          : t("staffing.credentials.markVerified"),
-    };
-  });
 }
 
 /**
@@ -443,43 +370,13 @@ function StaffRow({
         </CompactDisclosureRow>
       </div>
 
-      {/* What this person sails on, on the person: the ledger at the foot is
-          where a credential is added and reviewed, and this row is how an
-          owner reading Sal's card learns he has no license recorded. A role
-          that sails on a card says "None on file"; anyone else with nothing
-          recorded gets no row (third review, items 2 and 36). */}
-      {credentials.length > 0 || member.roles.some((role) => CREDENTIALED_ROLES.includes(role)) ? (
-        <div className="mt-4">
-          <CompactDisclosureRow
-            id={`credentials-${member.personId}`}
-            label={t("staffing.credentials.heading")}
-            value={
-              credentials.length > 0
-                ? cachedListFormat(locale).format(credentials.map((credential) => credential.name))
-                : t("staffing.credentials.noneOnFile")
-            }
-          >
-            {credentials.length > 0 ? (
-              <ul className="flex flex-col gap-1 text-sm">
-                {credentials.map((credential) => (
-                  <li key={credential.id}>
-                    <span className="font-medium">{credential.name}</span>
-                    {credential.renewalWord ? (
-                      <span className="text-muted"> · {credential.renewalWord}</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <a
-              href="#add-credential"
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
-            >
-              {t("staffing.credentials.add")}
-            </a>
-          </CompactDisclosureRow>
-        </div>
-      ) : null}
+      <StaffCardCredentials
+        personId={member.personId}
+        roles={member.roles}
+        credentials={credentials}
+        locale={locale}
+        t={t}
+      />
 
       {/* Who to call for this person, and the one place a shop can say so.
           Behind a disclosure because it is the rare edit — a contact is typed
