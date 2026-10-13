@@ -20,6 +20,9 @@ export const BUILDER_NOTICE_KEYS: Record<
   removed: { tone: "success", key: "schedule.notices.removed" },
   invalid: { tone: "danger", key: "schedule.notices.invalid" },
   "end-before-start": { tone: "danger", key: "schedule.notices.endBeforeStart" },
+  // A course's named days, out of order or past six weeks (third UX review, item 10).
+  "days-out-of-order": { tone: "danger", key: "schedule.notices.daysOutOfOrder" },
+  "days-span-repeat": { tone: "danger", key: "schedule.notices.daysSpanRepeat" },
   "not-authorized": { tone: "danger", key: "schedule.notices.notAuthorized" },
   "not-found": { tone: "danger", key: "schedule.notices.notFound" },
   "not-scheduled": { tone: "warning", key: "schedule.notices.notScheduled" },

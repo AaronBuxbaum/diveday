@@ -11,6 +11,7 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { depthInUnit } from "@/lib/depth-units";
 import { formatShortDate, weekdayNames } from "@/lib/format";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
@@ -18,6 +19,7 @@ import { toShopCurrency } from "@/lib/money";
 import type { requireShopSurface } from "@/lib/session";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
+import { laterMeetingDates } from "@/lib/trip-days";
 import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
 import { updateTripCrewAction } from "../crew-actions";
 import { saveDetails } from "../details-actions";
@@ -229,6 +231,11 @@ export function tripAboutRows(context: TripAboutRowsContext) {
             startWall,
             endWall,
             dayCount: Math.max(1, scheduleDays.length),
+            // The later days' own dates when the run has gaps (third UX
+            // review, item 10), so a save keeps a course's weekends apart.
+            laterDates: laterMeetingDates(
+              scheduleDays.map((day) => calendarDateInTimezone(day.startsAt, shop.timezone)),
+            ),
             locale,
             currency: toShopCurrency(shop.currency),
             boats: shopBoats.map((boat) => ({ id: boat.id, name: boat.name })),

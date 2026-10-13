@@ -197,6 +197,8 @@ export type BuilderCopy = {
   selfGuidedHint: string;
   daysLabel: string;
   daysDescription: string;
+  /** "Day {number}" over each later day's date box (third UX review, item 10). */
+  meetingDayLabel: string;
   payAtBookingLegend: string;
   payAtBookingDescription: string;
   depositLabel: string;

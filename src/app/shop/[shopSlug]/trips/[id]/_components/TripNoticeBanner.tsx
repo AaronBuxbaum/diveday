@@ -465,6 +465,7 @@ const NOTICE_KEYS: Record<
   "not-authorized": { form: "page", tone: "danger", key: "trips.notices.notAuthorized" },
   invalid: { form: "page", tone: "danger", key: "trips.notices.invalid" },
   "end-before-start": { form: "details", tone: "danger", key: "trips.notices.endBeforeStart" },
+  "days-out-of-order": { form: "details", tone: "danger", key: "trips.notices.daysOutOfOrder" },
   "capacity-below-booked": {
     form: "details",
     tone: "danger",

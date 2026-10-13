@@ -126,7 +126,7 @@ export function boatStageOf<R extends { stage: TripStage; recordedAt: Date }>({
  *
  * A departure shorter than a day is one sailing even when it crosses
  * midnight, so every tap from its own day is "from its last day". A longer one
- * is a multi-day run (`trip-days.ts`: the same window on consecutive days), and
+ * is a multi-day run (`trip-days.ts`: the same window on several days), and
  * its last day is the shop day `endsAt` falls on.
  */
 function readTap({

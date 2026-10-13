@@ -11,14 +11,24 @@
  * a title and nothing else — separate rosters, separate waivers, separate
  * crew.
  *
- * A trip's days are the same wall-clock window on consecutive calendar days.
- * That is deliberately the boring shape: it is what a course weekend and a
- * multi-day charter actually look like, it survives a DST boundary (the wall
- * time is what a shop promises, so 08:30 stays 08:30 either side of the
- * change — `addCalendarDays` moves the calendar date, not a fixed 24 hours),
- * and a day that genuinely differs is edited on its own afterwards.
+ * A trip's days are the same wall-clock window, on consecutive calendar days
+ * unless the shop names the dates. Consecutive is the boring default: it is
+ * what a course weekend and a multi-day charter look like, it survives a DST
+ * boundary (the wall time is what a shop promises, so 08:30 stays 08:30 either
+ * side of the change — `addCalendarDays` moves the calendar date, not a fixed
+ * 24 hours), and a day that genuinely differs is edited on its own afterwards.
+ *
+ * **A date per day, when the days are not consecutive** (third UX review,
+ * item 10). An Open Water course for working adults meets Sat/Sun, Sat/Sun,
+ * Sat, and as consecutive days it had to go on the board as three unrelated
+ * trips: three rosters, three prep links per student, three recaps, and a
+ * certify on whichever roster was last. Named dates keep it one trip, one
+ * roster, one certify. Each later date must come after the one before it and
+ * within {@link MAX_TRIP_SPAN_DAYS} of day one; anything else is refused,
+ * never reordered, because a reordered course is not the one the shop typed.
  */
 
+import { type CalendarDate, calendarDaysBetween, isValidCalendarDate } from "./calendar-date";
 import { addCalendarDays, type WallTime } from "./zoned";
 
 /** A departure meets on at least one day, by definition. */
@@ -30,6 +40,13 @@ export const MIN_TRIP_DAYS = 1;
  * silently mint a year of meeting days.
  */
 export const MAX_TRIP_DAYS = 14;
+
+/**
+ * Six weeks from day one to the last day: room for a course that meets over
+ * several weekends, short enough that a mistyped year cannot stretch one
+ * departure across a season.
+ */
+export const MAX_TRIP_SPAN_DAYS = 42;
 
 /** One meeting day as wall time in the shop's own zone. */
 export type MeetingDayWall = { start: WallTime; end: WallTime };
@@ -55,4 +72,66 @@ export function tripMeetingDays(day: MeetingDayWall, dayCount: number): MeetingD
     start: addCalendarDays(day.start, offset),
     end: addCalendarDays(day.end, offset),
   }));
+}
+
+export type MeetingDaysResult =
+  | { ok: true; days: MeetingDayWall[] }
+  | { ok: false; reason: "invalid" | "days_out_of_order" };
+
+const dateOf = (wall: WallTime): CalendarDate =>
+  `${String(wall.year).padStart(4, "0")}-${String(wall.month).padStart(2, "0")}-${String(wall.day).padStart(2, "0")}`;
+
+/**
+ * The meeting days a submission asks for: `dayCount` consecutive days when
+ * `laterDates` is empty, otherwise day one plus one named date for each later
+ * day. Every day keeps day one's wall-clock window; a window that ends after
+ * midnight ends on the morning after its own date, as day one's does.
+ *
+ * `invalid` is a count out of range, a date that does not exist, or a list
+ * whose length disagrees with the count (a forged or stale form).
+ * `days_out_of_order` is a later date on or before the day before it, or more
+ * than {@link MAX_TRIP_SPAN_DAYS} after day one: something the staffer can
+ * fix by looking at the dates, so it gets its own sentence.
+ */
+export function meetingDaysFor(
+  day: MeetingDayWall,
+  dayCount: number,
+  laterDates: readonly string[] = [],
+): MeetingDaysResult {
+  if (laterDates.length === 0) {
+    const days = tripMeetingDays(day, dayCount);
+    return days ? { ok: true, days } : { ok: false, reason: "invalid" };
+  }
+  if (!isTripDayCount(dayCount) || laterDates.length !== dayCount - 1) {
+    return { ok: false, reason: "invalid" };
+  }
+  if (!laterDates.every((date) => isValidCalendarDate(date))) {
+    return { ok: false, reason: "invalid" };
+  }
+  const first = dateOf(day.start);
+  let previous = first;
+  const days: MeetingDayWall[] = [day];
+  for (const date of laterDates) {
+    if (calendarDaysBetween(previous, date) < 1) return { ok: false, reason: "days_out_of_order" };
+    const offset = calendarDaysBetween(first, date);
+    if (offset > MAX_TRIP_SPAN_DAYS) return { ok: false, reason: "days_out_of_order" };
+    days.push({
+      start: addCalendarDays(day.start, offset),
+      end: addCalendarDays(day.end, offset),
+    });
+    previous = date;
+  }
+  return { ok: true, days };
+}
+
+/**
+ * The later days' dates of a stored departure, for the edit form: empty when
+ * the days are consecutive (the count says it all), otherwise one date per
+ * day after the first, read in the shop's zone.
+ */
+export function laterMeetingDates(dayStarts: readonly CalendarDate[]): CalendarDate[] {
+  const [first, ...rest] = dayStarts;
+  if (!first || rest.length === 0) return [];
+  const consecutive = rest.every((date, index) => calendarDaysBetween(first, date) === index + 1);
+  return consecutive ? [] : rest;
 }

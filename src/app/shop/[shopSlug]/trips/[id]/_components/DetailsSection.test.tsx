@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DetailsSection } from "./DetailsSection";
 import type { Trip } from "./types";
@@ -39,7 +39,12 @@ const trip = {
 
 const wall = { year: 2026, month: 10, day: 3, hour: 8, minute: 0 };
 
-function renderDetails() {
+function renderDetails(
+  days: { dayCount: number; laterDates: string[] } = {
+    dayCount: 1,
+    laterDates: [],
+  },
+) {
   return render(
     <DetailsSection
       context={{
@@ -49,7 +54,7 @@ function renderDetails() {
         tripDiveList: [],
         startWall: wall,
         endWall: { ...wall, hour: 12 },
-        dayCount: 1,
+        ...days,
         locale: "en-US",
         currency: "USD",
         boats: [],
@@ -82,5 +87,33 @@ describe("DetailsSection — the stored arrival photo", () => {
     expect(wrapper?.className).not.toMatch(/grid-cols/);
     // Why: the field it sits in is one cell of a two-column grid.
     expect(wrapper?.closest('[class*="grid-cols"]')).toHaveClass("sm:grid-cols-2");
+  });
+});
+
+/**
+ * **A course that skips days keeps its dates** (third UX review, item 10):
+ * the edit form shows a date per later day, so saving it does not fold a
+ * course's two weekends back into consecutive days.
+ */
+describe("a departure on named days", () => {
+  it("shows each later day's own date, and moves them with day one", async () => {
+    renderDetails({ dayCount: 3, laterDates: ["2026-10-04", "2026-10-10"] });
+    const day2 = (await screen.findByLabelText("Day 2")) as HTMLInputElement;
+    const day3 = screen.getByLabelText("Day 3") as HTMLInputElement;
+    expect(day2.value).toBe("2026-10-04");
+    expect(day3.value).toBe("2026-10-10");
+    expect(day2.name).toBe("meetingDate");
+
+    const first = document.querySelector('input[name="date"]') as HTMLInputElement;
+    fireEvent.change(first, { target: { value: "2026-10-10" } });
+    expect((screen.getByLabelText("Day 2") as HTMLInputElement).value).toBe("2026-10-11");
+    expect((screen.getByLabelText("Day 3") as HTMLInputElement).value).toBe("2026-10-17");
+  });
+
+  it("offers the next consecutive date for a day the count adds", async () => {
+    renderDetails({ dayCount: 1, laterDates: [] });
+    expect(screen.queryByLabelText("Day 2")).toBeNull();
+    fireEvent.change(screen.getByRole("spinbutton", { name: /Days/ }), { target: { value: "2" } });
+    expect(((await screen.findByLabelText("Day 2")) as HTMLInputElement).value).toBe("2026-10-04");
   });
 });
