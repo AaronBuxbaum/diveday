@@ -1051,16 +1051,6 @@ export async function seedDemoSchedule(
         divers: customers,
         actorPersonId: instructor.id,
       });
-      // The morning handoff on that same boat: what the desk did after the
-      // owner last looked, plus the two divers who said the crew may know it
-      // is their first trip (src/db/seed-desk-handoff.ts, issues #1202/#1187
-      // and #1182). Written by the instructor so the owner's own login — the
-      // one a demo signs in with — is the reader who is behind on them.
-      await seedDeskHandoff(db, shopId, {
-        trip: reefTrip,
-        roster: bookingRows,
-        actorPersonId: instructor.id,
-      });
       // One unpaid seat on that same boat, so the Overview's pulse has a money
       // fact to state and the Orders index has something to be narrowed to
       // (src/db/seed-open-invoice.ts). Deliberately `open`: a booking-linked
@@ -1203,6 +1193,23 @@ export async function seedDemoSchedule(
   // any health answers. It remains unresolved every time the demo resets; the
   // policy/legal decision behind production medical handling is still H-01–H-03.
   await seedMedicalReview(db, shopId, waiverTemplate, tripRows, instructor.id, isCanonicalDemo);
+
+  // The morning handoff on today's reef boat: what the desk did after the
+  // owner last looked, plus the two divers who said the crew may know it is
+  // their first trip (src/db/seed-desk-handoff.ts, issues #1202/#1187 and
+  // #1182). Written by the instructor so the owner's own login — the one a
+  // demo signs in with — is the reader who is behind on them. Late, after
+  // every scenario that can block a diver on this boat: its check-ins are
+  // real ones, so they ask readiness the question the counter would (UX
+  // review 2026-10-13, item 3). No waiver row is written, so it may sit
+  // before the evidence pass below.
+  if (opts.history !== false && reef) {
+    await seedDeskHandoff(db, shopId, {
+      trip: reef,
+      roster: bookingRows,
+      actorPersonId: instructor.id,
+    });
+  }
 
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated
