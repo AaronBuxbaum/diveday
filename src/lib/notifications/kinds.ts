@@ -1078,6 +1078,14 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
     url: z.url().max(2_000),
   }),
   z.object({
+    kind: z.literal("money"),
+    revenueCents: z.number().int(),
+    tipsCents: z.number().int().min(0),
+    openOrders: z.number().int().min(0),
+    currency: z.string().trim().min(3).max(3),
+    url: z.url().max(2_000),
+  }),
+  z.object({
     kind: z.literal("this_week"),
     departures: z.number().int().min(1),
     seatsFilled: z.number().int().min(0),

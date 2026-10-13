@@ -4247,6 +4247,13 @@
         "sailed": "{departures, plural, one {# departure} other {# departures}} sailed with {filled} of {seats} seats filled ({percent}%).",
         "link": "Open Reports"
       },
+      "money": {
+        "heading": "Money",
+        "took": "Last week’s departures took {amount} after tax.",
+        "tips": "{amount} in tips to pass on to the crew.",
+        "openOrders": "{count, plural, one {# order is still open.} other {# orders are still open.}}",
+        "link": "Open Money"
+      },
       "thisWeek": {
         "heading": "This week, {range}",
         "board": "{departures, plural, one {# departure} other {# departures}} on the board, {filled} of {seats} seats booked ({percent}%).",

@@ -3,6 +3,7 @@ import {
   digestWeeks,
   isWeeklyDigestDue,
   mondayOnOrBefore,
+  noMoney,
   overdueTodayActions,
   seatFillPercent,
   WEEKLY_DIGEST_CRON_CRONTAB,
@@ -20,6 +21,7 @@ const QUIET: WeeklyDigestFacts = {
   reviews: { received: 0, awaitingModeration: 0 },
   dateRequestsWaiting: 0,
   overdueTodayItems: 0,
+  money: { revenueCents: 0, tipsCents: 0, openOrders: 0, currency: "usd" },
 };
 
 describe("mondayOnOrBefore", () => {
@@ -252,15 +254,47 @@ describe("weeklyDigestSections", () => {
       reviews: { received: 2, awaitingModeration: 0 },
       dateRequestsWaiting: 2,
       overdueTodayItems: 5,
+      money: { revenueCents: 412_000, tipsCents: 39_500, openOrders: 2, currency: "usd" },
     });
     expect(sections.map((section) => section.kind)).toEqual([
       "last_week",
+      "money",
       "this_week",
       "waivers",
       "reviews",
       "date_requests",
       "overdue",
     ]);
+  });
+});
+
+/**
+ * **What the week made, for whoever may read the money** (third UX review,
+ * item 33). The Monday email carried bookings and seats and never a dollar;
+ * the money section is built from the Reports grade's facts only, and the
+ * staff grade's are zero, so a crew member's email never has it.
+ */
+describe("the money section", () => {
+  it("says what last week took, the tips to pass on and the orders still open", () => {
+    const sections = weeklyDigestSections({
+      ...QUIET,
+      money: { revenueCents: 412_000, tipsCents: 39_500, openOrders: 2, currency: "usd" },
+    });
+    expect(sections).toEqual([
+      { kind: "money", revenueCents: 412_000, tipsCents: 39_500, openOrders: 2, currency: "usd" },
+    ]);
+  });
+
+  it("is built from open orders alone in a week nothing sailed", () => {
+    const sections = weeklyDigestSections({
+      ...QUIET,
+      money: { revenueCents: 0, tipsCents: 0, openOrders: 1, currency: "usd" },
+    });
+    expect(sections.map((section) => section.kind)).toEqual(["money"]);
+  });
+
+  it("is never built from the staff grade's money", () => {
+    expect(weeklyDigestSections({ ...QUIET, money: noMoney("usd") })).toEqual([]);
   });
 });
 

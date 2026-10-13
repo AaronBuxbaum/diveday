@@ -4247,6 +4247,13 @@
         "sailed": "{departures, plural, one {Salió # salida} other {Salieron # salidas}} con {filled} de {seats} plazas ocupadas ({percent} %).",
         "link": "Abrir Informes"
       },
+      "money": {
+        "heading": "Dinero",
+        "took": "Las salidas de la semana pasada dejaron {amount} después de impuestos.",
+        "tips": "{amount} en propinas para repartir con la tripulación.",
+        "openOrders": "{count, plural, one {# pedido sigue abierto.} other {# pedidos siguen abiertos.}}",
+        "link": "Abrir Dinero"
+      },
       "thisWeek": {
         "heading": "Esta semana, {range}",
         "board": "{departures, plural, one {# salida} other {# salidas}} en la agenda, {filled} de {seats} plazas reservadas ({percent} %).",

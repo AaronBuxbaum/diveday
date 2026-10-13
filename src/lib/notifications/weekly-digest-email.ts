@@ -1,6 +1,6 @@
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { formatCalendarDateRange, formatTimeZoneName } from "@/lib/format";
+import { formatCalendarDateRange, formatMoneyCents, formatTimeZoneName } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import { firstNameOf } from "@/lib/person-name";
 import { seatFillPercent } from "@/lib/weekly-digest";
@@ -54,6 +54,29 @@ function blockFor(
         lines,
         url: section.url,
         linkLabel: t("notifications.weeklyDigest.lastWeek.link"),
+      };
+    }
+    case "money": {
+      const money = (cents: number) => formatMoneyCents(cents, section.currency, input.locale);
+      const lines: string[] = [];
+      if (section.revenueCents > 0) {
+        lines.push(
+          t("notifications.weeklyDigest.money.took", { amount: money(section.revenueCents) }),
+        );
+      }
+      if (section.tipsCents > 0) {
+        lines.push(
+          t("notifications.weeklyDigest.money.tips", { amount: money(section.tipsCents) }),
+        );
+      }
+      if (section.openOrders > 0) {
+        lines.push(t("notifications.weeklyDigest.money.openOrders", { count: section.openOrders }));
+      }
+      return {
+        heading: t("notifications.weeklyDigest.money.heading"),
+        lines,
+        url: section.url,
+        linkLabel: t("notifications.weeklyDigest.money.link"),
       };
     }
     case "this_week": {
