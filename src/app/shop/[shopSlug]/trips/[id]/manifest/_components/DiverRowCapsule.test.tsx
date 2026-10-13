@@ -58,7 +58,7 @@ describe("the earlier-refusal capsule", () => {
         }),
       ],
     });
-    expect(capsuleOf(container)).toHaveTextContent("Riding only: not cleared");
+    expect(capsuleOf(container)).toHaveTextContent("Riding only: MD said no");
     expect(capsuleOf(container)).not.toHaveTextContent(CAPSULE);
     expect(container.textContent).toMatch(
       /A physician did not clear this person on Sep\s4,\s2026: riding only, not in the water/,
@@ -352,7 +352,7 @@ describe("the unresolved-referral capsule", () => {
  */
 describe("the riding-only capsules", () => {
   const holds = [
-    { kind: "not_cleared", en: "Riding only: not cleared", es: "Solo a bordo: no apto" },
+    { kind: "not_cleared", en: "Riding only: MD said no", es: "Solo a bordo: no apto" },
     { kind: "referral", en: "Riding only: referred", es: "Solo a bordo: derivado" },
   ] as const;
 

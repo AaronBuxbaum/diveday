@@ -914,7 +914,7 @@
   card, rents nothing, and pays the departure's rider price (`trips.rider_price_cents`) under the
   same rule as a snorkeler's. A rider is still a body aboard and is counted at roll call, and is
   never held at boarding on a medical referral or refusal (H-109); the roll call, its printed
-  sheet and the offline copy show it instead as "Riding only: not cleared" or
+  sheet and the offline copy show it instead as "Riding only: MD said no" or
   "Riding only: referred", with the date.
 - **Diver seats** — an optional cap on how many **divers** a departure carries
   (`trips.diver_capacity`), for a boat whose tanks or guides run out before its deck does. The
