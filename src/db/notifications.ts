@@ -1561,6 +1561,12 @@ export async function listNotificationDeliveryIssues(
           inArray(notificationDeliveries.status, ["failed", "not_configured"]),
           inArray(notificationDeliveries.providerStatus, ACTIONABLE_PROVIDER_STATUSES),
         ),
+        // A send held for a rehearsal is not an issue: nothing was meant to
+        // leave (#2395, ADR 20261012-rehearsal-departures).
+        or(
+          isNull(notificationDeliveries.sendErrorCode),
+          ne(notificationDeliveries.sendErrorCode, REHEARSAL_HELD_DELIVERY.errorCode),
+        ),
         ne(bookings.status, "cancelled"),
         window.from ? gte(trips.startsAt, window.from) : undefined,
         window.until ? lte(trips.startsAt, window.until) : undefined,

@@ -556,6 +556,7 @@
     "waiverResendHint": "Reenviar",
     "waiverSend": "Enviar exención",
     "waiverSent": "Exención enviada",
+    "waiverHeldRehearsal": "Retenida: ensayo",
     "waiverSigned": "Exención firmada",
     "noteCount": "{count, plural, one {# nota} other {# notas}}",
     "emergencyContactAddFull": "Añadir contacto de emergencia",

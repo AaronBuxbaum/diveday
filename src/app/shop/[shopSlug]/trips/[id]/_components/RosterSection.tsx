@@ -80,7 +80,7 @@ export function RosterSection({
   const { waitingGroup, invitedGroup, addDiverGroup, arrival, record } = slots;
   const { roster } = rows;
   const t = staffTranslator(locale);
-  const controls = waiverControls(t);
+  const controls = waiverControls(t, { rehearsal: trip.rehearsal });
   const groups = groupRoster({
     t,
     rows,
