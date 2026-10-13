@@ -8,6 +8,7 @@ import process from "node:process";
 
 import {
   GUARD_COUNT_SITES,
+  gitignoredPaths,
   guardCountProblems,
   linkedSkillProblems,
   missingDocPaths,
@@ -16,7 +17,6 @@ import {
 } from "./agent-layer.mjs";
 import { listDirs } from "./check-context-budget.mjs";
 import { findLaunchProblems } from "./mcp-launch-guard.mjs";
-import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { areas } from "./task-context-data.mjs";
 
 const ROOT = process.cwd();
@@ -264,17 +264,10 @@ for (const file of handoffDocs) {
   ))
     missingHandoff.push({ file, token });
 }
-const ignoredHandoff = new Set();
-if (missingHandoff.length > 0) {
-  // One bounded call: which of these does .gitignore cover? Exit 1 means none.
-  const result = runBounded("git", ["check-ignore", "--no-index", "--stdin"], {
-    cwd: ROOT,
-    encoding: "utf8",
-    input: [...new Set(missingHandoff.map((item) => item.token))].join("\n"),
-    timeoutMs: SUBPROCESS_TIMEOUTS.git,
-  });
-  for (const line of String(result.stdout ?? "").split("\n")) if (line) ignoredHandoff.add(line);
-}
+const ignoredHandoff = gitignoredPaths(
+  ROOT,
+  missingHandoff.map((item) => item.token),
+);
 for (const { file, token } of missingHandoff) {
   if (!ignoredHandoff.has(token)) problems.push(`${file}: path "${token}" does not exist`);
 }

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   GUARD_COUNT_SITES,
+  gitignoredPaths,
   guardCountProblems,
   linkedSkillProblems,
   missingDocPaths,
@@ -233,13 +234,24 @@ describe("the handoff docs' paths", () => {
     }
   });
 
+  it("counts a gitignored output as named, whether or not this checkout has made it yet", () => {
+    // `e2e/screenshots/` exists only after a local capture run, so CI's fresh clone lacks it.
+    expect([...gitignoredPaths(ROOT, ["e2e/screenshots/", "src/db/schema.ts"])]).toEqual([
+      "e2e/screenshots/",
+    ]);
+    expect(gitignoredPaths(ROOT, [])).toEqual(new Set());
+  });
+
   it("passes the tree as it stands", () => {
-    // The guard itself reads every handoff doc; this pins the two files the review named.
+    // The guard itself reads every handoff doc; this pins the two files the review named, under
+    // the guard's own rule: missing on disk and not a gitignored output.
     for (const file of ["docs/agents/working-rules.md", ".claude/skills/marketing-page/SKILL.md"]) {
       const contents = readFileSync(path.join(ROOT, file), "utf8");
-      expect(
-        missingDocPaths(contents, (relative) => existsSync(path.join(ROOT, relative))),
-      ).toEqual([]);
+      const missing = missingDocPaths(contents, (relative) =>
+        existsSync(path.join(ROOT, relative)),
+      );
+      const ignored = gitignoredPaths(ROOT, missing);
+      expect(missing.filter((token) => !ignored.has(token))).toEqual([]);
     }
   });
 });
