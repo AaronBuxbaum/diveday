@@ -1,5 +1,20 @@
-import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  ne,
+  not,
+  sql,
+} from "drizzle-orm";
 import { courseTemplateSnapshot, getCourseTemplate } from "@/content/course-templates";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import {
   type CourseTemplateDiff,
   type CourseTemplateSnapshot,
@@ -17,7 +32,8 @@ import type { AppDb } from "./client";
 import { attachStandardCourseForms, courseFormsAwaitingTextByCourse } from "./course-forms";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import type { Course } from "./schema";
-import { courses, shops } from "./schema";
+import { courses, shops, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export type NewCourse = {
   shopId: string;
@@ -240,6 +256,72 @@ export type CoursePage = {
 };
 
 /**
+ * The roster's three views beside "All" (third UX review, item 35): a course
+ * with a session ahead of it, a course on the catalog with none, and a course
+ * hidden from divers. "Scheduled" asks the question `nextSessionStartByCourse`
+ * answers for the row's "Next {date}", in the same words, so a row in that
+ * view always carries a date.
+ */
+export const COURSE_LIST_VIEWS = ["scheduled", "notYet", "hidden"] as const;
+export type CourseListView = (typeof COURSE_LIST_VIEWS)[number];
+
+export function courseListViewParam(value: string | undefined): CourseListView | undefined {
+  return COURSE_LIST_VIEWS.find((view) => view === value);
+}
+
+function courseListViewWhere(
+  db: AppDb,
+  shopId: string,
+  view: CourseListView | undefined,
+  now: Date,
+) {
+  if (!view) return undefined;
+  if (view === "hidden") return eq(courses.isActive, false);
+  const upcoming = exists(
+    db
+      .select({ one: sql`1` })
+      .from(trips)
+      .where(
+        and(
+          liveTrip(),
+          eq(trips.shopId, shopId),
+          eq(trips.courseId, courses.id),
+          eq(trips.status, "scheduled"),
+          gte(trips.startsAt, new Date(now.getTime() - HOUR_MS)),
+        ),
+      ),
+  );
+  return view === "scheduled" ? upcoming : and(eq(courses.isActive, true), not(upcoming));
+}
+
+/**
+ * The courses among `courseIds` that have ever been on the board: a session
+ * ahead, or one that ran. The roster offers "Schedule" on these and on the
+ * shop's own courses, not on every catalog entry a template put there (third
+ * UX review, item 35): 55 rows each offering Schedule read as 55 products the
+ * shop sells.
+ */
+export async function courseIdsEverOnBoard(
+  db: AppDb,
+  shopId: string,
+  courseIds: readonly string[],
+): Promise<Set<string>> {
+  if (courseIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ courseId: trips.courseId })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        inArray(trips.courseId, [...courseIds]),
+        ne(trips.status, "cancelled"),
+      ),
+    );
+  return new Set(rows.flatMap((row) => (row.courseId ? [row.courseId] : [])));
+}
+
+/**
  * The staff roster's paginated view of the full catalog — hidden entries
  * included, one page at a time. Callers that need the complete set for a
  * dropdown or picker use {@link listActiveCourses}, not this.
@@ -271,9 +353,21 @@ export type CoursePage = {
 export async function pagedCourses(
   db: AppDb,
   shopId: string,
-  options: { page?: number; limit?: number } = {},
+  options: {
+    page?: number;
+    limit?: number;
+    /** A substring of the course's title (third UX review, item 35). */
+    query?: string;
+    view?: CourseListView;
+    now?: Date;
+  } = {},
 ): Promise<CoursePage> {
-  const scope = eq(courses.shopId, shopId);
+  const query = options.query?.trim();
+  const scope = and(
+    eq(courses.shopId, shopId),
+    query ? ilike(courses.title, `%${query}%`) : undefined,
+    courseListViewWhere(db, shopId, options.view, options.now ?? nowDate()),
+  );
 
   const paged = await offsetPage({
     page: options.page,

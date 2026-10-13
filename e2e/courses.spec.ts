@@ -327,12 +327,14 @@ test.describe("staff", () => {
   test("a course row schedules a session of itself, opening the board's add panel", async ({
     page,
   }) => {
+    // A course the shop runs: the seed seats Discover Scuba Diving on the
+    // board, so its row offers Schedule (third UX review, item 35).
     await page.goto("/shop/blue-mantis/courses");
     const row = page
       .getByRole("listitem")
-      .filter({ has: page.getByText("Rescue Diver", { exact: true }) });
+      .filter({ has: page.getByText("Discover Scuba Diving", { exact: true }) });
 
-    await row.getByRole("link", { name: "Schedule a session of Rescue Diver" }).click();
+    await row.getByRole("link", { name: "Schedule a session of Discover Scuba Diving" }).click();
     // The one trip-creation path, not a second one (ADR
     // 20260806-one-trip-create-form) — the panel opens with the course
     // preselected and the title placeholder already shaped for it.
@@ -345,11 +347,43 @@ test.describe("staff", () => {
     await expect(course).toHaveValue(/[0-9a-f-]{36}/);
     // The preselected course is the one whose row was clicked, not the first
     // in the list — the whole point of arriving here from the catalog.
-    await expect(course).toContainText("Rescue Diver");
+    await expect(course).toContainText("Discover Scuba Diving");
     await expect(page.getByLabel("What is it")).toHaveAttribute(
       "placeholder",
-      /Rescue Diver — Session 1/,
+      /Discover Scuba Diving — Session 1/,
     );
+  });
+
+  /**
+   * **55 courses, findable in one line** (third UX review, item 35): a title
+   * search and Scheduled / Not yet / Hidden views, and "Schedule" only on a
+   * course the shop runs rather than on every catalog entry.
+   */
+  test("the roster searches by title and narrows to a view", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/courses");
+    const search = page.getByRole("searchbox", { name: "Search courses" });
+    await search.fill("Rescue");
+    await search.press("Enter");
+    await page.waitForURL(/[?&]q=Rescue/);
+    const rescue = page
+      .getByRole("listitem")
+      .filter({ has: page.getByText("Rescue Diver", { exact: true }) });
+    await expect(rescue).toBeVisible();
+    // Never on the board, from the agency's catalog: a door to its editor, no Schedule.
+    await expect(rescue.getByRole("link", { name: /^Schedule a session of/ })).toHaveCount(0);
+
+    const views = page.getByRole("navigation", { name: "Course views" });
+    await views.getByRole("link", { name: "Scheduled" }).click();
+    await page.waitForURL(/[?&]view=scheduled/);
+    await expect(page.getByText("No courses match.")).toBeVisible();
+
+    await page.getByRole("link", { name: "Clear search" }).click();
+    await expect(page).not.toHaveURL(/[?&]q=/);
+    const scheduled = page
+      .getByRole("listitem")
+      .filter({ has: page.getByText("Discover Scuba Diving", { exact: true }) });
+    await expect(scheduled).toContainText(/Next /);
+    await expect(page.getByText("Not scheduled")).toHaveCount(0);
   });
 
   test("staff edit a seeded course page, toggle it live, and a signed-out diver reads it", async ({
