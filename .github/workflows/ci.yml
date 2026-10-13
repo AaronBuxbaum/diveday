@@ -87,11 +87,12 @@ jobs:
       # this job runs on every pull request, docs-only included, so a guard over
       # a document still answers to a docs-only change.
       - run: pnpm exec vitest run --project guards --reporter=dot
-      # Supply chain: no production dependency carries a known high or critical
-      # advisory. Production only, because that is what ships; the dev tree's one
-      # unpatched advisory is reviewed in pnpm-workspace.yaml's `auditConfig`.
-      - name: Production dependencies have no high advisory
-        run: pnpm audit --prod --audit-level high
+      # Supply chain: no dependency carries a known high or critical advisory.
+      # The whole tree, not only production: dev tooling is what runs on the
+      # runners that hold the reg-suit keys and the deploy role. An advisory with
+      # no patched release is reviewed in pnpm-workspace.yaml's `auditConfig`.
+      - name: Dependencies have no unreviewed high advisory
+        run: pnpm audit --audit-level high
       # The body names the reviewer agents a safety-critical or security-sensitive diff needs
       # (scripts/check-pr-body.mjs; docs/agents/repo-checks.md#pr-body). The body is read live
       # so an edit counts on a re-run; without `pull-requests: read` that read fails and the

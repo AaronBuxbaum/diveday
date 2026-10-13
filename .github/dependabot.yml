@@ -6,7 +6,8 @@ updates:
       interval: weekly
     # Three days, the same delay as `minimumReleaseAge` in pnpm-workspace.yaml:
     # a pull request for a version younger than that would fail CI's install.
-    # Security updates are not delayed.
+    # Security updates are not delayed, so one for a version younger than that
+    # fails the install until `minimumReleaseAgeExclude` names it, by design.
     cooldown:
       default-days: 3
     groups:

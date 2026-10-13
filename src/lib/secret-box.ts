@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 /**
  * Authenticated encryption for third-party credentials DiveDay stores on a
@@ -126,6 +126,16 @@ function parseKey(value: string | undefined): ParsedKey {
 export function openingKeys(key: SecretKey): Buffer[] {
   if (Buffer.isBuffer(key)) return [key];
   return key.previous ? [key.current, key.previous] : [key.current];
+}
+
+/**
+ * A short, non-secret name for a key: the first 16 hex digits of its SHA-256.
+ * Stored beside values the key protects, so an operator can count what still
+ * depends on a previous key. Shell equivalent:
+ * `printf %s "$KEY" | base64 -d | sha256sum | cut -c1-16`.
+ */
+export function secretKeyFingerprint(key: Buffer): string {
+  return createHash("sha256").update(key).digest("hex").slice(0, 16);
 }
 
 /** The one key that seals. */

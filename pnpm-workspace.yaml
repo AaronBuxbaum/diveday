@@ -17,10 +17,9 @@ allowBuilds:
 # the line comes out once the version is three days old.
 minimumReleaseAge: 4320
 
-# `pnpm audit` runs in CI over production dependencies (repository safeguards).
-# An advisory listed here is one with no patched release, reachable only from
-# development tooling, so the full-tree audit can gate as well. Delete a line
-# once the fix ships.
+# `pnpm audit --audit-level high` runs in CI over the whole tree (repository
+# safeguards). An advisory listed here has no patched release and is reachable
+# only from development tooling. Delete a line once the fix ships.
 #   GHSA-vfj7-8cjw-p6xm: braces <=3.0.3, stack exhaustion on nested patterns.
 #     Dev only: reg-suit > reg-cli > del > globby > fast-glob > micromatch.
 auditConfig:

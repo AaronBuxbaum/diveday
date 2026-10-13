@@ -173,6 +173,19 @@ describe("an environment file read through the shell", () => {
     expect(refuses("source .env.local")).toBe(true);
   });
 
+  /** Every form the shell reads the same file through (security review of row 26). */
+  it("refuses a quoted path, a glob, a brace expansion, dd and a redirected read", () => {
+    expect(refuses('cat ".env.local"')).toBe(true);
+    expect(refuses("cat '.env'")).toBe(true);
+    expect(refuses("cat .env*")).toBe(true);
+    expect(refuses("cat .env.{local,vercel}")).toBe(true);
+    expect(refuses("head -3 .env.l?cal")).toBe(true);
+    expect(refuses("dd if=.env.local")).toBe(true);
+    expect(refuses("cat .env.local>x")).toBe(true);
+    expect(refuses("grep KEY < .env.local")).toBe(true);
+    expect(refuses("grep KEY <.env.vercel")).toBe(true);
+  });
+
   /** `.env.example` is generated from the registry, holds no value, and is checked in. */
   it("leaves .env.example, a listing, and a name that only starts with .env alone", () => {
     expect(refuses("cat .env.example")).toBe(false);
@@ -181,6 +194,14 @@ describe("an environment file read through the shell", () => {
     expect(refuses("cat .envrc.md")).toBe(false);
     expect(refuses("grep -rn 'env.local' docs")).toBe(false);
     expect(refuses("node scripts/render-env-example.mjs --write")).toBe(false);
+  });
+
+  it("leaves writing an env file, a quoted .env.example, and a glob over other names alone", () => {
+    expect(refuses("cat >> .env.local <<'EOF'\nFOO=bar\nEOF")).toBe(false);
+    expect(refuses("cat > .env.manual <<EOF\nSTRIPE_SECRET_KEY=\nEOF")).toBe(false);
+    expect(refuses('cat ".env.example"')).toBe(false);
+    expect(refuses("cat src/*.ts")).toBe(false);
+    expect(refuses('git commit -m "guard: refuse cat .env.local"')).toBe(false);
   });
 });
 

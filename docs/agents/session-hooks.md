@@ -135,9 +135,11 @@ memory is what a session does not have about the session before.
    the other readers handed `.env` or a `.env.*` path other than `.env.example`. The settings deny
    the Read tool those files, and `grep`/`find` run without a prompt, so `grep -r . .env.local`
    printed production keys (2026-10-13 review, row 26). `config/env-registry.mjs` says what each key
-   is, `.env.example` lists them without values, and `pnpm check:env` says which are blank. A
-   recursive search of a directory that holds a `.env` file is not caught; `rg` skips it by default
-   as gitignored.
+   is, `.env.example` lists them without values, and `pnpm check:env` says which are blank. This rule
+   reads the raw command, not the quote-blanked one the others use: a quoted path, a glob or brace
+   expansion (`.env*`, `.env.{local,vercel}`), `dd if=`, and an input redirection all count, and an
+   output redirection or heredoc that *writes* the file does not. A recursive search of a directory
+   that holds a `.env` file is not caught; `rg` skips it by default as gitignored.
 
 The guard blanks heredoc bodies and quoted strings before matching, so a commit message or a
 script that *mentions* a refused shape is not refused. The cost — a shell-in-a-string like

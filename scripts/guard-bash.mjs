@@ -84,12 +84,46 @@ const GENERATED_ARTIFACT =
 /** Commands whose only purpose is to print a file. */
 const PRINTERS = /^(?:cat|head|tail|less|more|bat)\b/;
 
-/** Commands that print or search a file's contents. */
+/** Commands that print, search or copy out a file's contents. */
 const READERS =
-  /^(?:cat|head|tail|less|more|bat|tac|nl|grep|egrep|fgrep|rg|ag|awk|gawk|sed|cut|sort|uniq|strings|xxd|od|hexdump|base64|diff|cmp|jq|source|\.)$/;
+  /^(?:cat|head|tail|less|more|bat|tac|nl|grep|egrep|fgrep|rg|ag|awk|gawk|sed|cut|sort|uniq|strings|xxd|od|hexdump|base64|diff|cmp|jq|dd|source|\.)$/;
 
 /** A `.env` file, or `.env.<anything>` except the generated, value-free `.env.example`. */
 const ENV_FILE = /(?:^|\/)\.env(?:\.(?!example$)[\w.-]+)?$/;
+
+/** A glob or brace expansion that the shell may expand to a `.env` file: `.env*`, `.env.{local,vercel}`. */
+const ENV_PATTERN = /(?:^|\/)\.env[^/]*[*?{]/;
+
+/**
+ * Whether one argument names an environment file. Quotes are the shell's, not
+ * the file's, so they are stripped; an input redirection (`<.env`) and a
+ * `name=value` operand (`dd if=.env`) are read for their path.
+ */
+function namesEnvFile(token) {
+  const bare = token.replaceAll(/['"]/g, "").replace(/^\d?</, "");
+  const path = bare.includes("=") ? bare.slice(bare.lastIndexOf("=") + 1) : bare;
+  return ENV_FILE.test(path) || ENV_PATTERN.test(path);
+}
+
+/**
+ * The reader in `command` handed an environment file, or null. Judged on the
+ * raw text rather than the quote-blanked form the other rules use, because a
+ * quoted path (`cat ".env.local"`) is still a path. Heredoc bodies are dropped
+ * and output redirections stripped first, so `cat >> .env.local <<'EOF'`, which
+ * writes the file, is not a read.
+ */
+function envFileRead(command) {
+  const withoutHeredocs = command.replace(/<<-?\s*(['"]?)(\w+)\1[\s\S]*?^\s*\2\s*$/gm, "");
+  for (const segment of segments(withoutHeredocs)) {
+    for (const part of withoutRedirection(segment).split("|")) {
+      const tokens = withoutEnvAssignments(part.trim().split(/\s+/));
+      if (READERS.test(tokens[0] ?? "") && tokens.slice(1).some(namesEnvFile)) {
+        return tokens.join(" ");
+      }
+    }
+  }
+  return null;
+}
 
 function workingTreeChanges() {
   const status = readBounded("git", ["status", "--porcelain"], {
@@ -353,22 +387,17 @@ export function violationFor(
       );
     }
 
-    const envRead = segment
-      .split("|")
-      .map((part) => withoutEnvAssignments(part.trim().split(/\s+/)))
-      .find(
-        (tokens) => READERS.test(tokens[0] ?? "") && tokens.slice(1).some((t) => ENV_FILE.test(t)),
-      );
-    if (envRead) {
-      return (
-        `\`${envRead.join(" ")}\` reads an environment file, which holds live keys; the Read tool is denied ` +
-        `these files and the shell is not the way round it. \`config/env-registry.mjs\` says what each key is ` +
-        `and who supplies it, \`.env.example\` lists them with no values, and \`pnpm check:env\` says which are blank.`
-      );
-    }
-
     const discard = discardViolation(segment, changes);
     if (discard) return discard;
+  }
+
+  const envRead = envFileRead(command);
+  if (envRead) {
+    return (
+      `\`${envRead}\` reads an environment file, which holds live keys; the Read tool is denied ` +
+      `these files and the shell is not the way round it. \`config/env-registry.mjs\` says what each key is ` +
+      `and who supplies it, \`.env.example\` lists them with no values, and \`pnpm check:env\` says which are blank.`
+    );
   }
   return null;
 }

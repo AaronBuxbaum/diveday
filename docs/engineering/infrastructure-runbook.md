@@ -736,7 +736,21 @@ keys (`src/lib/secret-box.ts`): `SECRET_ENCRYPTION_KEY` seals and opens, and
 4. Remove `SECRET_ENCRYPTION_KEY_PREVIOUS` only when every two-factor account has signed in since the
    rotation and replaced its old recovery codes (turn two-factor off and on again), and every shop has
    reconnected WhatsApp and its connectors and re-saved its backup destination. Whatever is still
-   sealed under the old key stops opening at that moment.
+   sealed under the old key stops opening at that moment. Each `account_security` row records the
+   fingerprint of the key that sealed its secret and of the key that hashed its recovery codes, so
+   the accounts still depending on the old key can be listed. Take the new key's fingerprint
+   (`printf %s "$SECRET_ENCRYPTION_KEY" | base64 -d | sha256sum | cut -c1-16`) and run:
+
+   ```sql
+   select user_account_id from account_security where totp_enabled_at is not null and (totp_secret_key_id is distinct from '<fingerprint>' or (jsonb_array_length(recovery_code_hashes) > 0 and recovery_codes_key_id is distinct from '<fingerprint>'));
+   ```
+
+   An empty result means no staffer is locked out by removing the key. A row with a null fingerprint
+   predates the column: treat it as still on the old key until it signs in or re-enrols.
+5. To remove it, delete the line from `.env.manual` and redeploy, which drops it from `.env.local`.
+   The Vercel import only uploads values that changed and never deletes one, so also run
+   `vercel env rm SECRET_ENCRYPTION_KEY_PREVIOUS production` (and for any preview environment that
+   has it); until then the deployment still holds the old key.
 
 A malformed `SECRET_ENCRYPTION_KEY_PREVIOUS` is reported as an invalid key, as a malformed current key
 is: it would otherwise quietly fail everything it was set to open.
