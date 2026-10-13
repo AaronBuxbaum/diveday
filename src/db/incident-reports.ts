@@ -660,7 +660,7 @@ export async function listIncidentCrewChoices(
  * people first) and both roll-call trails. Only the demo reset calls this
  * (`resetDemoSchedule`), which wipes the schedule they hang off; nothing a
  * live shop reaches deletes an incident report, which outlives its departure
- * for the retention window instead.
+ * for the retention window (seven years, H-112) instead.
  */
 export async function deleteDemoSafetyTrail(db: DbExecutor, shopId: string): Promise<void> {
   await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));

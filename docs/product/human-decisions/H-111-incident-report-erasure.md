@@ -13,12 +13,12 @@
 
 ## Recommendation
 
-**(a).** The record a shop needs is that an incident happened, what was done and who did it; whose body it was matters less once the person has asked to be forgotten, and the seven-year window still ends it. The residual is stated rather than hidden: a nickname, a first name on its own, or a description ("the German couple's son") is not matched, and a date and departure can still point at the person through the seat. Counsel may prefer (b) where a claim is open; that would be a per-report hold, a separate build.
+**(a).** The record a shop needs is that an incident happened, what was done and who did it; whose body it was matters less once the person has asked to be forgotten, and the seven-year window still ends it. The residual is stated rather than hidden: a nickname, a first name on its own, or a description ("the German couple's son") is not matched, a date and departure can still point at the person through the seat, and a parent or guardian written into a minor's report (in the narrative, the handover detail or an outsider row) is not one of the report's people and has no erasure path of their own; the seven-year window ends this residual too. Counsel may prefer (b) where a claim is open; that would be a per-report hold, a separate build.
 
 ## Also to confirm
 
 - **The diver's own export** (`/divers/<id>` download) leaves incident reports out. A subject-access request may be owed them; the same counsel review as H-01/H-03 decides.
-- **Seven years** from the incident is the retention window (`RETENTION_DAYS.incident_reports`). Some jurisdictions run a minor's limitation period from their 18th birthday, which can be longer.
+- **Seven years** from the incident is the retention window (`RETENTION_DAYS.incident_reports`), kept by the product owner over keeping reports for ever ([H-112](H-112-incident-report-retention.md), 2026-10-13). Some jurisdictions run a minor's limitation period from their 18th birthday, which can be longer.
 
 ## Minimum outcome to record
 

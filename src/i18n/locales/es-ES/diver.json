@@ -3594,13 +3594,14 @@
       },
       "keep": {
         "heading": "Cuánto tiempo se guarda",
-        "intro": "Los registros propios del centro se guardan mientras el centro use DiveDay, y desaparecen cuando el centro los borra o cierra su cuenta. Los historiales tienen ventanas fijas, y estos son los números reales con los que el sistema los poda:",
+        "intro": "Los registros propios del centro se guardan mientras el centro use DiveDay, y desaparecen cuando el centro los borra o cierra su cuenta. La mayoría de los historiales tienen ventanas fijas, y estos son los números reales con los que el sistema los poda:",
         "activity": "Historial de actividad del personal: 3 años.",
         "delivery": "Resultados e intentos de entrega de mensajes: 400 días. Contienen identificadores del proveedor y códigos de error más que el contenido de los mensajes, aunque el texto de error de un proveedor a veces cita la dirección a la que no pudo llegar.",
         "payments": "Historial de eventos de pago: 7 años, acorde con el horizonte habitual de los registros financieros. Los pedidos y los pagos en sí son registros del centro y se conservan hasta que el centro los elimina.",
         "webhooks": "Registros de eventos del procesador de pagos: 400 días. No contienen ningún dato de buceadores.",
         "tokens": "Tokens caducados de inicio de sesión y de restablecimiento: 90 días después de su propia caducidad. Uno vigente no se poda nunca.",
         "push": "Registros de notificaciones por dispositivo: 30 días.",
+        "safety": "Los pases de lista se conservan mientras el centro use DiveDay, y los informes de incidente, siete años; si un buceador pide que se le borre, su identidad se elimina de ambos.",
         "reviewTerm": "Aún por decidir",
         "reviewBody": "cuánto tiempo debe conservarse una exención firmada y sus respuestas médicas después de que un buceador deje de bucear con un centro. Hoy se conservan hasta que el centro las elimina, porque una exención es evidencia que un centro puede necesitar años después, y acortar ese plazo sin asesoramiento sería el tipo de suposición equivocada. Está en revisión con los mismos asesores que revisan el texto de la exención, y esta página dirá la respuesta cuando la haya."
       },
