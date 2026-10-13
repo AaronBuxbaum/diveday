@@ -299,7 +299,7 @@ Operationally distinct from §2 in every way that matters during an incident:
 `SECRET_ENCRYPTION_KEY_PREVIOUS` after a rotation, and is re-sealed when the shop next saves its
 destination. Removing the previous key before then surfaces as `credential_unreadable` delivery
 failures until each shop re-enters its key. The procedure is in the
-[infrastructure runbook](infrastructure-runbook.md#rotating-secret_encryption_key).
+[infrastructure runbook](infrastructure-runbook.md#rotating-the-secret-sealing-key).
 
 ## 2c. Full-cluster `pg_dump` (running since 2026-08-12)
 

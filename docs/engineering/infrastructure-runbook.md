@@ -716,9 +716,9 @@ breaking anything still holding it, where a hand-minted key would have survived 
 the correct default — a credential this stack no longer describes should stop working — but it is a
 sharp edge worth knowing before deleting a user.
 
-### Rotating `SECRET_ENCRYPTION_KEY`
+### Rotating the secret-sealing key
 
-This key seals every staffer's two-factor secret and HMACs their recovery codes, so a key swapped in
+`SECRET_ENCRYPTION_KEY` seals every staffer's two-factor secret and HMACs their recovery codes, so a key swapped in
 one step **locks out every account that turned on two-factor**: sign-in demands the second factor and
 nothing can check it. It also seals WhatsApp tokens, connector credentials, backup destinations,
 reusable waiver links and queued notifications, which degrade instead. The app therefore reads two

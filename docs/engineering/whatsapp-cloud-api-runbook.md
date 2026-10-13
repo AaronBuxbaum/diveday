@@ -127,7 +127,7 @@ that row by `shop_id` once its owner confirms they are not mid-Connect). Re-run 
 ## Rotating `SECRET_ENCRYPTION_KEY`
 
 Follow the two-key procedure in the
-[infrastructure runbook](infrastructure-runbook.md#rotating-secret_encryption_key). A shop's access
+[infrastructure runbook](infrastructure-runbook.md#rotating-the-secret-sealing-key). A shop's access
 token and PIN are sealed under the old key until the shop reconnects, and open under
 `SECRET_ENCRYPTION_KEY_PREVIOUS` until then. Removing that key before every connected shop has
 reconnected degrades those shops to SMS.
