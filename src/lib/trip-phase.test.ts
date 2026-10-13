@@ -233,6 +233,55 @@ describe("a night boat across midnight", () => {
 });
 
 /**
+ * A boat out 22:00 to 02:00 whose crew never taps Home (#2409). Its scheduled
+ * return falls on the next shop day, but it is still one sailing: the word
+ * holds through the hour's buffer and then lets go, not at the end of the
+ * shop day the return falls on.
+ */
+describe("a night boat back after midnight, Home never tapped", () => {
+  // 22:00 Tue Jul 21 to 02:00 Wed Jul 22, local.
+  const nightStarts = new Date("2026-07-22T02:00:00.000Z");
+  const nightEnds = new Date("2026-07-22T06:00:00.000Z");
+  // Tapped Underway at 22:10 local.
+  const underway = {
+    stage: "underway" as TripStage,
+    recordedAt: new Date("2026-07-22T02:10:00.000Z"),
+  };
+  const at = (now: string) => ({
+    startsAt: nightStarts,
+    endsAt: nightEnds,
+    now: new Date(now),
+    timeZone: ZONE,
+    stage: underway,
+    cancelled: false,
+  });
+
+  it("still speaks at 02:30, inside the hour's buffer", () => {
+    expect(tripPhaseOf(at("2026-07-22T06:30:00.000Z"))).toBe("aboard");
+    expect(boatStageOf(at("2026-07-22T06:30:00.000Z"))?.stage).toBe("underway");
+  });
+
+  it("is quiet at 03:00, not held to the end of Wednesday", () => {
+    expect(tripPhaseOf(at("2026-07-22T07:00:00.000Z"))).toBe("back");
+    expect(boatStageOf(at("2026-07-22T07:00:00.000Z"))).toBeNull();
+    expect(departureStage(at("2026-07-22T07:00:00.000Z")).finished).toBe(true);
+  });
+
+  it("is never finished sooner than its untapped twin", () => {
+    for (const now of [
+      "2026-07-22T05:59:00.000Z",
+      "2026-07-22T06:30:00.000Z",
+      "2026-07-22T06:59:00.000Z",
+      "2026-07-22T07:00:00.000Z",
+    ]) {
+      const tapped = tripPhaseOf(at(now));
+      const silent = tripPhaseOf({ ...at(now), stage: null });
+      if (tapped === "back") expect(silent).toBe("back");
+    }
+  });
+});
+
+/**
  * `trips.starts_at`/`ends_at` bound the whole run of a multi-day course. A
  * `home` tap after day one is the crew tying up for the night, not the course
  * finishing, and yesterday's word is not today's.
