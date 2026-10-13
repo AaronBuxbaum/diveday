@@ -35,13 +35,14 @@ const MINUTES_IN_DAY = 24 * 60;
 export const AFTER_HOURS_PING_INTERVAL_MS = 30 * 60_000;
 
 /**
- * The trailing-ping sweep (`/api/cron/desk-pings`, #2311): hourly at `:01`,
- * inside the five minutes the other hourly passes share, so it adds no
- * database wake-up of its own (`src/lib/cron-schedule.test.ts`). A message
+ * The trailing-ping sweep (`/api/cron/desk-pings`, #2311): hourly at `:05`,
+ * a minute after the last pass before it, so it adds no database wake-up of
+ * its own and no second cold start in anybody's minute
+ * (`src/lib/cron-schedule.test.ts`). A message
  * batched behind a ping therefore reaches its staffer within about an hour of
  * the clock running out, rather than the next morning.
  */
-export const DESK_PING_CRON_CRONTAB = "1 * * * *";
+export const DESK_PING_CRON_CRONTAB = "5 * * * *";
 
 function minuteOfDay(wall: WallTime): number {
   return wall.hour * 60 + wall.minute;
