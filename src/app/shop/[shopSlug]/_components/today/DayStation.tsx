@@ -143,6 +143,7 @@ export function DayStation({
             </span>
           </span>
         </Link>
+        {station.rehearsal ? <Badge>{t("trips.rehearsal.label")}</Badge> : null}
         {crewed ? <Badge tone="primary">{t("shopHome.spine.crewing")}</Badge> : null}
       </h3>
       {meta.length > 0 ? (

@@ -77,6 +77,7 @@ function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
     crew: [{ fullName: "Keiko Tanaka" }],
     crewAccountedFor: true,
     crewReason: null,
+    rehearsal: false,
     ...overrides,
     sellableCapacity: overrides.sellableCapacity ?? overrides.capacity ?? 12,
   };
@@ -283,6 +284,16 @@ describe("a station owns its departure's facts", () => {
       ...(container.querySelector("[data-readiness-bar]")?.children ?? []),
     ] as HTMLElement[];
     expect(ready?.style.transform).toBe(`scaleX(${Math.round((10 / 11) * 1e4) / 1e4})`);
+  });
+
+  /** #2395: a practice departure says so where the day is read. */
+  it("marks a rehearsal departure as one beside its title", () => {
+    renderSpine({ departures: [departure({ rehearsal: true })] });
+    const title = screen.getByRole("heading", { level: 3 });
+    expect(within(title).getByText("Rehearsal")).toBeInTheDocument();
+    cleanup();
+    renderSpine();
+    expect(screen.queryByText("Rehearsal")).toBeNull();
   });
 
   it("says Full rather than nought spots open on a boat with no seats left", () => {

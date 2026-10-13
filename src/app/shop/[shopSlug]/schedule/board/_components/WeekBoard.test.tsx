@@ -34,6 +34,7 @@ const COPY: WeekBoardCopy = {
   noPriceSet: "No price set",
   noPriceSetAria: "Set a price for {ref}",
   noPriceSetAll: "None of these departures has a price yet.",
+  rehearsal: "Rehearsal",
   rollCallOpen: "Roll call · {count} not counted",
   rollCallOpenAria: "Finish the dive {dive} roll call for {ref}",
   noBoats: "No boats",
@@ -53,6 +54,7 @@ function entry(overrides: Partial<WeekEntry> = {}): WeekEntry {
     dayCount: 1,
     status: "upcoming",
     unpriced: false,
+    rehearsal: false,
     rollCallOpen: null,
     ref: "Two-Tank Reef, Thu, Aug 27 7:00 AM",
     time: "7:00 AM",
@@ -349,6 +351,7 @@ describe("a departure row is one door (K-325, K-530)", () => {
     dayCount: 3,
     status: "upcoming",
     unpriced: false,
+    rehearsal: false,
     rollCallOpen: null,
     ref: "Open Water Diver — three-day course, Aug 28 – 30, 2026",
     meta: "$595 · Marcus Webb",
@@ -402,6 +405,17 @@ describe("a departure row is one door (K-325, K-530)", () => {
       expect(flag).toHaveClass("relative", "z-10", ...tapTargetLinkClass.split(" "));
       expect(flag).not.toHaveClass("flex");
     }
+  });
+
+  /**
+   * **A rehearsal says so, and asks for no price** (#2395). It is unpriced by
+   * design (ADR 20261012-rehearsal-departures), so "No price set" was a prompt
+   * to do something every money door refuses.
+   */
+  it("marks a rehearsal as one in the flag's slot, with no price prompt", () => {
+    board(week({}, [entry({ rehearsal: true })]));
+    expect(screen.getByText("Rehearsal")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^Set a price for / })).toBeNull();
   });
 
   it("hooks each door, and only the door, for a spec that may read neither its copy nor its place", () => {

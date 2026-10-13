@@ -155,6 +155,8 @@ export type DepartureSummary = {
    * (#2388), as the booking transaction does.
    */
   sellableCapacity: number;
+  /** A practice departure (ADR 20261012-rehearsal-departures). */
+  rehearsal: boolean;
   ready: number;
   blocked: number;
   /**
@@ -1444,6 +1446,7 @@ function summarizeDepartures(
       booked: trip.booked,
       capacity: trip.capacity,
       sellableCapacity: trip.sellableCapacity,
+      rehearsal: trip.isRehearsal,
       ready: rows.filter((row) => row.readiness.status === "ready").length,
       blocked: blockedRows.length,
       boarded: aboardCount,
