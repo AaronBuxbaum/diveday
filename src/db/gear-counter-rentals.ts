@@ -2,46 +2,14 @@ import { and, asc, eq, gte, inArray, isNotNull, isNull, lte, type SQL, sql } fro
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { nowDate } from "@/lib/clock";
-import {
-  type CounterRentalCardRefusal,
-  type CounterRentalWindowRefusal,
-  checkCounterRentalWindow,
-  counterRentalCardRefusal,
-  isLifeSupportKind,
-} from "@/lib/counter-rentals";
-import {
-  type GearItemKind,
-  type GearReturnOutcome,
-  gearServiceKeepsUnitBack,
-  gearServiceState,
-} from "@/lib/gear";
+import { type CounterRentalCardRefusal, type CounterRentalWindowRefusal, checkCounterRentalWindow, counterRentalCardRefusal, isLifeSupportKind } from "@/lib/counter-rentals";
+import { type GearItemKind, type GearReturnOutcome, gearServiceKeepsUnitBack, gearServiceState } from "@/lib/gear";
 import { type ShopWaiverStatus, shopWaiverStatus } from "@/lib/waivers";
 import type { AppDb } from "./client";
-import {
-  type GearReservationActionOutcome,
-  type GearSetReturnOutcome,
-  latestServiceClocks,
-  openGearReservation,
-  openServiceConcerns,
-  pullReturnedUnitsForService,
-} from "./gear";
+import { type GearReservationActionOutcome, type GearSetReturnOutcome, latestServiceClocks, openGearReservation, openServiceConcerns, pullReturnedUnitsForService } from "./gear";
 import { violatesExclusionConstraint } from "./query-helpers";
-import {
-  type CertificationReviewRefusal,
-  createCertification,
-  createSpecialtyCertification,
-  reviewCertification,
-  reviewSpecialtyCertification,
-} from "./readiness";
-import {
-  type CertificationAgency,
-  certifications,
-  gearItems,
-  gearReservations,
-  orders,
-  people,
-  specialtyCertifications,
-} from "./schema";
+import { type CertificationReviewRefusal, createCertification, createSpecialtyCertification, reviewCertification, reviewSpecialtyCertification } from "./readiness";
+import { type CertificationAgency, certifications, gearItems, gearReservations, orders, people, specialtyCertifications } from "./schema";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 
 /**
