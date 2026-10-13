@@ -651,7 +651,11 @@ describe("a diver's own cancellation on the departure's trail (UX review 2026-10
       .where(eq(trips.id, trip.id));
 
     expect(
-      await recordDiverSelfCancel(db, { shopId: shop.id, bookingId: entry.booking.id, refunded: true }),
+      await recordDiverSelfCancel(db, {
+        shopId: shop.id,
+        bookingId: entry.booking.id,
+        refunded: true,
+      }),
     ).not.toBeNull();
     expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
       code: "seat_self_refunded",
@@ -670,7 +674,11 @@ describe("a diver's own cancellation on the departure's trail (UX review 2026-10
     // A deleted departure is off every trail a staffer reads, so the line has
     // nowhere to be seen; the caller logs the null instead of dropping it.
     expect(
-      await recordDiverSelfCancel(db, { shopId: shop.id, bookingId: entry.booking.id, refunded: false }),
+      await recordDiverSelfCancel(db, {
+        shopId: shop.id,
+        bookingId: entry.booking.id,
+        refunded: false,
+      }),
     ).toBeNull();
   });
 
