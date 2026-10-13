@@ -22,7 +22,7 @@ const COPY: FirstRunChecklistCopy = {
   profileAction: "Set up profile",
   profileDone: "Shop profile configured.",
   unitsTitle: "Check your currency and depth unit",
-  unitsBody: "We started you on USD and feet from your timezone.",
+  unitsBody: "We picked USD, feet and Fahrenheit for where you are.",
   unitsAction: "Check units",
   unitsDone: "Units confirmed.",
   siteTitle: "Add your first dive site",
@@ -272,7 +272,7 @@ describe("the units step", () => {
     // The values themselves, not just an invitation to go and look — a step
     // that says "check your units" without saying what they are makes a shop
     // navigate to find out whether it needs to.
-    expect(screen.getByText(/USD and feet/)).toBeInTheDocument();
+    expect(screen.getByText(/USD, feet and Fahrenheit/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Check units" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/settings#units",
@@ -294,7 +294,7 @@ describe("the units step", () => {
     );
 
     expect(screen.getByText("Units confirmed.")).toBeInTheDocument();
-    expect(screen.queryByText(/USD and feet/)).toBeNull();
+    expect(screen.queryByText(/USD, feet and Fahrenheit/)).toBeNull();
   });
 });
 
