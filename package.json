@@ -63,6 +63,7 @@
     "check:exit-curves": "node scripts/check-exit-curves.mjs",
     "check:text": "node scripts/check-source-text.mjs",
     "check:infra-ascii": "node scripts/check-infra-ascii.mjs",
+    "check:sentry-imports": "node scripts/check-sentry-imports.mjs",
     "check:locale": "node scripts/check-locale.mjs",
     "check:copy": "node scripts/check-copy.mjs",
     "check:bundle-reach": "node scripts/check-bundle-reach.mjs",

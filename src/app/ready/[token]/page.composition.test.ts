@@ -22,6 +22,8 @@ import { describe, expect, it } from "vitest";
  */
 
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+/** The after-dive reads the page asks first (code review 2026-10-13, item 29). */
+const AFTER_DIVE_READS = readFileSync(join(__dirname, "_components/after-dive-reads.ts"), "utf8");
 
 /** Where a marker first appears in the route's source, or -1. */
 function positionOf(marker: string): number {
@@ -487,8 +489,10 @@ describe("after the dive", () => {
     // late-arrival buffer and the four-hour recap floor. A literal
     // `60 * 60 * 1000` here is how "has it sailed" and "is it over" drift an
     // hour apart.
-    expect(SOURCE).toContain("isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })");
+    expect(AFTER_DIVE_READS).toContain("isAfterTheDive({ endsAt, boarded })");
+    expect(SOURCE).toContain("endsAt: detail.trip.endsAt,");
     expect(SOURCE).not.toContain("60 * 60 * 1000");
+    expect(AFTER_DIVE_READS).not.toContain("60 * 60 * 1000");
   });
 
   it("asks the crew's own roll call before it says anybody dived", () => {
@@ -499,12 +503,17 @@ describe("after the dive", () => {
     // day, and an invitation to tip the crew who dived without them.
     // `roll_call_events` is the only direct evidence DiveDay holds about who
     // got on the boat, and the page consults it before composing the afterglow.
-    const rollCall = positionOf("departureRollCallForBooking(");
+    // The reads live beside the page (`_components/after-dive-reads.ts`), and
+    // the page asks them before it composes the afterglow.
+    expect(positionOf("await readAfterTheDive(db, {")).toBeGreaterThan(-1);
+    expect(positionOf("await readAfterTheDive(db, {")).toBeLessThan(positionOf("<AfterState"));
+    const rollCall = AFTER_DIVE_READS.indexOf("departureRollCallForBooking(db,");
     expect(rollCall).toBeGreaterThan(-1);
-    expect(rollCall).toBeLessThan(positionOf("isAfterTheDive("));
+    expect(rollCall).toBeLessThan(AFTER_DIVE_READS.indexOf("isAfterTheDive({ endsAt, boarded })"));
     // Only once the boat is scheduled home: an ordinary night-before page load
     // never pays for the query.
-    expect(SOURCE).toContain("theBoatIsHome({ endsAt: detail.trip.endsAt })");
+    expect(AFTER_DIVE_READS).toContain("const boatIsHome = theBoatIsHome({ endsAt });");
+    expect(AFTER_DIVE_READS).toMatch(/boatIsHome\s*\?\s*await departureRollCallForBooking\(/);
   });
 
   it("answers a canceled departure on the branch a canceled departure reaches", () => {
@@ -661,7 +670,19 @@ describe("a held seat after the dive", () => {
   it("answers with its own card before the recap is read", () => {
     const held = positionOf("if (data.identityHeld) return <HeldAfterDiveCard");
     expect(held).toBeGreaterThan(-1);
-    expect(held).toBeLessThan(positionOf("await getRecapPageState(db, bookingId)"));
+    expect(held).toBeLessThan(positionOf("await afterDive.recap()"));
+    // The recap starts early beside the roll call (code review 2026-10-13,
+    // item 29), but never for a held seat.
+    const AFTER_DIVE_READS = readFileSync(
+      join(__dirname, "_components/after-dive-reads.ts"),
+      "utf8",
+    );
+    expect(AFTER_DIVE_READS).toContain(
+      "const speculate = boatIsHome && !input.identityHeld && isAfterTheDive({ endsAt });",
+    );
+    expect(AFTER_DIVE_READS).toContain(
+      "const recapRead = speculate ? getRecapPageState(db, bookingId) : null;",
+    );
     expect(positionOf("<NoShowCard")).toBeGreaterThan(held);
   });
 });

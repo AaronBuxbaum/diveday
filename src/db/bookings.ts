@@ -1455,10 +1455,17 @@ export async function getShopBookingTripId(
 }
 
 /**
- * A booking on a specific trip, with its person — for the confirmation
- * panel, which must render from the database, never from URL params.
+ * A booking on a specific trip of this shop, with its person — for the
+ * confirmation panel, which must render from the database, never from URL
+ * params. Scoped to the shop on the query itself (CR-007), not only through
+ * whatever handed it the ids.
  */
-export async function getBookingForTrip(db: AppDb, tripId: string, bookingId: string) {
+export async function getBookingForTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+) {
   const [row] = await db
     .select({ booking: bookings, person: people })
     .from(bookings)
@@ -1466,6 +1473,7 @@ export async function getBookingForTrip(db: AppDb, tripId: string, bookingId: st
     .where(
       and(
         eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
         ne(bookings.status, "cancelled"),
       ),

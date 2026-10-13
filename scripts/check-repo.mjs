@@ -79,6 +79,7 @@ const checks = [
   ["ci-change-detection", "check-ci-change-detection.mjs"],
   ["node-version", "check-node-version.mjs"],
   ["closing-keywords", "check-closing-keywords.mjs"],
+  ["sentry-imports", "check-sentry-imports.mjs"],
 ];
 
 function runCheck(label, scriptFile) {

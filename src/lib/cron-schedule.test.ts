@@ -77,20 +77,26 @@ describe("the daily tick", () => {
    * functions opening pools against the pooler at the same second was a
    * connection spike at the top of every hour (code review 2026-10-10, item
    * 11). Aaron chose `:00`–`:04` over a wider spread, to keep the one wake.
+   *
+   * Then two more hourly passes arrived and doubled up on `:01` and `:04`
+   * (code review 2026-10-13, item 36). They moved to `:05` and `:06`: each is
+   * a minute after the pass before it, so the compute the others woke never
+   * idles five minutes and the hour still wakes it once. What the assertion
+   * holds is that: one pass to a minute, and no gap of five minutes between
+   * one hourly pass and the next.
    */
-  it("keeps every hourly pass inside the hour's first five minutes, at most two to a minute", () => {
+  it("keeps the hourly passes one to a minute, with no five-minute gap between them", () => {
     const hourlyMinutes = vercelCrons()
       .filter((cron) => cron.schedule.split(" ")[1] === "*")
       .flatMap((cron) => cron.schedule.split(" ")[0].split(","))
       .map(Number);
     expect(hourlyMinutes.length).toBeGreaterThan(0);
-    for (const minute of hourlyMinutes) {
-      expect(minute).toBeGreaterThanOrEqual(0);
-      expect(minute).toBeLessThanOrEqual(4);
+    const sorted = [...hourlyMinutes].sort((a, b) => a - b);
+    expect(sorted[0]).toBe(0);
+    expect(new Set(sorted).size).toBe(sorted.length);
+    for (let index = 1; index < sorted.length; index += 1) {
+      expect(sorted[index] - sorted[index - 1]).toBeLessThan(5);
     }
-    const perMinute = new Map<number, number>();
-    for (const minute of hourlyMinutes) perMinute.set(minute, (perMinute.get(minute) ?? 0) + 1);
-    expect(Math.max(...perMinute.values())).toBeLessThanOrEqual(2);
   });
 
   it("wakes no *queue-draining* pass more often than daily, so a day is the floor on retry latency", () => {

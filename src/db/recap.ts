@@ -396,8 +396,14 @@ export async function recapClosedReason(
   if (row.tripStatus !== "scheduled") return "departure-cancelled";
   if (row.identityUnconfirmedAt) return "dead";
   const one = [{ booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } }];
-  if ((await bookingsLeftAtTheDock(db, one)).has(bookingId)) return "dead";
-  if ((await bookingsWaitingOnAMissingPerson(db, one, now)).has(bookingId)) return "waiting";
+  // Both asked at once, then answered in the disclosure order above: the dock
+  // before the wait (code review 2026-10-13, item 29).
+  const [leftAtTheDock, waitingOnAMissingPerson] = await Promise.all([
+    bookingsLeftAtTheDock(db, one),
+    bookingsWaitingOnAMissingPerson(db, one, now),
+  ]);
+  if (leftAtTheDock.has(bookingId)) return "dead";
+  if (waitingOnAMissingPerson.has(bookingId)) return "waiting";
   return null;
 }
 

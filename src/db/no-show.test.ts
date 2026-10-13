@@ -900,6 +900,16 @@ describe("undoBookingNoShow", () => {
   });
 });
 
+/** One diver's offer, through the reader that answers every no-show at once. */
+async function salvageFor(
+  db: Parameters<typeof noShowSalvage>[0],
+  { personId, ...rest }: { shopId: string; tripId: string; personId: string; now: Date },
+) {
+  const offer = (await noShowSalvage(db, { ...rest, personIds: [personId] })).get(personId);
+  if (!offer) throw new Error("no offer for the diver who missed");
+  return offer;
+}
+
 describe("noShowSalvage", () => {
   it("offers the wait list ahead of anything else, and counts only the uninvited", async () => {
     const { db, shop, trip, personId, now } = await context();
@@ -915,7 +925,7 @@ describe("noShowSalvage", () => {
       { shopId: shop.id, tripId: trip.id, personId: invited.id, invitedAt: now },
     ]);
 
-    expect(await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, personId, now })).toEqual({
+    expect(await salvageFor(db, { shopId: shop.id, tripId: trip.id, personId, now })).toEqual({
       kind: "waitlist",
       count: 1,
     });
@@ -940,7 +950,7 @@ describe("noShowSalvage", () => {
       .returning();
     if (!alternative) throw new Error("alternative trip insert failed");
 
-    const offer = await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, personId, now });
+    const offer = await salvageFor(db, { shopId: shop.id, tripId: trip.id, personId, now });
     expect(offer.kind).toBe("rebook");
     if (offer.kind !== "rebook") throw new Error("unreachable");
     expect(offer.departures.map((row) => row.tripId)).toContain(alternative.id);
@@ -993,7 +1003,7 @@ describe("noShowSalvage", () => {
       minimumCertificationLevel: "rescue",
     });
 
-    const offer = await noShowSalvage(db, {
+    const offer = await salvageFor(db, {
       shopId: shop.id,
       tripId: trip.id,
       personId: personId,
@@ -1006,11 +1016,60 @@ describe("noShowSalvage", () => {
     expect(offered).not.toContain(gated.id);
   });
 
+  /**
+   * The desk asks once for every diver who missed (code review 2026-10-13,
+   * item 13). The board is shared; the days offered are still each diver's
+   * own, so a day one of them already holds a seat on is offered to the other.
+   */
+  it("answers every diver who missed at once, each with the days they could book", async () => {
+    const { db, shop, trip, personId, now } = await context();
+    const roster = await getTripRoster(db, shop.id, trip.id);
+    const other = roster.find((seat) => seat.person.id !== personId)?.person.id;
+    if (!other) throw new Error("expected a second seat on the reef trip");
+    const [site] = await db
+      .select({ diveSiteId: trips.diveSiteId })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    const [alternative] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Third Reef Run",
+        startsAt: new Date(trip.startsAt.getTime() + 24 * 60 * MINUTE_MS),
+        endsAt: new Date(trip.startsAt.getTime() + 28 * 60 * MINUTE_MS),
+        capacity: 8,
+        diveSiteId: site?.diveSiteId ?? null,
+      })
+      .returning();
+    if (!alternative) throw new Error("alternative trip insert failed");
+    const held = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: alternative.id,
+      personId: other,
+    });
+    if (!held.ok) throw new Error(`booking failed: ${held.reason}`);
+
+    const offers = await noShowSalvage(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      personIds: [personId, other, personId],
+      now,
+    });
+    expect([...offers.keys()].sort()).toEqual([personId, other].sort());
+    const days = (id: string) => {
+      const offer = offers.get(id);
+      return offer?.kind === "rebook" ? offer.departures.map((row) => row.tripId) : [];
+    };
+    expect(days(personId)).toContain(alternative.id);
+    expect(days(other)).not.toContain(alternative.id);
+  });
+
   it("says there is nothing rather than inventing an offer", async () => {
     const { db, shop, trip, personId, now } = await context();
     // Nothing else on this shop's board shares the reef trip's site or course.
     await db.update(trips).set({ diveSiteId: null, courseId: null }).where(eq(trips.id, trip.id));
-    expect(await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, personId, now })).toEqual({
+    expect(await salvageFor(db, { shopId: shop.id, tripId: trip.id, personId, now })).toEqual({
       kind: "none",
     });
   });
@@ -1034,9 +1093,7 @@ describe("noShowSalvage", () => {
       .insert(tripWaitlistEntries)
       .values({ shopId: other.id, tripId: theirTrip.id, personId: stranger.id });
 
-    expect(
-      await noShowSalvage(db, { shopId: shop.id, tripId: theirTrip.id, personId, now }),
-    ).toEqual({
+    expect(await salvageFor(db, { shopId: shop.id, tripId: theirTrip.id, personId, now })).toEqual({
       kind: "none",
     });
   });
