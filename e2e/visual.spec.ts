@@ -5009,6 +5009,21 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-add-full", scheme);
       });
 
+      // A course that meets on named days (third UX review, item 10): three
+      // days asked for, and a date field for each day after the first.
+      test(`the add panel's named meeting days render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.getByRole("button", { name: "Fewer options" }).waitFor();
+        await page.getByLabel("Date", { exact: true }).fill(daysFromNow(4));
+        await page.getByLabel("How many days").fill("3");
+        await page.getByLabel("Day 3", { exact: true }).waitFor();
+        await addPanelSettled(page);
+        await boardListSettled(page);
+        await capture(page, "schedule-builder-add-meeting-days", scheme);
+      });
+
       // The repeating-trip panel on a trip's own page. Built through the add
       // panel rather than seeded, because putting a standing charter into the
       // demo seed would move a dozen unrelated baselines (the board, the public
@@ -7310,6 +7325,37 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByRole("link", { name: "Add a departure" }).first().waitFor();
         await capture(page, "staff-date-requests", scheme);
+      });
+
+      // A request staff closed (third UX review, item 13): off the open list
+      // and into the short Done list under it, with Reopen beside it. Marked
+      // here rather than seeded, because a closed request in the demo seed
+      // would move the open list's own baseline above.
+      test(`a request marked done sits under the open list (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/requests");
+        await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
+        await page.getByRole("button", { name: "Mark done" }).first().click();
+        await page.getByRole("region", { name: /^Done:/i }).waitFor();
+        await capture(page, "staff-date-requests-done", scheme);
+      });
+
+      // "Move to another departure", open on a seat (third UX review, item
+      // 11): one select of later departures of the same kind, each worded
+      // with its zone, and one button. The row is any booked seat on the
+      // reef morning, found by the control itself.
+      test(`a seat's move to another departure, open (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        const row = page
+          .locator('#roster li[id^="booking-"]')
+          .filter({ visible: true })
+          .filter({ has: page.locator("summary", { hasText: "Move to another departure" }) })
+          .first();
+        await openRosterDetails(row);
+        await row.locator("summary", { hasText: "Move to another departure" }).click();
+        await row.getByLabel("Departure").waitFor();
+        await row.getByRole("button", { name: "Move", exact: true }).scrollIntoViewIfNeeded();
+        await capture(page, "trip-roster-move-seat", scheme);
       });
 
       // What divers wrote back, as a worklist (ADR 20260907-two-way-inbox):
