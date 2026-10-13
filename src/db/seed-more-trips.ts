@@ -828,9 +828,23 @@ function preferReviewedCards(
   return drawn.map((index) => (hasReviewedCard(index) ? index : (spares.shift() ?? index)));
 }
 
-/** When the dawn boat's n-th roll-call checkpoint was called: every ninety minutes from sailing. */
+/**
+ * Minutes after sailing that the dawn boat's n-th count was called: at the
+ * dock, then a few minutes after each dive's last diver was back aboard. Sail
+ * 5:30, dive 1 in 5:50 and out 6:30, count 6:35; dive 2 in 7:10 and out 7:50,
+ * count 7:55; the ride home docks at 8:30 (`DEMO_DAWN_BOAT`). The last count
+ * comes before the dock, never on it (domain review of layer 2, finding 2).
+ */
+const DAWN_CHECKPOINT_MINUTES = [0, 65, 145] as const;
+
+/** A dive's minutes in the water, and how long before its count the last diver surfaced. */
+const DAWN_DIVE_MINUTES = 40;
+const DAWN_EXIT_BEFORE_COUNT_MINUTES = 5;
+
+/** When the dawn boat's n-th roll-call checkpoint was called. */
 function dawnCheckpointAt(trip: { startsAt: Date }, index: number): Date {
-  return new Date(trip.startsAt.getTime() + index * 90 * 60 * 1000);
+  const minutes = DAWN_CHECKPOINT_MINUTES[index] ?? 145 + (index - 2) * 80;
+  return new Date(trip.startsAt.getTime() + minutes * 60 * 1000);
 }
 
 /**
@@ -912,9 +926,8 @@ async function seedDawnBoatRecord(
   );
   if (crewRows.length > 0) await db.insert(rollCallCrewEvents).values(crewRows);
 
-  // Both tanks logged: in the water a quarter of an hour after the boat
-  // reached the mooring, out forty-five minutes later, the reef's ordinary
-  // depth. Each dive ends before the after-dive count that closes it.
+  // Both tanks logged at the reef's ordinary depth, each dive ending a few
+  // minutes before the after-dive count that closes it.
   const plan = await db
     .select({ diveNumber: tripDives.diveNumber, diveSiteId: tripDives.diveSiteId })
     .from(tripDives)
@@ -929,8 +942,10 @@ async function seedDawnBoatRecord(
           tripId: trip.id,
           diveNumber: dive.diveNumber,
           actualSiteId: dive.diveSiteId ?? trip.diveSiteId,
-          enteredAt: new Date(afterDive - 60 * minute),
-          exitedAt: new Date(afterDive - 15 * minute),
+          enteredAt: new Date(
+            afterDive - (DAWN_DIVE_MINUTES + DAWN_EXIT_BEFORE_COUNT_MINUTES) * minute,
+          ),
+          exitedAt: new Date(afterDive - DAWN_EXIT_BEFORE_COUNT_MINUTES * minute),
           maxDepthMeters: dive.diveNumber === 1 ? 14 : 10,
           recordedByPersonId: recorderId,
         };

@@ -88,6 +88,27 @@ describe("the seeded dawn boat's record", () => {
     }
   });
 
+  it("counted everyone back aboard after each dive, and before the boat docked", async () => {
+    // Domain review of layer 2, finding 2: the last count used to land on the
+    // docking minute, with dive 2 still in the water at a quarter past eight.
+    const { db, dawn } = await dawnBoat();
+    const counts = await db
+      .select()
+      .from(rollCallCrewEvents)
+      .where(eq(rollCallCrewEvents.tripId, dawn.id));
+    const dives = await db.select().from(executedDives).where(eq(executedDives.tripId, dawn.id));
+    for (const count of counts) {
+      expect(count.occurredAt.getTime()).toBeLessThan(dawn.endsAt.getTime());
+    }
+    for (const dive of dives) {
+      const after = counts.filter((row) => row.checkpoint === `after_dive_${dive.diveNumber}`);
+      expect(after.length).toBeGreaterThan(0);
+      for (const count of after) {
+        expect(dive.exitedAt?.getTime()).toBeLessThan(count.occurredAt.getTime());
+      }
+    }
+  });
+
   it("carried nobody whose card was still waiting for a review", async () => {
     const { db, dawn } = await dawnBoat();
     const aboard = await db
