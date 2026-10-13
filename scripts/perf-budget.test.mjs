@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
-import { sharedFirstLoadChunks, staffMarkersIn } from "./perf-budget.mjs";
+import { floorMarkersIn, sharedFirstLoadChunks } from "./perf-budget.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -60,20 +60,27 @@ describe("sharedFirstLoadChunks", () => {
   });
 });
 
-describe("staffMarkersIn", () => {
+describe("floorMarkersIn", () => {
   // The floor fell 4.2 KB of the 18 a fix expected, and the total stayed under
   // its ceiling, so nothing said the staff palette was still in all 107 routes
   // (code review 2026-10-13b, item 7). A floor chunk that carries the staff
   // shell is the regression this guard is named after, whatever it weighs.
   it("names the palette's shortcut and the row menu's open mark", () => {
-    expect(staffMarkersIn('e.jsx("button",{"aria-keyshortcuts":"Meta+K Control+K"})')).toEqual([
+    expect(floorMarkersIn('e.jsx("button",{"aria-keyshortcuts":"Meta+K Control+K"})')).toEqual([
       "aria-keyshortcuts",
     ]);
-    expect(staffMarkersIn('"has-[[data-row-menu-open]]:z-20"')).toEqual(["data-row-menu-open"]);
+    expect(floorMarkersIn('"has-[[data-row-menu-open]]:z-20"')).toEqual(["data-row-menu-open"]);
+  });
+
+  it("names the Sentry SDK's global carrier", () => {
+    // About 57 KB of the floor until the browser SDK loaded on idle (item 34).
+    expect(floorMarkersIn("var c=globalThis.__SENTRY__=globalThis.__SENTRY__||{}")).toEqual([
+      "__SENTRY__",
+    ]);
   });
 
   it("leaves a diver chunk alone", () => {
-    expect(staffMarkersIn('e.jsx("a",{href:"/s/blue-mantis",children:"Book"})')).toEqual([]);
+    expect(floorMarkersIn('e.jsx("a",{href:"/s/blue-mantis",children:"Book"})')).toEqual([]);
   });
 });
 
@@ -105,10 +112,10 @@ describe("the budget against the real build", () => {
     expect(floor).toBeLessThanOrEqual(heaviest);
   });
 
-  it.runIf(existsSync(stats))("finds no staff shell on the floor", () => {
+  it.runIf(existsSync(stats))("finds no staff shell and no Sentry SDK on the floor", () => {
     const routeStats = JSON.parse(readFileSync(stats, "utf8"));
     const carrying = sharedFirstLoadChunks(routeStats).filter(
-      (chunk) => staffMarkersIn(readFileSync(path.join(ROOT, chunk), "utf8")).length > 0,
+      (chunk) => floorMarkersIn(readFileSync(path.join(ROOT, chunk), "utf8")).length > 0,
     );
     expect(carrying).toEqual([]);
   });

@@ -77,17 +77,23 @@ export function sharedFirstLoadChunks(routeStats) {
 }
 
 /**
- * **Strings only the staff shell ships**, so a floor chunk carrying one is the
- * staff shell on every diver and marketing page, whatever it weighs. The
- * palette's `aria-keyshortcuts` and the ledger row menu's `data-row-menu-open`
- * rode the root 404 into all 107 routes at 13.8 KB gzip while the total stayed
- * under its ceiling (code review 2026-10-13b, item 7): a byte budget alone
- * could not see it. Exported for the test.
+ * **Code the floor must not carry, by a string only that code ships.** A floor
+ * chunk carrying one is that code on every diver and marketing page, whatever
+ * it weighs, so this fails before the byte budget would. The staff palette's
+ * `aria-keyshortcuts` and the ledger row menu's `data-row-menu-open` rode the
+ * root 404 into all 107 routes at 13.8 KB gzip while the total stayed under its
+ * ceiling (code review 2026-10-13b, item 7); the Sentry SDK's `__SENTRY__`
+ * carrier was about 57 KB of the floor until `src/instrumentation-client.ts`
+ * loaded it on idle (item 34). Exported for the test.
  */
-export const STAFF_MARKERS = ["aria-keyshortcuts", "data-row-menu-open"];
+export const FLOOR_MARKERS = {
+  "aria-keyshortcuts": "the staff command palette",
+  "data-row-menu-open": "the ledger's row menu",
+  __SENTRY__: "the Sentry browser SDK, which loads on idle",
+};
 
-export function staffMarkersIn(source) {
-  return STAFF_MARKERS.filter((marker) => source.includes(marker));
+export function floorMarkersIn(source) {
+  return Object.keys(FLOOR_MARKERS).filter((marker) => source.includes(marker));
 }
 
 async function main() {
@@ -121,18 +127,21 @@ async function main() {
   }
 
   let totalKb = 0;
-  const staffChunks = [];
+  const markedChunks = [];
   for (const chunk of shared) {
     const source = await readFile(chunk);
     totalKb += gzipSync(source).length / 1024;
-    const markers = staffMarkersIn(source.toString("utf8"));
-    if (markers.length > 0) staffChunks.push(`${chunk} (${markers.join(", ")})`);
+    const markers = floorMarkersIn(source.toString("utf8"));
+    if (markers.length > 0) {
+      markedChunks.push(`${chunk}: ${markers.map((marker) => FLOOR_MARKERS[marker]).join(", ")}`);
+    }
   }
-  if (staffChunks.length > 0) {
+  if (markedChunks.length > 0) {
     console.error(
-      `perf: the staff shell is on the shared first-load floor, in every route:\n  ${staffChunks.join("\n  ")}\n` +
-        "  A module every route loads (the root layout, the root not-found) imports a staff component\n" +
-        "  statically. Load it with `next/dynamic` from a Client Component, as `LazyCommandPalette` does.",
+      `perf: the shared first-load floor, which every route loads, carries code it must not:\n  ${markedChunks.join("\n  ")}\n` +
+        "  A module every route loads (the root layout, the root not-found, instrumentation-client.ts)\n" +
+        "  imports it statically. Load it with `next/dynamic` from a Client Component, as\n" +
+        "  `LazyCommandPalette` does, or on idle, as `deferSentry` does.",
     );
     process.exit(1);
   }
