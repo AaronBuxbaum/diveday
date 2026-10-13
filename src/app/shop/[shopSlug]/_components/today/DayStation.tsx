@@ -91,7 +91,9 @@ export function DayStation({
     { text: station.crewNames.length > 0 ? station.crewNames.join(", ") : null, phone: false },
     {
       text:
-        station.priceCents === null ? null : formatMoneyScanned(station.priceCents, currency, locale),
+        station.priceCents === null
+          ? null
+          : formatMoneyScanned(station.priceCents, currency, locale),
       phone: true,
     },
   ].filter((fact): fact is { text: string; phone: boolean } => Boolean(fact.text));
