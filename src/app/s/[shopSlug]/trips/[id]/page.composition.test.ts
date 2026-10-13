@@ -342,7 +342,7 @@ describe("the trip page's order", () => {
     expect(SOURCE).not.toContain("getBookingForTrip(");
     expect(READS_SOURCE.split("getBookingForTrip(").length - 1).toBe(1);
     expect(READS_SOURCE).toContain(
-      "(capability) => (capability ? getBookingForTrip(db, tripId, capability.bookingId) : null)",
+      "(capability) => (capability ? getBookingForTrip(db, shop.id, tripId, capability.bookingId) : null)",
     );
     expect(READS_SOURCE).toContain(
       "isEmbed || !shop.reviewsEnabled ? null : getShopReviewAggregate(db, shop.id)",

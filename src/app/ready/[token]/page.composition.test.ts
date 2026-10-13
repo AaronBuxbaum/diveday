@@ -509,7 +509,7 @@ describe("after the dive", () => {
     expect(positionOf("await readAfterTheDive(db, {")).toBeLessThan(positionOf("<AfterState"));
     const rollCall = AFTER_DIVE_READS.indexOf("departureRollCallForBooking(db,");
     expect(rollCall).toBeGreaterThan(-1);
-    expect(rollCall).toBeLessThan(AFTER_DIVE_READS.indexOf("isAfterTheDive({"));
+    expect(rollCall).toBeLessThan(AFTER_DIVE_READS.indexOf("isAfterTheDive({ endsAt, boarded })"));
     // Only once the boat is scheduled home: an ordinary night-before page load
     // never pays for the query.
     expect(AFTER_DIVE_READS).toContain("const boatIsHome = theBoatIsHome({ endsAt });");
@@ -678,7 +678,10 @@ describe("a held seat after the dive", () => {
       "utf8",
     );
     expect(AFTER_DIVE_READS).toContain(
-      "boatIsHome && !input.identityHeld ? getRecapPageState(db, bookingId) : null",
+      "const speculate = boatIsHome && !input.identityHeld && isAfterTheDive({ endsAt });",
+    );
+    expect(AFTER_DIVE_READS).toContain(
+      "const recapRead = speculate ? getRecapPageState(db, bookingId) : null;",
     );
     expect(positionOf("<NoShowCard")).toBeGreaterThan(held);
   });

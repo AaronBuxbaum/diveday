@@ -97,7 +97,8 @@ export async function readTripPage(
   const confirmedRead =
     isEmbed && bookingToken
       ? verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" }).then(
-          (capability) => (capability ? getBookingForTrip(db, tripId, capability.bookingId) : null),
+          (capability) =>
+            capability ? getBookingForTrip(db, shop.id, tripId, capability.bookingId) : null,
         )
       : Promise.resolve(null);
   const waitlistRead = waitlistId

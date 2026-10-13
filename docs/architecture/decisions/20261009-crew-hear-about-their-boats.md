@@ -48,8 +48,9 @@ Crew changes reach the database through three functions, and every surface calls
 - **The coalescing rule** is `src/lib/crew-notices.ts`, and it is the whole of it:
   1. A person's notices wait until their crew has been still for two minutes
      (`CREW_NOTICE_SETTLE_MS`).
-  2. The hourly pass (`/api/cron/crew-notices`, `0 * * * *`) claims everything that settled and nets
-     it per departure by `seq`: the state before the first change against the state after the last.
+  2. The hourly pass (`/api/cron/crew-notices`, `6 * * * *`, its own minute since the 2026-10-13
+     code review) claims everything that settled and nets it per departure by `seq`: the state
+     before the first change against the state after the last.
      On then off, or off then on, is no news.
   3. A call-off is said as that, whatever came before it, unless somebody was put back on after.
   4. An approval that put them aboard is said once, as the approval. An approval the boat then

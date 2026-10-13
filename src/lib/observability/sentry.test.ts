@@ -50,4 +50,35 @@ describe("sentry, loaded on first use", () => {
     });
     await expect(sentry.captureException(new Error("x"))).resolves.toBe(undefined);
   });
+
+  it("tries the import again after a failed load", async () => {
+    let attempt = 0;
+    const { sentry, imported } = await load("https://key@sentry.invalid/1", () => {
+      attempt += 1;
+      if (attempt === 1) throw new Error("transient");
+      return sdk;
+    });
+    expect(await sentry.captureException(new Error("x"))).toBe(undefined);
+    expect(await sentry.captureException(new Error("y"))).toBe("event-id");
+    expect(imported).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("reportScrubbedError", () => {
+  it("sends a stand-in with the caller's words, the class and cause tokens, never the message", async () => {
+    await load("https://key@sentry.invalid/1");
+    const { reportScrubbedError } = await import("./sentry");
+    const leaky = new Error("insert failed for nora@example.com", {
+      cause: Object.assign(new Error("dup"), { name: "DatabaseError", code: "23505" }),
+    });
+    await reportScrubbedError(leaky, { name: "XError", message: "X failed", tags: { a: "b" } });
+    const [sent, context] = sdk.captureException.mock.calls[0] as unknown as [Error, unknown];
+    expect(sent.name).toBe("XError");
+    expect(sent.message).toBe("X failed");
+    expect(sent.cause).toBeUndefined();
+    expect(sent.stack).not.toContain("nora@example.com");
+    expect(context).toEqual({
+      tags: { a: "b", error_class: "Error", cause_name: "DatabaseError", cause_code: "23505" },
+    });
+  });
 });

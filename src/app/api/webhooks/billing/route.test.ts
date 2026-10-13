@@ -29,6 +29,7 @@ const actualApply = (
   await vi.importActual<typeof import("@/db/shop-subscriptions")>("@/db/shop-subscriptions")
 ).applyBillingEffect;
 const { POST } = await import("./route");
+const Sentry = await import("@sentry/nextjs");
 
 const WEBHOOK_SECRET = "whsec_billing_test";
 const CONNECT_SECRET = "whsec_connect_test";
@@ -203,6 +204,34 @@ describe("POST /api/webhooks/billing — applies what Stripe says, once", () => 
     expect((await getShopSubscription(db, shopId))?.stripeStatus).toBeNull();
     expect((await deliver(payload, signed(payload))).status).toBe(200);
     expect((await getShopSubscription(db, shopId))?.stripeStatus).toBe("active");
+  });
+
+  // Issue #2334, as on the Connect webhook: a handler's error can quote the row
+  // it refused, so Sentry gets a fixed message and the class as a tag.
+  it("sends Sentry a scrubbed error, never the handler's own message", async () => {
+    vi.mocked(Sentry.captureException).mockReset();
+    const leaky = new TypeError('duplicate key: (email)=(nora@example.com) for "Nora Diaz"');
+    vi.mocked(subscriptions.applyBillingEffect).mockRejectedValueOnce(leaky);
+    const payload = subscriptionEvent("evt_leaky", { status: "active" });
+    expect((await deliver(payload, signed(payload))).status).toBe(500);
+
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+    const [sent, context] = vi.mocked(Sentry.captureException).mock.calls[0];
+    expect(sent).not.toBe(leaky);
+    const scrubbed = sent as Error;
+    expect(scrubbed.cause).toBeUndefined();
+    expect(scrubbed.message).toBe("Billing webhook handler failed");
+    for (const text of [scrubbed.message, scrubbed.stack ?? "", JSON.stringify(context)]) {
+      expect(text).not.toContain("nora@example.com");
+      expect(text).not.toContain("Nora Diaz");
+    }
+    expect(context).toEqual({
+      tags: expect.objectContaining({
+        stripe_event_id: "evt_leaky",
+        billing_webhook_stage: "handler",
+        error_class: "TypeError",
+      }),
+    });
   });
 
   it("records the first paid month from a paid invoice", async () => {

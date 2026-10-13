@@ -13,9 +13,10 @@ import { isAfterTheDive, theBoatIsHome } from "@/lib/thread-steps";
  * night-before load never pays for them.
  *
  * **The recap is read beside the roll call, not after it** (code review
- * 2026-10-13, item 29): once the boat is home it is the likely answer, and a
+ * 2026-10-13, item 29): past the recap floor it is the likely answer, and a
  * read-only one, so it starts with the roll call and is awaited only if the
- * page does turn. A held identity never reads it at all: its card is decided
+ * page does turn. Before the floor it is read only once the roll call says
+ * the diver boarded. A held identity never reads it at all: its card is decided
  * before the recap is (issue #2125).
  */
 export async function readAfterTheDive(
@@ -24,7 +25,13 @@ export async function readAfterTheDive(
 ): Promise<{ afterTheDive: boolean; recap: () => Promise<RecapPageState> }> {
   const { shopId, tripId, endsAt, bookingId } = input;
   const boatIsHome = theBoatIsHome({ endsAt });
-  const recapRead = boatIsHome && !input.identityHeld ? getRecapPageState(db, bookingId) : null;
+  // Started early only past the recap floor, where the afterglow is the answer
+  // unless the crew left the diver at the dock. Between the boat coming home
+  // and that floor, a shop that keeps no roll call stays on the thread, so the
+  // recap waits for the roll call's "boarded" instead of being read and
+  // thrown away on every load of that window.
+  const speculate = boatIsHome && !input.identityHeld && isAfterTheDive({ endsAt });
+  const recapRead = speculate ? getRecapPageState(db, bookingId) : null;
   // Settled here so a page that stays on the thread never leaves it unhandled.
   recapRead?.catch(() => null);
   const departure = boatIsHome

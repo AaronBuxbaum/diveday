@@ -15,6 +15,7 @@ import {
   confirmBookingIdentity,
   createBooking,
   createBookingParty,
+  getBookingForTrip,
   movableSameNameSeats,
   restoreBooking,
   sameNameHeldSeats,
@@ -720,6 +721,26 @@ describe("createBooking by identity (returning diver, no re-entry)", () => {
       personId: diver.id,
     });
     expect(outcome).toEqual({ ok: false, reason: "trip_full" });
+  });
+});
+
+describe("getBookingForTrip (the confirmation panel's read)", () => {
+  it("answers a live booking on this shop's trip, and nothing under another shop's id", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-booking-for-trip-test", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("second shop setup failed");
+
+    const found = await getBookingForTrip(db, shop.id, open.id, booked.bookingId);
+    expect(found?.person.fullName).toBe("Nora Quinn");
+    expect(await getBookingForTrip(db, other.id, open.id, booked.bookingId)).toBeNull();
+
+    await cancelBooking(db, shop.id, booked.bookingId);
+    expect(await getBookingForTrip(db, shop.id, open.id, booked.bookingId)).toBeNull();
   });
 });
 
