@@ -321,7 +321,7 @@
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 416,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/integrations/page.tsx": 489,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 871,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 831,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 507,

@@ -473,6 +473,8 @@ export type TripActivityEntry =
         | "identity_split"
         | "seat_added"
         | "seat_added_walk_in"
+        | "seat_added_from_trip_link"
+        | "departure_offered"
         | "rider_added_at_dock";
       diver: string;
     }
@@ -502,7 +504,14 @@ export type TripActivityEntry =
 
 export async function recordTripActivity(
   db: DbExecutor,
-  input: { shopId: string; tripId: string; actorPersonId: string; entry: TripActivityEntry },
+  input: {
+    shopId: string;
+    tripId: string;
+    actorPersonId: string;
+    entry: TripActivityEntry;
+    /** The diver a line is about when no booking carries them (`activity_events.subject_person_id`). */
+    subjectPersonId?: string;
+  },
 ) {
   const entry = input.entry;
   const [scope] = await db
@@ -526,6 +535,7 @@ export async function recordTripActivity(
       shopId: input.shopId,
       tripId: input.tripId,
       actorPersonId: input.actorPersonId,
+      subjectPersonId: input.subjectPersonId ?? null,
       code: entry.code,
       params: { actor: scope.actorName, ...names },
       occurredAt: nowDate(),

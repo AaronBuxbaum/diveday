@@ -263,11 +263,13 @@ export async function offerAnotherDayAction(
       back,
       outcome === "sent"
         ? "offer-sent"
-        : outcome === "opted_out"
-          ? "offer-opted-out"
-          : outcome === "unavailable"
-            ? "offer-unavailable"
-            : "offer-not-sent",
+        : outcome === "already_sent"
+          ? "offer-already-sent"
+          : outcome === "opted_out"
+            ? "offer-opted-out"
+            : outcome === "unavailable"
+              ? "offer-unavailable"
+              : "offer-not-sent",
     ),
   );
 }

@@ -502,7 +502,7 @@ export default async function GearUnitPage({
             timeZone={shop.timezone}
           />
         ) : (
-          <StatusCard item={item} held={held} t={t} />
+          <StatusCard detail={detail} held={held} t={t} locale={locale} zone={shop.timezone} />
         )}
       </div>
     </main>

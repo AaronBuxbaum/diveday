@@ -125,11 +125,16 @@ export async function cancelMyBookingAction(token: string) {
   // has an answer that is not a staffer. Caught for the same reason as the
   // refund: the cancellation has already happened.
   try {
-    await recordDiverSelfCancel(ctx.db, {
+    const recorded = await recordDiverSelfCancel(ctx.db, {
       shopId: ctx.data.shop.id,
       bookingId: ctx.bookingId,
       refunded: refund.status === "refunded",
     });
+    // Null when the departure was deleted under the diver: no trail to write
+    // on, so the act is at least in the log for a disputed refund (#2471).
+    if (!recorded) {
+      log("booking.self_cancel_activity_skipped", "warn", { bookingId: ctx.bookingId });
+    }
   } catch (error) {
     log("booking.self_cancel_activity_failed", "error", {
       bookingId: ctx.bookingId,

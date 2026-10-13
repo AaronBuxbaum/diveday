@@ -138,6 +138,10 @@ type ActivityParamShapes = {
   seat_added: { actor: string; diver: string };
   /** …as a walk-in, which is the same act with a different story behind it. */
   seat_added_walk_in: { actor: string; diver: string };
+  /** …by a diver, for a friend, from their own trip link (the actor is the lead). */
+  seat_added_from_trip_link: { actor: string; diver: string };
+  /** A staffer emailed a diver an invitation to this departure (the counter's "another day"). */
+  departure_offered: { actor: string; diver: string };
   /**
    * …as a rider who turned up at the boat unrostered (batch 4, D6): the crew
    * added them from the manifest, so the line says where it happened.
@@ -280,6 +284,8 @@ export const ACTIVITY_CODES = [
   "incident_report_addendum_added",
   "seat_added",
   "seat_added_walk_in",
+  "seat_added_from_trip_link",
+  "departure_offered",
   "rider_added_at_dock",
   "departure_note_sent",
   "booking_link_requested",

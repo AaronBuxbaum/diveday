@@ -90,6 +90,7 @@ export const DESK_NOTICES: DeskNoticeMap = {
   // whether the offer left, and when it did not, the reason that sends the
   // staffer to the phone instead.
   "offer-sent": { tone: "success", key: "checkIn.notice.offerSent" },
+  "offer-already-sent": { tone: "neutral", key: "checkIn.notice.offerAlreadySent" },
   "offer-not-sent": { tone: "warning", key: "checkIn.notice.offerNotSent" },
   "offer-opted-out": { tone: "warning", key: "checkIn.notice.offerOptedOut" },
   "offer-unavailable": { tone: "neutral", key: "checkIn.notice.offerUnavailable" },
