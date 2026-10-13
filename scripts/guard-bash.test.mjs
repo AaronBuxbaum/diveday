@@ -102,7 +102,7 @@ describe("piping a long run through tail", () => {
 describe("the whole suite, locally", () => {
   it("refuses a bare run of the scripts that belong to CI, naming the focused form", () => {
     expect(violationFor("pnpm test", scripts)).toMatch(/pnpm test <file>/);
-    expect(violationFor("pnpm test --reporter=dot", scripts)).toMatch(/test:changed/);
+    expect(violationFor("pnpm test --reporter=dot", scripts)).toMatch(/verify:push/);
     expect(violationFor("pnpm run test", scripts)).toMatch(/whole suite/);
     expect(violationFor("pnpm e2e", scripts)).toMatch(/pnpm e2e <spec>/);
     expect(violationFor("pnpm e2e:run --reporter=line", new Set([...scripts, "e2e:run"]))).toMatch(
@@ -118,7 +118,7 @@ describe("the whole suite, locally", () => {
   it("leaves a focused run alone", () => {
     expect(refuses("pnpm test src/db/bookings.test.ts --reporter=dot")).toBe(false);
     expect(refuses("pnpm test scripts/guard-bash.test.mjs")).toBe(false);
-    expect(refuses("pnpm test:changed")).toBe(false);
+    expect(refuses("pnpm verify:push")).toBe(false);
     expect(refuses("pnpm test --changed origin/main")).toBe(false);
     expect(refuses("pnpm test -t 'refuses a bare'")).toBe(false);
     expect(refuses("pnpm e2e e2e/booking.spec.ts --reporter=line")).toBe(false);

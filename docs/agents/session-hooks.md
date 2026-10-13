@@ -82,7 +82,7 @@ read "650 unpushed commits" on every prompt. A detached HEAD now says "detached 
 and counts nothing; a branch with no upstream yet is still counted against every remote, which is
 honest for a branch nobody has pushed. At startup and resume the hook also runs
 `git fetch --quiet --prune origin main claude/*` (20 s bound, skipped when `FETCH_HEAD` is under ten
-minutes old, `DIVEDAY_SESSION_FETCH=0` to opt out) before reading anything, so `test:changed`,
+minutes old, `DIVEDAY_SESSION_FETCH=0` to opt out) before reading anything, so `verify:push`,
 `check:closing-keywords` and the migration guard measure from a current base, and the
 `unpushed-work` hook below sees current remote refs. A failed fetch is said in the block.
 

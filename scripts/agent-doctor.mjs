@@ -160,7 +160,7 @@ export function checks(facts) {
         ? "no origin/main ref"
         : `origin/main tip ${facts.mainTip}, ${facts.fetchAgeMs === null ? "never fetched in this checkout" : `fetched ${minutes(facts.fetchAgeMs)} ago`}`,
     fix: stale
-      ? "git fetch origin main — `test:changed`, `check:closing-keywords` and the migration guard measure from it."
+      ? "git fetch origin main — `verify:push` (off a stack), `check:closing-keywords` and the migration guard measure from it."
       : "",
   });
   rows.push({

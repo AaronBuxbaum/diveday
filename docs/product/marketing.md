@@ -1047,7 +1047,7 @@ at the dock, the blocker queue, the no-login diver arc.
 - **A claim is invalidated** (feature removed, behavior changed) → fix the page in the same PR
   that invalidates it. If code and copy disagree, one of them is the bug.
 - **Verification is the product bar**: the local gate green (`pnpm check:repo`, `pnpm lint`,
-  `pnpm typecheck`, `pnpm test:changed`) and CI's `pnpm check`; `pnpm e2e marketing.spec.ts`;
+  `pnpm typecheck`, `pnpm verify:push`) and CI's `pnpm check`; `pnpm e2e marketing.spec.ts`;
   screenshots of every touched page in light + dark, desktop + phone, actually looked at
   (design-review skill); visual triage after push (visual-triage skill).
 - Copy changes update the e2e assertions that pin headlines/price visibility — deliberately: a

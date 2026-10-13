@@ -117,7 +117,7 @@ while the field has focus, and add a test that fails if any parser is ever attac
 the never-list (card details, head counts, tank pressure, nitrox mix, depth, medical answers,
 emergency-contact name). The component that must not drift names the ADR in its doc comment.
 Update the README's slice table row to shipped with the file and the pinning test, run
-pnpm check:design-canvases, pnpm test:changed, pnpm lint and pnpm typecheck, look at the fields
+pnpm check:design-canvases, pnpm verify:push, pnpm lint and pnpm typecheck, look at the fields
 in light and dark, and open a pull request explaining any visual diff.
 ```
 

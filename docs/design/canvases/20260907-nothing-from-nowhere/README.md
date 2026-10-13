@@ -149,7 +149,7 @@ the counter's instrument line and settled count, the station chip's boarding cou
 answer count, the held send's seconds and the booking form's gear price. Add a test that walks the
 roll call's and the manifest's component trees and fails on any import of it. The component names
 the ADR in its doc comment. Update the README's slice table row to shipped with the file and the
-pinning test, run pnpm check:design-canvases, pnpm test:changed, pnpm lint and pnpm typecheck,
+pinning test, run pnpm check:design-canvases, pnpm verify:push, pnpm lint and pnpm typecheck,
 look at the counter in light and dark, and open a pull request explaining any visual diff.
 ```
 
@@ -213,7 +213,7 @@ trips.revision.
 
 Write the spec's acceptance tests (1–8 and the e2e spec) as you go; they are what pin the rules.
 The module's index.ts and the component that renders the line name the ADR in their doc comments.
-Before each push run pnpm test:changed, pnpm lint, pnpm typecheck, pnpm check:architecture and
+Before each push run pnpm verify:push, pnpm lint, pnpm typecheck, pnpm check:architecture and
 pnpm check:repo. Run the security-reviewer agent over the web-service routes and the token handling
 before the routes PR leaves draft, and act on what it finds. Look at the thread at a phone width in
 light and dark (node scripts/screenshot.mjs against pnpm dev) once with a runtime-generated test

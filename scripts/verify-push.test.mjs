@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { excerpt, plan, sourceScanTests } from "./verify-push.mjs";
+import {
+  appTreeKey,
+  browserSpecs,
+  excerpt,
+  plan,
+  REACH_BUDGET_MS,
+  sourceScanTests,
+} from "./verify-push.mjs";
 
 const names = (steps) => steps.map((step) => step.name);
 const base = { specs: [], scans: ["src/components/ui/form.test.tsx"] };
@@ -95,5 +102,74 @@ describe("a red step's excerpt", () => {
     expect(excerpt("a\nb\n FAIL src/x.test.ts\nTests 1 failed")).toBe(
       "a\nb\n FAIL src/x.test.ts\nTests 1 failed",
     );
+  });
+});
+
+describe("the browser specs a push runs", () => {
+  const minute = 60_000;
+  const record = { "e2e/a.spec.ts": 2 * minute, "e2e/b.spec.ts": 4 * minute, "e2e/c.spec.ts": minute };
+  const strong = new Map([["e2e/a.spec.ts", new Set(["quotes it"])]]);
+  const rank = new Map();
+
+  it("caps what the diff only reaches at five minutes, whatever the strong tier left", () => {
+    const reach = new Map([
+      ["e2e/b.spec.ts", new Set()],
+      ["e2e/c.spec.ts", new Set()],
+      ["e2e/d.spec.ts", new Set()],
+    ]);
+    const picked = browserSpecs({ changed: ["src/lib/x.ts"], strong, reach, rank, record });
+    expect(REACH_BUDGET_MS).toBe(5 * minute);
+    // Cheapest first: c (1) and d (unrecorded, one minute by default) fit; b (4) would make six.
+    expect(picked.specs).toEqual(["e2e/a.spec.ts", "e2e/c.spec.ts", "e2e/d.spec.ts"]);
+    expect(picked.left).toEqual(["e2e/b.spec.ts"]);
+  });
+
+  it("never spends more than the whole budget when the strong tier is already near it", () => {
+    const heavy = { ...record, "e2e/a.spec.ts": 14 * minute };
+    const reach = new Map([["e2e/b.spec.ts", new Set()]]);
+    const picked = browserSpecs({ changed: ["src/lib/x.ts"], strong, reach, rank, record: heavy });
+    expect(picked.specs).toEqual(["e2e/a.spec.ts"]);
+    expect(picked.left).toEqual(["e2e/b.spec.ts"]);
+  });
+
+  it("runs no browser spec, so builds nothing, when only unit tests changed", () => {
+    const picked = browserSpecs({
+      changed: ["src/lib/x.test.ts", "scripts/y.test.mjs", "docs/agents/verifying.md"],
+      strong,
+      reach: new Map(),
+      rank,
+      record,
+    });
+    expect(picked).toEqual({ specs: [], reached: [], left: [], testsOnly: true });
+  });
+
+  it("still runs the specs a diff of e2e specs names", () => {
+    const picked = browserSpecs({
+      changed: ["e2e/a.spec.ts"],
+      strong,
+      reach: new Map(),
+      rank,
+      record,
+    });
+    expect(picked.specs).toEqual(["e2e/a.spec.ts"]);
+  });
+});
+
+describe("the build key", () => {
+  const line = (file, sha) => `100644 blob ${sha}\t${file}`;
+  const app = [line("src/lib/x.ts", "a1"), line("package.json", "b2")];
+
+  it("does not move when only tests, specs or docs change, so the build is reused", () => {
+    const before = appTreeKey([...app, line("src/lib/x.test.ts", "c3"), line("e2e/a.spec.ts", "d4")].join("\n"));
+    const after = appTreeKey(
+      [...app, line("src/lib/x.test.ts", "ff"), line("e2e/a.spec.ts", "ee"), line("docs/x.md", "11")].join("\n"),
+    );
+    expect(after).toBe(before);
+  });
+
+  it("moves when anything the app is built from changes", () => {
+    const before = appTreeKey(app.join("\n"));
+    const after = appTreeKey([line("src/lib/x.ts", "a2"), line("package.json", "b2")].join("\n"));
+    expect(after).not.toBe(before);
   });
 });

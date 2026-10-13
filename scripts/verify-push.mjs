@@ -29,6 +29,7 @@
 // bodies record it as "cut short". Each step's output goes to a log under the git dir; a red
 // step prints only its tail.
 
+import { createHash } from "node:crypto";
 import {
   closeSync,
   existsSync,
@@ -50,6 +51,19 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Recorded CI time the strong and reach tiers may spend together before reach stops adding. */
 export const E2E_BUDGET_MS = 15 * 60_000;
+
+/**
+ * What the reach tier (specs the diff only reaches through the import graph) may spend at most,
+ * whatever room the strong tier left. Every push is a new sha, a ten-layer restack is ten runs,
+ * and a reached spec is a guess CI answers anyway (code re-review 2026-10-13, item 16b).
+ */
+export const REACH_BUDGET_MS = 5 * 60_000;
+
+/** A unit, script or guard test: no page imports one, so no browser spec can move with it. */
+const UNIT_TEST = /\.test\.(?:ts|tsx|mts|mjs|js)$/;
+
+/** Paths the e2e build never reads: a change to only these reuses the build already made. */
+const NOT_BUILT = /(?:^|\/)[^/]+\.test\.(?:ts|tsx|mts|mjs|js)$|^e2e\/|^docs\/|\.md$|^\.claude\//;
 
 /** A diff of only these changes no code: CI skips the unit and browser jobs for it too. */
 const DOCS_ONLY = /^(?:docs\/|\.claude\/|[^/]+\.md$)|\.md$/;
@@ -154,6 +168,36 @@ export function plan({ changed, specs, scans, existing = () => true }) {
   return steps;
 }
 
+/**
+ * The Playwright specs to run: every one the diff names, then what it only reaches, cheapest
+ * first, inside both the whole budget and {@link REACH_BUDGET_MS}. A diff of only unit tests (and
+ * docs) runs none, so it never pays for an e2e build: nothing a page imports changed.
+ */
+export function browserSpecs({ changed, strong, reach, rank, record }) {
+  const testsOnly =
+    changed.length > 0 &&
+    changed.every((file) => UNIT_TEST.test(file) || DOCS_ONLY.test(file)) &&
+    changed.some((file) => UNIT_TEST.test(file));
+  if (testsOnly) return { specs: [], reached: [], left: [], testsOnly };
+  const named = [...strong.keys()].sort();
+  const room = Math.min(REACH_BUDGET_MS, Math.max(0, E2E_BUDGET_MS - estimateMs(named, record)));
+  const { run, left } = withinBudget(reach, rank, record, room);
+  return { specs: [...named, ...run], reached: run, left, testsOnly };
+}
+
+/**
+ * The build's key: every path the e2e build reads, with its blob, from `git ls-tree -r HEAD`.
+ * Keyed on the tree minus tests, specs and docs rather than on the whole tree, so a commit that
+ * only fixes a spec or a unit test reuses the build it already has instead of spending two more
+ * minutes making the same one.
+ */
+export function appTreeKey(lsTree) {
+  const built = lsTree
+    .split("\n")
+    .filter((line) => line && !NOT_BUILT.test(line.slice(line.indexOf("\t") + 1)));
+  return createHash("sha256").update(built.join("\n")).digest("hex");
+}
+
 function gitPath(git, name) {
   const relative = git(["rev-parse", "--git-path", name]);
   return relative ? path.resolve(ROOT, relative) : null;
@@ -183,7 +227,7 @@ function tail(file) {
   }
 }
 
-/** The tree a build was made from, so an unchanged HEAD reuses it. */
+/** The {@link appTreeKey} a build was made from, so a commit that changes none of it reuses it. */
 function buildTreeFile() {
   return path.join(ROOT, ".next", "diveday-build-tree");
 }
@@ -192,7 +236,9 @@ function main() {
   const args = process.argv.slice(2);
   const git = gitReader(ROOT);
   const head = git(["rev-parse", "HEAD"]);
-  const tree = git(["rev-parse", "HEAD^{tree}"]);
+  // Falls back to the whole tree when git cannot list it, which only ever costs a rebuild.
+  const listed = git(["ls-tree", "-r", "HEAD"]);
+  const tree = listed ? appTreeKey(listed) : git(["rev-parse", "HEAD^{tree}"]);
   if (!head) {
     console.error("verify:push: git could not read HEAD.");
     process.exit(1);
@@ -213,10 +259,19 @@ function main() {
     process.exit(1);
   }
   const record = durations(ROOT);
-  const strong = [...selection.strong.keys()].sort();
-  const room = Math.max(0, E2E_BUDGET_MS - estimateMs(strong, record));
-  const { run: reachRun, left } = withinBudget(selection.reach, selection.rank, record, room);
-  const specs = [...strong, ...reachRun];
+  const {
+    specs,
+    reached: reachRun,
+    left,
+    testsOnly,
+  } = browserSpecs({
+    changed: selection.changed,
+    strong: selection.strong,
+    reach: selection.reach,
+    rank: selection.rank,
+    record,
+  });
+  const strong = specs.filter((spec) => !reachRun.includes(spec));
   const steps = plan({
     changed: selection.changed,
     existing: (file) => existsSync(path.join(ROOT, file)),
@@ -233,6 +288,7 @@ function main() {
     console.log(`  ${spec}  — ${[...selection.strong.get(spec)].slice(0, 2).join("; ")}`);
   }
   if (reachRun.length > 0) console.log(`  reached: ${reachRun.join(" ")}`);
+  if (testsOnly) console.log("  only tests changed: no e2e build, no browser specs.");
   if (args.includes("--plan")) {
     for (const step of steps) {
       const shown =

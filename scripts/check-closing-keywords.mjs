@@ -35,7 +35,7 @@ import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
  * ## What is guarded
  *
  * Commit messages on this branch — `git merge-base origin/main HEAD` to `HEAD`,
- * the same anchor `pnpm test:changed` and the destructive-migration guard use,
+ * the same anchor the destructive-migration guard uses (and `pnpm verify:push` off a stack),
  * so on a stack it reads every layer's commits and not `main`'s history. A
  * branch with nothing of its own reads clean rather than failing.
  *
@@ -137,7 +137,7 @@ function defaultRun(args) {
  * is the same clone in both cases. Failure is a **reason, not a skip**: exit 2
  * is deliberately a one-off for the one guard that makes a network call
  * ([docs/agents/repo-checks.md](../docs/agents/repo-checks.md)), and a checkout
- * this cannot read is one `pnpm test:changed` and the destructive-migration
+ * this cannot read is one `pnpm verify:push` and the destructive-migration
  * guard cannot read either.
  *
  * On `main` itself the merge base is `HEAD`, so the range is empty and the

@@ -129,7 +129,7 @@ dismissal, which is kept per device the way boat mode keeps its own. No coral, n
 Every sentence lands in en-US and es-ES in the same change. The component names the ADR in its doc
 comment and a test pins that it renders nothing when installed or on a desktop. Update the README's
 slice table row to shipped with the file and the pinning test, run pnpm check:design-canvases,
-pnpm test:changed, pnpm lint and pnpm typecheck, look at the home on a phone in light and dark, and
+pnpm verify:push, pnpm lint and pnpm typecheck, look at the home on a phone in light and dark, and
 open a pull request explaining any visual diff.
 ```
 

@@ -190,7 +190,7 @@ unchanged; only the location moved. Code comments in `src/` citing "specialist-o
 
 The rest of this lens shipped: the stale copy-backlog claims are corrected everywhere, four new
 `task:context` areas exist (payments, notifications, reviews, data portability), `pnpm e2e:run` and
-`pnpm test:changed` give the fast iteration paths, `src/features` is inside the copy safeguards,
+a changed-tests run (now `pnpm verify:push`) give the fast iteration paths, `src/features` is inside the copy safeguards,
 `pnpm check:repo` runs its ten checks in parallel and reports all failures, and `check:agents`
 verifies AGENTS.md's route-map paths.
 

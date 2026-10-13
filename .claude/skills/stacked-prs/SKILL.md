@@ -213,10 +213,11 @@ to its own change.
      full runs overlap. Each layer is a ~25-job run against the account's 20-concurrent-job cap:
      four layers pushed within 46 s on 2026-10-10 (runs 4558, 4559, 4562, 4563) queued jobs for up
      to 740 s and took 23.0–28.4 min each, against 13.6–16.8 min for a run on its own.
-- **`pnpm test:changed` and the destructive-migration guard** anchor on
+- **The destructive-migration guard** anchors on
   `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
-  layers re-run lower layers' affected tests and re-check their migrations. Slower, never wrong —
-  do not "fix" it by re-anchoring to the layer below.
+  layers re-check lower layers' migrations. Slower, never wrong — do not "fix" it by re-anchoring
+  to the layer below. `pnpm verify:push` is the one that diffs against the layer below
+  (`stackBase`), because its tests and specs would otherwise be the whole stack's.
 - **Visual regression handles a stack on its own, and a stack may move pixels.** The baseline key is
   *named* rather than inferred: `regconfig.json` uses `reg-simple-keygen-plugin` and
   `scripts/reg-suit-keys.mjs` resolves **every** layer's baseline to
