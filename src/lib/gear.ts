@@ -708,8 +708,9 @@ export function serviceConcernStillOpen(
  * alone (`pullReturnedUnitsForService`), so the concern would otherwise live
  * only in the rental history further down the page. The status card names
  * each one, newest first, while the unit is off the wall: a service-concern
- * return with words, returned on or after the last recorded service, and not
- * already the unit's own note.
+ * return with words that no later service answered, and not already the
+ * unit's own note. "Later" is the rule `serviceConcernStillOpen` keeps: a
+ * service on a later day, or on the same day recorded at or after the return.
  */
 export function benchReturnConcerns(
   item: { status: "in_service" | "needs_service"; serviceNote: string | null },
@@ -718,18 +719,18 @@ export function benchReturnConcerns(
     returnNote: string | null;
     returnedAt: Date | null;
   }>,
-  history: ReadonlyArray<{ servicedOn: CalendarDate; kind: GearServiceKind }>,
+  history: ReadonlyArray<{ servicedOn: CalendarDate; kind: GearServiceKind; createdAt: Date }>,
   timeZone: string,
 ): { note: string; returnedOn: CalendarDate }[] {
   if (item.status !== "needs_service") return [];
   // A condition note answers no concern; any real work on the unit does.
-  const lastServiced = history.reduce<CalendarDate | null>(
-    (latest, event) =>
-      event.kind !== "note" && (latest === null || event.servicedOn > latest)
-        ? event.servicedOn
-        : latest,
-    null,
-  );
+  const work = history.filter((event) => event.kind !== "note");
+  const answered = (returnedOn: CalendarDate, returnedAt: Date) =>
+    work.some(
+      (event) =>
+        event.servicedOn > returnedOn ||
+        (event.servicedOn === returnedOn && event.createdAt.getTime() >= returnedAt.getTime()),
+    );
   const ownNote = item.serviceNote?.trim() ?? "";
   return reservations
     .flatMap((reservation) => {
@@ -737,7 +738,7 @@ export function benchReturnConcerns(
       if (reservation.returnOutcome !== "service_concern" || !reservation.returnedAt) return [];
       if (note === "" || note === ownNote) return [];
       const returnedOn = calendarDateInTimezone(reservation.returnedAt, timeZone);
-      if (lastServiced !== null && returnedOn < lastServiced) return [];
+      if (answered(returnedOn, reservation.returnedAt)) return [];
       return [{ note, returnedOn, at: reservation.returnedAt.getTime() }];
     })
     .sort((a, b) => b.at - a.at)

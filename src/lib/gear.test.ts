@@ -792,7 +792,13 @@ describe("benchReturnConcerns", () => {
       benchReturnConcerns(
         bench,
         [concern("Hose cracked", "2026-09-01T15:00:00Z")],
-        [{ servicedOn: "2026-09-05", kind: "service" }],
+        [
+          {
+            servicedOn: "2026-09-05",
+            kind: "service",
+            createdAt: new Date("2026-09-05T14:00:00Z"),
+          },
+        ],
         TZ,
       ),
     ).toEqual([]);
@@ -803,10 +809,25 @@ describe("benchReturnConcerns", () => {
       benchReturnConcerns(
         bench,
         [concern("Hose cracked", "2026-09-01T15:00:00Z")],
-        [{ servicedOn: "2026-09-05", kind: "note" }],
+        [{ servicedOn: "2026-09-05", kind: "note", createdAt: new Date("2026-09-05T14:00:00Z") }],
         TZ,
       ),
     ).toEqual([{ note: "Hose cracked", returnedOn: "2026-09-01" }]);
+  });
+
+  it("on the day of the return, weighs the service against the moment it came home", () => {
+    const returned = [concern("Hose cracked", "2026-09-05T18:00:00Z")];
+    const servicedAt = (at: string) => [
+      { servicedOn: "2026-09-05", kind: "service" as const, createdAt: new Date(at) },
+    ];
+    // Serviced that morning, before the evening return: still open.
+    expect(benchReturnConcerns(bench, returned, servicedAt("2026-09-05T13:00:00Z"), TZ)).toEqual([
+      { note: "Hose cracked", returnedOn: "2026-09-05" },
+    ]);
+    // Serviced after it came home the same evening: answered.
+    expect(benchReturnConcerns(bench, returned, servicedAt("2026-09-05T20:00:00Z"), TZ)).toEqual(
+      [],
+    );
   });
 
   it("says nothing for a unit on the wall", () => {
