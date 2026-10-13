@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// A `PreToolUse` hook on `Bash` that refuses three command shapes this repository has
+// A `PreToolUse` hook on `Bash` that refuses the command shapes this repository has
 // already been burned by, and names the correct form in the refusal.
 //
 // All three are written down as hard rules in AGENTS.md, and being written down is not
@@ -46,6 +46,14 @@
 //     `--force-with-lease`, and any push to `main`, are refused unconditionally: one
 //     overwrites a branch somebody else may have advanced, the other skips the pull request.
 //
+//  7. Cancelling a CI run for a push to `main` — `gh run cancel <id>` or the REST
+//     `actions/runs/<id>/cancel` and `force-cancel`. Each main push has its own concurrency
+//     group (`ci.yml`), so nothing will run that commit again: cancelled, it is never verified
+//     and publishes no visual baseline. On 2026-10-13 five main runs (4714, 4728, 4733, 4739,
+//     4745) were cancelled under the `gh` identity every session shares. The guard asks GitHub
+//     which branch and event the run belongs to (bounded, failing open) and refuses only that
+//     case; a pull request's run, a nightly run and anything it cannot read pass.
+//
 // The contract is Claude Code's: JSON on stdin, exit 2 with the reason on stderr to block,
 // exit 0 to stay out of the way. It **fails open** on anything it does not understand —
 // unparseable payload, unexpected shape, its own bug — because a guard that blocks the
@@ -58,6 +66,7 @@ import { fileURLToPath } from "node:url";
 
 import { recordRefusal } from "./hook-log.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { repoSlug } from "./tracker.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -270,6 +279,69 @@ function discardViolation(segment, changes) {
 }
 
 /**
+ * `{ branch, event }` of one Actions run, or null when GitHub could not say in time. The hook
+ * fails open, so a slow or refused read lets the command through.
+ */
+function readRunInfo(id, repo) {
+  try {
+    const text = readBounded(
+      "gh",
+      [
+        "api",
+        `repos/${repo}/actions/runs/${id}`,
+        "--jq",
+        '[.head_branch // "", .event // ""] | join(" ")',
+      ],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeoutMs: SUBPROCESS_TIMEOUTS.ghHookRead,
+      },
+    ).trim();
+    const [branch, event] = text.split(" ");
+    return branch ? { branch, event } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The run a segment would cancel, as `{ id, repo }`, or null. */
+export function runCancelTarget(segment) {
+  const tokens = withoutEnvAssignments(segment.split(/\s+/));
+  if (tokens[0] !== "gh") return null;
+  if (tokens[1] === "run" && tokens[2] === "cancel") {
+    const id = tokens.slice(3).find((token) => /^\d+$/.test(token));
+    const flag = tokens.findIndex((token) => token === "-R" || token === "--repo");
+    const inline = tokens.find((token) => token.startsWith("--repo="));
+    const repo = inline ? inline.slice("--repo=".length) : flag > 0 ? tokens[flag + 1] : null;
+    return id ? { id, repo: repo || repoSlug() } : null;
+  }
+  if (tokens[1] === "api") {
+    for (const token of tokens.slice(2)) {
+      const hit = token.match(
+        /^\/?repos\/([\w.-]+\/[\w.-]+)\/actions\/runs\/(\d+)\/(?:force-)?cancel$/,
+      );
+      if (hit) return { id: hit[2], repo: hit[1] };
+    }
+  }
+  return null;
+}
+
+function runCancelViolation(segment, runInfo) {
+  const target = runCancelTarget(segment);
+  if (!target) return null;
+  const run = runInfo(target.id, target.repo);
+  if (run?.branch !== "main" || run?.event !== "push") return null;
+  return (
+    `\`${segment}\` cancels run ${target.id}, the CI run for a push to main. Each main push has its own ` +
+    `concurrency group in ci.yml, so nothing runs that commit again: cancelled, main is never verified ` +
+    `there and no visual baseline is published for it (five main runs were cancelled this way on 2026-10-13). ` +
+    `Let it finish. If it is holding up your layer, that is the account's 20-concurrent-job cap, not a ` +
+    `conflict: push after it, or cancel your own pull request's superseded run instead.`
+  );
+}
+
+/**
  * The reason this command is refused, or null. Exported for the tests: what matters about
  * this guard is not that it blocks but that it never blocks something legitimate — a guard
  * that cries wolf gets worked around, and then it protects nothing.
@@ -279,7 +351,7 @@ function discardViolation(segment, changes) {
 export function violationFor(
   command,
   scripts = packageScripts(),
-  { changes = workingTreeChanges } = {},
+  { changes = workingTreeChanges, runInfo = readRunInfo } = {},
 ) {
   for (const segment of segments(withoutInertText(command))) {
     const pnpmScript = segment.match(/^pnpm\s+(?:run\s+)?([\w:.-]+)\b/);
@@ -342,6 +414,9 @@ export function violationFor(
 
     const discard = discardViolation(segment, changes);
     if (discard) return discard;
+
+    const cancel = runCancelViolation(segment, runInfo);
+    if (cancel) return cancel;
   }
   return null;
 }

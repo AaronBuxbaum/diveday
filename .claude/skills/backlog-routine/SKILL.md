@@ -198,8 +198,8 @@ the next ticket stacks on it, because anything else means resolving the same con
 should expect a long one: ticket twelve stacks on ticket eleven exactly the way ticket two stacked
 on ticket one. Every layer runs the whole CI gate (ADR 20261003-every-stack-layer-runs-ci; the
 **stacked-prs** skill), so a deep stack costs runners, and that is the accepted price of every
-layer's green meaning it was tested. Push one layer, let its run finish, then the next: concurrent
-runs cancel each other. The stack restarts when the one below it **merges**, not at a layer count.
+layer's green meaning it was tested. Push one layer, let its run finish, then the next: overlapping
+runs queue on the account's 20-concurrent-job cap. The stack restarts when the one below it **merges**, not at a layer count.
 
 **A fix that is not the ticket goes on its own branch off `main`**, not into the stack — an
 unordered crew query found while triaging a diff, a race in a spec you did not touch. It should be

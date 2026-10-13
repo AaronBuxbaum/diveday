@@ -56,7 +56,7 @@ runs. Pass args directly. The shell guard refuses the bare form.
   target branch before calling work complete.
 - **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
   newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
-  the stack pushes one layer at a time, because concurrent runs cancel each other.** That is
+  the stack pushes one layer at a time, because overlapping runs queue on a 20-job cap.** That is
   Aaron's rule; the CI half dates from 2026-10-12, when 15 to 19 layers pushed together cost 126
   cancelled runs and 90 failed jobs. Push a layer, let its run finish, then push the next; a thread
   whose layer sits on another thread's stack leaves the push order to the thread that owns it. A

@@ -14,7 +14,7 @@ bottom-up and atomically, and retargets what is left onto `main`
 
 **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
 newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
-the stack pushes one layer at a time, because concurrent runs cancel each other** (AGENTS.md's
+the stack pushes one layer at a time, because overlapping runs queue on a 20-job cap** (AGENTS.md's
 *Parallel work*). Related or unrelated, a schema migration or a padding change, one file or forty —
 the shape is the same, and it is the default rather than a special case for dependent chains (ADR
 [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
@@ -211,9 +211,11 @@ to its own change.
      against it and the sticky comment says so; otherwise it falls back to the stack's fork point
      from `main`, and the diff is **cumulative** (ADR [20261012-visual-baseline-layer-below](../../../docs/architecture/decisions/20261012-visual-baseline-layer-below.md)).
   2. **One PR's CI at a time, bottom first, driven by the thread that owns the stack.** Push a
-     layer, let its run finish, then push the next. Concurrent runs cancel each other: on
-     2026-10-12, 15 to 19 layers pushed together cost 126 cancelled runs and 90 failed jobs as each
-     break rode up the stack. Each layer is a ~25-job run against the account's 20-concurrent-job
+     layer, let its run finish, then push the next. Runs on different branches do not cancel each
+     other (a push cancels only its own branch's previous run, and each main push has its own
+     group); they queue. On 2026-10-12, 15 to 19 layers pushed together cost 126 cancelled runs
+     and 90 failed jobs as each restack force-pushed every layer and each break rode up the stack.
+     Never cancel a main push run: `guard-bash.mjs` refuses it. Each layer is a ~25-job run against the account's 20-concurrent-job
      cap, so even two overlapping runs queue (runs 4558 to 4563 on 2026-10-10 took 23 to 28 min
      each against 14 to 17 alone). The per-prompt context line counts the account's open pull
      requests, so a second run in flight is visible before you push.

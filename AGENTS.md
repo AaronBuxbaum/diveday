@@ -144,7 +144,7 @@ Other sessions share this checkout. The full statement of each rule:
   work complete.
 - **Stack everything, across threads, and run one PR's CI at a time**: cut every branch from the
   newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
-  the stack pushes one layer at a time, because concurrent runs cancel each other (**stacked-prs**).
+  the stack pushes one layer at a time, because overlapping runs queue on a 20-job cap (**stacked-prs**).
 
 ## Hard rules
 

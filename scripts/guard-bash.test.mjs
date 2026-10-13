@@ -209,3 +209,43 @@ describe("discarding a shared working tree", () => {
     expect(violationFor("git push -u origin claude/fix-domain", scripts, clean)).toBeNull();
   });
 });
+
+describe("cancelling a CI run on main", () => {
+  // 2026-10-13: main runs 4714, 4728, 4733, 4739 and 4745 were "canceled by @AaronBuxbaum",
+  // the `gh` identity every session shares; nothing refused it.
+  const runs = {
+    4714: { branch: "main", event: "push" },
+    5001: { branch: "claude/feature-3", event: "pull_request" },
+    5002: { branch: "main", event: "schedule" },
+  };
+  const asked = [];
+  const runInfo = (id, repo) => {
+    asked.push(`${repo}#${id}`);
+    return runs[id] ?? null;
+  };
+  const check = (command) => violationFor(command, scripts, { changes: () => [], runInfo });
+
+  it("refuses `gh run cancel` and the REST cancel on a main push run, naming why", () => {
+    const reason = check("gh run cancel 4714");
+    expect(reason).toMatch(/push to main/);
+    expect(reason).toMatch(/20-concurrent-job cap/);
+    expect(check("gh run cancel 4714 -R AaronBuxbaum/diveday")).not.toBeNull();
+    expect(
+      check("gh api -X POST repos/AaronBuxbaum/diveday/actions/runs/4714/cancel"),
+    ).not.toBeNull();
+    expect(
+      check("gh api --method POST repos/AaronBuxbaum/diveday/actions/runs/4714/force-cancel"),
+    ).not.toBeNull();
+    expect(asked).toContain("AaronBuxbaum/diveday#4714");
+  });
+
+  it("leaves a pull request's run, a nightly run, an unknown run and reading a run alone", () => {
+    expect(check("gh run cancel 5001")).toBeNull();
+    expect(check("gh run cancel 5002")).toBeNull();
+    expect(check("gh run cancel 9999")).toBeNull();
+    asked.length = 0;
+    expect(check("gh run view 4714 --log-failed")).toBeNull();
+    expect(check("gh api repos/AaronBuxbaum/diveday/actions/runs/4714")).toBeNull();
+    expect(asked).toEqual([]);
+  });
+});
