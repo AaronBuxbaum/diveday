@@ -1,7 +1,8 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readSchedulePage } from "@/app/s/[shopSlug]/_components/schedule-reads";
 import { inHorizonReadiness } from "@/db/blockers";
 import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
 import type { AppDb } from "@/db/client";
@@ -10,11 +11,13 @@ import { hasActiveCourses } from "@/db/courses";
 import { countSpendableDives } from "@/db/dive-packages";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { countGearItems } from "@/db/gear";
+import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getReadyPageData } from "@/db/ready";
+import { departureAfterLateBoarding, getRecapPageState } from "@/db/recap";
 import { getShopReviewAggregate } from "@/db/reviews";
-import { bookings, people, personRoles, trips } from "@/db/schema";
+import { bookings, people, personRoles, tripSeries, trips } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
@@ -29,6 +32,7 @@ import { siteSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import {
   getTripWithBooked,
+  listRunningPublicSeries,
   listTripDives,
   listTripScheduleDays,
   pagedUpcomingTripsWithCounts,
@@ -39,9 +43,12 @@ import { getTripGuests } from "@/db/trips-guests";
 import { liveTrip } from "@/db/trips-live";
 import { getTripOverview } from "@/db/trips-overview";
 import { loadTripSharedReads } from "@/db/trips-shared-reads";
-import { nowDate } from "@/lib/clock";
+import { buildAfterStateProps } from "@/features/recap-after-state";
+import { diverTranslator } from "@/i18n/messages";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
+import { theBoatIsHome } from "@/lib/thread-steps";
 import { seededShopContext } from "@/test/db";
 
 /**
@@ -85,8 +92,8 @@ const { getDb } = await import("@/db/client");
 const { auth } = await import("@/lib/auth");
 const { requireShopSurface } = await import("@/lib/session");
 
-async function timedSeededShop() {
-  const { db: plain, shop } = await seededShopContext();
+async function timedSeededShop(options: { history?: boolean } = {}) {
+  const { db: plain, shop } = await seededShopContext(options);
   const db = drizzle({
     client: plain.$client as PGlite,
     logger: queryTimingLogger,
@@ -450,6 +457,148 @@ async function readyPageReads(db: AppDb, token: string) {
   ]);
 }
 
+/**
+ * `/ready` once the boat is home (ADR 20260827-the-divers-thread, decision 4):
+ * a seat on a departure that ended past the recap floor, whose recap is open.
+ * The seeded shop's past days carry no roll call, so this is the commonest
+ * shape — the four-hour floor decides, and the page renders the afterglow.
+ */
+async function readinessLinkForSeatAfterTheDive(plain: AppDb, shopId: string) {
+  const seats = await plain
+    .select({ bookingId: bookings.id })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.status, ["booked", "checked_in"]),
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+        lt(trips.endsAt, new Date(nowDate().getTime() - 6 * HOUR_MS)),
+      ),
+    )
+    .orderBy(desc(trips.startsAt), asc(bookings.id))
+    .limit(25);
+  for (const { bookingId } of seats) {
+    if ((await getRecapPageState(plain, bookingId)).kind !== "recap") continue;
+    const issued = await issueBookingCapability(plain, {
+      shopId,
+      bookingId,
+      purpose: "readiness",
+    });
+    if (issued) return issued.token;
+  }
+  throw new Error("the seeded shop has no past seat with an open recap");
+}
+
+/**
+ * `/ready`'s reads after the dive, as the page awaits them: the capability,
+ * `getReadyPageData`, then the after-dive branch above the thread — the
+ * departure roll call and late boarding, the recap, and the after-state's one
+ * wave (`buildAfterStateProps`). The thread's own wave never runs on this
+ * branch.
+ */
+async function readyAfterTheDiveReads(db: AppDb, token: string) {
+  const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
+  if (!capability) throw new Error("the readiness link did not verify");
+  const { bookingId } = capability;
+  const data = await getReadyPageData(db, bookingId);
+  if (!data) throw new Error("no ready page data");
+  const { detail, shop } = data;
+  const departure = theBoatIsHome({ endsAt: detail.trip.endsAt })
+    ? await departureRollCallForBooking(db, shop.id, detail.trip.id, bookingId)
+    : null;
+  await departureAfterLateBoarding(db, departure, {
+    booking: { id: bookingId },
+    shop: { id: shop.id },
+    trip: { id: detail.trip.id },
+  });
+  const recapState = await getRecapPageState(db, bookingId);
+  if (recapState.kind !== "recap")
+    throw new Error(`expected an open recap, got ${recapState.kind}`);
+  const noop = async () => undefined;
+  await buildAfterStateProps({
+    db,
+    data: recapState.data,
+    bookingId,
+    locale: "en-US",
+    t: diverTranslator("en-US"),
+    mintHandoff: true,
+    params: {},
+    actions: {
+      submitReview: noop,
+      uploadPhoto: noop,
+      startTip: noop,
+      submitPulse: noop,
+    } as unknown as Parameters<typeof buildAfterStateProps>[0]["actions"],
+  });
+}
+
+/**
+ * **The public schedule** (`src/app/s/[shopSlug]/page.tsx`), the shop's
+ * most-visited page and the one hot page the tripwire did not measure (code
+ * review 2026-10-13, item 11). What its body waits for before it flushes: the
+ * shop, `readSchedulePage`'s one batch, and — when the diver has reached the
+ * board's last month — the runs that keep going past it. The month's
+ * sightings, the reviews and "Our year" each stream behind a boundary of their
+ * own, so they hold nothing and are not replayed.
+ *
+ * Three open-ended runs are made public first, so the board's-end read has
+ * series to look at: it is the one read on the page whose cost grew with the
+ * shop (code review 2026-10-13, item 29).
+ */
+async function withRunningSeries(plain: AppDb, shopId: string) {
+  const upcoming = await plain
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
+        gt(trips.startsAt, nowDate()),
+      ),
+    )
+    .orderBy(asc(trips.startsAt))
+    .limit(3);
+  if (upcoming.length < 3) throw new Error("the seeded shop has too few public departures");
+  for (const trip of upcoming) {
+    const [series] = await plain
+      .insert(tripSeries)
+      .values({
+        shopId,
+        title: "Measured run",
+        weekdayMask: 0b1111111,
+        anchorDate: "2026-01-01",
+        occurrenceCount: 1,
+      })
+      .returning({ id: tripSeries.id });
+    if (!series) throw new Error("series insert failed");
+    await plain
+      .update(trips)
+      .set({ seriesId: series.id })
+      .where(and(eq(trips.shopId, shopId), inArray(trips.id, [trip.id])));
+  }
+}
+
+async function publicSchedulePageReads(db: AppDb, shopSlug: string) {
+  const shop = await getShopBySlug(db, shopSlug);
+  if (!shop) throw new Error("no shop");
+  const now = nowDate();
+  await readSchedulePage(db, shop, {
+    isEmbed: false,
+    lens: undefined,
+    after: undefined,
+    now,
+    listMonthBounds: null,
+    hasSpaceFilter: false,
+    tripTypeFilter: undefined,
+  });
+  const running = await listRunningPublicSeries(db, shop.id, now);
+  if (running.length === 0) throw new Error("the board's-end read found no running series");
+}
+
 describe("what a diver's page sends", () => {
   it("reads the public booking page", async () => {
     const { db, plain, shop } = await timedSeededShop();
@@ -463,6 +612,21 @@ describe("what a diver's page sends", () => {
     const token = await readinessLinkForUpcomingSeat(plain, shop.id);
     const { stats } = await withQueryStats(() => readyPageReads(db, token));
     expect(report("ready", stats.queries)).toBeLessThanOrEqual(READY_CEILING);
+  });
+
+  it("reads /ready after the dive", async () => {
+    // The past days are history, seeded only on request.
+    const { db, plain, shop } = await timedSeededShop({ history: true });
+    const token = await readinessLinkForSeatAfterTheDive(plain, shop.id);
+    const { stats } = await withQueryStats(() => readyAfterTheDiveReads(db, token));
+    expect(report("ready after the dive", stats.queries)).toBeLessThanOrEqual(READY_AFTER_CEILING);
+  });
+
+  it("reads the public schedule", async () => {
+    const { db, plain, shop } = await timedSeededShop();
+    await withRunningSeries(plain, shop.id);
+    const { stats } = await withQueryStats(() => publicSchedulePageReads(db, shop.slug));
+    expect(report("public schedule", stats.queries)).toBeLessThanOrEqual(PUBLIC_SCHEDULE_CEILING);
   });
 });
 
@@ -481,6 +645,26 @@ describe("how many round trips a diver's page waits for, one after another", () 
     const token = await readinessLinkForUpcomingSeat(plain, shop.id);
     await readyPageReads(db, token);
     expect(report("ready phases", phases())).toBeLessThanOrEqual(READY_PHASE_CEILING);
+  });
+
+  it("reads /ready after the dive in a bounded number of phases", async () => {
+    const { plain, shop } = await timedSeededShop({ history: true });
+    const { db, phases } = phaseCountingDb(plain.$client as PGlite);
+    const token = await readinessLinkForSeatAfterTheDive(plain, shop.id);
+    await readyAfterTheDiveReads(db, token);
+    expect(report("ready after the dive phases", phases())).toBeLessThanOrEqual(
+      READY_AFTER_PHASE_CEILING,
+    );
+  });
+
+  it("reads the public schedule in a bounded number of phases", async () => {
+    const { plain, shop } = await timedSeededShop();
+    const { db, phases } = phaseCountingDb(plain.$client as PGlite);
+    await withRunningSeries(plain, shop.id);
+    await publicSchedulePageReads(db, shop.slug);
+    expect(report("public schedule phases", phases())).toBeLessThanOrEqual(
+      PUBLIC_SCHEDULE_PHASE_CEILING,
+    );
   });
 });
 
@@ -562,3 +746,14 @@ const PUBLIC_TRIP_PHASE_CEILING = 3;
 // row and its fan-out (`getReadyPageData`); the readiness pass's one wave; and
 // the thread's one wave.
 const READY_PHASE_CEILING = 5;
+
+// Measured 2026-10-13 when the replays were added (code review 2026-10-13,
+// items 11 and 29), before either page's tail was grouped.
+// After the dive: the capability and `getReadyPageData` (4 phases), the
+// departure roll call, then the recap (8) and the after-state's wave (5).
+const READY_AFTER_CEILING = 60;
+const READY_AFTER_PHASE_CEILING = 18;
+// The shop, `readSchedulePage`'s batch with its chained reads, then the
+// board's-end read: one select, then one template check per running series.
+const PUBLIC_SCHEDULE_CEILING = 16;
+const PUBLIC_SCHEDULE_PHASE_CEILING = 7;
