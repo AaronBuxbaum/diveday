@@ -441,6 +441,14 @@ test.describe("approving a divemaster onto an intro session over its ratio", () 
           "Approving this one adds no seats to this session. Only an instructor does.",
         ),
       ).toBeVisible();
+      // Only once React owns the page: a press on the server-rendered Approve
+      // while the page is still hydrating (or re-rendering after a hydration
+      // mismatch, React #418 in CI 2026-10-12 and -13) is lost, and the answer
+      // never comes. The staff header's Search trigger publishes the flag.
+      await expect(page.getByRole("button", { name: "Search" })).toHaveAttribute(
+        "data-hydrated",
+        "true",
+      );
       await ownerCell.getByRole("button", { name: "Approve" }).click();
       await expect(
         page.getByText(

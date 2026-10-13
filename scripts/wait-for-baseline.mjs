@@ -116,6 +116,42 @@ function appendEnv(file, lines) {
   appendFileSync(file, `${lines.join("\n")}\n`);
 }
 
+/**
+ * A stacked layer's own baseline: the commit of the layer below that this branch contains
+ * (`merge-base` of the PR's base sha and HEAD), but only when that commit's snapshot is already
+ * published. Then the diff is this layer's own change instead of the whole stack's since `main`,
+ * which on 2026-10-12 was ~926 changed captures per layer, most of them other layers' work, and
+ * the costliest triage sessions spent tokens on. Never waits: an unpublished layer below falls
+ * back to the fork point from `main`, exactly as before (ADR 20261012-visual-baseline-layer-below).
+ *
+ * Returns `{ key, note }`, or null to keep the fork point.
+ */
+export async function layerBelowBaseline({
+  bucket,
+  baseRef,
+  baseSha,
+  defaultBranch,
+  key,
+  git,
+  fetchImpl = fetch,
+}) {
+  if (!baseRef || baseRef === defaultBranch || !COMMIT_SHA.test(baseSha ?? "")) return null;
+  let below;
+  try {
+    below = git(["merge-base", baseSha, "HEAD"]).trim();
+  } catch {
+    return null;
+  }
+  if (!COMMIT_SHA.test(below) || below === key) return null;
+  if (!(await exists(bucket, `${below}/out.json`, { fetchImpl }))) return null;
+  return {
+    key: below,
+    note:
+      `Compared against the layer below (${baseRef} at ${below.slice(0, 7)}), so these changes ` +
+      "are this layer's own.",
+  };
+}
+
 async function main() {
   const bucket = process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET;
   const key = process.env.REG_EXPECTED_KEY;
@@ -132,6 +168,22 @@ async function main() {
     return;
   }
 
+  const layer = await layerBelowBaseline({
+    bucket,
+    baseRef: process.env.PR_BASE_REF,
+    baseSha: process.env.PR_BASE_SHA,
+    defaultBranch: process.env.DEFAULT_BRANCH || "main",
+    key,
+    git: gitReader(),
+  });
+  if (layer) {
+    console.log(`wait-for-baseline: ${layer.note} Comparing against ${layer.key}.`);
+    appendEnv(process.env.GITHUB_ENV, [
+      `REG_EXPECTED_KEY=${layer.key}`,
+      `REG_BASELINE_NOTE=${layer.note}`,
+    ]);
+    return;
+  }
   const nearest = await nearestPublishedAncestor({ bucket, key, git: gitReader() });
   if (!nearest) {
     console.log(

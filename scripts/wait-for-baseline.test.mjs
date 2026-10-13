@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_MAX_ANCESTORS, nearestPublishedAncestor } from "./wait-for-baseline.mjs";
+import {
+  DEFAULT_MAX_ANCESTORS,
+  layerBelowBaseline,
+  nearestPublishedAncestor,
+} from "./wait-for-baseline.mjs";
 
 const KEY = "3333333333333333333333333333333333333333";
 const BUCKET = "diveday-vrt";
@@ -88,5 +92,43 @@ describe("nearestPublishedAncestor", () => {
       fetchImpl: fixture.fetchImpl,
     });
     expect(found).toBeNull();
+  });
+});
+
+describe("layerBelowBaseline", () => {
+  const BASE = "dddddddddddddddddddddddddddddddddddddddd";
+  const BELOW = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+  const git = (args) => {
+    if (args.join(" ") === `merge-base ${BASE} HEAD`) return `${BELOW}\n`;
+    throw new Error(`stub git: no answer for \`git ${args.join(" ")}\``);
+  };
+  const layer = { baseRef: "claude/layer-1", baseSha: BASE, defaultBranch: "main", key: KEY, git };
+
+  it("compares a stacked layer against the layer below when that commit is published", async () => {
+    const { fetchImpl } = bucketWith({ objects: [`${BELOW}/out.json`] });
+    const result = await layerBelowBaseline({ bucket: BUCKET, ...layer, fetchImpl });
+    expect(result?.key).toBe(BELOW);
+    expect(result?.note).toContain("claude/layer-1");
+  });
+
+  it("keeps the fork point when the layer below has not published, and never waits", async () => {
+    const { state, fetchImpl } = bucketWith({ objects: [] });
+    expect(await layerBelowBaseline({ bucket: BUCKET, ...layer, fetchImpl })).toBeNull();
+    expect(state.heads).toBe(1);
+  });
+
+  it("leaves a pull request on the default branch alone", async () => {
+    const { state, fetchImpl } = bucketWith({ objects: [`${BELOW}/out.json`] });
+    expect(
+      await layerBelowBaseline({ bucket: BUCKET, ...layer, baseRef: "main", fetchImpl }),
+    ).toBeNull();
+    expect(state.heads).toBe(0);
+  });
+
+  it("leaves a push (no base sha) alone", async () => {
+    const { fetchImpl } = bucketWith({ objects: [`${BELOW}/out.json`] });
+    expect(
+      await layerBelowBaseline({ bucket: BUCKET, ...layer, baseSha: undefined, fetchImpl }),
+    ).toBeNull();
   });
 });

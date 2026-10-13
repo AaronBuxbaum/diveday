@@ -77,6 +77,7 @@
     "cost:report": "node scripts/cost-report.mjs",
     "check": "node scripts/check-all.mjs",
     "gates": "node scripts/gate-freshness.mjs",
+    "regen": "node scripts/regenerate.mjs",
     "perf:budget": "node scripts/perf-budget.mjs",
     "task:context": "node scripts/task-context.mjs",
     "db:generate": "drizzle-kit generate",
