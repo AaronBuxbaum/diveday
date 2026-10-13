@@ -24,9 +24,11 @@ function summary(overrides: Partial<CertificationSummaryShape> = {}): Certificat
   return {
     level: "open_water",
     levelSelfDeclared: false,
+    verifiedLevel: "open_water",
     noCertificationDeclared: false,
     nitrox: false,
     nitroxSelfDeclared: false,
+    nitroxVerified: false,
     ...overrides,
   };
 }
@@ -40,6 +42,30 @@ describe("certificationSummaryText", () => {
     expect(certificationSummaryText(t, summary({ levelSelfDeclared: true }), "en-US")).toBe(
       "Open Water — unverified",
     );
+  });
+
+  /**
+   * **A card a staffer typed and nobody verified** carries no self-declared
+   * stamp, and used to print as a plain "Open Water", identical to a card the
+   * shop checked (#2428). Nobody has seen it, so it says so.
+   */
+  it("marks a staff-typed card nobody has verified, in words", () => {
+    expect(certificationSummaryText(t, summary({ verifiedLevel: null }), "en-US")).toBe(
+      "Open Water — unverified",
+    );
+    expect(
+      certificationSummaryText(
+        t,
+        summary({ level: "advanced_open_water", verifiedLevel: "open_water" }),
+        "en-US",
+      ),
+    ).toBe("Advanced Open Water — unverified");
+    expect(
+      certificationSummaryText(t, summary({ nitrox: true, nitroxVerified: false }), "en-US"),
+    ).toBe("Open Water, Nitrox — unverified");
+    expect(
+      certificationSummaryText(t, summary({ nitrox: true, nitroxVerified: true }), "en-US"),
+    ).toBe("Open Water, Nitrox");
   });
 
   it("states an absent level rather than leaving the row blank", () => {
@@ -139,6 +165,22 @@ describe("certificationSummaryUnchecked", () => {
     expect(
       certificationSummaryUnchecked(summary({ level: null, noCertificationDeclared: true })),
     ).toBe(true);
+  });
+
+  it("is true for a staff-typed card nobody has verified (#2428)", () => {
+    expect(certificationSummaryUnchecked(summary({ verifiedLevel: null }))).toBe(true);
+    // A verified Open Water does not vouch for a higher rung nobody checked.
+    expect(
+      certificationSummaryUnchecked(
+        summary({ level: "advanced_open_water", verifiedLevel: "open_water" }),
+      ),
+    ).toBe(true);
+    expect(certificationSummaryUnchecked(summary({ nitrox: true, nitroxVerified: false }))).toBe(
+      true,
+    );
+    expect(certificationSummaryUnchecked(summary({ nitrox: true, nitroxVerified: true }))).toBe(
+      false,
+    );
   });
 
   it("stops being unverified once a card the shop holds is on file", () => {
