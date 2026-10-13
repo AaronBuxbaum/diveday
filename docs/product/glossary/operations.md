@@ -665,6 +665,13 @@
   A **crew sailing** is one crew member on one departure that is home, unless the crew marked
   them ashore at the dock; the Safety tab reads each against the crew member's credentials as they
   stand today, on the departure's last day.
+- **The record** — a home departure's Divers tab: each seat filed under **Sailed**, **Didn't
+  sail**, **Not counted at the dock** or **No roll call taken** (`recordGroups`,
+  `src/app/shop/[shopSlug]/trips/[id]/_components/roster-model.ts`), built from the crew's
+  roll-call results and the desk's no-show marks. It says who the crew counted aboard. It does
+  **not** say whether those divers were ready to board at the time: `roll_call_events` stores no
+  readiness snapshot, so a diver under "Sailed" may have boarded with a blocker the crew overrode
+  or never saw, and any readiness shown beside the record is today's, not the day's.
 - **Didn't sail** — a finished departure's record band for the seats somebody *said* did not go:
   the crew's `not_boarded` at the `departure` roll-call checkpoint, or a released seat (`no_show`)
   nobody counted aboard at any checkpoint. Only a statement files a seat here (`seatSailed`,
