@@ -955,7 +955,7 @@ export type ShopOrderFilter = {
  * index it opens has to show those same two rows, which only holds while both
  * ask the database the same question.
  */
-function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
+export function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
   const conditions = [eq(orders.shopId, shopId)];
   if (filter.status) conditions.push(eq(orders.status, filter.status));
   if (filter.personId) conditions.push(eq(orders.personId, filter.personId));

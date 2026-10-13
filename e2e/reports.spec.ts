@@ -138,10 +138,15 @@ test.describe("owner", () => {
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toMatch(/^text\/csv/);
     const body = await response.text();
-    expect(body).toContain("Net revenue");
-    expect(body).toContain("Crew assigned");
+    // One tidy table, not three stacked under three headers (third UX review,
+    // item 34): one header row, then one fact per row.
+    const [header, ...rows] = body.trimEnd().split("\r\n");
+    expect(header).toBe("Section,Item,Date,Measure,Value");
+    expect(rows).not.toContain(header);
+    expect(body).toContain("Summary,,,Net revenue,");
+    expect(body).toContain(",Crew assigned,");
     // The page's "Money in, by line", from the same query (issue #2305).
-    expect(body).toContain('"Money in, by line",This month');
+    expect(body).toContain('"Money in, by line",');
   });
 
   test("the month and its numbers lead the page, above the departures ledger", {

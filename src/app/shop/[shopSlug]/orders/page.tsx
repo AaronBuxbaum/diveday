@@ -13,6 +13,7 @@ import { canPersonManageOrders, canPersonManagePaymentSettings } from "@/db/auth
 import { listImportedPaymentHistory } from "@/db/imported-payment-history";
 import { ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
 import { getShopPersonName } from "@/db/people";
+import { canPersonViewShopReports } from "@/db/reporting";
 import { orderStatus } from "@/db/schema";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getShopTripTitle } from "@/db/trips";
@@ -30,8 +31,6 @@ import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
-import { uuidParam } from "@/lib/uuid";
-import { wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { orderLedgerRow } from "./_components/ledger-row";
 import {
@@ -49,6 +48,7 @@ import {
 } from "./_components/OwedMoneyQueues";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 import { PayoutLines, readBackOffice } from "./_components/PayoutLines";
+import { orderIndexFilter } from "./order-index-filter";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -142,28 +142,6 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "paid-after-close-failed": { tone: "danger", key: "orders.index.notice.paidAfterCloseFailed" },
 };
 
-const DATE_INPUT = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-/**
- * An `?from=`/`?to=` day (shop-local, `<input type="date">` value) to a UTC
- * instant — the day's start for `from`, the *next* day's start for `to` so
- * the whole end day is included in a `[from, to)` range. Malformed or absent
- * input is simply not a filter, never a thrown error over a stray query param.
- */
-function dayBoundary(
-  value: string | undefined,
-  timeZone: string,
-  addDays: number,
-): Date | undefined {
-  const match = value ? DATE_INPUT.exec(value) : null;
-  if (!match) return undefined;
-  const [, year, month, day] = match;
-  return wallTimeToUtc(
-    { year: Number(year), month: Number(month), day: Number(day) + addDays, hour: 0, minute: 0 },
-    timeZone,
-  );
-}
-
 /**
  * **The shop's money as a day ledger** — ADR
  * 20260827-clearwater-surface-language, decision 7.
@@ -226,9 +204,13 @@ export default async function OrdersIndexPage({
   // reader `orders/new` would only bounce back here (issue #1925) — a
   // courtesy, never the gate; the route, its action and `createOrder` each
   // refuse on their own.
-  const [canReconcilePayments, canManageOrders] = await Promise.all([
+  // `canExportOrders` is the Reports CSV's gate, for the same reason: a file
+  // of every filtered order with diver names is the owner's or manager's to
+  // take away, and `orders/download` refuses everyone else on its own.
+  const [canReconcilePayments, canManageOrders, canExportOrders] = await Promise.all([
     canPersonManagePaymentSettings(db, session.user.shopId, session.user.personId),
     canPersonManageOrders(db, session.user.shopId, session.user.personId),
+    canPersonViewShopReports(db, session.user.shopId, session.user.personId),
   ]);
   // The one "New order" door, drawn in the header and the empty state alike:
   // absent for a reader `orders/new` would refuse (issue #1925).
@@ -240,71 +222,24 @@ export default async function OrdersIndexPage({
   const { stuckPaymentOperations, owedRefunds, paidAfterClose, failedRefunds, payouts } =
     await readBackOffice(db, shop.id, canReconcilePayments);
 
-  const statusFilter = orderStatus.enumValues.includes(
-    status as (typeof orderStatus.enumValues)[number],
-  )
-    ? (status as (typeof orderStatus.enumValues)[number])
-    : undefined;
-  const trimmedQuery = q?.trim() || undefined;
-  // Validated the way `?status=` is validated against its enum, and for the
-  // reason `dayBoundary` above gives: a malformed value is simply not a filter.
-  // `trips.id` and `orders.person_id` are `uuid` columns, so a stray
-  // `?tripId=nope`/`?personId=nope` reaching the query is not an empty list —
-  // it is a thrown `invalid input syntax for type uuid` and a 500 on a page a
-  // staffer only mistyped their way onto. Both ids arrive from links other
-  // pages build, and a link is exactly the thing that gets truncated in a chat
-  // message. `personFilter` is used *everywhere* the raw param used to be
-  // (query, hidden rider, self-links, pinned name), so a bad id leaves no
-  // trace for the staffer to carry around.
-  const tripFilter = uuidParam(tripId);
-  const personFilter = uuidParam(personId);
-
-  const fromBoundary = dayBoundary(from, shop.timezone, 0);
-  const toBoundary = dayBoundary(to, shop.timezone, 1);
-  // The index is windowed unless it is told otherwise: without one it loaded
-  // every invoice a shop has ever raised. `?range=all` is the stated way out,
-  // and an explicit `?from=`/`?to=` replaces the window rather than nesting
-  // inside it — a staffer who asked for last March means last March.
-  const hasDateBounds = Boolean(fromBoundary || toBoundary);
-  // `range` is authoritative when present, and the toolbar now offers Custom
-  // unconditionally: picking it submits `range=custom` with no bounds yet,
-  // which filters nothing and is what puts the two date inputs on screen.
-  const selectedRange =
-    range === "all"
-      ? "all"
-      : range === "recent"
-        ? "recent"
-        : range === "custom" || hasDateBounds
-          ? "custom"
-          : "recent";
+  // One reading of the URL, shared with "Download orders (CSV)" so the file
+  // holds the orders this page shows (`orderIndexFilter`).
+  const {
+    filter: orderFilter,
+    range: selectedRange,
+    status: statusFilter,
+    query: trimmedQuery,
+    tripId: tripFilter,
+    personId: personFilter,
+  } = orderIndexFilter({ status, personId, q, tripId, from, to, range }, shop.timezone, nowDate());
   const showAll = selectedRange === "all";
   const customRange = selectedRange === "custom";
-  const windowed = selectedRange === "recent";
-  const defaultFrom = windowed
-    ? new Date(nowDate().getTime() - ORDER_DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000)
-    : undefined;
 
   const ledger = await pagedOrdersByDay(
     db,
     shop.id,
     shop.timezone,
-    {
-      status: statusFilter,
-      personId: personFilter,
-      // The search **combines** with a pinned diver rather than yielding to
-      // it, which the old diver-name box could not do: one search over the
-      // name and the departure means that inside one diver's orders it still
-      // has something to narrow, so the box is never a control that visibly
-      // does nothing.
-      q: trimmedQuery,
-      // Arrives from a link, exactly like `personId` — the trip pulse's "N
-      // orders are awaiting payment ›". `pagedOrdersByDay` matches it through
-      // the order's booking and counts with the same joins, so the pager
-      // cannot promise pages this filter renders nothing on.
-      tripId: tripFilter,
-      from: customRange ? fromBoundary : defaultFrom,
-      to: customRange ? toBoundary : undefined,
-    },
+    orderFilter,
     // A non-numeric or missing `?page=` reads as page 1 rather than NaN;
     // `offsetPage` clamps it into range either way.
     { page: Number.parseInt(page ?? "", 10) },
@@ -335,7 +270,10 @@ export default async function OrdersIndexPage({
   const hasImportedHistory = Boolean(importedHistoryPage && importedHistoryPage.total > 0);
 
   /** This page's URL with the filters kept and only the given params swapped. */
-  const hrefWith = (overrides: { page?: number; importedPage?: number; range?: string | null }) => {
+  const hrefWith = (
+    overrides: { page?: number; importedPage?: number; range?: string | null },
+    path = "orders",
+  ) => {
     const query = new URLSearchParams();
     if (status) query.set("status", status);
     if (personFilter) query.set("personId", personFilter);
@@ -361,7 +299,7 @@ export default async function OrdersIndexPage({
       query.set("importedPage", String(overrides.importedPage));
     }
     const search = query.toString();
-    return search ? `/shop/${shopSlug}/orders?${search}` : `/shop/${shopSlug}/orders`;
+    return search ? `/shop/${shopSlug}/${path}?${search}` : `/shop/${shopSlug}/${path}`;
   };
 
   // Looked up rather than read off the first row — a filter that matches
@@ -653,6 +591,21 @@ export default async function OrdersIndexPage({
         href={(target) => hrefWith({ page: target })}
         words={staffPagerWords(t)}
       />
+
+      {/* **The ledger as a bookkeeper's file** (third UX review, item 34): every
+          order this filter found, across every page, one row per line. A plain
+          anchor, as Reports' download is, so the browser saves the file rather
+          than the router fetching it. */}
+      {canExportOrders && days.length > 0 ? (
+        <p className="mt-4 text-end text-sm print:hidden">
+          <a
+            href={hrefWith({}, "orders/download")}
+            className="font-medium text-primary hover:underline"
+          >
+            {t("orders.index.downloadCsv")}
+          </a>
+        </p>
+      ) : null}
 
       {/* One disclosure row at the foot, where a second full table and a second
           pager used to stand permanently open (decision 7). It is history from

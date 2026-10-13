@@ -6,12 +6,12 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type MonthRef, monthKey, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { buildCsv, exportDateStamp } from "@/lib/export";
+import { exportDateStamp } from "@/lib/export";
 import { toShopCurrency } from "@/lib/money";
 import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
 import { requireStaffSession } from "@/lib/session";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
-import { moneyByLineCsv } from "./money-by-line-csv";
+import { monthReportCsv } from "./month-report-csv";
 
 /**
  * A CSV of one month's report — "just this month's numbers" for an owner's
@@ -21,10 +21,10 @@ import { moneyByLineCsv } from "./money-by-line-csv";
  * reason: revenue access has to close the instant a manager is demoted or
  * disabled, not at their next sign-in.
  *
- * Reuses buildCsv (src/lib/export.ts) rather than a second serializer, as
- * three blocks — the headline numbers, the money by line (the page's own
- * query, issue #2305), then the trip breakdown — since they are not one
- * uniform table. `?month=` is read directly, not re-clamped to
+ * One tidy table (`monthReportCsv`): the headline numbers, the money by line
+ * (the page's own query, issue #2305) and the trip breakdown, one fact per
+ * row under one header, through buildCsv (src/lib/export.ts) rather than a
+ * second serializer. `?month=` is read directly, not re-clamped to
  * the shop's own earliest month the way the page's picker is: a hand-edited
  * out-of-range month downloads an honest, empty report rather than a page
  * that needs a floor to stay usable.
@@ -61,42 +61,37 @@ export async function GET(request: Request) {
     input.trips.map((trip) => trip.tripId),
   );
 
-  const summaryCsv = buildCsv(
-    ["Metric", "This month"],
-    [
-      ["Net revenue", formatReportMoney(report.revenueCents, currency, shop.defaultLocale)],
-      [
-        "Pass-through collected",
-        formatReportMoney(report.passThroughCents ?? 0, currency, shop.defaultLocale),
+  const money = (cents: number) => formatReportMoney(cents, currency, shop.defaultLocale);
+  const csv = monthReportCsv(
+    {
+      summary: [
+        ["Net revenue", money(report.revenueCents)],
+        ["Pass-through collected", money(report.passThroughCents ?? 0)],
+        ["Tax collected", money(report.taxCents)],
+        ["Tips", money(report.tipsCents)],
+        ["Bookings", report.seatsBooked],
+        ["Seats offered", report.seatsOffered],
+        ["Seat fill", formatPercent(report.fillRate)],
+        ["Waivers signed", report.waiverComplete],
+        ["Waivers outstanding", report.waiverOutstanding],
       ],
-      ["Tax collected", formatReportMoney(report.taxCents, currency, shop.defaultLocale)],
-      ["Tips", formatReportMoney(report.tipsCents, currency, shop.defaultLocale)],
-      ["Bookings", report.seatsBooked],
-      ["Seats offered", report.seatsOffered],
-      ["Seat fill", formatPercent(report.fillRate)],
-      ["Waivers signed", report.waiverComplete],
-      ["Waivers outstanding", report.waiverOutstanding],
-    ],
-  );
-  const tripsCsv = buildCsv(
-    ["Date", "Trip", "Seats booked", "Capacity", "Fill", "Crew assigned", "Waivers signed"],
-    input.trips.map((trip) => [
-      trip.startsAt,
-      trip.title,
-      trip.activeBookings,
-      trip.capacity,
-      formatPercent(tripFillRate(trip)),
-      crewCounts.get(trip.tripId) ?? 0,
-      trip.waiverComplete,
-    ]),
-  );
-
-  const linesCsv = moneyByLineCsv(detail.lines, t, (cents) =>
-    formatReportMoney(cents, currency, shop.defaultLocale),
+      lines: detail.lines,
+      trips: input.trips.map((trip) => ({
+        title: trip.title,
+        startsAt: trip.startsAt,
+        seatsBooked: trip.activeBookings,
+        capacity: trip.capacity,
+        fill: formatPercent(tripFillRate(trip)),
+        crewAssigned: crewCounts.get(trip.tripId) ?? 0,
+        waiversSigned: trip.waiverComplete,
+      })),
+    },
+    t,
+    money,
   );
 
   const fileName = `diveday-report-${shop.slug}-${monthKey(current)}-${exportDateStamp(now, shop.timezone)}.csv`;
-  return new Response(`${summaryCsv}\r\n${linesCsv}\r\n${tripsCsv}`, {
+  return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fileName}"`,
