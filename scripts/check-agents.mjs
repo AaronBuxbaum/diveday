@@ -10,11 +10,13 @@ import {
   GUARD_COUNT_SITES,
   guardCountProblems,
   linkedSkillProblems,
+  missingDocPaths,
   spawnedGuardCount,
   vendoredSkillProblems,
 } from "./agent-layer.mjs";
 import { listDirs } from "./check-context-budget.mjs";
 import { findLaunchProblems } from "./mcp-launch-guard.mjs";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { areas } from "./task-context-data.mjs";
 
 const ROOT = process.cwd();
@@ -239,6 +241,44 @@ for (const file of ruleFiles) {
   }
 }
 
+// 5c. The handoff docs a session acts on: `docs/agents/*.md`, this repo's own skills and the
+// reviewer agents. Until 2026-10-13 nothing read their paths, and ten live instructions pointed
+// at files the splits had moved (`src/db/schema.ts`, `MarketingNav.tsx`, `src/db/*-templates.ts`).
+// A linked skill is vendored from elsewhere and left alone; a line telling history ("(was …)",
+// "until 2026-…") is exempt in `missingDocPaths`; a gitignored output is a real thing to name.
+const handoffDocs = [
+  ...(await readdir(path.join(ROOT, "docs/agents")))
+    .filter((name) => name.endsWith(".md"))
+    .map((name) => `docs/agents/${name}`),
+  ...skillDirs
+    .filter((dir) => !linkedSkills.has(dir))
+    .map((dir) => `.claude/skills/${dir}/SKILL.md`)
+    .filter((file) => existsSync(path.join(ROOT, file))),
+  ...agentFiles.map((file) => `.claude/agents/${file}`),
+].sort();
+const missingHandoff = [];
+for (const file of handoffDocs) {
+  const contents = await readFile(path.join(ROOT, file), "utf8");
+  for (const token of missingDocPaths(contents, (relative) =>
+    existsSync(path.join(ROOT, relative)),
+  ))
+    missingHandoff.push({ file, token });
+}
+const ignoredHandoff = new Set();
+if (missingHandoff.length > 0) {
+  // One bounded call: which of these does .gitignore cover? Exit 1 means none.
+  const result = runBounded("git", ["check-ignore", "--no-index", "--stdin"], {
+    cwd: ROOT,
+    encoding: "utf8",
+    input: [...new Set(missingHandoff.map((item) => item.token))].join("\n"),
+    timeoutMs: SUBPROCESS_TIMEOUTS.git,
+  });
+  for (const line of String(result.stdout ?? "").split("\n")) if (line) ignoredHandoff.add(line);
+}
+for (const { file, token } of missingHandoff) {
+  if (!ignoredHandoff.has(token)) problems.push(`${file}: path "${token}" does not exist`);
+}
+
 // 6. The permission allowlist references real things. A dead entry is worse
 // than a missing one: it advertises a tool that doesn't exist (sessions go
 // looking for scripts/screenshot.mjs) or silently grants nothing (a pnpm
@@ -391,5 +431,5 @@ if (problems.length > 0) {
 }
 
 console.log(
-  `agents: ${skillDirs.length} skills (${linkedSkills.size} linked in from .agents/skills), ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${Object.keys(areas).length} task-context areas, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync`,
+  `agents: ${skillDirs.length} skills (${linkedSkills.size} linked in from .agents/skills), ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${Object.keys(areas).length} task-context areas, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync, ${handoffDocs.length} handoff docs' paths resolve`,
 );

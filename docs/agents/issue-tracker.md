@@ -48,7 +48,7 @@ Add the `in-progress` label and post one comment:
 **Branch:** claude/course-templates-a1b2c3
 **Worktree:** .claude/worktrees/course-templates-a1b2c3
 **Started:** 2026-08-21T09:00:00Z
-**Owns:** src/db/course-templates.ts, public/marine-life/
+**Owns:** src/content/course-templates.ts, public/marine-life/
 **Also touches:** src/i18n/locales/en-US/staff/courses.json
 ```
 
@@ -247,7 +247,7 @@ whether or not anything failed.
 
 A glob is accepted on that line when it expands to at least one file in the tree the check runs in, so a change that edits the same namespace in every locale says `src/i18n/locales/*/staff/trips.json` once rather than listing each locale and going stale when a third arrives. Issue #1339 wrote it that way, correctly, and the literal lookup failed it.
 
-A path with a dynamic route segment in it — `src/app/ready/[token]/actions.ts` — is a real path and a glob character class at the same time, and it is checked literally first, so write it exactly as it is on disk. Reading it only as a pattern was how a correctly spelled path got told it "does not exist": the brackets expand to `src/app/ready/t/actions.ts` and friends, which exist nowhere. Issue #1755 named that path on 2026-09-12 and the scan went red for it on PR #1746, a branch with nothing to do with that issue (#1761). If such a path is refused now, the file really is not there under that spelling — and the sentence names the characters that made the token a pattern, so a `*` or `{` you did not mean to type says so.
+A path with a dynamic route segment in it — `src/app/waivers/[token]/actions.ts` — is a real path and a glob character class at the same time, and it is checked literally first, so write it exactly as it is on disk. Reading it only as a pattern was how a correctly spelled path got told it "does not exist": the brackets expand to single-letter directories such as `t/` and `o/`, which exist nowhere. Issue #1755 named such a path (under `/ready/`) on 2026-09-12 and the scan went red for it on PR #1746, a branch with nothing to do with that issue (#1761). If such a path is refused now, the file really is not there under that spelling — and the sentence names the characters that made the token a pattern, so a `*` or `{` you did not mean to type says so.
 
 
 An issue blocked on somebody *outside this repo* — an upstream release, a third party's answer, a

@@ -132,7 +132,7 @@ It derives all of that from the remote refs: a layer below is a remote branch HE
 `origin/main` does not, a layer above is one that contains HEAD, a layer sits on HEAD's first-parent
 chain and a sub-branch is merged in through a second parent. So it is exactly as fresh as the last
 fetch, and the session-start hook fetches `main` and `claude/*` (with `--prune`, so a merged layer
-drops out) for that reason. Two designs were weighed and refused. A committed `.claude/stack.json`
+drops out) for that reason. Two designs were weighed and refused. A committed stack manifest file
 that each PR updates is one more shared file every layer edits, stale the moment a layer merges and
 a conflict on every rebase — the problem it would exist to remove. A `STACK` block in each PR body
 read live would put a GitHub call on every prompt, and a hook cannot count on one: `gh`'s GraphQL

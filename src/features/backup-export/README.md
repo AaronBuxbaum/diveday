@@ -38,7 +38,7 @@ Operational posture: [backup-and-restore runbook](../../../docs/engineering/back
 
 ## Does not own
 
-- The table *definitions*, which live in `src/db/schema.ts` (ADR-0005).
+- The table *definitions*, which live in `src/db/schema/` (ADR-0005).
 - What the export bundle contains — `src/db/export.ts` / `src/lib/export.ts` stay authoritative;
   this module reuses them byte for byte so the backup is the same tested artifact staff download.
 - The iCalendar rendering (`calendar-sync`'s `feedDocument`) or its no-divers invariant.

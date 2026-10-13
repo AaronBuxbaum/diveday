@@ -7,6 +7,7 @@ import {
   GUARD_COUNT_SITES,
   guardCountProblems,
   linkedSkillProblems,
+  missingDocPaths,
   spawnedGuardCount,
   vendoredSkillProblems,
 } from "./agent-layer.mjs";
@@ -198,5 +199,47 @@ describe("local overrides of vendored skills", () => {
     });
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain(".agents/skills/to-spec/SKILL.md");
+  });
+});
+
+describe("the handoff docs' paths", () => {
+  const exists = (relative) =>
+    ["src/db/schema", "e2e/fixtures.ts", "src/app/s/[shopSlug]/page.tsx"].includes(relative);
+
+  it("names a backticked path that resolves to nothing", () => {
+    expect(missingDocPaths("After editing `src/db/schema.ts`, run it.", exists)).toEqual([
+      "src/db/schema.ts",
+    ]);
+  });
+
+  it("leaves alone a directory, a module specifier, a dynamic segment and a line number", () => {
+    const text =
+      "Edit `src/db/schema/`, import `e2e/fixtures`, open `src/app/s/[shopSlug]/page.tsx:12`.";
+    expect(missingDocPaths(text, exists)).toEqual([]);
+  });
+
+  it("leaves alone globs, placeholders and examples", () => {
+    const text = "`src/**/x.ts`, `src/app/<feature>/page.tsx`, `src/lib/example.ts`, `src/a/…`";
+    expect(missingDocPaths(text, exists)).toEqual([]);
+  });
+
+  it("leaves alone a line that tells history, so a doc can say where a file used to be", () => {
+    for (const line of [
+      "the 8,700-line file (until 2026-10-07 `src/db/schema.ts`, now a directory)",
+      "Before the guard (`scripts/check-soft-delete.mjs`) was deleted, it ran",
+      "`src/components/MarketingNav.tsx` (was the nav) is now a view",
+    ]) {
+      expect(missingDocPaths(line, exists)).toEqual([]);
+    }
+  });
+
+  it("passes the tree as it stands", () => {
+    // The guard itself reads every handoff doc; this pins the two files the review named.
+    for (const file of ["docs/agents/working-rules.md", ".claude/skills/marketing-page/SKILL.md"]) {
+      const contents = readFileSync(path.join(ROOT, file), "utf8");
+      expect(
+        missingDocPaths(contents, (relative) => existsSync(path.join(ROOT, relative))),
+      ).toEqual([]);
+    }
   });
 });

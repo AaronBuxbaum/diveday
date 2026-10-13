@@ -165,11 +165,12 @@ except a migration's own `migration.sql` (the schema-change skill asks for the g
 reviewed once), `.next/`, `playwright-report/`, `test-results/` — is never read whole; a specific
 lookup goes through Grep, which is what "diagnosing a specific failure in that artifact" means. And
 a **whole-file read of a source file over 900 lines** without an `offset` or `limit`: the Read tool
-returns up to 2,000 lines when no range is given, so `src/db/schema.ts` at 8,700 lines costs
-roughly 25,000 tokens per open and answers a question Grep answers in fifty. An explicit range is
-always allowed — a range is a decision, and the guard never second-guesses one. Markdown is exempt
-(a document is read to be read; it has no symbol to search for), and so is anything outside the
-repository, which is where `node_modules/next/dist/docs/` lives.
+returns up to 2,000 lines when no range is given, so the 8,700-line schema file it was written for
+(until 2026-10-07 `src/db/schema.ts`, now a directory) cost roughly 25,000 tokens per open and
+answered a question Grep answers in fifty. An explicit range is always allowed — a range is a
+decision, and the guard never second-guesses one. Markdown is exempt (a document is read to be read;
+it has no symbol to search for), and so is anything outside the repository, which is where
+`node_modules/next/dist/docs/` lives.
 
 The threshold is 900 lines: 135 of the ~2,800 source files are over it, and every one of those is a
 file a session reads by symbol, not front to back. It was 600 until 2026-10-07, when 242 files sat

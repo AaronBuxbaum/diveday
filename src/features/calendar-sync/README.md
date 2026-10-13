@@ -14,7 +14,7 @@ Module shape: [20260730-feature-module-contracts](../../../docs/architecture/dec
 
 ## Does not own
 
-- The `calendar_feeds` table *definition*, which lives in `src/db/schema.ts` with every other
+- The `calendar_feeds` table *definition*, which lives in `src/db/schema/` with every other
   table — one schema file stays the source of truth (ADR-0005).
 - The iCalendar primitives (`src/lib/trip-calendar.ts`), shared with the diver's one-off `.ics`
   download.

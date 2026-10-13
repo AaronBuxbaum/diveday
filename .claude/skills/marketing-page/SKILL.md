@@ -37,7 +37,7 @@ the same PR.
 | Page narrative copy | `src/app/page.tsx`, `src/app/product/page.tsx`, `src/app/pricing/page.tsx`, `src/app/onboard/page.tsx` |
 | A feature page (`/product/<feature>`) | the registry `src/lib/feature-pages.ts`, the one template `src/app/product/_components/FeaturePageBody.tsx`, words in `marketing.featurePages.<page>`; its checklist is that page's group of `productCapabilityIndex` |
 | Illustrated mockup copy | `src/components/MarketingScreenFallbacks.tsx`; a feature page's screen in `src/components/MarketingFeatureScreens.tsx` |
-| Nav / footer | `src/components/MarketingNav.tsx`, `src/components/MarketingFooter.tsx` |
+| Nav / footer | `src/components/MarketingNavView.tsx`, `src/components/MarketingFooter.tsx` |
 
 Layout stays inside the design system: semantic tokens only, `buttonClass()` for button-shaped
 things, `<Field>`/`<FieldGrid>` for forms — but inside those mechanics, compose for the argument

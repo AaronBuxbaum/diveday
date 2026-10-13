@@ -89,3 +89,43 @@ export function vendoredSkillProblems(contentsByName) {
         problems.push(`.agents/skills/${name}/SKILL.md: names \`${phrase}\`; ${fix}`);
   return problems;
 }
+
+/**
+ * A backticked token that names a repo path: it starts at one of the repo's top-level
+ * directories. Globs and placeholders (`*`, `<feature>`, `…`, anything called `example`) are
+ * prose, not a path; a bracketed Next.js segment such as `[shopSlug]` is literal, because the
+ * directory is named exactly that.
+ */
+const DOC_PATH = /`((?:src|scripts|docs|e2e|config|infra|\.claude)\/[^`\s]*)`/g;
+
+/**
+ * A line that tells history or names a path by its absence rather than giving an instruction:
+ * "(was …)", "until 2026-10-07", "used to", "was deleted", "exist nowhere". Its paths are left
+ * alone, so a doc can still say where a file used to be (2026-10-13 re-review, item 18).
+ */
+const NOT_AN_INSTRUCTION =
+  /\(was\b|\bwas `|\buntil 20\d\d-|\bused to\b|\bis gone\b|\bno longer\b|\b(?:was|were) (?:deleted|removed|renamed|moved)\b|\bbefore 20\d\d-|\bformerly\b|\bexists? nowhere\b/i;
+
+/** A module specifier resolves with any of these, so `e2e/fixtures` names `e2e/fixtures.ts`. */
+const MODULE_EXTENSIONS = ["", ".ts", ".tsx", ".mjs", ".js"];
+
+/**
+ * The backticked repo paths in one Markdown file that resolve to nothing. `exists` answers for a
+ * repo-relative path. The caller drops gitignored outputs (`.claude/.hook-log`), which a doc may
+ * name though no checkout of main contains them.
+ */
+export function missingDocPaths(contents, exists) {
+  const missing = [];
+  const seen = new Set();
+  for (const line of String(contents).split("\n")) {
+    if (NOT_AN_INSTRUCTION.test(line)) continue;
+    for (const match of line.matchAll(DOC_PATH)) {
+      const token = match[1].replace(/[.,;:]+$/, "").replace(/:\d+(?:-\d+)?$/, "");
+      if (seen.has(token) || /[*<…]|example/.test(token)) continue;
+      seen.add(token);
+      const bare = token.replace(/\/$/, "");
+      if (!MODULE_EXTENSIONS.some((ext) => exists(`${bare}${ext}`))) missing.push(token);
+    }
+  }
+  return missing;
+}

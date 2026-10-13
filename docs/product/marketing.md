@@ -956,7 +956,7 @@ structure* live; none of them may contain an English sentence:
 | Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` | `account.onboard.*` in the bundles |
 | Why DiveDay exists, who builds it, and how a shop gets set up | `src/app/about/page.tsx` | `marketing.about.*` in the bundles |
 | Mockup copy | `src/components/MarketingScreenFallbacks.tsx`, and the feature pages' screens in `src/components/MarketingFeatureScreens.tsx` | `fallback.*` in the bundles |
-| Nav / footer | `src/components/MarketingNav.tsx` / `MarketingFooter.tsx` | `nav.*` in the bundles |
+| Nav / footer | `src/components/MarketingNavView.tsx` / `MarketingFooter.tsx` | `nav.*` in the bundles |
 | Switching-guide content (per incumbent) | `src/lib/migration-guides.ts` (key registry; slugs, URLs, source citations); pages in `src/app/switching/` | `marketing.guides.*` in the bundles |
 
 A claim used on more than one page belongs in `src/lib/marketing.ts` as a shared *key*, not

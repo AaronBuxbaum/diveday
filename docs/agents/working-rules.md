@@ -23,7 +23,7 @@ in AGENTS.md's one-liner in the same commit.
 | `pnpm gates` | report (never a gate): ages of human decisions, every `in-progress` claim checked against `git` (**live** / **stale** / **unverifiable**), and every open `needs-triage` issue oldest first. Nothing it reports is an agent's to close ([docs/agents/issue-tracker.md](issue-tracker.md)) |
 | `pnpm agent:health` | report (never a gate): what the agent environment costs and covers — always-loaded context by file, the path-scoped rules and what each costs when it loads, visual and axe coverage of routes, guards with no test beside them, and the hooks wired into the session lifecycle |
 | `pnpm build` | production build |
-| `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (the **schema-change** skill) |
+| `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema/` (the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds. **Refuses while a dev server is running**, naming the pid (ADR 20260903-one-process-per-pglite-directory) |
 | `node scripts/screenshot.mjs <path…>` | look at a page against a running `pnpm dev` — light-mode phone/desktop PNGs into `screenshots/`, with dev-credential sign-in for `/shop/**`. Review-grade captures come from a filtered visual-spec run (the **verify** skill) |
 | `pnpm visual` | capture the visual surfaces and compare them against the S3 baseline for this branch's parent commit (baselines are rendered on CI's Linux runners; triage from the CI report) |

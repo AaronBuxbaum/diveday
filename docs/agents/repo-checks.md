@@ -706,8 +706,8 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
 
 #### Where things are
 
-- **Schema** (source of truth — never read `drizzle/`): `src/db/schema.ts`. Locate a table with
-  Grep and read the range; the file is 8,700 lines and the Read guard refuses it whole.
+- **Schema** (source of truth — never read `drizzle/`): `src/db/schema/`, one file per area (26
+  files, three over the Read guard's 900 lines). Locate a table with Grep and read the range.
 - **Client / test db factory**: `src/db/client.ts` (`getDb()`, `createTestDb()`).
 - **Queries and seed data**: `src/db/shops.ts`, plus two barrels over sibling modules —
   `src/db/trips.ts` re-exports `trips-create/-series/-record/-schedule/-crew/-roster.ts`, and
@@ -742,8 +742,8 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
 - **Buddy teams**: `src/db/buddy-pairs.ts` (named for its table, `buddy_pair_members`; every word a
   human reads says "team"). A team is two or more, a member is a booking **or** a crew person, and
   every act appends to `buddy_team_events` — informs, never gates (ADR 20260804-buddy-teams).
-- **Starting content a shop copies and then owns**: `src/db/dive-site-templates.ts` and
-  `src/db/course-templates.ts`, both `i18n-exempt-file` — picking one **copies** its words onto the
+- **Starting content a shop copies and then owns**: `src/content/dive-site-templates.ts` and
+  `src/content/course-templates.ts`, both `i18n-exempt-file` — picking one **copies** its words onto the
   shop's row, and nothing is read back at render, so a later correction never rewrites what a shop
   published. The **opposite** contract is `src/db/marine-life-catalog.ts`: 148 species as slug +
   Latin binomial + category code and no prose; DiveDay writes the words once in every language
@@ -759,12 +759,12 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
 
 #### Changing the schema
 
-Follow the **schema-change** skill. The short form: edit `src/db/schema.ts`, `pnpm db:generate`
+Follow the **schema-change** skill. The short form: edit `src/db/schema/`, `pnpm db:generate`
 with a `--name`, review the generated SQL once, seed if e2e needs rows, and **before you push** run
-the four coverage guards that assert over `schema.ts` from files you will never touch (the
+the four coverage guards that assert over `src/db/schema/` from files you will never touch (the
 **verify** skill's checklist, step 3, carries the command).
 
-Touching `schema.ts` at all is the trigger, not the shape of the change — `pnpm test:changed`
+Touching `src/db/schema/` at all is the trigger, not the shape of the change — `pnpm test:changed`
 selects the whole suite after a schema edit, and that run belongs to CI
 ([docs/agents/verifying.md](verifying.md)). Never hand-edit or hand-merge
 anything under `drizzle/`; a migration is generated, and a conflict there is resolved by reverting
@@ -1074,7 +1074,10 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
   linked in from `.agents/skills/` included; every local skill is in `.claude/skills/README.md` and
   mentioned in `AGENTS.md`, and every linked one has a `skills-lock.json` entry and keeps the local
   lines a sync would undo (`VENDORED_SKILL_OVERRIDES`); every reviewer agent is in the index; every `task:context` path exists; every backticked repo path in `AGENTS.md` and in
-  `.claude/rules/*.md` exists; every allowlist entry and every hook command in
+  `.claude/rules/*.md` exists, and in the handoff docs (`docs/agents/*.md`, the local skills'
+  `SKILL.md`, `.claude/agents/*.md`) too, except on a line telling history ("(was …)", "until
+  2026-…") or naming a gitignored output — ten live instructions there pointed at moved files on
+  2026-10-13; every allowlist entry and every hook command in
   `.claude/settings.json` names a real script or package script; nothing in `.mcp.json` launches
   through a package manager.
 - **Always-loaded context is budgeted** (`scripts/check-context-budget.mjs`): `AGENTS.md`,
