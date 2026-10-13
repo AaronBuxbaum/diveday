@@ -2873,6 +2873,31 @@ describe("settledPartyPayment", () => {
     expect(sent.partyPaid).toEqual({ amountCents: 31_590, currency: "usd", seats: 2 });
   });
 
+  it("states nothing once a seat it covered is cancelled, or anything was refunded", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const started = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!started.ok) throw new Error("expected ok");
+    const [lead, member] = bookingIds;
+    await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId, undefined, 31_590);
+
+    await db
+      .update(bookingCheckouts)
+      .set({ refundedCents: 15_795 })
+      .where(eq(bookingCheckouts.id, started.checkout.id));
+    expect(await settledPartyPayment(db, shop.id, lead)).toBeNull();
+
+    await db
+      .update(bookingCheckouts)
+      .set({ refundedCents: 0 })
+      .where(eq(bookingCheckouts.id, started.checkout.id));
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, member));
+    expect(await settledPartyPayment(db, shop.id, lead)).toBeNull();
+  });
+
   it("states nothing when Stripe reported no settled total", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const started = await startBookingCheckout(
