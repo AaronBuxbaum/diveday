@@ -114,9 +114,10 @@ export type DeskCatchUp = {
  * 2026-10-13, item 3). The strip sits above the head count on the manifest,
  * so "Priya has checked in" over a roll call that has her at the counter's
  * start is a contradiction on a safety surface. An arrival is read through
- * the seat it names and kept only while that seat is `checked_in` — the
- * projection the roster and the counter read — so an undone check-in, which
- * writes no event of its own, takes its line with it. A seat taken is kept
+ * the seat it names and kept only while that seat is `checked_in` on this
+ * departure — the projection the roster and the counter read — so an undone
+ * check-in, which writes no event of its own, takes its line with it, and so
+ * does a seat moved to another boat. A seat taken is kept
  * only while the seat is still held, and a diver's ask for a hand only while
  * that ask is still open (`trip_help_requests`, the row Today reads). The
  * append-only rows are untouched; the reader filters, so the trail stays
@@ -188,7 +189,10 @@ export async function listDeskEventsSince(
  */
 function rosterStillSaysIt() {
   return and(
-    or(ne(tripDeskEvents.kind, "arrival"), eq(bookings.status, "checked_in")),
+    or(
+      ne(tripDeskEvents.kind, "arrival"),
+      and(eq(bookings.tripId, tripDeskEvents.tripId), eq(bookings.status, "checked_in")),
+    ),
     or(
       ne(tripDeskEvents.kind, "seat_taken"),
       and(eq(bookings.tripId, tripDeskEvents.tripId), ne(bookings.status, "cancelled")),

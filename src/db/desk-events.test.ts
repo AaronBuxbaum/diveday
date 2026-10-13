@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
@@ -291,6 +291,20 @@ describe("listDeskEventsSince, against the roster it sits above", () => {
     // thing that can retract the line is the seat it names.
     const { db, shop, reader, trip, seat } = await arrivalAfterMark("checked_in");
     await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, seat.id));
+    expect((await listDeskEventsSince(db, shop.id, trip.id, reader.id)).events).toEqual([]);
+  });
+
+  it("drops an arrival once the checked-in seat moves to another departure", async () => {
+    // Domain review 1: a seat move keeps the status, so the status alone would
+    // leave the old strip saying the diver arrived for a boat they are not on.
+    const { db, shop, reader, trip, seat } = await arrivalAfterMark("checked_in");
+    const [other] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), ne(trips.id, trip.id)))
+      .limit(1);
+    if (!other) throw new Error("expected a second departure");
+    await db.update(bookings).set({ tripId: other.id }).where(eq(bookings.id, seat.id));
     expect((await listDeskEventsSince(db, shop.id, trip.id, reader.id)).events).toEqual([]);
   });
 
