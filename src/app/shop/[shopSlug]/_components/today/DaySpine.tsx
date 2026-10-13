@@ -157,20 +157,7 @@ function rowControls(
       emailSubject: t.raw("trips.waitlist.emailSubject"),
       emailBody: t.raw("trips.waitlist.emailBody"),
     },
-    paymentCopy: {
-      copyLink: t("today.paymentAction.copyLink"),
-      linkCopied: t("today.paymentAction.linkCopied"),
-      copyFailed: t("today.paymentAction.copyFailed"),
-      resendInvoice: t("today.paymentAction.resendInvoice"),
-      resending: t("today.paymentAction.resending"),
-      invoiceResent: t("today.paymentAction.invoiceResent"),
-      errors: {
-        notFound: t("today.paymentAction.errors.notFound"),
-        notOpen: t("today.paymentAction.errors.notOpen"),
-        notConfigured: t("today.paymentAction.errors.notConfigured"),
-        failed: t("today.paymentAction.errors.failed"),
-      },
-    },
+    paymentCopy: paymentActionCopy(t),
   };
 }
 
@@ -712,6 +699,25 @@ function Stations({
 type SpineEntry =
   | { kind: "live"; at: number; station: DayStationData }
   | { kind: "closing"; at: number; close: EveningClose["stations"][number] };
+
+/** The words for the Today queue's payment control (copy link, resend invoice). */
+function paymentActionCopy(t: StaffTranslator): PaymentActionCopy {
+  return {
+    copyLink: t("today.paymentAction.copyLink"),
+    linkCopied: t("today.paymentAction.linkCopied"),
+    copyFailed: t("today.paymentAction.copyFailed"),
+    resendInvoice: t("today.paymentAction.resendInvoice"),
+    resending: t("today.paymentAction.resending"),
+    invoiceResent: t("today.paymentAction.invoiceResent"),
+    errors: {
+      notFound: t("today.paymentAction.errors.notFound"),
+      notOpen: t("today.paymentAction.errors.notOpen"),
+      notConfigured: t("today.paymentAction.errors.notConfigured"),
+      failed: t("today.paymentAction.errors.failed"),
+      rateLimited: t("today.paymentAction.errors.rateLimited"),
+    },
+  };
+}
 
 /**
  * Everything the evening reading needs, read once by the page and handed down

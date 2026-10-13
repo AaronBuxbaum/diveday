@@ -27,7 +27,10 @@
  * someone who inquired once and never booked — is not something to add here.
  * It was proposed and declined: a lead who books eight months later is
  * ordinary dive-shop behaviour, and the erasure path that does exist is the
- * requested one (`src/db/anonymize.ts`), not a timer.
+ * requested one (`src/db/anonymize.ts`), not a timer. The one exception is
+ * `setup_requests`: a shop asking DiveDay to be set up is nobody's customer
+ * yet, so no shop's record or erasure reaches it, and its window is argued
+ * beside its number below (code review 2026-10-11, item 14).
  *
  * **`gear_service_events` is deliberately unbounded and does not belong here.**
  * It is append-only and its value is evidentiary rather than operational: a
@@ -67,19 +70,33 @@
  * `src/db/schema.ts`, which points back at this file for the statement this
  * paragraph now makes).
  *
- * **`notification_send_queue` is absent because it empties its own rows, not
- * because nobody looked.** It is the one table outside this list that holds a
- * rendered outbound message, a recipient and a subject's address and phone, so
- * it would be the obvious candidate — but every write that finishes a row
- * (`sent`, `failed`, `missing_payload`, and the park that spends a parked
- * row's last attempt) nulls the payload and all four handles, so a row nobody
- * is still working on already holds nothing a window could take away. That is
- * an invariant rather than an observation: `src/db/notifications.ts` states it
- * at each of those writes and `notifications.test.ts` pins it. The one write
- * that used to break it — a `sealed_payload_unreadable` park past its bound,
- * kept forever with everything on it — is why this paragraph exists
- * (`security-reviewer`). If a fifth terminal write ever keeps a handle, the
- * answer is to clear it there, not to add a window here.
+ * **`notification_send_queue` empties its own rows of personal data, and the
+ * window below only bounds what is left.** It holds a rendered outbound
+ * message, a recipient and a subject's address and phone while a row is being
+ * worked, and every write that finishes a row (`sent`, `failed`,
+ * `missing_payload`, and the park that spends a parked row's last attempt)
+ * nulls the payload and all four handles. That is an invariant rather than an
+ * observation: `src/db/notifications.ts` states it at each of those writes and
+ * `notifications.test.ts` pins it, and if a fifth terminal write ever keeps a
+ * handle, the answer is to clear it there. What a finished row still holds is
+ * a status, an idempotency key and two instants, one per notification ever
+ * sent, so the table grew with traffic for ever; its window (code review
+ * 2026-10-11, item 14) takes only finished rows, never one the drain could
+ * still offer again.
+ *
+ * **What is kept for ever, by decision, outside this list.** The event-like
+ * trails that carry no window, one line each, so "how long is X kept?" has an
+ * answer for every one of them; ADR 20260803-append-only-retention carries the
+ * same list. Safety records about a departure: `roll_call_events`,
+ * `roll_call_crew_events`, `booking_arrival_events`, `buddy_team_events`,
+ * `trip_stage_events` (argued above). Equipment evidence:
+ * `gear_service_events` (argued above). Records of who changed what on a
+ * departure or a ticket, read as the record itself: `trip_change_events`,
+ * `work_order_events`. Queues and obligations deleted by their own work:
+ * `held_sends` (its own sweep, `src/db/held-sends.ts`),
+ * `media_deletion_attempts` and `processor_erasure_obligations` (deleted when
+ * discharged). Signed evidence H-02 has not ruled on: `waiver_records` and
+ * the course-form records.
  */
 
 import { DAY_MS } from "@/lib/clock";
@@ -120,6 +137,9 @@ export type RetainedTable =
   | "staff_replies"
   | "weekly_digest_sends"
   | "crew_notices"
+  | "notification_send_queue"
+  | "waiver_deliveries"
+  | "setup_requests"
   | "incident_reports"
   | "lost_items"
   | "departure_notes";
@@ -333,6 +353,38 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * "did the pass tell Ana?" and nothing more.
    */
   crew_notices: 30,
+  /**
+   * 90 days, measured on `updated_at` (the instant the row was finished), and
+   * only rows that are finished: `sent`, or `failed` with the payload already
+   * cleared. A parked `sealed_payload_unreadable` row keeps its payload while
+   * the drain may still offer it again, so it is never eligible. A finished row
+   * holds no personal data (the paragraph at the top of this file); what it
+   * holds is the idempotency key, and three months is far past the moment any
+   * producer would queue the same notification twice. What was sent is the
+   * delivery trail's to remember (`notification_deliveries`, 400 days).
+   */
+  notification_send_queue: 90,
+  /**
+   * 400 days, measured on `attempted_at`. A row is the latest delivery outcome
+   * of one waiver link on one channel: the provider's message id and, on a
+   * bounce, the provider's own words. It is the same kind of row as
+   * `notification_delivery_attempts` and answers the same question ("did the
+   * shop ever reach me about the waiver?"), so it keeps the same season plus a
+   * year. The signed waiver itself is `waiver_records`, which no clock touches.
+   */
+  waiver_deliveries: 400,
+  /**
+   * 365 days, measured on `created_at`. A row is a shop asking DiveDay to be
+   * set up: a name, an email, an optional phone, from a person who is not yet
+   * anybody's customer (ADR 20261007-setup-request-form). A year is a full
+   * season to follow the lead up; a request that never became a shop has no
+   * reason to sit here after that, and one that did lives on as the shop. Its
+   * single-use setup link is deleted with it (`on delete cascade`), and is long
+   * expired by then. This reverses that ADR's "kept until someone asks" for
+   * this one table (code review 2026-10-11, item 14); `people` and
+   * `course_inquiries` keep the product owner's 2026-08-14 decision above.
+   */
+  setup_requests: 365,
   /**
    * 2555 days (7 years), measured from when the incident happened (a draft
    * that never said when is measured from when it was started). A record, not

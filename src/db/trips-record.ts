@@ -531,7 +531,9 @@ export async function updateTrip(
         seq: rollCallEvents.seq,
       })
       .from(rollCallEvents)
-      .where(eq(rollCallEvents.tripId, tripId));
+      // The shop first: the only index on this append-only table leads with
+      // it, and the read is the shop's own (code review 2026-10-11, item 27).
+      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)));
     const recordedDiveCount = maxRecordedDiveNumber(checkpointRows);
     if (plannedDives < recordedDiveCount) {
       return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };

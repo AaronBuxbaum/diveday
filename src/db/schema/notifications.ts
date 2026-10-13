@@ -309,8 +309,9 @@ export const notificationSendQueue = pgTable(
      * **Cleared when a row is finished with, retained while it is only
      * parked.** `sent`, `failed` and `missing_payload` clear all four beside
      * `payload_sealed`, so a row that is done holds nothing — which matters
-     * because nothing prunes this table (it is not in `RETENTION_DAYS`), so a
-     * `sent` row that kept its recipient would keep it forever. The one
+     * because the retention prune keeps a finished row for 90 days
+     * (`RETENTION_DAYS.notification_send_queue`), and a `sent` row that kept
+     * its recipient would keep it all that time. The one
      * exception is `sealed_payload_unreadable`, which keeps the payload *and*
      * the handles on purpose: that row is parked rather than finished, and a
      * parked row that had dropped its handles would be a row an erasure could

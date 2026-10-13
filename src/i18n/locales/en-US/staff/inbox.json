@@ -60,6 +60,7 @@
     "emptyBody": "Type an answer before sending.",
     "tooLong": "That is longer than a reply can be. Trim it and send again.",
     "notFound": "That message is no longer on this record.",
+    "sendLimit": "You have sent a lot of replies this hour. Nothing went out; try again in a little while.",
     "channelUnsupported": "DiveDay cannot answer a text message yet.",
     "noReplyAddress": "There is no address to answer on.",
     "cannotBeSent": "This reply cannot be sent as it stands. Nothing went out, and trying again will not change that.",

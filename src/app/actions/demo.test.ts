@@ -42,6 +42,9 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
+const { auth } = await import("@/lib/auth");
+const { cookies } = await import("next/headers");
+const { DEMO_SEAT_COOKIE, signDemoSeat } = await import("@/lib/demo-seat");
 const { switchDemoRoleAction } = await import("./demo");
 
 /** Where the action sent the caller, or the error it failed with instead. */
@@ -56,10 +59,23 @@ async function landing(role: string): Promise<string> {
   throw new Error("expected switchDemoRoleAction to redirect");
 }
 
+let shopId = "";
+
+/** The caller's session, as `auth()` hands it back: signed in at `atShopId`. */
+function signedInAt(atShopId: string) {
+  vi.mocked(auth).mockResolvedValue({ user: { shopId: atShopId } } as never);
+}
+
 beforeEach(async () => {
-  const { db } = await seededShopContext();
+  const { db, shop } = await seededShopContext();
+  shopId = shop.id;
   vi.mocked(getDb).mockResolvedValue(db);
   hoisted.signInDiveDayCredentials.mockReset().mockResolvedValue({});
+  hoisted.signOut.mockReset().mockResolvedValue({});
+  // The staff switches below are made by somebody already in blue-mantis, as
+  // the banner's own taps are; the tests about strangers say otherwise.
+  signedInAt(shopId);
+  (await cookies()).delete(DEMO_SEAT_COOKIE);
 });
 
 describe("switchDemoRoleAction", () => {
@@ -91,5 +107,36 @@ describe("switchDemoRoleAction", () => {
     await expect(switchDemoRoleAction("instructor", "blue-mantis")).rejects.toThrow(
       "The demo sign-in refused the role switch.",
     );
+  });
+
+  it("refuses a staff switch from somebody signed in at another shop", async () => {
+    // A slug is all the action is given, and every demo shop's slug is three
+    // dictionary words: a session elsewhere must not become this shop's owner.
+    signedInAt("00000000-0000-4000-8000-000000000000");
+    expect(await landing("owner")).toBe("/");
+    expect(hoisted.signInDiveDayCredentials).not.toHaveBeenCalled();
+  });
+
+  it("refuses a staff switch from a stranger with no session and no seat", async () => {
+    vi.mocked(auth).mockResolvedValue(null as never);
+    expect(await landing("owner")).toBe("/");
+    expect(hoisted.signInDiveDayCredentials).not.toHaveBeenCalled();
+  });
+
+  it("refuses a seat signed for a different shop", async () => {
+    vi.mocked(auth).mockResolvedValue(null as never);
+    (await cookies()).set(DEMO_SEAT_COOKIE, signDemoSeat("00000000-0000-4000-8000-000000000000"));
+    expect(await landing("owner")).toBe("/");
+    expect(hoisted.signInDiveDayCredentials).not.toHaveBeenCalled();
+  });
+
+  it("lets the visitor previewing as a diver switch back to staff", async () => {
+    // The diver preview signs the session out, so the seat it leaves behind is
+    // the only thing that says this browser was in this shop a moment ago.
+    expect(await landing("diver")).toBe("/s/blue-mantis");
+    expect(hoisted.signOut).toHaveBeenCalled();
+    vi.mocked(auth).mockResolvedValue(null as never);
+    expect(await landing("owner")).toBe("/shop/blue-mantis");
+    expect(hoisted.signInDiveDayCredentials).toHaveBeenCalled();
   });
 });

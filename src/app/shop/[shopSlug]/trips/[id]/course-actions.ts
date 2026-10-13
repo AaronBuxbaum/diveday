@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getShopBookingTripId } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
 import { recordCourseMaterialsDone } from "@/db/course-materials";
@@ -21,6 +20,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { requireRosterBooking, tripPath } from "./roster-booking";
 
 /**
  * A course session's roster doors: certify a student, record their next step, tick their
@@ -28,8 +28,6 @@ import { uuidParam } from "@/lib/uuid";
  * the way `elearning-actions.ts` and `prep/actions.ts` were, so a course fix does not open the
  * whole departure's doors.
  */
-
-const tripPath = (shopSlug: string, tripId: string) => shopPath(shopSlug, "trips", tripId);
 
 /**
  * Every field the roster's course rows post, each read as `FormData.get`
@@ -71,7 +69,7 @@ export async function certifyDiverFromRosterAction(
   const db = await getDb();
   // The row posts its own booking; one from another departure of this shop is
   // not this roster's to certify from.
-  if ((await getShopBookingTripId(db, s.user.shopId, bookingId)) !== tripId) redirect(back);
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
   // **An intro session certifies nobody** (dive-domain review). The roster
   // draws no Certify control on one, but a post reaches this regardless, and
   // a forged `award=open_water` on a DSD would otherwise land a verified card
@@ -132,7 +130,7 @@ export async function saveCourseNextStepAction(
   const bookingId = fields.bookingId;
   if (!uuidParam(tripId) || !uuidParam(bookingId)) redirect(back);
   const db = await getDb();
-  if ((await getShopBookingTripId(db, s.user.shopId, bookingId)) !== tripId) redirect(back);
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
 
   const outcome = await recordCourseNextStep(db, {
     shopId: s.user.shopId,
@@ -178,7 +176,7 @@ export async function setCourseMaterialsDoneAction(
   const bookingId = fields.bookingId;
   if (!uuidParam(tripId) || !uuidParam(bookingId)) redirect(back);
   const db = await getDb();
-  if ((await getShopBookingTripId(db, s.user.shopId, bookingId)) !== tripId) redirect(back);
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
 
   const outcome = await recordCourseMaterialsDone(db, {
     shopId: s.user.shopId,
@@ -242,8 +240,13 @@ export async function recordPaperCourseFormAction(
   const dbi = await getDb();
   // The row posts its own booking; one from another departure is not this
   // roster's to record against.
-  if ((await getShopBookingTripId(dbi, s.user.shopId, bookingId)) !== tripId)
-    redirect(noticeUrl(back, "course-form-unavailable"));
+  await requireRosterBooking(
+    dbi,
+    s.user.shopId,
+    tripId,
+    bookingId,
+    noticeUrl(back, "course-form-unavailable"),
+  );
   const guardianName = fields.guardianName.trim();
   const guardianRelationship = fields.guardianRelationship.trim();
   const recorded = await recordPaperCourseForm(dbi, {

@@ -34,6 +34,35 @@ describe("the remove-diver disclosure", () => {
     expect(summary).toHaveClass("min-h-12", "text-base");
     expect(summary).not.toHaveClass("text-sm");
   });
+
+  it("warns, before the confirm, that someone who also works here leaves the team", () => {
+    const { getByText, rerender, queryByText } = render(
+      <RemoveDiver
+        diver={
+          {
+            person: { fullName: "Ines Dual-Role" },
+            holdsStaffRole: true,
+          } as unknown as DiverProfile
+        }
+        shopSlug="blue-mantis"
+        personId="person-1"
+        t={staffTranslator("en-US")}
+      />,
+    );
+    expect(getByText(/can no longer sign in/)).toBeInTheDocument();
+
+    rerender(
+      <RemoveDiver
+        diver={
+          { person: { fullName: "Morgan Vale" }, holdsStaffRole: false } as unknown as DiverProfile
+        }
+        shopSlug="blue-mantis"
+        personId="person-1"
+        t={staffTranslator("en-US")}
+      />,
+    );
+    expect(queryByText(/can no longer sign in/)).toBeNull();
+  });
 });
 
 /**

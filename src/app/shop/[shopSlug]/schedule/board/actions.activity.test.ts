@@ -30,11 +30,13 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+// The real gate, behind a mocked `auth()`: `requireShopSurface` re-reads the
+// staffer's live roles from the seeded database, as it does in production.
+vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { auth } = await import("@/lib/auth");
 const { moveDepartureAction, removeDepartureAction } = await import("./actions");
 
 async function context() {
@@ -49,7 +51,7 @@ async function context() {
 }
 
 function signIn(shop: { id: string; slug: string }, personId: string) {
-  vi.mocked(requireStaffSession).mockResolvedValue(
+  vi.mocked(auth).mockResolvedValue(
     staffSession({ shopId: shop.id, shopSlug: shop.slug, personId }) as never,
   );
 }

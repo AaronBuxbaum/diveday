@@ -61,7 +61,23 @@ see the [2026-10-12 amendment](#amendment-2026-10-12--retention_days-is-the-list
 | `activity_events` | 1095 | Staff-facing operational narrative; small rows, and the thing a shop reconstructs an old season from. **The longest personal-data window in the app**: `params` holds the actor's and the diver's names as rendered words (`src/lib/activity.ts`), so three years of name-bearing lines is the price of the narrative. Erasure redacts them by id and by name on request (`src/db/anonymize.ts`); the window only bounds what nobody asked to erase. |
 | `account_tokens` | 90 **past each token's own expiry** | Hashed bearer credentials over account takeover, so the conservative direction is the *opposite*: long enough for an incident review, no longer. A live token is never eligible at any age. |
 | `account_sessions` | 90 **past each session's own expiry** | Added 2026-10-10 (code review item 38). One row per device sign-in, carrying its IP address and user agent, deleted before only by sign-out, revocation or erasure, so a staffer who never signed out kept them for ever. Same incident-review argument and same clock as `account_tokens`; every use slides `expires_at` forward, so a session still honoured is never eligible. |
+| `notification_send_queue` | 90 **past the row being finished** | Added 2026-10-12 (code review 2026-10-11, item 14). Only `sent` rows and `failed` rows whose payload is already cleared: a finished row holds no personal data (every terminal write clears it), only an idempotency key, so the window bounds growth. A queued, processing or parked row is never eligible. |
+| `waiver_deliveries` | 400 | Added 2026-10-12 (item 14). The latest delivery outcome of one waiver link on one channel, carrying the provider's bounce text. The same question as `notification_delivery_attempts`, so the same window; the signed waiver itself is `waiver_records`, which no clock touches. |
+| `setup_requests` | 365 | Added 2026-10-12 (item 14). A shop asking to be set up: a person's name, email and phone, not yet anybody's customer. A season to follow it up; the single-use setup link goes with it by cascade. Reverses [20261007-setup-request-form](20261007-setup-request-form.md)'s "kept until asked" for this one table. |
 | `booking_payment_events` | 2555 | The local money ledger, at the ordinary seven-year financial horizon. Listed rather than left unbounded so "how long is a shop's money history kept?" has an answer in the same table as everything else. |
+
+### Kept for ever, by decision
+
+Every event-like trail without a window, one line each (the same list heads `src/lib/retention.ts`):
+
+- `roll_call_events`, `roll_call_crew_events`, `booking_arrival_events`, `buddy_team_events`: safety records of who was on a boat and with whom ([20260804-buddy-teams](20260804-buddy-teams.md)).
+- `trip_stage_events`: the crew's taps through a departure's day, kept as incident evidence (product owner, 2026-09-10, issue #1397).
+- `gear_service_events`: a unit's service and test history, which is equipment evidence (product owner, 2026-08-20).
+- `trip_change_events`, `work_order_events`: who changed what on a departure or a ticket, read as the record itself.
+- `held_sends`, `media_deletion_attempts`, `processor_erasure_obligations`, `payment_operation_intents`: deleted by their own work when it is done; a clock would delete what is still owed.
+- `waiver_records` and the course-form records: signed evidence, H-02's question, never a clock's.
+
+`activity_events` is not on this list: it has the longest window here, 1,095 days (three years), stated in the table above.
 
 `retentionWindowsOutlastStripeRetries()` asserts the first row's relationship to
 `STRIPE_WEBHOOK_RETRY_DAYS`, and a unit test holds it — shortening that window has to fail a test,

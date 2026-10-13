@@ -6,7 +6,7 @@ import { callTripBlowout, resumeTripBlowout } from "@/db/blowouts";
 import { getDb } from "@/db/client";
 import { recordTripActivity } from "@/db/operations";
 import { trackEvent } from "@/lib/analytics";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 // `shopPath`, not a template literal: `shopSlug` is a server-action argument and
@@ -30,7 +30,7 @@ const blowoutPath = (shopSlug: string, tripId: string) =>
  */
 export async function callBlowoutAction(shopSlug: string, tripId: string) {
   const back = blowoutPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
   const outcome = await callTripBlowout(db, {
     shopId: s.user.shopId,
@@ -66,7 +66,7 @@ export async function callBlowoutAction(shopSlug: string, tripId: string) {
  */
 export async function resumeBlowoutAction(shopSlug: string, tripId: string) {
   const back = blowoutPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
   const outcome = await resumeTripBlowout(db, {
     shopId: s.user.shopId,

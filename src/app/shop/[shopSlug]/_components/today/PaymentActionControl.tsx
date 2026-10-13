@@ -20,6 +20,7 @@ export type PaymentActionCopy = {
     notOpen: string;
     notConfigured: string;
     failed: string;
+    rateLimited: string;
   };
 };
 
@@ -71,6 +72,7 @@ export function PaymentActionControl({
     not_open: copy.errors.notOpen,
     not_configured: copy.errors.notConfigured,
     failed: copy.errors.failed,
+    rate_limited: copy.errors.rateLimited,
   } as const;
 
   return (

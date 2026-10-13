@@ -392,6 +392,7 @@ export async function listFailedRefunds(db: AppDb, shopId: string): Promise<Fail
       ? db
           .select({ id: people.id, fullName: people.fullName })
           .from(people)
+          // diveday:allow-deleted-people: the name on a past refund, which a later removal does not change.
           .where(and(eq(people.shopId, shopId), inArray(people.id, personIds)))
       : [],
   ]);

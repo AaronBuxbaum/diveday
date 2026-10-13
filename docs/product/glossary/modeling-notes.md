@@ -171,7 +171,10 @@
   **Removing** a diver is the reversible archive action every entity has
   ([20260719-crud-archive-semantics](../../architecture/decisions/20260719-crud-archive-semantics.md)):
   `people.deleted_at` is set, they drop off the active lists, and *nothing about the record is
-  destroyed* — an owner or manager can undo it. **Erasing** a diver is the one-way answer to "delete
+  destroyed* — an owner or manager can undo it. A removed person who also holds a staff role leaves
+  the team with it: they drop off every crew picker and can no longer sign in (`livePerson()`), so
+  Remove refuses while they are still crew on a departure ahead and says to take them off those boats
+  first. Taking them off a boat stays possible after removal. **Erasing** a diver is the one-way answer to "delete
   what you hold about me": their name, contact details, date of birth, emergency contact, card
   numbers and card photographs, medical answers, sizes, notes, review comments, and shared photos
   are destroyed across every table, and `people.anonymized_at` is stamped. What survives is the

@@ -9,6 +9,7 @@ import { isValidCalendarDate } from "@/lib/calendar-date";
 import { readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { uuidParam } from "@/lib/uuid";
 import { backTo, requireDiverActionContext } from "./action-helpers";
 
@@ -112,6 +113,13 @@ export async function replyToDiverAction(shopSlug: string, personId: string, for
   const messageId = uuidParam(form.messageId);
   if (!messageId) {
     revalidateAndRedirect(base, backTo(base, "reply-message-not-found", "reply"));
+  }
+  const sendAllowed = await checkRateLimit(
+    rateLimitKey("staff-send", "reply", staff.user.personId),
+    RATE_LIMITS.staffSendByActor,
+  );
+  if (!sendAllowed.allowed) {
+    revalidateAndRedirect(base, backTo(base, "reply-send-limit", "reply"));
   }
   const result = await sendStaffReply(db, {
     shopId: staff.user.shopId,

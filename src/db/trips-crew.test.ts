@@ -5,6 +5,7 @@ import { courseCrewGap } from "@/lib/course-ratios";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
+import { deleteDiver } from "./divers";
 import { getTripManifest, recordCrewRollCall } from "./manifests";
 import type { Course } from "./schema";
 import { bookings, courses, crewAvailabilityBlocks, people, personRoles, shops } from "./schema";
@@ -1404,5 +1405,68 @@ describe("changeTripCrewOutcome", () => {
     ).toBe(false);
     // The refused call wrote nothing, on either door.
     expect(await getTripCrewIds(db, shop.id, overlapping.id)).toEqual([]);
+  });
+});
+
+/**
+ * **A staff member removed from the diver list is not crew.**
+ *
+ * `deleteDiver` soft-deletes a person who holds the `diver` role, and staff
+ * who also dive hold both. Until `livePerson()` (src/db/trips-live.ts) the
+ * staff list and the crew-change eligibility read did not look at
+ * `deleted_at`, so a deleted dual-role person stayed in every crew picker and
+ * could be put on a boat. The seed has no dual-role person, so one is made.
+ */
+describe("a dual-role person removed as a diver", () => {
+  async function dualRolePerson(db: AppDb, shopId: string) {
+    const [person] = await db
+      .insert(people)
+      .values({ shopId, fullName: "Ines Dual-Role", email: "ines.dual@example.invalid" })
+      .returning({ id: people.id });
+    if (!person) throw new Error("insert failed");
+    await db.insert(personRoles).values([
+      { personId: person.id, role: "diver" },
+      { personId: person.id, role: "divemaster" },
+    ]);
+    return person.id;
+  }
+
+  it("leaves the staff list", async () => {
+    const { db, shop } = ctx;
+    const personId = await dualRolePerson(db, shop.id);
+    expect((await listStaff(db, shop.id)).map((s) => s.person.id)).toContain(personId);
+
+    expect(await deleteDiver(db, shop.id, personId)).toBe(true);
+
+    expect((await listStaff(db, shop.id)).map((s) => s.person.id)).not.toContain(personId);
+  });
+
+  it("cannot be put on a departure's crew", async () => {
+    const { db, shop } = ctx;
+    const personId = await dualRolePerson(db, shop.id);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id, nowDate());
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    expect(await deleteDiver(db, shop.id, personId)).toBe(true);
+
+    expect(
+      await changeTripCrewOutcome(db, shop.id, trip.id, { personId, operation: "assign" }),
+    ).toEqual({ ok: false, refusal: "refused" });
+    expect(await getTripCrewIds(db, shop.id, trip.id)).not.toContain(personId);
+  });
+
+  it("can still be taken off a departure they were already crewing", async () => {
+    const { db, shop } = ctx;
+    const personId = await dualRolePerson(db, shop.id);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id, nowDate());
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    expect(
+      (await changeTripCrewOutcome(db, shop.id, trip.id, { personId, operation: "assign" })).ok,
+    ).toBe(true);
+    expect(await deleteDiver(db, shop.id, personId)).toBe(true);
+
+    expect(
+      (await changeTripCrewOutcome(db, shop.id, trip.id, { personId, operation: "unassign" })).ok,
+    ).toBe(true);
+    expect(await getTripCrewIds(db, shop.id, trip.id)).not.toContain(personId);
   });
 });

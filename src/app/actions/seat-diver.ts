@@ -8,7 +8,7 @@ import { blankAsAbsent, formValue, parseForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
@@ -202,7 +202,7 @@ export async function seatExistingDiverAction(
   formData: FormData,
 ) {
   const surface = surfaceFor(surfaceId);
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const parsed = parseForm(existingDiverSchema, formData);
   const raw = rawLanding(formData);
   const landing: SeatLanding = {
@@ -242,7 +242,7 @@ export async function seatNewDiverAction(
   formData: FormData,
 ) {
   const surface = surfaceFor(surfaceId);
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const parsed = parseForm(newDiverSchema, formData);
   const raw = rawLanding(formData);
   const email = parsed.ok ? parsed.data.email || undefined : undefined;

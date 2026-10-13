@@ -9,9 +9,10 @@ import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
 import { offerDepartureToDiver } from "@/db/trip-invitations";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { requireRosterBooking } from "../roster-booking";
 import { counterQueuePath } from "./focus";
 
 /** Every door here posts one field: the seat it acts on. */
@@ -49,11 +50,20 @@ export async function checkInAction(
   tripId: string,
   formData: FormData,
 ): Promise<{ ok: true }> {
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const back = counterQueuePath(shopSlug, tripId);
   const bookingId = bookingIdFrom(formData, back);
+  const db = await getDb();
+  // A seat from another departure is not this counter's (../roster-booking.ts).
+  await requireRosterBooking(
+    db,
+    session.user.shopId,
+    tripId,
+    bookingId,
+    noticeUrl(back, "invalid"),
+  );
 
-  const outcome = await checkInBooking(await getDb(), {
+  const outcome = await checkInBooking(db, {
     shopId: session.user.shopId,
     bookingId,
     recordedByPersonId: session.user.personId,
@@ -100,11 +110,20 @@ export async function undoCheckInAction(
   tripId: string,
   formData: FormData,
 ): Promise<{ ok: true }> {
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const back = counterQueuePath(shopSlug, tripId);
   const bookingId = bookingIdFrom(formData, back);
+  const db = await getDb();
+  // A seat from another departure is not this counter's (../roster-booking.ts).
+  await requireRosterBooking(
+    db,
+    session.user.shopId,
+    tripId,
+    bookingId,
+    noticeUrl(back, "invalid"),
+  );
 
-  const outcome = await undoCheckInBooking(await getDb(), {
+  const outcome = await undoCheckInBooking(db, {
     shopId: session.user.shopId,
     bookingId,
     recordedByPersonId: session.user.personId,
@@ -140,11 +159,20 @@ export async function markNoShowAction(
   tripId: string,
   formData: FormData,
 ): Promise<void> {
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const back = counterQueuePath(shopSlug, tripId);
   const bookingId = bookingIdFrom(formData, back);
+  const db = await getDb();
+  // A seat from another departure is not this counter's (../roster-booking.ts).
+  await requireRosterBooking(
+    db,
+    session.user.shopId,
+    tripId,
+    bookingId,
+    noticeUrl(back, "invalid"),
+  );
 
-  const outcome = await markBookingNoShow(await getDb(), {
+  const outcome = await markBookingNoShow(db, {
     shopId: session.user.shopId,
     bookingId,
     recordedByPersonId: session.user.personId,
@@ -174,11 +202,20 @@ export async function undoNoShowAction(
   tripId: string,
   formData: FormData,
 ): Promise<void> {
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const back = counterQueuePath(shopSlug, tripId);
   const bookingId = bookingIdFrom(formData, back);
+  const db = await getDb();
+  // A seat from another departure is not this counter's (../roster-booking.ts).
+  await requireRosterBooking(
+    db,
+    session.user.shopId,
+    tripId,
+    bookingId,
+    noticeUrl(back, "invalid"),
+  );
 
-  const outcome = await undoBookingNoShow(await getDb(), {
+  const outcome = await undoBookingNoShow(db, {
     shopId: session.user.shopId,
     bookingId,
     recordedByPersonId: session.user.personId,
@@ -208,7 +245,7 @@ export async function offerAnotherDayAction(
   tripId: string,
   formData: FormData,
 ): Promise<void> {
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const back = counterQueuePath(shopSlug, tripId);
   const parsed = parseForm(offerForm, formData);
   if (!parsed.ok) redirect(noticeUrl(back, "invalid"));

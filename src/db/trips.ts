@@ -52,6 +52,7 @@ export {
   type CrewMoveConflicts,
   changeTripCrew,
   changeTripCrewOutcome,
+  countUpcomingCrewDepartures,
   crewClashes,
   crewClashesByTrip,
   crewMoveConflicts,

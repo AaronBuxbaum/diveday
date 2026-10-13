@@ -415,6 +415,12 @@ export const RATE_LIMITS = {
   demoCreate: perHour(10),
   /** Marking a browser as the founder's (`/api/demo/quiet`), per IP — a key-guessing oracle otherwise. */
   demoQuiet: perHour(10),
+  /**
+   * The demo banner's role switch, per IP. It takes a shop slug from the
+   * browser, and demo slugs are dictionary words: this bounds how fast one IP
+   * can try them, on top of the seat check the action makes.
+   */
+  demoSwitch: perHour(30),
   /** Credentials sign-in attempts, per IP — the wider net. */
   signInByIp: per15Min(20),
   /** Credentials sign-in attempts, per attempted email — the narrow net. */
@@ -433,6 +439,15 @@ export const RATE_LIMITS = {
    * hesitant typist re-typing a long street a few times stays well inside it.
    */
   addressLookup: perHour(120),
+  /**
+   * Staff-triggered sends to someone outside the shop — a fresh waiver link, a
+   * reply to a diver, a staff invite or its resend, an invoice resend — per
+   * staff member and per kind of send. Each is one tap on a signed-in page, so
+   * a compromised or scripted staff session could otherwise turn the shop's
+   * sender into a spam cannon and burn its reputation. Sixty an hour is a send
+   * a minute, far above a busy morning at the counter.
+   */
+  staffSendByActor: perHour(60),
   /** Public wait-list joins, per IP. */
   waitlistJoin: perHour(10),
   /** Course inquiry submissions from the public course page, per IP. */

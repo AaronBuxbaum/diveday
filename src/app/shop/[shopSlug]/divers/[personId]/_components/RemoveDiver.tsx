@@ -63,6 +63,11 @@ export function RemoveDiver({
       <p className="max-w-prose text-sm text-muted">
         {t("divers.remove.consequence", { name: diver.person.fullName })}
       </p>
+      {/* Someone who also works here leaves the team with it, and loses
+          sign-in (`livePerson()`, layer B review). */}
+      {diver.holdsStaffRole ? (
+        <p className="max-w-prose text-sm text-muted">{t("divers.remove.staffWarning")}</p>
+      ) : null}
     </div>
   );
 }

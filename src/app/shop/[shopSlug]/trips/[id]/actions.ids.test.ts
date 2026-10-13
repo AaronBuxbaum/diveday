@@ -31,20 +31,27 @@ vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/db/bookings", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/bookings")>();
-  return { ...actual, getShopBookingTripId: vi.fn() };
+  return { ...actual, getShopBookingTripId: vi.fn(), cancelBooking: vi.fn() };
+});
+vi.mock("@/db/waivers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/waivers")>();
+  return { ...actual, recordInPersonWaiver: vi.fn() };
 });
 
 const { getDb } = await import("@/db/client");
-const { getShopBookingTripId } = await import("@/db/bookings");
+const { cancelBooking, getShopBookingTripId } = await import("@/db/bookings");
+const { recordInPersonWaiver } = await import("@/db/waivers");
 const { requireShopSurface } = await import("@/lib/session");
 const {
   addToWaitlistAction,
   confirmDiverIdentityAction,
+  markWaiverInPersonAction,
   splitDiverIdentityAction,
   removeBookingAction,
   undoRemoveBookingAction,
 } = await import("./actions");
 const { certifyDiverFromRosterAction, saveCourseNextStepAction } = await import("./course-actions");
+const { elearningCheckAction } = await import("./elearning-actions");
 
 const SHOP_SLUG = "reef-life";
 const SHOP_ID = "11111111-1111-4111-8111-111111111111";
@@ -138,5 +145,61 @@ describe("a malformed id on the trip roster", () => {
 
     expect(to).toBe(noticeUrl(tripLanding(NOT_A_UUID), "diver-invalid"));
     expect(getDb).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **A seat from another departure of the same shop is not this roster's.**
+ *
+ * A well-formed id of a booking the shop owns, posted from this departure's
+ * page while it sits on another (a stale tab, a hand-edited form). Each shape
+ * of roster door refuses it before it writes, through the one shared check
+ * (`./roster-booking.ts`): a redirect back, a form answer, a result object.
+ */
+describe("a booking that sits on another departure", () => {
+  const OTHER_TRIP_ID = "55555555-5555-4555-8555-555555555555";
+
+  function onAnotherDeparture() {
+    signIn();
+    vi.mocked(getDb).mockResolvedValue({} as never);
+    vi.mocked(getShopBookingTripId).mockResolvedValue(OTHER_TRIP_ID);
+  }
+
+  it("is not removed from this roster", async () => {
+    onAnotherDeparture();
+
+    const to = await redirectedTo(() =>
+      removeBookingAction(SHOP_SLUG, TRIP_ID, bookingForm(BOOKING_ID)),
+    );
+
+    expect(to).toBe(tripLanding(TRIP_ID));
+    expect(cancelBooking).not.toHaveBeenCalled();
+  });
+
+  it("gets no paper waiver recorded from this roster", async () => {
+    onAnotherDeparture();
+
+    const state = await markWaiverInPersonAction(
+      SHOP_SLUG,
+      TRIP_ID,
+      { status: "idle" },
+      bookingForm(BOOKING_ID),
+    );
+
+    expect(state.status).toBe("refused");
+    expect(recordInPersonWaiver).not.toHaveBeenCalled();
+  });
+
+  it("gets no e-learning check from this roster", async () => {
+    onAnotherDeparture();
+
+    const result = await elearningCheckAction(
+      SHOP_SLUG,
+      TRIP_ID,
+      { ok: false, reason: "invalid" } as never,
+      bookingForm(BOOKING_ID),
+    );
+
+    expect(result).toEqual({ ok: false, reason: "invalid" });
   });
 });

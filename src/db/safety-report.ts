@@ -167,6 +167,7 @@ export async function getSafetyMonth(
           db
             .select({ id: people.id, fullName: people.fullName })
             .from(people)
+            // diveday:allow-deleted-people: names for crew already on these trips; removed or not, they were aboard.
             .where(and(eq(people.shopId, shopId), inArray(people.id, crewIds))),
       ])
     : [[], []];

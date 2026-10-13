@@ -285,6 +285,7 @@ export async function survivingPersonNames(
         mergedInto: people.mergedIntoPersonId,
       })
       .from(people)
+      // diveday:allow-deleted-people: a merged-away record is soft-deleted by the merge, and following it is the point.
       .where(and(eq(people.shopId, shopId), inArray(people.id, frontier)));
     const next: string[] = [];
     for (const row of rows) {
