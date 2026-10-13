@@ -147,7 +147,14 @@ export type DepartureSummary = {
   startsAt: Date;
   endsAt: Date;
   booked: number;
+  /** The stated seats, as the details form edits them. */
   capacity: number;
+  /**
+   * The seats on sale: `capacity` capped at the boat's certificate (H-107,
+   * `sellableSeats`). Open seats and the readiness bar count against this
+   * (#2388), as the booking transaction does.
+   */
+  sellableCapacity: number;
   ready: number;
   blocked: number;
   /**
@@ -281,7 +288,8 @@ export type TodayWork = {
     title: string;
     startsAt: Date;
     booked: number;
-    capacity: number;
+    /** The seats on sale (`sellableSeats`), which the booked count is read against. */
+    sellableCapacity: number;
   } | null;
   /**
    * The role lens's raw material (20260721-role-aware-landing): which of the
@@ -1435,6 +1443,7 @@ function summarizeDepartures(
       endsAt: trip.endsAt,
       booked: trip.booked,
       capacity: trip.capacity,
+      sellableCapacity: trip.sellableCapacity,
       ready: rows.filter((row) => row.readiness.status === "ready").length,
       blocked: blockedRows.length,
       boarded: aboardCount,
@@ -2175,7 +2184,7 @@ export async function getTodayWork(
           startsAt: next.startsAt,
           tripId: next.id,
           booked: next.booked,
-          capacity: next.capacity,
+          sellableCapacity: next.sellableCapacity,
         }
       : null,
     crewedTripIds,

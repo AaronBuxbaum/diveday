@@ -1504,7 +1504,10 @@ export type SpineDeparture = {
   courseTitle: string | null;
   boatName: string | null;
   priceCents: number | null;
+  /** The stated seats. */
   capacity: number;
+  /** The seats on sale under the boat's certificate (`sellableSeats`); open seats count against it. */
+  sellableCapacity: number;
   booked: number;
   boarded: number;
   blocked: number;

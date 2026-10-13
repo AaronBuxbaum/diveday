@@ -81,7 +81,8 @@ export function DayStation({
     : "";
   const blocked = Math.min(station.blocked, station.booked);
   const ready = station.booked - blocked;
-  const open = Math.max(0, station.capacity - station.booked);
+  // The seats on sale, not the stated number (H-107, #2388).
+  const open = Math.max(0, station.sellableCapacity - station.booked);
   // **The crew's names are the desktop's**: on a phone the card is the time,
   // the boat and the bar, and who is crewing is one tap away on the departure
   // (and on Schedule's Crew view). Their names ran the line onto a second row.
@@ -169,7 +170,12 @@ export function DayStation({
           one bar the boat's capacity wide; the words under it are the
           accessible reading, so the bar itself is decoration. The arrival
           desk draws the same bar (`ReadinessBar`, #2100). */}
-      <ReadinessBar className="mt-4" ready={ready} blocked={blocked} of={station.capacity} />
+      <ReadinessBar
+        className="mt-4"
+        ready={ready}
+        blocked={blocked}
+        of={station.sellableCapacity}
+      />
       <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">
         <span>{t("shopHome.spine.readyCount", { ready, booked: station.booked })}</span>
         {blocked > 0 ? (

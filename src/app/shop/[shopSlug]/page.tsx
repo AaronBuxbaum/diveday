@@ -859,7 +859,7 @@ async function TodayBody({
                       {formatTime(nextDeparture.startsAt, locale, shop.timezone)}
                     </span>
                     <span>
-                      {nextDeparture.booked}/{nextDeparture.capacity}
+                      {nextDeparture.booked}/{nextDeparture.sellableCapacity}
                     </span>
                   </p>
                 </div>

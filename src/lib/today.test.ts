@@ -582,6 +582,7 @@ function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
     crewAccountedFor: true,
     crewReason: null,
     ...overrides,
+    sellableCapacity: overrides.sellableCapacity ?? overrides.capacity ?? 12,
   };
 }
 
