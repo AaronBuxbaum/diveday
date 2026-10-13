@@ -247,7 +247,7 @@ describe("a station owns its departure's facts", () => {
     const line = screen.getByText(
       (_, element) =>
         element?.tagName === "P" &&
-        element.textContent === "Molasses Reef · Mantis II · Keiko Tanaka · $95.00",
+        element.textContent === "Molasses Reef · Mantis II · Keiko Tanaka · $95",
     );
     expect(line).toBeInTheDocument();
     // The crew's names are the desktop's: below `sm` the line is the site,

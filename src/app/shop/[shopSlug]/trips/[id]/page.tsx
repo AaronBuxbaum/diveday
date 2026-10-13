@@ -23,7 +23,7 @@ import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips"
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents } from "@/lib/format";
+import { formatMoneyScanned } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
@@ -365,7 +365,9 @@ export default async function ManageTripPage({
           price={
             trip.priceCents === null
               ? undefined
-              : `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`
+              : // The scanned form and the editor's own unit, as the board and the
+                // public hero print it: "$95 per diver" (third review, item 7).
+                `${formatMoneyScanned(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perDiver")}`
           }
           // Only while the boat can take a seat: full, sailed, held or
           // cancelled, and the header offers nothing (owner, 2026-10-06). A

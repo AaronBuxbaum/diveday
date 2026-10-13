@@ -8,7 +8,7 @@ import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents, formatTime } from "@/lib/format";
+import { formatMoneyScanned, formatTime } from "@/lib/format";
 import type { DayStation as DayStationData } from "@/lib/today";
 import { STAGE_TONE } from "@/lib/trip-stage-tone";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
@@ -91,7 +91,7 @@ export function DayStation({
     { text: station.crewNames.length > 0 ? station.crewNames.join(", ") : null, phone: false },
     {
       text:
-        station.priceCents === null ? null : formatMoneyCents(station.priceCents, currency, locale),
+        station.priceCents === null ? null : formatMoneyScanned(station.priceCents, currency, locale),
       phone: true,
     },
   ].filter((fact): fact is { text: string; phone: boolean } => Boolean(fact.text));
