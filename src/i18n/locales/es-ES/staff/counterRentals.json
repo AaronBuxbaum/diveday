@@ -72,7 +72,7 @@
     "setPrice": "Precio del equipo completo, {count, plural, one {# día} other {# días}}",
     "cards": {
       "verified": "Tarjeta verificada: {level}",
-      "none": "Sin tarjeta verificada, así que nada de soporte vital: reguladores, chalecos, botellas, ordenadores y trajes secos se quedan en la pared.",
+      "none": "Sin tarjeta verificada, así que nada de soporte vital: reguladores, chalecos, botellas, computadoras y trajes secos se quedan en la pared.",
       "drysuit": "Tarjeta de traje seco verificada",
       "unverified": "{count, plural, one {# tarjeta registrada} other {# tarjetas registradas}}, sin verificar",
       "minor": "Menor de edad",
