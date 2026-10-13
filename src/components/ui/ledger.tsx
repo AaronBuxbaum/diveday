@@ -699,7 +699,17 @@ export function LedgerRow({
         // line, which is what issue #1447 predicted its option 1 would do.
         //
         // So: nothing to change here, and the trade the issue asked the owner
-        // to weigh no longer exists. Two things still not to reach for if the
+        // to weigh no longer exists.
+        //
+        // **Partial Prefetching, 2026-10-13** (`partialPrefetching: true`,
+        // code review 2026-10-13b item 20). Re-counted on the same roster
+        // against an e2e build, every prefetch request on the page in the
+        // eight seconds after the heading paints, flag off then on: 23 then
+        // 21 requests over the same 12 targets (the shell's 8 section links
+        // and 4 of the 20 rows). The rows' share did not move; what the flag
+        // buys is one App Shell per route instead of one prefetch per URL,
+        // which matters where many rows point at one route, and this roster
+        // prefetches only four of them. Two things still not to reach for if the
         // numbers ever move again: `prefetch={true}`, which is the *per-link*
         // prefetch and so the same problem with more work; and a `"use client"`
         // boundary here for `router.prefetch` on pointer-enter/focus — Next's
