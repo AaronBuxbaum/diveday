@@ -132,3 +132,17 @@ describe("the dock desk's seat list", () => {
     expect(dockDesk).not.toContain("seats={departureManifest.divers}");
   });
 });
+
+/**
+ * **A stale `?checkpoint=` leaves the address bar** (#2508): the page sends it
+ * to the manifest's canonical URL instead of rendering the dock under the
+ * stale address. `openCheckpoint` decides; the page only acts on it.
+ */
+describe("a stale checkpoint in the URL", () => {
+  it("redirects to the manifest without it", () => {
+    const at = SOURCE.indexOf('"stale" in opened');
+    expect(at, "the page reads openCheckpoint's stale answer").toBeGreaterThan(-1);
+    const branch = SOURCE.slice(at, SOURCE.indexOf(";", at));
+    expect(branch).toContain('redirect(shopPath(shopSlug, "trips", tripId, "manifest"))');
+  });
+});
