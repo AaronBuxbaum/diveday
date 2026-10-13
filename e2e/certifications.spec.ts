@@ -493,6 +493,9 @@ test("a diver with no card says so on the readiness page, and the desk sees why"
   const certification = await openThreadStep(page, "certification");
   await certification.getByText("No card yet?").waitFor();
   await certification.getByRole("button", { name: "I’m not certified yet" }).click();
+  // Asked once: the statement cannot be taken back from this page.
+  await expect(certification.getByText("Tell the shop you have no card yet?")).toBeVisible();
+  await certification.getByRole("button", { name: "Yes, tell them" }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "The shop will get in touch about your options" }),
   ).toBeVisible();
@@ -500,7 +503,9 @@ test("a diver with no card says so on the readiness page, and the desk sees why"
   // Still Blocked, under its own reason, with the try-it course as the door
   // and the card form still there for a card found in a drawer.
   const step = await openThreadStep(page, "certification");
-  await expect(step.getByRole("link", { name: "Try Discover Scuba Diving first" })).toBeVisible();
+  await expect(
+    step.getByRole("link", { name: "Not certified? Discover Scuba Diving is how to start" }),
+  ).toBeVisible();
   await expect(step.getByText("Add your certification", { exact: true })).toBeVisible();
   await expect(step.getByRole("button", { name: "I’m not certified yet" })).toHaveCount(0);
 

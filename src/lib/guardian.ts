@@ -68,6 +68,7 @@ export type GuardianSignature = {
  * So a blank date here is either nobody's question or a staffer's "adult",
  * and both read as an adult; a date, when one lands, is what is measured.
  * The one exception is a seat its booker marked "Under 18" (`minorDeclared`).
+ * That stamp feeds this co-signature and the Minor badge only, never an age gate.
  */
 export function guardianSignatureRequired(
   dateOfBirth: CalendarDate | null | undefined,

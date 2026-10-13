@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import type { DiverTranslator } from "@/i18n/messages";
 import {
@@ -275,6 +276,9 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
  * agency, level and number here with nothing to pick. One tap records their
  * word (`declareNoCertificationFromReady`); the step then says the crew will
  * get in touch before the day, and Today names the reason. It clears nothing.
+ *
+ * **Asked once**, the shape Running late has (RunningLate.tsx): the diver
+ * cannot take the statement back from this page, only a card can supersede it.
  */
 function NotYetAnswer({ token, t }: { token: string; t: DiverTranslator }) {
   return (
@@ -283,12 +287,15 @@ function NotYetAnswer({ token, t }: { token: string; t: DiverTranslator }) {
       className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
     >
       <span className="text-muted">{t("ready.certNotYetLead")}</span>
-      <SubmitButton
+      <InlineConfirm
+        triggerLabel={t("ready.certNotYetButton")}
+        triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
+        message={t("ready.certNotYetConfirm")}
+        confirmLabel={t("ready.certNotYetConfirmButton")}
+        cancelLabel={t("ready.neverMind")}
         pendingLabel={t("common.saving")}
-        className={buttonClass({ variant: "ghost", size: "sm" })}
-      >
-        {t("ready.certNotYetButton")}
-      </SubmitButton>
+        confirmClassName={buttonClass({ size: "sm" })}
+      />
     </form>
   );
 }
@@ -296,7 +303,9 @@ function NotYetAnswer({ token, t }: { token: string; t: DiverTranslator }) {
 /**
  * Once the diver has said "not yet": the shop's try-it course, the one door
  * that gets a non-diver into the water. Absent when the shop publishes none,
- * and the checklist line already says the shop will get in touch.
+ * and the checklist line already says the shop will get in touch. Worded as
+ * where to start, not "first": the trip may be gated well above Open Water,
+ * and this component never sees its level.
  */
 function IntroCourseDoor({
   course,
@@ -308,7 +317,7 @@ function IntroCourseDoor({
   return (
     <div>
       <Link href={course.href} className={buttonClass({ variant: "secondary", size: "sm" })}>
-        {t("ready.certNotYetTryFirst", { course: course.title })}
+        {t("ready.certNotYetHowToStart", { course: course.title })}
       </Link>
     </div>
   );

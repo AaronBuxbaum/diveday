@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverChecklistItem } from "@/lib/readiness-summary";
@@ -104,6 +104,28 @@ describe("CertificationEntries", () => {
     expect(screen.getByRole("button", { name: t("ready.certNotYetButton") })).toBeInTheDocument();
   });
 
+  it("asks once before telling the shop there is no card", () => {
+    render(
+      <CertificationEntries
+        token="tok"
+        item={item([{ code: "certification_missing" }])}
+        offerNitrox={false}
+        notYet={null}
+        t={t}
+      />,
+    );
+    // The first tap only arms the question; nothing is sent until "Yes".
+    expect(screen.queryByText(t("ready.certNotYetConfirm"))).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: t("ready.certNotYetButton") }));
+    expect(screen.getByText(t("ready.certNotYetConfirm"))).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: t("ready.certNotYetConfirmButton") }),
+    ).toHaveAttribute("type", "submit");
+    fireEvent.click(screen.getByRole("button", { name: t("ready.neverMind") }));
+    expect(screen.queryByText(t("ready.certNotYetConfirm"))).toBeNull();
+    expect(screen.getByRole("button", { name: t("ready.certNotYetButton") })).toBeInTheDocument();
+  });
+
   it("never offers 'not certified yet' over a card already on file", () => {
     render(
       <CertificationEntries
@@ -128,7 +150,7 @@ describe("CertificationEntries", () => {
       />,
     );
     const door = screen.getByRole("link", {
-      name: t("ready.certNotYetTryFirst", { course: "Discover Scuba Diving" }),
+      name: t("ready.certNotYetHowToStart", { course: "Discover Scuba Diving" }),
     });
     expect(door).toHaveAttribute("href", "/s/reef/courses/dsd");
     expect(summaries(container)).toEqual([t("ready.certHeading")]);
