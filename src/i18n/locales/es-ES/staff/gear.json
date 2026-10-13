@@ -99,7 +99,6 @@
     "restoreUnit": "Restaurar {label}"
   },
   "addUnit": {
-    "door": "Agregar equipo",
     "title": "Agregar una unidad",
     "submit": "Agregar al registro",
     "pending": "Agregando…"

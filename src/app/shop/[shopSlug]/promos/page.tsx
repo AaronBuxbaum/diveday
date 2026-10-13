@@ -230,6 +230,20 @@ export default async function PromosPage({
   // (src/lib/staff-notices.ts).
   const noticeField = noticeFromParam(notice, NOTICE_FIELD);
   const createStatus = notice && CREATE_FORM_NOTICES.has(notice) ? banner : undefined;
+  // Said once, shown in one of two places (see the banner's comment below).
+  const connectNotice = (className: string) => (
+    <PaymentsConnectCta
+      variant="banner"
+      className={className}
+      message={t.rich("promos.connectBanner", {
+        settingsLink: (chunks) => (
+          <Link href={`/shop/${shopSlug}/settings`} className="font-semibold underline">
+            {chunks}
+          </Link>
+        ),
+      })}
+    />
+  );
   const pageBanner = noticeField || createStatus ? undefined : banner;
   /** This box's refusal, already worded — or nothing, when the refusal was elsewhere. */
   const fieldError = (field: "code" | "discount" | "startsAt") =>
@@ -390,20 +404,15 @@ export default async function PromosPage({
 
       {/* **A form that cannot submit does not stand open.** Seven fields sat at
           rest under a banner saying no code could be created until Stripe was
-          connected — a whole composer for an act the page had just refused. The
-          notice is the only thing here until there is an account behind it. */}
-      {connected ? null : (
-        <PaymentsConnectCta
-          variant="banner"
-          message={t.rich("promos.connectBanner", {
-            settingsLink: (chunks) => (
-              <Link href={`/shop/${shopSlug}/settings`} className="font-semibold underline">
-                {chunks}
-              </Link>
-            ),
-          })}
-        />
-      )}
+          connected — a whole composer for an act the page had just refused.
+
+          **And the warning sits where it is true.** On a shop with codes on
+          its list, a page-wide "Connect your Stripe account… before creating a
+          code" stood over a live, redeemed REEF10 and read as if those codes
+          were broken (third review #36). It is about creating, so with codes
+          to show it lives inside the "New code" door below; only a shop with
+          no codes at all, where it is the one next move, keeps it up here. */}
+      {connected || promoPage.total > 0 ? null : connectNotice("mb-6")}
 
       {/* **And when it can submit, it is a door rather than a standing form.**
           Reading the ledger is daily; writing a code is a few times a season,
@@ -416,7 +425,7 @@ export default async function PromosPage({
           `#new-code`. A client navigation to a fragment never runs the
           browser's own reveal, so a plain `<details>` would arrive collapsed
           with the refusal inside it. */}
-      {connected ? (
+      {connected || promoPage.total > 0 ? (
         <AutoOpenDetails
           id="new-code"
           openOnHash="new-code"
@@ -432,88 +441,91 @@ export default async function PromosPage({
                 (docs/design/settled-questions.md). */}
             <DisclosureCaret className="group-open/new-code:rotate-90" />
           </summary>
-          <SectionCard className="mt-4" padding="lg" description={t("promos.newCode.detail")}>
-            <FieldGrid as="form" action={createPromoAction} columns={2}>
-              <Field
-                label={t("promos.fields.code")}
-                hint={t("promos.fields.codeHint")}
-                error={fieldError("code")}
-              >
-                <input
-                  name="code"
-                  required
-                  maxLength={40}
-                  placeholder={t("promos.fields.codePlaceholder")}
-                  autoComplete="off"
-                  className={`${controlClass} uppercase`}
+          {connected ? null : connectNotice("mt-4")}
+          {connected ? (
+            <SectionCard className="mt-4" padding="lg" description={t("promos.newCode.detail")}>
+              <FieldGrid as="form" action={createPromoAction} columns={2}>
+                <Field
+                  label={t("promos.fields.code")}
+                  hint={t("promos.fields.codeHint")}
+                  error={fieldError("code")}
+                >
+                  <input
+                    name="code"
+                    required
+                    maxLength={40}
+                    placeholder={t("promos.fields.codePlaceholder")}
+                    autoComplete="off"
+                    className={`${controlClass} uppercase`}
+                  />
+                </Field>
+                <Field label={t("promos.fields.goodFor")}>
+                  <select name="scope" defaultValue="all" className={controlClass}>
+                    {Object.entries(SCOPE_KEYS).map(([value, key]) => (
+                      <option key={value} value={value}>
+                        {t(key)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <PromoDiscountFields
+                  t={t}
+                  currency={currency}
+                  locale={locale}
+                  error={fieldError("discount")}
                 />
-              </Field>
-              <Field label={t("promos.fields.goodFor")}>
-                <select name="scope" defaultValue="all" className={controlClass}>
-                  {Object.entries(SCOPE_KEYS).map(([value, key]) => (
-                    <option key={value} value={value}>
-                      {t(key)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <PromoDiscountFields
-                t={t}
-                currency={currency}
-                locale={locale}
-                error={fieldError("discount")}
-              />
-              <Field
-                label={t("promos.fields.redemptionCap")}
-                hint={t("promos.fields.redemptionCapHint")}
-              >
-                <input
-                  name="maxRedemptions"
-                  type="number"
-                  min={1}
-                  placeholder={t("promos.fields.redemptionCapPlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-              <Field
-                label={t("promos.fields.starts")}
-                hint={t("promos.fields.startsHint")}
-                error={fieldError("startsAt")}
-              >
-                <DateField name="startsAt" type="datetime-local" />
-              </Field>
-              <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
-                <DateField name="expiresAt" type="datetime-local" />
-              </Field>
-              {/* The human zone name, never the raw IANA id — "America/New_York"
+                <Field
+                  label={t("promos.fields.redemptionCap")}
+                  hint={t("promos.fields.redemptionCapHint")}
+                >
+                  <input
+                    name="maxRedemptions"
+                    type="number"
+                    min={1}
+                    placeholder={t("promos.fields.redemptionCapPlaceholder")}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field
+                  label={t("promos.fields.starts")}
+                  hint={t("promos.fields.startsHint")}
+                  error={fieldError("startsAt")}
+                >
+                  <DateField name="startsAt" type="datetime-local" />
+                </Field>
+                <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
+                  <DateField name="expiresAt" type="datetime-local" />
+                </Field>
+                {/* The human zone name, never the raw IANA id — "America/New_York"
               with its underscore is implementation surfacing (principle 4). */}
-              <p className="-mt-2 text-xs text-muted sm:col-span-2">
-                {t("promos.fields.timezoneHint", {
-                  timezone: timeZoneLabel(now, locale, timezone),
-                })}
-              </p>
-              <Field label={t("promos.fields.whatFor")} hint={t("promos.fields.whatForHint")}>
-                <input
-                  name="description"
-                  maxLength={200}
-                  placeholder={t("promos.fields.whatForPlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-              <FieldActions>
-                <SubmitButton pendingLabel={t("promos.creating")} className={buttonClass()}>
-                  {t("promos.createCode")}
-                </SubmitButton>
-                <FormStatus tone={createStatus?.tone}>
-                  {createStatus ? t(createStatus.key) : undefined}
-                </FormStatus>
-              </FieldActions>
-              {/* Keyed on the notice so an identical repeat refusal still re-fires
+                <p className="-mt-2 text-xs text-muted sm:col-span-2">
+                  {t("promos.fields.timezoneHint", {
+                    timezone: timeZoneLabel(now, locale, timezone),
+                  })}
+                </p>
+                <Field label={t("promos.fields.whatFor")} hint={t("promos.fields.whatForHint")}>
+                  <input
+                    name="description"
+                    maxLength={200}
+                    placeholder={t("promos.fields.whatForPlaceholder")}
+                    className={controlClass}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton pendingLabel={t("promos.creating")} className={buttonClass()}>
+                    {t("promos.createCode")}
+                  </SubmitButton>
+                  <FormStatus tone={createStatus?.tone}>
+                    {createStatus ? t(createStatus.key) : undefined}
+                  </FormStatus>
+                </FieldActions>
+                {/* Keyed on the notice so an identical repeat refusal still re-fires
               the focus move — the effect is otherwise skipped on a re-render
               that changed nothing it depends on. */}
-              <FieldErrorFocus key={notice} scope="new-code" />
-            </FieldGrid>
-          </SectionCard>
+                <FieldErrorFocus key={notice} scope="new-code" />
+              </FieldGrid>
+            </SectionCard>
+          ) : null}
         </AutoOpenDetails>
       ) : null}
 

@@ -99,7 +99,6 @@
     "restoreUnit": "Restore {label}"
   },
   "addUnit": {
-    "door": "Add gear",
     "title": "Add a unit",
     "submit": "Add to the register",
     "pending": "Adding…"

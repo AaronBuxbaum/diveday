@@ -306,7 +306,7 @@ export default async function GearRegisterPage({
         {fleetTotal === 0 && !showDeleted ? (
           <EmptyState
             title={t("gear.empty.heading")}
-            action={<AddUnitLink className={buttonClass()}>{t("gear.addUnit.door")}</AddUnitLink>}
+            action={<AddUnitLink className={buttonClass()}>{t("gear.addUnit.title")}</AddUnitLink>}
             className="mt-4"
           />
         ) : (
@@ -385,13 +385,19 @@ export default async function GearRegisterPage({
 
         {/* `AddUnitDetails`, not `SectionCard as="details"` (no `open` prop)
             or a plain `<details>`: its React state lets `AddUnitLink` open it
-            reliably. `initialOpen` also opens it on a refusal to show. On an
-            empty register the closed band hides, so the empty state's "Add
-            gear" is the one door to it (UX review 2026-10-10, item 30). */}
+            reliably. `initialOpen` also opens it on a refusal to show.
+
+            **One door, one name.** The closed band hides wherever a door
+            opens it: the header's "Add a unit" on a register with units, the
+            empty state's on one without (UX review 2026-10-10, item 30; third
+            review #36, which found the populated page still offering the
+            header, a differently named empty-state door and this band under
+            the last row). Only the deleted view of a register with nothing
+            live has no door, so the band stays there. */}
         <AddUnitDetails
           className={sectionCardClass({
             padding: "none",
-            className: `group/add-unit scroll-mt-24${fleetTotal === 0 && !showDeleted ? " hidden open:block" : ""}`,
+            className: `group/add-unit scroll-mt-24${fleetTotal > 0 || !showDeleted ? " hidden open:block" : ""}`,
           })}
           initialOpen={Boolean(addStatus)}
         >

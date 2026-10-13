@@ -45,104 +45,63 @@ const DELIVERY: ShopBackupDelivery = {
   finishedAt: new Date("2026-08-09T06:02:00Z"),
 };
 
-/** Where the history stops stacking its rows and draws them as a table. */
-const TABLE_FROM = "xl";
-
 /**
- * The padding an outer cell has once the history is a table, on one side,
- * read off its classes the way the cascade settles it: a wider breakpoint over
- * a narrower one, and within one breakpoint the table's edge step
- * (`first:ps-*`, `last:pe-*`) over a side, over an axis.
+ * **One stacked block per delivery, at every width** (third review #36). The
+ * five-column table it was from `xl` left Details about 60px of a 610px pane at
+ * 1280, and the object key broke one syllable per line ("dive day/ dive day-
+ * back up-b lue-…"). Each delivery is still a row of cells, so assistive tech
+ * and the e2e specs read it as one, but it lays out as lines: the stamp, then
+ * run, outcome and size, then the details on a line of their own.
  */
-function edgePaddingAtTable(cell: HTMLElement, side: "start" | "end"): string | undefined {
-  const [edge, letter] = side === "start" ? ["first", "s"] : ["last", "e"];
-  const classes = cell.className.split(/\s+/);
-  for (const breakpoint of [`${TABLE_FROM}:`, "lg:", "md:", "sm:", ""]) {
-    for (const prefix of [
-      `${breakpoint}${edge}:p${letter}-`,
-      `${breakpoint}p${letter}-`,
-      `${breakpoint}px-`,
-    ]) {
-      const hit = classes.find((name) => name.startsWith(prefix));
-      if (hit) return hit.slice(prefix.length);
-    }
-  }
-  return undefined;
-}
-
 describe("BackupsSection's delivery history", () => {
-  it("starts each outer column's values where its heading starts, once it is a table", () => {
-    // A table's headings step their outer edges to 20px, onto the card column
-    // (K-20). This table's cells pad themselves, because until it is a table
-    // its rows reflow into stacked lines, so without the same step "When" sat
-    // 4px right of every date under it.
+  it("stacks every row at every width, with no table breakpoint left", () => {
     renderSection("en-US", [DELIVERY]);
     const table = screen.getByRole("table");
-    const headings = within(table).getAllByRole("columnheader");
-    const cells = within(within(table).getAllByRole("row")[1]).getAllByRole("cell");
-    expect(edgePaddingAtTable(headings[0], "start")).toBe("5");
-    expect(edgePaddingAtTable(cells[0], "start")).toBe(edgePaddingAtTable(headings[0], "start"));
-    expect(edgePaddingAtTable(cells[cells.length - 1], "end")).toBe(
-      edgePaddingAtTable(headings[headings.length - 1], "end"),
-    );
+    const body = table.querySelector("tbody");
+    const [row] = within(table).getAllByRole("row").slice(1);
+    expect(body).toHaveClass("block");
+    expect(row).toHaveClass("flex", "flex-wrap");
+    for (const element of [
+      table.querySelector("thead"),
+      body,
+      row,
+      ...within(row).getAllByRole("cell"),
+    ]) {
+      expect(element?.className).not.toMatch(/(^|\s)(sm|md|lg|xl|2xl):/);
+    }
   });
 
-  /**
-   * **Five columns only where five columns fit** (K-143, pixel-craft class 9).
-   * The table is `table-layout: fixed`, and five headings with no width split
-   * it evenly: 134px columns at 1280 cut "Jun 29, 4:00 AM EDT" by 39px, and at
-   * the 640 and 1024 edges the table was 540 and 580px wide, where the stamp
-   * lost 65px and "Delivered" 30. Every column but Details now states the
-   * width its longest words need, and the rows stay stacked until the table is
-   * wide enough to leave Details a column beside them: at 1024 it is 580px,
-   * which leaves it 36px; from 1280 it is 670px, which leaves it 126.
-   */
-  it("gives every column but Details the width its longest words need", () => {
+  it("gives the object key a line of its own and breaks it only where the line is full", () => {
     renderSection("en-US", [DELIVERY]);
-    const headings = within(screen.getByRole("table")).getAllByRole("columnheader");
-    expect(headings.map((heading) => heading.textContent)).toEqual([
-      "When",
-      "Run",
-      "Outcome",
-      "Size",
-      "Details",
-    ]);
-    expect(headings[0]).toHaveClass("w-48");
-    expect(headings[2]).toHaveClass("w-40");
-    // Run and Size hold "Semanal" and "48.6 MB" in 6rem, and Details, the
-    // sentence a failed delivery is read for, takes what is left: 126px at
-    // 670, where an even split left it 106.
-    expect(headings[1]).toHaveClass("w-24");
-    expect(headings[3]).toHaveClass("w-24");
-    expect(headings[4].className).not.toMatch(/(^|\s)w-/);
+    const [row] = within(screen.getByRole("table")).getAllByRole("row").slice(1);
+    const cells = within(row).getAllByRole("cell");
+    const details = cells[cells.length - 1];
+    expect(details).toHaveClass("basis-full");
+    const key = within(details).getByText(DELIVERY.objectKey as string);
+    expect(key.className).not.toMatch(/break-all/);
+    expect(key).toHaveClass("[overflow-wrap:anywhere]");
   });
 
-  it("lets a stamp longer than its column wrap after its comma rather than be cut", () => {
+  it("keeps the five headings for a screen reader", () => {
+    renderSection("en-US", [DELIVERY]);
+    const table = screen.getByRole("table");
+    expect(table.querySelector("thead")).toHaveClass("sr-only");
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((heading) => heading.textContent),
+    ).toEqual(["When", "Run", "Outcome", "Size", "Details"]);
+  });
+
+  it("lets a long stamp wrap after its comma rather than be cut", () => {
     // "Sep 29, 10:00 PM GMT+10" is a shop in Sydney. The formatter keeps the
     // time and its zone whole (keepUnitsWhole), so the comma is the one place
-    // the stamp may end a line; `nowrap` in an `overflow-hidden` cell is what
-    // turned a long stamp into a cut one.
+    // the stamp may end a line.
     renderSection("en-US", [DELIVERY]);
     const [row] = within(screen.getByRole("table")).getAllByRole("row").slice(1);
     const [when] = within(row).getAllByRole("cell");
     expect(when.className).not.toMatch(/whitespace-nowrap/);
-  });
-
-  it("stacks its rows until the table is wide enough for five columns", () => {
-    renderSection("en-US", [DELIVERY]);
-    const table = screen.getByRole("table");
-    const head = table.querySelector("thead");
-    const body = table.querySelector("tbody");
-    const [row] = within(table).getAllByRole("row").slice(1);
-    expect(head).toHaveClass("hidden", `${TABLE_FROM}:table-header-group`);
-    expect(body).toHaveClass("block", `${TABLE_FROM}:table-row-group`);
-    expect(row).toHaveClass("flex", `${TABLE_FROM}:table-row`);
-    // Nothing on a stacked line answers to a narrower breakpoint: the table's
-    // `sm:` edge step on a stacked stamp would push it 20px in from the row's
-    // own inset.
-    for (const element of [body, row, ...within(row).getAllByRole("cell")]) {
-      expect(element?.className).not.toMatch(/(^|\s)(sm|md|lg):/);
-    }
+    expect(when).toHaveClass("basis-full");
   });
 });
 
