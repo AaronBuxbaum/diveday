@@ -1,0 +1,41 @@
+/*
+ * Metric-matched stand-ins drawn from Arial while a face loads, named by the
+ * `fallback` of each family's `latin` call in `fonts.ts`. The values are the
+ * ones `next/font/google` computed for these families, kept so the first paint
+ * before a font arrives lays out as it did (issue #2516).
+ */
+@font-face {
+  font-family: "IBM Plex Sans Fallback";
+  src: local("Arial");
+  ascent-override: 101.32%;
+  descent-override: 27.18%;
+  line-gap-override: 0%;
+  size-adjust: 101.17%;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono Fallback";
+  src: local("Arial");
+  ascent-override: 76.16%;
+  descent-override: 20.43%;
+  line-gap-override: 0%;
+  size-adjust: 134.59%;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Fallback";
+  src: local("Arial");
+  ascent-override: 95.6%;
+  descent-override: 29.18%;
+  line-gap-override: 0%;
+  size-adjust: 99.37%;
+}
+
+@font-face {
+  font-family: "Noto Sans Symbols 2 Fallback";
+  src: local("Arial");
+  ascent-override: 98.87%;
+  descent-override: 58.27%;
+  line-gap-override: 0%;
+  size-adjust: 108.12%;
+}
