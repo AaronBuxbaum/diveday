@@ -524,7 +524,7 @@
     "dockLineSays": "Saluda a {name}: dice {level}."
   },
   "diveIntent": {
-    "aboardToday": "Hoy a bordo: {list}",
+    "onTheList": "En la lista de hoy: {list}",
     "easingBack": "{count} volviendo a tomar confianza",
     "smallLife": "{count} buscando vida pequeña",
     "aWreck": "{count} con ganas de un naufragio",

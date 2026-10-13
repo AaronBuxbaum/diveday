@@ -220,7 +220,7 @@ describe("a station owns its departure's facts", () => {
    */
   it("renders no extra line on a station whose bookings carry no intent", () => {
     renderSpine({ departures: [departure({ intents: [] })] });
-    expect(screen.queryByText(/Aboard today/)).toBeNull();
+    expect(screen.queryByText(/On the list today/)).toBeNull();
   });
 
   it("counts what the divers came for, naming numbers and nobody", () => {
@@ -234,7 +234,7 @@ describe("a station owns its departure's facts", () => {
         }),
       ],
     });
-    const line = screen.getByText(/Aboard today/);
+    const line = screen.getByText(/On the list today/);
     expect(line).toHaveTextContent("4 out for a good day");
     expect(line).toHaveTextContent("2 getting comfortable again");
     // An aggregate, never a pairing: no diver is named by it.

@@ -317,7 +317,7 @@ test.describe("staff", () => {
     await page.getByRole("heading", { name: "Buddy teams" }).click();
     // The whole of what D23 gets: an aggregate on the team builder, with no
     // name in it and no suggested pairing.
-    const aboard = page.getByText(/^Aboard today:/);
+    const aboard = page.getByText(/^On the list today:/);
     await expect(aboard).toBeVisible();
     await expect(aboard).toContainText("1 looking for small life");
     await expect(aboard).not.toContainText("Ines");
