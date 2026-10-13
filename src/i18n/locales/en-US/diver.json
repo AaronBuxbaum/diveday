@@ -859,7 +859,7 @@
       "certificationSelfDeclared": "Your certification level has not been verified yet.",
       "certificationInsufficient": "This trip needs a higher certification level. Your shop can talk through the options.",
       "certificationInTraining": "You’re booked on a course that finishes before this trip. Once you complete it and your instructor certifies you, this step is done.",
-      "certificationNotYet": "You told the shop you’re not certified yet. This trip is for certified divers, so the shop will get in touch about your options before the day.",
+      "certificationNotYet": "You told the shop you’re not certified yet, so the shop will get in touch about your options before the day.",
       "specialtyMissing": "This dive needs a specialty certification. Share its details with the shop or get in touch so they can add it.",
       "specialtyPending": "Your specialty certification is with the shop for verification.",
       "specialtyImportUnconfirmed": "Your specialty certification came across from your shop’s old system and is with them to confirm.",
