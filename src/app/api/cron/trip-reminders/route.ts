@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { drainHeldSends } from "@/db/held-sends";
@@ -7,6 +6,7 @@ import { sendDueServiceReminders } from "@/db/work-order-follow-up";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 import { TRIP_REMINDER_CRON_CRONTAB } from "@/lib/reminders";
 
 /** A whole boat's reminders can come due at once; keep the provider-bound pass bounded. */
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
   const refusal = requireCronSecret(request);
   if (refusal) return refusal;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
@@ -67,8 +67,8 @@ export async function GET(request: Request) {
     // the reason the trip reminders moved here: it is held to each shop's own
     // daytime, which a fixed UTC hour cannot serve. Isolated, so a broken
     // reminder scan never costs a diver their dock-call reminder.
-    const serviceReminders = await sendDueServiceReminders(db).catch((error: unknown) => {
-      Sentry.captureException(error, { tags: { cron_scan: "service_reminders" } });
+    const serviceReminders = await sendDueServiceReminders(db).catch(async (error: unknown) => {
+      await sentry.captureException(error, { tags: { cron_scan: "service_reminders" } });
       log("cron_trip_reminders.service_reminders_failed", "error", {
         scan: "service_reminders",
       });
@@ -82,16 +82,16 @@ export async function GET(request: Request) {
       serviceRemindersHeld: serviceReminders?.held,
       serviceRemindersFailed: serviceReminders?.failed,
     });
-    Sentry.captureCheckIn({
+    await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
       status: serviceReminders ? "ok" : "error",
     });
     return NextResponse.json(summary);
   } catch (error) {
-    Sentry.captureException(error, { tags: { cron_scan: "trip_reminders" } });
+    await sentry.captureException(error, { tags: { cron_scan: "trip_reminders" } });
     log("cron_trip_reminders.scan_failed", "error", { scan: "trip_reminders" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });
   } finally {
     await flushLogs();

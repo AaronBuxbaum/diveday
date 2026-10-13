@@ -91,7 +91,6 @@ const BOAT_MODE_FILES = new Set(
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverFacts.tsx",
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/SharedDepthAdvisories.tsx",
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CrewRollCall.tsx",
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/BuddyTeamChip.tsx",
     "src/components/OfflineManifestView.tsx",
     "src/components/row-tones.ts",
   ].map((file) => path.normalize(file)),

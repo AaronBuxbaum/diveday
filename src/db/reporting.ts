@@ -47,7 +47,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
-import { liveTrip, notRehearsal } from "./trips-live";
+import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * Owner reporting exposes shop-wide revenue, so it re-checks authorization
@@ -62,11 +62,11 @@ export async function canPersonViewShopReports(
   personId: string,
 ): Promise<boolean> {
   const [person] = await db
-    .select({ id: people.id, deletedAt: people.deletedAt })
+    .select({ id: people.id })
     .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson()))
     .limit(1);
-  if (!person || person.deletedAt) return false;
+  if (!person) return false;
 
   const [account] = await db
     .select({ status: userAccounts.status })

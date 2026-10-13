@@ -508,6 +508,7 @@
     "paymentPaid": "Pagado",
     "paymentPartlyRefunded": "Reembolsado en parte",
     "paymentPrefix": "Pago:",
+    "paymentStatusLabel": "Estado del pago",
     "paymentRefunded": "Reembolsado",
     "paymentSourceCounter": "Marcado como pagado en el mostrador",
     "paymentSourceOnline": "Pagado en línea · Stripe",
@@ -654,6 +655,6 @@
     "label": "Ensayo",
     "title": "Salida de práctica para el día de formación",
     "body": "Nada de esta salida se envía, se cobra, se muestra en público ni cuenta en los informes. Se elimina {days, plural, one {# día} other {# días}} después de volver, cuando ninguna salida posterior cuenta sus inmersiones para la espera antes de volar.",
-    "kept": "Este ensayo tiene un pase de lista o una inmersión registrada, así que no se elimina solo."
+    "kept": "Este ensayo tiene un pase de lista, una inmersión registrada o un informe de incidente, así que no se elimina solo."
   }
 }

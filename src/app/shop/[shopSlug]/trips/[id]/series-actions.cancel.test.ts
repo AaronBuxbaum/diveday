@@ -37,7 +37,7 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
-const { cancelSeriesAction } = await import("./details-actions");
+const { cancelSeriesAction } = await import("./series-actions");
 
 describe("cancelling a run whose only upcoming date is underway", () => {
   it("says the date still stands, not that nothing went through", async () => {

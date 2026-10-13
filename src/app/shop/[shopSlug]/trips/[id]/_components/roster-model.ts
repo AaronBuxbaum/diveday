@@ -158,7 +158,7 @@ export type RosterRows = {
 export type RosterActions = {
   /** A reducer, not a plain form action: a refusal hands the typed values
    * back to the control rather than redirecting (`PaperWaiverAction`). */
-  markWaiverInPersonAction: PaperWaiverAction;
+  markRosterWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
   /**
@@ -377,6 +377,7 @@ export function waiverControls(t: StaffTranslator): WaiverControls {
 export function rosterPaymentStatusCopy(t: StaffTranslator): PaymentStatusControlCopy {
   return {
     prefix: t("trips.roster.paymentPrefix"),
+    label: t("trips.roster.paymentStatusLabel"),
     statuses: {
       unpaid: t("trips.roster.paymentUnpaid"),
       deposit_paid: t("trips.roster.paymentDepositPaid"),

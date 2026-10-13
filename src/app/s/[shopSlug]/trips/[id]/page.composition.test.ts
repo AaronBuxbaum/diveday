@@ -23,10 +23,24 @@ import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet"
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
 /** The page's one wave of reads, lifted beside it so the route stays a renderer (#2353). */
 const READS_SOURCE = readFileSync(join(__dirname, "_lib/page-reads.ts"), "utf8");
-const FOOT_BAR_SOURCE = readFileSync(
-  join(__dirname, "../../../../../components/PhoneFootBar.tsx"),
-  "utf8",
-);
+
+/**
+ * The source of a file the page composes, read by name: under the route's
+ * `_components/`, or under `src/components/`. A section that moves out of the
+ * page moves its pins with it by changing only the name passed here.
+ */
+function component(file: string): string {
+  try {
+    return readFileSync(join(__dirname, "_components", file), "utf8");
+  } catch {
+    return readFileSync(join(__dirname, "..", "..", "..", "..", "..", "components", file), "utf8");
+  }
+}
+
+const FOOT_BAR_SOURCE = component("PhoneFootBar.tsx");
+/** The hero the page opens on, and the cancelled departure's landing. */
+const HERO = component("TripHero.tsx");
+const CANCELLED = component("CancelledTripLanding.tsx");
 
 /**
  * Where a marker first appears in the route's source, or -1.
@@ -49,17 +63,22 @@ function positionOf(marker: string): number {
  * 5,782px at 390 before the form when nothing bounded it.
  */
 const ABOVE_THE_FORM = [
+  "<TripHero",
+  "<TripDayPlan",
+  "<TripPitch",
+  "<ConditionsLine",
+  "<TripChangeLedger",
+  "<TripAlternatives",
+] as const;
+
+/** What the hero (`TripHero`) renders, in its order. */
+const IN_THE_HERO = [
   "<TripHeader",
   "<TripActions",
   // The day's cover photo, inside the hero rather than a section of its own:
   // the owner asked for media-heavier public pages (2026-10-05), and one
   // picture of the place is that without a new beat to scroll past.
   "<StoredPhoto",
-  "<TripDayPlan",
-  "<TripPitch",
-  "<ConditionsLine",
-  "<TripChangeLedger",
-  "<TripAlternatives",
 ] as const;
 
 /**
@@ -99,14 +118,14 @@ describe("the trip page's rules", () => {
  * on the `lg` rung: so that panel is the `lg` twin.
  */
 describe("the trip page's weather warnings", () => {
-  function panelAt(marker: string): string {
-    const at = positionOf(marker);
+  function panelAt(marker: string, source = SOURCE): string {
+    const at = source.indexOf(marker);
     expect(at).toBeGreaterThan(-1);
-    return SOURCE.slice(at, SOURCE.indexOf("</", at));
+    return source.slice(at, source.indexOf("</", at));
   }
 
   it("sets the hold banner on the default tone panel, level with the note under it", () => {
-    const hold = panelAt("{trip.conditionsHold ? (");
+    const hold = panelAt("{trip.conditionsHold ? (", HERO);
     expect(hold).toMatch(/\$\{TONE_PANEL_CLASS\}/);
     expect(hold).not.toContain("TONE_PANEL_LG_CLASS");
   });
@@ -120,16 +139,24 @@ describe("the trip page's order", () => {
   it("bounds what runs above the form, and bounds its own list", () => {
     // The count is the bound. Adding a section means editing this literal and
     // this number, which is the deliberate act the ADR asks for.
-    expect(ABOVE_THE_FORM).toHaveLength(8);
+    // The hero is one entry here and three inside it: still eight.
+    expect(ABOVE_THE_FORM.length - 1 + IN_THE_HERO.length).toBe(8);
     const positions = ABOVE_THE_FORM.map(positionOf);
     for (const at of positions) expect(at).toBeGreaterThan(-1);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    const inHero = IN_THE_HERO.map((marker) => HERO.indexOf(marker));
+    for (const at of inHero) expect(at).toBeGreaterThan(-1);
+    expect(inHero).toEqual([...inHero].sort((a, b) => a - b));
     // Everything the page actually renders in that range, read off the source
     // rather than listed by hand: any capitalised JSX name between the hero and
-    // the form's slot that is not on the list above fails here.
-    const region = SOURCE.slice(positionOf("<TripHeader"), positionOf("{confirmed ? ("));
-    const rendered = new Set([...region.matchAll(/<([A-Z][A-Za-z]*)/g)].map((m) => `<${m[1]}`));
-    expect([...rendered].sort()).toEqual([...ABOVE_THE_FORM].sort());
+    // the form's slot that is not on the list above fails here, and so does
+    // one the hero renders that is not on its own list.
+    const jsxNames = (text: string) =>
+      new Set([...text.matchAll(/<([A-Z][A-Za-z]*)/g)].map((m) => `<${m[1]}`));
+    const region = SOURCE.slice(positionOf("<TripHero"), positionOf("{confirmed ? ("));
+    expect([...jsxNames(region)].sort()).toEqual([...ABOVE_THE_FORM].sort());
+    const heroBody = HERO.slice(HERO.indexOf("return ("));
+    expect([...jsxNames(heroBody)].sort()).toEqual([...IN_THE_HERO].sort());
   });
 
   it("keeps the five moved beats inside the pitch's door", () => {
@@ -144,6 +171,7 @@ describe("the trip page's order", () => {
       "TripCrewLine",
     ]) {
       expect(SOURCE).not.toContain(`<${beat}`);
+      expect(HERO).not.toContain(`<${beat}`);
     }
   });
 
@@ -202,13 +230,14 @@ describe("the trip page's order", () => {
     // cancelled landing has no form and keeps the one column.
     const DEPARTURE = `${FRAME} lg:max-w-5xl`;
     const LOADING = readFileSync(join(__dirname, "loading.tsx"), "utf8");
-    const HEADER = readFileSync(join(__dirname, "_components", "TripHeader.tsx"), "utf8");
+    const HEADER = component("TripHeader.tsx");
     // Both of this page's non-embed columns — the departure and the cancelled
     // landing — and its loading skeleton.
-    expect(SOURCE.split(`: "${FRAME}"`).length - 1).toBe(1);
+    expect(CANCELLED.split(`: "${FRAME}"`).length - 1).toBe(1);
+    expect(SOURCE.split(`: "${FRAME}"`).length - 1).toBe(0);
     expect(SOURCE.split(`: "${DEPARTURE}"`).length - 1).toBe(1);
     expect(LOADING).toContain(`<main className="${DEPARTURE}">`);
-    for (const source of [SOURCE, LOADING]) expect(source).not.toContain("py-16");
+    for (const source of [SOURCE, CANCELLED, LOADING]) expect(source).not.toContain("py-16");
     // The header opens the column; the staff preview bar keeps its own `mb-6`.
     expect(HEADER).toMatch(/return \(\s*<ShopPageHeader/);
   });
@@ -257,11 +286,9 @@ describe("the trip page's order", () => {
   });
 
   it("leaves every section's own component without an outer margin", () => {
-    const component = (name: string) =>
-      readFileSync(join(__dirname, "_components", `${name}.tsx`), "utf8");
     // The day's run, the pitch and the other boats open on a bare section.
     // Counted rather than matched, so a failure names what it found.
-    const found = (name: string, pattern: RegExp) => component(name).match(pattern) ?? [];
+    const found = (name: string, pattern: RegExp) => component(`${name}.tsx`).match(pattern) ?? [];
     for (const name of ["TripDayPlan", "TripPitch", "TripAlternatives"]) {
       expect(found(name, /<section className="mt-8">/g), name).toEqual([]);
     }
@@ -341,8 +368,8 @@ describe("the trip page's order", () => {
     // The booking is read only off a capability that verified, and nowhere else.
     expect(SOURCE).not.toContain("getBookingForTrip(");
     expect(READS_SOURCE.split("getBookingForTrip(").length - 1).toBe(1);
-    expect(READS_SOURCE).toContain(
-      "(capability) => (capability ? getBookingForTrip(db, tripId, capability.bookingId) : null)",
+    expect(READS_SOURCE).toMatch(
+      /\(capability\) =>\s*capability \? getBookingForTrip\(db, shop\.id, tripId, capability\.bookingId\) : null,/,
     );
     expect(READS_SOURCE).toContain(
       "isEmbed || !shop.reviewsEnabled ? null : getShopReviewAggregate(db, shop.id)",
@@ -359,7 +386,7 @@ describe("the trip page's order", () => {
  * because what is being pinned is which *inputs* a server page consults.
  */
 describe("the known diver's facts", () => {
-  const SECTIONS = readFileSync(join(__dirname, "_components", "BookingSections.tsx"), "utf8");
+  const SECTIONS = component("BookingSections.tsx");
 
   it("are read only through the handoff, and never on an embed", () => {
     const read = READS_SOURCE.indexOf("readKnownDiver(db, {");
@@ -384,5 +411,35 @@ describe("the known diver's facts", () => {
     expect(SECTIONS).toContain(
       "onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}",
     );
+  });
+});
+
+/**
+ * **The booking form gets the departure's three public facts, not its row**
+ * (security review, code review 2026-10-13 layer C). `BookSpotSection` and
+ * `TripFullSection` are client components: whatever the page hands them is
+ * serialized into the public payload, so the page projects the trip through
+ * `bookingFormTrip` at both doors and the components accept nothing wider.
+ */
+describe("the trip the booking form is handed", () => {
+  const SECTIONS = component("BookingSections.tsx");
+
+  it("is projected at both client doors, never the raw row", () => {
+    expect(SOURCE).toContain("trip: bookingFormTrip(trip),");
+    expect(SOURCE).toContain(
+      "<TripFullSection\n                  shopSlug={shopSlug}\n                  trip={bookingFormTrip(trip)}",
+    );
+    // Neither door takes the row itself. (`BookingFinePrint` inside them may:
+    // it is a server component, rendered before anything crosses.)
+    expect(SOURCE).not.toContain("context={{\n                    trip,\n");
+    expect(SOURCE).not.toContain(
+      "<TripFullSection\n                  shopSlug={shopSlug}\n                  trip={trip}",
+    );
+  });
+
+  it("is typed as the projection on the client side", () => {
+    expect(SECTIONS).toContain('"use client"');
+    expect(SECTIONS).not.toMatch(/\btrip: Trip;/);
+    expect(SECTIONS.split("trip: BookingFormTrip;").length - 1).toBe(2);
   });
 });

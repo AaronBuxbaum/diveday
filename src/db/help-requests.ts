@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { bookings, people, tripHelpRequests, trips } from "./schema";
+import { livePerson } from "./trips-live";
 
 export type HelpRequestKind = (typeof tripHelpRequests.kind.enumValues)[number];
 export type HelpRequestStatus = (typeof tripHelpRequests.status.enumValues)[number];
@@ -257,7 +258,7 @@ export async function updateHelpRequestStatus(
     const [actor] = await tx
       .select({ id: people.id })
       .from(people)
-      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
       .limit(1);
     if (!actor) return { ok: false, reason: "unavailable" };
     const [request] = await tx

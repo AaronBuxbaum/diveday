@@ -1,4 +1,4 @@
-import sharp, { type Metadata, type Sharp as SharpImage } from "sharp";
+import type { Metadata, Sharp as SharpImage } from "sharp";
 
 /**
  * ~40 megapixels — generous for any real photo (a 45MP pro camera RAW export
@@ -56,6 +56,12 @@ export async function processImage(bytes: ArrayBuffer | Buffer): Promise<Process
   const input = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
   let image: SharpImage;
   let metadata: Metadata;
+  // **Loaded here, on the first upload, never at import** (code review
+  // 2026-10-13, item 6): the storage barrel is in every staff and diver page's
+  // graph, and a static import put sharp's 18.7 MB libvips in each one's trace.
+  // Outside the `try` below: a missing native is a broken deployment, not a
+  // bad image, and must not read as "that file is not a photo".
+  const { default: sharp } = await import("sharp");
   try {
     // The constructor itself can throw synchronously (e.g. an empty buffer),
     // not just the async metadata read — both need to fail closed the same way.

@@ -1,0 +1,287 @@
+// @vitest-environment jsdom
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
+import {
+  acknowledgeDiscardedOfflineRecords,
+  type DiscardedOfflineRecord,
+  listOfflineManifests,
+  loadOfflineManifest,
+  readDiscardedOfflineRecords,
+  syncOfflineManifest,
+} from "@/lib/offline-manifest-store";
+import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
+import { useSavedManifest } from "./use-saved-manifest";
+import { envelope, setOnline } from "./view-fixtures";
+
+const search = vi.hoisted(() => ({ params: new URLSearchParams() }));
+const tenant = vi.hoisted(() => ({ slug: "blue-mantis" as string | null }));
+
+vi.mock("next/navigation", () => ({ useSearchParams: () => search.params }));
+vi.mock("@/lib/offline-manifest-store", () => ({
+  acknowledgeDiscardedOfflineRecords: vi.fn(),
+  listOfflineManifests: vi.fn(),
+  loadOfflineManifest: vi.fn(),
+  readDiscardedOfflineRecords: vi.fn(),
+  syncOfflineManifest: vi.fn(),
+}));
+// The purge round has its own tests (`use-cross-shop-purge.test.tsx`).
+vi.mock("./use-cross-shop-purge", () => ({ useCrossShopPurge: () => {} }));
+vi.mock("./use-offline-tenant", () => {
+  const tenantSlugRef = { current: null };
+  const resolveTenant = async () => tenant.slug;
+  return { useOfflineTenant: () => ({ tenantSlugRef, resolveTenant }) };
+});
+
+const acknowledge = vi.mocked(acknowledgeDiscardedOfflineRecords);
+const list = vi.mocked(listOfflineManifests);
+const load = vi.mocked(loadOfflineManifest);
+const readDiscarded = vi.mocked(readDiscardedOfflineRecords);
+const sync = vi.mocked(syncOfflineManifest);
+
+/** The key, and its values when it has any: enough to tell every status line apart. */
+const t = ((key: string, values?: Record<string, unknown>) =>
+  values ? `${key} ${JSON.stringify(values)}` : key) as unknown as OfflineManifestTranslator;
+const line = (key: string) => `shared.offlineManifest.reconcile.${key}`;
+
+/** A saved copy with `pending` and `rejected` roll-call events waiting on the server. */
+function withEvents(
+  tripId: string,
+  counts: { pending?: number; rejected?: number },
+  shopSlug = "blue-mantis",
+): OfflineManifestEnvelope {
+  const events = [
+    ...Array.from({ length: counts.pending ?? 0 }, () => ({ syncStatus: "pending" })),
+    ...Array.from({ length: counts.rejected ?? 0 }, () => ({ syncStatus: "rejected" })),
+  ] as unknown as OfflineManifestEnvelope["events"];
+  return envelope(tripId, `Trip ${tripId}`, { events, shopSlug });
+}
+
+function at(query: string) {
+  search.params = new URLSearchParams(query);
+  return renderHook(() => useSavedManifest(t));
+}
+
+beforeEach(() => {
+  for (const mock of [acknowledge, list, load, readDiscarded, sync]) mock.mockReset();
+  acknowledge.mockResolvedValue(undefined);
+  readDiscarded.mockResolvedValue([]);
+  tenant.slug = "blue-mantis";
+  setOnline(false);
+});
+
+afterEach(cleanup);
+
+describe("useSavedManifest on a trip", () => {
+  it("claims nothing before the store is read, then shows the saved copy", async () => {
+    const saved = envelope("trip-1", "Morning Two-Tank");
+    load.mockResolvedValue(saved);
+    const { result } = at("trip=trip-1");
+    expect(result.current.storeRead).toBe(false);
+    expect(result.current.message).toBe("shared.offlineManifest.loadingMessage");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.tripId).toBe("trip-1");
+    expect(result.current.envelope).toBe(saved);
+    expect(result.current.message).toBe(line("ready"));
+    expect(readDiscarded).toHaveBeenCalled();
+  });
+
+  it("says so when this device holds no copy of the trip", async () => {
+    load.mockResolvedValue(null);
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.envelope).toBeNull();
+    expect(result.current.message).toBe(line("noneForTrip"));
+  });
+
+  it("settles on an error line when the store cannot be read", async () => {
+    load.mockRejectedValue(new Error("decrypt failed"));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.message).toBe(line("singleLoadError"));
+  });
+
+  it("keeps a checkpoint from the URL the trip actually has", async () => {
+    load.mockResolvedValue(envelope("trip-1", "Morning Two-Tank"));
+    const { result } = at("trip=trip-1&checkpoint=after_dive_1");
+    expect(result.current.checkpoint).toBe("after_dive_1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.checkpoint).toBe("after_dive_1");
+  });
+
+  it("falls back to departure for a checkpoint the saved trip does not have", async () => {
+    // The fixture trip plans one dive, so there is no second after-dive count.
+    load.mockResolvedValue(envelope("trip-1", "Morning Two-Tank"));
+    const { result } = at("trip=trip-1&checkpoint=after_dive_2");
+    expect(result.current.checkpoint).toBe("after_dive_2");
+    await waitFor(() => expect(result.current.checkpoint).toBe("departure"));
+  });
+
+  it("ignores a checkpoint that is not one in shape", () => {
+    load.mockReturnValue(new Promise(() => {}));
+    const { result } = at("trip=trip-1&checkpoint=bogus");
+    expect(result.current.checkpoint).toBe("departure");
+  });
+
+  it("syncs with signal and reports every queue caught up", async () => {
+    setOnline(true);
+    const saved = withEvents("trip-1", { pending: 1 });
+    const synced = withEvents("trip-1", {});
+    load.mockResolvedValue(saved);
+    sync.mockResolvedValue(synced);
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.message).toBe(line("allCaughtUp")));
+    expect(sync).toHaveBeenCalledWith("trip-1");
+    expect(result.current.envelope).toBe(synced);
+  });
+
+  it("counts what is still waiting after a sync", async () => {
+    setOnline(true);
+    load.mockResolvedValue(withEvents("trip-1", { pending: 2 }));
+    sync.mockResolvedValue(withEvents("trip-1", { pending: 2 }));
+    const { result } = at("trip=trip-1");
+    await waitFor(() =>
+      expect(result.current.message).toBe(`${line("pendingWaiting")} {"count":2}`),
+    );
+  });
+
+  it("puts a refused event ahead of anything still waiting", async () => {
+    setOnline(true);
+    load.mockResolvedValue(withEvents("trip-1", { pending: 1 }));
+    sync.mockResolvedValue(withEvents("trip-1", { pending: 1, rejected: 1 }));
+    const { result } = at("trip=trip-1");
+    await waitFor(() =>
+      expect(result.current.message).toBe(`${line("pendingRejectedSingle")} {"count":1}`),
+    );
+  });
+
+  it("says the server could not be reached when the sync throws", async () => {
+    setOnline(true);
+    load.mockResolvedValue(withEvents("trip-1", { pending: 1 }));
+    sync.mockRejectedValue(new Error("offline after all"));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.message).toBe(line("reachError")));
+  });
+
+  it("never submits another shop's saved events under the signed-in shop", async () => {
+    setOnline(true);
+    load.mockResolvedValue(withEvents("trip-1", { pending: 1 }, "other-shop"));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    await act(async () => result.current.reconcile());
+    expect(sync).not.toHaveBeenCalled();
+    expect(result.current.message).toBe(line("ready"));
+  });
+
+  it("syncs nothing when it cannot tell which shop is signed in", async () => {
+    setOnline(true);
+    tenant.slug = null;
+    load.mockResolvedValue(withEvents("trip-1", { pending: 1 }));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    await act(async () => result.current.reconcile());
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it("syncs again when signal comes back", async () => {
+    load.mockResolvedValue(withEvents("trip-1", { pending: 1 }));
+    sync.mockResolvedValue(withEvents("trip-1", {}));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(sync).not.toHaveBeenCalled();
+    setOnline(true);
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(result.current.message).toBe(line("allCaughtUp")));
+  });
+});
+
+describe("useSavedManifest on the list", () => {
+  it("lists what the device holds and counts it", async () => {
+    const saved = [envelope("trip-1", "Morning"), envelope("trip-2", "Night")];
+    list.mockResolvedValue(saved);
+    const { result } = at("");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.tripId).toBe("");
+    expect(result.current.list).toBe(saved);
+    expect(result.current.message).toBe(`${line("savedCount")} {"count":2}`);
+  });
+
+  it("leaves the status line empty when nothing is saved", async () => {
+    list.mockResolvedValue([]);
+    const { result } = at("");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.list).toEqual([]);
+    expect(result.current.message).toBe("");
+  });
+
+  it("settles on an error line when the list cannot be read", async () => {
+    list.mockRejectedValue(new Error("store unreadable"));
+    const { result } = at("");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.message).toBe(line("listLoadError"));
+  });
+
+  it("syncs only the signed-in shop's copies with pending events, and merges them back", async () => {
+    setOnline(true);
+    const mine = withEvents("trip-1", { pending: 1 });
+    const theirs = withEvents("trip-2", { pending: 1 }, "other-shop");
+    const quiet = withEvents("trip-3", {});
+    const synced = withEvents("trip-1", {});
+    list.mockResolvedValue([mine, theirs, quiet]);
+    sync.mockResolvedValue(synced);
+    const { result } = at("");
+    await waitFor(() => expect(result.current.list?.[0]).toBe(synced));
+    expect(sync).toHaveBeenCalledTimes(1);
+    expect(sync).toHaveBeenCalledWith("trip-1");
+    expect(result.current.list).toEqual([synced, theirs, quiet]);
+    // The foreign copy's event is still pending, so this is not "all caught up".
+    expect(result.current.message).toBe(`${line("savedCount")} {"count":3}`);
+  });
+
+  it("says all caught up once nothing on the device is pending", async () => {
+    setOnline(true);
+    list.mockResolvedValue([withEvents("trip-1", { pending: 1 })]);
+    sync.mockResolvedValue(withEvents("trip-1", {}));
+    const { result } = at("");
+    await waitFor(() => expect(result.current.message).toBe(line("listAllCaughtUp")));
+  });
+
+  it("counts the refusals across the list", async () => {
+    setOnline(true);
+    list.mockResolvedValue([withEvents("trip-1", { pending: 2 })]);
+    sync.mockResolvedValue(withEvents("trip-1", { rejected: 2 }));
+    const { result } = at("");
+    await waitFor(() =>
+      expect(result.current.message).toBe(`${line("listPendingRejected")} {"count":2}`),
+    );
+  });
+});
+
+describe("useSavedManifest and what retention threw away", () => {
+  const lost: DiscardedOfflineRecord = {
+    tripId: "trip-9",
+    tripTitle: "Wreck Dive",
+    shopName: "Blue Mantis Divers",
+    pendingEvents: 3,
+    discardedAt: "2026-08-01T12:00:00.000Z",
+  };
+
+  it("reads the discarded records after the store is opened", async () => {
+    list.mockResolvedValue([]);
+    readDiscarded.mockResolvedValue([lost]);
+    const { result } = at("");
+    await waitFor(() => expect(result.current.discarded).toEqual([lost]));
+  });
+
+  it("clears the notice at once when acknowledged, and records the acknowledgement", async () => {
+    list.mockResolvedValue([]);
+    readDiscarded.mockResolvedValue([lost]);
+    const { result } = at("");
+    await waitFor(() => expect(result.current.discarded).toEqual([lost]));
+    act(() => result.current.acknowledgeDiscarded());
+    expect(result.current.discarded).toEqual([]);
+    expect(acknowledge).toHaveBeenCalledTimes(1);
+  });
+});

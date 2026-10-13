@@ -45,7 +45,7 @@ const { requireShopSurface } = await import("@/lib/session");
 const {
   addToWaitlistAction,
   confirmDiverIdentityAction,
-  markWaiverInPersonAction,
+  markRosterWaiverInPersonAction,
   splitDiverIdentityAction,
   removeBookingAction,
   undoRemoveBookingAction,
@@ -179,7 +179,7 @@ describe("a booking that sits on another departure", () => {
   it("gets no paper waiver recorded from this roster", async () => {
     onAnotherDeparture();
 
-    const state = await markWaiverInPersonAction(
+    const state = await markRosterWaiverInPersonAction(
       SHOP_SLUG,
       TRIP_ID,
       { status: "idle" },

@@ -4,7 +4,7 @@ import { isUuid } from "@/lib/uuid";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
-import { liveTrip } from "./trips-live";
+import { livePerson, liveTrip } from "./trips-live";
 
 export async function addInternalNote(
   db: AppDb,
@@ -38,7 +38,7 @@ export async function addInternalNote(
     const [actor] = await tx
       .select({ name: people.fullName })
       .from(people)
-      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
       .limit(1);
     if (!scope || !actor) return null;
     const [note] = await tx
@@ -82,12 +82,13 @@ export async function addDiverNote(
     const [diver] = await tx
       .select({ name: people.fullName })
       .from(people)
+      // diveday:allow-deleted-people: the diver's name for a note on their record, which stays readable after removal.
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
       .limit(1);
     const [actor] = await tx
       .select({ name: people.fullName })
       .from(people)
-      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
       .limit(1);
     if (!diver || !actor) return null;
     const [note] = await tx
@@ -145,12 +146,13 @@ export async function recordDiverActivity(
   const [diver] = await db
     .select({ name: people.fullName })
     .from(people)
+    // diveday:allow-deleted-people: the diver's name for a line on their record, which stays readable after removal.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
   const [actor] = await db
     .select({ name: people.fullName })
     .from(people)
-    .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+    .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
     .limit(1);
   if (!diver || !actor) return false;
   await db.insert(activityEvents).values({
@@ -210,7 +212,7 @@ export async function deleteInternalNote(
     const [actor] = await tx
       .select({ name: people.fullName })
       .from(people)
-      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
       .limit(1);
     if (!actor) return { deleted: false };
     await tx
@@ -257,7 +259,7 @@ export async function deleteDiverNote(
     const [actor] = await tx
       .select({ name: people.fullName })
       .from(people)
-      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
       .limit(1);
     if (!actor) return { deleted: false };
     await tx
@@ -435,6 +437,7 @@ export async function pagedDiverActivity(
     pageSize: options.pageSize ?? DIVER_ACTIVITY_PAGE_SIZE,
     countRows: async () => {
       if (!usable) return 0;
+      // diveday:allow-unscoped-event: `theirs` opens with activityEvents.shopId.
       const [row] = await db.select({ count: count() }).from(activityEvents).where(theirs);
       return row?.count ?? 0;
     },
@@ -442,6 +445,7 @@ export async function pagedDiverActivity(
       usable
         ? await db
             .select()
+            // diveday:allow-unscoped-event: `theirs` opens with activityEvents.shopId.
             .from(activityEvents)
             .where(theirs)
             .orderBy(desc(activityEvents.occurredAt), desc(activityEvents.seq))

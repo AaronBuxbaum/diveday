@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { sendDueCheckoutRecoveries } from "@/db/checkout-recovery";
 import { getDb } from "@/db/client";
@@ -11,6 +10,7 @@ import { requireCronSecret } from "@/lib/cron-auth";
 import { DAILY_TICK_CRONTAB } from "@/lib/cron-schedule";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 
 /**
  * Six scans run one after another, several of which can send email/SMS through a
@@ -97,7 +97,7 @@ async function runScan<T>(scan: string, run: () => Promise<T>): Promise<ScanOutc
   try {
     return { status: "ok", result: await run() };
   } catch (error) {
-    Sentry.captureException(error, { tags: { cron_scan: scan } });
+    await sentry.captureException(error, { tags: { cron_scan: scan } });
     log("cron_reminders.scan_failed", "error", { scan });
     return { status: "error" };
   }
@@ -156,7 +156,7 @@ export async function GET(request: Request) {
   // create by hand — but if a check-in never arrives within `checkinMargin` of
   // the schedule, Sentry raises a missed-check-in alert. That is the only
   // signal that survives the endpoint never being called.
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
@@ -232,7 +232,7 @@ export async function GET(request: Request) {
     });
 
     // Dead-man's switch, half two.
-    Sentry.captureCheckIn({
+    await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
       status: failedScans.length > 0 ? "error" : "ok",
@@ -248,9 +248,9 @@ export async function GET(request: Request) {
     // migrate. Nothing ran, so there are no counts to report; the check-in
     // still has to be closed out or the monitor would read this as a run that
     // is somehow still in progress.
-    Sentry.captureException(error, { tags: { cron_scan: "bootstrap" } });
+    await sentry.captureException(error, { tags: { cron_scan: "bootstrap" } });
     log("cron_reminders.tick_failed", "error", { scan: "bootstrap" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });
   } finally {
     // See the identical block in the retention cron: a tick's log line is the

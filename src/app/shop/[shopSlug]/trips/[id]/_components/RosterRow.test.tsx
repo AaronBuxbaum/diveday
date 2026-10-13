@@ -76,7 +76,7 @@ function contextFor(status: "ready" | "blocked"): RosterRowContext {
       notesByBooking: new Map(),
     },
     actions: {
-      markWaiverInPersonAction: async () => PAPER_WAIVER_IDLE,
+      markRosterWaiverInPersonAction: async () => PAPER_WAIVER_IDLE,
       markPaymentAction: noop,
       removeBookingAction: noop,
       confirmIdentityAction: noop,

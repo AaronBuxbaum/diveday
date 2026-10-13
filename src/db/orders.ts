@@ -67,7 +67,7 @@ import {
   getShopTaxEnabled,
 } from "./stripe-accounts";
 import { invoicingProviderFromEnvironment } from "./stripe-providers";
-import { notRehearsal } from "./trips-live";
+import { livePerson, notRehearsal } from "./trips-live";
 
 export type NewOrderLineItem = {
   kind: OrderLineItemKind;
@@ -315,7 +315,7 @@ async function issueOrder(
   const [customer] = await db
     .select({ id: people.id, fullName: people.fullName, email: people.email })
     .from(people)
-    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId), livePerson()))
     .limit(1);
   const customerEmail = customer?.email ?? options.customerEmail;
   if (!customer || !customerEmail) return { ok: false, reason: "invalid" };
@@ -747,6 +747,7 @@ async function discardUnusedBuyer(db: AppDb, shopId: string, personId: string): 
       const [own] = await tx
         .select({ id: people.id })
         .from(people)
+        // diveday:allow-deleted-people: the buyer this checkout just created.
         .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.email)));
       if (!own) return;
       await tx.delete(personRoles).where(eq(personRoles.personId, personId));
@@ -859,7 +860,7 @@ export async function listOrderableCustomers(db: DbExecutor, shopId: string) {
   return db
     .select({ id: people.id, fullName: people.fullName, email: people.email })
     .from(people)
-    .where(eq(people.shopId, shopId))
+    .where(and(eq(people.shopId, shopId), livePerson()))
     .orderBy(asc(people.fullName));
 }
 
@@ -1378,6 +1379,7 @@ export async function getOrder(db: DbExecutor, shopId: string, orderId: string) 
   const [createdBy] = await db
     .select({ id: people.id, fullName: people.fullName })
     .from(people)
+    // diveday:allow-deleted-people: who raised the order, removed staff included.
     .where(and(eq(people.id, row.order.createdByPersonId), eq(people.shopId, shopId)))
     .limit(1);
   // Recorded at insert, never inferred from whoever holds which role today: a

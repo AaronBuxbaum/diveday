@@ -84,6 +84,7 @@ export async function DepartureNoteSection({
                 past: t("desk.departureNote.refusals.past"),
                 limit,
                 no_recipients: t("desk.departureNote.refusals.noRecipients"),
+                rate_limited: t("desk.departureNote.refusals.sendLimit"),
                 other: t("desk.departureNote.refusals.other"),
               },
             }}

@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { sendTrailingDeskPings } from "@/db/desk-pings";
@@ -6,6 +5,7 @@ import { requireCronSecret } from "@/lib/cron-auth";
 import { DESK_PING_CRON_CRONTAB } from "@/lib/desk-hours";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 
 const CRON_MONITOR_SLUG = "diveday-desk-pings";
 const CRON_MONITOR_CONFIG = {
@@ -29,19 +29,19 @@ export async function GET(request: Request) {
   const refused = requireCronSecret(request);
   if (refused) return refused;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
   try {
     const summary = await sendTrailingDeskPings(await getDb());
     log("cron_desk_pings.scan_complete", "info", summary);
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
     return NextResponse.json(summary);
   } catch (error) {
-    Sentry.captureException(error, { tags: { cron_scan: "desk_pings" } });
+    await sentry.captureException(error, { tags: { cron_scan: "desk_pings" } });
     log("cron_desk_pings.scan_failed", "error", { scan: "desk_pings" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });
   } finally {
     await flushLogs();

@@ -47,7 +47,7 @@ export type RowOutstandingInput = Pick<
   | "readinessByBooking"
   | "courseNextStepByBooking"
   | "elearningQueryByBooking"
-  | "markWaiverInPersonAction"
+  | "markRosterWaiverInPersonAction"
   | "markPaymentAction"
   | "certifyDiverAction"
   | "saveCourseNextStepAction"
@@ -89,7 +89,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     readinessByBooking,
     courseNextStepByBooking,
     elearningQueryByBooking,
-    markWaiverInPersonAction,
+    markRosterWaiverInPersonAction,
     markPaymentAction,
     certifyDiverAction,
     saveCourseNextStepAction,
@@ -227,7 +227,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
               record it so the waiver gate isn't held up by a signature the
               app never sees. */}
           <PaperWaiverControl
-            action={markWaiverInPersonAction}
+            action={markRosterWaiverInPersonAction}
             bookingId={booking.id}
             copy={paperWaiverCopy(t, "roster")}
             requiresGuardian={requiresGuardian}

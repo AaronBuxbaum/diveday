@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { clearFinishedRehearsals } from "@/db/rehearsals";
@@ -6,6 +5,7 @@ import { rollAllSeriesForward } from "@/db/trips";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 import { SERIES_HORIZON_DAYS } from "@/lib/recurrence";
 
 /**
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
   const refusal = requireCronSecret(request);
   if (refusal) return refusal;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
     // than an error because the shop's existing dates are all still on the
     // board — nothing a diver can see is broken yet.
     if (summary.failures > 0) {
-      Sentry.captureMessage("trip series could not be rolled forward", {
+      await sentry.captureMessage("trip series could not be rolled forward", {
         level: "warning",
         tags: { series_failures: String(summary.failures) },
       });
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
       rehearsalsCleared,
     });
 
-    Sentry.captureCheckIn({
+    await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
       status: summary.failures > 0 ? "error" : "ok",
@@ -119,9 +119,9 @@ export async function GET(request: Request) {
     // Only reachable before any series is touched — `getDb()` failing to
     // connect or migrate. The check-in still has to be closed out or the
     // monitor would read this as a run that is somehow still in progress.
-    Sentry.captureException(error, { tags: { cron_scan: "trip_series_bootstrap" } });
+    await sentry.captureException(error, { tags: { cron_scan: "trip_series_bootstrap" } });
     log("cron_trip_series.roll_failed", "error", { scan: "bootstrap" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "roll_unavailable" }, { status: 503 });
   } finally {
     await flushLogs();

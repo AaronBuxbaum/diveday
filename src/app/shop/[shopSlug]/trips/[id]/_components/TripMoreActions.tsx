@@ -12,12 +12,12 @@ import type { getTripOverview } from "@/db/trips";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { requireShopSurface } from "@/lib/session";
 import type { FormNotice } from "@/lib/staff-notices";
+import { cancelTripAction } from "../details-actions";
 import {
   applySeriesDetailsAction,
   cancelSeriesAction,
-  cancelTripAction,
   setSeriesRepeatAction,
-} from "../details-actions";
+} from "../series-actions";
 import { BlowoutDoors } from "./BlowoutDoors";
 import { SeriesMoreActions } from "./SeriesSection";
 import { TripMoreDisclosure } from "./TripAboutSection";

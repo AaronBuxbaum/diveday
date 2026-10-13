@@ -267,7 +267,7 @@ const SENDERS: Record<string, string> = {
   "src/db/waiver-guardian-copy.ts": HELD_AT_CHOKEPOINT,
   "src/app/s/[shopSlug]/trips/[id]/actions.ts":
     "the public trip page, which a rehearsal never reaches",
-  "src/app/shop/[shopSlug]/trips/[id]/details-actions.ts": HELD_AT_CHOKEPOINT,
+  "src/app/shop/[shopSlug]/trips/[id]/conditions-actions.ts": HELD_AT_CHOKEPOINT,
   "src/db/departure-notes.ts": "its departure read carries `notRehearsal()`, so no note goes",
   "src/db/lost-items.ts": "its tell reads the departure with `notRehearsal()`, so nobody is told",
   "src/db/trip-rescheduled.ts":

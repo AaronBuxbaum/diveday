@@ -281,14 +281,19 @@ export async function PublicShopFooterSection({
   const db = await getDb();
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) return null;
-  const locale = await requestLocale(shop.defaultLocale);
-  const t = diverTranslator(locale);
   // "We speak …" — every language any active staff member has recorded
   // (issue #708), named in each language's own endonym (not the reader's
   // locale) so a diver who reads none of the site's two languages still
   // recognises their own among the badges. Nothing when nobody has recorded
-  // one — additive, never a placeholder for an empty shop.
-  const spokenLanguages = await listShopSpokenLanguages(db, shop.id);
+  // one — additive, never a placeholder for an empty shop. Read beside the
+  // WhatsApp number and the locale, not after them (code review 2026-10-13,
+  // item 29).
+  const [locale, spokenLanguages, whatsAppNumber] = await Promise.all([
+    requestLocale(shop.defaultLocale),
+    listShopSpokenLanguages(db, shop.id),
+    shopPublicWhatsAppNumber(db, shop.id),
+  ]);
+  const t = diverTranslator(locale);
   const spokenLanguagesLine =
     spokenLanguages.length === 0
       ? null
@@ -296,7 +301,7 @@ export async function PublicShopFooterSection({
           spokenLanguages.map((code) => languageEndonym(code) ?? code),
         );
   const deskHoursLine = shop.deskHoursConfirmedAt ? deskHoursText(shop, locale, t) : null;
-  const whatsAppHref = whatsAppChatHref(await shopPublicWhatsAppNumber(db, shop.id));
+  const whatsAppHref = whatsAppChatHref(whatsAppNumber);
   return (
     <PublicShopFooter
       shop={shop}

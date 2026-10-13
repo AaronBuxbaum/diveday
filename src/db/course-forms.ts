@@ -71,7 +71,12 @@ export type CourseFormSummary = {
   updatedAt: Date;
 };
 
-/** Every live form of a shop with its current version, oldest first. */
+/**
+ * Every live form of a shop with its current version, oldest first; forms
+ * created in the same instant by title, then by id. The seed stamps every
+ * form with one time, and an id is random, so without the title the list
+ * reordered on every reseed (issue #2512).
+ */
 export async function listCourseForms(
   db: DbExecutor,
   shopId: string,
@@ -95,10 +100,12 @@ export async function listCourseForms(
         isNull(courseForms.deletedAt),
       ),
     )
-    .orderBy(asc(courseForms.createdAt), asc(courseForms.id), desc(courseFormVersions.version));
+    .orderBy(asc(courseForms.id), desc(courseFormVersions.version));
   const current = new Map<string, CourseFormSummary>();
+  const createdAt = new Map<string, number>();
   for (const row of rows) {
     if (current.has(row.id)) continue;
+    createdAt.set(row.id, row.createdAt.getTime());
     current.set(row.id, {
       id: row.id,
       title: row.title,
@@ -108,7 +115,17 @@ export async function listCourseForms(
       updatedAt: row.versionCreatedAt,
     });
   }
-  return [...current.values()];
+  return [...current.values()].sort(
+    (a, b) =>
+      (createdAt.get(a.id) ?? 0) - (createdAt.get(b.id) ?? 0) ||
+      byCodePoint(a.title, b.title) ||
+      byCodePoint(a.id, b.id),
+  );
+}
+
+/** A comparison no runtime locale can change. */
+function byCodePoint(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /** A new form, at version 1. */

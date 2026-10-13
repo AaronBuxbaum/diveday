@@ -44,10 +44,8 @@ import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { countSpendableDives } from "@/db/dive-packages";
-import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
-import { departureAfterLateBoarding, getRecapPageState } from "@/db/recap";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
@@ -74,12 +72,12 @@ import { nitroxAvailableOn } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
   buildThreadSteps,
-  isAfterTheDive,
   isDiveDay,
   partyIsAllSet,
   type ThreadStep,
   theBoatIsHome,
 } from "@/lib/thread-steps";
+import { readAfterTheDive } from "./_components/after-dive-reads";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
 import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
 import { saveEmergencyContactFromReady } from "./paperwork-actions";
@@ -247,9 +245,9 @@ async function DiverReadinessPage({
    * alone, and the clock cannot tell whether this diver was on the boat — so
    * the crew's own departure roll call decides it wherever a shop kept one,
    * and the four-hour recap floor decides it where none exists
-   * (`isAfterTheDive`, src/lib/thread-steps.ts). The read only happens once
-   * the boat is scheduled home, so an ordinary night-before page load never
-   * pays for it.
+   * (`readAfterTheDive`, beside this page). The read only happens once the
+   * boat is scheduled home, so an ordinary night-before page load never pays
+   * for it.
    *
    * The three recap actions are bound to a **recap** token minted here, never
    * to this page's readiness token: the two capabilities are domain-separated
@@ -258,17 +256,16 @@ async function DiverReadinessPage({
    * booking. The cost is that acting on one of them lands the diver on the
    * `/recap` URL, which renders this same surface.
    */
-  const departure = theBoatIsHome({ endsAt: detail.trip.endsAt })
-    ? await departureRollCallForBooking(db, shop.id, detail.trip.id, bookingId)
-    : null;
-  const boarded = await departureAfterLateBoarding(db, departure, {
-    booking: { id: bookingId },
-    shop: { id: shop.id },
-    trip: { id: detail.trip.id },
+  const afterDive = await readAfterTheDive(db, {
+    shopId: shop.id,
+    tripId: detail.trip.id,
+    endsAt: detail.trip.endsAt,
+    bookingId,
+    identityHeld: data.identityHeld,
   });
-  if (isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })) {
+  if (afterDive.afterTheDive) {
     if (data.identityHeld) return <HeldAfterDiveCard shop={shopContact} t={t} />;
-    const recapState = await getRecapPageState(db, bookingId);
+    const recapState = await afterDive.recap();
     if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
     const recap = recapState.kind === "recap" ? recapState.data : null;
     if (!recap) return <NoShowCard shop={shopContact} t={t} />;

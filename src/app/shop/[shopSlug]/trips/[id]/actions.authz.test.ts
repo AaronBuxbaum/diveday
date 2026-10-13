@@ -65,7 +65,8 @@ const { refundBookingOnCancellation } = await import("@/db/refunds");
 const { markPaymentAction, removeBookingAction, setParticipantTypeAction } = await import(
   "./actions"
 );
-const { reinstateTripAction, saveRequirementsAction } = await import("./details-actions");
+const { reinstateTripAction } = await import("./details-actions");
+const { saveRequirementsAction } = await import("./terms-actions");
 const { certifyDiverFromRosterAction } = await import("./course-actions");
 
 /**
@@ -602,7 +603,7 @@ describe("who may run each action on the trip page", () => {
     // undone by an owner or manager's merge, and `splitBookingIdentity` writes
     // its trail on the departure and on the matched diver's record.
     "splitDiverIdentityAction",
-    "markWaiverInPersonAction",
+    "markRosterWaiverInPersonAction",
     // A course form signed on paper: the release's paper path, on the same
     // terms (ADR 20261008-course-forms). The record names the staffer who
     // took it, and `recordPaperCourseForm` refuses anyone not active staff.
@@ -652,8 +653,9 @@ describe("who may run each action on the trip page", () => {
 
   /**
    * Every exported action's source, sliced from its `export` to its closing brace, across the
-   * departure's action files, one per tab (`details-actions.ts` the About and Details tab,
-   * `notes-actions.ts` the internal notes, `course-actions.ts` the course roster's doors; the
+   * departure's action files, one per tab or concern (the About and Details tab split by what
+   * each changes: `details-actions.ts`, `conditions-actions.ts`, `terms-actions.ts`,
+   * `series-actions.ts`, `crew-actions.ts`, `print-actions.ts`; `notes-actions.ts` the internal notes, `course-actions.ts` the course roster's doors; the
    * desk's three — the note, the dock rider, lost and found — have their own files).
    */
   function actionBodies(): Map<string, string> {
@@ -661,6 +663,11 @@ describe("who may run each action on the trip page", () => {
     for (const file of [
       "./actions.ts",
       "./details-actions.ts",
+      "./conditions-actions.ts",
+      "./terms-actions.ts",
+      "./series-actions.ts",
+      "./crew-actions.ts",
+      "./print-actions.ts",
       "./notes-actions.ts",
       "./course-actions.ts",
       "./departure-note-actions.ts",

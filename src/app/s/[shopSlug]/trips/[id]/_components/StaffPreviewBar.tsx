@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
+import { staffTranslator } from "@/i18n/staff-messages";
 
 /**
  * The one staff-facing strip on an otherwise entirely diver-facing page.
@@ -11,18 +12,24 @@ import { buttonClass } from "@/components/ui/button";
  * ("this is the diver's view, the management view is over here") while leaving
  * the preview on screen.
  *
- * Words come in as props: the surrounding page renders diver copy, and staff
- * copy is server-resolved from the staff bundle by the caller.
+ * Staff words come from the staff bundle even here — the rest of this page
+ * speaks to divers, and mixing the two vocabularies in one file is exactly what
+ * the two bundles exist to prevent. A server component, so the staff bundle is
+ * resolved here and never reaches the browser.
  */
 export function StaffPreviewBar({
-  message,
-  manageLabel,
-  manageHref,
+  locale,
+  shopSlug,
+  tripId,
 }: {
-  message: string;
-  manageLabel: string;
-  manageHref: string;
+  locale: string;
+  shopSlug: string;
+  tripId: string;
 }) {
+  const t = staffTranslator(locale);
+  const message = t("trips.publicPreview.banner");
+  const manageLabel = t("trips.publicPreview.manage");
+  const manageHref = `/shop/${shopSlug}/trips/${tripId}`;
   return (
     <div
       role="status"

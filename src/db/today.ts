@@ -27,6 +27,7 @@ import {
 import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rentalFitCompleteness } from "@/lib/rentals";
+import { inAfterDivePopulation, isAccountedForAfterDive } from "@/lib/roll-call-population";
 import {
   filterActionsForRoles,
   isBlockedAboard,
@@ -388,13 +389,8 @@ export type OpenRollCall = {
  * asymmetry read the other way round: the population counted at risk here is
  * the population the desk may not call absent. Widen who is at risk and that
  * gate must widen with it.
- */
-function isAccountedForAfterDive(state: "boarded" | "not_boarded" | undefined): boolean {
-  return state === "boarded";
-}
-
-/**
- * Who an after-dive count is counting. **Not** everyone who bought a seat.
+ *
+ * **Who an after-dive count is counting.** Not everyone who bought a seat.
  *
  * Crews tap "Boarded" for the people standing in front of them and never touch
  * the two who didn't show; there is no bulk action, and the one act that does
@@ -412,10 +408,11 @@ function isAccountedForAfterDive(state: "boarded" | "not_boarded" | undefined): 
  * after-dive checkpoint later (a diver who joined at the second site, or one
  * the crew counted without a dock result). A diver with no departure result at
  * all is a *departure*-count problem and gets its own, quieter row.
+ *
+ * Both rules are `isAccountedForAfterDive` and `inAfterDivePopulation` in
+ * `src/lib/roll-call-population.ts`, imported here rather than copied, so the
+ * Today queue and every other head count read one predicate.
  */
-function inAfterDivePopulation(states: readonly ("boarded" | "not_boarded" | undefined)[]) {
-  return states[0] === "boarded" || states.slice(1).some((state) => state !== undefined);
-}
 
 /**
  * Every trip whose head count is not closed — the number that says whether

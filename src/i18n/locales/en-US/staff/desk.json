@@ -53,6 +53,7 @@
       "past": "This departure has sailed.",
       "limit": "This departure has had its {max, plural, one {# note} other {# notes}}.",
       "noRecipients": "Nobody is booked yet.",
+      "sendLimit": "You have sent a lot of notes this hour. Try again in a little while.",
       "other": "Couldn’t send it."
     },
     "sentCount": "{count, plural, one {# sent} other {# sent}}"

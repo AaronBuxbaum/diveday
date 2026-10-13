@@ -60,7 +60,9 @@ const checks = [
   ["icu-plurals", "check-icu-plurals.mjs"],
   ["live-trips", "check-live-trips.mjs"],
   ["live-people", "check-live-people.mjs"],
+  ["event-scope", "check-event-scope.mjs"],
   ["slug-actions", "check-slug-actions.mjs"],
+  ["env-reads", "check-env-reads.mjs"],
   ["trip-revision", "check-trip-revision.mjs"],
   ["time-id-order", "check-time-id-order.mjs"],
   ["departure-buffer", "check-departure-buffer.mjs"],
@@ -77,6 +79,7 @@ const checks = [
   ["ci-change-detection", "check-ci-change-detection.mjs"],
   ["node-version", "check-node-version.mjs"],
   ["closing-keywords", "check-closing-keywords.mjs"],
+  ["sentry-imports", "check-sentry-imports.mjs"],
 ];
 
 function runCheck(label, scriptFile) {

@@ -8,11 +8,11 @@
  */
 import { notFound } from "next/navigation";
 import { loadActiveStaffRoles } from "@/db/authz";
-import { type AppDb, getDb } from "@/db/client";
+import type { AppDb } from "@/db/client";
 import { getMergedIntoPersonId } from "@/db/people";
 import { isStaff } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { diverRecordIsClear } from "./_lib/status-load";
@@ -98,13 +98,11 @@ export async function requireDiverActionContext(
   const personId = uuidParam(rawPersonId);
   if (!personId) notFound();
 
-  const staff = await requireStaffSession();
   // The slug is bound into the action by the form, so a replay can name any
   // shop. The reads and writes below scope by the session's shop, but the
   // paths revalidated and redirected to are built from the slug, so a slug
-  // that is not the session's shop is refused before either is built.
-  if (shopSlug !== staff.user.shopSlug) notFound();
-  const db = await getDb();
+  // that is not the session's shop is a 404 before either is built.
+  const { session: staff, db } = await requireShopSurface(shopSlug);
   const base = shopPath(shopSlug, "divers", personId);
   if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, backTo(base, unauthorizedNotice, form));

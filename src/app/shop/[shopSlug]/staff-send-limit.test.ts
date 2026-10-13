@@ -13,8 +13,9 @@ import {
 
 /**
  * **A staff member past the hourly send bound** (`RATE_LIMITS.staffSendByActor`)
- * on each of the five one-tap sends to someone outside the shop: a fresh waiver
- * link, a reply to a diver, a staff invite and its resend, an invoice resend.
+ * on each of the one-tap sends to someone outside the shop: a fresh waiver
+ * link, a reply to a diver, a staff invite and its resend, an invoice resend,
+ * a departure's recaps and a note to everyone on a departure.
  *
  * Each is refused with words before anything is written or sent. The real gate
  * runs behind a mocked `auth()`; only the bucket's answer is forced.
@@ -59,6 +60,14 @@ vi.mock("@/db/waiver-issue", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/waiver-issue")>();
   return { ...actual, deliverWaiverBatch: vi.fn() };
 });
+vi.mock("@/db/recap", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/recap")>();
+  return { ...actual, sendTripRecaps: vi.fn() };
+});
+vi.mock("@/db/held-sends", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/held-sends")>();
+  return { ...actual, holdSend: vi.fn() };
+});
 vi.mock("@/db/waivers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/waivers")>();
   return { ...actual, retireMedicalRefusal: vi.fn() };
@@ -76,6 +85,10 @@ const { sendNewWaiverAction } = await import("./trips/[id]/actions");
 const { replyToDiverAction } = await import("./divers/[personId]/details-actions");
 const { inviteStaffAction, resendInviteAction } = await import("./settings/team/actions");
 const { resendInvoiceAction } = await import("@/app/actions/invoices");
+const { sendTripRecaps } = await import("@/db/recap");
+const { holdSend } = await import("@/db/held-sends");
+const { sendRecapAction } = await import("./actions");
+const { holdDepartureNoteAction } = await import("./trips/[id]/departure-note-actions");
 
 const ctx = fileScopedShopContext();
 
@@ -174,6 +187,25 @@ describe("a staff member past the hourly send bound", () => {
     expect(result).toEqual({ status: "error", reason: "rate_limited" });
     expect(lastBucketPolicy()).toBe(RATE_LIMITS.staffSendByActor);
     expect(resendOrderInvoice).not.toHaveBeenCalled();
+  });
+
+  it("a departure's recaps are refused before any goes out", async () => {
+    const booking = await aSeatedBooking();
+    const to = await redirectedTo(() => sendRecapAction(booking.tripId));
+    expect(to).toContain("notice=recap-send-limit");
+    expect(lastBucketPolicy()).toBe(RATE_LIMITS.staffSendByActor);
+    expect(sendTripRecaps).not.toHaveBeenCalled();
+  });
+
+  it("a note to everyone on a departure answers rate_limited and holds nothing", async () => {
+    const booking = await aSeatedBooking();
+    const result = await holdDepartureNoteAction(
+      booking.tripId,
+      form({ body: "Meet at the dock at seven." }),
+    );
+    expect(result).toEqual({ ok: false, reason: "rate_limited" });
+    expect(lastBucketPolicy()).toBe(RATE_LIMITS.staffSendByActor);
+    expect(holdSend).not.toHaveBeenCalled();
   });
 
   it("each kind of send has its own bucket per staff member", async () => {

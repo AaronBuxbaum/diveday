@@ -45,24 +45,17 @@ async function openPrivateNotes(page: Page) {
   return details;
 }
 
-test("staff adds a walk-in diver, then wait-lists one once the trip is full", async ({ page }) => {
-  // A held send counts eight seconds down before it leaves (ADR
-  // 20260906-before-you-ask, decision 2); this test sends one, and the
-  // explicit budget below covers the hold. No `test.slow()` beside it: the
-  // later `test.setTimeout` replaces whatever slow() set, so the two never
-  // composed (issue #1906).
-  // Longest sequential flow in this file: create a trip, add a diver, add a
-  // private note, delete it, undo, delete again, then wait-list a second
-  // diver — each its own status-toast wait. Same aggregate-cost reasoning as
-  // visual.spec.ts's `test.setTimeout`: a traced CI failure showed every
-  // individual step resolving successfully, just past the default 15s
-  // budget in total — not a hang this override would mask.
-  test.setTimeout(30_000);
-
+/**
+ * A capacity-1 trip of the spec's own, opened on its Trip tab with one
+ * walk-in seated through the Add diver form: the boat is full afterwards.
+ * Both walk-in tests start here, so each carries one half of the old single
+ * flow (notes, then wait list) and neither runs on its budget's edge.
+ */
+async function openNewTripWithWalkIn(page: Page, titlePrefix: string): Promise<string> {
   // Unique title so assertions target this spec's own trip, never a seeded
   // one. (Isolation across tests comes from the per-test demo reset in
   // fixtures.ts, not from this suffix.)
-  const title = `Walk-in Test Trip ${e2eNow().getTime()}`;
+  const title = `${titlePrefix} ${e2eNow().getTime()}`;
 
   await createTrip(page, {
     title,
@@ -101,6 +94,18 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .filter({ has: page.getByRole("heading", { level: 1, name: title }) });
   await expect(header.getByText("Full", { exact: true })).toBeVisible();
 
+  return title;
+}
+
+test("staff adds a walk-in diver, and keeps a private note about them", async ({ page }) => {
+  // Create a trip, add a diver, add a private note, delete it, undo, delete
+  // again, read the trail — each its own status-toast wait. A traced CI
+  // failure showed every step resolving, just past the default 15s budget in
+  // total, so this flow keeps an explicit budget; the wait list that once
+  // shared it is its own test below (CI 2026-10-13, shard 3).
+  test.setTimeout(30_000);
+  await openNewTripWithWalkIn(page, "Walk-in Test Trip");
+
   const privateNotes = await openPrivateNotes(page);
   await privateNotes.scrollIntoViewIfNeeded();
   const notesScroll = await page.evaluate(() => window.scrollY);
@@ -131,8 +136,8 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await openPrivateNotes(page);
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
 
-  // Delete again — the rest of this test doesn't care about the note, only
-  // about the trip filling up.
+  // Delete again: the seat ends with no note, as a staffer tidying up would
+  // leave it.
   await page.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Add a private note").first()).toBeVisible();
 
@@ -140,7 +145,18 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await openTripActivity(page);
   await expect(page.getByText(/added a private note about Walk-in Wanda/).first()).toBeVisible();
   await expect(page.getByText(/deleted a private note about Walk-in Wanda/).first()).toBeVisible();
-  await openTripTab(page, "Trip");
+});
+
+test("staff wait-lists a diver once the trip is full, and invites them to a seat", async ({
+  page,
+}) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one, and the
+  // explicit budget covers the hold. No `test.slow()` beside it: the later
+  // `test.setTimeout` replaces whatever slow() set, so the two never composed
+  // (issue #1906).
+  test.setTimeout(30_000);
+  await openNewTripWithWalkIn(page, "Wait-list Test Trip");
 
   // Trip is now full — the same section switches to wait-listing.
   await expect(page.getByRole("link", { name: "Add to wait list" })).toBeVisible();

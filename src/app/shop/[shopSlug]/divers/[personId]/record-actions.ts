@@ -5,7 +5,7 @@ import { canPersonDeleteDiver, canPersonErasePersonalData, canPersonMergeDiver }
 import { DIVER_MERGE_FIELDS, type DiverMergeChoices, mergeDiverRecords } from "@/db/diver-merge";
 import { deleteDiver, getDiverProfile, restoreDiver } from "@/db/divers";
 import { eraseGuardianEmail } from "@/db/guardian-erasure";
-import { countUpcomingCrewDepartures } from "@/db/trips";
+import { countCrewDeparturesNotHome } from "@/db/trips";
 import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -103,10 +103,11 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
     revalidateAndRedirect(base, backTo(base, "not-authorized-delete", "remove"));
     return;
   }
-  // Someone who also works here and is still crew on a boat ahead would stay
-  // on that manifest, and in its crew ratio, after leaving every picker and
-  // sign-in. They come off those boats first.
-  if ((await countUpcomingCrewDepartures(db, staff.user.shopId, personId)) > 0) {
+  // Someone who also works here and is crew on a boat ahead or still out would
+  // stay on that manifest, and in its crew ratio, after leaving every picker
+  // and sign-in, and could no longer be counted back in at roll call. They
+  // come off those boats, or the boat comes home, first.
+  if ((await countCrewDeparturesNotHome(db, staff.user.shopId, personId)) > 0) {
     revalidateAndRedirect(base, backTo(base, "remove-crew-upcoming", "remove"));
     return;
   }
