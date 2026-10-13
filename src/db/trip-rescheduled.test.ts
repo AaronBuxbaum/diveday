@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
@@ -105,14 +106,14 @@ const HOUR = 3_600_000;
  */
 async function courseUnderway(dayOneAgo: number) {
   const { db, shop } = ctx;
-  const realNow = new Date();
+  const now = nowDate();
   const days = (dayOne: Date) =>
     [0, 1, 2].map((day) => ({
       dayNumber: day + 1,
       startsAt: new Date(dayOne.getTime() + day * 24 * HOUR),
       endsAt: new Date(dayOne.getTime() + day * 24 * HOUR + 4 * HOUR),
     }));
-  const ahead = new Date(realNow.getTime() + 6 * HOUR);
+  const ahead = new Date(now.getTime() + 6 * HOUR);
   const course = await createTrip(db, {
     shopId: shop.id,
     title: "Three-day course",
@@ -139,7 +140,7 @@ async function courseUnderway(dayOneAgo: number) {
     },
   ]);
   if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
-  const dayOne = new Date(realNow.getTime() - dayOneAgo * HOUR);
+  const dayOne = new Date(now.getTime() - dayOneAgo * HOUR);
   await db
     .update(trips)
     .set({
@@ -157,7 +158,7 @@ async function courseUnderway(dayOneAgo: number) {
         and(eq(tripScheduleDays.tripId, course.id), eq(tripScheduleDays.dayNumber, day.dayNumber)),
       );
   }
-  return { db, shop, course, dayOne, now: realNow };
+  return { db, shop, course, dayOne, now };
 }
 
 describe("sendRescheduleNotices", () => {

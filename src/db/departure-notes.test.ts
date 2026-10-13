@@ -14,14 +14,7 @@ import {
   sendDepartureNote,
 } from "./departure-notes";
 import { claimHeldSend, executeHeldSend, holdSend } from "./held-sends";
-import {
-  activityEvents,
-  departureNotes,
-  people,
-  shops,
-  tripScheduleDays,
-  trips,
-} from "./schema";
+import { activityEvents, departureNotes, people, shops, tripScheduleDays, trips } from "./schema";
 import { createTrip, setTripStatus } from "./trips";
 
 /**
