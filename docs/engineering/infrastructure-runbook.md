@@ -716,6 +716,31 @@ breaking anything still holding it, where a hand-minted key would have survived 
 the correct default — a credential this stack no longer describes should stop working — but it is a
 sharp edge worth knowing before deleting a user.
 
+### Rotating `SECRET_ENCRYPTION_KEY`
+
+This key seals every staffer's two-factor secret and HMACs their recovery codes, so a key swapped in
+one step **locks out every account that turned on two-factor**: sign-in demands the second factor and
+nothing can check it. It also seals WhatsApp tokens, connector credentials, backup destinations,
+reusable waiver links and queued notifications, which degrade instead. The app therefore reads two
+keys (`src/lib/secret-box.ts`): `SECRET_ENCRYPTION_KEY` seals and opens, and
+`SECRET_ENCRYPTION_KEY_PREVIOUS` only opens.
+
+1. Copy the current `SECRET_ENCRYPTION_KEY` out of `.env.local` into `.env.manual` as
+   `SECRET_ENCRYPTION_KEY_PREVIOUS`.
+2. Rotate the seed (`diveday/app-secret-seed`), run `pnpm infra:deploy`, then import `.env.vercel`
+   as the table above says. The seed also derives `AUTH_SECRET` and `CRON_SECRET`, which rotate with
+   it.
+3. From then on every value is sealed under the new key when it is next written. A two-factor secret
+   is re-sealed at the account's next sign-in; recovery codes issued before the rotation stay hashed
+   under the old key and keep working while it is set.
+4. Remove `SECRET_ENCRYPTION_KEY_PREVIOUS` only when every two-factor account has signed in since the
+   rotation and replaced its old recovery codes (turn two-factor off and on again), and every shop has
+   reconnected WhatsApp and its connectors and re-saved its backup destination. Whatever is still
+   sealed under the old key stops opening at that moment.
+
+A malformed `SECRET_ENCRYPTION_KEY_PREVIOUS` is reported as an invalid key, as a malformed current key
+is: it would otherwise quietly fail everything it was set to open.
+
 ### Why two secrets, not ten
 
 Secrets Manager bills $0.40 per secret per month and has no free tier. Eight credential secrets plus

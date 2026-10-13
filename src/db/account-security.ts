@@ -1,6 +1,12 @@
 import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { nowDate, nowMs } from "@/lib/clock";
-import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
+import {
+  openingKeys,
+  openSecretWithKeyring,
+  sealingKey,
+  sealSecret,
+  secretKeyFromEnvironment,
+} from "@/lib/secret-box";
 import {
   createTotpSecret,
   generateRecoveryCodes,
@@ -28,7 +34,7 @@ export async function beginTotpEnrollment(db: DbExecutor, userAccountId: string)
   if (current?.totpEnabledAt) return null;
   const secret = createTotpSecret();
   const recoveryCodes = generateRecoveryCodes();
-  const hashes = recoveryCodeHashes(recoveryCodes, key.key, userAccountId);
+  const hashes = recoveryCodeHashes(recoveryCodes, sealingKey(key.key), userAccountId);
   await db
     .insert(accountSecurity)
     .values({
@@ -54,12 +60,7 @@ export async function enableTotp(
   userAccountId: string,
   code: string,
 ): Promise<boolean> {
-  const security = await getAccountSecurity(db, userAccountId);
-  const key = secretKeyFromEnvironment();
-  const secret =
-    security?.totpSecretSealed && key.status === "ok"
-      ? openSecret(security.totpSecretSealed, key.key)
-      : null;
+  const secret = await resealedTotpSecret(db, userAccountId);
   if (!secret || !verifyTotpCode(secret, code)) return false;
   await db
     .update(accountSecurity)
@@ -69,28 +70,26 @@ export async function enableTotp(
 }
 
 /**
- * Verifies a second factor. Sign-in consumes a TOTP time step to prevent a
- * replayed code from creating another session; step-up and factor-management
- * checks can validate the still-current TOTP window without consuming it so a
- * staff member is not locked out of the next action immediately after sign-in.
- * A recovery code is always removed atomically from the stored hash list.
+ * Verifies a second factor, and spends it. Sign-in, step-up and turning
+ * two-factor off each grant something, so each consumes the TOTP time step: a
+ * code seen over a shoulder, or already used to sign in, does not pass again
+ * inside its window. The next code arrives within one step. A recovery code is
+ * removed atomically from the stored hash list.
  */
 export async function verifyAccountSecondFactor(
   db: DbExecutor,
   userAccountId: string,
   code: string,
-  options: { consumeTotpStep?: boolean } = {},
 ): Promise<boolean> {
   const security = await getAccountSecurity(db, userAccountId);
   if (!security?.totpEnabledAt) return true;
 
-  const secret = await getTotpSecret(db, userAccountId);
+  const secret = await resealedTotpSecret(db, userAccountId);
   const now = nowMs();
   // The step the code was *for*, which with drift accepted is not always the
   // current one -- consuming the current step would leave the real one live.
   const step = secret ? matchTotpStep(secret, code, now) : null;
   if (step !== null) {
-    if (options.consumeTotpStep === false) return true;
     const [row] = await db
       .update(accountSecurity)
       .set({ lastTotpStep: step, updatedAt: nowDate() })
@@ -106,7 +105,21 @@ export async function verifyAccountSecondFactor(
 
   const key = secretKeyFromEnvironment();
   if (key.status !== "ok") return false;
-  const recoveryHash = recoveryCodeHashes([code], key.key, userAccountId)[0];
+  // A code issued before a key rotation was hashed under the previous key, and
+  // cannot be re-hashed without its plaintext: each one is tried under both.
+  for (const candidate of openingKeys(key.key)) {
+    if (await spendRecoveryCode(db, userAccountId, code, candidate)) return true;
+  }
+  return false;
+}
+
+async function spendRecoveryCode(
+  db: DbExecutor,
+  userAccountId: string,
+  code: string,
+  key: Buffer,
+): Promise<boolean> {
+  const recoveryHash = recoveryCodeHashes([code], key, userAccountId)[0];
   const [row] = await db
     .update(accountSecurity)
     .set({
@@ -126,12 +139,45 @@ export async function verifyAccountSecondFactor(
   return Boolean(row);
 }
 
+/**
+ * The account's TOTP secret, or null when there is none or no key opens it.
+ * Read-only: the security page shows it during enrolment.
+ */
 export async function getTotpSecret(db: DbExecutor, userAccountId: string) {
+  return (await openTotpSecret(db, userAccountId))?.plaintext ?? null;
+}
+
+async function openTotpSecret(db: DbExecutor, userAccountId: string) {
   const security = await getAccountSecurity(db, userAccountId);
   const key = secretKeyFromEnvironment();
-  return security?.totpSecretSealed && key.status === "ok"
-    ? openSecret(security.totpSecretSealed, key.key)
-    : null;
+  const sealed = security?.totpSecretSealed;
+  if (!sealed || key.status !== "ok") return null;
+  const opened = openSecretWithKeyring(sealed, key.key);
+  return opened ? { ...opened, sealed, key: key.key } : null;
+}
+
+/**
+ * The TOTP secret for a check that writes anyway (enabling, verifying). A
+ * secret still sealed under the previous key is sealed again under the current
+ * one, so a rotation finishes for each account at its next sign-in. The write
+ * is conditional on the old ciphertext: two checks at once cannot overwrite
+ * each other with anything but the same secret.
+ */
+async function resealedTotpSecret(db: DbExecutor, userAccountId: string) {
+  const opened = await openTotpSecret(db, userAccountId);
+  if (!opened) return null;
+  if (opened.sealedWithPrevious) {
+    await db
+      .update(accountSecurity)
+      .set({ totpSecretSealed: sealSecret(opened.plaintext, opened.key), updatedAt: nowDate() })
+      .where(
+        and(
+          eq(accountSecurity.userAccountId, userAccountId),
+          eq(accountSecurity.totpSecretSealed, opened.sealed),
+        ),
+      );
+  }
+  return opened.plaintext;
 }
 
 export async function listAccountSessions(db: DbExecutor, userAccountId: string) {
