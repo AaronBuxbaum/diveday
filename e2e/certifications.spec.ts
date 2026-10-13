@@ -463,7 +463,11 @@ test("a diver with no card says so on the readiness page, and the desk sees why"
   page,
 }) => {
   test.setTimeout(90_000);
-  const title = `Not Yet Run ${e2eNow().getTime()}`;
+  // Unique per attempt: the database outlives a retry, and two records with
+  // one name make the diver search ambiguous.
+  const stamp = Date.now();
+  const title = `Not Yet Run ${stamp}`;
+  const diver = `Tomás Ferreira ${stamp}`;
   await createTrip(page, {
     title,
     date: daysFromNow(5),
@@ -481,8 +485,8 @@ test("a diver with no card says so on the readiness page, and the desk sees why"
     .getByRole("link")
     .click();
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name", { exact: true }).fill("Tomás Ferreira");
-  await page.getByLabel("Email", { exact: true }).fill(`notyet-${e2eNow().getTime()}@example.com`);
+  await page.getByLabel("Name", { exact: true }).fill(diver);
+  await page.getByLabel("Email", { exact: true }).fill(`notyet-${stamp}@example.com`);
   await page.getByRole("button", { name: /^Book/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
 
@@ -502,7 +506,7 @@ test("a diver with no card says so on the readiness page, and the desk sees why"
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/divers");
-  await page.getByRole("searchbox", { name: "Search divers" }).fill("Tomás Ferreira");
-  await page.getByRole("link", { name: /Tomás Ferreira/ }).click();
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(diver);
+  await page.getByRole("link", { name: diver }).click();
   await expect(page.getByText(/Says they’re not certified yet/).first()).toBeVisible();
 });
