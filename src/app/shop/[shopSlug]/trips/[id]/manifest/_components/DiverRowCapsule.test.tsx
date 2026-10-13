@@ -58,7 +58,7 @@ describe("the earlier-refusal capsule", () => {
         }),
       ],
     });
-    expect(capsuleOf(container)).toHaveTextContent("Physician did not clear: riding only");
+    expect(capsuleOf(container)).toHaveTextContent("Riding only: not cleared");
     expect(capsuleOf(container)).not.toHaveTextContent(CAPSULE);
     expect(container.textContent).toMatch(
       /A physician did not clear this person on Sep\s4,\s2026: riding only, not in the water/,
@@ -343,6 +343,43 @@ describe("the unresolved-referral capsule", () => {
     expect(text.length).toBeGreaterThan(0);
     expect(text.length).toBeLessThanOrEqual(24);
   });
+});
+
+/**
+ * **The riding-only capsules fit beside a name on a phone** (#2386): held to
+ * the same 24 characters as every other capsule, in both locales, and still
+ * saying both that the rider stays aboard and why.
+ */
+describe("the riding-only capsules", () => {
+  const holds = [
+    { kind: "not_cleared", en: "Riding only: not cleared", es: "Solo a bordo: no apto" },
+    { kind: "referral", en: "Riding only: referred", es: "Solo a bordo: derivado" },
+  ] as const;
+
+  for (const hold of holds) {
+    for (const locale of ["en-US", "es-ES"] as const) {
+      it(`says ${hold.kind} in 24 characters or fewer (${locale})`, () => {
+        const { container } = renderList({
+          divers: [
+            diver({
+              participantType: "rider",
+              riderMedicalHold: {
+                kind: hold.kind,
+                at: new Date("2026-09-05T12:00:00.000Z"),
+                evaluatedOn: "2026-09-04",
+              },
+            }),
+          ],
+          locale,
+        });
+        const capsule = container.querySelector<HTMLElement>(".basis-full");
+        const words = locale === "en-US" ? hold.en : hold.es;
+        // The capsule line also carries the rider's type badge; the cap is the chip's.
+        const chip = within(capsule as HTMLElement).getByText(words);
+        expect(chip.textContent?.length).toBeLessThanOrEqual(24);
+      });
+    }
+  }
 });
 
 describe("diverCapsule, called on its own", () => {
