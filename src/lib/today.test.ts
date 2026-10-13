@@ -213,8 +213,8 @@ describe("diverBlockerAction", () => {
     );
     expect(result?.detail).toBe("Medical answer needs a doctor’s sign-off.");
     if (!result) throw new Error("expected a row");
-    expect(filterActionsForRoles([result], ["captain"]).visibleActions).toHaveLength(1);
-    expect(filterActionsForRoles([result], ["divemaster"]).visibleActions).toHaveLength(1);
+    expect(filterActionsForRoles([result], ["captain"])).toHaveLength(1);
+    expect(filterActionsForRoles([result], ["divemaster"])).toHaveLength(1);
   });
 
   it("takes the aboard kind once the diver is on the boat, keeping the fix", () => {
@@ -507,40 +507,34 @@ describe("filterActionsForRoles", () => {
     action({ id: "8", kind: "gear_due_back" }),
   ];
 
-  it("shows all actions to an owner with zero withheld", () => {
+  it("shows all actions to an owner", () => {
     const result = filterActionsForRoles(sampleActions, ["owner"]);
-    expect(result.visibleActions).toHaveLength(8);
-    expect(result.withheldCount).toBe(0);
+    expect(result).toHaveLength(8);
   });
 
-  it("shows all actions to a manager with zero withheld", () => {
+  it("shows all actions to a manager", () => {
     const result = filterActionsForRoles(sampleActions, ["manager"]);
-    expect(result.visibleActions).toHaveLength(8);
-    expect(result.withheldCount).toBe(0);
+    expect(result).toHaveLength(8);
   });
 
   it("filters out clerical and commercial rows for a captain", () => {
     const result = filterActionsForRoles(sampleActions, ["captain"]);
-    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "8"]);
-    expect(result.withheldCount).toBe(4);
+    expect(result.map((a) => a.id)).toEqual(["1", "2", "3", "8"]);
   });
 
   it("filters out clerical and commercial rows for a divemaster", () => {
     const result = filterActionsForRoles(sampleActions, ["divemaster"]);
-    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "8"]);
-    expect(result.withheldCount).toBe(4);
+    expect(result.map((a) => a.id)).toEqual(["1", "2", "3", "8"]);
   });
 
   it("shows certs and waivers to an instructor but withholds payment and deals", () => {
     const result = filterActionsForRoles(sampleActions, ["instructor"]);
-    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
-    expect(result.withheldCount).toBe(2);
+    expect(result.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
   });
 
   it("shows the union for a person holding multiple roles", () => {
     const result = filterActionsForRoles(sampleActions, ["captain", "instructor"]);
-    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
-    expect(result.withheldCount).toBe(2);
+    expect(result.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
   });
 
   it("returns the whole queue when there is no viewer to filter for", () => {
@@ -552,9 +546,8 @@ describe("filterActionsForRoles", () => {
     // owed refund because nobody was looking would be a falsified reading
     // rather than a tightened gate.
     const noRoles = filterActionsForRoles(sampleActions, undefined);
-    expect(noRoles.visibleActions).toHaveLength(8);
-    expect(noRoles.withheldCount).toBe(0);
-    expect(filterActionsForRoles(sampleActions, []).visibleActions).toHaveLength(8);
+    expect(noRoles).toHaveLength(8);
+    expect(filterActionsForRoles(sampleActions, [])).toHaveLength(8);
   });
 });
 
@@ -882,7 +875,7 @@ describe("the Say hello row", () => {
       "captain",
       "crew",
     ] as const) {
-      expect(filterActionsForRoles([action({ kind: "say_hello" })], [role]).withheldCount).toBe(0);
+      expect(filterActionsForRoles([action({ kind: "say_hello" })], [role])).toHaveLength(1);
     }
   });
 });
@@ -905,9 +898,9 @@ describe("the unanswered-messages row", () => {
       "captain",
       "crew",
     ] as const) {
-      expect(
-        filterActionsForRoles([action({ kind: "unanswered_messages" })], [role]).withheldCount,
-      ).toBe(0);
+      expect(filterActionsForRoles([action({ kind: "unanswered_messages" })], [role])).toHaveLength(
+        1,
+      );
     }
   });
 });
@@ -929,9 +922,7 @@ describe("the failed-email row", () => {
       "captain",
       "crew",
     ] as const) {
-      expect(
-        filterActionsForRoles([action({ kind: "email_delivery" })], [role]).withheldCount,
-      ).toBe(0);
+      expect(filterActionsForRoles([action({ kind: "email_delivery" })], [role])).toHaveLength(1);
     }
   });
 });
@@ -1123,7 +1114,7 @@ describe("readNeedsYou, one reading for every role", () => {
   ] as const;
 
   function readFor(role: (typeof ROLES)[number]) {
-    const { visibleActions } = filterActionsForRoles(queue, [role.role]);
+    const visibleActions = filterActionsForRoles(queue, [role.role]);
     const spine = assembleDaySpine(
       { departures: [evening], actions: visibleActions },
       { departures: [], actions: [] },
@@ -1597,7 +1588,7 @@ describe("the boat's emergency kit on Today (dive-domain review 2026-10-09)", ()
   it("is danger, and every role on the boat sees it", () => {
     expect(ACTION_KIND_META.boat_safety_kit.tone).toBe("danger");
     for (const role of ["crew", "captain", "divemaster", "assistant_instructor"] as const) {
-      expect(filterActionsForRoles([kit], [role]).visibleActions).toEqual([kit]);
+      expect(filterActionsForRoles([kit], [role])).toEqual([kit]);
     }
   });
 
@@ -1615,7 +1606,7 @@ describe("the boat's emergency kit on Today (dive-domain review 2026-10-09)", ()
     const lapsed = action({ id: "lapsed", kind: "boat_safety_expired" });
     expect(ACTION_KIND_META.boat_papers_due.tone).toBe("neutral");
     expect(ACTION_KIND_META.boat_safety_expired.tone).toBe("warning");
-    expect(filterActionsForRoles([due, lapsed], ["crew"]).visibleActions).toEqual([]);
-    expect(filterActionsForRoles([due, lapsed], ["manager"]).visibleActions).toHaveLength(2);
+    expect(filterActionsForRoles([due, lapsed], ["crew"])).toEqual([]);
+    expect(filterActionsForRoles([due, lapsed], ["manager"])).toHaveLength(2);
   });
 });

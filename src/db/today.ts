@@ -270,8 +270,6 @@ export type TodayWork = {
    * the summary's blocked figure (`blockedOnNextBoatDay`).
    */
   blockedAboard: number;
-  /** How many actions were filtered out for the reader's role lens (issue #715). */
-  withheldCount: number;
   /** Shown only when nothing sails today, so the page still orients the crew. */
   nextDeparture: {
     tripId: string;
@@ -1471,7 +1469,7 @@ async function highWindActions(
       dueAt: trip.startsAt,
     });
   }
-  return filterActionsForRoles(rows, context.roles).visibleActions;
+  return filterActionsForRoles(rows, context.roles);
 }
 
 /** What the Today queue's one wave of reads answers. */
@@ -1783,7 +1781,7 @@ export async function getTodayWork(
   /**
    * The viewer's roles, for filtering the action queue to the relevant audience
    * (issue #715). Multi-role viewers see the union; owners and managers see all.
-   * Omitted, all actions are returned (withheldCount = 0).
+   * Omitted, all actions are returned.
    */
   roles?: readonly Role[],
 ): Promise<TodayWork> {
@@ -1990,7 +1988,7 @@ export async function getTodayWork(
       });
   }
 
-  const { visibleActions, withheldCount } = filterActionsForRoles(actions, roles);
+  const visibleActions = filterActionsForRoles(actions, roles);
 
   return {
     departures,
@@ -2000,7 +1998,6 @@ export async function getTodayWork(
       ...new Set([...crewClashState.outTripIds, ...boatsOut.out.map((trip) => trip.id)]),
     ],
     blockedAboard: boatsOut.blocked.filter((row) => isBlockedAboard(row.readiness.blockers)).length,
-    withheldCount,
     nextDeparture: next
       ? {
           title: next.title,

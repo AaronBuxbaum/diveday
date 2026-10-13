@@ -4,8 +4,7 @@
     "emptyBody": "Every diver booked in the next week has their waiver, certifications, and payment in order.",
     "emptyAction": "View the schedule",
     "boatsClear": "Today’s boats are all clear",
-    "checkingForecast": "Checking the forecast…",
-    "withheldDeskWork": "{count, plural, one {# job for the front desk} other {# jobs for the front desk}}"
+    "checkingForecast": "Checking the forecast…"
   },
   "resendConfirmation": {
     "resending": "Resending…",

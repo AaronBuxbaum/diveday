@@ -145,7 +145,6 @@ function renderSpine({
   departures?: SpineDeparture[];
   actions?: TodayAction[];
   tomorrow?: SpineDeparture[];
-  withheldCount?: number;
   showPaymentsRow?: boolean;
   drafts?: SpineDraft[];
   crewedTripIds?: string[];
@@ -792,19 +791,10 @@ describe("the first booking ever", () => {
 });
 
 describe("the role lens", () => {
-  it("keeps the withheld-work line under the summary sentence, above the first station", () => {
-    const { container } = renderSpine({
-      actions: [action({ id: "on-boat", departure: boat("t1") })],
-      withheldCount: 3,
-    });
-    const line = screen.getByText("3 jobs for the front desk");
-    const firstStation = container.querySelector("ol li");
-    expect(
-      line.compareDocumentPosition(firstStation as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  it("renders no withheld line for a reader nothing was withheld from", () => {
+  // Third review, item 5: a captain's Today opened on "22 jobs for the front
+  // desk", rows the role cannot see, above a fold of rows it can. The count of
+  // what is withheld is not a line any more; the fold is the one desk number.
+  it("prints no count of the work a role does not see", () => {
     renderSpine({ actions: [action({ id: "on-boat", departure: boat("t1") })] });
     expect(screen.queryByText(/jobs? for the front desk/)).toBeNull();
   });
@@ -1152,7 +1142,6 @@ describe("the words on the spine", () => {
         action({ id: "chore", kind: "reviews_pending" }),
       ],
       showPaymentsRow: true,
-      withheldCount: 2,
     });
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/\b(she|he|her|hers|his|him|they|them|their|theirs)\b/i);
