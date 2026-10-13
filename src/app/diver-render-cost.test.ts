@@ -23,7 +23,7 @@ vi.mock("next/server", () => ({ after: vi.fn() }));
 
 /**
  * **What the diver pages whose reads live in `src/app` cost** — the public
- * schedule and `/ready` once the boat is home (code review 2026-10-13, items
+ * schedule, `/recap/[token]` and `/ready` once the boat is home (code review 2026-10-13, items
  * 11 and 29). The same instruments as the staff renders and the public
  * booking page (`src/db/staff-render-cost.test.ts`, whose header says what a
  * ceiling means); here because the replays call the page's own reader
@@ -121,6 +121,34 @@ async function readyAfterTheDiveReads(db: AppDb, token: string) {
 }
 
 /**
+ * **`/recap/[token]`, the recap email's link** (code review 2026-10-13b, item
+ * 32): what the page body awaits once the signature verifies, which reads no
+ * row. The recap state, then the after-state's wave; a recap link never mints
+ * a handoff, so that write is not here. `generateMetadata` asks for the same
+ * state through `recapPageStateCached`, which React answers once per request.
+ */
+async function recapPageReads(db: AppDb, bookingId: string) {
+  const state = await getRecapPageState(db, bookingId);
+  if (state.kind !== "recap") throw new Error(`expected an open recap, got ${state.kind}`);
+  const noop = async () => undefined;
+  await buildAfterStateProps({
+    db,
+    data: state.data,
+    bookingId,
+    locale: "en-US",
+    t: diverTranslator("en-US"),
+    mintHandoff: false,
+    params: {},
+    actions: {
+      submitReview: noop,
+      uploadPhoto: noop,
+      startTip: noop,
+      submitPulse: noop,
+    } as unknown as Parameters<typeof buildAfterStateProps>[0]["actions"],
+  });
+}
+
+/**
  * **The public schedule** (`src/app/s/[shopSlug]/page.tsx`), the shop's
  * most-visited page and the one hot page the tripwire did not measure (code
  * review 2026-10-13, item 11). What its body waits for before it flushes: the
@@ -194,6 +222,15 @@ describe("what a diver's page sends", () => {
     expect(report("ready after the dive", stats.queries)).toBeLessThanOrEqual(READY_AFTER_CEILING);
   });
 
+  it("reads /recap/[token]", async () => {
+    const { db, plain, shop } = await timedSeededShop({ history: true });
+    const token = await readinessLinkForSeatAfterTheDive(plain, shop.id);
+    const capability = await verifyBookingCapability(plain, { token, purpose: "readiness" });
+    if (!capability) throw new Error("the readiness link did not verify");
+    const { stats } = await withQueryStats(() => recapPageReads(db, capability.bookingId));
+    expect(report("recap", stats.queries)).toBeLessThanOrEqual(RECAP_CEILING);
+  });
+
   it("reads the public schedule", async () => {
     const { db, plain, shop } = await timedSeededShop();
     await withRunningSeries(plain, shop.id);
@@ -211,6 +248,16 @@ describe("how many round trips a diver's page waits for, one after another", () 
     expect(report("ready after the dive phases", phases())).toBeLessThanOrEqual(
       READY_AFTER_PHASE_CEILING,
     );
+  });
+
+  it("reads /recap/[token] in a bounded number of phases", async () => {
+    const { plain, shop } = await timedSeededShop({ history: true });
+    const { db, phases } = phaseCountingDb(plain.$client as PGlite);
+    const token = await readinessLinkForSeatAfterTheDive(plain, shop.id);
+    const capability = await verifyBookingCapability(plain, { token, purpose: "readiness" });
+    if (!capability) throw new Error("the readiness link did not verify");
+    await recapPageReads(db, capability.bookingId);
+    expect(report("recap phases", phases())).toBeLessThanOrEqual(RECAP_PHASE_CEILING);
   });
 
   it("reads the public schedule in a bounded number of phases", async () => {
@@ -231,8 +278,17 @@ describe("how many round trips a diver's page waits for, one after another", () 
 // 18 → 16 (code review 2026-10-13, item 29): the recap starts beside the roll
 // call, and its two seat checks (left at the dock, waiting on a missing
 // person) go out together.
-const READY_AFTER_CEILING = 60;
-const READY_AFTER_PHASE_CEILING = 16;
+// 60 → 59 statements and 16 → 12 phases (code review 2026-10-13b, item 32):
+// the gate and the page start from one row, and the page's reads go out
+// beside the seat checks with the trip in the same wave, so the recap is 3
+// phases where it was 7. The after-state's 5 are its next-dive read and the
+// handoff it mints.
+const READY_AFTER_CEILING = 59;
+const READY_AFTER_PHASE_CEILING = 12;
+// `/recap/[token]`, replayed from item 32: the recap's 3 and the after-state's
+// next-dive read, with no handoff. Before item 32 the same reads were 7 + 2.
+const RECAP_CEILING = 28;
+const RECAP_PHASE_CEILING = 5;
 // The shop, `readSchedulePage`'s batch with its chained reads, then the
 // board's-end read. 16 → 14 statements and 7 → 5 phases (item 29): the
 // running series' templates are one read, not one per series.
