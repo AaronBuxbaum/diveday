@@ -14,7 +14,14 @@ import {
   sendDepartureNote,
 } from "./departure-notes";
 import { claimHeldSend, executeHeldSend, holdSend } from "./held-sends";
-import { activityEvents, departureNotes, people, shops, trips } from "./schema";
+import {
+  activityEvents,
+  departureNotes,
+  people,
+  shops,
+  tripScheduleDays,
+  trips,
+} from "./schema";
 import { createTrip, setTripStatus } from "./trips";
 
 /**
@@ -185,6 +192,56 @@ describe("sendDepartureNote", () => {
         now: new Date(dayOne.getTime() + 51 * HOUR),
       }),
     ).toEqual({ ok: false, reason: "past" });
+  });
+
+  it("dates a note sent between a course's days by the day still to come, not day one", async () => {
+    const { db, shop } = ctx;
+    // Booked while it was ahead; then day one sails 30 hours ago and day
+    // two finishes two hours ago.
+    const days = (dayOne: Date) =>
+      [0, 1, 2].map((day) => ({
+        dayNumber: day + 1,
+        startsAt: new Date(dayOne.getTime() + day * 24 * HOUR),
+        endsAt: new Date(dayOne.getTime() + day * 24 * HOUR + 4 * HOUR),
+      }));
+    const ahead = new Date(nowDate().getTime() + 6 * HOUR);
+    const course = await createTrip(db, {
+      shopId: shop.id,
+      title: "Three-day course",
+      startsAt: ahead,
+      endsAt: new Date(ahead.getTime() + 52 * HOUR),
+      capacity: 8,
+      scheduleDays: days(ahead),
+    });
+    if (!course) throw new Error("course not created");
+    await book(db, shop.id, course.id, { email: "note-day-three@example.com" });
+    const dayOne = new Date(nowDate().getTime() - 30 * HOUR);
+    await db
+      .update(trips)
+      .set({ startsAt: dayOne, endsAt: new Date(dayOne.getTime() + 52 * HOUR) })
+      .where(eq(trips.id, course.id));
+    for (const day of days(dayOne)) {
+      await db
+        .update(tripScheduleDays)
+        .set({ startsAt: day.startsAt, endsAt: day.endsAt })
+        .where(
+          and(
+            eq(tripScheduleDays.tripId, course.id),
+            eq(tripScheduleDays.dayNumber, day.dayNumber),
+          ),
+        );
+    }
+    const email = fakeEmail();
+    const sent = await sendDepartureNote(
+      db,
+      { shopId: shop.id, tripId: course.id, body: NOTE, actorPersonId: null },
+      { emailProvider: email.provider },
+    );
+    expect(sent).toMatchObject({ ok: true });
+    expect(email.sent[0]).toMatchObject({
+      kind: "departure_note",
+      startsAt: new Date(dayOne.getTime() + 48 * HOUR),
+    });
   });
 
   it("refuses past the per-departure cap", async () => {
