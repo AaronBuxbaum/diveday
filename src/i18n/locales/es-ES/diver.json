@@ -4356,6 +4356,7 @@
       "stopLine": "Responde STOP para darte de baja.",
       "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}",
       "readyLink": "Tu preparación: {url}",
+      "meetingPointMoved": "{shopName}: cambiamos el punto de encuentro de {tripTitle}, {date}, {time}.",
       "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}. Antes era el {previous}."
     },
     "whatsappTemplate": {
@@ -4463,7 +4464,9 @@
     },
     "tripRescheduled": {
       "subject": "Nuevo horario para {tripTitle}",
+      "placeSubject": "Nuevo punto de encuentro para {tripTitle}",
       "body": "Cambiamos el horario de {tripTitle}. Este es el nuevo.",
+      "placeBody": "Cambiamos el punto de encuentro de {tripTitle}. La hora no cambia.",
       "was": "Antes era el {when}.",
       "meetingPointMoved": "También cambia el punto de encuentro.",
       "cantMakeIt": "¿No puedes a la nueva hora? Escríbenos y lo resolvemos."
