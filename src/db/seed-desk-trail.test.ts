@@ -37,7 +37,15 @@ describe("seeded desk trail", () => {
     expect(occurred).toEqual([...occurred].sort((a, b) => b - a));
     for (const event of activity) {
       expect(isActivityCode(event.code)).toBe(true);
-      expect(event.params.actor).toMatch(/\w+ \w+/);
+      // A counter check-in, which the desk handoff seeds through the same
+      // shape `checkInBooking` writes, names its diver and keeps the staffer
+      // as the row's actor rather than a param.
+      if (event.code === "counter_check_in") {
+        expect(event.params.diver).toMatch(/\w+ \w+/);
+        expect(event.actorPersonId).not.toBeNull();
+      } else {
+        expect(event.params.actor).toMatch(/\w+ \w+/);
+      }
     }
 
     const notes = await listBookingNotes(db, shop.id, trip.id);

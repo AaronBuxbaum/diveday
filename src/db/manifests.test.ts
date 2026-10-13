@@ -2437,7 +2437,12 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
         await db
           .select()
           .from(rollCallCrewEvents)
-          .where(eq(rollCallCrewEvents.personId, missing.id)),
+          .where(
+            and(
+              eq(rollCallCrewEvents.tripId, reef.id),
+              eq(rollCallCrewEvents.personId, missing.id),
+            ),
+          ),
       ).toHaveLength(2);
     });
 
@@ -2639,7 +2644,9 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
 
       // Nothing was written by either, so the checkpoint stays open — the
       // fail-closed direction.
-      expect(await db.select().from(rollCallCrewEvents)).toHaveLength(0);
+      expect(
+        await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id)),
+      ).toHaveLength(0);
     });
 
     it("undoes a mis-tap with a cleared event, returning the crew member to awaiting", async () => {

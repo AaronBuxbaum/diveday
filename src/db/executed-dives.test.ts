@@ -54,6 +54,9 @@ async function logFixture({ fresh = false } = {}) {
     .where(eq(trips.shopId, shop.id))
     .limit(1);
   if (!owner || !trip) throw new Error("executed-dive fixture needs the seeded owner and a trip");
+  // The seed logs the finished dawn boat's dives (UX review 2026-10-13, item
+  // 40); these tests start from a trip with nothing logged.
+  await db.delete(executedDives).where(eq(executedDives.tripId, trip.id));
   return { db, shop, owner, trip };
 }
 
