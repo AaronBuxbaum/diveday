@@ -1,3 +1,4 @@
+import { ArrivalMap } from "@/components/ArrivalMap";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SectionCard } from "@/components/ui/card";
@@ -193,25 +194,9 @@ export function TripArrivalCard({
           sizes="(max-width: 640px) calc(100vw - 56px), 576px"
         />
       ) : showMap && facts.mapQuery ? (
-        /* Inset to the card's own rhythm rather than bled to its edge, so it
-           stands in exactly where the shop's photo would.
-
-           **`no-referrer`, not `strict-origin-when-cross-origin`.** An
-           element's own `referrerpolicy` overrides the document's, and the one
-           caller is `/ready/[token]`, which `TOKEN_ROUTE_PREFIXES`
-           (`src/lib/security-headers.ts`) serves under `Referrer-Policy:
-           no-referrer` precisely because a bearer-token route has "no
-           legitimate cross-origin use" for a referrer at all — not even the
-           origin-only form. The weaker attribute rode along when this frame
-           moved here from the page's trailing shop card; a map embed needs no
-           referrer, so it now asks for none
-           (docs/engineering/capability-telemetry-runbook.md). */
-        <iframe
+        <ArrivalMap
           title={t("trip.arrivalMapTitle", { place: facts.label })}
           src={googleMapEmbedUrl(facts.mapQuery)}
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          className="mb-5 block aspect-[16/9] w-full rounded-inset border-0 bg-surface-sunken"
         />
       ) : null}
       {/* A ruled row pads `pt-3` under its rule, the column's own gap above

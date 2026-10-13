@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import { arrivalCardFacts, siteRunsLine, TripArrivalCard } from "./TripArrivalCard";
 
@@ -238,6 +239,32 @@ describe("the map", () => {
     );
     expect(mapFrame()).toBeNull();
     expect(screen.getByAltText(/Blue Mantis Divers/)).toBeInTheDocument();
+  });
+
+  it("is never in the server's HTML, the copy a phone keeps for the marina", () => {
+    // A frame with no signal is 16:9 of gray above the address (third UX
+    // review, item 27); the saved page carries the address and the link alone.
+    const html = renderToString(
+      <TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />,
+    );
+    expect(html).not.toContain("<iframe");
+    expect(html).toContain("100 Ocean Drive");
+  });
+
+  it("steps aside when the connection drops, and comes back with it", () => {
+    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />);
+    expect(mapFrame()).not.toBeNull();
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    act(() => {
+      window.dispatchEvent(new Event("offline"));
+    });
+    expect(mapFrame()).toBeNull();
+    onLine.mockReturnValue(true);
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(mapFrame()).not.toBeNull();
+    onLine.mockRestore();
   });
 
   it("draws nothing where no honest query can be built", () => {
