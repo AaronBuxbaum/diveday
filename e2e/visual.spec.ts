@@ -76,7 +76,7 @@ import { mintOnboardFormPath } from "./setup-link";
  * extra width is a small addition, not the 50% a third viewport applied to
  * every surface would have cost.
  *
- * Three of the 254 are the same surface twice, in a second language: see
+ * Four of them are the same surface twice, in a second language: see
  * {@link SPANISH}. A Spanish sibling takes the standard pair and keys its own
  * baseline off `<name>-es-ES`, so it is a new item in the report rather than a
  * change to the English one.
@@ -8349,7 +8349,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **Three dense surfaces, read in Spanish** (issue #1681).
+       * **Four dense surfaces, read in Spanish** (issues #1681, #2407).
        *
        * Every other capture in this file signs in with an English reader, so no
        * baseline had ever seen an `es-ES` string in a layout — in a product
@@ -8357,8 +8357,8 @@ for (const scheme of ["light", "dark"] as const) {
        * recorded and guarded (`src/i18n/locales/es-ES/README.md`). What no
        * check held was whether the chosen word *fits*.
        *
-       * Three, not everything: the surfaces where length is most likely to
-       * break something are the dense fixed-width ones, and these are the three
+       * Four, not everything: the surfaces where length is most likely to
+       * break something are the dense fixed-width ones, and these are the four
        * reviews have pointed at. Each costs four screenshots and a triage
        * burden on every future pull request, which is why the set is named here
        * rather than derived.
@@ -8435,6 +8435,44 @@ for (const scheme of ["light", "dark"] as const) {
           // heading above it is true before the checkpoints render.
           await expect(page.getByText("Punto de control activo").first()).toBeVisible();
           await capture(page, "manifest", scheme, { locale: SPANISH });
+        });
+
+        /**
+         * **The after-dive buddy alert, in Spanish** (#2407). "Compañero sin
+         * regresar a bordo" was measured by hand at about 229px against the
+         * roughly 246px capsule line a phone gives it; this is the baseline
+         * that holds it there. The same state as the English
+         * `manifest-buddy-divergence`: Tom aboard, his teammate Lena recorded
+         * not back.
+         */
+        test(`the manifest's split buddy team reads in Spanish (${scheme})`, async ({ page }) => {
+          test.setTimeout(FLOW_TIMEOUT_MS);
+          await openReefTrip(page);
+          await page.goto(`${new URL(page.url()).pathname}/manifest`);
+          await expect(
+            page.getByText(/Copia (actualizada|envejeciendo|desactualizada)/),
+          ).toBeVisible();
+          await page
+            .getByRole("link", { name: "Después de la inmersión 1" })
+            .evaluate((link: HTMLElement) => link.click());
+          await page.waitForURL(/checkpoint=after_dive_1/);
+          const tomRow = manifestRow(page, "Tom Okafor");
+          const lenaRow = manifestRow(page, "Lena Fischer");
+          const boardTom = tomRow.getByRole("button", { name: "Marcar embarcado" });
+          await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
+          await boardTom.click();
+          await openManifestPerson(lenaRow);
+          const dialog = page.getByRole("dialog");
+          const lenaNotBack = dialog.getByRole("button", { name: "Marcar sin regresar a bordo" });
+          await lenaNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
+          await lenaNotBack.click();
+          await expect(
+            dialog.getByRole("button", { name: "Sin regresar a bordo", exact: true }),
+          ).toBeVisible();
+          await dialog.getByRole("button", { name: "Cerrar detalles de la persona" }).click();
+          await expect(tomRow.getByText("Compañero sin regresar a bordo")).toBeVisible();
+          await page.mouse.move(0, 0);
+          await capture(page, "manifest-buddy-divergence", scheme, { locale: SPANISH });
         });
 
         /**
