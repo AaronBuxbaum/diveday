@@ -10,6 +10,10 @@ runs:
     - uses: actions/setup-node@v7
       with:
         node-version: 24
-        cache: pnpm
+        # GitHub-hosted runners start empty, so they restore the pnpm store
+        # from the Actions cache. The Mac's runners keep theirs on a shared
+        # volume (scripts/mac-runner/start.sh), and restoring it there would
+        # download the whole store over a home connection for every job.
+        cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
     - run: pnpm install --frozen-lockfile
       shell: bash

@@ -236,7 +236,8 @@ describe("deleteStoredImageTracked", () => {
       fetchImpl as unknown as typeof fetch,
     );
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain("network unreachable");
+    // The class, never the message (issue #2531).
+    if (!result.ok) expect(result.error).toBe("delete threw Error");
   });
 });
 
@@ -503,6 +504,29 @@ describe("deleteS3Image host binding", () => {
     );
     expect(result).toEqual({ ok: true });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * The error lands in `media_deletions.last_error` (issue #2531), and a
+   * thrown message can quote what the call was handed. Only its cause's code
+   * or its class is kept.
+   */
+  it("keeps a thrown error's code, never its message", async () => {
+    const cause = Object.assign(new Error("connect ECONNRESET 10.0.0.1"), { code: "ECONNRESET" });
+    const fetchImpl = vi.fn().mockRejectedValue(new TypeError("fetch failed for nora", { cause }));
+    const deleted = await deleteS3Image(
+      "https://diveday-media.s3.us-east-1.amazonaws.com/courses/abc-photo.jpg",
+      config,
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(deleted).toEqual({ ok: false, error: "delete threw ECONNRESET" });
+    const read = await readS3Object(
+      "https://diveday-media.s3.us-east-1.amazonaws.com/medical-clearances/x.pdf",
+      config,
+      { prefix: "medical-clearances" },
+      vi.fn().mockRejectedValue(new Error("socket hang up for nora")) as unknown as typeof fetch,
+    );
+    expect(read).toEqual({ ok: false, error: "read threw Error" });
   });
 });
 

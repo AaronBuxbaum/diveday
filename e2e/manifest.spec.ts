@@ -933,7 +933,7 @@ test("an owner adds and removes a line on the shop's own pre-departure checklist
   await expect(page.getByText("Test kit checked")).not.toBeVisible();
 });
 
-test("a crew member checks a pre-departure item on the live manifest, and a re-tap undoes it", async ({
+test("a crew member checks a pre-departure item on the live manifest, and two re-taps undo it", async ({
   page,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -946,7 +946,11 @@ test("a crew member checks a pre-departure item on the live manifest, and a re-t
   await item.click();
   await expect(page.getByText(/Checked by .* · /)).toBeVisible();
 
-  // The same control, re-tapped, is the undo (ADR 20260824-pre-departure-safety-check).
+  // The same control is the undo (ADR 20260824-pre-departure-safety-check),
+  // but clearing a safety item takes a second tap (#2481): the first only asks.
+  await item.click();
+  await expect(item).toContainText("Tap again to clear");
+  await expect(item).toHaveAttribute("aria-pressed", "true");
   await item.click();
   await expect(page.getByText(/Checked by .* · /)).not.toBeVisible();
 });

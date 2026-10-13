@@ -167,6 +167,18 @@ const bookingConfirmationSchema = z.object({
    */
   calendarUrl: z.url().max(2_000).optional(),
   money: seatMoneySchema.optional(),
+  /**
+   * What the card checkout this booking leads settled for the whole party,
+   * as Stripe reported it (`settledPartyPayment`, #2447). Display only, and
+   * absent unless Stripe's own figure exists.
+   */
+  partyPaid: z
+    .object({
+      amountCents: centsSchema,
+      currency: z.string().length(3),
+      seats: z.number().int().min(1).max(100),
+    })
+    .optional(),
   /** When free cancellation closes (`cancellationDeadline`); absent when the trip states no window. */
   freeCancellationUntil: z.date().optional(),
   /**
@@ -487,8 +499,10 @@ const tripReminder24hSchema = z.object({
  * sent by the diver's usual channel after the same eight-second hold every
  * other staff send takes (`held_sends`, kind `trip_rescheduled`).
  *
- * The old time and the new, the meeting point **only when it moved with the
- * time**, and the diver's own trip-prep link. Addressed to the address on the
+ * The old time and the new, the meeting point **only when it moved**, and the
+ * diver's own trip-prep link. `previousStartsAt` equal to `startsAt` is a
+ * notice that only the meeting point moved (#2443): no "It was", and the
+ * subject names the place. Addressed to the address on the
  * booking's own person record and nobody else (`src/db/trip-rescheduled.ts`).
  *
  * `revision` is the trip's `revision` after the move, and keys the send: a
@@ -1554,9 +1568,13 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "trip_reminder_24h":
       return `${notification.kind}/${notification.bookingId}`;
     // One per seat per move: the trip's revision after the move keys it, so a
-    // second move is a second message and a retried send is not.
+    // second move is a second message and a retried send is not. A meeting
+    // point moves without a revision (#2443), so a place-only notice is keyed
+    // by the place it names as well.
     case "trip_rescheduled":
-      return `trip-rescheduled/${notification.bookingId}/${notification.revision}`;
+      return notification.previousStartsAt.getTime() === notification.startsAt.getTime()
+        ? `trip-rescheduled/${notification.bookingId}/${notification.revision}/place/${notification.meetingPoint?.label ?? ""}/${notification.meetingPoint?.address ?? ""}`
+        : `trip-rescheduled/${notification.bookingId}/${notification.revision}`;
     // One recap per booking after the trip departs.
     case "trip_recap":
       return `trip-recap/${notification.bookingId}`;

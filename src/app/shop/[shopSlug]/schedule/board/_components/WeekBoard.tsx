@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type ReactNode, useRef } from "react";
 import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
 import { MENU_PANEL, menuRowClass } from "@/components/ui/menu";
@@ -44,6 +45,11 @@ export type WeekDeparture = {
   status: "upcoming" | "sailed";
   /** No price has ever been set — the quieter of the two marks a departure carries. */
   unpriced: boolean;
+  /**
+   * A rehearsal departure (ADR 20261012-rehearsal-departures): it wears its
+   * own mark in the flag's slot and is never asked for a price (#2395).
+   */
+  rehearsal: boolean;
   /**
    * The boat is back and somebody on its list was never counted (DOM-H3) —
    * **the loudest thing this board can say**, and it outranks the price flag
@@ -196,6 +202,7 @@ export type WeekBoardCopy = {
   noPriceSet: string;
   noPriceSetAria: string;
   noPriceSetAll: string;
+  rehearsal: string;
   rollCallOpen: string;
   rollCallOpenAria: string;
   /** What a day with nothing on it says, because a blank row is just a gap. */
@@ -623,6 +630,10 @@ function WeekBoat({
               shopSlug={shopSlug}
               copy={copy}
             />
+          ) : departure.rehearsal ? (
+            <Badge size="sm" className="mt-1">
+              {copy.rehearsal}
+            </Badge>
           ) : departure.unpriced && !sailed ? (
             <PriceFlag departure={departure} shopSlug={shopSlug} copy={copy} />
           ) : null}

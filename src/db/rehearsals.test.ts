@@ -4,9 +4,11 @@ import { HOUR_MS } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
+import { listNotificationDeliveryIssues, recordNotificationDelivery } from "./notifications";
 import {
   clearFinishedRehearsals,
   isRehearsalTrip,
+  REHEARSAL_HELD_DELIVERY,
   rehearsalsWithEvidence,
   shopRehearsalIds,
 } from "./rehearsals";
@@ -287,5 +289,35 @@ describe("isRehearsalTrip and shopRehearsalIds", () => {
     expect(ids.bookingIds.has(bookingId)).toBe(true);
     expect(ids.tripIds.has(real.trip.id)).toBe(false);
     expect((await shopRehearsalIds(db, other.id)).tripIds.size).toBe(0);
+  });
+});
+
+/**
+ * **A held send is not a failed one** (#2395). Every email about a rehearsal is
+ * held at the chokepoint and recorded `failed / rehearsal_departure`; read as a
+ * delivery issue, it put "confirmation failed" on Today for a message nobody
+ * was ever meant to receive. A real failure on the same kind still shows.
+ */
+describe("a send held for a rehearsal", () => {
+  it("is not a delivery issue staff are asked to chase", async () => {
+    const { db, shop } = ctx;
+    const held = await rehearsal(db, shop.id);
+    const real = await rehearsal(db, shop.id, false);
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId: held.bookingId,
+      kind: "booking_confirmation",
+      delivery: REHEARSAL_HELD_DELIVERY,
+    });
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId: real.bookingId,
+      kind: "booking_confirmation",
+      delivery: { status: "failed", retryable: false, errorCode: "provider_error" },
+    });
+    const issues = await listNotificationDeliveryIssues(db, shop.id);
+    const bookingIds = issues.map((issue) => issue.booking.id);
+    expect(bookingIds).toContain(real.bookingId);
+    expect(bookingIds).not.toContain(held.bookingId);
   });
 });

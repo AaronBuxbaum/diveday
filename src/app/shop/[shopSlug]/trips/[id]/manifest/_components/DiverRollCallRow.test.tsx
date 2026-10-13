@@ -58,7 +58,7 @@ describe("a blocked diver's mark at the dock", () => {
     });
     const row = container.querySelector("li[id^='diver-row-']") as HTMLElement;
     expect(row.className).toContain("border-danger");
-    expect(row.className).not.toContain("bg-success/20");
+    expect(row.className).not.toContain("bg-success-tint");
     expect(markOf(container)).toBe("aboard");
   });
 

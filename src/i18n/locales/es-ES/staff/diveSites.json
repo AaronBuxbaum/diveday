@@ -124,7 +124,8 @@
       "advanced": "Avanzado"
     },
     "depthRangeLabel": "Rango de profundidad",
-    "depthRangePlaceholder": "20–45 ft",
+    "depthRangePlaceholderFeet": "20 a 45 pies",
+    "depthRangePlaceholderMeters": "6 a 14 m",
     "maxDepthMetersLabel": "Profundidad máxima (metros)",
     "maxDepthFeetLabel": "Profundidad máxima (pies)",
     "maxDepthHint": "Avisa cuando la titulación no llega.",

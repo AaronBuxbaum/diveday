@@ -11,13 +11,25 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 
 const CUSTOMER = "Priya Sharma";
 
-/** From the register's header to the units step, renting to {@link CUSTOMER}. */
-async function startRentalForCustomer(page: Page) {
-  await page.goto("/shop/blue-mantis/gear");
-  await page.getByRole("link", { name: "Rent out", exact: true }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Rent out" })).toBeVisible();
-  await page.getByLabel("Search by name, email, or phone").fill("Priya");
-  await page.getByRole("button", { name: "Find a returning diver" }).click();
+/**
+ * To the units step, renting to {@link CUSTOMER}.
+ *
+ * Every test but one opens the search's own URL (`?q=`), one navigation where
+ * the register's door, the form and its submit cost three server renders
+ * before the test reaches what it is about, and the longest of these tests ran
+ * past the 15-second default on a loaded shard (issue #2538). The door and the
+ * search box keep one test of their own (`fromRegister`).
+ */
+async function startRentalForCustomer(page: Page, { fromRegister = false } = {}) {
+  if (fromRegister) {
+    await page.goto("/shop/blue-mantis/gear");
+    await page.getByRole("link", { name: "Rent out", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Rent out" })).toBeVisible();
+    await page.getByLabel("Search by name, email, or phone").fill("Priya");
+    await page.getByRole("button", { name: "Find a returning diver" }).click();
+  } else {
+    await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+  }
   await page.getByRole("link", { name: `Rent to ${CUSTOMER}` }).click();
   // The window defaults to today; the free units for it are listed at once.
   await expect(page.getByRole("group", { name: "Kind of gear" })).toBeVisible();
@@ -178,7 +190,8 @@ test.describe("staff", () => {
   });
 
   test("offers no Rent out until something is picked, keeping who and when", async ({ page }) => {
-    await startRentalForCustomer(page);
+    // The register's own door and the search box, walked once here.
+    await startRentalForCustomer(page, { fromRegister: true });
     await expect(page.getByText("0 items", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Rent out", exact: true })).toBeDisabled();
     await expect(page.getByText(CUSTOMER).first()).toBeVisible();

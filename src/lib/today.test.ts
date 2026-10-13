@@ -581,7 +581,9 @@ function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
     crew: [{ fullName: "Keiko Tanaka" }],
     crewAccountedFor: true,
     crewReason: null,
+    rehearsal: false,
     ...overrides,
+    sellableCapacity: overrides.sellableCapacity ?? overrides.capacity ?? 12,
   };
 }
 

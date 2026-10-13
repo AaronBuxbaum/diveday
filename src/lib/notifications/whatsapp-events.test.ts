@@ -150,7 +150,10 @@ describe("parseWhatsAppDeliveryEvents", () => {
     expect(parseWhatsAppDeliveryEvents(payload, NOW)).toEqual([]);
   });
 
-  it("carries Meta's specific explanation for a failure", () => {
+  // Meta's code and title, never its `details` or `message` (security review
+  // of issue #2531): those are free prose and can quote the recipient or the
+  // message, and this detail is stored on the delivery row.
+  it("keeps Meta's code and title for a failure, never its free-text details", () => {
     const payload = statusPayload([
       {
         id: "wamid.1",
@@ -167,15 +170,19 @@ describe("parseWhatsAppDeliveryEvents", () => {
     ]);
 
     expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].detail).toBe(
-      "Receiver is not a valid WhatsApp user",
+      "131026 Message undeliverable",
     );
   });
 
-  it("falls back to the generic title when there is no specific detail", () => {
+  it("drops a message that quotes the recipient and keeps the code alone", () => {
     const payload = statusPayload([
-      { id: "wamid.1", status: "failed", errors: [{ code: 131026, title: "Undeliverable" }] },
+      {
+        id: "wamid.1",
+        status: "failed",
+        errors: [{ code: 131026, message: "Recipient +15551234567 is not on WhatsApp" }],
+      },
     ]);
-    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].detail).toBe("Undeliverable");
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].detail).toBe("131026");
   });
 
   it("falls back to now for a missing or unparseable timestamp", () => {

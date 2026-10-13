@@ -209,6 +209,23 @@ describe("the deployed schedule", () => {
       readFileSync(path.join(process.cwd(), "vercel.json"), "utf8"),
     ).crons;
     const entry = crons.find((cron) => cron.path === "/api/cron/demo-refresh");
-    expect(entry?.schedule).toBe("9 3 * * *");
+    expect(entry?.schedule).toBe("8 9 * * *");
+  });
+
+  it("runs before the demo shop's morning, so the boat it moves onto today sails by day", async () => {
+    // Issue #2440. At 03:45 UTC the pass ran at 11:45 PM in the demo shop's zone, and the
+    // departure it pulled onto "today" sailed at 11:46 PM, then vanished from
+    // the board at midnight.
+    const { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, sailsAfterDayBoats } = await import(
+      "@/db/seed-clock"
+    );
+    const { utcToWallTime } = await import("@/lib/zoned");
+    for (const day of ["2026-07-21", "2026-01-21"]) {
+      const run = new Date(`${day}T09:08:00.000Z`);
+      const wall = utcToWallTime(run, DEMO_SHOP_TIMEZONE);
+      expect(wall.hour).toBeGreaterThanOrEqual(4);
+      expect(wall.hour).toBeLessThan(6);
+      expect(sailsAfterDayBoats(demoTodayDepartureStart(run, DEMO_SHOP_TIMEZONE))).toBe(false);
+    }
   });
 });

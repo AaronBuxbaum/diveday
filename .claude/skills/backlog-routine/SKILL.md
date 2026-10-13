@@ -38,9 +38,13 @@ either build it or say why you are not.
 2. **Read what GitHub says about the pull requests you already opened**, in the same breath:
 
    ```sh
-   gh pr list --author '@me' --state open --json number,title,mergeable,statusCheckRollup
-   gh pr checks <n>          # for any that reports a failure
+   R=repos/AaronBuxbaum/diveday
+   gh api "$R/pulls?state=open&per_page=100" --jq '[.[] | select(.user.login == "<your login>") | {number, title, sha: .head.sha}]'
+   gh api "$R/commits/<sha>/check-runs" --jq '.check_runs[] | {name, conclusion}'
    ```
+
+   REST throughout: `gh pr list`, `gh pr checks` and `gh pr view` go through GraphQL, which cloud
+   sessions are refused ([issue-tracker.md](../../../docs/agents/issue-tracker.md)).
 
    CI takes about ten minutes and you opened that pull request before you started the last ticket,
    so **its answer arrives while you are not looking.** A red check on your own branch is your work
@@ -59,7 +63,7 @@ either build it or say why you are not.
    weekly refresh (`.github/workflows/durations-refresh.yml`) commits the recorded shard durations
    straight to `main` and opens that pull request only when the push was refused. A pull request
    opened with the workflow token starts no CI, so it waits unchecked until someone pushes:
-   `gh pr list --head automation/durations-refresh --state open`; if one is there, check it out,
+   `gh api "$R/pulls?state=open&head=AaronBuxbaum:automation/durations-refresh"`; if one is there, check it out,
    `git commit --allow-empty -m "Run CI on the durations refresh"`, push, and merge it once green.
    The diff is two JSON files the next run's shards are dealt by; there is nothing to review.
 
@@ -69,7 +73,8 @@ either build it or say why you are not.
    is exactly why this step exists:
 
    ```sh
-   gh pr view <n> --comments
+   gh api $R/issues/<n>/comments    # the conversation
+   gh api $R/pulls/<n>/comments     # the inline review threads
    ```
 
    Answer each open thread before the next ticket: fix and reply with the commit, decline with the
@@ -265,9 +270,9 @@ message).
   ready and stop; do not work around it.
 - **Ask GitHub what is open at the moment you write it down, never your own memory of opening it.**
   These merge fast: one session's closing message listed seven pull requests as awaiting review and
-  every one of them had already merged — the human went looking for them and found nothing. One
-  `gh pr list --author '@me' --state open` immediately before writing the summary is the whole fix,
-  and the same command tells you whether anything of yours is red.
+  every one of them had already merged — the human went looking for them and found nothing.
+  Reading the open pull requests for your own login (step 2's REST list) immediately before writing
+  the summary is the whole fix, and step 2's check-runs read tells you whether anything is red.
 - **Anything you notice and do not do** becomes a `needs-triage` issue written for a reader with
   none of your context — not a line in the closing message. **At most ten per run**
   ([issue-tracker.md](../../../docs/agents/issue-tracker.md)'s Rules say what to do past ten).

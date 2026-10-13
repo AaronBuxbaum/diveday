@@ -38,6 +38,7 @@ export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
     noPriceSet: st("schedule.builder.noPriceSet"),
     noPriceSetAria: st.raw("schedule.builder.noPriceSetAria"),
     noPriceSetAll: st("schedule.builder.noPriceSetAll"),
+    rehearsal: st("trips.rehearsal.label"),
     ...weekDayCopy(st),
     addDeparture: st("requests.addDeparture"),
     rollCallOpen: st.raw("schedule.builder.rollCallOpen"),

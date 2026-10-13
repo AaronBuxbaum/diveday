@@ -108,11 +108,13 @@
     "stripeDone": "Stripe conectado.",
     "doneBadge": "Hecho",
     "unitsTitle": "Revisa tu moneda y tu unidad de profundidad",
-    "unitsBody": "Empezamos con {currency} y {depth} según tu zona horaria. Los precios y las profundidades son difíciles de cambiar después.",
+    "unitsBody": "Elegimos {currency}, {depth} y {temperature} según dónde estás. Los precios y las profundidades son difíciles de cambiar después.",
     "unitsAction": "Revisar unidades",
     "unitsDone": "Unidades confirmadas.",
     "unitsFeet": "pies",
     "unitsMeters": "metros",
+    "unitsFahrenheit": "grados Fahrenheit",
+    "unitsCelsius": "grados Celsius",
     "pageTitle": "Tu centro está listo."
   },
   "spine": {
@@ -170,6 +172,7 @@
     "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "departuresLabel": "Salidas",
     "needsYouCount": "{count, plural, one {# cosa} other {# cosas}}",
+    "needsYouCountBeforeNext": "{count, plural, one {# cosa} other {# cosas}} · {before, plural, =0 {ninguna antes de la de las {time}} other {# antes de la de las {time}}}",
     "deskFoldLabel": "{count, plural, one {# más para otras salidas y el mostrador} other {# más para otras salidas y el mostrador}}",
     "needsYouLabel": "Pendiente",
     "crewTips": "Tus barcos ganaron {amount} en propinas esta semana."

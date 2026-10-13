@@ -34,6 +34,8 @@ import type {
 /** The departure, and what this staffer may do on it. */
 export type RosterTrip = {
   shopSlug: string;
+  /** A rehearsal departure: nothing about it is sent (ADR 20261012-rehearsal-departures). */
+  rehearsal?: boolean;
   shopTimezone: string;
   locale: string;
   tripId: string;
@@ -359,10 +361,26 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
 
 export type WaiverControls = Record<ReturnType<typeof waiverState>, WaiverControl>;
 
-/** Every waiver state's control, worded. */
-export function waiverControls(t: StaffTranslator): WaiverControls {
+/**
+ * Every waiver state's control, worded. On a rehearsal an open link was never
+ * sent — every message about one is held, and its links are handed over in
+ * person (ADR 20261012-rehearsal-departures) — so it says held (#2395).
+ */
+export function waiverControls(
+  t: StaffTranslator,
+  { rehearsal = false }: { rehearsal?: boolean } = {},
+): WaiverControls {
+  const keys: typeof WAIVER_CONTROL_KEYS = rehearsal
+    ? {
+        ...WAIVER_CONTROL_KEYS,
+        awaiting_signature: {
+          ...WAIVER_CONTROL_KEYS.awaiting_signature,
+          labelKey: "trips.roster.waiverHeldRehearsal",
+        },
+      }
+    : WAIVER_CONTROL_KEYS;
   return Object.fromEntries(
-    Object.entries(WAIVER_CONTROL_KEYS).map(([status, entry]) => [
+    Object.entries(keys).map(([status, entry]) => [
       status,
       {
         ...entry,

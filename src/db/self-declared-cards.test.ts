@@ -598,6 +598,7 @@ describe("recordSelfDeclaredCards", () => {
         noCertificationDeclared: false,
         nitrox: false,
         nitroxSelfDeclared: false,
+        nitroxVerified: false,
         verifiedLevel: null,
       });
     });
@@ -627,6 +628,7 @@ describe("recordSelfDeclaredCards", () => {
         noCertificationDeclared: true,
         nitrox: false,
         nitroxSelfDeclared: false,
+        nitroxVerified: false,
         verifiedLevel: null,
       });
     });
@@ -1363,6 +1365,29 @@ describe("reviewCertification on a self-declared card", () => {
 });
 
 describe("listCertificationSummaries", () => {
+  /**
+   * A nitrox card a staffer typed carries no self-declared stamp, so the stamp
+   * alone cannot say whether anybody checked it (#2428).
+   */
+  it("says whether a nitrox card is verified, apart from whether it is a claim", async () => {
+    const { db, shop, person } = await joiner();
+    await createNitroxCertification(db, {
+      shopId: shop.id,
+      personId: person.id,
+      agency: "padi",
+      identifier: "NX-2428",
+    });
+    const typed = (await listCertificationSummaries(db, shop.id, [person.id])).get(person.id);
+    expect(typed).toMatchObject({ nitrox: true, nitroxSelfDeclared: false, nitroxVerified: false });
+
+    await db
+      .update(nitroxCertifications)
+      .set({ status: "verified" })
+      .where(eq(nitroxCertifications.personId, person.id));
+    const checked = (await listCertificationSummaries(db, shop.id, [person.id])).get(person.id);
+    expect(checked).toMatchObject({ nitrox: true, nitroxVerified: true });
+  });
+
   it("marks a claim and leaves a real card unmarked", async () => {
     const { db, shop, person } = await joiner();
     const other = await findOrCreatePerson(db, {
@@ -1393,6 +1418,7 @@ describe("listCertificationSummaries", () => {
       noCertificationDeclared: false,
       nitrox: true,
       nitroxSelfDeclared: true,
+      nitroxVerified: false,
       verifiedLevel: null,
     });
     expect(profiles.get(other.person.id)).toEqual({
@@ -1401,6 +1427,7 @@ describe("listCertificationSummaries", () => {
       noCertificationDeclared: false,
       nitrox: false,
       nitroxSelfDeclared: false,
+      nitroxVerified: false,
       verifiedLevel: null,
     });
   });
@@ -1473,6 +1500,7 @@ describe("listCertificationSummaries", () => {
       noCertificationDeclared: true,
       nitrox: false,
       nitroxSelfDeclared: false,
+      nitroxVerified: false,
       verifiedLevel: null,
     });
   });

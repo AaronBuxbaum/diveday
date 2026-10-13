@@ -42,3 +42,13 @@ export function errorCauseTokens(error: unknown): { causeName?: string; causeCod
 export function thrownErrorToken(error: unknown): string {
   return errorCauseTokens(error).causeCode ?? errorClassToken(error);
 }
+
+/**
+ * The thrown error's own code, else its cause's, each only when it has the
+ * shape of one; undefined when neither does.
+ */
+export function errorCodeToken(error: unknown): string | undefined {
+  const own = field(error, "code");
+  if (typeof own === "string" && CODE.test(own)) return own;
+  return errorCauseTokens(error).causeCode;
+}
