@@ -1107,7 +1107,19 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           // summary under the date counts what is due before the next boat and
           // the badge counts blocked divers, so the list carries its own total
           // rather than leaving the reader to reconcile three numbers.
-          meta={t("shopHome.spine.needsYouCount", { count: needsYouCount })}
+          //
+          // **And says how much of it is the next boat's** (#2413) when that
+          // is not all of it, so the sentence's smaller number over this one
+          // reads as a part of it rather than a contradiction.
+          meta={
+            needsYouReading.next && needsYouReading.dueBeforeNext !== needsYouCount
+              ? t("shopHome.spine.needsYouCountBeforeNext", {
+                  count: needsYouCount,
+                  before: needsYouReading.dueBeforeNext,
+                  time: formatTime(needsYouReading.next.startsAt, locale, timeZone),
+                })
+              : t("shopHome.spine.needsYouCount", { count: needsYouCount })
+          }
         >
           <ul>
             {lead.map((action) => (

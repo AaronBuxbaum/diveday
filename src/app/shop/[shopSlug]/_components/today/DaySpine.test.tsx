@@ -1425,6 +1425,24 @@ describe("the evening reading", () => {
     expect(heading.parentElement).toHaveTextContent("2 things");
   });
 
+  /**
+   * **The two counts explain each other** (#2413). The sentence under the date
+   * counts what is due before the next boat; the list counts everything. Read
+   * side by side, "1 thing … before the 1:00 PM" over "2 things" looked like a
+   * contradiction, so the list says how many of its rows are the boat's.
+   */
+  it("names how many of its rows are due before the next boat when that is not all of them", () => {
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      actions: [
+        action({ id: "a", departure: boat("t1") }),
+        action({ id: "b", departure: undefined }),
+      ],
+    });
+    const heading = screen.getByRole("heading", { name: "Needs you" });
+    expect(heading.parentElement).toHaveTextContent(/2 things · 1 before the 9:00\sAM/);
+  });
+
   it("leads a crew reader with their own boat's rows and folds the desk's into one line", () => {
     // UX audit 2026-10-07, item 7: a captain's "what now" is the boat they
     // crew, not the front desk's queue.
