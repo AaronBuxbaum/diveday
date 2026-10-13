@@ -18,6 +18,7 @@ import {
   combineSiteRequirements,
   hasVerifiedCertificationAtLeast,
   higherCertificationLevel,
+  noCertificationStands,
   REQUIRABLE_CERTIFICATION_LEVELS,
   unreviewedCardState,
 } from "./readiness";
@@ -1478,5 +1479,90 @@ describe("calculateReadiness — the medical by participant type (H-109)", () =>
       now,
     });
     expect(result.blockers).toEqual([{ code: "guardian_signature_missing" }]);
+  });
+});
+
+/**
+ * Third UX review, item 23: a diver's own "I'm not certified yet", said on
+ * `/ready`. It names why the gate is unmet; it never clears it, and anything
+ * the shop holds says more than it does.
+ */
+describe("certification_not_yet", () => {
+  const codes = (input: Partial<Parameters<typeof calculateReadiness>[0]>) =>
+    calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications: [],
+      now,
+      ...input,
+    }).blockers.map((blocker) => blocker.code);
+
+  it("replaces 'missing' and still blocks", () => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications: [],
+      noCertificationDeclared: true,
+      now,
+    });
+    expect(result.status).toBe("blocked");
+    expect(result.blockers).toContainEqual({
+      code: "certification_not_yet",
+      params: { requiredLevel: "advanced_open_water" },
+    });
+    expect(result.blockers).not.toContainEqual(
+      expect.objectContaining({ code: "certification_missing" }),
+    );
+  });
+
+  it("outranks a bare self-declared level", () => {
+    const blockerCodes = codes({
+      noCertificationDeclared: true,
+      certifications: [
+        certification({ status: "pending", selfDeclaredAt: new Date("2026-07-17T00:00:00Z") }),
+      ],
+    });
+    expect(blockerCodes).toContain("certification_not_yet");
+    expect(blockerCodes).not.toContain("certification_self_declared");
+  });
+
+  it("gives way to a card the shop holds, a card under review and a too-low card", () => {
+    expect(
+      codes({ noCertificationDeclared: true, certifications: [certification()] }),
+    ).not.toContain("certification_not_yet");
+    expect(
+      codes({
+        noCertificationDeclared: true,
+        certifications: [certification({ status: "pending", identifier: "PADI-1" })],
+      }),
+    ).toEqual(expect.arrayContaining(["certification_pending"]));
+    expect(
+      codes({
+        noCertificationDeclared: true,
+        certifications: [certification({ level: "open_water" })],
+      }),
+    ).toEqual(expect.arrayContaining(["certification_insufficient"]));
+  });
+
+  it("asks nothing of a trip with no certification gate", () => {
+    expect(
+      codes({
+        noCertificationDeclared: true,
+        requirement: { ...requirement, minimumCertificationLevel: null } as TripRequirement,
+      }),
+    ).not.toContain("certification_not_yet");
+  });
+
+  it("stands until a staffer clears it", () => {
+    const said = new Date("2026-07-17T00:00:00Z");
+    expect(
+      noCertificationStands({ noCertificationDeclaredAt: said, noCertificationClearedAt: null }),
+    ).toBe(true);
+    expect(
+      noCertificationStands({ noCertificationDeclaredAt: said, noCertificationClearedAt: said }),
+    ).toBe(false);
+    expect(
+      noCertificationStands({ noCertificationDeclaredAt: null, noCertificationClearedAt: null }),
+    ).toBe(false);
   });
 });

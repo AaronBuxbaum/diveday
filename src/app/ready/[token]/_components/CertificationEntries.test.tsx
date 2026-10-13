@@ -8,6 +8,7 @@ import { CertificationEntries } from "./CertificationEntries";
 vi.mock("../cert-actions", () => {
   const action = async () => {};
   return {
+    declareNoCertificationFromReady: action,
     saveCertificationFromReady: action,
     saveNitroxCertificationFromReady: action,
     saveSpecialtyFromReady: action,
@@ -42,6 +43,7 @@ describe("CertificationEntries", () => {
           { code: "nitrox_missing" },
         ])}
         offerNitrox={false}
+        notYet={null}
         t={t}
       />,
     );
@@ -61,6 +63,7 @@ describe("CertificationEntries", () => {
         token="tok"
         item={item([{ code: "certification_pending" }])}
         offerNitrox={false}
+        notYet={null}
         t={t}
       />,
     );
@@ -69,7 +72,7 @@ describe("CertificationEntries", () => {
 
   it("pills the nitrox offer the trip does not require, and never doubles a required one", () => {
     const { container } = render(
-      <CertificationEntries token="tok" item={item([])} offerNitrox t={t} />,
+      <CertificationEntries token="tok" item={item([])} offerNitrox notYet={null} t={t} />,
     );
     expect(summaries(container)).toEqual([
       `${t("ready.nitroxCertHeading")}${t("ready.certOptional")}`,
@@ -80,10 +83,55 @@ describe("CertificationEntries", () => {
         token="tok"
         item={item([{ code: "nitrox_missing" }])}
         offerNitrox
+        notYet={null}
         t={t}
       />,
     );
     expect(summaries(required.container)).toEqual([t("ready.nitroxCertHeading")]);
     expect(screen.queryByText(t("ready.certOptional"))).toBeNull();
+  });
+  it("offers 'not certified yet' beside the card form when the shop holds nothing", () => {
+    render(
+      <CertificationEntries
+        token="tok"
+        item={item([{ code: "certification_missing" }])}
+        offerNitrox={false}
+        notYet={null}
+        t={t}
+      />,
+    );
+    expect(screen.getByText(t("ready.certNotYetLead"))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: t("ready.certNotYetButton") })).toBeInTheDocument();
+  });
+
+  it("never offers 'not certified yet' over a card already on file", () => {
+    render(
+      <CertificationEntries
+        token="tok"
+        item={item([{ code: "certification_insufficient" }])}
+        offerNitrox={false}
+        notYet={null}
+        t={t}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: t("ready.certNotYetButton") })).toBeNull();
+  });
+
+  it("after 'not yet', opens the try-it course and keeps the card form for a found card", () => {
+    const { container } = render(
+      <CertificationEntries
+        token="tok"
+        item={item([])}
+        offerNitrox={false}
+        notYet={{ introCourse: { title: "Discover Scuba Diving", href: "/s/reef/courses/dsd" } }}
+        t={t}
+      />,
+    );
+    const door = screen.getByRole("link", {
+      name: t("ready.certNotYetTryFirst", { course: "Discover Scuba Diving" }),
+    });
+    expect(door).toHaveAttribute("href", "/s/reef/courses/dsd");
+    expect(summaries(container)).toEqual([t("ready.certHeading")]);
+    expect(screen.queryByRole("button", { name: t("ready.certNotYetButton") })).toBeNull();
   });
 });

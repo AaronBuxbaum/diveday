@@ -171,6 +171,10 @@
   "Ignored" is that same three-table test: any live card the shop holds drops it from the summary,
   while a level the diver merely *claimed* later leaves it standing and simply renders ahead of it.
   It gates nothing ([20260814-self-declared-cards](../../architecture/decisions/20260814-self-declared-cards.md)).
+  Since 2026-10-13 a booked diver can also give it on `/ready`'s certification step, the first place
+  the sale's silence (2026-08-27) meets a first-timer. While it stands on a seat whose level gate is
+  unmet, the blocker reads `certification_not_yet` ("Says they're not certified yet") instead of
+  `certification_missing`: the same Blocked seat, named so the desk knows which conversation to have.
 - **Clearing a declared-uncertified stamp** — a staffer saying, on the diver record, that this diver
   never gave that answer. The forms that write it are unauthenticated and resolve a person by shop +
   email, so for a diver the shop holds no card for anybody with a name and an email address can leave

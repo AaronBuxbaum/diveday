@@ -131,6 +131,9 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // "waiting": the diver's part is finishing the course they are booked on,
   // and the card is the instructor's to issue.
   certification_in_training: "waiting",
+  // "waiting": the diver has answered. What is left is the crew's
+  // conversation at the dock, and nothing on this page can do it.
+  certification_not_yet: "waiting",
   specialty_missing: "action",
   specialty_pending: "waiting",
   // "waiting", not "action": the card is on file and came across in the shop's

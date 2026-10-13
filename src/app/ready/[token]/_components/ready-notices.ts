@@ -48,6 +48,8 @@ export const READY_NOTICES: Record<
   // The number is already on file here — most often their own card, entered
   // twice. Nothing to fix, so this is neutral rather than an error.
   "saved-cert-known": { tone: "neutral", key: "ready.certKnown" },
+  "saved-not-yet": { tone: "success", key: "ready.certNotYetSaved" },
+  "saved-not-yet-card": { tone: "neutral", key: "ready.certNotYetCardOnFile" },
   "error-cert": { tone: "danger", key: "ready.certInvalid" },
   // `selfCancelBooking` refused — the seat flipped to checked-in, or the boat
   // sailed, between this page rendering and the tap. The four refusal reasons

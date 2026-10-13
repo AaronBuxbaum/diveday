@@ -214,6 +214,7 @@
       "certificationInsufficient": "Sin la certificación para esta salida. Requiere {level} o superior.",
       "certificationInsufficientHeld": "Sin la certificación para esta salida. Requiere {level} o superior, y la certificación más alta registrada es {held}.",
       "certificationInTraining": "Aún sin certificación {level}. Inscrito en un curso que termina antes de esta salida; esto se resuelve cuando el instructor lo certifique.",
+      "certificationNotYet": "Dice que todavía no tiene certificación. Esta salida pide {level} o superior, así que habla con esa persona antes de que embarque.",
       "specialtyMissing": "Se requiere la especialidad {specialty}; no hay certificación registrada.",
       "specialtyPending": "La certificación de especialidad {specialty} espera verificación del personal.",
       "specialtyImportUnconfirmed": "La certificación de especialidad {specialty} llegó en una importación y un miembro del personal debe confirmarla antes de esta inmersión.",

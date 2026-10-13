@@ -180,6 +180,28 @@ export async function hasActiveRefresherCourse(db: AppDb, shopId: string): Promi
 }
 
 /**
+ * The first try-it course this shop publishes (Discover Scuba, Try Scuba), the
+ * door `/ready` opens for a diver who said they are not certified yet (third UX
+ * review, item 23). `is_intro_course` says which entries these are, never the
+ * title. Null when the shop publishes none: the page then says only that the
+ * crew will talk to them at the dock.
+ */
+export async function firstActiveIntroCourse(
+  db: AppDb,
+  shopId: string,
+): Promise<{ slug: string; title: string } | null> {
+  const [row] = await db
+    .select({ slug: courses.slug, title: courses.title })
+    .from(courses)
+    .where(
+      and(eq(courses.shopId, shopId), eq(courses.isActive, true), eq(courses.isIntroCourse, true)),
+    )
+    .orderBy(...progressionOrder)
+    .limit(1);
+  return row ?? null;
+}
+
+/**
  * Every publicly-indexable course page, for the sitemap — active courses at
  * non-demo shops, across the whole catalog rather than one shop at a time, so
  * this joins to `shops` for the `isDemo` filter instead of looping

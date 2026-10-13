@@ -66,6 +66,7 @@ import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
+import { publicCoursePath } from "@/lib/public-routes";
 import { readyCopyKeepUntil } from "@/lib/ready-offline";
 import { signRecapToken } from "@/lib/recap-links";
 import { nitroxAvailableOn } from "@/lib/rentals";
@@ -508,6 +509,20 @@ async function DiverReadinessPage({
               token={token}
               item={step.item}
               offerNitrox={nitroxCardEntryOffered}
+              notYet={
+                detail.readiness.blockers.some(
+                  (blocker) => blocker.code === "certification_not_yet",
+                )
+                  ? {
+                      introCourse: data.introCourse
+                        ? {
+                            title: data.introCourse.title,
+                            href: publicCoursePath(data.shop.slug, data.introCourse.slug),
+                          }
+                        : null,
+                    }
+                  : null
+              }
               t={t}
             />
           );

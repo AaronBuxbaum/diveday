@@ -214,6 +214,15 @@ export type ReadinessBlockerCode =
    * diver boards on the card the instructor issues, never on the enrollment.
    */
   | "certification_in_training"
+  /**
+   * The diver said, on their own link, that they hold no card yet (third UX
+   * review, item 23). Still a blocker, never a refusal: the sale stays open
+   * (`decideTripAdmission`), and the crew talks to them at the dock about a
+   * Discover Scuba or the course. Its own code so Today and the roster say
+   * "Says not certified yet" rather than "No certification on file", which
+   * reads as paperwork the diver forgot.
+   */
+  | "certification_not_yet"
   | "specialty_missing"
   | "specialty_pending"
   | "specialty_import_unconfirmed"
@@ -271,6 +280,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   certification_self_declared: "certification",
   certification_insufficient: "certification",
   certification_in_training: "certification",
+  certification_not_yet: "certification",
   specialty_missing: "certification",
   specialty_pending: "certification",
   specialty_import_unconfirmed: "certification",
@@ -357,6 +367,7 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   certification_self_declared: "certification",
   certification_insufficient: "certification",
   certification_in_training: "certification",
+  certification_not_yet: "certification",
   specialty_missing: "certification",
   specialty_pending: "certification",
   specialty_import_unconfirmed: "certification",
@@ -423,6 +434,13 @@ export type ReadinessInput = {
    * into the softer `certification_in_training`, and nothing here clears.
    */
   certificationsInTraining?: readonly CertificationInTraining[];
+  /**
+   * The diver's own standing "I'm not certified yet" (`people.
+   * no_certification_declared_at`, not cleared by staff). Never evidence and
+   * never a clearance: it only names *why* a level gate is unmet, below every
+   * card the shop holds. See `noCertificationStands`.
+   */
+  noCertificationDeclared?: boolean;
   specialtyCertifications?: readonly SpecialtyCertification[];
   nitroxCertifications?: readonly NitroxCertification[];
   /** The booking's current payment state; absent is treated as unpaid. */
@@ -646,10 +664,23 @@ export function hasVerifiedCertificationAtLeast(
   );
 }
 
+/**
+ * Whether a person's "I'm not certified yet" still stands: said, and not since
+ * cleared by a staffer (`clearNoCertificationDeclaration`). A card on file
+ * outranks it in `certificationBlocker`, so this asks nothing about cards.
+ */
+export function noCertificationStands(person: {
+  noCertificationDeclaredAt: Date | null;
+  noCertificationClearedAt: Date | null;
+}): boolean {
+  return person.noCertificationDeclaredAt !== null && person.noCertificationClearedAt === null;
+}
+
 function certificationBlocker(
   certifications: readonly Certification[],
   minimumLevel: CertificationLevel,
   inTraining: readonly CertificationInTraining[],
+  noCertificationDeclared: boolean,
   now: Date,
 ): ReadinessBlocker | null {
   const verified = certifications.filter(validVerifiedCertification);
@@ -708,6 +739,14 @@ function certificationBlocker(
       code: "certification_insufficient",
       params: { requiredLevel: minimumLevel, heldLevel },
     };
+  }
+  // **The diver's own "not yet"**, below every card the shop holds and every
+  // course that gets them there: a verified card, a number waiting on review
+  // or a course finishing first all answer more than the statement does. Above
+  // a bare self-declared level and plain `missing`, because it is the one
+  // answer that tells the crew what conversation to have at the dock.
+  if (noCertificationDeclared) {
+    return { code: "certification_not_yet", params: { requiredLevel: minimumLevel } };
   }
   // Below every state backed by something the shop holds, and above plain
   // `missing` only because it can say more: the diver told us a level and gave
@@ -918,6 +957,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       input.certifications,
       effective.minimumCertificationLevel,
       input.certificationsInTraining ?? [],
+      input.noCertificationDeclared ?? false,
       now,
     );
     if (certification) blockers.push(certification);

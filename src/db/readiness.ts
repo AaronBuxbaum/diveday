@@ -13,6 +13,7 @@ import {
   combineSiteRequirements,
   isUnsightedSelfDeclaration,
   needsCardSighting,
+  noCertificationStands,
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
@@ -1762,6 +1763,9 @@ export async function listTripsReadiness(
               now,
             )
           : [],
+        // The diver's own "I'm not certified yet", said on their link or a
+        // public form: it names why the gate is unmet, and clears nothing.
+        noCertificationDeclared: noCertificationStands(row.person),
         specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
         nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
         paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,

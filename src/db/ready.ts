@@ -9,6 +9,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import type { ParticipantType } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { type ReEntryAsk, reEntryWindowOpen } from "@/lib/re-entry";
+import { noCertificationStands } from "@/lib/readiness";
 import type { RentalPricing } from "@/lib/rentals";
 import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
@@ -16,7 +17,7 @@ import { shopWaiverStatus } from "@/lib/waivers";
 import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
-import { hasActiveRefresherCourse } from "./courses";
+import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
@@ -258,6 +259,12 @@ export type ReadyPageData = {
    * almost always, and the query behind it only runs then.
    */
   refresherCourseOffered: boolean;
+  /**
+   * The try-it course (`is_intro_course`) the certification step points a
+   * diver at after they said they are not certified yet. Read only while that
+   * statement stands, null otherwise or when the shop publishes none.
+   */
+  introCourse: { slug: string; title: string } | null;
   reEntryOffersOpen: boolean;
   nitroxCardVerified: boolean;
   /**
@@ -399,6 +406,8 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
+      noCertificationDeclaredAt: people.noCertificationDeclaredAt,
+      noCertificationClearedAt: people.noCertificationClearedAt,
       tripStartsAt: trips.startsAt,
       tripCourseId: trips.courseId,
     })
@@ -426,6 +435,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
   const [
     trip,
     refresherCourseOffered,
+    introCourse,
     materialsDoneElsewhere,
     rentalFit,
     helpRequest,
@@ -438,6 +448,9 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
   ] = await Promise.all([
     getTripWithBooked(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
+    // Only for a diver whose "I'm not certified yet" stands: the one door the
+    // certification step opens for them (third UX review, item 23).
+    noCertificationStands(row) ? firstActiveIntroCourse(db, row.shopId) : null,
     // Someone marked this student's materials done on another departure of the
     // same course; asked only when this seat carries no mark of its own.
     row.courseMaterialsDoneAt === null && row.tripCourseId !== null
@@ -468,6 +481,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     row,
     trip,
     refresherCourseOffered,
+    introCourse,
     reEntryOffersOpen,
     rentalFit,
     helpRequest,
@@ -501,6 +515,7 @@ export async function getReadyPageData(
     row,
     trip,
     refresherCourseOffered,
+    introCourse,
     reEntryOffersOpen,
     rentalFit,
     helpRequest,
@@ -593,6 +608,7 @@ export async function getReadyPageData(
     reEntryAsk: row.reEntryAsk,
     reEntryOffersOpen,
     refresherCourseOffered,
+    introCourse: identityHeld ? null : introCourse,
     nitroxCardVerified: !identityHeld && nitroxVerified.has(row.personId),
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),

@@ -227,6 +227,12 @@ const CERTIFICATION_FIX: Record<
       target: "open_booking",
     },
     certification_in_training: null,
+    // The diver said there is no card: the booking is where a staffer moves
+    // them to a Discover Scuba or the course, as for a card below the bar.
+    certification_not_yet: {
+      labelKey: "divers.status.acts.openBooking",
+      target: "open_booking",
+    },
     // Not certification blockers; listed so a new code is a type error here.
     requirements_not_configured: null,
     identity_unconfirmed: null,
