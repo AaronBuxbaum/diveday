@@ -218,7 +218,13 @@ async function DiverReadinessPage({
     // from the shop. What it says about their money is read from the payment
     // row, never from anything on the URL.
     const payment = await getBookingPayment(db, data.shop.id, bookingId);
-    return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name, t);
+    return cancelledNotice(db, {
+      paymentStatus: payment?.status,
+      trip: { id: data.trip.id, title: detail.trip.title },
+      shop: { id: shop.id, slug: shop.slug, name: detail.shop.name, timezone: detail.shop.timezone },
+      locale,
+      t,
+    });
   }
 
   /**

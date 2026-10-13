@@ -51,12 +51,18 @@ export async function readyDeadLink({
       const data = await getReadyPageData(db, resolved.bookingId);
       if (data?.detail.cancelled) {
         const payment = await getBookingPayment(db, data.shop.id, resolved.bookingId);
-        return cancelledNotice(
-          payment?.status,
-          data.detail.trip.title,
-          data.detail.shop.name,
-          anonT,
-        );
+        return cancelledNotice(db, {
+          paymentStatus: payment?.status,
+          trip: { id: data.trip.id, title: data.detail.trip.title },
+          shop: {
+            id: data.shop.id,
+            slug: data.shop.slug,
+            name: data.detail.shop.name,
+            timezone: data.detail.shop.timezone,
+          },
+          locale: await requestLocale(data.shop.defaultLocale),
+          t: anonT,
+        });
       }
     }
   }

@@ -841,6 +841,8 @@
     "freshWaiverLink": "Get a fresh waiver link",
     "payForTrip": "Pay for this trip",
     "cancelledSeatReleased": "Your seat on {trip} is no longer held. If that’s a surprise, get in touch with {shop}.",
+    "cancelledSeeSchedule": "See what’s coming up",
+    "cancelledNextInSeries": "Book the next {trip}: {date}",
     "tripCancelledBody": "Your seat is released, and there’s nothing you need to do.",
     "checklistDetail": {
       "setupGeneric": "Your shop is still finalizing this trip’s details.",

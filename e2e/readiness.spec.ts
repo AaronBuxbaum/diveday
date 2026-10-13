@@ -225,6 +225,11 @@ test.describe("staff-prepared trip", () => {
     await page.getByRole("button", { name: "Cancel my spot" }).click();
     await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
     await expect(page.getByRole("heading", { name: "This booking was canceled" })).toBeVisible();
+    // Never a dead end: the schedule is one tap away (third UX review, item 16).
+    await expect(page.getByRole("link", { name: "See what’s coming up" })).toHaveAttribute(
+      "href",
+      /^\/s\/[^/]+$/,
+    );
 
     // **And the same dead token, opened again later, names the shop.**
     //

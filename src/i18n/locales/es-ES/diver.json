@@ -841,6 +841,8 @@
     "freshWaiverLink": "Conseguir un enlace nuevo",
     "payForTrip": "Pagar esta salida",
     "cancelledSeatReleased": "Tu plaza en {trip} ya no está reservada. Si te sorprende, ponte en contacto con {shop}.",
+    "cancelledSeeSchedule": "Ver las próximas salidas",
+    "cancelledNextInSeries": "Reservar la próxima fecha de {trip}: {date}",
     "tripCancelledBody": "Tu plaza queda liberada y no tienes que hacer nada.",
     "checklistDetail": {
       "setupGeneric": "Tu centro todavía está finalizando los detalles de esta salida.",
