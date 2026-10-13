@@ -35,6 +35,7 @@ import {
   type TripInvitationDelivery,
 } from "@/db/trip-invitations";
 import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
+import { carryWaitlist } from "@/db/waitlist-roll";
 import {
   deliverWaiverBatch,
   type IdentityReleaseOutcome,
@@ -490,6 +491,39 @@ export async function moveSeatAction(shopSlug: string, tripId: string, formData:
         ? "seat-moved-untold"
         : "seat-moved";
   revalidateAndRedirect(back, noticeUrl(back, notice));
+}
+
+/**
+ * **"Carry the wait list"** from the demand banner (third UX review, item 12):
+ * every lead still waiting on this full departure is copied to the one staff
+ * chose, and the staffer lands on it, where the wait list's one-tap invite
+ * reaches them. Nobody is messaged here.
+ */
+const carryWaitlistForm = z.object({
+  toTripId: z.string().refine((id) => uuidParam(id) !== undefined),
+});
+
+export async function carryWaitlistAction(shopSlug: string, tripId: string, formData: FormData) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const parsed = parseForm(carryWaitlistForm, formData);
+  if (!uuidParam(tripId) || !parsed.ok) redirect(back);
+  const { toTripId } = parsed.data;
+  const carried = await carryWaitlist(await getDb(), {
+    shopId: s.user.shopId,
+    fromTripId: tripId,
+    toTripId,
+  });
+  if (!carried.ok) {
+    if (carried.reason === "not_found") redirect(back);
+    revalidateAndRedirect(back, noticeUrl(back, "waitlist-carry-unavailable"));
+  }
+  const landing = tripPath(shopSlug, toTripId);
+  revalidatePath(back);
+  revalidateAndRedirect(
+    landing,
+    noticeUrl(landing, "waitlist-carried", { count: carried.carried }),
+  );
 }
 
 export async function undoRemoveBookingAction(

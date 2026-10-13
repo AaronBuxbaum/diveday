@@ -3,15 +3,17 @@ import type { ReactNode } from "react";
 import { ActivityLog } from "@/components/ActivityLog";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { ScrollToHash } from "@/components/ScrollToHash";
+import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripGuests } from "@/db/trips";
 import { activityLine } from "@/i18n/activity-labels";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -42,6 +44,8 @@ export type TripRosterActions = {
   markPaymentAction: FormAction;
   removeBookingAction: FormAction;
   moveSeat?: SeatMove;
+  /** The demand banner's "Carry the wait list" (third UX review, item 12). */
+  carryWaitlistAction?: FormAction;
   setParticipantTypeAction: FormAction;
   confirmDiverIdentityAction: FormAction;
   splitDiverIdentityAction: FormAction;
@@ -213,6 +217,13 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           >
             {t("trips.guests.scheduleAnotherDeparture")}
           </Link>
+          {actions.carryWaitlistAction && actions.moveSeat?.targets.length ? (
+            <CarryWaitlistForm
+              action={actions.carryWaitlistAction}
+              targets={actions.moveSeat.targets}
+              t={t}
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -458,5 +469,44 @@ export function TripPromoteAndActivity({
           the roster's own ScrollToHash is not on this tab. */}
       <ScrollToHash />
     </div>
+  );
+}
+
+/**
+ * The demand banner's second door: hand the waiting leads to a departure that
+ * is already on the board, including the one just added from "Schedule another
+ * departure". The same departures a seat may move to (`seatMoveFor`).
+ */
+function CarryWaitlistForm({
+  action,
+  targets,
+  t,
+}: {
+  action: FormAction;
+  targets: SeatMove["targets"];
+  t: StaffTranslator;
+}) {
+  return (
+    <form action={action} className="mt-4 flex flex-col gap-3">
+      <FieldGrid columns={1}>
+        <Field label={t("trips.guests.carryWaitlistTo")} htmlFor="carry-waitlist-to">
+          <select id="carry-waitlist-to" name="toTripId" required className={controlClass}>
+            {targets.map((target) => (
+              <option key={target.id} value={target.id}>
+                {target.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </FieldGrid>
+      <div>
+        <SubmitButton
+          pendingLabel={t("trips.guests.carryWaitlistPending")}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("trips.guests.carryWaitlist")}
+        </SubmitButton>
+      </div>
+    </form>
   );
 }

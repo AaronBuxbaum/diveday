@@ -26,6 +26,7 @@ vi.mock("@/db/seat-diver", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/seat-diver")>();
   return { ...actual, moveSeat: vi.fn() };
 });
+vi.mock("@/db/waitlist-roll", () => ({ carryWaitlist: vi.fn() }));
 vi.mock("./roster-booking", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./roster-booking")>();
   return { ...actual, requireRosterBooking: vi.fn() };
@@ -35,7 +36,8 @@ const { getDb } = await import("@/db/client");
 const { moveSeat } = await import("@/db/seat-diver");
 const { requireShopSurface } = await import("@/lib/session");
 const { requireRosterBooking } = await import("./roster-booking");
-const { moveSeatAction } = await import("./actions");
+const { carryWaitlist } = await import("@/db/waitlist-roll");
+const { carryWaitlistAction, moveSeatAction } = await import("./actions");
 
 const SHOP_SLUG = "reef-life";
 const SHOP_ID = "11111111-1111-4111-8111-111111111111";
@@ -126,6 +128,35 @@ describe("moveSeatAction", () => {
     expect(moveSeat).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ toTripId: "not-a-trip" }),
+    );
+  });
+});
+
+describe("carryWaitlistAction", () => {
+  function carryForm() {
+    const data = new FormData();
+    data.set("toTripId", TO_TRIP_ID);
+    return data;
+  }
+
+  it("lands on the departure the leads went to, saying how many", async () => {
+    signIn();
+    vi.mocked(carryWaitlist).mockResolvedValue({ ok: true, carried: 3 });
+    const landing = shopPath(SHOP_SLUG, "trips", TO_TRIP_ID);
+    expect(await redirectedTo(() => carryWaitlistAction(SHOP_SLUG, TRIP_ID, carryForm()))).toBe(
+      noticeUrl(landing, "waitlist-carried", { count: 3 }),
+    );
+    expect(carryWaitlist).toHaveBeenCalledWith(
+      {},
+      { shopId: SHOP_ID, fromTripId: TRIP_ID, toTripId: TO_TRIP_ID },
+    );
+  });
+
+  it("stays put and says so when the departure takes nobody", async () => {
+    signIn();
+    vi.mocked(carryWaitlist).mockResolvedValue({ ok: false, reason: "target_unavailable" });
+    expect(await redirectedTo(() => carryWaitlistAction(SHOP_SLUG, TRIP_ID, carryForm()))).toBe(
+      noticeUrl(back, "waitlist-carry-unavailable"),
     );
   });
 });

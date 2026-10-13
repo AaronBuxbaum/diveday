@@ -2,6 +2,7 @@ import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-
 import type { AppDb } from "@/db/client";
 import {
   addToWaitlistAction,
+  carryWaitlistAction,
   confirmDiverIdentityAction,
   createDirectTripInvitationAction,
   markPaymentAction,
@@ -67,6 +68,7 @@ export async function tripRosterActions({
     updateBookingPickupAction: updateBookingPickupAction.bind(null, shopSlug, tripId),
     recordTripInvitationAction: recordTripInvitationAction.bind(null, shopSlug, tripId),
     undoRemoveBookingAction: undoRemoveBookingAction.bind(null, shopSlug, tripId),
+    carryWaitlistAction: carryWaitlistAction.bind(null, shopSlug, tripId),
     moveSeat: await seatMoveFor({
       db,
       shopId: shop.id,

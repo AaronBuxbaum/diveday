@@ -377,6 +377,7 @@
   joining buys no standing, and staff invite whoever fits the departure. The join date is kept and
   shown to staff, so the longest wait is visible without being owed anything
   (ADR 20260813-wait-list-is-a-lead-list).
+- **Wait-list roll** — the wait list following the divers rather than staying on a day that is gone or full. Nightly, beside the series roll, a series date that sailed hands every lead nobody invited to the next date of the run, and the existing wait-list invite goes out at once while that date has a seat; a lead staff already invited stays where they left it. From a full departure's demand banner, "Carry the wait list" hands every lead to a departure staff choose, with no message until staff invite. Entries are copied, keep the time the diver first asked, skip anyone already seated there, and never rank anybody. `src/db/waitlist-roll.ts`.
 - **Last-minute list** — a shop-wide (not per-trip) opt-in of divers who want to hear about
   last-minute deals, each with an optional date range they said they're around. Distinct from the
   **wait list**: the wait list is per-trip interest in a charter that's already *full*; the
