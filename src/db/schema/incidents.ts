@@ -136,6 +136,10 @@ export const incidentReportPeople = pgTable(
   (table) => [
     index("incident_report_people_report_idx").on(table.reportId, table.createdAt),
     index("incident_report_people_booking_idx").on(table.bookingId),
+    // The people FK, which erasure and a merge check against every row.
+    index("incident_report_people_person_idx")
+      .on(table.personId)
+      .where(sql`${table.personId} is not null`),
     check(
       "incident_report_people_one_subject",
       sql`num_nonnulls(${table.bookingId}, ${table.personId}, ${table.outsiderName}) = 1`,
