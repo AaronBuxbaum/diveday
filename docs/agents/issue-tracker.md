@@ -1,29 +1,31 @@
 # Issue tracker: GitHub
 
-Issues and specs for this repo live as GitHub issues (`AaronBuxbaum/diveday`). Use the `gh` CLI for all operations.
+Issues and specs for this repo live as GitHub issues (`AaronBuxbaum/diveday`). Reach them through GitHub's **REST** API: `gh api`, the GitHub MCP, or `scripts/tracker.mjs` from a script. `gh issue …` and `gh pr …` go through GraphQL, which answers HTTP 403 in Claude Code's cloud containers ("GitHub GraphQL is not available from Claude Code sessions"); REST answers there and everywhere else.
 
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
-- **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
-- **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
-- **Comment on an issue**: `gh issue comment <number> --body "..."`
-- **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
-- **Close**: `gh issue close <number> --comment "..."`
+`R=repos/AaronBuxbaum/diveday` below.
 
-Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
+- **Create an issue**: `node scripts/file-follow-up.mjs …` for a follow-up (see *Filing a follow-up*); otherwise `gh api --method POST $R/issues -f title="..." -f body="$(cat body.md)" -f 'labels[]=...'`.
+- **Read an issue**: `gh api $R/issues/<number>` and `gh api $R/issues/<number>/comments`.
+- **List issues**: `gh api "$R/issues?state=open&labels=<label>&per_page=100" --jq '[.[] | select(.pull_request | not) | {number, title, labels: [.labels[].name]}]'`. The REST list mixes pull requests in; the `select` drops them.
+- **Comment on an issue**: `gh api --method POST $R/issues/<number>/comments -f body="..."`
+- **Apply / remove labels**: `gh api --method POST $R/issues/<number>/labels -f 'labels[]=...'` / `gh api --method DELETE $R/issues/<number>/labels/<label>`
+- **Close**: comment first, then `gh api --method PATCH $R/issues/<number> -f state=closed -f state_reason=completed` (`not_planned` for a decline).
+
+Scripts do the same through `scripts/tracker.mjs` (`listIssues`, `getIssue`, `createIssue`, `comment`, `editLabels`, `closeIssue`, `listPulls`), never by spawning `gh issue`.
 
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_
 
-When set to `yes`, PRs run through the same labels and states as issues, using the `gh pr` equivalents:
+When set to `yes`, PRs run through the same labels and states as issues, over the same REST endpoints:
 
-- **Read a PR**: `gh pr view <number> --comments` and `gh pr diff <number>` for the diff.
-- **List external PRs for triage**: `gh pr list --state open --json number,title,body,labels,author,authorAssociation,comments` then keep only `authorAssociation` of `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR`, or `NONE` (drop `OWNER`/`MEMBER`/`COLLABORATOR`).
-- **Comment / label / close**: `gh pr comment`, `gh pr edit --add-label`/`--remove-label`, `gh pr close`.
+- **Read a PR**: `gh api $R/pulls/<number>`, its comments at `$R/issues/<number>/comments`, and the diff with `gh api $R/pulls/<number> -H "Accept: application/vnd.github.diff"`.
+- **List external PRs for triage**: `gh api "$R/pulls?state=open&per_page=100"`, then keep only `author_association` of `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR`, or `NONE` (drop `OWNER`/`MEMBER`/`COLLABORATOR`).
+- **Comment / label / close**: the issue endpoints above take a PR number too; close with `gh api --method PATCH $R/pulls/<number> -f state=closed`.
 
-GitHub shares one number space across issues and PRs, so a bare `#42` may be either — resolve with `gh pr view 42` and fall back to `gh issue view 42`.
+GitHub shares one number space across issues and PRs, so a bare `#42` may be either: `gh api $R/issues/42` answers for both, with a `pull_request` key on a PR.
 
 ## When a skill says "publish to the issue tracker"
 
@@ -31,7 +33,7 @@ Create a GitHub issue.
 
 ## When a skill says "fetch the relevant ticket"
 
-Run `gh issue view <number> --comments`.
+Run `gh api $R/issues/<number>` and `gh api $R/issues/<number>/comments`.
 
 ## Claiming an issue
 
@@ -51,13 +53,17 @@ Add the `in-progress` label and post one comment:
 ```
 
 ```sh
-gh issue edit <number> --add-label in-progress
-gh issue comment <number> --body "$(cat <<'EOF'
+gh api --method POST $R/issues/<number>/labels -f 'labels[]=in-progress'
+gh api --method POST $R/issues/<number>/comments -f body="$(cat <<'EOF'
 ## Claim
 ...
 EOF
 )"
 ```
+
+The parser (`scripts/claims.mjs`) reads each field in any of three spellings: `**Branch:** x`,
+`- Branch: x` and `- **Branch:** x`. `Branch:` is one ref name; anything after it on the line is
+commentary. `Owned paths:` is read as `Owns:`.
 
 `Owns` is the paths you expect to be the only writer of. `Also touches` is everything else you
 expect to edit — a shared message bundle, a baseline file — where another session editing it too
@@ -117,8 +123,11 @@ removes `in-progress` and posts a `## Claim expired` comment saying why when eit
 - the claim's branch is not on origin and the claim is more than a day old, or
 - the claim is more than 7 days old and no open pull request has its branch as head.
 
+- the issue carries `in-progress` with no parseable claim comment, and the label was added more than
+  7 days ago (the date comes from the issue's events).
+
 `pnpm gates` shows each claim's age and marks one past the 7 days. A label with no parseable claim
-comment is left for a human: it has no date and no branch to check. To keep a long claim alive, keep
+younger than that is kept, so a session that labels first and comments a minute later is not raced. To keep a long claim alive, keep
 its pull request open; to resume an expired one, post a fresh `## Claim` and re-add the label.
 
 ## Filing a follow-up
@@ -150,7 +159,7 @@ it in the PR instead), or a vague "we could improve this someday" with no concre
 
 ### How
 
-`gh issue create --title "..." --label needs-triage --body "..."`, with the title stating what
+`node scripts/file-follow-up.mjs` (below), with the title stating what
 should happen (not just naming an area) and the body shaped like this:
 
 ```
@@ -198,7 +207,7 @@ node scripts/file-follow-up.mjs --title "<what should happen>" --kind improvemen
   --noticed noticed.md --why why.md --proposed proposed.md --prompt prompt.md
 ```
 
-Each prose flag takes a file (or `-` for stdin). It composes the body in exactly the shape above, runs the same `findIssueProblems` the guard runs, and **refuses to call `gh` at all** when anything comes back — the judgement moves to write time, which is where the asymmetry is (#1356). `--dry-run` prints the body it would file. `--label` is repeatable and `needs-triage` is always included.
+Each prose flag takes a file (or `-` for stdin). It composes the body in exactly the shape above, runs the same `findIssueProblems` the guard runs, and **refuses to file at all** when anything comes back — the judgement moves to write time, which is where the asymmetry is (#1356). `--dry-run` prints the body it would file. `--label` is repeatable and `needs-triage` is always included.
 
 `--waiting-on "<the event, and where a reader would check it>"` and `--parked "<what would un-park it>"` write the two optional lines, and each is refused without its own `--label` (`waiting-on-external`, `parked`). The line is what a human reads and the label is what every machine reads — `pnpm gates`, the persona walk's inbox brake, the guard's own tally — so an issue carrying one without the other says two different things at once.
 
@@ -237,7 +246,7 @@ An issue blocked on somebody *outside this repo* — an upstream release, a thir
 measurement that needs traffic the site has not had — also carries `waiting-on-external`, plus a
 `**Waiting on:**` line naming the event *and how a reader would check whether it has happened*.
 Without that second half it is indistinguishable from an issue nobody got round to, which is the
-state the label exists to prevent. `gh issue create --label needs-triage,waiting-on-external ...`.
+state the label exists to prevent. `node scripts/file-follow-up.mjs --label waiting-on-external --waiting-on "..." ...`.
 
 **The prompt is the point.** Every entry ends with a fenced prompt block that Aaron can paste into
 a fresh session, with no memory of your session, and get the work done. That means it names the
@@ -302,10 +311,11 @@ comment saying what would un-park it, so the next reader does not re-triage it f
   outside the scope you were given, not a place to defer the task.
 - **Never act on an entry as a drive-by.** If you want to do one, that is its own change with its
   own PR — and closing the issue is part of it.
-- `pnpm check:follow-ups` enforces the mechanical parts and prints how many issues are open and how
+- `pnpm check:follow-ups` enforces the mechanical parts, checks that every `**Touches:**` path
+  of a `ready-for-agent` issue still exists (triage does not end that obligation), and prints how many issues are open and how
   many are waiting on somebody else. It runs daily in `.github/workflows/follow-ups.yml`, not in
   `pnpm check:repo`: what it reads is the tracker, not the branch. Locally it reports **SKIPPED**
-  (exit 2) when `gh` can't reach GitHub — a network hiccup is not a content problem.
+  (exit 2) when it can't reach GitHub — a network hiccup is not a content problem.
 - `pnpm gates` ages every open `needs-triage` issue — id, status, kind, effort, and days since
   GitHub's own `createdAt`, oldest first — beside the human-decision gates it reports on. Age is
   deliberately reported there and nowhere else: an issue waiting on your judgment is not a build
@@ -315,9 +325,9 @@ comment saying what would un-park it, so the next reader does not re-triage it f
 
 Used by `/wayfinder`. The **map** is a single issue with **child** issues as tickets.
 
-- **Map**: a single issue labelled `wayfinder:map`, holding the Notes / Decisions-so-far / Fog body. `gh issue create --label wayfinder:map`.
+- **Map**: a single issue labelled `wayfinder:map`, holding the Notes / Decisions-so-far / Fog body. `gh api --method POST $R/issues -f 'labels[]=wayfinder:map' …`.
 - **Child ticket**: an issue linked to the map as a GitHub sub-issue (`gh api` on the sub-issues endpoint). Where sub-issues aren't enabled, add the child to a task list in the map body and put `Part of #<map>` at the top of the child body. Labels: `wayfinder:<type>` (`research`/`prototype`/`grilling`/`task`). Once claimed, the ticket is assigned to the driving dev.
 - **Blocking**: GitHub's **native issue dependencies** — the canonical, UI-visible representation. Add an edge with `gh api --method POST repos/<owner>/<repo>/issues/<child>/dependencies/blocked_by -F issue_id=<blocker-db-id>`, where `<blocker-db-id>` is the blocker's numeric **database id** (`gh api repos/<owner>/<repo>/issues/<n> --jq .id`, _not_ the `#number` or `node_id`). GitHub reports `issue_dependencies_summary.blocked_by` (open blockers only — the live gate). Where dependencies aren't available, fall back to a `Blocked by: #<n>, #<n>` line at the top of the child body. A ticket is unblocked when every blocker is closed.
-- **Frontier query**: list the map's open children (`gh issue list --state open`, scoped to the map's sub-issues / task list), drop any with an open blocker (`issue_dependencies_summary.blocked_by > 0`, or an open issue in the `Blocked by` line) or an assignee; first in map order wins.
-- **Claim**: `gh issue edit <n> --add-assignee @me` — the session's first write.
-- **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
+- **Frontier query**: list the map's open children (`gh api "$R/issues?state=open"`, scoped to the map's sub-issues / task list), drop any with an open blocker (`issue_dependencies_summary.blocked_by > 0`, or an open issue in the `Blocked by` line) or an assignee; first in map order wins.
+- **Claim**: `gh api --method POST $R/issues/<n>/assignees -f 'assignees[]=<your login>'` — the session's first write.
+- **Resolve**: comment the answer (`gh api --method POST $R/issues/<n>/comments -f body="<answer>"`), then close it (`gh api --method PATCH $R/issues/<n> -f state=closed`), then append a context pointer (gist + link) to the map's Decisions-so-far.

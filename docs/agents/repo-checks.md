@@ -402,13 +402,21 @@ On `main` itself the merge base is `HEAD`, the range is empty, and the guard pas
 
 ### follow-ups, outside `check:repo`
 
-The follow-ups guard (`scripts/check-follow-ups.mjs`) is the one guard that makes a **network call** — `gh issue list` for every open `needs-triage` issue — and it is deliberately **not** in this table. What it reads is the tracker, not the branch: while it ran here, one malformed issue (#2036, and #1097, #1526, #1555 before it) turned every open pull request red at once, for a problem none of them contained and none could fix. Since 2026-10-07 it runs daily in `.github/workflows/follow-ups.yml` with the repository token, and on demand as `pnpm check:follow-ups`; [issue-tracker.md](issue-tracker.md)'s "Filing a follow-up" says when a session runs it.
+The follow-ups guard (`scripts/check-follow-ups.mjs`) is the one guard that makes a **network call** — it lists every open `needs-triage` issue for the format check, and every open `ready-for-agent` issue for the `**Touches:**` existence check alone, through `scripts/tracker.mjs` — and it is deliberately **not** in this table. What it reads is the tracker, not the branch: while it ran here, one malformed issue (#2036, and #1097, #1526, #1555 before it) turned every open pull request red at once, for a problem none of them contained and none could fix. Since 2026-10-07 it runs daily in `.github/workflows/follow-ups.yml` with the repository token, and on demand as `pnpm check:follow-ups`; [issue-tracker.md](issue-tracker.md)'s "Filing a follow-up" says when a session runs it.
 
-It keeps its three outcomes. Exit 0 is clean, exit 1 is a malformed issue, and exit **2** is `SKIPPED`: `gh` could not answer, so nothing was validated. That code is unreachable from any validation path, so a genuine failure can never downgrade itself into a skip. Every guard in `check:repo` exits 0 or fails; none reads the network, and `check-repo.mjs` no longer has a skipped outcome at all.
+It keeps its three outcomes. Exit 0 is clean, exit 1 is a malformed issue, and exit **2** is `SKIPPED`: GitHub could not answer, so nothing was validated.
+
+The `ready-for-agent` half exists because triage relabels a follow-up and the format check stops applying, while a path that no longer exists still sends the next session to read nothing: on 2026-10-11, 7 of 70 `ready-for-agent` issues named a path missing on main, among them follow-ups filed from an unmerged branch that triage had moved on. Only existence is checked there, since a triaged body may be rewritten as an agent brief.
+
+### tracker
+
+`scripts/tracker.mjs` is how every script reaches GitHub issues and pull requests: `gate-freshness`, `check-follow-ups`, `expire-claims`, `file-follow-up`, `check-pr-body` and `agent-doctor`. It calls `gh api` (REST), never `gh issue` or `gh pr`, which are GraphQL and answer HTTP 403 in Claude Code's cloud containers. Until 2026-10-12 the four tracker scripts shelled to `gh issue`, so in those containers `pnpm gates` skipped its claims gate, `expire-claims` could not run, and `file-follow-up` could not file, and sessions filed through the GitHub MCP, which the filing quota never counted (11 follow-ups filed from one stack, 2 stamps in the ledger). A write's fields go to `gh` as JSON on stdin, never in argv, and every write takes `{ dryRun }`. Its parser half is tested against recorded REST responses in `scripts/tracker.fixtures.json`. That code is unreachable from any validation path, so a genuine failure can never downgrade itself into a skip. Every guard in `check:repo` exits 0 or fails; none reads the network, and `check-repo.mjs` no longer has a skipped outcome at all.
 
 ### pr-body
 
-The pr-body guard (`scripts/check-pr-body.mjs`), outside `check:repo`, reads the one thing no branch contains, the pull request's body, so it is a step in CI's `Repository safeguards` job rather than a row in this table: on every pull request event it fetches the body live (or takes the event's copy) and diffs against the base **ref**, three-dot, for the reason the CI-change-detection write-up above gives. When the diff touches a safety-critical path (manifests, roll call, readiness, trip admission, certifications, medical, erasure, seat-diver, nitrox) it fails unless the body's `## Reviews launched` section names `dive-domain-expert` with an answer; when it touches auth, a `[token]` route's server code, personal-data schema, or export/import, the same for `security-reviewer`. "An answer" is what the agent found, or "not needed because <reason>"; an empty line or the template's placeholder is not. The path list is `REVIEWS` in the script and only covers `src/**`, minus the copy bundles and the PWA web manifest (`src/app/manifest.ts`).
+The pr-body guard (`scripts/check-pr-body.mjs`), outside `check:repo`, reads the one thing no branch contains, the pull request's body, so it is a step in CI's `Repository safeguards` job rather than a row in this table: on every pull request event it fetches the body live (or takes the event's copy) and diffs against the base **ref**, three-dot, for the reason the CI-change-detection write-up above gives. When the diff touches a safety-critical path (manifests, roll call, readiness, trip admission, certifications, medical, erasure, seat-diver, nitrox, the `src/db/waiver*`/`src/lib/waiver*` modules, `src/db/bookings.ts`) it fails unless the body's `## Reviews launched` section names `dive-domain-expert` with an answer; when it touches auth, a `[token]` route's server code, personal-data schema, the waiver modules, `src/lib/payments/`, `src/app/api/webhooks/`, or export/import, the same for `security-reviewer`. "An answer" says the agent was **launched** or what it **found**, or "**not needed because** <reason>"; "yes", "n/a", an empty line or the template's placeholder is not. Until 2026-10-12 any non-placeholder text passed and the waiver, payment, webhook and booking-transaction modules matched no pattern, so a "yes" on a Stripe webhook change was green.
+
+It also requires `Closes #n` in the body for every open `in-progress` issue whose newest `## Claim` names the pull request's head branch (`GITHUB_HEAD_REF` in CI, `--head` or the current branch locally), read through `scripts/tracker.mjs`; when GitHub cannot answer it warns and skips that half. #2241's claim said "closes with #2326" in prose; #2326 merged and the issue stayed open and `in-progress`. The path list is `REVIEWS` in the script and only covers `src/**`, minus the copy bundles and the PWA web manifest (`src/app/manifest.ts`).
 
 It exists because AGENTS.md's "launched, never skipped" was a rule nothing read: between 2026-10-07 and 2026-10-10, 17 of 85 merged pull requests mentioned a reviewer anywhere, while `src/lib/manifests.ts`, `src/db/seat-diver.ts` and the course-form seal changed. It checks that a launch is *recorded*, never that the review was good. The section comes from `.github/pull_request_template.md`, whose other headings (Before / After, What, How, Visual diffs, Follow-ups filed, ADRs and glossary, Stack position) are what a human reviewer reads first; only the Reviews section is enforced. Locally: `node scripts/check-pr-body.mjs --body-file <draft.md>` diffs against `origin/main`.
 
@@ -1131,3 +1139,54 @@ For `src/i18n/`; the rules themselves are in `.claude/rules/i18n.md`.
   won, an apology for a refusal — deleted, not shortened (the **copy-restraint** skill).
 - Waiver and medical wording stays English pending H-01/H-03 — its date formatting is still
   locale-negotiated.
+
+### The infra rules
+
+For `infra/`, `config/`, `.env.example` and the deploy scripts; the rules themselves are in `.claude/rules/infra.md`. This is their longer form as it stood on 2026-10-12, when the rule file was cut under 500 words.
+
+
+- **Environment variables — adding one, or asking who supplies one**: one registry,
+  `config/env-registry.mjs`: per key, who produces it (`stack` / `derived` / `manual`), which
+  destinations carry it, and what being absent costs. **A value this repository already knows is
+  not configuration and does not go here** — DiveDay's own origin, sender, Connect client id and
+  Sentry DSN are compiled in beside the code that reads them, behind `src/lib/configured.ts`, with
+  their variables surviving only as overrides; deploying a value the repo already knows is a round
+  trip that can corrupt it, and once did (issue #517). Everything derives from the registry:
+  `.env.example` is generated (`node scripts/render-env-example.mjs --write`), `.env.manual` is the
+  only file a human edits (`pnpm env:manual`), `.env.local`/`.env.vercel`/`.env.github` are
+  generated from the credentials secret plus `.env.manual`, and nothing merges: a stack-produced key
+  in `.env.manual` is refused, not ignored. Add a variable there and nowhere else (ADR
+  20260812-env-provenance-registry). `pnpm check:env` states the two structural facts and reports
+  which manual values are unset — a report, never a failure — except that with
+  `VERCEL_ENV=production` it fails on any unset `requiredInProduction` row (the Upstash pair).
+- **AWS credentials, and what deploying still leaves for a human**: one Secrets Manager secret
+  holding a filled-in `.env.example` (§16 of `infra/lib/infra-stack.ts`), and one registry of manual
+  steps (§17, `infra/lib/manual-actions.ts`) that renders to both stack outputs and the generated
+  [docs/engineering/manual-actions.md](../engineering/manual-actions.md). Add a step to the
+  registry, never to a runbook; regenerate with `pnpm test infra -u`. Reasoning in
+  [docs/engineering/infrastructure-runbook.md](../engineering/infrastructure-runbook.md).
+- **Logs, metrics, alarms, dashboards**: what is counted and alarmed is one registry,
+  `infra/lib/observability.ts`, expanded in §13 of the stack; add a signal there, never a graph at a
+  call site. An `$.event` code (`src/lib/log.ts`) and a vital's `field` are contracts a test reads
+  out of `src/` — renaming one silently stops a metric filter counting. All browser telemetry
+  mounts through the one `src/app/observability-client.tsx` so the capability-URL redaction cannot
+  be bypassed. Setup, thresholds, cost and troubleshooting in
+  [docs/engineering/cloudwatch-observability-runbook.md](../engineering/cloudwatch-observability-runbook.md).
+- **ASCII only** in everything a deploy carries out of the repo — all of `infra/`,
+  `config/env-registry.mjs`, `scripts/render-env-example.mjs` and `.env.example`. An em dash and two
+  `≤`/`≥` came back from a real deploy as `?` (`scripts/check-infra-ascii.mjs`, ADR
+  20260812-diff-role-assumes-file-publishing-role).
+- **Node majors** are three constants in `scripts/check-node-version.mjs` (`NODE_MAJOR`,
+  `NODE_FLOOR`, `LAMBDA_NODE_MAJOR`); change them there first and the guard names every declaration
+  still to follow. The Lambda major is deliberately separate from the toolchain major.
+- **Delivery pipelines**: SMS receipts are §10 of the stack with
+  [docs/engineering/sms-delivery-receipts-runbook.md](../engineering/sms-delivery-receipts-runbook.md);
+  email in [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md);
+  WhatsApp in [docs/engineering/whatsapp-cloud-api-runbook.md](../engineering/whatsapp-cloud-api-runbook.md).
+  Mail *to* DiveDay is hosted mailboxes, not code.
+- **Every AWS, Vercel and `gh` call is bounded** through `scripts/subprocess.mjs`; a synthesized
+  stack is the only place a credential can leak into an output, and `infra/**/*.test.ts` is in the
+  `pnpm check` gate for that reason. Nothing here logs a command's environment, stdin or output.
+- A new AWS service, vendor or runtime dependency is an ADR (the **adr** skill); vendor swaps are
+  rows in [docs/architecture/aws-migration-dossier.md](../architecture/aws-migration-dossier.md)
+  awaiting H-45.

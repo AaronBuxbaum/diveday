@@ -1,6 +1,6 @@
 name: Durations refresh
 
-# The four unit shards, the four Playwright shards and the eight visual shards
+# The four unit shards, the six Playwright shards and the eight visual shards
 # are dealt by each file's or test's recorded CI duration
 # (`scripts/test-durations.json` for src/test/shard-sequencer.ts,
 # `scripts/e2e-durations.json` for scripts/e2e-shard.mjs). Those files are
@@ -8,13 +8,24 @@ name: Durations refresh
 # by hand: the unit file was refreshed on 2026-10-09 and the shards already
 # spread 49% on 10-10 (code review 2026-10-10, finding 6). Every CI run
 # already uploads what it measured, so this folds the newest main run's
-# measurements back in once a week and opens a pull request when they moved.
+# measurements back in once a week and commits them when they moved.
 #
-# Needs the repository setting "Allow GitHub Actions to create and approve
-# pull requests" (Settings → Actions → General); without it the last step
-# fails with a 403 and says so. A pull request opened with the workflow token
-# starts no CI of its own (GitHub's rule against recursive runs), which is
-# acceptable for a data file the next push to it, or its merge, checks.
+# Straight to main, not through a pull request, whenever the diff is the two
+# JSON files and nothing else (the only files this job writes; the step
+# checks rather than assumes). A pull request opened with the workflow token
+# starts no CI of its own (GitHub's rule against recursive runs) and main has
+# no required checks, so the PR this job used to open waited for someone to
+# notice it every week while the shards kept dealing on stale figures (code
+# review 2026-10-11, finding 2). The files are data no reviewer reads and the
+# next CI run consumes; `main`'s ruleset forbids only deletion and force
+# pushes, so a fast-forward push from `contents: write` lands. If main moved
+# under the job it rebases once and retries; if the push is still refused
+# (a ruleset added later, a conflict) it falls back to the pull request on
+# `automation/durations-refresh`, and the backlog routine
+# (.claude/skills/backlog-routine/SKILL.md) gives an open one an empty commit
+# so CI runs, then merges it. The fallback needs the repository setting
+# "Allow GitHub Actions to create and approve pull requests" (Settings →
+# Actions → General); without it that step fails with a 403 and says so.
 on:
   schedule:
     # Mondays 05:00 UTC, an hour ahead of follow-ups.yml.
@@ -76,23 +87,35 @@ jobs:
           functional=(artifacts/e2e/*/functional-*.json)
           visual=(artifacts/visual/*/visual-*.json)
           inputs=()
-          if [ "${#functional[@]}" -eq 4 ]; then inputs+=("${functional[@]}"); else echo "::warning::${#functional[@]} of 4 Playwright shards recorded durations; keeping the committed functional figures."; fi
+          if [ "${#functional[@]}" -eq 6 ]; then inputs+=("${functional[@]}"); else echo "::warning::${#functional[@]} of 6 Playwright shards recorded durations; keeping the committed functional figures."; fi
           if [ "${#visual[@]}" -eq 8 ]; then inputs+=("${visual[@]}"); else echo "::warning::${#visual[@]} of 8 visual shards recorded durations; keeping the committed visual figures."; fi
           if [ "${#inputs[@]}" -gt 0 ]; then node scripts/e2e-durations.mjs merge "${inputs[@]}"; fi
           git diff --stat -- scripts/test-durations.json scripts/e2e-durations.json
-      - name: Open or update the pull request
+      - name: Commit to main, or open the pull request
         run: |
           if git diff --quiet -- scripts/test-durations.json scripts/e2e-durations.json; then
-            echo "Nothing moved; no pull request."
+            echo "Nothing moved; nothing to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$BRANCH"
+          message="Refresh the recorded shard durations from CI run ${{ steps.run.outputs.id }}"
+          others=$(git status --porcelain --untracked-files=no | awk '{print $2}' | grep -v -x -e scripts/test-durations.json -e scripts/e2e-durations.json || true)
           git add scripts/test-durations.json scripts/e2e-durations.json
-          git commit -m "Refresh the recorded shard durations from CI run ${{ steps.run.outputs.id }}"
+          git commit -m "$message"
+          if [ -z "$others" ]; then
+            if git push origin HEAD:main || { git pull --rebase origin main && git push origin HEAD:main; }; then
+              echo "Committed to main: $(git rev-parse HEAD)."
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "::warning::Pushing to main was refused; opening a pull request instead."
+          else
+            echo "::warning::The working tree changed outside the two durations files (${others//$'\n'/, }); opening a pull request instead of committing to main."
+          fi
+          git switch -c "$BRANCH"
           git push --force origin "$BRANCH"
-          body="Folds the durations CI run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }} recorded into \`scripts/test-durations.json\` and \`scripts/e2e-durations.json\`, which the unit, Playwright and visual shards are dealt by. Opened by .github/workflows/durations-refresh.yml; nothing here is hand-written."
+          body="Folds the durations CI run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }} recorded into \`scripts/test-durations.json\` and \`scripts/e2e-durations.json\`, which the unit, Playwright and visual shards are dealt by. Opened by .github/workflows/durations-refresh.yml because committing straight to main was refused; nothing here is hand-written. A token-opened pull request starts no CI: push an empty commit to it, then merge."
           if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
             gh pr edit "$BRANCH" --body "$body"
           else

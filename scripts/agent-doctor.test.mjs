@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { checks, gatherFacts, renderReport, summaryLines } from "./agent-doctor.mjs";
+import {
+  branchesWithoutPr,
+  checks,
+  gatherFacts,
+  renderReport,
+  summaryLines,
+} from "./agent-doctor.mjs";
 
 const healthy = {
   nodeMajor: 24,
@@ -78,5 +84,45 @@ describe("the doctor's checks", () => {
     expect(facts).toMatchObject({ pinnedMajor: 24, gh: false, mainTip: "2026-10-10", stack: "" });
     expect(facts.strays).toBeUndefined();
     expect(checks(facts).some((row) => row.name === "stray processes")).toBe(false);
+  });
+
+  it("leaves the remote-branch read to the on-demand report, off the session-start path", () => {
+    let asked = false;
+    const readers = {
+      git: () => null,
+      pinnedMajor: () => 24,
+      commandWorks: () => true,
+      fetchAge: () => 5_000,
+      installNeed: () => null,
+      readStack: () => null,
+      readLog: () => [],
+      remoteHeads: () => {
+        asked = true;
+        return ["main", "claude/merged-1", "claude/open-2"];
+      },
+      openPullHeads: () => ["claude/open-2"],
+    };
+    expect(gatherFacts("/repo", { strays: false, readers }).orphanBranches).toBeUndefined();
+    expect(asked).toBe(false);
+    const facts = gatherFacts("/repo", { strays: false, remote: true, readers });
+    expect(facts.orphanBranches).toEqual(["claude/merged-1"]);
+    const row = checks(facts).find((r) => r.name === "remote branches");
+    expect(row).toMatchObject({ status: "warn" });
+    expect(row.detail).toBe("1 remote branches with no open PR (claude/merged-1)");
+  });
+});
+
+describe("branchesWithoutPr", () => {
+  it("is every head but main that no open pull request uses, or null when unread", () => {
+    expect(branchesWithoutPr(["main", "b", "a", "c"], ["c"])).toEqual(["a", "b"]);
+    expect(branchesWithoutPr(null, [])).toBeNull();
+    expect(branchesWithoutPr(["a"], null)).toBeNull();
+  });
+
+  it("reports unknown, not ok, when GitHub could not answer", () => {
+    const row = checks({ ...healthy, orphanBranches: null }).find(
+      (r) => r.name === "remote branches",
+    );
+    expect(row.status).toBe("unknown");
   });
 });

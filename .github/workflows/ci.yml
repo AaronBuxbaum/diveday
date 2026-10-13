@@ -293,7 +293,7 @@ jobs:
           retention-days: 1
 
   playwright:
-    name: Playwright shard ${{ matrix.shard }}/4
+    name: Playwright shard ${{ matrix.shard }}/6
     needs: build
     # Nightly runs `real-postgres` only.
     if: github.event_name != 'schedule'
@@ -304,7 +304,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -335,7 +335,7 @@ jobs:
       # what it last took on CI (`scripts/e2e-durations.json`, refreshed weekly
       # by durations-refresh.yml from the `e2e-durations-<n>` artifacts below),
       # and a source estimate scaled onto those milliseconds for a spec added
-      # since. It reads only committed files, so all four jobs compute the
+      # since. It reads only committed files, so all six jobs compute the
       # identical deal from their own checkouts — the property that matters,
       # since a deal two jobs disagreed about would run a spec twice or, worse,
       # not at all. `scripts/e2e-shard.test.mjs` pins that every spec lands in
@@ -352,12 +352,12 @@ jobs:
       # here: `playwright test` with no file arguments runs every spec.
       - name: Run non-visual Playwright tests
         run: |
-          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/4 --explain --summary="$GITHUB_STEP_SUMMARY")
+          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/6 --explain --summary="$GITHUB_STEP_SUMMARY")
           if [ "${#spec_files[@]}" -eq 0 ]; then
             echo "::error::scripts/e2e-shard.mjs dealt this shard nothing; refusing to run every spec instead."
             exit 1
           fi
-          echo "shard ${{ matrix.shard }}/4: ${#spec_files[@]} specs"
+          echo "shard ${{ matrix.shard }}/6: ${#spec_files[@]} specs"
           pnpm exec playwright test "${spec_files[@]}"
         # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
         # cores) was pinned to E2E_WORKERS=1 with double the shards
@@ -396,6 +396,22 @@ jobs:
         # micro-optimization removes it — it can only be paid for with
         # E2E_WORKERS=1 and double the shards. Treat a flake here as a real
         # finding to root-cause, not as expected noise.
+        #
+        # Six shards at 2 workers, not four (2026-10-12). Once the deal ran on
+        # recorded durations the four bins could only even out to their mean,
+        # and that mean was the run's critical path: on main run 4565 the
+        # Playwright shards summed 2,439 s of job time and shard 1 ended the
+        # run at 13.6 min (709 s), two minutes after the eight visual shards
+        # and reg-suit were done. A shard is ~85 s of fixed cost (checkout,
+        # install, the build download, the shell, warm-up) plus its specs'
+        # recorded time over two workers; 4,379 recorded spec-seconds over six
+        # bins is ~365 s each, so ~7.5 min a shard against ~10.5, which puts
+        # the visual job and reg-suit back on the critical path. The price is
+        # two more runners (~3 runner-minutes) per code run and two more jobs
+        # against the 20-concurrent-job cap — which is why a stack is pushed
+        # a layer at a time (.claude/skills/stacked-prs/SKILL.md). Workers
+        # stay at 2: the oversubscription argued above is per runner, and
+        # more shards do not change it.
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -881,8 +897,8 @@ jobs:
     # four visual shards and a reg-suit compare — nineteen jobs, seventy-odd
     # runner minutes, ten minutes of wall-clock — to photograph 696 surfaces
     # that could not have moved. Worse than the waste is the queue: a code run
-    # is twenty-three jobs against the account's twenty-concurrent-job cap (at
-    # most ~17 at once, since the safeguards, lint, typecheck and this job are
+    # is twenty-five jobs against the account's twenty-concurrent-job cap (at
+    # most ~19 at once, since the safeguards, lint, typecheck and this job are
     # done before the build releases the browser shards), so a docs-only run
     # starting ahead of a code run held the code run's jobs back for as long as
     # it took to capture nothing. The safeguards, lint

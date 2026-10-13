@@ -3,6 +3,7 @@ import {
   DURATIONS_LOG_MARKER,
   mergeDurations,
   parseDurationsInput,
+  pruneMissing,
 } from "./merge-test-durations.mjs";
 
 describe("mergeDurations", () => {
@@ -44,5 +45,23 @@ describe("parseDurationsInput", () => {
     );
     const twice = `${DURATIONS_LOG_MARKER} {"a":1}\n${DURATIONS_LOG_MARKER} {"b":2}`;
     expect(() => parseDurationsInput(twice)).toThrow(/found 2/);
+  });
+});
+
+describe("pruneMissing", () => {
+  it("drops every key whose test file is gone and names them", () => {
+    const onDisk = new Set(["src/a.test.ts", "src/c.test.tsx"]);
+    expect(
+      pruneMissing({ "src/a.test.ts": 10, "src/b.test.ts": 20, "src/c.test.tsx": 30 }, (file) =>
+        onDisk.has(file),
+      ),
+    ).toEqual({ kept: { "src/a.test.ts": 10, "src/c.test.tsx": 30 }, pruned: ["src/b.test.ts"] });
+  });
+
+  it("keeps the map's order and prunes nothing when every file exists", () => {
+    const map = { "src/b.test.ts": 2, "src/a.test.ts": 1 };
+    const { kept, pruned } = pruneMissing(map, () => true);
+    expect(Object.keys(kept)).toEqual(["src/b.test.ts", "src/a.test.ts"]);
+    expect(pruned).toEqual([]);
   });
 });

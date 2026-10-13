@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Writes the index table in docs/architecture/decisions/README.md: one row per ADR — id, title,
-// status, superseded-by — sorted by id. `scripts/check-adrs.mjs` fails when the committed table
+// Writes the index table in docs/architecture/decisions/README.md: one row per ADR — its id and
+// the first five words of its title, struck through with the successor beside it when
+// superseded — sorted by id. `scripts/check-adrs.mjs` fails when the committed table
 // differs from what this would write, so the index cannot drift from the files.
 //
 //   node scripts/adr-index.mjs --write
@@ -9,6 +10,11 @@
 // branches that each add an ADR each add one row; when the rows land next to each other git
 // reports a conflict in the table, and the resolution is to take either side and run this
 // again, never to merge the rows by hand.
+//
+// Two columns and five words because the index is what a reviewer is pointed at: with whole
+// titles, statuses and successors it reached 6,244 words (about 8k tokens) by 2026-10-11, the
+// heaviest "read this first" in the repository. The id is the lookup key and the file name
+// (`<id>.md`), so it is written bare rather than as a link that spells it twice.
 
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -47,15 +53,29 @@ export function adrSummary(filename, contents, known = new Set()) {
 
 const cell = (text) => text.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 
+export const TITLE_WORDS = 5;
+
+/** The first TITLE_WORDS words of a title, with an ellipsis when that cut something. */
+export function shortTitle(title) {
+  const words = title.split(/\s+/).filter(Boolean);
+  return words.length > TITLE_WORDS ? `${words.slice(0, TITLE_WORDS).join(" ")}…` : words.join(" ");
+}
+
+/** The Decision cell: the short title, marked when the record no longer stands as written. */
+function decisionCell({ title, status, supersededBy }) {
+  const short = cell(shortTitle(title));
+  if (status === "Superseded") {
+    return supersededBy ? `~~${short}~~ → ${supersededBy}` : `~~${short}~~`;
+  }
+  if (status === "Deprecated") return `~~${short}~~ (deprecated)`;
+  if (status === "Proposed") return `${short} (proposed)`;
+  return short;
+}
+
 /** The table, header included, one line per ADR. */
 export function indexTable(summaries) {
-  const rows = summaries.map(
-    ({ id, title, status, supersededBy }) =>
-      `| [${id}](${id}.md) | ${cell(title)} | ${status} | ${supersededBy ? `[${supersededBy}](${supersededBy}.md)` : ""} |`,
-  );
-  return ["| ADR | Decision | Status | Superseded by |", "| --- | --- | --- | --- |", ...rows].join(
-    "\n",
-  );
+  const rows = summaries.map((summary) => `| ${summary.id} | ${decisionCell(summary)} |`);
+  return ["| ADR | Decision |", "| --- | --- |", ...rows].join("\n");
 }
 
 /** The README with its marked block replaced by `table`; null when the markers are missing. */

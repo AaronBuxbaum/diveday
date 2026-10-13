@@ -20,6 +20,7 @@ import { lastSessionRefusals, readLog, refusalLine } from "./hook-log.mjs";
 import { fetchHeadAgeMs, installNeed, pinnedNodeMajor } from "./session-context.mjs";
 import { gitReader, readStack, stackSummary } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { tracker } from "./tracker.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -63,10 +64,45 @@ function strayCount(root) {
 }
 
 /**
+ * The branches on origin that no open pull request has as its head, `main` aside; null when
+ * either list could not be read. On 2026-10-11, 28 of 29 heads on origin had no open pull
+ * request, and every session start fetches all of `claude/*`.
+ */
+export function branchesWithoutPr(heads, openHeads) {
+  if (!heads || !openHeads) return null;
+  const open = new Set(openHeads);
+  return heads.filter((name) => name !== "main" && !open.has(name)).sort();
+}
+
+function remoteHeads(root) {
+  const result = runBounded("git", ["ls-remote", "--heads", "origin"], {
+    cwd: root,
+    encoding: "utf8",
+    timeoutMs: SUBPROCESS_TIMEOUTS.gitFetch,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.status !== 0) return null;
+  return String(result.stdout ?? "")
+    .split("\n")
+    .map((line) => line.split("\t")[1]?.replace(/^refs\/heads\//, ""))
+    .filter(Boolean);
+}
+
+function openPullHeads() {
+  try {
+    return tracker()
+      .listPulls({ state: "open" })
+      .map((pull) => pull.headRefName);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The raw facts, each null when it could not be read. Every reader is injectable through
  * `readers` so the tests need no git, no `gh` and no process table.
  */
-export function gatherFacts(root = ROOT, { strays = true, readers = {} } = {}) {
+export function gatherFacts(root = ROOT, { strays = true, remote = false, readers = {} } = {}) {
   const git = readers.git ?? gitReader(root);
   const facts = {
     nodeMajor: Number(process.versions.node.split(".")[0]),
@@ -78,6 +114,13 @@ export function gatherFacts(root = ROOT, { strays = true, readers = {} } = {}) {
     strays: strays ? (readers.strayCount ?? strayCount)(root) : undefined,
     stack: stackSummary((readers.readStack ?? readStack)(git)),
     refusals: refusalLine(lastSessionRefusals((readers.readLog ?? readLog)({ root }), null)),
+    // Two network reads, so only the on-demand report makes them, never the session-start lines.
+    orphanBranches: remote
+      ? branchesWithoutPr(
+          (readers.remoteHeads ?? remoteHeads)(root),
+          (readers.openPullHeads ?? openPullHeads)(),
+        )
+      : undefined,
   };
   return facts;
 }
@@ -100,7 +143,7 @@ export function checks(facts) {
     detail: facts.gh ? "gh is installed" : "gh is not installed",
     fix: facts.gh
       ? ""
-      : "Use the GitHub MCP tools (`mcp__github__*`) for issues, PRs and review threads; `pnpm gates` and `check:follow-ups` report SKIPPED without gh.",
+      : "Use the GitHub MCP tools (`mcp__github__*`) for issues, PRs and review threads; `pnpm gates` and `check:follow-ups` report SKIPPED without gh. Where gh is installed, `gh api` (REST) works in cloud sessions and `gh issue`/`gh pr` (GraphQL) do not.",
   });
   rows.push({
     name: "github-mcp",
@@ -142,6 +185,22 @@ export function checks(facts) {
       fix: facts.strays ? "node scripts/stray-processes.mjs --list" : "",
     });
   }
+  if (facts.orphanBranches !== undefined) {
+    const names = facts.orphanBranches ?? [];
+    const shown = names.slice(0, 5).join(", ");
+    rows.push({
+      name: "remote branches",
+      status: facts.orphanBranches === null ? "unknown" : names.length > 0 ? "warn" : "ok",
+      detail:
+        facts.orphanBranches === null
+          ? "could not list origin's branches or the open pull requests"
+          : `${names.length} remote branches with no open PR${shown ? ` (${shown}${names.length > 5 ? ", …" : ""})` : ""}`,
+      fix:
+        names.length > 0
+          ? 'Every session start fetches them. A merged one is safe to delete on GitHub; one of yours with unpushed intent wants its pull request opened. Turning on "Automatically delete head branches" in the repository settings stops the merged ones piling up (a human\'s switch).'
+          : "",
+    });
+  }
   rows.push({
     name: "stack",
     status: "ok",
@@ -181,7 +240,7 @@ export function renderReport(facts) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    process.stdout.write(`${renderReport(gatherFacts(process.cwd()))}\n`);
+    process.stdout.write(`${renderReport(gatherFacts(process.cwd(), { remote: true }))}\n`);
   } catch (error) {
     process.stdout.write(`agent:doctor could not finish: ${error?.message ?? error}\n`);
   }

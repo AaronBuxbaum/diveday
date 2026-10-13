@@ -10,13 +10,20 @@
 // that is not written down cannot be told from one that never happened, so the body is where
 // it is recorded (`.github/pull_request_template.md`), and this reads it.
 //
-// It checks that the reviewer is *named* with an answer — what it found, or "not needed
-// because …" with a reason — never the quality of the review. A reason is a human's to judge.
+// It checks that the reviewer is *named* with an answer — "launched" and what it found, or "not
+// needed because …" with a reason — never the quality of the review. A reason is a human's to
+// judge; "yes" or "n/a" is not one.
+//
+// It also requires a `Closes #n` for every open issue whose `## Claim` comment names the pull
+// request's head branch (`--head`, else `GITHUB_HEAD_REF`, else the current branch). #2241's claim
+// said "closes with #2326" in prose; #2326 merged and the issue stayed open and in-progress. The
+// tracker is read through scripts/tracker.mjs; when GitHub cannot answer, that half is skipped
+// with a warning, never failed.
 //
 // CI runs it in the safeguards job on every pull request event, with the body read live (so an
 // edit counts on the next run) or from the event payload, and the diff against the base:
 //
-//   node scripts/check-pr-body.mjs --body-file <path> --base <sha>
+//   node scripts/check-pr-body.mjs --body-file <path> --base <sha> [--head <branch>]
 //   node scripts/check-pr-body.mjs --body-file <path> --files <list-file>   (local, a file per line)
 //
 // With no `--base` and no `--files` it diffs against `origin/main`, which is what a session
@@ -27,19 +34,26 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { IN_PROGRESS_LABEL, latestClaimIn } from "./claims.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { tracker } from "./tracker.mjs";
 
 /** Never a surface: the PWA web manifest, and copy bundles every pull request edits. */
 const NOT_SURFACES = [/^src\/app\/manifest\.ts$/, /^src\/i18n\/locales\//];
 
+/** `src/db/waivers.ts`, `src/lib/waiver-tokens.ts`, … : signed consent and its medical answers. */
+const WAIVER_MODULES = /^src\/(db|lib)\/waivers?[^/]*\.ts$/;
+
 /**
- * The paths each reviewer owns, from AGENTS.md's hard rules. Only `src/**`: a document about a
- * manifest is not a manifest. Matched against the lowercased path.
+ * The paths each reviewer owns, from AGENTS.md's hard rules and the reviewer agents' own
+ * descriptions. Only `src/**`: a document about a manifest is not a manifest. Matched against the
+ * lowercased path.
  */
 export const REVIEWS = [
   {
     agent: "dive-domain-expert",
-    surface: "safety-critical (manifests, roll call, readiness, cert gating, medical, erasure)",
+    surface:
+      "safety-critical (manifests, roll call, readiness, cert gating, medical, waivers, erasure, the booking transaction)",
     patterns: [
       /manifest/,
       /roll-?call/,
@@ -52,11 +66,14 @@ export const REVIEWS = [
       /erase|erasure|anonymi[sz]/,
       /seat-diver/,
       /nitrox/,
+      WAIVER_MODULES,
+      /^src\/db\/bookings\.ts$/,
     ],
   },
   {
     agent: "security-reviewer",
-    surface: "security-sensitive (auth, tokens, personal or medical data, export/import)",
+    surface:
+      "security-sensitive (auth, tokens, personal or medical data, waivers, payments, webhooks, export/import)",
     patterns: [
       /^src\/proxy\.ts$/,
       /^src\/lib\/(auth|authz|auth-secret|session)\.ts$/,
@@ -69,6 +86,9 @@ export const REVIEWS = [
       /^src\/db\/schema\/(accounts|core|waivers|certifications|erasure)\.ts$/,
       /medical/,
       /erase|erasure|anonymi[sz]/,
+      WAIVER_MODULES,
+      /^src\/lib\/payments\//,
+      /^src\/app\/api\/webhooks\//,
     ],
   },
 ];
@@ -100,8 +120,9 @@ export function reviewsSection(body) {
 }
 
 /**
- * Whether `section` names `agent` with an answer: the rest of the line after the name, less
- * punctuation, is something other than the template's own placeholder.
+ * Whether `section` names `agent` with an answer: the rest of the line after the name says it was
+ * "launched" or what it "found", or that it was "not needed because" something. "yes", "n/a" and
+ * the template's placeholder all passed before 2026-10-12, which made the line a checkbox.
  */
 export function reviewAnswered(section, agent) {
   for (const line of String(section ?? "").split("\n")) {
@@ -109,11 +130,42 @@ export function reviewAnswered(section, agent) {
     if (at === -1) continue;
     const answer = line
       .slice(at + agent.length)
+      .replace(/<[^>]*>/g, " ")
       .replace(/[`*_:|—–-]/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
-    if (answer && !/^(<[^>]*>|\.\.\.|…|tbd|todo|yes\s*\/\s*no)$/i.test(answer)) return true;
+    if (/(?<!\b(?:not|never|un) ?)\b(launched|found)\b/i.test(answer)) return true;
+    if (/\bnot needed because\b\s*\S{2,}/i.test(answer)) return true;
   }
   return false;
+}
+
+/**
+ * The open issues whose newest `## Claim` names `head` as its branch, from issues labelled
+ * in-progress (a claim always carries the label; one whose label expired is not a live claim).
+ */
+export function issuesClaimedBy(issues, head) {
+  if (!head) return [];
+  return (issues ?? [])
+    .filter((issue) => latestClaimIn(issue.comments)?.branch === head)
+    .map((issue) => issue.number);
+}
+
+/** The issue numbers `body` closes with a GitHub closing keyword. */
+export function closedByBody(body) {
+  const keyword = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+#(\d+)\b/gi;
+  return new Set([...String(body ?? "").matchAll(keyword)].map((match) => Number(match[1])));
+}
+
+/** A sentence for each claimed issue the body does not close. */
+export function closesProblems({ body, claimed, head }) {
+  const closed = closedByBody(body);
+  return claimed
+    .filter((number) => !closed.has(number))
+    .map(
+      (number) =>
+        `Issue #${number} is claimed by this branch (\`${head}\`) and the body does not close it. Add "Closes #${number}" on its own line under "## Follow-ups filed", or, if this pull request does not finish it, post a fresh claim naming the branch that will.`,
+    );
 }
 
 /** Every problem with this body for this diff, as sentences. Empty means it passes. */
@@ -147,6 +199,32 @@ function changedFiles({ base, filesFile }) {
   return String(output).split("\n").filter(Boolean);
 }
 
+function currentBranch() {
+  try {
+    return String(
+      readBounded("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+        encoding: "utf8",
+        timeoutMs: SUBPROCESS_TIMEOUTS.git,
+      }),
+    ).trim();
+  } catch {
+    return "";
+  }
+}
+
+/** Issues claimed by `head`, or null (with a warning) when GitHub cannot answer. */
+function claimedIssues(head) {
+  try {
+    const issues = tracker().listIssues({ label: IN_PROGRESS_LABEL, comments: true });
+    return issuesClaimedBy(issues, head);
+  } catch (error) {
+    console.warn(
+      `pr-body: could not read claims from GitHub, Closes check skipped — ${error.message}`,
+    );
+    return null;
+  }
+}
+
 function argValue(args, name) {
   const at = args.indexOf(name);
   return at === -1 ? undefined : args[at + 1];
@@ -157,7 +235,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const bodyFile = argValue(args, "--body-file");
   if (!bodyFile) {
     console.error(
-      "Usage: node scripts/check-pr-body.mjs --body-file <path> [--base <sha> | --files <path>]",
+      "Usage: node scripts/check-pr-body.mjs --body-file <path> [--base <sha> | --files <path>] [--head <branch>]",
     );
     process.exit(2);
   }
@@ -166,7 +244,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     base: argValue(args, "--base"),
     filesFile: argValue(args, "--files"),
   });
-  const problems = bodyProblems({ body, files });
+  const head = argValue(args, "--head") || process.env.GITHUB_HEAD_REF || currentBranch();
+  const claimed = head && head !== "HEAD" ? claimedIssues(head) : [];
+  const problems = [
+    ...bodyProblems({ body, files }),
+    ...closesProblems({ body, claimed: claimed ?? [], head }),
+  ];
   if (problems.length > 0) {
     console.error(`Pull request body:\n${problems.map((p) => `- ${p}`).join("\n")}`);
     console.error(
@@ -180,4 +263,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       ? `pr-body: ${needed.join(" and ")} named for ${files.length} changed files`
       : `pr-body: none of ${files.length} changed files needs a reviewer agent`,
   );
+  if (claimed) {
+    console.log(
+      `pr-body: ${claimed.length} issue(s) claimed by \`${head}\`, each closed by the body`,
+    );
+  }
 }

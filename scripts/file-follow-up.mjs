@@ -14,7 +14,7 @@ import {
   unverifiedTouchedProblem,
   WAITING_LABEL,
 } from "./check-follow-ups.mjs";
-import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { tracker } from "./tracker.mjs";
 
 /**
  * **The door onto the follow-up tracker that cannot file a malformed issue.**
@@ -36,7 +36,7 @@ import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
  *
  * Deliberately not a second set of rules: the body goes straight back through
  * `findIssueProblems`, the same function `pnpm check:follow-ups` runs, and
- * `gh` is never spawned when that function has anything to say. Refusing is the
+ * nothing reaches GitHub (through `scripts/tracker.mjs`) when that function has anything to say. Refusing is the
  * whole point; filing is what it does when it has nothing left to refuse.
  */
 
@@ -248,7 +248,7 @@ function realTmpDir() {
 }
 
 /**
- * A last look at the composed body before `gh` is spawned. Coarse on purpose:
+ * A last look at the composed body before it is filed. Coarse on purpose:
  * it is the seatbelt under the containment check above, for the case where a
  * secret reaches a section through a file that is inside the checkout and not
  * named `.env` — a scratch note, a pasted log, a captured request.
@@ -403,32 +403,19 @@ async function main() {
     return;
   }
 
-  const filed = filedInWindow(readLedger(root));
-  if (filed >= FOLLOW_UP_QUOTA && !parsed.overQuota) {
+  const recent = filedInWindow(readLedger(root));
+  if (recent >= FOLLOW_UP_QUOTA && !parsed.overQuota) {
     console.error(
-      `file-follow-up: DID NOT FILE — ${filed} follow-ups were filed from this checkout in the last ${QUOTA_WINDOW_HOURS} hours, and the quota is ${FOLLOW_UP_QUOTA}. Do the most valuable of what is left, fold related notes into one issue, or say in your hand-off what you did not file. If this one cannot wait, pass --over-quota "<why>". See docs/agents/issue-tracker.md's Filing a follow-up section.`,
+      `file-follow-up: DID NOT FILE — ${recent} follow-ups were filed from this checkout in the last ${QUOTA_WINDOW_HOURS} hours, and the quota is ${FOLLOW_UP_QUOTA}. Do the most valuable of what is left, fold related notes into one issue, or say in your hand-off what you did not file. If this one cannot wait, pass --over-quota "<why>". See docs/agents/issue-tracker.md's Filing a follow-up section.`,
     );
     process.exit(1);
   }
 
-  const result = runBounded(
-    "gh",
-    [
-      "issue",
-      "create",
-      "--label",
-      parsed.labels.join(","),
-      "--title",
-      parsed.title,
-      "--body",
-      body,
-    ],
-    { cwd: root, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCli },
-  );
-  if (result.status !== 0) {
-    console.error(
-      `file-follow-up: \`gh issue create\` failed — ${String(result.stderr ?? "").trim()}`,
-    );
+  let filed;
+  try {
+    filed = tracker().createIssue({ title: parsed.title, body, labels: parsed.labels });
+  } catch (error) {
+    console.error(`file-follow-up: filing failed — ${error.message}`);
     process.exit(1);
   }
   try {
@@ -436,7 +423,7 @@ async function main() {
   } catch {
     // An unwritable ledger loses a count, never an issue.
   }
-  console.log(`file-follow-up: filed ${String(result.stdout ?? "").trim()}`);
+  console.log(`file-follow-up: filed ${filed.url || `#${filed.number}`}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) await main();

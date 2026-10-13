@@ -40,6 +40,14 @@ describe("needsDatabaseTimeout", () => {
     expect(needsDatabaseTimeout(resolve("src/app/api/test/seed-evening/route.test.ts"))).toBe(true);
   });
 
+  it("gives a test that builds its own database through the factory the longer ceiling", () => {
+    // The `createTestDb` factory straight from `@/db/client`, no fixture: it runs
+    // the whole migration chain, and timed out at 20s on a loaded box
+    // (2026-10-12) while the `db` project, which matches the factory call,
+    // already counted it as db-backed.
+    expect(needsDatabaseTimeout(resolve("src/lib/auth-schema.test.ts"))).toBe(true);
+  });
+
   it("leaves a real file that touches no database on the suite's own ceiling", () => {
     // This file. It is named for the db layer and reads none, which is exactly
     // the case the path rule alone gets wrong in the other direction.

@@ -6,46 +6,39 @@ paths:
 
 # Rules for `src/app/` and `src/components/`
 
-Everything a person looks at. Each rule names what enforces it; the reasoning, incidents and the
-longer form of every row are in [docs/agents/repo-checks.md](../../docs/agents/repo-checks.md#the-surfaces-rules).
+Each rule names what enforces it; the reasoning, the ADRs and the longer form of every row are in
+[docs/agents/repo-checks.md](../../docs/agents/repo-checks.md#the-surfaces-rules).
 
 ## Where things are
 
 - **Diver shop pages**: `src/app/s/[shopSlug]/**`, no auth anywhere; paths from
-  `src/lib/public-routes.ts` (ADR 20260803-public-shop-namespace). `/shop/**` is staff.
+  `src/lib/public-routes.ts`. `/shop/**` is staff.
 - **Where a diver can go**: `src/components/PublicShopNav.tsx`, assembled in
-  `src/app/s/[shopSlug]/layout.tsx`; never a per-page cross-link; the header drops in `?embed=1`.
-- **Where staff can go**: add a destination to `src/lib/staff-destinations.ts` with its section,
-  never to a consumer (`src/components/ShopSectionNav.tsx`, `src/components/search/CommandPalette.tsx`).
-  Anything fixed to the foot stands off `--tabbar-h` (ADR 20261001-logbook).
+  `src/app/s/[shopSlug]/layout.tsx`; never a per-page cross-link.
+- **Where staff can go**: a destination goes in `src/lib/staff-destinations.ts`, never in a
+  consumer (`src/components/ShopSectionNav.tsx`, `src/components/search/CommandPalette.tsx`).
 - **Bearer-token pages** (`src/app/waivers/[token]` and siblings): the URL is the capability; read
   [the capability runbook](../../docs/engineering/capability-telemetry-runbook.md) first; no
-  structured data or telemetry that could carry the token.
+  structured data or telemetry carrying the token.
 - **A staff page opens with** `requireShopSurface` (`src/lib/session.ts`); every refusal throws, a
   cross-tenant miss is `notFound()` (`src/lib/session.test.ts`).
 - **Server actions**: inline `"use server"` for one page, `src/app/actions/` when shared, a sibling
-  `actions.ts` for a large page. Seating a diver goes through `src/app/actions/seat-diver.ts`.
+  `actions.ts` for a large page; seating a diver through `src/app/actions/seat-diver.ts`.
 - **Schedule**: the builder (`schedule/board/_components/ScheduleBuilder.tsx`) is the one place a
-  trip is created (ADR 20260806-one-trip-create-form). Week and Crew are two views under
-  `schedule/_components/ScheduleViews.tsx`; a third reading is a third view there.
-- **A departure is four tabs** (Divers, Boat, Gear, Details) drawn by `_components/TripTabs.tsx`;
-  add to a tab, never a fifth surface. A cancelled departure keeps Boat and packs nothing.
-- **The shop home** is `_components/today/DaySpine.tsx`: the day's departures, then one "Needs you"
-  list. There is no act of closing the day.
-- **Back-office queues** sit with their object and render nothing when empty, never on Reports;
-  the year on Reports shows no money (ADR 20260908-one-hand).
+  trip is created; another reading of the schedule is a view in `schedule/_components/ScheduleViews.tsx`.
+- **A departure is four tabs** drawn by `_components/TripTabs.tsx`; add to a tab, never a fifth surface.
+- **The shop home** is `_components/today/DaySpine.tsx`: departures, then one "Needs you" list.
+- **Back-office queues** sit with their object and render nothing when empty, never on Reports.
 - **A day not on the board**: `src/components/DateRequestForm.tsx` + `src/app/actions/inquiry.ts`,
   never the wait list.
 - **A dive-site briefing** is written in `SiteFields.tsx` and read in `TripDayPlan.tsx`, every
-  sentence off the site row (ADR 20260813-dive-site-briefings-are-the-shops-own-words).
-- **Tokens and wrappers**: `src/app/globals.css`, `src/components/ui/`; readiness words from
-  `src/i18n/readiness-labels.ts`; heading levels from `src/components/ui/typography.ts`.
-- **Paging**: `src/components/Pager.tsx` + `offsetPage`; a count shares the row query's exact scope
-  (ADR 20260803-one-pagination-model).
-- **Link previews**: `allowSvgRasterization()` before every `ImageResponse` (ADR
-  20260804-og-svg-rasterizer); no root metadata module imports `next/og`
-  (`src/app/_og/card.test.tsx`); every `openGraph` block spreads `openGraphSite`
-  (`pnpm check:repo`, Open-Graph-site).
+  sentence off the site row.
+- **Tokens and wrappers**: `src/app/globals.css`, `src/components/ui/`; readiness words in
+  `src/i18n/readiness-labels.ts`; heading levels in `src/components/ui/typography.ts`.
+- **Paging**: `src/components/Pager.tsx` + `offsetPage`; a count shares the row query's exact scope.
+- **Link previews**: `allowSvgRasterization()` before every `ImageResponse`; no root metadata
+  module imports `next/og` (`src/app/_og/card.test.tsx`); every `openGraph` block spreads
+  `openGraphSite` (`pnpm check:repo`).
 - **A surface that does not exist yet**: [docs/design/design-artifacts.md](../../docs/design/design-artifacts.md) first.
 
 ## Rules
@@ -56,7 +49,7 @@ longer form of every row are in [docs/agents/repo-checks.md](../../docs/agents/r
 - **A form's outcome sits beside the form** (`Field`'s `error`, `FormStatus`), routed by
   `noticeForForm`, brought on screen by `StatusInView`; scroll-preservation guard.
 - **A new page ships with `loading.tsx` and `export const instant = true`; no `await` above
-  `{children}` in a layout**: loading-skeleton guard and `next build` (ADR 20260804-instant-navigation).
+  `{children}` in a layout**: loading-skeleton guard and `next build`.
 - **No literal locale; every rendered date passes `shop.timezone`**: `pnpm check:locale`,
   Biome rule `timezone`.
 - **Copy comes from a message bundle, in every locale at once**: `pnpm check:copy`,
@@ -68,5 +61,5 @@ longer form of every row are in [docs/agents/repo-checks.md](../../docs/agents/r
 - **A trouble state is photographed through `/api/test/seed-trouble-states`**, never seeded into
   the demo shop.
 - **Look at what you changed**: `node scripts/screenshot.mjs`, the **design-review** skill, an
-  `e2e/` spec and a visual capture (`pnpm check:route-coverage`); safety surfaces get a
-  `dive-domain-expert` review.
+  `e2e/` spec and a visual capture (`pnpm check:route-coverage`); safety surfaces get
+  `dive-domain-expert`.
