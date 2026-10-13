@@ -20,9 +20,12 @@ import { tracker } from "./tracker.mjs";
  * something. It cannot judge whether the prompt is *good*; docs/agents/issue-tracker.md
  * carries that instruction, and review carries the rest.
  *
- * Deliberately not enforced: how many issues are open (an inbox may be full), or how old
- * they are (aging is the human's business, not a build failure) — both are reported by
- * `pnpm gates`, neither fails here.
+ * How many are open *is* enforced, at a ceiling (`INBOX_CEILING`): on 2026-10-12 one day's
+ * builds filed 128 and nobody triaged one, about 53k tokens of reading before the first
+ * decision. Above the ceiling the scheduled run fails, so the backlog is a red check rather than
+ * a number nobody reads, and the filing door (`scripts/file-follow-up.mjs`) refuses to add to it.
+ * How old they are is still not enforced (aging is the human's business, not a build failure);
+ * `pnpm gates` reports it.
  *
  * `waiting-on-external` marks an issue where nobody in this repo owes the next move — an
  * upstream release, a third party's answer, a measurement that needs traffic we do not have
@@ -64,6 +67,45 @@ export const LABEL = "needs-triage";
 export const READY_LABEL = "ready-for-agent";
 export const WAITING_LABEL = "waiting-on-external";
 export const PARKED_LABEL = "parked";
+/** Where a `**Kind:** question` goes at filing: a decision only a human can make, read in the
+ *  human's queue beside the other human-owned issues, not in the agent inbox the triage
+ *  routine reads. */
+export const QUESTION_LABEL = "ready-for-human";
+
+/** Open `needs-triage` issues above this fail the scheduled run (2026-10-13 re-review, item 1). */
+export const INBOX_CEILING = 40;
+
+/** The failure line when the inbox is over the ceiling, or null. */
+export function inboxProblem(openCount, ceiling = INBOX_CEILING) {
+  if (openCount <= ceiling) return null;
+  return `${openCount} issues are open under label:${LABEL}, over the ceiling of ${ceiling}: triage before anything files more (docs/agents/triage-routine.md runs it daily; the triage skill is the how). A follow-up filed into a queue nobody reads is not memory.`;
+}
+
+/** How many leading words of a title make it "the same issue" for the duplicate check. */
+export const TITLE_KEY_WORDS = 6;
+
+/** A title reduced to its first TITLE_KEY_WORDS words, lowercased, punctuation dropped. */
+export function titleKey(title) {
+  return String(title ?? "")
+    .toLowerCase()
+    .replace(/[‘’`'"]/g, "")
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, TITLE_KEY_WORDS)
+    .join(" ");
+}
+
+/**
+ * The open issue whose title shares `title`'s first TITLE_KEY_WORDS words, or null. Three
+ * "Add a visual capture of the …" issues were filed on one day (#2412, #2418, #2423); one
+ * issue listing the three surfaces was the right shape.
+ */
+export function nearDuplicate(title, openIssues) {
+  const key = titleKey(title);
+  if (!key) return null;
+  return (openIssues ?? []).find((issue) => titleKey(issue.title) === key) ?? null;
+}
 
 const VALID_KINDS = new Set(["question", "improvement", "risk", "cleanup", "half-done"]);
 const VALID_EFFORTS = new Set(["S", "M", "L"]);
@@ -603,6 +645,9 @@ async function main() {
   }
 
   for (const issue of ready) problems.push(...(await readyIssueProblems(root, issue)));
+
+  const overfull = inboxProblem(issues.length);
+  if (overfull) problems.push(overfull);
 
   if (problems.length > 0) {
     console.error(

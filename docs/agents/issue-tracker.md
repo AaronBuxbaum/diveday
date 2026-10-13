@@ -282,9 +282,19 @@ comment saying what would un-park it, so the next reader does not re-triage it f
   `needs-triage` issues. Backlog sweeps filed 54 in three bursts on 2026-10-09 and 2026-10-10, and none
   had been triaged a day later: a queue written faster than anyone reads it is no memory. Past ten, do the most
   valuable of what is left, fold related notes into one issue, or name what you did not file in the
-  hand-off. `scripts/file-follow-up.mjs` counts its filings in a gitignored `.claude/.follow-up-log`
-  and refuses the eleventh in twelve hours unless `--over-quota "<why>"` says why it cannot wait; an
-  issue filed through the GitHub MCP counts the same, by your own tally.
+  hand-off. `scripts/file-follow-up.mjs` counts its filings in one ledger per clone
+  (`<git common dir>/diveday-follow-up-log`), so every worktree of a stack shares one quota, and
+  refuses the eleventh in twelve hours unless `--over-quota "<why>"` says why it cannot wait; an
+  issue filed through the GitHub MCP counts the same, by your own tally. Until 2026-10-13 the
+  ledger was per checkout, and one day's stack filed 128.
+- **At most 40 waiting.** Above 40 open `needs-triage` issues the scheduled `check:follow-ups` run
+  fails and `file-follow-up` refuses to add one (the same `--over-quota` overrides it). The inbox
+  is read daily by the [triage routine](triage-routine.md).
+- **A question goes to the human.** `--kind question` files with `ready-for-human` instead of
+  `needs-triage`: it is a decision only a human can make, and the agent inbox is not where one
+  reads those.
+- **No near-duplicates.** `file-follow-up` refuses a title that starts with the same six words as
+  an open issue; add to that issue, or fold both into one.
 - **One issue per item**, labelled `needs-triage`.
 - **Every section filled**, including a runnable prompt that names real paths and tells the session
   to close the issue.

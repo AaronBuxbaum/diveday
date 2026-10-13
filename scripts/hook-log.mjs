@@ -99,3 +99,63 @@ export function refusalLine(summary) {
     .join(", ");
   return `${summary.count} hook refusal${summary.count === 1 ? "" : "s"} last session (${hooks}): if one fought you, add a papercut (docs/agents/papercuts.md)`;
 }
+
+/** Refusals of one rule in this window, at or above this count, ask for a papercut. */
+export const PAPERCUT_THRESHOLD = 3;
+export const PAPERCUT_WINDOW_DAYS = 7;
+
+/**
+ * What a refusal's reason says once the command it quotes is taken out: the backticked spans
+ * (and an unclosed one the 160-character cut left) and anything that is not a word go, and the
+ * first eight words remain. Two refusals of `… | tail -8` and `… | head` by the same rule then
+ * read the same, which is what "one rule refused three times" has to mean.
+ */
+export function ruleOf(reason) {
+  return String(reason ?? "")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/`.*$/, " ")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]+/g, " ")
+    .split(/\s+/)
+    .filter((word) => word && word !== "-")
+    .slice(0, 8)
+    .join(" ");
+}
+
+/**
+ * The rule refused most often in the last PAPERCUT_WINDOW_DAYS, as `{ hook, rule, count, slug }`,
+ * when it was refused PAPERCUT_THRESHOLD times or more; else null. Across sessions on purpose:
+ * the log outlives a session but not the container, and three refusals of one rule in a week is
+ * friction worth four lines in the repo whoever met it (2026-10-13 re-review, item 21).
+ */
+export function repeatedRefusal(entries, { now = new Date() } = {}) {
+  const since = now.getTime() - PAPERCUT_WINDOW_DAYS * 86_400_000;
+  const counts = new Map();
+  for (const entry of entries) {
+    if (entry.kind !== "refusal") continue;
+    const at = Date.parse(entry.at);
+    if (!Number.isFinite(at) || at < since) continue;
+    const rule = ruleOf(entry.reason);
+    const key = `${entry.hook}\u0000${rule}`;
+    const seen = counts.get(key) ?? { hook: entry.hook, rule, count: 0 };
+    seen.count += 1;
+    counts.set(key, seen);
+  }
+  const top = [...counts.values()].sort((a, b) => b.count - a.count)[0];
+  if (!top || top.count < PAPERCUT_THRESHOLD) return null;
+  const slug = [top.hook, ...top.rule.split(" ").slice(0, 4)]
+    .join("-")
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 50)
+    .replace(/-$/, "");
+  return { ...top, slug };
+}
+
+/** The per-prompt ask for a papercut, or "" when there is nothing to ask. */
+export function papercutLine(repeat) {
+  if (!repeat) return "";
+  const what = repeat.rule ? ` (“${repeat.rule}”)` : "";
+  return `${repeat.hook} refused one rule${what} ${repeat.count} times this week — write a papercut: node scripts/file-follow-up.mjs --papercut ${repeat.slug} --project <area> --symptom "<text>" --fix "<text>"`;
+}

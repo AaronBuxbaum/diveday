@@ -1,4 +1,4 @@
-import { appendFileSync, readFileSync, realpathSync } from "node:fs";
+import { appendFileSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -6,14 +6,19 @@ import process from "node:process";
 
 import {
   findIssueProblems,
+  INBOX_CEILING,
+  inboxProblem,
   LABEL,
+  nearDuplicate,
   PARKED_LABEL,
+  QUESTION_LABEL,
   REQUIRED_SECTIONS,
   TOUCHED_TIMEOUT,
   touchedPathExists,
   unverifiedTouchedProblem,
   WAITING_LABEL,
 } from "./check-follow-ups.mjs";
+import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { tracker } from "./tracker.mjs";
 
 /**
@@ -55,30 +60,79 @@ const VALUE_FLAGS = {
 };
 
 /**
- * The filing quota: at most FOLLOW_UP_QUOTA issues from one checkout in QUOTA_WINDOW_HOURS.
+ * The filing quota: at most FOLLOW_UP_QUOTA issues from one clone in QUOTA_WINDOW_HOURS.
  * Backlog sweeps filed 54 `needs-triage` issues in three bursts on 2026-10-09 and 2026-10-10 and
- * none was triaged: a queue written faster than anyone reads it is no memory at all. The ledger
- * is a gitignored file in the checkout (a cloud container's whole life is one run); the eleventh
+ * none was triaged: a queue written faster than anyone reads it is no memory at all. The eleventh
  * filing is refused unless `--over-quota "<why>"` says why this one cannot wait.
+ *
+ * **The ledger is the clone's, not the checkout's.** Until 2026-10-13 it was
+ * `<checkout>/.claude/.follow-up-log`, so a stack of eight layers in eight worktrees had eight
+ * quotas, and one day filed 128 issues (2026-10-13 re-review, item 1). It now lives in
+ * `git rev-parse --git-common-dir`, which every worktree of a clone shares: a stack, built in
+ * however many worktrees, is counted once. Each line is `<ISO time>\t<branch>`, so the refusal
+ * can say who filed.
  */
 export const FOLLOW_UP_QUOTA = 10;
 export const QUOTA_WINDOW_HOURS = 12;
-export const QUOTA_LEDGER = ".claude/.follow-up-log";
+export const QUOTA_LEDGER_NAME = "diveday-follow-up-log";
+/** Points the ledger somewhere else; the tests use it so they never write the real one. */
+export const QUOTA_LEDGER_ENV = "DIVEDAY_FOLLOW_UP_LEDGER";
 
-/** How many of `stamps` (ISO strings, one per filed issue) fall in the window ending `now`. */
+/**
+ * Where the ledger lives: `$DIVEDAY_FOLLOW_UP_LEDGER`, else
+ * `<git common dir>/diveday-follow-up-log`, else (no git) the gitignored
+ * `<root>/.claude/.follow-up-log`. `git` is injectable for the tests.
+ */
+export function ledgerPath(root, { env = process.env, git = gitCommonDir } = {}) {
+  if (env[QUOTA_LEDGER_ENV]) return path.resolve(root, env[QUOTA_LEDGER_ENV]);
+  const common = git(root);
+  return common
+    ? path.join(path.resolve(root, common), QUOTA_LEDGER_NAME)
+    : path.join(root, ".claude/.follow-up-log");
+}
+
+function gitCommonDir(root) {
+  try {
+    return (
+      readBounded("git", ["rev-parse", "--git-common-dir"], {
+        cwd: root,
+        encoding: "utf8",
+        timeoutMs: SUBPROCESS_TIMEOUTS.git,
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim() || null
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** How many ledger lines (`<ISO>` or `<ISO>\t<branch>`) fall in the window ending `now`. */
 export function filedInWindow(stamps, now = new Date()) {
   const since = now.getTime() - QUOTA_WINDOW_HOURS * 3_600_000;
   return stamps.filter((stamp) => {
-    const at = Date.parse(stamp);
+    const at = Date.parse(String(stamp).split("\t")[0]);
     return Number.isFinite(at) && at >= since && at <= now.getTime();
   }).length;
 }
 
-function readLedger(root) {
+function readLedger(file) {
   try {
-    return readFileSync(path.join(root, QUOTA_LEDGER), "utf8").split("\n").filter(Boolean);
+    return readFileSync(file, "utf8").split("\n").filter(Boolean);
   } catch {
     return [];
+  }
+}
+
+function currentBranch(root) {
+  try {
+    return readBounded("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      cwd: root,
+      encoding: "utf8",
+      timeoutMs: SUBPROCESS_TIMEOUTS.git,
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "";
   }
 }
 /** The four prose flags name a file to read, or `-` for stdin. */
@@ -164,7 +218,9 @@ export function parseFileArgs(argv) {
     };
   }
 
-  const applied = new Set([LABEL, ...labels]);
+  // A question is a decision only a human can make: it goes straight to the human queue, not
+  // into the agent inbox where 31 of 128 sat on 2026-10-13.
+  const applied = new Set([values.kind === "question" ? QUESTION_LABEL : LABEL, ...labels]);
   // The prose and the label have to agree, and only one direction of that is
   // caught downstream. `--label waiting-on-external` with no `--waiting-on` is
   // refused by `findIssueProblems`, which demands the line. The reverse is
@@ -327,7 +383,108 @@ async function readSection(root, spec) {
   return readFile(resolved, "utf8");
 }
 
+/**
+ * **`--papercut <slug>`: the other door, into the repo instead of the tracker.** A papercut is
+ * friction with the tooling, not work for the product (docs/agents/papercuts.md), and it is four
+ * lines in `docs/agents/papercuts/<date>-<slug>.md`. The per-prompt line asks for one when a hook
+ * has refused the same rule three times (`scripts/session-context.mjs`); this writes it, so the
+ * ask is one command rather than a file to shape by hand. Through the week of 2026-10-09 the log
+ * recorded nothing while 90 CI jobs failed.
+ *
+ *   node scripts/file-follow-up.mjs --papercut <slug> --project <area> --symptom "<text>" --fix "<text>"
+ */
+const PAPERCUT_FLAGS = {
+  "--papercut": "slug",
+  "--project": "project",
+  "--symptom": "symptom",
+  "--fix": "fix",
+};
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const PAPERCUT_DIR = "docs/agents/papercuts";
+
+export function parsePapercutArgs(argv) {
+  const values = {};
+  let dryRun = false;
+  for (let at = 0; at < argv.length; at += 1) {
+    const name = argv[at];
+    if (name === "--dry-run") {
+      dryRun = true;
+      continue;
+    }
+    if (!(name in PAPERCUT_FLAGS)) {
+      return {
+        error: `file-follow-up --papercut: unrecognised argument \`${name}\` — it takes --papercut <slug> --project <area> --symptom "<text>" --fix "<text>"`,
+      };
+    }
+    if (values[PAPERCUT_FLAGS[name]] !== undefined) {
+      return { error: `file-follow-up --papercut: ${name} given twice` };
+    }
+    const value = argv[at + 1];
+    if (value === undefined || value in PAPERCUT_FLAGS || value === "--dry-run") {
+      return { error: `file-follow-up --papercut: ${name} needs a value` };
+    }
+    values[PAPERCUT_FLAGS[name]] = value;
+    at += 1;
+  }
+  const missing = Object.entries(PAPERCUT_FLAGS)
+    .filter(([, field]) => !String(values[field] ?? "").trim())
+    .map(([flag]) => flag);
+  if (missing.length > 0) {
+    return { error: `file-follow-up --papercut: missing ${missing.join(", ")}` };
+  }
+  if (!SLUG.test(values.slug)) {
+    return {
+      error: `file-follow-up --papercut: “${values.slug}” is not a slug — lowercase words joined by hyphens`,
+    };
+  }
+  return { ...values, dryRun };
+}
+
+/** The four lines docs/agents/papercuts.md asks for, each on one line however long. */
+export function renderPapercut({ date, project, symptom, fix }) {
+  const line = (text) => String(text).replace(/\s+/g, " ").trim();
+  return `Date: ${date}\nProject: ${line(project)}\nSymptom: ${line(symptom)}\nFix: ${line(fix)}\n`;
+}
+
+function papercutMain(argv) {
+  const parsed = parsePapercutArgs(argv);
+  if (parsed.error) {
+    console.error(parsed.error);
+    process.exit(1);
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  const text = renderPapercut({ ...parsed, date });
+  if (SECRET_SHAPED_TEXT.some((pattern) => pattern.test(text))) {
+    console.error(
+      "file-follow-up --papercut: DID NOT WRITE — the text looks like it carries a credential, and the repository is public.",
+    );
+    process.exit(1);
+  }
+  const relative = `${PAPERCUT_DIR}/${date}-${parsed.slug}.md`;
+  if (parsed.dryRun) {
+    console.log(`${relative}\n${text}`);
+    return;
+  }
+  try {
+    // `wx`: an existing entry is never overwritten. Two sessions hitting the same papercut on
+    // one day is the signal the papercuts doc asks for: pick another slug.
+    writeFileSync(path.join(process.cwd(), relative), text, { flag: "wx" });
+  } catch (error) {
+    console.error(
+      error.code === "EEXIST"
+        ? `file-follow-up --papercut: ${relative} exists — someone hit this today too; read it, and pick another slug if yours is different`
+        : `file-follow-up --papercut: could not write ${relative} — ${error.message}`,
+    );
+    process.exit(1);
+  }
+  console.log(`file-follow-up: wrote ${relative}; commit it with your change.`);
+}
+
 async function main() {
+  if (process.argv.includes("--papercut")) {
+    papercutMain(process.argv.slice(2));
+    return;
+  }
   const parsed = parseFileArgs(process.argv.slice(2));
   if (parsed.error) {
     console.error(parsed.error);
@@ -403,12 +560,42 @@ async function main() {
     return;
   }
 
-  const recent = filedInWindow(readLedger(root));
+  const ledger = ledgerPath(root);
+  const recent = filedInWindow(readLedger(ledger));
   if (recent >= FOLLOW_UP_QUOTA && !parsed.overQuota) {
     console.error(
-      `file-follow-up: DID NOT FILE — ${recent} follow-ups were filed from this checkout in the last ${QUOTA_WINDOW_HOURS} hours, and the quota is ${FOLLOW_UP_QUOTA}. Do the most valuable of what is left, fold related notes into one issue, or say in your hand-off what you did not file. If this one cannot wait, pass --over-quota "<why>". See docs/agents/issue-tracker.md's Filing a follow-up section.`,
+      `file-follow-up: DID NOT FILE — ${recent} follow-ups were filed from this clone (every worktree, so a whole stack) in the last ${QUOTA_WINDOW_HOURS} hours, and the quota is ${FOLLOW_UP_QUOTA}. Do the most valuable of what is left, fold related notes into one issue, or say in your hand-off what you did not file. If this one cannot wait, pass --over-quota "<why>". See docs/agents/issue-tracker.md's Filing a follow-up section.`,
     );
     process.exit(1);
+  }
+
+  // One read of every open issue serves both refusals below. It fails open: the scheduled
+  // `check:follow-ups` still sees the inbox, and a tracker hiccup should not cost a filing.
+  let open = null;
+  try {
+    open = tracker().listIssues({ state: "open" });
+  } catch (error) {
+    console.error(
+      `file-follow-up: could not read the open issues (${error.message}); filing without the duplicate and inbox checks.`,
+    );
+  }
+  if (open) {
+    const twin = nearDuplicate(parsed.title, open);
+    if (twin) {
+      console.error(
+        `file-follow-up: DID NOT FILE — #${twin.number} “${twin.title}” is open and starts with the same words. Add this to it as a comment, or fold both into one issue; if it really is a different item, give it a title that says how.`,
+      );
+      process.exit(1);
+    }
+    const inbox = open.filter((issue) =>
+      (issue.labels ?? []).some((label) => label.name === LABEL),
+    ).length;
+    if (parsed.labels.includes(LABEL) && inboxProblem(inbox) && !parsed.overQuota) {
+      console.error(
+        `file-follow-up: DID NOT FILE — ${inbox} issues are open under label:${LABEL}, over the ceiling of ${INBOX_CEILING}. Name what you did not file in your hand-off instead; if this one cannot wait, pass --over-quota "<why>".`,
+      );
+      process.exit(1);
+    }
   }
 
   let filed;
@@ -419,7 +606,7 @@ async function main() {
     process.exit(1);
   }
   try {
-    appendFileSync(path.join(root, QUOTA_LEDGER), `${new Date().toISOString()}\n`);
+    appendFileSync(ledger, `${new Date().toISOString()}\t${currentBranch(root)}\n`);
   } catch {
     // An unwritable ledger loses a count, never an issue.
   }
