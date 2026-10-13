@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -34,13 +33,12 @@ import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
 import { DESK_NOTICES } from "./_arrivals/notices";
-import { courseRosterActions } from "./_components/course-roster-actions";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { openSeatsDetailsRows } from "./_components/details-rows";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
-import { noteRosterActions } from "./_components/note-roster-actions";
 import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
+import { tripRosterActions } from "./_components/roster-actions";
 import { TripAboutLinks } from "./_components/TripAboutLinks";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { TripIncidentReports } from "./_components/TripIncidentReports";
@@ -55,21 +53,6 @@ import { DETAILS_FORMS, pageNoticesFor } from "./_components/trip-notice-tabs";
 import { tripPulseFacts } from "./_components/trip-pulse-facts";
 import type { TripPageSearchParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
-import {
-  addToWaitlistAction,
-  confirmDiverIdentityAction,
-  createDirectTripInvitationAction,
-  markPaymentAction,
-  markRosterWaiverInPersonAction,
-  recordTripInvitationAction,
-  removeBookingAction,
-  saveRosterEmergencyContactAction,
-  sendNewWaiverAction,
-  setParticipantTypeAction,
-  splitDiverIdentityAction,
-  undoRemoveBookingAction,
-  updateBookingPickupAction,
-} from "./actions";
 import { reinstateTripAction } from "./details-actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -266,30 +249,16 @@ export default async function ManageTripPage({
   });
 
   const tabsCopy = tripTabsCopy(t);
-  const rosterActions = {
-    addBookingAction: seatNewDiverAction.bind(null, "trip-guests", shopSlug),
-    addExistingDiverAction: seatExistingDiverAction.bind(null, "trip-guests", shopSlug),
-    addToWaitlistAction: addToWaitlistAction.bind(null, shopSlug, tripId),
-    createDirectTripInvitationAction: createDirectTripInvitationAction.bind(null, shopSlug, tripId),
-    markRosterWaiverInPersonAction: markRosterWaiverInPersonAction.bind(null, shopSlug, tripId),
-    markPaymentAction: markPaymentAction.bind(null, shopSlug, tripId),
-    removeBookingAction: removeBookingAction.bind(null, shopSlug, tripId),
-    setParticipantTypeAction: setParticipantTypeAction.bind(null, shopSlug, tripId),
-    // One door on this tab, desk or not: the arrivals window opens 36 hours
-    // ahead, so a confirm made inside it is no evidence the diver was standing
-    // at the counter (dive-domain review 2026-10-05).
-    confirmDiverIdentityAction: confirmDiverIdentityAction.bind(null, shopSlug, tripId),
-    splitDiverIdentityAction: splitDiverIdentityAction.bind(null, shopSlug, tripId),
-    sendNewWaiverAction: mayRetireRefusal
-      ? sendNewWaiverAction.bind(null, shopSlug, tripId)
-      : undefined,
-    ...courseRosterActions(Boolean(trip.course), shopSlug, tripId),
-    ...noteRosterActions(shopSlug, tripId),
-    saveRosterEmergencyContactAction: saveRosterEmergencyContactAction.bind(null, shopSlug, tripId),
-    updateBookingPickupAction: updateBookingPickupAction.bind(null, shopSlug, tripId),
-    recordTripInvitationAction: recordTripInvitationAction.bind(null, shopSlug, tripId),
-    undoRemoveBookingAction: undoRemoveBookingAction.bind(null, shopSlug, tripId),
-  };
+  const rosterActions = await tripRosterActions({
+    db,
+    shop,
+    shopSlug,
+    tripId,
+    trip,
+    locale,
+    now,
+    mayRetireRefusal,
+  });
 
   return (
     <>

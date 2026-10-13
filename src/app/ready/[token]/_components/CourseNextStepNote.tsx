@@ -1,3 +1,5 @@
+import type { AppDb } from "@/db/client";
+import { courseNextStepForBooking } from "@/db/course-next-step";
 import type { DiverTranslator } from "@/i18n/messages";
 
 /**
@@ -7,15 +9,21 @@ import type { DiverTranslator } from "@/i18n/messages";
  * before day two, so the live thread shows it under the spine's "Next".
  *
  * The instructor's own words under their own name, the recap's two keys, and
- * nothing when there is no note.
+ * nothing when there is no note. Read live here, so the route file only places
+ * it: a seat that is not a course session, or has no note, reads null.
  */
-export function CourseNextStepNote({
-  note,
+export async function CourseNextStepNote({
+  db,
+  shopId,
+  bookingId,
   t,
 }: {
-  note: { words: string; byName: string } | null;
+  db: AppDb;
+  shopId: string;
+  bookingId: string;
   t: DiverTranslator;
 }) {
+  const note = await courseNextStepForBooking(db, shopId, bookingId);
   if (!note) return null;
   return (
     <figure className="mt-6 border-s-2 border-border ps-4">

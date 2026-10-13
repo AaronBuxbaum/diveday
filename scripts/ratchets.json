@@ -217,7 +217,7 @@
       }
     ],
     "src/app/api/webhooks/stripe/route.ts#POST": 457,
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 501,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 494,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 670,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 568,
@@ -233,7 +233,7 @@
     "src/app/shop/[shopSlug]/staffing/page.tsx#StaffingPage": 419,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 412,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 457,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 443,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
     "src/db/bookings.ts#createBookingRecord": 463,
     "src/db/checkouts.ts#startBookingCheckout": 443,
@@ -302,7 +302,7 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 592,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 684,
+    "src/app/ready/[token]/page.tsx": 674,
     "src/app/s/[shopSlug]/page.tsx": 882,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 530,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
@@ -325,7 +325,7 @@
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 507,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 559
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 528
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

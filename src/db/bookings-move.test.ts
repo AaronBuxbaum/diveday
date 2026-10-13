@@ -1,0 +1,335 @@
+import { and, eq, isNotNull } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
+import { tripRescheduledEmail } from "@/lib/notifications/email";
+import { fileScopedShopContext } from "@/test/db";
+import { fakeEmail, fakeSms } from "@/test/fakes";
+import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
+import { formBuddyTeam } from "./buddy-pairs";
+import type { AppDb } from "./client";
+import { listTripActivity } from "./operations";
+import {
+  bookings,
+  certifications,
+  courses,
+  tripDeskEvents,
+  tripHelpRequests,
+  tripRequirements,
+  trips,
+} from "./schema";
+import { moveSeat } from "./seat-diver";
+import {
+  createTrip,
+  getTripRoster,
+  listStaff,
+  setTripCrew,
+  upcomingTripsWithCounts,
+} from "./trips";
+
+/**
+ * **A staffer moves a booked seat to another departure** (ADR
+ * 20261013-staff-move-a-seat). The same row changes trip, so everything keyed
+ * on the booking travels; the new seat is measured as a new staff seat is; and
+ * what belongs to the old departure is refused rather than rewritten.
+ */
+
+const ctx = fileScopedShopContext();
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+async function setup(targetCapacity = 6) {
+  const { db, shop } = ctx;
+  const upcoming = await upcomingTripsWithCounts(db, shop.id);
+  const from = upcoming.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
+  if (!from) throw new Error("seeded trip missing");
+  const to = await createTrip(db, {
+    shopId: shop.id,
+    title: "Two-Tank Reef — next week",
+    startsAt: new Date(nowMs() + 40 * DAY_MS),
+    endsAt: new Date(nowMs() + 40 * DAY_MS + 4 * 60 * 60 * 1000),
+    capacity: targetCapacity,
+    plannedDives: 2,
+    priceCents: 12_000,
+  });
+  if (!to) throw new Error("target trip failed");
+  const seat = await seatOn(db, shop.id, from.id, "Nora Quinn");
+  return { db, shop, from, to, seat };
+}
+
+async function seatOn(db: AppDb, shopId: string, tripId: string, fullName: string) {
+  const booked = await createBooking(db, {
+    actor: "staff",
+    shopId,
+    tripId,
+    fullName,
+    email: `${fullName.toLowerCase().replace(/\W+/g, "-")}@example.com`,
+  });
+  if (!booked.ok) throw new Error(`seating ${fullName} failed: ${booked.reason}`);
+  return booked;
+}
+
+function move(db: AppDb, shopId: string, fromTripId: string, toTripId: string, bookingId: string) {
+  return moveBooking(db, { shopId, fromTripId, toTripId, bookingId });
+}
+
+async function tripOf(db: AppDb, bookingId: string) {
+  const [row] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId));
+  return row?.tripId;
+}
+
+describe("moveBooking", () => {
+  it("moves the same booking row, and both crews read it on the catch-up strip", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    await db.insert(tripHelpRequests).values({
+      shopId: shop.id,
+      tripId: from.id,
+      bookingId: seat.bookingId,
+      kind: "carry_gear",
+    });
+
+    const moved = await move(db, shop.id, from.id, to.id, seat.bookingId);
+    expect(moved).toMatchObject({
+      ok: true,
+      personName: "Nora Quinn",
+      fromTripId: from.id,
+      toTripId: to.id,
+      owedCents: 0,
+    });
+    expect(await tripOf(db, seat.bookingId)).toBe(to.id);
+    const fromRoster = await getTripRoster(db, shop.id, from.id);
+    const toRoster = await getTripRoster(db, shop.id, to.id);
+    expect(fromRoster.map((r) => r.booking.id)).not.toContain(seat.bookingId);
+    expect(toRoster.map((r) => r.booking.id)).toContain(seat.bookingId);
+
+    const desk = await db
+      .select({ tripId: tripDeskEvents.tripId, kind: tripDeskEvents.kind })
+      .from(tripDeskEvents)
+      .where(eq(tripDeskEvents.bookingId, seat.bookingId));
+    expect(desk).toEqual(
+      expect.arrayContaining([
+        { tripId: from.id, kind: "seat_released" },
+        { tripId: to.id, kind: "seat_taken" },
+      ]),
+    );
+    const [help] = await db
+      .select({ tripId: tripHelpRequests.tripId })
+      .from(tripHelpRequests)
+      .where(eq(tripHelpRequests.bookingId, seat.bookingId));
+    expect(help?.tripId).toBe(to.id);
+  });
+
+  it("refuses a full departure and leaves the seat where it was", async () => {
+    const { db, shop, from, to, seat } = await setup(1);
+    await seatOn(db, shop.id, to.id, "Fill Seat");
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "trip_full",
+    });
+    expect(await tripOf(db, seat.bookingId)).toBe(from.id);
+  });
+
+  it("refuses a departure the diver cannot qualify for, naming what it asks", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    // A diver with no card on file is admitted blind (H-08); one with an Open
+    // Water card is measured against it.
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: seat.personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: "C-MOVE-1",
+      status: "verified",
+    });
+    await db.delete(tripRequirements).where(eq(tripRequirements.tripId, to.id));
+    await db.insert(tripRequirements).values({
+      tripId: to.id,
+      shopId: shop.id,
+      minimumCertificationLevel: "rescue",
+    });
+    const moved = await move(db, shop.id, from.id, to.id, seat.bookingId);
+    expect(moved).toMatchObject({ ok: false, reason: "trip_prerequisite" });
+    expect(await tripOf(db, seat.bookingId)).toBe(from.id);
+  });
+
+  it("refuses moving a dive seat onto a course session", async () => {
+    const { db, shop, from, seat } = await setup();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
+    if (!course) throw new Error("course missing");
+    const session = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Discover Scuba — move test",
+      startsAt: new Date(nowMs() + 180 * DAY_MS),
+      endsAt: new Date(nowMs() + 180 * DAY_MS + 4 * 60 * 60 * 1000),
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!session) throw new Error("session failed");
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (instructor) await setTripCrew(db, shop.id, session.id, [instructor.person.id]);
+    expect(await move(db, shop.id, from.id, session.id, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "course_mismatch",
+    });
+  });
+
+  it("refuses a diver who already holds, or once held, a seat there", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    const there = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: to.id,
+      personId: seat.personId,
+    });
+    if (!there.ok) throw new Error("second seat failed");
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "already_booked",
+    });
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, there.bookingId));
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "earlier_seat",
+    });
+  });
+
+  it("refuses a seat that is checked in, or whose departure has sailed", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    expect(
+      await moveBooking(db, {
+        shopId: shop.id,
+        fromTripId: from.id,
+        toTripId: to.id,
+        bookingId: seat.bookingId,
+        now: new Date(from.startsAt.getTime() + 2 * 60 * 60 * 1000),
+      }),
+    ).toEqual({ ok: false, reason: "departed" });
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, seat.bookingId));
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "not_movable",
+    });
+  });
+
+  it("refuses a party lead with live seats behind it", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    const guest = await seatOn(db, shop.id, from.id, "Party Guest");
+    await db
+      .update(bookings)
+      .set({ partyLeadBookingId: seat.bookingId })
+      .where(eq(bookings.id, guest.bookingId));
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "leads_party",
+    });
+    // The guest moving alone leaves the party.
+    expect(await move(db, shop.id, from.id, to.id, guest.bookingId)).toMatchObject({ ok: true });
+    const [row] = await db
+      .select({ lead: bookings.partyLeadBookingId })
+      .from(bookings)
+      .where(eq(bookings.id, guest.bookingId));
+    expect(row?.lead).toBeNull();
+  });
+
+  it("refuses a seat on a buddy team until the team is taken apart", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    const buddy = await seatOn(db, shop.id, from.id, "Buddy Diver");
+    const staff = await listStaff(db, shop.id);
+    const owner = staff.find((entry) => entry.roles.includes("owner"));
+    if (!owner) throw new Error("owner missing");
+    const team = await formBuddyTeam(db, {
+      shopId: shop.id,
+      tripId: from.id,
+      members: [
+        { kind: "diver", bookingId: seat.bookingId },
+        { kind: "diver", bookingId: buddy.bookingId },
+      ],
+      recordedByPersonId: owner.person.id,
+    });
+    expect(team).toMatchObject({ ok: true });
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "on_buddy_team",
+    });
+  });
+
+  it("refuses the same departure, and one that is not this shop's", async () => {
+    const { db, shop, from, seat } = await setup();
+    expect(await move(db, shop.id, from.id, from.id, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "target_unavailable",
+    });
+    expect(
+      await move(db, shop.id, from.id, "00000000-0000-4000-8000-000000000000", seat.bookingId),
+    ).toEqual({ ok: false, reason: "target_unavailable" });
+  });
+});
+
+describe("moveSeat (the consequence path)", () => {
+  it("tells the diver at their own address, and writes both trails", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    const staff = await listStaff(db, shop.id);
+    const owner = staff.find((entry) => entry.roles.includes("owner"));
+    if (!owner) throw new Error("owner missing");
+    const email = fakeEmail();
+    const sms = fakeSms();
+    const moved = await moveSeat(
+      db,
+      {
+        shopId: shop.id,
+        fromTripId: from.id,
+        toTripId: to.id,
+        bookingId: seat.bookingId,
+        actorPersonId: owner.person.id,
+      },
+      {
+        emailProvider: email.provider,
+        smsProvider: sms.provider,
+        whatsAppProviders: new Map(),
+        appOrigin: "https://diveday.example",
+      },
+    );
+    expect(moved).toMatchObject({ ok: true, notice: "told" });
+    expect(email.sent).toHaveLength(1);
+    const [sent] = email.sent;
+    if (sent?.kind !== "trip_rescheduled") throw new Error("expected a reschedule notice");
+    expect(sent).toMatchObject({
+      bookingId: seat.bookingId,
+      to: "nora-quinn@example.com",
+      tripTitle: "Two-Tank Reef — next week",
+      previousStartsAt: from.startsAt,
+      startsAt: to.startsAt,
+    });
+    expect(sent.seatMovedAt).toBeInstanceOf(Date);
+    expect(tripRescheduledEmail(sent).text).toContain("We moved your seat to Two-Tank Reef");
+
+    const codes = async (tripId: string) =>
+      (await listTripActivity(db, shop.id, tripId)).map((entry) => entry.code);
+    expect(await codes(from.id)).toContain("seat_moved_away");
+    expect(await codes(to.id)).toContain("seat_moved_here");
+  });
+});
+
+describe("listSeatMoveTargets", () => {
+  it("lists later dive departures, never this one or a course session", async () => {
+    const { db, shop, from, to } = await setup();
+    const targets = await listSeatMoveTargets(db, shop.id, from.id);
+    const ids = targets.map((target) => target.id);
+    expect(ids).toContain(to.id);
+    expect(ids).not.toContain(from.id);
+    const sessions = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), isNotNull(trips.courseId)));
+    for (const session of sessions) expect(ids).not.toContain(session.id);
+    expect(targets.map((target) => target.startsAt.getTime())).toEqual(
+      [...targets.map((target) => target.startsAt.getTime())].sort((a, b) => a - b),
+    );
+  });
+});

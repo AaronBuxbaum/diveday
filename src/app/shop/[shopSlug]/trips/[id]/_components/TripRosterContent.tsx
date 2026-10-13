@@ -24,7 +24,7 @@ import { AddDiverSection } from "./AddDiverSection";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
-import type { RosterActions, RosterRecord } from "./roster-model";
+import type { RosterActions, RosterRecord, SeatMove } from "./roster-model";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -41,6 +41,7 @@ export type TripRosterActions = {
   markRosterWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: FormAction;
   removeBookingAction: FormAction;
+  moveSeat?: SeatMove;
   setParticipantTypeAction: FormAction;
   confirmDiverIdentityAction: FormAction;
   splitDiverIdentityAction: FormAction;
@@ -258,6 +259,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           markRosterWaiverInPersonAction: actions.markRosterWaiverInPersonAction,
           markPaymentAction: actions.markPaymentAction,
           removeBookingAction: actions.removeBookingAction,
+          moveSeat: actions.moveSeat,
           setParticipantTypeAction: actions.setParticipantTypeAction,
           confirmIdentityAction: actions.confirmDiverIdentityAction,
           splitIdentityAction: actions.splitDiverIdentityAction,

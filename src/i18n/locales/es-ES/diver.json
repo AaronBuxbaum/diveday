@@ -4356,7 +4356,8 @@
       "stopLine": "Responde STOP para darte de baja.",
       "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}",
       "readyLink": "Tu preparación: {url}",
-      "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}. Antes era el {previous}."
+      "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}. Antes era el {previous}.",
+      "rescheduledSeat": "{shopName}: pasamos tu plaza a {tripTitle}, el {date}, {time}. Antes era el {previous}."
     },
     "whatsappTemplate": {
       "body": "¡Hola! Un aviso de '{{1}}': '{{2}}'",
@@ -4464,6 +4465,7 @@
     "tripRescheduled": {
       "subject": "Nuevo horario para {tripTitle}",
       "body": "Cambiamos el horario de {tripTitle}. Este es el nuevo.",
+      "seatBody": "Pasamos tu plaza a {tripTitle}. Este es el horario.",
       "was": "Antes era el {when}.",
       "meetingPointMoved": "También cambia el punto de encuentro.",
       "cantMakeIt": "¿No puedes a la nueva hora? Escríbenos y lo resolvemos."

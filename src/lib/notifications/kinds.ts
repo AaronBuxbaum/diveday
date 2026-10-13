@@ -512,6 +512,12 @@ const tripRescheduledSchema = z.object({
   revision: z.number().int().min(0),
   meetingPoint: meetingPointSchema.optional(),
   readinessUrl: z.url().max(2_000).optional(),
+  /**
+   * Set when the seat moved to another departure rather than the departure
+   * moving (ADR 20261013-staff-move-a-seat). It keys the send instead of the
+   * revision, which two departures can share.
+   */
+  seatMovedAt: z.date().optional(),
 });
 
 const tripRecapSchema = z.object({
@@ -1612,9 +1618,12 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "trip_reminder_24h":
       return `${notification.kind}/${notification.bookingId}`;
     // One per seat per move: the trip's revision after the move keys it, so a
-    // second move is a second message and a retried send is not.
+    // second move is a second message and a retried send is not. A seat moved
+    // to another departure is keyed by when it moved.
     case "trip_rescheduled":
-      return `trip-rescheduled/${notification.bookingId}/${notification.revision}`;
+      return notification.seatMovedAt
+        ? `trip-rescheduled/${notification.bookingId}/seat/${notification.seatMovedAt.toISOString()}`
+        : `trip-rescheduled/${notification.bookingId}/${notification.revision}`;
     // One recap per booking after the trip departs.
     case "trip_recap":
       return `trip-recap/${notification.bookingId}`;

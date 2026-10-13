@@ -225,6 +225,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Salvage offer
 - Seat claim
 - Seat held
+- Seat move
 - Seat release
 - Self-guided departure
 - Set-up request

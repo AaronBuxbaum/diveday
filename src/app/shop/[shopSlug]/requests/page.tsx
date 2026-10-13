@@ -130,6 +130,13 @@ export default async function RequestsPage({
       : [],
   );
 
+  // Nothing open: the empty state only when nothing was ever asked, or it
+  // would sit above the Done list saying there were no requests.
+  const emptyState =
+    done.length === 0 ? (
+      <EmptyState title={t("requests.emptyHeading")} body={t("requests.emptyDetail")} />
+    ) : null;
+
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader title={t("shared.shopSections.inbox")} />
@@ -148,11 +155,7 @@ export default async function RequestsPage({
       ) : null}
 
       {requestPage.total === 0 ? (
-        // Nothing open: the empty state only when nothing was ever asked, or
-        // it would sit above the Done list saying there were no requests.
-        done.length === 0 ? (
-          <EmptyState title={t("requests.emptyHeading")} body={t("requests.emptyDetail")} />
-        ) : null
+        emptyState
       ) : (
         // One rhythm between groups, the page-section spacing every staff
         // surface uses — never a per-section `mt-*` that drifts.

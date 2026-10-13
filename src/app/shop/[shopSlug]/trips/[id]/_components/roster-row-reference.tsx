@@ -28,6 +28,7 @@ export type RowReferenceInput = Pick<
   | "rentalFitByBooking"
   | "participantTypeCertBookingId"
   | "removeBookingAction"
+  | "moveSeat"
   | "setParticipantTypeAction"
   | "addNoteAction"
   | "deleteNoteAction"
@@ -57,6 +58,7 @@ export function rowReference(seat: RowReferenceInput) {
     rentalFitByBooking,
     participantTypeCertBookingId,
     removeBookingAction,
+    moveSeat,
     setParticipantTypeAction,
     addNoteAction,
     deleteNoteAction,
@@ -200,6 +202,7 @@ export function rowReference(seat: RowReferenceInput) {
         shopSlug={shopSlug}
         offersCreateOrder={offersCreateOrder}
         removeBookingAction={removeBookingAction}
+        moveSeat={moveSeat}
       />
     </>
   );

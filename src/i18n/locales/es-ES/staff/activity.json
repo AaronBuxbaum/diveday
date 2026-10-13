@@ -23,6 +23,8 @@
     "seat_added": "{actor} agregó a {diver} a la salida",
     "seat_added_walk_in": "{actor} agregó a {diver} a la salida sin reserva",
     "rider_added_at_dock": "{actor} agregó a {diver} en el barco como acompañante",
+    "seat_moved_away": "{actor} pasó a {diver} a otra salida",
+    "seat_moved_here": "{actor} pasó a {diver} a esta salida desde otra",
     "departure_note_sent": "{actor} envió una nota a todos los de la salida",
     "booking_link_requested": "{actor} pidió un enlace nuevo para su reserva",
     "seat_claimed": "{actor} reclamó su lugar",

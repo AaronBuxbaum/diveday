@@ -1218,6 +1218,8 @@ type TripRescheduledEmailInput = {
   /** Present only when the meeting point moved with the time. */
   meetingPoint?: MeetingPoint;
   readinessUrl?: string;
+  /** The seat moved to another departure, rather than the departure moving. */
+  seatMovedAt?: Date;
 };
 
 /**
@@ -1232,8 +1234,11 @@ export function tripRescheduledEmail(input: TripRescheduledEmailInput): Notifica
   const when = whenLines(t, input);
   const previous = formatDateTimeTz(input.previousStartsAt, input.locale, input.timezone);
   const was = t("notifications.tripRescheduled.was", { when: previous });
-  const body = t("notifications.tripRescheduled.body", { tripTitle: input.tripTitle });
-  const bodyHtml = t("notifications.tripRescheduled.body", {
+  const bodyKey = input.seatMovedAt
+    ? "notifications.tripRescheduled.seatBody"
+    : "notifications.tripRescheduled.body";
+  const body = t(bodyKey, { tripTitle: input.tripTitle });
+  const bodyHtml = t(bodyKey, {
     tripTitle: `<strong>${title}</strong>`,
   });
   const dockNote =

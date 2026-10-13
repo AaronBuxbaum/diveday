@@ -207,6 +207,18 @@ export type RosterActions = {
     formData: FormData,
   ) => Promise<ElearningCheckResult>;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
+  /**
+   * "Move to another departure" (ADR 20261013-staff-move-a-seat): the action
+   * and the departures it may move to. Absent once the departure has left, or
+   * when there is nowhere to go.
+   */
+  moveSeat?: SeatMove;
+};
+
+/** The departures a seat may move to, already worded with their zone. */
+export type SeatMove = {
+  action: (formData: FormData) => void;
+  targets: readonly { id: string; label: string }[];
 };
 
 /**

@@ -473,7 +473,9 @@ export type TripActivityEntry =
         | "identity_split"
         | "seat_added"
         | "seat_added_walk_in"
-        | "rider_added_at_dock";
+        | "rider_added_at_dock"
+        | "seat_moved_away"
+        | "seat_moved_here";
       diver: string;
     }
   | {

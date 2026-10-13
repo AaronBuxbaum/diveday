@@ -143,6 +143,10 @@ type ActivityParamShapes = {
    * added them from the manifest, so the line says where it happened.
    */
   rider_added_at_dock: { actor: string; diver: string };
+  /** A staffer moved a diver's seat from this departure to another (ADR 20261013-staff-move-a-seat). */
+  seat_moved_away: { actor: string; diver: string };
+  /** …and the departure it moved to says where it came from. */
+  seat_moved_here: { actor: string; diver: string };
   /** A staffer sent one note to everyone booked on the departure (batch 4, J4). */
   departure_note_sent: { actor: string };
   /** A diver asked for their booking link again. */
@@ -281,6 +285,8 @@ export const ACTIVITY_CODES = [
   "seat_added",
   "seat_added_walk_in",
   "rider_added_at_dock",
+  "seat_moved_away",
+  "seat_moved_here",
   "departure_note_sent",
   "booking_link_requested",
   "seat_claimed",

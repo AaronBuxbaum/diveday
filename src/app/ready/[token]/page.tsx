@@ -21,8 +21,8 @@ import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions
 import { ThreadSections } from "@/app/ready/[token]/_components/ThreadSections";
 import {
   ThreadSpine,
-  type ThreadSpineStep,
   ThreadStatus,
+  threadSpineSteps,
 } from "@/app/ready/[token]/_components/ThreadSpine";
 import {
   boatStageLine,
@@ -44,7 +44,6 @@ import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
-import { courseNextStepForBooking } from "@/db/course-next-step";
 import { countSpendableDives } from "@/db/dive-packages";
 import { getBookingPayment } from "@/db/payments";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
@@ -58,11 +57,7 @@ import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
-import {
-  THREAD_STEP_STATE_KEYS,
-  THREAD_STEP_TITLE_KEYS,
-  threadNextKey,
-} from "@/i18n/thread-labels";
+import { threadNextKey } from "@/i18n/thread-labels";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -547,21 +542,7 @@ async function DiverReadinessPage({
       }
     };
 
-    // The instructor's latest next step, read live (third UX review, item
-    // 15): written after day one, it is for before day two, not for the recap.
-    const courseNextStep = data.trip.course
-      ? await courseNextStepForBooking(db, shop.id, bookingId)
-      : null;
-
-    const spineSteps: ThreadSpineStep[] = spine.steps.map((step) => ({
-      id: step.id,
-      state: step.state,
-      current: step.id === spine.current,
-      title: t(THREAD_STEP_TITLE_KEYS[step.id]),
-      stateWord: step.state === "done" ? null : t(THREAD_STEP_STATE_KEYS[step.state]),
-      line: stepLine(step),
-      body: stepBody(step) ?? undefined,
-    }));
+    const spineSteps = threadSpineSteps(spine, t, stepLine, stepBody);
 
     return (
       <>
@@ -592,7 +573,7 @@ async function DiverReadinessPage({
             <ThreadSpine steps={spineSteps} />
           </>
         )}
-        <CourseNextStepNote note={courseNextStep} t={t} />
+        <CourseNextStepNote db={db} shopId={shop.id} bookingId={bookingId} t={t} />
         <ThreadSections
           context={{
             token,

@@ -82,6 +82,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     elearningCheckAction,
     recordPaperCourseFormAction,
     updatePickupAction,
+    moveSeat,
   } = actions;
   // A course student whose learning materials nobody has marked done (ADR
   // 20261008-course-learning-materials). Bookkeeping, never a gate: it is a
@@ -260,6 +261,8 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     elearningCheckAction,
     recordPaperCourseFormAction,
     updatePickupAction,
+    // Only a booked seat moves: checked in or absent is the day's own record.
+    moveSeat: booking.status === "booked" ? moveSeat : undefined,
     materialsDone,
     materialsPending,
     readiness,

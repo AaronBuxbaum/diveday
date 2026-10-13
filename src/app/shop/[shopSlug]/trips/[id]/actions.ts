@@ -25,6 +25,7 @@ import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import type { PaymentStatus } from "@/db/schema";
+import { type MoveSeatRefusal, moveSeat } from "@/db/seat-diver";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopCurrency } from "@/db/stripe-accounts";
 import {
@@ -431,6 +432,64 @@ export async function setParticipantTypeAction(
   // loud rather than left for someone to notice at close-out.
   const saved = outcome.owedCents > 0 ? "participant-type-owed" : "participant-type-set";
   revalidateAndRedirect(back, noticeUrl(back, saved, { bid: bookingId }));
+}
+
+/**
+ * **"Move to another departure"** on a roster row (ADR
+ * 20261013-staff-move-a-seat). Roster work any staff member does, like Remove
+ * and "Coming as": nothing is charged or refunded, so no money role is asked
+ * for. The seat must be on this departure (`requireRosterBooking`), and
+ * `moveSeat` is the one path that moves it and tells the diver.
+ */
+const moveSeatForm = z.object({
+  bookingId: z.string().refine((id) => uuidParam(id) !== undefined),
+  toTripId: z.string().refine((id) => uuidParam(id) !== undefined),
+});
+
+const MOVE_SEAT_NOTICE: Record<Exclude<MoveSeatRefusal, "not_found">, string> = {
+  not_movable: "seat-move-not-movable",
+  departed: "seat-move-departed",
+  target_unavailable: "seat-move-unavailable",
+  course_mismatch: "seat-move-course",
+  already_booked: "seat-move-already",
+  earlier_seat: "seat-move-earlier",
+  leads_party: "seat-move-party",
+  on_buddy_team: "seat-move-buddy",
+  roll_call_started: "seat-move-roll-call",
+  trip_full: "seat-move-full",
+  divers_full: "seat-move-full",
+  course_ratio_full: "seat-move-full",
+  course_unstaffed: "seat-move-full",
+  trip_prerequisite: "seat-move-prerequisite",
+};
+
+export async function moveSeatAction(shopSlug: string, tripId: string, formData: FormData) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const parsed = parseForm(moveSeatForm, formData);
+  if (!uuidParam(tripId) || !parsed.ok) redirect(back);
+  const { bookingId, toTripId } = parsed.data;
+  const dbi = await getDb();
+  await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
+  const moved = await moveSeat(dbi, {
+    shopId: s.user.shopId,
+    fromTripId: tripId,
+    toTripId,
+    bookingId,
+    actorPersonId: s.user.personId,
+  });
+  if (!moved.ok) {
+    if (moved.reason === "not_found") redirect(back);
+    revalidateAndRedirect(back, noticeUrl(back, MOVE_SEAT_NOTICE[moved.reason]));
+  }
+  revalidatePath(tripPath(shopSlug, toTripId));
+  const notice =
+    moved.owedCents > 0
+      ? "seat-moved-owed"
+      : moved.notice === "failed"
+        ? "seat-moved-untold"
+        : "seat-moved";
+  revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 
 export async function undoRemoveBookingAction(
