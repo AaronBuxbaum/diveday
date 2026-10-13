@@ -359,7 +359,13 @@ export async function markMessageRunningLate(
   const seats = await openSeatsOf(db, input.shopId, [input.personId], input.now);
   const seat = seatForMessage(seats, input.personId, input.receivedAt);
   if (!seat) return { status: "closed" };
-  const outcome = await stampWithParty(db, input.shopId, seat.bookingId, input.now, input.receivedAt);
+  const outcome = await stampWithParty(
+    db,
+    input.shopId,
+    seat.bookingId,
+    input.now,
+    input.receivedAt,
+  );
   if (outcome.status === "marked") {
     await recordDiverActivity(db, {
       shopId: input.shopId,

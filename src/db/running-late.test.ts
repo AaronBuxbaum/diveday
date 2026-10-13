@@ -198,7 +198,13 @@ describe("a message in the diver's own words (the Inbox)", () => {
     });
 
     expect(
-      await markMessageRunningLate(db, { shopId: shop.id, personId, receivedAt, now, actorPersonId }),
+      await markMessageRunningLate(db, {
+        shopId: shop.id,
+        personId,
+        receivedAt,
+        now,
+        actorPersonId,
+      }),
     ).toEqual({ status: "marked", bookingId, at: receivedAt });
     expect(await lateAt(bookingId)).toEqual(receivedAt);
     // Security review 1 / domain review 3: the staffer who read it is on the
@@ -208,7 +214,13 @@ describe("a message in the diver's own words (the Inbox)", () => {
     ]);
     // A second mark changes nothing, so it files nothing.
     expect(
-      await markMessageRunningLate(db, { shopId: shop.id, personId, receivedAt, now, actorPersonId }),
+      await markMessageRunningLate(db, {
+        shopId: shop.id,
+        personId,
+        receivedAt,
+        now,
+        actorPersonId,
+      }),
     ).toMatchObject({ status: "already" });
     expect(await lateLines(personId)).toHaveLength(1);
     const after = await messageSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
@@ -222,7 +234,13 @@ describe("a message in the diver's own words (the Inbox)", () => {
     const seats = await messageSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
     expect(seats.size).toBe(0);
     expect(
-      await markMessageRunningLate(db, { shopId: shop.id, personId, receivedAt, now, actorPersonId }),
+      await markMessageRunningLate(db, {
+        shopId: shop.id,
+        personId,
+        receivedAt,
+        now,
+        actorPersonId,
+      }),
     ).toEqual({ status: "closed" });
     expect(await lateAt(bookingId)).toBeNull();
     expect(await lateLines(personId)).toEqual([]);
@@ -240,7 +258,13 @@ describe("a message in the diver's own words (the Inbox)", () => {
     expect(stranger.size).toBe(0);
     await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
     expect(
-      await markMessageRunningLate(db, { shopId: shop.id, personId, receivedAt, now, actorPersonId }),
+      await markMessageRunningLate(db, {
+        shopId: shop.id,
+        personId,
+        receivedAt,
+        now,
+        actorPersonId,
+      }),
     ).toEqual({ status: "closed" });
   });
 
