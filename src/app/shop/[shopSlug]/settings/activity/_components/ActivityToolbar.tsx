@@ -17,6 +17,11 @@ import { QueryForm } from "@/components/ui/QueryForm";
  * The date boxes do not: two empty boxes look identical, so each carries a
  * visible "From" / "To" on its own row, beside the box rather than above it
  * so the toolbar stays one line of controls (issue #2314).
+ *
+ * The two date boxes are one unit (issue #2538): they wrap together, so "To"
+ * never lands under "From" on a wide screen, and on a phone they stack on a
+ * two-column grid whose first column is the wider caption, so both boxes
+ * start at the same left edge.
  */
 export type ActivityToolbarCopy = {
   personLabel: string;
@@ -31,8 +36,10 @@ export type ActivityToolbarCopy = {
 };
 
 const FIELD_CLASS = "min-w-36 flex-1 sm:w-44 sm:flex-none";
-/** A date box and its visible caption, side by side; the box takes the rest. */
-const DATE_FIELD_CLASS = "flex min-w-44 flex-1 items-center gap-2 sm:w-52 sm:flex-none";
+/** The From and To pair: a caption column and a box column, one row from `sm` up. */
+const DATE_RANGE_CLASS =
+  "grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-3 sm:flex sm:w-auto";
+const DATE_BOX_CLASS = "min-w-0 sm:w-40";
 
 export function ActivityToolbar({
   personId,
@@ -99,8 +106,8 @@ export function ActivityToolbar({
         </select>
       </div>
 
-      <div className={DATE_FIELD_CLASS}>
-        <label className="shrink-0 text-sm text-muted" htmlFor="activity-from">
+      <div className={DATE_RANGE_CLASS}>
+        <label className="text-sm text-muted" htmlFor="activity-from">
           {copy.fromLabel}
         </label>
         <DateField
@@ -108,11 +115,9 @@ export function ActivityToolbar({
           name="from"
           defaultValue={from}
           onChange={submit}
-          wrapperClassName="min-w-0 flex-1"
+          wrapperClassName={DATE_BOX_CLASS}
         />
-      </div>
-      <div className={DATE_FIELD_CLASS}>
-        <label className="shrink-0 text-sm text-muted" htmlFor="activity-to">
+        <label className="text-sm text-muted sm:ms-1" htmlFor="activity-to">
           {copy.toLabel}
         </label>
         <DateField
@@ -120,7 +125,7 @@ export function ActivityToolbar({
           name="to"
           defaultValue={to}
           onChange={submit}
-          wrapperClassName="min-w-0 flex-1"
+          wrapperClassName={DATE_BOX_CLASS}
         />
       </div>
 
