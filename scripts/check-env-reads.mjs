@@ -46,6 +46,7 @@ const NOT_REGISTERED = {
   DIVEDAY_RATE_LIMIT_DISABLED: "the e2e harness switches the limiter off",
   DIVEDAY_TEST_CACHE_DIR: "the unit-test database template cache",
   DIVEDAY_TEST_POSTGRES_URL: "the real-Postgres unit tests",
+  DIVEDAY_PRINT_QUERY_COUNTS: "the render-cost tests print their query counts for a PR body",
   PGLITE_DATA_DIR: "where a local run keeps its embedded database",
 };
 
