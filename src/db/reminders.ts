@@ -293,22 +293,33 @@ async function readMeetingsByTrip(
 /**
  * The trip-prep link each sending reminder carries, by booking id, carried by
  * both the email's button and the text (ux review 2026-10-11, item 6). Minted
- * in one insert per shop for exactly the reminders that earn their send (code
- * review 2026-10-13b, item 36): the send loop used to mint one capability per
- * reminder, three statements each, between its sends. Empty with no public
- * origin configured.
+ * in one insert per shop for exactly the reminders that earn their send and
+ * have a channel to carry it (code review 2026-10-13b, item 36): the send loop
+ * used to mint one capability per reminder, three statements each, between
+ * its sends. Empty with no public origin configured.
  */
 async function mintReminderLinks(
   db: AppDb,
   origin: string | null,
-  seats: ReadonlyArray<{ shopId: string; bookingId: string }>,
+  seats: ReadonlyArray<{
+    row: {
+      shop: { id: string };
+      booking: { id: string };
+      person: { email: string | null; phone: string | null };
+    };
+  }>,
   now: Date,
 ): Promise<Map<string, string>> {
   const links = new Map<string, string>();
   if (!origin) return links;
   const byShop = new Map<string, string[]>();
-  for (const { shopId, bookingId } of seats) {
-    byShop.set(shopId, [...(byShop.get(shopId) ?? []), bookingId]);
+  for (const {
+    row: { shop, booking, person },
+  } of seats) {
+    // Only a seat the send loop can reach: a diver with no email and no
+    // textable phone gets a `not_configured` row, not a live token.
+    if (!person.email && !smsRecipient(person.phone)) continue;
+    byShop.set(shop.id, [...(byShop.get(shop.id) ?? []), booking.id]);
   }
   for (const [shopId, bookingIds] of byShop) {
     const issued = await issueBookingCapabilities(db, {
@@ -584,12 +595,7 @@ export async function sendDueReminders(
     sending.push({ row, cadence, checklist, materialsDue });
   }
 
-  const links = await mintReminderLinks(
-    db,
-    origin,
-    sending.map(({ row }) => ({ shopId: row.shop.id, bookingId: row.booking.id })),
-    now,
-  );
+  const links = await mintReminderLinks(db, origin, sending, now);
 
   for (const {
     row: { booking, person, trip, shop },

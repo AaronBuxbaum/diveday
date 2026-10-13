@@ -14,6 +14,7 @@ import {
 } from "./readiness";
 import { sendDueReminders } from "./reminders";
 import {
+  bookingCapabilities,
   bookings,
   courses,
   notificationDeliveries,
@@ -457,6 +458,27 @@ describe("sendDueReminders", () => {
     });
     const rows = await rowsFor(db, bookingId);
     expect(rows[0].status).toBe("not_configured");
+  });
+
+  it("mints no trip-prep link for a diver with no email and no phone", async () => {
+    // The link rides the email and the text; with neither, a live readiness
+    // token would only count against the booking's cap (security review of
+    // code review 2026-10-13b, item 36).
+    const { db, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ email: null, phone: null }).where(eq(people.id, personId));
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: "https://dive.day",
+    });
+    expect((await rowsFor(db, bookingId))[0].status).toBe("not_configured");
+    expect(
+      await db
+        .select()
+        .from(bookingCapabilities)
+        .where(eq(bookingCapabilities.bookingId, bookingId)),
+    ).toEqual([]);
   });
 });
 

@@ -161,6 +161,16 @@ describe("recurring trip series (in-memory PGlite)", () => {
         .from(tripRequirements)
         .where(eq(tripRequirements.tripId, trip.id));
       expect(reqs).toHaveLength(1);
+      // The same gates the one-at-a-time insert wrote: waiver on, and a
+      // course-less day's Open Water baseline (code review 2026-10-13b, item 40).
+      expect(reqs[0]).toMatchObject({
+        shopId: shop.id,
+        requiresWaiver: true,
+        minimumCertificationLevel: "open_water",
+        requiredSpecialties: [],
+        requiresNitrox: false,
+        requiresPayment: false,
+      });
     }
 
     const summary = await getTripSeriesSummary(db, shop.id, firstInstance.id);

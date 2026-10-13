@@ -473,8 +473,9 @@ export async function noShowSalvage(
   // diver's walk asked one candidate, waited, then asked the next, over up to
   // fifty. Now it asks the next `SALVAGE_STEP` together and keeps the passes
   // in rank order, so the days offered are exactly the ones the one-at-a-time
-  // walk would have found, usually in one round instead of several, and never
-  // more questions in flight per diver than the pool can carry.
+  // walk would have found, usually in one round instead of several. The bound
+  // is per diver: `SALVAGE_STEP` questions in flight for each, with the divers
+  // themselves side by side.
   await Promise.all(
     personIds.map(async (personId) => {
       const alternatives: SimilarDeparture[] = [];
