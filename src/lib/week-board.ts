@@ -73,7 +73,12 @@ export function resolveWeekStart(param: string | undefined, today: CalendarDate)
 export const WEEK_SHARED_FACT_FLOOR = 3;
 
 /** The little this gate needs to know about a departure. */
-type PricedDeparture = { status: "upcoming" | "sailed"; priceCents: number | null };
+type PricedDeparture = {
+  status: "upcoming" | "sailed";
+  priceCents: number | null;
+  /** A rehearsal is unpriced by design (ADR 20261012-rehearsal-departures), never a price to set. */
+  isRehearsal?: boolean;
+};
 
 /**
  * Whether *every* departure this week still has to sail is unpriced — the
@@ -98,7 +103,7 @@ export function weekIsWhollyUnpriced(board: {
   spans: readonly PricedDeparture[];
 }): boolean {
   const upcoming = [...Object.values(board.days).flat(), ...board.spans].filter(
-    (departure) => departure.status === "upcoming",
+    (departure) => departure.status === "upcoming" && !departure.isRehearsal,
   );
   return (
     upcoming.length >= WEEK_SHARED_FACT_FLOOR &&

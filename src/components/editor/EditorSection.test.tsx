@@ -258,4 +258,31 @@ describe("an editor section on a phone", () => {
     expect(body("faq")).not.toHaveClass("max-lg:hidden");
     expect(document.activeElement).toBe(document.getElementById("faq"));
   });
+
+  /**
+   * **A folded header says it holds edits** (#2438). The sentence beside Save
+   * names the section, but a staffer scanning folded headers could not see
+   * where their edits were. The tag is in the header button, so its name
+   * carries it to a screen reader; saving clears it.
+   */
+  it("tags a section with unsaved edits in its header until the form is saved", () => {
+    render(
+      <form onSubmit={(event) => event.preventDefault()}>
+        <EditorSection id="pitch" label="The pitch" lead unsavedTag="Unsaved">
+          <input aria-label="Subhead" name="subhead" />
+        </EditorSection>
+        <EditorSection id="pricing" label="Pricing" unsavedTag="Unsaved">
+          <input aria-label="Price" name="price" />
+        </EditorSection>
+      </form>,
+    );
+    expect(header(/Pricing/)).not.toHaveTextContent("Unsaved");
+    fireEvent.input(screen.getByLabelText("Price"), { target: { value: "500" } });
+    expect(header(/Pricing/)).toHaveAccessibleName(/Pricing\s*Unsaved/);
+    expect(header(/The pitch/)).not.toHaveTextContent("Unsaved");
+    // Still a 48px target with the tag in it.
+    expect(header(/Pricing/)).toHaveClass("min-h-12");
+    fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+    expect(header(/Pricing/)).not.toHaveTextContent("Unsaved");
+  });
 });

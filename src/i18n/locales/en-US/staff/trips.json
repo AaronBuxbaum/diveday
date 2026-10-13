@@ -556,6 +556,7 @@
     "waiverResendHint": "Resend",
     "waiverSend": "Send waiver",
     "waiverSent": "Waiver sent",
+    "waiverHeldRehearsal": "Held: rehearsal",
     "waiverSigned": "Waiver signed",
     "noteCount": "{count, plural, one {# note} other {# notes}}",
     "emergencyContactAddFull": "Add emergency contact",
