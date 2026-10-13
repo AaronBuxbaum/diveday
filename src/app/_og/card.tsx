@@ -126,6 +126,22 @@ export const OG_WORDMARK = (
   </div>
 );
 
+/**
+ * **How long a CDN may hold a public link-preview card** (code review
+ * 2026-10-13b, item 27). Next answers a dynamic `opengraph-image` with
+ * `public, max-age=0, must-revalidate`, so every crawler fetch read the shop,
+ * the trip and its booked list, fetched the logo and rasterized. The shop's
+ * card names the shop and shows its logo, which change rarely: an hour, and a
+ * day stale while it refreshes. A trip's card shows open seats, so it is held
+ * as long as `availability.json` holds its counts, five minutes; so is the
+ * generic card an unknown shop gets, since its slug may be a shop's tomorrow.
+ * Never on `/recap/[token]`, whose URL is a capability.
+ */
+export const OG_CACHE = {
+  shop: { "cache-control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400" },
+  seats: { "cache-control": "public, max-age=60, s-maxage=300, stale-while-revalidate=3600" },
+} as const;
+
 /** The promise DiveDay's *own* cards close on. Never a shop's. */
 export const OG_TAGLINE = "A calmer way to run a dive day";
 
