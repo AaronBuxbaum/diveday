@@ -217,12 +217,6 @@ const nextConfig: NextConfig = {
     "/shop/**": ["node_modules/**/next/dist/compiled/@vercel/og/**"],
   },
   cacheComponents: true,
-  // Every `<Link>` to a route shares that route's one App Shell, rather than
-  // prefetching its own URL (code review 2026-10-13b, item 20). Nothing in
-  // `src/` opts into the legacy full prefetch (`prefetch={true}`), so there was
-  // nothing to migrate; the roster's re-count is in `ui/ledger.tsx`'s link.
-  // Both options go away in the next major, with this the behaviour.
-  partialPrefetching: true,
   images: {
     // The e2e build serves every photo's original bytes instead of running
     // them through the optimizer. Sharp's lossy re-encodes are not
