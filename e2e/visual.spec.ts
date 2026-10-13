@@ -4130,9 +4130,10 @@ for (const scheme of ["light", "dark"] as const) {
       // no longer the desk but the record (UX review 2026-10-10, item 10),
       // every seat filed by the crew's roll call under "Sailed", "Didn't
       // sail", "Not counted at the dock" or "No roll call taken". The seeded
-      // dawn boat boarded everyone, so the frame holds one "Sailed" band and
-      // no count, no taps and nothing still to clear: a record never asks for
-      // action. Reading the seeded state keeps this capture independent of
+      // dawn boat boarded everyone readiness cleared and turned the rest away
+      // at the dock (#2415), so the frame holds "Sailed" and "Didn't sail"
+      // and no count, no taps and nothing still to clear: a record never asks
+      // for action. Reading the seeded state keeps this capture independent of
       // the mutable roll-call action. The capture keeps its name so the
       // baseline diff reads as this surface changing, not a new one.
       test(`the desk's settled boat renders true to the design (${scheme})`, async ({ page }) => {
@@ -4141,6 +4142,27 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: SAILED_TRIP }).waitFor();
         await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
         await capture(page, "trip-desk-checked", scheme);
+      });
+
+      // The same record with a seat the dock never counted (#2408): the "Not
+      // counted at the dock" band had only been checked in jsdom. One seat
+      // sailed, one was turned away, one has no dock result at all, so all
+      // three bands stand on one finished departure.
+      test(`a finished boat's record with an uncounted seat renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        const seeded = await page.request.post("/api/test/seed-trouble-states?uncountedSeat=1");
+        expect(seeded.ok()).toBe(true);
+        const { uncountedSeat } = (await seeded.json()) as {
+          uncountedSeat?: { tripId: string };
+        };
+        if (!uncountedSeat) throw new Error("seed-trouble-states left no seat uncounted");
+        await page.goto(counterPath("blue-mantis", uncountedSeat.tripId));
+        await page.getByRole("heading", { level: 1, name: SAILED_TRIP }).waitFor();
+        await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
+        await page.getByRole("heading", { name: /^Didn’t sail · \d+$/ }).waitFor();
+        await page.getByRole("heading", { name: /^Not counted at the dock · 1$/ }).waitFor();
+        await capture(page, "trip-record-uncounted", scheme);
       });
 
       /**
