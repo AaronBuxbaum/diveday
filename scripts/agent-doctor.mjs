@@ -9,8 +9,12 @@
 // the whole report on demand. Like the hooks, it never fails: a check that cannot answer says
 // "unknown" rather than guessing, and the exit code is always 0 — it is a report, not a gate.
 //
-// The GitHub MCP server cannot be reached from a script at all (it is a tool of the session,
-// not a process this can call), so that row always says how to test it rather than pretending.
+// A row warns only about what a session can fix. What only a human can change (the Node the
+// container ships, the repository's delete-head-branches switch) is `info`: the full report
+// still shows it, the session-start line does not, because four warnings nobody could act on
+// on every start trained sessions to skip the block (2026-10-13 re-review, item 37). The GitHub
+// MCP server is not a row at all: a script cannot reach it, so the row could only ever say
+// "unknown"; the `gh` row's fix names the MCP tools instead.
 
 import path from "node:path";
 import process from "node:process";
@@ -102,13 +106,20 @@ function openPullHeads() {
  * The raw facts, each null when it could not be read. Every reader is injectable through
  * `readers` so the tests need no git, no `gh` and no process table.
  */
-export function gatherFacts(root = ROOT, { strays = true, remote = false, readers = {} } = {}) {
+export function gatherFacts(
+  root = ROOT,
+  { strays = true, remote = false, readers = {}, fetched = null } = {},
+) {
   const git = readers.git ?? gitReader(root);
   const facts = {
+    // SessionStart's own fetch, when it ran just before this: "fetched" or "failed". A fetch
+    // that just succeeded is current whatever FETCH_HEAD's path says; one that failed is
+    // already said by the session block, so the summary does not say it twice.
+    fetched,
     nodeMajor: Number(process.versions.node.split(".")[0]),
     pinnedMajor: (readers.pinnedMajor ?? pinnedNodeMajor)(root),
     gh: (readers.commandWorks ?? commandWorks)("gh", ["--version"]),
-    fetchAgeMs: (readers.fetchAge ?? fetchHeadAgeMs)(git, root),
+    fetchAgeMs: fetched === "fetched" ? 0 : (readers.fetchAge ?? fetchHeadAgeMs)(git, root),
     mainTip: git(["log", "-1", "--format=%cs", "origin/main"]),
     nodeModules: (readers.installNeed ?? installNeed)(root),
     strays: strays ? (readers.strayCount ?? strayCount)(root) : undefined,
@@ -125,13 +136,16 @@ export function gatherFacts(root = ROOT, { strays = true, remote = false, reader
   return facts;
 }
 
-/** One row per check: `{ name, status: "ok" | "warn" | "unknown", detail, fix }`. */
+/**
+ * One row per check: `{ name, status: "ok" | "warn" | "info" | "unknown", detail, fix }`.
+ * `warn` is for what a session can fix; `info` for what only a human can.
+ */
 export function checks(facts) {
   const rows = [];
   const nodeOk = facts.pinnedMajor === null || facts.nodeMajor === facts.pinnedMajor;
   rows.push({
     name: "node",
-    status: facts.pinnedMajor === null ? "unknown" : nodeOk ? "ok" : "warn",
+    status: facts.pinnedMajor === null ? "unknown" : nodeOk ? "ok" : "info",
     detail: `Node ${facts.nodeMajor} (.nvmrc pins ${facts.pinnedMajor ?? "nothing readable"})`,
     fix: nodeOk
       ? ""
@@ -143,13 +157,7 @@ export function checks(facts) {
     detail: facts.gh ? "gh is installed" : "gh is not installed",
     fix: facts.gh
       ? ""
-      : "Use the GitHub MCP tools (`mcp__github__*`) for issues, PRs and review threads; `pnpm gates` and `check:follow-ups` report SKIPPED without gh. Where gh is installed, `gh api` (REST) works in cloud sessions and `gh issue`/`gh pr` (GraphQL) do not.",
-  });
-  rows.push({
-    name: "github-mcp",
-    status: "unknown",
-    detail: "not reachable from a script",
-    fix: "Test it in the session: call `mcp__github__get_me`. An answer means issues and PRs are reachable; repo-scoped REST through curl is refused in cloud containers either way.",
+      : "Use the GitHub MCP tools (`mcp__github__*`; `mcp__github__get_me` tests them) for issues, PRs and review threads; `pnpm gates` and `check:follow-ups` report SKIPPED without gh. Where gh is installed, `gh api` (REST) works in cloud sessions and `gh issue`/`gh pr` (GraphQL) do not.",
   });
   const stale = facts.fetchAgeMs === null || facts.fetchAgeMs > STALE_FETCH_MS;
   rows.push({
@@ -190,7 +198,7 @@ export function checks(facts) {
     const shown = names.slice(0, 5).join(", ");
     rows.push({
       name: "remote branches",
-      status: facts.orphanBranches === null ? "unknown" : names.length > 0 ? "warn" : "ok",
+      status: facts.orphanBranches === null ? "unknown" : names.length > 0 ? "info" : "ok",
       detail:
         facts.orphanBranches === null
           ? "could not list origin's branches or the open pull requests"
@@ -217,7 +225,13 @@ export function checks(facts) {
 export function summaryLines(facts) {
   const rows = checks(facts);
   // The refusal tally is the per-prompt line's to say, once; not repeated here.
-  const warned = rows.filter((row) => row.status === "warn" && row.name !== "hook refusals");
+  const warned = rows.filter(
+    (row) =>
+      row.status === "warn" &&
+      row.name !== "hook refusals" &&
+      // A failed session fetch is the session block's first line already.
+      !(row.name === "origin/main" && facts.fetched === "failed"),
+  );
   const first =
     warned.length === 0
       ? "Doctor: nothing to warn about."

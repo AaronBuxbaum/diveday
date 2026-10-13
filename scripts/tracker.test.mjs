@@ -122,9 +122,19 @@ describe("writing issues", () => {
     tracker.editLabels(5, { add: ["a"], remove: ["in-progress"] }, { dryRun: true });
     tracker.closeIssue(5, {}, { dryRun: true });
     expect(calls).toHaveLength(0);
-    expect(lines).toHaveLength(5);
+    expect(lines).toHaveLength(7);
     expect(lines[3]).toContain(`DELETE ${BASE}/issues/5/labels/in-progress`);
     expect(lines[4]).toContain('"state_reason":"completed"');
+  });
+
+  it("strips in-progress and ready-for-agent when it closes an issue, after the close", () => {
+    const { run, calls } = fakeGh({ [`${BASE}/issues/7`]: { number: 7 } });
+    createTracker({ repo: REPO, run }).closeIssue(7);
+    expect(calls.map((call) => call.args.slice(0, 3).join(" "))).toEqual([
+      `--method PATCH ${BASE}/issues/7`,
+      `--method DELETE ${BASE}/issues/7/labels/in-progress`,
+      `--method DELETE ${BASE}/issues/7/labels/ready-for-agent`,
+    ]);
   });
 
   it("treats removing a label the issue does not carry as done", () => {

@@ -26,6 +26,9 @@ export const DEFAULT_REPO = "AaronBuxbaum/diveday";
 const PAGE_SIZE = 100;
 const MAX_PAGES = 10;
 
+/** Labels that describe an open issue's queue; `closeIssue` strips them. */
+export const OPEN_ONLY_LABELS = ["in-progress", "ready-for-agent"];
+
 export class TrackerError extends Error {}
 
 /** `owner/name` from `GITHUB_REPOSITORY` (set in Actions), else this repository. */
@@ -208,13 +211,20 @@ export function createTracker({ repo = repoSlug(), run = ghApi, log = console.lo
       }
     },
 
+    /**
+     * Closes the issue and strips the labels that only mean something on an open one. #2355
+     * closed still carrying `in-progress` and `ready-for-agent`, and `pnpm gates` and the
+     * backlog sweep both read labels, not state (2026-10-13 re-review, item 37).
+     */
     closeIssue(issueNumber, { reason = "completed" } = {}, options) {
-      return write(
+      const closed = write(
         "PATCH",
         `${base}/issues/${number(issueNumber)}`,
         { state: "closed", state_reason: reason },
         options,
       );
+      api.editLabels(issueNumber, { remove: OPEN_ONLY_LABELS }, options);
+      return closed;
     },
   };
   return api;

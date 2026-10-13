@@ -185,6 +185,14 @@ describe("the session-start block", () => {
     expect(block).toContain(".claude/rules/");
   });
 
+  it("says the merge drivers are not installed only when the install returned false", () => {
+    expect(sessionBlock(null, { mergeDrivers: "not installed" })).toContain(
+      "Merge drivers: not installed",
+    );
+    expect(sessionBlock(null, { mergeDrivers: "installed" })).not.toContain("Merge drivers");
+    expect(sessionBlock(null)).not.toContain("Merge drivers");
+  });
+
   it("asks for a papercut when a guard or hook fights the session, on every start", () => {
     for (const source of ["startup", "resume", "compact"]) {
       expect(sessionBlock(null, { source })).toContain("docs/agents/papercuts/");

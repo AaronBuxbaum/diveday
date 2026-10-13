@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { DRIVERS, mergeJson, mergeRatchetText } from "./merge-drivers.mjs";
+import { DRIVERS, install, mergeJson, mergeRatchetText } from "./merge-drivers.mjs";
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "merge-drivers.mjs");
 
@@ -102,5 +102,63 @@ describe("the drivers inside a real git merge", () => {
     expect(ratchets["page-length"]).toEqual({ "a.tsx": 490, "b.tsx": 440 });
     expect(await readFile(path.join(root, "index.md"), "utf8")).toBe("# Index\n\n- one\n- ours\n");
     expect(git("status", "--porcelain")).toBe("");
+  });
+});
+
+/** A fake `git config` over a map, counting writes; `failWrites` makes every write lose. */
+function fakeConfig(initial = {}, { failWrites = false, racer = null } = {}) {
+  const config = new Map(Object.entries(initial));
+  const writes = [];
+  const git = (args) => {
+    if (args[2] === "--get") {
+      return config.has(args[3])
+        ? { status: 0, stdout: `${config.get(args[3])}\n` }
+        : { status: 1, stdout: "" };
+    }
+    writes.push(args[2]);
+    if (failWrites) {
+      // Another session's start holds config.lock and writes the same value.
+      if (racer) config.set(args[2], racer(args[2], args[3]));
+      return { status: 255, stdout: "" };
+    }
+    config.set(args[2], args[3]);
+    return { status: 0, stdout: "" };
+  };
+  return { git, writes, config };
+}
+
+const installed = Object.fromEntries(
+  Object.entries(DRIVERS).flatMap(([id, { name, driver }]) => [
+    [`merge.${id}.name`, name],
+    [`merge.${id}.driver`, driver],
+  ]),
+);
+
+describe("installing the drivers", () => {
+  it("writes nothing when every definition already reads back, so parallel starts do not contend", () => {
+    const { git, writes } = fakeConfig(installed);
+    expect(install("/repo", { git })).toBe(true);
+    expect(writes).toEqual([]);
+  });
+
+  it("writes only the definitions that are missing or different", () => {
+    const { "merge.diveday-ratchets.driver": _gone, ...partial } = installed;
+    const { git, writes, config } = fakeConfig({
+      ...partial,
+      "merge.diveday-generated.name": "old",
+    });
+    expect(install("/repo", { git })).toBe(true);
+    expect(writes).toEqual(["merge.diveday-ratchets.driver", "merge.diveday-generated.name"]);
+    expect(Object.fromEntries(config)).toEqual(installed);
+  });
+
+  it("counts a write that lost the lock as installed when the winner wrote the same value", () => {
+    const { git } = fakeConfig({}, { failWrites: true, racer: (_key, value) => value });
+    expect(install("/repo", { git })).toBe(true);
+  });
+
+  it("returns false when a definition is still missing after its write failed", () => {
+    const { git } = fakeConfig({}, { failWrites: true });
+    expect(install("/repo", { git })).toBe(false);
   });
 });

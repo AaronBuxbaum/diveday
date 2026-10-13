@@ -286,10 +286,16 @@ export function sessionBlock(
     installed,
     nodeSelection = null,
     fetched = null,
+    mergeDrivers = null,
     doctor = [],
   } = {},
 ) {
   const lines = [];
+  if (mergeDrivers === "not installed") {
+    lines.push(
+      "Merge drivers: not installed (git config failed), so a merge or restack can stop on scripts/ratchets.json and the generated files — run `node scripts/merge-drivers.mjs install`.",
+    );
+  }
   if (fetched === "failed") {
     lines.push(
       "`git fetch origin main` failed or timed out at session start: origin/main may be stale, so `pnpm test:changed` and `check:closing-keywords` may measure from an old base.",
@@ -432,7 +438,7 @@ function main() {
   const nodeSelection = selectPinnedNode({ nodeMajor, pinnedMajor });
   const installed = installIfNeeded(cwd);
   // So a restack merge never stops on a generated file (scripts/merge-drivers.mjs).
-  installMergeDrivers(cwd);
+  const mergeDrivers = installMergeDrivers(cwd) ? "installed" : "not installed";
   const block = sessionBlock(state, {
     source,
     nodeMajor,
@@ -440,7 +446,9 @@ function main() {
     nodeSelection,
     installed,
     fetched,
-    doctor: summaryLines(gatherFacts(cwd)),
+    mergeDrivers,
+    // After the fetch above, so origin/main's row reads this session's refs.
+    doctor: summaryLines(gatherFacts(cwd, { fetched })),
   });
   if (block) process.stdout.write(`${block}\n`);
 }

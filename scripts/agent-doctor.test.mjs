@@ -43,7 +43,6 @@ describe("the doctor's checks", () => {
     const rows = checks(sick);
     const warned = rows.filter((row) => row.status === "warn").map((row) => row.name);
     expect(warned).toEqual([
-      "node",
       "gh",
       "origin/main",
       "node_modules",
@@ -54,7 +53,6 @@ describe("the doctor's checks", () => {
       expect(row.fix).not.toBe("");
     }
     const [first, second] = summaryLines(sick);
-    expect(first).toContain("Node 22 (.nvmrc pins 24)");
     expect(first).toContain("never fetched in this checkout");
     // The refusal tally belongs to the per-prompt line, said once; not repeated here.
     expect(first).not.toContain("refusal");
@@ -62,10 +60,39 @@ describe("the doctor's checks", () => {
     expect(renderReport(sick)).toContain("git fetch origin main");
   });
 
-  it("never claims the GitHub MCP server is reachable: a script cannot test it", () => {
-    const mcp = checks(healthy).find((row) => row.name === "github-mcp");
-    expect(mcp.status).toBe("unknown");
-    expect(mcp.fix).toContain("mcp__github__get_me");
+  it("keeps what only a human can change out of the session-start line, and in the report", () => {
+    const facts = { ...healthy, nodeMajor: 22, orphanBranches: ["claude/merged-1"] };
+    const rows = checks(facts);
+    expect(rows.find((row) => row.name === "node")).toMatchObject({ status: "info" });
+    expect(rows.find((row) => row.name === "remote branches")).toMatchObject({ status: "info" });
+    expect(summaryLines(facts)[0]).toBe("Doctor: nothing to warn about.");
+    expect(renderReport(facts)).toContain("Node 22 (.nvmrc pins 24)");
+    expect(renderReport(facts)).toContain("1 remote branches with no open PR");
+  });
+
+  it("has no GitHub MCP row, which a script could only ever call unknown, and names the tools under gh", () => {
+    expect(checks(healthy).some((row) => row.name === "github-mcp")).toBe(false);
+    const gh = checks({ ...healthy, gh: false }).find((row) => row.name === "gh");
+    expect(gh.fix).toContain("mcp__github__get_me");
+  });
+
+  it("reads origin/main as current after the session's own fetch, and leaves a failed one to the block", () => {
+    const readers = {
+      git: (args) => (args.join(" ") === "log -1 --format=%cs origin/main" ? "2026-10-10" : null),
+      pinnedMajor: () => 24,
+      commandWorks: () => true,
+      fetchAge: () => null,
+      installNeed: () => null,
+      readStack: () => null,
+      readLog: () => [],
+    };
+    const fetched = gatherFacts("/repo", { strays: false, readers, fetched: "fetched" });
+    expect(checks(fetched).find((row) => row.name === "origin/main").status).toBe("ok");
+    const failed = gatherFacts("/repo", { strays: false, readers, fetched: "failed" });
+    expect(checks(failed).find((row) => row.name === "origin/main").status).toBe("warn");
+    expect(summaryLines(failed)[0]).toBe("Doctor: nothing to warn about.");
+    const never = gatherFacts("/repo", { strays: false, readers });
+    expect(summaryLines(never)[0]).toContain("never fetched in this checkout");
   });
 
   it("gathers through injectable readers, leaving strays out when asked", () => {
@@ -107,7 +134,7 @@ describe("the doctor's checks", () => {
     const facts = gatherFacts("/repo", { strays: false, remote: true, readers });
     expect(facts.orphanBranches).toEqual(["claude/merged-1"]);
     const row = checks(facts).find((r) => r.name === "remote branches");
-    expect(row).toMatchObject({ status: "warn" });
+    expect(row).toMatchObject({ status: "info" });
     expect(row.detail).toBe("1 remote branches with no open PR (claude/merged-1)");
   });
 });
