@@ -837,11 +837,8 @@ export async function POST(request: Request) {
     // Released the same way a failed handle releases, for the same reason:
     // the retry must reach the handler. A release that fails is the one case a
     // retry cannot heal, so it is reported like the failure path reports it.
-    const released = await releaseStripeWebhookEventClaim(db, event.id).catch(
-      async (releaseError) => {
-        await reportToSentry(releaseError, event, "claim_release");
-        return false;
-      },
+    const released = await releaseStripeWebhookEventClaim(db, event.id).catch((releaseError) =>
+      reportToSentry(releaseError, event, "claim_release").then(() => false),
     );
     logOutcome("deferred", { claimReleased: released });
     return new Response(null, { status: 503 });
