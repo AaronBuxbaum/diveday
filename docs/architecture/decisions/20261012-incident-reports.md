@@ -29,7 +29,8 @@ access, export, retention and erasure are decided here.
 - **A record, not a gate.** No readiness, roll-call, booking or close-out path reads these tables.
 - **Export:** three files in the shop bundle, beside `waiver_records.csv`. The diver's own bundle
   leaves them out (H-111).
-- **Retention:** 7 years from the incident (2555 days); people and addenda cascade.
+- **Retention:** kept for ever with its people and addenda, like roll call (amended 2026-10-13 by
+  [H-112](../../product/human-decisions/H-112-incident-report-retention.md); was 7 years).
 - **Erasure:** `anonymizeDiver` keeps the report. The diver's links survive with the erased name,
   an outsider row with their name is redacted, and every word-boundary match of their name in the
   narrative fields and addenda becomes `[redacted]`. A filed report changes only through this.

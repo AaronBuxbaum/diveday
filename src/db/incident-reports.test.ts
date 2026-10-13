@@ -533,7 +533,7 @@ describe("erasing a diver named in a report", () => {
 });
 
 describe("retention", () => {
-  it("prunes a report seven years after the incident, with its people and addenda", async () => {
+  it("keeps a report, its people and its addenda for ever (H-112)", async () => {
     const { db, shop } = ctx;
     const f = await fixture(db, shop.id);
     const started = await startIncidentReport(db, {
@@ -557,28 +557,23 @@ describe("retention", () => {
     await fileIncidentReport(db, base);
     await addIncidentAddendum(db, { ...base, body: "Closed." });
 
-    const justInside = new Date(OCCURRED_AT.getTime() + 2554 * 86_400_000);
-    await pruneExpiredRecords(db, { now: justInside });
+    // Fifty years on, a prune pass still takes nothing: there is no window.
+    const decadesLater = new Date(OCCURRED_AT.getTime() + 50 * 366 * 86_400_000);
+    await pruneExpiredRecords(db, { now: decadesLater });
     expect(
       await db.select().from(incidentReports).where(eq(incidentReports.id, started.reportId)),
     ).toHaveLength(1);
-
-    const past = new Date(OCCURRED_AT.getTime() + 2556 * 86_400_000);
-    await pruneExpiredRecords(db, { now: past });
-    expect(
-      await db.select().from(incidentReports).where(eq(incidentReports.id, started.reportId)),
-    ).toHaveLength(0);
     expect(
       await db
         .select()
         .from(incidentReportPeople)
         .where(eq(incidentReportPeople.reportId, started.reportId)),
-    ).toHaveLength(0);
+    ).not.toHaveLength(0);
     expect(
       await db
         .select()
         .from(incidentReportAddenda)
         .where(eq(incidentReportAddenda.reportId, started.reportId)),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
   });
 });

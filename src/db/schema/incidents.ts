@@ -20,8 +20,8 @@ import { trips } from "./trips";
  * 20261012-incident-reports): the report, the people in it, and the dated
  * addenda that follow it once it is filed.
  *
- * Personal and medical data end to end. Kept seven years from the incident
- * (`RETENTION_DAYS.incident_reports`), carried in the shop export, and reached
+ * Personal and medical data end to end. Kept for ever by decision (H-112;
+ * `UNBOUNDED_BY_DECISION`, `src/lib/retention.ts`), carried in the shop export, and reached
  * by `anonymizeDiver`, which redacts a diver's identity and keeps the report.
  * Nothing on the dock reads these tables: a report is a record, never a gate.
  */

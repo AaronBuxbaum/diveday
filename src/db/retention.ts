@@ -1,4 +1,4 @@
-import { and, inArray, isNotNull, isNull, lt, SQL, sql } from "drizzle-orm";
+import { and, inArray, isNotNull, isNull, lt, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -20,7 +20,6 @@ import {
   departureNotes,
   formDrafts,
   inboundMessages,
-  incidentReports,
   integrationEvents,
   integrationOauthStates,
   lostItems,
@@ -82,15 +81,6 @@ export type PruneSummary = {
 };
 
 /**
- * `clock < cutoff`, for a column or an expression. The two branches are the
- * same call: drizzle's `lt` overloads take a column or an `SQL`, never the
- * union, so the narrowing is what lets one arm table hold both kinds of clock.
- */
-function olderThan(clock: PgColumn | SQL, cutoff: Date): SQL {
-  return clock instanceof SQL ? lt(clock, cutoff) : lt(clock, cutoff);
-}
-
-/**
  * Deletes at most `PRUNE_BATCH_LIMIT` rows in two statements — select the
  * eligible ids, then delete exactly those — rather than one `DELETE ... LIMIT`,
  * which Postgres does not support and which a subquery would only emulate.
@@ -108,7 +98,7 @@ async function pruneBatch(
     const rows = (await db
       .select({ id: arm.id })
       .from(arm.from)
-      .where(and(olderThan(arm.clock, retentionCutoff(table, now)), arm.extraWhere))
+      .where(and(lt(arm.clock, retentionCutoff(table, now)), arm.extraWhere))
       .limit(PRUNE_BATCH_LIMIT)) as { id: string }[];
     if (rows.length === 0) {
       return { table, deleted: 0, capped: false, failed: false, retentionDays };
@@ -147,7 +137,7 @@ async function pruneBatch(
 type PruneArm = {
   from: PgTable;
   id: PgColumn;
-  clock: PgColumn | SQL;
+  clock: PgColumn;
   extraWhere?: SQL;
 };
 
@@ -345,14 +335,6 @@ export const PRUNE_ARMS = {
     from: inboundMessages,
     id: inboundMessages.id,
     clock: inboundMessages.receivedAt,
-  },
-  // Incident reports (ADR 20261012-incident-reports): seven years from when the
-  // incident happened, or from when a draft that never said so was started.
-  // Its people and addenda cascade with it.
-  incident_reports: {
-    from: incidentReports,
-    id: incidentReports.id,
-    clock: sql`coalesce(${incidentReports.occurredAt}, ${incidentReports.createdAt})`,
   },
 } satisfies Record<RetainedTable, PruneArm>;
 

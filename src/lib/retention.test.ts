@@ -6,6 +6,7 @@ import {
   retentionCutoff,
   retentionWindowsOutlastStripeRetries,
   STRIPE_WEBHOOK_RETRY_DAYS,
+  UNBOUNDED_BY_DECISION,
 } from "./retention";
 
 const NOW = new Date("2026-08-03T00:00:00.000Z");
@@ -40,19 +41,18 @@ describe("retention windows", () => {
   // The money ledger DATA-M3 exists to provide must outlive the operational
   // trails; a shorter window there would quietly defeat the point of the table.
   it("keeps the local money ledger longest", () => {
-    // Incident reports are records kept on the same seven-year horizon, not a
-    // trail (ADR 20261012-incident-reports); the next test holds them to it.
     const others = (Object.keys(RETENTION_DAYS) as RetainedTable[]).filter(
-      (table) => table !== "booking_payment_events" && table !== "incident_reports",
+      (table) => table !== "booking_payment_events",
     );
     for (const table of others) {
       expect(RETENTION_DAYS.booking_payment_events).toBeGreaterThan(RETENTION_DAYS[table]);
     }
   });
 
-  it("keeps an incident report seven years, as long as the money ledger", () => {
-    expect(RETENTION_DAYS.incident_reports).toBe(2555);
-    expect(RETENTION_DAYS.incident_reports).toBe(RETENTION_DAYS.booking_payment_events);
+  // H-112: an incident report is kept for ever, so no window may name it.
+  it("gives an incident report no window", () => {
+    expect(Object.keys(RETENTION_DAYS)).not.toContain("incident_reports");
+    expect(UNBOUNDED_BY_DECISION).toContain("incident_reports");
   });
 
   it("computes a cutoff that many days back", () => {
