@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { applyBillingEffect } from "@/db/shop-subscriptions";
@@ -11,6 +10,7 @@ import {
 } from "@/lib/billing/stripe-billing";
 import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
+import { sentry } from "@/lib/observability/sentry";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
 /**
@@ -83,11 +83,11 @@ export async function POST(request: Request) {
     try {
       released = await releaseStripeWebhookEventClaim(db, ledgerId);
     } catch (releaseError) {
-      Sentry.captureException(releaseError, {
+      await sentry.captureException(releaseError, {
         tags: { billing_webhook_event_type: event.type, billing_webhook_stage: "claim_release" },
       });
     }
-    Sentry.captureException(error, {
+    await sentry.captureException(error, {
       tags: { billing_webhook_event_type: event.type, billing_webhook_stage: "handler" },
     });
     logOutcome("handler_failed", { claimReleased: released });

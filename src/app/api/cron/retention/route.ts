@@ -1,10 +1,10 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { pruneExpiredRecords } from "@/db/retention";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 
 /**
  * A prune pass is a handful of bounded deletes (`PRUNE_BATCH_LIMIT` rows per
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
   const refusal = requireCronSecret(request);
   if (refusal) return refusal;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
 
     for (const outcome of summary.outcomes) {
       if (outcome.failed) {
-        Sentry.captureMessage("retention prune arm failed", {
+        await sentry.captureMessage("retention prune arm failed", {
           level: "error",
           tags: { retention_table: outcome.table },
         });
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
       ),
     });
 
-    Sentry.captureCheckIn({
+    await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
       status: summary.failedTables.length > 0 ? "error" : "ok",
@@ -120,9 +120,9 @@ export async function GET(request: Request) {
     // Only reachable before any arm runs — `getDb()` failing to connect or
     // migrate. The check-in still has to be closed out or the monitor would
     // read this as a run that is somehow still in progress.
-    Sentry.captureException(error, { tags: { cron_scan: "retention_bootstrap" } });
+    await sentry.captureException(error, { tags: { cron_scan: "retention_bootstrap" } });
     log("cron_retention.prune_failed", "error", { scan: "bootstrap" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "prune_unavailable" }, { status: 503 });
   } finally {
     // The pass's log line *is* the record that it ran and what it deleted, so

@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { sendDueCrewNotices } from "@/db/crew-notices";
@@ -6,6 +5,7 @@ import { CREW_NOTICE_CRON_CRONTAB } from "@/lib/crew-notices";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 
 const CRON_MONITOR_SLUG = "diveday-crew-notices";
 const CRON_MONITOR_CONFIG = {
@@ -32,19 +32,19 @@ export async function GET(request: Request) {
   const refused = requireCronSecret(request);
   if (refused) return refused;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
   try {
     const summary = await sendDueCrewNotices(await getDb());
     log("cron_crew_notices.scan_complete", "info", summary);
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
     return NextResponse.json(summary);
   } catch (error) {
-    Sentry.captureException(error, { tags: { cron_scan: "crew_notices" } });
+    await sentry.captureException(error, { tags: { cron_scan: "crew_notices" } });
     log("cron_crew_notices.scan_failed", "error", { scan: "crew_notices" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });
   } finally {
     await flushLogs();
