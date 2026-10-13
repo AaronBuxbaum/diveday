@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 50 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 51 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -161,6 +161,10 @@ Code lines rather than lines since the 2026-10-13 review: counting comments char
 The third half, `file-length`, banks every non-test file under `src/app` and `src/components`, and every test file under `src/`, over 900 lines: `LARGE_FILE_LINES`, the size `scripts/guard-read.mjs` will not hand an agent whole. A function-only ratchet was met by splitting inside the file (`CommandPalette.tsx` stayed at 1,017 lines after its function came under the limit), so the file kept being unreadable. The fix for a red file is a sibling file; for a test, a new test file beside it. `e2e/` is outside it: `e2e/visual.spec.ts` is where every capture is added.
 
 Every half warns, without failing, about an unbanked entry within 20 of its limit. Splits that stopped at the line (five functions at 397 to 400 after the 2026-10-13 batch) left the next edit to break the ratchet; a split aims well under the limit, and the warning says which ones are close before a session edits them.
+
+### form-controls
+
+The form-controls one (`scripts/check-form-controls.mjs`) refuses two mistakes axe cannot see. An `<input>` or `<textarea>` whose only name is its `placeholder`: axe-core's `label` rule accepts a placeholder as a name, so `e2e/a11y.spec.ts` passed an order's line-item description and the brand-colour hex field (second inside a `<Field>` whose wrapping `<label>` names only the picker) until the 2026-10-13 review read them. And a raw `<button type="submit">` inside a `<form action={…}>`: without `useFormStatus` a tap that seems not to land is tapped again and posts twice, which `BuddyTeamsPanel` explained in a comment beside three raw buttons that did it. The fix for the first is an `aria-label` from the bundle (or being the first control in the `<Field>`); for the second, `SubmitButton`, whose `name` and `value` let a form with several answers keep them. A `method="get"` form and a button that owns its `disabled` are left alone; anything else says `diveday:allow-raw-submit: <why>` on the line or within three lines above. Read off the text like the other guards, so a control wrapped by a component in another file is out of its reach.
 
 ### voice
 

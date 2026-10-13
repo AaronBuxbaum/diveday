@@ -36,6 +36,7 @@ const checks = [
   ["tinted-ink", "check-tinted-ink.mjs"],
   ["type-ramp", "check-type-ramp.mjs"],
   ["page-length", "check-page-length.mjs"],
+  ["form-controls", "check-form-controls.mjs"],
   ["voice", "check-voice.mjs"],
   ["logical-properties", "check-logical-properties.mjs"],
   ["db-concurrency", "check-db-concurrency.mjs"],

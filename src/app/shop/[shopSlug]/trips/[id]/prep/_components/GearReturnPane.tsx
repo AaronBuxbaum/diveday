@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceFieldset, ChoiceRow, controlClass, Field } from "@/components/ui/form";
 
@@ -98,24 +99,24 @@ export function GearReturnPane({
               hidden while the concern's `required` note is open, and kept so
               a fast answer can never be held hostage by a control in the same
               form. */}
-          <button
-            type="submit"
+          <SubmitButton
             name="outcome"
             value="all_good"
             formNoValidate
+            pendingLabel={labels.allGood}
             className={buttonClass({ size: "sm" })}
           >
             {labels.allGood}
-          </button>
-          <button
-            type="submit"
+          </SubmitButton>
+          <SubmitButton
             name="outcome"
             value="fit_adjusted"
             formNoValidate
+            pendingLabel={labels.fitAdjusted}
             className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             {labels.fitAdjusted}
-          </button>
+          </SubmitButton>
           <button
             ref={openerRef}
             type="button"
@@ -154,14 +155,14 @@ export function GearReturnPane({
             </ChoiceFieldset>
           ) : null}
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="submit"
+            <SubmitButton
               name="outcome"
               value="service_concern"
+              pendingLabel={labels.serviceConcern}
               className={buttonClass({ size: "sm" })}
             >
               {labels.serviceConcern}
-            </button>
+            </SubmitButton>
             <button
               type="button"
               onClick={() => setConcernOpen(false)}
