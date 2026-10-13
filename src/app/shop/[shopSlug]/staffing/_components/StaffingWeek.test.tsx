@@ -428,6 +428,29 @@ describe("StaffingWeek", () => {
     expect(screen.queryByText(sentence)).toBeNull();
   });
 
+  it("never puts an answer's form inside a paragraph, which the HTML parser would split", () => {
+    // A <p> is closed by the parser at the first <form> in it, so the server's
+    // markup and React's tree disagree, React throws the subtree away (#418),
+    // and a press on Approve before it is rebuilt is lost (CI 2026-10-12, -13).
+    const { container } = renderWeek({
+      gaps: [{ ...GAP, gap: "over_intro_ratio" }],
+      requests: [
+        {
+          id: "r1",
+          tripId: GAP.tripId,
+          personId: "person-2",
+          personName: "Sal Moretti",
+          inWaterRole: "certified_assistant",
+          state: "pending",
+          requestedAt: new Date("2026-08-20T00:00:00.000Z"),
+        },
+      ],
+    });
+    // The phone list's Approve and Decline are the two forms at stake.
+    expect(screen.getAllByRole("button", { name: "Approve" }).length).toBe(2);
+    expect(container.querySelectorAll("p form")).toHaveLength(0);
+  });
+
   it("names the current day with a word as well as an ink", () => {
     const { container } = renderWeek();
 
