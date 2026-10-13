@@ -167,6 +167,18 @@ const bookingConfirmationSchema = z.object({
    */
   calendarUrl: z.url().max(2_000).optional(),
   money: seatMoneySchema.optional(),
+  /**
+   * What the card checkout this booking leads settled for the whole party,
+   * as Stripe reported it (`settledPartyPayment`, #2447). Display only, and
+   * absent unless Stripe's own figure exists.
+   */
+  partyPaid: z
+    .object({
+      amountCents: centsSchema,
+      currency: z.string().length(3),
+      seats: z.number().int().min(1).max(100),
+    })
+    .optional(),
   /** When free cancellation closes (`cancellationDeadline`); absent when the trip states no window. */
   freeCancellationUntil: z.date().optional(),
   /**

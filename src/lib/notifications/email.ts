@@ -58,6 +58,8 @@ type BookingConfirmationEmailInput = {
   calendarUrl?: string;
   /** This seat's money as the booking form showed it. */
   money?: ConfirmationMoney;
+  /** What the party's card checkout settled, as Stripe reported it (#2447). */
+  partyPaid?: { amountCents: number; currency: string; seats: number };
   /** When free cancellation closes, in the shop's zone. */
   freeCancellationUntil?: Date;
 };
@@ -949,6 +951,16 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   // 5): what they pay and where, and until when they can walk away for free.
   const terms = [
     input.money ? confirmationMoneyLine(t, input.money, input) : null,
+    input.partyPaid
+      ? t("notifications.bookingConfirmation.partyPaid", {
+          seats: input.partyPaid.seats,
+          amount: formatMoneyCents(
+            input.partyPaid.amountCents,
+            input.partyPaid.currency,
+            input.locale,
+          ),
+        })
+      : null,
     input.freeCancellationUntil
       ? t("trip.freeCancellationUntil", {
           when: formatDateTimeTz(input.freeCancellationUntil, input.locale, input.timezone),

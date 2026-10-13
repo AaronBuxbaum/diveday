@@ -4161,7 +4161,8 @@
       "packingHeading": "Trae",
       "moneyOnline": "Tu plaza: {amount}, con tarjeta en línea.",
       "moneyDeposit": "Tu plaza: {deposit} con tarjeta en línea y {balance} en el muelle el {date}.",
-      "moneyAtShop": "Tu plaza: {amount}, a pagar en el centro."
+      "moneyAtShop": "Tu plaza: {amount}, a pagar en el centro.",
+      "partyPaid": "{seats, plural, one {Pagado con tarjeta: {amount}.} other {Pagado con tarjeta por # plazas: {amount}.}}"
     },
     "waitlistInvite": {
       "subject": "Se ha liberado una plaza en {tripTitle}",
