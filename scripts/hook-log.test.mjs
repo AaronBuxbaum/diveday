@@ -101,9 +101,7 @@ describe("an escape hatch someone used", () => {
     expect(refusalLine(summary)).toBe(
       "1 push past verify:push last session (DIVEDAY_PUSH_UNVERIFIED): say why in the PR",
     );
-    expect(
-      refusalLine({ count: 2, byHook: { "guard-bash": 2 }, overrides: 2 }),
-    ).toBe(
+    expect(refusalLine({ count: 2, byHook: { "guard-bash": 2 }, overrides: 2 })).toBe(
       "2 hook refusals last session (guard-bash 2): if one fought you, add a papercut (docs/agents/papercuts.md); 2 pushes past verify:push (DIVEDAY_PUSH_UNVERIFIED): say why in the PR",
     );
   });

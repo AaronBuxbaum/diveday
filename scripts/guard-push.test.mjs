@@ -79,7 +79,9 @@ describe("leaves alone", () => {
 describe("the reason a push gave for skipping verify:push", () => {
   it("is read back so the hook can log it", () => {
     expect(
-      overrideReason(`git fetch && ${OVERRIDE}="saving work before the container is reclaimed" git push`),
+      overrideReason(
+        `git fetch && ${OVERRIDE}="saving work before the container is reclaimed" git push`,
+      ),
     ).toBe("saving work before the container is reclaimed");
   });
 

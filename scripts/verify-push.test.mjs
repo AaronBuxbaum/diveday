@@ -107,7 +107,11 @@ describe("a red step's excerpt", () => {
 
 describe("the browser specs a push runs", () => {
   const minute = 60_000;
-  const record = { "e2e/a.spec.ts": 2 * minute, "e2e/b.spec.ts": 4 * minute, "e2e/c.spec.ts": minute };
+  const record = {
+    "e2e/a.spec.ts": 2 * minute,
+    "e2e/b.spec.ts": 4 * minute,
+    "e2e/c.spec.ts": minute,
+  };
   const strong = new Map([["e2e/a.spec.ts", new Set(["quotes it"])]]);
   const rank = new Map();
 
@@ -160,9 +164,16 @@ describe("the build key", () => {
   const app = [line("src/lib/x.ts", "a1"), line("package.json", "b2")];
 
   it("does not move when only tests, specs or docs change, so the build is reused", () => {
-    const before = appTreeKey([...app, line("src/lib/x.test.ts", "c3"), line("e2e/a.spec.ts", "d4")].join("\n"));
+    const before = appTreeKey(
+      [...app, line("src/lib/x.test.ts", "c3"), line("e2e/a.spec.ts", "d4")].join("\n"),
+    );
     const after = appTreeKey(
-      [...app, line("src/lib/x.test.ts", "ff"), line("e2e/a.spec.ts", "ee"), line("docs/x.md", "11")].join("\n"),
+      [
+        ...app,
+        line("src/lib/x.test.ts", "ff"),
+        line("e2e/a.spec.ts", "ee"),
+        line("docs/x.md", "11"),
+      ].join("\n"),
     );
     expect(after).toBe(before);
   });
