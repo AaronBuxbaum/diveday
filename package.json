@@ -65,6 +65,7 @@
     "check:infra-ascii": "node scripts/check-infra-ascii.mjs",
     "check:sentry-imports": "node scripts/check-sentry-imports.mjs",
     "check:locale": "node scripts/check-locale.mjs",
+    "check:seat-word": "node scripts/check-seat-word.mjs",
     "check:copy": "node scripts/check-copy.mjs",
     "check:bundle-reach": "node scripts/check-bundle-reach.mjs",
     "check:closing-keywords": "node scripts/check-closing-keywords.mjs",

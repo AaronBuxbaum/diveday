@@ -55,6 +55,7 @@ const checks = [
   ["scroll-preservation", "check-scroll-preservation.mjs"],
   ["exit-curves", "check-exit-curves.mjs"],
   ["shop-word", "check-shop-word.mjs"],
+  ["seat-word", "check-seat-word.mjs"],
   ["capability-runbook", "check-capability-runbook.mjs"],
   ["rental-fit-caps", "check-rental-fit-caps.mjs"],
   ["icu-plurals", "check-icu-plurals.mjs"],

@@ -178,7 +178,7 @@ export function DayStation({
           </span>
         ) : null}
         <span className="text-muted">
-          {open === 0 ? t("shopHome.spine.full") : t("shopHome.spine.spotsOpen", { count: open })}
+          {open === 0 ? t("shopHome.spine.full") : t("shopHome.spine.seatsOpen", { count: open })}
         </span>
       </p>
 

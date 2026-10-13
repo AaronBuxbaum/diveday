@@ -258,11 +258,11 @@ describe("a station owns its departure's facts", () => {
     );
   });
 
-  it("says how many of the booked divers are ready, and the open spots beside it", () => {
+  it("says how many of the booked divers are ready, and the open seats beside it", () => {
     renderSpine({ departures: [departure({ blocked: 2 })] });
     expect(screen.getByText("8 of 10 ready")).toBeInTheDocument();
     expect(screen.getByText("2 blocked")).toBeInTheDocument();
-    expect(screen.getByText("2 spots open")).toBeInTheDocument();
+    expect(screen.getByText("2 seats open")).toBeInTheDocument();
   });
 
   it("says nothing about blocked divers on a boat whose divers are all ready", () => {
@@ -271,10 +271,10 @@ describe("a station owns its departure's facts", () => {
     expect(screen.queryByText(/blocked/)).toBeNull();
   });
 
-  it("says Full rather than nought spots open on a boat with no seats left", () => {
+  it("says Full rather than nought seats open on a boat with no seats left", () => {
     renderSpine({ departures: [departure({ booked: 12 })] });
     expect(screen.getByText("Full")).toBeInTheDocument();
-    expect(screen.queryByText(/spots? open/)).toBeNull();
+    expect(screen.queryByText(/seats? open/)).toBeNull();
   });
 
   it("draws readiness as one bar the boat's capacity wide: ready, then blocked, then open", () => {

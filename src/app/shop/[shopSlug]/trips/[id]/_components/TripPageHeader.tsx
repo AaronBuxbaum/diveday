@@ -43,7 +43,7 @@ export function TripCapacityBadge({
       <Badge tone={isFull(onSale) ? "success" : "primary"} tabularNums>
         {capacity.kind === "full"
           ? t("shared.capacity.full")
-          : t("shared.capacity.spotsLeft", { count: capacity.remaining })}
+          : t("shared.capacity.seatsLeft", { count: capacity.remaining })}
       </Badge>
       {trip.sellableCapacity < trip.capacity ? (
         <span className="text-muted tabular-nums">

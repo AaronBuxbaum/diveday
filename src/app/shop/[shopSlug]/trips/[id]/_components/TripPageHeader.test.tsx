@@ -103,7 +103,7 @@ function loadedHeader() {
       backLabel="Trip"
       locale="en-US"
       timeZone="America/New_York"
-      badge={<Badge tone="primary">3 spots left</Badge>}
+      badge={<Badge tone="primary">3 seats left</Badge>}
     />,
   ).container;
 }
@@ -144,7 +144,7 @@ describe("TripCapacityBadge", () => {
 
   it("counts what is left under the certificate, and says the stated number beside it", () => {
     renderBadge({ capacity: 14, sellableCapacity: 12, booked: 10 });
-    expect(screen.getByText("2 spots left")).toBeTruthy();
+    expect(screen.getByText("2 seats left")).toBeTruthy();
     expect(screen.getByText("Certificate: 12 of 14 seats")).toBeTruthy();
   });
 
@@ -155,7 +155,7 @@ describe("TripCapacityBadge", () => {
 
   it("says one number when the certificate does not bind", () => {
     renderBadge({ capacity: 12, sellableCapacity: 12, booked: 10 });
-    expect(screen.getByText("2 spots left")).toBeTruthy();
+    expect(screen.getByText("2 seats left")).toBeTruthy();
     expect(screen.queryByText(/Certificate:/)).toBeNull();
   });
 });
@@ -190,7 +190,7 @@ describe("TripPageHeaderSkeleton", () => {
     // The h1 shares its row with the surface's actions (K-196, K-357); the
     // meta row is that row's next sibling.
     const meta = screen.getByRole("heading", { level: 1 }).parentElement?.nextElementSibling;
-    expect(meta?.textContent).toContain("3 spots left");
+    expect(meta?.textContent).toContain("3 seats left");
     const skeleton = render(<TripPageHeaderSkeleton />).container.firstElementChild;
     const row = skeleton?.children[2];
     expect(spacing(row)).toEqual(spacing(meta));

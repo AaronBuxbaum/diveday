@@ -131,7 +131,7 @@
     "openBoard": "Open the board",
     "departures": "{count, plural, one {# departure} other {# departures}}",
     "jobs": "{count, plural, one {# job} other {# jobs}}",
-    "spotsOpen": "{count, plural, one {# spot open} other {# spots open}}",
+    "seatsOpen": "{count, plural, one {# seat open} other {# seats open}}",
     "full": "Full",
     "until": "until {time}",
     "crewing": "You’re crewing",

@@ -131,7 +131,7 @@
     "openBoard": "Abrir el calendario",
     "departures": "{count, plural, one {# salida} other {# salidas}}",
     "jobs": "{count, plural, one {# tarea} other {# tareas}}",
-    "spotsOpen": "{count, plural, one {# plaza libre} other {# plazas libres}}",
+    "seatsOpen": "{count, plural, one {# plaza libre} other {# plazas libres}}",
     "full": "Completa",
     "until": "hasta las {time}",
     "crewing": "Formas parte de la tripulación",
