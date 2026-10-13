@@ -647,7 +647,8 @@
     "printLineChecked": "{label} — {status}",
     "printLineNotChecked": "{label} — Not checked",
     "errorRefusal": "That didn’t save. Try it again.",
-    "checkedLabel": "Checked — press to clear",
+    "checkedLabel": "Checked — press twice to clear",
+    "confirmClear": "Tap again to clear",
     "uncheckedLabel": "Not checked — press to mark checked",
     "summary": "Before you leave the dock: {checked} of {total} checked"
   },
