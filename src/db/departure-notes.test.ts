@@ -158,6 +158,35 @@ describe("sendDepartureNote", () => {
     });
   });
 
+  it("takes a note on a multi-day course after day one sails, until its last day does (#2393)", async () => {
+    const { db, shop } = ctx;
+    const dayOne = new Date(nowDate().getTime() - 27 * HOUR);
+    const course = await createTrip(db, {
+      shopId: shop.id,
+      title: "Three-day course",
+      startsAt: dayOne,
+      endsAt: new Date(dayOne.getTime() + 52 * HOUR),
+      capacity: 8,
+      scheduleDays: [0, 1, 2].map((day) => ({
+        dayNumber: day + 1,
+        startsAt: new Date(dayOne.getTime() + day * 24 * HOUR),
+        endsAt: new Date(dayOne.getTime() + day * 24 * HOUR + 4 * HOUR),
+      })),
+    });
+    if (!course) throw new Error("course not created");
+    expect(
+      await checkDepartureNote(db, { shopId: shop.id, tripId: course.id, body: NOTE }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await checkDepartureNote(db, {
+        shopId: shop.id,
+        tripId: course.id,
+        body: NOTE,
+        now: new Date(dayOne.getTime() + 51 * HOUR),
+      }),
+    ).toEqual({ ok: false, reason: "past" });
+  });
+
   it("refuses past the per-departure cap", async () => {
     const { db, shop } = ctx;
     const trip = await departure(db, shop.id);

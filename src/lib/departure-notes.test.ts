@@ -93,6 +93,32 @@ describe("departureNoteBlock", () => {
     ).toBe("past");
   });
 
+  // #2393: a multi-day course is one departure whose later days still have
+  // students to tell where to park; it is open until its last day sails.
+  it("takes a note on a course whose first day sailed while a later day is ahead", () => {
+    const trip = {
+      status: "scheduled",
+      startsAt: new Date("2026-10-11T09:00:00Z"),
+      lastDayStartsAt: new Date("2026-10-13T09:00:00Z"),
+    };
+    expect(departureNoteBlock(trip, 0, now)).toBeNull();
+    expect(departureNoteBlock(trip, DEPARTURE_NOTES_PER_DEPARTURE, now)).toBe("limit");
+  });
+
+  it("refuses a course once its last day has sailed", () => {
+    expect(
+      departureNoteBlock(
+        {
+          status: "scheduled",
+          startsAt: new Date("2026-10-10T09:00:00Z"),
+          lastDayStartsAt: new Date("2026-10-12T09:00:00Z"),
+        },
+        0,
+        now,
+      ),
+    ).toBe("past");
+  });
+
   it("refuses past the per-departure cap", () => {
     const trip = { status: "scheduled", startsAt: later };
     expect(departureNoteBlock(trip, DEPARTURE_NOTES_PER_DEPARTURE - 1, now)).toBeNull();
