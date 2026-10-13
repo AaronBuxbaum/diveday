@@ -10,6 +10,7 @@ import { isUuid } from "@/lib/uuid";
 import { verifyWaiverIntegrity, type WaiverSealedFields } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
+import { personSearchMatch } from "./person-search";
 import { bookings, people, trips, waiverRecords } from "./schema";
 import {
   WAIVER_SEALED_COLUMNS,
@@ -66,6 +67,28 @@ function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
 
 export type SignedWaiverEntry = ReturnType<typeof toSignedWaiverEntry>;
 
+/**
+ * The signed-record views the Waivers page offers beside "All": records whose
+ * seal cannot be checked (`verifyWaiverIntegrity` → `unsealed`: no hash or no
+ * seal version, which is every imported record and anything signed before
+ * sealing), and records holding a medical follow-up (a `medical_review` with
+ * answers, the rows `toSignedWaiverEntry` gives `flaggedPrompts`).
+ */
+export const SIGNED_RECORD_VIEWS = ["unchecked", "medical"] as const;
+export type SignedRecordView = (typeof SIGNED_RECORD_VIEWS)[number];
+
+export function signedRecordViewParam(value: string | undefined): SignedRecordView | undefined {
+  return SIGNED_RECORD_VIEWS.find((view) => view === value);
+}
+
+function signedRecordViewWhere(view: SignedRecordView | undefined) {
+  if (view === "unchecked")
+    return or(isNull(waiverRecords.integrityHash), isNull(waiverRecords.integrityVersion));
+  if (view === "medical")
+    return and(eq(waiverRecords.status, "medical_review"), isNotNull(waiverRecords.medicalAnswers));
+  return undefined;
+}
+
 export type WaiverIntegrityAuditPage = {
   entries: SignedWaiverEntry[];
   page: number;
@@ -92,16 +115,20 @@ export type WaiverIntegrityAuditPage = {
  * knows what they have and have not walked.
  *
  * The count carries the same `innerJoin people` the page does, so the two can
- * never disagree about how many rows exist.
+ * never disagree about how many rows exist. A search (the diver's name, email
+ * or phone, through `personSearchMatch`) and a {@link SignedRecordView} narrow
+ * both together (third UX review, item 31).
  */
 export async function listWaiverIntegrityAudit(
   db: DbExecutor,
   shopId: string,
-  options: { page?: number; limit?: number } = {},
+  options: { page?: number; limit?: number; query?: string; view?: SignedRecordView } = {},
 ): Promise<WaiverIntegrityAuditPage> {
   const scope = and(
     eq(waiverRecords.shopId, shopId),
     inArray(waiverRecords.status, ["completed", "medical_review"]),
+    personSearchMatch(options.query ?? ""),
+    signedRecordViewWhere(options.view),
   );
 
   const paged = await offsetPage({

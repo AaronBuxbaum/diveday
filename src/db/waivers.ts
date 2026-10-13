@@ -25,8 +25,11 @@ export {
   getSignedWaiverRecordForShop,
   listSignedWaiversByPerson,
   listWaiverIntegrityAudit,
+  SIGNED_RECORD_VIEWS,
+  type SignedRecordView,
   type SignedWaiverEntry,
   type SignedWaiverForDiver,
+  signedRecordViewParam,
   WAIVER_INTEGRITY_PAGE_SIZE,
   type WaiverIntegrityAuditPage,
 } from "./waivers-audit";

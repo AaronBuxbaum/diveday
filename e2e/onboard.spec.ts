@@ -106,7 +106,9 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   // are signing the sample, with the editor open on arrival.
   await page.getByRole("link", { name: "Read the release" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}/waivers#release$`));
-  await expect(page.getByText("Divers are signing DiveDay’s sample wording.", { exact: false })).toBeVisible();
+  await expect(
+    page.getByText("Divers are signing DiveDay’s sample wording.", { exact: false }),
+  ).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Release text" })).toBeVisible();
 });
 

@@ -33,7 +33,6 @@ import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
 import { listDiveSites } from "@/db/dive-sites";
-import { getCurrentWaiverTemplate } from "@/db/waivers";
 import { shopFirstBooking } from "@/db/first-booking";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
@@ -45,6 +44,7 @@ import { canAcceptPayments, shopStripeAccountForRender } from "@/db/stripe-accou
 import { getShopDayDepartures, getTodayWork } from "@/db/today";
 import { countShopTrips } from "@/db/trips";
 import { isOrientationDismissed } from "@/db/user-accounts";
+import { getCurrentWaiverTemplate } from "@/db/waivers";
 import {
   orientationRoleFor,
   orientationTourHref,

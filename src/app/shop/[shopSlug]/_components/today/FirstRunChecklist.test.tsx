@@ -448,7 +448,9 @@ describe("the release step", () => {
     expect(primaries[0]).toHaveTextContent("Read the release");
     // Lands on the editor open: the waivers page opens its `#release` door.
     expect(primaries[0]).toHaveAttribute("href", "/shop/blue-mantis/waivers#release");
-    expect(screen.getByText("Divers sign DiveDay’s sample wording until you publish your own.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Divers sign DiveDay’s sample wording until you publish your own."),
+    ).toBeInTheDocument();
   });
 
   it("settles once the shop's own words are live", () => {

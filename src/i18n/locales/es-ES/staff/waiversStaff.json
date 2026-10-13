@@ -40,6 +40,15 @@
     "integrityUnsealed": "No se puede verificar si cambió",
     "medicalFlag": "Seguimiento médico marcado",
     "flaggedAnswersHeading": "Respuestas marcadas",
+    "searchLabel": "Buscar registros firmados",
+    "searchPlaceholder": "Nombre, correo o teléfono del buceador",
+    "searchClear": "Borrar la búsqueda",
+    "noMatch": "Ningún registro firmado coincide.",
+    "views": {
+      "label": "Vistas de registros firmados",
+      "all": "Todos",
+      "unchecked": "No se puede verificar"
+    },
     "pagination": {
       "total": "{count, plural, one {# registro} other {# registros}}"
     }

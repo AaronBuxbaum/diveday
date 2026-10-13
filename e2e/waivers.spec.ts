@@ -1076,6 +1076,43 @@ test("the signature audit pages both ways, and keeps a pinned record while it do
 });
 
 /**
+ * **A signed release is findable in one line** (third UX review, item 31).
+ * The demo holds hundreds of signed records; a search on the diver and a
+ * medical view narrow the log and its count together, and keep each other.
+ */
+test("the signed records search by diver and narrow to medical follow-ups", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/waivers");
+  const pager = page.getByRole("navigation", { name: "Pages" });
+  await expect(pager).toContainText(/Page 1 of \d+/);
+  const rows = page.locator('details[id^="waiver-record-"]');
+
+  // The demo's synthetic medical hold is the one flagged record we can name.
+  const views = page.getByRole("navigation", { name: "Signed record views" });
+  await views.getByRole("link", { name: "Medical follow-up flagged" }).click();
+  await page.waitForURL(/[?&]view=medical/);
+  await expect(rows.first()).toBeVisible();
+  const flaggedCount = await rows.count();
+  await expect(rows.filter({ hasText: "Medical follow-up flagged" })).toHaveCount(flaggedCount);
+  await expect(rows.filter({ hasText: "Morgan Vale" }).first()).toBeVisible();
+
+  // A search keeps the view it was typed under.
+  const search = page.getByRole("searchbox", { name: "Search signed records" });
+  await search.fill("Morgan Vale");
+  await search.press("Enter");
+  await page.waitForURL(/[?&]q=Morgan/);
+  await expect(page).toHaveURL(/[?&]view=medical/);
+  await expect(rows.filter({ hasNotText: "Morgan Vale" })).toHaveCount(0);
+
+  // Nothing matching says so, and clearing the search widens back out.
+  await search.fill("Nobody-by-this-name");
+  await search.press("Enter");
+  await expect(page.getByText("No signed records match.")).toBeVisible();
+  await page.getByRole("link", { name: "Clear search" }).click();
+  await expect(rows.first()).toBeVisible();
+  await expect(page).not.toHaveURL(/[?&]q=/);
+});
+
+/**
  * The waiver is signed on a phone, on a dock, from a text message — so the page
  * must never lay itself out wider than the screen it arrives on.
  *

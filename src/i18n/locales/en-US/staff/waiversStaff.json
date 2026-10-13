@@ -40,6 +40,15 @@
     "integrityUnsealed": "Can’t be checked for changes",
     "medicalFlag": "Medical follow-up flagged",
     "flaggedAnswersHeading": "Flagged answers",
+    "searchLabel": "Search signed records",
+    "searchPlaceholder": "Diver name, email or phone",
+    "searchClear": "Clear search",
+    "noMatch": "No signed records match.",
+    "views": {
+      "label": "Signed record views",
+      "all": "All",
+      "unchecked": "Can’t be checked"
+    },
     "pagination": {
       "total": "{count, plural, one {# record} other {# records}}"
     }
