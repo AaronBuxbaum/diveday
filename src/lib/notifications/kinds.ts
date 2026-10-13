@@ -12,6 +12,7 @@ import {
 import { CREW_NOTICE_CHANGES, CREW_TRIP_ROLES } from "@/lib/crew-notices";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { DEPARTURE_NOTE_MAX, departureNoteProblem } from "@/lib/departure-notes";
+import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { GEAR_KIND_ORDER, GEAR_SERVICE_KINDS } from "@/lib/gear";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
@@ -1214,6 +1215,33 @@ const lostItemFoundSchema = z.object({
   toldAt: z.date(),
 });
 
+/**
+ * **A student's certification, told to the student** (third UX review, item
+ * 14). Sent once, when the instructor's Certify tap writes a new level card
+ * (`issueShopCertification` refuses a level the diver already holds, so a
+ * second tap sends nothing). Not queued, for the reason the lost-item message
+ * is not: a courtesy that missed its moment is not owed a retry row.
+ */
+const courseCertifiedSchema = z.object({
+  kind: z.literal("course_certified"),
+  certificationId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  level: z.enum(DECLARABLE_CERTIFICATION_LEVELS),
+  recordedAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** The shop's next public course on from this level; the url is built server-side. */
+  nextCourse: z
+    .object({
+      title: z.string().trim().min(1).max(200),
+      url: z.url().max(2_000),
+    })
+    .optional(),
+});
+
 const workOrderReadySchema = z.object({
   kind: z.literal("work_order_ready"),
   noticeId: z.uuid(),
@@ -1387,6 +1415,7 @@ export const notificationSchema = z
     deskAfterHoursSchema,
     departureNoteSchema,
     lostItemFoundSchema,
+    courseCertifiedSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1499,6 +1528,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "desk_after_hours":
     case "departure_note":
     case "lost_item_found":
+    case "course_certified":
       return false;
     default:
       return true;
@@ -1636,6 +1666,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per tap on Tell.
     case "lost_item_found":
       return `lost-item-found/${notification.itemId}/${notification.toldAt.toISOString()}`;
+    // One send per card written; a level already held writes none.
+    case "course_certified":
+      return `course-certified/${notification.certificationId}`;
     // One Monday email per person per shop-local week — the same pair
     // `weekly_digest_sends` holds unique, so a queued retry and the claim
     // agree on what "this week's email" means.

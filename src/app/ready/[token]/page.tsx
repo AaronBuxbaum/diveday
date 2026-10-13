@@ -6,6 +6,7 @@ import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { cancelledNotice } from "@/app/ready/[token]/_components/CancelledNotice";
 import { CertificationEntries } from "@/app/ready/[token]/_components/CertificationEntries";
 import { ChangedFacts, fitRecallFrom } from "@/app/ready/[token]/_components/ChangedFacts";
+import { CourseNextStepNote } from "@/app/ready/[token]/_components/CourseNextStepNote";
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
 import { readyDeadLink } from "@/app/ready/[token]/_components/dead-link";
 import { PayStepBody } from "@/app/ready/[token]/_components/PayStepBody";
@@ -43,6 +44,7 @@ import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
+import { courseNextStepForBooking } from "@/db/course-next-step";
 import { countSpendableDives } from "@/db/dive-packages";
 import { getBookingPayment } from "@/db/payments";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
@@ -545,6 +547,12 @@ async function DiverReadinessPage({
       }
     };
 
+    // The instructor's latest next step, read live (third UX review, item
+    // 15): written after day one, it is for before day two, not for the recap.
+    const courseNextStep = data.trip.course
+      ? await courseNextStepForBooking(db, shop.id, bookingId)
+      : null;
+
     const spineSteps: ThreadSpineStep[] = spine.steps.map((step) => ({
       id: step.id,
       state: step.state,
@@ -584,6 +592,7 @@ async function DiverReadinessPage({
             <ThreadSpine steps={spineSteps} />
           </>
         )}
+        <CourseNextStepNote note={courseNextStep} t={t} />
         <ThreadSections
           context={{
             token,

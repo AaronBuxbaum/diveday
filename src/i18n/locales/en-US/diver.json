@@ -4483,6 +4483,14 @@
     },
     "smsLostItem": {
       "body": "{shopName}: the crew found this aboard after {tripTitle}: {item}. We’re holding it for you."
+    },
+    "courseCertified": {
+      "subject": "You’re certified: {level}",
+      "body": "You’re certified: {level}. {shopName} recorded it on {date}.",
+      "next": "Your next course: {course}"
+    },
+    "smsCourseCertified": {
+      "body": "{shopName}: you’re certified, {level}. Congratulations."
     }
   },
   "brand": {

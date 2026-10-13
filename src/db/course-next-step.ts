@@ -1,7 +1,7 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
-import { bookings, trips } from "./schema";
+import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /** The longest a next step may be — one thing to do, not a lesson plan. */
@@ -89,4 +89,42 @@ export async function courseNextStepsByBooking(
       ),
     );
   return new Map(rows.flatMap((row) => (row.note ? [[row.bookingId, row.note] as const] : [])));
+}
+
+/**
+ * **The note one student reads while the session is still running** (third
+ * UX review, item 15). The recap prints the same words once the boat is home;
+ * this is the read `/ready` makes before then, so "Practice mask clearing
+ * before Sunday" written after day one reaches the student before Sunday.
+ *
+ * Scoped by shop and booking, a live course session only, and null unless the
+ * words and the name that wrote them are both there: a sentence with nobody
+ * under it is not one a student should read (the same rule the recap keeps).
+ */
+export async function courseNextStepForBooking(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+): Promise<{ words: string; byName: string } | null> {
+  const [row] = await db
+    .select({ words: bookings.courseNextStep, byName: people.fullName })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+    .innerJoin(
+      people,
+      and(eq(people.id, bookings.courseNextStepByPersonId), eq(people.shopId, shopId)),
+    )
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        isNotNull(trips.courseId),
+        isNotNull(bookings.courseNextStep),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  const words = row?.words?.trim();
+  const byName = row?.byName?.trim();
+  return words && byName ? { words, byName } : null;
 }

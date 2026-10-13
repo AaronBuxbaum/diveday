@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { courseNextStepsByBooking, recordCourseNextStep } from "./course-next-step";
+import {
+  courseNextStepForBooking,
+  courseNextStepsByBooking,
+  recordCourseNextStep,
+} from "./course-next-step";
 import { bookings } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -166,5 +170,34 @@ describe("courseNextStepsByBooking", () => {
     );
     const notes = await courseNextStepsByBooking(db, shop.id, booking.tripId);
     expect(notes.get(studentBookingId)).toBe("Book your deep dive.");
+  });
+});
+
+describe("courseNextStepForBooking", () => {
+  it("reads the student's own note with the name that wrote it", async () => {
+    const { db, shop, instructorId, studentBookingId } = await courseContext();
+    expect(await courseNextStepForBooking(db, shop.id, studentBookingId)).toBeNull();
+    await recordCourseNextStep(db, {
+      shopId: shop.id,
+      bookingId: studentBookingId,
+      instructorPersonId: instructorId,
+      note: "Practice mask clearing before Sunday.",
+    });
+    const note = await courseNextStepForBooking(db, shop.id, studentBookingId);
+    expect(note?.words).toBe("Practice mask clearing before Sunday.");
+    expect(note?.byName).toBeTruthy();
+  });
+
+  it("never reads another shop's booking", async () => {
+    const { db, shop, instructorId, studentBookingId } = await courseContext();
+    await recordCourseNextStep(db, {
+      shopId: shop.id,
+      bookingId: studentBookingId,
+      instructorPersonId: instructorId,
+      note: "Practice mask clearing before Sunday.",
+    });
+    expect(
+      await courseNextStepForBooking(db, "00000000-0000-4000-8000-000000000000", studentBookingId),
+    ).toBeNull();
   });
 });
