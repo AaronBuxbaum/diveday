@@ -32,5 +32,8 @@ export function readinessDoorPath(
   tripId: string,
   bookingToken: string | undefined,
 ): string {
-  return `${publicTripPath(shopSlug, tripId)}/ready?booking=${encodeURIComponent(bookingToken ?? "")}`;
+  const departure = publicTripPath(shopSlug, tripId);
+  // No token: the departure's page directly, where `../ready/route.ts` would only redirect.
+  if (!bookingToken) return departure;
+  return `${departure}/ready?booking=${encodeURIComponent(bookingToken)}`;
 }
