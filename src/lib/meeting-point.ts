@@ -112,8 +112,8 @@ export function shopAddressPartsOf(shop: {
   };
 }
 
-type MeetingPointShopRow = Parameters<typeof shopAddressPartsOf>[0] & { name: string };
-type MeetingPointTripRow = {
+export type MeetingPointShopRow = Parameters<typeof shopAddressPartsOf>[0] & { name: string };
+export type MeetingPointTripRow = {
   meetingPointLabel: string | null;
   meetingPointAddress: string | null;
   arrivalLandmark: string | null;

@@ -35,10 +35,14 @@ describe("TripTabs", () => {
     // UX review 2026-10-13, item 20: the desk had no word for its busiest
     // half hour, because the stage chip waits for the crew's tap.
     const line = "Check-in open · at the dock by 11:00 PM";
-    render(<TripTabs shopSlug="s" tripId="t" current="divers" copy={copy} checkInLine={line} />);
+    render(
+      <TripTabs shopSlug="s" tripId="t" current="divers" copy={{ ...copy, checkInLine: line }} />,
+    );
     expect(screen.getByText(line)).toBeInTheDocument();
     cleanup();
-    render(<TripTabs shopSlug="s" tripId="t" current="boat" copy={copy} checkInLine={line} />);
+    render(
+      <TripTabs shopSlug="s" tripId="t" current="boat" copy={{ ...copy, checkInLine: line }} />,
+    );
     expect(screen.queryByText(line)).toBeNull();
   });
 

@@ -97,38 +97,8 @@ export async function seedMoreTrips(
     return picked;
   };
 
-  /**
-   * **Nobody sails on the finished dawn boat with a card nobody has checked**
-   * (UX review 2026-10-13, item 40). Its departure log is the record a shop
-   * hands an insurer, and a plain `draw(8)` put Mateo Duarte aboard with his
-   * card still "Pending review — not certified". A drawn diver without a
-   * reviewed card trades places with one from the far end of the pool who has
-   * one. The cursor moves exactly as `draw` moved it, so no later boat's
-   * roster shifts.
-   */
-  const reviewedCardHolders = new Set(
-    (
-      await db
-        .select({ personId: certifications.personId })
-        .from(certifications)
-        .where(
-          and(
-            eq(certifications.shopId, shopId),
-            eq(certifications.status, "verified"),
-            isNotNull(certifications.reviewedAt),
-          ),
-        )
-    ).map((row) => row.personId),
-  );
-  const hasReviewedCard = (index: number) => reviewedCardHolders.has(customers[index]?.id ?? "");
-  const drawBoarded = (n: number): number[] => {
-    const drawn = draw(n);
-    const spares = [...generalPool]
-      .reverse()
-      .filter((index) => !drawn.includes(index) && hasReviewedCard(index));
-    return drawn.map((index) => (hasReviewedCard(index) ? index : (spares.shift() ?? index)));
-  };
-
+  const reviewed = await reviewedCardHolders(db, shopId, customers);
+  const drawBoarded = (n: number) => preferReviewedCards(draw(n), generalPool, reviewed);
   /** The demo shop's ordinary boat fare, for a charter its definition does not price. */
   const DEMO_TWO_TANK_PRICE_CENTS = 9500;
 
@@ -685,26 +655,7 @@ export async function seedMoreTrips(
       (booking) => booking.tripId === completedTrip.id,
     );
     const rollCallRecorderId = captainId ?? instructorId;
-    const completedRollCallRows = completedBookings.flatMap((booking) =>
-      rollCallCheckpoints(completedTrip.plannedDives).map((checkpoint, index) => ({
-        shopId,
-        tripId: completedTrip.id,
-        bookingId: booking.id,
-        recordedByPersonId: rollCallRecorderId,
-        status: "boarded" as const,
-        checkpoint,
-        source: "live" as const,
-        occurredAt: new Date(completedTrip.startsAt.getTime() + index * 90 * 60 * 1000),
-      })),
-    );
-    if (completedRollCallRows.length > 0)
-      await db.insert(rollCallEvents).values(completedRollCallRows);
-    await seedDawnBoatRecord(db, shopId, {
-      trip: completedTrip,
-      recorderId: rollCallRecorderId,
-      checkpointTimes: (index) =>
-        new Date(completedTrip.startsAt.getTime() + index * 90 * 60 * 1000),
-    });
+    await seedDawnBoatRecord(db, shopId, completedTrip, rollCallRecorderId, completedBookings);
 
     // A partially completed report run is more useful demo state than an empty
     // queue: six reports have gone out and two remain for the staffer to notice.
@@ -833,6 +784,56 @@ export async function seedMoreTrips(
 }
 
 /**
+ * **Nobody sails on the finished dawn boat with a card nobody has checked**
+ * (UX review 2026-10-13, item 40). Its departure log is the record a shop
+ * hands an insurer, and a plain `draw(8)` put Mateo Duarte aboard with his
+ * card still "Pending review — not certified". The customers holding a
+ * verified, reviewed card, by their index in `customers`.
+ */
+async function reviewedCardHolders(
+  db: DbExecutor,
+  shopId: string,
+  customers: readonly { id: string }[],
+): Promise<(index: number) => boolean> {
+  const holders = new Set(
+    (
+      await db
+        .select({ personId: certifications.personId })
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shopId),
+            eq(certifications.status, "verified"),
+            isNotNull(certifications.reviewedAt),
+          ),
+        )
+    ).map((row) => row.personId),
+  );
+  return (index) => holders.has(customers[index]?.id ?? "");
+}
+
+/**
+ * A drawn diver without a reviewed card trades places with one from the far
+ * end of the pool who has one. The caller's cursor has already moved exactly
+ * as `draw` moved it, so no later boat's roster shifts.
+ */
+function preferReviewedCards(
+  drawn: readonly number[],
+  pool: readonly number[],
+  hasReviewedCard: (index: number) => boolean,
+): number[] {
+  const spares = [...pool]
+    .reverse()
+    .filter((index) => !drawn.includes(index) && hasReviewedCard(index));
+  return drawn.map((index) => (hasReviewedCard(index) ? index : (spares.shift() ?? index)));
+}
+
+/** When the dawn boat's n-th roll-call checkpoint was called: every ninety minutes from sailing. */
+function dawnCheckpointAt(trip: { startsAt: Date }, index: number): Date {
+  return new Date(trip.startsAt.getTime() + index * 90 * 60 * 1000);
+}
+
+/**
  * **The rest of the finished dawn boat's record** (UX review 2026-10-13, item
  * 40). Its departure log is headed "Ready to print if authorities or insurers
  * ever ask", and it printed the pre-departure check as five "Not checked",
@@ -840,20 +841,32 @@ export async function seedMoreTrips(
  * been saved", under a Today card reading "All home · last roll call closed by
  * Sal Moretti". A crew that ran the day would have left all three, so the seed
  * writes what they would have: the checklist ticked at the dock before the
- * boat left, every crew member counted at each checkpoint the divers were
- * counted at, and both dives logged.
+ * boat left, every diver and every crew member counted at each checkpoint,
+ * and both dives logged.
  */
 async function seedDawnBoatRecord(
   db: DbExecutor,
   shopId: string,
-  ctx: {
-    trip: typeof trips.$inferSelect;
-    recorderId: string;
-    /** When the n-th checkpoint was called, the same instants the divers' roll call carries. */
-    checkpointTimes: (index: number) => Date;
-  },
+  trip: typeof trips.$inferSelect,
+  recorderId: string,
+  boarded: readonly { id: string }[],
 ): Promise<void> {
-  const { trip, recorderId } = ctx;
+  // Every diver aboard, at every checkpoint, in the captain's name.
+  const checkpoints = rollCallCheckpoints(trip.plannedDives);
+  const diverRows = boarded.flatMap((booking) =>
+    checkpoints.map((checkpoint, index) => ({
+      shopId,
+      tripId: trip.id,
+      bookingId: booking.id,
+      recordedByPersonId: recorderId,
+      status: "boarded" as const,
+      checkpoint,
+      source: "live" as const,
+      occurredAt: dawnCheckpointAt(trip, index),
+    })),
+  );
+  if (diverRows.length > 0) await db.insert(rollCallEvents).values(diverRows);
+
   const minute = 60 * 1000;
 
   // The safety check, a quarter of an hour before the lines came off.
@@ -885,7 +898,6 @@ async function seedDawnBoatRecord(
     .select({ personId: tripAssignments.personId })
     .from(tripAssignments)
     .where(eq(tripAssignments.tripId, trip.id));
-  const checkpoints = rollCallCheckpoints(trip.plannedDives);
   const crewRows = crew.flatMap(({ personId }) =>
     checkpoints.map((checkpoint, index) => ({
       shopId,
@@ -895,7 +907,7 @@ async function seedDawnBoatRecord(
       status: "boarded" as const,
       checkpoint,
       source: "live" as const,
-      occurredAt: ctx.checkpointTimes(index),
+      occurredAt: dawnCheckpointAt(trip, index),
     })),
   );
   if (crewRows.length > 0) await db.insert(rollCallCrewEvents).values(crewRows);
@@ -911,7 +923,7 @@ async function seedDawnBoatRecord(
   if (plan.length > 0) {
     await db.insert(executedDives).values(
       plan.map((dive) => {
-        const afterDive = ctx.checkpointTimes(dive.diveNumber).getTime();
+        const afterDive = dawnCheckpointAt(trip, dive.diveNumber).getTime();
         return {
           shopId,
           tripId: trip.id,

@@ -37,6 +37,12 @@ export type TripTabsCopy = {
   tabs: Record<TripTab, string>;
   stageLabel: string;
   stages: Record<TripStage, string>;
+  /**
+   * "Check-in open · at the dock by 11:00 PM" (UX review 2026-10-13, item 20),
+   * already worded, while `checkInOpen` holds. Said under the tabs on Divers
+   * only, the desk's tab; never a stage word, never on the chip.
+   */
+  checkInLine?: string | null;
 };
 
 /** Where each tab lives. Every one is a page of this departure. */
@@ -79,18 +85,11 @@ export function TripTabs({
   tripId,
   current,
   copy,
-  checkInLine,
 }: {
   shopSlug: string;
   tripId: string;
   current: TripTab;
   copy: TripTabsCopy;
-  /**
-   * "Check-in open · at the dock by 11:00 PM" (UX review 2026-10-13, item 20),
-   * already worded, while `checkInOpen` holds. Said under the tabs on Divers
-   * only, the desk's tab; never a stage word, never on the chip.
-   */
-  checkInLine?: string | null;
 }) {
   return (
     <div className="print:hidden">
@@ -116,8 +115,8 @@ export function TripTabs({
           })}
         </ul>
       </nav>
-      {checkInLine && current === "divers" ? (
-        <p className="mt-3 text-sm text-muted tabular-nums">{checkInLine}</p>
+      {copy.checkInLine && current === "divers" ? (
+        <p className="mt-3 text-sm text-muted tabular-nums">{copy.checkInLine}</p>
       ) : null}
     </div>
   );

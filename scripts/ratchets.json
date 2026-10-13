@@ -232,7 +232,7 @@
     "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 553,
     "src/app/shop/[shopSlug]/staffing/page.tsx#StaffingPage": 419,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 412,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 405,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 457,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
     "src/db/bookings.ts#createBookingRecord": 463,
@@ -242,7 +242,7 @@
     "src/db/reporting.ts#getMonthlyReport": 510,
     "src/db/seed-dive-sites.ts#seedDiveSites": 525,
     "src/db/seed-history.ts#seedHistory": 854,
-    "src/db/seed-more-trips.ts#seedMoreTrips": 747,
+    "src/db/seed-more-trips.ts#seedMoreTrips": 736,
     "src/db/seed-trips.ts#seedTrips": 582,
     "src/db/seed.ts#resetDemoSchedule": 449,
     "src/lib/import.ts#prepareContactImport": 638
@@ -324,7 +324,7 @@
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 871,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 507,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 501,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 559
   },
   "tokens": {

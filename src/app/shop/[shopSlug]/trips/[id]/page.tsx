@@ -23,14 +23,13 @@ import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips"
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { dockCallAt } from "@/lib/dock-call";
-import { formatMoneyCents, formatTime } from "@/lib/format";
+import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { checkInOpen, departureStage } from "@/lib/trip-phase";
+import { departureStage } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
@@ -243,25 +242,14 @@ export default async function ManageTripPage({
   const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
   const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const phaseInput = {
+  const { shown, finished, checkInOpen } = departureStage({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
     timeZone: shop.timezone,
     stage: stageReading,
     cancelled,
-  };
-  const { shown: shownStage, finished } = departureStage(phaseInput);
-  // The desk's one clock word, on Divers only (UX review 2026-10-13, item 20).
-  const checkInLine = checkInOpen(phaseInput)
-    ? t("trips.checkInOpen", {
-        time: formatTime(
-          dockCallAt(trip.startsAt, shop.dockCallMinutes) ?? trip.startsAt,
-          locale,
-          shop.timezone,
-        ),
-      })
-    : null;
+  });
   // The desk while arrivals are open, or a finished departure's record.
   const { desk, record } = await diversTabState({
     db,
@@ -277,7 +265,7 @@ export default async function ManageTripPage({
     finished,
   });
 
-  const tabsCopy = tripTabsCopy(t);
+  const tabsCopy = tripTabsCopy(t, checkInOpen ? { trip, shop, locale } : undefined);
   const rosterActions = {
     addBookingAction: seatNewDiverAction.bind(null, "trip-guests", shopSlug),
     addExistingDiverAction: seatExistingDiverAction.bind(null, "trip-guests", shopSlug),
@@ -343,7 +331,7 @@ export default async function ManageTripPage({
           timeZone={shop.timezone}
           badge={
             <>
-              <TripStageBadge stage={shownStage?.stage ?? null} copy={tabsCopy} />
+              <TripStageBadge stage={shown?.stage ?? null} copy={tabsCopy} />
               <TripCapacityBadge
                 trip={trip}
                 finished={finished}
@@ -402,7 +390,6 @@ export default async function ManageTripPage({
           tripId={tripId}
           current={showDetails ? "details" : "divers"}
           copy={tabsCopy}
-          checkInLine={checkInLine}
         />
 
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />

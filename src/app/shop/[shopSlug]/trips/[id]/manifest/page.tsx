@@ -9,7 +9,6 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { scopedHash, scopedId } from "@/lib/element-id";
-import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
@@ -58,6 +57,7 @@ import { SummaryPanel } from "./_components/SummaryPanel";
 import { seenGroupView } from "./_components/seen-group-view";
 import { stageStripProps } from "./_components/stage-strip-props";
 import { TripPlanSection } from "./_components/TripPlanSection";
+import { tripPlanRows } from "./_components/trip-plan-rows";
 import type { ManifestActionContext } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -378,23 +378,7 @@ export default async function TripManifestPage({
           <TripPlanSection
             idPrefix={idPrefix}
             heading={t("manifest.planChange.heading")}
-            dives={plannedDives.map(({ dive, diveSite }) => ({
-              diveNumber: dive.diveNumber,
-              line: diveSite
-                ? t("manifest.planChange.diveRow", {
-                    number: dive.diveNumber,
-                    site: diveSite.name,
-                  })
-                : t("manifest.planChange.diveRowNoSite", { number: dive.diveNumber }),
-            }))}
-            meeting={
-              meetingPoint
-                ? {
-                    label: t("trips.about.meetingPoint"),
-                    line: meetingPointLine(meetingPointOfRows(shop, meetingPoint)),
-                  }
-                : undefined
-            }
+            {...tripPlanRows(t, shop, plannedDives, meetingPoint)}
           />
         ) : null}
 

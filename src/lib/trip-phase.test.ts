@@ -176,8 +176,13 @@ describe("departureStage", () => {
   });
 
   it("is finished by the clock when the crew never tapped, but shows no word", () => {
-    expect(at("2026-07-21T22:00:00.000Z", null)).toEqual({ shown: null, finished: true });
-    expect(at("2026-07-21T10:00:00.000Z", null)).toEqual({ shown: null, finished: false });
+    expect(at("2026-07-21T22:00:00.000Z", null)).toMatchObject({ shown: null, finished: true });
+    expect(at("2026-07-21T10:00:00.000Z", null)).toMatchObject({ shown: null, finished: false });
+  });
+
+  it("says check-in is open from the same reading", () => {
+    expect(at("2026-07-21T10:30:00.000Z", null).checkInOpen).toBe(true);
+    expect(at("2026-07-21T22:00:00.000Z", null).checkInOpen).toBe(false);
   });
 });
 

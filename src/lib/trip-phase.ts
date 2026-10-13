@@ -171,13 +171,18 @@ export function checkInOpen(input: Parameters<typeof tripPhaseOf>[0]): boolean {
 }
 
 /**
- * A departure page's two readings of where the boat is, from one input: the
- * crew's word the header chip prints (`boatStageOf`), and whether the
- * departure is finished, which turns its Divers tab into a record and stops
- * its header counting seats (UX review 2026-10-10, items 1 and 10).
+ * A departure page's readings of where the boat is, from one input: the
+ * crew's word the header chip prints (`boatStageOf`), whether the departure is
+ * finished, which turns its Divers tab into a record and stops its header
+ * counting seats (UX review 2026-10-10, items 1 and 10), and whether the
+ * Divers tab says check-in is open (`checkInOpen`).
  */
 export function departureStage<R extends { stage: TripStage; recordedAt: Date }>(
   input: Parameters<typeof boatStageOf<R>>[0],
-): { shown: R | null; finished: boolean } {
-  return { shown: boatStageOf(input), finished: tripPhaseOf(input) === "back" };
+): { shown: R | null; finished: boolean; checkInOpen: boolean } {
+  return {
+    shown: boatStageOf(input),
+    finished: tripPhaseOf(input) === "back",
+    checkInOpen: checkInOpen(input),
+  };
 }
