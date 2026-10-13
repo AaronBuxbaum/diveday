@@ -87,6 +87,11 @@ jobs:
       # this job runs on every pull request, docs-only included, so a guard over
       # a document still answers to a docs-only change.
       - run: pnpm exec vitest run --project guards --reporter=dot
+      # Supply chain: no production dependency carries a known high or critical
+      # advisory. Production only, because that is what ships; the dev tree's one
+      # unpatched advisory is reviewed in pnpm-workspace.yaml's `auditConfig`.
+      - name: Production dependencies have no high advisory
+        run: pnpm audit --prod --audit-level high
       # The body names the reviewer agents a safety-critical or security-sensitive diff needs
       # (scripts/check-pr-body.mjs; docs/agents/repo-checks.md#pr-body). The body is read live
       # so an edit counts on a re-run; without `pull-requests: read` that read fails and the
@@ -1219,3 +1224,38 @@ jobs:
           # test at this container. One purpose-built variable keeps the blast
           # radius to the three files that ask for it by name (src/test/postgres.ts).
           DIVEDAY_TEST_POSTGRES_URL: postgres://postgres:postgres@localhost:5432/postgres
+
+  # The one check main's ruleset requires. A required check names a job, and
+  # most jobs here are skipped on a docs-only change or split into shards whose
+  # names move with the shard count, so none of them can be the required one.
+  # This job needs all of them and fails if any failed or was cancelled; a
+  # skipped job is a passed one, because `changes` decided it had nothing to do.
+  ci-result:
+    name: CI result
+    if: always() && github.event_name != 'schedule'
+    needs:
+      - repo-safeguards
+      - lint
+      - typecheck
+      - unit-tests
+      - unit-tests-docs
+      - build
+      - playwright
+      - visual-plan
+      - visual
+      - visual-report
+      - changes
+      - real-postgres
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -qE '"(failure|cancelled)"'; then
+            echo "::error::A CI job failed or was cancelled."
+            exit 1
+          fi
