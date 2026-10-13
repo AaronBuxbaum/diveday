@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
@@ -139,11 +139,11 @@ export default async function TripManifestPage({
   if (!departureManifest || !completeManifests) notFound();
   const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t);
 
-  const { checkpoints, checkpoint, isDeparture, manifest } = openCheckpoint(
-    completeManifests,
-    departureManifest,
-    requestedCheckpoint,
-  );
+  const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
+  // A checkpoint this plan does not have leaves the address bar rather than
+  // opening the dock under it (#2508).
+  if ("stale" in opened) redirect(shopPath(shopSlug, "trips", tripId, "manifest"));
+  const { checkpoints, checkpoint, isDeparture, manifest } = opened;
   const todayTrailBySubject = personTrailIndex(completeManifests, locale, shop.timezone, t);
   // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
   // ADR 20260804-crew-roll-call-is-per-person). This used to be written inline
