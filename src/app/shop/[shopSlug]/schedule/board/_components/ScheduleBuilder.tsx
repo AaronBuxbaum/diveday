@@ -219,10 +219,15 @@ function MoveImpact({
   const lines = preflight.sections.flatMap((section) =>
     isAlert(section) ? [] : impactLines(section, copy),
   );
-  if (lines.length === 0 && alertLines.length === 0 && !preflight.blocked) return null;
+  // `data-move-preflight` marks a read that has landed, said or not: the
+  // answer arriving over the wire is not the panel having drawn it, and a test
+  // that reads the panel in between takes a sailed departure for a movable one.
+  if (lines.length === 0 && alertLines.length === 0 && !preflight.blocked) {
+    return <span hidden data-move-preflight={tripId} />;
+  }
 
   return (
-    <div className="sm:col-span-2 space-y-3" data-move-impact={tripId}>
+    <div className="sm:col-span-2 space-y-3" data-move-impact={tripId} data-move-preflight={tripId}>
       {preflight.blocked ? (
         <p className="text-sm font-medium text-warning" role="alert">
           {preflight.blocked === "already_sailed"
