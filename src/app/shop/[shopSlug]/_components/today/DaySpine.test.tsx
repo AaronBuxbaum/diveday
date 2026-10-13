@@ -318,6 +318,26 @@ describe("a station owns its departure's facts", () => {
     expect(headings[1]).toContain("Wreck Trip");
     expect(headings[1]).toContain("You’re crewing");
   });
+
+  it("opens the boat the reader crews straight onto its manifest, and only that one", () => {
+    // UX review 2026-10-13, item 17: the roll call was the title, then the
+    // Boat tab, then a scroll, and the role card promised a manifest door.
+    renderSpine({
+      departures: [
+        departure({ tripId: "morning", title: "Morning Reef", startsAt: hoursFromNow(1) }),
+        departure({ tripId: "wreck", title: "Wreck Trip", startsAt: hoursFromNow(6) }),
+      ],
+      crewedTripIds: ["wreck"],
+    });
+    const doors = screen.getAllByRole("link", { name: "Open the boat" });
+    expect(doors).toHaveLength(1);
+    expect(doors[0]).toHaveAttribute("href", "/shop/blue-mantis/trips/wreck/manifest");
+    // The title still goes to Divers, the desk's tab.
+    expect(screen.getByRole("link", { name: "Wreck Trip" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/wreck",
+    );
+  });
 });
 
 /**

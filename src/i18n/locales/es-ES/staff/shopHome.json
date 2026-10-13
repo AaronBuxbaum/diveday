@@ -135,6 +135,7 @@
     "full": "Completa",
     "until": "hasta las {time}",
     "crewing": "Formas parte de la tripulación",
+    "openBoat": "Abrir el barco",
     "crewRollCallOpen": "Todos los buceadores están a bordo y falta pasar lista a la tripulación.",
     "allHome": "Todos los barcos están en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBoatHome": "Tu primer barco está en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
