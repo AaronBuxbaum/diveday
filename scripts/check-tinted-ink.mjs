@@ -67,9 +67,9 @@ const fillPattern = (hue) => new RegExp(`bg-${hue}\\/\\d+\\b`);
  * A file list rather than fifteen line comments, because the fact is about the
  * *surface*: `manifest/page.tsx` wraps its whole body in `boat-mode` and
  * `OfflineManifestView` renders `<main className="boat-mode …">`, so every
- * component beneath them inherits it. `row-tones.ts` is in here for the same
- * reason: its one map, `ROLL_CALL_ROW_TONE`, is read only by those two
- * surfaces' roll-call rows.
+ * component beneath them inherits it. `row-tones.ts` left the list with its
+ * translucent state fills (#2534): its rows paint on the opaque
+ * `bg-<hue>-tint`, which reads the same in sunlight and in either palette.
  *
  * The roll-call controls themselves are not on the list (issue #2341):
  * `RollCallControls.tsx` and the offline view's two roll-call sections paint
@@ -92,7 +92,6 @@ const BOAT_MODE_FILES = new Set(
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/SharedDepthAdvisories.tsx",
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CrewRollCall.tsx",
     "src/components/OfflineManifestView.tsx",
-    "src/components/row-tones.ts",
   ].map((file) => path.normalize(file)),
 );
 const inkPattern = (hue) => new RegExp(`text-${hue}(-strong)?\\b`);
