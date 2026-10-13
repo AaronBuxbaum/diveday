@@ -1,14 +1,19 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
 import {
   bookingPayments,
   bookings,
+  certifications,
   type DiveSpecialty,
+  executedDives,
   notificationDeliveries,
   notificationDeliveryAttempts,
   people,
   personRoles,
+  preDepartureCheckEvents,
+  preDepartureChecklistItems,
+  rollCallCrewEvents,
   rollCallEvents,
   type TripAssignmentRole,
   tripAssignments,
@@ -92,6 +97,39 @@ export async function seedMoreTrips(
     return picked;
   };
 
+  /**
+   * **Nobody sails on the finished dawn boat with a card nobody has checked**
+   * (UX review 2026-10-13, item 40). Its departure log is the record a shop
+   * hands an insurer, and a plain `draw(8)` put Mateo Duarte aboard with his
+   * card still "Pending review — not certified". A drawn diver without a
+   * reviewed card trades places with one from the far end of the pool who has
+   * one. The cursor moves exactly as `draw` moved it, so no later boat's
+   * roster shifts.
+   */
+  const reviewedCardHolders = new Set(
+    (
+      await db
+        .select({ personId: certifications.personId })
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shopId),
+            eq(certifications.status, "verified"),
+            isNotNull(certifications.reviewedAt),
+          ),
+        )
+    ).map((row) => row.personId),
+  );
+  const hasReviewedCard = (index: number) =>
+    reviewedCardHolders.has(customers[index]?.id ?? "");
+  const drawBoarded = (n: number): number[] => {
+    const drawn = draw(n);
+    const spares = [...generalPool]
+      .reverse()
+      .filter((index) => !drawn.includes(index) && hasReviewedCard(index));
+    return drawn.map((index) => (hasReviewedCard(index) ? index : (spares.shift() ?? index)));
+  };
+
   /** The demo shop's ordinary boat fare, for a charter its definition does not price. */
   const DEMO_TWO_TANK_PRICE_CENTS = 9500;
 
@@ -135,7 +173,7 @@ export async function seedMoreTrips(
       capacity: 12,
       siteName: "Molasses Reef",
       completedDemo: true,
-      roster: draw(8),
+      roster: drawBoarded(8),
     },
     {
       title: "Morning Two-Tank — Molasses Reef",
@@ -662,6 +700,11 @@ export async function seedMoreTrips(
     );
     if (completedRollCallRows.length > 0)
       await db.insert(rollCallEvents).values(completedRollCallRows);
+    await seedDawnBoatRecord(db, shopId, {
+      trip: completedTrip,
+      recorderId: rollCallRecorderId,
+      checkpointTimes: (index) => new Date(completedTrip.startsAt.getTime() + index * 90 * 60 * 1000),
+    });
 
     // A partially completed report run is more useful demo state than an empty
     // queue: six reports have gone out and two remain for the staffer to notice.
@@ -786,5 +829,100 @@ export async function seedMoreTrips(
         createdAt: nextCreatedAt(),
       })
       .onConflictDoNothing();
+  }
+}
+
+/**
+ * **The rest of the finished dawn boat's record** (UX review 2026-10-13, item
+ * 40). Its departure log is headed "Ready to print if authorities or insurers
+ * ever ask", and it printed the pre-departure check as five "Not checked",
+ * every crew checkpoint as "Awaiting roll call" and "No post-dive record has
+ * been saved", under a Today card reading "All home · last roll call closed by
+ * Sal Moretti". A crew that ran the day would have left all three, so the seed
+ * writes what they would have: the checklist ticked at the dock before the
+ * boat left, every crew member counted at each checkpoint the divers were
+ * counted at, and both dives logged.
+ */
+async function seedDawnBoatRecord(
+  db: DbExecutor,
+  shopId: string,
+  ctx: {
+    trip: typeof trips.$inferSelect;
+    recorderId: string;
+    /** When the n-th checkpoint was called, the same instants the divers' roll call carries. */
+    checkpointTimes: (index: number) => Date;
+  },
+): Promise<void> {
+  const { trip, recorderId } = ctx;
+  const minute = 60 * 1000;
+
+  // The safety check, a quarter of an hour before the lines came off.
+  const items = await db
+    .select({ id: preDepartureChecklistItems.id })
+    .from(preDepartureChecklistItems)
+    .where(
+      and(
+        eq(preDepartureChecklistItems.shopId, shopId),
+        isNull(preDepartureChecklistItems.deletedAt),
+      ),
+    )
+    .orderBy(preDepartureChecklistItems.sortOrder);
+  if (items.length > 0) {
+    await db.insert(preDepartureCheckEvents).values(
+      items.map((item, index) => ({
+        shopId,
+        tripId: trip.id,
+        checklistItemId: item.id,
+        recordedByPersonId: recorderId,
+        status: "checked" as const,
+        occurredAt: new Date(trip.startsAt.getTime() - (15 - index) * minute),
+      })),
+    );
+  }
+
+  // The crew half of the head count, at the same checkpoints as the divers.
+  const crew = await db
+    .select({ personId: tripAssignments.personId })
+    .from(tripAssignments)
+    .where(eq(tripAssignments.tripId, trip.id));
+  const checkpoints = rollCallCheckpoints(trip.plannedDives);
+  const crewRows = crew.flatMap(({ personId }) =>
+    checkpoints.map((checkpoint, index) => ({
+      shopId,
+      tripId: trip.id,
+      personId,
+      recordedByPersonId: recorderId,
+      status: "boarded" as const,
+      checkpoint,
+      source: "live" as const,
+      occurredAt: ctx.checkpointTimes(index),
+    })),
+  );
+  if (crewRows.length > 0) await db.insert(rollCallCrewEvents).values(crewRows);
+
+  // Both tanks logged: in the water a quarter of an hour after the boat
+  // reached the mooring, out forty-five minutes later, the reef's ordinary
+  // depth. Each dive ends before the after-dive count that closes it.
+  const plan = await db
+    .select({ diveNumber: tripDives.diveNumber, diveSiteId: tripDives.diveSiteId })
+    .from(tripDives)
+    .where(eq(tripDives.tripId, trip.id))
+    .orderBy(tripDives.diveNumber);
+  if (plan.length > 0) {
+    await db.insert(executedDives).values(
+      plan.map((dive) => {
+        const afterDive = ctx.checkpointTimes(dive.diveNumber).getTime();
+        return {
+          shopId,
+          tripId: trip.id,
+          diveNumber: dive.diveNumber,
+          actualSiteId: dive.diveSiteId ?? trip.diveSiteId,
+          enteredAt: new Date(afterDive - 60 * minute),
+          exitedAt: new Date(afterDive - 15 * minute),
+          maxDepthMeters: dive.diveNumber === 1 ? 14 : 10,
+          recordedByPersonId: recorderId,
+        };
+      }),
+    );
   }
 }

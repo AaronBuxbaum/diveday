@@ -102,6 +102,12 @@ export function hoursFromNow(hours: number, from = nowDate()): Date {
 /** The earliest local hour today's seeded departure leaves: after the dawn boat docks. */
 export const DEMO_DAY_FIRST_SAILING_HOUR = 9;
 
+/** The desk's own day, for the cast who crew nothing when today's boat sails at night. */
+export const DEMO_DESK_DAY = {
+  opens: { hour: 9, minute: 0 },
+  closes: { hour: 17, minute: 0 },
+} as const;
+
 /**
  * The first-light boat's local wall times (`DEMO_COMPLETED_TRIP_TITLE`,
  * `seed-more-trips.ts`), named once so the crew's shift (`demoTodayShifts`)
@@ -141,6 +147,19 @@ export function demoTodayDepartureStart(
   return new Date(Math.min(now.getTime() + 60 * 1000, midnight.getTime() - 1000));
 }
 
+/**
+ * The local hour from which today's seeded departure is a night boat. It
+ * sails five hours after the demo is seeded, so a demo seeded in the evening
+ * puts it at 11:30 PM (#2440), and a few things a shop would never put on a
+ * boat at that hour are kept off it (UX review 2026-10-13, item 40).
+ */
+export const DEMO_NIGHT_SAILING_HOUR = 20;
+
+/** Whether today's seeded departure, sailing at `sails`, is a night boat. */
+export function demoSailsAtNight(sails: Date, timeZone: string = DEMO_SHOP_TIMEZONE): boolean {
+  return utcToWallTime(sails, timeZone).hour >= DEMO_NIGHT_SAILING_HOUR;
+}
+
 /** How long today's seeded departure runs, dock to dock (`seed-trips.ts`). */
 export const DEMO_TODAY_DEPARTURE_MS = 3.5 * 60 * 60 * 1000;
 
@@ -166,24 +185,39 @@ export function demoTodayShift(
 }
 
 /**
- * **Every shift one member of the demo cast works today.** Everyone gets the
- * shift around today's departure (`demoTodayShift`). The dawn boat's crew
- * (`dawnCrew`: the captain, the divemaster and the assistant who crew it) also
- * work from an hour before it sails to an hour after it docks, 4:30 to 9:30;
- * the shared shift never starts before 8:00, so without this the staffing week
- * flagged the demo's own crew on a boat they were not rostered for
- * (dive-domain review of the demo layer). Where the two touch or overlap they
- * are one shift, because nobody clocks out at 8:00 to clock back in at 8:00.
+ * **Every shift one member of the demo cast works today.** The crew (`crew`:
+ * the captain, the divemaster and the assistant, who crew both the dawn boat
+ * and today's departure) work the shift around today's departure
+ * (`demoTodayShift`), and from an hour before the dawn boat sails to an hour
+ * after it docks, 4:30 to 9:30; the shared shift never starts before 8:00, so
+ * without this the staffing week flagged the demo's own crew on a boat they
+ * were not rostered for (dive-domain review of the demo layer). Where the two
+ * touch or overlap they are one shift, because nobody clocks out at 8:00 to
+ * clock back in at 8:00.
+ *
+ * Everyone else works the same shift around today's departure by day, and the
+ * desk's own day when that departure is a night boat: a demo seeded in the
+ * evening put the owner and both instructors, who crew nothing, on a
+ * "10:30 PM – 12:00 AM" shift beside the crew (UX review 2026-10-13, item 40).
  */
 export function demoTodayShifts(
   now = nowDate(),
   timeZone: string = DEMO_SHOP_TIMEZONE,
-  { dawnCrew }: { dawnCrew: boolean },
+  { crew }: { crew: boolean },
 ): { startsAt: Date; endsAt: Date }[] {
   const shared = demoTodayShift(now, timeZone);
-  if (!dawnCrew) return [shared];
+  const sails = demoTodayDepartureStart(now, timeZone);
+  const day = utcToWallTime(sails, timeZone);
+  if (!crew) {
+    if (!demoSailsAtNight(sails, timeZone)) return [shared];
+    return [
+      {
+        startsAt: wallTimeToUtc({ ...day, ...DEMO_DESK_DAY.opens }, timeZone),
+        endsAt: wallTimeToUtc({ ...day, ...DEMO_DESK_DAY.closes }, timeZone),
+      },
+    ];
+  }
   const hour = 60 * 60 * 1000;
-  const day = utcToWallTime(demoTodayDepartureStart(now, timeZone), timeZone);
   const dawn = {
     startsAt: new Date(
       wallTimeToUtc({ ...day, ...DEMO_DAWN_BOAT.sails }, timeZone).getTime() - hour,

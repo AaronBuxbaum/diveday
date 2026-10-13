@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { demoTodayDepartureStart, demoTodayShift, demoTodayShifts } from "./seed-clock";
+import {
+  demoSailsAtNight,
+  demoTodayDepartureStart,
+  demoTodayShift,
+  demoTodayShifts,
+} from "./seed-clock";
 
 describe("demoTodayDepartureStart", () => {
   const TZ = "America/New_York";
@@ -110,19 +115,40 @@ describe("demoTodayShifts", () => {
 
   it("gives everyone off the dawn boat the one shift around today's departure", () => {
     const now = new Date("2026-07-20T04:30:00Z"); // 12:30 AM EDT → the 9:00 AM boat
-    expect(spans(demoTodayShifts(now, TZ, { dawnCrew: false }))).toEqual(["08:00-13:30"]);
+    expect(spans(demoTodayShifts(now, TZ, { crew: false }))).toEqual(["08:00-13:30"]);
   });
 
   it("starts the dawn crew at 4:30, an hour before the 5:30 boat, through the morning boat", () => {
     const now = new Date("2026-07-20T04:30:00Z"); // → the 9:00 AM boat, whose shift starts at 8:00
-    expect(spans(demoTodayShifts(now, TZ, { dawnCrew: true }))).toEqual(["04:30-13:30"]);
+    expect(spans(demoTodayShifts(now, TZ, { crew: true }))).toEqual(["04:30-13:30"]);
+  });
+
+  it("gives only the crew a night boat's hours, and everyone else the desk's day", () => {
+    // UX review 2026-10-13, item 40: seeded at 6:30 PM EDT, today's boat
+    // sails at 11:30 PM, and the owner and both instructors held a
+    // "10:30 PM – 12:00 AM" shift beside the crew.
+    const now = new Date("2026-10-12T22:30:00Z"); // 6:30 PM EDT → the 11:30 PM boat
+    expect(spans(demoTodayShifts(now, TZ, { crew: false }))).toEqual(["09:00-17:00"]);
+    expect(spans(demoTodayShifts(now, TZ, { crew: true }))).toEqual([
+      "04:30-09:30",
+      "22:30-00:00",
+    ]);
   });
 
   it("gives the dawn crew a 4:30 to 9:30 shift of its own when today's boat sails in the evening", () => {
     const now = new Date("2026-10-10T17:18:00Z"); // 1:18 PM EDT → a 6:30 PM boat
-    expect(spans(demoTodayShifts(now, TZ, { dawnCrew: true }))).toEqual([
+    expect(spans(demoTodayShifts(now, TZ, { crew: true }))).toEqual([
       "04:30-09:30",
       "17:30-23:00",
     ]);
+  });
+});
+
+describe("demoSailsAtNight", () => {
+  const TZ = "America/New_York";
+
+  it("calls an 11:30 PM departure a night boat and a 6:30 PM one not", () => {
+    expect(demoSailsAtNight(new Date("2026-10-13T03:30:00Z"), TZ)).toBe(true); // 11:30 PM EDT
+    expect(demoSailsAtNight(new Date("2026-10-12T22:30:00Z"), TZ)).toBe(false); // 6:30 PM EDT
   });
 });
