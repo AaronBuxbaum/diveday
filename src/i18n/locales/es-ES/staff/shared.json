@@ -552,7 +552,8 @@
   },
   "formDraft": {
     "pickedUp": "Retomado del mostrador, {time}.",
-    "startOver": "Empezar de nuevo"
+    "startOver": "Empezar de nuevo",
+    "unsavedSection": "Sin guardar"
   },
   "identityCheck": {
     "reasonSharedEmail": "Reservó como {bookedAs} con el correo de {name}. Confirma quién es.",
