@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  CLEAR_CONFIRM_MIN_GAP_MS,
   CLEAR_CONFIRM_TIMEOUT_MS,
   type PreDepartureCheckAction,
   PreDepartureCheckList,
@@ -176,16 +177,26 @@ describe("the pre-departure check's label", () => {
  * aboard" unnoticed, so the first tap on a checked item only asks.
  */
 describe("clearing a checked item", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   function setup() {
     const action = vi.fn<PreDepartureCheckAction>(async () => ({ ok: true }));
     render(<PreDepartureCheckList action={action} items={items} copy={copy} atDeparture />);
     const oxygen = () => screen.getByRole("button", { name: /Emergency oxygen kit aboard/ });
-    return { action, oxygen };
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    return { action, oxygen, user };
   }
+  /** The pause a deliberate second tap takes; a bounce never does. */
+  const pause = (ms = CLEAR_CONFIRM_MIN_GAP_MS) => act(() => vi.advanceTimersByTimeAsync(ms));
 
   it("checks an unchecked item in one tap", async () => {
-    const { action } = setup();
-    await userEvent.click(screen.getByRole("button", { name: /Radio check done/ }));
+    const { action, user } = setup();
+    await user.click(screen.getByRole("button", { name: /Radio check done/ }));
     await waitFor(() => expect(action).toHaveBeenCalledOnce());
     const formData = action.mock.calls[0]?.[1];
     expect(formData?.get("checklistItemId")).toBe("radio");
@@ -193,8 +204,9 @@ describe("clearing a checked item", () => {
   });
 
   it("does not clear a checked item on one tap, and says what the next tap does", async () => {
-    const { action, oxygen } = setup();
-    await userEvent.click(oxygen());
+    const { action, oxygen, user } = setup();
+    await user.click(oxygen());
+    await pause();
     expect(action).not.toHaveBeenCalled();
     expect(oxygen()).toHaveTextContent("Tap again to clear");
     // Announced, since a changed button name is not.
@@ -204,43 +216,53 @@ describe("clearing a checked item", () => {
   });
 
   it("clears it on the second tap", async () => {
-    const { action, oxygen } = setup();
-    await userEvent.click(oxygen());
-    await userEvent.click(oxygen());
+    const { action, oxygen, user } = setup();
+    await user.click(oxygen());
+    await pause();
+    await user.click(oxygen());
     await waitFor(() => expect(action).toHaveBeenCalledOnce());
     const formData = action.mock.calls[0]?.[1];
     expect(formData?.get("checklistItemId")).toBe("oxygen");
     expect(formData?.get("status")).toBe("cleared");
   });
 
-  it("stands down when the tap goes elsewhere, so a later stray tap only asks again", async () => {
+  it("ignores a bounced double tap: two taps 50ms apart only ask", async () => {
     const { action, oxygen } = setup();
-    await userEvent.click(oxygen());
+    fireEvent.click(oxygen());
+    await pause(50);
+    fireEvent.click(oxygen());
+    await pause();
+    expect(action).not.toHaveBeenCalled();
+    // The bounce did not spend the ask: a deliberate tap now clears.
+    expect(oxygen()).toHaveTextContent("Tap again to clear");
+  });
+
+  it("stands down when the tap goes elsewhere, so a later stray tap only asks again", async () => {
+    const { action, oxygen, user } = setup();
+    await user.click(oxygen());
+    await pause();
     fireEvent.blur(oxygen());
     expect(oxygen()).not.toHaveTextContent("Tap again to clear");
-    await userEvent.click(oxygen());
+    await user.click(oxygen());
     expect(action).not.toHaveBeenCalled();
   });
 
   it("stands down on Escape", async () => {
-    const { action, oxygen } = setup();
-    await userEvent.click(oxygen());
+    const { action, oxygen, user } = setup();
+    await user.click(oxygen());
+    await pause();
     fireEvent.keyDown(oxygen(), { key: "Escape" });
     expect(oxygen()).not.toHaveTextContent("Tap again to clear");
     expect(action).not.toHaveBeenCalled();
   });
 
   it("stands down by itself if left asking", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const { action, oxygen } = setup();
-      fireEvent.click(oxygen());
-      expect(oxygen()).toHaveTextContent("Tap again to clear");
-      await act(() => vi.advanceTimersByTimeAsync(CLEAR_CONFIRM_TIMEOUT_MS));
-      expect(oxygen()).not.toHaveTextContent("Tap again to clear");
-      expect(action).not.toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-    }
+    const { action, oxygen } = setup();
+    fireEvent.click(oxygen());
+    await pause();
+    expect(oxygen()).toHaveTextContent("Tap again to clear");
+    await pause(CLEAR_CONFIRM_TIMEOUT_MS);
+    expect(oxygen()).not.toHaveTextContent("Tap again to clear");
+    expect(action).not.toHaveBeenCalled();
   });
 });
