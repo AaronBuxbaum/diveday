@@ -274,25 +274,30 @@ describe("day close-out (in-memory PGlite)", () => {
       const closing = rollCallCheckpoints(completed.plannedDives).at(-1) ?? "departure";
       // Later than anything the seed wrote, so these two marks are the last.
       const late = (minutes: number) => new Date(completed.endsAt.getTime() + minutes * 60_000);
-      const diverMark = (occurredAt: Date, createdAt?: Date) =>
+      type MarkOptions = {
+        checkpoint?: string;
+        status?: "boarded" | "not_boarded" | "cleared";
+        recordedBy?: string;
+      };
+      const diverMark = (occurredAt: Date, createdAt?: Date, options: MarkOptions = {}) =>
         db.insert(rollCallEvents).values({
           shopId: shop.id,
           tripId: completed.tripId,
           bookingId: seat.id,
-          recordedByPersonId: diverMarker.person.id,
-          status: "boarded",
-          checkpoint: closing,
+          recordedByPersonId: options.recordedBy ?? diverMarker.person.id,
+          status: options.status ?? "boarded",
+          checkpoint: options.checkpoint ?? closing,
           occurredAt,
           ...(createdAt ? { createdAt } : {}),
         });
-      const crewMark = (occurredAt: Date, createdAt?: Date) =>
+      const crewMark = (occurredAt: Date, createdAt?: Date, options: MarkOptions = {}) =>
         db.insert(rollCallCrewEvents).values({
           shopId: shop.id,
           tripId: completed.tripId,
           personId: crew.personId,
-          recordedByPersonId: crewMarker.person.id,
-          status: "boarded",
-          checkpoint: closing,
+          recordedByPersonId: options.recordedBy ?? crewMarker.person.id,
+          status: options.status ?? "boarded",
+          checkpoint: options.checkpoint ?? closing,
           occurredAt,
           ...(createdAt ? { createdAt } : {}),
         });
@@ -365,6 +370,51 @@ describe("day close-out (in-memory PGlite)", () => {
         closedAt: late(60),
         closedBy: crewMarker.person.fullName,
       });
+    });
+
+    /**
+     * **The close is the final checkpoint's, not the last mark anywhere**
+     * (#2536). A mis-tap fixed on the dock checkpoint at 4:10 by the office
+     * manager, or a retraction, says nothing about who closed the final head
+     * count or when.
+     */
+    it("ignores a later correction on an earlier checkpoint", async () => {
+      const { diverMarker, crewMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await crewMark(late(55));
+      await diverMark(late(60));
+      await diverMark(late(130), undefined, {
+        checkpoint: "departure",
+        recordedBy: crewMarker.person.id,
+      });
+      await crewMark(late(140), undefined, {
+        checkpoint: "departure",
+        recordedBy: diverMarker.person.id,
+      });
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: diverMarker.person.fullName });
+      expect(await read(false)).toEqual({
+        closedAt: late(60),
+        closedBy: diverMarker.person.fullName,
+      });
+    });
+
+    it("ignores a retraction on an earlier checkpoint", async () => {
+      const { diverMarker, crewMarker, late, diverMark, read } = await closingFixture();
+      await diverMark(late(60));
+      await diverMark(late(130), undefined, {
+        checkpoint: "departure",
+        status: "cleared",
+        recordedBy: crewMarker.person.id,
+      });
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: diverMarker.person.fullName });
+    });
+
+    it("never counts a retraction at the final checkpoint as the close", async () => {
+      const { diverMarker, crewMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await crewMark(late(55));
+      await diverMark(late(60));
+      await diverMark(late(70), undefined, { status: "cleared", recordedBy: crewMarker.person.id });
+      await crewMark(late(75), undefined, { status: "cleared", recordedBy: diverMarker.person.id });
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: diverMarker.person.fullName });
     });
 
     it("never reads another shop's marks", async () => {
