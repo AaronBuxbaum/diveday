@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findTransactionFanOut } from "./check-db-concurrency.mjs";
+import { findMisplacedRealServerSuites, findTransactionFanOut } from "./check-db-concurrency.mjs";
 
 const lines = (findings) => findings.map((finding) => finding.line);
 
@@ -207,5 +207,45 @@ describe("the scanner's own blind spots", () => {
     `);
 
     expect(findings).toEqual([]);
+  });
+});
+
+describe("a real-Postgres suite", () => {
+  const suite = `
+    import { describePostgres, postgresTestDb } from "@/test/postgres";
+    describePostgres("races", () => {
+      it("serializes", async () => {
+        const pg = await postgresTestDb();
+      });
+    });
+  `;
+
+  it("is refused in a file the real-postgres job never selects", () => {
+    // The 2026-10-13 shape: seat-locks.test.ts held two describePostgres races
+    // that skipped in every unit shard and were never picked up by the job.
+    expect(lines(findMisplacedRealServerSuites("src/db/seat-locks.test.ts", suite))).toEqual([
+      2, 3, 5,
+    ]);
+  });
+
+  it("is refused outside src/db even with the right suffix", () => {
+    expect(
+      lines(findMisplacedRealServerSuites("src/lib/thing.postgres.test.ts", suite)),
+    ).toHaveLength(3);
+  });
+
+  it("leaves alone a *.postgres.test.ts in src/db, and the harness that defines it", () => {
+    expect(findMisplacedRealServerSuites("src/db/seat-locks.postgres.test.ts", suite)).toEqual([]);
+    expect(findMisplacedRealServerSuites("src/test/postgres.ts", suite)).toEqual([]);
+  });
+
+  it("leaves alone a comment that names it", () => {
+    const comment = `
+      // describePostgres lives in seat-locks.postgres.test.ts
+      /**
+       * See postgresTestDb.
+       */
+    `;
+    expect(findMisplacedRealServerSuites("src/db/seat-locks.test.ts", comment)).toEqual([]);
   });
 });

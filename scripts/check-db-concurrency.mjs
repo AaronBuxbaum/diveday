@@ -282,6 +282,36 @@ export function findTransactionFanOut(contents, { jsx = false } = {}) {
   return findings;
 }
 
+/**
+ * **A real-Postgres suite lives in a `*.postgres.test.ts` file, or it runs nowhere.**
+ *
+ * `describePostgres` (`src/test/postgres.ts`) skips unless
+ * `DIVEDAY_TEST_POSTGRES_URL` names a server, and only CI's `real-postgres` job
+ * sets it — for `src/db/*.postgres.test.ts` and nothing else (`ci.yml`). A
+ * `describePostgres` block in any other file therefore skips in the unit shards
+ * and is never selected by the job: the race tests of `lockSeatDeparture` sat in
+ * `seat-locks.test.ts` that way, green and inert, until 2026-10-13. The job's
+ * own comment records the first such case (a hand-kept list of file names).
+ *
+ * Returns `{ line, text }` for each use of either name outside that glob.
+ * `src/test/postgres.ts` defines them and is the one other file allowed to.
+ */
+export const REAL_SERVER_SUITE = /^src\/db\/[^/]+\.postgres\.test\.ts$/;
+const REAL_SERVER_NAMES = /\b(describePostgres|postgresTestDb)\b/;
+const REAL_SERVER_HOME = "src/test/postgres.ts";
+
+export function findMisplacedRealServerSuites(file, contents) {
+  const normalized = file.split(path.sep).join("/");
+  if (normalized === REAL_SERVER_HOME || REAL_SERVER_SUITE.test(normalized)) return [];
+  const findings = [];
+  for (const [index, raw] of contents.split("\n").entries()) {
+    const text = raw.trim();
+    if (text.startsWith("//") || text.startsWith("*") || text.startsWith("/*")) continue;
+    if (REAL_SERVER_NAMES.test(text)) findings.push({ line: index + 1, text });
+  }
+  return findings;
+}
+
 async function main() {
   const violations = [];
   for (const root of GUARDED_ROOTS) {
@@ -294,6 +324,23 @@ async function main() {
         violations.push(`${file}:${finding.line}: ${finding.text}`);
       }
     }
+  }
+
+  const misplaced = [];
+  for (const file of await walk("src")) {
+    const contents = await readFile(path.join(ROOT, file), "utf8");
+    if (!REAL_SERVER_NAMES.test(contents)) continue;
+    for (const finding of findMisplacedRealServerSuites(file, contents)) {
+      misplaced.push(`${file}:${finding.line}: ${finding.text}`);
+    }
+  }
+  if (misplaced.length > 0) {
+    console.error(
+      `A real-Postgres suite outside src/db/*.postgres.test.ts:\n${misplaced.map((v) => `- ${v}`).join("\n")}`,
+    );
+    console.error(
+      "describePostgres skips without DIVEDAY_TEST_POSTGRES_URL, and CI's real-postgres job sets it only for src/db/*.postgres.test.ts, so this suite runs nowhere. Move it into a <module>.postgres.test.ts file beside the module.",
+    );
   }
 
   if (violations.length > 0) {
@@ -309,10 +356,12 @@ async function main() {
     console.error(
       "If the Promise.all is genuinely not over queries on that executor, say so on the line: `diveday:allow-db-concurrency: <why>`.",
     );
-    process.exit(1);
   }
+  if (violations.length > 0 || misplaced.length > 0) process.exit(1);
 
-  console.log("db-concurrency: no Promise.all over queries on a transaction executor");
+  console.log(
+    "db-concurrency: no Promise.all over queries on a transaction executor; every real-Postgres suite is a *.postgres.test.ts",
+  );
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();
