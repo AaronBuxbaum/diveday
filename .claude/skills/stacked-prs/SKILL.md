@@ -41,9 +41,10 @@ written**. The ratchets are the sharpest version: a baseline written on layer 4 
 previous branch.
 
 **Merging a layer up never stops on a generated file.** `.gitattributes` gives
-`scripts/ratchets.json`, the export-bundle snapshot and the glossary and ADR indexes merge drivers
-(`scripts/merge-drivers.mjs`, installed by the `SessionStart` hook; a human runs
-`node scripts/merge-drivers.mjs install` once). The merge prints a line naming each file it settled
+`scripts/ratchets.json`, `scripts/test-durations.json`, the export-bundle snapshot and the glossary
+and ADR indexes merge drivers (`scripts/merge-drivers.mjs`, installed by the `SessionStart` hook; a
+human runs `node scripts/merge-drivers.mjs install` once; `pnpm agent:doctor` warns when they are
+missing). The merge prints a line naming each file it settled
 mechanically; then run **`pnpm regen`**, which rewrites all of them from their sources, and commit
 what it changed before you push (`--no-snapshot` skips the slow one when no seed, schema or export file moved).
 

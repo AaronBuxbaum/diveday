@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   checkoutState,
+  fastForwardShared,
   fetchNeed,
   fetchOpenPulls,
   findInstalledNode,
@@ -152,6 +153,83 @@ describe("the session-start fetch", () => {
   it("prints the doctor's summary lines where it is given them", () => {
     const block = sessionBlock(null, { doctor: ["Doctor: one", "Stack: two"] });
     expect(block).toContain("Doctor: one\nStack: two");
+  });
+});
+
+describe("fast-forwarding the shared checkout the hooks load from", () => {
+  // 2026-10-13: /home/claude/diveday sat detached 704 commits behind main, so every session's
+  // hooks, settings and AGENTS.md were three days old; the fetch above never moved HEAD.
+  const shared = {
+    "rev-parse --abbrev-ref HEAD": "HEAD",
+    "rev-parse --git-dir": ".git",
+    "rev-parse --git-common-dir": ".git",
+    "status --porcelain": "",
+    "rev-list --count HEAD..origin/main": "704",
+    "rev-parse --short HEAD": "3ed8285",
+    "rev-parse --short origin/main": "700c6ff",
+  };
+  function runner(statuses = {}) {
+    const calls = [];
+    const run = (args) => {
+      calls.push(args.join(" "));
+      return statuses[args.join(" ")] ?? 0;
+    };
+    return { run, calls };
+  }
+  const go = (answers, { source = "startup", env = {}, statuses } = {}) => {
+    const { run, calls } = runner(statuses);
+    return { result: fastForwardShared(gitFrom(answers), run, { source, env }), calls };
+  };
+
+  it("moves a detached, clean, behind primary checkout to origin/main and says so", () => {
+    const { result, calls } = go(shared);
+    expect(calls).toEqual([
+      "merge-base --is-ancestor HEAD origin/main",
+      "checkout --quiet --detach origin/main",
+    ]);
+    expect(result).toEqual({ status: "moved", from: "3ed8285", to: "700c6ff", commits: 704 });
+    expect(sessionBlock(null, { fastForward: result })).toContain(
+      "fast-forwarded 704 commits (3ed8285 → 700c6ff)",
+    );
+  });
+
+  it("leaves alone a checkout on a branch, a dirty one, a linked worktree, or one already current", () => {
+    for (const answers of [
+      { ...shared, "rev-parse --abbrev-ref HEAD": "claude/feature" },
+      { ...shared, "status --porcelain": " M AGENTS.md" },
+      { ...shared, "status --porcelain": "?? notes.txt" },
+      { ...shared, "rev-parse --git-dir": "/repo/.git/worktrees/wt-1" },
+      { ...shared, "rev-list --count HEAD..origin/main": "0" },
+      { ...shared, "status --porcelain": null },
+    ]) {
+      const { result, calls } = go(answers);
+      expect(result).toBeNull();
+      expect(calls).toEqual([]);
+    }
+  });
+
+  it("leaves alone a HEAD that is not on main's history, and says nothing went wrong", () => {
+    const { result, calls } = go(shared, {
+      statuses: { "merge-base --is-ancestor HEAD origin/main": 1 },
+    });
+    expect(result).toBeNull();
+    expect(calls).toHaveLength(1);
+  });
+
+  it("only at startup or resume, and not when opted out", () => {
+    expect(go(shared, { source: "compact" }).result).toBeNull();
+    expect(go(shared, { env: { DIVEDAY_SESSION_FASTFORWARD: "0" } }).result).toBeNull();
+    expect(go(shared, { source: "resume" }).result).toMatchObject({ status: "moved" });
+  });
+
+  it("reports a checkout that would not move, with the command to run", () => {
+    const { result } = go(shared, {
+      statuses: { "checkout --quiet --detach origin/main": 1 },
+    });
+    expect(result).toEqual({ status: "failed", from: "3ed8285", to: "700c6ff", commits: 704 });
+    expect(sessionBlock(null, { fastForward: result })).toContain(
+      "git checkout --detach origin/main",
+    );
   });
 });
 

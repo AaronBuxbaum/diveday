@@ -27,6 +27,9 @@
 // that a closing message is not a queue — is exactly what a summary compresses into "continued
 // working". The reminders are short because they are paid for on every compaction.
 //
+// When the checkout is the shared one the hooks load from — the primary worktree, detached and
+// clean — and `origin/main` has moved past it, it fast-forwards it first (`fastForwardShared`).
+//
 // **UserPromptSubmit** prints one line: branch, uncommitted count, unpushed count. AGENTS.md's
 // Parallel-work section asks for a `git status` before anything that touches the shared tree;
 // this makes that free and current on every prompt instead of a snapshot from session start.
@@ -112,6 +115,39 @@ function fetchAtStart(cwd, git, source) {
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
   });
   return result.status === 0 ? "fetched" : "failed";
+}
+
+/**
+ * Moves the shared checkout the hooks load from up to `origin/main`, when that is safe.
+ *
+ * Every session's `.claude/settings.json`, hooks, `AGENTS.md` and `CLAUDE.md` come from
+ * `$CLAUDE_PROJECT_DIR`, and work happens in `wt-*` worktrees, so that checkout sits detached
+ * and nobody moves it. On 2026-10-13 it was 704 commits behind main: the push gate, the
+ * PR-body hook, the hook log and the merge-driver install all existed on main and ran nowhere
+ * (2026-10-13 fourth review, row 1). The fetch above updated `origin/main` and left HEAD.
+ *
+ * Moves only a checkout that is the clone's primary worktree, detached, clean (untracked files
+ * included), and strictly behind (HEAD on main's history). A branch, a linked worktree, any
+ * uncommitted or untracked path, or a HEAD off main's history is somebody's work and is left
+ * alone. Startup and resume only; `DIVEDAY_SESSION_FASTFORWARD=0` opts out. Settings load
+ * before this hook runs, so the moved hooks take effect from the next session.
+ *
+ * `git(args)` reads (string or null); `run(args)` acts and returns its exit status.
+ */
+export function fastForwardShared(git, run, { source, env = process.env } = {}) {
+  if (env.DIVEDAY_SESSION_FASTFORWARD === "0") return null;
+  if (source !== "startup" && source !== "resume") return null;
+  if (git(["rev-parse", "--abbrev-ref", "HEAD"]) !== "HEAD") return null;
+  const gitDir = git(["rev-parse", "--git-dir"]);
+  if (!gitDir || gitDir !== git(["rev-parse", "--git-common-dir"])) return null;
+  if (git(["status", "--porcelain"]) !== "") return null;
+  const commits = Number(git(["rev-list", "--count", "HEAD..origin/main"]));
+  if (!Number.isInteger(commits) || commits <= 0) return null;
+  if (run(["merge-base", "--is-ancestor", "HEAD", "origin/main"]) !== 0) return null;
+  const from = git(["rev-parse", "--short", "HEAD"]);
+  const to = git(["rev-parse", "--short", "origin/main"]);
+  const moved = run(["checkout", "--quiet", "--detach", "origin/main"]) === 0;
+  return { status: moved ? "moved" : "failed", from, to, commits };
 }
 
 /** The install a cloud container runs when it wakes without its dependencies. */
@@ -382,10 +418,21 @@ export function sessionBlock(
     nodeSelection = null,
     fetched = null,
     mergeDrivers = null,
+    fastForward = null,
     doctor = [],
   } = {},
 ) {
   const lines = [];
+  if (fastForward?.status === "moved") {
+    lines.push(
+      `This shared checkout was detached and clean behind main, so it was fast-forwarded ${fastForward.commits} commit${fastForward.commits === 1 ? "" : "s"} (${fastForward.from} → ${fastForward.to}); its hooks and settings take effect from the next session.`,
+    );
+  }
+  if (fastForward?.status === "failed") {
+    lines.push(
+      `This shared checkout is ${fastForward.commits} commits behind main and \`git checkout --detach origin/main\` failed here, so every session's hooks and settings stay old until it moves — run it in this directory and read the error.`,
+    );
+  }
   if (mergeDrivers === "not installed") {
     lines.push(
       "Merge drivers: not installed (git config failed), so a merge or restack can stop on scripts/ratchets.json and the generated files — run `node scripts/merge-drivers.mjs install`.",
@@ -551,6 +598,17 @@ function main() {
   const source = payload.source ?? payload.how_started ?? "startup";
   // Before reading the state, so ahead/behind and the stack are measured from current refs.
   const fetched = fetchAtStart(cwd, git, source);
+  // After the fetch, so origin/main is current; before reading the state, which then reads it.
+  const fastForward = fastForwardShared(
+    git,
+    (args) =>
+      runBounded("git", args, {
+        cwd,
+        stdio: "ignore",
+        timeoutMs: SUBPROCESS_TIMEOUTS.git,
+      }).status,
+    { source },
+  );
   const state = checkoutState(git);
   const nodeMajor = Number(process.versions.node.split(".")[0]);
   const pinnedMajor = pinnedNodeMajor(cwd);
@@ -567,8 +625,11 @@ function main() {
     installed,
     fetched,
     mergeDrivers,
+    fastForward,
     // After the fetch above, so origin/main's row reads this session's refs.
-    doctor: summaryLines(gatherFacts(cwd, { fetched })),
+    doctor: summaryLines(
+      gatherFacts(cwd, { fetched, mergeDriversInstall: mergeDrivers, projectDir: cwd }),
+    ),
   });
   if (block) process.stdout.write(`${block}\n`);
 }

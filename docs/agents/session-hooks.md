@@ -29,7 +29,7 @@ what is currently wired.
 
 | Event | Script | What it does |
 | --- | --- | --- |
-| `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`, read after the fetch), "Merge drivers: not installed" when `scripts/merge-drivers.mjs install` could not write them and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
+| `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once, then fast-forwards the checkout to `origin/main` when it is the clone's primary worktree, detached, clean and strictly behind (`DIVEDAY_SESSION_FASTFORWARD=0` turns it off); prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`, read after the fetch), "Merge drivers: not installed" when `scripts/merge-drivers.mjs install` could not write them and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position, and the account's open pull requests (`gh api`, cached ten minutes in the git common dir; `DIVEDAY_OPEN_PULLS=0` turns it off), because one PR's CI runs at a time; on the first prompt of a session, the last session's hook refusals, and "write a papercut" with a ready `file-follow-up.mjs --papercut` command when one rule has refused three or more times this week and no papercut has its slug |
 | `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form |
 | `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
@@ -65,6 +65,17 @@ volta and `/opt/node<major>`, and when it finds one it appends an `export PATH=â
 which Node the session got. When none is installed it says so, and that `node_modules` may then
 have been installed under another Node â€” the fix for that is the environment's own setup, not
 this hook.
+
+**The shared checkout moves with main.** Every session's `.claude/settings.json`, hooks, `AGENTS.md`
+and `CLAUDE.md` load from `$CLAUDE_PROJECT_DIR`, and in the cloud containers that is the shared
+clone the `wt-*` worktrees hang off: work happens in the worktrees, so nothing moved it. On
+2026-10-13 it sat detached 704 commits behind main, and the push gate, the PR-body hook, the hook
+log and the merge-driver install existed on main and ran nowhere. After its fetch the hook now runs
+`git checkout --detach origin/main` there when the checkout is the primary worktree, detached,
+clean (untracked files included) and on main's history; a branch, a linked worktree or any
+uncommitted path is someone's work and is left alone. Claude Code reads the settings before the
+hook runs, so the moved hooks take effect from the next session. When it could not move it,
+`agent-doctor`'s "hooks checkout" row warns with the command.
 
 In a cloud container (`CLAUDE_CODE_REMOTE=true`) with no `node_modules/`, or one older than
 `pnpm-lock.yaml` (by `node_modules/.modules.yaml`'s mtime), it runs
