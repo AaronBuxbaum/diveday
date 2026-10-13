@@ -158,7 +158,7 @@ export type RosterRows = {
 export type RosterActions = {
   /** A reducer, not a plain form action: a refusal hands the typed values
    * back to the control rather than redirecting (`PaperWaiverAction`). */
-  markWaiverInPersonAction: PaperWaiverAction;
+  markRosterWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
   /**

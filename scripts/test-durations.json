@@ -547,7 +547,6 @@
   "src/components/ui/table.test.tsx": 1601,
   "src/components/ui/typography.test.ts": 282,
   "src/components/ui/week-pager.test.tsx": 893,
-  "src/components/useDragSheet.test.tsx": 851,
   "src/components/useExitAnimation.test.tsx": 797,
   "src/content/course-templates.test.ts": 115,
   "src/db/account-security.test.ts": 13811,

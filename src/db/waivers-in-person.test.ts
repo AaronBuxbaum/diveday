@@ -251,7 +251,7 @@ describe("staff records a paper / in-person signature", () => {
  *
  * The refusal stays the writer's existing `staff_not_found`: it is the same
  * answer to the same question, and both server actions above it
- * (`markWaiverInPersonAction`, `markWaiverInPersonFromCheckIn`) already fold
+ * (`markRosterWaiverInPersonAction`, `markWaiverInPersonFromCheckIn`) already fold
  * every non-medical refusal into one `waiver-error` notice.
  */
 describe("the in-person attestor must be live staff (defense in depth)", () => {

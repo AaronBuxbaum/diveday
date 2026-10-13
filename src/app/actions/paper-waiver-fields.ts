@@ -22,6 +22,23 @@ function paperWaiverFields(formData: FormData): z.infer<typeof paperWaiverForm> 
 }
 
 /**
+ * **What a paper release attests**, read back the same way at every door: the
+ * staffer's medical tick and, for a minor, the co-signer. The roster's
+ * `markRosterWaiverInPersonAction` and the diver record's
+ * `markWaiverInPersonAction` spread this straight into `recordInPersonWaiver`,
+ * so the two cannot drift into two readings of one form.
+ */
+export function paperWaiverAttestation(formData: FormData): {
+  medicalAttested: boolean;
+  guardian: ReturnType<typeof paperGuardianFrom>;
+} {
+  return {
+    medicalAttested: paperWaiverFields(formData).medicalAttested,
+    guardian: paperGuardianFrom(formData),
+  };
+}
+
+/**
  * **The fields `PaperWaiverControl` submits for a minor**, read back
  * (ADR 20260907-guardian-co-signature).
  *

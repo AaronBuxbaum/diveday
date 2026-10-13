@@ -66,7 +66,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     participantTypeCertBookingId,
   } = rows;
   const {
-    markWaiverInPersonAction,
+    markRosterWaiverInPersonAction,
     markPaymentAction,
     removeBookingAction,
     setParticipantTypeAction,
@@ -244,7 +244,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     heldSeatLastDiveDay,
     packageDivesByBooking,
     participantTypeCertBookingId,
-    markWaiverInPersonAction,
+    markRosterWaiverInPersonAction,
     markPaymentAction,
     removeBookingAction,
     setParticipantTypeAction,
