@@ -46,12 +46,24 @@ export type MastheadFacts = {
  * reader's own locale.
  */
 export function mastheadWhenLine(facts: MastheadFacts, locale: string, now: Date): string {
+  const { day, hours } = mastheadWhenParts(facts, locale, now);
+  return `${day} · ${hours}`;
+}
+
+/** The when line's two halves: the day and date, and the time range. */
+function mastheadWhenParts(
+  facts: MastheadFacts,
+  locale: string,
+  now: Date,
+): { day: string; hours: string } {
   const { trip, shop } = facts;
   const relative = formatRelativeDay(trip.startsAt, now, locale, shop.timezone);
   const lead = relative.charAt(0).toLocaleUpperCase(locale) + relative.slice(1);
   const date = formatShortDate(trip.startsAt, locale, shop.timezone);
-  const hours = formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone);
-  return `${lead} · ${date} · ${hours}`;
+  return {
+    day: `${lead} · ${date}`,
+    hours: formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone),
+  };
 }
 
 /**
@@ -180,12 +192,28 @@ export function ReadyBookedHeader({
         title={t("booking.confirmedHeading", { name: firstName })}
       >
         <p className="font-semibold text-foreground">{bindTitleDash(facts.trip.title)}</p>
-        <p className="mt-1">{mastheadWhenLine(facts, locale, now)}</p>
+        <BookedWhen facts={facts} locale={locale} now={now} />
         <p className="mt-1 font-medium text-foreground">{mastheadArrivalLine(facts, locale, t)}</p>
       </EarnedMoment>
       <MastheadDoors facts={facts} t={t} />
       {children}
     </header>
+  );
+}
+
+/**
+ * **The booked card's when, on two lines** (#2504). The page a diver
+ * screenshots for the dock wrapped its one line inside the time range at 390
+ * ("7:00" / "AM to 11:30 AM"); the day and date take a line, and the whole
+ * range the next, unbreakable.
+ */
+function BookedWhen({ facts, locale, now }: { facts: MastheadFacts; locale: string; now: Date }) {
+  const { day, hours } = mastheadWhenParts(facts, locale, now);
+  return (
+    <p className="mt-1">
+      <span className="block">{day}</span>
+      <span className="block whitespace-nowrap">{hours}</span>
+    </p>
   );
 }
 
