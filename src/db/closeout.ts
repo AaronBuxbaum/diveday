@@ -428,7 +428,7 @@ export async function listHeadCountCloses(
     db
       .select({ id: trips.id, plannedDives: trips.plannedDives })
       .from(trips)
-      .where(and(eq(trips.shopId, shopId), inArray(trips.id, [...tripIds]))),
+      .where(and(eq(trips.shopId, shopId), inArray(trips.id, [...tripIds]), liveTrip())),
     db
       .select({
         tripId: rollCallEvents.tripId,

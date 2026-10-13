@@ -140,8 +140,7 @@ export default async function TripManifestPage({
   const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t);
 
   const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
-  // A checkpoint this plan does not have leaves the address bar rather than
-  // opening the dock under it (#2508).
+  // A checkpoint this plan lacks leaves the address bar, never opening the dock (#2508).
   if ("stale" in opened) redirect(shopPath(shopSlug, "trips", tripId, "manifest"));
   const { checkpoints, checkpoint, isDeparture, manifest } = opened;
   const todayTrailBySubject = personTrailIndex(completeManifests, locale, shop.timezone, t);
