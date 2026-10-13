@@ -267,6 +267,27 @@ describe("a night boat back after midnight, Home never tapped", () => {
     expect(departureStage(at("2026-07-22T07:00:00.000Z")).finished).toBe(true);
   });
 
+  // The crew's word beats the clock: a boat that says "Heading in" at 02:40,
+  // after its scheduled return, is still at sea at 03:00 (domain review of
+  // #2409). Its word holds to the end of the day it was said on.
+  const lateHeadingIn = {
+    stage: "heading_in" as TripStage,
+    recordedAt: new Date("2026-07-22T06:40:00.000Z"),
+  };
+  const lateAt = (now: string) => ({ ...at(now), stage: lateHeadingIn });
+
+  it("a word said after the scheduled return still speaks at 03:00", () => {
+    expect(tripPhaseOf(lateAt("2026-07-22T07:00:00.000Z"))).toBe("aboard");
+    expect(boatStageOf(lateAt("2026-07-22T07:00:00.000Z"))?.stage).toBe("heading_in");
+    expect(departureStage(lateAt("2026-07-22T07:00:00.000Z")).finished).toBe(false);
+  });
+
+  it("a word said after the scheduled return holds to the end of the day it was said", () => {
+    // 23:59 Wed local still speaks; 00:00 Thu does not.
+    expect(tripPhaseOf(lateAt("2026-07-23T03:59:00.000Z"))).toBe("aboard");
+    expect(tripPhaseOf(lateAt("2026-07-23T04:00:00.000Z"))).toBe("back");
+  });
+
   it("is never finished sooner than its untapped twin", () => {
     for (const now of [
       "2026-07-22T05:59:00.000Z",
