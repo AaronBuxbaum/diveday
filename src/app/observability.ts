@@ -17,8 +17,33 @@ import type * as Sentry from "@sentry/nextjs";
 import { redactCapabilityUrl } from "@/lib/capability-urls";
 import { errorCodeToken } from "@/lib/error-token";
 
-/** Same redaction applied to Sentry breadcrumbs (navigation, fetch, xhr). */
+/** What an exception's or a logged line's text becomes: the text is gone. */
+const REDACTED_MESSAGE = "[redacted]";
+
+/**
+ * React's production build throws `Minified React error #418; visit
+ * https://react.dev/errors/418?args[]=… for the full message`. The number is
+ * the diagnosis and says nothing about anybody; the link's arguments can carry
+ * rendered text, so only the number is kept.
+ */
+const MINIFIED_REACT_ERROR = /^Minified React error #\d+/;
+
+/** A message's text replaced, unless it is a minified React error's number. */
+function redactedText(text: string | undefined): string {
+  return text?.match(MINIFIED_REACT_ERROR)?.[0] ?? REDACTED_MESSAGE;
+}
+
+/**
+ * Same redaction applied to Sentry breadcrumbs (navigation, fetch, xhr), and a
+ * console breadcrumb's text and arguments dropped: a logged line is often the
+ * very error text `redactEvent` scrubs from the exception (security review of
+ * issue #2531).
+ */
 export function redactBreadcrumb(breadcrumb: Sentry.Breadcrumb): Sentry.Breadcrumb {
+  if (breadcrumb.category === "console") {
+    if (breadcrumb.message !== undefined) breadcrumb.message = redactedText(breadcrumb.message);
+    if (breadcrumb.data) delete breadcrumb.data.arguments;
+  }
   const data = breadcrumb.data;
   if (!data) return breadcrumb;
   if (breadcrumb.category === "navigation") {
@@ -90,15 +115,13 @@ const CLIENT_ADDRESS_HEADERS = new Set([
   "x-cluster-client-ip",
 ]);
 
-/** What an exception's message becomes: the text is gone, a code stays. */
-const REDACTED_MESSAGE = "[redacted]";
-
 /**
  * Every exception's message replaced (issue #2531). A message can quote
  * whatever the failing call was handed: a bounce's recipient, a driver's bound
  * parameters, a provider's free text. The class is already the exception's
  * `type`; the thrown error's own code, or its cause's (`23505`, `ECONNRESET`),
- * is kept on the outermost one when it has the shape of a code.
+ * is kept on the outermost one when it has the shape of a code. A minified
+ * React error keeps its number (`redactedText`).
  */
 function redactException(event: Sentry.ErrorEvent, hint: Sentry.EventHint | undefined) {
   const values = event.exception?.values;
@@ -106,7 +129,8 @@ function redactException(event: Sentry.ErrorEvent, hint: Sentry.EventHint | unde
   const code = hint ? errorCodeToken(hint.originalException) : undefined;
   values.forEach((value, index) => {
     const outermost = index === values.length - 1;
-    value.value = outermost && code ? `${REDACTED_MESSAGE} ${code}` : REDACTED_MESSAGE;
+    const text = redactedText(value.value);
+    value.value = outermost && code && text === REDACTED_MESSAGE ? `${text} ${code}` : text;
   });
 }
 
