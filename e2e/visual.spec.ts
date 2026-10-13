@@ -141,8 +141,8 @@ import { mintOnboardFormPath } from "./setup-link";
  *
  * Before every screenshot, `capture` runs `paintWholeDocument` (see its own
  * comment): it scrolls the document through to force the compositor to
- * rasterize every band, then waits on `document.fonts.ready`. The Geist fonts
- * (next/font/google) load asynchronously; without that wait a capture can land
+ * rasterize every band, then waits on `document.fonts.ready`. The webfonts
+ * (next/font/local, `src/app/_fonts/`) load asynchronously; without that wait a capture can land
  * on either side of the fallback→webfont swap and render the same text with
  * different sub-pixel antialiasing, which reads as a false diff.
  *
