@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
-import { eq, getTableName } from "drizzle-orm";
+import { eq, getTableName, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { RETENTION_DAYS, UNBOUNDED_BY_DECISION } from "@/lib/retention";
+import { RETENTION_DAYS, type RetainedTable, UNBOUNDED_BY_DECISION } from "@/lib/retention";
 import { fileScopedShopContext } from "@/test/db";
 import { setBookingPayment } from "./payments";
-import { pruneExpiredRecords } from "./retention";
+import { PRUNE_ARMS, pruneExpiredRecords } from "./retention";
 import * as schema from "./schema";
 import {
   accountSessions,
@@ -542,6 +542,390 @@ describe("pruneExpiredRecords", () => {
       expect(outcome.capped).toBe(false);
     }
   });
+});
+
+/**
+ * **Declaration is not deletion.** The classification below proves every
+ * table is declared somewhere; this proves every declared window deletes. For
+ * each `RETENTION_DAYS` key it writes one row a day past the window and one a
+ * day inside it, on the column the window is measured from, and expects the
+ * pass to take exactly the first. An arm that names the wrong column leaves
+ * the stale row (its other timestamps default to the database's own now,
+ * months after {@link NOW}) and fails here.
+ *
+ * `satisfies Record<RetainedTable, …>`: a new window does not compile until
+ * it has a row here.
+ */
+type Fixture = Awaited<ReturnType<typeof retentionContext>> & {
+  waiverRecordId: string;
+  people: [string, string];
+};
+let unique = 0;
+const token = () => {
+  unique += 1;
+  return `retention-${unique}`;
+};
+const idOf = <T extends { id: string }>([row]: T[]) => {
+  if (!row) throw new Error("fixture insert returned nothing");
+  return row.id;
+};
+
+const STALE_AND_FRESH = {
+  stripe_webhook_events: async ({ db }, at) =>
+    idOf(
+      await db
+        .insert(schema.stripeWebhookEvents)
+        .values({ id: `evt_${token()}`, type: "charge.refunded", occurredAt: at })
+        .returning({ id: schema.stripeWebhookEvents.id }),
+    ),
+  integration_events: async ({ db, shop }, at) =>
+    idOf(
+      await db
+        .insert(schema.integrationEvents)
+        .values({
+          shopId: shop.id,
+          eventType: "booking.created",
+          entityType: "booking",
+          entityId: token(),
+          idempotencyKey: token(),
+          payload: {},
+          createdAt: at,
+        })
+        .returning({ id: schema.integrationEvents.id }),
+    ),
+  integration_oauth_states: async ({ db, shop, people }, at) =>
+    idOf(
+      await db
+        .insert(schema.integrationOauthStates)
+        .values({
+          stateHash: token(),
+          shopId: shop.id,
+          personId: people[0],
+          provider: "shopify",
+          expiresAt: at,
+        })
+        .returning({ id: schema.integrationOauthStates.id }),
+    ),
+  notification_deliveries: async ({ db, shop, entry }, at, n) =>
+    idOf(
+      await db
+        .insert(schema.notificationDeliveries)
+        .values({
+          shopId: shop.id,
+          bookingId: entry.booking.id,
+          kind: n === 0 ? "booking_confirmation" : "waiver_request",
+          status: "sent",
+          attemptedAt: at,
+        })
+        .returning({ id: schema.notificationDeliveries.id }),
+    ),
+  notification_delivery_attempts: async ({ db, shop, entry }, at) =>
+    idOf(
+      await db
+        .insert(schema.notificationDeliveryAttempts)
+        .values({
+          shopId: shop.id,
+          bookingId: entry.booking.id,
+          kind: "booking_confirmation",
+          status: "sent",
+          attemptedAt: at,
+        })
+        .returning({ id: schema.notificationDeliveryAttempts.id }),
+    ),
+  activity_events: async ({ db, shop, people }, at) =>
+    idOf(
+      await db
+        .insert(schema.activityEvents)
+        .values({ shopId: shop.id, actorPersonId: people[0], code: token(), occurredAt: at })
+        .returning({ id: schema.activityEvents.id }),
+    ),
+  account_tokens: async ({ db, owner }, at) =>
+    idOf(
+      await db
+        .insert(schema.accountTokens)
+        .values({
+          userAccountId: owner?.id ?? "",
+          purpose: "password_reset",
+          tokenHash: token(),
+          expiresAt: at,
+        })
+        .returning({ id: schema.accountTokens.id }),
+    ),
+  account_sessions: async ({ db, shop, owner, people }, at) =>
+    idOf(
+      await db
+        .insert(schema.accountSessions)
+        .values({
+          userAccountId: owner?.id ?? "",
+          token: token(),
+          expiresAt: at,
+          personId: people[0],
+          shopId: shop.id,
+          shopSlug: shop.slug,
+          roles: [],
+          name: "Retention",
+        })
+        .returning({ id: schema.accountSessions.id }),
+    ),
+  shop_contact_email_confirmation_tokens: async ({ db, shop }, at) =>
+    idOf(
+      await db
+        .insert(schema.shopContactEmailConfirmationTokens)
+        .values({
+          shopId: shop.id,
+          email: "desk@example.com",
+          tokenHash: token(),
+          expiresAt: at,
+        })
+        .returning({ id: schema.shopContactEmailConfirmationTokens.id }),
+    ),
+  booking_capabilities: async ({ db, shop, entry }, at, n) =>
+    idOf(
+      await db
+        .insert(schema.bookingCapabilities)
+        .values({
+          shopId: shop.id,
+          bookingId: entry.booking.id,
+          purpose: n === 0 ? "readiness" : "confirm",
+          tokenHash: token(),
+          expiresAt: at,
+        })
+        .returning({ id: schema.bookingCapabilities.id }),
+    ),
+  booking_payment_events: async ({ db, shop, entry }, at) =>
+    idOf(
+      await db
+        .insert(schema.bookingPaymentEvents)
+        .values({
+          shopId: shop.id,
+          bookingId: entry.booking.id,
+          status: "paid",
+          currency: "usd",
+          operation: "manual_mark",
+          occurredAt: at,
+        })
+        .returning({ id: schema.bookingPaymentEvents.id }),
+    ),
+  push_subscriptions: async ({ db, shop, reef, people }, at) =>
+    idOf(
+      await db
+        .insert(schema.pushSubscriptions)
+        .values({
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: people[0],
+          endpoint: `https://push.example.com/${token()}`,
+          p256dh: "key",
+          auth: "auth",
+          createdAt: at,
+        })
+        .returning({ id: schema.pushSubscriptions.id }),
+    ),
+  trip_desk_events: async ({ db, shop, reef }, at) =>
+    idOf(
+      await db
+        .insert(schema.tripDeskEvents)
+        .values({ shopId: shop.id, tripId: reef.id, kind: "arrival", occurredAt: at })
+        .returning({ id: schema.tripDeskEvents.id }),
+    ),
+  trip_read_marks: async ({ db, shop, reef, people }, at, n) =>
+    idOf(
+      await db
+        .insert(schema.tripReadMarks)
+        .values({ shopId: shop.id, tripId: reef.id, personId: people[n], lastSeenAt: at })
+        .returning({ id: schema.tripReadMarks.id }),
+    ),
+  form_drafts: async ({ db, shop, people }, at) =>
+    idOf(
+      await db
+        .insert(schema.formDrafts)
+        .values({ shopId: shop.id, personId: people[0], form: token(), fields: {}, savedAt: at })
+        .returning({ id: schema.formDrafts.id }),
+    ),
+  demo_entries: async ({ db }, at) =>
+    idOf(
+      await db
+        .insert(schema.demoEntries)
+        .values({ source: token(), role: "owner", enteredAt: at })
+        .returning({ id: schema.demoEntries.id }),
+    ),
+  inbound_messages: async ({ db, shop }, at) =>
+    idOf(
+      await db
+        .insert(schema.inboundMessages)
+        .values({
+          shopId: shop.id,
+          channel: "email",
+          fromAddress: "diver@example.com",
+          body: "Hello",
+          receivedAt: at,
+          providerMessageId: token(),
+        })
+        .returning({ id: schema.inboundMessages.id }),
+    ),
+  staff_replies: async ({ db, shop, people }, at) =>
+    idOf(
+      await db
+        .insert(schema.staffReplies)
+        .values({
+          shopId: shop.id,
+          personId: people[0],
+          channel: "email",
+          toAddress: "diver@example.com",
+          body: "Hello",
+          locale: "en-US",
+          status: "sent",
+          sentAt: at,
+        })
+        .returning({ id: schema.staffReplies.id }),
+    ),
+  weekly_digest_sends: async ({ db, shop, people }, at, n) =>
+    idOf(
+      await db
+        .insert(schema.weeklyDigestSends)
+        .values({
+          shopId: shop.id,
+          personId: people[n],
+          weekOf: "2026-01-05",
+          unsubscribeTokenHash: token(),
+          createdAt: at,
+        })
+        .returning({ id: schema.weeklyDigestSends.id }),
+    ),
+  crew_notices: async ({ db, shop, reef, people }, at) =>
+    idOf(
+      await db
+        .insert(schema.crewNotices)
+        .values({
+          shopId: shop.id,
+          personId: people[0],
+          tripId: reef.id,
+          change: "assigned",
+          createdAt: at,
+        })
+        .returning({ id: schema.crewNotices.id }),
+    ),
+  notification_send_queue: async ({ db, shop }, at) =>
+    idOf(
+      await db
+        .insert(schema.notificationSendQueue)
+        .values({
+          shopId: shop.id,
+          idempotencyKey: token(),
+          nextAttemptAt: at,
+          status: "sent",
+          updatedAt: at,
+        })
+        .returning({ id: schema.notificationSendQueue.id }),
+    ),
+  waiver_deliveries: async ({ db, shop, waiverRecordId }, at, n) =>
+    idOf(
+      await db
+        .insert(schema.waiverDeliveries)
+        .values({
+          shopId: shop.id,
+          waiverRecordId,
+          channel: n === 0 ? "email" : "text",
+          status: "sent",
+          attemptedAt: at,
+        })
+        .returning({ id: schema.waiverDeliveries.id }),
+    ),
+  setup_requests: async ({ db }, at) =>
+    idOf(
+      await db
+        .insert(schema.setupRequests)
+        .values({
+          shopName: "Retention Divers",
+          region: "Florida",
+          runsBoat: true,
+          currentSystem: "paper",
+          contactName: "Ret Ention",
+          email: `${token()}@example.com`,
+          source: "pricing",
+          locale: "en-US",
+          createdAt: at,
+        })
+        .returning({ id: schema.setupRequests.id }),
+    ),
+  incident_reports: async ({ db, shop, reef, people }, at) =>
+    idOf(
+      await db
+        .insert(schema.incidentReports)
+        .values({ shopId: shop.id, tripId: reef.id, createdByPersonId: people[0], occurredAt: at })
+        .returning({ id: schema.incidentReports.id }),
+    ),
+  lost_items: async ({ db, shop, reef }, at) =>
+    idOf(
+      await db
+        .insert(schema.lostItems)
+        .values({
+          shopId: shop.id,
+          tripId: reef.id,
+          description: "blue mask",
+          status: "returned",
+          resolvedAt: at,
+        })
+        .returning({ id: schema.lostItems.id }),
+    ),
+  departure_notes: async ({ db, shop, reef }, at) =>
+    idOf(
+      await db
+        .insert(schema.departureNotes)
+        .values({ shopId: shop.id, tripId: reef.id, body: "Bring a jacket", sentAt: at })
+        .returning({ id: schema.departureNotes.id }),
+    ),
+} satisfies Record<RetainedTable, (fixture: Fixture, at: Date, n: 0 | 1) => Promise<string>>;
+
+describe("every retention window deletes", () => {
+  it.each(Object.keys(RETENTION_DAYS) as RetainedTable[])(
+    "%s: takes the row past its window and keeps the one inside it",
+    async (table) => {
+      const base = await retentionContext();
+      const { db, shop } = base;
+      const [record] = await db
+        .select({ id: schema.waiverRecords.id })
+        .from(schema.waiverRecords)
+        .where(eq(schema.waiverRecords.shopId, shop.id))
+        .limit(1);
+      const staff = await db
+        .select({ id: schema.people.id })
+        .from(schema.people)
+        .where(eq(schema.people.shopId, shop.id))
+        .limit(2);
+      if (!record || staff.length < 2) throw new Error("seeded fixtures missing");
+      // Clear the seat's own one-per-kind rows so the two written here are the only ones.
+      await db
+        .delete(schema.waiverDeliveries)
+        .where(eq(schema.waiverDeliveries.waiverRecordId, record.id));
+      await db
+        .delete(schema.notificationDeliveries)
+        .where(eq(schema.notificationDeliveries.bookingId, base.entry.booking.id));
+      await db
+        .delete(schema.bookingCapabilities)
+        .where(eq(schema.bookingCapabilities.bookingId, base.entry.booking.id));
+      await db.delete(schema.tripReadMarks).where(eq(schema.tripReadMarks.tripId, base.reef.id));
+      await db.delete(schema.weeklyDigestSends).where(eq(schema.weeklyDigestSends.shopId, shop.id));
+      const fixture: Fixture = {
+        ...base,
+        waiverRecordId: record.id,
+        people: [staff[0]?.id ?? "", staff[1]?.id ?? ""],
+      };
+      const days = RETENTION_DAYS[table];
+      const write = STALE_AND_FRESH[table];
+      const stale = await write(fixture, daysAgo(days + 1), 0);
+      const fresh = await write(fixture, daysAgo(days - 1), 1);
+
+      await pruneExpiredRecords(db, { now: NOW });
+
+      const arm = PRUNE_ARMS[table];
+      const left = await db
+        .select({ id: arm.id })
+        .from(arm.from)
+        .where(inArray(arm.id, [stale, fresh]));
+      expect(left.map((row) => row.id)).toEqual([fresh]);
+    },
+  );
 });
 
 /**

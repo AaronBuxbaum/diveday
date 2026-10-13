@@ -1,4 +1,5 @@
-import { and, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, inArray, isNotNull, isNull, lt, SQL, sql } from "drizzle-orm";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -47,7 +48,7 @@ import {
  * This file only knows *which column* each window is measured against and how
  * to delete safely.
  *
- * Every arm is:
+ * Every arm ({@link PRUNE_ARMS}) is:
  *
  * - **Bounded.** At most {@link PRUNE_BATCH_LIMIT} rows per table per pass, so
  *   one run can never outlive the platform's function ceiling. A backlog
@@ -79,6 +80,11 @@ export type PruneSummary = {
   failedTables: RetainedTable[];
 };
 
+/** `clock < cutoff`, for a column or an expression (drizzle types the two apart). */
+function olderThan(clock: PgColumn | SQL, cutoff: Date): SQL {
+  return clock instanceof SQL ? lt(clock, cutoff) : lt(clock, cutoff);
+}
+
 /**
  * Deletes at most `PRUNE_BATCH_LIMIT` rows in two statements — select the
  * eligible ids, then delete exactly those — rather than one `DELETE ... LIMIT`,
@@ -86,18 +92,28 @@ export type PruneSummary = {
  * Two statements are also what makes the count returned here the count actually
  * deleted rather than an estimate.
  */
-async function pruneBatch<Id extends string>(
+async function pruneBatch(
+  db: AppDb,
   table: RetainedTable,
-  selectIds: () => Promise<Array<{ id: Id }>>,
-  deleteIds: (ids: Id[]) => Promise<unknown>,
+  arm: PruneArm,
+  now: Date,
 ): Promise<PruneOutcome> {
   const retentionDays = RETENTION_DAYS[table];
   try {
-    const rows = await selectIds();
+    const rows = (await db
+      .select({ id: arm.id })
+      .from(arm.from)
+      .where(and(olderThan(arm.clock, retentionCutoff(table, now)), arm.extraWhere))
+      .limit(PRUNE_BATCH_LIMIT)) as { id: string }[];
     if (rows.length === 0) {
       return { table, deleted: 0, capped: false, failed: false, retentionDays };
     }
-    await deleteIds(rows.map((row) => row.id));
+    await db.delete(arm.from).where(
+      inArray(
+        arm.id,
+        rows.map((row) => row.id),
+      ),
+    );
     return {
       table,
       deleted: rows.length,
@@ -116,6 +132,226 @@ async function pruneBatch<Id extends string>(
 }
 
 /**
+ * **Which column each window is measured against**, one row per retained
+ * table, in the order a pass prunes them. `clock` is the instant the row's
+ * window runs from; `extraWhere` is what the clock alone must not take (a send
+ * still in flight, an item the shop is still holding). Every row here is
+ * pruned the same way by {@link pruneBatch}, and `retention.test.ts` inserts a
+ * stale and a fresh row for every key and proves the arm deletes exactly one.
+ */
+type PruneArm = {
+  from: PgTable;
+  id: PgColumn;
+  clock: PgColumn | SQL;
+  extraWhere?: SQL;
+};
+
+export const PRUNE_ARMS = {
+  // Stripe's own ledger. `occurred_at` (Stripe's event-creation time), not
+  // `received_at`: the window's whole purpose is to outlast Stripe's retry
+  // horizon, which is measured from when the event happened.
+  stripe_webhook_events: {
+    from: stripeWebhookEvents,
+    id: stripeWebhookEvents.id,
+    clock: stripeWebhookEvents.occurredAt,
+  },
+  integration_events: {
+    from: integrationEvents,
+    id: integrationEvents.id,
+    clock: integrationEvents.createdAt,
+  },
+  integration_oauth_states: {
+    from: integrationOauthStates,
+    id: integrationOauthStates.id,
+    clock: integrationOauthStates.expiresAt,
+  },
+  // Measured from the attempt, not from the row's insert — a retry queued long
+  // after the original send is its own row with its own `attempted_at`.
+  notification_delivery_attempts: {
+    from: notificationDeliveryAttempts,
+    id: notificationDeliveryAttempts.id,
+    clock: notificationDeliveryAttempts.attemptedAt,
+  },
+  // The latest delivery outcome is mutable state, but it is still an
+  // operational trail: its provider detail and send error are the evidence a
+  // shop reads when asking whether a message reached a diver. Measure it from
+  // the latest send attempt, which is refreshed whenever a new send replaces
+  // the row.
+  notification_deliveries: {
+    from: notificationDeliveries,
+    id: notificationDeliveries.id,
+    clock: notificationDeliveries.attemptedAt,
+  },
+  activity_events: {
+    from: activityEvents,
+    id: activityEvents.id,
+    clock: activityEvents.occurredAt,
+  },
+  // The one arm measured from a column that is not "when it happened":
+  // `expires_at` is when the credential stopped being usable, so the window is
+  // "90 days after it went dead", and a token still live at any age is never
+  // eligible. A used or superseded token still carries its original
+  // `expires_at`, so it ages out on the same clock.
+  account_tokens: {
+    from: accountTokens,
+    id: accountTokens.id,
+    clock: accountTokens.expiresAt,
+  },
+  // Same clock as account_tokens. A session past its own `expires_at` is one the
+  // auth layer already refuses; deleting it takes its IP address and user agent
+  // with it, and its step-up grants cascade away.
+  account_sessions: {
+    from: accountSessions,
+    id: accountSessions.id,
+    clock: accountSessions.expiresAt,
+  },
+  // Same shape and same clock as account_tokens: measured from each link's
+  // own `expires_at`, so a live confirmation link is never eligible.
+  shop_contact_email_confirmation_tokens: {
+    from: shopContactEmailConfirmationTokens,
+    id: shopContactEmailConfirmationTokens.id,
+    clock: shopContactEmailConfirmationTokens.expiresAt,
+  },
+  // Booking links (H-82, issue #1726), on the same clock as the two token
+  // arms above. `expires_at` only, never `revoked_at`: a revoked link can still
+  // be inside its own life, and an unexpired row is never eligible whatever
+  // else is true of it.
+  booking_capabilities: {
+    from: bookingCapabilities,
+    id: bookingCapabilities.id,
+    clock: bookingCapabilities.expiresAt,
+  },
+  // The local money ledger (DATA-M3). Longest window here by a wide margin;
+  // pruned at all only so that "how long is a shop's money history kept?" has
+  // a stated answer rather than an implicit "forever".
+  booking_payment_events: {
+    from: bookingPaymentEvents,
+    id: bookingPaymentEvents.id,
+    clock: bookingPaymentEvents.occurredAt,
+  },
+  // Device push credentials (ADR 20260804-manifest-web-push). Pruned by
+  // `created_at` rather than by the trip's departure: the row's whole value is
+  // short-lived, and keying on its own age means a subscription whose trip was
+  // moved, deleted, or never sailed is still bounded.
+  push_subscriptions: {
+    from: pushSubscriptions,
+    id: pushSubscriptions.id,
+    clock: pushSubscriptions.createdAt,
+  },
+  // The Monday email's per-week claims and their opt-out link hashes. Pruned
+  // on their own age: the claim is spent once its week is over.
+  weekly_digest_sends: {
+    from: weeklyDigestSends,
+    id: weeklyDigestSends.id,
+    clock: weeklyDigestSends.createdAt,
+  },
+  // Crew news, spent the hour it settles (ADR 20261009-crew-hear-about-their-boats).
+  crew_notices: {
+    from: crewNotices,
+    id: crewNotices.id,
+    clock: crewNotices.createdAt,
+  },
+  // Finished sends only, on the instant they were finished. `sent`, or
+  // `failed` with the payload already cleared: a parked
+  // `sealed_payload_unreadable` row keeps its payload while the drain may still
+  // offer it, so it never matches (`drainableStatus`, src/db/notifications.ts).
+  // A `queued` or `processing` row is someone's work in flight and never
+  // matches either.
+  notification_send_queue: {
+    from: notificationSendQueue,
+    id: notificationSendQueue.id,
+    clock: notificationSendQueue.updatedAt,
+    extraWhere: and(
+      inArray(notificationSendQueue.status, ["sent", "failed"]),
+      isNull(notificationSendQueue.payloadSealed),
+    ),
+  },
+  // A waiver link's latest delivery outcome, on its own latest attempt: a new
+  // send replaces the row and moves `attempted_at` forward.
+  waiver_deliveries: {
+    from: waiverDeliveries,
+    id: waiverDeliveries.id,
+    clock: waiverDeliveries.attemptedAt,
+  },
+  // A set-up request on the day it was made; its single-use link goes with it
+  // (`on delete cascade`).
+  setup_requests: {
+    from: setupRequests,
+    id: setupRequests.id,
+    clock: setupRequests.createdAt,
+  },
+  // Found items, only once resolved: an open one is still the shop's to hold,
+  // so `resolved_at` is both the clock and the filter (batch 4, J2).
+  lost_items: {
+    from: lostItems,
+    id: lostItems.id,
+    clock: lostItems.resolvedAt,
+    extraWhere: isNotNull(lostItems.resolvedAt),
+  },
+  // Notes sent to a whole departure, on the send's own time (batch 4, J4).
+  departure_notes: {
+    from: departureNotes,
+    id: departureNotes.id,
+    clock: departureNotes.sentAt,
+  },
+  // The manifest's shift catch-up (issues #1202, #1187). Pruned on the event's
+  // own `occurred_at`: a desk act is a same-day handoff, so its age is the only
+  // thing that decides, and a departure that was moved or never sailed is
+  // bounded the same way as one that did.
+  trip_desk_events: {
+    from: tripDeskEvents,
+    id: tripDeskEvents.id,
+    clock: tripDeskEvents.occurredAt,
+  },
+  // A staff form's draft (ADR 20260906-before-you-ask, decision 3), on the
+  // moment it was last typed into: the reader already hides one older than a
+  // day, so this clears rows nobody can reach.
+  form_drafts: {
+    from: formDrafts,
+    id: formDrafts.id,
+    clock: formDrafts.savedAt,
+  },
+  // The founder digest's demo count (ADR 20261007-founder-metrics), on the
+  // instant of the entry.
+  demo_entries: {
+    from: demoEntries,
+    id: demoEntries.id,
+    clock: demoEntries.enteredAt,
+  },
+  // The marks that point into those events, on `last_seen_at` rather than a
+  // creation time: a mark a staffer keeps moving forward is live state, and
+  // only one nobody has touched in a month has nothing left to point at.
+  trip_read_marks: {
+    from: tripReadMarks,
+    id: tripReadMarks.id,
+    clock: tripReadMarks.lastSeenAt,
+  },
+  // The inbox (ADR 20260907-two-way-inbox), replies first: a reply names the
+  // message it answered with ON DELETE SET NULL, so either order is safe, but
+  // deleting the answer before the question keeps a half-pruned thread from
+  // reading as a message nobody answered. Both measured on the instant the
+  // words arrived or went out, never on the row's own insert.
+  staff_replies: {
+    from: staffReplies,
+    id: staffReplies.id,
+    clock: staffReplies.sentAt,
+  },
+  inbound_messages: {
+    from: inboundMessages,
+    id: inboundMessages.id,
+    clock: inboundMessages.receivedAt,
+  },
+  // Incident reports (ADR 20261012-incident-reports): seven years from when the
+  // incident happened, or from when a draft that never said so was started.
+  // Its people and addenda cascade with it.
+  incident_reports: {
+    from: incidentReports,
+    id: incidentReports.id,
+    clock: sql`coalesce(${incidentReports.occurredAt}, ${incidentReports.createdAt})`,
+  },
+} satisfies Record<RetainedTable, PruneArm>;
+
+/**
  * One prune pass over every retained table. Safe to run repeatedly and safe to
  * run concurrently with itself: each arm deletes only rows it has just
  * observed to be past the window, so a second pass simply finds fewer.
@@ -128,440 +364,10 @@ export async function pruneExpiredRecords(
   opts: { now?: Date } = {},
 ): Promise<PruneSummary> {
   const now = opts.now ?? nowDate();
-  const cutoff = (table: RetainedTable) => retentionCutoff(table, now);
-
   const outcomes: PruneOutcome[] = [];
-
-  // Stripe's own ledger. `occurred_at` (Stripe's event-creation time), not
-  // `received_at`: the window's whole purpose is to outlast Stripe's retry
-  // horizon, which is measured from when the event happened.
-  outcomes.push(
-    await pruneBatch(
-      "stripe_webhook_events",
-      () =>
-        db
-          .select({ id: stripeWebhookEvents.id })
-          .from(stripeWebhookEvents)
-          .where(lt(stripeWebhookEvents.occurredAt, cutoff("stripe_webhook_events")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(stripeWebhookEvents).where(inArray(stripeWebhookEvents.id, ids)),
-    ),
-  );
-
-  outcomes.push(
-    await pruneBatch(
-      "integration_events",
-      () =>
-        db
-          .select({ id: integrationEvents.id })
-          .from(integrationEvents)
-          .where(lt(integrationEvents.createdAt, cutoff("integration_events")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(integrationEvents).where(inArray(integrationEvents.id, ids)),
-    ),
-  );
-
-  outcomes.push(
-    await pruneBatch(
-      "integration_oauth_states",
-      () =>
-        db
-          .select({ id: integrationOauthStates.id })
-          .from(integrationOauthStates)
-          .where(lt(integrationOauthStates.expiresAt, cutoff("integration_oauth_states")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(integrationOauthStates).where(inArray(integrationOauthStates.id, ids)),
-    ),
-  );
-
-  // Measured from the attempt, not from the row's insert — a retry queued long
-  // after the original send is its own row with its own `attempted_at`.
-  outcomes.push(
-    await pruneBatch(
-      "notification_delivery_attempts",
-      () =>
-        db
-          .select({ id: notificationDeliveryAttempts.id })
-          .from(notificationDeliveryAttempts)
-          .where(
-            lt(notificationDeliveryAttempts.attemptedAt, cutoff("notification_delivery_attempts")),
-          )
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) =>
-        db
-          .delete(notificationDeliveryAttempts)
-          .where(inArray(notificationDeliveryAttempts.id, ids)),
-    ),
-  );
-
-  // The latest delivery outcome is mutable state, but it is still an
-  // operational trail: its provider detail and send error are the evidence a
-  // shop reads when asking whether a message reached a diver. Measure it from
-  // the latest send attempt, which is refreshed whenever a new send replaces
-  // the row.
-  outcomes.push(
-    await pruneBatch(
-      "notification_deliveries",
-      () =>
-        db
-          .select({ id: notificationDeliveries.id })
-          .from(notificationDeliveries)
-          .where(lt(notificationDeliveries.attemptedAt, cutoff("notification_deliveries")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(notificationDeliveries).where(inArray(notificationDeliveries.id, ids)),
-    ),
-  );
-
-  outcomes.push(
-    await pruneBatch(
-      "activity_events",
-      () =>
-        db
-          .select({ id: activityEvents.id })
-          .from(activityEvents)
-          .where(lt(activityEvents.occurredAt, cutoff("activity_events")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(activityEvents).where(inArray(activityEvents.id, ids)),
-    ),
-  );
-
-  // The one arm measured from a column that is not "when it happened":
-  // `expires_at` is when the credential stopped being usable, so the window is
-  // "90 days after it went dead", and a token still live at any age is never
-  // eligible. A used or superseded token still carries its original
-  // `expires_at`, so it ages out on the same clock.
-  outcomes.push(
-    await pruneBatch(
-      "account_tokens",
-      () =>
-        db
-          .select({ id: accountTokens.id })
-          .from(accountTokens)
-          .where(lt(accountTokens.expiresAt, cutoff("account_tokens")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(accountTokens).where(inArray(accountTokens.id, ids)),
-    ),
-  );
-
-  // Same clock as account_tokens. A session past its own `expires_at` is one the
-  // auth layer already refuses; deleting it takes its IP address and user agent
-  // with it, and its step-up grants cascade away.
-  outcomes.push(
-    await pruneBatch(
-      "account_sessions",
-      () =>
-        db
-          .select({ id: accountSessions.id })
-          .from(accountSessions)
-          .where(lt(accountSessions.expiresAt, cutoff("account_sessions")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(accountSessions).where(inArray(accountSessions.id, ids)),
-    ),
-  );
-
-  // Same shape and same clock as account_tokens: measured from each link's
-  // own `expires_at`, so a live confirmation link is never eligible.
-  outcomes.push(
-    await pruneBatch(
-      "shop_contact_email_confirmation_tokens",
-      () =>
-        db
-          .select({ id: shopContactEmailConfirmationTokens.id })
-          .from(shopContactEmailConfirmationTokens)
-          .where(
-            lt(
-              shopContactEmailConfirmationTokens.expiresAt,
-              cutoff("shop_contact_email_confirmation_tokens"),
-            ),
-          )
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) =>
-        db
-          .delete(shopContactEmailConfirmationTokens)
-          .where(inArray(shopContactEmailConfirmationTokens.id, ids)),
-    ),
-  );
-
-  // Booking links (H-82, issue #1726), on the same clock as the two token
-  // arms above. `expires_at` only, never `revoked_at`: a revoked link can still
-  // be inside its own life, and an unexpired row is never eligible whatever
-  // else is true of it.
-  outcomes.push(
-    await pruneBatch(
-      "booking_capabilities",
-      () =>
-        db
-          .select({ id: bookingCapabilities.id })
-          .from(bookingCapabilities)
-          .where(lt(bookingCapabilities.expiresAt, cutoff("booking_capabilities")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(bookingCapabilities).where(inArray(bookingCapabilities.id, ids)),
-    ),
-  );
-
-  // The local money ledger (DATA-M3). Longest window here by a wide margin;
-  // pruned at all only so that "how long is a shop's money history kept?" has
-  // a stated answer rather than an implicit "forever".
-  outcomes.push(
-    await pruneBatch(
-      "booking_payment_events",
-      () =>
-        db
-          .select({ id: bookingPaymentEvents.id })
-          .from(bookingPaymentEvents)
-          .where(lt(bookingPaymentEvents.occurredAt, cutoff("booking_payment_events")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(bookingPaymentEvents).where(inArray(bookingPaymentEvents.id, ids)),
-    ),
-  );
-
-  // Device push credentials (ADR 20260804-manifest-web-push). Pruned by
-  // `created_at` rather than by the trip's departure: the row's whole value is
-  // short-lived, and keying on its own age means a subscription whose trip was
-  // moved, deleted, or never sailed is still bounded.
-  outcomes.push(
-    await pruneBatch(
-      "push_subscriptions",
-      () =>
-        db
-          .select({ id: pushSubscriptions.id })
-          .from(pushSubscriptions)
-          .where(lt(pushSubscriptions.createdAt, cutoff("push_subscriptions")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, ids)),
-    ),
-  );
-
-  // The Monday email's per-week claims and their opt-out link hashes. Pruned
-  // on their own age: the claim is spent once its week is over.
-  outcomes.push(
-    await pruneBatch(
-      "weekly_digest_sends",
-      () =>
-        db
-          .select({ id: weeklyDigestSends.id })
-          .from(weeklyDigestSends)
-          .where(lt(weeklyDigestSends.createdAt, cutoff("weekly_digest_sends")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(weeklyDigestSends).where(inArray(weeklyDigestSends.id, ids)),
-    ),
-  );
-
-  // Crew news, spent the hour it settles (ADR 20261009-crew-hear-about-their-boats).
-  outcomes.push(
-    await pruneBatch(
-      "crew_notices",
-      () =>
-        db
-          .select({ id: crewNotices.id })
-          .from(crewNotices)
-          .where(lt(crewNotices.createdAt, cutoff("crew_notices")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(crewNotices).where(inArray(crewNotices.id, ids)),
-    ),
-  );
-
-  // Finished sends only, on the instant they were finished. `sent`, or
-  // `failed` with the payload already cleared: a parked
-  // `sealed_payload_unreadable` row keeps its payload while the drain may still
-  // offer it, so it never matches (`drainableStatus`, src/db/notifications.ts).
-  // A `queued` or `processing` row is someone's work in flight and never
-  // matches either.
-  outcomes.push(
-    await pruneBatch(
-      "notification_send_queue",
-      () =>
-        db
-          .select({ id: notificationSendQueue.id })
-          .from(notificationSendQueue)
-          .where(
-            and(
-              inArray(notificationSendQueue.status, ["sent", "failed"]),
-              isNull(notificationSendQueue.payloadSealed),
-              lt(notificationSendQueue.updatedAt, cutoff("notification_send_queue")),
-            ),
-          )
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(notificationSendQueue).where(inArray(notificationSendQueue.id, ids)),
-    ),
-  );
-
-  // A waiver link's latest delivery outcome, on its own latest attempt: a new
-  // send replaces the row and moves `attempted_at` forward.
-  outcomes.push(
-    await pruneBatch(
-      "waiver_deliveries",
-      () =>
-        db
-          .select({ id: waiverDeliveries.id })
-          .from(waiverDeliveries)
-          .where(lt(waiverDeliveries.attemptedAt, cutoff("waiver_deliveries")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(waiverDeliveries).where(inArray(waiverDeliveries.id, ids)),
-    ),
-  );
-
-  // A set-up request on the day it was made; its single-use link goes with it
-  // (`on delete cascade`).
-  outcomes.push(
-    await pruneBatch(
-      "setup_requests",
-      () =>
-        db
-          .select({ id: setupRequests.id })
-          .from(setupRequests)
-          .where(lt(setupRequests.createdAt, cutoff("setup_requests")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(setupRequests).where(inArray(setupRequests.id, ids)),
-    ),
-  );
-
-  // Found items, only once resolved: an open one is still the shop's to hold,
-  // so `resolved_at` is both the clock and the filter (batch 4, J2).
-  outcomes.push(
-    await pruneBatch(
-      "lost_items",
-      () =>
-        db
-          .select({ id: lostItems.id })
-          .from(lostItems)
-          .where(
-            and(isNotNull(lostItems.resolvedAt), lt(lostItems.resolvedAt, cutoff("lost_items"))),
-          )
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(lostItems).where(inArray(lostItems.id, ids)),
-    ),
-  );
-
-  // Notes sent to a whole departure, on the send's own time (batch 4, J4).
-  outcomes.push(
-    await pruneBatch(
-      "departure_notes",
-      () =>
-        db
-          .select({ id: departureNotes.id })
-          .from(departureNotes)
-          .where(lt(departureNotes.sentAt, cutoff("departure_notes")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(departureNotes).where(inArray(departureNotes.id, ids)),
-    ),
-  );
-
-  // The manifest's shift catch-up (issues #1202, #1187). Pruned on the event's
-  // own `occurred_at`: a desk act is a same-day handoff, so its age is the only
-  // thing that decides, and a departure that was moved or never sailed is
-  // bounded the same way as one that did.
-  outcomes.push(
-    await pruneBatch(
-      "trip_desk_events",
-      () =>
-        db
-          .select({ id: tripDeskEvents.id })
-          .from(tripDeskEvents)
-          .where(lt(tripDeskEvents.occurredAt, cutoff("trip_desk_events")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(tripDeskEvents).where(inArray(tripDeskEvents.id, ids)),
-    ),
-  );
-
-  // A staff form's draft (ADR 20260906-before-you-ask, decision 3), on the
-  // moment it was last typed into: the reader already hides one older than a
-  // day, so this clears rows nobody can reach.
-  outcomes.push(
-    await pruneBatch(
-      "form_drafts",
-      () =>
-        db
-          .select({ id: formDrafts.id })
-          .from(formDrafts)
-          .where(lt(formDrafts.savedAt, cutoff("form_drafts")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(formDrafts).where(inArray(formDrafts.id, ids)),
-    ),
-  );
-
-  // The founder digest's demo count (ADR 20261007-founder-metrics), on the
-  // instant of the entry.
-  outcomes.push(
-    await pruneBatch(
-      "demo_entries",
-      () =>
-        db
-          .select({ id: demoEntries.id })
-          .from(demoEntries)
-          .where(lt(demoEntries.enteredAt, cutoff("demo_entries")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(demoEntries).where(inArray(demoEntries.id, ids)),
-    ),
-  );
-
-  // The marks that point into those events, on `last_seen_at` rather than a
-  // creation time: a mark a staffer keeps moving forward is live state, and
-  // only one nobody has touched in a month has nothing left to point at.
-  outcomes.push(
-    await pruneBatch(
-      "trip_read_marks",
-      () =>
-        db
-          .select({ id: tripReadMarks.id })
-          .from(tripReadMarks)
-          .where(lt(tripReadMarks.lastSeenAt, cutoff("trip_read_marks")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(tripReadMarks).where(inArray(tripReadMarks.id, ids)),
-    ),
-  );
-
-  // The inbox (ADR 20260907-two-way-inbox), replies first: a reply names the
-  // message it answered with ON DELETE SET NULL, so either order is safe, but
-  // deleting the answer before the question keeps a half-pruned thread from
-  // reading as a message nobody answered. Both measured on the instant the
-  // words arrived or went out, never on the row's own insert.
-  outcomes.push(
-    await pruneBatch(
-      "staff_replies",
-      () =>
-        db
-          .select({ id: staffReplies.id })
-          .from(staffReplies)
-          .where(lt(staffReplies.sentAt, cutoff("staff_replies")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(staffReplies).where(inArray(staffReplies.id, ids)),
-    ),
-  );
-  outcomes.push(
-    await pruneBatch(
-      "inbound_messages",
-      () =>
-        db
-          .select({ id: inboundMessages.id })
-          .from(inboundMessages)
-          .where(lt(inboundMessages.receivedAt, cutoff("inbound_messages")))
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(inboundMessages).where(inArray(inboundMessages.id, ids)),
-    ),
-  );
-
-  // Incident reports (ADR 20261012-incident-reports): seven years from when the
-  // incident happened, or from when a draft that never said so was started.
-  // Its people and addenda cascade with it.
-  outcomes.push(
-    await pruneBatch(
-      "incident_reports",
-      () =>
-        db
-          .select({ id: incidentReports.id })
-          .from(incidentReports)
-          .where(
-            lt(
-              sql`coalesce(${incidentReports.occurredAt}, ${incidentReports.createdAt})`,
-              cutoff("incident_reports"),
-            ),
-          )
-          .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(incidentReports).where(inArray(incidentReports.id, ids)),
-    ),
-  );
-
+  for (const [table, arm] of Object.entries(PRUNE_ARMS) as [RetainedTable, PruneArm][]) {
+    outcomes.push(await pruneBatch(db, table, arm, now));
+  }
   return {
     outcomes,
     totalDeleted: outcomes.reduce((sum, outcome) => sum + outcome.deleted, 0),
