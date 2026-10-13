@@ -74,7 +74,7 @@ jobs:
         && github.event.issue.pull_request != null
         && startsWith(github.event.comment.body, '/preview')
         && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -99,7 +99,7 @@ jobs:
   deploy:
     name: Deploy a preview
     needs: resolve
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read

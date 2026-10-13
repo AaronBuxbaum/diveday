@@ -78,6 +78,7 @@ const checks = [
   ["critical-text", "check-critical-text.mjs"],
   ["ci-change-detection", "check-ci-change-detection.mjs"],
   ["node-version", "check-node-version.mjs"],
+  ["runner-image", "check-runner-image.mjs"],
   ["closing-keywords", "check-closing-keywords.mjs"],
   ["sentry-imports", "check-sentry-imports.mjs"],
 ];

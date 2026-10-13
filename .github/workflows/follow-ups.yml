@@ -31,7 +31,7 @@ permissions:
 jobs:
   follow-ups:
     name: Every needs-triage issue is actionable cold, and no claim is dead
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7

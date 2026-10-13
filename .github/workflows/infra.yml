@@ -42,7 +42,7 @@ jobs:
     # explicit "do this now" from a human — it should never be silently
     # skipped because the current branch happens not to touch infra/.
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     # Only checks out and greps history; no write scope of any kind needed.
     permissions:
@@ -97,7 +97,7 @@ jobs:
     # gate comes after a fresh synth+diff is already visible in this run,
     # not blind against whatever a past PR's diff comment happened to show.
     if: ${{ always() && ((github.event_name == 'workflow_dispatch' && (inputs.command == 'diff' || inputs.command == 'deploy')) || (github.event_name == 'pull_request' && needs.infra-changed.outputs.changed == 'true')) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     # GitHubActionsCdkDiffRole's trust condition (infra-stack.ts §18) accepts
     # any workflow run in this repo — no `environment:` gate here, because
@@ -209,7 +209,7 @@ jobs:
     # `inputs.command == 'deploy'` -- `diff` runs for both commands, so this is
     # what keeps a `command: diff` dispatch from deploying.
     if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.command == 'deploy' && needs.diff.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     # The approval gate. GitHub only issues an OIDC token for a job that
     # references this environment once a required reviewer has approved the
