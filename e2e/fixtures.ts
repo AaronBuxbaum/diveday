@@ -52,7 +52,61 @@ export function makeActivitySafe(page: Page): Page {
   const rawGetByPlaceholder = page.getByPlaceholder.bind(page);
   page.getByPlaceholder = ((text: string | RegExp, options?: { exact?: boolean }) =>
     rawGetByPlaceholder(text, options).filter({ visible: true })) as Page["getByPlaceholder"];
+  settleStaffHydrationAfterNavigation(page);
   return page;
+}
+
+/**
+ * The staff header's Search trigger (`src/components/search/CommandPalette.tsx`),
+ * in both of its variants. It is server-rendered on every `/shop/**` page and
+ * draws `data-hydrated="true"` once React has attached its listener.
+ */
+export const STAFF_HYDRATION_PROBE = '[aria-keyshortcuts="Meta+K Control+K"]';
+
+/**
+ * **A click on a server-rendered staff page before React owns it is lost.** It
+ * was the flake class of 2026-10-12/13 (code re-review 2026-10-13, item 15):
+ * `dive-sites`, `schedule-builder`, `staffing` and `blowout` each lost a press
+ * that landed mid-hydration, and each was being fixed by its own hand-written
+ * wait. One wait here instead, after every navigation that loads a document:
+ * when the page that loaded is a staff page carrying the Search trigger, it
+ * returns only once every trigger says it is hydrated. A client navigation
+ * finds the flag already drawn and costs one query; a public page, a redirect
+ * to sign-in, or a `waitUntil: "commit"` that has no DOM yet has no trigger
+ * and is not waited on, which is the opt-out `staff-nav.spec.ts` uses on
+ * purpose. `pnpm check:e2e-hygiene`'s `pre-hydration-click` refuses a click
+ * straight after that opt-out.
+ */
+export async function settleStaffHydration(page: Page): Promise<void> {
+  let pathname: string;
+  try {
+    pathname = new URL(page.url()).pathname;
+  } catch {
+    return;
+  }
+  if (!pathname.startsWith("/shop/")) return;
+  const triggers = page.locator(STAFF_HYDRATION_PROBE);
+  if ((await triggers.count()) === 0) return;
+  await expect(
+    page.locator(`${STAFF_HYDRATION_PROBE}:not([data-hydrated="true"])`),
+    `${pathname} loaded, but React never took over its Search trigger`,
+  ).toHaveCount(0);
+}
+
+const SETTLED = Symbol.for("diveday.playwright.settles-staff-hydration");
+
+function settleStaffHydrationAfterNavigation(page: Page): void {
+  const flags = page as unknown as Record<symbol, boolean>;
+  if (flags[SETTLED]) return;
+  flags[SETTLED] = true;
+  for (const method of ["goto", "reload", "goBack", "goForward", "waitForURL"] as const) {
+    const original = (page[method] as (...args: unknown[]) => Promise<unknown>).bind(page);
+    (page as unknown as Record<string, unknown>)[method] = async (...args: unknown[]) => {
+      const result = await original(...args);
+      await settleStaffHydration(page);
+      return result;
+    };
+  }
 }
 
 /**

@@ -38,6 +38,27 @@ async function seatDiver(db: AppDb, shopId: string, tripId: string, tag: string)
 const ctx = fileScopedShopContext();
 
 describe("staffing view", () => {
+  it("puts no shift on a removed staff member, though their roles remain", async () => {
+    const { db, shop } = ctx;
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+    await db
+      .update(people)
+      .set({ deletedAt: new Date(nowMs()) })
+      .where(eq(people.id, instructor.person.id));
+    const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
+    const shift = await createStaffShift(db, {
+      shopId: shop.id,
+      personId: instructor.person.id,
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
+      note: null,
+      createdByPersonId: instructor.person.id,
+    });
+    expect(shift).toEqual({ ok: false, reason: "staff_not_found" });
+  });
+
   it("shows roles, working windows, and the departures a person crews", async () => {
     const { db, shop } = ctx;
     await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));

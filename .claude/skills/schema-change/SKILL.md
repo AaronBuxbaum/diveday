@@ -32,7 +32,7 @@ questions — read the schema module.
    instead — which is how 16g's four columns, 16i's `recap_pulses` table *and* its
    `addressed_by_person_id`, and 16j-B's two `person_id` columns all went red after a push. An
    unclassified `person_id` is the expensive one: a merge silently leaves rows pointing at a
-   removed diver. `pnpm test:changed` selects these too, but after a schema edit it selects
+   removed diver. An import-graph run selects these too, but after a schema edit it selects
    the *whole* suite (9,391 of 9,391 entries, measured 2026-09-06) — that run belongs to CI.
 6. **Local sanity**: `pnpm db:reset && pnpm e2e e2e/<the spec your change touches>.spec.ts --reporter=line` exercises the auto-migrate + auto-seed boot
    from zero.

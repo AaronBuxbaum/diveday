@@ -107,7 +107,7 @@ export default defineConfig({
     // duration from `scripts/test-durations.json` when it has one, and a
     // source estimate otherwise. See src/test/shard-sequencer.ts.
     sequence: { sequencer: CostWeightedSequencer },
-    // `pnpm test:changed` (and `vitest related`) selects tests by walking the
+    // `vitest related` (the pre-push gate's step) selects tests by walking the
     // *import* graph, and the Drizzle migrations are never imported — they are
     // read off disk at runtime by `migrate(db, { migrationsFolder: "drizzle" })`.
     // A migration change therefore selected zero tests while silently changing
@@ -158,7 +158,7 @@ export default defineConfig({
       TZ: "UTC",
     },
     // Each project inherits everything above (`extends: true`) and changes only
-    // what its files differ in. `pnpm test <file>`, `pnpm test:changed` and
+    // what its files differ in. `pnpm test <file>`, `vitest related` and
     // `--shard` still see one run across all of them; `--project <name>` (the
     // `test:lib` / `test:db` / `test:ui` scripts) runs one.
     projects: [

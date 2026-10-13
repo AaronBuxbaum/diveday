@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { InPersonWaiverOutcome } from "@/db/waivers";
-import { checkbox, formValue, parseForm } from "@/lib/form-parse";
+import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import type {
   PaperWaiverFormState,
   PaperWaiverRefusal,
@@ -16,20 +16,35 @@ const paperWaiverForm = z.object({
 });
 
 function paperWaiverFields(formData: FormData): z.infer<typeof paperWaiverForm> {
-  const parsed = parseForm(paperWaiverForm, formData);
-  if (!parsed.ok) throw new Error("unreadable paper waiver form");
-  return parsed.data;
+  return readForm(paperWaiverForm, formData);
+}
+
+/**
+ * **What a paper release attests**, read back the same way at every door: the
+ * staffer's medical tick and, for a minor, the co-signer. The roster's
+ * `markRosterWaiverInPersonAction` and the diver record's
+ * `markWaiverInPersonAction` spread this straight into `recordInPersonWaiver`,
+ * so the two cannot drift into two readings of one form.
+ */
+export function paperWaiverAttestation(formData: FormData): {
+  medicalAttested: boolean;
+  guardian: ReturnType<typeof paperGuardianFrom>;
+} {
+  return {
+    medicalAttested: paperWaiverFields(formData).medicalAttested,
+    guardian: paperGuardianFrom(formData),
+  };
 }
 
 /**
  * **The fields `PaperWaiverControl` submits for a minor**, read back
  * (ADR 20260907-guardian-co-signature).
  *
- * Three staff surfaces open the same paper-release form — the trip roster, the
- * counter queue and the diver's own record — and all three hand what comes
- * back to `recordInPersonWaiver`. Reading them in one place is what keeps
- * the three doors onto one write path from drifting into three parsers, in the
- * same spirit as `src/app/actions/seat-diver-surfaces.ts`.
+ * Two staff surfaces open the same paper-release form — the trip roster and
+ * the diver's own record — and both hand what comes back to
+ * `recordInPersonWaiver`. Reading them in one place is what keeps the two
+ * doors onto one write path from drifting into two parsers, in the same spirit
+ * as `src/app/actions/seat-diver-surfaces.ts`.
  *
  * Nothing is validated here. `recordInPersonWaiver` decides from the date of
  * birth on file whether a guardian is needed at all, refuses a relationship
@@ -40,7 +55,7 @@ function paperWaiverFields(formData: FormData): z.infer<typeof paperWaiverForm> 
  *
  * `guardianNamesakeAttested` is the staffer's own assertion that this parent
  * and this diver really do share a name on their IDs and that they watched
- * both of them sign (issue #1573). Read here because all three surfaces submit
+ * both of them sign (issue #1573). Read here because both surfaces submit
  * it; honoured by the writer only when the two names actually match, and never
  * offered on the online path at all.
  */

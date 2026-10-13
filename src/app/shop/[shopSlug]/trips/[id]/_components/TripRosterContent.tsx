@@ -38,7 +38,7 @@ export type TripRosterActions = {
   createDirectTripInvitationAction: FormAction;
   /** A reducer, not a plain `FormAction`: a refused paper release answers in
    * the form with the typed values rather than redirecting (issue #1674). */
-  markWaiverInPersonAction: PaperWaiverAction;
+  markRosterWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: FormAction;
   removeBookingAction: FormAction;
   setParticipantTypeAction: FormAction;
@@ -255,7 +255,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           participantTypeCertBookingId,
         }}
         actions={{
-          markWaiverInPersonAction: actions.markWaiverInPersonAction,
+          markRosterWaiverInPersonAction: actions.markRosterWaiverInPersonAction,
           markPaymentAction: actions.markPaymentAction,
           removeBookingAction: actions.removeBookingAction,
           setParticipantTypeAction: actions.setParticipantTypeAction,

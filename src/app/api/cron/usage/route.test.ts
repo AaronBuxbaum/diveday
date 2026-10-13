@@ -11,6 +11,8 @@ vi.mock("@/lib/usage/alert-ledger", () => ({
   releaseUsageAlert: vi.fn(),
 }));
 vi.mock("@/lib/notifications", () => ({ notify: vi.fn() }));
+// The routes report only where a DSN is configured; the suite runs without one.
+vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureException: vi.fn(),

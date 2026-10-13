@@ -22,7 +22,7 @@ import {
   trips,
 } from "./schema";
 import { listStaff, type StaffPerson } from "./trips-crew";
-import { liveTrip } from "./trips-live";
+import { livePerson, liveTrip } from "./trips-live";
 import { bookedDiversCount } from "./trips-queries";
 
 /*
@@ -561,6 +561,7 @@ export async function createStaffShift(
           eq(people.id, input.personId),
           eq(people.shopId, input.shopId),
           inArray(personRoles.role, [...STAFF_ROLES]),
+          livePerson(),
         ),
       )
       .limit(1);

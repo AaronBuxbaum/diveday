@@ -56,10 +56,23 @@ describe("openLocalDb", () => {
       }),
     ).rejects.toThrow();
 
-    const db = await openLocalDb(dataDir);
-    const rows = await db.execute("select 1 as ok");
-    expect(rows.rows[0]).toEqual({ ok: 1 });
-  }, 30_000);
+    // The second open proves the directory answers a query, then stops: the
+    // migrations and the demo seed are the success path every other database
+    // test already runs, and replaying them here on a real disk is what took
+    // this test to its time cap (issue #2520). Stopping by a throw also checks
+    // the second attempt cleans up after itself the same way.
+    let answered: unknown;
+    await expect(
+      openLocalDb(dataDir, {
+        runMigrate: async (db) => {
+          answered = (await db.execute("select 1 as ok")).rows[0];
+          throw new Error("opened; stop before the seed");
+        },
+      }),
+    ).rejects.toThrow("opened; stop before the seed");
+    expect(answered).toEqual({ ok: 1 });
+    expect(readdirSync(dataDir).filter((name) => name.startsWith(LOCK_PREFIX))).toEqual([]);
+  });
 
   it("refuses a directory another live process holds, without opening PGlite at all", async () => {
     // Cross-process by construction: the holder is pid 1, which exists on every

@@ -4,13 +4,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { TripMoreActions } from "./TripMoreActions";
 
-vi.mock("../details-actions", () => {
+vi.mock("../details-actions", () => ({ cancelTripAction: async () => {} }));
+vi.mock("../series-actions", () => {
   const action = async () => {};
   return {
     applySeriesDetailsAction: action,
     cancelSeriesAction: action,
     setSeriesRepeatAction: action,
-    cancelTripAction: action,
   };
 });
 vi.mock("./SeriesSection", () => ({ SeriesMoreActions: () => <p>series-actions</p> }));

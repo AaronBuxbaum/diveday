@@ -18,15 +18,11 @@ import { toShopCurrency } from "@/lib/money";
 import type { requireShopSurface } from "@/lib/session";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import {
-  cancelOffCadenceSeriesAction,
-  clearConditionsAction,
-  saveConditionsAction,
-  saveDetails,
-  saveRequirementsAction,
-  updateSeriesCadenceAction,
-  updateTripCrewAction,
-} from "../details-actions";
+import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
+import { updateTripCrewAction } from "../crew-actions";
+import { saveDetails } from "../details-actions";
+import { cancelOffCadenceSeriesAction, updateSeriesCadenceAction } from "../series-actions";
+import { saveRequirementsAction } from "../terms-actions";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewSection } from "./CrewSection";
 import { DetailsEditor } from "./DetailsEditor";

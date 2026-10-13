@@ -9,6 +9,8 @@ vi.mock("@/db/media-deletions", () => ({ retryPendingMediaDeletions: vi.fn() }))
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
 vi.mock("@/db/processor-erasure", () => ({ retryPendingProcessorErasures: vi.fn() }));
 vi.mock("@/db/seed", () => ({ reapExpiredDemoShops: vi.fn() }));
+// The routes report only where a DSN is configured; the suite runs without one.
+vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureException: vi.fn(),

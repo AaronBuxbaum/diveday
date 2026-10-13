@@ -5,6 +5,7 @@ import { CAPABILITY_MAX_TTL_MS, CAPABILITY_MIN_TTL_MS } from "@/lib/booking-capa
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
+  issueBookingCapabilities,
   issueBookingCapability,
   MAX_LIVE_CAPABILITIES_PER_PURPOSE,
   resolveRevokedBookingCapability,
@@ -446,6 +447,69 @@ describe("live-capability cap (security review: unbounded minting on page GETs)"
       ).toBeNull();
     }
     expect(await liveRowCount(db, bookingId, at)).toBe(0);
+  });
+
+  /**
+   * The departure note's fan-out mints one link per seat in a fixed number of
+   * statements (code review 2026-10-13, item 35). The same rules hold for the
+   * set as for one: only this shop's live bookings, and each booking's cap.
+   */
+  it("issues one link per booking in a set, each verifying back to its own booking", async () => {
+    const { db, shop, open, other } = await seededContext();
+    const first = await bookVisitor(db, shop.id, open.id);
+    const second = await bookVisitor(db, shop.id, other.id);
+    const issued = await issueBookingCapabilities(db, {
+      shopId: shop.id,
+      bookingIds: [first, second, first],
+      purpose: "readiness",
+    });
+    expect([...issued.keys()].sort()).toEqual([first, second].sort());
+    for (const bookingId of [first, second]) {
+      const ctx = await verifyBookingCapability(db, {
+        token: issued.get(bookingId)?.token ?? "",
+        purpose: "readiness",
+      });
+      expect(ctx).toMatchObject({ bookingId, shopId: shop.id });
+    }
+  });
+
+  it("issues nothing in a set for another shop's booking or a cancelled one", async () => {
+    const { db, shop, open, other } = await seededContext();
+    const live = await bookVisitor(db, shop.id, open.id);
+    const cancelled = await bookVisitor(db, shop.id, other.id);
+    await cancelBooking(db, shop.id, cancelled);
+    const elsewhere = await issueBookingCapabilities(db, {
+      shopId: "00000000-0000-4000-8000-000000000000",
+      bookingIds: [live],
+      purpose: "readiness",
+    });
+    expect(elsewhere.size).toBe(0);
+    const issued = await issueBookingCapabilities(db, {
+      shopId: shop.id,
+      bookingIds: [live, cancelled],
+      purpose: "readiness",
+    });
+    expect([...issued.keys()]).toEqual([live]);
+  });
+
+  it("holds each booking in a set at its own cap", async () => {
+    const { db, shop, open, other } = await seededContext();
+    const full = await bookVisitor(db, shop.id, open.id);
+    const fresh = await bookVisitor(db, shop.id, other.id);
+    const start = nowDate();
+    const [oldest] = await mintSeries(db, shop.id, full, MAX_LIVE_CAPABILITIES_PER_PURPOSE, start);
+    const at = new Date(start.getTime() + MAX_LIVE_CAPABILITIES_PER_PURPOSE * 1000);
+    await issueBookingCapabilities(db, {
+      shopId: shop.id,
+      bookingIds: [full, fresh],
+      purpose: "readiness",
+      now: at,
+    });
+    expect(await liveRowCount(db, full, at)).toBe(MAX_LIVE_CAPABILITIES_PER_PURPOSE);
+    expect(await liveRowCount(db, fresh, at)).toBe(1);
+    expect(await verifyBookingCapability(db, { token: oldest ?? "", purpose: "readiness" })).toBe(
+      null,
+    );
   });
 });
 

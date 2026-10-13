@@ -66,7 +66,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
  * The one fetch a session makes on its own, at startup and resume: `main`, which
- * `test:changed`, `check:closing-keywords` and the migration guard all measure from, and the
+ * `verify:push`, `check:closing-keywords` and the migration guard all measure from, and the
  * `claude/*` thread branches `stack-map.mjs` derives the stack from. A container's refs are
  * whatever its clone saw, and on 2026-10-10 that was an `origin/main` five days and 650 commits
  * old. `--prune` drops refs of merged-and-deleted branches, so a merged layer leaves the stack.
@@ -393,7 +393,7 @@ export function sessionBlock(
   }
   if (fetched === "failed") {
     lines.push(
-      "`git fetch origin main` failed or timed out at session start: origin/main may be stale, so `pnpm test:changed` and `check:closing-keywords` may measure from an old base.",
+      "`git fetch origin main` failed or timed out at session start: origin/main may be stale, so `pnpm verify:push` and `check:closing-keywords` may measure from an old base.",
     );
   }
   if (state) {
@@ -453,7 +453,7 @@ export function sessionBlock(
       "",
       "After compaction, the rules a summary drops:",
       "- Re-read TaskList; the task list is the queue, a sentence in a message is not.",
-      "- Before you commit: the guard you touched, `pnpm test <file>`, `pnpm typecheck`, `pnpm lint`; before you push, `pnpm test:changed`. The whole suite belongs to CI.",
+      "- Before you commit: the guard you touched, `pnpm test <file>`, `pnpm typecheck`, `pnpm lint`; before you push, `pnpm verify:push`. The whole suite belongs to CI.",
       "- A thought you are not acting on becomes a `needs-triage` GitHub issue, never a closing remark.",
       "- A turn ends done, filed, or handed over in as many words. Never on an intention.",
       "- Read a large file by range after a Grep, never whole; the hooks refuse the whole-file form.",

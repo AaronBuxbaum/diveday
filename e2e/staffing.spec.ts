@@ -441,14 +441,10 @@ test.describe("approving a divemaster onto an intro session over its ratio", () 
           "Approving this one adds no seats to this session. Only an instructor does.",
         ),
       ).toBeVisible();
-      // Only once React owns the page: a press on the server-rendered Approve
-      // while the page is still hydrating (or re-rendering after a hydration
-      // mismatch, React #418 in CI 2026-10-12 and -13) is lost, and the answer
-      // never comes. The staff header's Search trigger publishes the flag.
-      await expect(page.getByRole("button", { name: "Search" })).toHaveAttribute(
-        "data-hydrated",
-        "true",
-      );
+      // A press on the server-rendered Approve while the page is still
+      // hydrating is lost (React #418 in CI 2026-10-12 and -13); the `goto`
+      // above returned only once React owned the page (`settleStaffHydration`
+      // in e2e/fixtures.ts).
       // The press must reach the server, and the notice it brings back is read
       // whole: CI has seen this answer missing (2026-10-12, -13) where it never
       // fails locally, so a failure here says which half went wrong — no POST,

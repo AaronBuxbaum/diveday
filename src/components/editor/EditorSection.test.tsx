@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { EditorSection } from "./EditorSection";
@@ -152,6 +153,23 @@ describe("an editor section on a phone", () => {
     expect(header(/Pricing/)).not.toHaveTextContent("x");
     // An open section shows its fields instead.
     expect(header(/The pitch/).querySelector("[data-section-preview]")).toHaveTextContent("");
+  });
+
+  /**
+   * The preview line is read off the fields once the section's wiring runs,
+   * which is after hydration: the server's markup carries an empty line. The
+   * visual suite shot `course-edit` with blank previews on one run and filled
+   * ones on the next (#2509), so a filled line says so, and the capture waits
+   * for every line to say it.
+   */
+  it("marks every preview line ready once it has been read, and none in the server's markup", () => {
+    const markup = renderToString(<Form />);
+    expect(markup).toContain("data-section-preview");
+    expect(markup).not.toContain("data-preview-ready");
+    render(<Form />);
+    const lines = document.querySelectorAll("[data-section-preview]");
+    expect(lines).toHaveLength(3);
+    for (const line of lines) expect(line).toHaveAttribute("data-preview-ready");
   });
 
   it("opens one section at a time", () => {

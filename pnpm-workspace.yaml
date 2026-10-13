@@ -17,8 +17,11 @@ minimumReleaseAge: 0
 #   aws-rum-web: uuid. The one exception to "same major": @aws-rum/web-core
 #   3.2.1 (the latest) pins uuid ^9 and imports only `v4`, which 11.x keeps
 #   with the same signature and the same CJS + ESM entry points.
+#   reg-suit (dev): tmp, two advisories patched in 0.2.6. Its `braces`
+#   advisory has no patched release reported, so it has no line here.
 overrides:
   '@modelcontextprotocol/sdk@<1.31.0': ^1.31.0
+  'tmp@<0.2.6': ^0.2.6
   'uuid@<11.1.1': ^11.1.1
 
 patchedDependencies:

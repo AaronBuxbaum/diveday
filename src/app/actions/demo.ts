@@ -186,6 +186,9 @@ export async function resetDemoAction() {
  * Works for both seeded and dynamically created trials.
  */
 export async function switchDemoRoleAction(role: string, shopSlug: string) {
+  // diveday:slug-action-before-sign-in: this is how a demo visitor becomes
+  // staff of the shop the slug names, so there is no shop surface to require
+  // yet; the seat cookie or a session already in this shop is the gate below.
   // The slug is the caller's word, and every demo slug is three dictionary
   // words: throttle per IP before it is looked up, so the space cannot be
   // walked.

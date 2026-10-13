@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { shopDayOf } from "@/lib/closeout";
 import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
-import { hasReturned } from "@/lib/trips";
+import { DEPARTURE_BUFFER_MS, hasReturned } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices, recordCrewNotices } from "./crew-notices";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
@@ -488,6 +488,7 @@ export async function crewMoveConflicts(
       : await db
           .select({ personId: people.id, fullName: people.fullName })
           .from(people)
+          // diveday:allow-deleted-people: names for crew already assigned elsewhere.
           .where(and(eq(people.shopId, shopId), inArray(people.id, awayIds)))
           .orderBy(asc(people.fullName));
 
@@ -510,6 +511,36 @@ export async function getTripCrewAssignments(
     .from(tripAssignments)
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
     .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId), liveTrip()));
+}
+
+/**
+ * {@link getTripCrewAssignments} for many departures in one statement, keyed by
+ * trip; a departure with no crew is absent. The series' standing-crew apply
+ * compares every upcoming date at once rather than reading them one by one
+ * (code review 2026-10-13, item 35).
+ */
+export async function getTripCrewAssignmentsByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, { personId: string; tripRole: TripCrewRole | null }[]>> {
+  const byTrip = new Map<string, { personId: string; tripRole: TripCrewRole | null }[]>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: tripAssignments.tripId,
+      personId: tripAssignments.personId,
+      tripRole: tripAssignments.tripRole,
+    })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(and(inArray(tripAssignments.tripId, tripIds), eq(trips.shopId, shopId), liveTrip()));
+  for (const { tripId, personId, tripRole } of rows) {
+    const crew = byTrip.get(tripId) ?? [];
+    crew.push({ personId, tripRole });
+    byTrip.set(tripId, crew);
+  }
+  return byTrip;
 }
 
 /**
@@ -541,6 +572,7 @@ function crewInputPersonId(entry: TripCrewMemberInput): string {
  */
 async function crewWithRollCallHistory(
   tx: DbExecutor,
+  shopId: string,
   tripId: string,
   personIds: readonly string[],
 ): Promise<Set<string>> {
@@ -550,6 +582,7 @@ async function crewWithRollCallHistory(
     .from(rollCallCrewEvents)
     .where(
       and(
+        eq(rollCallCrewEvents.shopId, shopId),
         eq(rollCallCrewEvents.tripId, tripId),
         inArray(rollCallCrewEvents.personId, [...personIds]),
       ),
@@ -626,7 +659,10 @@ export async function setTripCrew(
     // (review 20260803, D3). They stay on the crew list, and their count stays
     // open, until a human resolves it.
     const dropped = [...existingRoles.keys()].filter((personId) => !valid.includes(personId));
-    if (dropped.length > 0 && (await crewWithRollCallHistory(tx, tripId, dropped)).size > 0) {
+    if (
+      dropped.length > 0 &&
+      (await crewWithRollCallHistory(tx, shopId, tripId, dropped)).size > 0
+    ) {
       return false;
     }
     if (trip.courseId) {
@@ -931,13 +967,16 @@ export type TripCrewOutcome = { ok: true } | { ok: false; refusal: TripCrewRefus
  * UI, rather than a value nobody can reach without SQL (review 20260803, D4/D5).
  */
 /**
- * How many departures still ahead this person is crew on, in this shop. Removing
- * a person takes them off every crew picker and away from sign-in
- * (`livePerson()`), but an assignment already on a boat stays where it is, on
- * the manifest and in the crew ratio; the diver record's Remove refuses while
- * this is above zero, so nobody is left crewing a boat they can no longer see.
+ * How many departures this person is crew on that are not home yet, in this
+ * shop: still ahead, or sailed and out. Removing a person takes them off every
+ * crew picker and away from sign-in (`livePerson()`), but an assignment
+ * already on a boat stays where it is, on the manifest and in the crew ratio;
+ * and every roll-call writer refuses someone removed, so crew still aboard
+ * could not be counted back in. The diver record's Remove refuses while this
+ * is above zero. "Home" is `hasReturned` (`src/lib/trips.ts`): the scheduled
+ * return plus the departure buffer.
  */
-export async function countUpcomingCrewDepartures(
+export async function countCrewDeparturesNotHome(
   db: DbExecutor,
   shopId: string,
   personId: string,
@@ -953,7 +992,8 @@ export async function countUpcomingCrewDepartures(
         eq(tripAssignments.personId, personId),
         liveTrip(),
         ne(trips.status, "cancelled"),
-        sql`${trips.startsAt} > ${now}`,
+        // Not `hasReturned`: due home, plus the buffer, still ahead of now.
+        sql`${trips.endsAt} > ${new Date(now.getTime() - DEPARTURE_BUFFER_MS)}`,
       ),
     );
   return row?.count ?? 0;
@@ -999,7 +1039,7 @@ export async function changeTripCrewOutcome(
     // (review 20260803, D3).
     if (
       change.operation === "unassign" &&
-      (await crewWithRollCallHistory(tx, tripId, [change.personId])).size > 0
+      (await crewWithRollCallHistory(tx, shopId, tripId, [change.personId])).size > 0
     ) {
       return { ok: false, refusal: "refused" };
     }

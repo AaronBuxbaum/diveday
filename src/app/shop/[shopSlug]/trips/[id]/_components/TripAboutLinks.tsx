@@ -10,7 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { publicTripPath } from "@/lib/public-routes";
 import { shopPath } from "@/lib/staff-notices";
-import { recordTripPrintPdfAction } from "../details-actions";
+import { recordTripPrintPdfAction } from "../print-actions";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { DepartureLogLink } from "./DepartureLogLink";
 import { PrintTripBundleButton } from "./PrintTripBundleButton";

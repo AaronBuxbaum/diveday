@@ -106,7 +106,42 @@ export const rules = [
     message:
       "navigating away in the statement straight after submitting a server action races it: the click returns when the request is *sent*, not when the write has landed, so the goto/reload can tear the page down mid-flight and the destination then renders the state from before the save. Wait for what the destination itself shows — `page.waitForURL()` on the action's own `?notice=`/`?created=` redirect, or, for a `useActionState` form that re-renders in place and never redirects, an `expect(locator)` on what the row shows once it has landed. Never a timeout, a retry, or networkidle — and never the field you just filled: an `expect(field).toHaveValue(<what this test typed>)` passes on its first poll whether or not the write landed, so it does not count as the wait here. Both instances that reached CI pointed nowhere near the cause: one closed the destination's stream early and read as a server error, and the other spent the visual shard's whole 210-second budget before failing on an assertion forty lines below, which is exactly how this gets misread as slow CI.",
   },
+  {
+    id: "pre-hydration-click",
+    pattern: /\.click\s*\(/,
+    predicate: clickBeforeHydration,
+    message:
+      'this click follows a navigation that opted out of the fixture\'s hydration wait (`waitUntil: "commit"`), so it can land on the server-rendered page before React owns it, and the press is lost: the flake class of 2026-10-12/13, four specs in 21 runs (code re-review 2026-10-13, item 15). Every other `goto`/`reload`/`waitForURL` on a fixture page returns only once the staff Search trigger says `data-hydrated` (`settleStaffHydration` in e2e/fixtures.ts). Drop the opt-out, or call `settleStaffHydration(page)` before the click, or acknowledge the line when the test is *about* a click beating hydration.',
+  },
 ];
+
+/**
+ * The nearest navigation above a click, in the same test, opted out of the
+ * fixture's hydration wait with `waitUntil: "commit"`, and nothing between the
+ * two waits for React.
+ *
+ * Every `page.goto` on a fixture page settles staff hydration by itself
+ * (`settleStaffHydration` in e2e/fixtures.ts), so the one way left to click a
+ * server-rendered staff page before React owns it is to ask the navigation to
+ * return at commit, before there is a DOM to wait on. `domcontentloaded` is not
+ * that: the document is parsed by then and the fixture waits as usual.
+ */
+function clickBeforeHydration(lines, index) {
+  const body = testBodyFrom(lines, index);
+  for (let at = index - 1; at >= body; at -= 1) {
+    const line = lines[at];
+    if (isProse(line)) continue;
+    if (/data-hydrated|settleStaffHydration\s*\(/.test(line)) return false;
+    if (!/\.(?:goto|reload)\s*\(/.test(line)) continue;
+    let statement = line;
+    for (let end = at + 1; end < lines.length && end - at < 8; end += 1) {
+      if (statement.trimEnd().endsWith(";")) break;
+      statement += `\n${lines[end]}`;
+    }
+    return /waitUntil\s*:\s*["'`]commit["'`]/.test(statement);
+  }
+  return false;
+}
 
 /**
  * A submit-shaped click as the **immediately preceding code statement** of a

@@ -31,7 +31,7 @@
 //     with no file, spec or filter runs work that belongs to CI's sharded runners
 //     (docs/agents/verifying.md: measured 2026-08-28, twenty minutes local without finishing
 //     against a few on CI, and a saturated box starves everything else on it). The focused
-//     forms and `pnpm test:changed` are what a session runs. `DIVEDAY_ALLOW_WHOLE_SUITE=1`
+//     forms and `pnpm verify:push` are what a session runs. `DIVEDAY_ALLOW_WHOLE_SUITE=1`
 //     in front of the command is the escape hatch, for the rare run that is the point.
 //
 //  5. A generated artifact read through the shell — `cat pnpm-lock.yaml`, `head .next/...`,
@@ -205,11 +205,11 @@ function wholeSuiteViolation(segment, scripts) {
   if (!isUnfocused(args)) return null;
 
   const focused = {
-    test: "`pnpm test <file> --reporter=dot` for the test you are iterating on and `pnpm test:changed` before you push",
+    test: "`pnpm test <file> --reporter=dot` for the test you are iterating on and `pnpm verify:push` before you push",
     e2e: "`pnpm e2e <spec> --reporter=line` (or `pnpm e2e:run <spec>` after one `pnpm e2e:build`)",
     "e2e:run": "`pnpm e2e:run <spec> --reporter=line`",
     check:
-      "`pnpm check:repo`, `pnpm lint`, `pnpm typecheck` and `pnpm test:changed` — the four local halves of the gate",
+      "`pnpm check:repo`, `pnpm lint`, `pnpm typecheck`, or all of it with `pnpm verify:push` — the local halves of the gate",
     visual: "a filtered visual-spec run (see the verify skill), or push and read CI's report",
   }[script];
   return (

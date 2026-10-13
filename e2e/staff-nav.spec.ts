@@ -73,6 +73,7 @@ test.describe("owner", () => {
     const nav = page.getByRole("navigation", { name: "Main", exact: true });
     const door = page.locator("[data-week-board] a[data-departure-door]").first();
     const title = (await door.getAttribute("aria-label")) ?? "";
+    // diveday:allow-e2e-hygiene pre-hydration-click: beating the sidebar's hydration is what this test is about (#2273); a native link navigation is not lost the way a button press is.
     await door.click();
     await expect(page).toHaveURL(/\/trips\//);
     // The address moves before the page commits; under load the nav can still

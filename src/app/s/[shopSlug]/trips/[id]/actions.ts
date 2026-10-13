@@ -489,7 +489,7 @@ export async function bookSpot(
     redirect(`${publicTripPath(shopSlug, tripId)}?error=unavailable${embedParam(embed, "&")}`);
   }
   const [confirmedBooking, tripNow] = await Promise.all([
-    getBookingForTrip(dbi, tripId, primaryBookingId),
+    getBookingForTrip(dbi, shopNow.id, tripId, primaryBookingId),
     getTripWithBooked(dbi, shopNow.id, tripId),
   ]);
   // Where this booking now lands, and what the confirmation email links to:

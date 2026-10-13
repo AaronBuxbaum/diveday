@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
+import { paperWaiverAttestation, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
 import {
   canPersonOverrideCertBlock,
   canPersonRefund,
@@ -696,7 +696,7 @@ const SPLIT_REFUSAL_NOTICE = {
  * values back with the refusal — never through the URL, which is not where a
  * named minor's guardian's name goes.
  */
-export async function markWaiverInPersonAction(
+export async function markRosterWaiverInPersonAction(
   shopSlug: string,
   tripId: string,
   _state: PaperWaiverFormState,
@@ -717,12 +717,11 @@ export async function markWaiverInPersonAction(
     shopId: s.user.shopId,
     subject: { bookingId },
     recordedByPersonId: s.user.personId,
-    medicalAttested: formData.get("medicalAttested") === "on",
-    // A minor's paper release names its co-signer (ADR
+    // The medical tick and, for a minor, the co-signer (ADR
     // 20260907-guardian-co-signature). Passed as typed; `recordInPersonWaiver`
-    // decides from the date of birth on file whether it is needed at all, and
-    // refuses a section that is not a signature.
-    guardian: paperGuardianFrom(formData),
+    // decides from the date of birth on file whether a guardian is needed at
+    // all, and refuses a section that is not a signature.
+    ...paperWaiverAttestation(formData),
   });
   // Nothing was written, so nothing is revalidated: the roster the staffer is
   // looking at is still true, and the answer is the sentence under the button.

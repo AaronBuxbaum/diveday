@@ -480,3 +480,91 @@ describe("reporting", () => {
     ]);
   });
 });
+
+describe("pre-hydration clicks", () => {
+  it("catches a click after a navigation that opted out of the fixture's hydration wait", () => {
+    const source = [
+      'test("x", async ({ page }) => {',
+      '  await page.goto("/shop/blue-mantis/schedule/board", { waitUntil: "commit" });',
+      '  const door = page.locator("a").first();',
+      "  await door.click();",
+      "});",
+    ].join("\n");
+    expect(findHygieneViolations(source)).toEqual([
+      { rule: "pre-hydration-click", line: 4, text: "await door.click();" },
+    ]);
+  });
+
+  it("reads the opt-out however the formatter broke the navigation", () => {
+    const source = [
+      'test("x", async ({ page }) => {',
+      "  await page.goto(board, {",
+      '    waitUntil: "commit",',
+      "  });",
+      '  await page.getByRole("button", { name: "Move it" }).click();',
+      "});",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual(["pre-hydration-click"]);
+  });
+
+  it("leaves a click after an ordinary navigation alone: the fixture waited for React", () => {
+    const source = [
+      'test("x", async ({ page }) => {',
+      '  await page.goto("/shop/blue-mantis/schedule/board");',
+      '  await page.getByRole("button", { name: "Move it" }).click();',
+      '  await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });',
+      '  await page.getByRole("link", { name: "Book" }).click();',
+      "});",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual([]);
+  });
+
+  it("accepts a hydration wait between the opt-out and the click", () => {
+    const source = [
+      'test("x", async ({ page }) => {',
+      '  await page.goto(board, { waitUntil: "commit" });',
+      "  await settleStaffHydration(page);",
+      "  await door.click();",
+      '  await page.goto(board, { waitUntil: "commit" });',
+      '  await expect(trigger).toHaveAttribute("data-hydrated", "true");',
+      "  await trigger.click();",
+      "});",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual([]);
+  });
+
+  it("does not reach into a sibling test", () => {
+    const source = [
+      'test("a", async ({ page }) => {',
+      '  await page.goto(board, { waitUntil: "commit" });',
+      "});",
+      'test("b", async ({ page }) => {',
+      "  await door.click();",
+      "});",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual([]);
+  });
+
+  it("only looks at the nearest navigation", () => {
+    const source = [
+      'test("x", async ({ page }) => {',
+      '  await page.goto(board, { waitUntil: "commit" });',
+      "  await expect(page).toHaveURL(/board/);",
+      "  await page.reload();",
+      "  await door.click();",
+      "});",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual([]);
+  });
+
+  it("takes the acknowledgement for a test that means to click early", () => {
+    const source = [
+      'test("x", async ({ page }) => {',
+      '  await page.goto(board, { waitUntil: "commit" });',
+      `  // ${ACKNOWLEDGEMENT} pre-hydration-click: the test is about the click beating hydration (#2273)`,
+      "  await door.click();",
+      "});",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual([]);
+  });
+});

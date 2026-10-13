@@ -25,7 +25,8 @@ of them could have made it a bad fit and one nearly does:
 
 - **CI needs no change.** `.github/workflows/ci.yml` triggers on a bare `pull_request:` with no
   branch filter, so a layer whose base is another topic branch gets the identical full gate.
-- **The `origin/main`-anchored tooling stays correct.** `pnpm test:changed` and
+- **The `origin/main`-anchored tooling stays correct.** The changed-tests run (since replaced by
+  `pnpm verify:push`, which diffs against the layer below) and
   `scripts/previous-release-migrations.mjs` (the destructive-migration guard) both anchor on
   `git merge-base origin/main HEAD`, which in a stack resolves to the fork point of the *whole*
   stack. An upper layer therefore re-runs the lower layers' affected tests and re-checks their

@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SCHEDULE_MIN_RUNWAY_DAYS, refreshCanonicalDemoSchedule } from "@/db/demo-refresh";
@@ -6,6 +5,7 @@ import { sqlStateOf } from "@/db/query-helpers";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 
 /**
  * Most passes are one indexed aggregate and no write at all. The pass that does
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
   const refusal = requireCronSecret(request);
   if (refusal) return refusal;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
@@ -87,14 +87,14 @@ export async function GET(request: Request) {
       demoShopFound: summary.found,
     });
 
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
     return NextResponse.json(summary);
   } catch (error) {
     // Either the database was unreachable or the restore itself failed. The
     // restore runs in one transaction, so the demo is whatever it was before
     // this pass -- an aging board, not a half-wiped shop -- and tomorrow's tick
     // re-attempts it.
-    Sentry.captureException(error, { tags: { cron_pass: "demo_refresh" } });
+    await sentry.captureException(error, { tags: { cron_pass: "demo_refresh" } });
     // The payload used to be `{}`, which said a pass failed and nothing about
     // why -- the line that sent someone to Sentry to learn even the shape of
     // the failure (issue #517). Both fields are closed vocabularies rather
@@ -110,7 +110,7 @@ export async function GET(request: Request) {
       errorName: error instanceof Error ? error.name : "unknown_error",
       sqlState: sqlStateOf(error),
     });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "refresh_unavailable" }, { status: 503 });
   } finally {
     await flushLogs();

@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import type { PreparedGearImport } from "@/lib/gear-import";
 import type { AppDb } from "./client";
 import { gearItems, gearServiceEvents, people, priorGearAssignments } from "./schema";
+import { livePerson } from "./trips-live";
 
 export async function commitGearImport(
   db: AppDb,
@@ -112,14 +113,22 @@ export async function commitGearImport(
               await tx
                 .select({ id: people.id })
                 .from(people)
-                .where(and(eq(people.shopId, shopId), eq(people.email, row.personEmail)))
+                .where(
+                  and(eq(people.shopId, shopId), eq(people.email, row.personEmail), livePerson()),
+                )
                 .limit(1)
             )[0]
           : (
               await tx
                 .select({ id: people.id })
                 .from(people)
-                .where(and(eq(people.shopId, shopId), eq(people.fullName, row.personName ?? "")))
+                .where(
+                  and(
+                    eq(people.shopId, shopId),
+                    eq(people.fullName, row.personName ?? ""),
+                    livePerson(),
+                  ),
+                )
                 .limit(1)
             )[0];
         if (

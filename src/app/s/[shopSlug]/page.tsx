@@ -782,7 +782,7 @@ export default async function SchedulePage({
       {/* "Our year": the shop's own year in counts, last, and only with its yes. */}
       {!isEmbed && shop.publicYearEnabled ? (
         <Suspense fallback={null}>
-          <OurYearSection db={db} shop={shop} locale={locale} t={t} className={SECTION_GAP} />
+          <OurYearSection shop={shop} locale={locale} t={t} className={SECTION_GAP} />
         </Suspense>
       ) : null}
       {/* Human-discovery footer, embed mode only. */}

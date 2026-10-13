@@ -69,6 +69,12 @@ export interface OfflineManifestManagerCopy {
   groupHeading: string;
 }
 
+/**
+ * The "On this phone" card. It carries `data-offline-copy="settled"` once the
+ * mount's first save (or the offline read standing in for it) has finished, so
+ * the freshness pill is as it will stay: the visual suite shot the pill missing
+ * on one run and present on the next until it waited for that (#2509).
+ */
 export function OfflineManifestManager({
   payload,
   locale,
@@ -101,6 +107,7 @@ export function OfflineManifestManager({
   const [saved, setSaved] = useState<OfflineManifestEnvelope | null>(null);
   const [message, setMessage] = useState(copy.checkingDevice);
   const [busy, setBusy] = useState(false);
+  const [settled, setSettled] = useState(false);
   // saveOfflineManifest/syncOfflineManifest overlap easily across the mount
   // effect, the reconnect listener, and the interval — this keeps them from
   // racing each other into IndexedDB. Cross-tab/cross-view races (this page
@@ -329,9 +336,11 @@ export function OfflineManifestManager({
         manualRefreshPending.current = false;
         await save({ silent: !manual });
         if (cancelled) return;
+        setSettled(true);
         await reconcile();
       } else {
         setMessage(envelope ? copy.offlineWithSavedCopy : copy.offlineNoSavedCopy);
+        setSettled(true);
       }
     })();
     return () => {
@@ -475,28 +484,25 @@ export function OfflineManifestManager({
         </div>
       ) : null}
       {/* **The whole "On this phone" group, as one line at rest** (ADR
-          20260827-the-departure-is-two-working-surfaces, decision 2: device
-          settings and offline detail are "ashore, not here"). Everything this
-          *device* does — hold an offline copy, wake itself for a refresh,
-          buzz — is one per-phone concern rather than
-          anything about this departure, and at full height it spent the foot of
-          every manifest on preferences nobody changes twice.
+          20260827-the-departure-is-two-working-surfaces, decision 2: device settings and offline
+          detail are "ashore, not here"). Everything this *device* does — hold an offline copy, wake
+          itself for a refresh, buzz — is one per-phone concern rather than anything about this
+          departure, and at full height it spent the foot of every manifest on preferences nobody
+          changes twice.
 
-          **The state is not what collapses.** A stale copy that looks current
-          is the failure mode this whole mechanism exists to prevent
-          (docs/design/principles.md), so the connectivity chip and the
-          freshness pill ride the *summary* — readable without a tap, exactly as
-          before. What went behind the tap is the prose, the two buttons and the
-          toggles. That is also why this component owns the disclosure rather
-          than the page wrapping it in one: the line that must stay visible is
-          computed here, and there is one reader of the store.
+          **The state is not what collapses.** A stale copy that looks current is the failure mode
+          this whole mechanism exists to prevent (docs/design/principles.md), so the connectivity
+          chip and the freshness pill ride the *summary* — readable without a tap, exactly as
+          before. What went behind the tap is the prose, the two buttons and the toggles. That is
+          also why this component owns the disclosure rather than the page wrapping it in one: the
+          line that must stay visible is computed here, and there is one reader of the store.
 
-          Still a backstop rather than the way in: the shop-wide auto-prime
-          already saves the near-term board on any /shop page visit (ADR
-          20260726-shopwide-offline-manifest-priming), and once a boat is truly
-          out of signal this live page does not load at all —
+          Still a backstop rather than the way in: the shop-wide auto-prime already saves the
+          near-term board on any /shop page visit (ADR 20260726-shopwide-offline-manifest-priming),
+          and once a boat is truly out of signal this live page does not load at all —
           /offline-manifest is what a captain opens. */}
       <section
+        data-offline-copy={settled || !tripId ? "settled" : "pending"}
         className={sectionCardClass({ padding: "none", className: "print:hidden" })}
         aria-labelledby={scopedId(idPrefix, "offline-heading")}
       >

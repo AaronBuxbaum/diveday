@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { OVERRIDE, parsePush, pushViolation } from "./guard-push.mjs";
+import { OVERRIDE, overrideReason, parsePush, pushViolation } from "./guard-push.mjs";
 
 /**
  * A push guard that refuses something legitimate gets routed around, so the "leaves alone"
@@ -73,5 +73,21 @@ describe("leaves alone", () => {
     expect(parsePush("git -C ../wt push -u origin x")).toMatchObject({
       positional: ["origin", "x"],
     });
+  });
+});
+
+describe("the reason a push gave for skipping verify:push", () => {
+  it("is read back so the hook can log it", () => {
+    expect(
+      overrideReason(
+        `git fetch && ${OVERRIDE}="saving work before the container is reclaimed" git push`,
+      ),
+    ).toBe("saving work before the container is reclaimed");
+  });
+
+  it("is null for a plain push, a non-push, and a reason too short to count", () => {
+    expect(overrideReason("git push -u origin claude/layer")).toBeNull();
+    expect(overrideReason("git status")).toBeNull();
+    expect(overrideReason(`${OVERRIDE}=skip git push`)).toBeNull();
   });
 });

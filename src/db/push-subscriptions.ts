@@ -347,6 +347,7 @@ export async function pushManifestChanged(
     const localeRows = await db
       .select({ id: people.id, locale: people.locale })
       .from(people)
+      // diveday:allow-deleted-people: locales for recipients the fan-out already chose.
       // Shop-scoped like every other query here, though the ids come from rows
       // already claimed under this shop: this is the one read in the fan-out
       // whose `where` would otherwise not name the tenant.

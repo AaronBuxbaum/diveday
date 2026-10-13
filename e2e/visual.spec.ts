@@ -1464,6 +1464,34 @@ async function readerLanguage(page: Page): Promise<string> {
   );
 }
 
+/**
+ * **Client-filled state the server cannot draw, settled before any shot.**
+ * Each of these is a mark a component publishes once its own fill has landed,
+ * so the wait is on the state being photographed, not on a clock (#2509):
+ *
+ * - `[data-section-preview]` without `data-preview-ready`: an editor
+ *   section's folded preview line, read off its fields after hydration.
+ *   `course-edit` light at 390 came back with every folded line blank on one
+ *   run and filled on the next.
+ * - `[data-offline-copy="pending"]`: the "On this phone" card before the
+ *   mount's first save to this device has landed, which is whenever the
+ *   service worker answers. `manifest-running-late` dark at 390 came back
+ *   with "Online" alone on one run and "Online · Fresh copy" on the next.
+ *
+ * Every capture helper calls this, so the next surface that shows either
+ * component is covered without a per-capture selector.
+ */
+async function waitForClientFills(page: Page) {
+  await page.waitForFunction(
+    () =>
+      !document.querySelector(
+        '[data-section-preview]:not([data-preview-ready]), [data-offline-copy="pending"]',
+      ),
+    undefined,
+    { timeout: 15_000 },
+  );
+}
+
 async function capture(
   page: Page,
   name: string,
@@ -1544,6 +1572,7 @@ async function capture(
     undefined,
     { timeout: 15_000 },
   );
+  await waitForClientFills(page);
   // The standard pair, plus the portrait tablet for the five staff surfaces a
   // shop runs on one. Widest last is deliberate: the base viewport is restored
   // below either way, but a capture that fails mid-loop leaves the page at a
@@ -1606,6 +1635,7 @@ async function capture(
  */
 async function captureStickyFoot(page: Page, name: string, scheme: "light" | "dark") {
   const baseViewport = page.viewportSize();
+  await waitForClientFills(page);
   // Both viewports, like `capture()` — the phone is where a bar pinned to the
   // bottom edge earns its place, so photographing only the desktop would leave
   // the case that motivated it unbaselined.
@@ -1647,6 +1677,7 @@ async function captureStickyFoot(page: Page, name: string, scheme: "light" | "da
  */
 async function captureFolded(page: Page, name: string, scheme: "light" | "dark") {
   const baseViewport = page.viewportSize();
+  await waitForClientFills(page);
   await withTransitionsOff(page, async () => {
     await page.setViewportSize(PHONE_VIEWPORT);
     await paintWholeDocument(page);
@@ -7020,9 +7051,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
-        // Same wait as the full-page shot: the folded sections' preview lines
-        // are filled in after hydration, and the server-rendered field alone
-        // let this capture land with them empty.
+        // Same wait as the full-page shot. The folded sections' preview lines
+        // are filled in after hydration; `captureStickyFoot` waits for each
+        // to say so (`waitForClientFills`).
         await page.getByRole("navigation", { name: "Sections", exact: true }).waitFor();
         await page.getByLabel("Day 1 — what happens").waitFor();
         await captureStickyFoot(page, "course-edit-save-bar", scheme);
@@ -8252,11 +8283,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/calendar");
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         // The keypress is lost if it lands before the palette's listener is
-        // attached; its trigger says when it is (issue #2366).
-        await expect(page.getByRole("button", { name: "Search", exact: true })).toHaveAttribute(
-          "data-hydrated",
-          "true",
-        );
+        // attached; the fixture's `goto` waits for its trigger to say it is
+        // (issue #2366, `settleStaffHydration` in e2e/fixtures.ts).
         await page.keyboard.press("ControlOrMeta+k");
         const box = page.getByRole("combobox", { name: /Search divers/ });
         await expect(box).toBeFocused();
@@ -8276,11 +8304,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/calendar");
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         // The keypress is lost if it lands before the palette's listener is
-        // attached; its trigger says when it is (issue #2366).
-        await expect(page.getByRole("button", { name: "Search", exact: true })).toHaveAttribute(
-          "data-hydrated",
-          "true",
-        );
+        // attached; the fixture's `goto` waits for its trigger to say it is
+        // (issue #2366, `settleStaffHydration` in e2e/fixtures.ts).
         await page.keyboard.press("ControlOrMeta+k");
         const box = page.getByRole("combobox", { name: /Search divers/ });
         await expect(box).toBeFocused();

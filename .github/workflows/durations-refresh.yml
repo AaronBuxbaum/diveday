@@ -79,16 +79,25 @@ jobs:
           gh run download "${{ steps.run.outputs.id }}" -p 'visual-durations-*' -D artifacts/visual || true
       # A suite is folded only when every one of its shards reported: a
       # partial set would drop the missing shard's items back to their
-      # estimate and make the next deal worse, not better.
+      # estimate and make the next deal worse, not better. "Every" is the
+      # count that run had, read from its own job names ("Playwright shard
+      # n/N"), not today's matrix: the run read can predate a re-shard (run
+      # 4565 had four Playwright shards against today's six), and its four
+      # files still cover every spec it ran (code re-review 2026-10-13,
+      # item 17).
       - name: Merge
         run: |
           shopt -s nullglob
           node scripts/merge-test-durations.mjs artifacts/unit/*/*.json
+          jobs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${{ steps.run.outputs.id }}/jobs?per_page=100" --paginate --jq '.jobs[].name')
+          shards() { grep -c "^$1 shard [0-9]*/" <<<"$jobs" || true; }
+          want_functional=$(shards "Playwright")
+          want_visual=$(shards "Visual capture")
           functional=(artifacts/e2e/*/functional-*.json)
           visual=(artifacts/visual/*/visual-*.json)
           inputs=()
-          if [ "${#functional[@]}" -eq 6 ]; then inputs+=("${functional[@]}"); else echo "::warning::${#functional[@]} of 6 Playwright shards recorded durations; keeping the committed functional figures."; fi
-          if [ "${#visual[@]}" -eq 8 ]; then inputs+=("${visual[@]}"); else echo "::warning::${#visual[@]} of 8 visual shards recorded durations; keeping the committed visual figures."; fi
+          if [ "$want_functional" -gt 0 ] && [ "${#functional[@]}" -eq "$want_functional" ]; then inputs+=("${functional[@]}"); else echo "::warning::${#functional[@]} of ${want_functional} Playwright shards recorded durations; keeping the committed functional figures."; fi
+          if [ "$want_visual" -gt 0 ] && [ "${#visual[@]}" -eq "$want_visual" ]; then inputs+=("${visual[@]}"); else echo "::warning::${#visual[@]} of ${want_visual} visual shards recorded durations; keeping the committed visual figures."; fi
           if [ "${#inputs[@]}" -gt 0 ]; then node scripts/e2e-durations.mjs merge "${inputs[@]}"; fi
           git diff --stat -- scripts/test-durations.json scripts/e2e-durations.json
       - name: Commit to main, or open the pull request

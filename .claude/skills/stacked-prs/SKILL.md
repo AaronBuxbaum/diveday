@@ -216,10 +216,11 @@ to its own change.
      cap, so even two overlapping runs queue (runs 4558 to 4563 on 2026-10-10 took 23 to 28 min
      each against 14 to 17 alone). The per-prompt context line counts the account's open pull
      requests, so a second run in flight is visible before you push.
-- **`pnpm test:changed` and the destructive-migration guard** anchor on
+- **The destructive-migration guard** anchors on
   `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
-  layers re-run lower layers' affected tests and re-check their migrations. Slower, never wrong —
-  do not "fix" it by re-anchoring to the layer below.
+  layers re-check lower layers' migrations. Slower, never wrong — do not "fix" it by re-anchoring
+  to the layer below. `pnpm verify:push` is the one that diffs against the layer below
+  (`stackBase`), because its tests and specs would otherwise be the whole stack's.
 - **Visual regression handles a stack on its own, and a stack may move pixels.** The baseline key is
   *named* rather than inferred: `regconfig.json` uses `reg-simple-keygen-plugin` and
   `scripts/reg-suit-keys.mjs` resolves **every** layer's baseline to

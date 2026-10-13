@@ -25,7 +25,7 @@ export async function RehearsalBanner({ shopSlug, tripId }: { shopSlug: string; 
   if (!shop) return null;
   const db = await getDb();
   if (!(await isRehearsalTrip(db, shop.id, tripId))) return null;
-  const kept = (await rehearsalsWithEvidence(db, [tripId])).has(tripId);
+  const kept = (await rehearsalsWithEvidence(db, shop.id, [tripId])).has(tripId);
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
   return (
     <section

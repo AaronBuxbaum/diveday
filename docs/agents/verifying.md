@@ -12,7 +12,7 @@ sections below are why each line is on it, and why the rest is not.
 ## The unit suite's projects
 
 `vitest.config.ts` splits the suite into Vitest projects by what each file needs, read from its
-source by `src/test/projects.ts`. `pnpm test <file>` and `pnpm test:changed` are unchanged: they
+source by `src/test/projects.ts`. `pnpm test <file>` and `vitest related` are unchanged: they
 see one run across every project. CI's four unit shards run every project but `guards`
 (`--project '!guards'`), dealt together by the shard sequencer; `guards` runs once, in the
 `Repository safeguards` job, because it is bounded by reading the repository rather than by test
@@ -28,7 +28,7 @@ count.
 | `node` | everything else | forks, isolated | `vitest run --project node` |
 
 A project shortcut is for a sweep after a change to a shared helper (`src/test/db.ts` →
-`pnpm test:db`), not a substitute for `pnpm test:changed`; `test:db` is the expensive one, minutes
+`pnpm test:db`), not a substitute for `pnpm verify:push`; `test:db` is the expensive one, minutes
 on a quiet box. A `src/lib` file that starts calling `vi.mock`, `vi.stubEnv` or `vi.resetModules` moves
 itself to `node` on the next run; a `lib` file that leaks state another way shows up as an
 order-dependent failure, which `pnpm test:lib --sequence.shuffle` reproduces.
@@ -44,8 +44,8 @@ afternoon on 2026-09-05: slice 16g's four columns, 16i's `recap_pulses` table an
 `addressed_by_person_id`, and 16j-B's two `person_id` columns. Every one of those agents had run
 the documented local gate correctly.
 
-`pnpm test:changed` selects by import graph and catches all four, which is why it is a pre-push
-step rather than a mid-iteration convenience. Know its cost before you start it: the schema sits
+An import-graph run (`vitest related`, the pre-push gate's step 4) catches all four, which is why it is a
+pre-push step rather than a mid-iteration convenience. Know its cost before you start it: the schema sits
 in nearly every import chain (every module under `src/db/schema/` is reached through its `index.ts`), so a diff touching it selects the **whole** suite — 9,391 of 9,391
 entries, measured 2026-09-06 — and on a stack the diff against `origin/main` is every layer
 beneath you, so that is a floor rather than a ceiling. That run belongs to CI. When you touched
@@ -84,12 +84,14 @@ the first red step, and writes a stamp naming HEAD into the git directory:
    without Vitest's `forceRerunTriggers` (any `package.json` edit makes `--changed` all 1,490
    files); after a schema edit, the named coverage guards instead, because the schema reaches
    the whole suite.
-5. The Playwright specs `pnpm e2e:affected` selects, after an `e2e:build` it reuses while the
-   tree is unchanged. *Strong*: specs the diff edits or whose helper it edits, specs quoting
-   text the diff removed (a locale value, JSX text, a seed literal), and specs visiting a route
-   whose own directory the diff edits. *Reach*: specs visiting a route whose page imports an
-   edited module, or a hub route (one more than ten specs visit), run narrowest first while the
-   recorded CI time stays inside fifteen minutes; the rest are named and left to CI.
+5. The Playwright specs `pnpm e2e:affected` selects, after an `e2e:build` it reuses while
+   nothing the build reads has changed (the tree minus tests, `e2e/` and docs, so a commit that
+   only fixes a spec reuses it). *Strong*: specs the diff edits or whose helper it edits, specs
+   quoting text the diff removed (a locale value, JSX text, a seed literal), and specs visiting a
+   route whose own directory the diff edits. *Reach*: specs visiting a route whose page imports an
+   edited module, or a hub route (one more than ten specs visit), run narrowest first while they
+   stay inside five recorded CI-minutes and the whole selection inside fifteen; the rest are named
+   and left to CI. A diff of only unit tests runs no spec and builds nothing.
 
 Replayed against the commits that broke specs on 2026-10-11 and 2026-10-12, the selection ran
 the broken spec in five of six: the sightings disclaimer, the reviews count, the dive-site editor
@@ -101,7 +103,9 @@ minutes for a cold build.
 `git push` is refused for a commit with no stamp (`scripts/guard-push.mjs`); a merge from the
 layer below is a new commit and needs a new run, which is the typecheck row. The way past it is a
 reason written in front of the command, `DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`, for the
-two cases the verify skill allows. A spec that is red on the base too is still named: run it on
+two cases the verify skill allows. Each one is logged with its reason and the sha to
+`.claude/.hook-log` (`recordOverride` in `scripts/hook-log.mjs`), and the next session's opening
+line counts them, so an escape hatch used every day shows up as a number. A spec that is red on the base too is still named: run it on
 the base, say so in the PR, and push with the reason.
 
 The PR body rows are a separate gate: `scripts/guard-pr-body.mjs` runs `check-pr-body.mjs`

@@ -126,7 +126,7 @@
       "1920": 416
     }
   },
-  "src/app/s/[shopSlug]/trips/[id]/page.tsx :: (min-width: 640px) 33rem, 92vw": {
+  "src/app/s/[shopSlug]/trips/[id]/_components/TripHero.tsx :: (min-width: 640px) 33rem, 92vw": {
     "measured": "2026-10-05, /s/blue-mantis/trips/<Molasses departure>. The day's cover photo in the reading column (528px from sm, the lg left column too).",
     "rendered": {
       "390": 358,

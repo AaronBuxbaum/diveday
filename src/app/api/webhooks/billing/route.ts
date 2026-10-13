@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { applyBillingEffect } from "@/db/shop-subscriptions";
@@ -11,6 +10,7 @@ import {
 } from "@/lib/billing/stripe-billing";
 import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
+import { reportScrubbedError } from "@/lib/observability/sentry";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
 /**
@@ -83,13 +83,9 @@ export async function POST(request: Request) {
     try {
       released = await releaseStripeWebhookEventClaim(db, ledgerId);
     } catch (releaseError) {
-      Sentry.captureException(releaseError, {
-        tags: { billing_webhook_event_type: event.type, billing_webhook_stage: "claim_release" },
-      });
+      await reportBillingFailure(releaseError, event, "claim_release");
     }
-    Sentry.captureException(error, {
-      tags: { billing_webhook_event_type: event.type, billing_webhook_stage: "handler" },
-    });
+    await reportBillingFailure(error, event, "handler");
     logOutcome("handler_failed", { claimReleased: released });
     return new Response(null, { status: 500 });
   }
@@ -139,4 +135,21 @@ async function handle(
   }
   logOutcome(outcome, { customer });
   return outcome;
+}
+
+/** A billing webhook failure, reported without its message (`reportScrubbedError`). */
+async function reportBillingFailure(
+  error: unknown,
+  event: { id: string; type: string },
+  stage: "handler" | "claim_release",
+) {
+  await reportScrubbedError(error, {
+    name: "BillingWebhookError",
+    message: `Billing webhook ${stage} failed`,
+    tags: {
+      stripe_event_id: event.id,
+      billing_webhook_event_type: event.type,
+      billing_webhook_stage: stage,
+    },
+  });
 }

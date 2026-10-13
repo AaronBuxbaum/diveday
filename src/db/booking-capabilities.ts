@@ -86,7 +86,7 @@ export async function issueBookingCapability(
     .limit(1);
   if (!booking) return null;
 
-  await retireOldestLiveCapabilities(db, input.shopId, input.bookingId, input.purpose, now);
+  await retireOldestLiveCapabilities(db, input.shopId, [input.bookingId], input.purpose, now);
 
   const token = createCapabilityToken();
   const tripBound = capabilityExpiryFor(booking.tripEndsAt, now);
@@ -101,6 +101,62 @@ export async function issueBookingCapability(
     expiresAt,
   });
   return { token, expiresAt };
+}
+
+/**
+ * **One capability for each of many bookings, in a fixed number of statements**
+ * (code review 2026-10-13, item 35): the departure note's fan-out used to mint
+ * one link per seat inside its send loop, three statements a seat, before the
+ * first message left. Same rules as {@link issueBookingCapability}, applied to
+ * the set: a booking that isn't this shop's or is cancelled gets nothing (it is
+ * simply absent from the answer), and each booking's live set stays within
+ * `MAX_LIVE_CAPABILITIES_PER_PURPOSE`, its oldest retired first.
+ */
+export async function issueBookingCapabilities(
+  db: DbExecutor,
+  input: { shopId: string; bookingIds: string[]; purpose: CapabilityPurpose; now?: Date },
+): Promise<Map<string, IssuedCapability>> {
+  const now = input.now ?? nowDate();
+  const issued = new Map<string, IssuedCapability>();
+  const bookingIds = [...new Set(input.bookingIds)];
+  if (bookingIds.length === 0) return issued;
+  const found = await db
+    .select({ id: bookings.id, tripEndsAt: trips.endsAt })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        inArray(bookings.id, bookingIds),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  if (found.length === 0) return issued;
+
+  await retireOldestLiveCapabilities(
+    db,
+    input.shopId,
+    found.map((booking) => booking.id),
+    input.purpose,
+    now,
+  );
+
+  const rows = found.map((booking) => {
+    const token = createCapabilityToken();
+    const expiresAt = capabilityExpiryFor(booking.tripEndsAt, now);
+    issued.set(booking.id, { token, expiresAt });
+    return {
+      shopId: input.shopId,
+      bookingId: booking.id,
+      purpose: input.purpose,
+      tokenHash: hashCapabilityToken(token),
+      tokenSealed: null,
+      issuedAt: now,
+      expiresAt,
+    };
+  });
+  await db.insert(bookingCapabilities).values(rows);
+  return issued;
 }
 
 /**
@@ -187,17 +243,17 @@ export async function issueCourseFormsCapability(
 async function retireOldestLiveCapabilities(
   db: DbExecutor,
   shopId: string,
-  bookingId: string,
+  bookingIds: string[],
   purpose: CapabilityPurpose,
   now: Date,
 ): Promise<void> {
   const live = await db
-    .select({ id: bookingCapabilities.id })
+    .select({ id: bookingCapabilities.id, bookingId: bookingCapabilities.bookingId })
     .from(bookingCapabilities)
     .where(
       and(
         eq(bookingCapabilities.shopId, shopId),
-        eq(bookingCapabilities.bookingId, bookingId),
+        inArray(bookingCapabilities.bookingId, bookingIds),
         eq(bookingCapabilities.purpose, purpose),
         isNull(bookingCapabilities.revokedAt),
         gt(bookingCapabilities.expiresAt, now),
@@ -207,7 +263,14 @@ async function retireOldestLiveCapabilities(
     // same instant still order deterministically.
     // diveday:allow-time-id-order: which surplus capabilities are revoked; no list renders it.
     .orderBy(desc(bookingCapabilities.issuedAt), desc(bookingCapabilities.id));
-  const doomed = live.slice(MAX_LIVE_CAPABILITIES_PER_PURPOSE - 1).map((row) => row.id);
+  // Each booking keeps its own newest `MAX_LIVE_CAPABILITIES_PER_PURPOSE - 1`.
+  const keptPerBooking = new Map<string, number>();
+  const doomed: string[] = [];
+  for (const row of live) {
+    const kept = keptPerBooking.get(row.bookingId) ?? 0;
+    if (kept >= MAX_LIVE_CAPABILITIES_PER_PURPOSE - 1) doomed.push(row.id);
+    else keptPerBooking.set(row.bookingId, kept + 1);
+  }
   if (doomed.length === 0) return;
   await db
     .update(bookingCapabilities)

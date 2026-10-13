@@ -6,6 +6,7 @@ import type { DbExecutor } from "./client";
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import { bookings, people, personRoles, shops } from "./schema";
+import { livePerson } from "./trips-live";
 
 export type FindOrCreatePersonInput = {
   shopId: string;
@@ -232,6 +233,7 @@ export async function getShopPersonName(
   const [row] = await db
     .select({ fullName: people.fullName })
     .from(people)
+    // diveday:allow-deleted-people: a name for a line that already names someone; removal does not unname them.
     .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
     .limit(1);
   return row?.fullName ?? null;
@@ -251,6 +253,7 @@ export async function getMergedIntoPersonId(
   const [row] = await db
     .select({ mergedInto: people.mergedIntoPersonId })
     .from(people)
+    // diveday:allow-deleted-people: a merged-away record is removed by design, and this is how a stale link finds its survivor.
     .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
     .limit(1);
   return row?.mergedInto ?? null;
@@ -354,7 +357,14 @@ export async function demoRoleEmail(
     .from(people)
     .innerJoin(personRoles, eq(people.id, personRoles.personId))
     .innerJoin(shops, eq(shops.id, people.shopId))
-    .where(and(eq(people.shopId, shopId), eq(shops.isDemo, true), eq(personRoles.role, role)))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        eq(shops.isDemo, true),
+        eq(personRoles.role, role),
+        livePerson(),
+      ),
+    )
     .limit(1);
   return matches[0]?.email ?? null;
 }

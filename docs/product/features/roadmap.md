@@ -445,7 +445,8 @@ spring half, 18c's roster half and 18f wait on it.
   handle. **Shipped 2026-09-07.** The release decision is a pure function (`dismissOnRelease`)
   because a hand's *speed* is the one input a DOM test cannot express, and a velocity guard stops a
   release that lands in the same millisecond as the last move from reading as a flick. The embed
-  lightbox is the same hook and follows.
+  lightbox is the same hook and follows. **Removed 2026-10-13**: the hook was never wired to a
+  sheet, so it went (H-49).
 - **18e** — the title folds into the bar on a phone. **Shipped 2026-09-07** (issue #1422). The bar
   and the title live in two trees, so the page delivers its title into an `aria-hidden` slot
   `ShopNav` renders (`FoldedPageTitle`, a portal) — the smaller of the two answers, and the one that
@@ -1040,7 +1041,7 @@ ADR rather than letting this become an unbounded second backlog.
    AGENTS.md route-map paths, or `task:context` doc paths drift. Still open: the per-provider
    adapters themselves and checking *them* against the canonical layer.
 2. **Path-aware CI.** Run the smallest trustworthy check set for a change while preserving the full
-   `pnpm check` gate before merge. The per-developer half of this shipped (`pnpm test:changed`,
+   `pnpm check` gate before merge. The per-developer half of this shipped (`pnpm verify:push`,
    `pnpm e2e:run`); what's open is job selection in `.github/workflows/ci.yml` based on changed
    paths. Changed-UI evidence is already covered — reg-suit posts a visual report per PR and
    AGENTS.md makes accounting for every diff a hard rule.

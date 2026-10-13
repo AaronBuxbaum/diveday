@@ -1368,7 +1368,8 @@
   The nightly cron deletes it once it was due home before yesterday began in the shop's zone
   **and** the fly-safe look-back plus a day has passed, so a later boat still counts its divers'
   **Dive day** (`rehearsalMayClear`), giving back prepaid dives and unclaimed gear. **Never one
-  with evidence**: a boarding, any after-dive count, or a logged dive keeps it live, and its
+  with evidence**: a diver or crew boarding, any after-dive count, a logged dive, or an incident
+  report keeps it live, and its
   banner says so. A warning panel says it is a rehearsal above every trip surface, and the paper
   manifest prints "Rehearsal" beside souls on board. See
   [20261012-rehearsal-departures](../../architecture/decisions/20261012-rehearsal-departures.md).

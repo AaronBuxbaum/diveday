@@ -3078,7 +3078,7 @@ archived.
   an explicitly configured `pg` Pool.
 - **Developer & agent experience (§8)** — four new `task:context` areas (payments, notifications,
   reviews, data portability) and refreshed goals on the milestone-era ones; `pnpm e2e:run` reuses an
-  existing build with a staleness guard, and `pnpm test:changed` runs only the tests a diff affects;
+  existing build with a staleness guard, and a changed-tests run (now `pnpm verify:push`) runs only the tests a diff affects;
   `src/features` is inside the copy safeguards; `pnpm check:repo` runs its ten checks in parallel and
   reports *all* failures rather than stopping at the first; `check:agents` now verifies every
   route-map path in AGENTS.md exists on disk; and the stale "~1,000 strings still to extract" claim

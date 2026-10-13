@@ -93,7 +93,7 @@ comment, and a test pins the rule.
 | 18a — the physics: the three rungs as theme tokens, `motionMs()` for the ten copied timers, the press on every tappable primitive, principle 5's ladder and event table | shipped | `src/lib/motion.ts` | `src/app/motion-tokens.test.ts` |
 | 18b — a figure rolls: `RollingFigure` on the counter's instrument line and settled count and on the held send's seconds; the never-list held by test over the roll call and the manifest | dropped | shipped, then removed by ADR 20261001-logbook: every count is a plain tabular number and the held send says "Sending…" with Undo | — |
 | 18c — a row closes its own gap: `SettledRows` on the counter's working queue and its settled group, Undo reversed (the manifest roster still waits on H-69 c) | dropped | shipped, then removed: its last list, the trip's Check-in tab, folded into Divers on 2026-10-05, and the component went with it on 2026-10-12 | — |
-| 18d — the sheet follows the thumb: `useDragSheet` on the dock's More sheet, with the grab handle; the scrim tracks the sheet's travel | shipped | `src/components/useDragSheet.ts` | `src/components/useDragSheet.test.tsx` |
+| 18d — the sheet follows the thumb: `useDragSheet` on the dock's More sheet, with the grab handle; the scrim tracks the sheet's travel | dropped | built, never wired to a sheet, and deleted on 2026-10-13 (H-49) | — |
 | 18e — the title folds into the bar on a phone: `FoldedPageTitle` portals the page's title into `ShopNav`'s slot, three scroll-driven animations over 120px | shipped | `src/components/chrome/FoldedPageTitle.tsx` | `src/components/chrome/FoldedPageTitle.test.tsx`, `src/components/chrome/chrome.test.ts` |
 | 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the PassKit web service and the Google object (H-69 b decided yes 2026-09-07; built dark until the credentials are held; contract in [SPEC.md](SPEC.md)) | open | — | — |
 
@@ -149,7 +149,7 @@ the counter's instrument line and settled count, the station chip's boarding cou
 answer count, the held send's seconds and the booking form's gear price. Add a test that walks the
 roll call's and the manifest's component trees and fails on any import of it. The component names
 the ADR in its doc comment. Update the README's slice table row to shipped with the file and the
-pinning test, run pnpm check:design-canvases, pnpm test:changed, pnpm lint and pnpm typecheck,
+pinning test, run pnpm check:design-canvases, pnpm verify:push, pnpm lint and pnpm typecheck,
 look at the counter in light and dark, and open a pull request explaining any visual diff.
 ```
 
@@ -213,7 +213,7 @@ trips.revision.
 
 Write the spec's acceptance tests (1–8 and the e2e spec) as you go; they are what pin the rules.
 The module's index.ts and the component that renders the line name the ADR in their doc comments.
-Before each push run pnpm test:changed, pnpm lint, pnpm typecheck, pnpm check:architecture and
+Before each push run pnpm verify:push, pnpm lint, pnpm typecheck, pnpm check:architecture and
 pnpm check:repo. Run the security-reviewer agent over the web-service routes and the token handling
 before the routes PR leaves draft, and act on what it finds. Look at the thread at a phone width in
 light and dark (node scripts/screenshot.mjs against pnpm dev) once with a runtime-generated test

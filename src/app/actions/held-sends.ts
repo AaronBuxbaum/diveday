@@ -217,8 +217,11 @@ async function assertMayActOnHeld(
 
 export async function undoHeldSendAction(id: string): Promise<boolean> {
   const session = await requireStaffSession();
+  // A stale or hand-posted id is nothing to undo, not a 500.
+  const parsed = z.uuid().safeParse(id);
+  if (!parsed.success) return false;
+  const heldId = parsed.data;
   const db = await getDb();
-  const heldId = z.uuid().parse(id);
   await assertMayActOnHeld(db, session, heldId);
   return undoHeldSend(db, session.user.shopId, heldId);
 }
@@ -256,8 +259,10 @@ function waiverSendPath(
 
 export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   const session = await requireStaffSession();
+  const parsed = z.uuid().safeParse(id);
+  if (!parsed.success) return { status: "gone" };
+  const heldId = parsed.data;
   const db = await getDb();
-  const heldId = z.uuid().parse(id);
   await assertMayActOnHeld(db, session, heldId);
   // The actor's own countdown is the clock (see `claimHeldSend`).
   const claim = await claimHeldSend(db, session.user.shopId, heldId, undefined, {

@@ -440,86 +440,13 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
         {trip.courseId ? null : <SelfGuidedField t={t} checked={trip.selfGuided} />}
         <DecompressionField t={t} checked={trip.exceedsNoDecoLimits} />
       </FieldGrid>
-      <fieldset className={GROUP_INSET}>
-        <legend className={`${legendClass} text-sm font-medium`}>
-          {t("trips.details.payAtBookingLegend")}
-        </legend>
-        <p className="text-sm text-muted">{t("trips.details.payAtBookingDescription")}</p>
-        <FieldGrid columns={2} className="mt-4">
-          <Field
-            label={t("trips.details.depositLabel")}
-            description={t("trips.details.depositDescription")}
-          >
-            <input
-              name="depositDollars"
-              type="number"
-              step={priceStep}
-              min={0}
-              max={maxPriceMajor(currency)}
-              placeholder={pricePlaceholder}
-              defaultValue={
-                trip.depositCents === null ? "" : minorToMajor(trip.depositCents, currency)
-              }
-              title={t("trips.details.depositTitle")}
-              className={`${controlClass} tabular-nums sm:w-40`}
-            />
-          </Field>
-          <Field
-            label={t("trips.details.cancellationWindowLabel")}
-            description={t("trips.details.cancellationWindowDescription")}
-          >
-            <div className="flex items-center gap-2">
-              <input
-                name="cancellationWindowHours"
-                type="number"
-                step={1}
-                min={0}
-                max={720}
-                placeholder="48"
-                defaultValue={trip.cancellationWindowHours ?? ""}
-                className={`${controlClass} tabular-nums sm:w-28`}
-              />
-              <span className="text-sm text-muted">{t("trips.details.hoursSuffix")}</span>
-            </div>
-          </Field>
-          <Field
-            label={t("trips.details.minimumBookingsLabel")}
-            description={t("trips.details.minimumBookingsDescription")}
-          >
-            <div className="flex items-center gap-2">
-              <input
-                name="minimumBookings"
-                type="number"
-                step={1}
-                min={1}
-                max={MAX_MINIMUM_BOOKINGS}
-                placeholder="4"
-                defaultValue={trip.minimumBookings ?? ""}
-                className={`${controlClass} tabular-nums sm:w-28`}
-              />
-              <span className="text-sm text-muted">{t("trips.details.diversSuffix")}</span>
-            </div>
-          </Field>
-          <Field
-            label={t("trips.details.minimumDecisionLabel")}
-            description={t("trips.details.minimumDecisionDescription")}
-          >
-            <div className="flex items-center gap-2">
-              <input
-                name="minimumDecisionHours"
-                type="number"
-                step={1}
-                min={MIN_DECISION_HOURS}
-                max={MAX_DECISION_HOURS}
-                placeholder={String(MINIMUM_SEATS_DECISION_HOURS_DEFAULT)}
-                defaultValue={trip.minimumDecisionHours ?? ""}
-                className={`${controlClass} tabular-nums sm:w-28`}
-              />
-              <span className="text-sm text-muted">{t("trips.details.hoursBeforeSuffix")}</span>
-            </div>
-          </Field>
-        </FieldGrid>
-      </fieldset>
+      <PayAtBookingFields
+        t={t}
+        trip={trip}
+        currency={currency}
+        priceStep={priceStep}
+        pricePlaceholder={pricePlaceholder}
+      />
       <div className="flex flex-wrap items-center gap-3">
         {/* One open form at a time, one weight for its Save — the default
                 primary, shared by all four Overview sections. */}
@@ -529,6 +456,108 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
         <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
       </div>
     </form>
+  );
+}
+
+/**
+ * **Pay at booking**: the deposit, the free-cancellation window and the
+ * departure's minimum head count with the hour it is decided, in the shop's
+ * currency. One group inside the Details form, wearing `GROUP_INSET`.
+ */
+function PayAtBookingFields({
+  t,
+  trip,
+  currency,
+  priceStep,
+  pricePlaceholder,
+}: {
+  t: StaffTranslator;
+  trip: Trip;
+  currency: string;
+  priceStep: string;
+  pricePlaceholder: string;
+}) {
+  return (
+    <fieldset className={GROUP_INSET}>
+      <legend className={`${legendClass} text-sm font-medium`}>
+        {t("trips.details.payAtBookingLegend")}
+      </legend>
+      <p className="text-sm text-muted">{t("trips.details.payAtBookingDescription")}</p>
+      <FieldGrid columns={2} className="mt-4">
+        <Field
+          label={t("trips.details.depositLabel")}
+          description={t("trips.details.depositDescription")}
+        >
+          <input
+            name="depositDollars"
+            type="number"
+            step={priceStep}
+            min={0}
+            max={maxPriceMajor(currency)}
+            placeholder={pricePlaceholder}
+            defaultValue={
+              trip.depositCents === null ? "" : minorToMajor(trip.depositCents, currency)
+            }
+            title={t("trips.details.depositTitle")}
+            className={`${controlClass} tabular-nums sm:w-40`}
+          />
+        </Field>
+        <Field
+          label={t("trips.details.cancellationWindowLabel")}
+          description={t("trips.details.cancellationWindowDescription")}
+        >
+          <div className="flex items-center gap-2">
+            <input
+              name="cancellationWindowHours"
+              type="number"
+              step={1}
+              min={0}
+              max={720}
+              placeholder="48"
+              defaultValue={trip.cancellationWindowHours ?? ""}
+              className={`${controlClass} tabular-nums sm:w-28`}
+            />
+            <span className="text-sm text-muted">{t("trips.details.hoursSuffix")}</span>
+          </div>
+        </Field>
+        <Field
+          label={t("trips.details.minimumBookingsLabel")}
+          description={t("trips.details.minimumBookingsDescription")}
+        >
+          <div className="flex items-center gap-2">
+            <input
+              name="minimumBookings"
+              type="number"
+              step={1}
+              min={1}
+              max={MAX_MINIMUM_BOOKINGS}
+              placeholder="4"
+              defaultValue={trip.minimumBookings ?? ""}
+              className={`${controlClass} tabular-nums sm:w-28`}
+            />
+            <span className="text-sm text-muted">{t("trips.details.diversSuffix")}</span>
+          </div>
+        </Field>
+        <Field
+          label={t("trips.details.minimumDecisionLabel")}
+          description={t("trips.details.minimumDecisionDescription")}
+        >
+          <div className="flex items-center gap-2">
+            <input
+              name="minimumDecisionHours"
+              type="number"
+              step={1}
+              min={MIN_DECISION_HOURS}
+              max={MAX_DECISION_HOURS}
+              placeholder={String(MINIMUM_SEATS_DECISION_HOURS_DEFAULT)}
+              defaultValue={trip.minimumDecisionHours ?? ""}
+              className={`${controlClass} tabular-nums sm:w-28`}
+            />
+            <span className="text-sm text-muted">{t("trips.details.hoursBeforeSuffix")}</span>
+          </div>
+        </Field>
+      </FieldGrid>
+    </fieldset>
   );
 }
 

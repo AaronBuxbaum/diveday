@@ -42,6 +42,7 @@ import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
+import { spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
 import { WaiverSendControl } from "./WaiverSendControl";
 
 /**
@@ -696,10 +697,6 @@ function Stations({
  * inferred from a null, because the two halves come from two readers and the
  * compiler is the only thing that can promise they never render twice.
  */
-type SpineEntry =
-  | { kind: "live"; at: number; station: DayStationData }
-  | { kind: "closing"; at: number; close: EveningClose["stations"][number] };
-
 /** The words for the Today queue's payment control (copy link, resend invoice). */
 function paymentActionCopy(t: StaffTranslator): PaymentActionCopy {
   return {
@@ -901,36 +898,10 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
   const jobs = spineJobCount(spine);
   const tomorrowDate = spine.tomorrow.stations[0]?.startsAt ?? null;
 
-  // **The two halves of one row of stations.** The spine's own stations come
-  // from a forward-looking reader, which drops a departure an hour after it
-  // leaves; the closing state is read backwards over the whole shop day. So a
-  // departure appears in exactly one of them, and merging by `startsAt` is
-  // what makes the day read as one column of times settling from the top
-  // rather than a board quietly emptying.
-  const liveTripIds = new Set(spine.stations.map((station) => station.tripId));
-  const liveEntries: SpineEntry[] = spine.stations.map((station) => ({
-    kind: "live",
-    at: station.startsAt.getTime(),
-    station,
-  }));
-  const closingEntries: SpineEntry[] = (evening?.close.stations ?? [])
-    .filter((close) => !liveTripIds.has(close.tripId))
-    .map((close) => ({ kind: "closing", at: close.startsAt.getTime(), close }));
-  const entries = [...liveEntries, ...closingEntries].sort((a, b) => a.at - b.at);
+  const { liveTripIds, entries } = spineEntries(spine, evening?.close);
 
-  // The one coral element, resolved once (see this file's docblock). The
-  // evening's own moment outranks the morning's; and between
-  // the morning's two, the shop's first booking ever outranks a day whose
-  // boats happen to be clear, because one of them happens once and the other
-  // happens on a good Tuesday.
-  const allHomeLine = evening?.close.allHome === true;
-  const firstBookingMark = !allHomeLine && firstBooking != null;
-  // The season's fact outranks the *daily* all-clear and nothing above it
-  // (Budget rule 3). It is not a compliment, so it does not wait for a day
-  // with no blockers on it — the Home board draws it over a morning with a
-  // boarding blocker, which is the day a shop most deserves to be told it is
-  // on its four hundredth diver.
-  const factOfScaleLine = !allHomeLine && !firstBookingMark && factOfScale != null;
+  const moment = spineMoment(evening?.close, firstBooking, factOfScale);
+  const { allHomeLine, firstBookingMark, factOfScaleLine } = moment;
   const needsYouReading =
     needsYouRead ??
     readNeedsYou(spine, {
@@ -941,18 +912,11 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
       blocked,
       now,
     });
-  // Clear of everything the queue answered; the wind decides the rest
-  // (`UnlessWindy`). With no job at all the reading says not clear only for
-  // want of one, so a wind row can still be the job the line stands over.
-  const clearUnlessWindy =
-    !allHomeLine &&
-    !firstBookingMark &&
-    !factOfScaleLine &&
-    (needsYouReading.boatsClear ||
-      (jobs === 0 &&
-        spine.stations.length > 0 &&
-        blocked === 0 &&
-        !spine.stations.some((station) => station.blocked > 0)));
+  const clearUnlessWindy = spineClearUnlessWindy(
+    moment,
+    { boatsClear: needsYouReading.boatsClear, jobs, blocked },
+    spine,
+  );
   const windOnToday = (wind: readonly TodayAction[]) =>
     wind.some((row) => row.departure != null && liveTripIds.has(row.departure.tripId));
   const closing = evening?.close.closing === true;

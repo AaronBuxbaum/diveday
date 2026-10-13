@@ -51,32 +51,36 @@ export async function departureRollCallEvents(
   range: { from: CalendarDate; to: CalendarDate },
 ): Promise<DepartureRollCallEvent[]> {
   const localDay = sql<string>`to_char(${trips.startsAt} at time zone ${shops.timezone}, 'YYYY-MM-DD')`;
-  return db
-    .select({
-      shopId: rollCallEvents.shopId,
-      bookingId: rollCallEvents.bookingId,
-      localDay,
-      status: rollCallEvents.status,
-      occurredAt: rollCallEvents.occurredAt,
-      createdAt: rollCallEvents.createdAt,
-      seq: rollCallEvents.seq,
-    })
-    .from(rollCallEvents)
-    .innerJoin(
-      trips,
-      and(eq(trips.id, rollCallEvents.tripId), eq(trips.shopId, rollCallEvents.shopId)),
-    )
-    .innerJoin(shops, eq(shops.id, rollCallEvents.shopId))
-    .where(
-      and(
-        realShop(),
-        liveTrip(),
-        notRehearsal(),
-        eq(rollCallEvents.checkpoint, "departure"),
-        gte(localDay, range.from),
-        lte(localDay, range.to),
-      ),
-    );
+  return (
+    db
+      .select({
+        shopId: rollCallEvents.shopId,
+        bookingId: rollCallEvents.bookingId,
+        localDay,
+        status: rollCallEvents.status,
+        occurredAt: rollCallEvents.occurredAt,
+        createdAt: rollCallEvents.createdAt,
+        seq: rollCallEvents.seq,
+      })
+      // diveday:allow-unscoped-event: founder metrics read every real shop's
+      // departure roll calls at once, by design; `shopId` is projected per row.
+      .from(rollCallEvents)
+      .innerJoin(
+        trips,
+        and(eq(trips.id, rollCallEvents.tripId), eq(trips.shopId, rollCallEvents.shopId)),
+      )
+      .innerJoin(shops, eq(shops.id, rollCallEvents.shopId))
+      .where(
+        and(
+          realShop(),
+          liveTrip(),
+          notRehearsal(),
+          eq(rollCallEvents.checkpoint, "departure"),
+          gte(localDay, range.from),
+          lte(localDay, range.to),
+        ),
+      )
+  );
 }
 
 /**
@@ -137,6 +141,8 @@ export async function syncShopMilestones(db: AppDb): Promise<void> {
       milestone: "first_roll_call",
       rows: db
         .select({ shopId: rollCallEvents.shopId, reachedAt: min(rollCallEvents.occurredAt) })
+        // diveday:allow-unscoped-event: each real shop's first boarding, every
+        // shop in one pass, grouped by shop.
         .from(rollCallEvents)
         .innerJoin(shops, eq(shops.id, rollCallEvents.shopId))
         .where(and(realShop(), eq(rollCallEvents.status, "boarded")))

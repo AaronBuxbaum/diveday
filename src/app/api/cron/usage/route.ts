@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { nowDate } from "@/lib/clock";
@@ -14,6 +13,7 @@ import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { notify } from "@/lib/notifications";
 import { flushLogs } from "@/lib/observability";
+import { sentry } from "@/lib/observability/sentry";
 import { alertRecipient } from "@/lib/platform-mail";
 import { claimUsageAlert, releaseUsageAlert } from "@/lib/usage/alert-ledger";
 import { collectUsageSamples } from "@/lib/usage/collect";
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
   const refusal = requireCronSecret(request);
   if (refusal) return refusal;
 
-  const checkInId = Sentry.captureCheckIn(
+  const checkInId = await sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
@@ -121,7 +121,7 @@ export async function GET(request: Request) {
       // Not an email — a blind probe is an engineering problem, and Sentry is
       // where DiveDay's engineering problems already land.
       if (evaluation.level === "unavailable") {
-        Sentry.captureMessage("usage probe unavailable", {
+        await sentry.captureMessage("usage probe unavailable", {
           level: "warning",
           tags: { ...ceilingTags(evaluation), usage_reason: evaluation.reason ?? "unknown" },
         });
@@ -130,7 +130,7 @@ export async function GET(request: Request) {
       if (!isAlertingLevel(evaluation.level)) continue;
 
       const percent = ceilingPercent(evaluation.fraction) ?? 0;
-      Sentry.captureMessage("usage ceiling reached", {
+      await sentry.captureMessage("usage ceiling reached", {
         level: evaluation.level === "over" ? "error" : "warning",
         tags: ceilingTags(evaluation),
         extra: { percent, value: evaluation.value, ceiling: evaluation.ceiling },
@@ -147,7 +147,7 @@ export async function GET(request: Request) {
       try {
         claimed = await claimUsageAlert(db, key, end, now);
       } catch (error) {
-        Sentry.captureException(error, {
+        await sentry.captureException(error, {
           tags: { ...ceilingTags(evaluation), usage_step: "claim" },
         });
       }
@@ -179,14 +179,14 @@ export async function GET(request: Request) {
       // Nothing was delivered, so the period's alert must not stay spent —
       // release the claim and let tomorrow's pass try again.
       alertsFailed += 1;
-      Sentry.captureMessage("usage alert not delivered", {
+      await sentry.captureMessage("usage alert not delivered", {
         level: "error",
         tags: { ...ceilingTags(evaluation), usage_delivery: delivery.status },
       });
       try {
         await releaseUsageAlert(db, key);
       } catch (error) {
-        Sentry.captureException(error, {
+        await sentry.captureException(error, {
           tags: { ...ceilingTags(evaluation), usage_step: "release" },
         });
       }
@@ -218,7 +218,7 @@ export async function GET(request: Request) {
       ),
     });
 
-    Sentry.captureCheckIn({
+    await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
       status: alertsFailed > 0 ? "error" : "ok",
@@ -242,9 +242,9 @@ export async function GET(request: Request) {
     // or an unexpected throw the per-probe guards did not cover. The check-in
     // still has to be closed out or the monitor would read this as a run that
     // is somehow still in progress.
-    Sentry.captureException(error, { tags: { cron_scan: "usage_bootstrap" } });
+    await sentry.captureException(error, { tags: { cron_scan: "usage_bootstrap" } });
     log("cron_usage.scan_failed", "error", { scan: "bootstrap" });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
+    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "usage_unavailable" }, { status: 503 });
   } finally {
     // See the identical block in the retention cron: a scan's log line is the
