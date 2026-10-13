@@ -461,6 +461,8 @@ const MOVE_SEAT_NOTICE: Record<Exclude<MoveSeatRefusal, "not_found">, string> = 
   divers_full: "seat-move-full",
   course_ratio_full: "seat-move-full",
   course_unstaffed: "seat-move-full",
+  course_prerequisite: "seat-move-prerequisite",
+  course_min_age: "seat-move-min-age",
   trip_prerequisite: "seat-move-prerequisite",
 };
 

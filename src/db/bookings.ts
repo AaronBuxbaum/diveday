@@ -1654,6 +1654,10 @@ export type MoveBookingRefusal =
   | "divers_full"
   | "course_ratio_full"
   | "course_unstaffed"
+  /** The course's prerequisite card is no longer on file. */
+  | "course_prerequisite"
+  /** Too young for the course on the day that session runs. */
+  | "course_min_age"
   | "trip_prerequisite";
 
 export type MoveBookingOutcome =
@@ -1692,6 +1696,54 @@ export type MoveBookingOutcome =
  * departure's activity, desk events, arrival marks and sealed course forms,
  * which are a record of what happened there.
  */
+/**
+ * A course session's prerequisite card and minimum age, for a person already
+ * on the books: the same two checks `createBookingRecord` makes for staff, with
+ * the same postures. A missing card fails closed; an unknown date of birth
+ * fails open, because nothing collects one at booking and readiness checks age
+ * at the dock.
+ */
+async function courseGateRefusal(
+  tx: DbExecutor,
+  shopId: string,
+  personId: string,
+  course: typeof courses.$inferSelect | undefined,
+  startsAt: Date,
+): Promise<"course_prerequisite" | "course_min_age" | null> {
+  if (!course) return null;
+  if (course.minimumCertificationLevel) {
+    const cardRows = await tx
+      .select()
+      .from(certifications)
+      .where(
+        and(
+          eq(certifications.shopId, shopId),
+          eq(certifications.personId, personId),
+          isNull(certifications.deletedAt),
+        ),
+      );
+    if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
+      return "course_prerequisite";
+    }
+  }
+  if (course.minimumAge) {
+    const [row] = await tx
+      .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
+      .from(people)
+      .innerJoin(shops, eq(shops.id, people.shopId))
+      // diveday:allow-deleted-people: the seat's own diver, whose age the session measures.
+      .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+      .limit(1);
+    if (row?.dateOfBirth) {
+      const day = calendarDateInTimezone(startsAt, row.timezone);
+      if (checkMinimumAge(row.dateOfBirth, course.minimumAge, day).status === "under") {
+        return "course_min_age";
+      }
+    }
+  }
+  return null;
+}
+
 export async function moveBooking(
   db: AppDb,
   input: { shopId: string; fromTripId: string; toTripId: string; bookingId: string; now?: Date },
@@ -1808,6 +1860,12 @@ export async function moveBooking(
       if (seatCap !== null && held.aboard >= seatCap) {
         return { ok: false, reason: "course_ratio_full" };
       }
+      // The course's own two gates, read again rather than trusted from the
+      // sale: a card can be revoked since, and age is measured on the day the
+      // session runs, so an earlier session of the same course can be one the
+      // student is still too young for (H-08).
+      const gate = await courseGateRefusal(tx, shopId, booking.personId, course, target.startsAt);
+      if (gate) return { ok: false, reason: gate };
     }
     const identityUnconfirmed = booking.identityUnconfirmedAt !== null;
     const admission = await tripAdmissionFor(

@@ -12,6 +12,7 @@ import {
   bookings,
   certifications,
   courses,
+  people,
   tripDeskEvents,
   tripHelpRequests,
   tripRequirements,
@@ -331,5 +332,57 @@ describe("listSeatMoveTargets", () => {
     expect(targets.map((target) => target.startsAt.getTime())).toEqual(
       [...targets.map((target) => target.startsAt.getTime())].sort((a, b) => a - b),
     );
+  });
+});
+
+describe("moveBooking between sessions of one course", () => {
+  /**
+   * Age is measured on the day the session runs (H-08), so the same student
+   * can be old enough for the later session and too young for an earlier one.
+   * The move measures the session it lands on.
+   */
+  it("refuses an earlier session the student is still too young for", async () => {
+    const { db, shop } = ctx;
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
+    if (!course) throw new Error("course missing");
+    const minimumAge = course.minimumAge ?? 10;
+    if (course.minimumAge === null) {
+      await db.update(courses).set({ minimumAge }).where(eq(courses.id, course.id));
+    }
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("instructor missing");
+    const session = async (days: number, title: string) => {
+      const trip = await createTrip(db, {
+        shopId: shop.id,
+        courseId: course.id,
+        title,
+        startsAt: new Date(nowMs() + days * DAY_MS),
+        endsAt: new Date(nowMs() + days * DAY_MS + 4 * 60 * 60 * 1000),
+        capacity: 12,
+        plannedDives: 2,
+      });
+      if (!trip) throw new Error("session failed");
+      await setTripCrew(db, shop.id, trip.id, [instructor.person.id]);
+      return trip;
+    };
+    const later = await session(200, "Discover Scuba — later");
+    const earlier = await session(180, "Discover Scuba — earlier");
+    // Their birthday falls between the two sessions.
+    const birthday = new Date(nowMs() + 190 * DAY_MS);
+    const dateOfBirth = `${birthday.getUTCFullYear() - minimumAge}-${String(
+      birthday.getUTCMonth() + 1,
+    ).padStart(2, "0")}-${String(birthday.getUTCDate()).padStart(2, "0")}`;
+    const student = await seatOn(db, shop.id, later.id, "Young Student");
+    await db.update(people).set({ dateOfBirth }).where(eq(people.id, student.personId));
+
+    expect(await move(db, shop.id, later.id, earlier.id, student.bookingId)).toEqual({
+      ok: false,
+      reason: "course_min_age",
+    });
+    expect(await tripOf(db, student.bookingId)).toBe(later.id);
   });
 });

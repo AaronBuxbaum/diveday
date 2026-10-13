@@ -69,6 +69,7 @@
     "seatMoveRollCall": "El pase de lista ya tiene esta plaza, así que se queda en esta salida.",
     "seatMoveFull": "Esa salida no tiene plaza para este buceador.",
     "seatMovePrerequisite": "Esa salida pide una certificación que este buceador no tiene.",
+    "seatMoveMinAge": "Este buceador no tiene la edad mínima del curso en la fecha de esa sesión.",
     "waitlistCarried": "La lista de espera ya está aquí. Invítalos abajo.",
     "waitlistCarriedCount": "{count, plural, =0 {Todos los que esperaban ya tienen plaza aquí.} one {# buceador de la lista de espera ya está aquí. Invítalo abajo.} other {# buceadores de la lista de espera ya están aquí. Invítalos abajo.}}",
     "waitlistCarryUnavailable": "Esa salida no está recibiendo reservas.",

@@ -69,6 +69,7 @@
     "seatMoveRollCall": "Roll call has this seat, so it stays on this departure.",
     "seatMoveFull": "That departure has no seat for this diver.",
     "seatMovePrerequisite": "That departure asks for a card this diver does not hold.",
+    "seatMoveMinAge": "This diver is under the course’s minimum age on that session’s date.",
     "waitlistCarried": "The wait list is here now. Invite them below.",
     "waitlistCarriedCount": "{count, plural, =0 {Everyone waiting already has a seat here.} one {# diver from the wait list is here now. Invite them below.} other {# divers from the wait list are here now. Invite them below.}}",
     "waitlistCarryUnavailable": "That departure is not taking seats.",

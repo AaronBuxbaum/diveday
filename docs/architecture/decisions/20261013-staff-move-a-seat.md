@@ -22,8 +22,8 @@ path; the roster row's "Move to another departure" is the one door.**
   refunded. A paid seat that lists higher on the new departure is said back (`seat-moved-owed`),
   the way a type change says it; a pending checkout at the old price is expired.
 - **Measured as a new staff seat.** The target row is locked (both trips in id order, then the
-  seat), both capacity limits and the course ratio are read under the lock, and the trip's
-  certification gate refuses (`enforce`), as the old reschedule did.
+  seat), both capacity limits, the course ratio and a course's card and age gates (on the
+  new session's date) are read under the lock, and the trip's certification gate refuses.
 - **Same kind only.** A course seat moves to another session of the same course; a dive seat to
   a dive. Never onto or off a rehearsal.
 - **Evidence is refused, not rewritten.** A seat that is checked in, absent, at roll call, on a
@@ -47,5 +47,5 @@ path; the roster row's "Move to another departure" is the one door.**
 - Reminders key on kind and booking, so a seat moved after its 7-day or 24-hour reminder went out
   does not get that reminder again for the new departure. The reschedule notice carries the new
   time and the `/ready` link; re-keying reminders is a follow-up.
-- A party lead cannot move with the party in one tap; each member moves first.
+- A party lead cannot move with the party in one tap.
 - Revisit if shops ask to move whole parties.

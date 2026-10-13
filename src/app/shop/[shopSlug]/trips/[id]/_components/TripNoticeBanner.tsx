@@ -107,6 +107,7 @@ const NOTICE_KEYS: Record<
   "seat-move-buddy": { form: "roster", tone: "danger", key: "trips.notices.seatMoveBuddy" },
   "seat-move-roll-call": { form: "roster", tone: "danger", key: "trips.notices.seatMoveRollCall" },
   "seat-move-full": { form: "roster", tone: "danger", key: "trips.notices.seatMoveFull" },
+  "seat-move-min-age": { form: "roster", tone: "danger", key: "trips.notices.seatMoveMinAge" },
   "waitlist-carried": {
     form: "roster",
     tone: "success",
