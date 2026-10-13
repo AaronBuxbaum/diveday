@@ -15,12 +15,14 @@
 // baseline. Values already in the environment win, so that step and this script
 // can never disagree — and so a human triaging by hand can override either key
 // for one run.
+import { appendFileSync, cpSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { gitReader, resolveRegSuitKeys } from "./reg-suit-keys.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { fillFromExpected, selectionNote } from "./visual-fill.mjs";
 import { DEFAULT_BUCKET } from "./visual-report-lib.mjs";
 import { nearestPublishedAncestor } from "./wait-for-baseline.mjs";
 
@@ -77,20 +79,69 @@ console.log(
 // which is fine. Resolved from node_modules rather than PATH so this behaves
 // the same when invoked as a bare `node scripts/visual-compare.mjs`.
 const binDir = path.join(repoRoot, "node_modules", ".bin");
-const result = runBounded(path.join(binDir, "dotenv"), ["-c", "--", "reg-suit", "run"], {
-  cwd: repoRoot,
-  stdio: "inherit",
-  // Nothing is logged from here: dotenv is about to load live AWS credentials
-  // into this child's environment. `PATH` is extended rather than trusted so
-  // dotenv can find `reg-suit` even when this is invoked as a bare
-  // `node scripts/visual-compare.mjs` rather than through pnpm.
-  env: {
-    ...process.env,
-    PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
-    REG_ACTUAL_KEY: resolved.actualKey,
-    REG_EXPECTED_KEY: resolved.expectedKey ?? "",
-  },
-  timeoutMs: SUBPROCESS_TIMEOUTS.regSuitRun,
-});
+const regSuit = (...args) =>
+  runBounded(path.join(binDir, "dotenv"), ["-c", "--", "reg-suit", ...args], {
+    cwd: repoRoot,
+    stdio: "inherit",
+    // Nothing is logged from here: dotenv is about to load live AWS credentials
+    // into this child's environment. `PATH` is extended rather than trusted so
+    // dotenv can find `reg-suit` even when this is invoked as a bare
+    // `node scripts/visual-compare.mjs` rather than through pnpm.
+    env: {
+      ...process.env,
+      PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
+      REG_ACTUAL_KEY: resolved.actualKey,
+      REG_EXPECTED_KEY: resolved.expectedKey ?? "",
+    },
+    timeoutMs: SUBPROCESS_TIMEOUTS.regSuitRun,
+  });
 
+// A pull request that captured only the surfaces its diff can reach
+// (`scripts/visual-affected.mjs`) is finished from the baseline before the
+// compare (`scripts/visual-fill.mjs`): reg-suit's own stages, run one by one so
+// the expected images are on disk between the fetch and the compare. Every
+// other run is the one `reg-suit run` it always was.
+//
+// `VISUAL_EXPECTED_DIR` is the baseline's images already on disk (CI restores
+// them from the Actions cache by the expected key, which names an immutable
+// snapshot): they are put where reg-suit's fetch would have written them, and
+// the fetch is skipped (code re-review 2026-10-13, item 27).
+const fill = process.env.VISUAL_FILL_FROM_EXPECTED === "true";
+const restored = process.env.VISUAL_EXPECTED_DIR;
+if (fill || restored) {
+  const expectedDir = path.join(repoRoot, ".reg", "expected");
+  const stages = [
+    restored ? ["restore"] : ["sync-expected"],
+    ...(fill ? [["fill"]] : []),
+    ["compare"],
+    ["publish", "-n"],
+  ];
+  for (const [stage, ...args] of stages) {
+    if (stage === "restore") {
+      rmSync(expectedDir, { recursive: true, force: true });
+      mkdirSync(path.dirname(expectedDir), { recursive: true });
+      cpSync(path.resolve(repoRoot, restored), expectedDir, { recursive: true });
+      console.log(`visual:compare: the expected images came from ${restored}, not from S3.`);
+      continue;
+    }
+    if (stage === "fill") {
+      const filled = fillFromExpected({
+        expectedDir,
+        actualDir: path.join(repoRoot, "e2e", "screenshots"),
+      });
+      console.log(
+        `visual:compare: ${filled.captured} captured, ${filled.copied} copied from the baseline.`,
+      );
+      if (process.env.GITHUB_ENV) {
+        appendFileSync(process.env.GITHUB_ENV, `VISUAL_SELECTION_NOTE=${selectionNote(filled)}\n`);
+      }
+      continue;
+    }
+    const step = regSuit(stage, ...args);
+    if (step.status !== 0) process.exit(step.status ?? 1);
+  }
+  process.exit(0);
+}
+
+const result = regSuit("run");
 process.exit(result.status ?? 1);

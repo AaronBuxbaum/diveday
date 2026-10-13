@@ -439,9 +439,74 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  # Which captures this run takes, and on how many shards (code re-review
+  # 2026-10-13, item 22). A green pull request run was 47% visual capture by
+  # job-minutes, and a stack re-captured all 1,158 surfaces on every layer. So:
+  #
+  # - A push to main captures everything on eight shards and publishes it, as
+  #   it always did: main's snapshot is the baseline every later commit and
+  #   every branch cut from it compares against, and it is never narrowed.
+  # - A pull request captures what its diff can reach plus a smoke set
+  #   (`scripts/visual-affected.mjs`: the e2e-affected walk of routes and
+  #   importers, read against each capture's own source), on as few shards as
+  #   that weighs, and `visual-report` copies every other surface from the
+  #   expected snapshot before the compare (`scripts/visual-fill.mjs`), so it
+  #   reads as unchanged and the published report is whole. A diff it cannot
+  #   bound (the harness, the seed, a stylesheet, a locale bundle, a config,
+  #   this file) captures everything.
+  #
+  # The diff is taken against the fork point from the default branch, which is
+  # the commit reg-suit's expected key names, so a stacked layer captures what
+  # every layer under it changed too. The list is dealt here once and handed to
+  # every shard as an artifact, so the shards cannot disagree about it.
+  visual-plan:
+    name: Plan the visual captures
+    needs: changes
+    if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+      count: ${{ steps.plan.outputs.count }}
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The fork point from the default branch is in history, not in a
+          # depth-1 checkout.
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - name: Choose the captures
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          # The `visual-all` label is the reviewer's way to ask for every
+          # capture on a pull request the selection may have under-read.
+          WANTS_ALL: ${{ contains(github.event.pull_request.labels.*.name, 'visual-all') }}
+        run: |
+          set -euo pipefail
+          pnpm exec playwright test e2e/visual.spec.ts --list --reporter=json > visual-list.full.json
+          if [ "${EVENT_NAME}" = "pull_request" ] && [ "${WANTS_ALL}" != "true" ]; then
+            # `|| true` and the script's own fallback: a base it cannot diff
+            # against captures everything, never nothing.
+            git fetch --no-tags origin "${DEFAULT_BRANCH}" > /dev/null 2>&1 || true
+            node scripts/visual-affected.mjs --list visual-list.full.json --out visual-list.json --base "origin/${DEFAULT_BRANCH}" --github-output
+          else
+            node scripts/visual-affected.mjs --list visual-list.full.json --out visual-list.json --all --github-output
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: visual-list
+          path: visual-list.json
+          if-no-files-found: error
+          retention-days: 1
+
   visual:
-    name: Visual capture shard ${{ matrix.shard }}/8
-    needs: build
+    name: Visual capture shard ${{ matrix.shard }}/${{ needs.visual-plan.outputs.count }}
+    needs: [build, visual-plan]
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     # Eight shards, one worker each — not four shards at two workers. Four
     # shards at one worker made this the run's critical path: 554, 619, 913
@@ -471,7 +536,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        # Eight on main; on a pull request as many as its captures weigh.
+        shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -510,15 +576,16 @@ jobs:
       # `--last-failed` reruns only this shard's failed tests (Playwright's
       # .last-run.json holds only them), so no --shard on the rerun — resharding
       # a filtered set could silently drop tests.
-      # Every shard lists the same tests from the same tree and deals them the
-      # same way, so the eight lists partition the suite (the deal's own test,
-      # scripts/e2e-shard.test.mjs, pins exactly-once). The job summary carries
-      # every bin's weight.
+      # Every shard deals the one list `visual-plan` chose the same way, so the
+      # lists partition it (the deal's own test, scripts/e2e-shard.test.mjs,
+      # pins exactly-once). The job summary carries every bin's weight.
+      - uses: actions/download-artifact@v8
+        with:
+          name: visual-list
       - name: Deal the visual captures
         run: |
-          pnpm exec playwright test e2e/visual.spec.ts --list --reporter=json > visual-list.json
-          node scripts/e2e-shard.mjs --visual=visual-list.json --shard=${{ matrix.shard }}/8 --explain --summary="$GITHUB_STEP_SUMMARY" > visual-tests.txt
-          echo "shard ${{ matrix.shard }}/8: $(wc -l < visual-tests.txt) tests"
+          node scripts/e2e-shard.mjs --visual=visual-list.json --shard=${{ matrix.shard }}/${{ needs.visual-plan.outputs.count }} --explain --summary="$GITHUB_STEP_SUMMARY" > visual-tests.txt
+          echo "shard ${{ matrix.shard }}/${{ needs.visual-plan.outputs.count }}: $(wc -l < visual-tests.txt) tests"
       - name: Capture visual regression screenshots
         run: |
           set -o pipefail
@@ -574,7 +641,7 @@ jobs:
 
   visual-report:
     name: reg-suit visual regression
-    needs: [visual, changes]
+    needs: [visual, changes, visual-plan]
     # `needs:` alone skips this job outright whenever any visual shard fails,
     # which is precisely when a reviewer most needs to hear that no pixel was
     # checked — and it silently defeats the `!cancelled()` on the summary step
@@ -742,15 +809,58 @@ jobs:
           " >> "$GITHUB_ENV"
         env:
           REG_SUIT_AWS_REGION: ${{ secrets.REG_SUIT_AWS_REGION }}
+      # The baseline's images, from the Actions cache rather than S3 when the
+      # main run that published them left them there (the save step below).
+      # Downloading 1,158 images and comparing them was most of this job's
+      # 55-221 s serial tail after the last capture shard (code re-review
+      # 2026-10-13, item 27). Keyed by the expected snapshot's own commit, which
+      # names an immutable set: a main commit publishes its snapshot once, from
+      # a run whose every shard succeeded, and this restores exactly what it
+      # published. A miss (a fork point whose main run predates this, an
+      # evicted entry) fetches from S3 as before. Restored only, never saved
+      # here: a pull request's cache is visible to that pull request alone, so
+      # the entry worth keeping is the one main writes, which every branch cut
+      # from it can read.
+      - name: Restore the baseline images
+        id: baseline-cache
+        if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' && env.REG_EXPECTED_KEY != '' }}
+        uses: actions/cache/restore@v6
+        with:
+          path: .reg-baseline
+          key: reg-baseline-${{ env.REG_EXPECTED_KEY }}
+      # `VISUAL_FILL_FROM_EXPECTED` on a pull request that captured only what its
+      # diff can reach (`visual-plan`): every surface it did not capture is
+      # copied from the expected snapshot before the compare, so it reads as
+      # unchanged instead of deleted (`scripts/visual-fill.mjs`).
       - name: Run reg-suit visual regression
+        id: compare
         if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' }}
         run: pnpm visual:compare
         env:
+          VISUAL_FILL_FROM_EXPECTED: ${{ needs.visual-plan.outputs.mode == 'affected' }}
+          VISUAL_EXPECTED_DIR: ${{ steps.baseline-cache.outputs.cache-hit == 'true' && '.reg-baseline' || '' }}
           REG_SUIT_AWS_REGION: ${{ env.REG_SUIT_AWS_REGION }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           REG_SUIT_AWS_ACCESS_KEY_ID: ${{ secrets.REG_SUIT_AWS_ACCESS_KEY_ID }}
           REG_SUIT_AWS_SECRET_ACCESS_KEY: ${{ secrets.REG_SUIT_AWS_SECRET_ACCESS_KEY }}
           REG_SUIT_GITHUB_CLIENT_ID: ${{ secrets.REG_SUIT_GITHUB_CLIENT_ID }}
+      # A push to main just published this commit's whole capture as its
+      # snapshot; keep the same images in the Actions cache under the same key,
+      # so every run that compares against this commit restores them above
+      # instead of downloading them. Main only: it is the only run whose
+      # snapshot is anyone's baseline, and a cache it writes is the only kind
+      # every branch can read.
+      - name: Keep this commit's images for the runs that compare against it
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.compare.outcome == 'success' }}
+        run: |
+          rm -rf .reg-baseline
+          cp -R e2e/screenshots .reg-baseline
+      - uses: actions/cache/save@v6
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.compare.outcome == 'success' }}
+        continue-on-error: true
+        with:
+          path: .reg-baseline
+          key: reg-baseline-${{ github.sha }}
       # "Account for every changed pixel" is AGENTS.md's strongest hard rule and
       # had the pipeline's weakest signal: a diff was only discoverable by a
       # human opening the S3-hosted SPA report. This step reads the same
@@ -793,6 +903,10 @@ jobs:
           # baseline; empty otherwise. Carried into the comment so the reviewer
           # reading a diff knows how far back it reaches.
           REG_BASELINE_NOTE: ${{ env.REG_BASELINE_NOTE }}
+          # Written by the compare step when a pull request captured only what
+          # its diff can reach: how many surfaces it captured, and that the rest
+          # are the baseline's own images.
+          VISUAL_SELECTION_NOTE: ${{ env.VISUAL_SELECTION_NOTE }}
       # A snapshot missed on **main** is everyone's problem, and until now it was
       # nobody's alarm. The publish steps above are correctly gated on every
       # shard succeeding — a partial set would become the next commit's baseline
