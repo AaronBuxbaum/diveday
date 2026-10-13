@@ -21,7 +21,9 @@ import { pathToFileURL } from "node:url";
  *
  * `.from(<table>)` for every `export const <name>Events = pgTable(...)` in
  * `src/db/schema/` that declares `shopId`, plus {@link EXTRA_TABLES}. A read
- * passes when `<table>.shopId` appears inside it: from the anchor to the next
+ * passes when `eq(<table>.shopId,` or `inArray(<table>.shopId,` appears
+ * inside it (a projection, join or groupBy of the column does not count):
+ * from the anchor to the next
  * `.from(` or {@link QUERY_WINDOW} lines, whichever is first, so one query is
  * never covered by its neighbour (issue #635's lesson, from
  * `check-live-trips.mjs`).
@@ -81,6 +83,15 @@ export function eventTablesIn(schemaSource) {
   return tables;
 }
 
+/**
+ * `eq(<table>.shopId, …)` or `inArray(<table>.shopId, …)`: the shop as a
+ * predicate. A bare mention is not enough, since a projection, a join to
+ * `shops` or a `groupBy` names the column while reading every shop's rows.
+ */
+function filtersShop(window, table) {
+  return new RegExp(`\\b(?:eq|inArray)\\(\\s*${table}\\.shopId\\s*,`).test(window);
+}
+
 /** Reads of `tables` in `source` that name no shop and give no reason. */
 export function findUnscopedEventReads(source, tables) {
   const lines = source.split("\n");
@@ -99,7 +110,7 @@ export function findUnscopedEventReads(source, tables) {
     const end = Math.min(index + QUERY_WINDOW, next?.index ?? lines.length);
     const window = lines.slice(index, end).join("\n");
     const above = lines.slice(Math.max(0, index - 3), index).join("\n");
-    if (window.includes(`${table}.shopId`) || ALLOW.test(window) || ALLOW.test(above)) return;
+    if (filtersShop(window, table) || ALLOW.test(window) || ALLOW.test(above)) return;
     findings.push({ line: index + 1, table, text: lines[index].trim() });
   });
   return { guarded, findings };

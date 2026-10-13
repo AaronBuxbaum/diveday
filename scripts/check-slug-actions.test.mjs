@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  exportReaches,
   exportReachesSurface,
   findSlugActionsOnStaffSession,
   isServerModule,
@@ -229,6 +230,45 @@ export async function addNote(shopSlug: string, personId: string) {
 `;
     expect(staff(source)).toEqual(["addNote:no-surface"]);
     expect(staff(source, ["requireDiverActionContext"])).toEqual([]);
+  });
+
+  it("sees requireStaffSession and auth() behind an imported wrapper too", () => {
+    // Outside src/app/shop/ a module is a staff one only when it signs in;
+    // a wrapper imported from elsewhere must count the same as one written here.
+    const source = `"use server";
+
+export async function viaStaffWrapper(shopSlug: string) {
+  await requireStaffWrapper();
+  redirect(shopPath(shopSlug, "x"));
+}
+
+export async function viaAuthWrapper(shopSlug: string) {
+  const session = await currentSession();
+  if (session?.user.shopSlug !== shopSlug) notFound();
+}
+`;
+    const actions = (options) =>
+      findSlugActionsOnStaffSession(source, options).map(
+        (finding) => `${finding.name}:${finding.problem}`,
+      );
+    expect(actions({})).toEqual([]);
+    expect(
+      actions({ importedStaffGates: ["requireStaffWrapper"], importedSignIns: ["currentSession"] }),
+    ).toEqual(["viaStaffWrapper:staff-session", "viaAuthWrapper:no-surface"]);
+  });
+
+  it("finds an imported wrapper's gate by what its own module does", () => {
+    const helpers = `export async function requireStaffWrapper() {
+  return requireStaffSession();
+}
+
+export async function currentSession() {
+  return auth();
+}
+`;
+    expect(exportReaches(helpers, "requireStaffWrapper", /\brequireStaffSession\s*\(/)).toBe(true);
+    expect(exportReaches(helpers, "currentSession", /\bauth\s*\(/)).toBe(true);
+    expect(exportReaches(helpers, "currentSession", /\brequireStaffSession\s*\(/)).toBe(false);
   });
 
   it("finds the imported helper by what its own module does", () => {

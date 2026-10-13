@@ -31,7 +31,9 @@ import { pathToFileURL } from "node:url";
  * under `src/app/shop/`, or one that calls `auth(` itself, must **reach**
  * `requireShopSurface(` — directly, through a function of the same module, or
  * through a helper it imports from a module of this repository where that
- * helper reaches it (the diver record's `requireDiverActionContext`). Without
+ * helper reaches it (the diver record's `requireDiverActionContext`).
+ * `requireStaffSession(` and `auth(` are resolved across modules the same
+ * way, so a wrapper imported from another file counts as if written here. Without
  * this half an action that compared the slug by hand, called `auth()`, or
  * checked nothing passed. A public action under `src/app/s/` checks no session
  * and is outside the rule; an action that reads the session before there is a
@@ -175,10 +177,15 @@ function reachesThrough(byName, pattern) {
 
 export function findSlugActionsOnStaffSession(source, options = {}) {
   if (!isServerModule(source)) return [];
-  const { staffModule = false, importedGates = [] } = options;
+  const {
+    staffModule = false,
+    importedGates = [],
+    importedStaffGates = [],
+    importedSignIns = [],
+  } = options;
   const functions = topLevelFunctions(source);
   const byName = new Map(functions.map((fn) => [fn.name, fn]));
-  const reaches = reachesThrough(byName, GATE);
+  const reaches = reachesThrough(byName, callPattern(GATE, importedStaffGates));
   const slugMemo = new Map();
   const takesSlug = (fn, seen = new Set()) => {
     if (slugMemo.has(fn.name)) return slugMemo.get(fn.name);
@@ -209,8 +216,8 @@ export function findSlugActionsOnStaffSession(source, options = {}) {
     slugMemo.set(fn.name, result);
     return result;
   };
-  const surfaces = reachesThrough(byName, gatePattern(importedGates));
-  const signsIn = reachesThrough(byName, AUTH);
+  const surfaces = reachesThrough(byName, callPattern(SURFACE, importedGates));
+  const signsIn = reachesThrough(byName, callPattern(AUTH, importedSignIns));
   return functions
     .filter((fn) => fn.exported && takesSlug(fn))
     .flatMap((fn) => {
@@ -222,10 +229,15 @@ export function findSlugActionsOnStaffSession(source, options = {}) {
     });
 }
 
-/** `requireShopSurface(`, or a call to a helper imported from a module where it reaches it. */
-function gatePattern(importedGates) {
-  const names = ["requireShopSurface", ...importedGates].join("|");
-  return new RegExp(`\\b(?:${names})\\s*\\(`);
+/**
+ * `pattern` (a call), or a call to any of `imported`: helpers imported from a
+ * module where they reach that call. Each of the three calls the rule reads
+ * (`requireShopSurface(`, `requireStaffSession(`, `auth(`) is resolved across
+ * modules the same way, so a wrapper in another file hides none of them.
+ */
+function callPattern(pattern, imported) {
+  if (imported.length === 0) return pattern;
+  return new RegExp(`${pattern.source}|\\b(?:${imported.join("|")})\\s*\\(`);
 }
 
 /**
@@ -244,11 +256,16 @@ export function repositoryImports(source) {
   return imports;
 }
 
-/** Whether `name`, a top-level function of `source`, reaches `requireShopSurface(`. */
-export function exportReachesSurface(source, name) {
+/** Whether `name`, a top-level function of `source`, reaches a call matching `pattern`. */
+export function exportReaches(source, name, pattern) {
   const byName = new Map(topLevelFunctions(source).map((fn) => [fn.name, fn]));
   const fn = byName.get(name);
-  return fn ? reachesThrough(byName, SURFACE)(fn) : false;
+  return fn ? reachesThrough(byName, pattern)(fn) : false;
+}
+
+/** Whether `name`, a top-level function of `source`, reaches `requireShopSurface(`. */
+export function exportReachesSurface(source, name) {
+  return exportReaches(source, name, SURFACE);
 }
 
 /**
@@ -297,15 +314,27 @@ async function resolveImport(file, specifier) {
   return null;
 }
 
-/** The imported helpers of `file` that reach `requireShopSurface(` in their own module. */
-async function importedGates(file, source) {
-  const gates = [];
+/**
+ * The imported helpers of `file`, sorted by which of the three calls each
+ * reaches in its own module: `requireShopSurface(` (`importedGates`),
+ * `requireStaffSession(` (`importedStaffGates`) and `auth(` (`importedSignIns`).
+ * `@/lib/session` itself is skipped: it is where the gates are defined, and its
+ * exports are matched by name.
+ */
+async function importedCalls(file, source) {
+  const found = { importedGates: [], importedStaffGates: [], importedSignIns: [] };
   for (const imported of repositoryImports(source)) {
     if (imported.from === "@/lib/session") continue;
     const target = await resolveImport(file, imported.from);
-    if (target && exportReachesSurface(target.source, imported.name)) gates.push(imported.local);
+    if (!target) continue;
+    if (exportReaches(target.source, imported.name, SURFACE))
+      found.importedGates.push(imported.local);
+    if (exportReaches(target.source, imported.name, GATE))
+      found.importedStaffGates.push(imported.local);
+    if (exportReaches(target.source, imported.name, AUTH))
+      found.importedSignIns.push(imported.local);
   }
-  return gates;
+  return found;
 }
 
 async function main() {
@@ -320,7 +349,7 @@ async function main() {
       modules++;
       const options = {
         staffModule: path.normalize(file).startsWith(STAFF_ROOT),
-        importedGates: await importedGates(file, source),
+        ...(await importedCalls(file, source)),
       };
       for (const finding of findSlugActionsOnStaffSession(source, options)) {
         (finding.problem === "staff-session" ? violations : unproven).push(

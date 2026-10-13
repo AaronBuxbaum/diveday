@@ -36,6 +36,28 @@ describe("a read of an event table", () => {
     ).toEqual([2]);
   });
 
+  it("is refused when the shop is only projected, joined or grouped, never filtered", () => {
+    // The founder-metrics shape: `shopId` in the select, the join and the
+    // groupBy, and every shop's rows read at once.
+    expect(
+      lines(`
+        db.select({ shopId: rollCallEvents.shopId, reachedAt: min(rollCallEvents.occurredAt) })
+          .from(rollCallEvents)
+          .innerJoin(shops, eq(shops.id, rollCallEvents.shopId))
+          .where(eq(rollCallEvents.status, "boarded"))
+          .groupBy(rollCallEvents.shopId);
+      `),
+    ).toEqual([3]);
+  });
+
+  it("passes a filter over a set of shops", () => {
+    expect(
+      lines(`
+        db.select().from(rollCallEvents).where(inArray(rollCallEvents.shopId, shopIds));
+      `),
+    ).toEqual([]);
+  });
+
   it("passes when it says why it is across shops", () => {
     expect(
       lines(`
