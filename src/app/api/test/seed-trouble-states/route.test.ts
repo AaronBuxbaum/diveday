@@ -1,7 +1,9 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getTripManifest } from "@/db/manifests";
+import { listTripReadiness } from "@/db/readiness";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
-import { trips } from "@/db/schema";
+import { bookings, people, trips } from "@/db/schema";
 import { seededShopContext } from "@/test/db";
 
 /**
@@ -67,5 +69,56 @@ describe("POST /api/test/seed-trouble-states", () => {
     expect(response.status).toBe(200);
 
     expect((await listOwedShopCancellationRefunds(db, shop.id)).length).toBeGreaterThan(0);
+  }, 60_000);
+
+  /**
+   * **A checked-in diver who can no longer board** (#2410): the state the
+   * counter must keep under "Still to clear", made through the real check-in.
+   */
+  it("checks a diver in and then blocks them when asked", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const response = await POST(seedRequest("?checkedInBlocked=1"));
+    const body = (await response.json()) as {
+      checkedInBlocked?: { tripId: string; personName: string };
+    };
+    if (!body.checkedInBlocked) throw new Error("no checked-in blocked diver was made");
+    const { tripId, personName } = body.checkedInBlocked;
+    const row = (await listTripReadiness(db, shop.id, tripId)).find(
+      (entry) => entry.person.fullName === personName,
+    );
+    expect(row?.booking.status).toBe("checked_in");
+    expect(row?.readiness.status).toBe("blocked");
+  }, 60_000);
+
+  /**
+   * **One seat the dock never counted on the finished dawn boat** (#2408), so
+   * its record shows every outcome band.
+   */
+  it("leaves one seat on the finished boat with no dock result when asked", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const response = await POST(seedRequest("?uncountedSeat=1"));
+    const body = (await response.json()) as {
+      uncountedSeat?: { tripId: string; personName: string };
+    };
+    if (!body.uncountedSeat) throw new Error("no uncounted seat was made");
+    const { tripId, personName } = body.uncountedSeat;
+    const manifest = await getTripManifest(db, shop.id, tripId);
+    const states = new Map(
+      manifest?.divers.map((diver) => [diver.fullName, diver.rollCall?.state]),
+    );
+    expect(states.get(personName)).toBeUndefined();
+    expect(states.has(personName)).toBe(true);
+    expect([...states.values()]).toContain("boarded");
+    expect([...states.values()]).toContain("not_boarded");
+    const [seat] = await db
+      .select({ status: bookings.status })
+      .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(and(eq(bookings.tripId, tripId), eq(people.fullName, personName)));
+    expect(seat?.status).toBe("checked_in");
   }, 60_000);
 });

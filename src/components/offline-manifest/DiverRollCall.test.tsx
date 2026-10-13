@@ -23,7 +23,7 @@ describe("OfflineDiverRollCall", () => {
     if (!trip) throw new Error("the fixture carries a manifest");
     const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
     const warned = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
-    expect(warned).toContain("Medical referral open: riding only");
+    expect(warned).toContain("Riding only: referred");
     expect(warned).not.toContain("Physician said no before");
     expect(warned).toMatch(
       /Referred to a physician on Jun\s10,\s2026 with no answer on file: riding only, not in the water/,
