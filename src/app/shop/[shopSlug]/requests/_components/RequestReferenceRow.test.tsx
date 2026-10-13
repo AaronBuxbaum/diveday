@@ -26,6 +26,8 @@ const BASE: DateRequestRow = {
   divers: 2,
   message: null,
   createdAt: new Date("2027-02-20T14:00:00.000Z"),
+  handledAt: null,
+  handledAs: null,
 };
 
 function row(

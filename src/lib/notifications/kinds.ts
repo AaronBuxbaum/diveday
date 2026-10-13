@@ -1216,6 +1216,33 @@ const lostItemFoundSchema = z.object({
 });
 
 /**
+ * **A date request, acknowledged to the diver who sent it** (third UX review,
+ * item 13). Addressed to the address the public form took, so it carries
+ * nothing the diver typed: the course title is the shop's, the dates are
+ * parsed calendar days, and the phone and hours are the shop's own
+ * (`courseInquiryReceivedEmail`).
+ */
+const courseInquiryReceivedSchema = z.object({
+  kind: z.literal("course_inquiry_received"),
+  courseInquiryId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  courseTitle: z.string().trim().min(1).max(200).optional(),
+  preferredDate: calendarDateSchema.optional(),
+  alternateDate: calendarDateSchema.optional(),
+  shopPhone: z.string().trim().min(1).max(40).optional(),
+  deskHours: z
+    .object({
+      opensMinute: z.number().int().min(0).max(1439),
+      closesMinute: z.number().int().min(1).max(1440),
+    })
+    .optional(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+/**
  * **A student's certification, told to the student** (third UX review, item
  * 14). Sent once, when the instructor's Certify tap writes a new level card
  * (`issueShopCertification` refuses a level the diver already holds, so a
@@ -1416,6 +1443,7 @@ export const notificationSchema = z
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
+    courseInquiryReceivedSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1666,6 +1694,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per tap on Tell.
     case "lost_item_found":
       return `lost-item-found/${notification.itemId}/${notification.toldAt.toISOString()}`;
+    // One acknowledgment per submitted request row.
+    case "course_inquiry_received":
+      return `course-inquiry-received/${notification.courseInquiryId}`;
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;

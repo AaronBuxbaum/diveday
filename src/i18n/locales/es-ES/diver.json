@@ -4491,6 +4491,15 @@
     },
     "smsCourseCertified": {
       "body": "{shopName}: ya tienes tu certificación {level}. Felicidades."
+    },
+    "inquiryReceived": {
+      "subject": "{shopName} recibió tu petición",
+      "course": "Gracias por preguntar por {course}. Recibimos tu petición.",
+      "dive": "Gracias por preguntar por un día de buceo. Recibimos tu petición.",
+      "dateOne": "Pediste el {date}.",
+      "datesTwo": "Pediste el {date} o el {alternate}.",
+      "reply": "Te responderemos por correo o por teléfono.",
+      "call": "Si quieres hablar antes, llama al {phone}."
     }
   },
   "brand": {

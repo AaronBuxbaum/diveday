@@ -4491,6 +4491,15 @@
     },
     "smsCourseCertified": {
       "body": "{shopName}: you’re certified, {level}. Congratulations."
+    },
+    "inquiryReceived": {
+      "subject": "{shopName} has your request",
+      "course": "Thanks for asking about {course}. We have your request.",
+      "dive": "Thanks for asking about a day of diving. We have your request.",
+      "dateOne": "You asked for {date}.",
+      "datesTwo": "You asked for {date}, or {alternate}.",
+      "reply": "We’ll get back to you by email or phone.",
+      "call": "To talk sooner, call {phone}."
     }
   },
   "brand": {

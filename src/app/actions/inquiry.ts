@@ -166,5 +166,37 @@ export async function submitInquiryAction(
     });
   }
 
+  // **The diver hears it arrived** (third UX review, item 13). "We'll be in
+  // touch" used to be the whole of it, and the only message DiveDay sent went
+  // to the shop. Only to an address the diver gave, and carrying nothing they
+  // typed (`courseInquiryReceivedEmail`); best-effort, after the response,
+  // like the shop's note above.
+  if (email) {
+    const locale = await requestLocale(shop.defaultLocale);
+    after(async () => {
+      await sendNotification(await getDb(), {
+        kind: "course_inquiry_received",
+        courseInquiryId: record.id,
+        shopId: shop.id,
+        to: email,
+        locale,
+        shopName: shop.name,
+        timezone: shop.timezone,
+        ...(course ? { courseTitle: course.title } : {}),
+        ...(preferredDate ? { preferredDate } : {}),
+        ...(alternateDate ? { alternateDate } : {}),
+        ...(shop.contactPhone ? { shopPhone: shop.contactPhone } : {}),
+        ...(shop.deskHoursConfirmedAt
+          ? {
+              deskHours: {
+                opensMinute: shop.deskOpensMinute,
+                closesMinute: shop.deskClosesMinute,
+              },
+            }
+          : {}),
+      }).catch(() => ({ status: "failed" as const }));
+    });
+  }
+
   return { success: true };
 }

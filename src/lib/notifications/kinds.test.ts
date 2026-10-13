@@ -153,8 +153,24 @@ describe("every handle a notification carries is reachable by the erasure sweep"
     expect(inquiry?.phone).toEqual(["inquirerPhone"]);
   });
 
+  /**
+   * **The shop's own published number, not a person's** — out of scope for
+   * the same reason `sender.replyTo` is. A date request's acknowledgment tells
+   * the diver how to reach the shop sooner (third UX review, item 13); the
+   * number is `shops.contact_phone`, resolved server-side, and erasing a diver
+   * never reaches it. Listed by kind and field, so a second phone on the same
+   * kind is still caught.
+   */
+  const SHOP_OWNED_NUMBERS: Record<string, readonly string[]> = {
+    course_inquiry_received: ["shopPhone"],
+  };
+
   it.each(branches())("$kind surfaces every handle it carries", ({ kind, email, phone }) => {
-    const extra = [...email.filter((field) => field !== "to"), ...phone];
+    const shopOwned = SHOP_OWNED_NUMBERS[kind] ?? [];
+    const extra = [
+      ...email.filter((field) => field !== "to"),
+      ...phone.filter((field) => !shopOwned.includes(field)),
+    ];
     if (extra.length === 0) return;
 
     const sample = SUBJECT_SAMPLES[kind];

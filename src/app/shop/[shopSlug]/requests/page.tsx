@@ -5,7 +5,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats } from "@/db/boats";
-import { listDateRequestsForStaff } from "@/db/course-inquiries";
+import { listDateRequestsForStaff, listHandledDateRequests } from "@/db/course-inquiries";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
@@ -15,8 +15,10 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { RequestDayGroup, requestAdviceLines } from "./_components/RequestDayGroup";
+import { RequestDoneRow } from "./_components/RequestDoneRow";
 import { RequestLedgerRow } from "./_components/RequestLedgerRow";
 import { RequestReferenceRow } from "./_components/RequestReferenceRow";
+import { setRequestOutcomeAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — it is this segment's `loading.tsx` that stands in while the
@@ -89,10 +91,12 @@ export default async function RequestsPage({
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range, so a bookmarked page past the end lands on the last real one.
-  const [requestPage, shopBoats, canAddDeparture] = await Promise.all([
+  const [requestPage, handled, shopBoats, canAddDeparture] = await Promise.all([
     listDateRequestsForStaff(db, shop.id, {
       page: Number.parseInt(page ?? "", 10),
     }),
+    // The closed leads (third UX review, item 13): off the days, under "Done".
+    listHandledDateRequests(db, shop.id),
     listBoats(db, shop.id),
     // **Reading a day is every role's; putting a boat on it is not** (issue
     // #1831). The day's act lands on the schedule builder, whose add panel is
@@ -119,6 +123,12 @@ export default async function RequestsPage({
   // says nothing. Reassigned while mapping the groups, in their render order.
   let previousAdvice = "";
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
+  const outcomeAction = setRequestOutcomeAction.bind(null, shopSlug);
+  const done = handled.flatMap((request) =>
+    request.handledAt && request.handledAs
+      ? [{ ...request, handledAt: request.handledAt, handledAs: request.handledAs }]
+      : [],
+  );
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -138,7 +148,11 @@ export default async function RequestsPage({
       ) : null}
 
       {requestPage.total === 0 ? (
-        <EmptyState title={t("requests.emptyHeading")} body={t("requests.emptyDetail")} />
+        // Nothing open: the empty state only when nothing was ever asked, or
+        // it would sit above the Done list saying there were no requests.
+        done.length === 0 ? (
+          <EmptyState title={t("requests.emptyHeading")} body={t("requests.emptyDetail")} />
+        ) : null
       ) : (
         // One rhythm between groups, the page-section spacing every staff
         // surface uses — never a per-section `mt-*` that drifts.
@@ -211,6 +225,8 @@ export default async function RequestsPage({
                       locale={locale}
                       timezone={timezone}
                       shopSlug={shopSlug}
+                      shopName={shop.name}
+                      markDoneAction={outcomeAction}
                       t={t}
                     />
                   ) : (
@@ -243,6 +259,8 @@ export default async function RequestsPage({
                   locale={locale}
                   timezone={timezone}
                   shopSlug={shopSlug}
+                  shopName={shop.name}
+                  markDoneAction={outcomeAction}
                   t={t}
                 />
               ))}
@@ -250,6 +268,25 @@ export default async function RequestsPage({
           ) : null}
         </div>
       )}
+
+      {/* The closed leads, after every open one and outside the pager: they
+          are here to reopen a mistaken tick, not to plan from. */}
+      {done.length > 0 ? (
+        <div className="mt-10">
+          <RequestDayGroup id="done" label={t("requests.done.heading", { count: done.length })}>
+            {done.map((request) => (
+              <RequestDoneRow
+                key={request.id}
+                request={request}
+                locale={locale}
+                timezone={timezone}
+                reopenAction={outcomeAction}
+                t={t}
+              />
+            ))}
+          </RequestDayGroup>
+        </div>
+      ) : null}
 
       <Pager
         page={requestPage.page}
