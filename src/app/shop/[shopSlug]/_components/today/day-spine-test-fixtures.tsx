@@ -1,6 +1,7 @@
 // i18n-exempt-file: test fixture; only the day spine's tests import it, and its words are seeded data.
 import { render } from "@testing-library/react";
 import type { FirstBooking } from "@/db/first-booking";
+import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
 import {
   assembleDaySpine,
@@ -140,7 +141,8 @@ export function renderSpine({
         spine: assembleDaySpine({ departures, actions }, { departures: tomorrow, actions: [] }),
         shopSlug: "blue-mantis",
         shopName: "Blue Mantis",
-        locale: "en-US",
+        // The source locale: these tests read the English bundle.
+        locale: DEFAULT_DIVER_LOCALE,
         timeZone: "America/New_York",
         currency: "usd",
         now: NOW,

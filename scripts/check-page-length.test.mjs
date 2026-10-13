@@ -200,9 +200,9 @@ describe("measuring top-level functions", () => {
 
 describe("counting code lines", () => {
   it("leaves out blank lines, line comments and block comments", () => {
-    expect(countCodeLines(["const a = 1;", "", "  // note", "/* one */", "/**", " * two", " */"])).toBe(
-      1,
-    );
+    expect(
+      countCodeLines(["const a = 1;", "", "  // note", "/* one */", "/**", " * two", " */"]),
+    ).toBe(1);
   });
 
   it("counts code after a closing block comment and code with a trailing comment", () => {

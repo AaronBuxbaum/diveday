@@ -127,7 +127,10 @@ export function countCodeLines(lines) {
       const close = text.indexOf("*/");
       if (close === -1) continue;
       inBlock = false;
-      text = text.slice(close + 2).replace(/^\}/, "").trim();
+      text = text
+        .slice(close + 2)
+        .replace(/^\}/, "")
+        .trim();
     }
     while (text.startsWith("/*") || text.startsWith("{/*")) {
       const open = text.indexOf("/*");
@@ -137,7 +140,10 @@ export function countCodeLines(lines) {
         text = "";
         break;
       }
-      text = text.slice(close + 2).replace(/^\}/, "").trim();
+      text = text
+        .slice(close + 2)
+        .replace(/^\}/, "")
+        .trim();
     }
     if (text.length === 0 || text.startsWith("//")) continue;
     code++;
