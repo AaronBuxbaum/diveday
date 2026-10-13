@@ -21,6 +21,8 @@ export type EditorSectionRef = {
   id: string;
   /** Already-translated: staff copy is resolved on the server. */
   label: string;
+  /** The phone header's unsaved word; spread onto `EditorSection` with the rest. */
+  unsavedTag?: string;
 };
 
 /**
