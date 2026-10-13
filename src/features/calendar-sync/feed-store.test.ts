@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarFeeds, people, personRoles, userAccounts } from "@/db/schema";
 import { listStaff } from "@/db/trips";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
   issueCalendarFeed,
@@ -272,6 +273,32 @@ describe("feed housekeeping", () => {
 
     const [after] = await listCalendarFeeds(db, { shopId: shop.id, personId });
     expect(after.lastAccessedAt?.toISOString()).toBe(fetchedAt.toISOString());
+  });
+
+  it("revokes the feed of a removed staff member who still holds a staff role", async () => {
+    // Removal stamps `deleted_at` and leaves the roles, so the role list alone
+    // kept a removed staffer's calendar URL working.
+    const { db, shop } = ctx;
+    const staff = await listStaff(db, shop.id);
+    const removed = staff.find((entry) => entry.roles.includes("captain")) ?? staff[1];
+    if (!removed) throw new Error("seeded shop needs a second staff member");
+    await issueCalendarFeed(db, {
+      shopId: shop.id,
+      personId: removed.person.id,
+      scope: "assignments",
+    });
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, removed.person.id));
+    await revokeFeedsForFormerStaff(db, { shopId: shop.id });
+    expect(
+      await listCalendarFeeds(db, { shopId: shop.id, personId: removed.person.id }),
+    ).toHaveLength(0);
+    expect(
+      await issueCalendarFeed(db, {
+        shopId: shop.id,
+        personId: removed.person.id,
+        scope: "assignments",
+      }),
+    ).toBeNull();
   });
 
   it("cleans up feeds held by people who no longer have any staff role", async () => {

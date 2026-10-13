@@ -695,6 +695,7 @@ async function loadRecapPageData(
       ? db
           .select({ fullName: people.fullName })
           .from(people)
+          // diveday:allow-deleted-people: the name of who wrote the course's next step.
           .where(eq(people.id, row.courseNextStepByPersonId))
           .limit(1)
       : Promise.resolve([]),

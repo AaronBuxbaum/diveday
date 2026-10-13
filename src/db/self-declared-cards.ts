@@ -160,6 +160,7 @@ export async function recordSelfDeclaredCards(
   const [locked] = await tx
     .select({ id: people.id })
     .from(people)
+    // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1)
     .for("no key update");
@@ -683,6 +684,7 @@ export async function listCertificationSummaries(
   const declaredRows = await db
     .select({ id: people.id })
     .from(people)
+    // diveday:allow-deleted-people: the declared-no-card flag of people already on this list.
     .where(
       and(
         eq(people.shopId, shopId),

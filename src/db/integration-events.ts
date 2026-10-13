@@ -254,6 +254,7 @@ export async function hydrateIntegrationEventPayload(
   const [person] = await db
     .select({ fullName: people.fullName, email: people.email })
     .from(people)
+    // diveday:allow-deleted-people: the event describes the person as they were when it happened.
     .where(and(eq(people.id, personId), eq(people.shopId, event.shopId)))
     .limit(1);
   if (!person) return event;

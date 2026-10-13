@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import type { AppDb, DbExecutor } from "@/db/client";
 import { calendarFeeds, people, personRoles, shops, userAccounts } from "@/db/schema";
+import { livePerson } from "@/db/trips-live";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { createFeedToken, hashFeedToken } from "./feed-token";
@@ -64,7 +65,7 @@ export async function issueCalendarFeed(
     const [locked] = await tx
       .select({ id: people.id })
       .from(people)
-      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId), livePerson()))
       .limit(1)
       .for("update");
     if (!locked) return null;
@@ -240,7 +241,13 @@ export async function revokeFeedsForFormerStaff(
     .selectDistinct({ personId: people.id })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, input.shopId), inArray(personRoles.role, [...STAFF_ROLES])));
+    .where(
+      and(
+        eq(people.shopId, input.shopId),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+        livePerson(),
+      ),
+    );
   const staffIds = staff.map((row) => row.personId);
   const conditions = [eq(calendarFeeds.shopId, input.shopId), isNull(calendarFeeds.revokedAt)];
   await db

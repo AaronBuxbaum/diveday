@@ -122,6 +122,7 @@ export async function rosterFacts(
     db
       .select({ id: people.id, selfRegisteredAt: people.selfRegisteredAt })
       .from(people)
+      // diveday:allow-deleted-people: facts for people already on this roster.
       .where(and(eq(people.shopId, shopId), inArray(people.id, ids))),
   ]);
 

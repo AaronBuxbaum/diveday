@@ -22,8 +22,8 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  * `.from(people)`, the lesson `check-live-trips.mjs` learned in issue #635),
  * it carries `livePerson()`, the same clause spelled out as
  * `isNull(people.deletedAt)` (src/lib takes only types from src/db, so it
- * cannot import the predicate), or `diveday:allow-deleted-people: <why>` in a
- * comment.
+ * cannot import the predicate), one of its module's {@link CARRIERS}, or
+ * `diveday:allow-deleted-people: <why>` in a comment.
  *
  * ## The baseline
  *
@@ -63,8 +63,56 @@ async function walk(relativeDirectory) {
   return files;
 }
 
+/**
+ * Named predicates that carry the filter for every read in their module, so a
+ * read passes by naming one: the merge's `activeDiverWhere`, the roster's
+ * `scope` (through `removalScope`, where the Removed filter is the one view
+ * that asks for removed people on purpose), and the inbox's `live`. Each is
+ * listed by hand, and each definition must itself carry the filter or another
+ * listed carrier, or it carries nothing ({@link carriersIn}).
+ */
+export const CARRIERS = {
+  "src/db/diver-merge.ts": ["activeDiverWhere"],
+  "src/db/divers.ts": ["removalScope", "scope"],
+  "src/db/inbound-messages.ts": ["live"],
+};
+
+/**
+ * The listed carriers whose definition in `source` (`function name(` or
+ * `const name = `, to the first blank line) holds the filter, directly or
+ * through another carrier that does.
+ */
+export function carriersIn(source, names) {
+  const definitions = new Map();
+  const lines = source.split("\n");
+  for (const name of names) {
+    const start = lines.findIndex((line) =>
+      new RegExp(`(?:function\\s+${name}\\s*\\(|const\\s+${name}\\s*=)`).test(line),
+    );
+    if (start === -1) continue;
+    const end = lines.findIndex((line, at) => at > start && line.trim() === "");
+    definitions.set(name, lines.slice(start, end === -1 ? undefined : end).join("\n"));
+  }
+  const carrying = new Set();
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const [name, text] of definitions) {
+      if (carrying.has(name)) continue;
+      if (
+        FILTERED.test(text) ||
+        [...carrying].some((other) => new RegExp(`\\b${other}\\b`).test(text))
+      ) {
+        carrying.add(name);
+        grew = true;
+      }
+    }
+  }
+  return [...carrying];
+}
+
 /** Every `.from(people)` in one source, and which of them say nothing about removed people. */
-export function findUnfilteredPeopleReads(source) {
+export function findUnfilteredPeopleReads(source, carriers = []) {
   const lines = source.split("\n");
   const anchors = [];
   lines.forEach((line, index) => {
@@ -77,6 +125,7 @@ export function findUnfilteredPeopleReads(source) {
     // in) is not looked for: the query must say it where it reads the table.
     const window = lines.slice(index, end).join("\n");
     if (FILTERED.test(window)) return;
+    if (carriers.some((name) => new RegExp(`\\b${name}\\b`).test(window))) return;
     findings.push({ line: index + 1, text: lines[index].trim() });
   });
   return { guarded: anchors.length, findings };
@@ -90,7 +139,9 @@ async function collect() {
       if (IS_TEST.test(file)) continue;
       const base = path.basename(file);
       if (base === "seed.ts" || base.startsWith("seed-")) continue;
-      const result = findUnfilteredPeopleReads(await readFile(path.join(ROOT, file), "utf8"));
+      const source = await readFile(path.join(ROOT, file), "utf8");
+      const listed = CARRIERS[file.split(path.sep).join("/")] ?? [];
+      const result = findUnfilteredPeopleReads(source, carriersIn(source, listed));
       guarded += result.guarded;
       if (result.findings.length > 0) {
         counts.set(

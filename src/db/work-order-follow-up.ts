@@ -851,6 +851,7 @@ export async function billAndPickupFacts(
       db
         .select({ email: people.email })
         .from(people)
+        // diveday:allow-deleted-people: the email of the ticket's own customer.
         .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
         .limit(1),
   ]);

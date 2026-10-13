@@ -61,6 +61,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
+import { livePerson } from "./trips-live";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 export type ImportSummary = {
@@ -918,11 +919,11 @@ export async function canPersonImportShopData(
   personId: string,
 ): Promise<boolean> {
   const [person] = await db
-    .select({ id: people.id, deletedAt: people.deletedAt })
+    .select({ id: people.id })
     .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson()))
     .limit(1);
-  if (!person || person.deletedAt) return false;
+  if (!person) return false;
 
   const [account] = await db
     .select({ status: userAccounts.status })

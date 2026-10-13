@@ -20,7 +20,7 @@ import {
   tripInvitations,
   trips,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { livePerson, liveTrip } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 
 export type CreateTripRequestInvitationsInput = {
@@ -54,7 +54,9 @@ export async function createTripRequestInvitations(
     const [author] = await tx
       .select({ id: people.id })
       .from(people)
-      .where(and(eq(people.id, input.createdByPersonId), eq(people.shopId, input.shopId)))
+      .where(
+        and(eq(people.id, input.createdByPersonId), eq(people.shopId, input.shopId), livePerson()),
+      )
       .limit(1);
     if (!author) return 0;
 
@@ -104,7 +106,9 @@ export async function createDirectTripInvitation(
     const [author] = await tx
       .select({ id: people.id })
       .from(people)
-      .where(and(eq(people.id, input.createdByPersonId), eq(people.shopId, input.shopId)))
+      .where(
+        and(eq(people.id, input.createdByPersonId), eq(people.shopId, input.shopId), livePerson()),
+      )
       .limit(1);
     if (!author) return false;
 

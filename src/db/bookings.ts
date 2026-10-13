@@ -1931,6 +1931,7 @@ async function changeParticipantType(
     const [subject] = await tx
       .select({ fullName: people.fullName })
       .from(people)
+      // diveday:allow-deleted-people: the seat's own diver, named on its trail line.
       .where(and(eq(people.id, booking.personId), eq(people.shopId, shopId)))
       .limit(1);
     await recordTripActivity(tx, {

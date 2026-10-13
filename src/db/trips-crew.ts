@@ -488,6 +488,7 @@ export async function crewMoveConflicts(
       : await db
           .select({ personId: people.id, fullName: people.fullName })
           .from(people)
+          // diveday:allow-deleted-people: names for crew already assigned elsewhere.
           .where(and(eq(people.shopId, shopId), inArray(people.id, awayIds)))
           .orderBy(asc(people.fullName));
 

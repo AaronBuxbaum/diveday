@@ -8,7 +8,7 @@
  */
 import { notFound } from "next/navigation";
 import { loadActiveStaffRoles } from "@/db/authz";
-import { type AppDb, getDb } from "@/db/client";
+import type { AppDb } from "@/db/client";
 import { getMergedIntoPersonId } from "@/db/people";
 import { isStaff } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";

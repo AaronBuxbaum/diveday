@@ -752,6 +752,7 @@ export async function setReviewPublished(
             tx
               .select({ one: people.id })
               .from(people)
+              // diveday:allow-deleted-people: erasure, not removal, is what takes a review down.
               .where(and(eq(people.id, tripReviews.personId), isNull(people.anonymizedAt))),
           ),
         ),
@@ -808,6 +809,7 @@ export async function setReviewStandout(
           db
             .select({ one: people.id })
             .from(people)
+            // diveday:allow-deleted-people: erasure, not removal, is what takes a review down.
             .where(and(eq(people.id, tripReviews.personId), isNull(people.anonymizedAt))),
         ),
       ),
@@ -881,6 +883,7 @@ export async function setReviewsPublished(
             tx
               .select({ one: people.id })
               .from(people)
+              // diveday:allow-deleted-people: erasure, not removal, is what takes a review down.
               .where(and(eq(people.id, tripReviews.personId), isNull(people.anonymizedAt))),
           ),
         ),
