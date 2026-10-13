@@ -112,6 +112,13 @@ export const SUBPROCESS_TIMEOUTS = {
    * so a cold vitest start on a busy runner is not cut off.
    */
   regenerateSnapshot: 300_000,
+  /**
+   * One step of `pnpm verify:push` (`scripts/verify-push.mjs`): lint, typecheck, `check:repo`, a
+   * vitest selection, the e2e build, or the selected Playwright specs. The slowest honest one is
+   * a `vitest --changed` over a wide diff on four cores, tens of minutes; an hour, so a wedged
+   * step names itself rather than holding the session until the harness gives up.
+   */
+  verifyPushStep: 3_600_000,
   /** `pnpm db:migrate` inside the production build, while the previous release still serves. */
   migrate: 300_000,
   /**

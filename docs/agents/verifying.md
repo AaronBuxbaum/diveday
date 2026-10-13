@@ -55,10 +55,62 @@ The command is step 3 of the verify skill's checklist: 40 tests, about a minute,
 every failure listed above. The trigger is touching
 any schema module at all — 16j-B added only columns and tripped two guards.
 
+## The pre-push gate
+
+Measured on the open stack between 2026-10-09 and 2026-10-12: 169 CI runs, 18 failed and 128
+cancelled, and 90 failed jobs inside them. Classified from their annotations and logs:
+
+| Failed jobs | What broke | Would a local run have caught it? |
+| --- | --- | --- |
+| 47 Playwright | a spec the change broke: a deleted sentence a spec still quoted (`sightings`), a moved seeded shift (`staffing`), a second "Crew schedule" destination (`search`), a recounted reviews line, a folded editor with two "Location" fields | yes, by running that spec; the checklist said "one spec", and nothing told the author which |
+| 23 unit | tests that read source from disk (`form.test.tsx`, `button.test.ts`, `EntryShell.test.tsx`, the erasure and rehearsal coverage scans), and the export snapshot after a seed change | yes, but `vitest --changed` cannot select a test that imports nothing it checks |
+| 9 safeguards | the `guards` Vitest project (`eyebrow-way-up`, `focus-ring`), and four pull request bodies | yes; no local step ran either |
+| 2 typecheck | fixtures a merge from the layer below broke | yes; the layer's checks had run before the merge |
+| 5 visual, 2 reg-suit | one capture that timed out on a moved heading | by a filtered capture run |
+| 2 build | Google Fonts unreachable at build time | no: infrastructure |
+
+So the problem was never flakiness. A stacked change that breaks a spec breaks it on every layer
+above it, which is how one deleted sentence became twelve red Playwright shards.
+
+`pnpm verify:push` (`scripts/verify-push.mjs`) runs the local half of every row above against
+the layer below (`stackBase` in `scripts/e2e-affected.mjs`; `origin/main` off a stack), stops at
+the first red step, and writes a stamp naming HEAD into the git directory:
+
+1. `pnpm regen` (with the export snapshot when seed, schema or export changed), then a clean
+   tree: a generated file the diff left stale is committed, not discovered by CI.
+2. `pnpm lint`, `pnpm typecheck`, `check:repo`, and the `guards` project (seconds).
+3. Every `src/` test that reads files from disk, 157 of them, about two and a half minutes.
+4. `vitest related` over the changed code files, which follows imports as `--changed` does but
+   without Vitest's `forceRerunTriggers` (any `package.json` edit makes `--changed` all 1,490
+   files); after a schema edit, the named coverage guards instead, because the schema reaches
+   the whole suite.
+5. The Playwright specs `pnpm e2e:affected` selects, after an `e2e:build` it reuses while the
+   tree is unchanged. *Strong*: specs the diff edits or whose helper it edits, specs quoting
+   text the diff removed (a locale value, JSX text, a seed literal), and specs visiting a route
+   whose own directory the diff edits. *Reach*: specs visiting a route whose page imports an
+   edited module, or a hub route (one more than ten specs visit), run narrowest first while the
+   recorded CI time stays inside fifteen minutes; the rest are named and left to CI.
+
+Replayed against the commits that broke specs on 2026-10-11 and 2026-10-12, the selection ran
+the broken spec in five of six: the sightings disclaimer, the reviews count, the dive-site editor
+fold, the shop name in the phone bar, and the second "Crew schedule". The miss was a seed change,
+which reaches every route and so ranks staffing behind thirty other specs. A local run takes
+about 1.4 times the recorded CI time (four specs: 291 s against 204 s recorded), plus three
+minutes for a cold build.
+
+`git push` is refused for a commit with no stamp (`scripts/guard-push.mjs`); a merge from the
+layer below is a new commit and needs a new run, which is the typecheck row. The way past it is a
+reason written in front of the command, `DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`, for the
+two cases the verify skill allows. A spec that is red on the base too is still named: run it on
+the base, say so in the PR, and push with the reason.
+
+The PR body rows are a separate gate: `scripts/guard-pr-body.mjs` runs `check-pr-body.mjs`
+before the GitHub MCP creates or edits a pull request.
+
 ## Push and read CI: anything whole
 
 `pnpm check`'s unit phase, the whole unit suite, `next build`, the whole `e2e/` suite, and the
-visual run.
+visual run. The pre-push gate above runs the part of each a diff can reach; CI runs them whole.
 
 **Why.** CI shards the unit suite four ways across dedicated runners and runs lint, typecheck,
 build, the safeguards and the Playwright shards beside it, in parallel. One agent container runs
@@ -85,8 +137,8 @@ one) and run `node scripts/merge-test-durations.mjs <logs…>` or
 **So the PR is the instrument, not the trophy.** Open it before it is green when that is the
 fastest way to learn what is broken; say so in the body, name what you have and have not run, and
 work what comes back. This does not license pushing carelessly: a push that turns CI red costs a
-cycle and reviewers' trust, so the local checks above still run first, and a change you have
-reason to think is broken gets fixed before it goes.
+cycle and reviewers' trust, so `pnpm verify:push` still runs first, and a push past it carries
+its reason in front of the command and in the body.
 
 **And a red PR is a PR you are still driving.** The licence to push before green is a licence to
 find out, never to walk away. A pull request left red with nobody working it is the thing this

@@ -1,6 +1,6 @@
 # The session hooks, and why each one exists
 
-`.claude/settings.json` wires ten scripts into the lifecycle of a Claude Code session. Every one
+`.claude/settings.json` wires twelve scripts into the lifecycle of a Claude Code session. Every one
 of them exists because a rule written in prose was followed for a while and then was not — a rule
 in `AGENTS.md` is only as reliable as the odds that a session holding thirteen thousand words of it
 happens to be holding that sentence when it types the command. A hook makes the mechanical half of
@@ -33,6 +33,8 @@ what is currently wired.
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position; on the first prompt of a session, the last session's hook refusals |
 | `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form |
 | `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
+| `PreToolUse` on `Bash` | `scripts/guard-push.mjs` | refuses a `git push` of a commit `pnpm verify:push` has not stamped, unless a reason is written in front |
+| `PreToolUse` on the GitHub MCP's pull request create/update | `scripts/guard-pr-body.mjs` | runs CI's `check-pr-body.mjs` over the body first and refuses one CI would refuse |
 | `PreToolUse` on `Read` | `scripts/guard-read.mjs` | refuses a generated artifact and a whole-file read of a large source file |
 | `PostToolUse` on `Edit`/`Write` | `scripts/format-touched.mjs` | Biome over the one file just touched; hands back what its safe fixes could not clear |
 | `PostToolUseFailure` on `Bash` | `scripts/explain-failure.mjs` | attaches the written answer to a failure the debug skill already explains |
@@ -134,6 +136,27 @@ The guard blanks heredoc bodies and quoted strings before matching, so a commit 
 script that *mentions* a refused shape is not refused. The cost — a shell-in-a-string like
 `sh -c "pnpm test | tail"` going unrefused — is deliberate and one way round only: a false negative
 costs one uncaught command, a false positive costs the guard its credibility.
+
+## `guard-push.mjs` — a push is of a verified commit, or says why not
+
+Between 2026-10-09 and 2026-10-12, 90 CI jobs failed on the open stack, and nearly every one was a
+break a local run would have shown ([verifying.md](verifying.md#the-pre-push-gate)). The verify
+skill already said to check before pushing; what it could not do was make the check happen on the
+commit actually pushed, after the merge from the layer below that came in once the checks were
+done. So `pnpm verify:push` writes a stamp naming the commit it passed (`diveday-verified.json`
+in the git directory), and this hook refuses a `git push` of any other commit. Left alone: a
+commit the remote already has, a branch deletion, a tag push. The way past it is
+`DIVEDAY_PUSH_UNVERIFIED="<reason>"` in front of the command, a reason of at least ten characters
+that the PR repeats; the two right uses are in the verify skill.
+
+## `guard-pr-body.mjs` — the body CI reads, checked before it is sent
+
+Four of the safeguard failures in the same window were pull request bodies: a "Reviews:" paragraph
+where the template has `## Reviews launched`, or a reviewer's answer on a sub-bullet. On the GitHub
+MCP's `create_pull_request` and `update_pull_request`, this writes the body to a temporary file and
+runs `scripts/check-pr-body.mjs` against the base the call names (for an edit, the layer below),
+refusing with the checker's own words. It checks only a pull request whose head is the branch
+checked out here, since the changed files come from HEAD, and fails open on everything else.
 
 ## `guard-read.mjs` — the context-economy rule at the Read tool
 

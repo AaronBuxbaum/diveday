@@ -449,12 +449,20 @@ test.describe("approving a divemaster onto an intro session over its ratio", () 
         "data-hydrated",
         "true",
       );
+      // The press must reach the server, and the notice it brings back is read
+      // whole: CI has seen this answer missing (2026-10-12, -13) where it never
+      // fails locally, so a failure here says which half went wrong — no POST,
+      // or a different notice — instead of only "not found".
+      const answered = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname.endsWith("/staffing"),
+      );
       await ownerCell.getByRole("button", { name: "Approve" }).click();
-      await expect(
-        page.getByText(
-          "Approved, and they’re on the crew. The session is still over its ratio: only an instructor adds seats.",
-        ),
-      ).toBeVisible();
+      await answered;
+      await expect(page.getByRole("status").filter({ hasText: "Approved" })).toContainText(
+        "Approved, and they’re on the crew. The session is still over its ratio: only an instructor adds seats.",
+      );
 
       // The asker again, now on the crew: the session is no less over its
       // ratio, so their line is still there.

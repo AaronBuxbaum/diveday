@@ -20,19 +20,29 @@ Before every commit:
    After any edit under `src/db/schema/`, also the four schema guards, which nothing you edit
    selects:
    `pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot`
-4. **A flow changed**: one `pnpm e2e <spec> --reporter=line` (section 2).
+4. **A flow, a page or its copy changed**: `pnpm e2e:affected` names the specs that read what
+   you changed; run them with `pnpm e2e <spec…> --reporter=line` (section 2).
 5. **UI changed**: look at it (section 3).
 
 Before every push:
 
-6. **`pnpm test:changed`**: the tests your diff reaches through the import graph, which is the only
-   local run that reaches a coverage guard in a file you never touched. After a schema edit it
-   selects the whole suite; step 3's four guards stand in for it then.
-7. **One validated push per round.** Commit as often as you like; push once, when the checklist
-   is green for the round's work, because each push cancels the CI run of the one before it
-   (the measurement is in [verifying.md](../../../docs/agents/verifying.md#one-validated-push-per-round)).
-   A second push is right only when the `unpushed-work` hook is saving work before a turn ends,
-   or when you push to learn what only CI can answer and say so in the PR.
+6. **`pnpm verify:push`**, in the background: everything above for the whole diff against the
+   layer below, plus what CI kept catching that this list used to leave out — `pnpm regen` and a
+   clean tree, the `guards` project, every unit test that reads source from disk (which
+   `vitest --changed` can never select), `vitest related` over the changed code, and the Playwright specs the diff
+   reaches (`pnpm e2e:affected` prints them and why). It stops at the first red step and prints
+   that step's tail. Green, it stamps HEAD; `git push` is refused for a commit without a stamp
+   (`scripts/guard-push.mjs`), so a merge from the layer below means another run. The reasons
+   and the measurements: [verifying.md](../../../docs/agents/verifying.md#the-pre-push-gate).
+7. **One validated push per round.** Commit as often as you like; push once, when
+   `verify:push` is green for the round's work, because each push cancels the CI run of the one
+   before it (the measurement is in [verifying.md](../../../docs/agents/verifying.md#one-validated-push-per-round)).
+   A push without a green run is right only when the `unpushed-work` hook is saving work before
+   a turn ends, or when you push to learn what only CI can answer; write the reason in front of
+   the command (`DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`) and in the PR.
+8. **A PR body** names its reviews in the template's `## Reviews launched` section, one line per
+   reviewer with its answer on the same line; `scripts/guard-pr-body.mjs` runs CI's check over
+   the body before `create_pull_request` or `update_pull_request` sends it.
 
 CI runs anything whole: `pnpm check`, the whole unit suite, `next build`, the whole e2e suite and
 the visual run. The shell guard refuses the bare local forms. When you do read a `pnpm check` log,

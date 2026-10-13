@@ -98,8 +98,8 @@ either build it or say why you are not.
    not survive, say so in the PR **and** the issue, and build what the evidence supports.
 7. **Cut the branch, commit once, open the draft PR and extend the stack** (below), then build it.
 8. **Verify.** The local gate green (`pnpm check:repo`, `pnpm lint`, `pnpm typecheck`,
-   `pnpm test:changed`; the whole `pnpm check` runs on CI), a focused e2e for any flow you
-   touched, and *look at* every surface you changed, in light (both schemes only for colour work).
+   the specs `pnpm e2e:affected` names; the whole `pnpm check` runs on CI), `pnpm verify:push`
+   before the push, and *look at* every surface you changed, in light (both schemes only for colour work).
    Read each visual diff against the actual image before writing a word about it —
    `pnpm visual:report --commit <sha>` writes the PNGs.
 9. **Finish the PR you already opened** at step 7 — body, position line, diff explanation, and

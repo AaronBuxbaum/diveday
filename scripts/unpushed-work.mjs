@@ -61,7 +61,7 @@ export function reasonFor({ unpushed, branch }) {
   return [
     `${unpushed} commit${unpushed === 1 ? "" : "s"} on \`${branch}\` ${unpushed === 1 ? "is" : "are"} on no remote branch, and this container is ephemeral — an unpushed commit is lost when it is reclaimed.`,
     "",
-    `Push now (\`git push -u origin ${branch}\`) and open or update the pull request. If there is a reason not to push yet, say so in your closing message; this check does not repeat on the same turn.`,
+    `Push now (\`pnpm verify:push\`, then \`git push -u origin ${branch}\`; to save unverified work first, \`DIVEDAY_PUSH_UNVERIFIED="saving work before the container is reclaimed" git push -u origin ${branch}\`) and open or update the pull request. If there is a reason not to push yet, say so in your closing message; this check does not repeat on the same turn.`,
   ].join("\n");
 }
 

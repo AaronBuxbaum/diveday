@@ -43,6 +43,9 @@
       "Bash(pnpm check:*)",
       "Bash(pnpm test *)",
       "Bash(pnpm test:changed)",
+      "Bash(pnpm verify:push)",
+      "Bash(pnpm verify:push *)",
+      "Bash(pnpm e2e:affected)",
       "Bash(pnpm e2e:build)",
       "Bash(pnpm e2e:run *)",
       "Bash(pnpm visual:report *)",
@@ -154,6 +157,21 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-commit-format.mjs\"",
             "timeout": 45
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-push.mjs\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__github__create_pull_request|mcp__github__update_pull_request",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-pr-body.mjs\"",
+            "timeout": 150
           }
         ]
       },
