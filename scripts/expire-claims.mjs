@@ -13,6 +13,12 @@
 //     that has not pushed yet has no branch; a day is long enough to push one), or
 //   - it is more than MAX_CLAIM_DAYS old and no open pull request has its branch as head.
 //
+// A claim's branch is any of the branches it names: its own and the aliases `claims.mjs` reads
+// out of `(assembled into X)` and `(sub-branch Y)`. When a pull request from one of them has
+// merged, the expiry comment names it first, so an issue whose work landed without `Closes #n`
+// (#2284 through #2368, #2233 through #2377) says where it went instead of returning to the
+// queue looking untouched.
+//
 // An issue labelled in-progress with no parseable claim expires once the label is more than
 // MAX_CLAIM_DAYS old (the label's own date, from the issue's events): a label nothing backs is
 // the exact case "a stale claim is a dead session" names. A younger one is kept, so a session
@@ -39,20 +45,25 @@ export const BRANCH_GRACE_DAYS = 1;
 const DAY = 86_400_000;
 
 /**
- * The decision for one in-progress issue: `{ expire, reason, days }`. `branches` is the set of
- * branch names on origin, `openHeads` the head branches of open pull requests.
+ * The decision for one in-progress issue: `{ expire, reason, days, merged? }`. `branches` is the
+ * set of branch names on origin, `openHeads` the head branches of open pull requests, and
+ * `mergedByHead` (optional) a map from head branch to the newest merged pull request on it.
  */
-export function claimVerdict(issue, { branches, openHeads, now }) {
+export function claimVerdict(issue, { branches, openHeads, mergedByHead = new Map(), now }) {
   const claim = latestClaimIn(issue.comments);
   if (!claim) return unclaimedVerdict(issue.labelledAt, now);
   const days = Math.floor((now.getTime() - claim.postedAt.getTime()) / DAY);
-  const onOrigin = branches.has(claim.branch);
-  const hasPr = openHeads.has(claim.branch);
+  const names = claim.branches ?? [claim.branch];
+  const onOrigin = names.some((name) => branches.has(name));
+  const hasPr = names.some((name) => openHeads.has(name));
+  const mergedName = names.find((name) => mergedByHead.has(name));
+  const merged = mergedName ? { head: mergedName, ...mergedByHead.get(mergedName) } : undefined;
   if (!onOrigin && days > BRANCH_GRACE_DAYS) {
     return {
       expire: true,
       days,
       branch: claim.branch,
+      merged,
       reason: `branch \`${claim.branch}\` is not on origin`,
     };
   }
@@ -61,6 +72,7 @@ export function claimVerdict(issue, { branches, openHeads, now }) {
       expire: true,
       days,
       branch: claim.branch,
+      merged,
       reason: `claimed ${days} days ago and no open pull request has \`${claim.branch}\` as its head`,
     };
   }
@@ -90,9 +102,16 @@ function unclaimedVerdict(labelledAt, now) {
 }
 
 export function expiryComment(verdict) {
+  const merged = verdict.merged
+    ? [
+        `#${verdict.merged.number} merged from \`${verdict.merged.head}\`, a branch this claim names${verdict.merged.url ? ` (${verdict.merged.url})` : ""}, without \`Closes #n\` for this issue. If it finished the work, close this issue; if not, say what is left.`,
+        "",
+      ]
+    : [];
   return [
     "## Claim expired",
     "",
+    ...merged,
     `The \`${IN_PROGRESS_LABEL}\` label is removed: ${verdict.reason}. A claim that nothing backs is a dead session, not a reservation (docs/agents/issue-tracker.md's "Claiming an issue").`,
     "",
     "Anyone may take this issue now. If the work is still going, post a fresh `## Claim` comment and re-add the label.",
@@ -125,6 +144,13 @@ function main() {
   const issues = github.listIssues({ label: IN_PROGRESS_LABEL, comments: true, limit: 200 });
   const branches = lsRemoteHeads();
   const openHeads = new Set(github.listPulls({ state: "open" }).map((pr) => pr.headRefName));
+  // Newest first, as GitHub lists them; the first merged pull request per head wins.
+  const mergedByHead = new Map();
+  for (const pull of github.listPulls({ state: "closed", limit: 300 })) {
+    if (pull.mergedAt && !mergedByHead.has(pull.headRefName)) {
+      mergedByHead.set(pull.headRefName, { number: pull.number, url: pull.url });
+    }
+  }
   const now = new Date();
   let expired = 0;
   for (const issue of issues) {
@@ -132,14 +158,22 @@ function main() {
     const labelledAt = latestClaimIn(issue.comments)
       ? null
       : github.labelledAt(issue.number, IN_PROGRESS_LABEL);
-    const verdict = claimVerdict({ ...issue, labelledAt }, { branches, openHeads, now });
+    const verdict = claimVerdict(
+      { ...issue, labelledAt },
+      { branches, openHeads, mergedByHead, now },
+    );
     const age = verdict.days === null ? "—" : `${verdict.days}d`;
-    console.log(`#${issue.number} ${verdict.expire ? "EXPIRE" : "keep"} ${age} ${verdict.reason}`);
+    const landed = verdict.merged ? ` (merged #${verdict.merged.number})` : "";
+    console.log(
+      `#${issue.number} ${verdict.expire ? "EXPIRE" : "keep"} ${age} ${verdict.reason}${landed}`,
+    );
     if (!verdict.expire) continue;
     expired++;
     if (!apply) continue;
-    github.editLabels(issue.number, { remove: [IN_PROGRESS_LABEL] }, { dryRun });
+    // The comment first: it carries the merged pull request, and a label dropped with no word
+    // of where the work went is the failure this replaces.
     github.comment(issue.number, expiryComment(verdict), { dryRun });
+    github.editLabels(issue.number, { remove: [IN_PROGRESS_LABEL] }, { dryRun });
   }
   const outcome = !apply
     ? "would expire (dry run; --apply to act)"

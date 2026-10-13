@@ -87,6 +87,29 @@ describe("parseClaim on the spellings sessions actually write", () => {
     expect(claim?.startedAt.toISOString()).toMatch(/^2026-10-10T0[89]:/);
   });
 
+  it("records (assembled into X) and (sub-branch Y) as aliases of the claimed branch", () => {
+    const body = (line) =>
+      `## Claim\n\n- Branch: ${line}\n- Worktree: /w\n- Started: 2026-10-10T08:20Z\n`;
+    expect(parseClaim(body("`claude/a-s3` (assembled into `claude/a`)"))?.branches).toEqual([
+      "claude/a-s3",
+      "claude/a",
+    ]);
+    expect(parseClaim(body("claude/a (sub-branch claude/a-l2)"))?.branches).toEqual([
+      "claude/a",
+      "claude/a-l2",
+    ]);
+    expect(parseClaim(body("claude/a (sub-branch of `claude/b`)"))?.branches).toEqual([
+      "claude/a",
+      "claude/b",
+    ]);
+    expect(parseClaim(body("claude/a (started from main, see #12)"))?.branches).toEqual([
+      "claude/a",
+    ]);
+    expect(parseClaim(body("claude/a (assembled into --upload-pack=x)"))?.branches).toEqual([
+      "claude/a",
+    ]);
+  });
+
   it("reads the Owned paths synonym for Owns", () => {
     expect(parseClaim(REAL_CLAIMS[2241])?.owns).toEqual(["src/test/projects.ts"]);
   });

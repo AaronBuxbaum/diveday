@@ -62,7 +62,12 @@ EOF
 ```
 
 The parser (`scripts/claims.mjs`) reads each field in any of three spellings: `**Branch:** x`,
-`- Branch: x` and `- **Branch:** x`. `Branch:` is one ref name; anything after it on the line is
+`- Branch: x` and `- **Branch:** x`. `Branch:` is one ref name, and a parenthesis after it may name
+the other branches the work arrives on: `(assembled into claude/x)` when a sub-branch's work lands
+through another branch's pull request, `(sub-branch claude/x-l2)` when it is built on one. Those
+are aliases: the `Closes #n` check (`scripts/check-pr-body.mjs`) matches a pull request whose head
+is any of them, and claim expiry treats any of them as the claim's branch. #2284 and #2233 stayed
+open after their work merged because only the first name was read. Anything else after the name is
 commentary. `Owned paths:` is read as `Owns:`.
 
 `Owns` is the paths you expect to be the only writer of. `Also touches` is everything else you
@@ -122,6 +127,9 @@ removes `in-progress` and posts a `## Claim expired` comment saying why when eit
 
 - the claim's branch is not on origin and the claim is more than a day old, or
 - the claim is more than 7 days old and no open pull request has its branch as head.
+
+When a pull request from one of the claim's branches (aliases included) has merged, the comment
+names it first, so the issue says where its work went before it returns to the queue.
 
 - the issue carries `in-progress` with no parseable claim comment, and the label was added more than
   7 days ago (the date comes from the issue's events).

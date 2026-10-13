@@ -90,3 +90,38 @@ describe("when a claim expires", () => {
     expect(body).toContain("post a fresh `## Claim` comment");
   });
 });
+
+describe("a claim whose work arrived on another branch", () => {
+  const aliased = (at) => ({
+    number: 2284,
+    comments: [
+      {
+        createdAt: at,
+        body: `## Claim\n\n- Branch: \`claude/f9-s3-gear\` (assembled into \`claude/f9\`)\n- Worktree: /w\n- Started: ${at}\n`,
+      },
+    ],
+  });
+
+  it("is kept while any branch it names is on origin with an open pull request", () => {
+    const verdict = claimVerdict(
+      aliased("2026-09-20T09:00:00Z"),
+      facts(["claude/f9"], ["claude/f9"]),
+    );
+    expect(verdict.expire).toBe(false);
+  });
+
+  it("names the merged pull request from an alias when it expires, first in the comment", () => {
+    const mergedByHead = new Map([["claude/f9", { number: 2368, url: "https://x/2368" }]]);
+    const verdict = claimVerdict(aliased("2026-10-07T09:00:00Z"), { ...facts(), mergedByHead });
+    expect(verdict).toMatchObject({ expire: true, merged: { number: 2368, head: "claude/f9" } });
+    const comment = expiryComment(verdict);
+    expect(comment.split("\n")[2]).toMatch(/^#2368 merged from `claude\/f9`/);
+    expect(comment).toContain("close this issue");
+  });
+
+  it("says nothing about a merge when none of its branches merged", () => {
+    const verdict = claimVerdict(aliased("2026-10-07T09:00:00Z"), facts());
+    expect(verdict.merged).toBeUndefined();
+    expect(expiryComment(verdict).split("\n")[2]).toMatch(/^The `in-progress` label is removed/);
+  });
+});
