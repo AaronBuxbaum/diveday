@@ -857,8 +857,10 @@ export function StaffingWeek({
                     ) : null}
                     {/* The same acts the grid carries: the phone loses the
                         columns, never the work (`GRID_CLASS`'s note above). */}
+                    {/* A <div>, not a <p>: the parser closes a paragraph at its
+                        first <form>, and the markup would no longer hydrate. */}
                     {gap.requests.map((request) => (
-                      <p key={request.id} className="mt-1 text-sm text-muted">
+                      <div key={request.id} className="mt-1 text-sm text-muted">
                         {request.state === "pending"
                           ? fill(words.requested, { person: request.personName })
                           : `${request.personName} · ${
@@ -897,7 +899,7 @@ export function StaffingWeek({
                             </form>
                           </span>
                         ) : null}
-                      </p>
+                      </div>
                     ))}
                     {gapAct(gap, canManage) === "request" ? (
                       <form action={requestAction} className="mt-1">
