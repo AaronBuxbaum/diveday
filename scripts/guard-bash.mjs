@@ -46,6 +46,12 @@
 //     `--force-with-lease`, and any push to `main`, are refused unconditionally: one
 //     overwrites a branch somebody else may have advanced, the other skips the pull request.
 //
+//  7. An environment file read through the shell — `grep -r . .env.local`, `cat .env`. The
+//     settings deny the Read tool those names, and `grep`/`find` are allowed without a
+//     prompt, so the shell printed production keys (2026-10-13 review, row 26). A reader
+//     handed a `.env*` path other than `.env.example` is refused; `config/env-registry.mjs`
+//     says what every key is, and `pnpm check:env` which ones are blank.
+//
 // The contract is Claude Code's: JSON on stdin, exit 2 with the reason on stderr to block,
 // exit 0 to stay out of the way. It **fails open** on anything it does not understand —
 // unparseable payload, unexpected shape, its own bug — because a guard that blocks the
@@ -77,6 +83,13 @@ const GENERATED_ARTIFACT =
 
 /** Commands whose only purpose is to print a file. */
 const PRINTERS = /^(?:cat|head|tail|less|more|bat)\b/;
+
+/** Commands that print or search a file's contents. */
+const READERS =
+  /^(?:cat|head|tail|less|more|bat|tac|nl|grep|egrep|fgrep|rg|ag|awk|gawk|sed|cut|sort|uniq|strings|xxd|od|hexdump|base64|diff|cmp|jq|source|\.)$/;
+
+/** A `.env` file, or `.env.<anything>` except the generated, value-free `.env.example`. */
+const ENV_FILE = /(?:^|\/)\.env(?:\.(?!example$)[\w.-]+)?$/;
 
 function workingTreeChanges() {
   const status = readBounded("git", ["status", "--porcelain"], {
@@ -337,6 +350,20 @@ export function violationFor(
         `\`${printed}\` prints a generated artifact whole — the lockfile, build output, a Drizzle snapshot or a ` +
         `Playwright report is thousands of lines nobody reads (AGENTS.md, "Context economy"). For a specific ` +
         `lookup, \`grep -n\` it for the line you need; \`src/db/schema/\` is the schema's source of truth.`
+      );
+    }
+
+    const envRead = segment
+      .split("|")
+      .map((part) => withoutEnvAssignments(part.trim().split(/\s+/)))
+      .find(
+        (tokens) => READERS.test(tokens[0] ?? "") && tokens.slice(1).some((t) => ENV_FILE.test(t)),
+      );
+    if (envRead) {
+      return (
+        `\`${envRead.join(" ")}\` reads an environment file, which holds live keys; the Read tool is denied ` +
+        `these files and the shell is not the way round it. \`config/env-registry.mjs\` says what each key is ` +
+        `and who supplies it, \`.env.example\` lists them with no values, and \`pnpm check:env\` says which are blank.`
       );
     }
 

@@ -31,7 +31,7 @@ what is currently wired.
 | --- | --- | --- |
 | `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`, read after the fetch), "Merge drivers: not installed" when `scripts/merge-drivers.mjs install` could not write them and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position, and the account's open pull requests (`gh api`, cached ten minutes in the git common dir; `DIVEDAY_OPEN_PULLS=0` turns it off), because one PR's CI runs at a time; on the first prompt of a session, the last session's hook refusals, and "write a papercut" with a ready `file-follow-up.mjs --papercut` command when one rule has refused three or more times this week and no papercut has its slug |
-| `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form |
+| `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses seven command shapes, each naming the correct form |
 | `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
 | `PreToolUse` on `Bash` | `scripts/guard-push.mjs` | refuses a `git push` of a commit `pnpm verify:push` has not stamped, unless a reason is written in front |
 | `PreToolUse` on the GitHub MCP's pull request create/update | `scripts/guard-pr-body.mjs` | runs CI's `check-pr-body.mjs` over the body first and refuses one CI would refuse |
@@ -98,7 +98,7 @@ line so it is not repeated. One papercut in 322 commits while twelve commit subj
 format or guard fix-ups is the measurement behind it: the papercuts rule fired on memory, and
 memory is what a session does not have about the session before.
 
-## `guard-bash.mjs` — six command shapes this repository has been burned by
+## `guard-bash.mjs` — seven command shapes this repository has been burned by
 
 1. **`pnpm <script> -- <args>`.** pnpm forwards that `--` into the underlying command instead of
    consuming it, so vitest/playwright see their own `--` and silently drop every flag after it.
@@ -131,6 +131,13 @@ memory is what a session does not have about the session before.
    refused unconditionally: `git push --force` without `--force-with-lease`, which overwrites a
    commit a reviewer or another session pushed since you fetched, and any push to `main`, which
    skips the pull request.
+7. **An environment file read through the shell.** `cat`, `grep`, `rg`, `sed`, `awk`, `source` and
+   the other readers handed `.env` or a `.env.*` path other than `.env.example`. The settings deny
+   the Read tool those files, and `grep`/`find` run without a prompt, so `grep -r . .env.local`
+   printed production keys (2026-10-13 review, row 26). `config/env-registry.mjs` says what each key
+   is, `.env.example` lists them without values, and `pnpm check:env` says which are blank. A
+   recursive search of a directory that holds a `.env` file is not caught; `rg` skips it by default
+   as gitignored.
 
 The guard blanks heredoc bodies and quoted strings before matching, so a commit message or a
 script that *mentions* a refused shape is not refused. The cost — a shell-in-a-string like

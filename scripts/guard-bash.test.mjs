@@ -157,6 +157,33 @@ describe("a generated artifact printed through the shell", () => {
   });
 });
 
+/**
+ * The settings deny the Read tool six `.env` names, and the shell was the way round it:
+ * `grep -r . .env.local` printed production keys with no prompt (2026-10-13 review, row 26).
+ */
+describe("an environment file read through the shell", () => {
+  it("refuses a reader handed a .env file, and names what to use instead", () => {
+    expect(violationFor("grep -r . .env.local", scripts)).toMatch(/env-registry/);
+    expect(refuses("cat .env")).toBe(true);
+    expect(refuses("head -5 .env.manual")).toBe(true);
+    expect(refuses("rg SECRET ../wt-x/.env.vercel")).toBe(true);
+    expect(refuses("sed -n 1,20p /home/claude/diveday/.env.github")).toBe(true);
+    expect(refuses("ls && awk -F= '{print $2}' .env.local")).toBe(true);
+    expect(refuses("cat .env.local | grep STRIPE")).toBe(true);
+    expect(refuses("source .env.local")).toBe(true);
+  });
+
+  /** `.env.example` is generated from the registry, holds no value, and is checked in. */
+  it("leaves .env.example, a listing, and a name that only starts with .env alone", () => {
+    expect(refuses("cat .env.example")).toBe(false);
+    expect(refuses("grep -n SECRET_ENCRYPTION_KEY .env.example")).toBe(false);
+    expect(refuses("ls -la .env.local")).toBe(false);
+    expect(refuses("cat .envrc.md")).toBe(false);
+    expect(refuses("grep -rn 'env.local' docs")).toBe(false);
+    expect(refuses("node scripts/render-env-example.mjs --write")).toBe(false);
+  });
+});
+
 describe("discarding a shared working tree", () => {
   const dirty = { changes: () => [" M src/db/schema.ts", "?? scratch.ts"] };
   const clean = { changes: () => [] };
