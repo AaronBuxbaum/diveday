@@ -76,6 +76,20 @@ export function sharedFirstLoadChunks(routeStats) {
   );
 }
 
+/**
+ * **Strings only the staff shell ships**, so a floor chunk carrying one is the
+ * staff shell on every diver and marketing page, whatever it weighs. The
+ * palette's `aria-keyshortcuts` and the ledger row menu's `data-row-menu-open`
+ * rode the root 404 into all 107 routes at 13.8 KB gzip while the total stayed
+ * under its ceiling (code review 2026-10-13b, item 7): a byte budget alone
+ * could not see it. Exported for the test.
+ */
+export const STAFF_MARKERS = ["aria-keyshortcuts", "data-row-menu-open"];
+
+export function staffMarkersIn(source) {
+  return STAFF_MARKERS.filter((marker) => source.includes(marker));
+}
+
 async function main() {
   try {
     await readFile(path.join(NEXT_DIR, "build-manifest.json"));
@@ -107,8 +121,20 @@ async function main() {
   }
 
   let totalKb = 0;
+  const staffChunks = [];
   for (const chunk of shared) {
-    totalKb += gzipSync(await readFile(chunk)).length / 1024;
+    const source = await readFile(chunk);
+    totalKb += gzipSync(source).length / 1024;
+    const markers = staffMarkersIn(source.toString("utf8"));
+    if (markers.length > 0) staffChunks.push(`${chunk} (${markers.join(", ")})`);
+  }
+  if (staffChunks.length > 0) {
+    console.error(
+      `perf: the staff shell is on the shared first-load floor, in every route:\n  ${staffChunks.join("\n  ")}\n` +
+        "  A module every route loads (the root layout, the root not-found) imports a staff component\n" +
+        "  statically. Load it with `next/dynamic` from a Client Component, as `LazyCommandPalette` does.",
+    );
+    process.exit(1);
   }
   const rounded = Math.round(totalKb * 10) / 10;
   const where = `${shared.length} chunks shared by all ${routeStats.length} routes`;

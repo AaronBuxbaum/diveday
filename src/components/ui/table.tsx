@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { tapTargetLinkClass } from "./button";
 
 /**

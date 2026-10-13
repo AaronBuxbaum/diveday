@@ -2,7 +2,7 @@
 
 import { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { EDITOR_REVEAL_EVENT } from "@/components/ui/reveal-event";
 
 /**

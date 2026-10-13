@@ -5,7 +5,7 @@ import { type ReactNode, useRef } from "react";
 import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
-import { GroupLabel, groupLabelClass } from "@/components/ui/ledger";
+import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
 import { MENU_PANEL, menuRowClass } from "@/components/ui/menu";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";

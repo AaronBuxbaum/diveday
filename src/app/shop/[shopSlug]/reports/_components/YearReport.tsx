@@ -1,5 +1,6 @@
 import { EmptyState } from "@/components/EmptyState";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";

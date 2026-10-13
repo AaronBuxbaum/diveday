@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 

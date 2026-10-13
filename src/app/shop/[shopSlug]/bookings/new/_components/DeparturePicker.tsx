@@ -1,4 +1,5 @@
-import { GroupLabel, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { CalendarDate } from "@/lib/calendar-date";
 
 /**

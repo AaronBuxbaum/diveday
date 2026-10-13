@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import type { TripStage } from "@/lib/trip-stages";
 import type { PreDepartureCheckResult } from "../actions";
 

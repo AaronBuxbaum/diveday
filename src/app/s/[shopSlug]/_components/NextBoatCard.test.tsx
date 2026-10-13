@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { diverTranslator } from "@/i18n/messages";
 import { NextBoatCard } from "./NextBoatCard";
 

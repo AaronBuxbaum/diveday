@@ -5,7 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";

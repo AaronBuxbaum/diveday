@@ -7,7 +7,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripGuests } from "@/db/trips";
 import { activityLine } from "@/i18n/activity-labels";

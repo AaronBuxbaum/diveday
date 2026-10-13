@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 
 /**
  * A group's top rule: a hairline between groups, and none above the first,

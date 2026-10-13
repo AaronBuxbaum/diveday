@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { courseFormResignImpact, listCourseForms } from "@/db/course-forms";
 import {

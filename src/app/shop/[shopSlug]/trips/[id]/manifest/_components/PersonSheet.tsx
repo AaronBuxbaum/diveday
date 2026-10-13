@@ -3,7 +3,7 @@
 import { useCallback, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { SHEET_PANEL_CLASS, SheetHeader } from "@/components/ui/sheet";
 import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import { motionMs } from "@/lib/motion";

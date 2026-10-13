@@ -1,4 +1,4 @@
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import type { PublicCrewMember } from "@/db/trips";
 import { languageNameIn } from "@/i18n/language-labels";
 import { diverTranslator } from "@/i18n/messages";
