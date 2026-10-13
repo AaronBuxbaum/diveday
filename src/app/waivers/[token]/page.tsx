@@ -1,15 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { DiveSitesPeek } from "@/components/DiveSitesPeek";
-import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
-import { THREAD_MEASURE_CLASS, ThreadShell } from "@/components/thread/ThreadShell";
-import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { ThreadShell } from "@/components/thread/ThreadShell";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { ChoiceRow, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -21,34 +14,31 @@ import {
   getWaiverForToken,
   staleWaiverRecordForToken,
 } from "@/db/waivers";
-import { fill, pluralForm } from "@/i18n/fill";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { medicalProgress, medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
-import { completeWaiverAction, saveWaiverDraftAction } from "./actions";
+import { completeWaiverAction } from "./actions";
 import { EmergencyContactSection } from "./EmergencyContactSection";
 import { GuardianCard } from "./GuardianCard";
-import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
-import { MedicalReviewContact } from "./MedicalReviewContact";
-import { QuestionnaireProgress } from "./QuestionnaireProgress";
-import { SectionHeading } from "./SectionHeading";
+import { MedicalQuestionnaireSection } from "./MedicalQuestionnaireSection";
+import { SignatureCard } from "./SignatureCard";
+import { WaiverCompleted } from "./WaiverCompleted";
 import { ExpiredLink, HeldWaiverCard, UnavailableWaiverLink } from "./WaiverDoorCards";
 import { WaiverHelpLine } from "./WaiverHelpLine";
 import { WaiverPacing } from "./WaiverPacing";
-import {
-  WAIVER_RAIL_TOTAL,
-  type WaiverRailSegmentId,
-  WaiverStepRail,
-  waiverRailProgress,
-} from "./WaiverStepRail";
+import { WaiverRelease } from "./WaiverRelease";
+import { WaiverSignBlock } from "./WaiverSignBlock";
+import { type WaiverRailSegmentId, waiverRailProgress } from "./WaiverStepRail";
+import { WaiverTripMeta } from "./WaiverTripMeta";
 import { WAIVER_FIELD_ERROR, type WaiverInvalidField } from "./waiver-fields";
+import { railLabels } from "./waiver-rail-copy";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
@@ -56,43 +46,6 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t("waiver.metaTitle"),
     robots: { index: false, follow: false },
   };
-}
-
-/**
- * `buttonClass` bakes in `text-sm`, and a plain `text-base` in `className` loses
- * the cascade because Tailwind emits `.text-sm` after `.text-base`. This waiver
- * is read at arm's length on a dock, so its actions keep their 16px label via
- * the token-valued utility, which does win.
- */
-const labelTextBase = "text-(length:--text-base) leading-6";
-
-/**
- * The rail's three names, in the reader's own language. One resolver, because
- * both states that render a rail — the page a diver is filling in and the
- * completed state — have to say the same three words.
- */
-function railLabels(t: DiverTranslator): Record<WaiverRailSegmentId, string> {
-  return {
-    release: t("waiver.railRelease"),
-    medical: t("waiver.railMedical"),
-    sign: t("waiver.railSign"),
-  };
-}
-
-/**
- * "2 of 3 done", pluralised against the reader's negotiated locale rather than
- * the server process's — `pluralForm` defaults to the runtime's own locale,
- * which on a server is whatever the box was booted with and is nobody's.
- */
-function railDoneLabel(t: DiverTranslator, locale: string, done: number): string {
-  return fill(
-    pluralForm(
-      done,
-      { one: t.raw("waiver.railProgressOne"), other: t.raw("waiver.railProgressOther") },
-      locale,
-    ),
-    { done, total: WAIVER_RAIL_TOTAL },
-  );
 }
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -211,53 +164,16 @@ export default async function WaiverPage({
       medicalStillOpen: needsReview,
       signed: true,
     });
-    // The `<main>` below wears the same gutter as the signing form this diver
-    // just came from: the outcome screen used to sit on a taller `py-16` on a
-    // phone than the flow that led to it.
     return (
-      <main className={THREAD_MEASURE_CLASS}>
-        <EarnedMoment
-          as="h1"
-          eyebrow={shopName}
-          title={needsReview ? t("capability.waiverReceived") : t("capability.waiverDone")}
-        >
-          <p>{needsReview ? t("waiver.medicalReview") : t("waiver.signedBody")}</p>
-          {needsReview ? (
-            <>
-              {/* Corrected copy from the 2026-07-30 UX persona review (task
-                  44): a "yes" answer needs a *physician's* written
-                  clearance — the shop only receives and checks for that
-                  sign-off, it never grants medical clearance itself, and
-                  this never promises a timeline the diver's own doctor
-                  controls. */}
-              <p className="mt-3">{t("waiver.medicalReviewNext")}</p>
-              <MedicalReviewContact shop={shop} t={t} />
-            </>
-          ) : null}
-          {readyPath ? (
-            <Link href={readyPath} className={buttonClass({ className: "mt-5" })}>
-              {t("waiver.seeWhatsLeft")}
-            </Link>
-          ) : null}
-        </EarnedMoment>
-
-        {/* The rail's closing frame: the same three segments the signing page
-            carried. It is the only thing on this screen that answers "is that
-            everything?" in the vocabulary the diver was reading two taps ago —
-            the earned moment above celebrates, and a celebration is not an
-            inventory. Sign settles here and only here: a typed name and a
-            ticked box are not a signature until `completeWaiver` has taken
-            them. Medical settles here too, *unless* the record is on a hold, in
-            which case this closes at two with an open ring beside it. */}
-        <WaiverStepRail
-          className="mt-8"
-          progress={signedRail}
-          labels={railLabels(t)}
-          doneLabel={railDoneLabel(t, locale, signedRail.done)}
-        />
-
-        <DiveSitesPeek sites={diveSitesList} heading={t("waiver.scheduledSites")} t={t} />
-      </main>
+      <WaiverCompleted
+        shop={shop}
+        t={t}
+        locale={locale}
+        needsReview={needsReview}
+        readyPath={readyPath}
+        signedRail={signedRail}
+        diveSitesList={diveSitesList}
+      />
     );
   }
 
@@ -344,72 +260,12 @@ export default async function WaiverPage({
           ? t("waiver.rateLimited")
           : undefined;
 
-  /**
-   * **One primary** (ADR 20260827-the-divers-thread, decision 5). Sign and
-   * "Save and finish later" used to share a row as two buttons, which on a
-   * phone stacked them at inverted weight — the bordered secondary above the
-   * primary — so the page's one act was the second thing a thumb reached. Sign
-   * is the full width of the card it belongs to, and saving demotes to a text
-   * link on the line with the expiry sentence that explains why you'd want it.
-   * It is still a real submit, so it still works with no JavaScript at all.
-   *
-   * Rendered once, in the **last** card: the diver's signature card for an
-   * adult, the guardian's card for a minor (ADR 20260907-guardian-co-signature).
-   */
   const signBlock = (
-    <>
-      <SubmitButton
-        pendingLabel={t("waiver.signing")}
-        className={buttonClass({
-          className: `mt-6 w-full disabled:opacity-70 ${labelTextBase}`,
-        })}
-      >
-        {t("waiver.signButton")}
-      </SubmitButton>
-      <p className="mt-4 text-sm text-muted">{t("waiver.signatureNote")}</p>
-      {/* Two facts on one line from `sm`, split by the dot; stacked below it,
-          with no dot. The row used to wrap, and the wrap fell after the dot:
-          "Save and finish later ·" on one line at 390, the expiry alone on
-          the next (K-340). It never wraps now — from `sm` a sentence too long
-          for the line (the Spanish pair all but fills the 478px card)
-          wraps inside its own span beside the link, which does not shrink.
-          From `sm` the link ends the card, and the unseen half of its 44px
-          box sank into the card's padding instead of adding to it: 38px under
-          these words against 30px over the heading (K-493). The row lines its
-          words up by their baseline, which the pulled-up margin cannot move;
-          below `sm` the expiry sits under the link, so the box stays whole. */}
-      <div className="mt-1 flex items-baseline gap-x-2 text-sm text-muted max-sm:flex-col max-sm:items-start">
-        <button
-          type="submit"
-          formAction={saveWaiverDraftAction.bind(null, token)}
-          // Drafts intentionally accept partial answers — the `required`
-          // on signerName/acknowledged (and the pre-existing one on each
-          // medical radio) would otherwise let the browser block a
-          // legitimate "save what I have so far" submit.
-          formNoValidate
-          // `link`, flush: reads as inline text and still claims the
-          // 44px target `base` bakes in — the wrapper's own answer to
-          // "a control that is not the primary act".
-          className={buttonClass({
-            variant: "link",
-            size: "sm",
-            flush: true,
-            outdent: "block-end-wide",
-            className: "shrink-0",
-          })}
-        >
-          {t("waiver.saveForLater")}
-        </button>
-        <span aria-hidden="true" className="max-sm:hidden">
-          ·
-        </span>
-        <span>
-          {t("waiver.linkExpiresAt", {
-            date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),
-          })}
-        </span>
-      </div>
-    </>
+    <WaiverSignBlock
+      token={token}
+      expiresAt={formatDateTimeTz(record.expiresAt, locale, shop.timezone)}
+      t={t}
+    />
   );
 
   return (
@@ -417,23 +273,7 @@ export default async function WaiverPage({
       shopName={shopName}
       title={t("waiver.beforeDockTitle")}
       meta={
-        <>
-          <p className="mt-2 text-base text-muted">{t("waiver.beforeDockDescription")}</p>
-          {tripHeader ? (
-            <p className="mt-3 text-base font-medium text-foreground">
-              {t("waiver.tripHeader", {
-                trip: tripHeader.title,
-                when: formatShortDate(tripHeader.startsAt, locale, shop.timezone),
-                time: formatTimeRangeTz(
-                  tripHeader.startsAt,
-                  tripHeader.endsAt,
-                  locale,
-                  shop.timezone,
-                ),
-              })}
-            </p>
-          ) : null}
-        </>
+        <WaiverTripMeta tripHeader={tripHeader} locale={locale} timezone={shop.timezone} t={t} />
       }
     >
       <FlashParams params={["saved", "error", "field", "at"]} />
@@ -502,65 +342,15 @@ export default async function WaiverPage({
           />
         ) : null}
 
-        {/* The release reads as a document, not a widget: no card, no box — a
-            quiet titled rule above, the text set at reading size, a closing rule
-            below. The form after it is where the boxes are, so "read this" and
-            "do this" stop looking like the same component. */}
-        <section className="mt-8">
-          <p className="border-b border-border pb-3 text-sm font-medium text-muted">
-            {t("waiver.templateVersion", {
-              title: record.templateTitle,
-              version: record.templateVersion,
-            })}
-          </p>
-          {/* `wrap-anywhere`, not just `whitespace-pre-wrap`. A shop's waiver text
-              is pasted in, usually out of a PDF or a word processor, and real
-              releases carry runs a line break can't fall inside: a signature rule
-              of underscores, a policy URL, a long insurer name. `pre-wrap` alone
-              only breaks at whitespace, so one of those lays the page out wider
-              than the phone it is being signed on — measured at 455px against a
-              390px viewport. `body { overflow-x: clip }` then stops the sideways
-              scroll but not the widened layout viewport, which is what shows as
-              empty space beside the page (2026-08-06 review). */}
-          <div
-            data-waiver-template-body
-            className="mt-4 wrap-anywhere whitespace-pre-wrap border-b border-border pb-8 text-base leading-7"
-          >
-            {record.templateBody}
-          </div>
-        </section>
+        <WaiverRelease record={record} t={t} />
 
         <form action={completeWaiverAction.bind(null, token)} className="mt-8 flex flex-col gap-10">
-          <section id="medical-questionnaire">
-            <QuestionnaireProgress
-              total={primaryQuestionCount}
-              labelTemplateOne={t.raw("waiver.questionsAnsweredOne")}
-              labelTemplateOther={t.raw("waiver.questionsAnsweredOther")}
-            >
-              <SectionHeading>{questionnaire.title}</SectionHeading>
-              {/* The published form's directions paragraph used to sit here. It
-                  asked the diver to memorise which question numbers carry an
-                  asterisk and then apply the rule to their own answers, which is
-                  work the page can do for them — `MedicalQuestionnaireFields`
-                  now states the outcome underneath the questions at the moment
-                  it becomes true (2026-08-06 review). The wording itself is
-                  unchanged and still on file in `RSTC_QUESTIONNAIRE.intro`; only
-                  where the diver meets it has moved. */}
-              <MedicalQuestionnaireFields
-                questionnaire={questionnaire}
-                initialResponses={draftResponses}
-                copy={{
-                  yesLabel: t("waiver.answerYes"),
-                  noLabel: t("waiver.answerNo"),
-                  referralReassurance: t("waiver.yesReassurance"),
-                  followUpReassurance: t("waiver.yesOpensFollowUps"),
-                  outcomeClear: t("waiver.outcomeClear"),
-                  outcomeReferral: t("waiver.outcomeReferral"),
-                  outcomeFollowUpsOpen: t("waiver.outcomeFollowUpsOpen"),
-                }}
-              />
-            </QuestionnaireProgress>
-          </section>
+          <MedicalQuestionnaireSection
+            questionnaire={questionnaire}
+            draftResponses={draftResponses}
+            primaryQuestionCount={primaryQuestionCount}
+            t={t}
+          />
 
           <EmergencyContactSection
             emergencyContact={emergencyContact}
@@ -568,77 +358,14 @@ export default async function WaiverPage({
             t={t}
           />
 
-          {/* The signature block is the one card in the form — the formal act at
-              the end of a paper release gets the same visual weight here. The
-              link's own expiry sits in its fine print, next to "Save and finish
-              later", because "can I come back to this?" is asked at the moment of
-              signing, not while reading the page title.
-              No `title` prop: the heading is a `SectionHeading`, and the
-              sections have to announce themselves identically whether or not
-              one happens to be boxed. `padding="lg"` is the card someone
-              works *inside*, and on a phone it is the `p-5` this already had. */}
-          <SectionCard padding="lg">
-            <SectionHeading>{t("waiver.signature")}</SectionHeading>
-            <FieldGrid columns={1} className="mt-4">
-              <Field
-                label={t("waiver.typeFullName")}
-                description={
-                  signerOnFile
-                    ? t("waiver.typeFullNameHint", { name: signerOnFile.fullName })
-                    : undefined
-                }
-                // The refusal renders on the field it names — `Field` puts the
-                // words under the control and wires `aria-invalid` +
-                // `aria-describedby` for us — so the reader `FieldErrorFocus`
-                // scrolls here finds the reason waiting beside the ringed box,
-                // not a ring with its explanation stranded at the top of the
-                // page.
-                error={
-                  namedFieldError?.anchor === "signerName" ? t(namedFieldError.textKey) : undefined
-                }
-              >
-                <input
-                  id="signerName"
-                  name="signerName"
-                  autoComplete="name"
-                  required
-                  minLength={2}
-                  maxLength={120}
-                  defaultValue={record.draftSignerName ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
-            <ChoiceRow
-              type="checkbox"
-              id="acknowledged"
-              name="acknowledged"
-              value="on"
-              required
-              defaultChecked={record.draftAcknowledged}
-              // The checkbox isn't a `Field`, so its refusal wiring is by
-              // hand: the same aria pair `Field`'s `error` prop provides,
-              // pointing at the message rendered just below.
-              aria-invalid={namedFieldError?.anchor === "acknowledged" ? "true" : undefined}
-              aria-describedby={
-                namedFieldError?.anchor === "acknowledged" ? "acknowledged-error" : undefined
-              }
-              // Last in the card when the guardian's card carries the Sign
-              // button, and then its target's unseen half sat under the
-              // agreement, 37px to the border against 30px over the heading
-              // (K-493). It gives that half back only while it ends the card.
-              outdent="block-end"
-              className="mt-4 text-base"
-            >
-              {t("waiver.agreementCheckbox")}
-            </ChoiceRow>
-            {namedFieldError?.anchor === "acknowledged" ? (
-              <FormStatus id="acknowledged-error" className="mt-2">
-                {t(namedFieldError.textKey)}
-              </FormStatus>
-            ) : null}
+          <SignatureCard
+            signerOnFile={signerOnFile}
+            record={record}
+            namedFieldError={namedFieldError}
+            t={t}
+          >
             {guardianRequired ? null : signBlock}
-          </SectionCard>
+          </SignatureCard>
 
           {/* **The guardian's card** (ADR 20260907-guardian-co-signature): the
               second signature a minor's release takes, in the same shape as

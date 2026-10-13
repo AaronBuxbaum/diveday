@@ -25,11 +25,36 @@ import { diverTranslator } from "@/i18n/messages";
  */
 
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+
+/**
+ * The source of a file the page composes, read by name: beside the page, or
+ * under `src/components/`. A section that moves out of the page moves its pins
+ * with it by changing only the name passed here; the gates themselves (the
+ * hold, the rail's progress, the held seat's early return) stay in the page.
+ */
+function component(file: string): string {
+  try {
+    return readFileSync(join(__dirname, file), "utf8");
+  } catch {
+    return readFileSync(join(__dirname, "..", "..", "..", "components", file), "utf8");
+  }
+}
+
 /** The two signing doors, which moved out of the page into the route's `actions.ts`. */
-const ACTIONS = readFileSync(join(__dirname, "actions.ts"), "utf8");
-/** The emergency contact's section and the guardian's card, which moved beside the page. */
-const CONTACT = readFileSync(join(__dirname, "EmergencyContactSection.tsx"), "utf8");
-const GUARDIAN = readFileSync(join(__dirname, "GuardianCard.tsx"), "utf8");
+const ACTIONS = component("actions.ts");
+/** The sections the page composes, each beside it. */
+const CONTACT = component("EmergencyContactSection.tsx");
+const GUARDIAN = component("GuardianCard.tsx");
+const SIGNATURE = component("SignatureCard.tsx");
+const MEDICAL = component("MedicalQuestionnaireSection.tsx");
+const RELEASE = component("WaiverRelease.tsx");
+const SIGN_BLOCK = component("WaiverSignBlock.tsx");
+const COMPLETED = component("WaiverCompleted.tsx");
+const RAIL_COPY = component("waiver-rail-copy.ts");
+
+function countIn(source: string, marker: string): number {
+  return source.split(marker).length - 1;
+}
 
 function positionOf(marker: string): number {
   return SOURCE.indexOf(marker);
@@ -42,7 +67,8 @@ function countOf(marker: string): number {
 describe("the waiver's pacing", () => {
   it("puts the rail under the header and above everything it paces", () => {
     const rail = positionOf("<WaiverPacing");
-    const release = positionOf("data-waiver-template-body");
+    const release = positionOf("<WaiverRelease");
+    expect(RELEASE).toContain("data-waiver-template-body");
     const form = positionOf("<form action={completeWaiverAction.bind(null, token)}");
     for (const marker of [rail, release, form]) expect(marker).toBeGreaterThan(-1);
     expect(rail).toBeLessThan(release);
@@ -122,15 +148,18 @@ describe("the waiver's pacing", () => {
     // of signing rather than a fourth thing to finish, so the rail is untouched
     // by it; what must never come back is a heading that *numbers itself*.
     expect(SOURCE).not.toMatch(/StepHeading/);
-    const headings = [SOURCE, CONTACT, GUARDIAN].map(
+    const headings = [SOURCE, MEDICAL, CONTACT, SIGNATURE, GUARDIAN].map(
       (file) => file.split("<SectionHeading>").length - 1,
     );
     expect(headings.reduce((sum, n) => sum + n, 0)).toBe(4);
     // The rail's own membership, stated where a future heading cannot drift it:
     // three labels, and the guardian is not one of them.
+    // One resolver says them for both states that render a rail.
     for (const step of ["waiver.railRelease", "waiver.railMedical", "waiver.railSign"]) {
-      expect(countOf(step)).toBe(1);
+      expect(countIn(RAIL_COPY, step)).toBe(1);
+      expect(countOf(step)).toBe(0);
     }
+    expect(RAIL_COPY).not.toMatch(/railGuardian/);
     expect(SOURCE).not.toMatch(/railGuardian/);
     expect(GUARDIAN).not.toMatch(/railGuardian|StepHeading/);
   });
@@ -142,7 +171,7 @@ describe("one notice grammar", () => {
     // draft and the English-only note about the document here, and the
     // expired link's rescue outcome on its own card beside the page.
     expect(countOf("<ShopNotice")).toBe(3);
-    const doorCards = readFileSync(join(__dirname, "WaiverDoorCards.tsx"), "utf8");
+    const doorCards = component("WaiverDoorCards.tsx");
     expect(doorCards.split("<ShopNotice").length - 1).toBe(1);
   });
 
@@ -153,41 +182,43 @@ describe("one notice grammar", () => {
       "bg-warning-tint px-4",
       "NOTICE_TONE",
     ]) {
-      expect(SOURCE).not.toContain(band);
+      for (const source of [SOURCE, RELEASE, SIGNATURE, SIGN_BLOCK])
+        expect(source).not.toContain(band);
     }
   });
 
   it("stacks them in one slot above the release", () => {
     const slot = positionOf("<ShopNotice");
-    expect(slot).toBeLessThan(positionOf("data-waiver-template-body"));
+    expect(slot).toBeLessThan(positionOf("<WaiverRelease"));
     // The English-only note used to sit *inside* the release section, as a
     // fifth treatment attached to the document. It is a notice; it renders
     // where the notices render.
-    expect(positionOf('t("waiver.englishOnlyNotice")')).toBeLessThan(
-      positionOf("data-waiver-template-body"),
-    );
+    expect(positionOf('t("waiver.englishOnlyNotice")')).toBeLessThan(positionOf("<WaiverRelease"));
+    expect(RELEASE).not.toContain("englishOnlyNotice");
   });
 });
 
 describe("one primary", () => {
   it("gives Sign the full width and demotes saving to a text link", () => {
-    expect(SOURCE).toMatch(/buttonClass\(\{\s*variant: "link",\s*size: "sm",\s*flush: true,/);
+    expect(SIGN_BLOCK).toMatch(/buttonClass\(\{\s*variant: "link",\s*size: "sm",\s*flush: true,/);
     // The bordered secondary that used to sit above the primary on a phone.
-    expect(SOURCE).not.toContain('variant: "secondary"');
-    expect(SOURCE).toContain("mt-6 w-full disabled:opacity-70");
+    for (const source of [SOURCE, SIGN_BLOCK]) expect(source).not.toContain('variant: "secondary"');
+    expect(SIGN_BLOCK).toContain("mt-6 w-full disabled:opacity-70");
+    // Rendered once, in whichever card ends the form.
+    expect(countOf("<WaiverSignBlock")).toBe(1);
   });
 
   it("keeps saving a real submit, so the page still works with no JavaScript", () => {
     // A `<button formAction>` inside the same form, not a link to a GET route:
     // demoting the affordance must not demote the mechanism, or a diver on a
     // dead connection loses the answers they came back to finish.
-    expect(SOURCE).toContain("formAction={saveWaiverDraftAction.bind(null, token)}");
-    expect(SOURCE).toContain("formNoValidate");
+    expect(SIGN_BLOCK).toContain("formAction={saveWaiverDraftAction.bind(null, token)}");
+    expect(SIGN_BLOCK).toContain("formNoValidate");
   });
 
   it("sets the expiry sentence beside it rather than on a line of its own", () => {
-    const link = positionOf('t("waiver.saveForLater")');
-    const expiry = positionOf('t("waiver.linkExpiresAt"');
+    const link = SIGN_BLOCK.indexOf('t("waiver.saveForLater")');
+    const expiry = SIGN_BLOCK.indexOf('t("waiver.linkExpiresAt"');
     expect(link).toBeGreaterThan(-1);
     expect(expiry).toBeGreaterThan(link);
     expect(expiry - link).toBeLessThan(600);
@@ -199,11 +230,11 @@ describe("one primary", () => {
     // ·" on one line, the expiry alone on the next (waiver-active, K-340).
     // Below `sm` the two facts stack and the dot, which only ever separated
     // them on one line, is not drawn; from `sm` they share a line split by it.
-    const link = positionOf('t("waiver.saveForLater")');
-    const row = SOURCE.lastIndexOf("<div", link);
-    expect(SOURCE.slice(row, link)).toContain("max-sm:flex-col max-sm:items-start");
-    expect(SOURCE.slice(row, link)).not.toContain("flex-wrap");
-    expect(SOURCE.slice(link, positionOf('t("waiver.linkExpiresAt"'))).toContain(
+    const link = SIGN_BLOCK.indexOf('t("waiver.saveForLater")');
+    const row = SIGN_BLOCK.lastIndexOf("<div", link);
+    expect(SIGN_BLOCK.slice(row, link)).toContain("max-sm:flex-col max-sm:items-start");
+    expect(SIGN_BLOCK.slice(row, link)).not.toContain("flex-wrap");
+    expect(SIGN_BLOCK.slice(link, SIGN_BLOCK.indexOf('t("waiver.linkExpiresAt"'))).toContain(
       '<span aria-hidden="true" className="max-sm:hidden">',
     );
   });
@@ -219,15 +250,16 @@ describe("one primary", () => {
     // a phone the expiry sits under it, and would sit under its box. Its row
     // lines its words up by their baseline, which a pulled-up margin cannot
     // move, where centring would lift the link 6px off the sentence beside it.
-    const link = positionOf('t("waiver.saveForLater")');
-    const row = SOURCE.slice(SOURCE.lastIndexOf("<div", link), link);
+    const link = SIGN_BLOCK.indexOf('t("waiver.saveForLater")');
+    const row = SIGN_BLOCK.slice(SIGN_BLOCK.lastIndexOf("<div", link), link);
     expect(row).toContain("items-baseline");
     expect(row).not.toContain("items-center");
     expect(row).toContain('outdent: "block-end-wide"');
     // The agreement row outdents itself, and only while it ends the card.
-    const agreement = SOURCE.slice(
-      SOURCE.lastIndexOf("<ChoiceRow", positionOf('t("waiver.agreementCheckbox")')),
-      positionOf('t("waiver.agreementCheckbox")'),
+    const agreementAt = SIGNATURE.indexOf('t("waiver.agreementCheckbox")');
+    const agreement = SIGNATURE.slice(
+      SIGNATURE.lastIndexOf("<ChoiceRow", agreementAt),
+      agreementAt,
     );
     expect(agreement).toContain('outdent="block-end"');
   });
@@ -264,7 +296,7 @@ describe("the emergency contact's two boxes", () => {
     expect(CONTACT).toContain('id="emergencyContactPhone"');
     // One sentence for both boxes: the fix is the same either way.
     // The field map lives beside the doors that refuse on it (`waiver-fields.ts`).
-    const fields = readFileSync(join(__dirname, "waiver-fields.ts"), "utf8");
+    const fields = component("waiver-fields.ts");
     expect(fields.split('textKey: "waiver.errorContactPair"').length - 1).toBe(2);
   });
 
@@ -314,9 +346,11 @@ describe("what this slice was forbidden to touch", () => {
     // "Presenting the full text is part of what typed consent means here" —
     // the ADR rejected collapsing it behind a disclosure outright. No details
     // element, no clamp, no scroll box around the template body.
-    expect(SOURCE).toContain("{record.templateBody}");
-    expect(SOURCE).not.toContain("AutoOpenDetails");
-    expect(SOURCE).not.toMatch(/line-clamp|max-h-\d+\s+overflow-y-auto/);
+    expect(RELEASE).toContain("{record.templateBody}");
+    for (const source of [SOURCE, RELEASE]) {
+      expect(source).not.toContain("AutoOpenDetails");
+      expect(source).not.toMatch(/line-clamp|max-h-\d+\s+overflow-y-auto/);
+    }
   });
 
   it("leaves the signature and medical semantics where it found them", () => {
@@ -343,8 +377,10 @@ describe("what this slice was forbidden to touch", () => {
     // "Paperwork done" is this page's moment and the thread's second (ADR
     // 20260827-the-divers-thread, decision 6). The page a diver is still
     // filling in celebrates nothing.
-    expect(countOf("<EarnedMoment")).toBe(1);
-    expect(positionOf("<EarnedMoment")).toBeLessThan(
+    expect(countIn(COMPLETED, "<EarnedMoment")).toBe(1);
+    expect(countOf("<EarnedMoment")).toBe(0);
+    expect(positionOf("<WaiverCompleted")).toBeGreaterThan(-1);
+    expect(positionOf("<WaiverCompleted")).toBeLessThan(
       positionOf("<form action={completeWaiverAction.bind(null, token)}"),
     );
   });
