@@ -145,8 +145,10 @@ export default async function EditCoursePage({
     { id: "learningMaterialsJson", label: t("courses.edit.materialsLegend") },
     { id: "scheduleDaysJson", label: t("courses.edit.dayByDayLegend") },
     { id: "faq", label: t("courses.edit.faqLegend") },
-  ].map((section) => ({ ...section, unsavedTag: t("shared.formDraft.unsavedSection") }));
-  const [pitch, pricing, photos, glance, enroll, feeCovers, materials, dayByDay, faq] = sections;
+  ];
+  const unsavedTag = t("shared.formDraft.unsavedSection");
+  const [pitch, pricing, photos, glance, enroll, feeCovers, materials, dayByDay, faq] =
+    sections.map((section) => ({ ...section, unsavedTag }));
   // The forms section is its own `<form>` below the save form, so the rail
   // names it but the unsaved-changes note (which reads the save form) does not.
   const formsSection: EditorSectionRef = { id: "forms", label: t("courses.edit.forms.legend") };
