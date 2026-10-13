@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { findSlugActionsOnStaffSession, isServerModule } from "./check-slug-actions.mjs";
+import {
+  exportReachesSurface,
+  findSlugActionsOnStaffSession,
+  isServerModule,
+  repositoryImports,
+} from "./check-slug-actions.mjs";
 
 const names = (source) => findSlugActionsOnStaffSession(source).map((finding) => finding.name);
 
@@ -171,5 +176,101 @@ describe("the directive", () => {
 
   it("is not read from further down the file", () => {
     expect(isServerModule(`import x from "y";\n"use server";\n`)).toBe(false);
+  });
+});
+
+describe("a slug-taking staff action must reach requireShopSurface", () => {
+  const staff = (source, importedGates = []) =>
+    findSlugActionsOnStaffSession(source, { staffModule: true, importedGates }).map(
+      (finding) => `${finding.name}:${finding.problem}`,
+    );
+
+  it("passes when it opens with requireShopSurface, directly or through a helper", () => {
+    expect(
+      staff(`"use server";
+
+async function requireEditor(shopSlug: string) {
+  return requireShopSurface(shopSlug);
+}
+
+export async function a(shopSlug: string) {
+  await requireShopSurface(shopSlug);
+}
+
+export async function b(shopSlug: string) {
+  await requireEditor(shopSlug);
+}
+`),
+    ).toEqual([]);
+  });
+
+  it("is refused when it checks nothing, or signs in by hand", () => {
+    expect(
+      staff(`"use server";
+
+export async function nothing(shopSlug: string, formData: FormData) {
+  redirect(shopPath(shopSlug, "x"));
+}
+
+export async function byHand(shopSlug: string) {
+  const session = await auth();
+  if (session?.user.shopSlug !== shopSlug) notFound();
+}
+`),
+    ).toEqual(["nothing:no-surface", "byHand:no-surface"]);
+  });
+
+  it("passes through a helper imported from a module where it reaches the gate", () => {
+    const source = `"use server";
+
+export async function addNote(shopSlug: string, personId: string) {
+  const context = await requireDiverActionContext(shopSlug, personId);
+}
+`;
+    expect(staff(source)).toEqual(["addNote:no-surface"]);
+    expect(staff(source, ["requireDiverActionContext"])).toEqual([]);
+  });
+
+  it("finds the imported helper by what its own module does", () => {
+    const helpers = `export async function requireDiverActionContext(shopSlug: string) {
+  const { session } = await requireShopSurface(shopSlug);
+  return session;
+}
+
+export async function looseContext(shopSlug: string) {
+  return requireStaffSession();
+}
+`;
+    expect(exportReachesSurface(helpers, "requireDiverActionContext")).toBe(true);
+    expect(exportReachesSurface(helpers, "looseContext")).toBe(false);
+    expect(
+      repositoryImports(`import { a, b as c } from "./helpers";
+import { z } from "zod";
+import { type T, d } from "@/lib/x";`),
+    ).toEqual([
+      { name: "a", local: "a", from: "./helpers" },
+      { name: "b", local: "c", from: "./helpers" },
+      { name: "T", local: "T", from: "@/lib/x" },
+      { name: "d", local: "d", from: "@/lib/x" },
+    ]);
+  });
+
+  it("leaves a public action alone, and one that says it runs before sign-in", () => {
+    const publicAction = `"use server";
+
+export async function bookSpot(shopSlug: string, formData: FormData) {
+  await createBooking(shopSlug, formData);
+}
+`;
+    expect(findSlugActionsOnStaffSession(publicAction)).toEqual([]);
+    expect(
+      findSlugActionsOnStaffSession(`"use server";
+
+export async function switchRole(role: string, shopSlug: string) {
+  // diveday:slug-action-before-sign-in: how a visitor becomes staff here.
+  const session = await auth();
+}
+`),
+    ).toEqual([]);
   });
 });

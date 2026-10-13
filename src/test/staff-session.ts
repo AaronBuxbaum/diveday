@@ -104,3 +104,27 @@ export async function redirectedTo(run: () => Promise<unknown>): Promise<string>
   }
   throw new Error("action returned without redirecting");
 }
+
+/**
+ * A `@/lib/session` mock for tests that set the session through
+ * `requireStaffSession`: its `requireShopSurface` takes that session and
+ * refuses, with `notFound()`, a slug that is not the session's shop, as the
+ * real gate does. Use it as the whole factory:
+ * `vi.mock("@/lib/session", async () => (await import("@/test/staff-session")).sessionMockOverStaffSession())`.
+ * The test file mocks `next/navigation` and `@/db/client` itself, as before.
+ */
+export async function sessionMockOverStaffSession() {
+  const { vi } = await import("vitest");
+  const { getDb } = await import("@/db/client");
+  const requireStaffSession = vi.fn<() => Promise<DiveDaySession>>();
+  const requireShopSurface = vi.fn(async (shopSlug: string) => {
+    const session = await requireStaffSession();
+    if (session.user.shopSlug !== shopSlug) (await import("next/navigation")).notFound();
+    return {
+      session,
+      db: await getDb(),
+      shop: { id: session.user.shopId, slug: session.user.shopSlug },
+    };
+  });
+  return { requireStaffSession, requireShopSurface };
+}
