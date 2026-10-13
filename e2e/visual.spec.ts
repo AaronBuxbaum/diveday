@@ -6789,6 +6789,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "order-detail", scheme);
       });
 
+      // A deposit names the departure it was raised for and what the seat
+      // still owes (third UX review, item 32).
+      test(`a deposit order's detail names its departure (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/orders?q=Trip+deposit");
+        const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
+        await ledgerRow.filter({ visible: true }).first().waitFor();
+        await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
+        await page.getByRole("link", { name: "Open the departure" }).waitFor();
+        await capture(page, "order-detail-deposit", scheme);
+      });
+
       /**
        * The one data-out surface: the "your data is yours" promise, concrete,
        * in both halves (ADR 20260806-one-data-out-surface) — the bundle you
