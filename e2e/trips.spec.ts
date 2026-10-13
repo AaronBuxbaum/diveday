@@ -328,9 +328,14 @@ test.describe("trip print packet", () => {
     ).toBeVisible();
     await popup.emulateMedia({ media: "screen" });
     await popup.close();
+  });
 
-    // Printing is intentionally owned by Trip. The packet is the one
-    // document door; the other tabs must not quietly print only themselves.
+  // Printing is intentionally owned by Trip. The packet is the one document
+  // door; the other tabs must not quietly print only themselves. Its own test
+  // (rather than the tail of the one above) so the popup flow and these two
+  // server navigations do not share one 15s budget.
+  test("the departure's other tabs offer no print door of their own", async ({ page }) => {
+    const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
     for (const tab of ["manifest", "prep"]) {
       await page.goto(`/shop/blue-mantis/trips/${tripId}/${tab}`);
       await expect(page.getByRole("button", { name: "Print packet" })).toHaveCount(0);
