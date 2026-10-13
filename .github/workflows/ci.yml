@@ -22,6 +22,14 @@ on:
   # comments in that job exist to prevent. Every pre-existing job therefore
   # carries `if: github.event_name != 'schedule'`, and those guards are load
   # bearing: deleting one puts that job on the nightly schedule.
+  # A run of main's head on request, read as a push to main: it compares
+  # against the previous commit and publishes this commit's snapshot. Its one
+  # caller is durations-refresh.yml, whose commit is pushed with the workflow
+  # token and so starts no `push` run (GitHub's rule against recursive runs);
+  # without this the next main run's baseline key named a commit that never
+  # published, and it compared against an older one (code review 2026-10-13,
+  # row 28). A dispatch is the exception to that rule.
+  workflow_dispatch:
   schedule:
     # 07:00 UTC — before the working day in the Americas, after it in Europe, so
     # a red nightly is read by a human rather than found stale the next evening.
@@ -45,7 +53,7 @@ concurrency:
   # regression blind repo-wide, on a green run. A per-commit group has nothing
   # to cancel against. The cost is that several main runs may overlap, which is
   # what those merges were asking for anyway.
-  group: ci-${{ github.event_name == 'schedule' && 'nightly' || github.event_name == 'push' && github.sha || github.ref }}
+  group: ci-${{ github.event_name == 'schedule' && 'nightly' || (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -425,6 +433,12 @@ jobs:
       - name: e2e budgets
         if: always()
         run: node scripts/e2e-budget-report.mjs e2e-durations/results.json >> "$GITHUB_STEP_SUMMARY"
+      # The same report's worst rows, over 80% of their budget, as `::warning`
+      # annotations on the spec's line: the check run's annotations are read,
+      # a step summary is not (code review 2026-10-13, row 28).
+      - name: e2e tests near their budget
+        if: always()
+        run: node scripts/e2e-budget-report.mjs e2e-durations/results.json --annotate
       # This shard's per-spec durations, as a file in the artifact below and as
       # one `diveday-e2e-durations:` log line — the input
       # `scripts/e2e-durations.mjs merge` folds into scripts/e2e-durations.json.
@@ -851,12 +865,12 @@ jobs:
       # snapshot is anyone's baseline, and a cache it writes is the only kind
       # every branch can read.
       - name: Keep this commit's images for the runs that compare against it
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.compare.outcome == 'success' }}
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.compare.outcome == 'success' }}
         run: |
           rm -rf .reg-baseline
           cp -R e2e/screenshots .reg-baseline
       - uses: actions/cache/save@v6
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.compare.outcome == 'success' }}
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.compare.outcome == 'success' }}
         continue-on-error: true
         with:
           path: .reg-baseline
@@ -945,7 +959,7 @@ jobs:
       # has already skipped it, and pushes to main are never auto-cancelled
       # (`cancel-in-progress` is false for them, for this same reason).
       - name: Refuse to miss main's baseline silently
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || steps.keys.outcome != 'success') }}
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || steps.keys.outcome != 'success') }}
         run: |
           echo "::error title=No visual baseline published for ${GITHUB_SHA}::The visual captures did not complete, or this run could not name the key to publish them under, so this commit published no S3 snapshot. Every branch cut from it resolves 0 baselines and reports every surface as new — visual regression is blind repo-wide until this is fixed. Re-run this run's failed jobs (Actions → this run → Re-run failed jobs); a green re-run publishes the snapshot and restores comparison. Do not publish a partial capture set to work around it: the missing surfaces would then read as new permanently."
           exit 1
@@ -993,7 +1007,7 @@ jobs:
       # — so that step keeps the floor there and this one would only add a
       # second, vaguer annotation beside it.
       - name: Refuse a green check over nothing compared
-        if: ${{ !cancelled() && steps.summary.outcome != 'skipped' && steps.summary.outputs.compared != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && !(github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || steps.keys.outcome != 'success')) }}
+        if: ${{ !cancelled() && steps.summary.outcome != 'skipped' && steps.summary.outputs.compared != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && !((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || steps.keys.outcome != 'success')) }}
         run: |
           echo "::error title=Nothing was compared::The visual run published no usable report for this commit (verdict: ${VERDICT:-unknown}), so nothing is known about its pixels — this is not a clean run, and it is not a passing one either. Read the sticky diveday:visual-summary comment and the visual-report job log: the usual causes are a failed capture shard, absent REG_SUIT_* secrets, or a bucket mismatch. Re-run the failed jobs; a green re-run compares and publishes. Do not merge on a Changed: 0 that compared nothing."
           exit 1

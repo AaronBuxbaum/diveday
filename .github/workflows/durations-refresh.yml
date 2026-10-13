@@ -45,7 +45,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      actions: read
+      # `write` for the one dispatch of ci.yml after the push below.
+      actions: write
       contents: write
       pull-requests: write
     env:
@@ -115,6 +116,12 @@ jobs:
           if [ -z "$others" ]; then
             if git push origin HEAD:main || { git pull --rebase origin main && git push origin HEAD:main; }; then
               echo "Committed to main: $(git rev-parse HEAD)."
+              # A push made with the workflow token starts no CI run, so this
+              # commit would publish no visual snapshot and the next main run
+              # would compare against an older one. A dispatch is the one
+              # trigger that token may fire; ci.yml reads it as a push to main.
+              gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/dispatches" -f ref=main \
+                || echo "::warning::Could not dispatch ci.yml on main; this commit has no CI run or visual snapshot until the next push."
               exit 0
             fi
             git rebase --abort 2>/dev/null || true
