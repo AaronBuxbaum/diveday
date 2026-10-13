@@ -33,7 +33,6 @@ import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date"
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import {
-  benchReturnConcerns,
   GEAR_KIND_ORDER,
   GEAR_SERVICE_KINDS_FOR,
   gearServiceState,
@@ -503,13 +502,7 @@ export default async function GearUnitPage({
             timeZone={shop.timezone}
           />
         ) : (
-          <StatusCard
-            item={item}
-            held={held}
-            concerns={benchReturnConcerns(item, reservations, history, shop.timezone)}
-            t={t}
-            locale={locale}
-          />
+          <StatusCard detail={detail} held={held} t={t} locale={locale} zone={shop.timezone} />
         )}
       </div>
     </main>

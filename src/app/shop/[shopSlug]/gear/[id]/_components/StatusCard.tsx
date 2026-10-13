@@ -4,7 +4,8 @@ import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import type { GearItemDetail } from "@/db/gear";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
+import { formatCalendarDate } from "@/lib/calendar-date";
+import { benchReturnConcerns } from "@/lib/gear";
 import { deleteGearItemAction, setGearItemStatusAction } from "../actions";
 import { PullForServiceButton } from "./PullForServiceButton";
 
@@ -15,19 +16,23 @@ import { PullForServiceButton } from "./PullForServiceButton";
  * own read so the holder's name never rides in the URL.
  */
 export function StatusCard({
-  item,
+  detail,
   held,
-  concerns = [],
   t,
   locale,
+  zone,
 }: {
-  item: GearItemDetail["item"];
+  detail: GearItemDetail;
   held: { name: string; until: string } | null;
-  /** Concerns returned while the unit is on the bench (`benchReturnConcerns`, #2540). */
-  concerns?: ReadonlyArray<{ note: string; returnedOn: CalendarDate }>;
   t: StaffTranslator;
   locale: string;
+  /** The shop's zone, for the day a concern came back. */
+  zone: string;
 }) {
+  const { item } = detail;
+  // Concerns returned while the unit is on the bench, which never overwrite
+  // the technician's note (#2540).
+  const concerns = benchReturnConcerns(item, detail.reservations, detail.history, zone);
   return (
     <SectionCard
       padding="lg"
