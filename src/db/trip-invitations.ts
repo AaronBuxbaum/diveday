@@ -1,7 +1,7 @@
-import { and, asc, eq, gt, inArray, isNull, ne, or } from "drizzle-orm";
-import { nowDate } from "@/lib/clock";
+import { and, asc, eq, gt, gte, inArray, isNull, ne, or } from "drizzle-orm";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
-import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { seatRefusal } from "@/lib/participant-types";
 import { publicTripPath } from "@/lib/public-routes";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
@@ -9,7 +9,9 @@ import { tripAdmissionFor, tripCourseCrewCounts } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { sendNotification } from "./notifications";
+import { recordTripActivity } from "./operations";
 import {
+  activityEvents,
   bookings,
   certifications,
   courseInquiries,
@@ -266,6 +268,7 @@ export type TripInvitationDelivery = "sent" | "fallback" | "opted_out";
 export async function deliverTripInvitation(
   db: AppDb,
   input: { shopId: string; shopSlug: string; tripId: string; invitationId: string },
+  provider?: NotificationProvider,
 ): Promise<TripInvitationDelivery> {
   const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
   if (!context) return "fallback";
@@ -302,28 +305,39 @@ export async function deliverTripInvitation(
       shopId: input.shopId,
       personId: person.id,
     });
-    const delivery = await sendNotification(db, {
-      ...shared,
-      kind: "direct_trip_invitation",
-      to: person.email,
-      locale: recipientLocale(person.locale, context.shop.defaultLocale),
-      diverName: person.fullName,
-      bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
-      unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
-    });
+    const delivery = await sendNotification(
+      db,
+      {
+        ...shared,
+        kind: "direct_trip_invitation",
+        to: person.email,
+        locale: recipientLocale(person.locale, context.shop.defaultLocale),
+        diverName: person.fullName,
+        bookingUrl: new URL(
+          publicTripPath(input.shopSlug, context.trip.id),
+          `${origin}/`,
+        ).toString(),
+        unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
+      },
+      provider,
+    );
     return delivery.status === "sent" ? "sent" : "fallback";
   }
 
   const email = context.person?.email ?? context.request?.email ?? null;
   if (!email || !origin) return "fallback";
-  const delivery = await sendNotification(db, {
-    ...shared,
-    kind: "trip_invitation",
-    to: email,
-    locale: recipientLocale(context.person?.locale, context.shop.defaultLocale),
-    diverName: context.person?.fullName ?? context.request?.name ?? "Diver",
-    bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
-  });
+  const delivery = await sendNotification(
+    db,
+    {
+      ...shared,
+      kind: "trip_invitation",
+      to: email,
+      locale: recipientLocale(context.person?.locale, context.shop.defaultLocale),
+      diverName: context.person?.fullName ?? context.request?.name ?? "Diver",
+      bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
+    },
+    provider,
+  );
   return delivery.status === "sent" ? "sent" : "fallback";
 }
 
@@ -337,7 +351,11 @@ export async function deliverTripInvitation(
  * emailed. Nothing is seated and nothing is charged.
  *
  * An invitation already standing for this diver and departure is sent again
- * rather than refused, so a second tap after "no email" was fixed works.
+ * rather than refused, so a second tap after "no email" was fixed works. Mail
+ * that did go out under an hour ago answers `already_sent` and sends nothing
+ * (#2480): a double tap at a busy counter is one email, not two. "Did go out"
+ * is the `departure_offered` line on the departure's trail, written only on a
+ * sent delivery, so a fallback never blocks the retry.
  * `unavailable` covers every reason there is nothing to offer: the departure
  * is gone or full, the diver could not book it (`departureOpenToDiver`), or
  * the person is not this shop's diver. Nothing is written or sent then.
@@ -447,11 +465,12 @@ export async function offerDepartureToDiver(
     personId: string;
     createdByPersonId: string;
   },
-): Promise<TripInvitationDelivery | "unavailable"> {
+  provider?: NotificationProvider,
+): Promise<TripInvitationDelivery | "unavailable" | "already_sent"> {
   if (!(await departureOpenToDiver(db, input))) return "unavailable";
   await createDirectTripInvitation(db, input);
   const [standing] = await db
-    .select({ id: tripInvitations.id })
+    .select({ id: tripInvitations.id, invitedAt: tripInvitations.invitedAt })
     .from(tripInvitations)
     .innerJoin(trips, eq(trips.id, tripInvitations.tripId))
     .where(
@@ -465,10 +484,62 @@ export async function offerDepartureToDiver(
     )
     .limit(1);
   if (!standing) return "unavailable";
-  return deliverTripInvitation(db, {
-    shopId: input.shopId,
-    shopSlug: input.shopSlug,
-    tripId: input.tripId,
-    invitationId: standing.id,
-  });
+  if (standing.invitedAt && (await offerSentSince(db, input, standing.invitedAt))) {
+    return "already_sent";
+  }
+  const delivery = await deliverTripInvitation(
+    db,
+    {
+      shopId: input.shopId,
+      shopSlug: input.shopSlug,
+      tripId: input.tripId,
+      invitationId: standing.id,
+    },
+    provider,
+  );
+  if (delivery === "sent") {
+    const [diver] = await db
+      .select({ fullName: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+      .limit(1);
+    await recordTripActivity(db, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      actorPersonId: input.createdByPersonId,
+      subjectPersonId: input.personId,
+      entry: { code: "departure_offered", diver: diver?.fullName ?? "" },
+    });
+  }
+  return delivery;
+}
+
+/**
+ * Whether this departure's offer reached this diver by email at or after the
+ * standing invitation's last stamp, and under an hour ago. The stamp is
+ * written before the send and the trail line only after a sent one, so a
+ * last attempt that fell back has no line after its stamp.
+ */
+async function offerSentSince(
+  db: AppDb,
+  input: { shopId: string; tripId: string; personId: string },
+  invitedAt: Date,
+): Promise<boolean> {
+  const hourAgo = new Date(nowDate().getTime() - HOUR_MS);
+  if (invitedAt.getTime() < hourAgo.getTime()) return false;
+  const [line] = await db
+    .select({ id: activityEvents.id })
+    .from(activityEvents)
+    .where(
+      and(
+        eq(activityEvents.shopId, input.shopId),
+        eq(activityEvents.tripId, input.tripId),
+        eq(activityEvents.subjectPersonId, input.personId),
+        eq(activityEvents.code, "departure_offered"),
+        gte(activityEvents.occurredAt, invitedAt),
+        gte(activityEvents.occurredAt, hourAgo),
+      ),
+    )
+    .limit(1);
+  return Boolean(line);
 }
