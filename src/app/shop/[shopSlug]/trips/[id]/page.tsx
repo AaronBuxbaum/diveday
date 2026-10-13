@@ -23,13 +23,14 @@ import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips"
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents } from "@/lib/format";
+import { formatMoneyCents, formatTime } from "@/lib/format";
+import { dockCallAt } from "@/lib/dock-call";
 import { toShopCurrency } from "@/lib/money";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { departureStage } from "@/lib/trip-phase";
+import { checkInOpen, departureStage } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
@@ -242,14 +243,25 @@ export default async function ManageTripPage({
   const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
   const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const { shown: shownStage, finished } = departureStage({
+  const phaseInput = {
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
     timeZone: shop.timezone,
     stage: stageReading,
     cancelled,
-  });
+  };
+  const { shown: shownStage, finished } = departureStage(phaseInput);
+  // The desk's one clock word, on Divers only (UX review 2026-10-13, item 20).
+  const checkInLine = checkInOpen(phaseInput)
+    ? t("trips.checkInOpen", {
+        time: formatTime(
+          dockCallAt(trip.startsAt, shop.dockCallMinutes) ?? trip.startsAt,
+          locale,
+          shop.timezone,
+        ),
+      })
+    : null;
   // The desk while arrivals are open, or a finished departure's record.
   const { desk, record } = await diversTabState({
     db,
@@ -390,6 +402,7 @@ export default async function ManageTripPage({
           tripId={tripId}
           current={showDetails ? "details" : "divers"}
           copy={tabsCopy}
+          checkInLine={checkInLine}
         />
 
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />

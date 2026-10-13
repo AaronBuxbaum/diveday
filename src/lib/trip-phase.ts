@@ -155,6 +155,22 @@ function readTap({
 }
 
 /**
+ * **Whether the desk may say check-in is open** (UX review 2026-10-13, item
+ * 20): the clock's Check-in phase, while the crew have said nothing.
+ *
+ * It is the one place the clock's phase reaches a word on screen, and it is
+ * built not to compete with the stage. It never names a stage (it is not one
+ * of the five boat words), it is said on the Divers tab only, where the desk
+ * checks people in, and it goes silent the moment a crew tap speaks, so the
+ * header's chip and this line can never both be talking. Before it the desk
+ * had no word at all for its busiest half hour: the chip is silent until the
+ * crew taps ("never a word from the clock").
+ */
+export function checkInOpen(input: Parameters<typeof tripPhaseOf>[0]): boolean {
+  return tripPhaseOf(input) === "checkin" && boatStageOf(input) === null;
+}
+
+/**
  * A departure page's two readings of where the boat is, from one input: the
  * crew's word the header chip prints (`boatStageOf`), and whether the
  * departure is finished, which turns its Divers tab into a record and stops

@@ -11,6 +11,7 @@
     "gear": "Equipo",
     "details": "Detalles"
   },
+  "checkInOpen": "Check-in abierto · en el muelle a las {time}",
   "stageLabel": "Etapa",
   "about": {
     "add": "Añadir",

@@ -11,6 +11,7 @@
     "gear": "Gear",
     "details": "Details"
   },
+  "checkInOpen": "Check-in open · at the dock by {time}",
   "stageLabel": "Stage",
   "about": {
     "add": "Add",
