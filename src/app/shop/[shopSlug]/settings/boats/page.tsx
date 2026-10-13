@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageShopSettings } from "@/db/authz";
-import { countBoatDepartures, listBoats } from "@/db/boats";
+import { countDeparturesByBoat, listBoats } from "@/db/boats";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -77,14 +77,13 @@ export default async function BoatsSettingsPage({
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const shopBoats = await listBoats(db, session.user.shopId);
   // **How much history each hull carries**, so the confirm can say so before a
-  // shop taps Delete. Sequential rather than a fan-out: this reads through the
-  // same executor and a shop's fleet is a handful of rows.
-  const boatDepartures = new Map<string, number>();
-  for (const boat of shopBoats) {
-    boatDepartures.set(boat.id, await countBoatDepartures(db, session.user.shopId, boat.id));
-  }
+  // shop taps Delete: one grouped read beside the fleet, where it used to be
+  // one count per hull after it.
+  const [shopBoats, boatDepartures] = await Promise.all([
+    listBoats(db, session.user.shopId),
+    countDeparturesByBoat(db, session.user.shopId),
+  ]);
   const banner = noticeFromParam(notice, boatNoticeMessages(t));
   // H-107's refusal is a field error on the row it is about, not a banner.
   const certificateError = boatCertificateError(t, query, locale);

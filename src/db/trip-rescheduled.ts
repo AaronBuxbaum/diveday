@@ -16,7 +16,7 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
-import { issueBookingCapability } from "./booking-capabilities";
+import { type IssuedCapability, issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { holdSend } from "./held-sends";
 import {
@@ -263,6 +263,23 @@ export async function sendRescheduleNotices(
     ? meetingPointForMessage(meetingPointOfRows(shop, trip))
     : undefined;
   const courseSession = Boolean(trip.courseId);
+  // **Every reachable seat's link in one insert, before the sends** (code
+  // review 2026-10-13b, item 36): this loop minted one per seat, three
+  // statements each, the shape `sendDepartureNote` left (item 35). The same
+  // seats as before: not a held one, not one with nowhere to send it.
+  const links = origin
+    ? await issueBookingCapabilities(db, {
+        shopId: shop.id,
+        bookingIds: seats
+          .filter(
+            ({ booking, person }) =>
+              !booking.identityUnconfirmedAt && (person.email || smsRecipient(person.phone)),
+          )
+          .map(({ booking }) => booking.id),
+        purpose: "readiness",
+        now,
+      })
+    : new Map<string, IssuedCapability>();
 
   for (const { booking, person } of seats) {
     // **A held seat waits for staff** (#2082), exactly as the reminders do.
@@ -285,14 +302,7 @@ export async function sendRescheduleNotices(
     }
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
-    const capability = origin
-      ? await issueBookingCapability(db, {
-          shopId: shop.id,
-          bookingId: booking.id,
-          purpose: "readiness",
-          now,
-        })
-      : null;
+    const capability = links.get(booking.id);
     const readinessUrl = capability
       ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
       : undefined;

@@ -35,7 +35,7 @@ import {
 } from "@/lib/reminders";
 import { maySendNow } from "@/lib/send-window";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { issueBookingCapability } from "./booking-capabilities";
+import { type IssuedCapability, issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import {
@@ -254,30 +254,6 @@ function reminderSmsBody(
   // Last, and only on a channel that can hear the answer.
   const keywords = input.replyKeywords ? ` ${t("notifications.replyKeyword.offer")}` : "";
   return `${body}${conditions}${meet}${todoText}${materialsText}${ready}${contact}${late}${keywords}`;
-}
-
-/**
- * The diver's own trip-prep link for one reminder, minted once and carried by
- * both the email's button and the text (ux review 2026-10-11, item 6).
- * Undefined with no public origin configured.
- */
-async function reminderReadinessUrl(
-  db: AppDb,
-  origin: string | null,
-  shopId: string,
-  bookingId: string,
-  now: Date,
-): Promise<string | undefined> {
-  if (!origin) return undefined;
-  const capability = await issueBookingCapability(db, {
-    shopId,
-    bookingId,
-    purpose: "readiness",
-    now,
-  });
-  return capability
-    ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
-    : undefined;
 }
 
 /**
@@ -500,7 +476,19 @@ export async function sendDueReminders(
     }
   }
 
+  // **First which reminders send, then every link they carry, then the
+  // sends** (code review 2026-10-13b, item 36). The loop minted one readiness
+  // capability per reminder, three statements each, between its sends; the
+  // links now go out in one insert per shop (`issueBookingCapabilities`), for
+  // exactly the reminders that earn their send, the set the loop minted for.
+  const sending: Array<{
+    row: (typeof dueRows)[number]["row"];
+    cadence: (typeof dueRows)[number]["cadence"];
+    checklist: ReturnType<typeof buildDiverChecklist> | null;
+    materialsDue: ReturnType<typeof readLearningMaterials>;
+  }> = [];
   for (const {
+    row,
     row: { booking, person, trip, shop, courseMaterials },
     cadence,
   } of dueRows) {
@@ -535,11 +523,10 @@ export async function sendDueReminders(
       ).has(person.id)
         ? courseMaterialsList
         : [];
-    const meetings = meetingsByTrip.get(trip.id) ?? [];
 
     // **Due, sendable, and still not worth sending.** The 7-day nudge carries
     // the diver's to-do list and nothing else, so with nothing on it there is
-    // no message to send. Checked *before* `issueBookingCapability` below, so a
+    // no message to send. Checked *before* the links are minted below, so a
     // suppressed reminder does not mint a readiness token nobody will open, and
     // before the no-reachable-channel branch, so a settled diver with no email
     // and no phone is counted settled rather than failed. Nothing is written:
@@ -553,7 +540,36 @@ export async function sendDueReminders(
       summary.settled += 1;
       continue;
     }
+    sending.push({ row, cadence, checklist, materialsDue });
+  }
 
+  const sendingByShop = new Map<string, string[]>();
+  for (const { row } of sending) {
+    const ids = sendingByShop.get(row.shop.id) ?? [];
+    ids.push(row.booking.id);
+    sendingByShop.set(row.shop.id, ids);
+  }
+  const links = new Map<string, IssuedCapability>();
+  if (origin) {
+    for (const [shopId, bookingIds] of sendingByShop) {
+      for (const [bookingId, capability] of await issueBookingCapabilities(db, {
+        shopId,
+        bookingIds,
+        purpose: "readiness",
+        now,
+      })) {
+        links.set(bookingId, capability);
+      }
+    }
+  }
+
+  for (const {
+    row: { booking, person, trip, shop },
+    cadence,
+    checklist,
+    materialsDue,
+  } of sending) {
+    const meetings = meetingsByTrip.get(trip.id) ?? [];
     const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
     // There is no request to negotiate `Accept-Language` from at a cron fire,
     // so this reads whatever the diver's own past requests already recorded,
@@ -564,7 +580,11 @@ export async function sendDueReminders(
     // different languages.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
-    const readinessUrl = await reminderReadinessUrl(db, origin, shop.id, booking.id, now);
+    const capability = links.get(booking.id);
+    const readinessUrl =
+      origin && capability
+        ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
+        : undefined;
     const phone = smsRecipient(person.phone);
     // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
     const meetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));

@@ -27,7 +27,7 @@ const CRON_MONITOR_SLUG =
  * still running.
  */
 const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "45 3 * * *" },
+  schedule: { type: "crontab", value: "9 3 * * *" },
   checkinMargin: 240,
   maxRuntime: 10,
   timezone: "Etc/UTC",

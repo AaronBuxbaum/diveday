@@ -209,6 +209,6 @@ describe("the deployed schedule", () => {
       readFileSync(path.join(process.cwd(), "vercel.json"), "utf8"),
     ).crons;
     const entry = crons.find((cron) => cron.path === "/api/cron/demo-refresh");
-    expect(entry?.schedule).toBe("45 3 * * *");
+    expect(entry?.schedule).toBe("9 3 * * *");
   });
 });
