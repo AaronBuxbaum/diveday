@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
@@ -128,6 +128,26 @@ export async function lastDayStartsAt(db: DbExecutor, tripId: string): Promise<D
 }
 
 /**
+ * The day a note sent `now` is about: the first of the departure's days not
+ * yet over, so a note sent on day three of a course is dated day three, not
+ * day one. Null when the departure has no day rows; the trip's own start
+ * stands then.
+ */
+export async function dayStillToComeStartsAt(
+  db: DbExecutor,
+  tripId: string,
+  now: Date,
+): Promise<Date | null> {
+  const [day] = await db
+    .select({ startsAt: tripScheduleDays.startsAt })
+    .from(tripScheduleDays)
+    .where(and(eq(tripScheduleDays.tripId, tripId), gt(tripScheduleDays.endsAt, now)))
+    .orderBy(asc(tripScheduleDays.startsAt))
+    .limit(1);
+  return day?.startsAt ?? null;
+}
+
+/**
  * Whether this note may go to this departure now; the one check the hold and
  * the send share. `countHeld` is the hold's: a note still inside its eight
  * seconds counts against the cap, so a fourth tap is refused at the box
@@ -225,7 +245,8 @@ async function claimDepartureNote(
       returning id`);
     const note = (inserted.rows as { id: string }[])[0];
     if (!note) return { ok: false as const, reason: "limit" as const };
-    return { ok: true as const, trip, body, seats, note };
+    const dayStartsAt = (await dayStillToComeStartsAt(tx, trip.id, now)) ?? trip.startsAt;
+    return { ok: true as const, trip, body, seats, note, dayStartsAt };
   });
 }
 
@@ -239,7 +260,7 @@ export async function sendDepartureNote(
   if (!shop) return { ok: false, reason: "not_found" };
   const claimed = await claimDepartureNote(db, input);
   if (!claimed.ok) return claimed;
-  const { trip, body, seats, note } = claimed;
+  const { trip, body, seats, note, dayStartsAt } = claimed;
 
   const origin = publicAppUrl();
   const emailProvider = notificationProviderForDb(providers.emailProvider);
@@ -290,7 +311,7 @@ export async function sendDepartureNote(
             diverName: person.fullName,
             shopName: shop.name,
             tripTitle: trip.title,
-            startsAt: trip.startsAt,
+            startsAt: dayStartsAt,
             timezone: shop.timezone,
             body,
             readinessUrl: readinessUrlFor(booking.id),
