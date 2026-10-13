@@ -541,6 +541,7 @@ function crewInputPersonId(entry: TripCrewMemberInput): string {
  */
 async function crewWithRollCallHistory(
   tx: DbExecutor,
+  shopId: string,
   tripId: string,
   personIds: readonly string[],
 ): Promise<Set<string>> {
@@ -550,6 +551,7 @@ async function crewWithRollCallHistory(
     .from(rollCallCrewEvents)
     .where(
       and(
+        eq(rollCallCrewEvents.shopId, shopId),
         eq(rollCallCrewEvents.tripId, tripId),
         inArray(rollCallCrewEvents.personId, [...personIds]),
       ),
@@ -626,7 +628,10 @@ export async function setTripCrew(
     // (review 20260803, D3). They stay on the crew list, and their count stays
     // open, until a human resolves it.
     const dropped = [...existingRoles.keys()].filter((personId) => !valid.includes(personId));
-    if (dropped.length > 0 && (await crewWithRollCallHistory(tx, tripId, dropped)).size > 0) {
+    if (
+      dropped.length > 0 &&
+      (await crewWithRollCallHistory(tx, shopId, tripId, dropped)).size > 0
+    ) {
       return false;
     }
     if (trip.courseId) {
@@ -999,7 +1004,7 @@ export async function changeTripCrewOutcome(
     // (review 20260803, D3).
     if (
       change.operation === "unassign" &&
-      (await crewWithRollCallHistory(tx, tripId, [change.personId])).size > 0
+      (await crewWithRollCallHistory(tx, shopId, tripId, [change.personId])).size > 0
     ) {
       return { ok: false, refusal: "refused" };
     }

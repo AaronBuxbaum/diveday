@@ -435,6 +435,7 @@ export async function pagedDiverActivity(
     pageSize: options.pageSize ?? DIVER_ACTIVITY_PAGE_SIZE,
     countRows: async () => {
       if (!usable) return 0;
+      // diveday:allow-unscoped-event: `theirs` opens with activityEvents.shopId.
       const [row] = await db.select({ count: count() }).from(activityEvents).where(theirs);
       return row?.count ?? 0;
     },
@@ -442,6 +443,7 @@ export async function pagedDiverActivity(
       usable
         ? await db
             .select()
+            // diveday:allow-unscoped-event: `theirs` opens with activityEvents.shopId.
             .from(activityEvents)
             .where(theirs)
             .orderBy(desc(activityEvents.occurredAt), desc(activityEvents.seq))

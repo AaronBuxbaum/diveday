@@ -82,8 +82,9 @@ export async function listChecklistItemsForTrip(
               .from(preDepartureCheckEvents)
               .where(
                 and(
-                  eq(preDepartureCheckEvents.checklistItemId, preDepartureChecklistItems.id),
+                  eq(preDepartureCheckEvents.shopId, shopId),
                   eq(preDepartureCheckEvents.tripId, tripId),
+                  eq(preDepartureCheckEvents.checklistItemId, preDepartureChecklistItems.id),
                 ),
               ),
           ),

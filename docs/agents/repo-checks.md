@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 47 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 48 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, live-trip-read, live-people-read, slug-action, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, live-trip-read, live-people-read, event-scope, slug-action, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -279,6 +279,10 @@ The live-trip-read one (`scripts/check-live-trips.mjs`) fails any read of `trips
 ### live-people-read
 
 The live-people-read one (`scripts/check-live-people.mjs`) fails a `.from(people)` that carries neither `livePerson()` (`src/db/trips-live.ts`), the same clause spelled `isNull(people.deletedAt)` (src/lib takes only types from src/db, so `src/lib/credentials.ts` spells it out), nor `diveday:allow-deleted-people: <why>`, inside the query and before the next `.from(people)`. Removing a diver stamps `people.deleted_at` and leaves the row, and a staff member who also dives holds the `diver` role, so a removed person can still hold a staff role. The 2026-10-11 review found the staff list behind every crew picker, the crew-change eligibility read and sign-in all admitting one; the seed has no dual-role person, which is why no test had noticed. Unlike `trips`, most unfiltered reads of `people` are right as they are (a by-id read in a transaction that already proved the person, a name for an activity line), so the reads written before the guard are a per-file ratchet in `scripts/ratchets.json` rather than sixty exemption comments: a count may only fall (`--write`), and a new unfiltered read anywhere fails.
+
+### event-scope
+
+The event-scope one (`scripts/check-event-scope.mjs`) fails a `.from(<table>)` on an append-only event table that does not name `<table>.shopId` inside the query, before the next `.from(`, and does not say `diveday:allow-unscoped-event: <why>`. The tables are every `export const <name>Events = pgTable` in `src/db/schema/` that declares `shopId`, plus `executedDives`, `recapPhotos` and `tripRecapPhotos`; each index leads with `shop_id`. A read by trip or parent id alone is right today, because the id belongs to one shop, but the tenant boundary then rests on the id rather than on the column that states it, and the read misses the index. The 2026-10-11 review fixed two roll-call reads of that shape; the next day `src/db/rehearsals.ts`, which a nightly cron runs across every shop, wrote it again, and the 2026-10-13 review found three siblings from 2026-10-05 (`trips-crew.ts`, `recap.ts`, `pre-departure-check.ts`). Writing the guard found six more (the review-moderation trail, the work-order trail, the diver recap-photo counts). `src/db/retention.ts` is skipped whole: the prune is across shops by design.
 
 ### slug-action
 

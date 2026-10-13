@@ -210,17 +210,21 @@ export async function clearFinishedRehearsals(db: AppDb, now: Date = nowDate()):
     .innerJoin(shops, eq(shops.id, trips.shopId))
     .where(and(eq(trips.isRehearsal, true), liveTrip(), lte(trips.endsAt, horizon)));
   const due = candidates.filter((trip) => rehearsalMayClear(trip.endsAt, now, trip.zone));
-  const kept = await rehearsalsWithEvidence(
-    db,
-    due.map((trip) => trip.id),
-  );
-  const clearing = due.filter((trip) => !kept.has(trip.id));
-  if (kept.size > 0) log("rehearsal.kept_with_evidence", "info", { count: kept.size });
-  for (const shopId of new Set(clearing.map((trip) => trip.shopId))) {
-    const tripIds = clearing.filter((trip) => trip.shopId === shopId).map((trip) => trip.id);
+  let cleared = 0;
+  let keptCount = 0;
+  // One shop at a time: the evidence is read inside the shop that owns it, on
+  // the event tables' `shop_id`-led indexes.
+  for (const shopId of new Set(due.map((trip) => trip.shopId))) {
+    const shopDue = due.filter((trip) => trip.shopId === shopId).map((trip) => trip.id);
+    const kept = await rehearsalsWithEvidence(db, shopId, shopDue);
+    keptCount += kept.size;
+    const tripIds = shopDue.filter((id) => !kept.has(id));
+    if (tripIds.length === 0) continue;
     await db.transaction((tx) => clearShopRehearsals(tx, shopId, tripIds, now));
+    cleared += tripIds.length;
   }
-  return clearing.length;
+  if (keptCount > 0) log("rehearsal.kept_with_evidence", "info", { count: keptCount });
+  return cleared;
 }
 
 async function clearShopRehearsals(
@@ -252,12 +256,14 @@ async function clearShopRehearsals(
 }
 
 /**
- * The rehearsals among `tripIds` that carry real evidence: a boarding at the
- * dock, any after-dive count, or a logged dive. A dockside `not_boarded` is
- * clerical and is not evidence.
+ * The rehearsals among this shop's `tripIds` that carry real evidence: a
+ * boarding at the dock, any after-dive count, or a logged dive. A dockside
+ * `not_boarded` is clerical and is not evidence. Only rows stamped with this
+ * shop count, and both reads lead with `shop_id` like their indexes.
  */
 export async function rehearsalsWithEvidence(
   db: DbExecutor,
+  shopId: string,
   tripIds: readonly string[],
 ): Promise<Set<string>> {
   if (tripIds.length === 0) return new Set();
@@ -266,6 +272,7 @@ export async function rehearsalsWithEvidence(
     .from(rollCallEvents)
     .where(
       and(
+        eq(rollCallEvents.shopId, shopId),
         inArray(rollCallEvents.tripId, [...tripIds]),
         or(eq(rollCallEvents.status, "boarded"), ne(rollCallEvents.checkpoint, "departure")),
       ),
@@ -273,7 +280,13 @@ export async function rehearsalsWithEvidence(
   const logged = await db
     .selectDistinct({ tripId: executedDives.tripId })
     .from(executedDives)
-    .where(and(inArray(executedDives.tripId, [...tripIds]), isNull(executedDives.deletedAt)));
+    .where(
+      and(
+        eq(executedDives.shopId, shopId),
+        inArray(executedDives.tripId, [...tripIds]),
+        isNull(executedDives.deletedAt),
+      ),
+    );
   return new Set([...counted, ...logged].map((row) => row.tripId));
 }
 

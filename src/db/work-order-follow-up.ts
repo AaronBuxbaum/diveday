@@ -172,7 +172,11 @@ export async function sendWorkOrderReadyNotice(
       .select({ id: workOrderEvents.id })
       .from(workOrderEvents)
       .where(
-        and(eq(workOrderEvents.workOrderId, workOrder.id), eq(workOrderEvents.toStatus, "ready")),
+        and(
+          eq(workOrderEvents.shopId, workOrder.shopId),
+          eq(workOrderEvents.workOrderId, workOrder.id),
+          eq(workOrderEvents.toStatus, "ready"),
+        ),
       )
       .orderBy(desc(workOrderEvents.seq))
       .limit(1);
