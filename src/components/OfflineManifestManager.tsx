@@ -101,6 +101,11 @@ export function OfflineManifestManager({
   const [saved, setSaved] = useState<OfflineManifestEnvelope | null>(null);
   const [message, setMessage] = useState(copy.checkingDevice);
   const [busy, setBusy] = useState(false);
+  // Whether the mount's first save (or the offline read standing in for it)
+  // has finished, so the freshness pill is as it will stay. Published on the
+  // card for the visual suite, which shot the pill missing on one run and
+  // present on the next (#2509).
+  const [settled, setSettled] = useState(false);
   // saveOfflineManifest/syncOfflineManifest overlap easily across the mount
   // effect, the reconnect listener, and the interval — this keeps them from
   // racing each other into IndexedDB. Cross-tab/cross-view races (this page
@@ -329,9 +334,11 @@ export function OfflineManifestManager({
         manualRefreshPending.current = false;
         await save({ silent: !manual });
         if (cancelled) return;
+        setSettled(true);
         await reconcile();
       } else {
         setMessage(envelope ? copy.offlineWithSavedCopy : copy.offlineNoSavedCopy);
+        setSettled(true);
       }
     })();
     return () => {
@@ -497,6 +504,7 @@ export function OfflineManifestManager({
           out of signal this live page does not load at all —
           /offline-manifest is what a captain opens. */}
       <section
+        data-offline-copy={settled || !tripId ? "settled" : "pending"}
         className={sectionCardClass({ padding: "none", className: "print:hidden" })}
         aria-labelledby={scopedId(idPrefix, "offline-heading")}
       >
