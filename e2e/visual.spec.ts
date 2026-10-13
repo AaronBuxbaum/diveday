@@ -5807,7 +5807,12 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
         await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
-        await page.getByText(/Open Water — unverified/).waitFor();
+        // Both seeded joiners now read unverified (#2428: a staff-typed card
+        // nobody checked is not vouched for), so wait on the first of them.
+        await page
+          .getByText(/Open Water — unverified/)
+          .first()
+          .waitFor();
         await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-seeded", scheme);
       });
