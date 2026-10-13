@@ -122,7 +122,7 @@
   "medicalEarlierRefusalChip": "Physician said no before",
   "medicalReferralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file",
   "medicalReferralUnresolvedChip": "Referral still open",
-  "medicalRidingOnlyNotClearedChip": "Riding only: not cleared",
+  "medicalRidingOnlyNotClearedChip": "Riding only: MD said no",
   "medicalRidingOnlyReferralChip": "Riding only: referred",
   "medicalRidingOnlyNotCleared": "A physician did not clear this person on {date}: riding only, not in the water",
   "medicalRidingOnlyReferral": "Referred to a physician on {date} with no answer on file: riding only, not in the water",

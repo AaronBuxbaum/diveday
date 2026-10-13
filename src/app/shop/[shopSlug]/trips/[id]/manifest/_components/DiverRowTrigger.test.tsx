@@ -32,7 +32,7 @@ afterEach(cleanup);
  * a dive is still not to go in the water.
  */
 describe("the rider's riding-only capsule", () => {
-  const NOT_CLEARED = "Riding only: not cleared";
+  const NOT_CLEARED = "Riding only: MD said no";
   const REFERRAL = "Riding only: referred";
   const notCleared = {
     kind: "not_cleared",
