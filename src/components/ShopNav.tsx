@@ -1,69 +1,20 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { ChromeBar } from "@/components/chrome/ChromeBar";
 import { ChromeTitleSlot } from "@/components/chrome/ChromeTitleSlot";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { ShopIdentityMenu } from "@/components/ShopIdentityMenu";
-import { gearStatusLabels } from "@/i18n/gear-labels";
 import { localeEndonym } from "@/i18n/language-labels";
 import { DIVER_LOCALES } from "@/i18n/settings";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { getAuth } from "@/lib/auth";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import {
-  STAFF_DESTINATION_LABEL_KEYS,
-  STAFF_DESTINATION_TITLE_KEYS,
   type StaffDestinationGates,
-  type StaffDestinationId,
-  type StaffDestinationLabels,
-  type StaffDestinationTitles,
   type StaffNavOffers,
   staffNavSections,
   staffShopRoot,
 } from "@/lib/staff-destinations";
+import { commandPaletteCopy, signOutAction } from "./command-palette-props";
 import { type ShopSectionNavCopy, ShopSidebar, ShopTabBar } from "./ShopSectionNav";
-import {
-  CommandPalette,
-  type CommandPaletteCopy,
-  type SettingsShortcut,
-} from "./search/CommandPalette";
-
-async function signOutAction() {
-  "use server";
-  const auth = await getAuth();
-  await auth.api.signOut({ headers: await headers() });
-  redirect("/");
-}
-
-/**
- * The one word each staff destination goes by, and the headline the page it
- * leads to wears.
- *
- * Both are read straight off the registry's key records, so the nav tab, the
- * palette's "Go to" row and the page's own eyebrow are the same string by
- * construction rather than by three people typing it. Adding a destination
- * without a word is a type error in `STAFF_DESTINATION_LABEL_KEYS`.
- */
-function destinationLabelsFor(t: (key: StaffMessageKey) => string): StaffDestinationLabels {
-  const entries = Object.entries(STAFF_DESTINATION_LABEL_KEYS) as [
-    StaffDestinationId,
-    StaffMessageKey,
-  ][];
-  return Object.fromEntries(entries.map(([id, key]) => [id, t(key)])) as StaffDestinationLabels;
-}
-
-/**
- * What each destination calls itself once you are on it, where that differs
- * from its label — so ⌘K finds Reports for somebody who types "how's my
- * month". Only the stable headlines; see `STAFF_DESTINATION_TITLE_KEYS`.
- */
-function destinationTitlesFor(t: (key: StaffMessageKey) => string): StaffDestinationTitles {
-  const entries = Object.entries(STAFF_DESTINATION_TITLE_KEYS) as [
-    StaffDestinationId,
-    StaffMessageKey,
-  ][];
-  return Object.fromEntries(entries.map(([id, key]) => [id, t(key)]));
-}
+import { CommandPalette, type SettingsShortcut } from "./search/CommandPalette";
 
 /**
  * The words both forms of the section nav read — the sidebar and the phone's
@@ -116,77 +67,6 @@ export function ShopNavSidebar({
       items={staffNavSections(navGates, navOffers)}
       blocked={navCounts?.blockers}
       copy={sectionNavCopy(t, navCounts?.blockers ?? 0)}
-    />
-  );
-}
-
-/** Every word the ⌘K palette speaks, wherever it is mounted. */
-function commandPaletteCopy(t: ReturnType<typeof staffTranslator>): CommandPaletteCopy {
-  return {
-    language: t("shared.shopNav.language"),
-    groupSession: t("shared.commandPalette.groupSession"),
-    signOut: t("shared.shopNav.signOut"),
-    search: t("shared.commandPalette.search"),
-    dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
-    comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
-    placeholder: t("shared.commandPalette.placeholder"),
-    emptyShort: t("shared.commandPalette.emptyShort"),
-    emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
-    groupDivers: t("shared.commandPalette.groupDivers"),
-    addDiver: t("shared.commandPalette.addDiver"),
-    groupTrips: t("shared.commandPalette.groupTrips"),
-    groupDiveSites: t("shared.commandPalette.groupDiveSites"),
-    groupCourses: t("shared.commandPalette.groupCourses"),
-    groupOrders: t("shared.commandPalette.groupOrders"),
-    groupGear: t("shared.commandPalette.groupGear"),
-    // Every status worded here, where the translator is: `src/db`
-    // returns the code (`src/i18n/gear-labels.ts` owns the words).
-    gearStatuses: gearStatusLabels(t),
-    groupGoTo: t("shared.commandPalette.groupGoTo"),
-    destinationLabels: destinationLabelsFor(t),
-    destinationTitles: destinationTitlesFor(t),
-    goToBoarding: t("shared.commandPalette.goToBoarding"),
-    goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
-    hintMove: t("shared.commandPalette.hintMove"),
-    hintOpen: t("shared.commandPalette.hintOpen"),
-    hintClose: t("shared.commandPalette.hintClose"),
-  };
-}
-
-/**
- * **The ⌘K search as a field of its own**, for a page that stands outside the
- * staff shell and so has no bar to put it in: the staff 404, which is a dead
- * end without it (UX review 2026-10-10, item 38). The same palette, the same
- * gates and the same words as the bar's, drawn as a full-width field.
- */
-export function ShopSearchField({
-  shopSlug,
-  navGates,
-  crewSchedule,
-  locale,
-  setLocale,
-  createDiverAction,
-}: {
-  shopSlug: string;
-  navGates: StaffDestinationGates;
-  crewSchedule: boolean;
-  locale: string;
-  setLocale: (locale: string) => Promise<void>;
-  createDiverAction: (formData: FormData) => Promise<void>;
-}) {
-  const t = staffTranslator(locale);
-  return (
-    <CommandPalette
-      variant="field"
-      shopSlug={shopSlug}
-      gates={navGates}
-      crewSchedule={crewSchedule}
-      locale={locale}
-      languages={DIVER_LOCALES.map((value) => ({ locale: value, label: localeEndonym(value) }))}
-      setLocaleAction={setLocale}
-      signOutAction={signOutAction}
-      createDiverAction={createDiverAction}
-      copy={commandPaletteCopy(t)}
     />
   );
 }

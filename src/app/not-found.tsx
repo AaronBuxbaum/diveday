@@ -10,8 +10,8 @@ import {
   PublicShopChromePlaceholder,
   PublicShopFooterSection,
 } from "@/app/s/[shopSlug]/_components/PublicShopShell";
-import { ShopSearchField } from "@/components/ShopNav";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
+import { ShopSearchField } from "@/components/ShopSearchField";
 import { buttonClass } from "@/components/ui/button";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { shopBySlugCached } from "@/db/shops-cached";
