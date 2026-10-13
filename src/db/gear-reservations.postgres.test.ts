@@ -5,7 +5,12 @@ import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { createGearItem, openGearReservation, releaseGearReservation, reserveGearUnit } from "./gear";
+import {
+  createGearItem,
+  openGearReservation,
+  releaseGearReservation,
+  reserveGearUnit,
+} from "./gear";
 import { gearReservations, people, shops, trips } from "./schema";
 
 /** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
