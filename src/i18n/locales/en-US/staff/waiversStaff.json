@@ -24,7 +24,8 @@
   "placeholder": "Write the release the diver will read and sign.",
   "pendingLabel": "Publishing…",
   "releaseDescription": {
-    "sample": "This is sample wording to start from. Edit it to fit your shop, and have your own counsel review it."
+    "sample": "This is sample wording to start from. Edit it to fit your shop, and have your own counsel review it.",
+    "sampleLive": "Divers are signing DiveDay’s sample wording. Edit it to fit your shop, and have your own counsel review it."
   },
   "versionInfo": "Version {version} · published {date}",
   "signatures": {

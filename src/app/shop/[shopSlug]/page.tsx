@@ -33,6 +33,7 @@ import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
 import { listDiveSites } from "@/db/dive-sites";
+import { getCurrentWaiverTemplate } from "@/db/waivers";
 import { shopFirstBooking } from "@/db/first-booking";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
@@ -85,6 +86,7 @@ import {
   spineIsQuiet,
   spineJobCount,
 } from "@/lib/today";
+import { isSampleRelease } from "@/lib/waivers";
 import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
 import {
@@ -451,7 +453,12 @@ async function TodayBody({
   // (`shopTripCount` is null for it).
   const showFirstRunChecklist = !nextDeparture && shopTripCount === 0;
   // The one read only a first-run shop makes, so the one third wave.
-  const firstRunDiveSites = showFirstRunChecklist ? await listDiveSites(db, shop.id) : null;
+  const [firstRunDiveSites, firstRunRelease] = showFirstRunChecklist
+    ? await Promise.all([listDiveSites(db, shop.id), getCurrentWaiverTemplate(db, shop.id)])
+    : [null, null];
+  // The release step is done once the live text is the shop's own words, never
+  // DiveDay's sample that sign-up published (third UX review, item 30).
+  const firstRunReleaseDone = showFirstRunChecklist && !isSampleRelease(firstRunRelease?.body);
   const firstRunStripeAccount = showFirstRunChecklist ? stripeAccount : null;
   // A first-run shop gets one quiet progress fact, derived from persisted
   // records. The trip and public-link rows are guided actions, not completion
@@ -461,6 +468,7 @@ async function TodayBody({
     Boolean(shop.tagline || shop.description || shop.logoUrl),
     Boolean(shop.unitsConfirmedAt),
     Boolean(firstRunDiveSites?.length),
+    firstRunReleaseDone,
     canAcceptPayments(firstRunStripeAccount),
   ].filter(Boolean).length;
   // The desk group's one presence-derived row (ADR 20260827-first-light,
@@ -912,6 +920,7 @@ async function TodayBody({
                 profileDone={Boolean(shop.tagline || shop.description || shop.logoUrl)}
                 diveSiteCount={firstRunDiveSites?.length ?? 0}
                 unitsDone={Boolean(shop.unitsConfirmedAt)}
+                releaseDone={firstRunReleaseDone}
                 stripeDone={canAcceptPayments(firstRunStripeAccount)}
                 copy={firstRunChecklistCopy(t, shop, {
                   diveSiteCount: firstRunDiveSites?.length ?? 0,

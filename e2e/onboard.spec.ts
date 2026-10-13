@@ -47,7 +47,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page.getByText("Add your first departure")).toBeVisible();
   await expect(page.getByText("Share your public schedule")).toBeVisible();
   await expect(page.getByText("Connect payments", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("0 of 5 done")).toBeVisible();
+  await expect(page.getByText("0 of 6 done")).toBeVisible();
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveText("Add contact details");
   // A brand-new shop has completed none of the steps yet.
@@ -82,7 +82,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
 
   await page.goto(`/shop/${unique}`);
   await expect(page.getByText("Contact details on file.")).toBeVisible();
-  await expect(page.getByText("1 of 5 done")).toBeVisible();
+  await expect(page.getByText("1 of 6 done")).toBeVisible();
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveText("Set up profile");
   await expect(page.getByText("Add your first dive site")).toBeVisible();
@@ -99,6 +99,15 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   // The schedule-link step always offers the link, independent of "done" state.
   await expect(page.getByText(`/s/${unique}`).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
+
+  // **Sign-up published DiveDay's sample release, and the shop is told so**
+  // (third UX review, item 30). The checklist asks for it to be read before
+  // the first departure lists, and the Waivers page says at rest that divers
+  // are signing the sample, with the editor open on arrival.
+  await page.getByRole("link", { name: "Read the release" }).click();
+  await expect(page).toHaveURL(new RegExp(`/shop/${unique}/waivers#release$`));
+  await expect(page.getByText("Divers are signing DiveDay’s sample wording.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Release text" })).toBeVisible();
 });
 
 // Sign-up used to offer sixteen hand-listed zones, so a shop in Raja Ampat,

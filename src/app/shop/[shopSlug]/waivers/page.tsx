@@ -25,7 +25,7 @@ import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
+import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
 import { type CourseFormNotice, CourseFormsSection } from "./_components/CourseFormsSection";
 import { PublishRelease, type PublishReleaseCopy } from "./_components/PublishRelease";
 import { SignatureLog } from "./_components/SignatureLog";
@@ -132,6 +132,7 @@ export default async function WaiversPage({
     courseFormResignImpact(db, shop.id),
   ]);
   const courseFormNotice = courseFormNoticeFor(notice, formParam, t);
+  const sampleRelease = isSampleRelease(current?.body);
 
   const resigning = notice === "waiver-resigning" ? Number(count) : Number.NaN;
   // Two refusals, two sentences. `invalid` says the release is too short;
@@ -235,14 +236,29 @@ export default async function WaiversPage({
         // where it sat while that card had a heading of its own repeating the
         // field's.
         meta={
-          current ? (
-            <p className="text-sm text-muted">
-              {t("waiversStaff.versionInfo", {
-                version: current.version,
-                date: formatShortDate(current.createdAt, locale, shop.timezone),
-              })}
-            </p>
-          ) : undefined
+          <>
+            {current ? (
+              <p className="text-sm text-muted">
+                {t("waiversStaff.versionInfo", {
+                  version: current.version,
+                  date: formatShortDate(current.createdAt, locale, shop.timezone),
+                })}
+              </p>
+            ) : null}
+            {/* **Said at rest, not only inside the editor** (third UX review,
+                item 30). Sign-up publishes DiveDay's sample release as a new
+                shop's version 1, and divers sign it from that hour. The note
+                used to render only for a shop with no release, which a
+                signed-up shop never is; it now holds for as long as the live
+                text is byte-equal to the sample (`isSampleRelease`). */}
+            {sampleRelease ? (
+              <p className="mt-1 text-sm text-warning-strong">
+                {current
+                  ? t("waiversStaff.releaseDescription.sampleLive")
+                  : t("waiversStaff.releaseDescription.sample")}
+              </p>
+            ) : null}
+          </>
         }
       />
 
@@ -280,13 +296,7 @@ export default async function WaiversPage({
         <SectionCard padding="lg" className="mt-4">
           <form action={saveWaiverAction} className="flex flex-col gap-5">
             <FieldGrid columns={1} className="gap-y-5">
-              <Field
-                label={t("waiversStaff.fieldLabel")}
-                // Only for a shop that has never published one: a starting text
-                // nobody's counsel has read is the one thing about this box a
-                // reader could get wrong.
-                description={current ? undefined : t("waiversStaff.releaseDescription.sample")}
-              >
+              <Field label={t("waiversStaff.fieldLabel")}>
                 <textarea
                   name="body"
                   required

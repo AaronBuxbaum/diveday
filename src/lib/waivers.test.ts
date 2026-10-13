@@ -3,10 +3,12 @@ import type { WaiverRecord } from "@/db/schema";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "./medical";
 import { localTypedConsentProvider, namesakeAttestationProvider } from "./signatures";
 import {
+  DEFAULT_WAIVER_BODY,
   effectiveReleaseForRiderSeat,
   effectiveWaiverForBooking,
   isCleanCompletion,
   isCompletedWaiverCurrent,
+  isSampleRelease,
   isUnresolvedMedicalHold,
   type MedicalWaiverMark,
   medicalWaiverMark,
@@ -1184,5 +1186,19 @@ describe("riderMedicalHold", () => {
     expect(
       medicalWarningDays(null, "America/New_York", riderMedicalHold(referral, [referral])),
     ).toEqual({ ridingReferredOn: "2026-07-01" });
+  });
+});
+
+describe("isSampleRelease", () => {
+  it("is true while the live release is DiveDay's starting text, or there is none", () => {
+    expect(isSampleRelease(DEFAULT_WAIVER_BODY)).toBe(true);
+    expect(isSampleRelease(null)).toBe(true);
+    expect(isSampleRelease(undefined)).toBe(true);
+  });
+
+  it("is false once the shop has published any words of its own", () => {
+    expect(isSampleRelease(`${DEFAULT_WAIVER_BODY}\n\nBlue Mantis Diving, Key Largo.`)).toBe(false);
+    // Byte-equal, not near-equal: one changed character is the shop's edit.
+    expect(isSampleRelease(DEFAULT_WAIVER_BODY.replace("crew", "Crew"))).toBe(false);
   });
 });
