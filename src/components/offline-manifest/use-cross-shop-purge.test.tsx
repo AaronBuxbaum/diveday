@@ -1,0 +1,162 @@
+// @vitest-environment jsdom
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  listOfflineManifests,
+  loadOfflineManifest,
+  purgeOfflineManifestsExceptShop,
+} from "@/lib/offline-manifest-store";
+import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
+import { useCrossShopPurge } from "./use-cross-shop-purge";
+import { envelope } from "./view-fixtures";
+
+vi.mock("@/lib/offline-manifest-store", () => ({
+  listOfflineManifests: vi.fn(),
+  loadOfflineManifest: vi.fn(),
+  purgeOfflineManifestsExceptShop: vi.fn(),
+}));
+
+const list = vi.mocked(listOfflineManifests);
+const load = vi.mocked(loadOfflineManifest);
+const purge = vi.mocked(purgeOfflineManifestsExceptShop);
+
+/**
+ * The hook's collaborators, each a spy. `tenantSlugRef` starts holding a stale
+ * answer so a test can see the round clear it before asking again.
+ */
+function setup(tripId: string, tenant: string | null) {
+  const props = {
+    tripId,
+    tenantSlugRef: { current: "stale-shop" as string | null },
+    resolveTenant: vi.fn(async () => tenant),
+    dispatchSaved: vi.fn(),
+    setList: vi.fn(),
+    refreshDiscarded: vi.fn(),
+  };
+  const hook = renderHook(() => useCrossShopPurge(props));
+  return { props, ...hook };
+}
+
+/** Run the `setList` updater the round handed over against `current`. */
+function listAfter(
+  setList: ReturnType<typeof vi.fn>,
+  current: OfflineManifestEnvelope[] | null,
+): OfflineManifestEnvelope[] | null {
+  const updater = setList.mock.calls.at(-1)?.[0] as (
+    value: OfflineManifestEnvelope[] | null,
+  ) => OfflineManifestEnvelope[] | null;
+  return updater(current);
+}
+
+beforeEach(() => {
+  list.mockReset();
+  load.mockReset();
+  purge.mockReset();
+  purge.mockResolvedValue(undefined as never);
+  list.mockResolvedValue([]);
+  load.mockResolvedValue(null);
+});
+
+afterEach(cleanup);
+
+describe("useCrossShopPurge", () => {
+  it("re-asks the tenant every round instead of trusting the cached answer", async () => {
+    const { props } = setup("", "blue-mantis");
+    expect(props.tenantSlugRef.current).toBeNull();
+    await waitFor(() => expect(props.resolveTenant).toHaveBeenCalledTimes(1));
+  });
+
+  it("purges nothing and repaints nothing when no shop is signed in", async () => {
+    const { props } = setup("", null);
+    await waitFor(() => expect(props.resolveTenant).toHaveBeenCalled());
+    await act(async () => {});
+    expect(purge).not.toHaveBeenCalled();
+    expect(props.setList).not.toHaveBeenCalled();
+    expect(props.dispatchSaved).not.toHaveBeenCalled();
+    expect(props.refreshDiscarded).not.toHaveBeenCalled();
+  });
+
+  it("on the list, keeps only the signed-in shop's copies and repaints from the store", async () => {
+    const kept = [envelope("trip-1", "Morning Two-Tank")];
+    list.mockResolvedValue(kept);
+    const { props } = setup("", "blue-mantis");
+    await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(1));
+    expect(purge).toHaveBeenCalledWith("blue-mantis");
+    // A list already painted is replaced; one not yet read stays unread, so the
+    // purge can never assert "nothing saved" before the store was opened.
+    expect(listAfter(props.setList, [])).toBe(kept);
+    expect(listAfter(props.setList, null)).toBeNull();
+  });
+
+  it("keeps the list it already painted when the re-read fails", async () => {
+    list.mockRejectedValue(new Error("store unreadable"));
+    const { props } = setup("", "blue-mantis");
+    await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(1));
+    expect(props.setList).not.toHaveBeenCalled();
+  });
+
+  it("on a trip, reports the copy gone under this tenant when the store answers that it is", async () => {
+    load.mockResolvedValue(null);
+    const { props } = setup("trip-1", "blue-mantis");
+    await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(1));
+    expect(load).toHaveBeenCalledWith("trip-1");
+    expect(props.dispatchSaved).toHaveBeenCalledWith({ type: "gone", tenant: "blue-mantis" });
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it("on a trip, says nothing when the copy survived the purge", async () => {
+    load.mockResolvedValue(envelope("trip-1", "Morning Two-Tank"));
+    const { props } = setup("trip-1", "blue-mantis");
+    await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(1));
+    expect(props.dispatchSaved).not.toHaveBeenCalled();
+  });
+
+  it("on a trip, never blanks the roster on a failed read", async () => {
+    load.mockRejectedValue(new Error("decrypt failed"));
+    const { props } = setup("trip-1", "blue-mantis");
+    await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(1));
+    expect(props.dispatchSaved).not.toHaveBeenCalled();
+  });
+
+  it("changes nothing on screen when the purge itself throws", async () => {
+    purge.mockRejectedValue(new Error("quota"));
+    const { props } = setup("trip-1", "blue-mantis");
+    await waitFor(() => expect(purge).toHaveBeenCalled());
+    await act(async () => {});
+    expect(load).not.toHaveBeenCalled();
+    expect(props.dispatchSaved).not.toHaveBeenCalled();
+    expect(props.refreshDiscarded).not.toHaveBeenCalled();
+  });
+
+  it("runs another round on every reconnect", async () => {
+    list.mockResolvedValue([]);
+    const { props } = setup("", "blue-mantis");
+    await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(2));
+    expect(purge).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports nothing once unmounted, and stops listening for reconnects", async () => {
+    let answer: (slug: string | null) => void = () => {};
+    const { props, unmount } = setup("trip-1", null);
+    props.resolveTenant.mockImplementation(
+      () =>
+        new Promise<string | null>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    // The first round already asked (and got null); a reconnect asks again and
+    // is still waiting when the view goes away.
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    unmount();
+    await act(async () => answer("blue-mantis"));
+    expect(purge).not.toHaveBeenCalled();
+    window.dispatchEvent(new Event("online"));
+    expect(props.resolveTenant).toHaveBeenCalledTimes(2);
+  });
+});
