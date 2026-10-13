@@ -711,49 +711,8 @@ export async function seedMoreTrips(
   });
   if (extraWaiverRows.length > 0) await db.insert(waiverRecords).values(extraWaiverRows);
 
-  // The completed dawn boat's roll call, written once its releases are on
-  // file so readiness reads the state it sailed in. Direct inserts skip
-  // `recordRollCall`, so this applies its gate itself (#2415): a diver the gate
-  // would refuse (no card, a card nobody verified) was turned away at the dock,
-  // one explicit `not_boarded` and nothing after it, never "boarded".
   if (completedTrip) {
-    const cleared = new Set(
-      (await listTripReadiness(db, shopId, completedTrip.id))
-        .filter((row) => row.readiness.status === "ready")
-        .map((row) => row.booking.id),
-    );
-    const rollCallRecorderId = captainId ?? instructorId;
-    const checkpointAt = (index: number) =>
-      new Date(completedTrip.startsAt.getTime() + index * 90 * 60 * 1000);
-    const completedRollCallRows = insertedBookings
-      .filter((booking) => booking.tripId === completedTrip.id)
-      .flatMap((booking): (typeof rollCallEvents.$inferInsert)[] =>
-        cleared.has(booking.id)
-          ? rollCallCheckpoints(completedTrip.plannedDives).map((checkpoint, index) => ({
-              shopId,
-              tripId: completedTrip.id,
-              bookingId: booking.id,
-              recordedByPersonId: rollCallRecorderId,
-              status: "boarded" as const,
-              checkpoint,
-              source: "live" as const,
-              occurredAt: checkpointAt(index),
-            }))
-          : [
-              {
-                shopId,
-                tripId: completedTrip.id,
-                bookingId: booking.id,
-                recordedByPersonId: rollCallRecorderId,
-                status: "not_boarded" as const,
-                checkpoint: "departure",
-                source: "live" as const,
-                occurredAt: checkpointAt(0),
-              },
-            ],
-      );
-    if (completedRollCallRows.length > 0)
-      await db.insert(rollCallEvents).values(completedRollCallRows);
+    await seedCompletedRollCall(db, shopId, completedTrip, captainId ?? instructorId);
   }
 
   // The Duane wreck readiness track: three of the six divers paid or on
@@ -817,4 +776,45 @@ export async function seedMoreTrips(
       })
       .onConflictDoNothing();
   }
+}
+
+/**
+ * The completed dawn boat's roll call, written once its releases are on file
+ * so readiness reads the state it sailed in. Direct inserts skip
+ * `recordRollCall`, so this applies its gate itself (#2415): a diver the gate
+ * would refuse (no card, a card nobody verified) was turned away at the dock,
+ * one explicit `not_boarded` and nothing after it, never "boarded".
+ */
+async function seedCompletedRollCall(
+  db: DbExecutor,
+  shopId: string,
+  completedTrip: { id: string; startsAt: Date; plannedDives: number },
+  rollCallRecorderId: string,
+): Promise<void> {
+  const readiness = await listTripReadiness(db, shopId, completedTrip.id);
+  const checkpointAt = (index: number) =>
+    new Date(completedTrip.startsAt.getTime() + index * 90 * 60 * 1000);
+  const mark = (
+    bookingId: string,
+    status: "boarded" | "not_boarded",
+    checkpoint: string,
+    index: number,
+  ) => ({
+    shopId,
+    tripId: completedTrip.id,
+    bookingId,
+    recordedByPersonId: rollCallRecorderId,
+    status,
+    checkpoint,
+    source: "live" as const,
+    occurredAt: checkpointAt(index),
+  });
+  const rows = readiness.flatMap(({ booking, readiness: result }) =>
+    result.status === "ready"
+      ? rollCallCheckpoints(completedTrip.plannedDives).map((checkpoint, index) =>
+          mark(booking.id, "boarded", checkpoint, index),
+        )
+      : [mark(booking.id, "not_boarded", "departure", 0)],
+  );
+  if (rows.length > 0) await db.insert(rollCallEvents).values(rows);
 }
