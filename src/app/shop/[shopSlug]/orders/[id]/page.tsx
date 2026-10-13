@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { PrintButton } from "@/components/PrintButton";
@@ -11,12 +12,13 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonManageOrders, canPersonRefund } from "@/db/authz";
+import { getOrderBookingContext } from "@/db/order-booking";
 import { getOrder } from "@/db/orders";
 import type { OrderStatus } from "@/db/schema";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents } from "@/lib/format";
+import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -112,13 +114,16 @@ export default async function OrderDetailPage({
   const timezone = shop.timezone ?? "UTC";
   // Refunds are owner/manager only (H-14, ADR 20260724-role-authorization);
   // hide the control from other staff. refundAction re-checks regardless.
-  const [canRefund, header] = await Promise.all([
+  const [canRefund, header, booking] = await Promise.all([
     canPersonRefund(db, shop.id, session.user.personId),
     loadOrderHeader(db, {
       shopId: shop.id,
       orderId: order.order.id,
       personId: session.user.personId,
     }),
+    // The departure a deposit or a trip fee was raised for (third UX review,
+    // item 32): the new-order form named it and the sent order lost it.
+    order.order.bookingId ? getOrderBookingContext(db, shop.id, order.order.bookingId) : null,
   ]);
   // Money taken at the counter, in cash or on the shop's own card machine (ADR
   // 20261009-counter-payments). It has no Stripe invoice, so none of the
@@ -194,6 +199,35 @@ export default async function OrderDetailPage({
             {formatMoneyCents(order.order.totalCents, order.order.currency, locale)}
           </span>
         </div>
+
+        {/* **Which departure, and what the seat still owes.** A deposit is
+            half a payment; the line names the booking it belongs to, in the
+            words the new-order form used, and the balance off the seat's own
+            price and payment row (`seatBalanceOwedCents`). */}
+        {booking ? (
+          <div className="mt-3 text-sm">
+            <p>
+              {t("orders.new.linkedTo", {
+                personName: order.person.fullName,
+                tripTitle: booking.tripTitle,
+                date: formatShortDate(booking.tripStartsAt, locale, timezone),
+              })}{" "}
+              <Link
+                href={`/shop/${shopSlug}/trips/${booking.tripId}`}
+                className="font-medium text-primary hover:underline print:hidden"
+              >
+                {t("orders.detail.openTrip")}
+              </Link>
+            </p>
+            {booking.balanceOwedCents !== null ? (
+              <p className="mt-1 text-muted tabular-nums">
+                {t("orders.detail.balanceOwed", {
+                  amount: formatMoneyCents(booking.balanceOwedCents, order.order.currency, locale),
+                })}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {counterCollection && order.order.paidAt ? (
           <PaidAtCounterLine

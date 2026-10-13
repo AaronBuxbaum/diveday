@@ -4,6 +4,7 @@ import {
   checkoutCharge,
   checkoutSeatTerms,
   refundOnCancellation,
+  seatBalanceOwedCents,
   seatListPriceCents,
   seatMoneyTerms,
   withinCancellationWindow,
@@ -206,5 +207,28 @@ describe("seatMoneyTerms (ux review 2026-10-11, item 5)", () => {
     expect(
       seatMoneyTerms({ priceCents: null, depositCents: null }, null, "diver", true),
     ).toBeNull();
+  });
+});
+
+describe("seatBalanceOwedCents", () => {
+  it("owes the whole seat before anything is paid", () => {
+    expect(seatBalanceOwedCents(9_500, null)).toBe(9_500);
+    expect(seatBalanceOwedCents(9_500, { status: "unpaid", amountCents: null })).toBe(9_500);
+  });
+
+  it("owes the seat less the deposit once the deposit is in", () => {
+    expect(seatBalanceOwedCents(9_500, { status: "deposit_paid", amountCents: 5_400 })).toBe(4_100);
+  });
+
+  it("owes nothing once the seat is settled, waived or refunded", () => {
+    for (const status of ["paid", "waived", "refunded", "partly_refunded"]) {
+      expect(seatBalanceOwedCents(9_500, { status, amountCents: 9_500 })).toBeNull();
+    }
+  });
+
+  it("says nothing for an unpriced seat, or a deposit that covered it", () => {
+    expect(seatBalanceOwedCents(null, null)).toBeNull();
+    expect(seatBalanceOwedCents(0, null)).toBeNull();
+    expect(seatBalanceOwedCents(5_000, { status: "deposit_paid", amountCents: 5_000 })).toBeNull();
   });
 });

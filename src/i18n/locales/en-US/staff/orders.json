@@ -55,6 +55,8 @@
     "raisedOn": "Raised {date}",
     "createdBy": "by {name}",
     "boughtOnline": "bought online",
+    "openTrip": "Open the departure",
+    "balanceOwed": "{amount} still owed on the seat.",
     "status": {
       "open": "Open — awaiting payment",
       "paid": "Paid",

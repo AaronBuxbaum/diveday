@@ -83,6 +83,23 @@ test.describe("demo billing history", () => {
   });
 
   /**
+   * **A deposit names the departure it was for** (third UX review, item 32).
+   * "Trip deposit (Deposit) $54.00" was the whole page: which boat, on what
+   * day, was on the new-order form and lost once the order was sent.
+   */
+  test("a deposit order names its departure and links to it", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/orders?q=Trip+deposit");
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+    await ledgerRows(page).first().getByRole("link").first().click();
+    await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
+    await expect(page.getByText(/^Linked to .+’s booking on .+ \(.+\)\./)).toBeVisible();
+    await page.getByRole("link", { name: "Open the departure" }).click();
+    await page.waitForURL(/\/trips\/[0-9a-f-]{36}/);
+  });
+
+  /**
    * The index is paged (`ORDER_PAGE_SIZE`). Before that it rendered every one
    * of the demo's 323 orders in a single ~17,700px scroll — the whole table
    * queried and painted on every visit, for a screen nobody reads past the
