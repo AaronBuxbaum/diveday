@@ -360,7 +360,7 @@
     "src/app/pricing/page.tsx": 468,
     "src/app/ready/[token]/page.tsx": 684,
     "src/app/s/[shopSlug]/page.tsx": 882,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 530,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 529,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 728,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,

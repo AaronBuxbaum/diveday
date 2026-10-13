@@ -14,15 +14,4 @@ describe("readinessDoorPath", () => {
       `${publicTripPath("blue-mantis", "trip-1")}/ready?booking=a%2Bb%2Fc%3D%26d`,
     );
   });
-
-  // The door was `/ready?booking=` with no token, which the route answered with a redirect back
-  // to the departure: one round trip to arrive where the link could have gone (2026-10-13 review).
-  it("goes straight to the departure's public page when there is no token", () => {
-    expect(readinessDoorPath("blue-mantis", "trip-1", undefined)).toBe(
-      publicTripPath("blue-mantis", "trip-1"),
-    );
-    expect(readinessDoorPath("blue-mantis", "trip-1", "")).toBe(
-      publicTripPath("blue-mantis", "trip-1"),
-    );
-  });
 });

@@ -149,7 +149,10 @@ describe("the trip page's order", () => {
     // one the hero renders that is not on its own list.
     const jsxNames = (text: string) =>
       new Set([...text.matchAll(/<([A-Z][A-Za-z]*)/g)].map((m) => `<${m[1]}`));
-    const region = SOURCE.slice(positionOf("<TripHero"), positionOf("{confirmed ? ("));
+    const region = SOURCE.slice(
+      positionOf("<TripHero"),
+      positionOf("{confirmed && bookingToken ? ("),
+    );
     expect([...jsxNames(region)].sort()).toEqual([...ABOVE_THE_FORM].sort());
     const heroBody = HERO.slice(HERO.indexOf("return ("));
     expect([...jsxNames(heroBody)].sort()).toEqual([...IN_THE_HERO].sort());

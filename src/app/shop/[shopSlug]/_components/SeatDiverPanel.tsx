@@ -143,7 +143,7 @@ export function SeatDiverPanel({
                     <input type="hidden" name="fromNameMatch" value="true" />
                     <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
                     <SubmitButton
-                      pendingLabel={match.fullName}
+                      pendingLabel={copy.adding}
                       className="underline font-medium text-left"
                     >
                       {match.fullName}
