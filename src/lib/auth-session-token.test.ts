@@ -132,6 +132,12 @@ describe("a session token at rest", () => {
 describe("the session APIs that cannot work over digests", () => {
   it("are refused by the handler", async () => {
     const { auth, context, session, cookieFor } = await harness();
+    // The control: a path left on answers through the same URL, so a 404
+    // below means "disabled", not "the handler never matched the base URL".
+    const control = await auth.handler(
+      new Request(`${context.baseURL}/get-session`, { headers: cookieFor(session.token) }),
+    );
+    expect(control.status).toBe(200);
     for (const path of DIGEST_BLIND_SESSION_PATHS) {
       const response = await auth.handler(
         new Request(`${context.baseURL}${path}`, {
