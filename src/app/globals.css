@@ -339,7 +339,7 @@
    * **IBM Plex Sans, everywhere** (ADR 20261001-logbook). One face the app
    * owns rather than the device's: it reads the same on a Mac, an Android
    * phone at the dock and CI's Linux runner, and its figures are clear at
-   * small sizes. Self-hosted by `next/font` in the root layout.
+   * small sizes. Self-hosted from committed files by `next/font/local` (`src/app/_fonts/fonts.ts`).
    */
   --font-sans: var(--font-plex-sans), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;

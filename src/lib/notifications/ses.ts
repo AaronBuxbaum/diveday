@@ -1,6 +1,6 @@
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { z } from "zod";
-import { redactCapabilityUrl } from "@/lib/capability-urls";
+import { thrownErrorToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import { deliveryAddressFor } from "@/lib/simulator-email";
 import type { Notification } from "./kinds";
@@ -63,48 +63,16 @@ export const sesConfigSchema = z.object({
 });
 
 /**
- * SES error messages quote the addresses they refused — an `AccessDeniedException` names the
- * sender identity, a rejection can name the recipient. Those messages are useful to an operator
- * reading a failed send row, but a structured log line may never carry an email address
- * (AGENTS.md hard rule on PII in logs), so the address is masked on the way to `log()` only.
- * The domain survives, which is the part that identifies *which* identity is unverified.
- */
-export function maskEmailAddresses(detail: string): string {
-  return detail.replace(/[\w.+-]+@([\w-]+\.)+[A-Za-z]{2,}/g, (address) => {
-    const domain = address.slice(address.indexOf("@") + 1);
-    return `<redacted>@${domain}`;
-  });
-}
-
-/**
- * Strip any capability link a provider quoted back at us, before the string is
- * kept anywhere (security review on issue #1297).
- *
- * `detail` is AWS's own prose and it is **persisted** —
- * `notification_send_queue.last_error`, `notification_deliveries.send_error`,
- * `waiver_records.delivery_error` — not merely logged. AWS's validation
- * exceptions echo the offending value (`Value '<x>' at '<field>' failed to
- * satisfy constraint`), and for half the notification kinds that value is a
- * link carrying a raw bearer token. That is the same token #1297 sealed out of
- * `payload_sealed`; writing it to `last_error` on the same row would undo the
- * change from one field over.
- *
- * **Addresses are deliberately left in.** The refused identity is the whole
- * diagnosis on an operator-facing failure row, and this repository already
- * decided that (`index.test.ts`, "keeps the refused identity in the failure
- * detail but out of the log line"). AGENTS.md's rule is about what a *log line*
- * may carry, and `maskEmailAddresses` still applies there. A credential is a
- * different thing from an identifier: one is useful to whoever reads the row,
- * the other is useful to whoever steals it.
- */
-export function redactCapabilityUrls(detail: string): string {
-  return detail.replace(/https?:\/\/[^\s"'<>)\]]+/g, (url) => redactCapabilityUrl(url));
-}
-
-/**
  * Every SES SDK error extends `SESv2ServiceException`, which carries `$metadata.httpStatusCode`
  * and a `.name` matching the specific AWS error type. A response that never reached AWS at all
  * (a network failure) has no `$metadata` and is treated as retryable.
+ *
+ * **No provider text** (security review of issue #2531). SES prose quotes what it refused: a
+ * rejection can name the recipient, a sandbox `AccessDeniedException` names a pre-verified
+ * recipient's identity, a validation error echoes a capability link. This result is logged and
+ * stored as the send's failure detail, so the AWS error's name is the code and a throw that never
+ * reached AWS keeps its cause's code or its class (`thrownErrorToken`), never its message, the
+ * same rule `snsErrorInfo` (`./sms.ts`) keeps.
  */
 function sesErrorInfo(error: unknown): {
   retryable: boolean;
@@ -120,8 +88,7 @@ function sesErrorInfo(error: unknown): {
   // a modeled AWS exception's specific name is worth surfacing. "network_error"
   // is reserved for a request that never got a response at all.
   const errorCode = isAwsException && error instanceof Error ? error.name : "network_error";
-  const detail =
-    error instanceof Error ? redactCapabilityUrls(error.message).slice(0, 500) : undefined;
+  const detail = isAwsException ? undefined : thrownErrorToken(error);
   const retryable =
     !isAwsException ||
     httpStatus === undefined ||
@@ -277,14 +244,7 @@ export function sesNotificationProvider(
         return { status: "sent", providerMessageId: result.MessageId };
       } catch (error) {
         const info = sesErrorInfo(error);
-        // The capability redaction already happened at the boundary, so it is
-        // in the persisted value too. The address masking stays here and only
-        // here: a log line may never carry one, while the failure row keeps it
-        // because it is the diagnosis.
-        log("notification.ses_send_failed", "warn", {
-          ...info,
-          detail: info.detail === undefined ? undefined : maskEmailAddresses(info.detail),
-        });
+        log("notification.ses_send_failed", "warn", info);
         return { status: "failed", ...info };
       }
     },

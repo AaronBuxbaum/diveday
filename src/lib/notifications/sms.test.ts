@@ -86,7 +86,7 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
   });
 
   it("marks a thrown 4xx SNS error as non-retryable and surfaces its code", async () => {
-    const error = Object.assign(new Error("Invalid parameter: PhoneNumber"), {
+    const error = Object.assign(new Error("Invalid parameter: PhoneNumber Reason: +15550100"), {
       name: "InvalidParameterException",
       $metadata: { httpStatusCode: 400 },
     });
@@ -98,7 +98,6 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
       retryable: false,
       httpStatus: 400,
       errorCode: "InvalidParameterException",
-      detail: "Invalid parameter: PhoneNumber",
     });
   });
 
@@ -133,14 +132,15 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
   });
 
   it("treats a network-level failure with no $metadata as retryable", async () => {
-    const client = { send: vi.fn().mockRejectedValue(new Error("fetch failed")) };
+    const cause = Object.assign(new Error("connect ECONNRESET 10.0.0.1"), { code: "ECONNRESET" });
+    const client = { send: vi.fn().mockRejectedValue(new TypeError("fetch failed", { cause })) };
     const provider = snsSmsProvider(snsConfig, { client });
 
     await expect(provider.send(message)).resolves.toEqual({
       status: "failed",
       retryable: true,
       errorCode: "network_error",
-      detail: "fetch failed",
+      detail: "ECONNRESET",
     });
   });
 });

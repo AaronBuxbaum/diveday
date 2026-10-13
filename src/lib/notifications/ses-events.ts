@@ -98,9 +98,26 @@ function shopIdOf(data: z.infer<typeof sesEventDataSchema>): string | null {
   return parsed.success ? parsed.data : null;
 }
 
+/**
+ * A bounce's diagnostic, reduced to its SMTP reply and enhanced status codes
+ * (`550 5.1.1`), or null when it carries neither (issue #2531). The rest is the
+ * remote server's free text, which routinely quotes the recipient's address
+ * (`550 5.1.1 <nora@example.com>: Recipient address rejected`), and this detail
+ * is stored on the delivery row. The codes are the diagnosis; the prose is not
+ * needed to act on it.
+ */
+export function smtpStatusOf(diagnostic: string): string | null {
+  // Neither may sit inside a longer dotted number, an IP address above all.
+  const reply = diagnostic.match(/(?<![\w.])[245]\d\d(?![\w.])/)?.[0];
+  const enhanced = diagnostic.match(/(?<![\w.])[245]\.\d{1,3}\.\d{1,3}(?![\w.])/)?.[0];
+  const status = [reply, enhanced].filter(Boolean).join(" ");
+  return status ? status : null;
+}
+
 function sesEventDetail(data: z.infer<typeof sesEventDataSchema>): string | null {
-  const bounceDiagnostic = data.bounce?.bouncedRecipients?.[0]?.diagnosticCode?.trim();
-  if (bounceDiagnostic) return bounceDiagnostic;
+  const diagnostic = data.bounce?.bouncedRecipients?.[0]?.diagnosticCode;
+  const bounceStatus = diagnostic ? smtpStatusOf(diagnostic) : null;
+  if (bounceStatus) return bounceStatus;
   const bounceClassification = [data.bounce?.bounceType, data.bounce?.bounceSubType]
     .filter(Boolean)
     .join(" / ");
