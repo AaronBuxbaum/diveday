@@ -29,6 +29,7 @@
     "lineItemsLegend": "Line items",
     "lineItemKindAria": "Line item {number} kind",
     "lineItemDescriptionPlaceholder": "Description",
+    "lineItemDescriptionAria": "Line item {number} description",
     "quantityLabel": "Quantity",
     "unitPriceLabel": "Unit price (USD)",
     "unitPricePlaceholder": "$0.00",
