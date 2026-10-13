@@ -26,6 +26,21 @@ describe("TripPlanSection", () => {
     expect(container.firstElementChild).toBeNull();
   });
 
+  it("says where the boat meets before the dives, even on a day with none planned", () => {
+    // UX review 2026-10-13, item 18: the crew read "The meeting point moved."
+    // on the strip above, and no staff page said where it had moved to.
+    const meeting = { label: "Where we meet", line: "Slip 4, the east dock · 1 Harbor Rd" };
+    const { container } = render(
+      <TripPlanSection heading="The plan" dives={DIVES} meeting={meeting} />,
+    );
+    const lines = [...container.querySelectorAll("li")].map((node) => node.textContent);
+    expect(lines[0]).toBe("Where we meetSlip 4, the east dock · 1 Harbor Rd");
+    expect(lines).toHaveLength(3);
+    cleanup();
+    const bare = render(<TripPlanSection heading="The plan" dives={[]} meeting={meeting} />);
+    expect(bare.container.querySelectorAll("li")).toHaveLength(1);
+  });
+
   it("keeps the plan off the printed sheet", () => {
     // The printed trip packet renders this whole manifest *and* its own
     // `PacketDives` list, so without `print:hidden` the sheet a crew carries to

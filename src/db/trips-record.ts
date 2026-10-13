@@ -319,6 +319,35 @@ export async function getShopTripTitle(
   return row?.title ?? null;
 }
 
+/**
+ * The columns {@link meetingPointOfRows} reads off one departure, for a staff
+ * page that states where the boat meets without loading the whole row (the
+ * manifest's plan; UX review 2026-10-13, item 18). Shop-scoped and live-only,
+ * so another tenant's id or a departure off the board reads as null.
+ */
+export async function getTripMeetingPointFields(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<{
+  meetingPointLabel: string | null;
+  meetingPointAddress: string | null;
+  arrivalLandmark: string | null;
+  arrivalParkingNote: string | null;
+} | null> {
+  const [row] = await db
+    .select({
+      meetingPointLabel: trips.meetingPointLabel,
+      meetingPointAddress: trips.meetingPointAddress,
+      arrivalLandmark: trips.arrivalLandmark,
+      arrivalParkingNote: trips.arrivalParkingNote,
+    })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  return row ?? null;
+}
+
 /** One dive site's diver-facing preview facts — no shop-internal fields. */
 export type TripSitePeek = {
   name: string;

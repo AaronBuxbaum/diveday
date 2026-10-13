@@ -134,3 +134,14 @@ export function meetingPointOfRows(
     arrivalParkingNote: trip.arrivalParkingNote,
   });
 }
+
+/**
+ * The meeting point as one staff line — "Slip 4, the east dock · 12 Ocean
+ * Way, Key Largo" — the place, then its address when it has one. Staff pages
+ * that state where the boat meets (the Details tab's About rows, the
+ * manifest's plan) read this, so the crew never knows less than the diver
+ * about the dock (UX review 2026-10-13, item 18).
+ */
+export function meetingPointLine(point: MeetingPoint): string {
+  return point.address ? `${point.label} · ${point.address}` : point.label;
+}

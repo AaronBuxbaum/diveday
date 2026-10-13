@@ -122,6 +122,7 @@ export {
   bookedDiverLanguages,
   getShopTripTitle,
   getTripDiveSitesPeek,
+  getTripMeetingPointFields,
   getTripWithBooked,
   listTripDives,
   listTripScheduleDays,

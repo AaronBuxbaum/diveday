@@ -9,6 +9,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { scopedHash, scopedId } from "@/lib/element-id";
+import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
@@ -130,6 +131,7 @@ export default async function TripManifestPage({
     catchUp,
     diveIntents,
     stage,
+    meetingPoint,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
@@ -385,6 +387,14 @@ export default async function TripManifestPage({
                   })
                 : t("manifest.planChange.diveRowNoSite", { number: dive.diveNumber }),
             }))}
+            meeting={
+              meetingPoint
+                ? {
+                    label: t("trips.about.meetingPoint"),
+                    line: meetingPointLine(meetingPointOfRows(shop, meetingPoint)),
+                  }
+                : undefined
+            }
           />
         ) : null}
 
