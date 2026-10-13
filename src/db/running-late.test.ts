@@ -290,9 +290,9 @@ describe("clearBookingRunningLate", () => {
     const { db, shop, trip, bookingId, now } = await context();
     await markBookingRunningLate(db, { shopId: shop.id, bookingId, now });
     const sailed = new Date(trip.startsAt.getTime() + 61 * MINUTE_MS);
-    expect(await clearBookingRunningLate(db, { shopId: shop.id, bookingId, now: sailed })).toEqual(
-      { status: "closed" },
-    );
+    expect(await clearBookingRunningLate(db, { shopId: shop.id, bookingId, now: sailed })).toEqual({
+      status: "closed",
+    });
     await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
     expect(await clearBookingRunningLate(db, { shopId: shop.id, bookingId, now })).toEqual({
       status: "closed",
@@ -313,15 +313,37 @@ describe("clearBookingRunningLate", () => {
   it("clears the party seats the organizer's tap stamped, not a member's own word", async () => {
     const { db, shop, trip, now } = await context();
     const party = await createBookingParty(db, [
-      { actor: "staff", shopId: shop.id, tripId: trip.id, fullName: "Cy Lead", email: "cy.lead@example.com" },
-      { actor: "staff", shopId: shop.id, tripId: trip.id, fullName: "Di Lead", email: "di.lead@example.com" },
-      { actor: "staff", shopId: shop.id, tripId: trip.id, fullName: "Ed Lead", email: "ed.lead@example.com" },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Cy Lead",
+        email: "cy.lead@example.com",
+      },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Di Lead",
+        email: "di.lead@example.com",
+      },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Ed Lead",
+        email: "ed.lead@example.com",
+      },
     ]);
     if (!party.ok) throw new Error(`party failed: ${party.reason}`);
     const [lead, member, ownWord] = party.bookings;
     if (!lead || !member || !ownWord) throw new Error("party seats missing");
     const earlier = new Date(now.getTime() - 5 * MINUTE_MS);
-    await markBookingRunningLate(db, { shopId: shop.id, bookingId: ownWord.bookingId, now: earlier });
+    await markBookingRunningLate(db, {
+      shopId: shop.id,
+      bookingId: ownWord.bookingId,
+      now: earlier,
+    });
     await markBookingRunningLate(db, { shopId: shop.id, bookingId: lead.bookingId, now });
     expect(await lateAt(member.bookingId)).toEqual(now);
 

@@ -342,13 +342,7 @@ describe("a departure's own legs", () => {
     const timeline = dockDayTimeline(start, rhythm(), short, 2, undefined, [120, 120]);
     // The second run is walked back off the tail with the dive it existed for,
     // rather than sitting at the end as a boat that set off and gave up.
-    expect(beats(timeline)).toEqual([
-      "arrive",
-      "briefing",
-      "departure",
-      "dive1",
-      "return",
-    ]);
+    expect(beats(timeline)).toEqual(["arrive", "briefing", "departure", "dive1", "return"]);
     expect(timeline.every(({ at }) => at <= short)).toBe(true);
   });
 });

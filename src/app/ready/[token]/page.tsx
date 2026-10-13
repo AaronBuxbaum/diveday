@@ -221,7 +221,12 @@ async function DiverReadinessPage({
     return cancelledNotice(db, {
       paymentStatus: payment?.status,
       trip: { id: data.trip.id, title: detail.trip.title },
-      shop: { id: shop.id, slug: shop.slug, name: detail.shop.name, timezone: detail.shop.timezone },
+      shop: {
+        id: shop.id,
+        slug: shop.slug,
+        name: detail.shop.name,
+        timezone: detail.shop.timezone,
+      },
       locale,
       t,
     });
@@ -547,7 +552,7 @@ async function DiverReadinessPage({
             />
           );
         case "dayof":
-          return <DayOfDetails token={token} data={data} t={t} />;
+          return <DayOfDetails token={token} data={data} saved={saved === "day-of"} t={t} />;
       }
     };
 

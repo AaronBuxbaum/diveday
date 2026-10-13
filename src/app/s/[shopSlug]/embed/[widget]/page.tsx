@@ -226,53 +226,55 @@ export default async function EmbedWidgetPage({
     const moreCourses = !showId && active.length > courses.length;
     body = (
       <section>
-      <ul className="divide-y divide-border rounded-panel border border-border bg-surface shadow-bed">
-        {courses.map((course) => (
-          <li
-            key={course.id}
-            className="flex min-h-14 items-center justify-between gap-3 px-4 py-3"
-          >
-            <div className="min-w-0">
-              <p className="font-brand-display font-semibold">{course.title}</p>
-              {/* Two lines on a phone, as the grid's card clamps the same
+        <ul className="divide-y divide-border rounded-panel border border-border bg-surface shadow-bed">
+          {courses.map((course) => (
+            <li
+              key={course.id}
+              className="flex min-h-14 items-center justify-between gap-3 px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="font-brand-display font-semibold">{course.title}</p>
+                {/* Two lines on a phone, as the grid's card clamps the same
                   field: at one line every summary on a 390px frame was cut
                   to a fragment ("How to dive between…") beside a title
                   that wraps freely (K-376). From `sm` one line holds it. */}
-              {course.summary ? (
-                <p className="line-clamp-2 text-sm text-muted sm:line-clamp-1">{course.summary}</p>
-              ) : null}
-              {/* How long, in the shop's own words — the course index says it,
+                {course.summary ? (
+                  <p className="line-clamp-2 text-sm text-muted sm:line-clamp-1">
+                    {course.summary}
+                  </p>
+                ) : null}
+                {/* How long, in the shop's own words — the course index says it,
                   and a list that dropped it was thinner than the page it stands for. */}
-              {course.durationText ? (
-                <p className="text-xs text-muted">{course.durationText}</p>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 items-center gap-3">
-              {coursePrice(course) ? (
-                <span className="font-semibold tabular-nums">{coursePrice(course)}</span>
-              ) : null}
-              <Link
-                href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
-                target="_top"
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("embed.enrol")}
-              </Link>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {moreCourses ? (
-        <p className="mt-3 text-right">
-          <Link
-            href={`${origin}${publicCoursesPath(shopSlug)}`}
-            target="_top"
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("courses.shelf.allCourses")}
-          </Link>
-        </p>
-      ) : null}
+                {course.durationText ? (
+                  <p className="text-xs text-muted">{course.durationText}</p>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                {coursePrice(course) ? (
+                  <span className="font-semibold tabular-nums">{coursePrice(course)}</span>
+                ) : null}
+                <Link
+                  href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
+                  target="_top"
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("embed.enrol")}
+                </Link>
+              </div>
+            </li>
+          ))}
+        </ul>
+        {moreCourses ? (
+          <p className="mt-3 text-right">
+            <Link
+              href={`${origin}${publicCoursesPath(shopSlug)}`}
+              target="_top"
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("courses.shelf.allCourses")}
+            </Link>
+          </p>
+        ) : null}
       </section>
     );
   } else {

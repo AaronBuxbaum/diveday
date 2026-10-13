@@ -156,10 +156,7 @@ export async function clearBookingRunningLate(
         eq(bookings.shopId, input.shopId),
         eq(bookings.status, "booked"),
         eq(bookings.runningLateAt, row.runningLateAt),
-        or(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.partyLeadBookingId, input.bookingId),
-        ),
+        or(eq(bookings.id, input.bookingId), eq(bookings.partyLeadBookingId, input.bookingId)),
       ),
     );
   return { status: "cleared" };

@@ -364,7 +364,8 @@ export function dockDayTimeline(
     if (offset.step === "boatRide" && offset.number === 1 && beats.at(-1)?.step === "departure") {
       const next = offsets[index + 1];
       const departure = beats.at(-1);
-      if (next && departure) departure.rideMinutes = next.minutesFromDeparture - offset.minutesFromDeparture;
+      if (next && departure)
+        departure.rideMinutes = next.minutesFromDeparture - offset.minutesFromDeparture;
       continue;
     }
     // By step, never by "offset > 0" — a shore-entry shop's Dive 1 sits at

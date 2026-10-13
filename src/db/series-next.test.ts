@@ -62,7 +62,11 @@ describe("nextPublicTripInSeries", () => {
     ).toBe(fourth.id);
     const afterAll = new Date(fourth.startsAt.getTime() + 1);
     expect(
-      await nextPublicTripInSeries(ctx.db, { shopId: ctx.shop.id, tripId: first.id, now: afterAll }),
+      await nextPublicTripInSeries(ctx.db, {
+        shopId: ctx.shop.id,
+        tripId: first.id,
+        now: afterAll,
+      }),
     ).toBeNull();
   });
 

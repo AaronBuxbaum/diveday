@@ -45,7 +45,7 @@ export const RE_ENTRY_ASKS = [
  * with no answer.
  *
  * One list, read by the surface that renders the offers *and* by the action
- * that accepts one (`saveReEntryAskFromReady`). Two copies drifted the moment
+ * that accepts one (`saveDayOfDetailsFromReady`). Two copies drifted the moment
  * they existed: the readiness page filtered `refresher_course` out for a shop
  * with no refresher, while the action re-derived only the saved intent and the
  * 24-hour window and took the third ask from anyone who posted it — a crafted

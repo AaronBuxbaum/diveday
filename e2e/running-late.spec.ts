@@ -42,7 +42,9 @@ test("a diver taps Running late on their link, and the desk sees when they said 
   // Asked first, naming the call (third UX review, item 26): "Never mind"
   // leaves nothing said.
   await page.getByRole("button", { name: "Running late" }).click();
-  await expect(page.getByText(/^Tell the shop you’re running late for the \d.* call\?/)).toBeVisible();
+  await expect(
+    page.getByText(/^Tell the shop you’re running late for the \d.* call\?/),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Never mind" }).click();
   await page.getByRole("button", { name: "Running late" }).click();
   await page.getByRole("button", { name: "Yes, tell them" }).click();

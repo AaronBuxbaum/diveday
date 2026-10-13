@@ -244,9 +244,7 @@ describe("the map", () => {
   it("is never in the server's HTML, the copy a phone keeps for the marina", () => {
     // A frame with no signal is 16:9 of gray above the address (third UX
     // review, item 27); the saved page carries the address and the link alone.
-    const html = renderToString(
-      <TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />,
-    );
+    const html = renderToString(<TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />);
     expect(html).not.toContain("<iframe");
     expect(html).toContain("100 Ocean Drive");
   });

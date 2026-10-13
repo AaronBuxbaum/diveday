@@ -100,18 +100,17 @@ export async function choosePartySize(page: Page, count: number) {
  *
  * The question was five pills on the public booking form until 2026-09-06; it
  * is one `<select>` in the Day-of step of `/ready/<token>` now, asked after the
- * sale of the diver whose seat it is. Scoped to its own `<form>` because the
- * recency question sits in the same step behind a Save spelled the same word,
- * and waits on the page's own notice rather than a timeout — the redirect
- * carries no hash, so the confirmation is the only thing that says it landed.
+ * sale of the diver whose seat it is, and saved with the rest of the step
+ * under one "Save day-of details" (third UX review, item 24). Waits on the
+ * page's own notice rather than a timeout: the redirect carries no hash, so the
+ * confirmation is the only thing that says it landed.
  */
 export async function saveDiveIntent(page: Page, label: string) {
   const step = await openThreadStep(page, "dayof");
-  const form = step.locator("form").filter({ hasText: "What’s this dive for?" });
-  await form.getByLabel("What’s this dive for?").selectOption({ label });
-  await form.getByRole("button", { name: "Save", exact: true }).click();
+  await step.getByLabel("What’s this dive for?").selectOption({ label });
+  await step.getByRole("button", { name: "Save day-of details" }).click();
   await expect(
-    page.getByRole("status").filter({ hasText: "The crew will know what you came for" }),
+    page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
   ).toBeVisible();
 }
 

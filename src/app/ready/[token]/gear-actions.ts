@@ -91,7 +91,7 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     finSize: parsed.data.finSize,
     weightPreference: parsed.data.weightPreference,
     // Deliberately absent, and `saveRentalFit` reads that absence as "leave the
-    // stored note alone": the note is `saveNoteFromReady`'s to write since issue
+    // stored note alone": the note is `saveDayOfDetailsFromReady`'s to write since issue
     // 627, so a diver nudging a boot size here must not silently delete words
     // the crew is relying on.
     note: undefined,

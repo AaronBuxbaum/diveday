@@ -207,7 +207,10 @@ describe("the reviews widget", () => {
  * every agency's ladder flat, sixty cards on a shop's homepage.
  */
 describe("the courses widget's catalog", () => {
-  const course = (n: number, extra: Partial<typeof deepDiver> = {}) => ({
+  const course = (
+    n: number,
+    extra: Partial<typeof deepDiver & { eLearningPriceCents: number | null }> = {},
+  ) => ({
     ...deepDiver,
     id: `course-${n}`,
     slug: `course-${n}`,
@@ -219,7 +222,9 @@ describe("the courses widget's catalog", () => {
   });
 
   async function renderCourses(rows: unknown[], show?: string) {
-    vi.mocked(listActiveCourses).mockReset().mockResolvedValue(rows as never);
+    vi.mocked(listActiveCourses)
+      .mockReset()
+      .mockResolvedValue(rows as never);
     render(
       await EmbedWidgetPage({
         params: Promise.resolve({ shopSlug: "blue-mantis", widget: "courses" }),
