@@ -18,6 +18,7 @@ export async function nextPublicTripInSeries(
   const [current] = await db
     .select({ seriesId: trips.seriesId })
     .from(trips)
+    // diveday:allow-deleted-trips: only the series id of the seat's own departure, which may be the one taken off the board; the next date below is read live.
     .where(and(eq(trips.shopId, input.shopId), eq(trips.id, input.tripId)))
     .limit(1);
   if (!current?.seriesId) return null;

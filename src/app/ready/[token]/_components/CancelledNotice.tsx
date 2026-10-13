@@ -2,6 +2,8 @@ import Link from "next/link";
 import { EntryDone } from "@/components/account/EntryShell";
 import { buttonClass } from "@/components/ui/button";
 import type { AppDb } from "@/db/client";
+import { getBookingPayment } from "@/db/payments";
+import type { ReadyPageData } from "@/db/ready";
 import { nextPublicTripInSeries } from "@/db/series-next";
 import type { DiverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
@@ -70,4 +72,30 @@ export async function cancelledNotice(
       }
     />
   );
+}
+
+/**
+ * The same notice, from the readiness page's own data (the route stays thin).
+ * The money sentence is read from the booking's payment row, never the URL.
+ */
+export async function cancelledNoticeForReady(
+  db: AppDb,
+  data: ReadyPageData,
+  bookingId: string,
+  locale: string,
+  t: DiverTranslator,
+) {
+  const payment = await getBookingPayment(db, data.shop.id, bookingId);
+  return cancelledNotice(db, {
+    paymentStatus: payment?.status,
+    trip: { id: data.trip.id, title: data.detail.trip.title },
+    shop: {
+      id: data.shop.id,
+      slug: data.shop.slug,
+      name: data.detail.shop.name,
+      timezone: data.detail.shop.timezone,
+    },
+    locale,
+    t,
+  });
 }

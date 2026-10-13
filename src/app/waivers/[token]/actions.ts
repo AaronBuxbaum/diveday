@@ -10,7 +10,7 @@ import type { MedicalAnswers } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { sendGuardianReleaseCopy } from "@/db/waiver-guardian-copy";
 import { emailFreshWaiverLink, type WaiverLinkRescue } from "@/db/waiver-issue";
-import { getWaiverSignerOnFile, seatMinorDeclared } from "@/db/waiver-signing";
+import { getWaiverSignerOnFile } from "@/db/waiver-signing";
 import {
   completeWaiver,
   getWaiverForToken,
@@ -112,7 +112,7 @@ async function signingContext(token: string) {
   if (state.state !== "available") return null;
   const shop = await getShopById(db, state.record.shopId);
   if (!shop) return null;
-  const signerOnFile = await getWaiverSignerOnFile(db, state.record.shopId, state.record.personId);
+  const signerOnFile = await getWaiverSignerOnFile(db, state.record);
   return {
     record: state.record,
     recordBookingId: state.record.bookingId,
@@ -120,7 +120,7 @@ async function signingContext(token: string) {
     guardianRequired: guardianSignatureRequired(
       signerOnFile?.dateOfBirth,
       signingDate(nowDate(), shop.timezone),
-      await seatMinorDeclared(db, state.record.shopId, state.record.bookingId),
+      signerOnFile?.minorDeclared ?? false,
     ),
   };
 }

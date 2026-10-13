@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
-import { cancelledNotice } from "@/app/ready/[token]/_components/CancelledNotice";
+import { cancelledNoticeForReady } from "@/app/ready/[token]/_components/CancelledNotice";
 import { CertificationEntries } from "@/app/ready/[token]/_components/CertificationEntries";
 import { ChangedFacts, fitRecallFrom } from "@/app/ready/[token]/_components/ChangedFacts";
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
@@ -44,7 +44,6 @@ import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { countSpendableDives } from "@/db/dive-packages";
-import { getBookingPayment } from "@/db/payments";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
@@ -66,7 +65,6 @@ import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
-import { publicCoursePath } from "@/lib/public-routes";
 import { readyCopyKeepUntil } from "@/lib/ready-offline";
 import { signRecapToken } from "@/lib/recap-links";
 import { nitroxAvailableOn } from "@/lib/rentals";
@@ -218,19 +216,7 @@ async function DiverReadinessPage({
     // rare, and the one path on which a diver learns from this page rather than
     // from the shop. What it says about their money is read from the payment
     // row, never from anything on the URL.
-    const payment = await getBookingPayment(db, data.shop.id, bookingId);
-    return cancelledNotice(db, {
-      paymentStatus: payment?.status,
-      trip: { id: data.trip.id, title: detail.trip.title },
-      shop: {
-        id: shop.id,
-        slug: shop.slug,
-        name: detail.shop.name,
-        timezone: detail.shop.timezone,
-      },
-      locale,
-      t,
-    });
+    return cancelledNoticeForReady(db, data, bookingId, locale, t);
   }
 
   /**
@@ -509,20 +495,7 @@ async function DiverReadinessPage({
               token={token}
               item={step.item}
               offerNitrox={nitroxCardEntryOffered}
-              notYet={
-                detail.readiness.blockers.some(
-                  (blocker) => blocker.code === "certification_not_yet",
-                )
-                  ? {
-                      introCourse: data.introCourse
-                        ? {
-                            title: data.introCourse.title,
-                            href: publicCoursePath(data.shop.slug, data.introCourse.slug),
-                          }
-                        : null,
-                    }
-                  : null
-              }
+              notYet={data.certificationNotYet}
               t={t}
             />
           );

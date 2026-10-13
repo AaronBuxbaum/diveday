@@ -164,12 +164,11 @@ export function CertificationEntries({
   for (const blocker of item.actionable) forms.push(...entriesFor(blocker));
   function entriesFor(blocker: DiverChecklistItem["actionable"][number]): React.ReactNode[] {
     if (CERT_ENTRY_CODES.has(blocker.code)) {
-      return [
-        <CertificationEntry key={blocker.code} token={token} t={t} />,
-        ...(NOT_YET_OFFER_CODES.has(blocker.code)
-          ? [<NotYetAnswer key="not-yet" token={token} t={t} />]
-          : []),
-      ];
+      const entries = [<CertificationEntry key={blocker.code} token={token} t={t} />];
+      if (NOT_YET_OFFER_CODES.has(blocker.code)) {
+        entries.push(<NotYetAnswer key="not-yet" token={token} t={t} />);
+      }
+      return entries;
     }
     if (SPECIALTY_ENTRY_CODES.has(blocker.code) && blocker.params?.specialty) {
       return [

@@ -133,10 +133,6 @@ export function BookingPartyFields({
   // member opted in — see src/db/bookings.ts and its "rolls back the whole
   // party" test).
   const [useLeadEmail, setUseLeadEmail] = useState<Record<number, boolean>>({});
-  // "Under 18", per member (decision 2026-10-13, after H-21). Controlled so a
-  // refused submit keeps the tick; never remembered with the diver, because a
-  // child grows up and the next booking asks again.
-  const [minors, setMinors] = useState<Record<number, boolean>>({});
   const [types, setTypes] = useState<ParticipantType[]>(() =>
     Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, () => "diver" as const),
   );
@@ -372,26 +368,7 @@ export function BookingPartyFields({
                       </select>
                     </Field>
                   ) : null}
-                  {/* **The parent's "Under 18"** (decision 2026-10-13). The
-                      form asks nobody a date of birth, so without this a
-                      parent who booked a twelve-year-old watched her sign her
-                      release alone. Stamped on the seat; the waiver then asks
-                      a parent or guardian to co-sign. */}
-                  <ChoiceRow
-                    type="checkbox"
-                    name={`minor-${index}`}
-                    checked={!!minors[index]}
-                    onChange={(event) => {
-                      const checked = event.target.checked;
-                      setMinors((current) => ({ ...current, [index]: checked }));
-                    }}
-                    className="text-sm"
-                  >
-                    {t("party.under18")}
-                    {minors[index] ? (
-                      <span className="block text-muted">{t("party.under18Hint")}</span>
-                    ) : null}
-                  </ChoiceRow>
+                  <UnderEighteenChoice index={index} />
                   {index === 0 || !useLeadEmail[index] ? (
                     <Field
                       label={
@@ -472,5 +449,30 @@ export function BookingPartyFields({
         );
       })}
     </>
+  );
+}
+
+/**
+ * **The parent's "Under 18"** (H-113, 2026-10-13). The form asks nobody a date
+ * of birth, so without this a parent who booked a twelve-year-old watched her
+ * sign her release alone. Stamped on the seat (`minor-N`); the waiver then asks
+ * a parent or guardian to co-sign. Controlled so a refused submit keeps the
+ * tick, and never remembered with the diver: a child grows up, and the next
+ * booking asks again.
+ */
+function UnderEighteenChoice({ index }: { index: number }) {
+  const t = useTranslations();
+  const [checked, setChecked] = useState(false);
+  return (
+    <ChoiceRow
+      type="checkbox"
+      name={`minor-${index}`}
+      checked={checked}
+      onChange={(event) => setChecked(event.target.checked)}
+      className="text-sm"
+    >
+      {t("party.under18")}
+      {checked ? <span className="block text-muted">{t("party.under18Hint")}</span> : null}
+    </ChoiceRow>
   );
 }

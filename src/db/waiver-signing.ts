@@ -46,19 +46,23 @@ export async function getBookingTripId(
   return row?.tripId ?? null;
 }
 
-/** The name and date of birth a release has to be signed under. */
+/**
+ * The name a release has to be signed under, and what the guardian rule reads:
+ * the date of birth on file and the seat's "Under 18" (`seatMinorDeclared`).
+ */
 export async function getWaiverSignerOnFile(
   db: DbExecutor,
-  shopId: string,
-  personId: string,
-): Promise<{ fullName: string; dateOfBirth: string | null } | undefined> {
+  record: { shopId: string; personId: string; bookingId: string | null },
+): Promise<{ fullName: string; dateOfBirth: string | null; minorDeclared: boolean } | undefined> {
   const [row] = await db
     .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
     .from(people)
     // diveday:allow-deleted-people: the signer of a release already issued.
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId)))
     .limit(1);
-  return row;
+  if (!row) return undefined;
+  const minorDeclared = await seatMinorDeclared(db, record.shopId, record.bookingId);
+  return { ...row, minorDeclared };
 }
 
 /** The trip a booking's waiver is for, named on the page so the diver can check it. */

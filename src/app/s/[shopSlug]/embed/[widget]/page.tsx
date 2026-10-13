@@ -265,7 +265,7 @@ export default async function EmbedWidgetPage({
           ))}
         </ul>
         {moreCourses ? (
-          <p className="mt-3 text-right">
+          <p className="mt-3 text-end">
             <Link
               href={`${origin}${publicCoursesPath(shopSlug)}`}
               target="_top"

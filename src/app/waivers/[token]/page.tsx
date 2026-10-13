@@ -7,12 +7,7 @@ import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
-import {
-  getBookingTripId,
-  getWaiverSignerOnFile,
-  getWaiverTripHeader,
-  seatMinorDeclared,
-} from "@/db/waiver-signing";
+import { getBookingTripId, getWaiverSignerOnFile, getWaiverTripHeader } from "@/db/waiver-signing";
 import {
   getEmergencyContactForBearer,
   getEmergencyContactForPerson,
@@ -193,19 +188,18 @@ export default async function WaiverPage({
   // anything else). Shown as the field's hint so the rule is guidance before
   // it is ever a refusal — and it discloses nothing this booking-scoped
   // bearer link doesn't already stand for.
-  const signerOnFile = await getWaiverSignerOnFile(db, record.shopId, record.personId);
+  const signerOnFile = await getWaiverSignerOnFile(db, record);
   /**
    * **A minor signs twice** (ADR 20260907-guardian-co-signature). Decided from
-   * the date of birth the shop holds, on the shop's calendar day this page is
-   * being signed — the same rule `completeWaiver` refuses on, so the section
-   * is never rendered for a diver the writer would not ask, and never absent
-   * for one it would. No date on file reads as an adult (H-08's fail-open).
+   * the date of birth the shop holds or, with none, the seat's "Under 18"
+   * (H-113), on the shop's calendar day this page is being signed: the rule
+   * `completeWaiver` refuses on, so the section is never rendered for a diver
+   * the writer would not ask, and never absent for one it would.
    */
   const guardianRequired = guardianSignatureRequired(
     signerOnFile?.dateOfBirth,
     signingDate(nowDate(), shop.timezone),
-    // Or, with no date on file, the booker ticked "Under 18" for this seat.
-    await seatMinorDeclared(db, record.shopId, record.bookingId),
+    signerOnFile?.minorDeclared ?? false,
   );
   const draftGuardian = record.draftGuardian;
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);

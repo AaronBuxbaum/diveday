@@ -8,6 +8,7 @@ import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
 import type { ParticipantType } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
+import { publicCoursePath } from "@/lib/public-routes";
 import { type ReEntryAsk, reEntryWindowOpen } from "@/lib/re-entry";
 import { noCertificationStands } from "@/lib/readiness";
 import type { RentalPricing } from "@/lib/rentals";
@@ -260,11 +261,12 @@ export type ReadyPageData = {
    */
   refresherCourseOffered: boolean;
   /**
-   * The try-it course (`is_intro_course`) the certification step points a
-   * diver at after they said they are not certified yet. Read only while that
-   * statement stands, null otherwise or when the shop publishes none.
+   * Present when this seat's level gate is unmet because the diver said "I'm
+   * not certified yet" (`certification_not_yet`, third UX review item 23): the
+   * try-it course (`is_intro_course`) the certification step points them at,
+   * null when the shop publishes none. Null on every other seat.
    */
-  introCourse: { slug: string; title: string } | null;
+  certificationNotYet: { introCourse: { title: string; href: string } | null } | null;
   reEntryOffersOpen: boolean;
   nitroxCardVerified: boolean;
   /**
@@ -608,7 +610,15 @@ export async function getReadyPageData(
     reEntryAsk: row.reEntryAsk,
     reEntryOffersOpen,
     refresherCourseOffered,
-    introCourse: identityHeld ? null : introCourse,
+    certificationNotYet:
+      !identityHeld &&
+      detail.readiness.blockers.some((blocker) => blocker.code === "certification_not_yet")
+        ? {
+            introCourse: introCourse
+              ? { title: introCourse.title, href: publicCoursePath(row.slug, introCourse.slug) }
+              : null,
+          }
+        : null,
     nitroxCardVerified: !identityHeld && nitroxVerified.has(row.personId),
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),

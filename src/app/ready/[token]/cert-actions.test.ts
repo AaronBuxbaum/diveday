@@ -126,8 +126,12 @@ describe("declareNoCertificationFromReady", () => {
         ),
       );
     expect(live).toEqual([]);
+    // The seat's own gate decides whether the door shows; when it does, it is
+    // the shop's first try-it course.
     const data = await getReadyPageData(db, bookingId);
-    expect(data?.introCourse ?? null).toEqual(await firstActiveIntroCourse(db, shop.id));
+    const intro = await firstActiveIntroCourse(db, shop.id);
+    expect(data?.certificationNotYet?.introCourse?.title ?? null).toBe(intro?.title ?? null);
+    expect(data?.certificationNotYet).not.toBeNull();
   });
 
   it("changes nothing over a card the shop holds", async () => {

@@ -1223,18 +1223,15 @@ async function createBookingRecord(
         claimedAt: null,
         // "Running late" (J3) was said about the seat's earlier life.
         runningLateAt: null,
-        // Same reasoning as the two lines above: a reactivated row is a *new*
-        // booking, so it carries this booking's referral — including null,
-        // which un-credits a partner who did not send this visit rather than
-        // letting a cancelled seat's old attribution ride along.
+        // Same reasoning as the two lines above: a reactivated row is a *new* booking, so it
+        // carries this booking's referral — including null, which un-credits a partner who did not
+        // send this visit rather than letting a cancelled seat's old attribution ride along.
         //
-        // The cost, stated: a caller that reactivates a cancelled *public*
-        // booking without passing a referral — a staff reschedule, a seat claim
-        // — silently drops a genuine partner's credit through an act nobody
-        // thinks of as touching attribution. Accepted over the alternative,
+        // The cost, stated: a caller that reactivates a cancelled *public* booking without passing
+        // a referral — a staff reschedule, a seat claim — silently drops a genuine partner's credit
+        // through an act nobody thinks of as touching attribution. Accepted over the alternative,
         // which is a stale credit surviving a cancellation nobody can see.
         referralSource: partnerReferralSlug(req.referralSource),
-        // This booking's own "Under 18", including its absence.
         minorDeclaredAt: req.minorDeclared ? nowDate() : null,
       })
       .where(eq(bookings.id, existing.id));
