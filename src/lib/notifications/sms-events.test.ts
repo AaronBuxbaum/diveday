@@ -57,6 +57,18 @@ describe("parseSmsDeliveryEvent", () => {
     });
   });
 
+  it("keeps no carrier text it does not recognize as an SNS reason", () => {
+    const event = parseSmsDeliveryEvent(
+      receipt({
+        status: "FAILURE",
+        delivery: { providerResponse: "Rejected: +15550100 said STOP to 'Your boat leaves at 7'" },
+      }),
+      NOW,
+    );
+
+    expect(event).toMatchObject({ status: "failed", detail: "unrecognized_response" });
+  });
+
   it("survives a failure that carried no provider response", () => {
     const event = parseSmsDeliveryEvent(receipt({ status: "FAILURE", delivery: {} }), NOW);
     expect(event).toMatchObject({ status: "failed", detail: null });

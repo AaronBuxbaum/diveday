@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { errorCauseTokens, errorClassToken, thrownErrorToken } from "./error-token";
+import { errorCauseTokens, errorClassToken, errorCodeToken, thrownErrorToken } from "./error-token";
 
 /**
  * **A thrown error, reduced to words a log or a column may hold** (issue #2334).
@@ -54,5 +54,21 @@ describe("thrownErrorToken", () => {
 
   it("falls back to the class", () => {
     expect(thrownErrorToken(new Error("socket hang up for nora@example.com"))).toBe("Error");
+  });
+});
+
+describe("errorCodeToken", () => {
+  it("reads the error's own code first, then its cause's", () => {
+    expect(errorCodeToken(Object.assign(new Error("x"), { code: "23505" }))).toBe("23505");
+    const cause = Object.assign(new Error("x"), { code: "ECONNRESET" });
+    expect(errorCodeToken(new TypeError("x", { cause }))).toBe("ECONNRESET");
+  });
+
+  it("is undefined when no code has the shape of one", () => {
+    expect(
+      errorCodeToken(Object.assign(new Error("x"), { code: "nora@example.com" })),
+    ).toBeUndefined();
+    expect(errorCodeToken(new Error("x"))).toBeUndefined();
+    expect(errorCodeToken("x")).toBeUndefined();
   });
 });
