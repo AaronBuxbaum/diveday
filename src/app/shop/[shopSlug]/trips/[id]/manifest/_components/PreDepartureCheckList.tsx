@@ -27,6 +27,12 @@ export type PreDepartureCheckListCopy = {
 /** How long a checked item waits for the second tap before it stands down. */
 export const CLEAR_CONFIRM_TIMEOUT_MS = 5000;
 
+/**
+ * How soon after the first tap a second one may clear. A bounced or doubled
+ * tap lands well inside this and is ignored; a deliberate second tap does not.
+ */
+export const CLEAR_CONFIRM_MIN_GAP_MS = 400;
+
 export type PreDepartureCheckListItem = {
   id: string;
   label: string;
@@ -58,17 +64,35 @@ function PreDepartureCheckRow({
   // unnoticed, so the first tap on a checked item only asks. A blur, Escape,
   // or a few seconds untouched stand it down, so an ask left behind never
   // turns a later stray tap into a clear.
+  // A bounced double tap (two taps ~50ms apart) is one tap, so the ask only
+  // arms — and only says "Tap again to clear" — once the gap has passed.
   const [asking, setAsking] = useState(false);
-  const armed = asking && checked;
+  const [settled, setSettled] = useState(false);
+  const standDown = () => {
+    setAsking(false);
+    setSettled(false);
+  };
+  const askingNow = asking && checked;
+  const armed = askingNow && settled;
   useEffect(() => {
-    if (!armed) return;
-    const timer = setTimeout(() => setAsking(false), CLEAR_CONFIRM_TIMEOUT_MS);
-    return () => clearTimeout(timer);
-  }, [armed]);
+    if (!askingNow) return;
+    const settle = setTimeout(() => setSettled(true), CLEAR_CONFIRM_MIN_GAP_MS);
+    const expire = setTimeout(() => {
+      setAsking(false);
+      setSettled(false);
+    }, CLEAR_CONFIRM_TIMEOUT_MS);
+    return () => {
+      clearTimeout(settle);
+      clearTimeout(expire);
+    };
+  }, [askingNow]);
   // Whatever the server said, the ask is spent once the submit settles: a
   // refused clear must not leave the item one tap from clearing.
   useEffect(() => {
-    if (!isPending) setAsking(false);
+    if (!isPending) {
+      setAsking(false);
+      setSettled(false);
+    }
   }, [isPending]);
   return (
     <li>
@@ -84,12 +108,13 @@ function PreDepartureCheckRow({
           onClick={(event) => {
             if (checked && !armed) {
               event.preventDefault();
-              setAsking(true);
+              // A tap inside the gap is the first one bouncing: ignored.
+              if (!askingNow) setAsking(true);
             }
           }}
-          onBlur={() => setAsking(false)}
+          onBlur={standDown}
           onKeyDown={(event) => {
-            if (event.key === "Escape") setAsking(false);
+            if (event.key === "Escape") standDown();
           }}
           className={buttonClass({
             variant: checked ? "primary" : "secondary",
