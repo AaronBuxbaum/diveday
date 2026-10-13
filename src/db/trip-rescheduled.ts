@@ -18,6 +18,7 @@ import {
 } from "@/lib/notifications/sms";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
+import { lastDayStartsAt } from "./departure-notes";
 import { holdSend } from "./held-sends";
 import {
   notificationProviderForDb,
@@ -105,6 +106,22 @@ export async function heldRescheduleIsPlaceOnly(
   return trip?.startsAt.getTime() === Date.parse(payload.previousStartsAt);
 }
 
+/**
+ * Whether the departure is still ahead of the divers: its last day has not
+ * started. A multi-day course is reachable between its days, so a meeting
+ * point moved after day one still reaches its students (as departure notes
+ * do, H-110).
+ */
+async function stillAhead(
+  db: AppDb,
+  trip: { id: string; startsAt: Date },
+  now: Date,
+): Promise<boolean> {
+  const lastDay = await lastDayStartsAt(db, trip.id);
+  const sails = lastDay && lastDay > trip.startsAt ? lastDay : trip.startsAt;
+  return sails.getTime() > now.getTime();
+}
+
 /** The divers know the current time again: nothing is owed them. */
 async function clearDiversTold(db: AppDb, shopId: string, tripId: string) {
   await db
@@ -142,6 +159,7 @@ export async function holdRescheduleNotice(
 ): Promise<HeldRescheduleNotice | null> {
   const [trip] = await db
     .select({
+      id: trips.id,
       startsAt: trips.startsAt,
       status: trips.status,
       diversToldStartsAt: trips.diversToldStartsAt,
@@ -154,6 +172,9 @@ export async function holdRescheduleNotice(
     )
     .limit(1);
   if (trip?.status !== "scheduled") return null;
+  // A departure that has sailed hears nothing, so the staffer is told nothing
+  // is on its way rather than "Telling 11 divers".
+  if (!(await stillAhead(db, trip, input.now ?? nowDate()))) return null;
   const toldStartsAt = trip.diversToldStartsAt ?? input.movedFrom ?? null;
 
   const pendingRows = await db
@@ -252,8 +273,9 @@ export async function sendRescheduleNotices(
   // Moved and moved back before the cron swept a closed tab's hold. A save
   // that moved only the meeting point still has that to say (#2443).
   if (!timeMoved && !payload.meetingPointMoved) return outcome;
-  // Nothing to tell about a departure that has already left.
-  if (trip.startsAt.getTime() <= now.getTime()) return outcome;
+  // Nothing to tell about a departure that has already left: for a
+  // multi-day course, once its last day has.
+  if (!(await stillAhead(db, trip, now))) return outcome;
 
   const seats = await db
     .select({ booking: bookings, person: people })
