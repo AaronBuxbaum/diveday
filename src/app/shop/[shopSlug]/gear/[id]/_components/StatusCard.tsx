@@ -4,6 +4,7 @@ import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import type { GearItemDetail } from "@/db/gear";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import { deleteGearItemAction, setGearItemStatusAction } from "../actions";
 import { PullForServiceButton } from "./PullForServiceButton";
 
@@ -16,11 +17,16 @@ import { PullForServiceButton } from "./PullForServiceButton";
 export function StatusCard({
   item,
   held,
+  concerns = [],
   t,
+  locale,
 }: {
   item: GearItemDetail["item"];
   held: { name: string; until: string } | null;
+  /** Concerns returned while the unit is on the bench (`benchReturnConcerns`, #2540). */
+  concerns?: ReadonlyArray<{ note: string; returnedOn: CalendarDate }>;
   t: StaffTranslator;
+  locale: string;
 }) {
   return (
     <SectionCard
@@ -35,6 +41,18 @@ export function StatusCard({
           thing on the record — a unit's resting state is one act wide. The
           delete sits beneath it at link weight, in danger ink, where it is
           still one tap and no longer the section's loudest control. */}
+      {concerns.length > 0 ? (
+        <ul className="mb-4 space-y-1 text-sm text-warning-strong">
+          {concerns.map((concern) => (
+            <li key={`${concern.returnedOn}:${concern.note}`}>
+              {t("gear.unit.status.returnedConcern", {
+                date: formatCalendarDate(concern.returnedOn, locale),
+                note: concern.note,
+              })}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <div>
         {item.status === "in_service" ? (
           <PullForServiceButton
