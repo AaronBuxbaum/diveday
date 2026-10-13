@@ -11,7 +11,7 @@ async function load(dsn: string | undefined, sdkModule: () => unknown = () => sd
   vi.resetModules();
   const imported = vi.fn(sdkModule);
   vi.doMock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: dsn }));
-  vi.doMock("@sentry/nextjs", () => imported());
+  vi.doMock("@sentry/nextjs", async () => imported() as never);
   const { sentry } = await import("./sentry");
   return { sentry, imported };
 }
