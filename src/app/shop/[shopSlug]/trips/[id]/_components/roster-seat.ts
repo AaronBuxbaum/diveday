@@ -162,8 +162,12 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   // every diver who has never been asked (H-21).
   const dateOfBirth = person.dateOfBirth;
   const age = showsPersonDetail && dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
-  const minor = showsPersonDetail && dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : false;
-  const requiresGuardian = guardianSignatureRequired(dateOfBirth, signedToday);
+  // The booker's "Under 18" on this seat stands in for a date the shop does
+  // not hold, for the badge and the co-signature alike (decision 2026-10-13).
+  const minorDeclared = Boolean(booking.minorDeclaredAt);
+  const minor =
+    showsPersonDetail && (dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : minorDeclared);
+  const requiresGuardian = guardianSignatureRequired(dateOfBirth, signedToday, minorDeclared);
   const birthday = showsPersonDetail ? birthdayCallout(dateOfBirth, tripDate) : null;
   const hasEmergencyContact = Boolean(person.emergencyContactName && person.emergencyContactPhone);
   // A warning, never a gate: the site goes deeper than this diver's

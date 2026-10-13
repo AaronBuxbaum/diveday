@@ -37,6 +37,13 @@ export function isGuardianRelationship(value: unknown): value is GuardianRelatio
  */
 export type GuardianSigner = {
   dateOfBirth: CalendarDate | null | undefined;
+  /**
+   * Whoever booked the seat said this diver is under 18
+   * (`bookings.minor_declared_at`). Required rather than optional so every
+   * caller answers it: `false` where no seat is in hand (a diver record, a
+   * counter rental), never by omission.
+   */
+  minorDeclared: boolean;
   timezone: string;
 };
 
@@ -60,13 +67,20 @@ export type GuardianSignature = {
  * gives a date or says the person is 18 or older (`people.adult_attested_at`).
  * So a blank date here is either nobody's question or a staffer's "adult",
  * and both read as an adult; a date, when one lands, is what is measured.
+ * The one exception is a seat its booker marked "Under 18" (`minorDeclared`).
  */
 export function guardianSignatureRequired(
   dateOfBirth: CalendarDate | null | undefined,
   signedOn: CalendarDate,
+  minorDeclared: boolean,
 ): boolean {
-  if (!dateOfBirth) return false;
-  return isMinorOnDate(dateOfBirth, signedOn);
+  // **A date on file decides; with none, the booker's "Under 18" does**
+  // (decision of 2026-10-13, after H-21). The date is the shop's own fact and
+  // the only way a staffer corrects a box ticked by mistake. Without one, the
+  // fail-open default above used to let a twelve-year-old a parent booked
+  // sign their release alone; the box is the parent saying so.
+  if (dateOfBirth) return isMinorOnDate(dateOfBirth, signedOn);
+  return minorDeclared;
 }
 
 /** The shop-local calendar day a signing instant fell on. */
@@ -103,7 +117,11 @@ export function guardianSignatureMissing(
   const signedAt = record.signedAt ?? record.completedAt;
   if (!signedAt) return false;
   if (waiverSignedByGuardian(record)) return false;
-  return guardianSignatureRequired(signer.dateOfBirth, signingDate(signedAt, signer.timezone));
+  return guardianSignatureRequired(
+    signer.dateOfBirth,
+    signingDate(signedAt, signer.timezone),
+    signer.minorDeclared,
+  );
 }
 
 /**

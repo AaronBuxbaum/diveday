@@ -437,6 +437,8 @@ export function WaiverGroup({
                   requiresGuardian={guardianSignatureRequired(
                     diver.person.dateOfBirth,
                     signingDate(nowDate(), timezone),
+                    // Person-scoped: no seat, so no booker's "Under 18".
+                    false,
                   )}
                   // **No namesake confirmation here, deliberately** —
                   // `offersNamesake` is left off. This door is the absentee

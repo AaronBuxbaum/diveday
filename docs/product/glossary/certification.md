@@ -460,6 +460,9 @@
   because that is who is on the boat; the co-signature asks whether they were under 18 on the day
   they **signed**, because a release a seventeen-year-old executed alone does not become valid on
   their eighteenth birthday.
+  Since 2026-10-13 a seat can also be a minor's **by its booker's word**: the public party form's
+  "Under 18" box stamps `bookings.minor_declared_at` on that seat alone. A date of birth on file
+  decides; with none, the stamp asks for the guardian and shows the badge ([H-113](../human-decisions/H-113-under-18-on-party-form.md)).
 - **Guardian co-signature** — the second signature a **minor's** liability release takes: a parent
   or legal guardian signing the same release, on the same page, under the same signature provider
   as the diver's own (ADR

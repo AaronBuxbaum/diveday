@@ -200,6 +200,40 @@ describe("createBooking (in-memory PGlite)", () => {
     );
   });
 
+  it("stamps a member's 'Under 18' on their seat alone, never on the person", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Ines Marlow",
+        email: "ines-marlow@example.com",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Maya Marlow",
+        minorDeclared: true,
+      },
+    ]);
+    if (!outcome.ok) throw new Error("setup booking failed");
+    const seats = await db
+      .select({
+        name: people.fullName,
+        minorDeclaredAt: bookings.minorDeclaredAt,
+        dateOfBirth: people.dateOfBirth,
+      })
+      .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(eq(bookings.tripId, open.id));
+    const byName = new Map(seats.map((seat) => [seat.name, seat]));
+    expect(byName.get("Maya Marlow")?.minorDeclaredAt).toBeInstanceOf(Date);
+    expect(byName.get("Maya Marlow")?.dateOfBirth).toBeNull();
+    expect(byName.get("Ines Marlow")?.minorDeclaredAt).toBeNull();
+  });
+
   it("keeps what the diver said this dive was for with the booking", async () => {
     const { db, shop, open } = await seededContext();
     const outcome = await createBooking(db, {

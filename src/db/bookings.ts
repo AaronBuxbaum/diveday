@@ -232,6 +232,15 @@ export type BookingRequest = {
    */
   referralSource?: string | null;
   /**
+   * **Whoever booked this seat said its diver is under 18** (the public party
+   * form's "Under 18" box; decision of 2026-10-13, after H-21). Stamped on the
+   * seat as `minor_declared_at`, never on the person: the form is anonymous,
+   * so it may only mark the seat it is creating. It gates nothing here (no age
+   * oracle at the sale, H-22); the guardian co-signature rule reads it where
+   * no date of birth is on file.
+   */
+  minorDeclared?: boolean;
+  /**
    * What this person is doing on the boat (ADR 20261007-participant-types).
    * Omitted is a diver, which is every caller that predates the type and the
    * stricter reading: a diver is asked for more, never less.
@@ -1225,6 +1234,8 @@ async function createBookingRecord(
         // thinks of as touching attribution. Accepted over the alternative,
         // which is a stale credit surviving a cancellation nobody can see.
         referralSource: partnerReferralSlug(req.referralSource),
+        // This booking's own "Under 18", including its absence.
+        minorDeclaredAt: req.minorDeclared ? nowDate() : null,
       })
       .where(eq(bookings.id, existing.id));
     await settlePackageCoverage(tx, {
@@ -1261,6 +1272,7 @@ async function createBookingRecord(
       identityBookedAs: identityUnconfirmed ? (identityClaim?.bookedAs ?? null) : null,
       identityMatchedBy: identityUnconfirmed ? (identityClaim?.matchedBy ?? null) : null,
       referralSource: partnerReferralSlug(req.referralSource),
+      minorDeclaredAt: req.minorDeclared ? nowDate() : null,
       // **Stamped by the application clock, not the column's `defaultNow()`.**
       //
       // `defaultNow()` is Postgres' clock, which `DIVEDAY_CLOCK` does not

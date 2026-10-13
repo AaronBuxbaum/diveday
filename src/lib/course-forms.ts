@@ -101,7 +101,11 @@ function signatureNamesForm(signature: CourseFormSignature, form: RequiredCourse
 /** A minor on the day they signed, with no guardian's signature beside theirs. */
 function guardianStillOwed(signature: CourseFormSignature, signer: GuardianSigner): boolean {
   const signedOn = signature.paperSignedOn ?? signingDate(signature.signedAt, signer.timezone);
-  const minorWhenSigned = guardianSignatureRequired(signer.dateOfBirth, signedOn);
+  const minorWhenSigned = guardianSignatureRequired(
+    signer.dateOfBirth,
+    signedOn,
+    signer.minorDeclared,
+  );
   return minorWhenSigned && signature.guardianSignedAt === null;
 }
 

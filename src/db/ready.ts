@@ -692,7 +692,11 @@ export async function carriedPreparationForDiver(
     waiver: shopWaiverStatus({
       personSignedWaivers: signedWaivers.get(input.personId) ?? [],
       currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
-      signer: signer ? { dateOfBirth: signer.dateOfBirth, timezone: signer.timezone } : undefined,
+      // Person-scoped, so no seat's "Under 18" is in hand: the next booking
+      // carries its own, and its readiness asks for the co-signature then.
+      signer: signer
+        ? { dateOfBirth: signer.dateOfBirth, minorDeclared: false, timezone: signer.timezone }
+        : undefined,
     }),
     certifications: levelCards,
     hasRentalFit: input.hasRentalFit,

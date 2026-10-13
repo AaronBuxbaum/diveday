@@ -387,6 +387,9 @@ export async function bookSpot(
       // diver whose seat it is, so this transaction records only the party and
       // how to reach it.
       referralSource,
+      // The "Under 18" box beside this member's name (decision 2026-10-13):
+      // the seat's own word, for the guardian co-signature and nothing else.
+      minorDeclared: fields[`minor-${index}`] === "on",
     })),
   );
   if (!outcome.ok) {

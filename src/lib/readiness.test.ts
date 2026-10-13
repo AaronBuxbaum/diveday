@@ -750,6 +750,23 @@ describe("calculateReadiness — the guardian co-signature", () => {
     }
   });
 
+  it("raises it for a seat its booker marked Under 18 when no date is on file", () => {
+    expect(
+      calculateReadiness({ ...base, waiver: minorsSoloWaiver, minorDeclared: true }).blockers.map(
+        (blocker) => blocker.code,
+      ),
+    ).toEqual(["guardian_signature_missing"]);
+    // A date on file decides: a staffer corrects a wrong tick by entering it.
+    expect(
+      calculateReadiness({
+        ...base,
+        waiver: minorsSoloWaiver,
+        minorDeclared: true,
+        dateOfBirth: "1990-03-04",
+      }).status,
+    ).toBe("ready");
+  });
+
   it("measures the signing day in the shop's zone, not the server's", () => {
     // Eighteen on 2026-07-19. In New York the signature landed on the 18th, so
     // they were still a minor; read in UTC the same instant is the 19th.

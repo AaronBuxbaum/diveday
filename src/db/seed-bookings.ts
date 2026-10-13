@@ -313,7 +313,11 @@ export async function seedBookings(
     // The zone is the canonical demo's; a minted shop may sit elsewhere, and a
     // day either way cannot turn a thirteen-year-old into an adult.
     if (
-      !guardianSignatureRequired(person?.dateOfBirth, signingDate(signedAt, DEMO_SHOP_TIMEZONE))
+      !guardianSignatureRequired(
+        person?.dateOfBirth,
+        signingDate(signedAt, DEMO_SHOP_TIMEZONE),
+        false,
+      )
     ) {
       return {};
     }

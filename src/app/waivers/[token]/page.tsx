@@ -7,7 +7,12 @@ import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
-import { getBookingTripId, getWaiverSignerOnFile, getWaiverTripHeader } from "@/db/waiver-signing";
+import {
+  getBookingTripId,
+  getWaiverSignerOnFile,
+  getWaiverTripHeader,
+  seatMinorDeclared,
+} from "@/db/waiver-signing";
 import {
   getEmergencyContactForBearer,
   getEmergencyContactForPerson,
@@ -199,6 +204,8 @@ export default async function WaiverPage({
   const guardianRequired = guardianSignatureRequired(
     signerOnFile?.dateOfBirth,
     signingDate(nowDate(), shop.timezone),
+    // Or, with no date on file, the booker ticked "Under 18" for this seat.
+    await seatMinorDeclared(db, record.shopId, record.bookingId),
   );
   const draftGuardian = record.draftGuardian;
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);

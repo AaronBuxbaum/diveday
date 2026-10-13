@@ -472,6 +472,13 @@ export type ReadinessInput = {
    */
   courseMinimumAge?: number | null;
   dateOfBirth?: CalendarDate | null;
+  /**
+   * The seat's booker said this diver is under 18
+   * (`bookings.minor_declared_at`). Read only by the guardian co-signature
+   * rule, and only where no date of birth is on file; never by the minimum-age
+   * gate, which needs an age, not a yes.
+   */
+  minorDeclared?: boolean;
   /** The shop-local calendar date the course runs, which is when age is measured. */
   courseDate?: CalendarDate | null;
   /**
@@ -922,6 +929,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       state === "complete" &&
       guardianSignatureMissing(input.waiver, {
         dateOfBirth: input.dateOfBirth,
+        minorDeclared: input.minorDeclared ?? false,
         timezone: input.timezone ?? "UTC",
       })
     ) {
@@ -936,7 +944,11 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   if (COURSE_FORMS_BLOCK_BOARDING && input.courseForms) {
     for (const { form, gap } of courseFormGaps({
       ...input.courseForms,
-      signer: { dateOfBirth: input.dateOfBirth, timezone: input.courseForms.timezone },
+      signer: {
+        dateOfBirth: input.dateOfBirth,
+        minorDeclared: input.minorDeclared ?? false,
+        timezone: input.courseForms.timezone,
+      },
     })) {
       blockers.push({
         code: gap === "guardian_missing" ? "course_form_guardian_missing" : "course_form_unsigned",

@@ -1223,6 +1223,8 @@
     "didYouMeanEmail": "¿Quisiste decir {email}?",
     "rememberedChip": "Reservando como <strong>{name}</strong> · <button>¿No eres tú?</button>",
     "useMainContactEmail": "Usar el correo del contacto principal para este buceador",
+    "under18": "Menor de 18 años",
+    "under18Hint": "Su madre, padre o tutor legal también firma la exención.",
     "bigGroupContactEmail": "¿Vienen más de {count}? <a>Contacta con el centro: {contact}</a>",
     "bigGroupContactPhone": "¿Vienen más de {count}? <a>Contacta con el centro: {contact}</a>",
     "bigGroupContactGeneric": "¿Sois más de {count}? Contacta con el centro."
@@ -3777,7 +3779,7 @@
         "faq1Q": "¿Y si un buceador llega sin firmar?",
         "faq1A": "Vuelve a enviarle el enlace desde su fila, o registra una exención que firmó en papel, después de verificar que ninguna de sus respuestas médicas requiere un médico.",
         "faq2Q": "¿Cómo firman los menores?",
-        "faq2A": "Cuando la fecha de nacimiento del buceador está en su ficha, la exención de un menor de 18 años pide también la firma de su madre, padre o tutor, y el embarque espera a las dos. DiveDay no le pide la fecha de nacimiento al buceador, así que sin ella lo trata como adulto.",
+        "faq2A": "La exención de un menor de 18 años pide también la firma de su madre, padre o tutor, y el embarque espera a las dos. Un buceador cuenta como menor cuando la fecha de nacimiento de su ficha lo dice o, sin fecha, cuando quien hizo la reserva marcó “Menor de 18 años”.",
         "faq3Q": "¿Y las exenciones que los buceadores ya firmaron con mi sistema anterior?",
         "faq3A": "Si la exportación de tu sistema anterior marca la exención de un buceador como aceptada, el importador la trae con su fecha, marcada como importada, y confía en la autorización médica que registró tu sistema anterior. No se le pide firmar de nuevo mientras siga vigente.",
         "closeTitle": "Mira el editor de la exención y cada copia firmada.",

@@ -11,6 +11,27 @@ import { bookings, people, trips } from "./schema";
  * nothing rather than leaking across tenants.
  */
 
+/**
+ * Whether the seat a release is for was marked "Under 18" by whoever booked it
+ * (`bookings.minor_declared_at`). False for a person-scoped release, which has
+ * no seat. The guardian rule reads it only where no date of birth is on file
+ * (`guardianSignatureRequired`), so the signing page and `completeWaiver` ask
+ * the same question.
+ */
+export async function seatMinorDeclared(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string | null,
+): Promise<boolean> {
+  if (!bookingId) return false;
+  const [row] = await db
+    .select({ minorDeclaredAt: bookings.minorDeclaredAt })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  return Boolean(row?.minorDeclaredAt);
+}
+
 /** The departure a booking sits on, or null when the booking is gone. */
 export async function getBookingTripId(
   db: DbExecutor,

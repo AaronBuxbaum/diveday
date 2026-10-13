@@ -1223,6 +1223,8 @@
     "didYouMeanEmail": "Did you mean {email}?",
     "rememberedChip": "Booking as <strong>{name}</strong> · <button>Not you?</button>",
     "useMainContactEmail": "Use the main contact’s email for this diver",
+    "under18": "Under 18",
+    "under18Hint": "A parent or guardian signs the waiver too.",
     "bigGroupContactEmail": "Bringing more than {count}? <a>Contact the shop: {contact}</a>",
     "bigGroupContactPhone": "Bringing more than {count}? <a>Contact the shop: {contact}</a>",
     "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop."
@@ -3777,7 +3779,7 @@
         "faq1Q": "What if a diver turns up without signing?",
         "faq1A": "Send the link again from their row, or record a release they signed on paper, once you’ve checked that none of their medical answers needs a physician.",
         "faq2Q": "How do minors sign?",
-        "faq2A": "Once a diver’s date of birth is on their record, a release signed under 18 asks a parent or guardian to sign too, and boarding waits for both. DiveDay doesn’t ask divers for their date of birth, so with none on file it treats them as an adult.",
+        "faq2A": "A release signed under 18 asks a parent or guardian to sign too, and boarding waits for both. A diver counts as under 18 when the date of birth on their record says so or, with no date on file, when whoever booked them ticked “Under 18”.",
         "faq3Q": "What about waivers divers already signed with my old system?",
         "faq3A": "If your old system’s export marks a diver’s waiver as accepted, the importer brings it across, dated and marked imported, and trusts the medical clearance your old system recorded. The diver isn’t asked to sign again while it’s current.",
         "closeTitle": "See the release editor and every signed copy.",

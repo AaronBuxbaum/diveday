@@ -1714,7 +1714,11 @@ export async function listTripsReadiness(
       owedCourseForms: courseForms
         ? outstandingCourseForms({
             ...courseForms,
-            signer: { dateOfBirth: row.person.dateOfBirth, timezone },
+            signer: {
+              dateOfBirth: row.person.dateOfBirth,
+              minorDeclared: row.booking.minorDeclaredAt !== null,
+              timezone,
+            },
           })
         : [],
       bookingWaiver: row.waiver,
@@ -1773,6 +1777,8 @@ export async function listTripsReadiness(
         courseMinimumAge,
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
+        // The booker's "Under 18" on this seat, for the guardian rule alone.
+        minorDeclared: row.booking.minorDeclaredAt !== null,
         // The guardian rule measures the diver's age on the shop-local day
         // they signed (src/lib/guardian.ts), so the engine needs the zone.
         timezone,

@@ -4,7 +4,7 @@ import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { getBookingReadiness } from "./readiness";
-import { people, waiverRecords } from "./schema";
+import { bookings, people, waiverRecords } from "./schema";
 import { listStaff } from "./trips";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { recordInPersonWaiver } from "./waivers-in-person";
@@ -591,4 +591,68 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
   function db_record(ctx: Awaited<ReturnType<typeof waiverContext>>, recordId: string) {
     return ctx.db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
   }
+});
+
+/**
+ * **The booker's "Under 18"** (decision 2026-10-13, after H-21): a seat the
+ * public party form marked, for a diver with no date of birth on file, takes
+ * the same co-signature a known minor's does, at every writer and at the gate.
+ */
+describe("a seat marked Under 18 by its booker", () => {
+  const guardian = {
+    name: "Ana Okafor",
+    relationship: "parent",
+    email: "ana@example.com",
+    agreed: true,
+  };
+
+  async function declaredSeat() {
+    const ctx = await waiverContext();
+    await ctx.db.update(people).set({ dateOfBirth: null }).where(eq(people.id, ctx.person.id));
+    await ctx.db
+      .update(bookings)
+      .set({ minorDeclaredAt: now })
+      .where(eq(bookings.id, ctx.booking.id));
+    return ctx;
+  }
+
+  it("refuses the diver signing alone, then takes the co-signed release and clears the gate", async () => {
+    const ctx = await declaredSeat();
+    const issued = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.booking.id,
+      now,
+    });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    const sign = (extra: { guardian?: typeof guardian }) =>
+      completeWaiver(ctx.db, issued.token, {
+        signerName: ctx.person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        now,
+        ...extra,
+      });
+
+    expect(await sign({})).toEqual({ ok: false, reason: "guardian_required" });
+    expect((await sign({ guardian })).ok).toBe(true);
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.booking.id);
+    expect(readiness?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "guardian_signature_missing" }),
+    );
+  });
+
+  it("asks the counter for the guardian on a paper release too", async () => {
+    const ctx = await declaredSeat();
+    const [staff] = await listStaff(ctx.db, ctx.shop.id);
+    if (!staff) throw new Error("seed has no staff");
+    expect(
+      await recordInPersonWaiver(ctx.db, {
+        shopId: ctx.shop.id,
+        subject: { bookingId: ctx.booking.id },
+        recordedByPersonId: staff.person.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "guardian_required" });
+  });
 });
