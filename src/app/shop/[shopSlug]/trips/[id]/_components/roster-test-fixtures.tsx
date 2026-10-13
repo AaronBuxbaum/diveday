@@ -106,6 +106,8 @@ export type RosterFixtureOptions = {
   waivers: WaiverByBooking;
   rentalFit?: RentalFitByBooking;
   compact?: boolean;
+  /** The departure page passes `false`: its Divers tab opens under the page's own H1. */
+  showSummaryHeading?: boolean;
   addDiverGroup?: ReactNode;
   paymentsConnected?: boolean;
   canManageOrders?: boolean;
@@ -126,6 +128,7 @@ function rosterProps({
   waivers,
   rentalFit,
   compact = false,
+  showSummaryHeading,
   addDiverGroup,
   paymentsConnected = false,
   canManageOrders = true,
@@ -156,6 +159,7 @@ function rosterProps({
       splitAsksDateOfBirth,
       certifyDefaultLevel,
       compact,
+      showSummaryHeading,
     },
     rows: {
       roster,

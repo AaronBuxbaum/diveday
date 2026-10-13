@@ -811,7 +811,7 @@ export function WeekBoard({
                   className="border-b border-border"
                 >
                   <div className={WEEK_DAY_GRID_CLASS}>
-                    <h3 className="py-2">
+                    <h2 className="py-2">
                       <span className="sr-only">
                         {fill(copy.quietDays, { first: first.label, last: last.label })}
                       </span>
@@ -821,7 +821,7 @@ export function WeekBoard({
                       >
                         {first.weekday}–{last.weekday}
                       </span>
-                    </h3>
+                    </h2>
                     <div className="min-w-0">
                       <div className={WEEK_EMPTY_DAY_CLASS}>
                         <p className="text-sm text-muted">{copy.noBoats}</p>
@@ -895,7 +895,7 @@ export function WeekBoard({
                     first departure's time beside it. Stacked from `sm` up, the
                     weekday and its numeral made every day two lines tall, and
                     an empty day twice the height of the one line it says. */}
-                  <h3
+                  <h2
                     id={`week-day-${day.dateIso}`}
                     className="sticky top-(--chrome-h) z-10 self-start bg-background py-2"
                   >
@@ -923,7 +923,7 @@ export function WeekBoard({
                         {day.dayNumber}
                       </span>
                     </span>
-                  </h3>
+                  </h2>
                   <div className="min-w-0">
                     {/* More departures than hulls, or one hull in two places —
                       the question the board exists to answer, on the day it is

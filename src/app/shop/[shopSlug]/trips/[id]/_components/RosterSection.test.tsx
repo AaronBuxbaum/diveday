@@ -36,6 +36,20 @@ describe("the guests ledger (slice 5d)", () => {
     expect(screen.getByRole("heading", { name: "Ready · 1" })).toBeVisible();
   });
 
+  /**
+   * **The bands are the Divers tab's second level** (UX review 2026-10-13,
+   * item 39). The departure page draws the roster under its own H1 with no
+   * summary heading, and the bands were H3: a screen reader moving by level
+   * found nothing at 2 on the page the desk uses most.
+   */
+  it("gives its group bands the level under the page title, skipping none", () => {
+    renderRoster({ ...fixtures, compact: true, showSummaryHeading: false });
+
+    const bands = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    expect(bands).toEqual(expect.arrayContaining(["Still to clear · 1", "Ready · 1"]));
+    expect(screen.queryAllByRole("heading", { level: 3 })).toEqual([]);
+  });
+
   it("never repeats the group's state word down its rows: a cleared seat is a name and a drawn mark", () => {
     const { container } = renderRoster(fixtures);
 
@@ -69,7 +83,7 @@ describe("the guests ledger (slice 5d)", () => {
     ).toHaveAttribute("href", `/shop/blue-mantis/divers/${blocked.person.id}#cards`);
 
     // And the groups order the page's answer: open work above cleared seats.
-    const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(headings.indexOf("Still to clear · 1")).toBeLessThan(headings.indexOf("Ready · 1"));
   });
 
