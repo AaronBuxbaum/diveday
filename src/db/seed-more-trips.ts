@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
+import { listTripReadiness } from "./readiness";
 import {
   bookingPayments,
   bookings,
@@ -647,22 +648,6 @@ export async function seedMoreTrips(
     const completedBookings = insertedBookings.filter(
       (booking) => booking.tripId === completedTrip.id,
     );
-    const rollCallRecorderId = captainId ?? instructorId;
-    const completedRollCallRows = completedBookings.flatMap((booking) =>
-      rollCallCheckpoints(completedTrip.plannedDives).map((checkpoint, index) => ({
-        shopId,
-        tripId: completedTrip.id,
-        bookingId: booking.id,
-        recordedByPersonId: rollCallRecorderId,
-        status: "boarded" as const,
-        checkpoint,
-        source: "live" as const,
-        occurredAt: new Date(completedTrip.startsAt.getTime() + index * 90 * 60 * 1000),
-      })),
-    );
-    if (completedRollCallRows.length > 0)
-      await db.insert(rollCallEvents).values(completedRollCallRows);
-
     // A partially completed report run is more useful demo state than an empty
     // queue: six reports have gone out and two remain for the staffer to notice.
     // The existing delivery tables are the source of truth for this task; no
@@ -725,6 +710,51 @@ export async function seedMoreTrips(
     };
   });
   if (extraWaiverRows.length > 0) await db.insert(waiverRecords).values(extraWaiverRows);
+
+  // The completed dawn boat's roll call, written once its releases are on
+  // file so readiness reads the state it sailed in. Direct inserts skip
+  // `recordRollCall`, so this applies its gate itself (#2415): a diver the gate
+  // would refuse (no card, a card nobody verified) was turned away at the dock,
+  // one explicit `not_boarded` and nothing after it, never "boarded".
+  if (completedTrip) {
+    const cleared = new Set(
+      (await listTripReadiness(db, shopId, completedTrip.id))
+        .filter((row) => row.readiness.status === "ready")
+        .map((row) => row.booking.id),
+    );
+    const rollCallRecorderId = captainId ?? instructorId;
+    const checkpointAt = (index: number) =>
+      new Date(completedTrip.startsAt.getTime() + index * 90 * 60 * 1000);
+    const completedRollCallRows = insertedBookings
+      .filter((booking) => booking.tripId === completedTrip.id)
+      .flatMap((booking): (typeof rollCallEvents.$inferInsert)[] =>
+        cleared.has(booking.id)
+          ? rollCallCheckpoints(completedTrip.plannedDives).map((checkpoint, index) => ({
+              shopId,
+              tripId: completedTrip.id,
+              bookingId: booking.id,
+              recordedByPersonId: rollCallRecorderId,
+              status: "boarded" as const,
+              checkpoint,
+              source: "live" as const,
+              occurredAt: checkpointAt(index),
+            }))
+          : [
+              {
+                shopId,
+                tripId: completedTrip.id,
+                bookingId: booking.id,
+                recordedByPersonId: rollCallRecorderId,
+                status: "not_boarded" as const,
+                checkpoint: "departure",
+                source: "live" as const,
+                occurredAt: checkpointAt(0),
+              },
+            ],
+      );
+    if (completedRollCallRows.length > 0)
+      await db.insert(rollCallEvents).values(completedRollCallRows);
+  }
 
   // The Duane wreck readiness track: three of the six divers paid or on
   // deposit — the other three (blocked by cert/specialty/nitrox regardless,

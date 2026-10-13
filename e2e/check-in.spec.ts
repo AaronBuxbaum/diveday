@@ -43,6 +43,8 @@ function deskRow(page: Page, name: string): Locator {
 const CHECKED_IN_BAND = /^Checked in · \d+$/;
 /** A finished departure's record band for the seats the roll call counted aboard. */
 const SAILED_BAND = /^Sailed · \d+$/;
+/** Its band for the seats the roll call turned away at the dock. */
+const DID_NOT_SAIL_BAND = /^Didn’t sail · \d+$/;
 
 /** A seeded boat still ahead of the frozen clock and inside the counter's window. */
 const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
@@ -164,11 +166,13 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
 
   // A boat that is home is read rather than worked: its Divers tab is the
   // record, every seat filed by the crew's roll call (UX review 2026-10-10,
-  // item 10). The seeded dawn boat boarded everyone, so they all stand under
-  // "Sailed", and nothing of the live counter is drawn: no count, no taps,
-  // nothing still to clear.
+  // item 10). The seeded dawn boat boarded everyone readiness cleared and
+  // turned the rest away at the dock (#2415), so its seats stand under
+  // "Sailed" and "Didn't sail", and nothing of the live counter is drawn: no
+  // count, no taps, nothing still to clear.
   await page.goto(counterPath("blue-mantis", sailedId));
   await expect(page.getByRole("heading", { name: SAILED_BAND })).toBeVisible();
+  await expect(page.getByRole("heading", { name: DID_NOT_SAIL_BAND })).toBeVisible();
   await expect(page.getByText(/^\d+ of \d+ here$/)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: CHECKED_IN_BAND })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /^Still to clear/ })).toHaveCount(0);
