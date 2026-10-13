@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { nowMs } from "@/lib/clock";
 import type { fileScopedShopContext } from "@/test/db";
 import {
@@ -9,6 +9,7 @@ import {
 } from "./schema";
 import type { getTodayWork } from "./today";
 import { listStaff } from "./trips";
+import { livePerson } from "./trips-live";
 
 /**
  * The unclosed-roll-call suites' fixtures (DOM-H3): a boat that already tied
@@ -50,7 +51,7 @@ export async function returnedTrip(
   const divers = await db
     .select({ id: people.id })
     .from(people)
-    .where(eq(people.shopId, shopId))
+    .where(and(eq(people.shopId, shopId), livePerson()))
     .limit(options.divers);
   if (divers.length < options.divers) throw new Error("seed has too few people for this fixture");
   const rows = await db
