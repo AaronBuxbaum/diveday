@@ -108,11 +108,13 @@
     "stripeDone": "Stripe connected.",
     "doneBadge": "Done",
     "unitsTitle": "Check your currency and depth unit",
-    "unitsBody": "We started you on {currency} and {depth} from your timezone. Prices and depths are hard to change later.",
+    "unitsBody": "We picked {currency}, {depth} and {temperature} for where you are. Prices and depths are hard to change later.",
     "unitsAction": "Check units",
     "unitsDone": "Units confirmed.",
     "unitsFeet": "feet",
     "unitsMeters": "meters",
+    "unitsFahrenheit": "Fahrenheit",
+    "unitsCelsius": "Celsius",
     "pageTitle": "Your shop is live."
   },
   "spine": {
