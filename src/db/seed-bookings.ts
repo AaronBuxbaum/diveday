@@ -282,7 +282,7 @@ export async function seedBookings(
       shopId,
       bookingId: recapBookingId,
       tripId: reef.id,
-      imageUrl: commonsImage("Blue Tangs Molasses Reef 1999.jpg"),
+      imageUrl: commonsImage("Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg"),
       caption: "A whole squad of blue tangs",
     },
   ]);

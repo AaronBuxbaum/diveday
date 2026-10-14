@@ -269,13 +269,16 @@ fails while it is stale. Grep the domain files for a term; this index says which
 
 [glossary/records-and-evidence.md](glossary/records-and-evidence.md)
 
+- Coverage denominator
 - Day profile
+- Dive area
 - Earliest flight
 - Executed dive
 - Field guide
 - Marine-life catalog
 - Material generation
 - Observed species
+- Photo ledger
 - Sighting
 - Staff credential
 - Supervision claim

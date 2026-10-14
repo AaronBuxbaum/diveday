@@ -103,7 +103,7 @@ when you open the file.
 | Data portability (CSV export/import), scheduled backups | `src/db/export.ts` / `src/db/import.ts`, `src/features/backup-export/`; staff UI under `src/app/shop/[shopSlug]/settings/` — security-sensitive, see hard rules |
 | Offline boat manifests | `src/lib/offline-manifests.ts` + `offline-manifest-store.ts`; viewer `src/app/offline-manifest/`; worker `src/worker/manifest-sw.ts` |
 | A dive site's briefing — what a diver reads, and which field writes it | `dive-sites/_components/SiteFields.tsx` writes it, `_components/TripDayPlan.tsx` reads it; the field guide is `src/lib/dive-site-field-guide.ts` + `src/i18n/marine-life-labels.ts` |
-| Starting content a shop copies, and species it picks | `src/content/dive-site-templates.ts`, `src/content/course-templates.ts` (copied, then the shop's); `src/db/marine-life-catalog.ts` (DiveDay's words, photos under `public/marine-life/`, added with `node scripts/fetch-marine-life-photo.mjs`) |
+| Starting content a shop copies, and species it picks | `src/content/dive-site-templates.ts`, `src/content/course-templates.ts` (copied, then the shop's); `src/db/marine-life-catalog.ts` (DiveDay's words); photos by `pnpm content:photos` |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | A domain term, or an ADR | `docs/product/glossary/` by domain; ADRs indexed in `docs/architecture/decisions/README.md` (generated; the guard names the command) |
 | Feature modules | `src/features/<feature>/` — `index.ts` is the whole public surface; `calendar-sync`, `backup-export`, `integrations` |
@@ -122,7 +122,7 @@ playbooks are indexed in [.claude/skills/README.md](.claude/skills/README.md): *
 **verify**, **design-implementation**, **i18n-copy**, **copy-restraint**, **design-review**,
 **brand-voice**, **schema-change**, **debug**, **instant-navigation**, **e2e-and-visual**,
 **visual-triage**, **adr**, **stacked-prs**, **triage**, **backlog-routine**, **marketing-page**,
-**switching-pages**, **run**, and **commercial-outreach**. Other providers should read the
+**switching-pages**, **run**, **expand-content**, and **commercial-outreach**. Other providers should read the
 corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical docs, tests, or
 code, the skill is stale and must be fixed in the same change. Reviewer agents (`.claude/agents/`)
 are launched, never skipped: `dive-domain-expert` for safety-critical surfaces, `security-reviewer`

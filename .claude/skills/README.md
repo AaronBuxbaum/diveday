@@ -38,6 +38,7 @@ The **hooks** in `.claude/settings.json` are the mechanical half of the rules an
 | `stacked-prs` | Cutting a branch or opening a PR while another of yours is still open — the default shape, related work or not — plus dependent chains (schema → db reader → surface), cascading rebase, bottom-up merge |
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 | `switching-pages` | Adding or editing a competitive switching guide (`/switching`, `/switching/[competitor]`, `/switching/spreadsheet`) — new incumbent, coexist-led channel guide, or edits to `src/lib/migration-guides.ts` |
+| `expand-content` | Covering a new dive area, or adding sites or species to the starting content — sourced denominator, templates, species copy and vetted photos, to 80% coverage |
 | `commercial-outreach` | Drafting go-to-market collateral for a stakeholder conversation — the design-partner one-pager, case-study interview prep, DEMA/media pitch notes, or other prep material referenced by `docs/product/rollout.md` and `docs/product/stakeholders/commercial-and-industry.md` |
 
 Reviewer agents (`.claude/agents/`): `design-critic` (delight principles), `dive-domain-expert`
