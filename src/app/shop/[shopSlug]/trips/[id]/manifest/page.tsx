@@ -9,6 +9,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { scopedHash, scopedId } from "@/lib/element-id";
+import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
@@ -132,6 +133,7 @@ export default async function TripManifestPage({
     diveIntents,
     stage,
     meetingPoint,
+    vessel,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
@@ -181,6 +183,8 @@ export default async function TripManifestPage({
   const notesByBooking = manifestNoteThreads(bookingNotes, diverNotes);
   const { crewRollCallButtonCopy, rollCallButtonCopy } = rollCallCopies(t, shopSlug, tripId);
   const emergencyCopy = emergencyReferenceCopy(t);
+  // This departure's own boat on every copy of the card, the shop line only without one (item 11).
+  const emergencyReference = emergencyReferenceForDeparture(shop.emergencyReference, vessel);
   const printedProcedureCopy = printedBoatProcedureCopy(t);
 
   return (
@@ -224,7 +228,7 @@ export default async function TripManifestPage({
               className="mt-0"
               headingId="emergency-reference-phone-heading"
               inOverlay
-              reference={shop.emergencyReference}
+              reference={emergencyReference}
               copy={emergencyCopy}
             />
           </ManifestMoreMenu>
@@ -234,7 +238,7 @@ export default async function TripManifestPage({
           reading of where the boat is, and a second one above it would be the
           same fact twice. */}
       <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
-      <PrintedSoulsOnBoard manifest={manifest} t={t} />
+      <PrintedSoulsOnBoard manifest={manifest} vesselName={vessel?.name ?? null} t={t} />
       {/* **The catch-up strip**, under the masthead and above the instrument,
           exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down
           slice 16d). It renders nothing when there is nothing new, and nothing
@@ -422,7 +426,7 @@ export default async function TripManifestPage({
           />
           <EmergencyReferenceCard
             headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
-            reference={shop.emergencyReference}
+            reference={emergencyReference}
             copy={emergencyCopy}
           />
           <PrintedKitBlanks
@@ -463,7 +467,7 @@ export default async function TripManifestPage({
           locale={locale}
           payload={offlineManifestPayload({
             completeManifests,
-            shop,
+            shop: { ...shop, emergencyReference },
             shopSlug,
             checklistItems,
             checklistChecks,
@@ -484,7 +488,7 @@ export default async function TripManifestPage({
         <EmergencyReferenceCard
           className="mt-0"
           headingId="emergency-reference-desktop-heading"
-          reference={shop.emergencyReference}
+          reference={emergencyReference}
           copy={emergencyCopy}
         />
       </ManifestMoreMenu>

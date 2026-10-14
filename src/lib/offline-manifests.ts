@@ -4,7 +4,7 @@ import { type ArrivalStatus, latestArrival } from "./arrival";
 import type { BoatSafetySection } from "./boat-safety";
 import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
-import type { EmergencyReference } from "./emergency-reference";
+import type { DepartureEmergencyReference } from "./emergency-reference";
 // Dependency-free too (type-only imports), for the same reason.
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { TripManifest } from "./manifests";
@@ -128,7 +128,7 @@ export type OfflineManifestPayload = {
      * signal would throw during render, with no `error.tsx` under
      * `/offline-manifest` to catch it. It fails toward silence instead.
      */
-    emergencyReference?: EmergencyReference;
+    emergencyReference?: DepartureEmergencyReference;
   };
   /**
    * The shop's own pre-departure safety line, and the last known answer to

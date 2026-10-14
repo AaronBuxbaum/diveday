@@ -204,6 +204,8 @@
     "heading": "En una emergencia",
     "empty": "Este centro no tiene números de emergencia registrados.",
     "vesselLabel": "Embarcación:",
+    "callSignLabel": "Indicativo:",
+    "mmsiLabel": "MMSI:",
     "shoreContactLabel": "Contacto en tierra:",
     "planLabel": "Si algo sale mal"
   },

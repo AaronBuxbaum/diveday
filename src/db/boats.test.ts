@@ -5,6 +5,7 @@ import {
   countBoatDepartures,
   createBoat,
   deleteBoat,
+  departureVessels,
   getBoatById,
   getBoatForHistory,
   listBoats,
@@ -275,5 +276,80 @@ describe("updateBoatWithinCertificate", () => {
     const boat = await createBoat(db, shop.id, "Certified Hull", 6);
     await deleteBoat(db, shop.id, boat.id);
     expect(await save(db, shop.id, boat.id, 4, null)).toEqual({ ok: false, reason: "not_found" });
+  });
+});
+
+describe("the boat a departure sails on, for its emergency card (fourth review, item 11)", () => {
+  async function departureOn(boatId: string | null) {
+    const { db, shop } = ctx;
+    const startsAt = new Date("2026-10-17T12:00:00Z");
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-Tank Reef",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 3600 * 1000),
+      capacity: 10,
+      plannedDives: 2,
+      priceCents: 9500,
+      diveMode: "boat",
+      boatId,
+    });
+    if (!trip) throw new Error("trip creation failed");
+    return trip;
+  }
+
+  it("names each departure's own hull with its call sign and MMSI", async () => {
+    const { db, shop } = ctx;
+    const one = await createBoat(db, shop.id, "Mantis I", 12, null, {
+      certifiedPassengers: null,
+      inspectionDueOn: null,
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
+      callSign: "WDM2201",
+      mmsi: "338055502",
+    });
+    const two = await createBoat(db, shop.id, "Mantis II", 14);
+    const onOne = await departureOn(one.id);
+    const onTwo = await departureOn(two.id);
+    const onNone = await departureOn(null);
+
+    const vessels = await departureVessels(db, shop.id, [onOne.id, onTwo.id, onNone.id]);
+    expect(vessels.get(onOne.id)).toEqual({
+      name: "Mantis I",
+      callSign: "WDM2201",
+      mmsi: "338055502",
+    });
+    expect(vessels.get(onTwo.id)).toEqual({ name: "Mantis II", callSign: null, mmsi: null });
+    // No boat: the card falls back to the shop's own vessel line.
+    expect(vessels.has(onNone.id)).toBe(false);
+  });
+
+  it("still names a hull the shop has since deleted", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Old Hull", 8);
+    const trip = await departureOn(boat.id);
+    await deleteBoat(db, shop.id, boat.id);
+    expect((await departureVessels(db, shop.id, [trip.id])).get(trip.id)?.name).toBe("Old Hull");
+  });
+
+  it("answers nothing about another shop's departure", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Mantis I", 12);
+    const trip = await departureOn(boat.id);
+    const vessels = await departureVessels(db, "00000000-0000-4000-8000-000000000000", [trip.id]);
+    expect(vessels.size).toBe(0);
+  });
+
+  it("refuses an MMSI that is not nine digits at the column", async () => {
+    const { db, shop } = ctx;
+    await expect(
+      createBoat(db, shop.id, "Typo", 8, null, {
+        certifiedPassengers: null,
+        inspectionDueOn: null,
+        registrationExpiresOn: null,
+        insuranceExpiresOn: null,
+        mmsi: "33805550",
+      }),
+    ).rejects.toThrow();
   });
 });

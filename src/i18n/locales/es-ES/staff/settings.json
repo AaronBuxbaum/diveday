@@ -507,6 +507,7 @@
       "lineExamples": "Cámara hiperbárica, línea de accidentes de buceo, guardacostas…",
       "phoneLabel": "Número {n}",
       "vesselLabel": "Embarcación",
+      "vesselHint": "Solo se imprime en las salidas sin embarcación. El indicativo y el MMSI de cada embarcación van en Embarcaciones.",
       "shoreContactLabel": "Contacto en tierra",
       "planLabel": "Si algo sale mal",
       "submit": "Guardar referencia de emergencia",

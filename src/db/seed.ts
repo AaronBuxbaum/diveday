@@ -206,7 +206,7 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
  * | `./seed-packages.ts` | two dive packages on sale, so the public Packages tab and price list have something to show |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
- * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder |
+ * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder; the dawn boat's divers paired at the dock |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
@@ -454,7 +454,9 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
           // i18n-exempt: the shop's own words, not DiveDay's.
           { label: "DAN emergency hotline", phone: "+1 919 555 0111" },
         ],
-        vessel: "Mantis II - VHF 16, MMSI 338055501",
+        // Only the fallback now (fourth review, item 11): a departure on a
+        // boat prints that boat's own name, call sign and MMSI, seeded below.
+        vessel: "Both boats keep VHF 16",
         shoreContact: "Front desk, +1 305 555 0142",
         plan: "Give O2, call the chamber first, then the Coast Guard on 16.",
       },
@@ -523,12 +525,18 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       name: "Mantis I",
       capacity: 14,
       description: "The small boat — fourteen aboard, a shaded deck, ten minutes to the reef.",
+      // Each hull's radio identity, printed on its departures' emergency card
+      // (fourth review, item 11). Fictional, in the US MMSI range.
+      callSign: "WDM2201",
+      mmsi: "338055502",
     },
     {
       shopId: shop.id,
       name: "Mantis II",
       capacity: 20,
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      callSign: "WDM2202",
+      mmsi: "338055501",
     },
   ]);
 
@@ -779,12 +787,18 @@ export async function createDemoShop(
       name: "Mantis I",
       capacity: 14,
       description: "The small boat — fourteen aboard, a shaded deck, ten minutes to the reef.",
+      // Each hull's radio identity, printed on its departures' emergency card
+      // (fourth review, item 11). Fictional, in the US MMSI range.
+      callSign: "WDM2201",
+      mmsi: "338055502",
     },
     {
       shopId: shop.id,
       name: "Mantis II",
       capacity: 20,
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      callSign: "WDM2202",
+      mmsi: "338055501",
     },
   ]);
 

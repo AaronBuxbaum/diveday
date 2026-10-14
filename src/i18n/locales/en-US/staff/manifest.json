@@ -204,6 +204,8 @@
     "heading": "In an emergency",
     "empty": "No emergency numbers recorded for this shop.",
     "vesselLabel": "Vessel:",
+    "callSignLabel": "Call sign:",
+    "mmsiLabel": "MMSI:",
     "shoreContactLabel": "Shore contact:",
     "planLabel": "If something goes wrong"
   },

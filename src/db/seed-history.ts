@@ -1,3 +1,4 @@
+import { and, eq, inArray } from "drizzle-orm";
 import { DAY_MS } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { demoEmail } from "@/lib/simulator-email";
@@ -13,6 +14,7 @@ import {
   personRoles,
   rollCallEvents,
   tips,
+  tripAssignments,
   tripRequirements,
   tripReviews,
   trips,
@@ -600,6 +602,30 @@ export async function seedHistory(
       requiresPayment: false,
     })),
   );
+
+  // **Every boat that sailed had somebody driving it** (fourth review, item
+  // 13). The back-fill sailed with nobody on the crew, so Reports listed this
+  // month's boats as "0 crew" while Safety judged "0 of 0" crew sailings: an
+  // insurer's first question, "who was the captain?", answered by the demo
+  // with nothing. The shop's captain and divemaster, the same pair the
+  // upcoming charters carry, one boat a day so nobody is on two at once.
+  // Direct inserts, as the db rules ask of seeded crew: no crew notices.
+  const crewRoles = await db
+    .select({ personId: personRoles.personId, role: personRoles.role })
+    .from(personRoles)
+    .innerJoin(people, eq(people.id, personRoles.personId))
+    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, ["captain", "divemaster"])));
+  const historyCrew = (["captain", "divemaster"] as const).flatMap((role) => {
+    const holder = crewRoles.find((row) => row.role === role);
+    return holder ? [{ personId: holder.personId, tripRole: role }] : [];
+  });
+  if (historyCrew.length > 0) {
+    await db
+      .insert(tripAssignments)
+      .values(
+        histTrips.flatMap((trip) => historyCrew.map((member) => ({ tripId: trip.id, ...member }))),
+      );
+  }
 
   // Deterministic per-booking plan. `k` is a global booking index; every "is
   // this one a no-show / a deposit / missing its waiver" decision is a fixed

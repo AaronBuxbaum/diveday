@@ -18,7 +18,12 @@ import {
 import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
-import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
+import {
+  MAX_EMERGENCY_LINES,
+  normalizeCallSign,
+  normalizeEmergencyReference,
+  normalizeMmsi,
+} from "@/lib/emergency-reference";
 import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -56,6 +61,8 @@ const boatForm = z.object({
   inspectionDueOn: trimmedText(),
   registrationExpiresOn: trimmedText(),
   insuranceExpiresOn: trimmedText(),
+  callSign: trimmedText(),
+  mmsi: trimmedText(),
 });
 type BoatForm = z.infer<typeof boatForm>;
 
@@ -151,7 +158,8 @@ function boatDescription(form: BoatForm): string | null {
  * fleet row posts them. Every one optional, and an empty box is a cleared
  * value; anything that is not a whole number of passengers or a real calendar
  * day refuses the save rather than being dropped, so a typo is never stored as
- * "nothing said" (roadmap N-10).
+ * "nothing said" (roadmap N-10). The radio identity rides with them (fourth
+ * review, item 11): an MMSI that is not nine digits refuses the save the same way.
  */
 function boatPapers(form: BoatForm): BoatPapersInput | "invalid" {
   const day = (
@@ -179,7 +187,17 @@ function boatPapers(form: BoatForm): BoatPapersInput | "invalid" {
   ) {
     return "invalid";
   }
-  return { certifiedPassengers, inspectionDueOn, registrationExpiresOn, insuranceExpiresOn };
+  const callSign = normalizeCallSign(form.callSign ?? "");
+  const mmsi = normalizeMmsi(form.mmsi ?? "");
+  if (callSign === "invalid" || mmsi === "invalid") return "invalid";
+  return {
+    certifiedPassengers,
+    inspectionDueOn,
+    registrationExpiresOn,
+    insuranceExpiresOn,
+    callSign,
+    mmsi,
+  };
 }
 
 /**

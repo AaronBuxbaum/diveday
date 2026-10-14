@@ -3,6 +3,7 @@ import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
 import { listTripReadiness } from "./readiness";
 import {
+  boats,
   bookingPayments,
   bookings,
   certifications,
@@ -655,6 +656,17 @@ export async function seedMoreTrips(
     const completedBookings = insertedBookings.filter(
       (booking) => booking.tripId === completedTrip.id,
     );
+    // **The dawn boat sailed on a hull** (fourth review, item 11): with none,
+    // its emergency card fell back to the shop line and its packet named no
+    // boat. Mantis II, which nothing else takes out before the day's boats.
+    const [dawnHull] = await db
+      .select({ id: boats.id })
+      .from(boats)
+      .where(and(eq(boats.shopId, shopId), eq(boats.name, "Mantis II")))
+      .limit(1);
+    if (dawnHull) {
+      await db.update(trips).set({ boatId: dawnHull.id }).where(eq(trips.id, completedTrip.id));
+    }
     await seedDawnBoatRecord(db, shopId, completedTrip, captainId ?? instructorId);
 
     // A partially completed report run is more useful demo state than an empty

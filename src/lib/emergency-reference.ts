@@ -83,6 +83,73 @@ export function normalizeEmergencyReference(input: {
 }
 
 /**
+ * **The boat a departure sails on, as a coastguard asks for it** (fourth
+ * review, item 11): its name, call sign and MMSI, each off the boat's own row
+ * in Settings > Boats. Call sign and MMSI are null when the shop has not typed
+ * them.
+ */
+export type VesselIdentity = {
+  name: string;
+  callSign: string | null;
+  mmsi: string | null;
+};
+
+/**
+ * The shop's reference as one departure prints it: the shop's own numbers and
+ * plan, and the departure's own boat in place of the shop-wide vessel line.
+ * `boat` is optional so a snapshot an older build saved offline, which never
+ * carried it, still reads as the shop line.
+ */
+export type DepartureEmergencyReference = EmergencyReference & {
+  boat?: VesselIdentity | null;
+};
+
+/**
+ * **The departure's own boat, the shop line only as the fallback.** The shop's
+ * vessel line is one free-text field for the whole fleet, so on a two-boat
+ * shop it names the wrong hull on half the departures, and the MMSI read off
+ * the card is the other boat's. A departure on a boat prints that boat and
+ * drops the shop line; a departure on no boat (a shore day, or one nobody has
+ * put on a hull yet) keeps the shop line, which is all there is.
+ */
+export function emergencyReferenceForDeparture(
+  reference: EmergencyReference,
+  boat: VesselIdentity | null,
+): DepartureEmergencyReference {
+  if (!boat) return { ...reference, boat: null };
+  return { ...reference, vessel: "", boat };
+}
+
+/** The longest call sign a form accepts: ITU call signs run to seven, ship stations to nine. */
+export const MAX_CALL_SIGN_LENGTH = 12;
+
+/**
+ * A call sign as typed, made what is read over the radio: trimmed, inner runs
+ * of space collapsed, upper-cased. Null for an empty box; `"invalid"` for
+ * anything past {@link MAX_CALL_SIGN_LENGTH} or holding more than letters,
+ * digits, a space or a hyphen, so a typo refuses the save rather than printing.
+ */
+export function normalizeCallSign(input: string): string | null | "invalid" {
+  const value = input.trim().replace(/\s+/g, " ").toUpperCase();
+  if (value === "") return null;
+  if (value.length > MAX_CALL_SIGN_LENGTH || !/^[A-Z0-9][A-Z0-9 -]*$/.test(value)) {
+    return "invalid";
+  }
+  return value;
+}
+
+/**
+ * An MMSI as typed: spaces and hyphens a shop copies off a licence are
+ * dropped, and what is left must be exactly nine digits (ITU-R M.585). Null
+ * for an empty box, `"invalid"` otherwise, matching the column's check.
+ */
+export function normalizeMmsi(input: string): string | null | "invalid" {
+  const value = input.replace(/[\s-]/g, "");
+  if (value === "") return null;
+  return /^[0-9]{9}$/.test(value) ? value : "invalid";
+}
+
+/**
  * Whether the shop has recorded anything at all.
  *
  * Two readers, two answers. The manifest keeps the panel either way and states
@@ -91,8 +158,9 @@ export function normalizeEmergencyReference(input: {
  * boat. Settings' hub row is where the same absence becomes an errand, beside
  * the form that ends it.
  */
-export function hasEmergencyReference(reference: EmergencyReference): boolean {
+export function hasEmergencyReference(reference: DepartureEmergencyReference): boolean {
   return (
+    Boolean(reference.boat) ||
     reference.lines.length > 0 ||
     reference.vessel.length > 0 ||
     reference.shoreContact.length > 0 ||

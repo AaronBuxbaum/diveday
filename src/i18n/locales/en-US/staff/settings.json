@@ -507,6 +507,7 @@
       "lineExamples": "Chamber, dive-accident hotline, coast guard…",
       "phoneLabel": "Number {n}",
       "vesselLabel": "Vessel",
+      "vesselHint": "Printed only on departures with no boat. Each boat’s call sign and MMSI go in Boats.",
       "shoreContactLabel": "Shore contact",
       "planLabel": "If something goes wrong",
       "submit": "Save emergency reference",
