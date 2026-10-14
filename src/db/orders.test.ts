@@ -2226,7 +2226,10 @@ describe("pagedOrdersByDay", () => {
     expect(first.groups[0]?.orders).toHaveLength(2);
     expect(first.groups[0]?.continued).toBe(false);
 
-    const second = await pagedOrdersByDay(db, shop.id, SHOP_TZ, AUGUST_ON, { page: 2, pageSize: 2 });
+    const second = await pagedOrdersByDay(db, shop.id, SHOP_TZ, AUGUST_ON, {
+      page: 2,
+      pageSize: 2,
+    });
     expect(second.groups).toHaveLength(1);
     expect(second.groups[0]?.orders).toHaveLength(1);
     // The header comes back rather than leaving page 2 opening on rows under
