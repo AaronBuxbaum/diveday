@@ -578,7 +578,6 @@ export async function listDiverSummaries(
     sort?: DiverSort;
   } = {},
 ) {
-  const filter = options.filter ?? "all";
   const now = options.now ?? nowDate();
   const scope = rosterScope(db, shopId, options);
   const lastDivedAt = lastDivedAtSql(shopId, now);
