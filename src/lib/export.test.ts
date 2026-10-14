@@ -32,6 +32,41 @@ describe("csv serialization", () => {
     expect(csvCell(-500)).toBe("-500");
   });
 
+  /**
+   * The OWASP CSV-injection bypass set, decided one by one. A spreadsheet's
+   * import can trim leading blanks, and an East Asian locale can read a
+   * full-width sign as its ASCII twin, so each of those still opens as a
+   * formula somewhere and is neutralized. The apostrophe costs a name nothing.
+   */
+  it("neutralizes a formula behind leading blanks or line breaks", () => {
+    expect(csvCell(" =1+2")).toBe("' =1+2");
+    expect(csvCell("   @SUM(A1)")).toBe("'   @SUM(A1)");
+    expect(csvCell("\n=1+2")).toBe('"\'\n=1+2"');
+    expect(csvCell("\r\n=1+2")).toBe('"\'\r\n=1+2"');
+    expect(csvCell("\u00a0-cmd|' /C calc'!A0")).toBe("'\u00a0-cmd|' /C calc'!A0");
+    // A phone number behind a stray space is still a phone number.
+    expect(csvCell(" +1 305 555 0100")).toBe(" +1 305 555 0100");
+  });
+
+  it("neutralizes the full-width signs an East Asian locale reads as formulas", () => {
+    expect(csvCell("\uff1d1+2")).toBe("'\uff1d1+2");
+    expect(csvCell("\uff20cmd")).toBe("'\uff20cmd");
+    expect(csvCell("\uff0bcmd|' /C calc'!A0")).toBe("'\uff0bcmd|' /C calc'!A0");
+    expect(csvCell("\uff0dDana")).toBe("'\uff0dDana");
+  });
+
+  /**
+   * A line break **inside** a cell, followed by `=`: decided, not neutralized.
+   * The cell does not start a formula, and RFC-4180 quoting keeps the break
+   * inside the one cell, so every spreadsheet that reads the quotes sees text
+   * that begins "Reef". An apostrophe could not help a reader that ignores
+   * the quotes anyway: it would land on the first line, not the second.
+   */
+  it("keeps a mid-cell line break and its formula-looking second line as quoted text", () => {
+    expect(csvCell("Reef\r\n=1+2")).toBe('"Reef\r\n=1+2"');
+    expect(csvCell("Reef\n@cmd")).toBe('"Reef\n@cmd"');
+  });
+
   it("passes phone-shaped strings through intact for import wizards", () => {
     // An E.164 number must reach a destination system unaltered — a purely
     // numeric cell can display as a number in a spreadsheet but never reach
