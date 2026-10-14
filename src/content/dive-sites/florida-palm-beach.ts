@@ -1948,4 +1948,192 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       creatureSlugs: ["great-barracuda", "greater-amberjack", "goliath-grouper", "lionfish"],
     },
   },
+  // Denominator row: "Spadefish (Spadefish Point)"
+  {
+    slug: "spadefish-point-jupiter",
+    version: 1,
+    area: "florida-palm-beach",
+    sources: [
+      "https://jupiterdivecenter.com/local-reefs/",
+      "https://www.jupiterscubadiving.com/dive-sites",
+      "https://www.divoceandivecharters.com/dive-sites",
+      "https://divers-hub.com/SiteDetails/spadefish-point",
+    ],
+    briefing: {
+      name: "Spadefish Point",
+      locationName: "off Jupiter, Florida",
+      forecastLatitude: 26.8938,
+      forecastLongitude: -80.0153,
+      description:
+        "A high ledge off Jupiter, the northern run of the Area 51 reef, with bowls cut into its top and a stone arch about halfway along. It takes its name from the schools of Atlantic spadefish that gather where the ledge bends west.",
+      marineLife: "Atlantic spadefish · reef sharks · goliath grouper · sea turtles · green morays",
+      marineLifeDescription:
+        "Spadefish at the bend, morays in the cracks, and turtles and nurse sharks resting at the foot of the ledge.",
+      difficultyLevel: "intermediate",
+      depthRange: "18–24 m (60–80 ft)",
+      maxDepthMeters: 26,
+      currentNote:
+        "Always a Gulf Stream drift, usually running north, and the boat follows your bubbles. Shoot your own SMB before you leave the bottom: boats run in and out of Jupiter Inlet all day, and Florida law asks them to keep 300 ft (90 m) from a dive flag.",
+      divePlan:
+        "Negative entry onto the ledge, then pick a depth: the sand at the foot for turtles and grouper, or the top edge and its bowls to stay shallower. Ascend together on the SMB.",
+      fitTone: "welcoming",
+      fitNote:
+        "An easy ledge to follow that can be dived no deeper than about 23 m. The skill is the drift.",
+      landmarks: [
+        {
+          name: "The arch",
+          kind: "reefFormation",
+          note: "A stone arch in one of the bowls about halfway along, standing off a smaller inner ledge. Porkfish usually crowd it.",
+        },
+      ],
+      creatureSlugs: [
+        "atlantic-spadefish",
+        "caribbean-reef-shark",
+        "goliath-grouper",
+        "loggerhead-turtle",
+        "green-moray",
+        "porkfish",
+      ],
+    },
+  },
+  // Denominator row: "Area 51"
+  {
+    slug: "area-51-jupiter",
+    version: 1,
+    area: "florida-palm-beach",
+    sources: [
+      "https://jupiterdivecenter.com/local-reefs/",
+      "https://www.divoceandivecharters.com/dive-sites",
+      "https://www.jupiterscubadiving.com/dive-sites",
+      "https://divers-hub.com/SiteDetails/area-51",
+    ],
+    briefing: {
+      name: "Area 51",
+      locationName: "off Jupiter, Florida",
+      forecastLatitude: 26.8806,
+      forecastLongitude: -80.0149,
+      description:
+        "One of the deeper Jupiter ledges, about 3–5 m tall and broken into big fallen blocks that make a maze along its foot. Reef sharks often come in from the east to look at divers in the first minutes of the dive.",
+      marineLife:
+        "Reef sharks · loggerhead and hawksbill turtles · goliath grouper · spadefish · barracuda",
+      marineLifeDescription:
+        "Sharks early, turtles and big green morays along the ledge, and jacks and barracuda working the current above it.",
+      difficultyLevel: "advanced",
+      depthRange: "21–27 m (70–90 ft)",
+      maxDepthMeters: 28,
+      currentNote:
+        "A Gulf Stream drift, moderate to strong and usually north, at a depth where no-stop time runs short. Carry your own SMB and send it up before the ascent: Jupiter Inlet boat traffic is heavy, and the boat is looking for your marker.",
+      divePlan:
+        "Negative entry at the south end and drift north along the ledge. Watch east early for the sharks, and end the dive on your no-stop limit or gas, whichever comes first.",
+      fitTone: "demanding",
+      fitNote:
+        "A deep, fast drift. Comfortable with a negative entry, an SMB, and watching your computer.",
+      // Advanced Open Water for the drift and the depth near 30 m: the sand is at
+      // 27 m in a strong Gulf Stream current, and it is listed as an Advanced dive.
+      minimumCertificationLevel: "advanced_open_water",
+      creatureSlugs: [
+        "caribbean-reef-shark",
+        "loggerhead-turtle",
+        "hawksbill-turtle",
+        "goliath-grouper",
+        "atlantic-spadefish",
+        "great-barracuda",
+      ],
+    },
+  },
+  // Denominator row: "Scarface"
+  {
+    slug: "scarface-reef-jupiter",
+    version: 1,
+    area: "florida-palm-beach",
+    sources: [
+      "https://jupiterdivecenter.com/local-reefs/",
+      "https://www.jupiterscubadiving.com/dive-sites",
+      "https://www.divoceandivecharters.com/dive-sites",
+      "https://divers-hub.com/SiteDetails/scarface",
+    ],
+    briefing: {
+      name: "Scarface",
+      locationName: "off Jupiter, Florida",
+      forecastLatitude: 26.9144,
+      forecastLongitude: -80.0167,
+      description:
+        "A high, west-facing ledge off Jupiter named after a battle-scarred green moray that lived on it. The top is a run of shallow bowls packed with reef fish, often around sixty species on one dive.",
+      marineLife: "Green morays · loggerhead turtles · nurse sharks · angelfish · spadefish",
+      marineLifeDescription:
+        "Tropicals in the bowls on top; turtles, nurse sharks and big morays under the ledge.",
+      difficultyLevel: "intermediate",
+      depthRange: "20–26 m (65–85 ft)",
+      maxDepthMeters: 26,
+      currentNote:
+        "A Gulf Stream drift, moderate to strong and usually north. Carry your own SMB and shoot it before you leave the bottom; Jupiter Inlet boats run past all day.",
+      divePlan:
+        "Negative entry onto the ledge. Newer drift divers stay on top over the bowls; the rest can drop to the foot and look underneath.",
+      fitTone: "welcoming",
+      fitNote:
+        "Easy to follow and a little shallower than Area 51, so a good drift for newer divers who stay on top.",
+      creatureSlugs: [
+        "green-moray",
+        "loggerhead-turtle",
+        "nurse-shark",
+        "queen-angelfish",
+        "atlantic-spadefish",
+        "yellowhead-jawfish",
+      ],
+    },
+  },
+  // Denominator row: "Tunnels"
+  {
+    slug: "tunnels-jupiter",
+    version: 1,
+    area: "florida-palm-beach",
+    sources: [
+      "https://jupiterdivecenter.com/local-reefs/",
+      "https://www.jupiterscubadiving.com/dive-sites",
+      "https://www.divoceandivecharters.com/dive-sites",
+      "https://divers-hub.com/SiteDetails/tunnels",
+      "https://scubaboard.com/community/threads/jupiter-diving-looking-for-some-numbers.294145/",
+    ],
+    briefing: {
+      name: "Tunnels",
+      locationName: "off Jupiter, Florida",
+      forecastLatitude: 26.9458,
+      forecastLongitude: -80.0312,
+      description:
+        "A ledge just south of Jupiter Inlet with short natural swim-throughs cut through it, and big animals nearly every dive. It ends at the Donut Hole, a hollow in the reef where reef sharks rest.",
+      marineLife: "Reef sharks · goliath grouper · Atlantic spadefish · southern stingrays · cobia",
+      marineLifeDescription:
+        "Reef sharks meet the group at the first tunnel, goliaths hang under the big undercut, and cobia shadow the stingrays in the sand.",
+      difficultyLevel: "intermediate",
+      depthRange: "20–23 m (65–75 ft)",
+      maxDepthMeters: 26,
+      currentNote:
+        "A Gulf Stream drift, moderate to strong and usually north; only a strong current or nitrox gets you to the Donut Hole. Shoot your own SMB before the ascent, because the site sits off Jupiter Inlet and its boat traffic.",
+      divePlan:
+        "Drop a few minutes south of the first swim-through and go slowly: the sharks and goliaths are at the start. About 25 minutes in, look into the big undercut with a light, then carry on north as far as gas and no-stop time allow.",
+      fitTone: "welcoming",
+      fitNote:
+        "Go slow and look east and west as well as at the ledge. Skip the swim-throughs if you are not comfortable under a roof.",
+      landmarks: [
+        {
+          name: "The first tunnel",
+          kind: "reefFormation",
+          note: "A short, wide swim-through near the start of the drift. Goliath grouper usually wait around it.",
+        },
+        {
+          name: "The Donut Hole",
+          kind: "reefFormation",
+          note: "The far north end of the site, reached only on a good current or a nitrox dive. Reef sharks, nurse sharks and goliaths shelter here.",
+        },
+      ],
+      creatureSlugs: [
+        "caribbean-reef-shark",
+        "goliath-grouper",
+        "atlantic-spadefish",
+        "southern-stingray",
+        "cobia",
+        "nurse-shark",
+      ],
+    },
+  },
 ];

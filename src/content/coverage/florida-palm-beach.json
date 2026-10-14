@@ -51,7 +51,7 @@
   "sites": [
     {
       "name": "Area 51",
-      "template": null,
+      "template": "area-51-jupiter",
       "listedBy": [
         "https://jupiterdivecenter.com/local-reefs/",
         "https://www.jupiterscubadiving.com/dive-sites",
@@ -114,7 +114,7 @@
     },
     {
       "name": "Scarface",
-      "template": null,
+      "template": "scarface-reef-jupiter",
       "listedBy": [
         "https://jupiterdivecenter.com/local-reefs/",
         "https://www.jupiterscubadiving.com/dive-sites",
@@ -123,7 +123,7 @@
     },
     {
       "name": "Spadefish (Spadefish Point)",
-      "template": null,
+      "template": "spadefish-point-jupiter",
       "listedBy": [
         "https://jupiterdivecenter.com/local-reefs/",
         "https://www.jupiterscubadiving.com/dive-sites",
@@ -132,7 +132,7 @@
     },
     {
       "name": "Tunnels",
-      "template": null,
+      "template": "tunnels-jupiter",
       "listedBy": [
         "https://jupiterdivecenter.com/local-reefs/",
         "https://www.jupiterscubadiving.com/dive-sites",
@@ -161,7 +161,7 @@
     },
     {
       "name": "Jupiter Wreck Trek (Zion Train, Miss Jenny, Esso Bonaire)",
-      "template": null,
+      "template": "jupiter-goliath-ledges",
       "position": [26.96303, -80.00733],
       "listedBy": [
         "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
