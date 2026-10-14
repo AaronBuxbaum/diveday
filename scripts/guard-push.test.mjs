@@ -168,7 +168,7 @@ describe("a push from a real worktree", () => {
     writeFileSync(path.join(wt, "b.txt"), "b");
     sh(wt, "add", "b.txt");
     sh(wt, "commit", "-q", "-m", "b");
-    return { repo, wt, sha: sh(wt, "rev-parse", "HEAD") };
+    return { root, repo, wt, sha: sh(wt, "rev-parse", "HEAD") };
   }
   const read = (dir) => gitAnswers(dir);
 
@@ -181,6 +181,24 @@ describe("a push from a real worktree", () => {
     writeFileSync(file, JSON.stringify({ sha }));
     expect(pushViolation(command, read, repo)).toBeNull();
     expect(pushViolation(`git -C ${wt} push`, read, repo)).toBeNull();
+  });
+
+  it("reads the stamp of a separate clone, not the shared checkout's", () => {
+    const { repo, root } = setup();
+    const clone = path.join(root, "clone");
+    sh(root, "clone", "-q", repo, clone);
+    sh(clone, "checkout", "-q", "-b", "claude/other");
+    writeFileSync(path.join(clone, "c.txt"), "c");
+    sh(clone, "add", "c.txt");
+    sh(clone, "commit", "-q", "-m", "c");
+    const sha = sh(clone, "rev-parse", "HEAD");
+    const commands = [`cd ${clone} && git push -u origin claude/other`, `git -C ${clone} push`];
+    for (const command of commands)
+      expect(pushViolation(command, read, repo)).toMatch(/verify:push/);
+    const file = verifiedFile(path.join(clone, ".git"), sha);
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify({ sha }));
+    for (const command of commands) expect(pushViolation(command, read, repo)).toBeNull();
   });
 
   it("still reads the old per-worktree stamp, from the worktree the command names", () => {
