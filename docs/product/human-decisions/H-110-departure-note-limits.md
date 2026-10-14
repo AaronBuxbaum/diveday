@@ -12,7 +12,7 @@
 - **Any staff member** may send one, from the trip's Details tab. The person at the counter at 6 AM is the one who knows the marina lot is closed.
 - **At most 200 characters**, folded onto one line, and **three notes per departure**.
 - **No link of any kind**: a scheme, `www.`, an email address or a bare domain is refused at the box and again at the server. The only link in the message is the diver's own `/ready` link, which DiveDay adds.
-- **Never to a canceled or sailed departure.** Those have their own messages.
+- **Never to a canceled or sailed departure.** Those have their own messages. A multi-day course has sailed once its last day has, so the desk can still reach students between days (#2393).
 - **A held send**: eight seconds with Undo, and every check runs again when the hold drains.
 - Every note is kept (`departure_notes`, 400 days) with who sent it, how many it went to and how many were delivered, and it writes an activity line.
 

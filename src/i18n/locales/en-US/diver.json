@@ -4082,12 +4082,12 @@
     "reminderAction": {
       "waiverPending": "Sign your waiver",
       "waiverExpired": "Your waiver link expired. Grab a fresh one; it only takes about two minutes",
-      "certificationMissing": "Send your shop your certification details",
-      "certificationInsufficient": "Check your certification level with the shop",
-      "certificationSelfDeclared": "Bring your certification card so the shop can check it",
-      "nitroxSelfDeclared": "Bring your nitrox card so the shop can check it",
-      "specialtyMissing": "Send your shop your specialty certification details",
-      "nitroxMissing": "Send your shop your nitrox certification details",
+      "certificationMissing": "Send us your certification details",
+      "certificationInsufficient": "Check your certification level with us",
+      "certificationSelfDeclared": "Bring your certification card so we can check it",
+      "nitroxSelfDeclared": "Bring your nitrox card so we can check it",
+      "specialtyMissing": "Send us your specialty certification details",
+      "nitroxMissing": "Send us your nitrox certification details",
       "paymentDue": "Settle your balance",
       "courseFormUnsigned": "Sign your course forms"
     },
@@ -4161,7 +4161,8 @@
       "packingHeading": "Bring",
       "moneyOnline": "Your seat: {amount}, by card online.",
       "moneyDeposit": "Your seat: {deposit} by card online, then {balance} at the dock on {date}.",
-      "moneyAtShop": "Your seat: {amount}, due at the shop."
+      "moneyAtShop": "Your seat: {amount}, due at the shop.",
+      "partyPaid": "{seats, plural, one {Paid by card: {amount}.} other {Paid by card for # seats: {amount}.}}"
     },
     "waitlistInvite": {
       "subject": "A spot opened up on {tripTitle}",
@@ -4356,6 +4357,7 @@
       "stopLine": "Reply STOP to opt out.",
       "courseForms": "{shopName}: please sign your course forms for {tripTitle} — {url}",
       "readyLink": "Your trip prep: {url}",
+      "meetingPointMoved": "{shopName}: we moved where we meet for {tripTitle}, {date}, {time}.",
       "rescheduled": "{shopName}: we moved {tripTitle} to {date}, {time}. It was {previous}."
     },
     "whatsappTemplate": {
@@ -4463,7 +4465,9 @@
     },
     "tripRescheduled": {
       "subject": "New time for {tripTitle}",
+      "placeSubject": "New meeting point for {tripTitle}",
       "body": "We moved {tripTitle}. Here is the new time.",
+      "placeBody": "We moved where we meet for {tripTitle}. The time is the same.",
       "was": "It was {when}.",
       "meetingPointMoved": "We meet somewhere new, too.",
       "cantMakeIt": "Can’t make the new time? Get in touch and we’ll sort it out."

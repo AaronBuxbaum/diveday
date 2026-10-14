@@ -4,6 +4,8 @@ import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import type { GearItemDetail } from "@/db/gear";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { formatCalendarDate } from "@/lib/calendar-date";
+import { benchReturnConcerns } from "@/lib/gear";
 import { deleteGearItemAction, setGearItemStatusAction } from "../actions";
 import { PullForServiceButton } from "./PullForServiceButton";
 
@@ -14,14 +16,23 @@ import { PullForServiceButton } from "./PullForServiceButton";
  * own read so the holder's name never rides in the URL.
  */
 export function StatusCard({
-  item,
+  detail,
   held,
   t,
+  locale,
+  zone,
 }: {
-  item: GearItemDetail["item"];
+  detail: GearItemDetail;
   held: { name: string; until: string } | null;
   t: StaffTranslator;
+  locale: string;
+  /** The shop's zone, for the day a concern came back. */
+  zone: string;
 }) {
+  const { item } = detail;
+  // Concerns returned while the unit is on the bench, which never overwrite
+  // the technician's note (#2540).
+  const concerns = benchReturnConcerns(item, detail.reservations, detail.history, zone);
   return (
     <SectionCard
       padding="lg"
@@ -35,6 +46,18 @@ export function StatusCard({
           thing on the record — a unit's resting state is one act wide. The
           delete sits beneath it at link weight, in danger ink, where it is
           still one tap and no longer the section's loudest control. */}
+      {concerns.length > 0 ? (
+        <ul className="mb-4 space-y-1 text-sm text-warning-strong">
+          {concerns.map((concern) => (
+            <li key={`${concern.returnedOn}:${concern.note}`}>
+              {t("gear.unit.status.returnedConcern", {
+                date: formatCalendarDate(concern.returnedOn, locale),
+                note: concern.note,
+              })}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <div>
         {item.status === "in_service" ? (
           <PullForServiceButton

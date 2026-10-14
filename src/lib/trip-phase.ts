@@ -128,6 +128,12 @@ export function boatStageOf<R extends { stage: TripStage; recordedAt: Date }>({
  * midnight, so every tap from its own day is "from its last day". A longer one
  * is a multi-day run (`trip-days.ts`: the same window on consecutive days), and
  * its last day is the shop day `endsAt` falls on.
+ *
+ * A word from the last day speaks until that day is over or an hour past the
+ * scheduled return, whichever is later; for one sailing "that day" is the day
+ * it left on, so a forgotten Home tap does not hold a midnight boat for a
+ * second day, unless the word itself was said on the later day, which holds
+ * it to the end of that day.
  */
 function readTap({
   startsAt,
@@ -148,8 +154,16 @@ function readTap({
   const oneSailing = endsAt.getTime() - startsAt.getTime() < DAY_MS;
   const fromLastDay = oneSailing || at >= returnDay.from.getTime();
   if (fromLastDay && tap.stage === "home") return "final_home";
+  // One sailing holds its word to the end of the day it left on (or the day
+  // the word was said, when that is later), or the hour past its return when
+  // that is later: a boat back at 02:00 lets go at 03:00, not at the end of
+  // the day 02:00 falls on (#2409), but a "Heading in" said at 02:40 is the
+  // crew's word and outlasts the clock.
+  const lastDayEnd = oneSailing
+    ? shopDayBounds(new Date(Math.max(startsAt.getTime(), at)), timeZone).to
+    : returnDay.to;
   const until = fromLastDay
-    ? Math.max(returnDay.to.getTime(), endsAt.getTime() + DEPARTURE_BUFFER_MS)
+    ? Math.max(lastDayEnd.getTime(), endsAt.getTime() + DEPARTURE_BUFFER_MS)
     : shopDayBounds(tap.recordedAt, timeZone).to.getTime();
   return now.getTime() < until ? "speaks" : null;
 }

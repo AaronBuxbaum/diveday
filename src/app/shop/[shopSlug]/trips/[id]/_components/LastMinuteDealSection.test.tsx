@@ -28,7 +28,9 @@ function profile(
     noCertificationDeclared: false,
     nitrox: false,
     nitroxSelfDeclared: false,
-    verifiedLevel: null,
+    nitroxVerified: false,
+    // A card the shop holds is a verified one; a claim is not.
+    verifiedLevel: selfDeclared ? null : level,
   };
 }
 
@@ -40,6 +42,7 @@ function uncertified(): CertificationSummary {
     noCertificationDeclared: true,
     nitrox: false,
     nitroxSelfDeclared: false,
+    nitroxVerified: false,
     verifiedLevel: null,
   };
 }

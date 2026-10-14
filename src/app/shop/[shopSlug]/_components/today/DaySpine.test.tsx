@@ -77,7 +77,9 @@ function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
     crew: [{ fullName: "Keiko Tanaka" }],
     crewAccountedFor: true,
     crewReason: null,
+    rehearsal: false,
     ...overrides,
+    sellableCapacity: overrides.sellableCapacity ?? overrides.capacity ?? 12,
   };
 }
 
@@ -270,6 +272,28 @@ describe("a station owns its departure's facts", () => {
     renderSpine();
     expect(screen.getByText("10 of 10 ready")).toBeInTheDocument();
     expect(screen.queryByText(/blocked/)).toBeNull();
+  });
+
+  /** H-107, #2388: the seats on sale, which the booking transaction sells up to. */
+  it("counts open spots and the bar against the boat's certificate, not the stated seats", () => {
+    const { container } = renderSpine({
+      departures: [departure({ capacity: 14, sellableCapacity: 11, booked: 10 })],
+    });
+    expect(screen.getByText("1 spot open")).toBeInTheDocument();
+    const [, ready] = [
+      ...(container.querySelector("[data-readiness-bar]")?.children ?? []),
+    ] as HTMLElement[];
+    expect(ready?.style.transform).toBe(`scaleX(${Math.round((10 / 11) * 1e4) / 1e4})`);
+  });
+
+  /** #2395: a practice departure says so where the day is read. */
+  it("marks a rehearsal departure as one beside its title", () => {
+    renderSpine({ departures: [departure({ rehearsal: true })] });
+    const title = screen.getByRole("heading", { level: 3 });
+    expect(within(title).getByText("Rehearsal")).toBeInTheDocument();
+    cleanup();
+    renderSpine();
+    expect(screen.queryByText("Rehearsal")).toBeNull();
   });
 
   it("says Full rather than nought spots open on a boat with no seats left", () => {
@@ -1423,6 +1447,24 @@ describe("the evening reading", () => {
     });
     const heading = screen.getByRole("heading", { name: "Needs you" });
     expect(heading.parentElement).toHaveTextContent("2 things");
+  });
+
+  /**
+   * **The two counts explain each other** (#2413). The sentence under the date
+   * counts what is due before the next boat; the list counts everything. Read
+   * side by side, "1 thing … before the 1:00 PM" over "2 things" looked like a
+   * contradiction, so the list says how many of its rows are the boat's.
+   */
+  it("names how many of its rows are due before the next boat when that is not all of them", () => {
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      actions: [
+        action({ id: "a", departure: boat("t1") }),
+        action({ id: "b", departure: undefined }),
+      ],
+    });
+    const heading = screen.getByRole("heading", { name: "Needs you" });
+    expect(heading.parentElement).toHaveTextContent(/2 things · 1 before the 9:00\sAM/);
   });
 
   it("leads a crew reader with their own boat's rows and folds the desk's into one line", () => {

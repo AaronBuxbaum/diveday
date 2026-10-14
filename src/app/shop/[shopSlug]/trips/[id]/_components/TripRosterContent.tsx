@@ -218,6 +218,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
       <RosterSection
         trip={{
           shopSlug,
+          rehearsal: trip.isRehearsal,
           shopTimezone: timezone,
           locale,
           tripId: trip.id,

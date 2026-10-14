@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
@@ -23,7 +23,16 @@ import { type IssuedCapability, issueBookingCapabilities } from "./booking-capab
 import type { AppDb, DbExecutor } from "./client";
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { recordTripActivity } from "./operations";
-import { bookings, departureNotes, heldSends, lostItems, people, shops, trips } from "./schema";
+import {
+  bookings,
+  departureNotes,
+  heldSends,
+  lostItems,
+  people,
+  shops,
+  tripScheduleDays,
+  trips,
+} from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { liveTrip, notRehearsal } from "./trips";
 import { seatHeld } from "./trips-queries";
@@ -104,6 +113,41 @@ export async function departureNotesHeld(
 }
 
 /**
+ * When the departure's last day starts, or null for a one-day departure's lone
+ * row (its start is the trip's own). A multi-day course takes notes until this
+ * day sails, not its first (#2393).
+ */
+export async function lastDayStartsAt(db: DbExecutor, tripId: string): Promise<Date | null> {
+  const [day] = await db
+    .select({ startsAt: tripScheduleDays.startsAt })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, tripId))
+    .orderBy(desc(tripScheduleDays.startsAt))
+    .limit(1);
+  return day?.startsAt ?? null;
+}
+
+/**
+ * The day a note sent `now` is about: the first of the departure's days not
+ * yet over, so a note sent on day three of a course is dated day three, not
+ * day one. Null when the departure has no day rows; the trip's own start
+ * stands then.
+ */
+export async function dayStillToComeStartsAt(
+  db: DbExecutor,
+  tripId: string,
+  now: Date,
+): Promise<Date | null> {
+  const [day] = await db
+    .select({ startsAt: tripScheduleDays.startsAt })
+    .from(tripScheduleDays)
+    .where(and(eq(tripScheduleDays.tripId, tripId), gt(tripScheduleDays.endsAt, now)))
+    .orderBy(asc(tripScheduleDays.startsAt))
+    .limit(1);
+  return day?.startsAt ?? null;
+}
+
+/**
  * Whether this note may go to this departure now; the one check the hold and
  * the send share. `countHeld` is the hold's: a note still inside its eight
  * seconds counts against the cap, so a fourth tap is refused at the box
@@ -127,7 +171,11 @@ export async function checkDepartureNote(
   const sent =
     (await departureNotesSent(db, input.shopId, input.tripId)) +
     (input.countHeld ? await departureNotesHeld(db, input.shopId, input.tripId) : 0);
-  const block = departureNoteBlock(trip, sent, input.now ?? nowDate());
+  const block = departureNoteBlock(
+    { ...trip, lastDayStartsAt: await lastDayStartsAt(db, trip.id) },
+    sent,
+    input.now ?? nowDate(),
+  );
   if (block) return { ok: false, reason: block };
   return { ok: true, body: foldDepartureNote(input.body), trip };
 }
@@ -168,7 +216,7 @@ async function claimDepartureNote(
     if (!trip) return { ok: false as const, reason: "not_found" as const };
     const now = nowDate();
     const block = departureNoteBlock(
-      trip,
+      { ...trip, lastDayStartsAt: await lastDayStartsAt(tx, trip.id) },
       await departureNotesSent(tx, input.shopId, trip.id),
       now,
     );
@@ -197,7 +245,8 @@ async function claimDepartureNote(
       returning id`);
     const note = (inserted.rows as { id: string }[])[0];
     if (!note) return { ok: false as const, reason: "limit" as const };
-    return { ok: true as const, trip, body, seats, note };
+    const dayStartsAt = (await dayStillToComeStartsAt(tx, trip.id, now)) ?? trip.startsAt;
+    return { ok: true as const, trip, body, seats, note, dayStartsAt };
   });
 }
 
@@ -211,7 +260,7 @@ export async function sendDepartureNote(
   if (!shop) return { ok: false, reason: "not_found" };
   const claimed = await claimDepartureNote(db, input);
   if (!claimed.ok) return claimed;
-  const { trip, body, seats, note } = claimed;
+  const { trip, body, seats, note, dayStartsAt } = claimed;
 
   const origin = publicAppUrl();
   const emailProvider = notificationProviderForDb(providers.emailProvider);
@@ -262,7 +311,7 @@ export async function sendDepartureNote(
             diverName: person.fullName,
             shopName: shop.name,
             tripTitle: trip.title,
-            startsAt: trip.startsAt,
+            startsAt: dayStartsAt,
             timezone: shop.timezone,
             body,
             readinessUrl: readinessUrlFor(booking.id),

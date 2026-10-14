@@ -20,14 +20,17 @@ const CRON_MONITOR_SLUG =
   process.env.SENTRY_DEMO_REFRESH_CRON_MONITOR_SLUG || "diveday-demo-refresh";
 
 /**
- * Must stay in lockstep with the `crons` entry in vercel.json. `checkinMargin`
+ * Must stay in lockstep with the `crons` entry in vercel.json. 09:45 UTC is
+ * 4:45 to 5:45 AM in the demo shop's zone, before its day: the today pass
+ * moves a boat onto `demoTodayDepartureStart(now)`, and run in the shop's
+ * evening (it was 03:45 UTC) that boat sailed at 11:46 PM (issue #2440). `checkinMargin`
  * is generous because the pass only has to act before the board runs out, which
  * `DEMO_SCHEDULE_MIN_RUNWAY_DAYS` leaves three weeks for; `maxRuntime` sits
  * above `maxDuration` so a platform-killed run reads as timed-out rather than
  * still running.
  */
 const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "45 3 * * *" },
+  schedule: { type: "crontab", value: "45 9 * * *" },
   checkinMargin: 240,
   maxRuntime: 10,
   timezone: "Etc/UTC",

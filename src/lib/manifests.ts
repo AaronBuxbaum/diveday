@@ -881,6 +881,12 @@ export type TripManifest = {
      * so beside souls on board. Optional for the same reason as `capacity`.
      */
     isRehearsal?: boolean;
+    /**
+     * A cancelled departure: the dock takes no rider (#2394). Optional for the
+     * same reason as `capacity`; absent reads as not cancelled, which only
+     * shows a form whose submit the server refuses.
+     */
+    cancelled?: boolean;
   };
   checkpoint: RollCallCheckpoint;
   crew: (ManifestCrewMember & {

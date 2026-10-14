@@ -106,6 +106,30 @@ describe("ReadyBookedHeader", () => {
     expect(screen.getByRole("link", { name: "Add to calendar" })).toBeTruthy();
   });
 
+  /**
+   * **The time range never splits** (#2504): at 390 the one line broke inside
+   * it ("7:00" / "AM to 11:30 AM"). The day and the date are one line, the
+   * whole range the next, and the range cannot wrap.
+   */
+  it("puts the date on one line and the unbroken time range on the next", () => {
+    render(
+      withProvider(
+        "en-US",
+        <ReadyBookedHeader
+          facts={FACTS}
+          greetingName="Priya Sharma"
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={diverTranslator("en-US")}
+        />,
+      ),
+    );
+    const date = screen.getByText(/^Tomorrow · Sun, Oct\s11$/);
+    const hours = screen.getByText(/^7:00\sAM\s–\s10:30\sAM\sEDT$/);
+    expect(date).toHaveClass("block");
+    expect(hours).toHaveClass("block", "whitespace-nowrap");
+  });
+
   it("claims the seat and never the boat, in either language", () => {
     // Dive-domain review 2026-10-12: the card paints before readiness is read
     // and takes no readiness input at all, so a diver in medical review or

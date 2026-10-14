@@ -52,4 +52,13 @@ describe("SiteDiveFields", () => {
     ]);
     expect(select.value).toBe("advanced");
   });
+
+  /** A metric shop is not coached to type feet (#2426). */
+  it("suggests a depth range in the shop's own unit", () => {
+    render(<SiteDiveFields t={t} depthUnit="meters" />);
+    expect((field("depthRange") as HTMLInputElement).placeholder).toBe("6–14 m");
+    cleanup();
+    render(<SiteDiveFields t={t} depthUnit="feet" />);
+    expect((field("depthRange") as HTMLInputElement).placeholder).toBe("20–45 ft");
+  });
 });

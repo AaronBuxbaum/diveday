@@ -141,6 +141,22 @@ export function demoTodayDepartureStart(
   return new Date(Math.min(now.getTime() + 60 * 1000, midnight.getTime() - 1000));
 }
 
+/**
+ * The latest local wall time a day boat leaves, in minutes after midnight
+ * (issue #2440). A demo seeded in the shop's evening has no day-boat slot left
+ * today, and `demoTodayDepartureStart` still has to put a boat on today's
+ * board, so it sails late; past this time it is named as the night dive it
+ * would be (`nameDemoNightDeparture`, `seed-trips.ts`) rather than read as a
+ * two-tank reef trip leaving at 11:30 PM.
+ */
+export const DEMO_DAY_LAST_SAILING_MINUTE = 20 * 60;
+
+/** Whether a departure starting at `startsAt` leaves after the day boats do, in shop time. */
+export function sailsAfterDayBoats(startsAt: Date, timeZone: string = DEMO_SHOP_TIMEZONE): boolean {
+  const wall = utcToWallTime(startsAt, timeZone);
+  return wall.hour * 60 + wall.minute > DEMO_DAY_LAST_SAILING_MINUTE;
+}
+
 /** How long today's seeded departure runs, dock to dock (`seed-trips.ts`). */
 export const DEMO_TODAY_DEPARTURE_MS = 3.5 * 60 * 60 * 1000;
 

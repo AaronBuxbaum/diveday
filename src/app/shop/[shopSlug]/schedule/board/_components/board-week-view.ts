@@ -233,7 +233,9 @@ export function boardWeekView({
         // a block of days to warn about.
         dayCount: 1,
         status: entry.status,
-        unpriced: entry.priceCents === null && !weekAllUnpriced,
+        // A rehearsal is unpriced by design and says so instead (#2395).
+        unpriced: entry.priceCents === null && !entry.isRehearsal && !weekAllUnpriced,
+        rehearsal: entry.isRehearsal,
         // The same shape the stream's controls use, so "Move X, Mon Jul 20
         // 7:00 AM – 11:00 AM" names one departure whichever composition a
         // staffer is reading.
@@ -282,6 +284,8 @@ export function boardWeekView({
         dayCount: span.dayCount,
         status: span.status,
         unpriced: span.priceCents === null && !weekAllUnpriced,
+        // A rehearsal is a single departure, never a multi-day span.
+        rehearsal: false,
         rollCallOpen: weekRollCalls.get(span.tripId) ?? null,
         ref: `${span.title}, ${formatCalendarDateRange(span.firstDay, span.lastDay, locale)}`,
         startColumn: first + 1,
