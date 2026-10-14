@@ -63,3 +63,14 @@ export async function loadFirstRunFacts(
   ].filter(Boolean).length;
   return { steps, doneCount };
 }
+
+/**
+ * Whether divers are still signing DiveDay's sample release: the one setup
+ * step that outlives first run on Today (fourth UX review, item 21). An owner
+ * who goes straight to Schedule and adds a boat, the natural first move, ends
+ * first run with the release unread.
+ */
+export async function liveReleaseIsSample(db: AppDb, shopId: string): Promise<boolean> {
+  const release = await getCurrentWaiverTemplate(db, shopId);
+  return isSampleRelease(release?.body);
+}
