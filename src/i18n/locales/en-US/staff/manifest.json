@@ -123,6 +123,8 @@
   "medicalEarlierRefusal": "A physician did not clear this person on {date} (earlier waiver)",
   "medicalEarlierRefusalChip": "Physician said no before",
   "medicalReferralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file",
+  "medicalHoldNotClearedChip": "Not medically cleared",
+  "medicalHoldReviewChip": "Medical review open",
   "medicalReferralUnresolvedChip": "Referral still open",
   "medicalRidingOnlyNotClearedChip": "Riding only: MD said no",
   "medicalRidingOnlyReferralChip": "Riding only: referred",
