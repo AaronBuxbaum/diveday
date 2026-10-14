@@ -320,7 +320,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `splendid-toadfish.jpg` — [Splendid toadfish.jpg](https://commons.wikimedia.org/wiki/File:Splendid_toadfish.jpg) · Public domain · Randall McNeely
 - `split-crown-feather-duster.jpg` — [iNaturalist photo 205998650](https://www.inaturalist.org/photos/205998650) · CC BY 4.0 · Donald Davesne
 - `sponge-brittle-star.jpg` — [iNaturalist photo 182176755](https://www.inaturalist.org/photos/182176755) · CC0 · no rights reserved
-- `spot-winged-comb-jelly.jpg` — [iNaturalist photo 59092286](https://www.inaturalist.org/photos/59092286) · CC BY-SA 4.0 · Matteo Cassella
+- `spot-winged-comb-jelly.jpg` — [iNaturalist photo 250756701](https://www.inaturalist.org/photos/250756701) · CC BY 4.0 · Dan Schofield
 - `spotfin-butterflyfish.jpg` — [Chaetodon ocellatus.jpg](https://commons.wikimedia.org/wiki/File:Chaetodon_ocellatus.jpg) · Public domain
 - `spottail-pinfish.jpg` — [iNaturalist photo 595164679](https://www.inaturalist.org/photos/595164679) · CC BY 4.0 · Tom Field
 - `spotted-cleaner-shrimp.jpg` — [Spotted cleaner shrimp (Periclimenes yucatanicus) - Harry's Hole Reef, Soto, Curaçao Netherland Antilles.jpg](https://commons.wikimedia.org/wiki/File:Spotted_cleaner_shrimp_(Periclimenes_yucatanicus)_-_Harry's_Hole_Reef,_Soto,_Cura%C3%A7ao_Netherland_Antilles.jpg) · CC BY 2.0 · LASZLO ILYES from Cleveland, Ohio, USA
