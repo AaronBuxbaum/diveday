@@ -65,6 +65,10 @@ it replaces the built-in scout with a read-only one on `model: sonnet` at low ef
   not it opens the file, which is why `pnpm check:context-budget` counts them alongside AGENTS.md
   and refuses a silent rise. Specific about the trigger, then short; the body is where the length
   belongs, because the body is loaded on purpose.
+- Keep each local `SKILL.md` under about 6k characters: the steps, and one pointer line per
+  supporting file in the same folder saying when to read it. Reference (incidents, tables, full
+  command walkthroughs) lives in those files. An invoked skill stays in context for the rest of the
+  thread, so its length is paid on every later call (H-114).
 - A skill linked in from `.agents/skills/` is upstream's text, pinned by `skills-lock.json`, and a
   sync overwrites it. The few lines changed locally are listed in `VENDORED_SKILL_OVERRIDES`
   (`scripts/agent-layer.mjs`) with the wording that replaced them; after a sync, `pnpm check:agents`
