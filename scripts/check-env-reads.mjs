@@ -33,6 +33,7 @@ const NOT_REGISTERED = {
   NEXT_RUNTIME: "set by Next",
   VERCEL_ENV: "set by Vercel",
   VERCEL_GIT_COMMIT_SHA: "set by Vercel",
+  GITHUB_ACTIONS: "set by GitHub Actions; the failed-file annotations switch on under it",
   TZ: "the test setup pins the process zone",
   // Overrides of a value compiled into the code (src/lib/configured.ts). The
   // registry holds only values that come from somewhere else; see its header.
