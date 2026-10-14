@@ -57,11 +57,14 @@ export function shouldBlock({ remote, reentry, closing, unpushed }) {
   return !isHandoff(closing);
 }
 
+/**
+ * One command to run. A block costs one more turn at the session's full context, so the reason
+ * names the exact command and the one alternative, and nothing else.
+ */
 export function reasonFor({ unpushed, branch }) {
   return [
-    `${unpushed} commit${unpushed === 1 ? "" : "s"} on \`${branch}\` ${unpushed === 1 ? "is" : "are"} on no remote branch, and this container is ephemeral — an unpushed commit is lost when it is reclaimed.`,
-    "",
-    `Push now (\`pnpm verify:push\`, then \`git push -u origin ${branch}\`; to save unverified work first, \`DIVEDAY_PUSH_UNVERIFIED="saving work before the container is reclaimed" git push -u origin ${branch}\`) and open or update the pull request. If there is a reason not to push yet, say so in your closing message; this check does not repeat on the same turn.`,
+    `${unpushed} commit${unpushed === 1 ? "" : "s"} on \`${branch}\` ${unpushed === 1 ? "is" : "are"} on no remote branch, and this container is ephemeral.`,
+    `Run \`pnpm verify:push && git push -u origin ${branch}\`, or say in one sentence why not; this check does not repeat this turn.`,
   ].join("\n");
 }
 

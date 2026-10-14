@@ -29,7 +29,7 @@ what is currently wired.
 
 | Event | Script | What it does |
 | --- | --- | --- |
-| `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`, read after the fetch), "Merge drivers: not installed" when `scripts/merge-drivers.mjs install` could not write them and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
+| `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once, then fast-forwards the checkout to `origin/main` when it is the main worktree, clean, detached or on `main`, and has nothing main lacks; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`, read after the fetch), "Merge drivers: not installed" when `scripts/merge-drivers.mjs install` could not write them and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position, and the account's open pull requests (`gh api`, cached ten minutes in the git common dir; `DIVEDAY_OPEN_PULLS=0` turns it off), because one PR's CI runs at a time; on the first prompt of a session, the last session's hook refusals, and "write a papercut" with a ready `file-follow-up.mjs --papercut` command when one rule has refused three or more times this week and no papercut has its slug |
 | `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form |
 | `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
@@ -39,8 +39,8 @@ what is currently wired.
 | `PostToolUse` on `Edit`/`Write` | `scripts/format-touched.mjs` | Biome over the one file just touched; hands back what its safe fixes could not clear |
 | `PostToolUseFailure` on `Bash` | `scripts/explain-failure.mjs` | attaches the written answer to a failure the debug skill already explains |
 | `Stop` | `scripts/stray-processes.mjs` | reports background shells still alive after ten minutes and dev/test processes reparented to init |
-| `Stop` | `scripts/unfinished-promises.mjs` | blocks a closing message that promises work while the tree is dirty |
-| `Stop` | `scripts/unpushed-work.mjs` | in a cloud container, blocks a plain ending with commits on no remote branch |
+| `Stop` | `scripts/unfinished-promises.mjs` | blocks a closing message that promises work while the tree is dirty, unless its closing paragraph asks a question; the reason quotes the promise in two lines |
+| `Stop` | `scripts/unpushed-work.mjs` | in a cloud container, blocks a plain ending with commits on no remote branch; the reason is the one command to run |
 | `SubagentStop` | `scripts/stray-processes.mjs` | the same report for a subagent's shells |
 | `SessionEnd` | `scripts/stray-processes.mjs --kill` | reaps this session's own shells and orphans — the one moment nobody is left to warn |
 
@@ -85,6 +85,19 @@ honest for a branch nobody has pushed. At startup and resume the hook also runs
 minutes old, `DIVEDAY_SESSION_FETCH=0` to opt out) before reading anything, so `verify:push`,
 `check:closing-keywords` and the migration guard measure from a current base, and the
 `unpushed-work` hook below sees current remote refs. A failed fetch is said in the block.
+
+**The shared checkout catches up with main.** Every thread loads its hooks and `AGENTS.md` from
+the clone the container started with (`/home/claude/diveday`), and nothing moved it: on 2026-10-14
+one thread's clone was 659 commits behind and wired 9 hooks against main's 14, so it ran without
+the push gate. Right after the fetch, at startup and resume, the hook runs
+`git merge --ff-only origin/main` there, and only when nothing can be lost: the main worktree (never
+a `git worktree add` one), HEAD detached or on `main`, a clean tree with no untracked files, no
+rebase, merge, cherry-pick, revert or bisect in progress, and no commit that is not already on
+`origin/main`. Any other state, or any git question that fails, leaves the checkout where it was
+and prints nothing; `DIVEDAY_SESSION_FASTFORWARD=0` opts out. When it moves, the block says from
+and to which commit. The scripts the hooks run are read from disk on each call, so they are
+current from the next one; the hook *list* in `.claude/settings.json` is what Claude Code read at
+startup.
 
 **The stack position** comes from `scripts/stack-map.mjs`, which derives the layers from the remote
 refs (the stacked-prs skill's "Where am I in the stack"). **The doctor's summary** is two lines of
@@ -243,6 +256,12 @@ word"), and for a promise on a clean tree, which is the ordinary "finished and p
 happens next". The three good endings it names: do it now, file it as a `needs-triage` issue, or
 hand it over in as many words.
 
+A block is not free: it re-prompts the session at its full context, $0.10 to $0.30 on a 300k
+thread (the 2026-10-14 token review). So a question anywhere in the closing paragraph counts as a
+handoff, even with a sign-off after it, and the reason is two lines: the promise quoted back, the
+uncommitted count, and "do it now, record it with TaskCreate, or end on a question". The extra turn
+should be one tool call or one sentence.
+
 ## `unpushed-work.mjs` — a commit on an ephemeral disk is not saved
 
 The container a cloud session runs in is reclaimed after a period of inactivity, and everything
@@ -250,7 +269,8 @@ not pushed goes with it. A commit *looks* safe — the work is "saved" — and i
 it is saved on is about to be recycled. This is the third `Stop` hook beside the two above:
 something finished and then lost. It blocks, once, a plain ending in a cloud container
 (`CLAUDE_CODE_REMOTE=true`) while `git rev-list HEAD --not --remotes` is non-empty, naming the
-count and the push command. It stays quiet on a laptop, on the re-entry after it already blocked,
+count and the one command to run, `pnpm verify:push && git push -u origin <branch>`, so the extra
+full-context turn a block costs is a single tool call. It stays quiet on a laptop, on the re-entry after it already blocked,
 when the closing message is a question or a handoff, and when everything is pushed. A session with
 a reason not to push says so in its closing message and stops on the next turn.
 

@@ -55,8 +55,8 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Molasses Reef Light",
             kind: "navigationMark" as const,
-            note: "The steel tower is the easiest above-water reference on the reef, and the way to stay oriented all dive. Elkhorn grows almost to its legs.",
-            photoUrl: marineLifeImage("elkhorn-coral"),
+            note: "The steel tower is the easiest above-water reference on the reef, and the way to stay oriented all dive.",
+            photoUrl: commonsImage("Molasses Reef Light, Florida.jpg"),
           },
           {
             name: "Historic ship's winch",
@@ -134,14 +134,14 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Flight deck and cranes",
             kind: "wreckFeature" as const,
-            note: "The broad deck and paired cranes make the ship's scale click into place, and a barracuda or two hangs off the crane tops. Stay outside the structure and follow the guide's line.",
-            photoUrl: marineLifeImage("great-barracuda"),
+            note: "The broad deck and paired cranes make the ship's scale click into place. Stay outside the structure and follow the guide's line.",
+            photoUrl: commonsImage("USS Spiegel Grove (LSD-32) flight deck 1984.jpg"),
           },
           {
             name: "Well deck",
             kind: "wreckFeature" as const,
-            note: "The open stern space is the most dramatic exterior room on the wreck, with big schools of jacks working through it.",
-            photoUrl: marineLifeImage("horse-eye-jack"),
+            note: "The open stern dock landing craft once drove into, and the most dramatic exterior room on the wreck.",
+            photoUrl: commonsImage("USS Spiegel Grove (LSD-32) well deck 1984.jpg"),
           },
         ],
         fitTone: "demanding" as const,
@@ -181,8 +181,8 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Christ of the Abyss",
             kind: "underwaterMonument" as const,
-            note: "Cast in 1954 and placed here in 1965 — the reason most people are on the boat. Sergeant majors crowd the statue's raised hands.",
-            photoUrl: marineLifeImage("sergeant-major"),
+            note: "Cast in 1954 and placed here in 1965 — the reason most people are on the boat.",
+            photoUrl: commonsImage("Christ of the Abyss, Key Largo, FL - panoramio.jpg"),
           },
           {
             name: "Dry Rocks sand channels",
@@ -318,14 +318,14 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Forward gun mount",
             kind: "wreckFeature" as const,
-            note: "Still trained out over the bow, and the picture everybody comes up with, usually with a school of spadefish around the barrel.",
-            photoUrl: marineLifeImage("atlantic-spadefish"),
+            note: "Still trained out over the bow, and the picture everybody comes up with.",
+            photoUrl: commonsImage("1973Duane.jpg"),
           },
           {
             name: "Crow's nest",
             kind: "wreckFeature" as const,
-            note: "The shallowest point at about 18 m — where the safety stop happens on a good day, with bar jacks circling the mast.",
-            photoUrl: marineLifeImage("bar-jack"),
+            note: "The shallowest point at about 18 m — where the safety stop happens on a good day.",
+            photoUrl: commonsImage("Crow's nest of the USCGC Duane (2007).jpg"),
           },
         ],
         fitTone: "demanding" as const,
@@ -402,8 +402,8 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Keel and ribs",
             kind: "wreckFeature" as const,
-            note: "The spine of the wreck, the easiest line to follow in the dark. Squirrelfish tuck into every rib.",
-            photoUrl: marineLifeImage("squirrelfish"),
+            note: "The spine of the wreck, the easiest line to follow in the dark.",
+            photoUrl: commonsImage("City Of Washington (38741160925).jpg"),
           },
           {
             name: "Stern plates",

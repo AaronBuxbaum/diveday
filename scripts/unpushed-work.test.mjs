@@ -35,6 +35,10 @@ describe("when the stop is blocked", () => {
     expect(shouldBlock({ ...base, closing: "Let me know which base branch you want." })).toBe(
       false,
     );
+    // A question in the closing paragraph is a handoff even when a sign-off follows it.
+    expect(
+      shouldBlock({ ...base, closing: "Committed. Which base should this stack on? It waits." }),
+    ).toBe(false);
   });
 });
 
@@ -43,6 +47,13 @@ describe("the reason", () => {
     const reason = reasonFor({ unpushed: 2, branch: "claude/feature" });
     expect(reason).toContain("2 commits on `claude/feature` are on no remote branch");
     expect(reason).toContain("git push -u origin claude/feature");
+  });
+
+  it("is one command to run, so the extra turn a block costs is a single tool call", () => {
+    const reason = reasonFor({ unpushed: 2, branch: "claude/feature" });
+    expect(reason).toContain("`pnpm verify:push && git push -u origin claude/feature`");
+    expect(reason.split("\n").length).toBeLessThanOrEqual(3);
+    expect(reason.length).toBeLessThan(500);
   });
 
   it("reads correctly for one commit", () => {
