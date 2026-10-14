@@ -805,6 +805,14 @@
   text throughout, including the phone lines: an international dive line is not a `tel:`-shaped
   string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
   incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
+- **Radio identity** — what a **boat** answers to on the radio: its name, its **call sign** and its
+  nine-digit **MMSI** (`boats.call_sign`, `boats.mmsi`, fourth review item 11). Held per hull, so
+  the emergency card and the printed packet name the departure's own boat
+  (`emergencyReferenceForDeparture`), and the shop's free-text vessel line on the **emergency
+  reference** is printed only for a departure with no boat. A call sign is stored trimmed and upper
+  case, and an MMSI as exactly nine digits, refused at the form and at the column. A departure on a
+  hull the shop has since deleted still prints that hull, because the paper describes the boat that
+  sailed.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. **After a dive it may carry a
   short note** (up to `ROLL_CALL_NOTE_MAX`, 300 characters) when the mark raises a "not back
@@ -1519,9 +1527,10 @@
   and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the roster
   did not say), and the one crew gap the staffing week would draw on it, from the same pass
   (`getStaffingView`'s `gapTrips`). The window is tomorrow and the six days after it in the shop's
-  zone; today's boat is already badged on the spine. Shown to a reader the Today lens files under
-  boat work, or a deckhand, at a shop that plans its crew (`shops.crew_schedule_enabled`); absent
-  for a reader rostered on nothing. Read in `src/db/crew-week.ts`, drawn by
+  zone; today's boat is already badged on the spine, including one that has already sailed. Shown
+  to any reader with a crew assignment, whatever their role, at a shop that plans its crew
+  (`shops.crew_schedule_enabled`), less the sessions "Your sessions" already lists (fourth review
+  item 14); absent for a reader rostered on nothing. Read in `src/db/crew-week.ts`, drawn by
   `_components/today/YourWeek.tsx`.
 - **Crew warning** — a line above the staffing week that informs and never blocks. Four checks: a
   departure whose rostered crew holds no current oxygen-provider credential; separately, one whose

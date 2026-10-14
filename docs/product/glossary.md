@@ -209,6 +209,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Prerequisite note
 - Private session / private course
 - Progression order
+- Radio identity
 - Reconciliation
 - Rehearsal
 - Reminder cadence
@@ -276,6 +277,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Marine-life catalog
 - Material generation
 - Observed species
+- Sailed with no crew on record
 - Sighting
 - Staff credential
 - Supervision claim

@@ -132,3 +132,9 @@
   credential read — which the booking gate, the seat cap and the crew editor's refusals use, because
   H-59 keeps a locally recorded renewal date from ever refusing a sale or an assignment (issue
   #1853). A surface showing a gap the two claims disagree about names who lapsed.
+- **Sailed with no crew on record** — a departure that went back in the month with nobody on its
+  crew counted as sailing (`SafetyMonth.noCrewDepartures`, `src/lib/safety-report.ts`; fourth
+  review item 13). Its own figure on the Safety report, listed by name, because a departure with no
+  crew never reaches the lapsed-credential check, so the emptiest record would otherwise read as
+  the cleanest. "Who was the captain?" is an insurer's first question; zero here means every boat
+  that sailed had somebody on record, never that nobody was asked.
