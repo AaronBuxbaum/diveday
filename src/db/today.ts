@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   highWindAlertDetailText,
@@ -1680,20 +1680,13 @@ async function readTodayWave(
       ),
     }),
     listWorkOrdersNeedingAttention(db, shopId, { todayLocal, timezone: timeZone }),
-    // Which in-window trips this person crews, when the caller asked.
-    personId && inWindow.length > 0
-      ? db
-          .select({ tripId: tripAssignments.tripId })
-          .from(tripAssignments)
-          .where(
-            and(
-              eq(tripAssignments.personId, personId),
-              inArray(
-                tripAssignments.tripId,
-                inWindow.map((trip) => trip.id),
-              ),
-            ),
-          )
+    // Which of the day's trips this person crews, when the caller asked.
+    personId
+      ? readerCrewedTrips(db, shopId, personId, {
+          windowTripIds: inWindow.map((trip) => trip.id),
+          dayStart: shopDayBounds(now, timeZone).from,
+          now,
+        })
       : null,
     // The payment rows' invoice controls (below): the open order behind each
     // owing seat, read only when the shop's own Stripe account can take a
@@ -1983,7 +1976,9 @@ export async function getTodayWork(
   let crewedSessions: CrewedSessionSummary[] = [];
   if (crewedAssignments) {
     const crewed = new Set(crewedAssignments.map((row) => row.tripId));
-    crewedTripIds = inWindow.filter((trip) => crewed.has(trip.id)).map((trip) => trip.id);
+    // Every crewed trip, not only the window's: the dawn boat still out is a
+    // card on the spine the window no longer holds (fourth review, item 14).
+    crewedTripIds = [...crewed];
     crewedSessions = inWindow
       .filter((trip) => trip.course && crewed.has(trip.id))
       .map((trip) => {
@@ -2023,4 +2018,35 @@ export async function getTodayWork(
     crewedSessions,
     availableStaff,
   };
+}
+
+/**
+ * **Which of the day's departures the reader crews** (fourth review, item 14):
+ * the queue's own window, and every departure that has sailed since the shop's
+ * day began. The window looks only forward, so the captain's dawn boat, still
+ * out with them aboard, lost its "You're crewing" mark the moment it sailed
+ * while the 1:30 PM card kept its own. The mark follows the assignment, not
+ * the window.
+ */
+function readerCrewedTrips(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  input: { windowTripIds: readonly string[]; dayStart: Date; now: Date },
+): Promise<{ tripId: string }[]> {
+  const sailedToday = and(gte(trips.startsAt, input.dayStart), lte(trips.startsAt, input.now));
+  return db
+    .select({ tripId: tripAssignments.tripId })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(
+      and(
+        eq(tripAssignments.personId, personId),
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        input.windowTripIds.length > 0
+          ? or(inArray(trips.id, [...input.windowTripIds]), sailedToday)
+          : sailedToday,
+      ),
+    );
 }

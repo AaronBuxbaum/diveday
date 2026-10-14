@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
@@ -11,7 +12,13 @@ import { boats, shops as shopsTable, tripAssignments } from "./schema";
 import { markShopUnitsConfirmed } from "./shops";
 import { getTodayWork } from "./today";
 import { recordTripStage } from "./trip-stages";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import {
+  createTrip,
+  getTripRoster,
+  listStaff,
+  setTripCrew,
+  upcomingTripsWithCounts,
+} from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
@@ -638,6 +645,37 @@ describe("role lens raw material", () => {
     const anonymous = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(anonymous.crewedTripIds).toHaveLength(0);
     expect(anonymous.crewedSessions).toHaveLength(0);
+  });
+
+  /**
+   * **The mark follows the assignment** (fourth review, item 14). The queue's
+   * window looks forward, so a boat that sailed this morning with the captain
+   * aboard lost its "You're crewing" mark the moment it left, while the
+   * afternoon card kept its own.
+   */
+  it("marks a boat the reader crews that already sailed today", async () => {
+    const { db, shop } = ctx;
+    const staff = await listStaff(db, shop.id);
+    const captain = staff.find((entry) => entry.roles.includes("captain"))?.person;
+    if (!captain) throw new Error("seed captain missing");
+    const now = nowDate();
+    const dayStart = shopDayBounds(now, shop.timezone).from.getTime();
+    const startsAt = new Date(Math.max(dayStart + 60_000, now.getTime() - 60 * 60_000));
+    const sailed = await createTrip(db, {
+      shopId: shop.id,
+      title: "Sailed this morning",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 3 * 60 * 60_000),
+      capacity: 8,
+      plannedDives: 1,
+    });
+    if (!sailed) throw new Error("failed to create the sailed boat");
+    await setTripCrew(db, shop.id, sailed.id, [{ personId: captain.id, tripRole: "captain" }]);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, undefined, captain.id);
+    expect(work.crewedTripIds).toContain(sailed.id);
+    // A session list is the window's, and stays so.
+    expect(work.crewedSessions.map((session) => session.tripId)).not.toContain(sailed.id);
   });
 });
 
