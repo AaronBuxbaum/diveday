@@ -144,7 +144,7 @@ export default async function TripManifestPage({
   const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
   // A checkpoint this plan lacks leaves the address bar, never opening the dock (#2508).
   if ("stale" in opened) redirect(shopPath(shopSlug, "trips", tripId, "manifest"));
-  const { checkpoints, checkpoint, isDeparture, manifest } = opened;
+  const { checkpoint, isDeparture, manifest } = opened;
   const todayTrailBySubject = personTrailIndex(completeManifests, locale, shop.timezone, t);
   // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
   // ADR 20260804-crew-roll-call-is-per-person). This used to be written inline
@@ -275,7 +275,7 @@ export default async function TripManifestPage({
       <StageStrip
         action={actions.setTripStage}
         {...stageStripProps(t, {
-          trip: departureManifest.trip,
+          manifests: completeManifests,
           stage,
           now: nowDate(),
           timeZone: shop.timezone,
@@ -284,7 +284,7 @@ export default async function TripManifestPage({
       />
 
       <CheckpointSwitch
-        checkpoints={checkpoints}
+        manifests={completeManifests}
         checkpoint={checkpoint}
         shopSlug={shopSlug}
         tripId={tripId}

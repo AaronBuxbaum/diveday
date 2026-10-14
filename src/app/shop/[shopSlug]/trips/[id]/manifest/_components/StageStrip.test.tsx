@@ -21,7 +21,7 @@ const copy: StageStripCopy = {
   ],
 };
 
-const noop = async () => ({ ok: true }) as const;
+const noop = async () => ({ ok: true, rollCallOpen: false }) as const;
 
 afterEach(cleanup);
 
@@ -132,5 +132,38 @@ describe("the stage on paper", () => {
     expect(screen.getByRole("region", { name: "Where the boat is" })).not.toHaveClass(
       "print:hidden",
     );
+  });
+});
+
+/**
+ * Batch 6, item 4: "Heading in" or "Home" while the last after-dive roll call
+ * is open warns, with the one tap to it. The words stay pressable: a warning,
+ * never a refusal.
+ */
+describe("StageStrip on the way home with a roll call open", () => {
+  const open = {
+    ...copy,
+    rollCallOpen: {
+      line: "Still 2 people not marked after dive 2.",
+      openLabel: "Open roll call",
+      href: "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=after_dive_2",
+    },
+  };
+
+  it("says who is unmarked and links straight to that roll call", () => {
+    render(<StageStrip action={noop} copy={open} current="heading_in" />);
+    expect(screen.getByRole("status").textContent).toBe("Still 2 people not marked after dive 2.");
+    expect(screen.getByRole("link", { name: "Open roll call" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=after_dive_2",
+    );
+    for (const tap of copy.taps) {
+      expect(screen.getByRole("button", { name: tap.label })).toBeEnabled();
+    }
+  });
+
+  it("holds the line until the boat's word says the diving is over", () => {
+    render(<StageStrip action={noop} copy={open} current="surface" />);
+    expect(screen.queryByText(/not marked/)).toBeNull();
   });
 });

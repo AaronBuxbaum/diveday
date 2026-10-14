@@ -749,6 +749,16 @@
   narrative beside it. Kept seven years from the incident; erasing a diver removes their identity
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
+- **Incident kind** / **incident severity** — the two closed answers an **incident report** files
+  with: its kind (injury, near miss, equipment, missing diver, other) and how serious the writer
+  judged it (minor, moderate, serious). Shown on the report and the Safety tab; read by nothing
+  that gates. A severity is the crew's judgment, never a medical classification
+  ([20261014-incident-kind-severity](../../architecture/decisions/20261014-incident-kind-severity.md)).
+- **Stale roll call** — an after-dive roll call still open 30 minutes after its departure's end.
+  Once per departure the owners are emailed and every device following the manifest is pushed
+  (`sendStaleRollCallAlerts`, hourly with the crew notices), and the Today row says when; the
+  shore contact is free text and is not messaged (H-114). It informs and never closes or changes
+  the count.
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking

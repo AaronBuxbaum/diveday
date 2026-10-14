@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { TripStageReading } from "@/lib/trip-stages";
+import { tripManifest } from "./manifest-page-test-fixtures";
 import { stageStripProps } from "./stage-strip-props";
 
 const t = staffTranslator("en-US");
@@ -46,5 +47,42 @@ describe("stageStripProps", () => {
     const props = read(stale, "2026-10-10T11:00:00Z");
     expect(props.current).toBeNull();
     expect(props.copy.recordedLine).toBeUndefined();
+  });
+});
+
+describe("stageStripProps on the way home (batch 6, item 4)", () => {
+  const withLast = (awaiting: number) =>
+    (["departure", "after_dive_1", "after_dive_2"] as const).map((checkpoint) =>
+      tripManifest({
+        trip: { ...tripManifest().trip, ...trip },
+        checkpoint,
+        summary: {
+          ...tripManifest().summary,
+          totalDivers: 4,
+          awaiting: checkpoint === "after_dive_2" ? awaiting : 0,
+        },
+      }),
+    );
+  const homeward = (awaiting: number) =>
+    stageStripProps(t, {
+      manifests: withLast(awaiting),
+      stage: tap("heading_in", "2026-10-10T15:30:00Z"),
+      now: new Date("2026-10-10T15:31:00Z"),
+      timeZone: "America/New_York",
+      locale: "en-US",
+    });
+
+  it("words the open last roll call and points at it on this page", () => {
+    expect(homeward(2).copy.rollCallOpen).toEqual({
+      line: "Still 2 people not marked after dive 2.",
+      openLabel: "Open roll call",
+      href: "?checkpoint=after_dive_2",
+    });
+    // The trip is the dock manifest's: the word still selects.
+    expect(homeward(2).current).toBe("heading_in");
+  });
+
+  it("carries nothing when the last roll call has everyone", () => {
+    expect(homeward(0).copy.rollCallOpen).toBeUndefined();
   });
 });

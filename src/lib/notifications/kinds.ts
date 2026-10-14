@@ -1398,6 +1398,38 @@ const deskAfterHoursSchema = z.object({
   pingedAt: z.date(),
 });
 
+/**
+ * **A roll call still open after the boat should be home** (batch 6, item 6;
+ * `sendStaleRollCallAlerts`, src/db/roll-call-alerts.ts). Staff safety mail
+ * to the shop's owners, once per departure.
+ *
+ * **Counts and a link, never names.** Who is unaccounted for stays behind the
+ * manifest's sign-in: the mail lands in a personal inbox that may sit on a
+ * shared phone. `missing` says a crew member recorded somebody not back
+ * aboard, which changes the words, not the payload's reach.
+ *
+ * Not queued (`notificationIsQueueable`): an alert that arrives hours late,
+ * after the count closed, says something false.
+ */
+const rollCallStaleSchema = z.object({
+  kind: z.literal("roll_call_stale"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  tripId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  /** The after-dive checkpoint that is open: 1–4. */
+  diveNumber: z.number().int().min(1).max(4),
+  /** People not accounted for there, or recorded not back aboard when `missing`. */
+  unaccounted: z.number().int().min(1).max(10_000),
+  missing: z.boolean(),
+  rollCallUrl: z.url().max(2_000),
+  alertedAt: z.date(),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -1468,6 +1500,7 @@ export const notificationSchema = z
     gearServiceDueSchema,
     crewScheduleChangeSchema,
     deskAfterHoursSchema,
+    rollCallStaleSchema,
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
@@ -1582,6 +1615,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "gear_service_due":
     case "crew_schedule_change":
     case "desk_after_hours":
+    case "roll_call_stale":
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
@@ -1751,5 +1785,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per claim of the person's batching clock.
     case "desk_after_hours":
       return `desk-after-hours/${notification.personId}/${notification.pingedAt.toISOString()}`;
+    // One alert per departure per owner; the departure's claim comes first.
+    case "roll_call_stale":
+      return `roll-call-stale/${notification.tripId}/${notification.personId}`;
   }
 }

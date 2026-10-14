@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { sendDueCrewNotices } from "@/db/crew-notices";
+import { sendStaleRollCallAlerts } from "@/db/roll-call-alerts";
 import { CREW_NOTICE_CRON_CRONTAB } from "@/lib/crew-notices";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
@@ -26,6 +27,11 @@ const CRON_MONITOR_CONFIG = {
  * gated to fewer hours: news settles within minutes at any hour, and the one
  * read that finds none is the whole cost of an idle pass. It sends fresh mail only; the kind is never
  * queued for a retry.
+ *
+ * The same pass raises the **stale roll-call alert** (`sendStaleRollCallAlerts`):
+ * an after-dive count still open 30 minutes after a trip's end reaches the
+ * shop's owners once per trip. It runs in its own try so a failure there never
+ * costs the crew their notices, and theirs never costs the alert.
  */
 export async function GET(request: Request) {
   // The shared constant-time check every cron route uses (src/lib/cron-auth.ts).
@@ -37,10 +43,16 @@ export async function GET(request: Request) {
     CRON_MONITOR_CONFIG,
   );
   try {
-    const summary = await sendDueCrewNotices(await getDb());
+    const db = await getDb();
+    const rollCall = await staleRollCallPass(db);
+    const summary = await sendDueCrewNotices(db);
     log("cron_crew_notices.scan_complete", "info", summary);
-    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
-    return NextResponse.json(summary);
+    await sentry.captureCheckIn({
+      checkInId,
+      monitorSlug: CRON_MONITOR_SLUG,
+      status: rollCall ? "ok" : "error",
+    });
+    return NextResponse.json({ ...summary, rollCall });
   } catch (error) {
     await sentry.captureException(error, { tags: { cron_scan: "crew_notices" } });
     log("cron_crew_notices.scan_failed", "error", { scan: "crew_notices" });
@@ -48,5 +60,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });
   } finally {
     await flushLogs();
+  }
+}
+
+/** The stale roll-call pass, held apart: a throw is reported and answered as `null`. */
+async function staleRollCallPass(db: Awaited<ReturnType<typeof getDb>>) {
+  try {
+    const summary = await sendStaleRollCallAlerts(db);
+    log("cron_roll_call_alerts.scan_complete", "info", summary);
+    return summary;
+  } catch (error) {
+    await sentry.captureException(error, { tags: { cron_scan: "roll_call_alerts" } });
+    log("cron_roll_call_alerts.scan_failed", "error", { scan: "roll_call_alerts" });
+    return null;
   }
 }

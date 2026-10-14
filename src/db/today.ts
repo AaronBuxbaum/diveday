@@ -365,6 +365,12 @@ export type OpenRollCall = {
   underway: boolean;
   /** Older than the dock-work window — kept as residue rather than vanishing. */
   stale: boolean;
+  /**
+   * When the owners were alerted that this departure's count was still open
+   * after the boat was due back (batch 6, item 6; src/db/roll-call-alerts.ts),
+   * or null. Optional so a gap assembled by hand says nothing about it.
+   */
+  alertedAt?: Date | null;
 };
 
 /**
@@ -478,6 +484,7 @@ export async function listRollCallGaps(
       capacity: trips.capacity,
       priceCents: trips.priceCents,
       plannedDives: trips.plannedDives,
+      alertedAt: trips.rollCallAlertedAt,
     })
     .from(trips)
     .where(
@@ -672,6 +679,7 @@ export async function listRollCallGaps(
       rosterSize: bookingIds.length,
       underway,
       stale,
+      alertedAt: trip.alertedAt,
     };
 
     // A human said a diver did not come back. That outranks every other gap on

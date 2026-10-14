@@ -1,8 +1,12 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { homewardCheckpointGap } from "@/lib/checkpoint-gaps";
 import { formatTime } from "@/lib/format";
+import { rollCallCheckpointOrdinal, type TripManifest } from "@/lib/manifests";
 import { boatStageOf } from "@/lib/trip-phase";
 import { STAGE_WORD_KEYS, TRIP_STAGES, type TripStageReading } from "@/lib/trip-stages";
 import type { StageStripCopy } from "./StageStrip";
+
+type GapManifest = Pick<TripManifest, "trip" | "checkpoint" | "summary" | "completeness">;
 
 /**
  * `StageStrip`'s selected word and copy, read once on the server.
@@ -17,17 +21,29 @@ import type { StageStripCopy } from "./StageStrip";
  */
 export function stageStripProps(
   t: StaffTranslator,
-  input: {
-    trip: { startsAt: Date; endsAt: Date };
+  input: (
+    | { trip: { startsAt: Date; endsAt: Date } }
+    | {
+        /**
+         * The departure's manifests, dock first: the trip is the dock's, and
+         * the last after-dive checkpoint is asked whether it has everyone
+         * (`homewardCheckpointGap`, batch 6 item 4).
+         */
+        manifests: readonly GapManifest[];
+      }
+  ) & {
     stage: TripStageReading | null;
     now: Date;
     timeZone: string;
     locale: string;
   },
 ): { current: TripStageReading["stage"] | null; copy: StageStripCopy } {
+  const trip = "trip" in input ? input.trip : input.manifests[0]?.trip;
+  if (!trip) throw new Error("stageStripProps: a departure has at least its dock manifest");
+  const homewardGap = "manifests" in input ? homewardCheckpointGap(input.manifests) : null;
   const shown = boatStageOf({
-    startsAt: input.trip.startsAt,
-    endsAt: input.trip.endsAt,
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
     now: input.now,
     timeZone: input.timeZone,
     stage: input.stage,
@@ -44,6 +60,17 @@ export function stageStripProps(
             name: shown.recordedByName ?? "",
             time: formatTime(shown.recordedAt, input.locale, input.timeZone),
           })
+        : undefined,
+      // A same-page address: the roll call is this manifest at that checkpoint.
+      rollCallOpen: homewardGap
+        ? {
+            line: t("manifest.stage.rollCallOpen", {
+              count: homewardGap.unaccounted,
+              dive: rollCallCheckpointOrdinal(homewardGap.checkpoint),
+            }),
+            openLabel: t("manifest.stage.openRollCall"),
+            href: `?checkpoint=${homewardGap.checkpoint}`,
+          }
         : undefined,
     },
   };

@@ -39,6 +39,8 @@ const complete: IncidentDraftFields = {
   diveSiteId: null,
   locationText: "North wall mooring",
   whatHappened: "Diver surfaced coughing after a fast ascent from 18 m.",
+  kind: "injury",
+  severity: "moderate",
   firstAidGiven: true,
   oxygenGiven: true,
   oxygenMinutes: 25,
@@ -114,7 +116,7 @@ describe("a draft, then a filed report", () => {
     return { ...f, reportId: started.reportId, tripId: f.trip.id };
   }
 
-  it("refuses to file until when, what, and the three yes/no questions are answered", async () => {
+  it("refuses to file until when, what, its kind and severity, and the three yes/no questions are answered", async () => {
     const { db, shop } = ctx;
     const { reportId, tripId, crew } = await draftBy("crew");
     expect(
@@ -126,6 +128,8 @@ describe("a draft, then a filed report", () => {
         "occurred_at",
         "location",
         "what_happened",
+        "kind",
+        "severity",
         "first_aid",
         "oxygen",
         "emergency_services",

@@ -398,3 +398,93 @@ export async function pushManifestChanged(
     // Best-effort by design — see the docblock.
   }
 }
+
+/**
+ * **One push about one departure to every device following its manifest,
+ * now** — the stale-roll-call alert (batch 6, item 6;
+ * src/db/roll-call-alerts.ts). Unlike {@link pushManifestChanged} it neither
+ * coalesces nor asks the departure window: it is sent once per departure, by
+ * a pass that has already claimed it. Same ceilings, same allowlist (inside
+ * `sendWebPush`), same pruning of endpoints the push service says are gone,
+ * and the same "never throws": a push service being down must not stop the
+ * owner's email beside it. Words are resolved per device in its owner's
+ * locale, never in the service worker. Returns how many sends went.
+ */
+export async function pushTripAlert(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  message: {
+    url: string;
+    words: (t: ReturnType<typeof staffTranslator>) => { title: string; body: string };
+  },
+): Promise<number> {
+  try {
+    const config = webPushConfig();
+    if (!config) return 0;
+    const targets = await db
+      .select({
+        id: pushSubscriptions.id,
+        personId: pushSubscriptions.personId,
+        endpoint: pushSubscriptions.endpoint,
+        p256dh: pushSubscriptions.p256dh,
+        auth: pushSubscriptions.auth,
+      })
+      .from(pushSubscriptions)
+      .where(and(eq(pushSubscriptions.shopId, shopId), eq(pushSubscriptions.tripId, tripId)))
+      .limit(MAX_PUSH_TARGETS_PER_EVENT);
+    if (targets.length === 0) return 0;
+    const [shop] = await db
+      .select({ defaultLocale: shops.defaultLocale })
+      .from(shops)
+      .where(eq(shops.id, shopId))
+      .limit(1);
+    if (!shop) return 0;
+    const localeRows = await db
+      .select({ id: people.id, locale: people.locale })
+      .from(people)
+      // diveday:allow-deleted-people: locales for recipients the subscriptions already name.
+      .where(
+        and(
+          eq(people.shopId, shopId),
+          inArray(
+            people.id,
+            targets.map((target) => target.personId),
+          ),
+        ),
+      );
+    const localeByPerson = new Map(localeRows.map((row) => [row.id, row.locale]));
+    let sent = 0;
+    const gone: string[] = [];
+    for (let index = 0; index < targets.length; index += PUSH_SEND_CONCURRENCY) {
+      const chunk = targets.slice(index, index + PUSH_SEND_CONCURRENCY);
+      const results = await Promise.all(
+        chunk.map(async (target) => {
+          const t = staffTranslator(
+            recipientLocale(localeByPerson.get(target.personId), shop.defaultLocale),
+          );
+          // The manifest's own payload shape, so the service worker shows it
+          // with no change: it already refreshes the saved copy and shows the
+          // title and body when no page of the app is visible.
+          return {
+            id: target.id,
+            result: await sendWebPush(
+              target,
+              { kind: "manifest-changed", tripId, url: message.url, ...message.words(t) },
+              config,
+            ),
+          };
+        }),
+      );
+      for (const entry of results) {
+        if (entry.result.status === "sent") sent += 1;
+        if (entry.result.status === "gone") gone.push(entry.id);
+      }
+    }
+    await deletePushSubscriptionsById(db, shopId, gone);
+    return sent;
+  } catch {
+    // Best-effort by design — see the docblock.
+    return 0;
+  }
+}

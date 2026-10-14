@@ -93,7 +93,7 @@ export const CLOSEOUT_STATUS_TONES: Record<
  * split decides which departures read as `unreconciled` — the loudest state a
  * station can settle into — and which read as `count_open`.
  */
-const AFTER_DIVE_GAP_REASONS: ReadonlySet<RollCallGapReason> = new Set([
+export const AFTER_DIVE_GAP_REASONS: ReadonlySet<RollCallGapReason> = new Set([
   "missing_diver",
   "missing_crew",
   "after_dive_uncounted",

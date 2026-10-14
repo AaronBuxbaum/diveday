@@ -28,6 +28,8 @@
     "locationHint": "El muelle, la cubierta, un lugar del arrecife.",
     "whatHappened": "Qué pasó",
     "whatHappenedHint": "En orden, como lo viste: horas, profundidades y quién hizo qué.",
+    "kind": "Tipo de incidente",
+    "severity": "Gravedad",
     "care": "Atención prestada",
     "firstAid": "¿Se prestaron primeros auxilios?",
     "oxygen": "¿Se administró oxígeno?",
@@ -55,6 +57,18 @@
     "chamber": "Una cámara hiperbárica",
     "diver": "La propia persona",
     "other": "Otra persona"
+  },
+  "kind": {
+    "injury": "Lesión",
+    "near_miss": "Casi accidente",
+    "equipment": "Fallo del equipo",
+    "missing_diver": "Buceador desaparecido",
+    "other": "Otra cosa"
+  },
+  "severity": {
+    "minor": "Leve",
+    "moderate": "Moderada",
+    "serious": "Grave"
   },
   "people": {
     "title": "Personas implicadas",
@@ -93,6 +107,8 @@
       "occurred_at": "Cuándo pasó",
       "location": "Dónde pasó",
       "what_happened": "Qué pasó",
+      "kind": "Qué tipo de incidente fue",
+      "severity": "Qué gravedad tuvo",
       "first_aid": "Si se prestaron primeros auxilios",
       "oxygen": "Si se administró oxígeno",
       "emergency_services": "Si se llamó a los servicios de emergencia",

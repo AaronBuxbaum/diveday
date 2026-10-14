@@ -28,6 +28,8 @@
     "locationHint": "The dock, the boat deck, a spot on the reef.",
     "whatHappened": "What happened",
     "whatHappenedHint": "In order, as you saw it: times, depths, and who did what.",
+    "kind": "What kind of incident",
+    "severity": "How serious",
     "care": "Care given",
     "firstAid": "Was first aid given?",
     "oxygen": "Was oxygen given?",
@@ -55,6 +57,18 @@
     "chamber": "A hyperbaric chamber",
     "diver": "Themselves, released on scene",
     "other": "Someone else"
+  },
+  "kind": {
+    "injury": "Injury",
+    "near_miss": "Near miss",
+    "equipment": "Equipment failure",
+    "missing_diver": "Missing diver",
+    "other": "Something else"
+  },
+  "severity": {
+    "minor": "Minor",
+    "moderate": "Moderate",
+    "serious": "Serious"
   },
   "people": {
     "title": "People involved",
@@ -93,6 +107,8 @@
       "occurred_at": "When it happened",
       "location": "Where it happened",
       "what_happened": "What happened",
+      "kind": "What kind of incident it was",
+      "severity": "How serious it was",
       "first_aid": "Whether first aid was given",
       "oxygen": "Whether oxygen was given",
       "emergency_services": "Whether emergency services were called",
