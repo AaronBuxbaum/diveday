@@ -33,8 +33,9 @@ function ListCard({
 }
 
 /**
- * The month's lists: the reports, the counts left open, the lapsed sailings,
- * and, when there are any, the crew who sailed with nothing on file.
+ * The month's lists: the reports, the counts left open, and, when there are
+ * any, the departures that sailed with no crew on record; then the lapsed
+ * sailings and the crew who sailed with nothing on file.
  */
 export function SafetyLists({
   month,
@@ -106,6 +107,31 @@ export function SafetyLists({
           </li>
         ))}
       </ListCard>
+
+      {/* Only when there are any, like the unrecorded crew below: a list
+          whose empty state restates the figure's zero earns nothing. Each
+          row opens the departure's crew (fourth review, item 13). */}
+      {month.noCrewDepartures.length > 0 ? (
+        <ListCard
+          title={t("incidents.safety.noCrewTitle")}
+          empty=""
+          count={month.noCrewDepartures.length}
+        >
+          {month.noCrewDepartures.map((departure) => (
+            <li key={departure.tripId}>
+              <Link
+                href={`${tripHref(departure.tripId)}?view=details#crew`}
+                className={`${ROW} hover:underline`}
+              >
+                <span className="font-medium">{departure.title}</span>
+                <span className="text-sm text-muted">
+                  {formatShortDate(departure.startsAt, locale, timeZone)}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ListCard>
+      ) : null}
 
       <ListCard
         title={t("incidents.safety.lapsedTitle")}

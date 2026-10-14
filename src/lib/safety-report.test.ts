@@ -280,3 +280,40 @@ describe("lapsedCredentialKinds", () => {
     ).toEqual([]);
   });
 });
+
+describe("summarizeSafetyMonth: departures with no crew on record (fourth review, item 13)", () => {
+  it("lists a departure that sailed with nobody on the crew, instead of reading 0 of 0", () => {
+    const summary = summarizeSafetyMonth(
+      month({ departures: [{ ...departure, crewIds: [] }], diverEvents: everyoneBack }),
+    );
+    expect(summary.crewSailings).toBe(0);
+    expect(summary.noCrewDepartures).toEqual([
+      { tripId: "t1", title: "Morning two-tank", startsAt: departure.startsAt },
+    ]);
+  });
+
+  it("counts a crew recorded ashore at the dock as no crew aboard", () => {
+    const summary = summarizeSafetyMonth(
+      month({
+        diverEvents: everyoneBack,
+        crewEvents: [
+          { tripId: "t1", subjectId: "c1", checkpoint: "departure", status: "not_boarded" },
+        ],
+      }),
+    );
+    expect(summary.noCrewDepartures.map((row) => row.tripId)).toEqual(["t1"]);
+  });
+
+  it("says nothing of a departure whose crew sailed, on file or not", () => {
+    const summary = summarizeSafetyMonth(month({ diverEvents: everyoneBack }));
+    expect(summary.crewSailings).toBe(1);
+    expect(summary.noCrewDepartures).toEqual([]);
+  });
+
+  it("passes over an empty occurrence nobody booked or counted", () => {
+    const summary = summarizeSafetyMonth(
+      month({ departures: [{ ...departure, bookingIds: [], crewIds: [] }] }),
+    );
+    expect(summary.noCrewDepartures).toEqual([]);
+  });
+});

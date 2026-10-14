@@ -138,6 +138,20 @@ export default async function SafetyReportPage({
       detailTone:
         safety.lapsedSailings.length > 0 || safety.unrecordedSailings > 0 ? "attention" : "quiet",
     },
+    // **A boat nobody is recorded driving is a figure, not a silence**
+    // (fourth review, item 13): such a departure never reaches the crew check,
+    // so the tile beside it read "0 of 0" for the emptiest record.
+    {
+      key: "noCrew",
+      label: t("incidents.safety.noCrew"),
+      value: String(safety.noCrewDepartures.length),
+      ...(safety.noCrewDepartures.length > 0
+        ? {
+            detail: t("incidents.safety.noCrewDetail", { back: safety.departuresBack }),
+            detailTone: "attention" as const,
+          }
+        : {}),
+    },
     {
       key: "incidents",
       label: t("incidents.safety.incidents"),

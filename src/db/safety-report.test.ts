@@ -1,7 +1,8 @@
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { getSafetyMonth } from "./safety-report";
-import { activityEvents } from "./schema";
+import { activityEvents, tripAssignments, trips } from "./schema";
 import { listStaff } from "./trips";
 
 // The demo shop with its sailed history, one rolled-back transaction per test.
@@ -58,6 +59,28 @@ describe("getSafetyMonth", () => {
       shop.timezone,
     );
     expect(july.certOverrides).toBe(0);
+  });
+
+  it("names a departure that came home with nobody on its crew (fourth review, item 13)", async () => {
+    const { db, shop } = ctx;
+    const before = await getSafetyMonth(db, shop.id, FAR_PAST, FAR_FUTURE, shop.timezone);
+    // The demo's sailed boats all carry crew now, so its record reads clean.
+    expect(before.noCrewDepartures).toEqual([]);
+    const [crewed] = await db
+      .select({ tripId: tripAssignments.tripId })
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          eq(trips.description, "Sailed. Kept in the log for the shop's monthly numbers."),
+        ),
+      )
+      .limit(1);
+    if (!crewed) throw new Error("expected a crewed history boat");
+    await db.delete(tripAssignments).where(eq(tripAssignments.tripId, crewed.tripId));
+    const after = await getSafetyMonth(db, shop.id, FAR_PAST, FAR_FUTURE, shop.timezone);
+    expect(after.noCrewDepartures.map((row) => row.tripId)).toEqual([crewed.tripId]);
   });
 
   it("reads nothing of another shop's", async () => {

@@ -93,6 +93,15 @@ export type SafetyMonth = {
    * The lapsed count's denominator, so a skipped sailing never reads as clean.
    */
   checkedSailings: number;
+  /**
+   * **Departures that sailed with no crew on record** (fourth review, item
+   * 13): nobody on the crew list, or every one of them recorded ashore at the
+   * dock. Such a departure adds nothing to `crewSailings`, so the lapsed count
+   * above read "0 of 0" for a month of boats nobody was recorded driving: the
+   * emptiest record reading cleanest. Listed, in the order they sailed, so the
+   * owner can open each one.
+   */
+  noCrewDepartures: { tripId: string; title: string; startsAt: Date }[];
 };
 
 /** The newest standing result per subject and checkpoint; a `cleared` undo leaves none. */
@@ -197,6 +206,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
   const openRollCalls: SafetyMonth["openRollCalls"] = [];
   const lapsedSailings: SafetyMonth["lapsedSailings"] = [];
   const unrecorded = new Map<string, SafetyMonth["unrecordedCrew"][number]>();
+  const noCrewDepartures: SafetyMonth["noCrewDepartures"] = [];
   let unrecordedSailings = 0;
 
   // An occurrence nobody booked and nobody counted is a date on the board,
@@ -228,6 +238,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
     }
 
     const divesOn = lastDayOfDeparture(departure.endsAt, input.timeZone);
+    const crewSailingsBefore = crewSailings;
     for (const personId of departure.crewIds) {
       // A crew member recorded ashore at the dock did not sail.
       if (crewResult(departure.tripId, personId, dock) === "not_boarded") continue;
@@ -256,6 +267,13 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
         });
       }
     }
+    if (crewSailings === crewSailingsBefore) {
+      noCrewDepartures.push({
+        tripId: departure.tripId,
+        title: departure.title,
+        startsAt: departure.startsAt,
+      });
+    }
   }
 
   return {
@@ -270,5 +288,6 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
     unrecordedSailings,
     unrecordedCrew: [...unrecorded.values()],
     checkedSailings: crewSailings - unrecordedSailings,
+    noCrewDepartures,
   };
 }
