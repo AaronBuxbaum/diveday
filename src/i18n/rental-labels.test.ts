@@ -66,6 +66,18 @@ describe("rentalFitLineText", () => {
     ).toBe(`BCD${NBSP}M, Regulator, Wetsuit${NBSP}5mm${NBSP}M`);
   });
 
+  it("says a sized piece has no size, rather than printing it bare (fourth review, item 17)", () => {
+    expect(
+      rentalFitLineText(t, "en-US", {
+        state: "rents",
+        items: [
+          { kind: "mask_fins", size: "M" },
+          { kind: "weights", size: null },
+        ],
+      }),
+    ).toMatch(/^Mask\s&\sfins\sM, Weights\s\(size\smissing\)$/);
+  });
+
   it("wraps only between pieces, never inside one", () => {
     // "Weights 6 / kg" broke on the manifest's person panel at 390, where the
     // subtitle column is about 165px wide (K-66). Each piece is one unit; the

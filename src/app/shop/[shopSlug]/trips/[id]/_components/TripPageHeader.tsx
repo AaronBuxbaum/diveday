@@ -136,7 +136,10 @@ export function TripPageHeader({
   className?: string;
 }) {
   return (
-    <header className={className ?? "mb-8"}>
+    // `data-trip-page-header`: the printed packet drops the manifest's copy on
+    // the sheet it shares with the dive plan, whose header already said it
+    // (`globals.css`, fourth review item 17).
+    <header data-trip-page-header="" className={className ?? "mb-8"}>
       {/* **The way back up.** These are the deepest pages in the staff app and
           were once the only ones at depth 2-3 with no link to their parent at
           all: the first link in the header was a tab strip, which moved you

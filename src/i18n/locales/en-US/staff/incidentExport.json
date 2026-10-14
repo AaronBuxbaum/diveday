@@ -42,6 +42,7 @@
   "executedDiveDescription": "What the crew recorded after each dive, including an explicit absence where a field was not captured.",
   "executedDiveEmpty": "No post-dive record has been saved.",
   "executedDiveFieldNotRecorded": "Not recorded",
+  "executedDiveFirstDive": "First dive",
   "executedDiveHeading": "Executed dive records",
   "executedDiveNumber": "Dive",
   "executedDiveRecordedBy": "Recorded by",

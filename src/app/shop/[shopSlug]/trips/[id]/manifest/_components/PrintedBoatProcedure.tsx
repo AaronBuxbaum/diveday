@@ -1,4 +1,8 @@
+import type { DepartureKitRecord } from "@/db/boat-safety";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
+import { formatDateWithYear } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 
 /**
  * **What the laminated boat card carried, on the printed manifest** (issue
@@ -13,10 +17,12 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  * what the trip packet and the day's paper compose, so either printout carries
  * them.
  *
- * The blanks stay blanks: DiveDay holds none of these facts, and a value it
- * invented is worse than a rule to write on, because the crew who trusts it
- * spends the minute finding out (issue #688). Paper only; the screen has the
- * live manifest.
+ * DiveDay invents none of these facts: a value it made up is worse than a
+ * rule to write on, because the crew who trusts it spends the minute finding
+ * out (issue #688). What the shop's own gear register holds about this hull's
+ * kit is printed in place of its blank (fourth review, item 17), and every
+ * line the register cannot answer stays a blank, the oxygen pressure always.
+ * Paper only; the screen has the live manifest.
  */
 export type PrintedBoatProcedureCopy = {
   missingHeading: string;
@@ -64,36 +70,79 @@ export function PrintedMissingProcedure({
   );
 }
 
+/** What the register says for each kit line, worded; null where the line stays a blank. */
+export type PrintedKitValues = {
+  oxygenKept: string | null;
+  firstAidKept: string | null;
+  lastChecked: string | null;
+};
+
+/** The register's record for this departure's boat, in the packet's words. */
+export function printedKitValues(
+  record: DepartureKitRecord | null,
+  t: StaffTranslator,
+  locale: string,
+): PrintedKitValues {
+  const kept = (kits: readonly string[]) =>
+    record && kits.length > 0
+      ? t("print.packet.keptAboard", {
+          boat: record.boatName,
+          kits: cachedListFormat(locale, { type: "conjunction" }).format(kits),
+        })
+      : null;
+  return {
+    oxygenKept: kept(record?.oxygenKits ?? []),
+    firstAidKept: kept(record?.firstAidKits ?? []),
+    // A calendar date with no instant in it: formatted through UTC midnight.
+    lastChecked: record?.oxygenLastCheckedOn
+      ? formatDateWithYear(calendarDateToUtcMidnight(record.oxygenLastCheckedOn), locale, "UTC")
+      : null,
+  };
+}
+
 /**
- * Ruled blanks to fill in by hand, under the shop's numbers. The oxygen
- * pressure sits beside the date of the check it was read at: one line, one
- * check.
+ * Ruled blanks to fill in by hand, under the shop's numbers, each filled from
+ * the register where it holds the fact. The oxygen pressure sits beside the
+ * date of the check it was read at: one line, one check.
  */
 export function PrintedKitBlanks({
   copy,
   headingId,
+  values = { oxygenKept: null, firstAidKept: null, lastChecked: null },
 }: {
   copy: PrintedBoatProcedureCopy;
   /** Unique per departure: the day's paper prints several manifests. */
   headingId: string;
+  values?: PrintedKitValues;
 }) {
-  const lines = [[copy.oxygenKept], [copy.firstAidKept], [copy.lastChecked, copy.oxygenPressure]];
+  const lines: [string, string | null][][] = [
+    [[copy.oxygenKept, values.oxygenKept]],
+    [[copy.firstAidKept, values.firstAidKept]],
+    [
+      [copy.lastChecked, values.lastChecked],
+      [copy.oxygenPressure, null],
+    ],
+  ];
   return (
     <section aria-labelledby={headingId} className="mt-4">
       <h2 id={headingId} className="text-base font-semibold">
         {copy.kitHeading}
       </h2>
       <dl className="mt-2 space-y-3 text-sm">
-        {lines.map((labels) => (
+        {lines.map((pairs) => (
           // A `dl` row may hold several term and blank pairs, and no deeper
           // wrapper: each pair is a `dt` and its own growing `dd`.
-          <div key={labels.join("|")} className="flex items-end gap-2">
-            {labels.flatMap((label, index) => [
+          <div key={pairs.map(([label]) => label).join("|")} className="flex items-end gap-2">
+            {pairs.flatMap(([label, value], index) => [
               <dt key={`${label}-term`} className={index > 0 ? "shrink-0 ps-2" : "shrink-0"}>
                 {label}
               </dt>,
-              <dd key={`${label}-blank`} className="min-w-0 flex-1">
-                <span data-print-blank className="block h-5 border-b border-border-strong" />
+              <dd key={`${label}-value`} className="min-w-0 flex-1">
+                {value ? (
+                  <span className="block border-b border-border-strong font-medium">{value}</span>
+                ) : (
+                  <span data-print-blank className="block h-5 border-b border-border-strong" />
+                )}
               </dd>,
             ])}
           </div>

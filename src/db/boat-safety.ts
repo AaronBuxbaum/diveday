@@ -271,3 +271,52 @@ export async function departureBoatId(
     .limit(1);
   return trip?.boatId ?? null;
 }
+
+/**
+ * **The oxygen and first aid kit aboard a departure's boat, as the register
+ * holds them** (fourth review, item 17). The printed packet left "Oxygen kit
+ * is kept / Last checked / O2 pressure" as blanks even when the shop's gear
+ * register says which kit is aboard this hull and when it was last serviced.
+ *
+ * Only what the shop recorded, never a guess: the in-service units aboard, by
+ * their own labels, and the newest dated record on an oxygen kit (a note is
+ * not a check, so it does not count). Null for a departure on no boat; empty
+ * lists when the register has nothing aboard, and the packet keeps its blanks.
+ * The cylinder's pressure is never recorded here, so it always stays a blank.
+ */
+export type DepartureKitRecord = {
+  boatName: string;
+  oxygenKits: string[];
+  firstAidKits: string[];
+  oxygenLastCheckedOn: CalendarDate | null;
+};
+
+export async function departureKitRecord(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<DepartureKitRecord | null> {
+  const boatId = await departureBoatId(db, shopId, tripId);
+  if (!boatId) return null;
+  const [boat] = await db
+    .select({ name: boats.name })
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId)))
+    .limit(1);
+  if (!boat) return null;
+  const aboard = (await listSafetyKit(db, shopId)).filter(
+    (unit) => unit.aboardBoatId === boatId && unit.status === "in_service",
+  );
+  const oxygen = aboard.filter((unit) => unit.kind === "o2_kit");
+  const checks = oxygen
+    .flatMap((unit) => unit.clocks)
+    .filter((clock) => clock.kind !== "note")
+    .map((clock) => clock.servicedOn)
+    .sort();
+  return {
+    boatName: boat.name,
+    oxygenKits: oxygen.map((unit) => unit.label),
+    firstAidKits: aboard.filter((unit) => unit.kind === "first_aid_kit").map((unit) => unit.label),
+    oxygenLastCheckedOn: checks.at(-1) ?? null,
+  };
+}

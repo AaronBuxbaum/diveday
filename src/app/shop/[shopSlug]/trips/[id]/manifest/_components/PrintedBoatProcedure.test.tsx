@@ -6,6 +6,7 @@ import {
   PrintedKitBlanks,
   PrintedMissingProcedure,
   printedBoatProcedureCopy,
+  printedKitValues,
 } from "./PrintedBoatProcedure";
 
 const copy = printedBoatProcedureCopy(staffTranslator("en-US"));
@@ -77,5 +78,43 @@ describe("the printed boat procedure", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("El botiquín se guarda en")).toBeInTheDocument();
     expect(screen.getByText("Presión del O2")).toBeInTheDocument();
+  });
+});
+
+describe("the kit lines filled from the shop's register (fourth review, item 17)", () => {
+  afterEach(cleanup);
+  const t = staffTranslator("en-US");
+
+  it("prints what the register holds and keeps a blank for the rest", () => {
+    const values = printedKitValues(
+      {
+        boatName: "Mantis I",
+        oxygenKits: ["O2 Kit A"],
+        firstAidKits: [],
+        oxygenLastCheckedOn: "2026-09-30",
+      },
+      t,
+      "en-US",
+    );
+    expect(values).toEqual({
+      oxygenKept: "aboard Mantis I (O2 Kit A)",
+      firstAidKept: null,
+      lastChecked: expect.stringMatching(/Sep\s30,\s2026/),
+    });
+    render(<PrintedKitBlanks copy={copy} headingId="kit" values={values} />);
+    const section = screen.getByRole("region", { name: "Oxygen and first aid" });
+    const definitions = within(section).getAllByRole("definition");
+    expect(definitions[0]).toHaveTextContent("aboard Mantis I (O2 Kit A)");
+    // First aid, and the oxygen pressure the register never holds, stay blanks.
+    expect(definitions[1]?.querySelector("[data-print-blank]")).not.toBeNull();
+    expect(definitions[3]?.querySelector("[data-print-blank]")).not.toBeNull();
+  });
+
+  it("is all blanks for a departure on no boat", () => {
+    expect(printedKitValues(null, t, "en-US")).toEqual({
+      oxygenKept: null,
+      firstAidKept: null,
+      lastChecked: null,
+    });
   });
 });

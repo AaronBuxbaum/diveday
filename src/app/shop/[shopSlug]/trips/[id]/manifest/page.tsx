@@ -46,6 +46,7 @@ import {
   PrintedKitBlanks,
   PrintedMissingProcedure,
   printedBoatProcedureCopy,
+  printedKitValues,
 } from "./_components/PrintedBoatProcedure";
 import { PrintedSoulsOnBoard } from "./_components/PrintedSoulsOnBoard";
 import { personTrailIndex } from "./_components/person-trail";
@@ -134,6 +135,7 @@ export default async function TripManifestPage({
     stage,
     meetingPoint,
     vessel,
+    kitRecord,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
@@ -431,6 +433,7 @@ export default async function TripManifestPage({
           />
           <PrintedKitBlanks
             copy={printedProcedureCopy}
+            values={printedKitValues(kitRecord, t, locale)}
             headingId={scopedId(idPrefix, "kit-blanks-print-heading")}
           />
         </div>
