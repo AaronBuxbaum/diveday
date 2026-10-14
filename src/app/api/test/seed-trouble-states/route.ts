@@ -1498,7 +1498,14 @@ async function boardEveryDiverAndNoCrew(
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(
-      and(eq(bookings.shopId, shopId), eq(bookings.tripId, next.id), eq(bookings.status, "booked")),
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, next.id),
+        // Checked in as well as booked: the demo's morning hand-off checks
+        // two divers in at the counter, and the station counts their seats
+        // too, so leaving them ashore would never fill the boat.
+        inArray(bookings.status, ["booked", "checked_in"]),
+      ),
     )
     .orderBy(people.fullName);
 
