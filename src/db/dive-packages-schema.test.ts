@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { bookings, divePackageEntitlements, divePackages, orders, people } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **The constraints, exercised.** This layer is schema only — the rules that
@@ -16,7 +18,7 @@ import { upsertShopStripeAccount } from "./stripe-accounts";
  */
 describe("the dive package tables", () => {
   async function context() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db
       .select({ id: people.id })
       .from(people)

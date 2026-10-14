@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { resolvePaymentOperation, startPaymentOperation } from "./payment-operations";
 import { reserveDiscountUse } from "./promo-caps";
@@ -9,8 +9,10 @@ import { bookingCheckouts, paymentOperationIntents, shops, trips } from "./schem
 import { createShopPromoCode } from "./shop-promos";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 
+const ctx = fileScopedShopContext();
+
 async function cappedCode(cap: number | null) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   await upsertShopStripeAccount(db, shop.id, "acct_caps");
   await setShopStripeAccountStatus(db, "acct_caps", {
     chargesEnabled: true,
