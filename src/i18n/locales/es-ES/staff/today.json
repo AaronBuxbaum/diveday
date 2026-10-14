@@ -49,7 +49,8 @@
     "studentsCount": "{count, plural, one {# estudiante} other {# estudiantes}}",
     "readyCount": "{count, plural, one {# listo} other {# listos}}",
     "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
-    "openRoster": "Ver lista"
+    "openRoster": "Ver lista",
+    "away": "Avisaste que estás ausente {dates}."
   },
   "yourWeek": {
     "heading": "Tu semana",
@@ -103,7 +104,8 @@
     "helpRequest": "Solicitud de ayuda",
     "sayHello": "Saluda",
     "rentalFit": "Equipo",
-    "blockedAboard": "A bordo"
+    "blockedAboard": "A bordo",
+    "crewAway": "Tripulación ausente"
   },
   "blockerAction": {
     "setRequirements": "Configurar requisitos",
@@ -187,7 +189,8 @@
     "ratingLapsed": "{names} {count, plural, one {tiene una titulación vencida} other {tienen titulaciones vencidas}} para esta salida.",
     "missingContactNamed": "Sin contacto de emergencia.",
     "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}}, sin oferta de última hora enviada.",
-    "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera."
+    "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera.",
+    "crewAway": "{name} está ausente {dates}."
   },
   "actionLabel": {
     "openRollCall": "Abrir recuento",

@@ -404,7 +404,10 @@ export async function getStaffingView(
  * window is the honest fallback, and inventing one here would hide a trip
  * whose rows were never written.
  */
-async function tripMeetings(db: AppDb, tripIds: string[]): Promise<Map<string, TripMeeting[]>> {
+export async function tripMeetings(
+  db: AppDb,
+  tripIds: readonly string[],
+): Promise<Map<string, TripMeeting[]>> {
   const byTrip = new Map<string, TripMeeting[]>();
   if (tripIds.length === 0) return byTrip;
   const rows = await db
@@ -414,7 +417,7 @@ async function tripMeetings(db: AppDb, tripIds: string[]): Promise<Map<string, T
       endsAt: tripScheduleDays.endsAt,
     })
     .from(tripScheduleDays)
-    .where(inArray(tripScheduleDays.tripId, tripIds))
+    .where(inArray(tripScheduleDays.tripId, [...tripIds]))
     .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
   for (const row of rows) {
     const windows = byTrip.get(row.tripId) ?? [];

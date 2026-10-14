@@ -82,6 +82,7 @@ export type TodayActionKind =
   | "uncrewed_departure"
   | "crew_clash"
   | "crew_clash_sailed"
+  | "crew_away"
   | "crew_below_target"
   | "waitlist_seat"
   | "last_minute_fill"
@@ -189,6 +190,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // row rather than with the advisory ones; it ranks just under it because the
   // boat it names does have somebody rostered, and the fix is one call.
   crew_clash: 11.5,
+  // **Rostered on a departure and away on a day it meets** (fourth review,
+  // item 12). The person told the shop; the roster did not hear. Just under a
+  // clash: a clash is the roster contradicting itself, this is the roster
+  // contradicting somebody's note, and both are one call to fix.
+  crew_away: 11.6,
   // A course session short of its instructor with somebody else in the water.
   // It refuses a sale (`course_unstaffed`, src/db/bookings.ts) and no
   // certification can be issued from it, which is why it is not merely
@@ -410,6 +416,9 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   // The crew rows' audience: the divemaster and captain at the rail are as
   // likely to notice they are on two boats as the office is to fix it.
   crew_clash: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
+  // The clash's audience, for the clash's reason: the person away is as likely
+  // to read it as the office that fixes it.
+  crew_away: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
   crew_clash_sailed: [
     "owner",
     "manager",
@@ -633,6 +642,9 @@ export const ACTION_KIND_META = {
   // somebody has said is missing — that is `roll_call_missing_crew`'s danger.
   crew_clash: { tone: "warning" },
   crew_clash_sailed: { tone: "warning" },
+  // Warning, as the staffing week draws it on the person's chip: informs,
+  // never gates (ADR 20260902-crew-requests-and-blackouts).
+  crew_away: { tone: "warning" },
   nitrox_gate: { tone: "warning" },
   high_wind_alert: { tone: "warning" },
   dive_prep: { tone: "neutral" },

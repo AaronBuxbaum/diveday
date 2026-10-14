@@ -10,6 +10,7 @@ import {
 import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import type { AvailabilityBlock } from "@/lib/crew-requests";
 import { effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import type { DiveIntentCount } from "@/lib/dive-intent";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
@@ -48,6 +49,7 @@ import { todayBoatSafety } from "./boat-safety";
 import { readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
+import { crewAwayByTrip } from "./crew-away";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
   listFitAdjustedReturns,
@@ -85,6 +87,7 @@ import {
 } from "./schema";
 import { listStaffCredentials } from "./staff-credentials";
 import { canAcceptPayments, shopStripeAccountForRender } from "./stripe-accounts";
+import { pushCrewAwayRows } from "./today-crew-away-rows";
 import { pushDepartureRows } from "./today-departure-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { pushRollCallRows } from "./today-roll-call-rows";
@@ -252,6 +255,12 @@ export type CrewedSessionSummary = {
   booked: number;
   ready: number;
   blocked: number;
+  /**
+   * The reader's own days away that this session meets on (fourth review,
+   * item 12; `crewAwayByTrip`). Empty when they are not away. Optional so a
+   * summary built elsewhere reads as "not away".
+   */
+  away?: AvailabilityBlock[];
 };
 
 export type TodayWork = {
@@ -1552,6 +1561,7 @@ async function readTodayWave(
     workOrdersNeedingAttention,
     crewedAssignments,
     openOrders,
+    crewAway,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
     // needs to tell "already aboard" from "still ashore" from "never left the
@@ -1702,6 +1712,14 @@ async function readTodayWave(
             ? openOrdersForBookings(db, shopId, owingBookingIds)
             : noOpenOrders,
         ),
+    // Who is rostered on a departure ahead and said they are away on a day it
+    // meets (fourth review, item 12): the `crew_away` rows.
+    crewAwayByTrip(
+      db,
+      shopId,
+      inWindow.map((trip) => trip.id),
+      timeZone,
+    ),
   ]);
   return {
     departureRollCall,
@@ -1736,6 +1754,7 @@ async function readTodayWave(
     workOrdersNeedingAttention,
     crewedAssignments,
     openOrders,
+    crewAway,
   };
 }
 
@@ -1860,6 +1879,7 @@ export async function getTodayWork(
     boatsOut,
     shopUnits,
     crewedAssignments,
+    crewAway,
   } = wave;
 
   const helpRequestsByTrip = new Map<string, typeof helpRequests>();
@@ -1901,6 +1921,8 @@ export async function getTodayWork(
   };
 
   pushRollCallRows(actions, rows);
+
+  pushCrewAwayRows(actions, rows);
 
   pushDepartureRows(actions, rows);
 
@@ -1991,6 +2013,7 @@ export async function getTodayWork(
           booked: trip.booked,
           ready: rows.filter((row) => row.readiness.status === "ready").length,
           blocked: rows.filter((row) => row.readiness.status === "blocked").length,
+          away: crewAway.get(trip.id)?.find((entry) => entry.personId === personId)?.blocks ?? [],
         };
       });
   }

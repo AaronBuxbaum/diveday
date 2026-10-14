@@ -169,7 +169,7 @@ async function seedDawnBuddyTeams(
         eq(rollCallEvents.status, "boarded"),
       ),
     )
-    .orderBy(asc(bookings.createdAt), asc(bookings.id));
+    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
   if (aboard.length < 2) return;
   const teams: (typeof aboard)[] = [];
   for (let i = 0; i + 1 < aboard.length; i += 2) teams.push(aboard.slice(i, i + 2));

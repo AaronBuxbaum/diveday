@@ -58,6 +58,12 @@ export type WeekDeparture = {
    * nobody has accounted for.
    */
   rollCallOpen: { diveNumber: number; uncounted: number } | null;
+  /**
+   * "Marcus Webb away Sat, Oct 17 – Sun, Oct 18" (fourth review, item 12):
+   * rostered people who said they are away on a day this departure meets,
+   * preformatted. Absent or null when nobody is.
+   */
+  crewAway?: string | null;
   /** "{title}, {day} {time}" — what names this departure to a screen reader. */
   ref: string;
 };
@@ -620,6 +626,15 @@ function WeekBoat({
                   <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
                 </>
               )}
+            </p>
+          ) : null}
+          {/* **Rostered and away** (fourth review, item 12), on boats and
+              course bars alike and whatever the usual crew: the staffing
+              week's warning, said where the departure is planned. */}
+          {departure.crewAway ? (
+            <p className="mt-0.5 flex items-start gap-1.5 text-sm font-medium text-warning">
+              <DiveDayIcon name="warning" className="mt-0.5 size-3.5 shrink-0" />
+              <span>{departure.crewAway}</span>
             </p>
           ) : null}
           {/* One slot, one grammar: an open head count outranks a missing
