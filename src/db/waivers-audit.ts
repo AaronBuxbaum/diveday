@@ -140,7 +140,10 @@ export async function listWaiverIntegrityAudit(
       const [counted] = await db
         .select({ total: count() })
         .from(waiverRecords)
-        .innerJoin(people, eq(people.id, waiverRecords.personId))
+        .innerJoin(
+          people,
+          and(eq(people.id, waiverRecords.personId), eq(people.shopId, waiverRecords.shopId)),
+        )
         .where(scope);
       return counted?.total ?? 0;
     },
@@ -154,7 +157,10 @@ export async function listWaiverIntegrityAudit(
           tripStartsAt: trips.startsAt,
         })
         .from(waiverRecords)
-        .innerJoin(people, eq(people.id, waiverRecords.personId))
+        .innerJoin(
+          people,
+          and(eq(people.id, waiverRecords.personId), eq(people.shopId, waiverRecords.shopId)),
+        )
         .leftJoin(
           bookings,
           and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
