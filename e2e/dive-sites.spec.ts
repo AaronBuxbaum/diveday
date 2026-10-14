@@ -520,11 +520,11 @@ test.describe("staff", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
     ).toBeVisible();
-    // By the row's own link, not loose text: Sand Island's briefing mentions
-    // Molasses Reef too, and `hasText` would match both rows.
+    // By the row's own name, exactly: other templates' prose mentions Molasses
+    // Reef too (Sand Island sits beside it), so a substring match finds two.
     const template = page
       .locator("li")
-      .filter({ has: page.getByRole("link", { name: "Molasses Reef", exact: true }) })
+      .filter({ has: page.getByText("Molasses Reef", { exact: true }) })
       .filter({ visible: true });
     await expect(template.getByText("Template v3")).toBeVisible();
 
