@@ -35,6 +35,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/ready/[token]/forms": {
+    "e2e": ["course-forms.spec.ts"],
     "visual": ["course-form-sign"]
   },
   "/s/[shopSlug]/embed/schedule": {
@@ -97,6 +98,12 @@
   },
   "/shop/[shopSlug]/orders/[id]": {
     "visual": ["order-detail", "order-detail-partly-refunded"]
+  },
+  "/shop/[shopSlug]/print/pass/[bookingId]": {
+    "e2e": ["shop-on-paper.spec.ts"]
+  },
+  "/shop/[shopSlug]/reports/safety": {
+    "e2e": ["incident-reports.spec.ts"]
   },
   "/shop/[shopSlug]/schedule/blowout/[tripId]": {
     "a11y": ["a11y.spec.ts"]
