@@ -90,7 +90,7 @@
     "profileAction": "Set up profile",
     "profileDone": "Shop profile configured.",
     "siteTitle": "Add your first dive site",
-    "siteBody": "{count, plural, one {The catalog has # Florida site ready to copy} other {The catalog has # Florida sites ready to copy}}",
+    "siteBody": "{count, plural, one {The catalog has # site in your waters ready to copy} other {The catalog has # sites in your waters ready to copy}}",
     "siteBodyOwn": "Add your first dive site, the place you’ll pin your trips to",
     "siteAction": "Add a dive site",
     "siteDone": "{count, plural, one {# dive site added.} other {# dive sites added.}}",

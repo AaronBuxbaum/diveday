@@ -78,10 +78,12 @@ describe("dive-site library", () => {
     if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");
     const imported = await importGlobalDiveSiteTemplate(db, shop.id, catalogEntry.template.id);
     if (!imported) throw new Error("expected a catalog copy");
+    const published = catalogEntry.version.version;
+    const next = published + 1;
 
     await db.insert(globalDiveSiteVersions).values({
       globalDiveSiteId: catalogEntry.template.id,
-      version: 3,
+      version: next,
       briefing: {
         ...catalogEntry.version.briefing,
         description: "A newly expanded published briefing.",
@@ -89,7 +91,7 @@ describe("dive-site library", () => {
     });
     await db
       .update(globalDiveSites)
-      .set({ currentVersion: 3 })
+      .set({ currentVersion: next })
       .where(eq(globalDiveSites.id, catalogEntry.template.id));
     await db
       .update(diveSites)
@@ -97,8 +99,8 @@ describe("dive-site library", () => {
       .where(eq(diveSites.id, imported.id));
 
     const pending = await getDiveSiteTemplateUpdate(db, shop.id, imported.id);
-    expect(pending?.currentVersion).toBe(2);
-    expect(pending?.latestVersion).toBe(3);
+    expect(pending?.currentVersion).toBe(published);
+    expect(pending?.latestVersion).toBe(next);
     expect(pending?.diff.some((change) => change.field === "description")).toBe(true);
 
     const [beforePull] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
@@ -110,7 +112,7 @@ describe("dive-site library", () => {
     );
     expect(result.status).toBe("updated");
     const [updated] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
-    expect(updated?.sourceTemplateVersion).toBe(3);
+    expect(updated?.sourceTemplateVersion).toBe(next);
     expect(updated?.description).toBe("Our local briefing for this boat.");
     // **A pull is a second writer of the prose the editor owns**, so it moves
     // the edit generation like any other. If it did not, a briefing opened
