@@ -57,6 +57,22 @@
       "sourceSize": [2816, 2112],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/Catfish Hotel Sink from left, Manatee Springs State Park.jpg": {
+      "subject": "site:catfish-hotel",
+      "source": "File:Catfish Hotel Sink from left, Manatee Springs State Park.JPG",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Michael Rivera",
+      "sourceSize": [5184, 3456],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Cherokee Sink from end of boardwalk.jpg": {
+      "subject": "site:cherokee-sink",
+      "source": "File:Cherokee Sink from end of boardwalk.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "The Bushranger",
+      "sourceSize": [3264, 2448],
+      "reviewed": "2026-10-14"
+    },
     "dive-sites/Christ of the Abyss, Key Largo, FL - panoramio.jpg": {
       "subject": "site:christ-of-the-abyss",
       "source": "File:Christ of the Abyss, Key Largo, FL - panoramio.jpg",
@@ -138,6 +154,14 @@
       "sourceSize": [1500, 1500],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/Florida Black Bear Scenic Byway - Alexander Springs, Shallows and Vent Area - NARA - 7718408.jpg": {
+      "subject": "site:alexander-springs",
+      "source": "File:Florida Black Bear Scenic Byway - Alexander Springs, Shallows and Vent Area - NARA - 7718408.jpg",
+      "licence": "Public domain",
+      "artist": "Unknown authorUnknown author or not provided",
+      "sourceSize": [3300, 2209],
+      "reviewed": "2026-10-14"
+    },
     "dive-sites/Florida Manatee FWS 4.jpg": {
       "subject": "site:three-sisters-springs",
       "source": "File:Florida Manatee FWS 4.jpg",
@@ -171,6 +195,22 @@
       "sourceSize": [2048, 1536],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/Manatee Springs State Park Florida springs01.jpg": {
+      "subject": "site:manatee-springs",
+      "source": "File:Manatee Springs State Park Florida springs01.jpg",
+      "licence": "CC BY 2.5",
+      "artist": "Ebyabe",
+      "sourceSize": [3264, 2448],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Manatees at Blue Spring State Park, FL.jpg": {
+      "subject": "site:blue-spring-orange-city",
+      "source": "File:Manatees at Blue Spring State Park, FL.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Rizka",
+      "sourceSize": [4608, 2619],
+      "reviewed": "2026-10-14"
+    },
     "dive-sites/Neptune Reef.jpg": {
       "subject": "site:neptune-memorial-reef",
       "source": "File:Neptune Reef.jpg",
@@ -178,6 +218,22 @@
       "artist": "Elkman",
       "sourceSize": [3072, 2304],
       "crop": "cropped to 0.03,0.03,0.94,0.92 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Palythoa caribaeorum bleached Emerald Reef.jpg": {
+      "subject": "site:emerald-reef",
+      "source": "File:Palythoa caribaeorum bleached Emerald Reef.png",
+      "licence": "Public domain",
+      "artist": "Unidentified NOAA photographer",
+      "sourceSize": [1329, 750],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Peacock Springs SP Orange Grove Sink01.jpg": {
+      "subject": "site:orange-grove-sink",
+      "source": "File:Peacock Springs SP Orange Grove Sink01.jpg",
+      "licence": "CC BY-SA 2.5",
+      "artist": "Ebyabe",
+      "sourceSize": [3264, 2448],
       "reviewed": "2026-10-14"
     },
     "dive-sites/Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg": {
@@ -229,6 +285,14 @@
       "sourceSize": [3648, 2736],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/Troy Springs SP springs pano01.jpg": {
+      "subject": "site:troy-spring",
+      "source": "File:Troy Springs SP springs pano01.jpg",
+      "licence": "CC BY-SA 2.5",
+      "artist": "Ebyabe",
+      "sourceSize": [4802, 1668],
+      "reviewed": "2026-10-14"
+    },
     "dive-sites/US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg": {
       "subject": "site:spiegel-grove",
       "source": "File:US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg",
@@ -261,6 +325,14 @@
       "artist": "USN",
       "sourceSize": [2358, 2980],
       "crop": "cropped to the open stern dock",
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Vortex Spring.jpg": {
+      "subject": "site:vortex-spring",
+      "source": "File:Vortex Spring.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Paul Clark. Edited slightly by Daniel Case prior to upload",
+      "sourceSize": [2304, 1536],
       "reviewed": "2026-10-14"
     },
     "marine-life/almaco-jack.jpg": {
@@ -2952,11 +3024,175 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:ajs-blackbeard-flying-eagle": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:alexander-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:almirante-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:alpha-wreck-pompano": {
+      "reason": "The only Commons candidate is an unrelated photo (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:ana-cecilia-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:anchorage-wreck-trek": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:ancient-mariner-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:andro-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:anglin-pier-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:antares-freighter": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:area-51-jupiter": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:avocet-dredge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:b-and-b-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:barracuda-reef-fort-lauderdale": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:belcher-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:belcher-barge-ii": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:belize-queen-bob-reay-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:belton-johnson-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:belzona-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:belzona-one": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:belzona-three": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:belzona-two": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:berry-patch-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:betek-ar-pen": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:biscayne-wreck": {
+      "reason": "Commons candidates show Key Biscayne, not the wreck (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:bj-putnam": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:black-bart-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:blue-fire-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
     "site:blue-grotto": {
       "reason": "No Commons photograph of Blue Grotto (Williston) at 1024px or more, by name, area or category.",
       "checked": "2026-10-14"
     },
+    "site:boca-artificial-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:bonnies-reef-jupiter": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:boynton-stepping-stone-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
     "site:breakers-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:briny-breezes-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:bud-bar-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:c-one-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:cable-crossing-palm-beach": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:captain-dan-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:captain-kirles-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:captain-tony-wreck": {
+      "reason": "The only Commons candidate is an unrelated photo (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:casino-beach-snorkel-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:cayman-salvager": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:century-barge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
@@ -2964,7 +3200,31 @@
       "reason": "The only Commons photograph at the site documents the 2023 bleaching event, which is not how a diver meets the reef.",
       "checked": "2026-10-14"
     },
+    "site:chepanoc-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:chevron-rig-pensacola": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:chickasaw-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:city-of-washington": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
     "site:coffins-patch": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:conception-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:conch-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
@@ -2972,7 +3232,63 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:cottrell-key": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:crocker-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:dan-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:danny-mccauley-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:davis-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:deep-freeze-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:deep-stim-iii": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:delray-ledges": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:dema-trader": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:destin-east-jetty": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
     "site:devils-den": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:devils-eye-and-ear": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:donald-g-mcallister-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:dupont-bridge-span-1": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:dupont-bridge-span-3": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
@@ -2980,15 +3296,479 @@
       "reason": "No Commons photograph of the Eagle wreck at 1024px or more.",
       "checked": "2026-10-14"
     },
+    "site:eastern-dry-rocks": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:ebenezer-ii-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:edison-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:eglin-lcm-8": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:eidsvag-triangle": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:el-dorado-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:empire-mica": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:fami-tugs": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:fanning-springs": {
+      "reason": "No Commons candidate clearly shows the spring basin (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:flamingo-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:flower-gardens-palm-beach": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:fort-pickens-jetty": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:gazebo-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:georges-valentine-shipwreck-preserve": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:gimrock-atlas-recycling-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:governors-riverwalk-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:graceland-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
     "site:grecian-rocks": {
       "reason": "The only Commons photograph at the site is people posing at the surface with a camera rig.",
+      "checked": "2026-10-14"
+    },
+    "site:grey-ghost-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:gulfstream-ledge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:guy-harvey-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:half-moon-preserve": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:hall-of-fame-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:hathaway-span-12": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:hathaway-span-14": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:hathaway-span-5": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:hav-parker-iii-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:hen-and-chickens": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:hillsboro-ledge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:hog-heaven-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:horseshoe-reef-boynton": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:houseboat-duzaway-wreck": {
+      "reason": "Commons candidates are 1947 hurricane-damage photos (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:ichetucknee-blue-hole": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:indian-shores-landing-ships": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:indian-shores-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:jay-dorman-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:jay-scutti-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:jeff-a-hovercraft": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:jim-atria-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:joe-patti-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:joes-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:jolly-jacks-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:jose-cuervo-underwater-bar": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:joseph-e-brown-liberty-ship": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:joseph-l-meek-liberty-ship": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:julies-reef-jupiter": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:juno-ledge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
     "site:jupiter-goliath-ledges": {
       "reason": "The one Jupiter goliath-aggregation photograph is from Warriors Reef, a different site from the Wreck Trek this template describes.",
       "checked": "2026-10-14"
     },
+    "site:king-spring": {
+      "reason": "The only Commons candidate does not identify King Spring (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:knicklebine-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:labonte-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:lady-carmen-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
     "site:lady-luck-shipwreck-park": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:lighthouse-ledge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:lofthus-shipwreck-preserve": {
+      "reason": "Commons candidates are surface views from Boynton Beach; the wreck is not visible (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:loggerhead-reef-jupiter": {
+      "reason": "Candidates on Commons show the Loggerhead Marinelife Center, not the reef (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:loss-pontoon": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:lulu-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:lynns-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:macs-reef-destin": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mandalay-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mariner-ii-barge-and-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:matthew-lawrence": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mercedes-i-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:merci-jesus-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mg-111-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:miami-army-tanks": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:miami-river-barge-zt-202": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mid-reef-palm-beach": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:miracles-express": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:miss-dania-beach-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:miss-louise-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mizpah-corridor": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mohawk-chief-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:monica-lee-tugboat": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:moray-bend": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mv-brannon": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mv-castor-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mv-courageous": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mv-deborah": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mv-fantasea": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mv-janet-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mv-miss-joann": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mv-monarch-countess": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:mv-skippin-sue": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:narwal-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:navarre-gulf-side-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:navy-barge-panama-city": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:navy-barge-pensacola": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:nekton-pilot": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:nekton-rorqual": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:new-venture-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:nine-foot-stake": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:north-dry-rocks": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:northwest-double-ledges": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:noula-express-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:oakland-ridges": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:okinawa-wreck-pompano": {
+      "reason": "Commons candidates are unrelated military photos (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:oops-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:ophelia-brian-wreck": {
+      "reason": "The Commons candidate shows another vessel (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:orion-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:paradise-springs": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:paraiso-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:park-east-snorkel-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:park-west-quarles-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:pauls-reef-palm-beach": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:pc-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:pcmi-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:pegasus-tug": {
+      "reason": "Commons candidates show NASA's Pegasus barge, a different vessel (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:perdido-key-snorkel-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:pete-tide-ii": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:peter-b-mcallister-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:pimelious-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:pompano-drop-off": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:princess-anne-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:princess-britney": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:proteus-miami": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:qualman-barge-deerfield": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rainbow-reef-miami": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
@@ -2996,7 +3776,291 @@
       "reason": "Commons holds only the headspring basin, where diving is not allowed; nothing of the KP Hole drift.",
       "checked": "2026-10-14"
     },
+    "site:rapa-nui-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rebel-wreck": {
+      "reason": "Commons candidates show streets, cars and other ships (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:red-sea-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:regina-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rio-miami": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rjs-ledge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rms-atlantis": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rms-cyclops": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:robert-edmister-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rock-key": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rocky-top": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rodeo-25-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rsb-1-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rv-dolphin": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rv-manta": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:san-pablo-russian-freighter": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:san-pedro": {
+      "reason": "Candidates on Commons are FEMA hurricane-damage photos, not the wreck (2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:sand-island": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:scarface-reef-jupiter": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:schurgers-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:sea-barb-paddlewheel": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:sea-emperor-aqua-zoo": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:shamrock-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:sheri-lyn-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:sheridan-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:snapper-ledge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:south-double-ledges": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:south-seas-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:spadefish-point-jupiter": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:spearmans-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:spirit-of-norfolk": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:ss-tarpon": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:st-anne-dauray": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:st-henry-express": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:st-pete-beach-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:suzannes-ledge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:sv-dylan": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tacoma-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tarpoon-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tenneco-rig": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tenneco-towers": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tex-edwards-barge": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:the-caves-fort-lauderdale": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:the-elbow": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:the-pillars-miami": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:the-trench-moray-alley": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:thomas-heyward-liberty-ship": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:three-coal-barges": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
     "site:thunderbolt-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:timothy-allen-reed-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:toppinos-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tortuga-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tracy-ken-vitale-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tug-born-again": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tug-ocean-wind": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tug-orange": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tugboat-zuess": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:tunnels-jupiter": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:ultra-freeze-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:underwater-museum-of-art-grayton": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:union-express-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:united-caribbean-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:urca-de-lima-shipwreck-preserve": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:usaf-big-dawg": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:uscgc-bibb": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:uscgc-blackthorn": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:uss-accokeek": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:uss-chippewa": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:uss-massachusetts": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:uss-mohawk-memorial-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:uss-rankin-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:uss-strength": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
@@ -3004,7 +4068,35 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:veterans-reef-circle-of-heroes": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
     "site:western-dry-rocks": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:western-sambo": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:wet-and-wild-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:white-coast-tug": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:windjammer-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:ydt-14": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:ydt-15": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     }
