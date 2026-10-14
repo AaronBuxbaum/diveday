@@ -7169,7 +7169,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the waiver surface renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/waivers");
-        await page.getByRole("heading", { level: 1, name: "The release" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Waivers and signed records" }).waitFor();
         await page.getByRole("navigation", { name: "Pages" }).waitFor();
         await capture(page, "staff-waivers", scheme);
       });
@@ -7198,7 +7198,7 @@ for (const scheme of ["light", "dark"] as const) {
         // answers to, and `AutoOpenDetails` opens it on a hard load as well as
         // on a client transition.
         await page.goto("/shop/blue-mantis/waivers#release");
-        await page.getByRole("heading", { level: 1, name: "The release" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Waivers and signed records" }).waitFor();
         await page.getByRole("radio", { name: /A material change/ }).check();
         await page.getByRole("button", { name: "Publish", exact: true }).click();
         await page.getByRole("button", { name: /Publish: \d+ signs? again/ }).waitFor();

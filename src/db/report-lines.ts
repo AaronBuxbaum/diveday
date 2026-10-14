@@ -329,8 +329,11 @@ async function moneyByLine(
  * spent by then (`consumed_at` empty or later), and not lapsed by then. Only
  * on an order the shop still holds money for — a refunded package is owed
  * nothing.
+ *
+ * Also the "Dives owed on packages" line under Dive packages, at now (fourth
+ * UX review, item 20).
  */
-async function packageDivesOwedAt(
+export async function packageDivesOwedAt(
   db: DbExecutor,
   shopId: string,
   asOf: Date,

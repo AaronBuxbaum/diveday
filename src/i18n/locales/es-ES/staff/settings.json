@@ -447,7 +447,7 @@
       "heading": "Sitios de buceo"
     },
     "waivers": {
-      "heading": "Plantilla de exención"
+      "heading": "Exenciones y registros firmados"
     },
     "safetyChecklist": {
       "heading": "Lista de verificación previa a la salida"
@@ -526,7 +526,8 @@
       "submit": "Añadir paquete",
       "submitting": "Añadiendo…",
       "delete": "Eliminar",
-      "deleting": "Eliminando…"
+      "deleting": "Eliminando…",
+      "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})"
     }
   },
   "team": {

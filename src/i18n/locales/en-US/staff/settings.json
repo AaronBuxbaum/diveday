@@ -447,7 +447,7 @@
       "heading": "Dive sites"
     },
     "waivers": {
-      "heading": "Waiver template"
+      "heading": "Waivers and signed records"
     },
     "safetyChecklist": {
       "heading": "Pre-departure checklist"
@@ -526,7 +526,8 @@
       "submit": "Add package",
       "submitting": "Adding…",
       "delete": "Delete",
-      "deleting": "Deleting…"
+      "deleting": "Deleting…",
+      "owed": "Dives owed on packages: {dives, number} ({value})"
     }
   },
   "team": {

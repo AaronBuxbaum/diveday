@@ -176,7 +176,8 @@
     "emergencyContactPhoneLabel": "Teléfono del contacto de emergencia",
     "saving": "Guardando…",
     "saveDetails": "Guardar datos",
-    "visits": "{count, plural, one {# visita} other {# visitas}}"
+    "visits": "{count, plural, one {# visita} other {# visitas}}",
+    "packageBalance": "Paquete: quedan {left} de {of, plural, one {# inmersión} other {# inmersiones}}"
   },
   "bookActivity": {
     "courseOrDiveLabel": "Salida",

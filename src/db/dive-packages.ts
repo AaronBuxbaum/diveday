@@ -263,6 +263,63 @@ export async function countSpendableDives(
 }
 
 /**
+ * **"Package: 7 of 10 dives left"** on the diver record (fourth UX review,
+ * item 20): the question a diver asks at the counter on day three, answered
+ * where the staffer is already looking.
+ *
+ * "Of" counts the dives on the packages that still have one to spend, so a
+ * finished package from two years ago does not turn "7 of 10" into "7 of 20".
+ * The same backing rule as {@link listSpendableEntitlements}: a refunded or
+ * lost-dispute package shows nothing. Null when there is nothing left.
+ */
+export async function diverPackageBalance(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  now = nowDate(),
+): Promise<{ left: number; of: number } | null> {
+  const rows = await db
+    .select({
+      orderId: divePackageEntitlements.orderId,
+      expiresAt: divePackageEntitlements.expiresAt,
+      consumedAt: divePackageEntitlements.consumedAt,
+    })
+    .from(divePackageEntitlements)
+    .innerJoin(
+      orders,
+      and(
+        eq(orders.id, divePackageEntitlements.orderId),
+        eq(orders.shopId, divePackageEntitlements.shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(divePackageEntitlements.shopId, shopId),
+        eq(divePackageEntitlements.personId, personId),
+        packageOrderStillBacks(),
+      ),
+    );
+  const byOrder = new Map<string, { left: number; of: number }>();
+  for (const row of rows) {
+    const tally = byOrder.get(row.orderId) ?? { left: 0, of: 0 };
+    tally.of += 1;
+    const spendable =
+      row.consumedAt === null &&
+      (row.expiresAt === null || row.expiresAt.getTime() > now.getTime());
+    if (spendable) tally.left += 1;
+    byOrder.set(row.orderId, tally);
+  }
+  let left = 0;
+  let of = 0;
+  for (const tally of byOrder.values()) {
+    if (tally.left === 0) continue;
+    left += tally.left;
+    of += tally.of;
+  }
+  return left > 0 ? { left, of } : null;
+}
+
+/**
  * Spend one dive on a booking, or report that there was none to spend.
  *
  * **Takes the executor it is given**, because the caller is `bookSpot`'s

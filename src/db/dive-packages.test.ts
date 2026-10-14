@@ -12,6 +12,7 @@ import {
   countSpendableDives,
   createDivePackage,
   deleteDivePackage,
+  diverPackageBalance,
   grantPackageEntitlements,
   listDivePackages,
   listPackagesOnSale,
@@ -224,6 +225,30 @@ describe("selling and spending a package", () => {
     ).resolves.toBeNull();
 
     expect(await countSpendableDives(db, shop.id, person.id)).toBe(9);
+  });
+
+  it("tells staff how many of the package's dives are left, and nothing once lapsed", async () => {
+    const { db, shop, person, booking } = await sold();
+    expect(await diverPackageBalance(db, shop.id, person.id)).toEqual({ left: 10, of: 10 });
+    await consumeEntitlementForBooking(db, {
+      shopId: shop.id,
+      personId: person.id,
+      bookingId: booking.id,
+      trip: { courseId: null },
+    });
+    expect(await diverPackageBalance(db, shop.id, person.id)).toEqual({ left: 9, of: 10 });
+    await db
+      .update(divePackageEntitlements)
+      .set({ expiresAt: new Date("2030-01-01T00:00:00Z") })
+      .where(eq(divePackageEntitlements.personId, person.id));
+    // Lapsed dives are not dives left.
+    const later = new Date("2030-02-01T00:00:00Z");
+    expect(await diverPackageBalance(db, shop.id, person.id, later)).toBeNull();
+  });
+
+  it("never reads another shop's package for the balance", async () => {
+    const { db, person } = await sold();
+    expect(await diverPackageBalance(db, crypto.randomUUID(), person.id)).toBeNull();
   });
 
   it("releases nothing for a booking that consumed nothing", async () => {

@@ -176,7 +176,8 @@
     "emergencyContactPhoneLabel": "Emergency contact phone",
     "saving": "Saving…",
     "saveDetails": "Save details",
-    "visits": "{count, plural, one {# visit} other {# visits}}"
+    "visits": "{count, plural, one {# visit} other {# visits}}",
+    "packageBalance": "Package: {left} of {of, plural, one {# dive} other {# dives}} left"
   },
   "bookActivity": {
     "courseOrDiveLabel": "Departure",
