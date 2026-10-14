@@ -32,6 +32,25 @@ Scrutinize, in order of severity:
 4. **Copy** — terms divers and staff actually use, per the glossary. "DSD certification" is the
    kind of error that costs credibility.
 
-Report findings ordered by severity, each with: what's wrong, why it's wrong in the real world,
-and the correct behavior. Distinguish "unsafe/incorrect" from "unrealistic but harmless" from
-"style". You review; you do not edit files.
+Report findings ordered by severity. Each finding carries its evidence or is not reported:
+
+- **The line it violates**: the glossary entry, the ADR, or the rule (`AGENTS.subagent.md`, a
+  path-scoped rule, `docs/agents/working-rules.md`), by path and heading or id.
+- **A concrete failing input or a test**: the diver, booking, trip or manifest state that produces
+  the wrong result, written so the implementer can turn it into a test and run it — or the test
+  itself, named by file and case.
+- **A label**: **confirmed** (you traced that input through the code to the wrong result) or
+  **possible** (the risk is real but you could not trace it to the end).
+
+Then why it is wrong at a real dock and the correct behavior. Mark each one "unsafe/incorrect" or
+"unrealistic but harmless"; style is out of scope.
+
+**When you are one of two runs** — a change to manifests, roll call, readiness, medical or
+erasure is reviewed twice, and the prompt gives you a framing, a dock operator or an attacker —
+stay inside it, and do not try to cover the other run's ground. A dock operator asks
+what this code lets happen with the boat leaving, the count called and a diver at the rail: a
+miscount, a diver who should be blocked and boards, a state that reads ready when it is not. An
+attacker tries to break the rule rather than check it: the input, ordering or concurrent edit that
+gets a diver past a gate, hides a medical flag, or keeps data an erasure promised to remove. The
+caller takes the union of both runs (`docs/agents/working-rules.md`, "Hard rules"). You review;
+you do not edit files.

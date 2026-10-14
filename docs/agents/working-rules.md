@@ -1,4 +1,4 @@
-# AGENTS.md's commands, parallel work and hard rules, in full
+# AGENTS.md's commands, parallel work, delegation and hard rules, in full
 
 [AGENTS.md](../../AGENTS.md) is loaded by every session, so it carries each of these as one line:
 the rule and the hook or guard that enforces it. This is the full statement each line points at,
@@ -74,6 +74,31 @@ runs. Pass args directly. The shell guard refuses the bare form.
   20261003-every-stack-layer-runs-ci and 20260907-a-runner-registers-the-stack.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same spec
   or test name; coordinate in that thread instead of pushing a competing fix.
+- **A thread that steers never builds.** A thread that plans, routes or watches a stack hands each
+  ticket or stack layer to a fresh worker (a subagent, or a new thread) with a spec written from
+  [spec-template.md](spec-template.md): goal, files owned, constraints, done-when, verification
+  command, hand-back format. The worker builds, writes its result to a file and hands back the
+  path; the steering thread reads that file, not the tree. A thread whose context passes about
+  150k tokens writes a state note (what is done, what is in flight and where, the next step) and
+  retires, and a fresh thread picks up from the note. The measurement: on 2026-10-14 five
+  steering threads at 200k to 380k context were also building, one with fourteen branches and
+  another with six worktrees, each call paying for the whole history; a long session degrades
+  as its input grows, and a clean one with a better brief outperforms it.
+
+## Delegating
+
+- **Scale the effort to the task.** A one-file change gets no plan and no subagent. A multi-file
+  change gets a plan first. A cross-area change gets at most three parallel subagents, each given
+  an objective, an output format and a boundary (the paths it may read or change). One turn here
+  once spawned nine; most coding work has fewer independent parts than that.
+- **Route cheap work to a cheap model.** Scouting, search, triage, labelling, screenshot capture
+  and test runs go to a subagent on sonnet at low effort; the project's `Explore` agent
+  (`.claude/agents/Explore.md`) is that scout, read-only and without `AGENTS.md`. Design,
+  judging and safety-critical code stay on the main model.
+- **A worker hands back a path.** A subagent or worker writes its full result to a file (the
+  scratchpad, or `docs/` when the result is the deliverable) and hands back the path plus at most
+  ten lines. A hand-back is read twice in the parent's transcript, and a long one crowds out the
+  work; the next step reads the file.
 
 ## Hard rules
 
@@ -125,7 +150,17 @@ runs. Pass args directly. The shell guard refuses the bare form.
 - **Safety-critical surfaces** (manifests, roll call, readiness, cert gating, medical flags,
   erasure) get boring code, failure-path and adversarial tests, and a `dive-domain-expert` review,
   named in the PR body's "Reviews launched" section, which CI reads
-  ([repo-checks.md](repo-checks.md#pr-body)).
+  ([repo-checks.md](repo-checks.md#pr-body)). For manifests, roll call, readiness, medical and
+  erasure, that review is **two independent runs with different framing**, launched in parallel
+  so neither sees the other: one as **a dock operator** (the boat is leaving, the count is
+  called, the diver is at the rail — what does this code let happen?) and one as **an attacker**
+  (`security-reviewer` when the change touches personal or medical data, tokens or erasure;
+  otherwise a second `dive-domain-expert` run told to break the rule rather than check it).
+  Act on the union of their findings, each under the reviewers' evidence rule: it cites the
+  rule, ADR or glossary line it violates and a failing input or a test, labelled confirmed or
+  possible. A finding is acted on once its test runs and fails. Both runs are named in "Reviews
+  launched". Ordinary PRs, and cert gating on its own, keep one run: two runs double the review
+  spend, and the voting is worth it only where a miss puts a diver in the water.
 - **Security-sensitive changes** (auth/authz, token flows, rows holding personal or medical data,
   export/import) get a `security-reviewer` review before merge.
 - **Layout**: domain logic in `src/lib/` or a feature module; routes in `src/app/` stay thin; e2e

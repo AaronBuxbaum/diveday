@@ -44,6 +44,11 @@ Before every push:
    reviewer with its answer on the same line; `scripts/guard-pr-body.mjs` runs CI's check over
    the body before `create_pull_request` or `update_pull_request` sends it.
 
+**A review finding is acted on once its test runs and fails.** Turn the finding's failing input
+into a test (a reviewer agent's, a bot's, or a claim in a PR thread), run it, and fix only when it
+goes red; a finding whose test passes is answered with that test, not a code change. At most two
+review rounds on one change: after the second, ask Aaron before another round of fixes.
+
 CI runs anything whole: `pnpm check`, the whole unit suite, `next build`, the whole e2e suite and
 the visual run. The shell guard refuses the bare local forms. When you do read a `pnpm check` log,
 read the whole tail before fixing anything; the list at the bottom is complete.
