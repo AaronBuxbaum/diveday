@@ -1,9 +1,14 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { COVERAGE_PROMISE, type CoverageDenominator, coverageOf, coverageProblems } from "./coverage";
+import { isMarineLifeSlug } from "@/db/marine-life-catalog";
+import {
+  COVERAGE_PROMISE,
+  type CoverageDenominator,
+  coverageOf,
+  coverageProblems,
+} from "./coverage";
 import { DIVE_AREA_BY_CODE } from "./dive-areas";
-import { MARINE_LIFE_BY_SLUG } from "@/db/marine-life-catalog";
 import { DIVE_SITE_TEMPLATES } from "./dive-site-templates";
 import speciesCoverage from "./species-coverage.json";
 
@@ -64,7 +69,7 @@ describe("the species denominators", () => {
   it("map only to species the catalog carries", () => {
     const unknown = groups.flatMap((group) =>
       group.rows
-        .filter((row) => row.slug && !MARINE_LIFE_BY_SLUG.has(row.slug))
+        .filter((row) => row.slug && !isMarineLifeSlug(row.slug))
         .map((row) => `${group.group}: ${row.slug}`),
     );
     expect(unknown).toEqual([]);
