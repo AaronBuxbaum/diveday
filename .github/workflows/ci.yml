@@ -84,7 +84,19 @@ jobs:
           # release, which is the destructive-DDL gate silently not running.
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      # The failing guards go to the job summary by name, and every guard's
+      # result to the `check-repo-results` artifact, so a catch rate per guard
+      # can be read across runs (scripts/check-repo-report.mjs).
       - run: pnpm check:repo
+        env:
+          CHECK_REPO_RESULTS: check-repo-results.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: check-repo-results
+          path: check-repo-results.json
+          if-no-files-found: ignore
+          retention-days: 90
       # The `guards` Vitest project — the src tests that read the repository's
       # own files and assert on their text — runs here, once per run, and
       # nowhere else: `unit-tests` excludes it (`--project '!guards'`), and
