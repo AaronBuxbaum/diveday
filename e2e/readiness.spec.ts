@@ -222,8 +222,8 @@ test.describe("staff-prepared trip", () => {
     // relaxed-revocation branch — which is the half of this that a unit test
     // cannot reach. Its own test because it ends the booking, which every
     // check in the test above needs live.
-    await page.getByRole("button", { name: "Cancel my spot" }).click();
-    await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
+    await page.getByRole("button", { name: "Cancel my seat" }).click();
+    await page.getByRole("button", { name: "Yes, cancel my seat" }).click();
     await expect(page.getByRole("heading", { name: "This booking was canceled" })).toBeVisible();
     // Never a dead end: the schedule is one tap away (third UX review, item 16).
     await expect(page.getByRole("link", { name: "See what’s coming up" })).toHaveAttribute(
@@ -276,7 +276,7 @@ test.describe("staff-prepared trip", () => {
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(
       page.getByRole("list", { name: "Upcoming trips" }).locator("li").filter({ hasText: title }),
-    ).toContainText("6 spots left");
+    ).toContainText("6 seats left");
   });
 });
 

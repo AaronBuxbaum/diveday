@@ -63,7 +63,7 @@ test.describe("reply keywords", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(email);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
     // The first `C`. Nothing is cancelled by it, by design.
@@ -148,7 +148,7 @@ test.describe("reply keywords", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name").fill("Ivan Petrov");
     await page.getByLabel("Email").fill(email);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Ivan/ })).toBeVisible();
 
     // A message that happens to contain the word: read as prose, not a command.

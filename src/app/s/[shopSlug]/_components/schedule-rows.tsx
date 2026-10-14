@@ -4,7 +4,12 @@ import type { nextSessionStartByCourse } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { tripRequirementMarkers } from "@/i18n/readiness-labels";
 import { courseDepthFormat } from "@/i18n/unit-labels";
-import { courseTotalCents, resolveCourseContentDepths, resolveImageAlt } from "@/lib/courses";
+import {
+  courseTotalCents,
+  perDiverBookingPriceCents,
+  resolveCourseContentDepths,
+  resolveImageAlt,
+} from "@/lib/courses";
 import { formatDayParts, formatMoneyScanned, formatShortDate, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ShopCurrency } from "@/lib/money";
@@ -67,6 +72,7 @@ export function weekLedgerRows({
     // them out: a course exists to create the certification, so repeating the
     // site's demand here would read as a bar on the very students it is for.
     const requirement = trip.course ? null : (requirementsByTrip.get(trip.id) ?? null);
+    const seatPrice = perDiverBookingPriceCents(trip, trip.course);
     const seats = scheduleSeatState(t, trip);
     return {
       id: trip.id,
@@ -107,8 +113,9 @@ export function weekLedgerRows({
       aboveLevel: aboveStatedLevel.has(trip.id) ? t("schedule.filters.aboveLevelChip") : null,
       capacityText: seats.text,
       capacityTone: seats.tone,
-      price:
-        trip.priceCents !== null ? formatMoneyScanned(trip.priceCents, currency, locale) : null,
+      // A course session reads the course total the booking charges, never
+      // the trip row's own figure (fourth UX review item 2, H-117).
+      price: seatPrice !== null ? formatMoneyScanned(seatPrice, currency, locale) : null,
     };
   });
 }

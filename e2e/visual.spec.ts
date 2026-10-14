@@ -3271,8 +3271,8 @@ for (const scheme of ["light", "dark"] as const) {
         await bookAVisualRegressionSeat(page, scheme);
         await page.goto(new URL(page.url()).pathname);
         await threadStatus(page).waitFor();
-        await page.getByRole("button", { name: "Cancel my spot" }).click();
-        await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
+        await page.getByRole("button", { name: "Cancel my seat" }).click();
+        await page.getByRole("button", { name: "Yes, cancel my seat" }).click();
         await page.getByRole("heading", { name: "This booking was canceled" }).waitFor();
         // Without `?cancelled=1` — the bookmarked URL, or the link out of an
         // old reminder email, which is how a diver actually arrives here.

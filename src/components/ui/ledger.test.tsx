@@ -1036,7 +1036,7 @@ describe("LedgerRow", () => {
    * crew" rows kept 20px of air over the kind and 10px under the last line, 5px
    * low. The overhang cannot grow (above), so the room is mirrored instead: a
    * row whose fix holds a control takes those 8px again under its last line.
-   * Only a control: a fix that is a fact ("3 spots left", a date) sits in the
+   * Only a control: a fix that is a fact ("3 seats left", a date) sits in the
    * kind's own line and leaves that line 20px, so it takes nothing back.
    */
   it("mirrors under its last line the room a control takes over the kind's line", () => {

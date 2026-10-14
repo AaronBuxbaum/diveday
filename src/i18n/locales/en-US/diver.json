@@ -73,7 +73,7 @@
     "timesInZone": "All times below are local to {shop} ({zone}).",
     "timesInZoneFooter": "Times are local to {shop} ({zone}).",
     "embedSeeFullSchedule": "See the full schedule",
-    "diverDescription": "Find your next day on the water, see what to expect, and reserve your spot.",
+    "diverDescription": "Find your next day on the water, see what to expect, and reserve your seat.",
     "noTrips": "No trips on the books yet",
     "noUpcomingStaff": "Nothing upcoming on the board",
     "noTripsStaff": "The board is clear. Schedule a departure and divers can start booking.",
@@ -118,7 +118,7 @@
     "tripListLabel": "Upcoming trips",
     "monthNav": "Browse by month",
     "jumpToDay": "Jump to a day",
-    "spotsLeftUrgent": "{count, plural, one {Only # spot left} other {Only # spots left}}",
+    "spotsLeftUrgent": "{count, plural, one {Only # seat left} other {Only # seats left}}",
     "nextWithSpace": {
       "eyebrow": "Next boat with space",
       "earlierFull": "{count, plural, one {the {time} boat is full} other {the # boats before it are full}}",
@@ -334,7 +334,7 @@
     "observed": "Observed"
   },
   "booking": {
-    "heading": "Grab a spot",
+    "heading": "Grab a seat",
     "knownDiver": {
       "heading": "Booking as {name}",
       "card": "{level} card, verified {date}",
@@ -367,9 +367,9 @@
     "cancelledBody": "for another date, or get in touch with the shop.",
     "cancelledContact": "Questions? Contact the shop at {contact}.",
     "bookAndPay": "Book and pay",
-    "bookAndPayLastSpot": "Book and pay — last spot",
-    "bookLastSpot": "Book the last spot",
-    "bookSpots": "Book these spots",
+    "bookAndPayLastSeat": "Book and pay for the last seat",
+    "bookLastSeat": "Book the last seat",
+    "bookSeats": "{count, plural, one {Book this seat} other {Book # seats}}",
     "bookVerb": "Book",
     "headingToPayment": "Heading to payment…",
     "booking": "Booking…",
@@ -379,12 +379,12 @@
     "alternativeSameSite": "Same site, {date}",
     "reefNotGoingAnywhere": "— the reef isn’t going anywhere.",
     "waitlistHeading": "Join the wait list",
-    "waitlistBody": "If a spot opens, the shop will have your details ready.",
+    "waitlistBody": "If a seat opens, the shop will have your details ready.",
     "waitlistJoining": "Joining…",
     "wantAnyTripAlertsInstead": "Not set on this one? Want any-trip deal alerts instead?",
     "joinLastMinuteDealAlerts": "Join the last-minute list",
     "waitlistConfirmedHeading": "You’re on the wait list, {name}.",
-    "waitlistConfirmedBody": "A spot is not held yet. The shop has your details and will get in touch if a seat opens up.",
+    "waitlistConfirmedBody": "A seat is not held yet. The shop has your details and will get in touch if one opens up.",
     "sailedHeading": "This one’s already sailed",
     "sailedCheckSchedule": "Check the schedule",
     "sailedForNext": "for the next departure.",
@@ -395,24 +395,24 @@
     "confirmedHeading": "You’ve got a seat, {name}.",
     "confirmedDockCall": "{date}, {time}. Be at the dock {minutes, plural, one {# minute} other {# minutes}} early and we’ll take it from there.",
     "paymentDepositBalance": "Your seat’s locked in. The {balance} balance is due at the dock.",
-    "paymentStillOpen": "Your spot is safe and payment’s still open",
-    "codeUsedUp": "That code’s been used up. Your spot is safe, and you can pay the full price from your readiness page.",
+    "paymentStillOpen": "Your seat is safe and payment’s still open",
+    "codeUsedUp": "That code’s been used up. Your seat is safe, and you can pay the full price from your readiness page.",
     "trackReadiness": "Track everything on your readiness page →",
     "errors": {
       "invalid": "Check your name and email and give it another go.",
-      "full": "Someone grabbed the last spot just before you, so the boat’s full.",
-      "available": "Good news: a spot just opened. Book it before it goes.",
+      "full": "Someone grabbed the last seat just before you, so the boat’s full.",
+      "available": "Good news: a seat just opened. Book it before it goes.",
       "already": "You’re already on this trip’s list, so there’s no need to book twice.",
       "unavailable": "This trip isn’t taking bookings right now. Get in touch and the shop can help you find the right fit.",
       "unavailableWithContact": "This trip isn’t taking bookings right now. Email {contact} and the shop can help you find the right fit.",
-      "tripRequirement": "This charter is for divers with {list}, so we couldn’t book that spot. Get in touch if you hold that certification and the shop can add it to your record.",
-      "tripRequirementWithContact": "This charter is for divers with {list}, so we couldn’t book that spot. Email {contact} if you hold that certification and the shop can add it to your record.",
+      "tripRequirement": "This charter is for divers with {list}, so we couldn’t book that seat. Get in touch if you hold that certification and the shop can add it to your record.",
+      "tripRequirementWithContact": "This charter is for divers with {list}, so we couldn’t book that seat. Email {contact} if you hold that certification and the shop can add it to your record.",
       "courseUnavailable": "This course still needs an assigned instructor before it can take bookings.",
       "courseRatioFull": "This session is at its instructor-to-student ratio limit. Call the shop: they may be able to add another instructor.",
       "fit": "That rental fit didn’t save. Check the details and try again.",
-      "pay": "We couldn’t open the payment page just now. Your spot is safe. Try again in a moment, or pay at the shop.",
+      "pay": "We couldn’t open the payment page just now. Your seat is safe. Try again in a moment, or pay at the shop.",
       "checkFields": "Check the highlighted fields and try again.",
-      "diversFull": "The diver spots on this trip are taken, so we couldn’t book a diver.",
+      "diversFull": "The diver seats on this trip are taken, so we couldn’t book a diver.",
       "typeUnavailable": "That option isn’t offered on this trip. Pick another and try again."
     },
     "fieldErrors": {
@@ -466,7 +466,7 @@
     "skipBody": "Bringing your own kit? Leave this unchecked and you won’t be charged for gear. Check it to see what we rent."
   },
   "lastMinute": {
-    "heading": "Want a deal on a last-minute spot?",
+    "heading": "Want a deal on a last-minute seat?",
     "body": "Tell us when you’re around and we’ll email you if a boat needs to fill seats at a discount.",
     "errors": {
       "invalid": "Enter a name and a valid email.",
@@ -479,7 +479,7 @@
     "submit": "Notify me",
     "submitting": "Notifying…",
     "joinedHeading": "You’re on the list.",
-    "joinedBody": "We’ll email you if a discounted last-minute spot opens up in your dates.",
+    "joinedBody": "We’ll email you if a discounted last-minute seat opens up in your dates.",
     "unsubscribe": {
       "title": "Stop last-minute deal emails?",
       "description": "You’re on {shopName}’s list for last-minute deal emails.",
@@ -738,7 +738,7 @@
     "nextDiveSameSite": "Back to {site}.",
     "nextDiveSoonest": "The next one with room.",
     "nextDiveLevelCovers": "Your {level} card covers it.",
-    "nextDiveSeats": "{count, plural, one {# spot} other {# spots}}"
+    "nextDiveSeats": "{count, plural, one {# seat} other {# seats}}"
   },
   "register": {
     "title": "Get set up with {shop}",
@@ -814,7 +814,7 @@
     "paymentUnavailable": "We couldn’t open the payment page. Your seat is safe. Try again, or pay at the shop.",
     "paymentCancelled": "Payment canceled. Your seat is still held.",
     "codeUsedUp": "That code’s been used up. Your seat is held, and you can pay the full price below.",
-    "cancelSpot": "Cancel my spot",
+    "cancelSpot": "Cancel my seat",
     "lateLead": "On your way but behind?",
     "lateButton": "Running late",
     "lateSending": "Telling the shop…",
@@ -824,14 +824,14 @@
     "lateSaid": "At {time} you told the shop you’re running late.",
     "lateUndo": "I’m on time after all",
     "lateUnavailable": "That didn’t reach the shop. If you’re still on your way, call them.",
-    "cancelConfirm": "Cancel your spot on {trip}? This can’t be undone.",
-    "cancelConfirmButton": "Yes, cancel my spot",
+    "cancelConfirm": "Cancel your seat on {trip}? This can’t be undone.",
+    "cancelConfirmButton": "Yes, cancel my seat",
     "neverMind": "Never mind",
     "cancelling": "Canceling…",
     "cancelPreviewRefund": "You’re still inside the free-cancellation window, so what you paid comes back to you.",
     "cancelPreviewForfeit": "You’re past the free-cancellation window, so what you paid won’t be refunded.",
     "cancelPreviewNoPolicy": "This shop doesn’t automate cancellation refunds, so nothing is refunded right away.",
-    "cancelUnavailable": "This spot can no longer be canceled here. The shop can release it for you.",
+    "cancelUnavailable": "This seat can no longer be canceled here. The shop can release it for you.",
     "refundIssued": "You paid for this trip, so a refund has been issued back to your card.",
     "refundManual": "You paid for this trip. This shop handles cancellation refunds directly, so reach out to them about it.",
     "stateDone": "Done",
@@ -2418,7 +2418,7 @@
     "nightDive": "Night Dive",
     "tomorrowTime": "Tomorrow · 7:30 AM",
     "fridayTime": "Friday · 7:30 PM",
-    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
+    "spotsLeft": "{count, plural, one {# seat left} other {# seats left}}",
     "full": "Full",
     "recap": {
       "label": "Dive recap",
@@ -2481,7 +2481,7 @@
     "phaseCheckin": "Check-in",
     "readyCount": "7 of 9 ready",
     "blockedCount": "2 blocked",
-    "spotsOpen": "3 spots open",
+    "spotsOpen": "3 seats open",
     "needsYou": "Needs you",
     "kindWaiver": "Waiver",
     "kindCertifications": "Certifications",
@@ -2493,7 +2493,7 @@
     "bookingCard": {
       "label": "Spiegel Grove Wreck",
       "requirement": "This charter is for divers with Advanced Open Water or higher and a Deep certification.",
-      "heading": "Grab a spot",
+      "heading": "Grab a seat",
       "divers": "Number of divers",
       "rentalGear": "Rental gear",
       "needGear": "Need rental gear?",
@@ -2529,7 +2529,7 @@
       "reefPrice": "$95",
       "nightTime": "7:30 PM – 9:30 PM",
       "nightPrice": "$120",
-      "onlyLeft": "{count, plural, one {Only # spot left} other {Only # spots left}}"
+      "onlyLeft": "{count, plural, one {Only # seat left} other {Only # seats left}}"
     },
     "waiverSigning": {
       "label": "Waiver",
@@ -2611,7 +2611,7 @@
       "day3Time": "8:00 AM – 4:00 PM",
       "nextDate": "Next date",
       "dates": "Wed, Oct 14 – Fri, Oct 16",
-      "dateMeta": "Starts 8:00 AM · 5 spots left",
+      "dateMeta": "Starts 8:00 AM · 5 seats left",
       "bookThisDate": "Book this date"
     },
     "ordersLedger": {
@@ -2690,7 +2690,7 @@
       "diver": {
         "title": "Diver",
         "desc": "You’re booking a dive. This is what the shop’s divers see: the schedule, the booking, the waiver.",
-        "tryThis": "Pick a trip on the schedule and book a spot."
+        "tryThis": "Pick a trip on the schedule and book a seat."
       }
     }
   },
@@ -3719,7 +3719,7 @@
         "lede": "The schedule on your site takes the divers, their rental gear, a nitrox request and the payment into your own Stripe account, and a departure stops selling by itself once it’s full.",
         "screenLabel": "A departure’s booking panel as a diver sees it: the certification the trip asks for, seats left, divers, rental gear and nitrox, and the total.",
         "note1": "The certification the trip asks for sits above the button, where a diver reads it before paying.",
-        "note2": "Spots left is the boat’s capacity less every seat sold or held, counted again as the booking saves.",
+        "note2": "Seats left is the boat’s capacity less every seat sold or held, counted again as the booking saves.",
         "note3": "Nitrox is priced per dive, and a diver who asks without a checked nitrox card is planned on air.",
         "step1Title": "Put the schedule where divers look",
         "step1Body": "Your departures have their own DiveDay page, and a Book Now button or the calendar pastes onto the site you already have.",
@@ -4157,7 +4157,7 @@
     },
     "bookingConfirmation": {
       "subject": "You’re on the boat — {tripTitle}",
-      "confirmed": "Your spot on {tripTitle} is confirmed.",
+      "confirmed": "Your seat on {tripTitle} is confirmed.",
       "dockNote": "Please be at the dock {dock} early. We’ll take it from there.",
       "waiverStep": "First, sign your waiver. {shopName} needs it before you board.",
       "waiverLink": "Sign your waiver",
@@ -4168,17 +4168,17 @@
       "partyPaid": "{seats, plural, one {Paid by card: {amount}.} other {Paid by card for # seats: {amount}.}}"
     },
     "waitlistInvite": {
-      "subject": "A spot opened up on {tripTitle}",
+      "subject": "A seat opened up on {tripTitle}",
       "body": "A seat just opened on {tripTitle}, and we’re offering it to you.",
       "claim": "Claim it before it’s gone",
-      "claimLink": "Claim your spot",
+      "claimLink": "Claim your seat",
       "footer": "The seat isn’t held for you, so don’t wait too long. See you on the boat!"
     },
     "tripInvitation": {
       "subject": "An invitation from {shopName}: {tripTitle}",
       "body": "We’ve planned {tripTitle} and would like to invite you.",
       "note": "This is an invitation, not a booking, so no seat is held yet.",
-      "link": "See the trip and book your spot"
+      "link": "See the trip and book your seat"
     },
     "lastMinuteDeal": {
       "subject": "{discount} off {tripTitle} — last-minute deal",
@@ -4190,7 +4190,7 @@
     },
     "checkoutRecovery": {
       "subject": "Finish booking {tripTitle}?",
-      "body": "Your spot on {tripTitle} is still held. You just haven’t finished paying.",
+      "body": "Your seat on {tripTitle} is still held. You just haven’t finished paying.",
       "pickUp": "Pick up right where you left off",
       "finishPaying": "Finish paying"
     },

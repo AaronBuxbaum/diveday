@@ -44,7 +44,7 @@ test("a week row is a link into its own departure", { tag: READ_ONLY }, async ({
   await page.goto("/s/blue-mantis");
 
   const firstRow = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
-  await expect(firstRow).toContainText(/spot|full/i);
+  await expect(firstRow).toContainText(/seat|full/i);
   const link = firstRow.getByRole("link").first();
   const href = await link.getAttribute("href");
   expect(href).toMatch(/^\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);

@@ -18,7 +18,7 @@ import {
  * proved the refusal ever reaches a human. That gap is exactly where this
  * feature's near-misses lived: the structured refusal shipped and reached no
  * UI, and the public form fell through to "this trip isn't taking bookings
- * right now" on a page displaying spots left. Both were caught in review, not
+ * right now" on a page displaying seats left. Both were caught in review, not
  * by a test.
  *
  * Its own file rather than cases in `booking.spec.ts`: that file is the
@@ -83,10 +83,10 @@ test.describe("as owner", () => {
     // impossibility rather than an absence of evidence.
     await page.getByLabel("Name", { exact: true }).fill("Diego Alvarez");
     await page.getByLabel("Email", { exact: true }).fill("diego.alvarez@mail.example");
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
 
     // What the *trip* requires, never what this person lacks (H-22). The
-    // non-disclosing fallback would be a lie on a page showing spots left, so
+    // non-disclosing fallback would be a lie on a page showing seats left, so
     // it must not appear.
     await expect(
       page.getByText(/This charter is for divers with Advanced Open Water or higher, so we could/),
@@ -122,7 +122,7 @@ test.describe("as owner", () => {
 
     await page.getByLabel("Name", { exact: true }).fill("Wren Halloway");
     await page.getByLabel("Email", { exact: true }).fill(`wren-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page).toHaveURL(/\/ready\//);
     // And the old refusal is not what happened.
     await expect(
@@ -148,7 +148,7 @@ test.describe("as owner", () => {
 
     // And the seat is there to buy.
     await expect(
-      page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }),
+      page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }),
     ).toBeEnabled();
   });
 

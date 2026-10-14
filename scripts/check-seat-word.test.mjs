@@ -8,7 +8,7 @@ function flagged(bundle, file = "trips.json") {
   return findSpotWords(bundle, { file }).violations.map((violation) => violation.keyPath);
 }
 
-describe("staff say seat", () => {
+describe("everyone says seat", () => {
   it("reads nested keys and counts every string it passed", () => {
     const result = findSpotWords({ a: { b: { c: "3 seats left" } }, d: "Full", e: 7 });
     expect(result.strings).toBe(2);
@@ -25,6 +25,18 @@ describe("staff say seat", () => {
     expect(flagged({ spine: { open: "3 Spots open" } })).toEqual(["spine.open"]);
   });
 
+  it("refuses the diver words the booking had (fourth review, item 7)", () => {
+    const diver = {
+      booking: { heading: "Grab a spot", bookSpots: "Book these spots" },
+      ready: { cancelSpot: "Cancel my spot" },
+    };
+    expect(flagged(diver, "diver.json")).toEqual([
+      "booking.heading",
+      "booking.bookSpots",
+      "ready.cancelSpot",
+    ]);
+  });
+
   it("leaves a word that only contains the letters alone", () => {
     expect(flagged({ a: "Spotlight on the reef", b: "Spotted a turtle", c: "despot" })).toEqual([]);
   });
@@ -38,9 +50,11 @@ describe("staff say seat", () => {
   it("names only allowed strings that still exist and still say spot", async () => {
     for (const entry of allowedSpotStrings) {
       const [file, keyPath] = entry.split(":");
-      const bundle = JSON.parse(
-        await readFile(new URL(`../src/i18n/locales/en-US/staff/${file}`, import.meta.url), "utf8"),
-      );
+      const where =
+        file === "diver.json"
+          ? "../src/i18n/locales/en-US/diver.json"
+          : `../src/i18n/locales/en-US/staff/${file}`;
+      const bundle = JSON.parse(await readFile(new URL(where, import.meta.url), "utf8"));
       const value = keyPath.split(".").reduce((node, key) => node?.[key], bundle);
       expect(value, entry).toMatch(/\bspots?\b/i);
     }

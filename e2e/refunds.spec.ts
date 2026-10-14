@@ -81,7 +81,7 @@ test.describe("refunds", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(`nora-${emailTag}-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
     await signInAsOwner(page);

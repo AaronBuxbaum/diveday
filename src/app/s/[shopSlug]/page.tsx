@@ -18,6 +18,7 @@ import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { parseBrandBadges } from "@/lib/brand";
 import { monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { formatMoneyScanned, formatTime } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -297,6 +298,11 @@ export default async function SchedulePage({
    * false — an empty 24px band above the schedule on the commonest shop of
    * all, the one with no next boat.
    */
+  // The booking's own per-diver figure: a course session's course total,
+  // never the trip row's price (fourth UX review item 2, H-117).
+  const nextBoatSeatCents = nextBoat ? perDiverBookingPriceCents(nextBoat, nextBoat.course) : null;
+  const nextBoatPrice =
+    nextBoatSeatCents !== null ? formatMoneyScanned(nextBoatSeatCents, currency, locale) : null;
   const identityPanels = (quiet.quiet ? 1 : 0) + (nextBoat ? 1 : 0);
 
   const { currentMonth, lastTripMonth, prevMonthKey, nextMonthKey } = scheduleMonthRail({
@@ -448,11 +454,7 @@ export default async function SchedulePage({
                     title={nextBoat.title}
                     description={nextBoat.description}
                     spots={scheduleSeatState(t, nextBoat).text}
-                    price={
-                      nextBoat.priceCents !== null
-                        ? formatMoneyScanned(nextBoat.priceCents, currency, locale)
-                        : null
-                    }
+                    price={nextBoatPrice}
                     skipped={skippedBoats}
                     firstSkippedTime={
                       firstSkippedBoat
@@ -838,7 +840,7 @@ async function ScheduleReviewsSection({
       endsAt: trip.endsAt,
       capacity: trip.capacity,
       booked: trip.booked,
-      priceCents: trip.priceCents,
+      priceCents: perDiverBookingPriceCents(trip, trip.course),
       diveSiteName: trip.diveSite?.name ?? null,
       conditionsHold: trip.conditionsHold,
     })),

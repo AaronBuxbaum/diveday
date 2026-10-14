@@ -33,14 +33,14 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   // the trip list itself: the "Next departure" card above it repeats whichever
   // trip's capacity it names, so a page-wide match legitimately finds two.
   const tripList = page.getByRole("list", { name: "Upcoming trips" });
-  await expect(tripList.getByText("3 spots left")).toHaveCount(1); // 11 of 14 booked, two of them not diving
+  await expect(tripList.getByText("3 seats left")).toHaveCount(1); // 11 of 14 booked, two of them not diving
   await expect(tripList.getByText("Full")).toHaveCount(1); // sold-out wreck trip
   await expect(page.getByRole("link", { name: "Full trip form" })).toHaveCount(0);
   await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
   // The hero says only what the shop wrote. DiveDay's own "find your next day
-  // on the water, … reserve your spot" filler left the page with the
+  // on the water, … reserve your seat" filler left the page with the
   // recomposition; it survives as the metadata description and nowhere else.
-  await expect(page.getByText(/reserve your spot/i)).toHaveCount(0);
+  await expect(page.getByText(/reserve your seat/i)).toHaveCount(0);
   await expect(page.getByText("Small-boat reef and wreck diving out of Key Largo.")).toBeVisible();
 
   // The month rail names the month in view and steps the list a month at a

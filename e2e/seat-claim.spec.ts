@@ -55,7 +55,7 @@ test.describe("seat claim links", () => {
     await page.getByLabel("Email", { exact: true }).fill(`orla-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Reyes");
     await page.getByLabel("Use the main contact’s email for this diver").check();
-    await page.getByRole("button", { name: "Book these spots" }).click();
+    await page.getByRole("button", { name: "Book 2 seats" }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Orla/ })).toBeVisible();
 
     // The organizer's panel: the second seat, unclaimed, with a shareable link.

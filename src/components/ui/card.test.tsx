@@ -492,7 +492,7 @@ describe("SectionCard", () => {
    * header top-aligned a 32px title line beside a 44px button, so the two
    * shared no line at all: "My departures" sat with its baseline 2px above
    * the button's label and its centre 5.5px above the button's
-   * (settings-calendar at 1280), and "Grab a spot" 10px under "5 spots left"
+   * (settings-calendar at 1280), and "Grab a seat" 10px under "5 seats left"
    * on the public trip. Baselines are the line text beside a control shares.
    */
   it("sets the title and its actions on one baseline", () => {
