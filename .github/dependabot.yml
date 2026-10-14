@@ -4,6 +4,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Three days, the same delay as `minimumReleaseAge` in pnpm-workspace.yaml:
+    # a pull request for a version younger than that would fail CI's install.
+    # Security updates are not delayed, so one for a version younger than that
+    # fails the install until `minimumReleaseAgeExclude` names it, by design.
+    cooldown:
+      default-days: 3
     groups:
       production-dependencies:
         dependency-type: production
@@ -17,6 +23,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Every Action is pinned to a commit (scripts/check-action-pins.mjs); these
+    # updates move the SHA and its `# vX.Y.Z` comment together, three days
+    # after a release rather than the hour a moved tag could be poisoned.
+    cooldown:
+      default-days: 3
     groups:
       github-actions:
         patterns:

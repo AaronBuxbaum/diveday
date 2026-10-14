@@ -5,7 +5,26 @@ allowBuilds:
   esbuild: true
   msw: true
 
-minimumReleaseAge: 0
+# Supply-chain delay: a version is not resolved until it has been public for
+# three days (4320 minutes). The 2025 npm worm releases spread within hours of
+# publication and were pulled within a day or two; a resolution on the day of a
+# compromise takes the bad version, one three days later does not. pnpm applies
+# it when it resolves and checks every locked entry against it on install,
+# `--frozen-lockfile` included ("Lockfile passes supply-chain policies"), so a
+# lockfile carrying a younger version fails CI's install. Dependabot holds the
+# same line with `cooldown` in .github/dependabot.yml. A same-day security patch
+# goes through `minimumReleaseAgeExclude` with the advisory named beside it, and
+# the line comes out once the version is three days old.
+minimumReleaseAge: 4320
+
+# `pnpm audit --audit-level high` runs in CI over the whole tree (repository
+# safeguards). An advisory listed here has no patched release and is reachable
+# only from development tooling. Delete a line once the fix ships.
+#   GHSA-vfj7-8cjw-p6xm: braces <=3.0.3, stack exhaustion on nested patterns.
+#     Dev only: reg-suit > reg-cli > del > globby > fast-glob > micromatch.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm
 
 # Security overrides for transitive dependencies (`pnpm audit`).
 # Each one lifts a pinned or stale copy to a patched release in the *same*

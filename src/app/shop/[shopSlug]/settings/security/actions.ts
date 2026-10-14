@@ -120,8 +120,7 @@ export async function disableTotpAction(shopSlug: string, formData: FormData) {
   const code = secondFactorCode(formData);
   const accepted =
     !security?.totpEnabledAt ||
-    (code.success &&
-      (await verifyAccountSecondFactor(db, accountId, code.data, { consumeTotpStep: false })));
+    (code.success && (await verifyAccountSecondFactor(db, accountId, code.data)));
   if (!accepted) redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "code-invalid"));
   await disableTotp(db, accountId);
   (await cookies()).delete(RECOVERY_CODES_COOKIE);
@@ -161,9 +160,7 @@ export async function verifyStepUpAction(shopSlug: string, formData: FormData) {
   if (!isStepUpPurpose(purposeValue) || !returnTo || !code.success || !session.user.sessionId) {
     redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-invalid"));
   }
-  const accepted = await verifyAccountSecondFactor(db, accountId, code.data, {
-    consumeTotpStep: false,
-  });
+  const accepted = await verifyAccountSecondFactor(db, accountId, code.data);
   if (!accepted) {
     redirect(
       noticeUrl(shopPath(shopSlug, "settings", "security"), "code-invalid", {

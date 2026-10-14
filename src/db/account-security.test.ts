@@ -1,7 +1,8 @@
-import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { randomBytes } from "node:crypto";
+import { eq, sql } from "drizzle-orm";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
-import { secretKeyFromEnvironment } from "@/lib/secret-box";
+import { openSecret, secretKeyFingerprint, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { recoveryCodeHashes, TOTP_STEP_SECONDS, totpCode } from "@/lib/totp";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
@@ -23,7 +24,22 @@ const ctx = fileScopedShopContext();
 function sealingKey() {
   const key = secretKeyFromEnvironment();
   if (key.status !== "ok") throw new Error("the unit suite configures a sealing key");
-  return key.key;
+  return key.key.current;
+}
+
+/**
+ * Two-factor turned on some time ago: the enrolment code spent its step, and
+ * that step has long passed, so the step record is cleared to say so.
+ */
+async function enrolledEarlier(db: Awaited<ReturnType<typeof seededAccount>>["db"], id: string) {
+  const started = await beginTotpEnrollment(db, id);
+  if (!started) throw new Error("enrollment needs a sealing key");
+  expect(await enableTotp(db, id, totpCode(started.secret))).toBe(true);
+  await db
+    .update(accountSecurity)
+    .set({ lastTotpStep: null })
+    .where(eq(accountSecurity.userAccountId, id));
+  return started;
 }
 
 async function seededAccount({ fresh = false } = {}) {
@@ -89,11 +105,20 @@ describe("account-security recovery codes", () => {
 describe("account-security TOTP", () => {
   async function enrolled() {
     const { db, account } = await seededAccount();
-    const started = await beginTotpEnrollment(db, account.id);
-    if (!started) throw new Error("enrollment needs a sealing key");
-    expect(await enableTotp(db, account.id, totpCode(started.secret))).toBe(true);
+    const started = await enrolledEarlier(db, account.id);
     return { db, account, secret: started.secret };
   }
+
+  /** The code typed to turn two-factor on is spent like any other. */
+  it("refuses the enrolment code at sign-in or step-up inside its window", async () => {
+    const { db, account } = await seededAccount();
+    const started = await beginTotpEnrollment(db, account.id);
+    if (!started) throw new Error("enrollment needs a sealing key");
+    const code = totpCode(started.secret);
+
+    expect(await enableTotp(db, account.id, code)).toBe(true);
+    expect(await verifyAccountSecondFactor(db, account.id, code)).toBe(false);
+  });
 
   it("accepts the code the authenticator is showing", async () => {
     const { db, account, secret } = await enrolled();
@@ -123,18 +148,6 @@ describe("account-security TOTP", () => {
     expect(await verifyAccountSecondFactor(db, account.id, previous)).toBe(false);
     // The current step is still ahead of the spent one, so it still works.
     expect(await verifyAccountSecondFactor(db, account.id, totpCode(secret, now))).toBe(true);
-  });
-
-  it("leaves the step unspent when the caller only checks", async () => {
-    const { db, account, secret } = await enrolled();
-    const code = totpCode(secret);
-
-    expect(await verifyAccountSecondFactor(db, account.id, code, { consumeTotpStep: false })).toBe(
-      true,
-    );
-    expect(await verifyAccountSecondFactor(db, account.id, code, { consumeTotpStep: false })).toBe(
-      true,
-    );
   });
 
   it("refuses a wrong code", async () => {
@@ -208,5 +221,132 @@ describe("step-up grants", () => {
         purpose: "money",
       }),
     ).toBeNull();
+  });
+});
+
+/**
+ * A rotated SECRET_ENCRYPTION_KEY used to lock out every account with
+ * two-factor on: the TOTP secret would not open and no recovery code would
+ * match. With the old value in SECRET_ENCRYPTION_KEY_PREVIOUS, both still work,
+ * and the TOTP secret moves to the new key at the next successful check.
+ */
+describe("account-security across a key rotation", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  /** Rotates the environment: a fresh current key, the suite's key as previous. */
+  function rotate({ keepPrevious = true } = {}) {
+    const previous = sealingKey().toString("base64");
+    const next = randomBytes(32);
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", next.toString("base64"));
+    vi.stubEnv("SECRET_ENCRYPTION_KEY_PREVIOUS", keepPrevious ? previous : "");
+    return next;
+  }
+
+  async function enrolledUnderSuiteKey() {
+    const { db, account } = await seededAccount();
+    const started = await enrolledEarlier(db, account.id);
+    return { db, account, ...started };
+  }
+
+  /**
+   * The runbook's query (docs/engineering/infrastructure-runbook.md, "Rotating
+   * the secret-sealing key"), with the current key's fingerprint bound: the
+   * accounts that still depend on the previous key.
+   */
+  async function stillOnPreviousKey(
+    db: Awaited<ReturnType<typeof seededAccount>>["db"],
+    current: Buffer,
+  ) {
+    const result = await db.execute(sql`
+      select user_account_id from account_security
+      where totp_enabled_at is not null
+        and (totp_secret_key_id is distinct from ${secretKeyFingerprint(current)}
+          or (jsonb_array_length(recovery_code_hashes) > 0
+            and recovery_codes_key_id is distinct from ${secretKeyFingerprint(current)}))`);
+    return result.rows.map((row) => (row as { user_account_id: string }).user_account_id);
+  }
+
+  it("records which key protects each account, so a rotation can be seen to finish", async () => {
+    const { db, account, secret, recoveryCodes } = await enrolledUnderSuiteKey();
+    const old = sealingKey();
+    const enrolledRow = await getAccountSecurity(db, account.id);
+    expect(enrolledRow?.totpSecretKeyId).toBe(secretKeyFingerprint(old));
+    expect(enrolledRow?.recoveryCodesKeyId).toBe(secretKeyFingerprint(old));
+
+    const next = rotate();
+    expect(await stillOnPreviousKey(db, next)).toContain(account.id);
+
+    // A sign-in moves the secret; the paper codes stay under the old key.
+    expect(await verifyAccountSecondFactor(db, account.id, totpCode(secret))).toBe(true);
+    const signedIn = await getAccountSecurity(db, account.id);
+    expect(signedIn?.totpSecretKeyId).toBe(secretKeyFingerprint(next));
+    expect(signedIn?.recoveryCodesKeyId).toBe(secretKeyFingerprint(old));
+    expect(await stillOnPreviousKey(db, next)).toContain(account.id);
+
+    // Spending a code confirms the key the rest were hashed under.
+    expect(await verifyAccountSecondFactor(db, account.id, recoveryCodes[0] ?? "")).toBe(true);
+    expect((await getAccountSecurity(db, account.id))?.recoveryCodesKeyId).toBe(
+      secretKeyFingerprint(old),
+    );
+
+    // Re-enrolling under the new key is what takes the account off the list.
+    await db
+      .update(accountSecurity)
+      .set({ totpEnabledAt: null })
+      .where(eq(accountSecurity.userAccountId, account.id));
+    await enrolledEarlier(db, account.id);
+    expect(await stillOnPreviousKey(db, next)).not.toContain(account.id);
+  });
+
+  it("locks the account out when the old key is simply dropped", async () => {
+    const { db, account, secret, recoveryCodes } = await enrolledUnderSuiteKey();
+    rotate({ keepPrevious: false });
+
+    expect(await verifyAccountSecondFactor(db, account.id, totpCode(secret))).toBe(false);
+    expect(await verifyAccountSecondFactor(db, account.id, recoveryCodes[0] ?? "")).toBe(false);
+  });
+
+  it("accepts a TOTP code under the previous key and re-seals the secret under the new one", async () => {
+    const { db, account, secret } = await enrolledUnderSuiteKey();
+    const next = rotate();
+
+    expect(await verifyAccountSecondFactor(db, account.id, totpCode(secret))).toBe(true);
+    const sealed = (await getAccountSecurity(db, account.id))?.totpSecretSealed ?? "";
+    // Opens under the new key alone: the previous key can now be retired for this account.
+    expect(openSecret(sealed, next)).toBe(secret);
+  });
+
+  it("leaves the secret under the previous key when the code is wrong", async () => {
+    const { db, account, secret } = await enrolledUnderSuiteKey();
+    rotate();
+    const before = (await getAccountSecurity(db, account.id))?.totpSecretSealed;
+    const wrong = totpCode(secret, nowMs() + 10 * TOTP_STEP_SECONDS * 1000);
+
+    expect(await verifyAccountSecondFactor(db, account.id, wrong)).toBe(false);
+    expect((await getAccountSecurity(db, account.id))?.totpSecretSealed).toBe(before);
+  });
+
+  it("accepts a recovery code issued under the previous key, once", async () => {
+    const { db, account, recoveryCodes } = await enrolledUnderSuiteKey();
+    rotate();
+    const code = recoveryCodes[0] ?? "";
+
+    expect(await verifyAccountSecondFactor(db, account.id, code)).toBe(true);
+    expect(await verifyAccountSecondFactor(db, account.id, code)).toBe(false);
+    expect((await getAccountSecurity(db, account.id))?.recoveryCodeHashes).toHaveLength(
+      recoveryCodes.length - 1,
+    );
+  });
+
+  it("hashes codes issued after the rotation under the new key", async () => {
+    const next = rotate();
+    const { db, account, recoveryCodes } = await enrolledUnderSuiteKey();
+    // The previous key is gone now; codes issued under the new one still work.
+    vi.stubEnv("SECRET_ENCRYPTION_KEY_PREVIOUS", "");
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", next.toString("base64"));
+
+    expect(await verifyAccountSecondFactor(db, account.id, recoveryCodes[1] ?? "")).toBe(true);
   });
 });

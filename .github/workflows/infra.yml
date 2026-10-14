@@ -50,7 +50,7 @@ jobs:
     outputs:
       changed: ${{ steps.filter.outputs.changed }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The diff below reaches back to the base commit, which a depth-1
           # checkout does not contain.
@@ -107,7 +107,7 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       # The wrapper, not a raw `cdk synth`: matches the command a workstation
       # operator actually runs. No AWS credentials needed for this either way
@@ -139,7 +139,7 @@ jobs:
         run: |
           echo "::error::AWS_CDK_DIFF_ROLE_ARN repository variable is not set. Complete manual action \"github-actions-cdk-oidc\" in docs/engineering/manual-actions.md, then set it to the GitHubActionsCdkDiffRoleArn stack output."
           exit 1
-      - uses: aws-actions/configure-aws-credentials@v6
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           # The session's default region, not where anything deploys -- every
@@ -150,7 +150,7 @@ jobs:
           role-session-name: gha-cdk-diff
       - name: Post the diff to the pull request
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        uses: corymhall/cdk-diff-action@v2
+        uses: corymhall/cdk-diff-action@ad67041313333f7f2bd26b33f18fb134610a971e # v2.0.9
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           # **One resource type, and it is here because the type has no
@@ -223,7 +223,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - name: Confirm the deploy role ARN is set
         if: vars.AWS_CDK_DEPLOY_ROLE_ARN == ''
@@ -278,7 +278,7 @@ jobs:
             echo "::error::Refusing to deploy: the post-deploy wizard would shell out to gh/vercel with an empty credential. Nothing has been deployed by this run."
             exit 1
           fi
-      - uses: aws-actions/configure-aws-credentials@v6
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           aws-region: us-east-1
           role-to-assume: ${{ vars.AWS_CDK_DEPLOY_ROLE_ARN }}

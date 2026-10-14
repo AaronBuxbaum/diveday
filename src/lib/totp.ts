@@ -98,10 +98,6 @@ export function matchTotpStep(
   return matched;
 }
 
-export function verifyTotpCode(secret: string, code: string, timestampMs = nowMs()): boolean {
-  return matchTotpStep(secret, code, timestampMs) !== null;
-}
-
 /**
  * Hashes a recovery code for storage.
  *

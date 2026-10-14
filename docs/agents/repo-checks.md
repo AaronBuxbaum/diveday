@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 53 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 54 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection, runner-image and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -322,6 +322,10 @@ The slug-action one (`scripts/check-slug-actions.mjs`) fails a `"use server"` mo
 
 The env-reads one (`scripts/check-env-reads.mjs`, also `pnpm check:env-reads`) fails an upper-case environment key read in `src/` (`process.env.KEY`, `process.env["KEY"]`, or `env.KEY` on a parameter defaulted to `process.env`) that `config/env-registry.mjs` does not hold and its `NOT_REGISTERED` list does not excuse with a reason. `pnpm check:env` compares `.env.example` and a deployment against the registry but never looked at the code, and the 2026-10-13 review found six keys read and unregistered, three of them signing secrets (`RECAP_LINK_SECRET`, `BUDDY_LINK_SECRET`, `WAIVER_INTEGRITY_SECRET`) that fall back to `AUTH_SECRET`: rotating `AUTH_SECRET` silently broke every recap and buddy link and made every sealed waiver verify as invalid, and nothing a human reads said so. Writing the guard found the VAPID keypair too. The excused keys are the platform's (`NODE_ENV`, `VERCEL_ENV`), the test and dev harness's (`DIVEDAY_CLOCK`, `PGLITE_DATA_DIR`), the Sentry cron monitor names, and the overrides of a value compiled into the code (`src/lib/configured.ts`: `APP_HOST`, `SES_FROM_EMAIL`, `STRIPE_CONNECT_CLIENT_ID`, `NEXT_PUBLIC_SENTRY_DSN`), which the registry's header says do not belong in it. An excuse nothing reads any more fails too.
 
+
+### action-pins
+
+The action-pins one (`scripts/check-action-pins.mjs`, also `pnpm check:action-pins`) fails any `uses:` under `.github/` that is not a local action and not pinned to a full 40-character commit SHA with a `# vX.Y.Z` comment beside it (a `docker://` image needs a digest). A tag is a pointer its owner can move: `corymhall/cdk-diff-action@v2` ran in the infra diff job after `configure-aws-credentials` had exported a role that can write the CDK staging bucket a later deploy reads, so a moved tag would have run someone else's code with those credentials (the tj-actions class of incident; 2026-10-13 review, row 14). The comment is what tells a reader, and Dependabot's `github-actions` updates, which version the SHA is; Dependabot bumps the SHA and the comment together. To pin a new action, `git ls-remote --tags https://github.com/<owner>/<repo>` gives the commit each tag points at.
 ### trip-revision
 
 The trip-revision one (`scripts/check-trip-revision.mjs`) fails any `.update(trips)` whose `.set()` literal writes `startsAt` without also writing `revision`. `trips.revision` is published as the RFC 5545 `SEQUENCE` on both calendar surfaces (`src/lib/trip-calendar.ts`), and a client that re-fetches an event whose `SEQUENCE` has not moved treats it as the event it already holds — so a departure that slides an hour with a flat revision leaves every subscribed calendar on the old `DTSTART`, and a diver on the dock at the old time. That is issue #1165, which was fixed at the two writers that existed then; nothing made the third one carry it.
