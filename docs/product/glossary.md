@@ -97,6 +97,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Cancellation notice
 - Card dispute
 - Dashboard refund
+- Dive (package unit)
 - Failed refund
 - First paid month
 - Free term
@@ -114,6 +115,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Arrival event
 - Arrival lookup
 - Arrivals window
+- Ask to move
 - Automated cancellation refund
 - Automated marine outlook
 - Back on the water
@@ -225,6 +227,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Safety kit
 - Sailed
 - Salvage offer
+- Seat
 - Seat claim
 - Seat held
 - Seat move
