@@ -11,6 +11,7 @@ const db = vi.hoisted(() => ({
   getReadyPageData: vi.fn(),
   getBookingPayment: vi.fn(),
   getShopById: vi.fn(),
+  partySeatsKeptAfterLeadCancel: vi.fn(),
 }));
 
 vi.mock("@/db/booking-capabilities", () => ({
@@ -20,6 +21,9 @@ vi.mock("@/db/booking-capabilities", () => ({
 vi.mock("@/db/ready", () => ({ getReadyPageData: db.getReadyPageData }));
 vi.mock("@/db/payments", () => ({ getBookingPayment: db.getBookingPayment }));
 vi.mock("@/db/shops", () => ({ getShopById: db.getShopById }));
+vi.mock("@/db/seat-claims", () => ({
+  partySeatsKeptAfterLeadCancel: db.partySeatsKeptAfterLeadCancel,
+}));
 vi.mock("@/db/series-next", () => ({ nextPublicTripInSeries: async () => null }));
 vi.mock("@/i18n/request", () => ({ requestLocale: async () => "en-US" }));
 vi.mock("./ExpiredLink", async (importOriginal) => ({
@@ -53,9 +57,36 @@ describe("readyDeadLink", () => {
       shop: { id: "s1", slug: "blue-mantis" },
     });
     db.getBookingPayment.mockResolvedValue(null);
+    db.partySeatsKeptAfterLeadCancel.mockResolvedValue([]);
     await show("1");
     expect(screen.getByText(t("ready.cancelledHeading"))).toBeTruthy();
     expect(db.getBookingPayment).toHaveBeenCalledWith(handle, "s1", "b1");
+  });
+
+  it("tells a party lead which of the seats they booked stayed (batch 6 item 10)", async () => {
+    db.resolveRevokedBookingCapability.mockResolvedValue({ bookingId: "b1" });
+    db.getReadyPageData.mockResolvedValue({
+      detail: {
+        cancelled: true,
+        trip: { title: "Two-Tank Reef" },
+        shop: { name: "Blue Mantis", timezone: "America/New_York" },
+      },
+      trip: { id: "t1" },
+      shop: { id: "s1", slug: "blue-mantis" },
+    });
+    db.getBookingPayment.mockResolvedValue(null);
+    db.partySeatsKeptAfterLeadCancel.mockResolvedValue(["Pia Ortiz"]);
+    await show("1");
+    expect(
+      screen.getByText(
+        t("ready.cancelledPartyKept", { count: 1, names: "Pia Ortiz", trip: "Two-Tank Reef" }),
+        { exact: false },
+      ),
+    ).toBeTruthy();
+    expect(db.partySeatsKeptAfterLeadCancel).toHaveBeenCalledWith(handle, {
+      shopId: "s1",
+      leadBookingId: "b1",
+    });
   });
 
   it("tells a diver stranded by a called-off departure the truth, not that the link expired", async () => {

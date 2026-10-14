@@ -516,6 +516,12 @@ export type PartySeatClaim = {
    */
   waiverSigned: boolean;
   /**
+   * The lead's own cancel would take this seat with it: unclaimed and still
+   * `booked` (batch 6 item 10, `cancelUnclaimedPartySeats`). The confirm lists
+   * these, and the rest as staying.
+   */
+  cancelsWithLead: boolean;
+  /**
    * A fresh claim capability for an unclaimed seat, or null for a claimed one
    * (nothing left to hand out) — and null when issuing failed, which the
    * panel renders as the seat's name with no link rather than an error.
@@ -591,6 +597,7 @@ export async function issuePartySeatClaims(
       seatName: seatName(row.person.fullName, row.booking),
       claimed: row.booking.claimedAt !== null,
       waiverSigned: waiverState(row.waiver, now) === "complete",
+      cancelsWithLead: row.booking.status === "booked" && row.booking.claimedAt === null,
       claim: claimable
         ? await issueBookingCapability(db, {
             shopId: input.shopId,
@@ -602,4 +609,33 @@ export async function issuePartySeatClaims(
     });
   }
   return seats;
+}
+
+/**
+ * **The party seats still booked after the lead's own cancel** (batch 6 item
+ * 10): what the lead's cancelled page names as staying. Read from the seats
+ * themselves, never the URL, and only seats this lead booked in this shop.
+ * Ordered as `issuePartySeatClaims` orders them.
+ */
+export async function partySeatsKeptAfterLeadCancel(
+  db: AppDb,
+  input: { shopId: string; leadBookingId: string },
+): Promise<string[]> {
+  const rows = await db
+    .select({
+      fullName: people.fullName,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      identityBookedAs: bookings.identityBookedAs,
+    })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.partyLeadBookingId, input.leadBookingId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
+  return rows.map((row) => seatName(row.fullName, row));
 }

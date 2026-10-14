@@ -161,6 +161,10 @@ type ActivityParamShapes = {
   seat_self_cancelled: { actor: string };
   /** …and the shop's cancellation window refunded them by card. */
   seat_self_refunded: { actor: string };
+  /** A party lead's own cancel took an unclaimed seat they booked with it (batch 6 item 10). */
+  party_seat_self_cancelled: { actor: string; diver: string };
+  /** …and the shop's cancellation window refunded that seat by card. */
+  party_seat_self_refunded: { actor: string; diver: string };
   /** A staffer opened a diver's physician's evaluation. */
   medical_clearance_opened: { actor: string; diver: string };
   /** A staffer downloaded a diver's own record. */
@@ -304,6 +308,8 @@ export const ACTIVITY_CODES = [
   "seat_claimed",
   "seat_self_cancelled",
   "seat_self_refunded",
+  "party_seat_self_cancelled",
+  "party_seat_self_refunded",
   "medical_clearance_opened",
   "record_exported",
   "running_late_from_message",

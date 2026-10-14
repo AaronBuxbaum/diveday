@@ -360,7 +360,10 @@
   Claiming re-points the seat's existing booking at the claimant's own person record and starts
   their own waiver and trip prep; the organizer's surfaces show which seats are claimed. It never
   creates or frees a seat, never moves money, and is never required — an unclaimed seat boards
-  under the organizer's party exactly as before claiming existed.
+  under the organizer's party exactly as before claiming existed. When the organizer cancels their
+  own seat from `/ready`, their unclaimed `booked` seats are cancelled with it and refunded under
+  the same policy; a claimed seat (or one already checked in) stays, and the confirm lists both
+  before the tap (`cancelUnclaimedPartySeats`, batch 6 item 10).
 - **Seat held** — the booking statuses that count against a departure's capacity: `booked` and
   `checked_in`, and nothing else (`SEAT_HELD_STATUSES` and `seatIsHeld`, `src/lib/no-show.ts`,
   spelled once as a `where` clause in `seatHeld`, `src/db/trips-queries.ts`). `cancelled` never held

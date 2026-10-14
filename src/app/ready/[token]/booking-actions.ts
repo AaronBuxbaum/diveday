@@ -7,7 +7,7 @@ import {
 } from "@/db/booking-cancelled-notice";
 import { addPartySeat, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
-import { getDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import { recordDiverSelfCancel } from "@/db/operations";
 import {
   planReadinessLinkRescue,
@@ -70,6 +70,10 @@ export async function payFromReady(token: string) {
  * seat is freed by `selfCancelBooking` first, and a refund failure afterward
  * never re-opens it or blocks the cancellation the diver already sees.
  *
+ * A party lead's unclaimed seats go with them (batch 6 item 10), released in
+ * the same transaction and then refunded one by one under the same policy as
+ * the lead's own. A claimed seat stays, and the cancelled page says which.
+ *
  * The move a diver cannot make here is a *move* — rescheduling is the shop's
  * (ADR 20260821-the-diver-may-release-their-own-seat).
  */
@@ -84,9 +88,11 @@ export async function cancelMyBookingAction(token: string) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
 
+  const shopId = ctx.data.shop.id;
   const cancelled = await selfCancelBooking(ctx.db, {
-    shopId: ctx.data.shop.id,
+    shopId,
     bookingId: ctx.bookingId,
+    withUnclaimedParty: true,
   });
   if (!cancelled.ok) redirect(`${base(token)}?error=cancel`);
   await trackEvent({ name: "booking_cancelled", source: "diver" });
@@ -97,27 +103,52 @@ export async function cancelMyBookingAction(token: string) {
   // the booking's own current payment status — an edited or replayed query
   // string cannot be used to claim a refund that did not happen, or hide one
   // that did.
-  //
-  // Caught, not left to throw: the cancellation above already committed and
-  // this token is already revoked, so a refund failure (a transient DB error,
-  // say) must never turn an already-successful cancellation into an error
-  // response — the diver would see a generic failure with no way to tell the
-  // destructive action actually went through, since refreshing the dead link
-  // only shows the unavailable notice. Staff can still see and fix a missed
-  // refund from the booking's payment record; the diver just needs the
-  // confirmation either way.
+  await settleSelfCancelledSeat(ctx.db, { shopId, bookingId: ctx.bookingId, notify: true });
+  for (const seat of cancelled.party?.cancelled ?? []) {
+    await settleSelfCancelledSeat(ctx.db, {
+      shopId,
+      bookingId: seat.bookingId,
+      // An unclaimed seat is the organizer's (ADR 20260804-seat-claim-links):
+      // its diver never took it as their own, the lead paid for it and chose
+      // this, so the lead's page says it and nobody else is emailed.
+      notify: false,
+      party: { leadBookingId: ctx.bookingId, seatName: seat.seatName },
+    });
+  }
+  redirect(`${base(token)}?cancelled=1`);
+}
+
+/**
+ * The refund, the trail line and the cancellation email for one seat a
+ * diver's own cancel released.
+ *
+ * Caught, not left to throw: the cancellation already committed and this
+ * token is already revoked, so a refund failure (a transient DB error, say)
+ * must never turn an already-successful cancellation into an error response —
+ * the diver would see a generic failure with no way to tell the destructive
+ * action actually went through, since refreshing the dead link only shows the
+ * unavailable notice. Staff can still see and fix a missed refund from the
+ * booking's payment record; the diver just needs the confirmation either way.
+ */
+async function settleSelfCancelledSeat(
+  db: AppDb,
+  input: {
+    shopId: string;
+    bookingId: string;
+    notify: boolean;
+    party?: { leadBookingId: string; seatName: string };
+  },
+) {
+  const { shopId, bookingId } = input;
   let refund: CancellationRefundSeen = { status: "not_attempted" };
   try {
-    refund = await refundBookingOnCancellation(ctx.db, {
-      shopId: ctx.data.shop.id,
-      bookingId: ctx.bookingId,
-    });
+    refund = await refundBookingOnCancellation(db, { shopId, bookingId });
     if (refund.status !== "no_policy" && refund.status !== "unpaid") {
       await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
     }
   } catch (error) {
     log("booking.self_cancel_refund_failed", "error", {
-      bookingId: ctx.bookingId,
+      bookingId,
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
   }
@@ -125,33 +156,32 @@ export async function cancelMyBookingAction(token: string) {
   // has an answer that is not a staffer. Caught for the same reason as the
   // refund: the cancellation has already happened.
   try {
-    const recorded = await recordDiverSelfCancel(ctx.db, {
-      shopId: ctx.data.shop.id,
-      bookingId: ctx.bookingId,
+    const recorded = await recordDiverSelfCancel(db, {
+      shopId,
+      bookingId,
       refunded: refund.status === "refunded",
+      party: input.party,
     });
     // Null when the departure was deleted under the diver: no trail to write
     // on, so the act is at least in the log for a disputed refund (#2471).
-    if (!recorded) {
-      log("booking.self_cancel_activity_skipped", "warn", { bookingId: ctx.bookingId });
-    }
+    if (!recorded) log("booking.self_cancel_activity_skipped", "warn", { bookingId });
   } catch (error) {
     log("booking.self_cancel_activity_failed", "error", {
-      bookingId: ctx.bookingId,
+      bookingId,
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
   }
   // The written record of what just happened, with the money in it: the page
-  // below says it once, and this is what the diver still has tomorrow.
-  await sendBookingCancelledNotice(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
+  // says it once, and this is what the diver still has tomorrow.
+  if (!input.notify) return;
+  await sendBookingCancelledNotice(db, {
+    shopId,
+    bookingId,
     cancelledBy: "diver",
     // `selfCancelBooking` only ever cancels a booked seat.
     from: "booked",
     refund,
   });
-  redirect(`${base(token)}?cancelled=1`);
 }
 
 /**
