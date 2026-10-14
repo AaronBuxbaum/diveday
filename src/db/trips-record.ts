@@ -19,6 +19,7 @@ import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from
 import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { rearmTripReminders } from "./reminder-rearm";
+import { recordedRollCallRows } from "./roll-call-history";
 import type { Trip } from "./schema";
 import {
   boats,
@@ -27,7 +28,6 @@ import {
   diveSites,
   people,
   personRoles,
-  rollCallEvents,
   tripAssignments,
   tripDives,
   tripScheduleDays,
@@ -131,6 +131,8 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
     ? {
         ...row.trip,
         sellableCapacity: sellableSeats(row.trip.capacity, row.certifiedPassengers),
+        // The certificate itself, for the manifest's head count (batch 6, item 2).
+        certifiedPassengers: row.certifiedPassengers,
         course: row.course,
         diveSite: row.diveSite,
         booked: row.booked,
@@ -548,22 +550,9 @@ export async function updateTrip(
       return { ok: false, reason: "capacity_below_booked", detail: { bookedCount } };
     }
 
-    const checkpointRows = await tx
-      .select({
-        bookingId: rollCallEvents.bookingId,
-        checkpoint: rollCallEvents.checkpoint,
-        status: rollCallEvents.status,
-        occurredAt: rollCallEvents.occurredAt,
-        createdAt: rollCallEvents.createdAt,
-        // Selected so a mis-tap and its `cleared` written in one transaction
-        // resolve to the retraction rather than to heap order — see
-        // `maxRecordedDiveNumber`'s `seq` doc.
-        seq: rollCallEvents.seq,
-      })
-      .from(rollCallEvents)
-      // The shop first: the only index on this append-only table leads with
-      // it, and the read is the shop's own (code review 2026-10-11, item 27).
-      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)));
+    // Divers and crew alike (`recordedRollCallRows`): a crew member counted
+    // after a dive is history this edit may not orphan either.
+    const checkpointRows = await recordedRollCallRows(tx, shopId, [tripId]);
     const recordedDiveCount = maxRecordedDiveNumber(checkpointRows);
     if (plannedDives < recordedDiveCount) {
       return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };

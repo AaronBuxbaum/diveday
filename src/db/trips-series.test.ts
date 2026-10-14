@@ -16,6 +16,7 @@ import {
   courses,
   crewNotices,
   people,
+  rollCallCrewEvents,
   rollCallEvents,
   tripRequirements,
   tripSeries,
@@ -62,6 +63,7 @@ import {
 const TZ = "America/New_York";
 const SUN = 0;
 const MON = 1;
+const TUE = 2;
 const WED = 3;
 const THU = 4;
 const SAT = 6;
@@ -562,6 +564,53 @@ describe("recurring trip series (in-memory PGlite)", () => {
 
     const untouched = await getTripWithBooked(db, shop.id, sailed.id);
     expect(untouched?.plannedDives).toBe(2);
+  });
+
+  it("skips a sibling whose only after-dive history is a crew roll call", async () => {
+    // Batch 6, item 5: the series floor reads crew results too.
+    const { db, shop } = ctx;
+    const now = at("2030-08-15T00:00:00.000Z");
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Tuesday Wall",
+        capacity: 10,
+        anchorDate: "2030-09-03",
+        weekdays: weekdaySetFrom([TUE]),
+        endsOn: "2030-09-10",
+        template: {
+          startsAt: at("2030-09-03T11:00:00.000Z"),
+          endsAt: at("2030-09-03T15:00:00.000Z"),
+        },
+      }),
+    );
+    if (!result) throw new Error("series not created");
+    const [source, sailed] = result.trips;
+    if (!source || !sailed) throw new Error("expected two instances");
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: sailed.id,
+      personId: staff.person.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+      checkpoint: "after_dive_2",
+      occurredAt: now,
+    });
+
+    await updateTrip(db, shop.id, source.id, {
+      title: source.title,
+      startsAt: source.startsAt,
+      endsAt: source.endsAt,
+      capacity: source.capacity,
+      plannedDives: 1,
+    });
+
+    const applied = await applyDetailsToFutureSeries(db, shop.id, result.series.id, source.id, now);
+    expect(applied).toEqual({ updated: 0, skipped: 1 });
+    expect((await getTripWithBooked(db, shop.id, sailed.id))?.plannedDives).toBe(2);
   });
 
   it("cancels every upcoming date at once, leaves past dates alone, and stops the repeat", async () => {

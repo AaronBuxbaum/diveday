@@ -382,7 +382,8 @@
     "src/db/seed-history.ts#seedHistory": 742,
     "src/db/seed-more-trips.ts#seedMoreTrips": 642,
     "src/db/seed-trips.ts#seedTrips": 431,
-    "src/lib/import.ts#prepareContactImport": 508
+    "src/lib/import.ts#prepareContactImport": 508,
+    "src/app/api/webhooks/stripe/route.ts#POST": 454
   },
   "live-people": {
     "//": "Reads of `people` written before scripts/check-live-people.mjs that carry no `livePerson()`, per file. Most are right (a by-id read in a transaction, a name for an activity line); a count may only fall. Written by `node scripts/check-live-people.mjs --write`.",

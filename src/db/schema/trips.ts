@@ -555,6 +555,15 @@ export const trips = pgTable(
      * src/db/rehearsals.ts).
      */
     isRehearsal: boolean("is_rehearsal").notNull().default(false),
+    /**
+     * **When the stale-roll-call alert went out for this departure** (batch
+     * 6, item 6; `sendStaleRollCallAlerts`, src/db/roll-call-alerts.ts): an
+     * after-dive roll call still open half an hour after the boat was due
+     * back. The hourly pass claims it with a conditional update, so the alert
+     * goes once per departure however many passes see the count still open.
+     * Null until then, and for ever on a departure whose count closed in time.
+     */
+    rollCallAlertedAt: timestamp("roll_call_alerted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

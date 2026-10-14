@@ -304,6 +304,13 @@ export const paymentStatus = pgEnum("payment_status", [
   "refunded",
 ]);
 
+/**
+ * How money a staffer marked by hand changed hands (batch 6 item 1, H-decision
+ * on the roster's Paid mark). Only ever set on a manual mark: a provider's row
+ * says what it is through `provider`. A code, never a sentence.
+ */
+export const manualPaymentMethod = pgEnum("manual_payment_method", ["cash", "card", "other"]);
+
 /** One current payment row per booking. Amounts are minor units (cents). */
 export const bookingPayments = pgTable(
   "booking_payments",
@@ -322,6 +329,19 @@ export const bookingPayments = pgTable(
     provider: text("provider"),
     providerRef: text("provider_ref"),
     note: text("note"),
+    /**
+     * Cash, card on the shop's own terminal, or anything else — set by a
+     * staffer's manual mark that took money, null on every provider write and
+     * on a mark that recorded none (a write-off, or a status moved back).
+     */
+    method: manualPaymentMethod("method"),
+    /**
+     * The staffer whose manual mark wrote this state. Null on a provider
+     * write. Attribution, not diver history: a merge leaves it where it is.
+     */
+    recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -461,6 +481,12 @@ export const bookingPaymentEvents = pgTable(
     operation: paymentEventOperation("operation").notNull(),
     /** Whatever note the mutation carried; null when it carried none. */
     note: text("note"),
+    /** `booking_payments.method` as this transition wrote it. */
+    method: manualPaymentMethod("method"),
+    /** The staffer whose manual mark made this transition; null for a provider write. */
+    recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -510,6 +536,15 @@ export const shopStripeAccounts = pgTable(
      * elsewhere (orders, checkouts, invoicing) is still deferred (task 35).
      */
     defaultCurrency: text("default_currency").notNull().default("usd"),
+    /**
+     * When Stripe turned card payments off on an account that had them on
+     * (`account.updated` with `charges_enabled` false), until it turns them
+     * back on. Set by one conditional update, so the owner's email goes once
+     * per change of state however many times Stripe delivers the event. Null
+     * for an account that never had payments on (still onboarding): that is
+     * Settings' story, not an alarm.
+     */
+    paymentsRestrictedAt: timestamp("payments_restricted_at", { withTimezone: true }),
     connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
     /** Set on an OAuth deauthorize webhook; a later reconnect clears it. */
     disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
@@ -1498,6 +1533,7 @@ export type BookingPayment = typeof bookingPayments.$inferSelect;
 export type PaymentStatus = (typeof paymentStatus.enumValues)[number];
 
 export type PaymentEventOperation = (typeof paymentEventOperation.enumValues)[number];
+export type ManualPaymentMethod = (typeof manualPaymentMethod.enumValues)[number];
 
 export type ShopStripeAccount = typeof shopStripeAccounts.$inferSelect;
 

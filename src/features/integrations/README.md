@@ -14,7 +14,11 @@ in `src/db/schema/` and the integration database modules.
 - Provider credentials and Zapier webhook URLs are sealed with
   `SECRET_ENCRYPTION_KEY` before persistence.
 - Paid/refunded order events are written in the same transaction as the order
-  change, with an idempotency key and retryable delivery row.
+  change, with an idempotency key and retryable delivery row. A completed online
+  checkout, a paid tip and a checkout refund travel the same way, as
+  `order.paid`/`order.refunded` with `entityType` `checkout` or `tip`: one
+  receipt per checkout, a tip on its own line
+  (`docs/architecture/decisions/20261014-checkouts-reach-integrations.md`).
 - The cron dispatcher claims deliveries conditionally so concurrent workers do
   not send the same delivery twice.
 - The settings projection never returns `credentials_sealed`.

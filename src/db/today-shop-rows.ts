@@ -5,10 +5,13 @@ import {
   openInboxActionText,
   openOrderActionText,
   openOrdersActionText,
+  openPaymentSettingsActionText,
   openReviewsActionText,
   openTripActionText,
   paymentDisputeDetailText,
   paymentDisputeSubjectText,
+  paymentsRestrictedDetailText,
+  paymentsRestrictedSubjectText,
   reviewsPendingSubjectText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
@@ -55,7 +58,26 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
   // Orders, deletions to Settings' Data group — and each row's `href` points at
   // wherever its panel now is.
   if (opsAlerts) {
-    const [stuckOperations, pendingDeletions, owedRefunds, openDisputes] = opsAlerts;
+    const [stuckOperations, pendingDeletions, owedRefunds, openDisputes, restrictedSince] =
+      opsAlerts;
+
+    // Stripe turned card payments off (batch 6 item 8). One row while they
+    // stay off: bookings already fall back to paying at the shop, so this is
+    // the standing reminder that the owner has something to answer in
+    // Stripe, beside the one email they got when it happened.
+    if (restrictedSince) {
+      actions.push({
+        id: "payments-restricted",
+        kind: "payments_restricted",
+        urgency: "now",
+        subject: paymentsRestrictedSubjectText(t),
+        context: null,
+        detail: paymentsRestrictedDetailText(t, formatShortDate(restrictedSince, locale, timeZone)),
+        actionLabel: openPaymentSettingsActionText(t),
+        href: `/shop/${shopSlug}/settings#money`,
+        dueAt: null,
+      });
+    }
 
     // A diver's bank is taking a charge back (ADR
     // 20261009-stripe-reversals-reach-diveday). One row per undecided dispute,
