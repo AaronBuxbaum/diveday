@@ -26,7 +26,8 @@
     "waiversAllIn": "Everyone’s paperwork is in",
     "revenueViewOrders": "View orders",
     "tipsLabel": "Tips",
-    "tipsDetail": "{count, plural, =0 {No tips left on this month’s trips} one {# tip, for the shop to pass on to the crew} other {# tips, for the shop to pass on to the crew}}"
+    "tipsDetail": "{count, plural, =0 {No tips left on this month’s trips} one {# tip, for the shop to pass on to the crew} other {# tips, for the shop to pass on to the crew}}",
+    "split": "Sailed {sailed} · Still to sail {toSail}"
   },
   "noTripsFuture": "Nothing on the books for this month yet.",
   "noTripsPast": "No trips sailed this month.",

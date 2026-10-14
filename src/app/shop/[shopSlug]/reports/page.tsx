@@ -32,6 +32,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeZoneName, monthNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { sailedSplit } from "@/lib/report-split";
 import {
   compareMonthlyReports,
   formatPercent,
@@ -58,6 +59,7 @@ import {
   QuietMonth,
 } from "./_components/MonthMoneyDetail";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
+import { sailedSplitLines } from "./_components/sailed-split-lines";
 import { YearReport } from "./_components/YearReport";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -196,10 +198,6 @@ export default async function ReportsPage({
   // genuine financial fact even without a DiveDay departure, so its earliest
   // eligible source day also moves this floor.
   //
-  // #411 batched this into a `Promise.all` alongside the ops-panel lists and
-  // the erase gate. Those four reads left with the panels they fed, so the one
-  // read that remains is a plain await again — a `Promise.all` of one is a
-  // parallelization of nothing.
   const earliestTripStart = await earliestReportedTripStart(db, shop.id);
   const earliestImportedFinancialDate = await earliestImportedFinancialHistoryDate(
     db,
@@ -226,9 +224,7 @@ export default async function ReportsPage({
   const next = addMonths(current, 1);
 
   const { from: monthStart, to: monthEnd } = shopMonthBounds(current, tz);
-  // The revenue card's "View orders" link (task 158) — the same month range as
-  // the report itself, expressed as the `<input type="date">` values the
-  // Orders index's own filter form reads.
+  // The revenue card's "View orders" link (task 158): the report's month as the Orders filter.
   const lastDayOfMonth = new Date(Date.UTC(current.year, current.month, 0)).getUTCDate();
   const revenueOrdersHref = `/shop/${shopSlug}/orders?from=${isoDate(current.year, current.month, 1)}&to=${isoDate(current.year, current.month, lastDayOfMonth)}&range=custom`;
 
@@ -255,12 +251,8 @@ export default async function ReportsPage({
       : "previousMonth"
     : null;
 
-  // Totals see every trip in the month (summarizeMonth's fill rate and waiver
-  // completion would quietly go wrong if this were page-limited); the table
-  // below gets its own bounded, cursor-paginated slice. The baseline month
-  // (when one applies) rides the same Promise.all — its own report costs the
-  // identical shape of query as the current month's, scoped to one more
-  // month's trips, never to the shop's whole history.
+  // Totals see every trip in the month (a page-limited fill rate would quietly go wrong); the
+  // table below gets its own bounded slice, and the baseline month the same shape of query.
   const baselineWindow = baselineMonth
     ? {
         start: wallTimeToUtc(
@@ -279,13 +271,11 @@ export default async function ReportsPage({
         ),
       }
     : null;
-  // Both months ride the same Promise.all rather than running sequentially,
-  // so the wall-clock cost is the slower of the two calls, not their sum —
-  // one more month's worth of trips, bookings and payments, never a second
-  // pass over the shop's whole history. See the PR description for the
-  // measured cost.
+  // Both months ride one Promise.all, so the cost is the slower call, not the sum. The month
+  // under way also reads its sailed half, departures before now (item 22).
   const shopMoney = { currency, timeZone: tz };
-  const [input, tripPage, baselineInput, moneyDetail] = await Promise.all([
+  const underWay = monthStart < now && now < monthEnd;
+  const [input, tripPage, baselineInput, moneyDetail, sailedInput] = await Promise.all([
     getMonthlyReport(db, shop.id, monthStart, monthEnd, { currency, timeZone: tz }),
     // A non-numeric or missing `?page=` reads as page 1; the query clamps it
     // into range, so switching to a shorter month never strands the reader on
@@ -302,9 +292,15 @@ export default async function ReportsPage({
     // The money by line, the package dives still owed, and the returning
     // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
     getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, shopMoney, current),
+    underWay ? getMonthlyReport(db, shop.id, monthStart, now, shopMoney) : null,
   ]);
   const report = summarizeMonth(input);
   const money = (cents: number) => formatReportMoney(cents, currency, locale);
+  const split = sailedSplitLines(
+    t,
+    sailedInput ? sailedSplit(report, summarizeMonth(sailedInput)) : null,
+    money,
+  );
   const baselineReport = baselineInput ? summarizeMonth(baselineInput) : null;
   const comparison: MonthComparison | null =
     baselineReport && baselineKind
@@ -453,6 +449,7 @@ export default async function ReportsPage({
               refunds: formatReportMoney(report.importedRefundCents, currency, locale),
             })
           : t("reports.metrics.revenueBasis"),
+      split: split?.revenue,
       comparison: revenueComparison,
       link: { href: revenueOrdersHref, label: t("reports.metrics.revenueViewOrders") },
     },
@@ -471,6 +468,7 @@ export default async function ReportsPage({
       label: t("reports.metrics.bookingsLabel"),
       value: String(report.seatsBooked),
       detail: bookingsDetail,
+      split: split?.seats,
       comparison: bookingsComparison,
     },
     {
@@ -482,6 +480,7 @@ export default async function ReportsPage({
         offered: report.seatsOffered,
         count: report.atCapacityTrips,
       }),
+      split: split?.fill,
       comparison: fillComparison,
     },
     {
