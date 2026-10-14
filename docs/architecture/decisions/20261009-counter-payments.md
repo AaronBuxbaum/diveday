@@ -52,3 +52,31 @@ Stripe-settled order does.
 - Integrations receive `order.paid` for counter money with no hint of how it was taken; an
   accounting adapter that books to a Stripe clearing account would misfile it. Revisit when one does.
 - Adding a fourth method (bank transfer) is one enum value and one word in each locale.
+
+## Amendment, 2026-10-14: counter money on an invoice already sent, and online seats on the ledger
+
+Fourth UX review, items 18 and 19. Two gaps in "money the shop took":
+
+- **Record payment on an open order.** A diver invoiced $340 walks in and pays cash. The order was
+  a Stripe invoice and stayed Open forever. `recordPaymentOnOpenOrder` (`src/db/orders.ts`) marks
+  the invoice paid out of band at Stripe first (`markInvoicePaidOutOfBand`, so Stripe stops asking
+  and a diver who paid online a moment earlier makes Stripe refuse), then, under the row's lock and
+  only while it is still an open `stripe_invoice`, makes it a paid counter order: `collection` is
+  the method, `amount_paid_cents` its total, `paid_at` now, and the booking it was raised for is
+  marked paid. **The three Stripe ids stay**, so diver erasure still files the Stripe customer's
+  deletion request. `orders_stripe_ids_match_collection` now allows a non-Stripe collection to
+  carry either none of the ids or all three, never a PaymentIntent (migration
+  `20261014220545_counter-settled-invoice`). `stripeInvoiceOf` still refuses every Stripe operation
+  on it, and the `invoice.paid` echo changes nothing. Any active staff member may record it, behind
+  the money step-up, as any counter money.
+- **A bench ticket paid at pickup.** `recordWorkOrderCounterPayment`
+  (`src/db/work-order-follow-up.ts`) records the ticket's lines through `recordCounterOrder` and
+  links the order as the ticket's bill. One bill per ticket is re-checked under the ticket's lock;
+  the loser of a double tap is voided by `voidPaidCounterOrder` (the void without its role gate,
+  the system undoing its own race rather than anyone's decision).
+- **Online seat payments on the ledger.** A diver who paid at booking left a `booking_checkouts`
+  row and no order, so the Money ledger and "Download orders (CSV)" never showed that money.
+  `src/db/seat-payments.ts` lists one row per seat of a completed checkout, its share of the
+  settled charge split by what each seat was asked, merged with orders by a `unionAll` in
+  `pagedOrdersByDay` and filtered alike. Nothing is written: the seats stay `booking_checkouts`,
+  and refunds stay on the checkout. The CSV gains "Paid on" and "Method".
