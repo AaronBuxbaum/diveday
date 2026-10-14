@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
-import { tapTargetLinkClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ReadinessBar } from "@/components/ui/ProgressBar";
 import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
@@ -10,6 +10,7 @@ import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { formatMoneyScanned, formatTime } from "@/lib/format";
+import { shopPath } from "@/lib/staff-notices";
 import type { DayStation as DayStationData } from "@/lib/today";
 import { STAGE_TONE } from "@/lib/trip-stage-tone";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
@@ -206,6 +207,19 @@ export function DayStation({
         <p className="mt-3 text-sm font-medium text-warning">
           {t("shopHome.spine.crewRollCallOpen")}
         </p>
+      ) : null}
+
+      {/* **The crew's door to the roll call** (UX review 2026-10-13, item 17).
+          The title goes to Divers, the desk's tab; a captain at the rail wants
+          the manifest, which was the title, then the Boat tab, then a scroll.
+          Only on a card the reader crews: for everyone else Divers is right. */}
+      {crewed ? (
+        <Link
+          href={shopPath(shopSlug, "trips", station.tripId, "manifest")}
+          className={buttonClass({ variant: "secondary", className: "mt-4 w-full sm:w-auto" })}
+        >
+          {t("shopHome.spine.openBoat")}
+        </Link>
       ) : null}
     </SectionCard>
   );

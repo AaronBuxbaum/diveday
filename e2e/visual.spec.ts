@@ -2486,7 +2486,7 @@ for (const scheme of ["light", "dark"] as const) {
       // prove is gone.
       test(`a dead link inside a shop renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/trips/00000000-0000-4000-8000-000000000000");
-        await page.getByRole("heading", { name: "That page isn’t here any more" }).waitFor();
+        await page.getByRole("heading", { name: "That page isn’t here" }).waitFor();
         await capture(page, "shop-not-found", scheme);
       });
 
@@ -6816,6 +6816,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "order-detail", scheme);
       });
 
+      // A deposit names the departure it was raised for and what the seat
+      // still owes (third UX review, item 32).
+      test(`a deposit order's detail names its departure (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/orders?q=Trip+deposit");
+        const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
+        await ledgerRow.filter({ visible: true }).first().waitFor();
+        await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
+        await page.getByRole("link", { name: "Open the departure" }).waitFor();
+        await capture(page, "order-detail-deposit", scheme);
+      });
+
       /**
        * The one data-out surface: the "your data is yours" promise, concrete,
        * in both halves (ADR 20260806-one-data-out-surface) — the bundle you
@@ -7337,6 +7348,37 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByRole("link", { name: "Add a departure" }).first().waitFor();
         await capture(page, "staff-date-requests", scheme);
+      });
+
+      // A request staff closed (third UX review, item 13): off the open list
+      // and into the short Done list under it, with Reopen beside it. Marked
+      // here rather than seeded, because a closed request in the demo seed
+      // would move the open list's own baseline above.
+      test(`a request marked done sits under the open list (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/requests");
+        await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
+        await page.getByRole("button", { name: "Mark done" }).first().click();
+        await page.getByRole("region", { name: /^Done:/i }).waitFor();
+        await capture(page, "staff-date-requests-done", scheme);
+      });
+
+      // "Move to another departure", open on a seat (third UX review, item
+      // 11): one select of later departures of the same kind, each worded
+      // with its zone, and one button. The row is any booked seat on the
+      // reef morning, found by the control itself.
+      test(`a seat's move to another departure, open (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        const row = page
+          .locator('#roster li[id^="booking-"]')
+          .filter({ visible: true })
+          .filter({ has: page.locator("summary", { hasText: "Move to another departure" }) })
+          .first();
+        await openRosterDetails(row);
+        await row.locator("summary", { hasText: "Move to another departure" }).click();
+        await row.getByLabel("Departure").waitFor();
+        await row.getByRole("button", { name: "Move", exact: true }).scrollIntoViewIfNeeded();
+        await capture(page, "trip-roster-move-seat", scheme);
       });
 
       // What divers wrote back, as a worklist (ADR 20260907-two-way-inbox):

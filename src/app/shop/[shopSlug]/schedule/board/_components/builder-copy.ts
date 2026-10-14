@@ -122,6 +122,7 @@ export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
     isRehearsalHint: st("schedule.builder.isRehearsalHint"),
     daysLabel: st("schedule.builder.daysLabel"),
     daysDescription: st("schedule.builder.daysDescription"),
+    meetingDayLabel: st.raw("schedule.builder.meetingDayLabel"),
     payAtBookingLegend: st("schedule.builder.payAtBookingLegend"),
     payAtBookingDescription: st("schedule.builder.payAtBookingDescription"),
     depositLabel: st("schedule.builder.depositLabel"),

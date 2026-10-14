@@ -179,7 +179,9 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Last-minute list
 - Learning materials
 - Manifest
+- Medical hold
 - Medical questionnaire
+- Meeting point
 - Milestone stamp
 - Minor unit
 - Monday email
@@ -225,6 +227,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Salvage offer
 - Seat claim
 - Seat held
+- Seat move
 - Seat release
 - Self-guided departure
 - Set-up request
@@ -254,6 +257,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Trip stage
 - Unaccounted for
 - Wait list
+- Wait-list roll
 - Waiver / release
 - Waiver activity
 - Waiver completion

@@ -233,6 +233,38 @@ const RULES = [
     pattern: /\bregistros? de llegadas?\b|\bllegada y registro\b/i,
     says: 'check-in is "el check-in" (the feature, the phase, "Llegada y check-in"); the tap on a row stays "Registrar"',
   },
+  {
+    id: "computer",
+    // README's vocabulary table — "ordenador (de buceo)" -> "computadora (de
+    // buceo)", in the table since the first sweep and unguarded until
+    // 2026-10-13, when six strings still said "Ordenador de buceo": the rental
+    // kit list a diver fills in, the diver record's gear line, the counter's
+    // refusal.
+    //
+    // Enumerated, not a stem: `ordenada` and `ordenado` (sorted) are innocent
+    // and a list-sorting string will want them.
+    pattern: /\bordenador(es)?\b/i,
+    says: 'a dive computer is "la computadora de buceo", and a desktop is "una computadora". "Ordenador" reads as Spain',
+  },
+  {
+    id: "parking",
+    // README's vocabulary table, added 2026-10-13 with this rule: four strings
+    // said "Aparcamiento", among them the printed pass a diver holds and the
+    // trip editor's parking note.
+    pattern: /\baparca(mientos?|r)\b/i,
+    says: 'parking is "el estacionamiento" ("Estacionamiento: {parking}"). "Aparcamiento" reads as Spain',
+  },
+  {
+    id: "mobile",
+    // README's vocabulary table, added 2026-10-13 with this rule: the SMS
+    // consent line every diver reads under the phone field said "número de
+    // móvil", and so did the privacy page.
+    //
+    // Word-initial on purpose: `inmóvil` (a barracuda holding still in the
+    // field guide) and `automóvil` carry the letters and are not the phone.
+    pattern: /\bm[oó]vil(es)?\b/i,
+    says: 'a mobile phone is "el celular" ("número de celular", "Celular o fijo"). "Móvil" reads as Spain',
+  },
 ];
 
 /**

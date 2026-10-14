@@ -257,7 +257,7 @@ test.describe("staff", () => {
 
     await page.goto(manageUrl);
     await page.getByRole("button", { name: "Reinstate trip" }).click();
-    await expect(page.getByRole("status")).toContainText("Back on");
+    await expect(page.getByRole("status")).toContainText("The trip is back on the schedule.");
     await page.goto(tripWeek);
     await expect(
       page.locator("[data-week-board]").getByRole("link", { name: renamed, exact: true }),
@@ -355,9 +355,9 @@ test.describe("staff", () => {
     await dayOf
       .getByRole("radio", { name: "A word with the divemaster before we get in." })
       .check();
-    await dayOf.getByRole("button", { name: "Save", exact: true }).last().click();
+    await dayOf.getByRole("button", { name: "Save day-of details" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "The crew will look out for you" }),
+      page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
     ).toBeVisible();
 
     // **The ask reaches the crew as a fact beside the name.** This assertion
@@ -652,7 +652,7 @@ test("a dead departure link keeps the diver at the shop they were trying to reac
   const response = await page.goto(dead);
   expect(response?.status(), dead).toBe(404);
 
-  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That page isn’t here" })).toBeVisible();
   // The shop's own chrome, from the namespace layout: whose page this is, and
   // the nav a diver can carry on browsing from.
   await expect(page.getByRole("banner").getByText("Blue Mantis Divers")).toBeVisible();
@@ -675,7 +675,7 @@ test("a mistyped page under a shop keeps the diver at that shop", async ({ page 
   const response = await page.goto(dead);
   expect(response?.status(), dead).toBe(404);
 
-  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That page isn’t here" })).toBeVisible();
   await expect(page.getByRole("banner").getByText("Blue Mantis Divers")).toBeVisible();
   await expect(page.getByRole("link", { name: "Back to the homepage" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "See what’s coming up" })).toHaveAttribute(

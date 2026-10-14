@@ -52,6 +52,18 @@ test.describe("the Monday email preview", () => {
       page.getByText(/Weeks run Monday to Sunday|no email goes out this Monday/),
     ).toBeVisible();
   });
+
+  // **The owner's Monday email says what the week made** (third UX review,
+  // item 33). The demo holds open orders, so the money section has something
+  // to say, and its link opens Orders.
+  test("gives the owner the week's money", async ({ page }) => {
+    await page.goto(`${emailSettingsFor("blue-mantis")}/preview`);
+    await expect(page.getByRole("heading", { name: "Money" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open Money" })).toHaveAttribute(
+      "href",
+      /\/shop\/blue-mantis\/orders$/,
+    );
+  });
 });
 
 test.describe("the Monday email for a staffer who is not an owner", () => {
@@ -63,5 +75,14 @@ test.describe("the Monday email for a staffer who is not an owner", () => {
     await expect(main.getByRole("heading", { name: "Monday email" })).toBeVisible();
     await expect(main.getByText("Off", { exact: true })).toBeVisible();
     await expect(main.getByRole("button", { name: "Turn on" })).toBeVisible();
+  });
+
+  test("previews a week with no money in it", async ({ page }) => {
+    await page.goto(`${emailSettingsFor("blue-mantis")}/preview`);
+    await expect(
+      page.getByText(/Weeks run Monday to Sunday|no email goes out this Monday/),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Money" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Open Money" })).toHaveCount(0);
   });
 });

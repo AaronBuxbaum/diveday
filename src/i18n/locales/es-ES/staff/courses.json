@@ -13,6 +13,16 @@
     "emptyTitle": "No hay cursos que mostrar",
     "emptyBody": "Aquí aparece cada curso que tu centro puede enseñar, listo para poner en el tablero.",
     "emptyAction": "Abrir el calendario",
+    "searchLabel": "Buscar cursos",
+    "searchPlaceholder": "Nombre del curso",
+    "searchClear": "Borrar la búsqueda",
+    "noMatch": "Ningún curso coincide.",
+    "views": {
+      "label": "Vistas de cursos",
+      "all": "Todos",
+      "scheduled": "Programados",
+      "notYet": "Aún no"
+    },
     "pagination": {
       "total": "{count, plural, one {# curso} other {# cursos}}"
     },

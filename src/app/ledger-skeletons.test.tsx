@@ -507,6 +507,8 @@ describe("the waivers skeleton", () => {
             guardian: null,
             integrity: "valid",
             flaggedPrompts: [],
+            medicalClearedAt: null,
+            medicalClearanceDeclinedAt: null,
           },
         ]}
         shopSlug="blue-mantis"

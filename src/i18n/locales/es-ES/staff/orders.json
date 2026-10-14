@@ -55,6 +55,8 @@
     "raisedOn": "Emitido el {date}",
     "createdBy": "por {name}",
     "boughtOnline": "comprado en línea",
+    "openTrip": "Abrir la salida",
+    "balanceOwed": "Quedan {amount} por pagar de la plaza.",
     "status": {
       "open": "Abierto — pendiente de pago",
       "paid": "Pagado",
@@ -110,6 +112,7 @@
   },
   "index": {
     "newOrder": "Nuevo pedido",
+    "downloadCsv": "Descargar pedidos (CSV)",
     "notice": {
       "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar. Conecta una para empezar a cobrar a los buceadores.",
       "notAuthorized": "Enviar una factura está limitado a propietarios y gerentes. Pide a uno de ellos que le facture a este buceador.",

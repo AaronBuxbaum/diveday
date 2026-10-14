@@ -2023,6 +2023,39 @@ describe("age on the crew's boarding list (H-21)", () => {
     }
   });
 
+  it("calls a seat booked as Under 18 a minor when the shop holds no date of birth", async () => {
+    // The roster's Minor badge reads the seat stamp (decision 2026-10-13); the
+    // crew's list and boat papers must say the same thing, with no age.
+    const { db, shop, reef } = await manifestContext();
+    const before = await getTripManifest(db, shop.id, reef.id, "departure");
+    const undated = before?.divers.find((diver) => diver.age === null);
+    if (!undated) throw new Error("expected a diver with no date of birth");
+    await db
+      .update(bookings)
+      .set({ minorDeclaredAt: new Date("2026-07-20T12:00:00Z") })
+      .where(eq(bookings.id, undated.bookingId));
+
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    const row = manifest?.divers.find((diver) => diver.bookingId === undated.bookingId);
+    expect(row?.minor).toBe(true);
+    expect(row?.age).toBeNull();
+  });
+
+  it("lets a date of birth on file outrank the Under 18 stamp", async () => {
+    const { db, shop, reef } = await manifestContext();
+    const before = await getTripManifest(db, shop.id, reef.id, "departure");
+    const adult = before?.divers.find((diver) => diver.age !== null && !diver.minor);
+    if (!adult) throw new Error("expected an adult with a date of birth");
+    await db
+      .update(bookings)
+      .set({ minorDeclaredAt: new Date("2026-07-20T12:00:00Z") })
+      .where(eq(bookings.id, adult.bookingId));
+
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    const row = manifest?.divers.find((diver) => diver.bookingId === adult.bookingId);
+    expect(row?.minor).toBe(false);
+  });
+
   it("never lets age become a boarding gate", async () => {
     // A minor is a fact the crew is told, not a refusal. Nothing about being
     // under 18 may add a readiness blocker of its own.
@@ -2437,7 +2470,12 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
         await db
           .select()
           .from(rollCallCrewEvents)
-          .where(eq(rollCallCrewEvents.personId, missing.id)),
+          .where(
+            and(
+              eq(rollCallCrewEvents.tripId, reef.id),
+              eq(rollCallCrewEvents.personId, missing.id),
+            ),
+          ),
       ).toHaveLength(2);
     });
 
@@ -2639,7 +2677,9 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
 
       // Nothing was written by either, so the checkpoint stays open — the
       // fail-closed direction.
-      expect(await db.select().from(rollCallCrewEvents)).toHaveLength(0);
+      expect(
+        await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id)),
+      ).toHaveLength(0);
     });
 
     it("undoes a mis-tap with a cleared event, returning the crew member to awaiting", async () => {

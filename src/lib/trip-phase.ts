@@ -126,7 +126,7 @@ export function boatStageOf<R extends { stage: TripStage; recordedAt: Date }>({
  *
  * A departure shorter than a day is one sailing even when it crosses
  * midnight, so every tap from its own day is "from its last day". A longer one
- * is a multi-day run (`trip-days.ts`: the same window on consecutive days), and
+ * is a multi-day run (`trip-days.ts`: the same window on several days), and
  * its last day is the shop day `endsAt` falls on.
  *
  * A word from the last day speaks until that day is over or an hour past the
@@ -169,13 +169,34 @@ function readTap({
 }
 
 /**
- * A departure page's two readings of where the boat is, from one input: the
- * crew's word the header chip prints (`boatStageOf`), and whether the
- * departure is finished, which turns its Divers tab into a record and stops
- * its header counting seats (UX review 2026-10-10, items 1 and 10).
+ * **Whether the desk may say check-in is open** (UX review 2026-10-13, item
+ * 20): the clock's Check-in phase, while the crew have said nothing.
+ *
+ * It is the one place the clock's phase reaches a word on screen, and it is
+ * built not to compete with the stage. It never names a stage (it is not one
+ * of the five boat words), it is said on the Divers tab only, where the desk
+ * checks people in, and it goes silent the moment a crew tap speaks, so the
+ * header's chip and this line can never both be talking. Before it the desk
+ * had no word at all for its busiest half hour: the chip is silent until the
+ * crew taps ("never a word from the clock").
+ */
+export function checkInOpen(input: Parameters<typeof tripPhaseOf>[0]): boolean {
+  return tripPhaseOf(input) === "checkin" && boatStageOf(input) === null;
+}
+
+/**
+ * A departure page's readings of where the boat is, from one input: the
+ * crew's word the header chip prints (`boatStageOf`), whether the departure is
+ * finished, which turns its Divers tab into a record and stops its header
+ * counting seats (UX review 2026-10-10, items 1 and 10), and whether the
+ * Divers tab says check-in is open (`checkInOpen`).
  */
 export function departureStage<R extends { stage: TripStage; recordedAt: Date }>(
   input: Parameters<typeof boatStageOf<R>>[0],
-): { shown: R | null; finished: boolean } {
-  return { shown: boatStageOf(input), finished: tripPhaseOf(input) === "back" };
+): { shown: R | null; finished: boolean; checkInOpen: boolean } {
+  return {
+    shown: boatStageOf(input),
+    finished: tripPhaseOf(input) === "back",
+    checkInOpen: checkInOpen(input),
+  };
 }

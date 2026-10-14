@@ -92,6 +92,7 @@ export async function issueWaiverRequest(
             id: bookings.id,
             personId: bookings.personId,
             dateOfBirth: people.dateOfBirth,
+            minorDeclaredAt: bookings.minorDeclaredAt,
             tripStatus: trips.status,
             identityUnconfirmedAt: bookings.identityUnconfirmedAt,
           })
@@ -130,7 +131,12 @@ export async function issueWaiverRequest(
     // A minor's solo signature is not a standing release (ADR
     // 20260907-guardian-co-signature): the tap that would have said "already
     // signed" instead supersedes it and mints a link that asks for both.
-    const signer: GuardianSigner = { dateOfBirth, timezone: await shopTimezone(tx, input.shopId) };
+    const signer: GuardianSigner = {
+      dateOfBirth,
+      // The seat's booker's "Under 18", when a seat is what this link is for.
+      minorDeclared: booking ? booking.minorDeclaredAt !== null : false,
+      timezone: await shopTimezone(tx, input.shopId),
+    };
 
     const [template] = await tx
       .select()

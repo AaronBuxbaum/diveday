@@ -3,10 +3,11 @@ import { Copyable } from "@/components/Copyable";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { DoorChevron, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * A new, real shop's Today is otherwise an empty work queue. This replaces
- * that blank landing with five persisted setup checks plus two guided actions
+ * that blank landing with six persisted setup checks plus two guided actions
  * (schedule a trip and share its public link). Each completion state comes
  * from a real query, never a dismiss-and-forget flag.
  *
@@ -30,7 +31,7 @@ import { SettledCheck } from "@/components/ui/SettledCheck";
  *   seven next actions, which is none.
  *
  * Everything the shipped checklist already owned is unchanged underneath: the
- * five persisted facts, the `countShopTrips === 0` condition, the demo
+ * six persisted facts, the `countShopTrips === 0` condition, the demo
  * exclusion, `FIRST_RUN_STEP_COUNT`, `Copyable` on the schedule-link row, the
  * Stripe row's plain `<a>` (its route 302s to Stripe's OAuth authorize URL,
  * which Next's client navigation cannot follow, so that one step is a link
@@ -61,6 +62,10 @@ export type FirstRunChecklistCopy = {
   siteBody: string;
   siteAction: string;
   siteDone: string;
+  releaseTitle: string;
+  releaseBody: string;
+  releaseAction: string;
+  releaseDone: string;
   tripTitle: string;
   tripBody: string;
   tripAction: string;
@@ -177,6 +182,7 @@ export function FirstRunChecklist({
   profileDone,
   diveSiteCount,
   unitsDone,
+  releaseDone,
   stripeDone,
   copy,
 }: {
@@ -187,6 +193,8 @@ export function FirstRunChecklist({
   diveSiteCount: number;
   /** The shop has saved its units at least once — see the step below. */
   unitsDone: boolean;
+  /** The live release is no longer DiveDay's sample text (`isSampleRelease`). */
+  releaseDone: boolean;
   stripeDone: boolean;
   copy: FirstRunChecklistCopy;
 }) {
@@ -202,7 +210,9 @@ export function FirstRunChecklist({
         ? "units"
         : !siteDone
           ? "site"
-          : "trip";
+          : !releaseDone
+            ? "release"
+            : "trip";
 
   return (
     <LedgerGroup as="h2" id="first-run-heading" label={copy.groupLabel} meta={copy.progress}>
@@ -261,6 +271,22 @@ export function FirstRunChecklist({
           href={`/shop/${shopSlug}/dive-sites`}
           actionLabel={copy.siteAction}
           primary={nextStep === "site"}
+        />
+        {/* **The one legal document, read before anyone can sign it.** Sign-up
+            publishes DiveDay's sample release as version 1, so the first
+            departure saved below lists a trip whose divers sign words nobody at
+            the shop has read. Placed before the departure for that reason, and
+            done only when the live text is the shop's own (third UX review,
+            item 30). The door lands on the editor open (`#release`). */}
+        <ChecklistStep
+          title={copy.releaseTitle}
+          body={copy.releaseBody}
+          done={releaseDone}
+          doneLabel={copy.releaseDone}
+          doneBadge={copy.doneBadge}
+          href={`${shopPath(shopSlug, "waivers")}#release`}
+          actionLabel={copy.releaseAction}
+          primary={nextStep === "release"}
         />
         <ChecklistStep
           title={copy.tripTitle}

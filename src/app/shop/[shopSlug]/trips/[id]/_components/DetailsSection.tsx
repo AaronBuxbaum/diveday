@@ -1,3 +1,4 @@
+import { MeetingDaysField } from "@/app/shop/[shopSlug]/_components/MeetingDaysField";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RemovablePhoto } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -46,8 +47,10 @@ export type DetailsSectionContext = {
   tripDiveList: TripDiveList;
   startWall: WallTime;
   endWall: WallTime;
-  /** How many consecutive days this departure meets on — its `trip_schedule_days` count. */
+  /** How many days this departure meets on — its `trip_schedule_days` count. */
   dayCount: number;
+  /** One date per later day when the days are not consecutive; empty otherwise. */
+  laterDates: string[];
   /** The shop's live fleet, for the hull select. Empty means no boat rows yet. */
   boats: { id: string; name: string }[];
   /** The shop's trip tags, in the order it wrote them. */
@@ -70,6 +73,7 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
     startWall,
     endWall,
     dayCount,
+    laterDates,
     locale,
     currency,
     boats,
@@ -314,6 +318,21 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
           <DateField name="endTime" type="time" required defaultValue={toTimeInputValue(endWall)} />
         </Field>
       </FieldGrid>
+      {/* The date/departs/returns boxes describe day one; this says how
+            many days repeat it, and on which dates once gaps are allowed
+            (third UX review, item 10; `MAX_MEETING_DAY_GAP_DAYS`). Saving rebuilds the whole
+            meeting-day list, so a departure can grow or shrink here rather
+            than being deleted and rebuilt as separate trips. */}
+      <MeetingDaysField
+        copy={{
+          daysLabel: t("trips.details.dayCountLabel"),
+          dayLabel: t.raw("schedule.builder.meetingDayLabel"),
+        }}
+        minDays={MIN_TRIP_DAYS}
+        maxDays={MAX_TRIP_DAYS}
+        defaultCount={dayCount}
+        defaultLaterDates={laterDates}
+      />
       <FieldGrid columns={3}>
         <Field label={t("trips.details.capacityLabel")}>
           <input
@@ -323,21 +342,6 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
             min={1}
             max={60}
             defaultValue={trip.capacity}
-            className={`${controlClass} tabular-nums`}
-          />
-        </Field>
-        {/* The date/departs/returns boxes describe day one; this says how
-              many consecutive days repeat it. Saving rebuilds the whole
-              meeting-day list, so a departure can grow or shrink here rather
-              than being deleted and rebuilt as separate trips. */}
-        <Field label={t("trips.details.dayCountLabel")}>
-          <input
-            name="dayCount"
-            type="number"
-            required
-            min={MIN_TRIP_DAYS}
-            max={MAX_TRIP_DAYS}
-            defaultValue={dayCount}
             className={`${controlClass} tabular-nums`}
           />
         </Field>

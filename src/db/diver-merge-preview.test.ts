@@ -640,6 +640,7 @@ describe("two people's legal records", () => {
       expect(
         guardianSignatureMissing(record, {
           dateOfBirth: kept.dateOfBirth,
+          minorDeclared: false,
           timezone: f.shop.timezone,
         }),
         choice,

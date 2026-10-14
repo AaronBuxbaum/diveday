@@ -20,7 +20,7 @@ they burned the capture budget.
 - [Elkhorn coral 8 Molasses Reef 20080309](https://commons.wikimedia.org/wiki/File:Elkhorn_coral_8_Molasses_Reef_20080309.jpg)
 - [FGBNMS nurse shark](https://commons.wikimedia.org/wiki/File:FGBNMS_-_nurse_shark_(27551309652).jpg)
 - [FKNMS Goliath Grouper With Remora](https://commons.wikimedia.org/wiki/File:FKNMS_-_Goliath_Grouper_With_Remora_(27094933605).jpg)
-- [French Angelfish Molasses Reef 20080309](https://commons.wikimedia.org/wiki/File:French_Angelfish_Molasses_Reef_20080309.jpg)
+- [French Angelfish Molasses Reef 20080309](https://commons.wikimedia.org/wiki/File:French_Angelfish_Molasses_Reef_20080309.jpg): cropped to the right-hand of the original's two frames, which printed as a hard seam across a trip's cover photo
 - [French Angelfish Pickles Reef 20230713](https://commons.wikimedia.org/wiki/File:French_Angelfish_Pickles_Reef_20230713.jpg)
 - [Grouper 2 Molasses Reef 1999](https://commons.wikimedia.org/wiki/File:Grouper_2_Molasses_Reef_1999.jpg)
 - [Sponge 06 Molasses Reef 20230714](https://commons.wikimedia.org/wiki/File:Sponge_06_Molasses_Reef_20230714.jpg)

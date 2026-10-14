@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
+import { tellCourseCertified } from "@/db/course-certified";
 import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
 import { recordCourseMaterialsDone } from "@/db/course-materials";
 import { recordCourseNextStep } from "@/db/course-next-step";
@@ -99,6 +100,22 @@ export async function certifyDiverFromRosterAction(
         ? await issueShopNitroxCertification(db, issued)
         : null;
   if (!level && !specialty && award !== "nitrox") redirect(back);
+
+  // **The student hears it** (third UX review, item 14): a new level card is
+  // the course's peak, and until now it was silent. Only a card this tap
+  // wrote, so a repeat tap sends nothing; a specialty or nitrox card waits for
+  // the physical card and is not news yet. Best-effort: the card stands
+  // whatever the mail does.
+  if (level && written) {
+    await tellCourseCertified(db, {
+      shopId: s.user.shopId,
+      personId,
+      tripId,
+      certificationId: written.id,
+      level,
+      recordedAt: written.issuedByShopAt ?? written.createdAt,
+    });
+  }
 
   revalidateAndRedirect(
     back,

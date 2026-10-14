@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boatStageOf, departureStage, TRIP_PHASES, tripPhaseOf } from "./trip-phase";
+import { boatStageOf, checkInOpen, departureStage, TRIP_PHASES, tripPhaseOf } from "./trip-phase";
 import type { TripStage } from "./trip-stages";
 
 const ZONE = "America/New_York";
@@ -176,8 +176,41 @@ describe("departureStage", () => {
   });
 
   it("is finished by the clock when the crew never tapped, but shows no word", () => {
-    expect(at("2026-07-21T22:00:00.000Z", null)).toEqual({ shown: null, finished: true });
-    expect(at("2026-07-21T10:00:00.000Z", null)).toEqual({ shown: null, finished: false });
+    expect(at("2026-07-21T22:00:00.000Z", null)).toMatchObject({ shown: null, finished: true });
+    expect(at("2026-07-21T10:00:00.000Z", null)).toMatchObject({ shown: null, finished: false });
+  });
+
+  it("says check-in is open from the same reading", () => {
+    expect(at("2026-07-21T10:30:00.000Z", null).checkInOpen).toBe(true);
+    expect(at("2026-07-21T22:00:00.000Z", null).checkInOpen).toBe(false);
+  });
+});
+
+describe("checkInOpen", () => {
+  const open = (now: string, stage: TripStage | null = null, cancelled = false) =>
+    checkInOpen({
+      startsAt,
+      endsAt,
+      now: new Date(now),
+      timeZone: ZONE,
+      // A tap on the departure's own day, before it sails.
+      stage: stage ? { stage, recordedAt: new Date("2026-07-21T10:40:00.000Z") } : null,
+      cancelled,
+    });
+
+  it("is open on the departure's own day until it sails", () => {
+    expect(open("2026-07-21T10:42:00.000Z")).toBe(true); // 6:42 AM, 18 minutes out
+    expect(open("2026-07-21T04:30:00.000Z")).toBe(true); // 12:30 AM the same day
+  });
+
+  it("is not open the day before, once it has sailed, or on a cancelled departure", () => {
+    expect(open("2026-07-21T03:00:00.000Z")).toBe(false); // 11:00 PM the night before
+    expect(open("2026-07-21T11:05:00.000Z")).toBe(false);
+    expect(open("2026-07-21T10:42:00.000Z", null, true)).toBe(false);
+  });
+
+  it("goes silent once the crew have said where the boat is", () => {
+    expect(open("2026-07-21T10:42:00.000Z", "boarding")).toBe(false);
   });
 });
 

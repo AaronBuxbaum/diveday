@@ -344,6 +344,17 @@ export type PlacedTrip = {
   title: string;
   startsAt: Date;
   endsAt: Date;
+  /**
+   * **The shop day this window began on, when it is not this column's** (UX
+   * review 2026-10-13, item 21): a night boat out at 11:30 PM and back at 3:00
+   * AM covers both days, and its second-day chip printed "11:30 PM – 3:00 AM"
+   * above that morning's 7:00 AM boat, which read as two night boats. A chip
+   * carrying this says what is true of its own day ("until 3:00 AM · from
+   * Monday") instead of the whole window. Null on the day it starts.
+   */
+  continuesFrom: CalendarDate | null;
+  /** Whether the window ends on this column's day — false only for a middle day of a run. */
+  endsThisDay: boolean;
   awayBlocks: readonly AvailabilityBlock[];
   clashes: readonly CrewClash[];
 };
@@ -544,13 +555,20 @@ function placements(
 ): { date: CalendarDate; placed: PlacedTrip }[] {
   const byDate = new Map<CalendarDate, PlacedTrip>();
   for (const meeting of [...trip.meetings].sort(byStart)) {
-    for (const date of daysCovered(meeting, timeZone, dates)) {
+    const covered = daysCovered(meeting, timeZone, dates);
+    const startDay = calendarDateInTimezone(meeting.startsAt, timeZone);
+    const lastDay = covered[covered.length - 1];
+    for (const date of covered) {
       if (byDate.has(date)) continue;
       byDate.set(date, {
         tripId: trip.tripId,
         title: trip.title,
         startsAt: meeting.startsAt,
         endsAt: meeting.endsAt,
+        continuesFrom: date === startDay ? null : startDay,
+        endsThisDay:
+          date === lastDay &&
+          calendarDateInTimezone(new Date(meeting.endsAt.getTime() - 1), timeZone) === date,
         awayBlocks,
         clashes: clashesFor(meeting),
       });

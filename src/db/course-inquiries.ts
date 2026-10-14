@@ -1,6 +1,7 @@
-import { and, asc, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
+import type { DateRequestOutcome } from "@/lib/date-requests";
 import { normalizeEmailAddress } from "@/lib/inbox";
 import type { AppDb, DbExecutor } from "./client";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
@@ -153,6 +154,9 @@ export type DateRequestRow = {
   divers: number | null;
   message: string | null;
   createdAt: Date;
+  /** Null while the lead is open (third UX review, item 13). */
+  handledAt: Date | null;
+  handledAs: DateRequestOutcome | null;
 };
 
 /**
@@ -238,7 +242,7 @@ export async function listDateRequestsForStaff(
       const [row] = await db
         .select({ n: count() })
         .from(courseInquiries)
-        .where(eq(courseInquiries.shopId, shopId));
+        .where(and(eq(courseInquiries.shopId, shopId), isNull(courseInquiries.handledAt)));
       return row?.n ?? 0;
     },
     fetchRows: async (offset, limit) =>
@@ -263,10 +267,12 @@ export async function listDateRequestsForStaff(
             divers: courseInquiries.divers,
             message: courseInquiries.message,
             createdAt: courseInquiries.createdAt,
+            handledAt: courseInquiries.handledAt,
+            handledAs: courseInquiries.handledAs,
           })
           .from(courseInquiries)
           .leftJoin(courses, eq(courses.id, courseInquiries.courseId))
-          .where(eq(courseInquiries.shopId, shopId))
+          .where(and(eq(courseInquiries.shopId, shopId), isNull(courseInquiries.handledAt)))
           .orderBy(sql`${firstDate} asc nulls last`, desc(courseInquiries.createdAt))
           .limit(limit)
           .offset(offset),
@@ -304,6 +310,8 @@ export async function listDateRequestsByIds(
       divers: courseInquiries.divers,
       message: courseInquiries.message,
       createdAt: courseInquiries.createdAt,
+      handledAt: courseInquiries.handledAt,
+      handledAs: courseInquiries.handledAs,
     })
     .from(courseInquiries)
     .leftJoin(courses, eq(courses.id, courseInquiries.courseId))
@@ -342,12 +350,16 @@ export async function listDateRequestsForCalendarDates(
       divers: courseInquiries.divers,
       message: courseInquiries.message,
       createdAt: courseInquiries.createdAt,
+      handledAt: courseInquiries.handledAt,
+      handledAs: courseInquiries.handledAs,
     })
     .from(courseInquiries)
     .leftJoin(courses, eq(courses.id, courseInquiries.courseId))
     .where(
       and(
         eq(courseInquiries.shopId, shopId),
+        // An answered lead no longer asks for the day (third UX review, item 13).
+        isNull(courseInquiries.handledAt),
         or(
           inArray(courseInquiries.preferredDate, uniqueDates),
           inArray(courseInquiries.alternateDate, uniqueDates),
@@ -356,4 +368,73 @@ export async function listDateRequestsForCalendarDates(
     )
     .orderBy(desc(courseInquiries.createdAt));
   return withRosterLinks(db, shopId, rows);
+}
+
+/** How many closed requests the Requests page lists under "Done". */
+export const HANDLED_DATE_REQUESTS_SHOWN = 20;
+
+/**
+ * **The leads the shop has closed, newest first** (third UX review, item 13):
+ * the "Done" list under the open days, capped, because the page is a worklist
+ * and the closed ones are there to reopen a mistake rather than to read.
+ */
+export async function listHandledDateRequests(
+  db: DbExecutor,
+  shopId: string,
+  limit: number = HANDLED_DATE_REQUESTS_SHOWN,
+): Promise<DateRequestRow[]> {
+  const rows = await db
+    .select({
+      id: courseInquiries.id,
+      courseId: courseInquiries.courseId,
+      courseTitle: courses.title,
+      interest: courseInquiries.interest,
+      personId: courseInquiries.personId,
+      name: courseInquiries.name,
+      email: courseInquiries.email,
+      phone: courseInquiries.phone,
+      experienceLevel: courseInquiries.experienceLevel,
+      timing: courseInquiries.timing,
+      preferredDate: courseInquiries.preferredDate,
+      alternateDate: courseInquiries.alternateDate,
+      dateFlexible: courseInquiries.dateFlexible,
+      divers: courseInquiries.divers,
+      message: courseInquiries.message,
+      createdAt: courseInquiries.createdAt,
+      handledAt: courseInquiries.handledAt,
+      handledAs: courseInquiries.handledAs,
+    })
+    .from(courseInquiries)
+    .leftJoin(courses, eq(courses.id, courseInquiries.courseId))
+    .where(and(eq(courseInquiries.shopId, shopId), isNotNull(courseInquiries.handledAt)))
+    .orderBy(desc(courseInquiries.handledAt))
+    .limit(limit);
+  return withRosterLinks(db, shopId, rows);
+}
+
+/**
+ * **Close a lead, or open it again** (third UX review, item 13). `booked` is
+ * the seat a staffer made from the request; `done` is the staffer's tick;
+ * `null` is Reopen. Scoped by shop, so an id from a form reaches nothing
+ * outside it. A `booked` stamp never overwrites an earlier close: the first
+ * answer is the one the page shows. Returns whether a row changed.
+ */
+export async function setDateRequestOutcome(
+  db: DbExecutor,
+  input: { shopId: string; requestId: string; outcome: DateRequestOutcome | null; now: Date },
+): Promise<boolean> {
+  const scope = and(
+    eq(courseInquiries.id, input.requestId),
+    eq(courseInquiries.shopId, input.shopId),
+  );
+  const rows = await db
+    .update(courseInquiries)
+    .set(
+      input.outcome
+        ? { handledAt: input.now, handledAs: input.outcome }
+        : { handledAt: null, handledAs: null },
+    )
+    .where(input.outcome === "booked" ? and(scope, isNull(courseInquiries.handledAt)) : scope)
+    .returning({ id: courseInquiries.id });
+  return rows.length > 0;
 }

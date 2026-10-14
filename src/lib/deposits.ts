@@ -224,3 +224,26 @@ export function refundOnCancellation(
   const refundCents = Math.max(0, Math.trunc(paidCents));
   return { refundCents, outcome: "refund" };
 }
+
+/**
+ * **What a seat still owes**, from its list price and its one payment row
+ * (`booking_payments`). The order page states it under a deposit, which is
+ * half a payment and otherwise never says what the other half is (third UX
+ * review, item 32).
+ *
+ * Only two states owe anything: `unpaid` owes the whole seat, and
+ * `deposit_paid` owes the seat less what was collected. `paid` and `waived`
+ * are settled, and a refunded seat owes nothing back. Null when the seat names
+ * no price or nothing is owed, so a caller never prints "$0.00 still owed".
+ */
+export function seatBalanceOwedCents(
+  listPriceCents: number | null,
+  payment: { status: string; amountCents: number | null } | null,
+): number | null {
+  if (listPriceCents === null || listPriceCents <= 0) return null;
+  const status = payment?.status ?? "unpaid";
+  if (status !== "unpaid" && status !== "deposit_paid") return null;
+  const collected = status === "deposit_paid" ? (payment?.amountCents ?? 0) : 0;
+  const owed = listPriceCents - collected;
+  return owed > 0 ? owed : null;
+}

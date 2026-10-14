@@ -188,12 +188,17 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   // impossible calendar day is refused, and a free-cancellation window with no
   // minimum beside it is not stored as a policy. Both were the board's rules
   // only until that module existed.
+  // The later days' dates when they are not consecutive (third UX review,
+  // item 10); empty is the consecutive run.
+  const laterDates = z.array(z.string()).safeParse(formData.getAll("meetingDate"));
+  if (!laterDates.success) redirect(noticeUrl(back, "invalid", { form: "details" }));
   const details = tripDetailsPatch(
     {
       date,
       startTime,
       endTime,
       dayCount,
+      laterDates: laterDates.data,
       priceDollars,
       depositDollars,
       cancellationWindowHours,
@@ -310,6 +315,9 @@ function redirectDetailsRefusal(
   details: Extract<ReturnType<typeof tripDetailsPatch>, { ok: false }>,
 ): never {
   if (details.reason === "end_before_start") redirect(noticeUrl(back, "end-before-start"));
+  if (details.reason === "days_out_of_order") {
+    redirect(noticeUrl(back, "days-out-of-order", { form: "details" }));
+  }
   if (details.reason === "price_required_by_gate") {
     redirect(noticeUrl(back, "price-required-by-gate", { form: "details" }));
   }

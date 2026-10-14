@@ -1044,10 +1044,14 @@ export async function getTripManifests(
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
       riderMedicalHold: riderHoldByBooking.get(booking.id) ?? null,
-      // Null/false whenever the shop holds no date of birth, so the captain's
-      // list stays quiet rather than showing "unknown" down the whole boat.
+      // Null whenever the shop holds no date of birth, so the captain's list
+      // stays quiet rather than showing "unknown" down the whole boat.
       age: person.dateOfBirth ? ageOnDate(person.dateOfBirth, tripDate) : null,
-      minor: person.dateOfBirth ? isMinorOnDate(person.dateOfBirth, tripDate) : false,
+      // A date of birth decides; with none, the seat's "Under 18" stamp does,
+      // the same rule as the roster's Minor badge (roster-seat.ts).
+      minor: person.dateOfBirth
+        ? isMinorOnDate(person.dateOfBirth, tripDate)
+        : Boolean(booking.minorDeclaredAt),
       birthday: birthdayCallout(person.dateOfBirth, tripDate),
       // Null unless the diver said so, and null again an hour after this boat
       // is home — the whole expiry lives in `welcomeCueFor`, so nothing here

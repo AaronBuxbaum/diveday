@@ -26,7 +26,7 @@
     "turningOff": "Desactivando…",
     "copy": "Copiar",
     "copied": "Copiado",
-    "copyFailed": "No se pudo copiar: selecciónalo a mano",
+    "copyFailed": "No se pudo copiar. Selecciónalo y cópialo tú.",
     "confirmRotate": "¿Sustituir este enlace? Cualquier calendario que siga usando el anterior dejará de actualizarse.",
     "confirmRotateButton": "Sí, sustituir el enlace",
     "confirmTurnOff": "¿Desactivar esta suscripción? El enlace dejará de funcionar de inmediato.",

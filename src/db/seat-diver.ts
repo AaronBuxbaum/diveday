@@ -1,13 +1,21 @@
 import { trackEvent } from "@/lib/analytics";
+import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { ParticipantType } from "@/lib/participant-types";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
-import { type BookingOutcome, createBooking, type FreshPersonDetails } from "./bookings";
+import {
+  type BookingOutcome,
+  createBooking,
+  type FreshPersonDetails,
+  type MoveBookingOutcome,
+  moveBooking,
+} from "./bookings";
 import type { AppDb } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { publishManifestEvent } from "./manifest-events";
 import { sendCourseSeatConfirmation } from "./notifications";
 import { recordTripActivity, type TripActivityEntry } from "./operations";
+import { type SendRescheduleNoticesOptions, sendSeatMoveNotice } from "./trip-rescheduled";
 import { type IssueAndDeliverWaiverResult, issueWaiverOnJoin } from "./waiver-issue";
 
 /**
@@ -311,4 +319,85 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     waiverPath,
     identityUnconfirmed: outcome.identityUnconfirmed,
   };
+}
+
+export type { MoveBookingRefusal as MoveSeatRefusal } from "./bookings";
+
+export type MoveSeatResult =
+  | Exclude<MoveBookingOutcome, { ok: true }>
+  | (Extract<MoveBookingOutcome, { ok: true }> & {
+      waiver: SeatDiverWaiver;
+      /** Whether the diver heard the new time: `skipped` when it did not change. */
+      notice: "told" | "failed" | "skipped";
+    });
+
+/**
+ * **Move a booked seat to another departure, with every consequence a seating
+ * owes** (ADR 20261013-staff-move-a-seat). The move itself is one transaction
+ * (`moveBooking`); after it commits, in the order a person would want: the new
+ * departure's waiver if it asks for one the seat does not hold, the diver told
+ * the new time, both trails, and both manifests refreshed. Each consequence is
+ * best-effort: the seat has moved whatever the mail does.
+ */
+export async function moveSeat(
+  db: AppDb,
+  input: {
+    shopId: string;
+    fromTripId: string;
+    toTripId: string;
+    bookingId: string;
+    actorPersonId: string;
+  },
+  notices: SendRescheduleNoticesOptions = {},
+): Promise<MoveSeatResult> {
+  const moved = await moveBooking(db, input);
+  if (!moved.ok) return moved;
+  const movedAt = notices.now ?? nowDate();
+
+  let waiver: SeatDiverWaiver;
+  try {
+    waiver = waiverOutcome(await issueWaiverOnJoin(db, input.shopId, input.bookingId));
+  } catch (error) {
+    log("booking.waiver_on_join_failed", "error", {
+      bookingId: input.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    waiver = "failed";
+  }
+
+  let notice: "told" | "failed" | "skipped";
+  try {
+    notice = await sendSeatMoveNotice(
+      db,
+      {
+        shopId: input.shopId,
+        bookingId: input.bookingId,
+        fromTripId: moved.fromTripId,
+        movedAt,
+      },
+      notices,
+    );
+  } catch (error) {
+    log("booking.seat_move_notice_failed", "error", {
+      bookingId: input.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    notice = "failed";
+  }
+
+  await recordTripActivity(db, {
+    shopId: input.shopId,
+    tripId: moved.fromTripId,
+    actorPersonId: input.actorPersonId,
+    entry: { code: "seat_moved_away", diver: moved.personName },
+  });
+  await recordTripActivity(db, {
+    shopId: input.shopId,
+    tripId: moved.toTripId,
+    actorPersonId: input.actorPersonId,
+    entry: { code: "seat_moved_here", diver: moved.personName },
+  });
+  await publishManifestEvent(db, input.shopId, moved.fromTripId);
+  await publishManifestEvent(db, input.shopId, moved.toTripId);
+  return { ...moved, waiver, notice };
 }

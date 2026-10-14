@@ -311,6 +311,7 @@
     "certificationSelfDeclared": "{count, plural, one {Certificación declarada por el buceador, sin verificar.} other {# certificaciones declaradas por los buceadores, sin verificar.}}",
     "certificationInsufficient": "{count, plural, one {Sin la certificación que pide esta salida.} other {# buceadores sin la certificación que pide esta salida.}}",
     "certificationInTraining": "{count, plural, one {Aún en formación para el nivel de esta salida.} other {# buceadores aún en formación para el nivel de esta salida.}}",
+    "certificationNotYet": "{count, plural, one {Dice que todavía no tiene certificación.} other {# buceadores dicen que todavía no tienen certificación.}}",
     "specialtyMissing": "{count, plural, one {Sin certificación de {specialty} registrada.} other {# buceadores sin certificación de {specialty} registrada.}}",
     "specialtyPending": "{count, plural, one {Certificación de {specialty} aún sin verificar.} other {# certificaciones de {specialty} aún sin verificar.}}",
     "specialtyImportUnconfirmed": "{count, plural, one {Certificación de {specialty} importada sin confirmar.} other {# certificaciones de {specialty} importadas sin confirmar.}}",

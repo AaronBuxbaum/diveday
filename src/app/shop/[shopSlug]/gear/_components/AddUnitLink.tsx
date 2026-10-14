@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { openAddUnitDetails } from "./AddUnitDetails";
 
 /**
- * The door into the collapsed "Add a unit" form at the bottom of the page: the
- * page header's primary on a register with units (UX audit 2026-10-07, item
- * 31), and the empty register's card on one without. Not a `<a href="#add-unit">`
+ * The door into the "Add a unit" form at the bottom of the page, hidden until
+ * opened: the page header's primary on a register with units (UX audit
+ * 2026-10-07, item 31), and the empty register's card on one without. Not a `<a href="#add-unit">`
  * (`lint/a11y/useValidAnchor` refuses an anchor whose href is only a click
  * handler in disguise, and it would be exactly that here): opening it is
  * `AddUnitDetails`'s own React state, asked for via `openAddUnitDetails()`
@@ -28,10 +28,10 @@ export function AddUnitLink({
     <button
       type="button"
       className={className}
-      onClick={() => {
-        openAddUnitDetails();
-        document.getElementById("add-unit")?.scrollIntoView({ block: "start", behavior: "smooth" });
-      }}
+      // Opening is all it asks; `AddUnitDetails` scrolls to itself once the
+      // open state has committed, because the closed band is `hidden` and a
+      // hidden summary has nowhere to scroll to in this tick.
+      onClick={openAddUnitDetails}
       // **This door does nothing until React owns it**, and it is painted
       // before then. The whole of it — this handler, and the `window` listener
       // `AddUnitDetails` registers to hear from it — is client-side, so a click

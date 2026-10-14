@@ -146,6 +146,7 @@ const COPY: BuilderCopy = {
   isRehearsalHint: "Practice only.",
   daysLabel: "How many days",
   daysDescription: "Most departures are one day.",
+  meetingDayLabel: "Day {number}",
   payAtBookingLegend: "Pay at booking",
   payAtBookingDescription: "Optional.",
   depositLabel: "Deposit per diver",

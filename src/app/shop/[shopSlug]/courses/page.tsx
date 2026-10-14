@@ -5,15 +5,26 @@ import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
+import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
+import { SearchField } from "@/components/ui/form";
+import { QueryForm } from "@/components/ui/QueryForm";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { coursesAwaitingFormText, pagedCourses } from "@/db/courses";
+import {
+  COURSE_LIST_VIEWS,
+  type CourseListView,
+  courseIdsEverOnBoard,
+  courseListViewParam,
+  coursesAwaitingFormText,
+  pagedCourses,
+} from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
 import { nextSessionStartByCourse } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyScanned, formatShortDate, joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
@@ -33,11 +44,17 @@ export const metadata: Metadata = {
   title: "Courses — DiveDay",
 };
 
+const COURSE_VIEW_KEYS: Record<CourseListView, StaffMessageKey> = {
+  scheduled: "courses.list.views.scheduled",
+  notYet: "courses.list.views.notYet",
+  hidden: "courses.list.hidden",
+};
+
 /**
  * The staff course roster: every course including the hidden ones, as one
  * ledger grouped by agency (ADR 20260827-the-shops-shelves, decision 1 — the
- * library pattern). Each row opens its course's editor; Schedule is the row's
- * one quiet act, and the header holds the one door to the diver-facing
+ * library pattern). Each row opens its course's editor; Schedule, on a course
+ * the shop runs, is the row's one quiet act, and the header holds the one door to the diver-facing
  * catalog. Hiding a course from that catalog lives on the course's own editor,
  * beside Save: it is a rare act, and 55 standing Hide buttons were 55 controls
  * nobody was reaching for. Staff-only, like everything else under
@@ -55,12 +72,17 @@ export default async function CoursesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; view?: string }>;
 }) {
   await connection(); // visibility can change between requests — render per request
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { page } = await searchParams;
+  const { page, q, view: viewParam } = await searchParams;
+  // **Find a course in one line** (third UX review, item 35): 55 courses over
+  // three pages had paging and nothing else.
+  const query = q?.trim() ?? "";
+  const view = courseListViewParam(viewParam);
+  const narrowed = Boolean(query || view);
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
@@ -83,12 +105,14 @@ export default async function CoursesPage({
   // groups are cut from.
   const coursePage = await pagedCourses(db, shop.id, {
     page: Number.parseInt(page ?? "", 10),
+    query,
+    view,
   });
   const courseList = coursePage.courses;
   // Together rather than in sequence: only the second needs the page of
   // courses, and the permission read does not, so awaiting them one after the
   // other would buy a serial round trip for nothing.
-  const [canSchedule, nextSessions, formsAwaitingText] = await Promise.all([
+  const [canSchedule, nextSessions, formsAwaitingText, everOnBoard] = await Promise.all([
     // Scheduling is owner/manager/instructor work, so the button is absent —
     // not disabled — for anyone else (AGENTS.md: gate by not rendering). The
     // new-trip page re-checks against live roles either way.
@@ -114,9 +138,55 @@ export default async function CoursesPage({
     // shop-wide, with a door to the first (UX review 2026-10-10, item 16);
     // under every row it was the same amber sentence nearly twenty times.
     coursesAwaitingFormText(db, shop.id),
+    courseIdsEverOnBoard(
+      db,
+      shop.id,
+      courseList.map((course) => course.id),
+    ),
   ]);
   const base = `/shop/${shopSlug}/courses`;
-  const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
+  // The search and the view travel with every page turn and chip.
+  const listHref = ({
+    target = 1,
+    nextView = view,
+    keepQuery = true,
+  }: {
+    target?: number;
+    nextView?: CourseListView;
+    keepQuery?: boolean;
+  }) => {
+    const search = new URLSearchParams();
+    if (keepQuery && query) search.set("q", query);
+    if (nextView) search.set("view", nextView);
+    if (target > 1) search.set("page", String(target));
+    const encoded = search.toString();
+    return encoded ? `${base}?${encoded}` : base;
+  };
+  const pageHref = (target: number) => listHref({ target });
+  const viewChips: FilterChip[] = [
+    {
+      key: "all",
+      label: st("courses.list.views.all"),
+      href: listHref({ nextView: undefined }),
+      active: !view,
+    },
+    ...COURSE_LIST_VIEWS.map((key) => ({
+      key,
+      label: st(COURSE_VIEW_KEYS[key]),
+      href: listHref({ nextView: key }),
+      active: view === key,
+    })),
+  ];
+  /**
+   * **"Schedule" on a course the shop runs, not on every catalog entry**
+   * (third UX review, item 35). A template puts the whole agency ladder on the
+   * roster priced and visible, and a Schedule beside each of 55 rows read as
+   * 55 products. It stands on a course that has been on the board, ahead or
+   * behind, and on one the shop wrote itself; any other course is scheduled
+   * from the board's own Add, which lists every course.
+   */
+  const offersSchedule = (course: (typeof courseList)[number]) =>
+    everOnBoard.has(course.id) || course.sourceTemplateSlug === null;
 
   /**
    * The row's quiet line: when it next runs, who it is open to, how long it
@@ -195,7 +265,7 @@ export default async function CoursesPage({
     // standing whole, it left 28px under its word against 17px over the
     // course's name (pixel-craft class 5). The box then ends on the row's rule,
     // so its ring is drawn inside it there.
-    ...(canSchedule
+    ...(canSchedule && offersSchedule(course)
       ? {
           actions: (
             <Link
@@ -254,7 +324,40 @@ export default async function CoursesPage({
         </ShopNotice>
       ) : null}
 
-      {courseList.length === 0 ? (
+      {coursePage.total > 0 || narrowed ? (
+        <div className="mt-6 flex flex-col gap-3">
+          <QueryForm
+            aria-label={st("courses.list.searchLabel")}
+            keep={{ view }}
+            className="flex items-center gap-2"
+          >
+            <SearchField
+              id="course-search"
+              name="q"
+              label={st("courses.list.searchLabel")}
+              defaultValue={query}
+              placeholder={st("courses.list.searchPlaceholder")}
+              className="w-full min-w-0 sm:w-80"
+            />
+            {query ? (
+              <Link
+                href={listHref({ keepQuery: false })}
+                scroll={false}
+                aria-label={st("courses.list.searchClear")}
+                title={st("courses.list.searchClear")}
+                className={buttonClass({ variant: "ghost", size: "icon" })}
+              >
+                <DiveDayIcon name="close" className="size-4" />
+              </Link>
+            ) : null}
+          </QueryForm>
+          <FilterChips label={st("courses.list.views.label")} chips={viewChips} />
+        </div>
+      ) : null}
+
+      {courseList.length === 0 && narrowed ? (
+        <EmptyState title={st("courses.list.noMatch")} className="mt-6" />
+      ) : courseList.length === 0 ? (
         // The roster used to render its card shell around nothing, giving a
         // shop with no courses an empty box and no sentence. The door is the
         // same act every row carries: a catalog exists to be taught, and a

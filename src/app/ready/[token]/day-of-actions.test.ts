@@ -1,0 +1,182 @@
+import { and, eq, gt, ne } from "drizzle-orm";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { issueBookingCapability } from "@/db/booking-capabilities";
+import { getHelpRequestForBooking, updateHelpRequestStatus } from "@/db/help-requests";
+import { getReadyPageData } from "@/db/ready";
+import { bookings, trips } from "@/db/schema";
+import { listStaff } from "@/db/trips";
+import { DAY_MS, nowDate } from "@/lib/clock";
+import { fileScopedShopContext } from "@/test/db";
+
+/**
+ * **Day-of details, one Save** (third UX review, item 24), against a real
+ * database. Six forms became one, so what has to hold is that every answer
+ * lands together, that an answer left alone is not rewritten (a help request
+ * the crew acknowledged keeps its status), that "Choose" never blanks, and
+ * that the gates the six actions each re-derived still hold.
+ */
+
+const fileCtx = fileScopedShopContext();
+
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn((to: string) => {
+    throw new Error(`REDIRECT:${to}`);
+  }),
+}));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/db/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/client")>();
+  return { ...actual, getDb: vi.fn() };
+});
+vi.mock("@/i18n/request", () => ({
+  requestLocale: vi.fn(async () => "en-US"),
+  requestFirstHandLocale: vi.fn(async () => null),
+}));
+vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.9") }));
+vi.mock("@/lib/rate-limit", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
+  return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })) };
+});
+
+const { getDb } = await import("@/db/client");
+const { saveDayOfDetailsFromReady } = await import("./day-of-actions");
+
+afterEach(() => vi.clearAllMocks());
+
+/** A booked diver more than a day out, with a readiness link. */
+async function seat() {
+  const { db, shop } = fileCtx;
+  vi.mocked(getDb).mockResolvedValue(db);
+  const [row] = await db
+    .select({ bookingId: bookings.id })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shop.id),
+        eq(bookings.status, "booked"),
+        eq(bookings.participantType, "diver"),
+        ne(trips.status, "cancelled"),
+        // More than a day out, so D18's offer window is open.
+        gt(trips.startsAt, new Date(nowDate().getTime() + 2 * DAY_MS)),
+      ),
+    )
+    .orderBy(trips.startsAt)
+    .limit(1);
+  if (!row) throw new Error("seed has no booked diver");
+  // The seat, freed of anything the seed said, so each case starts blank.
+  await db
+    .update(bookings)
+    .set({
+      lastDivedBand: null,
+      diveIntent: null,
+      reEntryAsk: null,
+      hotelPickupLocation: null,
+      identityUnconfirmedAt: null,
+      participantType: "diver",
+    })
+    .where(eq(bookings.id, row.bookingId));
+  const issued = await issueBookingCapability(db, {
+    shopId: shop.id,
+    bookingId: row.bookingId,
+    purpose: "readiness",
+  });
+  if (!issued) throw new Error("no readiness link");
+  return { db, shop, bookingId: row.bookingId, token: issued.token };
+}
+
+async function save(token: string, fields: Record<string, string>) {
+  const formData = new FormData();
+  for (const [name, value] of Object.entries(fields)) formData.set(name, value);
+  try {
+    await saveDayOfDetailsFromReady(token, formData);
+  } catch (error) {
+    return error instanceof Error ? error.message : "";
+  }
+  return "";
+}
+
+async function read(bookingId: string) {
+  const data = await getReadyPageData(fileCtx.db, bookingId);
+  if (!data) throw new Error("ready data missing");
+  return data;
+}
+
+describe("saveDayOfDetailsFromReady", () => {
+  it("keeps every answer from one Save, not only the last", async () => {
+    const { bookingId, token } = await seat();
+    const to = await save(token, {
+      lastDivedBand: "within_a_year",
+      diveIntent: "small_life",
+      note: "Left ear is slow to clear.",
+      hotelPickupLocation: "Marriott, room 214",
+      kind: "carry_gear",
+    });
+    expect(to).toBe(`REDIRECT:/ready/${token}?saved=day-of`);
+    const data = await read(bookingId);
+    expect(data.lastDivedBand).toBe("within_a_year");
+    expect(data.diveIntent).toBe("small_life");
+    expect(data.rentalFit?.note).toBe("Left ear is slow to clear.");
+    expect(data.hotelPickupLocation).toBe("Marriott, room 214");
+    expect(data.helpRequest?.kind).toBe("carry_gear");
+  });
+
+  it("never blanks a stored answer with Choose", async () => {
+    const { bookingId, token } = await seat();
+    await save(token, { lastDivedBand: "this_season", diveIntent: "a_wreck" });
+    await save(token, { lastDivedBand: "", diveIntent: "" });
+    const data = await read(bookingId);
+    expect(data.lastDivedBand).toBe("this_season");
+    expect(data.diveIntent).toBe("a_wreck");
+  });
+
+  it("does not rewrite a help request left as it was, so the crew's acknowledgment stands", async () => {
+    const { db, shop, bookingId, token } = await seat();
+    await save(token, { kind: "first_timer" });
+    const request = await getHelpRequestForBooking(db, shop.id, bookingId);
+    const [staff] = await listStaff(db, shop.id);
+    if (!request || !staff) throw new Error("setup missing");
+    await updateHelpRequestStatus(db, {
+      shopId: shop.id,
+      requestId: request.id,
+      status: "acknowledged",
+      actorPersonId: staff.person.id,
+    });
+    // The whole form posts again, the help radio unchanged, to save a note.
+    await save(token, { kind: "first_timer", note: "Bringing my own computer." });
+    expect((await read(bookingId)).helpRequest?.status).toBe("acknowledged");
+  });
+
+  it("asks a seat that is not diving nothing about diving, whatever the post says", async () => {
+    const { db, bookingId, token } = await seat();
+    await db.update(bookings).set({ participantType: "rider" }).where(eq(bookings.id, bookingId));
+    await save(token, {
+      lastDivedBand: "never",
+      diveIntent: "skills",
+      hotelPickupLocation: "Pier 1",
+    });
+    const data = await read(bookingId);
+    expect(data.lastDivedBand).toBeNull();
+    expect(data.diveIntent).toBeNull();
+    expect(data.hotelPickupLocation).toBe("Pier 1");
+  });
+
+  it("takes a re-entry ask only while the saved intent opens it", async () => {
+    const { db, bookingId, token } = await seat();
+    await save(token, { diveIntent: "easing_back" });
+    // Moving the intent away in the same post closes the offer it opened.
+    await save(token, { diveIntent: "good_day", reEntryAsk: "deck_word" });
+    expect((await read(bookingId)).reEntryAsk).toBeNull();
+    await db.update(bookings).set({ diveIntent: "easing_back" }).where(eq(bookings.id, bookingId));
+    await save(token, { diveIntent: "easing_back", reEntryAsk: "deck_word" });
+    expect((await read(bookingId)).reEntryAsk).toBe("deck_word");
+  });
+
+  it("refuses a post it cannot read, and writes nothing", async () => {
+    const { bookingId, token } = await seat();
+    expect(await save(token, { lastDivedBand: "yesterday", note: "x" })).toBe(
+      `REDIRECT:/ready/${token}?error=day-of`,
+    );
+    expect((await read(bookingId)).rentalFit?.note ?? null).toBeNull();
+  });
+});

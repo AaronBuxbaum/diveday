@@ -311,6 +311,7 @@
     "certificationSelfDeclared": "{count, plural, one {Certification self-declared, not verified.} other {# self-declared certifications, not verified.}}",
     "certificationInsufficient": "{count, plural, one {Not certified for this trip.} other {# divers not certified for this trip.}}",
     "certificationInTraining": "{count, plural, one {Still in training for this trip’s level.} other {# divers still in training for this trip’s level.}}",
+    "certificationNotYet": "{count, plural, one {Says not certified yet.} other {# divers say they’re not certified yet.}}",
     "specialtyMissing": "{count, plural, one {No {specialty} certification on file.} other {# divers with no {specialty} certification on file.}}",
     "specialtyPending": "{count, plural, one {{specialty} certification not verified yet.} other {# {specialty} certifications not verified yet.}}",
     "specialtyImportUnconfirmed": "{count, plural, one {Imported {specialty} certification not confirmed.} other {# imported {specialty} certifications not confirmed.}}",

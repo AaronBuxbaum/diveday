@@ -250,5 +250,5 @@ test("a mistyped trip id on a shop's public page is a 404 for an anonymous visit
   // The *shop's* refusal, not DiveDay's app-wide one: a `notFound()` in this
   // namespace renders inside the shop's chrome and offers its schedule (issue
   // #765).
-  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That page isn’t here" })).toBeVisible();
 });

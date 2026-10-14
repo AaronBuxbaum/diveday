@@ -34,6 +34,9 @@ export function AddUnitDetails({
   const details = useRef<HTMLDetailsElement>(null);
   const [open, setOpen] = useState(initialOpen);
   const [hydrated, setHydrated] = useState(false);
+  // Bumped by each door's request, so a second click on a door scrolls back
+  // to a form already open further down the page.
+  const [asked, setAsked] = useState(0);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: mount only — `open` is read once, as the thing to compare the DOM against.
   useEffect(() => {
@@ -41,10 +44,21 @@ export function AddUnitDetails({
     // first is what keeps the state sync from *closing* an early tap.
     if (details.current && details.current.open !== open) setOpen(details.current.open);
     setHydrated(true);
-    const openIt = () => setOpen(true);
+    const openIt = () => {
+      setOpen(true);
+      setAsked((count) => count + 1);
+    };
     window.addEventListener(OPEN_EVENT, openIt);
     return () => window.removeEventListener(OPEN_EVENT, openIt);
   }, []);
+
+  // **Scroll once the form is there.** The closed band is `hidden` wherever a
+  // door exists, so it has no box to scroll to until `open` has committed;
+  // the door asks, and this answers after the render that shows it.
+  useEffect(() => {
+    if (asked === 0) return;
+    details.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [asked]);
 
   return (
     <details

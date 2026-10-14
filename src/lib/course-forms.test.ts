@@ -38,8 +38,8 @@ const practices: RequiredCourseForm = {
 };
 
 const now = new Date("2026-10-08T15:00:00.000Z");
-const adult = { dateOfBirth: "1990-01-01", timezone: "America/New_York" };
-const minor = { dateOfBirth: "2012-05-01", timezone: "America/New_York" };
+const adult = { dateOfBirth: "1990-01-01", minorDeclared: false, timezone: "America/New_York" };
+const minor = { dateOfBirth: "2012-05-01", minorDeclared: false, timezone: "America/New_York" };
 
 function signed(overrides: Partial<CourseFormSignature> = {}): CourseFormSignature {
   return {
@@ -104,13 +104,21 @@ describe("outstandingCourseForms — which forms an enrollment still owes", () =
 
   it("measures the age on the day the form was signed, not today", () => {
     // Signed the day before an eighteenth birthday, alone: still owed after it.
-    const turning = { dateOfBirth: "2008-10-08", timezone: "UTC" };
+    const turning = { dateOfBirth: "2008-10-08", minorDeclared: false, timezone: "UTC" };
     const dayBefore = new Date("2026-10-07T12:00:00.000Z");
     expect(owed([signed({ signedAt: dayBefore })], turning)).toEqual(["form-release"]);
   });
 
   it("reads an unknown date of birth as an adult (H-08's fail-open)", () => {
-    expect(owed([signed()], { dateOfBirth: null, timezone: "UTC" } as never)).toEqual([]);
+    expect(
+      owed([signed()], { dateOfBirth: null, minorDeclared: false, timezone: "UTC" } as never),
+    ).toEqual([]);
+  });
+
+  it("asks for the guardian on a seat its booker marked Under 18 with no date on file", () => {
+    expect(
+      owed([signed()], { dateOfBirth: null, minorDeclared: true, timezone: "UTC" } as never),
+    ).toEqual(["form-release"]);
   });
 
   it("clears a form signed at the version a started session began with", () => {
@@ -121,7 +129,7 @@ describe("outstandingCourseForms — which forms an enrollment still owes", () =
   });
 
   it("measures a paper copy's age on the date written on it, not the day it was recorded", () => {
-    const turning = { dateOfBirth: "2008-10-08", timezone: "UTC" };
+    const turning = { dateOfBirth: "2008-10-08", minorDeclared: false, timezone: "UTC" };
     // Recorded today, the student is eighteen; on the paper's date they were not.
     expect(owed([signed({ paperSignedOn: "2026-10-01" })], turning)).toEqual(["form-release"]);
     expect(owed([signed({ paperSignedOn: "2026-10-08" })], turning)).toEqual([]);

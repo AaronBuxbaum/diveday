@@ -9,7 +9,12 @@ import { signingDate } from "@/lib/guardian";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import type { RosterRowContext } from "./RosterRow";
 import { type RosterArrival, RosterSection } from "./RosterSection";
-import { type RosterRecord, rosterPaymentStatusCopy, waiverControls } from "./roster-model";
+import {
+  type RosterRecord,
+  rosterPaymentStatusCopy,
+  type SeatMove,
+  waiverControls,
+} from "./roster-model";
 import { type RosterSeat, rosterSeat } from "./roster-seat";
 import type {
   NitroxByBooking,
@@ -106,6 +111,8 @@ export type RosterFixtureOptions = {
   waivers: WaiverByBooking;
   rentalFit?: RentalFitByBooking;
   compact?: boolean;
+  /** The departure page passes `false`: its Divers tab opens under the page's own H1. */
+  showSummaryHeading?: boolean;
   addDiverGroup?: ReactNode;
   paymentsConnected?: boolean;
   canManageOrders?: boolean;
@@ -118,6 +125,8 @@ export type RosterFixtureOptions = {
   splitAsksDateOfBirth?: boolean;
   /** Present means this is a course session's roster, with a Certify control. */
   certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
+  /** "Move to another departure", when the page offers it. */
+  moveSeat?: SeatMove;
 };
 
 function rosterProps({
@@ -126,6 +135,7 @@ function rosterProps({
   waivers,
   rentalFit,
   compact = false,
+  showSummaryHeading,
   addDiverGroup,
   paymentsConnected = false,
   canManageOrders = true,
@@ -137,6 +147,7 @@ function rosterProps({
   packageDivesByBooking,
   splitAsksDateOfBirth,
   certifyDefaultLevel,
+  moveSeat,
 }: RosterFixtureOptions) {
   return {
     trip: {
@@ -156,6 +167,7 @@ function rosterProps({
       splitAsksDateOfBirth,
       certifyDefaultLevel,
       compact,
+      showSummaryHeading,
     },
     rows: {
       roster,
@@ -178,6 +190,7 @@ function rosterProps({
       deleteNoteAction: noop,
       saveEmergencyContactAction: noop,
       certifyDiverAction: certifyDefaultLevel === undefined ? undefined : noop,
+      moveSeat,
     },
     slots: { addDiverGroup, arrival, record },
   };

@@ -57,6 +57,7 @@ import { SummaryPanel } from "./_components/SummaryPanel";
 import { seenGroupView } from "./_components/seen-group-view";
 import { stageStripProps } from "./_components/stage-strip-props";
 import { TripPlanSection } from "./_components/TripPlanSection";
+import { tripPlanRows } from "./_components/trip-plan-rows";
 import type { ManifestActionContext } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -130,6 +131,7 @@ export default async function TripManifestPage({
     catchUp,
     diveIntents,
     stage,
+    meetingPoint,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
@@ -376,15 +378,7 @@ export default async function TripManifestPage({
           <TripPlanSection
             idPrefix={idPrefix}
             heading={t("manifest.planChange.heading")}
-            dives={plannedDives.map(({ dive, diveSite }) => ({
-              diveNumber: dive.diveNumber,
-              line: diveSite
-                ? t("manifest.planChange.diveRow", {
-                    number: dive.diveNumber,
-                    site: diveSite.name,
-                  })
-                : t("manifest.planChange.diveRowNoSite", { number: dive.diveNumber }),
-            }))}
+            {...tripPlanRows(t, shop, plannedDives, meetingPoint)}
           />
         ) : null}
 

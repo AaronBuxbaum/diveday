@@ -1346,7 +1346,7 @@ describe("where to go (ux review 2026-10-11, items 4 and 27)", () => {
     const email = bookingConfirmationEmail({ ...base, locale: "es-ES", meetingPoint });
     expect(email.text).toContain("Adónde ir");
     expect(email.text).toContain("Referencia: Blue awning");
-    expect(email.text).toContain("Aparcamiento: Free lot");
+    expect(email.text).toContain("Estacionamiento: Free lot");
     expect(email.text).toContain("Abrir en mapas");
   });
 });

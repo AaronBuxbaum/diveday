@@ -3,9 +3,10 @@ import { Suspense } from "react";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
-import { cancelledNotice } from "@/app/ready/[token]/_components/CancelledNotice";
+import { cancelledNoticeForReady } from "@/app/ready/[token]/_components/CancelledNotice";
 import { CertificationEntries } from "@/app/ready/[token]/_components/CertificationEntries";
 import { ChangedFacts, fitRecallFrom } from "@/app/ready/[token]/_components/ChangedFacts";
+import { CourseNextStepNote } from "@/app/ready/[token]/_components/CourseNextStepNote";
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
 import { readyDeadLink } from "@/app/ready/[token]/_components/dead-link";
 import { PayStepBody } from "@/app/ready/[token]/_components/PayStepBody";
@@ -20,8 +21,8 @@ import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions
 import { ThreadSections } from "@/app/ready/[token]/_components/ThreadSections";
 import {
   ThreadSpine,
-  type ThreadSpineStep,
   ThreadStatus,
+  threadSpineSteps,
 } from "@/app/ready/[token]/_components/ThreadSpine";
 import {
   boatStageLine,
@@ -44,7 +45,6 @@ import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { countSpendableDives } from "@/db/dive-packages";
-import { getBookingPayment } from "@/db/payments";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
@@ -56,11 +56,7 @@ import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
-import {
-  THREAD_STEP_STATE_KEYS,
-  THREAD_STEP_TITLE_KEYS,
-  threadNextKey,
-} from "@/i18n/thread-labels";
+import { threadNextKey } from "@/i18n/thread-labels";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -217,8 +213,7 @@ async function DiverReadinessPage({
     // rare, and the one path on which a diver learns from this page rather than
     // from the shop. What it says about their money is read from the payment
     // row, never from anything on the URL.
-    const payment = await getBookingPayment(db, data.shop.id, bookingId);
-    return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name, t);
+    return cancelledNoticeForReady(db, data, bookingId, locale, t);
   }
 
   /**
@@ -497,6 +492,7 @@ async function DiverReadinessPage({
               token={token}
               item={step.item}
               offerNitrox={nitroxCardEntryOffered}
+              notYet={data.certificationNotYet}
               t={t}
             />
           );
@@ -541,19 +537,11 @@ async function DiverReadinessPage({
             />
           );
         case "dayof":
-          return <DayOfDetails token={token} data={data} t={t} />;
+          return <DayOfDetails token={token} data={data} saved={saved === "day-of"} t={t} />;
       }
     };
 
-    const spineSteps: ThreadSpineStep[] = spine.steps.map((step) => ({
-      id: step.id,
-      state: step.state,
-      current: step.id === spine.current,
-      title: t(THREAD_STEP_TITLE_KEYS[step.id]),
-      stateWord: step.state === "done" ? null : t(THREAD_STEP_STATE_KEYS[step.state]),
-      line: stepLine(step),
-      body: stepBody(step) ?? undefined,
-    }));
+    const spineSteps = threadSpineSteps(spine, t, stepLine, stepBody);
 
     return (
       <>
@@ -584,6 +572,7 @@ async function DiverReadinessPage({
             <ThreadSpine steps={spineSteps} />
           </>
         )}
+        <CourseNextStepNote db={db} shopId={shop.id} bookingId={bookingId} t={t} />
         <ThreadSections
           context={{
             token,

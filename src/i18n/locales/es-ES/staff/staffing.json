@@ -91,6 +91,8 @@
     "assignAria": "Asignar tripulación a {trip}",
     "away": "Ausente",
     "awayConflict": "Ausente {dates}",
+    "continuedFrom": "desde el {day}",
+    "continuedUntil": "hasta {time} · desde el {day}",
     "crewClash": "También en la tripulación de {departure}",
     "crewing": "Tripulación",
     "deciding": "Guardando…",

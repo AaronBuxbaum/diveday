@@ -11,28 +11,28 @@ import { e2eNow, seededTripId } from "./helpers";
  */
 
 /**
- * Open the "Add a unit" disclosure at the foot of the register, once React
- * owns it.
+ * Open the "Add a unit" form at the foot of the register through the page's one
+ * door, the header's "Add a unit", once React owns both ends.
  *
- * The band's own `<summary>` is the form's frame; the page header's primary
- * (`AddUnitLink`, a client handler talking to a client listener) opens the
- * same band and has a test of its own below.
- *
- * The wait stays. `AddUnitDetails` owns `open` in React state, so a tap that
- * lands before hydration is a tap React has not seen, and the next render can
- * disagree with what the browser did. That window used to be closed by
- * accident, because `/shop/**` had no static shell and nothing painted until
- * the server had finished; giving the staff surfaces one (issue 1446) is what
- * made it a window at all, and shard 2/4 found it. `data-hydrated` is the same
- * flag the rest of the staff surfaces publish (`CheckInSearch`,
- * `OrdersToolbar`, `CrewSection`) for exactly this.
+ * The band under the last row is hidden until a door opens it (third review
+ * #36), so the header is the way in. The wait stays: `AddUnitLink` is a client
+ * handler talking to a client listener in `AddUnitDetails`, and a click that
+ * lands before hydration is swallowed in silence. That window used to be
+ * closed by accident, because `/shop/**` had no static shell and nothing
+ * painted until the server had finished; giving the staff surfaces one (issue
+ * 1446) is what made it a window at all, and shard 2/4 found it.
+ * `data-hydrated` is the same flag the rest of the staff surfaces publish
+ * (`CheckInSearch`, `OrdersToolbar`, `CrewSection`) for exactly this.
  */
 async function openAddGear(page: Page) {
-  const panel = page.locator("details:has(> summary#add-unit)");
-  await expect(panel).toHaveAttribute("data-hydrated", "true");
-  const door = page.locator("summary#add-unit");
-  await door.scrollIntoViewIfNeeded();
+  const door = page.getByRole("button", { name: "Add a unit", exact: true });
+  await expect(door).toHaveAttribute("data-hydrated", "true");
+  await expect(page.locator("details:has(> summary#add-unit)")).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
   await door.click();
+  await expect(page.getByLabel("Tag")).toBeVisible();
 }
 
 test.describe("staff", () => {
@@ -41,7 +41,8 @@ test.describe("staff", () => {
   test("adds a unit to the register and finds it in the fleet", async ({ page }) => {
     const tag = `BCD E2E-${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/gear");
-    // "Add a unit" is a closed disclosure at rest; its own summary opens it.
+    // The header's "Add a unit" is the one door; the band under the list
+    // stays hidden until it is used.
     await openAddGear(page);
     await page.getByLabel("Tag").fill(tag);
     await page.getByLabel("Size").first().fill("M");
@@ -51,11 +52,18 @@ test.describe("staff", () => {
     await expect(page.getByRole("link", { name: tag })).toBeVisible();
   });
 
-  test("the header's Add a unit opens the form at the foot of the register", async ({ page }) => {
+  test("the header's Add a unit is the one door to the form at the foot of the register", async ({
+    page,
+  }) => {
     // The page's primary (UX audit 2026-10-07, item 31): an owner with a
-    // fleet should not have to read past every row to find the add form.
+    // fleet should not have to read past every row to find the add form, and
+    // the populated register offers no second door or second name for it
+    // (third review #36): no "Add gear", and no closed band under the list.
     await page.goto("/shop/blue-mantis/gear");
-    const door = page.getByRole("button", { name: "Add a unit", exact: true }).first();
+    const door = page.getByRole("button", { name: "Add a unit", exact: true });
+    await expect(door).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Add gear" })).toHaveCount(0);
+    await expect(page.locator("summary#add-unit")).toBeHidden();
     await expect(door).toHaveAttribute("data-hydrated", "true");
     await expect(page.locator("details:has(> summary#add-unit)")).toHaveAttribute(
       "data-hydrated",
@@ -68,7 +76,8 @@ test.describe("staff", () => {
   test("refuses a duplicate tag beside the field, not in a page banner", async ({ page }) => {
     const tag = `Reg E2E-${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/gear");
-    // "Add a unit" is a closed disclosure at rest; its own summary opens it.
+    // The header's "Add a unit" is the one door; the band under the list
+    // stays hidden until it is used.
     await openAddGear(page);
     await page.getByLabel("Tag").fill(tag);
     await page.getByRole("button", { name: "Add to the register" }).click();

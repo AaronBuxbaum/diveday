@@ -24,7 +24,8 @@
   "placeholder": "Write the release the diver will read and sign.",
   "pendingLabel": "Publishing…",
   "releaseDescription": {
-    "sample": "This is sample wording to start from. Edit it to fit your shop, and have your own counsel review it."
+    "sample": "This is sample wording to start from. Edit it to fit your shop, and have your own counsel review it.",
+    "sampleLive": "Divers are signing DiveDay’s sample wording. Edit it to fit your shop, and have your own counsel review it."
   },
   "versionInfo": "Version {version} · published {date}",
   "signatures": {
@@ -37,8 +38,20 @@
     "openTrip": "Open the departure",
     "integrityInvalid": "Integrity mismatch",
     "integrityUnsealed": "Can’t be checked for changes",
-    "medicalFlag": "Medical follow-up flagged",
+    "medicalWaiting": "Waiting on physician",
+    "medicalCleared": "Cleared by physician",
+    "medicalNotCleared": "Not cleared",
     "flaggedAnswersHeading": "Flagged answers",
+    "searchLabel": "Search signed records",
+    "searchPlaceholder": "Diver name, email or phone",
+    "searchClear": "Clear search",
+    "noMatch": "No signed records match.",
+    "views": {
+      "label": "Signed record views",
+      "all": "All",
+      "unchecked": "Can’t be checked",
+      "medical": "Medical holds"
+    },
     "pagination": {
       "total": "{count, plural, one {# record} other {# records}}"
     }
