@@ -13,7 +13,6 @@ import {
   earliestImportedFinancialHistoryDate,
   earliestReportedTripStart,
   getMonthlyReport,
-  getShopYear,
   pagedMonthlyReportTrips,
 } from "@/db/reporting";
 import { staffBookingsDetail } from "@/i18n/participant-labels";
@@ -30,7 +29,7 @@ import {
   parseMonthKey,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate, formatTimeZoneName, monthNames } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { sailedSplit } from "@/lib/report-split";
 import {
@@ -45,8 +44,6 @@ import {
   summarizeMonth,
 } from "@/lib/reporting";
 import { requireShopSurface } from "@/lib/session";
-import { summarizeShopYear } from "@/lib/shop-year";
-import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
@@ -60,7 +57,7 @@ import {
 } from "./_components/MonthMoneyDetail";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { sailedSplitLines } from "./_components/sailed-split-lines";
-import { YearReport } from "./_components/YearReport";
+import { YearView } from "./_components/YearView";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -145,44 +142,7 @@ export default async function ReportsPage({
   // the staff registry, its own `loading.tsx` and its own eyebrow, to say the
   // same word twice.
   if (range === "year") {
-    const yearInput = await getShopYear(db, shop.id, { timeZone: tz, now });
-    const year = summarizeShopYear(yearInput);
-    const zone = formatTimeZoneName(locale, tz, now);
-    return (
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <ShopPageHeader
-          title={t("shared.shopSections.money")}
-          description={
-            year.sinceMonth
-              ? t("reports.year.rangeSince", {
-                  year: String(year.year),
-                  month: monthNames(locale)[year.sinceMonth - 1] ?? "",
-                  zone,
-                })
-              : t("reports.year.rangeSoFar", { year: String(year.year), zone })
-          }
-          actions={
-            year.hasActivity ? (
-              <a
-                href={shopPath(shopSlug, "reports", "card")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("reports.year.printCard")}
-              </a>
-            ) : undefined
-          }
-        />
-        <StaffSectionTabs
-          shopSlug={shopSlug}
-          section="money"
-          current="reports"
-          roles={session.user.roles}
-          t={t}
-        />
-        <ReportRangeTabs shopSlug={shopSlug} range="year" t={t} className="mb-8" />
-        <YearReport year={year} locale={locale} shopSlug={shopSlug} t={t} />
-      </main>
-    );
+    return <YearView {...{ db, shop, shopSlug, locale, now, t }} roles={session.user.roles} />;
   }
 
   // Revenue is this shop's own money — a Bali shop's month reads in rupiah

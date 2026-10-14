@@ -115,14 +115,16 @@ export function figureCellClass(index: number): string {
 }
 
 /**
- * One column count per figure row. Two entries because there are two of them
- * in the tree — the month's five and the year's four (ADR 20260908-one-hand,
+ * One column count per figure row. An entry per row shape, because there are three of them
+ * in the tree — the month's five, the year's four and the year's three money
+ * figures (fourth UX review, item 25) (ADR 20260908-one-hand,
  * decision 6, lever T) — and a second component for the second one would be a
  * second spelling of one grammar, which is the drift decision 1 exists to end.
  * The class strings are written out rather than interpolated: Tailwind reads
  * class names as literals.
  */
 const FIGURE_COLUMNS = {
+  3: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-3",
   4: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-4",
   5: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5",
 } as const;
