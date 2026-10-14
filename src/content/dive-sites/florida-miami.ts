@@ -516,7 +516,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "11–15 m (35–50 ft)",
       maxDepthMeters: 15,
       currentNote:
-        "In the Anchorage reef site, with freighters at anchor nearby and a current that usually sets north. Rebar stakes on the sand lead toward the neighbouring sites. Stay outside the structure unless you are trained and equipped for wreck penetration.",
+        "In the Anchorage reef site, with freighters at anchor nearby and a current that usually sets north. Rebar stakes on the sand lead toward the neighbouring sites. Stay outside the structure.",
       fitTone: "welcoming",
       fitNote: "A good first wreck: shallow, compact and easy to find again.",
       landmarks: [
@@ -558,9 +558,9 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "15–18 m (48–60 ft)",
       maxDepthMeters: 18,
       currentNote:
-        "Part of the Key Biscayne reef site, about three miles out, where the current usually sets north and can be strong enough to run as a drift. Fishing boats work these wrecks, so watch for line, carry a surface marker and fly a dive flag. Stay outside the hull unless trained for penetration.",
+        "Part of the Key Biscayne reef site, about three miles out, where the current usually sets north and can be strong enough to run as a drift. Fishing boats work these wrecks, so watch for line, carry a surface marker and fly a dive flag. Stay outside the hull.",
       divePlan:
-        "Look over the barge, then follow the rebar markers on the sand to the Belzona tugs or to the Parker and Schurger's barges. The neighbouring wrecks sit deeper, so plan gas for the trek, not for the barge alone.",
+        "Look over the barge, then follow the rebar markers on the sand to Belzona One and Two or to the Parker and Schurger's barges; Belzona Three is deeper and gated on its own. The neighbouring wrecks sit deeper, so plan gas for the trek, not for the barge alone.",
       fitTone: "welcoming",
       fitNote: "Shallow for a Miami wreck, and the start of the area's most popular wreck trek.",
       landmarks: [
@@ -637,7 +637,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "15–22 m (48–71 ft)",
       maxDepthMeters: 22,
       currentNote:
-        "On the Belcher Wreck Trek in the Key Biscayne reef site. The current usually sets north, fishing boats work the area, and line snags on steel, so carry a cutter and a surface marker. Stay outside the hull unless trained for penetration.",
+        "On the Belcher Wreck Trek in the Key Biscayne reef site. The current usually sets north, fishing boats work the area, and line snags on steel, so carry a cutter and a surface marker. Stay outside the hull.",
       fitTone: "welcoming",
       landmarks: [
         {
@@ -671,7 +671,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "14–18 m (45–60 ft)",
       maxDepthMeters: 18,
       currentNote:
-        "On the Belcher Wreck Trek, with rebar stakes on the sand linking her to the other Belzona tugs. Expect a northerly current, fishing boats overhead and the odd tangle of line. Stay outside the hull unless trained for penetration.",
+        "On the Belcher Wreck Trek, with rebar stakes on the sand linking her to the other Belzona tugs. Expect a northerly current, fishing boats overhead and the odd tangle of line. Stay outside the hull.",
       fitTone: "welcoming",
       creatureSlugs: ["bluestriped-grunt", "gray-snapper", "great-barracuda", "spiny-lobster"],
     },
@@ -694,11 +694,11 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       description:
         "A 100-foot tug built in 1953 as the Carinthia, which worked for decades before her engine failed. Sunk in 1991, she is the largest and most intact of the three Belzona tugs.",
       marineLife: "Barracuda · snapper · grunts · goliath grouper",
-      difficultyLevel: "intermediate",
+      difficultyLevel: "advanced",
       depthRange: "21–26 m (70–85 ft)",
       maxDepthMeters: 26,
       currentNote:
-        "The deepest stop on the Belcher Wreck Trek. The current usually sets north and can be strong at this depth, and fishing line collects on the wreck. Stay outside the hull unless trained for penetration.",
+        "The deepest stop on the Belcher Wreck Trek. The current usually sets north and can be strong at this depth, and fishing line collects on the wreck. Stay outside the hull.",
       fitTone: "demanding",
       fitNote: "Close to 30 m on the sand, with current. Nitrox helps.",
       // Gated below 30 m: the sand is at about 26 m, and Miami operators run their 60–100 ft wrecks for Advanced divers.
@@ -776,7 +776,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.7044,
       forecastLongitude: -80.0884,
       description:
-        'A 120-foot steel freighter, the old "banana freighter", sunk in 1974 and one of the oldest wrecks off Miami. Bow and stern have collapsed, and the scattered remains of the Miracle Express, pushed onto her by Hurricane Andrew, lie alongside.',
+        'A 120-foot steel freighter, the old "banana freighter", sunk in 1974 and one of the oldest wrecks off Miami. Bow and stern have collapsed, and the scattered remains of the Miracles Express, pushed onto her by Hurricane Andrew, lie alongside.',
       marineLife: "Baitfish · snapper · grunts · angelfish · morays",
       marineLifeDescription:
         "Fifty years of growth and a dense crowd of fish. Shops like it as a night dive.",
@@ -784,12 +784,12 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "12–18 m (40–60 ft)",
       maxDepthMeters: 18,
       currentNote:
-        "In the Key Biscayne reef site, where the current usually sets north. Fishing line collects on the old steel, so carry a cutter, a surface marker and a dive flag. Stay outside the hull unless trained for penetration.",
+        "In the Key Biscayne reef site, where the current usually sets north. Fishing line collects on the old steel, so carry a cutter, a surface marker and a dive flag. Stay outside the hull.",
       fitTone: "welcoming",
       fitNote: "One of the shallower Key Biscayne wrecks, and one of the liveliest.",
       landmarks: [
         {
-          name: "Miracle Express debris",
+          name: "Miracles Express debris",
           kind: "wreckFeature",
           note: "Pieces of a 100-foot freighter that Hurricane Andrew drove onto the Biscayne in 1992.",
         },
@@ -827,7 +827,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "16–23 m (54–75 ft)",
       maxDepthMeters: 23,
       currentNote:
-        "Part of the Key Biscayne wreck field, where the current usually sets north and boats often drift several wrecks in a dive. Watch for fishing line and keep a surface marker ready. Stay outside the wreck unless trained for penetration.",
+        "Part of the Key Biscayne wreck field, where the current usually sets north and boats often drift several wrecks in a dive. Watch for fishing line and keep a surface marker ready. Stay outside the wreck.",
       fitTone: "welcoming",
       fitNote: "A good first deeper wreck, with plenty to see at modest depth.",
       creatureSlugs: [
@@ -862,7 +862,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "9–22 m (30–72 ft)",
       maxDepthMeters: 22,
       currentNote:
-        "In the Key Biscayne wreck field, where the current usually sets north. Rebar stakes run from her bow toward the Paraiso. Fishing boats work these wrecks, so watch for line, and stay outside the hull unless trained for penetration.",
+        "In the Key Biscayne wreck field, where the current usually sets north. Rebar stakes run from her bow toward the Paraiso. Fishing boats work these wrecks, so watch for line, and stay outside the hull.",
       divePlan:
         "Circle the tug from the sand up to the cabin, then follow the stakes off the bow to the Paraiso if gas and current allow.",
       fitTone: "welcoming",
@@ -900,8 +900,10 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       depthRange: "14–24 m (46–80 ft)",
       maxDepthMeters: 24,
+      // Below 30 m, but the sand at 24 m is past an Open Water diver's depth and the northward drift is common.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
-        "Just north of the Rio Miami in the Key Biscayne wreck field, where the current usually sets north. Fishing line collects on the superstructure. Stay outside unless trained for penetration.",
+        "Just north of the Rio Miami in the Key Biscayne wreck field, where the current usually sets north. Fishing line collects on the superstructure. Stay outside.",
       fitTone: "welcoming",
       fitNote: "A tall, intact wreck that rewards a slow look from the top down.",
       creatureSlugs: [
@@ -930,15 +932,15 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.7005,
       forecastLongitude: -80.0868,
       description:
-        "A 165-foot freighter seized in a 2002 drug investigation, Operation River Walk, after cocaine was found under her engine-room deck, and sunk in 2003. She rests upright and intact on sand, with the South Seas wreck to the southwest.",
+        "A 165-foot freighter seized in Operation River Walk, a 2001 drug investigation, after cocaine was found under her engine-room deck, and sunk in 2003. She rests upright and intact on sand, with the South Seas wreck to the southwest.",
       marineLife: "Barracuda · jacks · basket stars · snapper",
       marineLifeDescription:
         "Schools of barracuda and jacks hang over the deck, and basket stars open on the structure at night.",
-      difficultyLevel: "intermediate",
+      difficultyLevel: "advanced",
       depthRange: "18–27 m (60–90 ft)",
       maxDepthMeters: 27,
       currentNote:
-        "Among the deeper wrecks of the Key Biscayne field, where the current usually sets north and boats often drift from wreck to wreck. Fishing line is common. Stay outside unless trained for penetration.",
+        "Among the deeper wrecks of the Key Biscayne field, where the current usually sets north and boats often drift from wreck to wreck. Fishing line is common. Stay outside.",
       fitTone: "demanding",
       fitNote: "Close to 30 m at the sand, with current. Nitrox and a firm turn time help.",
       // Gated below 30 m: the sand is at about 27 m, and Miami operators run their 60–100 ft wrecks for Advanced divers.
@@ -975,7 +977,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "16–23 m (54–76 ft)",
       maxDepthMeters: 23,
       currentNote:
-        "In the Key Biscayne wreck field, where the current usually sets north. Rebar stakes link her to the Rio Miami's bow. Watch for fishing line, and stay outside unless trained for penetration.",
+        "In the Key Biscayne wreck field, where the current usually sets north. Rebar stakes link her to the Rio Miami's bow. Watch for fishing line, and stay outside.",
       fitTone: "welcoming",
       creatureSlugs: ["gray-snapper", "bluestriped-grunt", "great-barracuda", "porkfish"],
     },
@@ -1059,7 +1061,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "Sources give the sand at 120 to 135 ft (37–41 m), so the bottom lies at or past recreational limits; plan the dive on the hull. Gulf Stream current is common this far out and can be strong.",
+        "Sources give the sand at 120 to 135 ft (37–41 m), so the bottom lies at or past recreational limits; plan the dive on the hull. Gulf Stream current is common this far out and can be strong. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       fitTone: "demanding",
       fitNote:
         "A deep, rarely visited wreck for divers comfortable with depth, current and a short no-stop time.",
@@ -1098,7 +1100,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "Open water three miles out, where a northward current is common. Her high profile means much of the dive can stay well above the sand.",
+        "Open water three miles out, where a northward current is common. Her high profile means much of the dive can stay well above the sand. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       creatureSlugs: [
         "great-barracuda",
         "horse-eye-jack",
@@ -1132,7 +1134,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "Deep from deck to sand, with little time at depth and a northward current common. Sheri-Lyn lies about 400 ft to the west.",
+        "Deep from deck to sand, with little time at depth and a northward current common. Sheri-Lyn lies about 400 ft to the west. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       creatureSlugs: ["horse-eye-jack", "gray-snapper", "lionfish", "great-barracuda"],
     },
   },
@@ -1158,13 +1160,13 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLife: "Baitfish schools · grouper · gorgonians · sponges",
       marineLifeDescription:
         "The fallen pilot house is usually full of baitfish, and the west side of the deck is thick with sea fans.",
-      difficultyLevel: "intermediate",
+      difficultyLevel: "advanced",
       depthRange: "24–29 m (80–95 ft)",
       maxDepthMeters: 29,
       // Gated below 30 m on purpose: the sand is at 27–29 m, close enough to the line that shops run it as an advanced dive.
       minimumCertificationLevel: "advanced_open_water",
       currentNote:
-        "A northward current is common, and the Cascades ledges just north make a drift dive from here when it runs. Bring a light for the growth under the deck edges.",
+        "A northward current is common, and the Cascades ledges just north make a drift dive from here when it runs. Bring a light for the growth under the deck edges. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       landmarks: [
         {
           name: "The pilot house",
@@ -1205,7 +1207,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "20–23 m (65–75 ft)",
       maxDepthMeters: 23,
       currentNote:
-        "The current usually runs north here, so shops drift from the South Seas to the Princess Britney 250 ft away and on along the Key Biscayne wreck trek. Stay with the guide and the marker line between wrecks.",
+        "The current usually runs north here, so shops may drift on to the Princess Britney, a deeper site with its own gate, only when your trip lists it. Stay with the guide and the marker line between wrecks.",
       fitNote:
         "Low, broken wreckage that is best as the first stop of a drift along several wrecks.",
       creatureSlugs: [
@@ -1271,7 +1273,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "Sources put the sand at 120 to 135 ft (37–41 m), so keep the dive on the wreck. Gulf Stream current is common this far out. Andrew opened the starboard side and the structure is deteriorating, with fallen cables inside; stay outside.",
+        "Sources put the sand at 120 to 135 ft (37–41 m), so keep the dive on the wreck. Gulf Stream current is common this far out. Andrew opened the starboard side and the structure is deteriorating, with fallen cables inside; stay outside. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       fitTone: "demanding",
       fitNote: "A deep, current-swept wreck for experienced divers on a tight no-stop plan.",
       creatureSlugs: [
@@ -1307,7 +1309,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "15–20 m (50–65 ft)",
       maxDepthMeters: 20,
       currentNote:
-        "Usually run as a drift along the wreckage and the reef beside it, so stay with your buddy and the guide's marker. The wreck lies just inside Biscayne National Park's offshore boundary: take nothing, leave goliath grouper and coral alone, and follow the park's fishing rules.",
+        "Usually run as a drift along the wreckage and the reef beside it, so stay with your buddy and the guide's marker. The wreck lies just inside Biscayne National Park's offshore boundary: take nothing from the wreck and leave goliath grouper and coral alone; fishing and lobstering follow the park's rules.",
       fitTone: "welcoming",
       fitNote:
         "A relaxed drift over broken wreckage and reef, within reach of a newly advanced diver.",
@@ -1339,7 +1341,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "12–23 m (40–75 ft)",
       maxDepthMeters: 23,
       currentNote:
-        "Gulf Stream water brings good visibility and often a northward current. The Tarpoon lies about 1,200 ft to the north.",
+        "Gulf Stream water brings good visibility and often a northward current. The Tarpoon lies about 1,200 ft to the north. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       creatureSlugs: ["goliath-grouper", "sea-plume", "common-sea-fan", "gray-snapper", "lionfish"],
     },
   },
@@ -1405,7 +1407,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "Sources give the sand at 125 to 135 ft (38–41 m), so the whole dive is deep with little no-stop time. Offshore of the reef line, where Gulf Stream current is common.",
+        "Sources give the sand at 125 to 135 ft (38–41 m), so the whole dive is deep with little no-stop time. Offshore of the reef line, where Gulf Stream current is common. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       fitTone: "demanding",
       fitNote: "For experienced deep divers; there is no shallow part to retreat to.",
       creatureSlugs: ["goliath-grouper", "horse-eye-jack", "great-barracuda", "lionfish"],
@@ -1435,7 +1437,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "A low barge on deep sand, so nearly the whole dive is at depth. Little is published about her; Gulf Stream current is common this far offshore.",
+        "A low barge on deep sand, so nearly the whole dive is at depth. Little is published about her; Gulf Stream current is common this far offshore. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       creatureSlugs: ["horse-eye-jack", "gray-snapper", "lionfish", "great-barracuda"],
     },
   },
@@ -1509,7 +1511,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "The top deck is at about 110 ft and the sand at 135 ft (41 m), past recreational limits, so plan on the deck. Fairly strong current is the norm, the wreck is a favourite of spearfishers and carries a lot of monofilament, and silt stirs easily: carry a cutter.",
+        "The top deck is at about 110 ft and the sand at 135 ft (41 m), past recreational limits, so plan on the deck. Fairly strong current is the norm, the wreck is a favourite of spearfishers and carries a lot of monofilament, and silt stirs easily: carry a cutter. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       fitTone: "demanding",
       fitNote:
         "For experienced deep divers only; operators recommend it to advanced divers because of the current, line and silt.",
@@ -1637,7 +1639,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "The sand is at about 135 ft (41 m), past recreational limits, and the low hull gives little height above it, so no-stop time is very short. A northward current is common.",
+        "The sand is at about 135 ft (41 m), past recreational limits, and the low hull gives little height above it, so no-stop time is very short. A northward current is common. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       fitTone: "demanding",
       fitNote: "For experienced deep divers; the whole dive is at the edge of recreational limits.",
       landmarks: [
@@ -1702,6 +1704,8 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       depthRange: "12–25 m (40–82 ft)",
       maxDepthMeters: 25,
+      // Below 30 m, but the sand and scour hole sit at 25 m, past an Open Water diver's depth.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
         "The sand is at about 70 ft, with a scour hole under her midships reaching 82 ft. A northward drift is common, and Haulover Inlet boat traffic is close: stay within 300 ft of your divers-down flag and surface on a marker.",
       divePlan:
@@ -1736,8 +1740,8 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A small 45-foot steel tug sunk by the county in July 1999 in the Sunny Isles reef site, right beside the C-One. Most divers see her on the same dive as the C-One and the Conception.",
       marineLife: "Grunts · snapper · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "14–20 m (45–65 ft)",
-      maxDepthMeters: 20,
+      depthRange: "17–21 m (55–70 ft)",
+      maxDepthMeters: 21,
       currentNote:
         "Rebar stakes lead from here to the C-One and on to the Conception. Haulover Inlet boat traffic is close: stay within 300 ft of your divers-down flag.",
       creatureSlugs: ["tomtate", "gray-snapper", "sergeant-major", "lionfish"],
@@ -1849,7 +1853,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "The sand is near 100 ft, but her high profile lets much of the dive stay shallower. Current is common on the wrecks along the 100 ft line here, and the Narwal nearby is the usual alternative when the Andro cannot be dived.",
+        "The sand is near 100 ft, but her high profile lets much of the dive stay shallower. Current is common on the wrecks along the 100 ft line here, and the Narwal nearby is the usual alternative when the Andro cannot be dived. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       landmarks: [
         {
           name: "Twin propellers and stacks",
@@ -1896,7 +1900,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "Low wreckage on deep sand, so the whole dive is near its maximum depth and no-stop time is short. Strong current is common on the wrecks along the 100 ft line here.",
+        "Low wreckage on deep sand, so the whole dive is near its maximum depth and no-stop time is short. Strong current is common on the wrecks along the 100 ft line here. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       fitTone: "demanding",
       fitNote: "For experienced deep divers comfortable in current.",
       creatureSlugs: ["gray-snapper", "horse-eye-jack", "lionfish", "great-barracuda"],

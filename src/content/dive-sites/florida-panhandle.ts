@@ -263,7 +263,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "24–33 m (79–108 ft)",
       maxDepthMeters: 33,
       currentNote:
-        "Open Gulf about 15 miles out, so current and the ride decide the day. The wheelhouse and the opening behind it are overhead; stay outside unless trained.",
+        "Open Gulf about 15 miles out, so current and the ride decide the day. The wheelhouse and the opening behind it are overhead; stay outside.",
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -308,7 +308,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "23–34 m (77–112 ft)",
       maxDepthMeters: 34,
       currentNote:
-        "Open Gulf, a long ride south of Destin. The open back of the wheelhouse is a partly enclosed space; look in, do not go in, unless trained.",
+        "Open Gulf, a long ride south of Destin. The open back of the wheelhouse is a partly enclosed space; look in, do not go in.",
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -845,7 +845,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "22–37 m (71–122 ft)",
       maxDepthMeters: 37,
       currentNote:
-        "Open Gulf, a long ride offshore. The covered main deck, wheelhouse and stern are overhead environments; stay outside unless trained.",
+        "Open Gulf, a long ride offshore. The covered main deck, wheelhouse and stern are overhead environments; stay outside.",
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -963,7 +963,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "26–36 m (84–119 ft)",
       maxDepthMeters: 36,
       currentNote:
-        "Open Gulf, a long ride offshore. Her wheelhouse and interior are overhead; stay outside unless trained.",
+        "Open Gulf, a long ride offshore. Her wheelhouse and interior are overhead; stay outside.",
       divePlan:
         "Down the line to the wheelhouse and the mermaid, then, with gas and no-stop time to spare, across the sand to the Brannon and the Dylan.",
       fitTone: "demanding",
@@ -2457,7 +2457,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "16–25 m (52–83 ft)",
       maxDepthMeters: 25,
       currentNote:
-        "Ten miles out in open Gulf; sea state and visibility vary day to day. Stay outside the hull unless trained for penetration.",
+        "Ten miles out in open Gulf; sea state and visibility vary day to day. Stay outside the hull.",
       creatureSlugs: ["atlantic-spadefish", "gray-snapper", "great-barracuda", "lionfish"],
     },
   },
@@ -2944,7 +2944,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "18–35 m (60–115 ft)",
       maxDepthMeters: 35,
       currentNote:
-        "Open Gulf, a long run from either pass. Winter usually brings the best visibility and summer the warmest water. Stay outside the hull unless trained for penetration.",
+        "Open Gulf, a long run from either pass. Winter usually brings the best visibility and summer the warmest water. Stay outside the hull.",
       divePlan:
         "Down to the wheelhouse at about 18 m, then along the upper decks around 27 m, where most of the ship is in view. The sand is a deep dive.",
       fitTone: "demanding",

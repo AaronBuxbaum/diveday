@@ -1,7 +1,7 @@
 // i18n-exempt-file: shop-editable starter briefing content, not app UI copy — see src/content/dive-site-templates.ts
 import type { DiveSiteTemplate } from "./types";
 
-/** Palm Beach County: Jupiter to Boca Raton. */
+/** Palm Beach County and the Treasure Coast: Fort Pierce to Boca Raton. */
 export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
   {
     slug: "jupiter-goliath-ledges",
@@ -172,20 +172,21 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       depthRange: "18–24 m (60–80 ft)",
       maxDepthMeters: 24,
+      // Below 30 m, but a 23–24 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
         "Always a drift in the Gulf Stream, usually running north, and the boat follows your bubbles. Send up your own SMB before you leave the bottom: Jupiter Inlet boat traffic is heavy, and Florida law asks boats to keep 300 ft (90 m) from a dive flag.",
       divePlan:
         "Negative entry onto the ledge, then choose a depth: the sand at the foot for the grouper and turtles, or the top for the reef fish. Ascend together on the SMB.",
-      fitTone: "welcoming",
       fitNote:
-        "An easy ledge to follow. The skill is the drift: a negative entry, staying with the group, and an SMB.",
+        "The skill is the drift: a negative entry, staying with the group, and an SMB. Still past Open Water depth.",
       creatureSlugs: [
         "goliath-grouper",
         "loggerhead-turtle",
         "green-moray",
         "butter-hamlet",
         "tomtate",
-        "common-snook",
+        "queen-angelfish",
       ],
     },
   },
@@ -213,10 +214,11 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       depthRange: "18–23 m (58–75 ft)",
       maxDepthMeters: 23,
+      // Below 30 m, but a 23–24 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
         "A Gulf Stream drift, usually north. Carry your own SMB and shoot it before the ascent; boats run in and out of Jupiter Inlet all day.",
-      fitTone: "welcoming",
-      fitNote: "Shallow by Jupiter standards and easy to follow, so a good first drift here.",
+      fitNote: "One of the shallowest Jupiter ledges, still past Open Water depth.",
       landmarks: [
         {
           name: "The tiers",
@@ -258,13 +260,14 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       depthRange: "19–23 m (61–75 ft)",
       maxDepthMeters: 23,
+      // Below 30 m, but a 23–24 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
         "A Gulf Stream drift like every Jupiter reef. The ledge zigzags, so follow the guide rather than a compass heading, and carry your own SMB.",
       conservationNote:
         "Spiny lobster may be taken only in season (6 August to 31 March) with a Florida saltwater fishing licence and lobster permit, by hand or tickle stick, and brought up whole.",
-      fitTone: "welcoming",
       fitNote:
-        "Relaxed and fairly shallow, good for long bottom times and for photographers who like small things.",
+        "Relaxed by Jupiter standards, good for long bottom times and for photographers who like small things.",
       creatureSlugs: [
         "loggerhead-turtle",
         "spiny-lobster",
@@ -300,10 +303,11 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       depthRange: "18–23 m (60–76 ft)",
       maxDepthMeters: 23,
+      // Below 30 m, but a 23–24 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
         "A Gulf Stream drift, and the ledge is short, so go slowly or the dive is over early. Carry your own SMB; Jupiter Inlet traffic is heavy.",
-      fitTone: "welcoming",
-      fitNote: "The shallowest of the regular Jupiter ledges and a favourite first drift dive.",
+      fitNote: "The shallowest of the regular Jupiter ledges, still past Open Water depth.",
       landmarks: [
         {
           name: "The amphitheatres",
@@ -751,7 +755,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       forecastLatitude: 26.7774,
       forecastLongitude: -80.011,
       description:
-        "A natural reef with good relief just south of Palm Beach Inlet. The drift often ends at Spearman's Barge, an old deck barge sitting on the reef.",
+        "A natural reef with good relief just north of Palm Beach Inlet. The drift often ends at Spearman's Barge, an old deck barge sitting on the reef.",
       marineLife: "Hawksbill and loggerhead turtles · green morays · grouper",
       marineLifeDescription: "Turtles and green morays along the ledges and around the barge.",
       difficultyLevel: "advanced",
@@ -858,7 +862,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       depthRange: "17–26 m (55–85 ft)",
       maxDepthMeters: 27,
       currentNote:
-        "Dived as a Gulf Stream drift, so expect a negative entry and an SMB up before you leave the bottom. Close to the Lake Worth Inlet's boat traffic: surface under your dive flag or SMB, and stay outside the hull unless you are trained for it.",
+        "Dived as a Gulf Stream drift, so expect a negative entry and an SMB up before you leave the bottom. Close to the Lake Worth Inlet's boat traffic: surface under your dive flag or SMB, and stay outside the hull.",
       fitTone: "demanding",
       fitNote:
         "Upright and easy to read, but deep and in current. Nitrox stretches the bottom time.",
@@ -906,7 +910,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       depthRange: "22–34 m (72–110 ft)",
       maxDepthMeters: 34,
       currentNote:
-        "The Gulf Stream usually runs hard here, so it is a drift with a negative entry and an SMB. The hull is broken and unstable; stay outside it unless trained in overhead environments. Inlet boat traffic is heavy, so surface under your dive flag or SMB.",
+        "The Gulf Stream usually runs hard here, so it is a drift with a negative entry and an SMB. The hull is broken and unstable; stay outside it. Inlet boat traffic is heavy, so surface under your dive flag or SMB.",
       fitTone: "demanding",
       fitNote:
         "Deep, big and fast. Divers not ready for the hull can drift the reef just north of it instead.",
@@ -957,7 +961,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       depthRange: "17–27 m (55–90 ft)",
       maxDepthMeters: 28,
       currentNote:
-        "A Gulf Stream drift: negative entry, stay with the group from wreck to wreck, and shoot an SMB before the ascent. Stay outside the hulls unless trained for it, and watch for boats near the inlet when you surface.",
+        "A Gulf Stream drift: negative entry, stay with the group from wreck to wreck, and shoot an SMB before the ascent. Stay outside the hulls, and watch for boats near the inlet when you surface.",
       fitTone: "demanding",
       fitNote:
         "A training ground for advanced divers, with the sand close to 30 m and the current doing the steering.",
@@ -1055,9 +1059,11 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       depthRange: "15–26 m (50–85 ft)",
       maxDepthMeters: 26,
+      // Below 30 m, but a 26 m negative-entry Gulf Stream drift beside the inlet, sold as an Advanced dive like the Ana Cecilia nearby.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
-        "Gulf Stream current is common, so plan a negative entry and an SMB ascent. Close to the inlet's boat traffic; surface under your dive flag or SMB, and stay outside the hull unless trained.",
-      fitTone: "welcoming",
+        "Gulf Stream current is common, so plan a negative entry and an SMB ascent. Close to the inlet's boat traffic; surface under your dive flag or SMB, and stay outside the hull.",
+      fitTone: "demanding",
       fitNote: "Small enough to see whole in one dive, and a local favourite.",
       creatureSlugs: [
         "goliath-grouper",
@@ -1432,7 +1438,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       depthRange: "24–34 m (80–110 ft)",
       maxDepthMeters: 34,
       currentNote:
-        "Dived on a line or as a Gulf Stream drift; the sand lies past 30 m, so plan the gas and no-stop time carefully, and carry an SMB. The stern section has rolled onto its side; stay outside the structure unless trained. Surface near your dive flag or SMB.",
+        "Dived on a line or as a Gulf Stream drift; the sand lies past 30 m, so plan the gas and no-stop time carefully, and carry an SMB. The stern section has rolled onto its side; stay outside the structure. Surface near your dive flag or SMB.",
       fitTone: "demanding",
       fitNote: "Deep, so bottom time goes fast. Nitrox helps, and the grouper season is worth it.",
       minimumCertificationLevel: "advanced_open_water",
@@ -1480,7 +1486,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       depthRange: "22–29 m (72–95 ft)",
       maxDepthMeters: 29,
       currentNote:
-        "Dived on a line or as a Gulf Stream drift, often linked to the Captain Tony. The stern has broken away to the north-east; stay outside the hull unless trained, carry an SMB, and surface near your dive flag or SMB.",
+        "Dived on a line or as a Gulf Stream drift, often linked to the Captain Tony. The stern has broken away to the north-east; stay outside the hull, carry an SMB, and surface near your dive flag or SMB.",
       divePlan:
         "From the Bud Bar's stern, follow the rubble piles north-west to the Captain Tony's bow, a swim of 7–10 minutes.",
       fitTone: "demanding",
@@ -1531,7 +1537,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       depthRange: "15–25 m (49–82 ft)",
       maxDepthMeters: 25,
       currentNote:
-        "Dived on a line or as a Gulf Stream drift, often from the Bud Bar along the rubble trail. Stay outside the hull unless trained, carry an SMB, and surface near your dive flag or SMB.",
+        "Dived on a line or as a Gulf Stream drift, often from the Bud Bar along the rubble trail. Stay outside the hull, carry an SMB, and surface near your dive flag or SMB.",
       fitTone: "demanding",
       // Advanced Open Water for the drift: operators sell it as an Advanced dive,
       // usually as part of a Gulf Stream wreck trek from the Bud Bar.
@@ -1658,7 +1664,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       depthRange: "15–21 m (50–70 ft)",
       maxDepthMeters: 22,
       currentNote:
-        "Usually an anchor dive, or a drift linking it to the United Caribbean. About 1 km from the Boca Raton Inlet, so expect boat traffic: surface near your dive flag or SMB. Stay outside the overturned hull unless trained in overhead environments.",
+        "Usually an anchor dive, or a drift linking it to the United Caribbean. About 1 km from the Boca Raton Inlet, so expect boat traffic: surface near your dive flag or SMB. Stay outside the overturned hull.",
       divePlan:
         "Explore the barge and the culvert piles to its east, then follow the line of limestone boulders south-east to the United Caribbean if the current allows.",
       fitTone: "welcoming",
@@ -1706,7 +1712,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       depthRange: "15–21 m (50–70 ft)",
       maxDepthMeters: 22,
       currentNote:
-        "Usually an anchor dive, or a drift linking it to the Sea Emperor. Close to the Boca Raton Inlet and its boat traffic, so surface near your dive flag or SMB. Hurricane Wilma shifted and damaged her; stay outside the hull unless trained.",
+        "Usually an anchor dive, or a drift linking it to the Sea Emperor. Close to the Boca Raton Inlet and its boat traffic, so surface near your dive flag or SMB. Hurricane Wilma shifted and damaged her; stay outside the hull.",
       divePlan:
         "In a north current, start at the stern and follow the boulder line north-east to the Sea Emperor, about 75 m away.",
       fitTone: "welcoming",
@@ -1929,7 +1935,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       forecastLatitude: 27.1889,
       forecastLongitude: -80.0238,
       description:
-        "A 140 m Navy attack cargo ship launched in 1944 that served at Okinawa and in the Cuban Missile Crisis, then was sunk off Stuart as a reef in July 1988. She lies on her starboard side, and her hull still stands about 20 m off the sand.",
+        "A 140 m Navy attack cargo ship launched in 1944 that served at Okinawa and in the Cuban Missile Crisis, then was sunk off Stuart as a reef in July 1988. She lies on her starboard side, and her hull still stands about 22 m off the sand.",
       marineLife: "Barracuda · amberjack · grouper · bait schools",
       marineLifeDescription:
         "Barracuda hang above the hull and amberjack work the water column; sharks and turtles pass now and then.",

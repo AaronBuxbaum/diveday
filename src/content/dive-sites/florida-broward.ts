@@ -371,7 +371,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.0764,
       forecastLongitude: -80.0958,
       description:
-        "A shallow reef running south of Port Everglades off John U. Lloyd Beach, with more than twenty county mooring buoys along it. Operators compare it to a Florida Keys reef, a short run from a cruise port.",
+        "A shallow reef running south of Port Everglades off Dr. Von D. Mizell-Eula Johnson State Park, with more than twenty county mooring buoys along it. Operators compare it to a Florida Keys reef, a short run from a cruise port.",
       marineLife: "Sea turtles · stingrays · nurse sharks · barracuda · spiny lobster",
       marineLifeDescription:
         "Turtles and rays travel the reef, and nurse sharks come through to the cleaning stations.",
@@ -544,7 +544,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       depthRange: "11–21 m (35–70 ft)",
       maxDepthMeters: 21,
       currentNote:
-        "Usually dived on the anchor line, but the Gulf Stream current here can pick up without warning. Stay outside the hull unless trained for wreck penetration.",
+        "Usually dived on the anchor line, but the Gulf Stream current here can pick up without warning. Stay outside the hull.",
       divePlan:
         "Down the line to the pilothouse at about 11 m, tour the deck art and the propeller at the stern, and come back up the line on gas.",
       fitTone: "welcoming",
@@ -597,7 +597,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       depthRange: "21–34 m (70–110 ft)",
       maxDepthMeters: 34,
       currentNote:
-        "Moderate to strong Gulf Stream current is common, so descend and ascend on the line and plan an SMB ascent if you lose it. Visibility is usually good. Stay outside the hull unless trained for penetration.",
+        "Moderate to strong Gulf Stream current is common, so descend and ascend on the line and plan an SMB ascent if you lose it. Visibility is usually good. Stay outside the hull.",
       divePlan:
         "Down the line to the wheelhouse at about 21–24 m, along the deck at about 27 m, and back up the line before your no-decompression limit; the sand at 34 m is not the dive.",
       fitTone: "demanding",
@@ -677,7 +677,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       depthRange: "21–38 m (68–126 ft)",
       maxDepthMeters: 39,
       currentNote:
-        "Deep, with Gulf Stream current common, so it is dived on the anchor line. The forward mast has fallen to starboard onto the sand. Stay outside the hull unless trained for penetration.",
+        "Deep, with Gulf Stream current common, so it is dived on the anchor line. The forward mast has fallen to starboard onto the sand. Stay outside the hull.",
       divePlan:
         "Down the line past the masts to the wheelhouse at about 24 m, along the deck, and back to the line on gas; the sand near 38 m is not the dive.",
       fitTone: "demanding",
@@ -773,13 +773,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      landmarks: [
-        {
-          name: "Mariner II Barge",
-          kind: "wreckFeature",
-          note: "Lies a short swim to the east-northeast, deeper, for divers whose plan and gas allow it.",
-        },
-      ],
+      landmarks: [],
       creatureSlugs: [
         "horse-eye-jack",
         "great-barracuda",
@@ -812,7 +806,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       depthRange: "33–39 m (110–126 ft)",
       maxDepthMeters: 39,
       currentNote:
-        "Deep, with the Gulf Stream's northbound drift; with the right current you can drift from one wreck to the other along the cable. Bottom time is short at this depth, so plan the swim before you go. Fly a divers-down flag as Florida law requires.",
+        "Deep, with the Gulf Stream's northbound drift; with the right current you can drift from one wreck to the other along the cable. Bottom time is short at this depth, so plan the swim before you go. Fly a divers-down flag as Florida law requires. Each buddy pair carries an SMB and shoots it before leaving the bottom if separated from the float.",
       fitTone: "demanding",
       fitNote:
         "For a diver comfortable deep and in current, with gas planned for a swim between two wrecks.",
@@ -1072,7 +1066,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       marineLife: "Parrotfish · snapper · grunts · stingrays · horse conch",
       marineLifeDescription:
         "The growth feeds grazing parrotfish, and stingrays sometimes lie half buried in the sand by the stern.",
-      difficultyLevel: "beginner",
+      difficultyLevel: "intermediate",
       depthRange: "17–22 m (55–72 ft)",
       maxDepthMeters: 22,
       currentNote:
@@ -1119,7 +1113,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       description:
         "A 40 m freighter seized by Customs for drug trafficking and sunk in 1999, renamed in the state's records for Ken Vitale, a much-loved local instructor whose plaque is on board. She sits upright between the Jay Scutti and the Merci Jesus.",
       marineLife: "Snapper · grunts · angelfish · tropical reef fish",
-      difficultyLevel: "beginner",
+      difficultyLevel: "intermediate",
       depthRange: "14–22 m (45–72 ft)",
       maxDepthMeters: 22,
       currentNote:
@@ -1159,7 +1153,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       description:
         "A 27 m freighter seized by Customs in 1998 and sunk that August as the northern end of the Fort Lauderdale wreck trek. Upright with her bow to the south, well grown and busy with tropical fish.",
       marineLife: "Tropical reef fish · snapper · grunts · morays",
-      difficultyLevel: "beginner",
+      difficultyLevel: "intermediate",
       depthRange: "14–22 m (45–72 ft)",
       maxDepthMeters: 22,
       currentNote:
@@ -1192,11 +1186,11 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       description:
         "The 29 m Coast Guard cutter Cape Gull, built in 1953 and sunk off Fort Lauderdale in 1989 under a friend's name. Hurricane Andrew flattened parts of her, but she is covered in growth and still pulls in fish.",
       marineLife: "Snapper · grunts · grouper · tropical reef fish",
-      difficultyLevel: "beginner",
+      difficultyLevel: "intermediate",
       depthRange: "14–23 m (45–76 ft)",
       maxDepthMeters: 23,
       currentNote:
-        "A cable runs from her stern to the Wendy Rossheim about 30 m away, and the Jay Scutti lies about 300 m north. Mind the northbound drift and fly a divers-down flag, as Florida law requires.",
+        "A cable runs from her stern to the Wendy Rossheim about 30 m away, and the Jay Scutti lies about 600 m north. Mind the northbound drift and fly a divers-down flag, as Florida law requires.",
       fitTone: "welcoming",
       landmarks: [
         {
@@ -1226,7 +1220,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       description:
         "A 26 m New York harbour tug from the McAllister Towing fleet, sunk off Fort Lauderdale in 1998. Built heavy, she has held her shape well and sits upright with a slight list to starboard.",
       marineLife: "Snapper · grunts · jacks · tropical reef fish",
-      difficultyLevel: "beginner",
+      difficultyLevel: "intermediate",
       depthRange: "15–23 m (50–75 ft)",
       maxDepthMeters: 23,
       currentNote:
@@ -1262,7 +1256,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       marineLife: "Snapper · grunts · jacks · barracuda · morays",
       marineLifeDescription:
         "Storms have broken her up, but the wreckage and the reef beside her still hold a lot of fish.",
-      difficultyLevel: "intermediate",
+      difficultyLevel: "advanced",
       depthRange: "18–30 m (60–100 ft)",
       maxDepthMeters: 30,
       currentNote:
@@ -1358,7 +1352,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       depthRange: "21–34 m (70–111 ft)",
       maxDepthMeters: 34,
       currentNote:
-        "Often a drift in the Gulf Stream's northbound current, dived from a live boat. Florida law requires a divers-down flag, and boat traffic off Fort Lauderdale is heavy.",
+        "Often a drift in the Gulf Stream's northbound current, dived from a live boat. Florida law requires a divers-down flag, and boat traffic off Fort Lauderdale is heavy. Each buddy pair carries an SMB and shoots it before leaving the bottom if separated from the float.",
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1402,7 +1396,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       depthRange: "17–21 m (55–70 ft)",
       maxDepthMeters: 21,
       currentNote:
-        "The barge lies upside down with holes in its hull; stay outside unless trained, and watch your head around the edges. Pleasure boats pass over the site, so surface under your divers-down flag, which Florida law requires.",
+        "The barge lies upside down with holes in its hull; stay outside, and watch your head around the edges. Pleasure boats pass over the site, so surface under your divers-down flag, which Florida law requires.",
       fitTone: "welcoming",
       landmarks: [
         {
@@ -1444,7 +1438,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       description:
         "A 21 m steel houseboat, the Duzaway, one of Broward's older artificial reefs, sunk in deeper water off Fort Lauderdale with other small vessels. Soft coral and baitfish make her colourful for her size.",
       marineLife: "Barracuda · baitfish · soft corals · reef fish",
-      difficultyLevel: "intermediate",
+      difficultyLevel: "advanced",
       depthRange: "23–29 m (75–95 ft)",
       maxDepthMeters: 29,
       currentNote:
@@ -1474,7 +1468,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       description:
         "A 31 m New York harbour tug from the McAllister Towing fleet, sunk in June 1998 in Broward's southern reef sites. She sits upright and in good shape, rising about 8 m off the sand beside some reef rubble.",
       marineLife: "Lobster · snapper · grunts · tropical reef fish",
-      difficultyLevel: "beginner",
+      difficultyLevel: "intermediate",
       depthRange: "14–23 m (45–75 ft)",
       maxDepthMeters: 23,
       currentNote:
@@ -1513,7 +1507,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       description:
         "A former Canadian naval vessel of about 38 m, donated from a shipbuilder's estate and sunk in 2004 among Broward's southern wrecks. She stands about 8 m off the sand and has grown a good covering of sponge and coral.",
       marineLife: "Eels · grunts · sponges · corals",
-      difficultyLevel: "beginner",
+      difficultyLevel: "intermediate",
       depthRange: "18–22 m (60–72 ft)",
       maxDepthMeters: 22,
       currentNote:
