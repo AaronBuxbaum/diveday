@@ -2,9 +2,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CLEAR_CONFIRM_MIN_GAP_MS, CLEAR_CONFIRM_TIMEOUT_MS } from "@/lib/pre-departure-check";
 import {
-  CLEAR_CONFIRM_MIN_GAP_MS,
-  CLEAR_CONFIRM_TIMEOUT_MS,
   type PreDepartureCheckAction,
   PreDepartureCheckList,
   type PreDepartureCheckListCopy,

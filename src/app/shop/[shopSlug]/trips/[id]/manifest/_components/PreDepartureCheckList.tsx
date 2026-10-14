@@ -6,6 +6,7 @@ import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { scopedId } from "@/lib/element-id";
+import { CLEAR_CONFIRM_MIN_GAP_MS, CLEAR_CONFIRM_TIMEOUT_MS } from "@/lib/pre-departure-check";
 import type { PreDepartureCheckResult } from "../actions";
 
 export type PreDepartureCheckAction = (
@@ -23,15 +24,6 @@ export type PreDepartureCheckListCopy = {
   /** "Tap again to clear", shown once the first tap on a checked item has asked. */
   confirmClear: string;
 };
-
-/** How long a checked item waits for the second tap before it stands down. */
-export const CLEAR_CONFIRM_TIMEOUT_MS = 5000;
-
-/**
- * How soon after the first tap a second one may clear. A bounced or doubled
- * tap lands well inside this and is ignored; a deliberate second tap does not.
- */
-export const CLEAR_CONFIRM_MIN_GAP_MS = 400;
 
 export type PreDepartureCheckListItem = {
   id: string;

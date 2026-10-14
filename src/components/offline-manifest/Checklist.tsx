@@ -1,7 +1,13 @@
+import { useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { latestOfflineChecklistCheck } from "@/lib/offline-manifests";
+import {
+  CLEAR_CONFIRM_MIN_GAP_MS,
+  CLEAR_CONFIRM_TIMEOUT_MS,
+  type PreDepartureCheckStatus,
+} from "@/lib/pre-departure-check";
 import type { OfflineTripControls } from "./controls";
 import type { OfflineTripView } from "./trip-view";
 
@@ -33,38 +39,125 @@ export function OfflineChecklist({
             item.id,
             envelope.checklistEvents,
           );
-          const checked = check !== undefined;
-          const busy = busyChecklistItem === item.id;
           return (
-            <li key={item.id}>
-              <button
-                type="button"
-                disabled={busy || expired}
-                aria-busy={busy}
-                aria-pressed={checked}
-                onClick={() => recordChecklistCheck(item.id, checked ? "cleared" : "checked")}
-                className={buttonClass({
-                  variant: checked ? "primary" : "secondary",
-                  size: "boat",
-                  // `gap-3`, the counter row's below: the same mark and
-                  // label, so the words start on one x in both lists.
-                  className: "w-full justify-start gap-3 text-start",
-                })}
-              >
-                <StatusMark variant={checked ? "checked" : "unchecked"} size="md" />
-                <span className="flex min-w-0 flex-col">
-                  <span>{item.label}</span>
-                  <span className="sr-only">
-                    {checked
-                      ? t("shared.offlineManifest.single.checklist.checkedLabel")
-                      : t("shared.offlineManifest.single.checklist.uncheckedLabel")}
-                  </span>
-                </span>
-              </button>
-            </li>
+            <OfflineChecklistRow
+              key={item.id}
+              label={item.label}
+              checked={check !== undefined}
+              busy={busyChecklistItem === item.id}
+              expired={expired}
+              t={t}
+              onRecord={(status) => recordChecklistCheck(item.id, status)}
+            />
           );
         })}
       </ul>
     </section>
   ) : null;
+}
+
+/**
+ * One item. **Checking is one tap; clearing is two** (#2567), as on the live
+ * checklist since #2481: a wet hand brushing the phone on a moving deck must
+ * not quietly undo "Emergency oxygen kit aboard", so the first tap on a
+ * checked item only asks. A blur, Escape, or a few seconds untouched stand it
+ * down, and a bounced double tap (two taps ~50ms apart) is one tap: the ask
+ * only arms, and only says "Tap again to clear", once the gap has passed.
+ */
+function OfflineChecklistRow({
+  label,
+  checked,
+  busy,
+  expired,
+  t,
+  onRecord,
+}: {
+  label: string;
+  checked: boolean;
+  busy: boolean;
+  expired: boolean;
+  t: OfflineTripControls["t"];
+  onRecord: (status: PreDepartureCheckStatus) => void;
+}) {
+  const [asking, setAsking] = useState(false);
+  const [settled, setSettled] = useState(false);
+  const standDown = () => {
+    setAsking(false);
+    setSettled(false);
+  };
+  const askingNow = asking && checked;
+  const armed = askingNow && settled;
+  useEffect(() => {
+    if (!askingNow) return;
+    const settle = setTimeout(() => setSettled(true), CLEAR_CONFIRM_MIN_GAP_MS);
+    const expire = setTimeout(() => {
+      setAsking(false);
+      setSettled(false);
+    }, CLEAR_CONFIRM_TIMEOUT_MS);
+    return () => {
+      clearTimeout(settle);
+      clearTimeout(expire);
+    };
+  }, [askingNow]);
+  // The ask is spent once a write settles, whatever it said: a refused clear
+  // must not leave the item one tap from clearing.
+  useEffect(() => {
+    if (!busy) {
+      setAsking(false);
+      setSettled(false);
+    }
+  }, [busy]);
+  const confirmClear = t("shared.offlineManifest.single.checklist.confirmClear");
+  return (
+    <li>
+      <button
+        type="button"
+        disabled={busy || expired}
+        aria-busy={busy}
+        aria-pressed={checked}
+        onClick={() => {
+          if (!checked) {
+            onRecord("checked");
+            return;
+          }
+          // A tap inside the gap is the first one bouncing: ignored.
+          if (!armed) {
+            if (!askingNow) setAsking(true);
+            return;
+          }
+          standDown();
+          onRecord("cleared");
+        }}
+        onBlur={standDown}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") standDown();
+        }}
+        className={buttonClass({
+          variant: checked ? "primary" : "secondary",
+          size: "boat",
+          // `gap-3`, the counter row's below: the same mark and
+          // label, so the words start on one x in both lists.
+          className: "w-full justify-start gap-3 text-start",
+        })}
+      >
+        <StatusMark variant={checked ? "checked" : "unchecked"} size="md" />
+        <span className="flex min-w-0 flex-col">
+          <span>{label}</span>
+          {armed ? (
+            <span className="text-sm font-semibold">{confirmClear}</span>
+          ) : (
+            <span className="sr-only">
+              {checked
+                ? t("shared.offlineManifest.single.checklist.checkedLabel")
+                : t("shared.offlineManifest.single.checklist.uncheckedLabel")}
+            </span>
+          )}
+        </span>
+      </button>
+      {/* A changed button name is not announced; this is. */}
+      <span role="status" className="sr-only">
+        {armed ? confirmClear : ""}
+      </span>
+    </li>
+  );
 }
