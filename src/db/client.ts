@@ -177,6 +177,7 @@ export async function openLocalDb(
     // the *next* request builds another one: without this, a database that
     // fails to migrate stacks a fresh ~170 MB PGlite instance — and an
     // un-droppable lock — on every retry, for as long as anything keeps asking.
+    await client?.waitReady.catch(() => undefined);
     await client?.close().catch(() => undefined);
     releaseDataDirLock?.();
     throw error;
