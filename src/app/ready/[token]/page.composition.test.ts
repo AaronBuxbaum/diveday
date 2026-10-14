@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
  * request, a shop and a live capability token, and an e2e spec that scrolls
  * the real page cannot say *why* a section is where it is. Same shape as
  * `src/app/s/[shopSlug]/trips/[id]/page.composition.test.ts` and
- * `src/i18n/provider-coverage.test.ts`, for the same reason.
+ * `scripts/check-intl-providers.mjs`, for the same reason.
  */
 
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");

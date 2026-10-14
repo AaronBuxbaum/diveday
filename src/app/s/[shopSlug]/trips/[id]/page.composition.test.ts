@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
  * page's composition: there is no render to inspect without a database, a
  * request and a shop, and an e2e spec that scrolls the real page cannot say
  * *why* a section is where it is. The same shape as
- * `src/i18n/provider-coverage.test.ts`, and for the same reason.
+ * `scripts/check-intl-providers.mjs`, and for the same reason.
  */
 
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");

@@ -81,6 +81,12 @@ const checks = [
   ["node-version", "check-node-version.mjs"],
   ["closing-keywords", "check-closing-keywords.mjs"],
   ["sentry-imports", "check-sentry-imports.mjs"],
+  ["tenant-gates", "check-tenant-gates.mjs"],
+  ["instant", "check-instant.mjs"],
+  ["shop-reads", "check-shop-reads.mjs"],
+  ["redirect-slugs", "check-redirect-slugs.mjs"],
+  ["capability-refusals", "check-capability-refusals.mjs"],
+  ["intl-providers", "check-intl-providers.mjs"],
 ];
 
 function runCheck(label, scriptFile) {

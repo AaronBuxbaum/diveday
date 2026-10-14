@@ -11,7 +11,7 @@ import { LastMinuteListForm } from "./LastMinuteListForm";
  * that is not on the board, be told when a seat goes cheap, recover the link
  * to a booking already made. The page owns the section and its heading, and
  * renders it only when at least one row is left in it, inside the provider
- * that carries these rows' namespaces (`src/i18n/provider-coverage.test.ts`
+ * that carries these rows' namespaces (`scripts/check-intl-providers.mjs`
  * looks for it in the page).
  */
 export function MoreWaysRows({

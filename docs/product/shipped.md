@@ -2557,7 +2557,7 @@ stored hash. See [20260803-demo-bypass-containment](../architecture/decisions/20
 exemption comments assumed a provider meant shipping the diver bundle on every visit; that stopped
 being true when `DiverIntlProvider` grew a required `namespaces` list, so each route's `layout.tsx`
 now mounts four strings above the boundary. Seven token routes, not the six the review counted, plus
-the public shop namespace. `src/i18n/provider-coverage.test.ts` makes the `DiverIntlProvider`
+the public shop namespace. `scripts/check-intl-providers.mjs` makes the `DiverIntlProvider`
 footgun executable instead of tribal. es-ES swept for terminology and register (I18N-5): 256 strings,
 `tienda` → `centro` with agreement fixed and the retail sense split off, recorded in
 `src/i18n/locales/es-ES/README.md` so the next translator is consistent.

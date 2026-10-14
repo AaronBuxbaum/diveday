@@ -1251,7 +1251,7 @@ describe.each(CASES)("$module › $map", ({ rows, map }) => {
  * directory and requires the table to hold exactly those maps, so a map added
  * tomorrow fails here rather than joining the twenty-four that had no proof
  * for months. It is a text scan for the same reason
- * `provider-coverage.test.ts` is: the maps it looks for are private to their
+ * `scripts/check-intl-providers.mjs` is: the maps it looks for are private to their
  * modules and there is nothing to import.
  */
 const I18N_DIR = path.join(process.cwd(), "src/i18n");

@@ -68,7 +68,7 @@ import { shopPath } from "@/lib/staff-notices";
  * *shapes* that never matched `[token]` at all — the bare prefix, and a path
  * with an extra segment — and those name neither a shop nor a booking, which
  * leaves "back to the homepage" as the only destination anyone can honestly
- * offer them. `capability-refusals.test.ts` holds the first half of that to
+ * offer them. `scripts/check-capability-refusals.mjs` holds the first half of that to
  * the filesystem, so a capability route added later cannot quietly opt out.
  */
 export default function NotFound() {
