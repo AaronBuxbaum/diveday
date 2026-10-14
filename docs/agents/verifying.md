@@ -74,7 +74,8 @@ above it, which is how one deleted sentence became twelve red Playwright shards.
 
 `pnpm verify:push` (`scripts/verify-push.mjs`) runs the local half of every row above against
 the layer below (`stackBase` in `scripts/e2e-affected.mjs`; `origin/main` off a stack), stops at
-the first red step, and writes a stamp naming HEAD into the git directory:
+the first red step, and writes a stamp naming HEAD into the git directory (keyed by sha in the
+common git dir too, so a push from any worktree finds it):
 
 1. `pnpm regen` (with the export snapshot when seed, schema or export changed), then a clean
    tree: a generated file the diff left stale is committed, not discovered by CI.

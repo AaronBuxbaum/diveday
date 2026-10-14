@@ -163,8 +163,13 @@ Between 2026-10-09 and 2026-10-12, 90 CI jobs failed on the open stack, and near
 break a local run would have shown ([verifying.md](verifying.md#the-pre-push-gate)). The verify
 skill already said to check before pushing; what it could not do was make the check happen on the
 commit actually pushed, after the merge from the layer below that came in once the checks were
-done. So `pnpm verify:push` writes a stamp naming the commit it passed (`diveday-verified.json`
-in the git directory), and this hook refuses a `git push` of any other commit. Left alone: a
+done. So `pnpm verify:push` writes a stamp naming the commit it passed, and this hook refuses a
+`git push` of any other commit. The stamp is keyed by sha in the clone's common git dir
+(`<git common dir>/diveday-verified/<sha>`, beside the older per-worktree
+`diveday-verified.json`), and the hook reads the push in the directory the command names (a
+leading `cd <dir> &&`, or `git -C <dir>`): a thread's session cwd is the shared checkout while it
+builds in a worktree, and until 2026-10-14 the hook read the shared checkout's own stamp and
+refused every push verified in a worktree. Left alone: a
 commit the remote already has, a branch deletion, a tag push. The way past it is
 `DIVEDAY_PUSH_UNVERIFIED="<reason>"` in front of the command, a reason of at least ten characters
 that the PR repeats; the two right uses are in the verify skill.
