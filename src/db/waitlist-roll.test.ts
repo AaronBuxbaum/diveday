@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
-import { tripWaitlistEntries } from "./schema";
+import { courses, trips, tripWaitlistEntries } from "./schema";
 import { createTrip, createTripSeries } from "./trips";
 import { carryWaitlist, rollSailedSeriesWaitlists } from "./waitlist-roll";
 
@@ -72,6 +72,33 @@ async function saturdays(capacity = 12) {
   return { db, shop, first, second, now };
 }
 
+async function seat(db: AppDb, shopId: string, tripId: string, fullName: string) {
+  const booked = await createBooking(db, {
+    actor: "staff",
+    shopId,
+    tripId,
+    fullName,
+    email: `${fullName.toLowerCase().replace(/\W+/g, "-")}@example.com`,
+  });
+  if (!booked.ok) throw new Error(`seating ${fullName} failed: ${booked.reason}`);
+}
+
+async function nextAfter(
+  db: AppDb,
+  shopId: string,
+  trip: { seriesId: string | null; startsAt: Date },
+) {
+  const rows = await db
+    .select()
+    .from(trips)
+    .where(and(eq(trips.shopId, shopId), eq(trips.seriesId, trip.seriesId ?? "")));
+  const later = rows
+    .filter((row) => row.startsAt > trip.startsAt)
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
+  if (!later) throw new Error("expected a third date");
+  return later;
+}
+
 describe("rollSailedSeriesWaitlists", () => {
   it("rolls uninvited leads onto the next date and invites them while it has seats", async () => {
     const { db, shop, first, second, now } = await saturdays();
@@ -118,6 +145,74 @@ describe("rollSailedSeriesWaitlists", () => {
       rolled: 0,
       invited: 0,
     });
+  });
+});
+
+describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measured", () => {
+  it("skips a next date on a conditions hold for the one after it", async () => {
+    const { db, shop, first, second, now } = await saturdays();
+    const third = await nextAfter(db, shop.id, second);
+    await db.update(trips).set({ conditionsHold: true }).where(eq(trips.id, second.id));
+    const ana = await lead(db, shop.id, first.id, "Ana Held");
+
+    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 1 });
+    expect(await waiting(db, second.id)).toEqual([]);
+    expect((await waiting(db, third.id)).map((row) => row.personId)).toEqual([ana.id]);
+  });
+
+  it("invites nobody when the divers-only limit is reached, though the boat has room", async () => {
+    const { db, shop, first, second, now } = await saturdays();
+    await db.update(trips).set({ diverCapacity: 1 }).where(eq(trips.id, second.id));
+    await seat(db, shop.id, second.id, "Only Diver");
+    await lead(db, shop.id, first.id, "Cy Diverlimit");
+
+    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 0 });
+  });
+
+  it("invites nobody onto a course date with no instructor rostered", async () => {
+    const { db, shop, first, second, now } = await saturdays();
+    const [course] = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
+    if (!course) throw new Error("course missing");
+    await db.update(trips).set({ courseId: course.id }).where(eq(trips.id, second.id));
+    await lead(db, shop.id, first.id, "Dee Unstaffed");
+
+    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 0 });
+  });
+
+  it("counts invitations already out on the next date against its open seats", async () => {
+    const { db, shop, first, second, now } = await saturdays(2);
+    // Invited yesterday, no seat yet: that seat is spoken for.
+    await lead(db, shop.id, second.id, "Eve Invited", new Date(now.getTime() - 60_000));
+    await lead(db, shop.id, first.id, "Finn Rolled");
+    await lead(db, shop.id, first.id, "Gus Rolled");
+
+    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 2, invited: 1 });
+  });
+
+  it("invites the next date's own earlier lead before a rolled one", async () => {
+    const { db, shop, first, second, now } = await saturdays(1);
+    const native = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Hana First",
+      email: "hana-first@example.com",
+    });
+    if (!native) throw new Error("diver failed");
+    // Asked about the second Saturday before the rolled lead asked about the first.
+    await db.insert(tripWaitlistEntries).values({
+      shopId: shop.id,
+      tripId: second.id,
+      personId: native.id,
+      createdAt: new Date("2030-07-01T12:00:00Z"),
+    });
+    const rolled = await lead(db, shop.id, first.id, "Ivo Later");
+
+    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 1 });
+    const next = await waiting(db, second.id);
+    expect(next.find((row) => row.personId === native.id)?.invitedAt).toEqual(now);
+    expect(next.find((row) => row.personId === rolled.id)?.invitedAt).toBeNull();
   });
 });
 

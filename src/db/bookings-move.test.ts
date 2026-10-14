@@ -270,52 +270,6 @@ describe("moveBooking", () => {
       await move(db, shop.id, from.id, "00000000-0000-4000-8000-000000000000", seat.bookingId),
     ).toEqual({ ok: false, reason: "target_unavailable" });
   });
-});
-
-describe("moveSeat (the consequence path)", () => {
-  it("tells the diver at their own address, and writes both trails", async () => {
-    const { db, shop, from, to, seat } = await setup();
-    const staff = await listStaff(db, shop.id);
-    const owner = staff.find((entry) => entry.roles.includes("owner"));
-    if (!owner) throw new Error("owner missing");
-    const email = fakeEmail();
-    const sms = fakeSms();
-    const moved = await moveSeat(
-      db,
-      {
-        shopId: shop.id,
-        fromTripId: from.id,
-        toTripId: to.id,
-        bookingId: seat.bookingId,
-        actorPersonId: owner.person.id,
-      },
-      {
-        emailProvider: email.provider,
-        smsProvider: sms.provider,
-        whatsAppProviders: new Map(),
-        appOrigin: "https://diveday.example",
-      },
-    );
-    expect(moved).toMatchObject({ ok: true, notice: "told" });
-    expect(email.sent).toHaveLength(1);
-    const [sent] = email.sent;
-    if (sent?.kind !== "trip_rescheduled") throw new Error("expected a reschedule notice");
-    expect(sent).toMatchObject({
-      bookingId: seat.bookingId,
-      to: "nora-quinn@example.com",
-      tripTitle: "Two-Tank Reef — next week",
-      previousStartsAt: from.startsAt,
-      startsAt: to.startsAt,
-    });
-    expect(sent.seatMovedAt).toBeInstanceOf(Date);
-    expect(tripRescheduledEmail(sent).text).toContain("We moved your seat to Two-Tank Reef");
-
-    const codes = async (tripId: string) =>
-      (await listTripActivity(db, shop.id, tripId)).map((entry) => entry.code);
-    expect(await codes(from.id)).toContain("seat_moved_away");
-    expect(await codes(to.id)).toContain("seat_moved_here");
-  });
-});
 
   it("forgets what was said about the old departure: briefing, facts check, pickup, lateness", async () => {
     const { db, shop, from, to, seat } = await setup();
@@ -371,6 +325,52 @@ describe("moveSeat (the consequence path)", () => {
       .where(eq(tripHelpRequests.bookingId, seat.bookingId));
     expect(help?.tripId).toBe(from.id);
   });
+});
+
+describe("moveSeat (the consequence path)", () => {
+  it("tells the diver at their own address, and writes both trails", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    const staff = await listStaff(db, shop.id);
+    const owner = staff.find((entry) => entry.roles.includes("owner"));
+    if (!owner) throw new Error("owner missing");
+    const email = fakeEmail();
+    const sms = fakeSms();
+    const moved = await moveSeat(
+      db,
+      {
+        shopId: shop.id,
+        fromTripId: from.id,
+        toTripId: to.id,
+        bookingId: seat.bookingId,
+        actorPersonId: owner.person.id,
+      },
+      {
+        emailProvider: email.provider,
+        smsProvider: sms.provider,
+        whatsAppProviders: new Map(),
+        appOrigin: "https://diveday.example",
+      },
+    );
+    expect(moved).toMatchObject({ ok: true, notice: "told" });
+    expect(email.sent).toHaveLength(1);
+    const [sent] = email.sent;
+    if (sent?.kind !== "trip_rescheduled") throw new Error("expected a reschedule notice");
+    expect(sent).toMatchObject({
+      bookingId: seat.bookingId,
+      to: "nora-quinn@example.com",
+      tripTitle: "Two-Tank Reef — next week",
+      previousStartsAt: from.startsAt,
+      startsAt: to.startsAt,
+    });
+    expect(sent.seatMovedAt).toBeInstanceOf(Date);
+    expect(tripRescheduledEmail(sent).text).toContain("We moved your seat to Two-Tank Reef");
+
+    const codes = async (tripId: string) =>
+      (await listTripActivity(db, shop.id, tripId)).map((entry) => entry.code);
+    expect(await codes(from.id)).toContain("seat_moved_away");
+    expect(await codes(to.id)).toContain("seat_moved_here");
+  });
+});
 
 describe("listSeatMoveTargets", () => {
   it("lists later dive departures, never this one or a course session", async () => {
