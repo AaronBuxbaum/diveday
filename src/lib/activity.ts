@@ -167,6 +167,8 @@ type ActivityParamShapes = {
   party_seat_self_refunded: { actor: string; diver: string };
   /** A staffer opened a diver's physician's evaluation. */
   medical_clearance_opened: { actor: string; diver: string };
+  /** An owner or manager read a diver's full medical questionnaire (issue #2157). */
+  medical_answers_read: { actor: string; diver: string };
   /** A staffer downloaded a diver's own record. */
   record_exported: { actor: string; diver: string };
   /**
@@ -316,6 +318,7 @@ export const ACTIVITY_CODES = [
   "party_seat_self_cancelled",
   "party_seat_self_refunded",
   "medical_clearance_opened",
+  "medical_answers_read",
   "record_exported",
   "running_late_from_message",
   "order_refunded",

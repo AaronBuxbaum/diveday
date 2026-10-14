@@ -35,6 +35,7 @@
     "party_seat_self_cancelled": "{actor} canceló la plaza de {diver} junto con la suya, desde su enlace de la salida",
     "party_seat_self_refunded": "{actor} canceló la plaza de {diver} junto con la suya, desde su enlace de la salida, y se reembolsó en la tarjeta",
     "medical_clearance_opened": "{actor} abrió la evaluación médica de {diver}",
+    "medical_answers_read": "{actor} leyó las respuestas médicas de {diver}",
     "record_exported": "{actor} descargó una copia del registro de {diver}",
     "running_late_from_message": "{actor} marcó que {diver} llega tarde según su mensaje",
     "order_refunded": "{actor} reembolsó un pedido",

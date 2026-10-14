@@ -129,6 +129,7 @@ export type DiverActivityCode =
   | "identity_confirmed"
   | "identity_split_off"
   | "medical_clearance_opened"
+  | "medical_answers_read"
   | "record_exported"
   | "running_late_from_message";
 

@@ -35,6 +35,7 @@
     "party_seat_self_cancelled": "{actor} canceled {diver}’s seat with their own, from their trip link",
     "party_seat_self_refunded": "{actor} canceled {diver}’s seat with their own, from their trip link, and it was refunded by card",
     "medical_clearance_opened": "{actor} opened the physician’s evaluation for {diver}",
+    "medical_answers_read": "{actor} read {diver}’s medical answers",
     "record_exported": "{actor} downloaded a copy of {diver}’s record",
     "running_late_from_message": "{actor} marked {diver} running late from their message",
     "order_refunded": "{actor} refunded an order",
