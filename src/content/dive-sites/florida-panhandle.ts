@@ -1758,9 +1758,9 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       ],
     },
   },
-  // Gray Ghost
+  // Grey Ghost
   {
-    slug: "gray-ghost-tug",
+    slug: "grey-ghost-tug",
     version: 1,
     area: "florida-panhandle",
     sources: [
@@ -1768,7 +1768,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Grey%20Ghost%20Ship%27&outFields=Name,Depth,Relief,Lat_DD,Long_DD,DeployDate&returnGeometry=false&f=json",
     ],
     briefing: {
-      name: "Gray Ghost",
+      name: "Grey Ghost",
       locationName: "off western Panama City Beach, Florida",
       forecastLatitude: 30.0471,
       forecastLongitude: -86.0926,

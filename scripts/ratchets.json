@@ -345,6 +345,15 @@
     "//": "Bare heading spellings still typed at a call site, per file. Written by `node scripts/check-type-ramp.mjs --write`. This number may only go down — see scripts/check-type-ramp.mjs."
   },
   "voice": {
-    "//": "Voice tells — a machine-written mannerism, or a straight apostrophe or double quote where the house ’ and “ ” belong — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs."
+    "//": "Voice tells — a machine-written mannerism, or a straight apostrophe or double quote where the house ’ and “ ” belong — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs.",
+    "//absorbed": [
+      {
+        "why": "Grey Ghost is the wreck's name as FWC and the dive trail list her",
+        "files": {
+          "src/content/dive-sites/florida-panhandle.ts": "0 -> 1"
+        }
+      }
+    ],
+    "src/content/dive-sites/florida-panhandle.ts": 1
   }
 }
