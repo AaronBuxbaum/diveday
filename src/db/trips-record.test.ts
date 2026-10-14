@@ -5,7 +5,14 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBoat, deleteBoat } from "./boats";
 import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
-import { bookings, people, rollCallEvents, shops, userAccounts } from "./schema";
+import {
+  bookings,
+  people,
+  rollCallCrewEvents,
+  rollCallEvents,
+  shops,
+  userAccounts,
+} from "./schema";
 import { listTripChangeEvents } from "./trip-change-events";
 import {
   createTrip,
@@ -329,6 +336,61 @@ describe("trip records (in-memory PGlite)", () => {
       endsAt: reef.endsAt,
       capacity: reef.capacity,
       plannedDives: 2,
+    });
+    expect(accepted.ok).toBe(true);
+  });
+
+  it("refuses to drop planned dives below a checkpoint with only a crew roll call recorded", async () => {
+    // Batch 6, item 5. The floor used to read the diver table alone, so a
+    // crew member counted after dive 2 — the divemaster who went back down —
+    // could be orphaned by lowering the plan to one dive.
+    const { db, shop } = ctx;
+    const reef = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (t) => t.title === "Two-Tank Reef — Molasses & French",
+    );
+    if (!reef) throw new Error("expected seeded reef trip missing");
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("expected seeded staff missing");
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: staff.person.id,
+      recordedByPersonId: staff.person.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_2",
+      occurredAt: nowDate(),
+    });
+
+    const refused = await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: 1,
+    });
+    expect(refused).toEqual({
+      ok: false,
+      reason: "planned_dives_below_history",
+      detail: { recordedDiveCount: 2 },
+    });
+    expect((await getTripWithBooked(db, shop.id, reef.id))?.plannedDives).toBe(reef.plannedDives);
+
+    // A crew result that was undone is no history: the floor lifts.
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: staff.person.id,
+      recordedByPersonId: staff.person.id,
+      status: "cleared",
+      checkpoint: "after_dive_2",
+      occurredAt: new Date(nowDate().getTime() + 1000),
+    });
+    const accepted = await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: 1,
     });
     expect(accepted.ok).toBe(true);
   });

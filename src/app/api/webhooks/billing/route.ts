@@ -12,6 +12,7 @@ import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
 import { reportScrubbedError } from "@/lib/observability/sentry";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
+import { logWebhookRefusal } from "@/lib/webhook-refusal";
 
 /**
  * DiveDay's own subscription webhook: what a shop pays DiveDay, on DiveDay's
@@ -35,7 +36,10 @@ import { verifyStripeWebhook } from "@/lib/payments/webhook";
  */
 export async function POST(request: Request) {
   const config = billingConfigFromEnvironment();
-  if (!config) return new Response(null, { status: 503 });
+  if (!config) {
+    logWebhookRefusal("billing", "not_configured");
+    return new Response(null, { status: 503 });
+  }
 
   const payload = await request.text();
   const verification = verifyStripeWebhook(
@@ -43,8 +47,10 @@ export async function POST(request: Request) {
     request.headers.get("stripe-signature"),
     config.webhookSecret,
   );
-  if (verification.status === "not_configured") return new Response(null, { status: 503 });
-  if (verification.status !== "verified") return new Response(null, { status: 400 });
+  if (verification.status !== "verified") {
+    logWebhookRefusal("billing", verification.status);
+    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
+  }
 
   const { event } = verification;
   log("billing_webhook.event_received", "info", { eventId: event.id, eventType: event.type });

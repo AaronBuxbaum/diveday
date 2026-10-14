@@ -9,7 +9,9 @@ import {
   type IncidentFilingGap,
   type IncidentHandoverKind,
   type IncidentInvolvement,
+  type IncidentKind,
   type IncidentReportStatus,
+  type IncidentSeverity,
   type IncidentViewer,
   incidentFilingGaps,
   mayReadIncidentReport,
@@ -140,6 +142,8 @@ async function lockForWrite(
       diveSiteId: incidentReports.diveSiteId,
       locationText: incidentReports.locationText,
       whatHappened: incidentReports.whatHappened,
+      kind: incidentReports.kind,
+      severity: incidentReports.severity,
       firstAidGiven: incidentReports.firstAidGiven,
       oxygenGiven: incidentReports.oxygenGiven,
       oxygenMinutes: incidentReports.oxygenMinutes,
@@ -489,6 +493,8 @@ export async function getIncidentReport(
       diveSiteId: report.diveSiteId,
       locationText: report.locationText,
       whatHappened: report.whatHappened,
+      kind: report.kind,
+      severity: report.severity,
       firstAidGiven: report.firstAidGiven,
       oxygenGiven: report.oxygenGiven,
       oxygenMinutes: report.oxygenMinutes,
@@ -523,6 +529,9 @@ export type IncidentReportLine = {
   /** When it happened, or when the draft was started if it does not say yet. */
   at: Date;
   occurredAt: Date | null;
+  /** What kind of incident, and how serious; null on a draft that does not say yet. */
+  kind: IncidentKind | null;
+  severity: IncidentSeverity | null;
   createdByName: string;
 };
 
@@ -532,6 +541,8 @@ const LINE_FIELDS = {
   tripTitle: trips.title,
   status: incidentReports.status,
   occurredAt: incidentReports.occurredAt,
+  kind: incidentReports.kind,
+  severity: incidentReports.severity,
   createdAt: incidentReports.createdAt,
   createdByName: creators.fullName,
 };
@@ -542,6 +553,8 @@ function toLine(row: {
   tripTitle: string;
   status: IncidentReportStatus;
   occurredAt: Date | null;
+  kind: IncidentKind | null;
+  severity: IncidentSeverity | null;
   createdAt: Date;
   createdByName: string;
 }): IncidentReportLine {
@@ -552,6 +565,8 @@ function toLine(row: {
     status: row.status,
     at: row.occurredAt ?? row.createdAt,
     occurredAt: row.occurredAt,
+    kind: row.kind,
+    severity: row.severity,
     createdByName: row.createdByName,
   };
 }

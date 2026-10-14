@@ -366,7 +366,7 @@ to review, read against its English key.
 
 ## The field guide: `marineLife.*` is content, not chrome
 
-`diver.json`'s `marineLife` namespace is 148 species × three strings plus 18 category words, and it
+`diver.json`'s `marineLife` namespace is about 330 species × three strings plus 18 category words, and it
 is the only block in either bundle that is **content a diver reads about the world** rather than
 words the app says about itself. It is here because a shop *picks* species from DiveDay's catalog
 and does not write them (ADR 20260813-marine-life-is-diveday-copy) — the row stores a slug, so the
@@ -384,10 +384,8 @@ Two things follow for whoever edits it:
   ones — the scorpionfish, the fire coral, the long-spined urchin, every protected species — say
   the same thing the English says, no softer.
 
-One category label is narrower than its code and deliberately so: `eel` reads **Morena**, because
-all three species under it are morays and "anguila" would tell a diver less. Add a non-moray eel to
-the catalog and that label has to be revisited — it is the one place here where the Spanish is more
-specific than the English.
+The `eel` label reads **Anguila**. It read **Morena** while every species under it was a moray; the
+garden eel and the sharptail eel are not, and a morena is an anguila while the reverse is not true.
 
 `src/db/marine-life-catalog.test.ts` fails if a species loses its Spanish, gains copy for a slug the
 catalog dropped, or ends up with a description identical to the English one.

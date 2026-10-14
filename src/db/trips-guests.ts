@@ -20,6 +20,7 @@ import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
+import { paymentMarkFactsForTrip } from "./payment-marks";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
 import { listTripPrepDivers } from "./rental-fit";
 import { listCertificationSummaries } from "./self-declared-cards";
@@ -92,6 +93,7 @@ export async function getTripGuests(
     activity,
     stripeAccount,
     courseNextStepByBooking,
+    paymentMarksByBooking,
   ] = await Promise.all([
     filters.confirmName ? findSimilarDivers(db, shop.id, filters.confirmName) : [],
     // The returning-diver picker only books, so it is skipped once the boat is
@@ -116,6 +118,9 @@ export async function getTripGuests(
     // What each student on a course session has already been told to do next
     // (issues #1196, #1205), so the roster's box opens holding it.
     courseNextStepsByBooking(db, shop.id, tripId),
+    // What each seat's Paid mark recorded and what it still owes (batch 6
+    // item 1), so the amount field opens on the usual figure.
+    paymentMarkFactsForTrip(db, shop.id, tripId),
   ]);
 
   // The last-minute pipeline: who said they are around on this date, who among
@@ -315,6 +320,8 @@ export async function getTripGuests(
      * departure; seats with none are absent (issue #1697).
      */
     packageDivesByBooking,
+    /** Per seat, the Paid mark's money and what the seat still owes (`paymentMarkFactsForTrip`). */
+    paymentMarksByBooking,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A

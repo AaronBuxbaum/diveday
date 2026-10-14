@@ -46,7 +46,7 @@ type CertificationLevel =
  * - A higher rating's wording contains the lower one's ("Advanced Scuba
  *   Diver" contains "Scuba Diver"), so it matches the lower claim. A lower
  *   rating never matches a higher claim.
- * - **PADI DiveChek** (signed in, H-118) is narrower still, below
+ * - **PADI DiveChek** (signed in, H-121) is narrower still, below
  *   (`ONE_RECORD_ONLY`): one diver, a record that ends at the first line that
  *   could be someone else's, the birth date before the level, and the card
  *   number too when the card has one.

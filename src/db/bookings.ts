@@ -8,6 +8,8 @@ import { seatListPriceCents } from "@/lib/deposits";
 import { typeChangedDeskEventKind } from "@/lib/desk-events";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
+import { seatName } from "@/lib/held-seat";
+import { normalizeEmailAddress } from "@/lib/inbox";
 import {
   holdsRegisterKind,
   isDiver,
@@ -2473,8 +2475,22 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
   });
 }
 
+/**
+ * **What a party lead's own cancel did to the seats they booked** (batch 6
+ * item 10). `cancelled` went with the lead: unclaimed and still `booked`.
+ * `stayed` did not: claimed by their own diver, or already checked in. Names
+ * are the seat's own (`seatName`), the same the lead's party panel shows.
+ * `ownAddress` is a cancelled seat whose own email is not the lead's: that
+ * diver gets their own cancellation notice (glossary "Cancellation notice"),
+ * and a seat on the lead's address, or with none, stays quiet.
+ */
+export type PartyCancelOutcome = {
+  cancelled: Array<{ bookingId: string; seatName: string; ownAddress: boolean }>;
+  stayed: Array<{ bookingId: string; seatName: string }>;
+};
+
 export type SelfCancelResult =
-  | { ok: true }
+  | { ok: true; party?: PartyCancelOutcome }
   | {
       ok: false;
       /** already_cancelled / not_cancellable / trip_departed are distinct so a
@@ -2504,7 +2520,16 @@ export type SelfCancelResult =
  */
 export async function selfCancelBooking(
   db: AppDb,
-  input: { shopId: string; bookingId: string; now?: Date },
+  input: {
+    shopId: string;
+    bookingId: string;
+    now?: Date;
+    /**
+     * A party lead's unclaimed seats go with them (batch 6 item 10). Both
+     * diver paths, `/ready` and the reply keyword, ask for it.
+     */
+    withUnclaimedParty?: boolean;
+  },
 ): Promise<SelfCancelResult> {
   const now = input.now ?? nowDate();
   return db.transaction(async (tx) => {
@@ -2514,7 +2539,12 @@ export async function selfCancelBooking(
     // the write, which the unconditional update this replaced could then
     // blindly stomp back to cancelled (security review finding on this ADR).
     const [row] = await tx
-      .select({ status: bookings.status, tripId: bookings.tripId, personId: bookings.personId })
+      .select({
+        status: bookings.status,
+        tripId: bookings.tripId,
+        personId: bookings.personId,
+        partyLeadBookingId: bookings.partyLeadBookingId,
+      })
       .from(bookings)
       .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
       .limit(1)
@@ -2544,29 +2574,130 @@ export async function selfCancelBooking(
       )
       .returning({ id: bookings.id });
     if (!cancelled) return { ok: false, reason: "not_cancellable" };
-    // Same belt-and-suspenders revoke `cancelBooking` does for the staff path.
-    await revokeBookingCapabilities(tx, {
+    await releaseSelfCancelledSeat(tx, {
       shopId: input.shopId,
       bookingId: input.bookingId,
-    });
-    // Same rule as the staff cancel: un-collected units go back on the wall
-    // with the seat (ADR 20260815-minimal-gear-register).
-    await releaseUnclaimedGearReservations(tx, {
-      shopId: input.shopId,
-      bookingId: input.bookingId,
-    });
-    await releasePackageCoverageForBooking(tx, input.shopId, input.bookingId);
-    // And the same handoff line the staff cancel writes: a seat the diver gave
-    // back from their own link is exactly as much news to the crew (#1202).
-    await recordDeskEvent(tx, {
-      shopId: input.shopId,
       tripId: row.tripId,
-      kind: "seat_released",
-      bookingId: input.bookingId,
-      subjectPersonId: row.personId,
+      personId: row.personId,
     });
-    return { ok: true };
+    // Only a lead has party seats: a member's own cancel never reaches another seat.
+    if (!input.withUnclaimedParty || row.partyLeadBookingId !== null) return { ok: true };
+    const party = await cancelUnclaimedPartySeats(tx, {
+      shopId: input.shopId,
+      leadBookingId: input.bookingId,
+      tripId: row.tripId,
+    });
+    return { ok: true, party };
   });
+}
+
+/**
+ * Everything a self-cancelled seat lets go of, the same for the diver's own
+ * seat and each party seat that goes with a lead's.
+ */
+async function releaseSelfCancelledSeat(
+  tx: DbExecutor,
+  seat: { shopId: string; bookingId: string; tripId: string; personId: string },
+) {
+  // Same belt-and-suspenders revoke `cancelBooking` does for the staff path.
+  await revokeBookingCapabilities(tx, { shopId: seat.shopId, bookingId: seat.bookingId });
+  // Same rule as the staff cancel: un-collected units go back on the wall
+  // with the seat (ADR 20260815-minimal-gear-register).
+  await releaseUnclaimedGearReservations(tx, { shopId: seat.shopId, bookingId: seat.bookingId });
+  await releasePackageCoverageForBooking(tx, seat.shopId, seat.bookingId);
+  // And the same handoff line the staff cancel writes: a seat the diver gave
+  // back from their own link is exactly as much news to the crew (#1202).
+  await recordDeskEvent(tx, {
+    shopId: seat.shopId,
+    tripId: seat.tripId,
+    kind: "seat_released",
+    bookingId: seat.bookingId,
+    subjectPersonId: seat.personId,
+  });
+}
+
+/**
+ * **The lead's unclaimed seats go with the lead** (batch 6 item 10). Inside
+ * the lead's own cancel transaction, so the seats and the lead are released
+ * together or not at all. Only seats whose `party_lead_booking_id` is this
+ * lead in this shop are reached, each locked and re-checked: an unclaimed,
+ * `booked` seat is cancelled; a claimed seat belongs to its own diver and
+ * stays, as does one already checked in. A seat claimed between the confirm
+ * and this lock stays too, and the lead is told it did.
+ *
+ * Ordered as the lead's party panel orders them (`issuePartySeatClaims`).
+ */
+export async function cancelUnclaimedPartySeats(
+  tx: DbExecutor,
+  input: { shopId: string; leadBookingId: string; tripId: string },
+): Promise<PartyCancelOutcome> {
+  const [lead] = await tx
+    .select({ email: people.email })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  const leadAddress = normalizeEmailAddress(lead?.email);
+  const seats = await tx
+    .select({
+      bookingId: bookings.id,
+      status: bookings.status,
+      claimedAt: bookings.claimedAt,
+      personId: bookings.personId,
+      fullName: people.fullName,
+      email: people.email,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      identityBookedAs: bookings.identityBookedAs,
+    })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.partyLeadBookingId, input.leadBookingId),
+        eq(bookings.tripId, input.tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id))
+    .for("update", { of: bookings });
+  const outcome: PartyCancelOutcome = { cancelled: [], stayed: [] };
+  for (const seat of seats) {
+    const name = seatName(seat.fullName, seat);
+    if (seat.claimedAt !== null || seat.status !== "booked") {
+      outcome.stayed.push({ bookingId: seat.bookingId, seatName: name });
+      continue;
+    }
+    const [gone] = await tx
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(
+        and(
+          eq(bookings.id, seat.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.status, "booked"),
+          isNull(bookings.claimedAt),
+        ),
+      )
+      .returning({ id: bookings.id });
+    if (!gone) {
+      outcome.stayed.push({ bookingId: seat.bookingId, seatName: name });
+      continue;
+    }
+    await releaseSelfCancelledSeat(tx, {
+      shopId: input.shopId,
+      bookingId: seat.bookingId,
+      tripId: input.tripId,
+      personId: seat.personId,
+    });
+    const seatAddress = normalizeEmailAddress(seat.email);
+    outcome.cancelled.push({
+      bookingId: seat.bookingId,
+      seatName: name,
+      ownAddress: seatAddress !== null && seatAddress !== leadAddress,
+    });
+  }
+  return outcome;
 }
 
 /**

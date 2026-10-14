@@ -10,6 +10,12 @@ import {
 import type { IntegrationCredentials, IntegrationEvent, ShopIntegration } from "@/db/schema";
 import { nowMs } from "@/lib/clock";
 import { minorToMajor } from "@/lib/money";
+import {
+  refundLineDescription,
+  refundReference,
+  type SaleSource,
+  saleReference,
+} from "./sale-reference";
 
 export const XERO_AUTHORIZATION_URL = "https://login.xero.com/identity/connect/authorize";
 export const XERO_TOKEN_URL = "https://identity.xero.com/connect/token";
@@ -46,6 +52,7 @@ export type XeroCredentials = {
 };
 
 export type XeroOrderPayload = {
+  source?: SaleSource;
   orderId: string;
   customer: { id: string; name: string; email: string | null };
   currency: string;
@@ -210,7 +217,7 @@ export function xeroBankTransaction(
         }))
       : [
           {
-            Description: `Refund for DiveDay order ${payload.orderId}`,
+            Description: refundLineDescription(payload),
             Quantity: 1,
             UnitAmount: minorToMajor(refundCents, payload.currency),
             AccountCode: input.salesAccountCode,
@@ -220,10 +227,7 @@ export function xeroBankTransaction(
     Type: input.type,
     Contact: { ContactID: contactId },
     Date: payload.createdAt.slice(0, 10),
-    Reference:
-      input.type === "RECEIVE"
-        ? `DiveDay order ${payload.orderId}`
-        : `DiveDay refund for order ${payload.orderId}`,
+    Reference: input.type === "RECEIVE" ? saleReference(payload) : refundReference(payload),
     CurrencyCode: payload.currency.toUpperCase(),
     BankAccount: { Code: input.bankAccountCode },
     LineAmountTypes: "NoTax",

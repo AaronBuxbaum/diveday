@@ -99,12 +99,15 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Billing standing
 - Cancellation notice
 - Card dispute
+- Checkout sale / tip sale
 - Dashboard refund
 - Failed refund
 - First paid month
 - Free term
 - Paid after close
+- Paid mark
 - Pass-through fee
+- Payments restricted
 - Payout
 - Subscription (DiveDay billing)
 
@@ -174,6 +177,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Imported payment history
 - Imported waiver acceptance
 - In-water certified assistant
+- Incident kind
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
@@ -244,6 +248,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Snorkeler
 - Souls on board
 - Staff invite
+- Stale roll call
 - Standing crew
 - Station acknowledgement
 - Station echo

@@ -284,6 +284,46 @@ describe("booking_payment_events (append-only money trail)", () => {
     expect(reversal?.providerRef).toBe("re_reversal");
   });
 
+  it("records a hand mark's method and who made it, on the row and on its trail row", async () => {
+    const { db, shop, entry } = await paymentContext();
+    const staffer = entry.person.id;
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      method: "cash",
+      recordedByPersonId: staffer,
+    });
+
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
+      amountCents: 12_000,
+      method: "cash",
+      recordedByPersonId: staffer,
+      provider: null,
+    });
+    const [event] = await listBookingPaymentEvents(db, shop.id, entry.booking.id);
+    expect(event).toMatchObject({
+      operation: "manual_mark",
+      amountCents: 12_000,
+      method: "cash",
+      recordedByPersonId: staffer,
+    });
+
+    // The same money taken another way is a transition worth a trail row.
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      method: "card",
+      recordedByPersonId: staffer,
+    });
+    expect(await listBookingPaymentEvents(db, shop.id, entry.booking.id)).toHaveLength(2);
+  });
+
   it("defaults an unannotated write to manual_mark — a staff member setting it by hand", async () => {
     const { db, shop, entry } = await paymentContext();
     await setBookingPayment(db, {

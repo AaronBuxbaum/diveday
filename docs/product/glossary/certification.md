@@ -62,7 +62,7 @@
   the page already settled. Never a bulk confirm: nothing is certified that its agency's page did
   not show.
 - **DiveChek check** — the **Agency check** for a PADI card, on PADI's DiveChek in the staffer's own
-  browser, signed in to the PADI Pros' Site (H-118); the "(member sign-in)" link opens the same
+  browser, signed in to the PADI Pros' Site (H-121); the "(member sign-in)" link opens the same
   site. Searched by name and birth date, so a diver with no birth date on file keeps the link.
   Narrower than a public page. One diver: DiveChek may list a row per certification, so rows with
   the typed birth date are one diver's cards, and two birth dates under the name, or a page saying

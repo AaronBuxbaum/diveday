@@ -19,7 +19,13 @@ import {
 import { joinLastMinuteList } from "./last-minute-list";
 import { retryBookingConfirmation } from "./notifications";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { bookingCheckoutBookings, bookingCheckouts, bookings, trips } from "./schema";
+import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookings,
+  integrationEvents,
+  trips,
+} from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency, setShopPassThroughFee, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -2908,5 +2914,59 @@ describe("settledPartyPayment", () => {
     if (!started.ok) throw new Error("expected ok");
     await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId);
     expect(await settledPartyPayment(db, shop.id, bookingIds[0])).toBeNull();
+  });
+});
+
+describe("a completed checkout reaches the shop's books (batch 6 item 9)", () => {
+  it("queues one sale per checkout, naming the party lead, once however often Stripe says so", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const outcome = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!outcome.ok) throw new Error("expected ok");
+    await markCheckoutPaidBySessionId(db, outcome.checkout.stripeSessionId);
+    await markCheckoutPaidBySessionId(db, outcome.checkout.stripeSessionId);
+
+    const events = await db
+      .select()
+      .from(integrationEvents)
+      .where(
+        and(
+          eq(integrationEvents.shopId, shop.id),
+          eq(integrationEvents.entityId, outcome.checkout.id),
+        ),
+      );
+    expect(events).toHaveLength(1);
+    const [event] = events;
+    expect(event).toMatchObject({ eventType: "order.paid", entityType: "checkout" });
+    const [lead] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, bookingIds[0] ?? ""));
+    expect(event?.payload).toMatchObject({
+      source: "checkout",
+      orderId: outcome.checkout.id,
+      customer: { id: lead?.personId },
+      totalCents: REEF_PRICE_CENTS * 2,
+      lineItems: [expect.objectContaining({ kind: "fare", unitAmountCents: REEF_PRICE_CENTS * 2 })],
+    });
+  });
+
+  it("sends nothing for a checkout that never completed", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const outcome = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!outcome.ok) throw new Error("expected ok");
+    await markCheckoutExpiredBySessionId(db, outcome.checkout.stripeSessionId);
+    const events = await db
+      .select()
+      .from(integrationEvents)
+      .where(eq(integrationEvents.entityId, outcome.checkout.id));
+    expect(events).toEqual([]);
   });
 });

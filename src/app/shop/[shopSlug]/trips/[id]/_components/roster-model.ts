@@ -3,9 +3,11 @@ import type {
   AgencyCheckHostAction,
   AgencyListedHostAction,
 } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
+import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { CourseMaterialsDone } from "@/db/course-materials";
 import type { listBookingNotes } from "@/db/operations";
+import type { PaymentMarkFacts } from "@/db/payment-marks";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
@@ -140,6 +142,8 @@ export type RosterRows = {
   heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
   /** Per seat, the unspent package dives its diver could put toward this trip (issue #1697). */
   packageDivesByBooking?: ReadonlyMap<string, number>;
+  /** Per seat, the Paid mark's money and the seat's balance (`paymentMarkFactsForTrip`). */
+  paymentMarksByBooking?: ReadonlyMap<string, PaymentMarkFacts>;
   /**
    * The booking a staffer just acted on (`?bid=`), if any — a saved contact,
    * an updated payment. Acting on a row can move what they touched into the
@@ -437,6 +441,14 @@ export function rosterPaymentStatusCopy(t: StaffTranslator): PaymentStatusContro
     },
     update: t("trips.roster.paymentUpdate"),
     updating: t("trips.roster.paymentUpdating"),
+    amountLabel: t("trips.roster.paymentAmountLabel"),
+    methodLabel: t("trips.roster.paymentMethodLabel"),
+    methods: {
+      cash: t("trips.roster.paymentMethodCash"),
+      card: t("trips.roster.paymentMethodCard"),
+      other: t("trips.roster.paymentMethodOther"),
+    },
+    forgiving: forgivingCopy(t),
   };
 }
 

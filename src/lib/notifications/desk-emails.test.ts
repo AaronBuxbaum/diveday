@@ -83,3 +83,40 @@ describe("the desk_after_hours kind", () => {
     expect(() => notificationSchema.parse({ ...notification, waiting: 0 })).toThrow();
   });
 });
+
+describe("the stripe_payments_restricted kind", () => {
+  const notification = notificationSchema.parse({
+    kind: "stripe_payments_restricted",
+    shopId: "11111111-1111-4111-8111-111111111111",
+    personId: "22222222-2222-4222-8222-222222222222",
+    to: "ana@example.com",
+    locale: "en-US",
+    recipientName: "Ana Ruiz",
+    shopName: "Blue <Mantis>",
+    settingsUrl: "https://diveday.example/shop/blue/settings#money",
+    restrictedAt: new Date("2026-10-14T12:00:00Z"),
+  });
+
+  it("says payments are off, that divers pay at the shop, and links payment settings", () => {
+    const email = messageFor(notification);
+    expect(email.subject).toBe("Blue <Mantis>: Stripe has turned off card payments");
+    expect(email.text).toContain("Hi Ana");
+    expect(email.text).toContain("pay at the shop");
+    expect(email.html).toContain('href="https://diveday.example/shop/blue/settings#money"');
+    expect(email.html).not.toContain("<Mantis>");
+  });
+
+  it("is keyed per owner per restriction, so a redelivery is the same send", () => {
+    expect(notificationIdempotencyKey(notification)).toBe(
+      "stripe-payments-restricted/22222222-2222-4222-8222-222222222222/2026-10-14T12:00:00.000Z",
+    );
+    expect(notificationIsQueueable(notification)).toBe(true);
+  });
+
+  it("speaks the owner's language", () => {
+    const spanish = notificationSchema.parse({ ...notification, locale: "es-ES" });
+    expect(messageFor(spanish).subject).toBe(
+      "Blue <Mantis>: Stripe desactivó los pagos con tarjeta",
+    );
+  });
+});

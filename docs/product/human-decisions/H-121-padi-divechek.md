@@ -1,4 +1,4 @@
-# H-118: May the extension check a PADI card on DiveChek, behind the shop's own PADI sign-in?
+# H-121: May the extension check a PADI card on DiveChek, behind the shop's own PADI sign-in?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

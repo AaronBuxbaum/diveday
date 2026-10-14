@@ -44,7 +44,7 @@ describe("post-deploy wizard", () => {
       credentialsDocument: "AWS_ACCESS_KEY_ID=deployer-id\n",
       syncEnvironment: {},
       resyncVercel: true,
-      execute: (command, arguments_) => {
+      execute: (_command, arguments_) => {
         commands.push(arguments_);
         return "UPDATE";
       },

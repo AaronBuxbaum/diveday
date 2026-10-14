@@ -229,7 +229,7 @@ describe("ConditionsLine — a forecast still on its way", () => {
       locale: DEFAULT_DIVER_LOCALE,
     });
 
-    render(<>{element.props.fallback}</>);
+    render(element.props.fallback);
     expect(screen.getByText(/English and Spanish/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open-Meteo" })).not.toBeInTheDocument();
   });

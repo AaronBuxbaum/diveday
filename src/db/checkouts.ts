@@ -11,6 +11,7 @@ import { allocateSettledTotal } from "@/lib/payments/settlement";
 import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
+import { enqueueCheckoutIntegrationEvent } from "./integration-events";
 import {
   claimBookingsForCheckout,
   idempotencyKeyFor,
@@ -1436,6 +1437,16 @@ export async function markCheckoutPaidBySessionId(
         operation: "checkout_settled",
       });
     }
+    // One sale for the shop's books (batch 6 item 9, H-120): the whole
+    // checkout as one receipt naming the party lead, never one per seat.
+    // Keyed on the checkout, so the self-healing replay above sends nothing
+    // twice.
+    await enqueueCheckoutIntegrationEvent(tx, {
+      shopId: updated.shopId,
+      checkoutId: updated.id,
+      eventType: "order.paid",
+      idempotencyKey: `checkout:${updated.id}:paid`,
+    });
     return updated;
   });
 }
