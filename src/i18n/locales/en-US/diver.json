@@ -5001,7 +5001,7 @@
     "reminderAction": {
       "waiverPending": "Sign your waiver",
       "waiverExpired": "Your waiver link expired. Grab a fresh one; it only takes about two minutes",
-      "waiverLapsed": "Sign your waiver again",
+      "waiverLapsed": "Your signed waiver has lapsed. Sign it again",
       "certificationMissing": "Send us your certification details",
       "certificationInsufficient": "Check your certification level with us",
       "certificationSelfDeclared": "Bring your certification card so we can check it",

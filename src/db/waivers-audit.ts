@@ -352,8 +352,9 @@ export type SignedWaiverForDiver = NonNullable<Awaited<ReturnType<typeof getSign
 /**
  * Every *signed* release on file for a set of divers at a shop, grouped by
  * person — the evidence the sign-once rule draws on. Includes both `completed`
- * and `medical_review` records (superseded ones excluded, but for a retired
- * refusal — see the query): the caller needs the
+ * and `medical_review` records (superseded ones excluded, but for a referral
+ * no physician cleared and a clean signature a fresh link replaced — see the
+ * query): the caller needs the
  * medical holds too, so a stale clean signature can never carry a diver past a
  * newer, unresolved medical review. Currency (template version, age) is decided
  * per booking by `effectiveWaiverForBooking`.
@@ -377,15 +378,24 @@ export async function listSignedWaiversByPerson(
         eq(waiverRecords.shopId, shopId),
         inArray(waiverRecords.personId, personIds),
         inArray(waiverRecords.status, ["completed", "medical_review"]),
-        // A retired refusal stays in the evidence: superseded so its seat can
-        // carry a fresh release, it still outranks every signature older than
-        // it (`isStandingRefusal`), or sign-once would fall back past it.
+        // A referral no physician cleared stays in the evidence, superseded
+        // or not: a retired refusal, or a rider's lapsed hold its seat sent a
+        // fresh link past. Superseding moves a hold off a seat and answers
+        // nothing, so it still outranks every signature older than it
+        // (`isUnclearedReferral`), or sign-once would fall back past it.
+        //
+        // A clean signature superseded by a fresh link stays too, so the
+        // diver record reads "lapsed" rather than "nothing on file" while the
+        // link is out; every currency check refuses a superseded record, so it
+        // never stands. Only one given on the signer's own seat (or no seat):
+        // a split seat's records are superseded under the matched diver's
+        // name but were someone else's (`splitBookingIdentity`).
         or(
           isNull(waiverRecords.supersededAt),
+          and(eq(waiverRecords.status, "medical_review"), isNull(waiverRecords.medicalClearedAt)),
           and(
-            eq(waiverRecords.status, "medical_review"),
-            isNotNull(waiverRecords.medicalClearanceDeclinedAt),
-            isNull(waiverRecords.medicalClearedAt),
+            or(eq(waiverRecords.status, "completed"), isNotNull(waiverRecords.medicalClearedAt)),
+            or(isNull(waiverRecords.bookingId), eq(bookings.personId, waiverRecords.personId)),
           ),
         ),
         // **A clean release signed on a held seat does not carry** (#2082).

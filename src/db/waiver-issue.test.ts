@@ -13,6 +13,7 @@ import {
   setCourseFormRequirements,
   signCourseForm,
 } from "./course-forms";
+import { getDiverProfile } from "./divers";
 import {
   applyProviderEmailEvent,
   bookingConfirmationMailState,
@@ -393,6 +394,15 @@ describe("issueAndDeliverWaiver", () => {
     const after = await getBookingReadiness(db, shop.id, bookingId);
     expect(after?.status).toBe("blocked");
     expect(after?.blockers.map((blocker) => blocker.code)).toContain("waiver_pending");
+    // The diver record still says they signed once and it lapsed, not that
+    // nothing is on file, while the fresh link is out.
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    const profile = await getDiverProfile(db, shop.id, seat.personId);
+    expect(profile?.waiver).toEqual({ state: "expired", signedAt: longAgo });
   });
 
   it("sends a fresh link on joining when the diver's only release has lapsed", async () => {

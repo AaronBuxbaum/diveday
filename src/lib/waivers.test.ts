@@ -529,13 +529,22 @@ describe("shop-level waiver standing", () => {
     expect(status([hold, signed]).state).toBe("current");
   });
 
-  it("ignores a superseded hold", () => {
+  it("keeps a superseded referral no physician cleared as a hold (glossary: Medical hold)", () => {
+    // Superseding moves the hold off its seat so the seat can take a fresh
+    // link; only a clearance or a later clean release ends it.
     const hold = completedWaiver({
       id: "hold",
       status: "medical_review",
       supersededAt: SIGN_NOW,
     });
-    expect(status([hold]).state).toBe("none");
+    expect(status([hold]).state).toBe("medical_review");
+    const cleared = completedWaiver({
+      id: "cleared",
+      status: "medical_review",
+      supersededAt: SIGN_NOW,
+      medicalClearedAt: SIGN_NOW,
+    });
+    expect(status([cleared]).state).not.toBe("medical_review");
   });
 
   it("tells a refused evaluation apart from one nobody has answered", () => {
