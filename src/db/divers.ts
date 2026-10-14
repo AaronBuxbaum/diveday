@@ -579,7 +579,7 @@ export async function listDiverSummaries(
   } = {},
 ) {
   const now = options.now ?? nowDate();
-  const scope = rosterScope(db, shopId, options);
+  const scope = rosterScope(db, shopId, { ...options, now });
   const lastDivedAt = lastDivedAtSql(shopId, now);
 
   // Offset rather than keyset. The roster used to page forward-only by cursor,
