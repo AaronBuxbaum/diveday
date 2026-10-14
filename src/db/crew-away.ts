@@ -72,7 +72,7 @@ export async function crewAwayByTrip(
   );
   const [blocks, meetingsByTrip] = await Promise.all([
     listCrewAvailabilityBlocks(db, shopId, { from, to }),
-    tripMeetings(db, [...new Set(rows.map((row) => row.tripId))]),
+    tripMeetings(db, shopId, [...new Set(rows.map((row) => row.tripId))]),
   ]);
   if (blocks.length === 0) return byTrip;
 

@@ -229,10 +229,10 @@ function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusa
 
 /** Creates a new boat for the shop. */
 export async function createBoatAction(formData: FormData) {
-  const form = readForm(boatForm, formData);
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
+  const form = readForm(boatForm, formData);
 
   const name = form.name;
   const capacity = Number(form.capacity ?? 0);
@@ -255,10 +255,10 @@ export async function createBoatAction(formData: FormData) {
 
 /** Updates an existing boat: its name, seats, line, certificate and papers. */
 export async function updateBoatAction(formData: FormData) {
-  const form = readForm(boatForm, formData);
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
+  const form = readForm(boatForm, formData);
 
   const rawBoatId = form.boatId;
   const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
@@ -293,10 +293,10 @@ export async function updateBoatAction(formData: FormData) {
 
 /** Deletes a boat from the shop. */
 export async function deleteBoatAction(formData: FormData) {
-  const form = readForm(boatForm, formData);
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
+  const form = readForm(boatForm, formData);
 
   const rawBoatId = form.boatId;
   const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
