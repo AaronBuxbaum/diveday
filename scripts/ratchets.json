@@ -239,7 +239,7 @@
     "src/app/shop/[shopSlug]/staffing/page.tsx#StaffingPage": 419,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 405,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 455,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 441,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
     "src/db/bookings.ts#createBookingRecord": 463,
     "src/db/checkouts.ts#startBookingCheckout": 443,
@@ -308,7 +308,7 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 592,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 683,
+    "src/app/ready/[token]/page.tsx": 673,
     "src/app/s/[shopSlug]/page.tsx": 882,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 530,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
@@ -331,7 +331,7 @@
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 501,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 556
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 525
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."
