@@ -516,13 +516,22 @@ describe("the kit record the printed packet reads (fourth review, item 17)", () 
       servicedOn: "2026-09-30",
       nextDueOn: "2027-09-30",
     });
+    // A cylinder's hydro test or visual inspection is not a kit service, so a
+    // newer one never stands in for the date (review F2).
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: o2.id,
+      kind: "hydro_test",
+      servicedOn: "2026-10-05",
+      nextDueOn: "2031-10-05",
+    });
     const trip = await departureOn(db, shop.id, boat.id);
 
     expect(await departureKitRecord(db, shop.id, trip.id)).toEqual({
       boatName: "Mantis I",
       oxygenKits: ["O2 Kit A"],
       firstAidKits: ["Trauma bag"],
-      oxygenLastCheckedOn: "2026-09-30",
+      oxygenServicedOn: "2026-09-30",
     });
   });
 

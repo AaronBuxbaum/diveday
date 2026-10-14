@@ -28,6 +28,7 @@
     "firstAidKept": "First aid kit is kept",
     "lastChecked": "Last checked",
     "oxygenPressure": "O2 pressure",
-    "keptAboard": "aboard {boat} ({kits})"
+    "kitRegister": "Register: {kits} aboard {boat}",
+    "kitRegisterServiced": "Register: {kits} aboard {boat}; oxygen kit serviced {date}"
   }
 }

@@ -45,7 +45,7 @@ import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import {
   PrintedBoatPaper,
   printedBoatProcedureCopy,
-  printedKitValues,
+  printedKitRegister,
 } from "./_components/PrintedBoatProcedure";
 import { PrintedSoulsOnBoard } from "./_components/PrintedSoulsOnBoard";
 import { personTrailIndex } from "./_components/person-trail";
@@ -421,7 +421,7 @@ export default async function TripManifestPage({
           reference={emergencyReference}
           emergencyCopy={emergencyCopy}
           copy={printedBoatProcedureCopy(t)}
-          kit={printedKitValues(kitRecord, t, locale)}
+          kitRegister={printedKitRegister(kitRecord, t, locale)}
         />
         {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
             people happens before the boat leaves, while the lists above are

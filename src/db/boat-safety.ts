@@ -279,16 +279,20 @@ export async function departureBoatId(
  * register says which kit is aboard this hull and when it was last serviced.
  *
  * Only what the shop recorded, never a guess: the in-service units aboard, by
- * their own labels, and the newest dated record on an oxygen kit (a note is
- * not a check, so it does not count). Null for a departure on no boat; empty
- * lists when the register has nothing aboard, and the packet keeps its blanks.
- * The cylinder's pressure is never recorded here, so it always stays a blank.
+ * their own labels, and the newest `service` record on an oxygen kit. A
+ * cylinder's hydro test or visual inspection is not a kit service, and a note
+ * is not a check, so neither counts (review F2). Null for a departure on no
+ * boat; empty lists when the register has nothing aboard.
+ *
+ * The packet prints these as a line of their own above the kit blanks, never
+ * in them: "kept ___" asks where on the boat, and "last checked ___ · O2
+ * pressure ___" is the crew's own pre-trip check, which no register answers.
  */
 export type DepartureKitRecord = {
   boatName: string;
   oxygenKits: string[];
   firstAidKits: string[];
-  oxygenLastCheckedOn: CalendarDate | null;
+  oxygenServicedOn: CalendarDate | null;
 };
 
 export async function departureKitRecord(
@@ -308,15 +312,15 @@ export async function departureKitRecord(
     (unit) => unit.aboardBoatId === boatId && unit.status === "in_service",
   );
   const oxygen = aboard.filter((unit) => unit.kind === "o2_kit");
-  const checks = oxygen
+  const services = oxygen
     .flatMap((unit) => unit.clocks)
-    .filter((clock) => clock.kind !== "note")
+    .filter((clock) => clock.kind === "service")
     .map((clock) => clock.servicedOn)
     .sort();
   return {
     boatName: boat.name,
     oxygenKits: oxygen.map((unit) => unit.label),
     firstAidKits: aboard.filter((unit) => unit.kind === "first_aid_kit").map((unit) => unit.label),
-    oxygenLastCheckedOn: checks.at(-1) ?? null,
+    oxygenServicedOn: services.at(-1) ?? null,
   };
 }
