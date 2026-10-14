@@ -24,6 +24,7 @@ import {
   people,
   personRoles,
   tripRequirements,
+  trips as tripsTable,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -371,6 +372,102 @@ describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
     // Still seated: the diver's place on the boat never depends on this.
     if (!result.ok) throw new Error("expected the diver to be seated");
     expect(await waiverCount(db, result.bookingId)).toBe(0);
+  });
+});
+
+/**
+ * **A diver booked by phone hears what an online booker hears** (fourth UX
+ * review, item 3). A staff seating for a later day sends the booking
+ * confirmation with the waiver riding in it, one email; a seat on today's
+ * boat keeps the counter's path, the diver standing at the desk.
+ */
+describe("seatDiver confirmation (fourth UX review, item 3)", () => {
+  /** The SES message bodies sent so far, as text. */
+  const sentBodies = (send: ReturnType<typeof deliverableEmailEnv>) =>
+    send.mock.calls.map((call) => JSON.stringify(call[0]?.input ?? call[0]));
+
+  it("sends a later day's seat its confirmation, with the waiver inside it", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Phoned Pia", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "sent" });
+    // One seating, one email: the confirmation carries the waiver link.
+    expect(send).toHaveBeenCalledOnce();
+    expect(sentBodies(send)[0]).toContain("/waivers/");
+    expect(sentBodies(send)[0]).toContain(open.title);
+  });
+
+  it("still confirms a later day's seat when no waiver is owed", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+    await db
+      .update(tripRequirements)
+      .set({ requiresWaiver: false })
+      .where(eq(tripRequirements.tripId, open.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Regular Rex", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "not_needed" });
+    expect(send).toHaveBeenCalledOnce();
+    expect(sentBodies(send)[0]).not.toContain("/waivers/");
+  });
+
+  it("keeps the counter's path for today's boat: the waiver alone, no confirmation", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+    // The frozen test clock is 09:30 in the shop's zone; this boat leaves at 11:30.
+    const startsAt = new Date(nowDate().getTime() + 2 * 60 * 60 * 1000);
+    await db
+      .update(tripsTable)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
+      .where(eq(tripsTable.id, open.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Counter Cleo", email: DELIVERABLE_EMAIL },
+      entry: "walk_in",
+      refusals: "coarse",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "not_needed", waiver: "sent" });
+    expect(send).toHaveBeenCalledOnce();
+  });
+
+  it("reports not_sent, and hands the waiver link over, when the diver has no address", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "No Address Ned" },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "not_sent", waiver: "not_delivered" });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(result.waiverPath).toMatch(/^\/waivers\//);
+    expect(send).not.toHaveBeenCalled();
   });
 });
 

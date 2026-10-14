@@ -89,6 +89,7 @@
     "bookingRestoreRatio": "Couldn’t undo. The freed seat is taken and this session is at its instructor ratio. Assign another instructor, or use the wait list.",
     "bookingRestoreCancelled": "Couldn’t undo. This trip has been canceled. Reinstate the trip first, then add them back.",
     "diverAdded": "Diver added to the trip.",
+    "diverAddedConfirmed": "Diver added. Their confirmation is on its way.",
     "diverAddedWaiverUndelivered": "Diver added to the trip, but their waiver wasn’t emailed. Send it or share the link from their row below.",
     "diverAddedIdentityUnconfirmed": "Diver added to the trip, but the seat is held until you confirm it’s the same person. Confirm it on their row below.",
     "diverWaitlisted": "Diver added to the wait list.",

@@ -89,6 +89,7 @@
     "bookingRestoreRatio": "No se pudo deshacer: la plaza liberada está ocupada y la sesión está en su ratio de instructor. Asigna otro instructor o usa la lista de espera.",
     "bookingRestoreCancelled": "No se pudo deshacer. Esta salida está cancelada. Reactiva la salida y vuelve a añadirlo.",
     "diverAdded": "Buceador añadido a la salida.",
+    "diverAddedConfirmed": "Buceador añadido. Su confirmación va en camino.",
     "diverAddedWaiverUndelivered": "Buceador añadido a la salida, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
     "diverAddedIdentityUnconfirmed": "Buceador añadido a la salida, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila de abajo.",
     "diverWaitlisted": "Buceador añadido a la lista de espera.",

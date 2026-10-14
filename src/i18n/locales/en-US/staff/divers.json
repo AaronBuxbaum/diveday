@@ -390,6 +390,8 @@
   "notices": {
     "alreadyBooked": "This diver is already booked on that activity.",
     "booked": "Booked. Review it below, then create and send the invoice.",
+    "bookedConfirmed": "Booked, and their confirmation is on its way. Review it below, then create and send the invoice.",
+    "bookedConfirmedNoInvoice": "Booked, and their confirmation is on its way.",
     "bookedNoInvoice": "Booked.",
     "bookedWaiverUndelivered": "Booked, but their waiver wasn’t emailed. Open the trip’s Divers tab to send it or share the link.",
     "bookedIdentityUnconfirmed": "Booked, but the seat is held until you confirm it’s the same person. Open the trip’s Divers tab to confirm it.",

@@ -147,6 +147,13 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRestoreCancelled",
   },
   "diver-added": { form: "add-diver", tone: "success", key: "trips.notices.diverAdded" },
+  // Seated for a later day and told so: the confirmation an online booking
+  // gets went out (fourth UX review, item 3).
+  "diver-added-confirmed": {
+    form: "add-diver",
+    tone: "success",
+    key: "trips.notices.diverAddedConfirmed",
+  },
   // Seated, but the waiver never left the building. Warning rather than
   // success: the booking is real and nothing needs undoing, yet the staffer
   // still owes the diver a link (src/app/actions/seat-diver-surfaces.ts).

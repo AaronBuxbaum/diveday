@@ -55,6 +55,8 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
   invalid: { tone: "danger", key: "checkIn.notice.invalid" },
   "walkin-added": { tone: "success", key: "checkIn.notice.walkinAdded" },
+  // A walk-in seated on a later day's boat hears the booking confirmation.
+  "walkin-added-confirmed": { tone: "success", key: "checkIn.notice.walkinAddedConfirmed" },
   // The walk-in's *ordinary* outcome: added on a name alone, there is no
   // address to mail a waiver to, so the notice says the link is still owed.
   "walkin-added-waiver-undelivered": {

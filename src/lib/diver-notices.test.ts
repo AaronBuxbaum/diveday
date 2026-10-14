@@ -71,6 +71,15 @@ describe("the diver record's notice", () => {
     );
   });
 
+  it("says the diver was told when a later-day booking's confirmation went out (fourth UX review, item 3)", () => {
+    expect(resolve({ notice: "booked-confirmed", canRaiseInvoice: true })?.text).toBe(
+      t("divers.notices.bookedConfirmed"),
+    );
+    expect(resolve({ notice: "booked-confirmed" })?.text).toBe(
+      t("divers.notices.bookedConfirmedNoInvoice"),
+    );
+  });
+
   it("carries a card id only on a notice that names a box", () => {
     expect(resolve({ notice: "card-number-implausible", card: "card-1" })).toMatchObject({
       field: "sighted-identifier",
