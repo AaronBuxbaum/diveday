@@ -346,24 +346,12 @@ export async function disconnectShopStripeAccount(
 /**
  * When Stripe turned this shop's card payments off, while they are still off
  * on a connected account (batch 6 item 8); null otherwise. Today's owner row
- * reads it.
+ * reads it off the account the render already holds
+ * (`shopStripeAccountForRender`), never with a statement of its own.
  */
-export async function paymentsRestrictedSince(
-  db: DbExecutor,
-  shopId: string,
-): Promise<Date | null> {
-  const [row] = await db
-    .select({ at: shopStripeAccounts.paymentsRestrictedAt })
-    .from(shopStripeAccounts)
-    .where(
-      and(
-        eq(shopStripeAccounts.shopId, shopId),
-        isNull(shopStripeAccounts.disconnectedAt),
-        eq(shopStripeAccounts.chargesEnabled, false),
-      ),
-    )
-    .limit(1);
-  return row?.at ?? null;
+export function paymentsRestrictedSince(account: ShopStripeAccount | null): Date | null {
+  if (!account || account.disconnectedAt !== null || account.chargesEnabled) return null;
+  return account.paymentsRestrictedAt;
 }
 
 /**
