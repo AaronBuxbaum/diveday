@@ -774,6 +774,7 @@
     "intro": "Pay once, then book the dives as you go.",
     "metaDescription": "Prepaid dives at {shopName}: pay once, then book the dives as you go.",
     "dives": "{count, plural, one {# dive} other {# dives}}",
+    "diveIsATank": "One dive is one tank, so a two-tank trip uses two",
     "perDive": "{amount} a dive",
     "scopeAll": "Courses included",
     "scopeFunDives": "Courses not included",
@@ -905,6 +906,7 @@
     "logEntryWaiting": "After you dive, your log entry is waiting here.",
     "offlineCopy": "No signal: this is the copy your phone saved. Anything you change here needs signal.",
     "gearOnFile": "Your sizes are with the crew.",
+    "packageDivesUsed": "{line} · Uses {used} of your {count, plural, one {# package dive} other {# package dives}}, one per tank",
     "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
     "changesSizesLabel": "Sizes",
     "changesTanksLabel": "Tanks",
@@ -4165,6 +4167,9 @@
       "moneyOnline": "Your seat: {amount}, by card online.",
       "moneyDeposit": "Your seat: {deposit} by card online, then {balance} at the dock on {date}.",
       "moneyAtShop": "Your seat: {amount}, due at the shop.",
+      "moneyPartyOnline": "{seats, plural, one {# seat} other {# seats}}: {amount}, by card online.",
+      "moneyPartyDeposit": "{seats, plural, one {# seat} other {# seats}}: {deposit} by card online, then {balance} at the dock on {date}.",
+      "moneyPartyAtShop": "{seats, plural, one {# seat} other {# seats}}: {amount}, due at the shop.",
       "partyPaid": "{seats, plural, one {Paid by card: {amount}.} other {Paid by card for # seats: {amount}.}}"
     },
     "waitlistInvite": {

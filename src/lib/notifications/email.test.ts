@@ -1387,6 +1387,22 @@ describe("the confirmation's terms (ux review 2026-10-11, item 5)", () => {
     ).toMatch(/Tu plaza: .*120.*, con tarjeta en línea\./);
   });
 
+  it("says the party's figure once when the lead holds several seats (fourth UX review, item 5)", () => {
+    expect(
+      bookingConfirmationEmail({
+        ...base,
+        money: { due: "at_shop", amountCents: 28_500, currency: "usd", seats: 3 },
+      }).text,
+    ).toContain("3 seats: $285.00, due at the shop.");
+    expect(
+      bookingConfirmationEmail({
+        ...base,
+        locale: "es-ES",
+        money: { due: "at_shop", amountCents: 28_500, currency: "usd", seats: 3 },
+      }).text,
+    ).toMatch(/3 plazas: .*285.*, a pagar en el centro\./);
+  });
+
   it("states what the party paid by card, under the seat's own line (#2447)", () => {
     const email = bookingConfirmationEmail({
       ...base,
@@ -1413,7 +1429,7 @@ describe("the confirmation's terms (ux review 2026-10-11, item 5)", () => {
 
   it("says nothing of money, window or calendar when there is none", () => {
     const email = bookingConfirmationEmail(base);
-    expect(email.text).not.toContain("Your seat");
+    expect(email.text).not.toContain("Your seat:");
     expect(email.text).not.toContain("Free cancellation");
     expect(email.text).not.toContain("Add to calendar");
   });

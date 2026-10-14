@@ -3,6 +3,7 @@ import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
 import { log } from "@/lib/log";
+import type { ParticipantType } from "@/lib/participant-types";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
@@ -516,6 +517,11 @@ export type PartySeatClaim = {
    */
   waiverSigned: boolean;
   /**
+   * What the seat is (ADR 20261007-participant-types), so the lead's money
+   * line can price each unclaimed seat by its own fare (fourth UX review, item 5).
+   */
+  participantType: ParticipantType;
+  /**
    * A fresh claim capability for an unclaimed seat, or null for a claimed one
    * (nothing left to hand out) — and null when issuing failed, which the
    * panel renders as the seat's name with no link rather than an error.
@@ -591,6 +597,7 @@ export async function issuePartySeatClaims(
       seatName: seatName(row.person.fullName, row.booking),
       claimed: row.booking.claimedAt !== null,
       waiverSigned: waiverState(row.waiver, now) === "complete",
+      participantType: row.booking.participantType,
       claim: claimable
         ? await issueBookingCapability(db, {
             shopId: input.shopId,

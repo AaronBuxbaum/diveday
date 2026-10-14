@@ -282,6 +282,12 @@ export type ReadyPageData = {
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
   /**
+   * This seat is priced, unpaid, and the page cannot take a card for it: the
+   * money is owed at the shop, and `/ready` says how much, the party's unclaimed
+   * seats included (fourth UX review, item 5).
+   */
+  owesAtShop: boolean;
+  /**
    * What this seat is (ADR 20261007-participant-types): its price is its own,
    * and a snorkeler or a rider is not asked a diver's questions.
    */
@@ -626,6 +632,7 @@ export async function getReadyPageData(
     hotelPickupLocation: row.hotelPickupLocation,
     pickupTime: row.pickupTime,
     canPay,
+    owesAtShop: Boolean(perDiverPriceCents) && !settled && !canPay,
     cancelPreview,
     canCancelBooking,
     canAddSeat,

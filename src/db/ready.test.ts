@@ -107,6 +107,22 @@ describe("getReadyPageData", () => {
   // page renders it from — and `canCancelBooking` has to agree with
   // `selfCancelBooking`'s own pre-checks exactly, or the page offers a button
   // that can only come back refused.
+  /** Fourth UX review, item 5: a priced, unpaid seat with no card to take is owed at the shop. */
+  it("marks a priced seat the page cannot charge as owed at the shop, and a paid one not", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect((await getReadyPageData(db, bookingId))?.owesAtShop).toBe(true);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "cash",
+      providerRef: null,
+    });
+    expect((await getReadyPageData(db, bookingId))?.owesAtShop).toBe(false);
+  });
+
   /** UX review 2026-10-11, item 13: the page draws "Add a seat" only where it can work. */
   it("offers a seat to add on a booking that may lead one, never on a party member's seat", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
@@ -137,6 +153,8 @@ describe("getReadyPageData", () => {
     const owing = await getReadyPageData(db, bookingId);
     expect(owing?.canPay).toBe(true);
     expect(owing?.canAddSeat).toBe(false);
+    // A page that can take the card is not money owed at the shop.
+    expect(owing?.owesAtShop).toBe(false);
 
     await setBookingPayment(db, {
       shopId: shop.id,

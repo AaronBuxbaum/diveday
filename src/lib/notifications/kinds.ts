@@ -121,17 +121,31 @@ const meetingPointSchema = z.object({
 const centsSchema = z.number().int().min(1).max(100_000_000);
 
 /**
- * This seat's money as the booking form showed it (`seatMoneyTerms`): a code
- * and amounts in minor units, never a sentence.
+ * This seat's money as the booking form showed it (`seatMoneyTerms`), or the
+ * party's when the lead holds several seats (`partyMoneyTerms`, fourth UX
+ * review item 5): a code and amounts in minor units, never a sentence.
+ * `seats` is how many priced seats the figure covers; absent means one.
  */
+const seatsSchema = z.number().int().min(1).max(100).optional();
 const seatMoneySchema = z.discriminatedUnion("due", [
-  z.object({ due: z.literal("at_shop"), amountCents: centsSchema, currency: z.string().length(3) }),
-  z.object({ due: z.literal("online"), amountCents: centsSchema, currency: z.string().length(3) }),
+  z.object({
+    due: z.literal("at_shop"),
+    amountCents: centsSchema,
+    currency: z.string().length(3),
+    seats: seatsSchema,
+  }),
+  z.object({
+    due: z.literal("online"),
+    amountCents: centsSchema,
+    currency: z.string().length(3),
+    seats: seatsSchema,
+  }),
   z.object({
     due: z.literal("deposit"),
     depositCents: centsSchema,
     balanceCents: centsSchema,
     currency: z.string().length(3),
+    seats: seatsSchema,
   }),
 ]);
 

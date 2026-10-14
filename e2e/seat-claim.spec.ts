@@ -58,6 +58,10 @@ test.describe("seat claim links", () => {
     await page.getByRole("button", { name: "Book 2 seats" }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Orla/ })).toBeVisible();
 
+    // What the party owes at the shop, said once on the page the lead keeps,
+    // in the confirmation's own words (fourth UX review, item 5).
+    await expect(page.getByText("2 seats: $180.00, due at the shop.")).toBeVisible();
+
     // The organizer's panel: the second seat, unclaimed, with a shareable link.
     const panel = page.locator("section", {
       has: page.getByRole("heading", { name: "Your group’s seats" }),

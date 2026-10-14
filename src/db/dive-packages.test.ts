@@ -9,6 +9,8 @@ import {
 } from "./bookings";
 import {
   consumeEntitlementForBooking,
+  consumeEntitlementsForBooking,
+  countDivesSpentOnBooking,
   countSpendableDives,
   createDivePackage,
   deleteDivePackage,
@@ -224,6 +226,25 @@ describe("selling and spending a package", () => {
     ).resolves.toBeNull();
 
     expect(await countSpendableDives(db, shop.id, person.id)).toBe(9);
+  });
+
+  it("spends one dive per tank, and counts what the booking spent (H-115)", async () => {
+    // A package dive is one tank: a two-tank boat takes two of the five, and
+    // /ready says "Uses 2 of your 5 package dives" from this count.
+    const { db, shop, person, booking } = await sold({ diveCount: 5 });
+    expect(await countDivesSpentOnBooking(db, shop.id, booking.id)).toBe(0);
+    await consumeEntitlementsForBooking(db, {
+      shopId: shop.id,
+      personId: person.id,
+      bookingId: booking.id,
+      trip: { courseId: null, plannedDives: 2 },
+    });
+    expect(await countDivesSpentOnBooking(db, shop.id, booking.id)).toBe(2);
+    expect(await countSpendableDives(db, shop.id, person.id)).toBe(3);
+    // Another shop asking about the same booking id sees nothing.
+    expect(
+      await countDivesSpentOnBooking(db, "00000000-0000-4000-8000-000000000000", booking.id),
+    ).toBe(0);
   });
 
   it("releases nothing for a booking that consumed nothing", async () => {

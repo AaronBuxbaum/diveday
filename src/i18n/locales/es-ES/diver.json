@@ -774,6 +774,7 @@
     "intro": "Pagas una vez y reservas las inmersiones cuando quieras.",
     "metaDescription": "Inmersiones prepagadas en {shopName}: pagas una vez y reservas las inmersiones cuando quieras.",
     "dives": "{count, plural, one {# inmersión} other {# inmersiones}}",
+    "diveIsATank": "Una inmersión es un tanque, así que una salida de dos tanques usa dos",
     "perDive": "{amount} por inmersión",
     "scopeAll": "Incluye cursos",
     "scopeFunDives": "No incluye cursos",
@@ -905,6 +906,7 @@
     "logEntryWaiting": "Después de bucear, tu página de bitácora te espera aquí.",
     "offlineCopy": "Sin cobertura: esta es la copia que guardó tu teléfono. Para cambiar algo aquí necesitas cobertura.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
+    "packageDivesUsed": "{line} · Usa {used} de tus {count, plural, one {# inmersión del paquete} other {# inmersiones del paquete}}, una por tanque",
     "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
     "changesSizesLabel": "Tallas",
     "changesTanksLabel": "Tanques",
@@ -4165,6 +4167,9 @@
       "moneyOnline": "Tu plaza: {amount}, con tarjeta en línea.",
       "moneyDeposit": "Tu plaza: {deposit} con tarjeta en línea y {balance} en el muelle el {date}.",
       "moneyAtShop": "Tu plaza: {amount}, a pagar en el centro.",
+      "moneyPartyOnline": "{seats, plural, one {# plaza} other {# plazas}}: {amount}, con tarjeta en línea.",
+      "moneyPartyDeposit": "{seats, plural, one {# plaza} other {# plazas}}: {deposit} con tarjeta en línea y {balance} en el muelle el {date}.",
+      "moneyPartyAtShop": "{seats, plural, one {# plaza} other {# plazas}}: {amount}, a pagar en el centro.",
       "partyPaid": "{seats, plural, one {Pagado con tarjeta: {amount}.} other {Pagado con tarjeta por # plazas: {amount}.}}"
     },
     "waitlistInvite": {

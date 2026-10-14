@@ -263,6 +263,28 @@ export async function countSpendableDives(
 }
 
 /**
+ * How many package dives this booking spent: one per planned tank (H-115).
+ * `/ready` says it beside the money ("Uses 2 of your 5 package dives"), so a
+ * two-tank boat spending two is never a surprise.
+ */
+export async function countDivesSpentOnBooking(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(divePackageEntitlements)
+    .where(
+      and(
+        eq(divePackageEntitlements.shopId, shopId),
+        eq(divePackageEntitlements.bookingId, bookingId),
+      ),
+    );
+  return Number(row?.total ?? 0);
+}
+
+/**
  * Spend one dive on a booking, or report that there was none to spend.
  *
  * **Takes the executor it is given**, because the caller is `bookSpot`'s

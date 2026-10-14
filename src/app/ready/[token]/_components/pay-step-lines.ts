@@ -20,12 +20,16 @@ type Receipt = {
  * number a diver who bought a package asks, said where the money already is.
  * The caller counts it as `countSpendableDives` does, so a lapsed or spent dive
  * is never offered, and a diver who holds none hears nothing about packages.
+ *
+ * **A package dive is one tank** (H-115, fourth UX review item 9). When this
+ * booking spent some, the line says how many of what the diver held, and that
+ * it is one per tank, so a two-tank boat using two is never a surprise.
  */
 export function payStepLines(
   t: DiverTranslator,
   money: (cents: number, currency: string) => string,
   receipt: Receipt,
-  packageDivesLeft: number,
+  packageDives: { left: number; usedHere: number },
 ): { paidLine: string; depositBalanceLine: string | null } {
   const paid =
     receipt && receipt.amountCents !== null
@@ -33,9 +37,15 @@ export function payStepLines(
       : t("ready.checklistDetail.paymentDone");
   return {
     paidLine:
-      packageDivesLeft > 0
-        ? t("ready.packageDivesLeft", { line: paid, count: packageDivesLeft })
-        : paid,
+      packageDives.usedHere > 0
+        ? t("ready.packageDivesUsed", {
+            line: paid,
+            used: packageDives.usedHere,
+            count: packageDives.usedHere + packageDives.left,
+          })
+        : packageDives.left > 0
+          ? t("ready.packageDivesLeft", { line: paid, count: packageDives.left })
+          : paid,
     depositBalanceLine:
       receipt?.isDeposit && receipt.balanceDueCents > 0
         ? t("booking.paymentDepositBalance", {

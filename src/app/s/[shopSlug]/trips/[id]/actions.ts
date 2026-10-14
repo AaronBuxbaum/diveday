@@ -48,7 +48,7 @@ import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { type Notification, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
-import { isDiver, parsePartyTypes, rentsKind } from "@/lib/participant-types";
+import { isDiver, type ParticipantType, parsePartyTypes, rentsKind } from "@/lib/participant-types";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import {
   DIVER_NAME_MAX,
@@ -527,6 +527,7 @@ export async function bookSpot(
     ownLocale,
     readinessToken: readinessCapability?.token,
     chargesOnline: payAtBookingForGear,
+    partyTypes,
   });
 
   // Persist each diver's chosen gear (and nitrox request) the moment their
@@ -775,6 +776,7 @@ async function sendJoinMail(
     ownLocale,
     readinessToken,
     chargesOnline,
+    partyTypes,
   }: {
     shop: NonNullable<Awaited<ReturnType<typeof getShopBySlug>>>;
     trip: Awaited<ReturnType<typeof getTripWithBooked>>;
@@ -786,6 +788,8 @@ async function sendJoinMail(
     readinessToken: string | undefined;
     /** Whether this booking went to a checkout, the rule the form used. */
     chargesOnline: boolean;
+    /** What each seat of the party is, the lead's first: the money line sums them. */
+    partyTypes: readonly ParticipantType[];
   },
 ): Promise<void> {
   // One booking, one email (UX review 2026-10-11, item 7): the lead's waiver,
@@ -815,6 +819,7 @@ async function sendJoinMail(
           readinessUrl: readinessToken ? readinessEmailUrl(readinessToken) : undefined,
           waiver: leadWaiver,
           chargesOnline,
+          otherSeatTypes: partyTypes.slice(1),
         }),
       );
       confirmationSent = delivery.status === "sent";
@@ -1067,6 +1072,8 @@ function bookSpotConfirmation(input: {
   /** The lead's waiver, riding in the confirmation as its first step when one is owed. */
   waiver: { url: string; expiresAt: Date } | null;
   chargesOnline: boolean;
+  /** The party's other seats, all still the lead's at booking (fourth UX review, item 5). */
+  otherSeatTypes: readonly ParticipantType[];
 }): Notification {
   const { shop, trip, confirmed } = input;
   return {
@@ -1096,6 +1103,7 @@ function bookSpotConfirmation(input: {
       trip,
       course: trip.course ?? null,
       participantType: confirmed.booking.participantType,
+      partyTypes: input.otherSeatTypes,
       chargesOnline: input.chargesOnline,
       origin: publicAppUrl(),
     }),
