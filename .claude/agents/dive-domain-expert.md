@@ -45,11 +45,12 @@ Report findings ordered by severity. Each finding carries its evidence or is not
 Then why it is wrong at a real dock and the correct behavior. Mark each one "unsafe/incorrect" or
 "unrealistic but harmless"; style is out of scope.
 
-**When you are one of two runs** — a change to manifests, roll call, readiness, medical or
-erasure is reviewed twice, and the prompt gives you a framing, a dock operator or an attacker —
+**When you are one of two runs** — a change to manifests, roll call, readiness or cert gating,
+medical or waiver state, nitrox fills or erasure is reviewed twice, and the prompt gives you a framing, a dock operator or an attacker —
 stay inside it, and do not try to cover the other run's ground. A dock operator asks
 what this code lets happen with the boat leaving, the count called and a diver at the rail: a
-miscount, a diver who should be blocked and boards, a state that reads ready when it is not. An
+miscount, a diver who should be blocked and boards, a state that reads ready when it is not, and a copy that is stale (the printed sheet, the
+offline snapshot, a mark replayed after a later one). An
 attacker tries to break the rule rather than check it: the input, ordering or concurrent edit that
 gets a diver past a gate, hides a medical flag, or keeps data an erasure promised to remove. The
 caller takes the union of both runs (`docs/agents/working-rules.md`, "Hard rules"). You review;
