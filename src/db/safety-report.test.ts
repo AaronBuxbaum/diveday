@@ -81,6 +81,10 @@ describe("getSafetyMonth", () => {
     await db.delete(tripAssignments).where(eq(tripAssignments.tripId, crewed.tripId));
     const after = await getSafetyMonth(db, shop.id, FAR_PAST, FAR_FUTURE, shop.timezone);
     expect(after.noCrewDepartures.map((row) => row.tripId)).toEqual([crewed.tripId]);
+    // Review F1: "sailed" is a boat's word; the same day from the beach is not listed.
+    await db.update(trips).set({ diveMode: "shore" }).where(eq(trips.id, crewed.tripId));
+    const ashore = await getSafetyMonth(db, shop.id, FAR_PAST, FAR_FUTURE, shop.timezone);
+    expect(ashore.noCrewDepartures).toEqual([]);
   });
 
   it("reads nothing of another shop's", async () => {
