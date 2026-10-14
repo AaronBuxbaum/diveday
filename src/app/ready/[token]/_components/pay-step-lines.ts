@@ -85,7 +85,7 @@ export function atShopMoneyLine(
     ...partySeats.filter((seat) => !seat.claimed).map((seat) => seat.participantType),
   ];
   const terms = partyMoneyTerms(trip, trip.course, types, false);
-  if (!terms || terms.due !== "at_shop") return null;
+  if (terms?.due !== "at_shop") return null;
   const amount = formatMoneyCents(terms.amountCents, toShopCurrency(currency), locale);
   return terms.seats > 1
     ? t("notifications.bookingConfirmation.moneyPartyAtShop", { seats: terms.seats, amount })
