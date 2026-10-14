@@ -3850,7 +3850,7 @@ exports.handler = async () => {
       ],
     });
 
-    const auditTrail = new cloudtrail.Trail(this, "AuditTrail", {
+    const _auditTrail = new cloudtrail.Trail(this, "AuditTrail", {
       trailName: "diveday-audit-trail",
       bucket: auditTrailBucket,
       isMultiRegionTrail: true,
