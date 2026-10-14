@@ -42,8 +42,8 @@ import {
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-
 import { affectedSpecs, durations, estimateMs, stackBase, withinBudget } from "./e2e-affected.mjs";
+import { verifiedFile } from "./guard-push.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
@@ -196,6 +196,32 @@ export function appTreeKey(lsTree) {
     .split("\n")
     .filter((line) => line && !NOT_BUILT.test(line.slice(line.indexOf("\t") + 1)));
   return createHash("sha256").update(built.join("\n")).digest("hex");
+}
+
+/**
+ * Writes the stamp twice: the per-worktree file older guards read, and `<git common dir>/
+ * diveday-verified/<sha>`, which every worktree of the clone shares, so a push from any worktree
+ * (or from the shared checkout naming one) finds it (`scripts/guard-push.mjs`).
+ */
+export function writeStamps(
+  stamp,
+  {
+    git = gitReader(ROOT),
+    write = writeFileSync,
+    mkdir = (dir) => mkdirSync(dir, { recursive: true }),
+  } = {},
+) {
+  const text = `${JSON.stringify(stamp, null, 2)}\n`;
+  const own = gitPath(git, STAMP);
+  if (own) write(own, text);
+  const shared = verifiedFile(
+    git(["rev-parse", "--path-format=absolute", "--git-common-dir"]),
+    stamp.sha,
+  );
+  if (shared) {
+    mkdir(path.dirname(shared));
+    write(shared, text);
+  }
 }
 
 function gitPath(git, name) {
@@ -351,7 +377,7 @@ function main() {
     specs,
     leftToCi: left,
   };
-  writeFileSync(gitPath(git, STAMP), `${JSON.stringify(stamp, null, 2)}\n`);
+  writeStamps(stamp, { git });
   console.log(`verify:push: green. ${head.slice(0, 9)} may be pushed.`);
   if (left.length > 0) console.log(`Left to CI: ${left.join(" ")}`);
 }
