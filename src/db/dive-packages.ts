@@ -10,6 +10,7 @@ import {
   spendableCountForTrip,
 } from "@/lib/dive-packages";
 import type { AppDb, DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import {
   divePackageEntitlements,
   divePackages,
@@ -282,6 +283,21 @@ export async function countDivesSpentOnBooking(
       ),
     );
   return Number(row?.total ?? 0);
+}
+
+/**
+ * The two package numbers `/ready`'s Pay step says: what the diver still
+ * holds (`countSpendableDives`) and what this booking used (H-115).
+ */
+export async function packageDivesForBooking(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; bookingId: string },
+): Promise<{ left: number; usedHere: number }> {
+  const [left, usedHere] = await queryAll(db, [
+    () => countSpendableDives(db, input.shopId, input.personId),
+    () => countDivesSpentOnBooking(db, input.shopId, input.bookingId),
+  ]);
+  return { left, usedHere };
 }
 
 /**

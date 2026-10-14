@@ -1,4 +1,8 @@
 import type { DiverTranslator } from "@/i18n/messages";
+import { partyMoneyTerms } from "@/lib/deposits";
+import { formatMoneyCents } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
+import type { ParticipantType } from "@/lib/participant-types";
 
 /** What the Pay step needs from the booking's receipt. */
 type Receipt = {
@@ -53,4 +57,37 @@ export function payStepLines(
           })
         : null,
   };
+}
+
+/**
+ * **What is owed at the shop, said once** (fourth UX review, item 5). A
+ * pay-at-shop booking named no amount on the page the diver keeps, while
+ * every unclaimed party seat stays with the lead "exactly as booked". The
+ * same sentence as the lead's confirmation: "3 seats: $285.00, due at the
+ * shop". `types` is the lead's own seat first, then each seat still theirs; a
+ * claimed seat is its claimant's, on their own page. Null when nothing is
+ * owed at the shop.
+ */
+export function atShopMoneyLine(
+  t: DiverTranslator,
+  locale: string,
+  currency: string,
+  data: { owesAtShop: boolean; participantType: ParticipantType },
+  trip:
+    | (Parameters<typeof partyMoneyTerms>[0] & { course: Parameters<typeof partyMoneyTerms>[1] })
+    | null
+    | undefined,
+  partySeats: readonly { claimed: boolean; participantType: ParticipantType }[],
+): string | null {
+  if (!data.owesAtShop || !trip) return null;
+  const types = [
+    data.participantType,
+    ...partySeats.filter((seat) => !seat.claimed).map((seat) => seat.participantType),
+  ];
+  const terms = partyMoneyTerms(trip, trip.course, types, false);
+  if (!terms || terms.due !== "at_shop") return null;
+  const amount = formatMoneyCents(terms.amountCents, toShopCurrency(currency), locale);
+  return terms.seats > 1
+    ? t("notifications.bookingConfirmation.moneyPartyAtShop", { seats: terms.seats, amount })
+    : t("notifications.bookingConfirmation.moneyAtShop", { amount });
 }

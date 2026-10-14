@@ -20,7 +20,7 @@ import { monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
-import { formatMoneyScanned, formatTime } from "@/lib/format";
+import { formatTime } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { connectionForRoute } from "@/lib/observability/render-connection";
@@ -48,7 +48,7 @@ import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import { ShopPhotoStrip } from "./_components/ShopPhotoStrip";
 import { readSchedulePage } from "./_components/schedule-reads";
-import { shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
+import { seatPriceLabel, shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
 import {
   aboveStatedLevelIds,
   type ScheduleView,
@@ -298,11 +298,6 @@ export default async function SchedulePage({
    * false — an empty 24px band above the schedule on the commonest shop of
    * all, the one with no next boat.
    */
-  // The booking's own per-diver figure: a course session's course total,
-  // never the trip row's price (fourth UX review item 2, H-117).
-  const nextBoatSeatCents = nextBoat ? perDiverBookingPriceCents(nextBoat, nextBoat.course) : null;
-  const nextBoatPrice =
-    nextBoatSeatCents !== null ? formatMoneyScanned(nextBoatSeatCents, currency, locale) : null;
   const identityPanels = (quiet.quiet ? 1 : 0) + (nextBoat ? 1 : 0);
 
   const { currentMonth, lastTripMonth, prevMonthKey, nextMonthKey } = scheduleMonthRail({
@@ -454,7 +449,7 @@ export default async function SchedulePage({
                     title={nextBoat.title}
                     description={nextBoat.description}
                     spots={scheduleSeatState(t, nextBoat).text}
-                    price={nextBoatPrice}
+                    price={seatPriceLabel(nextBoat, currency, locale)}
                     skipped={skippedBoats}
                     firstSkippedTime={
                       firstSkippedBoat

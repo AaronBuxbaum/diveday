@@ -28,6 +28,23 @@ import type { WeekLedgerRow } from "./WeekLedger";
  * word has since been deleted resolves to null and renders nothing, which is
  * the same silence a departure that never wore one gets.
  */
+/**
+ * A departure's per-seat price as a schedule row shows it: the booking's own
+ * figure, so a course session reads the course total the booking charges and
+ * never the trip row's price (fourth UX review item 2, H-117). Null when
+ * nothing is priced.
+ */
+export function seatPriceLabel(
+  trip: Parameters<typeof perDiverBookingPriceCents>[0] & {
+    course: Parameters<typeof perDiverBookingPriceCents>[1];
+  },
+  currency: string,
+  locale: string,
+): string | null {
+  const cents = perDiverBookingPriceCents(trip, trip.course);
+  return cents !== null ? formatMoneyScanned(cents, currency, locale) : null;
+}
+
 export function weekLedgerRows({
   listedTrips,
   lenses,
@@ -72,7 +89,6 @@ export function weekLedgerRows({
     // them out: a course exists to create the certification, so repeating the
     // site's demand here would read as a bar on the very students it is for.
     const requirement = trip.course ? null : (requirementsByTrip.get(trip.id) ?? null);
-    const seatPrice = perDiverBookingPriceCents(trip, trip.course);
     const seats = scheduleSeatState(t, trip);
     return {
       id: trip.id,
@@ -115,7 +131,7 @@ export function weekLedgerRows({
       capacityTone: seats.tone,
       // A course session reads the course total the booking charges, never
       // the trip row's own figure (fourth UX review item 2, H-117).
-      price: seatPrice !== null ? formatMoneyScanned(seatPrice, currency, locale) : null,
+      price: seatPriceLabel(trip, currency, locale),
     };
   });
 }

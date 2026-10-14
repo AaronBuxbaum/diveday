@@ -10,7 +10,7 @@ import { CourseNextStepNote } from "@/app/ready/[token]/_components/CourseNextSt
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
 import { readyDeadLink } from "@/app/ready/[token]/_components/dead-link";
 import { PayStepBody } from "@/app/ready/[token]/_components/PayStepBody";
-import { payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
+import { atShopMoneyLine, payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
 import { resolvePaymentReceipt } from "@/app/ready/[token]/_components/payment-receipt";
 import { ReadyFitForm } from "@/app/ready/[token]/_components/ReadyFitForm";
 import { ReadyBookedPage, ReadyMastheadMeta } from "@/app/ready/[token]/_components/ReadyMasthead";
@@ -44,7 +44,7 @@ import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
-import { countDivesSpentOnBooking, countSpendableDives } from "@/db/dive-packages";
+import { packageDivesForBooking } from "@/db/dive-packages";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
@@ -58,7 +58,6 @@ import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { threadNextKey } from "@/i18n/thread-labels";
 import { nowDate } from "@/lib/clock";
-import { partyMoneyTerms } from "@/lib/deposits";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
@@ -358,43 +357,36 @@ async function DiverReadinessPage({
     // verified `readiness` capability above; the query only ever walks seats
     // led by this booking, so a member's own /ready renders no panel. One wave with
     // the rest: each needs only the verified booking, shop and person (review 2026-10-11).
-    const [
-      partySeatClaims,
-      tripReads,
-      paymentReceipt,
-      courseForms,
-      packageDivesLeft,
-      packageDivesUsedHere,
-    ] = await Promise.all([
-      issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
-      threadTripReads,
-      // What this booking has been charged. Read on every visit, because "what did
-      // I pay?" is a question the night before too — and it is what the Pay step's
-      // settled line says, now that the receipt panel that used to say it above
-      // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
-      //
-      // The emails line went with that panel. It claimed, in the minutes after a
-      // submit, that two messages were on their way — a third statement of the
-      // booking's status in one screenful, on a page whose status is now said once
-      // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
-      // thing the reader gets, which is the embed's confirmation and not this page.
-      resolvePaymentReceipt(
-        db,
-        shop.id,
-        bookingId,
-        // The two ways a diver arrives here straight off Stripe's hosted page:
-        // paying at booking (`bookSpot`'s success_url) and paying later
-        // (`payFromReady`'s). Both are the moment the webhook may still be in
-        // flight; every other arrival is not.
-        justBooked || pay === "paid",
-        data.trip.seatPriceCents,
-        toShopCurrency(shop.currency),
-      ),
-      // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
-      data.trip.course ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
-      countSpendableDives(db, shop.id, data.person.id),
-      countDivesSpentOnBooking(db, shop.id, bookingId),
-    ]);
+    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDives] =
+      await Promise.all([
+        issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
+        threadTripReads,
+        // What this booking has been charged. Read on every visit, because "what did
+        // I pay?" is a question the night before too — and it is what the Pay step's
+        // settled line says, now that the receipt panel that used to say it above
+        // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
+        //
+        // The emails line went with that panel. It claimed, in the minutes after a
+        // submit, that two messages were on their way — a third statement of the
+        // booking's status in one screenful, on a page whose status is now said once
+        // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
+        // thing the reader gets, which is the embed's confirmation and not this page.
+        resolvePaymentReceipt(
+          db,
+          shop.id,
+          bookingId,
+          // The two ways a diver arrives here straight off Stripe's hosted page:
+          // paying at booking (`bookSpot`'s success_url) and paying later
+          // (`payFromReady`'s). Both are the moment the webhook may still be in
+          // flight; every other arrival is not.
+          justBooked || pay === "paid",
+          data.trip.seatPriceCents,
+          toShopCurrency(shop.currency),
+        ),
+        // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
+        data.trip.course ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
+        packageDivesForBooking(db, { shopId: shop.id, personId: data.person.id, bookingId }),
+      ]);
     const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
     const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
 
@@ -435,51 +427,10 @@ async function DiverReadinessPage({
 
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
-    const { paidLine, depositBalanceLine } = payStepLines(t, money, paymentReceipt, {
-      left: packageDivesLeft,
-      usedHere: packageDivesUsedHere,
-    });
+    const { paidLine, depositBalanceLine } = payStepLines(t, money, paymentReceipt, packageDives);
 
-    /**
-     * **What is owed at the shop, said once** (fourth UX review, item 5). A
-     * pay-at-shop booking named no amount on the page the diver keeps, while
-     * every unclaimed party seat stays with the lead "exactly as booked". The
-     * same sentence as the lead's confirmation: "3 seats: $285.00, due at the
-     * shop". A claimed seat is its claimant's, on their own page.
-     */
-    const atShopTerms =
-      data.owesAtShop && fullTrip
-        ? partyMoneyTerms(
-            fullTrip,
-            fullTrip.course,
-            [
-              data.participantType,
-              ...partySeatClaims
-                .filter((seat) => !seat.claimed)
-                .map((seat) => seat.participantType),
-            ],
-            false,
-          )
-        : null;
-    const atShopLine =
-      atShopTerms && atShopTerms.due === "at_shop"
-        ? atShopTerms.seats > 1
-          ? t("notifications.bookingConfirmation.moneyPartyAtShop", {
-              seats: atShopTerms.seats,
-              amount: formatMoneyCents(
-                atShopTerms.amountCents,
-                toShopCurrency(shop.currency),
-                locale,
-              ),
-            })
-          : t("notifications.bookingConfirmation.moneyAtShop", {
-              amount: formatMoneyCents(
-                atShopTerms.amountCents,
-                toShopCurrency(shop.currency),
-                locale,
-              ),
-            })
-        : null;
+    // What is owed at the shop, said once (fourth UX review, item 5).
+    const atShopLine = atShopMoneyLine(t, locale, shop.currency, data, fullTrip, partySeatClaims);
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
     const stepLine = (step: ThreadStep): string | null =>

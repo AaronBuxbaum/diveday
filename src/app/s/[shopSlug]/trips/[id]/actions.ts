@@ -526,8 +526,7 @@ export async function bookSpot(
     bookings: outcome.bookings,
     ownLocale,
     readinessToken: readinessCapability?.token,
-    chargesOnline: payAtBookingForGear,
-    partyTypes,
+    money: { chargesOnline: payAtBookingForGear, partyTypes },
   });
 
   // Persist each diver's chosen gear (and nitrox request) the moment their
@@ -775,8 +774,7 @@ async function sendJoinMail(
     bookings,
     ownLocale,
     readinessToken,
-    chargesOnline,
-    partyTypes,
+    money: { chargesOnline, partyTypes },
   }: {
     shop: NonNullable<Awaited<ReturnType<typeof getShopBySlug>>>;
     trip: Awaited<ReturnType<typeof getTripWithBooked>>;
@@ -786,10 +784,12 @@ async function sendJoinMail(
     ownLocale: Awaited<ReturnType<typeof requestFirstHandLocale>>;
     /** The lead's `/ready` capability, when one was minted. */
     readinessToken: string | undefined;
-    /** Whether this booking went to a checkout, the rule the form used. */
-    chargesOnline: boolean;
-    /** What each seat of the party is, the lead's first: the money line sums them. */
-    partyTypes: readonly ParticipantType[];
+    money: {
+      /** Whether this booking went to a checkout, the rule the form used. */
+      chargesOnline: boolean;
+      /** What each seat of the party is, the lead's first: the money line sums them. */
+      partyTypes: readonly ParticipantType[];
+    };
   },
 ): Promise<void> {
   // One booking, one email (UX review 2026-10-11, item 7): the lead's waiver,

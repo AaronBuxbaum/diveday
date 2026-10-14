@@ -19,6 +19,7 @@ import { sendCourseSeatConfirmation, sendStaffSeatingConfirmation } from "./noti
 import { recordTripActivity, type TripActivityEntry } from "./operations";
 import { shops, trips } from "./schema";
 import { type SendRescheduleNoticesOptions, sendSeatMoveNotice } from "./trip-rescheduled";
+import { liveTrip } from "./trips-live";
 import {
   type IssueAndDeliverWaiverResult,
   issueJoinWaiverLink,
@@ -403,7 +404,7 @@ async function departsOnLaterShopDay(
     .select({ startsAt: trips.startsAt, timezone: shops.timezone })
     .from(trips)
     .innerJoin(shops, eq(shops.id, trips.shopId))
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
   if (!row) return false;
   return (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
-import { payStepLines } from "./pay-step-lines";
+import { atShopMoneyLine, payStepLines } from "./pay-step-lines";
 
 const t = diverTranslator("en-US");
 const money = (cents: number) => `$${cents / 100}`;
@@ -36,5 +36,28 @@ describe("payStepLines", () => {
         .depositBalanceLine,
     ).toContain("$50");
     expect(payStepLines(t, money, receipt, none).depositBalanceLine).toBeNull();
+  });
+});
+
+describe("atShopMoneyLine (fourth UX review, item 5)", () => {
+  const trip = { priceCents: 9_500, depositCents: null, snorkelerPriceCents: 4_000, course: null };
+  const owes = { owesAtShop: true, participantType: "diver" as const };
+  const seat = (claimed: boolean) => ({ claimed, participantType: "diver" as const });
+
+  it("says one seat's figure, due at the shop", () => {
+    expect(atShopMoneyLine(t, "en-US", "usd", owes, trip, [])).toBe(
+      "Your seat: $95.00, due at the shop.",
+    );
+  });
+
+  it("counts the lead's unclaimed party seats, and leaves a claimed seat to its claimant", () => {
+    expect(atShopMoneyLine(t, "en-US", "usd", owes, trip, [seat(false), seat(true)])).toBe(
+      "2 seats: $190.00, due at the shop.",
+    );
+  });
+
+  it("says nothing when nothing is owed at the shop", () => {
+    expect(atShopMoneyLine(t, "en-US", "usd", { ...owes, owesAtShop: false }, trip, [])).toBeNull();
+    expect(atShopMoneyLine(t, "en-US", "usd", owes, null, [])).toBeNull();
   });
 });
