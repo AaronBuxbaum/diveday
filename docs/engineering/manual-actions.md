@@ -154,7 +154,15 @@ this file is the checklist, not the argument.
              Text STOP to the number from your own phone: the STOP reply arrives, and an sms_webhook.reply_applied line is logged.
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped, and without the two-way setting a STOP is still honored by AWS but the app never hears of it.
 
-[14] Confirm the observability alarm subscription email
+[14] Delete the root user's access keys
+    when     once per account, and again if AWS Trusted Advisor's Root User Access Key check turns red
+    why      Only the root user can delete its own access keys, and this stack must never hold a root credential (see the cdk-bootstrap note). A root key is a password to the whole account with no MFA in front of it; nothing in DiveDay uses one.
+    run      Sign in to the AWS console as the root user (email and password, then MFA).
+             Account menu > Security credentials > Access keys: Deactivate each key, then Delete it.
+    verify   aws iam get-account-summary --query SummaryMap.AccountAccessKeysPresent -- 0 means no root key exists.
+    if not   If something breaks after deactivating, that thing was using root: give it its own IAM identity before deleting the key, rather than reactivating it.
+
+[15] Confirm the observability alarm subscription email
     when     three times per alert address -- once per alarm topic -- and again if the address changes
     why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13), both SES reputation alarms (infra/lib/email-stack.ts) and both uptime alarms (infra/lib/global-stack.ts) transition correctly and notify nobody, which is the failure mode the alarms exist to prevent.
     run      Open all three 'AWS Notification - Subscription Confirmation' mails sent to the alert address and click Confirm subscription in each.
@@ -169,7 +177,7 @@ this file is the checklist, not the argument.
 ## Verification
 
 ```text
-[15] Confirm the usage monitor reports numbers and reaches a real inbox
+[16] Confirm the usage monitor reports numbers and reaches a real inbox
     when     after minting the tokens, and after changing OPS_ALERT_EMAIL
     why      Every failure mode of this monitor is silent by construction. A wrong token, a revoked scope, a renamed provider field, or an unreachable alert mailbox all leave a cron that runs green and reports nothing, which is indistinguishable from a month with no cost problem.
     run      curl -s -H "Authorization: Bearer $CRON_SECRET" <webhookHost>/api/cron/usage | jq '.evaluations[] | {ceilingId, level, value}'

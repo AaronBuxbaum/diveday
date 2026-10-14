@@ -23,7 +23,8 @@
 // The contract is Claude Code's: JSON on stdin, exit 2 with the reason on stderr to block, exit 0
 // to stay out of the way. It fails open on anything it does not understand.
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -37,6 +38,26 @@ export const OVERRIDE = "DIVEDAY_PUSH_UNVERIFIED";
 const MIN_REASON = 10;
 
 const STAMP = "diveday-verified.json";
+
+/**
+ * **The stamp, keyed by sha, in the common git dir.** The per-worktree `diveday-verified.json`
+ * (`git rev-parse --git-path`) is invisible from any other worktree, and every thread's session
+ * cwd is the shared checkout while it builds in a worktree, so a push verified in the worktree
+ * was refused. `verify:push` now also writes `<git common dir>/diveday-verified/<sha>`, which
+ * every worktree of the clone shares; the old file is still read.
+ */
+export const STAMP_DIR = "diveday-verified";
+
+/** Where the sha-keyed stamp for `sha` lives under `commonDir`, or null for a non-sha. */
+export function verifiedFile(commonDir, sha) {
+  if (!commonDir || !/^[0-9a-f]{7,64}$/.test(sha ?? "")) return null;
+  return path.join(commonDir, STAMP_DIR, sha);
+}
+
+function unquote(word) {
+  const bare = word.replace(/^["']|["']$/g, "");
+  return bare === "~" || bare.startsWith("~/") ? path.join(os.homedir(), bare.slice(1)) : bare;
+}
 
 function segments(command) {
   return command
@@ -61,11 +82,16 @@ export function parsePush(segment) {
   const tokens = rest.split(/\s+/);
   if (tokens[0] !== "git") return null;
   let i = 1;
-  while (tokens[i] === "-C" || tokens[i] === "-c") i += 2;
+  let dir = null;
+  while (tokens[i] === "-C" || tokens[i] === "-c") {
+    if (tokens[i] === "-C" && tokens[i + 1]) dir = unquote(tokens[i + 1]);
+    i += 2;
+  }
   if (tokens[i] !== "push") return null;
   const after = tokens.slice(i + 1);
   return {
     reason,
+    dir,
     flags: after.filter((token) => token.startsWith("-")),
     positional: after.filter((token) => !token.startsWith("-")),
   };
@@ -73,13 +99,24 @@ export function parsePush(segment) {
 
 /**
  * Why `command` may not run, or null. `read` answers from git: `head()`, `branch()`,
- * `sha(ref)`, `remoteHas(sha)` and `stamp()` (the verified sha, or null).
+ * `sha(ref)`, `remoteHas(sha)`, `stamp()` (the per-worktree verified sha, or null) and
+ * `verified(sha)` (the sha-keyed stamp). It is either those answers or a function from a
+ * directory to them: the push is read in the directory the command names (a leading
+ * `cd <dir> &&`, or `git -C <dir>`), resolved from `cwd`, the session's own.
  */
-export function pushViolation(command, read) {
+export function pushViolation(command, read, cwd = ".") {
   if (typeof command !== "string") return null;
+  const at = typeof read === "function" ? read : () => read;
+  let dir = cwd;
   for (const segment of segments(command)) {
+    const cd = segment.match(/^cd\s+("[^"]*"|'[^']*'|\S+)$/);
+    if (cd) {
+      dir = path.resolve(dir, unquote(cd[1]));
+      continue;
+    }
     const push = parsePush(segment);
     if (!push) continue;
+    const here = at(push.dir ? path.resolve(dir, push.dir) : dir);
     if (push.reason !== null) {
       if (push.reason.length >= MIN_REASON) continue;
       return `\`${OVERRIDE}\` needs a reason a reviewer can read (at least ${MIN_REASON} characters), in quotes: \`${OVERRIDE}="why this push skips verify:push" ${segment.replace(/^.*?git /, "git ")}\`.`;
@@ -92,10 +129,10 @@ export function pushViolation(command, read) {
     const named = refspecs.map((spec) => spec.split(":")[0].replace(/^\+/, ""));
     const sources = named.length > 0 ? named : ["HEAD"];
     for (const source of sources) {
-      const sha = source === "HEAD" || source === read.branch() ? read.head() : read.sha(source);
+      const sha = source === "HEAD" || source === here.branch() ? here.head() : here.sha(source);
       if (!sha) continue;
-      if (read.remoteHas(sha)) continue;
-      if (read.stamp() === sha) continue;
+      if (here.remoteHas(sha)) continue;
+      if (here.verified?.(sha) || here.stamp?.() === sha) continue;
       return (
         `\`${segment}\` pushes ${sha.slice(0, 9)}, which \`pnpm verify:push\` has not passed. ` +
         "Run it (in the background: it builds and runs the Playwright specs your diff reaches), " +
@@ -131,6 +168,11 @@ export function gitAnswers(cwd) {
         : null,
     remoteHas: (sha) =>
       Boolean(git(["branch", "-r", "--contains", sha, "--format=%(refname:short)"])),
+    verified: (sha) => {
+      const common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+      const file = verifiedFile(common, sha);
+      return file !== null && existsSync(file);
+    },
     stamp: () => {
       const file = git(["rev-parse", "--git-path", STAMP]);
       if (!file) return null;
@@ -151,7 +193,7 @@ async function main() {
   const command = parsed.tool_input?.command;
   if (typeof command !== "string" || !/\bgit\b[^\n]*\bpush\b/.test(command)) return;
   const cwd = parsed.cwd ?? process.cwd();
-  const reason = pushViolation(command, gitAnswers(cwd));
+  const reason = pushViolation(command, (dir) => gitAnswers(dir), cwd);
   const override = overrideReason(command);
   if (!reason && override) {
     recordOverride("guard-push", override, {
