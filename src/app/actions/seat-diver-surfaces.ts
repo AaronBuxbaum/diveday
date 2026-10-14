@@ -91,8 +91,8 @@ export type SeatSurface = {
    */
   seatedIdentityUnconfirmedNotice: string;
   /**
-   * The same seating, when the departure is on a later day and the diver was
-   * sent the booking confirmation (`SeatDiverConfirmation`'s `sent`, fourth UX
+   * The same seating, when the departure has not sailed (or, at the counter,
+   * is on a later day) and the diver was sent the booking confirmation (`SeatDiverConfirmation`'s `sent`, fourth UX
    * review item 3). "Diver added to the trip." left the staffer guessing
    * whether a phone booker had been told anything; this says they were.
    */

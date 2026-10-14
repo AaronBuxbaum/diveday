@@ -5,6 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { ParticipantType } from "@/lib/participant-types";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
+import { hasSailed } from "@/lib/trips";
 import {
   type BookingOutcome,
   createBooking,
@@ -137,12 +138,14 @@ export type SeatDiverWaiver = "not_needed" | "sent" | "not_delivered" | "failed"
  * Whether the diver was sent the booking confirmation (fourth UX review,
  * item 3), so the door can say "Their confirmation is on its way."
  *
- * - `sent` — the departure is on a later day than today at the shop, and the
- *   confirmation (with the waiver riding in it when one was owed) went out.
+ * - `sent` — the departure has not sailed (at the walk-in counter, it is on a
+ *   later day than today at the shop), and the confirmation (with the waiver
+ *   riding in it when one was owed) went out.
  * - `not_sent` — it was owed and could not go: no address, no provider, a
  *   provider error. The door's ordinary notice stands.
- * - `not_needed` — a seat for today (the diver is at the counter), or a held
- *   seat, which is owed nothing until its identity is confirmed (#2125).
+ * - `not_needed` — the counter's seat on today's boat (the diver is standing
+ *   there), a departure that has sailed, or a held seat, which is owed nothing
+ *   until its identity is confirmed (#2125).
  */
 export type SeatDiverConfirmation = "sent" | "not_sent" | "not_needed";
 
@@ -279,16 +282,18 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     }
   };
 
-  // **A later day gets the confirmation an online booking gets** (fourth UX
-  // review, item 3): a phone booking, a seat from a date request, a regular
-  // put on next Saturday. The waiver rides in it as its first step, the way
-  // `bookSpot`'s does, so one seating is still one email; when the
-  // confirmation cannot go, the waiver goes on its own the old way. A seat for
-  // today keeps the counter's path (the diver is standing there), and a held
-  // seat is owed nothing until its identity is confirmed (#2125).
-  const laterDay =
-    !outcome.identityUnconfirmed && (await departsOnLaterShopDay(db, input.shopId, input.tripId));
-  if (laterDay) {
+  // **A staff seating gets the confirmation an online booking gets** (fourth
+  // UX review, item 3): a phone booking (the 1:30 booked at 9 AM included), a
+  // seat from a date request, a regular put on next Saturday. The waiver
+  // rides in it as its first step, the way `bookSpot`'s does, so one seating
+  // is still one email; when the confirmation cannot go, the waiver goes on
+  // its own the old way. Only the walk-in counter knows the diver is standing
+  // at the desk, so only its seat on today's boat keeps the counter's path;
+  // a held seat is owed nothing until its identity is confirmed (#2125).
+  const confirms =
+    !outcome.identityUnconfirmed &&
+    (await departureOwesConfirmation(db, input.shopId, input.tripId, input.entry));
+  if (confirms) {
     try {
       const link = await issueJoinWaiverLink(db, input.shopId, outcome.bookingId);
       const delivery = await sendStaffSeatingConfirmation(db, input.shopId, outcome.bookingId, {
@@ -390,14 +395,16 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
 }
 
 /**
- * Whether the departure starts on a later calendar day than today, both read
- * in the shop's own time zone: a seat for tomorrow's boat is a booking to
- * confirm, a seat on today's is a diver at the counter.
+ * Whether a staff seating on this departure is a booking to confirm: any
+ * departure that has not sailed, except the walk-in counter's seat on today's
+ * boat (both days read in the shop's own time zone), where the diver is
+ * standing at the desk. The door says which it is; the calendar never guesses.
  */
-async function departsOnLaterShopDay(
+async function departureOwesConfirmation(
   db: AppDb,
   shopId: string,
   tripId: string,
+  entry: SeatDiverEntry,
   now: Date = nowDate(),
 ): Promise<boolean> {
   const [row] = await db
@@ -406,7 +413,8 @@ async function departsOnLaterShopDay(
     .innerJoin(shops, eq(shops.id, trips.shopId))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
-  if (!row) return false;
+  if (!row || hasSailed(row.startsAt, now)) return false;
+  if (entry === "roster") return true;
   return (
     calendarDateInTimezone(row.startsAt, row.timezone) > calendarDateInTimezone(now, row.timezone)
   );

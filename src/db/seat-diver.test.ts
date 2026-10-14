@@ -377,9 +377,10 @@ describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
 
 /**
  * **A diver booked by phone hears what an online booker hears** (fourth UX
- * review, item 3). A staff seating for a later day sends the booking
- * confirmation with the waiver riding in it, one email; a seat on today's
- * boat keeps the counter's path, the diver standing at the desk.
+ * review, item 3). A staff seating for a departure that has not sailed sends
+ * the booking confirmation with the waiver riding in it, one email; only the
+ * walk-in counter's seat on today's boat keeps the counter's path, the diver
+ * standing at the desk.
  */
 describe("seatDiver confirmation (fourth UX review, item 3)", () => {
   /** The SES message bodies sent so far, as text. */
@@ -448,6 +449,52 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
     });
 
     expect(result).toMatchObject({ ok: true, confirmation: "not_needed", waiver: "sent" });
+    expect(send).toHaveBeenCalledOnce();
+  });
+
+  /**
+   * Dive-domain review F2 of layer r4-1: "Can you get me on the 1:30?" at
+   * 9 AM is the commonest phone booking a shop takes. Only the walk-in counter
+   * knows the diver is standing there; every other door confirms any
+   * departure that has not sailed.
+   */
+  it("confirms a phoned-in seat on today's boat", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+    const startsAt = new Date(nowDate().getTime() + 4 * 60 * 60 * 1000);
+    await db
+      .update(tripsTable)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
+      .where(eq(tripsTable.id, open.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Phoned Paz", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "sent" });
+    expect(send).toHaveBeenCalledOnce();
+    expect(sentBodies(send)[0]).toContain("/waivers/");
+  });
+
+  it("confirms a counter seat on a later day's boat", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Counter Cato", email: DELIVERABLE_EMAIL },
+      entry: "walk_in",
+      refusals: "coarse",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "sent" });
     expect(send).toHaveBeenCalledOnce();
   });
 

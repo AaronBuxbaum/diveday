@@ -205,7 +205,7 @@ async function seat(
   // `showsPersonDetail`) — the link the waiver notice sends a staffer to fetch
   // is one of the things the confirm releases.
   //
-  // Last, a seat for a later day whose confirmation went out says so (fourth
+  // Last, a seat whose confirmation went out says so (fourth
   // UX review, item 3): "Diver added. Their confirmation is on its way."
   const notice = result.identityUnconfirmed
     ? surface.seatedIdentityUnconfirmedNotice
