@@ -27,7 +27,19 @@ provider-specific folders are adapters and must not introduce unique requirement
 - Iterate with one focused test and quiet output. The whole suite belongs to CI; the shell guard
   refuses a bare `pnpm test` / `pnpm e2e` / `pnpm check`.
 - Redirect a long run to a file and read the failing part; never pipe it through `tail`.
-- Send a broad search or a verbose run to a subagent; the `Explore` agent does not load this file.
+
+## Delegating
+
+The full statement: [docs/agents/working-rules.md](docs/agents/working-rules.md#delegating).
+
+- One-file change: no plan, no subagent.
+- Multi-file change: plan first.
+- Cross-area change: at most three parallel subagents, each with an objective, an output format
+  and a boundary.
+- Scouting, search, triage, labelling, screenshot capture and test runs go to a subagent on sonnet
+  at low effort (`Explore`, which does not load this file); design, judging and safety-critical
+  code stay on the main model.
+- A worker writes its full result to a file and hands back the path plus at most ten lines.
 
 ## Commands
 
@@ -60,14 +72,12 @@ when you open the file.
 | Public pages (landing, sign-in) | `src/app/` |
 | A shop's diver-facing pages (schedule, booking, courses) | `src/app/s/[shopSlug]/**` — no auth anywhere in it; paths from `src/lib/public-routes.ts`. `/shop/**` is staff, without exception |
 | An unknown public URL (a 404 that is really a 404) | refused in `src/proxy.ts` before the shell — the URL's shape first, then one existence read where no closed list settles it; a page's own `notFound()` is only the second layer. An unrecognised shape passes through untouched, so `src/app/edge-refusal-coverage.test.ts` fails on a dynamic public route not taught to `publicRouteShape` |
-| Where a diver can go on a shop's public pages | `src/components/PublicShopNav.tsx`, assembled in `src/app/s/[shopSlug]/layout.tsx` — never a per-page cross-link |
 | Bearer-token pages (waiver signing, trip-prep "ready", recap, email verify, password reset, staff calendar feed) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]`, `src/app/verify/[token]`, `src/app/reset-password/[token]`, `src/app/calendar/[token]` — the URL *is* the capability |
 | Account lifecycle (sign-up welcome/verify, forgot/reset password) | `src/app/onboard/`, `src/app/forgot-password/`; tokens in `src/db/account-tokens.ts` / `src/lib/account-tokens.ts`; accounts in `src/db/user-accounts.ts` |
 | Course pages (public content / staff roster + editor) | `src/app/s/[shopSlug]/courses/**` and `src/app/shop/[shopSlug]/courses/**`; content shapes in `src/lib/courses.ts`; templates in `src/content/course-templates.ts`; progression order in `src/db/courses.ts` |
 | The staff schedule builder (add / move / copy / remove a departure) | `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx` + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`, reached through the `@/db/trips` barrel. The one place a trip is created |
 | A repeating trip (every Saturday, Mon+Thu, daily) | `src/lib/recurrence.ts` (pure cadence math), `src/db/trips-series.ts` (materialization), nightly roll at `src/app/api/cron/trip-series/` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
-| Where staff can go (the sidebar, the phone tab bar, ⌘K "Go to") | one registry of sections, `src/lib/staff-destinations.ts`; two consumers — `src/components/ShopSectionNav.tsx`, `src/components/search/CommandPalette.tsx` |
 | SMS delivery receipts | `src/lib/notifications/sms-events.ts` + `src/app/api/webhooks/sms/`; runbook [docs/engineering/sms-delivery-receipts-runbook.md](docs/engineering/sms-delivery-receipts-runbook.md) |
 | Environment variables — adding one, or asking who supplies one | one registry, `config/env-registry.mjs`; everything else is generated from it (ADR 20260812-env-provenance-registry) |
 | AWS credentials, and what deploying still leaves for a human | §16 and §17 of `infra/lib/infra-stack.ts`; [docs/engineering/infrastructure-runbook.md](docs/engineering/infrastructure-runbook.md). **Two stacks, one region knob**: mail is its own stack (`infra/lib/email-stack.ts`) and every region is `config/aws-regions.mjs` |
@@ -75,10 +85,6 @@ when you open the file.
 | Email: sending and delivery outcomes | `src/lib/notifications/` + `src/app/api/webhooks/ses/`; [docs/engineering/ses-email-runbook.md](docs/engineering/ses-email-runbook.md) |
 | The Today work queue, the day spine, the close-out | `src/lib/today.ts` / `src/db/today.ts`, `src/lib/closeout.ts` / `src/db/closeout.ts`; the spine in `_components/today/` |
 | Buddy teams (who dives with whom, and the split-team alert) | `src/db/buddy-pairs.ts`, the alert in `src/lib/manifests.ts`, words in `src/i18n/buddy-labels.ts`, the builder on `src/app/shop/[shopSlug]/trips/[id]/manifest/` |
-| How demanding a dive site is | `dive_sites.difficulty_level`, codes in `src/lib/dive-site-difficulty.ts`, words in `src/i18n/dive-site-labels.ts` |
-| The four lines every staff page opens with (session, shop, tenant, permission) | `requireShopSurface` in `src/lib/session.ts`; every refusal *throws* |
-| Telling a staffer what just happened (the `?notice=` redirect) | `src/lib/staff-notices.ts` — `noticeUrl`, `noticeFromParam`, `shopPath`; never hand-build the string |
-| Readiness words and tone ("Blocked" / "Ready", everywhere) | `src/i18n/readiness-labels.ts` |
 | DB schema (source of truth — never read `drizzle/`) | `src/db/schema/`, by Grep and range |
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
 | Queries and seed data | `src/db/shops.ts`; barrels `src/db/trips.ts` and `src/db/seed.ts` — import from the barrel, edit the sibling; demo data is a new `src/db/seed-<scenario>.ts` |
@@ -105,10 +111,7 @@ when you open the file.
 | Staff calendar subscriptions (iCalendar feeds) | `src/features/calendar-sync/` + `src/app/calendar/[token]/route.ts`; staff UI at `src/app/shop/[shopSlug]/settings/calendar/` |
 | Auth: session, gates, edge check | `src/lib/auth.ts` / `auth-secret.ts` / `authz.ts` + `session.ts`; edge layer `src/proxy.ts` |
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |
-| Design tokens; form/button/control/panel wrappers | `src/app/globals.css` (semantic only); `src/components/ui/` — `form.tsx`, `button.ts`, `card.tsx` (`SectionCard`), `tone.ts`, `typography.ts` |
-| Paging a staff list | `src/components/Pager.tsx` + `offsetPage` in `src/db/paging.ts`; keyset cursors in `src/db/cursor.ts` are the one exception |
 | Why a route paints instantly (or doesn't) | its `loading.tsx` and `export const instant = true` (ADR 20260804-instant-navigation; the **instant-navigation** skill) |
-| "What should this code do?" | Read `foo.test.ts` before `foo.ts` — tests are the contract |
 | A design for a surface that does not exist yet | [docs/design/design-artifacts.md](docs/design/design-artifacts.md) first; canvases in `docs/design/canvases/` |
 | An idea, question, risk, or cleanup you are **not** doing in this change | a GitHub issue labelled `needs-triage` ([docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up"), `waiting-on-external` when nobody here can move it. Committed work lives in `docs/product/features/`, human-owned calls in `docs/product/human-decisions/README.md` |
 
@@ -142,6 +145,9 @@ Other sessions share this checkout. The full statement of each rule:
 - A unique branch slug and an early draft PR naming owned paths, schema changes and ADR ids; ADR
   ids are `YYYYMMDD-short-slug`, never the next integer. Trial-merge the target before calling
   work complete.
+- **A thread that steers never builds**: each ticket or stack layer goes to a fresh worker with a
+  spec from [docs/agents/spec-template.md](docs/agents/spec-template.md) and hands back a path; a
+  thread past ~150k context writes a state note and retires.
 - **Stack everything, across threads, and run one PR's CI at a time**: cut every branch from the
   newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
   the stack pushes one layer at a time, because concurrent runs cancel each other (**stacked-prs**).
@@ -165,9 +171,10 @@ One line each, with what enforces it; the full statement and its incident:
 - **New runtime dependency → ADR** (`pnpm check:adrs`); **new domain concept → glossary**
   (`pnpm check:glossary`); **invalidated doc → fixed in the same PR** (`pnpm check:docs`).
 - **Safety-critical surfaces** (manifests, roll call, readiness, cert gating, medical, erasure) get
-  boring code, adversarial tests and a `dive-domain-expert` review; **security-sensitive changes**
-  (auth, tokens, personal or medical data, export/import) a `security-reviewer` review; the PR body
-  names both (`scripts/check-pr-body.mjs`).
+  boring code, adversarial tests and a `dive-domain-expert` review, two differently framed runs
+  for all but cert gating; **security-sensitive changes** (auth, tokens, personal or medical
+  data, export/import) a `security-reviewer` review; the PR body names both
+  (`scripts/check-pr-body.mjs`).
 - **`app → features → lib/db`, one way; routes stay thin** (`pnpm check:architecture`).
 - **Tests travel with behavior**: a bug fix starts with a failing regression test; every important
   flow gets an `e2e/` spec and every important surface a capture in `e2e/visual.spec.ts`
