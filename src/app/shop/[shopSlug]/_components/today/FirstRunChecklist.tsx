@@ -3,6 +3,7 @@ import { Copyable } from "@/components/Copyable";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { DoorChevron, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * A new, real shop's Today is otherwise an empty work queue. This replaces
@@ -283,7 +284,7 @@ export function FirstRunChecklist({
           done={releaseDone}
           doneLabel={copy.releaseDone}
           doneBadge={copy.doneBadge}
-          href={`/shop/${shopSlug}/waivers#release`}
+          href={`${shopPath(shopSlug, "waivers")}#release`}
           actionLabel={copy.releaseAction}
           primary={nextStep === "release"}
         />

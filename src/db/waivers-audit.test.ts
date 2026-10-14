@@ -157,6 +157,103 @@ describe("listWaiverIntegrityAudit search and views", () => {
     expect(page.total).toBe(page.entries.length);
   });
 
+  /** A record on a medical hold, inserted as a paper or status-only hold is: no stored answers. */
+  async function heldRecord(
+    ctx: Awaited<ReturnType<typeof waiverContext>>,
+    fullName: string,
+    outcome: "open" | "cleared" | "declined" = "open",
+  ) {
+    const { db, shop, template } = ctx;
+    const [diver] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
+    if (!diver) throw new Error("diver insert failed");
+    const answered = {
+      medicalClearanceEvaluatedOn: "2026-07-17",
+      medicalClearancePhysicianName: "Dr. Imani Okafor",
+    };
+    const [record] = await db
+      .insert(waiverRecords)
+      .values({
+        shopId: shop.id,
+        bookingId: null,
+        personId: diver.id,
+        templateId: template.id,
+        templateTitle: template.title,
+        templateVersion: template.version,
+        templateBody: template.body,
+        status: "medical_review",
+        medicalReviewRequired: true,
+        medicalAnswers: null,
+        tokenHash: `held-${fullName}`,
+        expiresAt: now,
+        signedAt: now,
+        ...(outcome === "cleared"
+          ? { ...answered, medicalClearedAt: now, medicalClearedByPersonId: diver.id }
+          : {}),
+        ...(outcome === "declined"
+          ? {
+              ...answered,
+              medicalClearanceDeclinedAt: now,
+              medicalClearanceDeclinedByPersonId: diver.id,
+            }
+          : {}),
+      })
+      .returning({ id: waiverRecords.id });
+    if (!record) throw new Error("record insert failed");
+    return record.id;
+  }
+
+  /**
+   * **The hold is the status, not the answers** (dive-domain-expert review of
+   * #2579, finding 1). A paper or status-only hold stores no questionnaire and
+   * still refuses boarding, so the log must carry it as a hold in both views:
+   * a row that reads as a plain signature here is a diver nobody chases.
+   */
+  it("carries a hold with no stored answers as a hold, under All and under Medical holds", async () => {
+    const ctx = await waiverContext();
+    const id = await heldRecord(ctx, "Quorvane Paper-Hold");
+    for (const view of [undefined, "medical"] as const) {
+      const page = await listWaiverIntegrityAudit(ctx.db, ctx.shop.id, {
+        query: "Quorvane",
+        ...(view ? { view } : {}),
+      });
+      expect(page.entries.map((entry) => entry.id)).toEqual([id]);
+      expect(page.entries[0]).toMatchObject({
+        status: "medical_review",
+        flaggedPrompts: [],
+        medicalClearedAt: null,
+        medicalClearanceDeclinedAt: null,
+      });
+    }
+  });
+
+  /**
+   * A cleared diver stays in the medical history (the record keeps
+   * `medical_review` on clearance, `isCleanCompletion`), but carries the
+   * clearance so the log can say so rather than calling them flagged
+   * (dive-domain-expert review of #2579, finding 2).
+   */
+  it("keeps a physician-cleared or refused record under Medical holds, carrying its outcome", async () => {
+    const ctx = await waiverContext();
+    const cleared = await heldRecord(ctx, "Thaddeus Cleared", "cleared");
+    const declined = await heldRecord(ctx, "Thaddeus Declined", "declined");
+    const page = await listWaiverIntegrityAudit(ctx.db, ctx.shop.id, {
+      query: "Thaddeus",
+      view: "medical",
+    });
+    const byId = new Map(page.entries.map((entry) => [entry.id, entry]));
+    expect(byId.get(cleared)).toMatchObject({
+      status: "medical_review",
+      medicalClearedAt: now,
+      medicalClearanceDeclinedAt: null,
+    });
+    expect(byId.get(declined)).toMatchObject({
+      status: "medical_review",
+      medicalClearedAt: null,
+      medicalClearanceDeclinedAt: now,
+    });
+    expect(page.total).toBe(2);
+  });
+
   it("combines a search with a view", async () => {
     const ctx = await waiverContext();
     await importedRecord(ctx, "Zephyrine Unsealed");

@@ -317,7 +317,8 @@
   20260827-self-guided-departures).
 - **Integrity-sealed waiver** — a signed waiver whose immutable metadata and template snapshot have
   a matching server-sealed HMAC. `unsealed` means legacy or imported evidence has no seal yet;
-  `invalid` means staff must stop and investigate.
+  `invalid` means staff must stop and investigate. The signed records' **Can’t be checked** view
+  lists the `unsealed` ones.
 
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, prep needs,
@@ -1110,6 +1111,14 @@
   within a year of signing. A medical-review record carries only once a **physician clearance** is
   recorded against it — until then it never does — and a stale or old-version signature falls back to
   "send a fresh link." See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
+- **Medical hold** — a signed release the medical questionnaire **referred** to a physician and no
+  physician has cleared: an open referral, or one the physician refused. It is the record's status
+  (`medical_review`), never the stored answers, because a paper or status-only hold stores none and
+  still refuses boarding (`isUnresolvedMedicalHold`, `isStandingRefusal` in `src/lib/waivers.ts`).
+  Only a **physician clearance** ends it, or a clean later release standing over it (below). A
+  cleared record keeps its status, so the signed records' **Medical holds** view lists every
+  referral, and each row says where it stands: Waiting on physician, Cleared by physician, or Not
+  cleared.
 - **Physician clearance** — the shop recording that a physician evaluated a diver the medical
   questionnaire had **referred**, and cleared them to dive. It is the only thing that clears that
   `medical_review` record itself (a clean later release can stand over it, below), and it is a

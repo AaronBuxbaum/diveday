@@ -39,7 +39,7 @@ import { formatShortDate, formatTime } from "@/lib/format";
  * block in place — the release version the signature was given against, the
  * two records it belongs to, and any flagged medical prompt. That block is
  * where the medical detail lives, which is the same gating the trip roster
- * applies (`RosterSection.tsx`): the summary says a follow-up is flagged, and
+ * applies (`RosterSection.tsx`): the summary says where a medical hold stands, and
  * the prompts themselves are one deliberate gesture away. Nothing here ever
  * renders the raw questionnaire — `src/db/waivers.ts` does not carry it.
  *
@@ -62,6 +62,27 @@ function IntegrityBadge({ entry, t }: { entry: SignedWaiverEntry; t: StaffTransl
       {invalid
         ? t("waiversStaff.signatures.integrityInvalid")
         : t("waiversStaff.signatures.integrityUnsealed")}
+    </Badge>
+  );
+}
+
+/**
+ * **Where a medical hold stands, from its status** (dive-domain-expert review
+ * of #2579). The hold is `medical_review`, never the stored answers: a paper or
+ * status-only hold has none and still refuses boarding. A clearance leaves the
+ * status where it was (`isCleanCompletion`), so the stamps say which of the
+ * three it is, and a cleared diver is never called waiting.
+ */
+function MedicalBadge({ entry, t }: { entry: SignedWaiverEntry; t: StaffTranslator }) {
+  if (entry.status !== "medical_review") return null;
+  const [tone, key] = entry.medicalClearedAt
+    ? (["success", "waiversStaff.signatures.medicalCleared"] as const)
+    : entry.medicalClearanceDeclinedAt
+      ? (["danger", "waiversStaff.signatures.medicalNotCleared"] as const)
+      : (["warning", "waiversStaff.signatures.medicalWaiting"] as const);
+  return (
+    <Badge tone={tone} size="sm" className="shrink-0">
+      {t(key)}
     </Badge>
   );
 }
@@ -114,7 +135,7 @@ function SignatureRow({
         }`
       : t("waiversStaff.signatures.noTrip");
   const flagged = entry.flaggedPrompts.length > 0;
-  const badged = flagged || entry.integrity !== "valid";
+  const badged = entry.status === "medical_review" || entry.integrity !== "valid";
   // Each door is a 44px target around a 20px line, 12px of box unseen above
   // and below its words. The block's `gap-1` counts the room above; when the
   // doors end the block they sink the room below into its `pb-5`
@@ -170,8 +191,8 @@ function SignatureRow({
             {trip}
           </span>
           {/* On a phone the badges, the exception, take a line of their own
-              under the departure. On the first line "Medical follow-up
-              flagged" (about 193px) beside a name, the time and the caret
+              under the departure. On the first line a medical badge
+              (about 193px) beside a name, the time and the caret
               overran the 358px column for any name over about 62px, and the
               time and caret wrapped to the start of a middle line. From `sm`
               up the wrapper is no box at all (`contents`): the badges are the
@@ -182,11 +203,7 @@ function SignatureRow({
               <IntegrityBadge entry={entry} t={t} />
               {/* The summary badge only — never the answers, which sit in the
                   block below and are read by opening the row. */}
-              {flagged ? (
-                <Badge tone="warning" size="sm" className="shrink-0">
-                  {t("waiversStaff.signatures.medicalFlag")}
-                </Badge>
-              ) : null}
+              <MedicalBadge entry={entry} t={t} />
             </span>
           ) : null}
           {entry.signedAt ? (

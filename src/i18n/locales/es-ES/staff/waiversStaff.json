@@ -38,7 +38,9 @@
     "openTrip": "Abrir la salida",
     "integrityInvalid": "Integridad no coincide",
     "integrityUnsealed": "No se puede verificar si cambió",
-    "medicalFlag": "Seguimiento médico marcado",
+    "medicalWaiting": "Pendiente del médico",
+    "medicalCleared": "Con autorización médica",
+    "medicalNotCleared": "Sin autorización médica",
     "flaggedAnswersHeading": "Respuestas marcadas",
     "searchLabel": "Buscar registros firmados",
     "searchPlaceholder": "Nombre, correo o teléfono del buceador",
@@ -48,7 +50,7 @@
       "label": "Vistas de registros firmados",
       "all": "Todos",
       "unchecked": "No se puede verificar",
-      "medical": "Retenciones médicas"
+      "medical": "Bloqueos médicos"
     },
     "pagination": {
       "total": "{count, plural, one {# registro} other {# registros}}"

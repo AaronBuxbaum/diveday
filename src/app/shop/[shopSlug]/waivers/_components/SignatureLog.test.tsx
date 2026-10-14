@@ -27,6 +27,8 @@ function entry(overrides: Partial<SignedWaiverEntry> & { id: string }): SignedWa
     guardian: null,
     integrity: "valid",
     flaggedPrompts: [],
+    medicalClearedAt: null,
+    medicalClearanceDeclinedAt: null,
   };
   return { ...base, ...overrides };
 }
@@ -146,11 +148,16 @@ describe("the ?record= pin", () => {
 
 /**
  * The medical detail keeps the gating the trip roster already applies: the
- * summary says a follow-up is flagged, and the prompts a reviewer must read
+ * summary says where the hold stands, and the prompts a reviewer must read
  * are one deliberate gesture away, inside the row rather than on the page.
+ *
+ * **The badge is the status, never the answers** (dive-domain-expert review of
+ * #2579). A paper or status-only hold stores no questionnaire and still
+ * refuses boarding; a cleared referral keeps `medical_review` and must not
+ * read as an open one.
  */
-describe("a flagged medical answer", () => {
-  it("shows the flag on the row and keeps the answers behind it", () => {
+describe("a medical hold", () => {
+  it("shows where the hold stands on the row and keeps the answers behind it", () => {
     const { container } = renderLog([
       entry({
         id: "a",
@@ -162,7 +169,7 @@ describe("a flagged medical answer", () => {
     const summary = row.querySelector("summary");
     if (!summary) throw new Error("the row has no summary");
 
-    expect(within(summary).getByText("Medical follow-up flagged")).toBeInTheDocument();
+    expect(within(summary).getByText("Waiting on physician")).toBeInTheDocument();
     expect(row.open).toBe(false);
     expect(
       within(row).getByText("Have you had chest surgery in the last 12 months?"),
@@ -170,6 +177,46 @@ describe("a flagged medical answer", () => {
     // The disclosure is the row's own, and it is what the answers sit behind —
     // never the summary, which would put them on the page at rest.
     expect(within(summary).queryByText(/chest surgery/)).toBeNull();
+  });
+
+  it("badges a hold with no stored answers, which still refuses boarding", () => {
+    const { container } = renderLog([entry({ id: "a", status: "medical_review" })]);
+    expect(within(summaryOf(container, "a")).getByText("Waiting on physician")).toBeInTheDocument();
+  });
+
+  it("says a physician cleared the diver, never that the record is waiting", () => {
+    const { container } = renderLog([
+      entry({
+        id: "a",
+        status: "medical_review",
+        medicalClearedAt: new Date("2026-08-29T15:00:00Z"),
+        flaggedPrompts: ["Have you had chest surgery in the last 12 months?"],
+      }),
+    ]);
+    const summary = summaryOf(container, "a");
+    expect(within(summary).getByText("Cleared by physician")).toBeInTheDocument();
+    expect(within(summary).queryByText("Waiting on physician")).toBeNull();
+  });
+
+  it("says a physician did not clear the diver", () => {
+    const { container } = renderLog([
+      entry({
+        id: "a",
+        status: "medical_review",
+        medicalClearanceDeclinedAt: new Date("2026-08-29T15:00:00Z"),
+      }),
+    ]);
+    const summary = summaryOf(container, "a");
+    expect(within(summary).getByText("Not cleared")).toBeInTheDocument();
+    expect(within(summary).queryByText("Waiting on physician")).toBeNull();
+  });
+
+  it("badges nothing medical on a completed record", () => {
+    const { container } = renderLog([entry({ id: "a" })]);
+    const summary = summaryOf(container, "a");
+    for (const word of ["Waiting on physician", "Cleared by physician", "Not cleared"]) {
+      expect(within(summary).queryByText(word)).toBeNull();
+    }
   });
 });
 
@@ -288,8 +335,8 @@ describe("a row's height", () => {
  * and caret on the first line, the departure under them at full width.
  *
  * A badge is the exception, and below `sm` it takes a line of its own under
- * the departure. Left on the first line, "Medical follow-up flagged" (about
- * 193px with its mark) beside a name, the time and the caret needs more than
+ * the departure. Left on the first line, a medical badge (about 193px with
+ * its mark, at its longest) beside a name, the time and the caret needs more than
  * the 358px column for any name over about 62px, so on every flagged row the
  * time and caret wrapped to a middle line at its start and the departure took
  * a third. From `sm` up it is the one-line row it was.
@@ -310,11 +357,12 @@ describe("a row on a phone", () => {
       entry({
         id: "a",
         integrity: "unsealed",
+        status: "medical_review",
         flaggedPrompts: ["Have you had chest surgery in the last 12 months?"],
       }),
     ]);
     const summary = summaryOf(container, "a");
-    const badges = within(summary).getByText("Medical follow-up flagged").parentElement;
+    const badges = within(summary).getByText("Waiting on physician").parentElement;
     expect(within(summary).getByText("Can’t be checked for changes").parentElement).toBe(badges);
     expect(badges?.parentElement).toBe(summary);
     // Below `sm` a full-width line after the departure's; from `sm` up the

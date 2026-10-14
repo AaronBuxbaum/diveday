@@ -104,4 +104,26 @@ describe("personSearchMatch", () => {
     expect(await matches(db, shop.id, "8877")).toContain(person.id);
     expect(await matches(db, shop.id, "877")).not.toContain(person.id);
   });
+
+  /**
+   * **What a staffer types is matched as written** (security review of #2579).
+   * `%` and `_` are `like` wildcards, so unescaped a lone `%` listed every
+   * person in the shop and `_` stood for any one letter. They are literal
+   * characters here, and a value that really holds one is still found.
+   */
+  it("treats % and _ as the characters typed, not as wildcards", async () => {
+    const { db, shop } = await seededShopContext();
+    const plain = await seatedDiver(db, shop.id, "Wildcard Plain", "+13055550111");
+    const literal = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Wildcard Odd", email: "odd_100%@example.com" })
+      .returning()
+      .then(([row]) => row);
+    if (!literal) throw new Error("person insert returned no row");
+
+    expect(await matches(db, shop.id, "%")).toEqual([literal.id]);
+    expect(await matches(db, shop.id, "Wildcard_Plain")).toEqual([]);
+    expect(await matches(db, shop.id, "Wildcard Pl_in")).not.toContain(plain.id);
+    expect(await matches(db, shop.id, "odd_100%")).toEqual([literal.id]);
+  });
 });

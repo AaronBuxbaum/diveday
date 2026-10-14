@@ -63,7 +63,7 @@ test.describe("as captain", () => {
       page.getByText("Editing the waiver is limited to owners and managers."),
     ).toBeVisible();
     // No signed-record evidence ever reaches the page for a refused role.
-    await expect(page.getByText("Medical follow-up flagged")).toHaveCount(0);
+    await expect(page.getByText("Waiting on physician")).toHaveCount(0);
   });
 });
 
