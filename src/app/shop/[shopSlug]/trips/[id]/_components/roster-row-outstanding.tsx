@@ -57,6 +57,7 @@ export type RowOutstandingInput = Pick<
   | "materialsDone"
   | "paymentStatus"
   | "paymentSource"
+  | "paymentMark"
   | "waiverStatus"
   | "waiverControl"
   | "identityUnconfirmed"
@@ -99,6 +100,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     materialsDone,
     paymentStatus,
     paymentSource,
+    paymentMark,
     waiverStatus,
     waiverControl,
     identityUnconfirmed,
@@ -280,6 +282,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
               mayWriteOffPayment ? PAYMENT_STATUSES_ALL : PAYMENT_STATUSES_RECORDING_ONLY
             }
             sourceNote={paymentSource}
+            mark={paymentMark}
             packageNote={packageNote}
             refundNote={
               refundEligible && cancellationDeadline

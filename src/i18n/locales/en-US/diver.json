@@ -825,6 +825,10 @@
     "lateUndo": "I’m on time after all",
     "lateUnavailable": "That didn’t reach the shop. If you’re still on your way, call them.",
     "cancelConfirm": "Cancel your spot on {trip}? This can’t be undone.",
+    "cancelConfirmParty": "Cancel your spot on {trip}? This can’t be undone, and it changes the seats you booked:",
+    "cancelPartyGoes": "Canceled with yours: {names}",
+    "cancelPartyStays": "{count, plural, one {Stays booked} other {Stay booked}}: {names}",
+    "cancelPartyRefund": "The shop refunds {count, plural, one {that seat} other {those seats}} the same way.",
     "cancelConfirmButton": "Yes, cancel my spot",
     "neverMind": "Never mind",
     "cancelling": "Canceling…",
@@ -842,6 +846,7 @@
     "freshWaiverLink": "Get a fresh waiver link",
     "payForTrip": "Pay for this trip",
     "cancelledSeatReleased": "Your seat on {trip} is no longer held. If that’s a surprise, get in touch with {shop}.",
+    "cancelledPartyKept": "{names} {count, plural, one {keeps their seat} other {keep their seats}} on {trip}.",
     "cancelledSeeSchedule": "See what’s coming up",
     "cancelledNextInSeries": "Book the next {trip}: {date}",
     "tripCancelledBody": "Your seat is released, and there’s nothing you need to do.",
@@ -5369,6 +5374,17 @@
       "body": "{count, plural, one {# diver wrote} other {# divers wrote}} in after hours.",
       "open": "Open the Inbox",
       "turnOff": "Turn these off in your email settings"
+    },
+    "stripeRestricted": {
+      "subject": "{shopName}: Stripe has turned off card payments",
+      "body": "Stripe has paused card payments on your account, so divers can still book but pay at the shop for now. Stripe’s dashboard says what it needs to turn them back on.",
+      "open": "Open payment settings"
+    },
+    "rollCallStale": {
+      "subject": "{shopName}: roll call still open on {tripTitle}",
+      "body": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back at {time}. {count, plural, one {# person is} other {# people are}} not marked aboard.",
+      "bodyMissing": "On {tripTitle}, {count, plural, one {# person is} other {# people are}} recorded not back aboard after dive {dive}, after the boat was due back at {time}.",
+      "open": "Open the roll call"
     },
     "smsWorkOrder": {
       "ready": "{shopName}: your gear on ticket #{number} is ready to collect ({pieces}).",

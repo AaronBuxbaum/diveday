@@ -38,13 +38,16 @@
  */
 export type { DiveSiteTemplate } from "./dive-sites/types";
 
-import { FLORIDA_GULF } from "./dive-sites/florida-gulf";
+import { FLORIDA_BROWARD } from "./dive-sites/florida-broward";
+import { FLORIDA_GULF_COAST } from "./dive-sites/florida-gulf-coast";
 import { FLORIDA_KEYS_ISLAMORADA } from "./dive-sites/florida-keys-islamorada";
 import { FLORIDA_KEYS_KEY_WEST } from "./dive-sites/florida-keys-key-west";
 import { FLORIDA_KEYS_LOWER } from "./dive-sites/florida-keys-lower";
 import { FLORIDA_KEYS_MARATHON } from "./dive-sites/florida-keys-marathon";
 import { FLORIDA_KEYS_UPPER } from "./dive-sites/florida-keys-upper";
-import { FLORIDA_SOUTHEAST } from "./dive-sites/florida-southeast";
+import { FLORIDA_MIAMI } from "./dive-sites/florida-miami";
+import { FLORIDA_PALM_BEACH } from "./dive-sites/florida-palm-beach";
+import { FLORIDA_PANHANDLE } from "./dive-sites/florida-panhandle";
 import { FLORIDA_SPRINGS } from "./dive-sites/florida-springs";
 import type { DiveSiteTemplate } from "./dive-sites/types";
 import ledger from "./photo-records.json";
@@ -80,7 +83,10 @@ export const DIVE_SITE_TEMPLATES: readonly DiveSiteTemplate[] = [
   ...FLORIDA_KEYS_MARATHON,
   ...FLORIDA_KEYS_LOWER,
   ...FLORIDA_KEYS_KEY_WEST,
-  ...FLORIDA_SOUTHEAST,
-  ...FLORIDA_GULF,
+  ...FLORIDA_PALM_BEACH,
+  ...FLORIDA_BROWARD,
+  ...FLORIDA_MIAMI,
+  ...FLORIDA_PANHANDLE,
+  ...FLORIDA_GULF_COAST,
   ...FLORIDA_SPRINGS,
 ].map(withCover);

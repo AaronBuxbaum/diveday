@@ -91,6 +91,7 @@ export type TodayActionKind =
   | "failed_photo_deletion"
   | "owed_refund"
   | "payment_dispute"
+  | "payments_restricted"
   | "reviews_pending"
   | "unanswered_messages"
   | "gear_overdue"
@@ -237,6 +238,10 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // answer it (ADR 20261009-stripe-reversals-reach-diveday). Level with the
   // owed refund: both are money with somebody waiting on the shop.
   payment_dispute: 26,
+  // Stripe turned the shop's card payments off (batch 6 item 8). Level with
+  // the other money rows: nobody is in danger, but every booking from now on
+  // is a seat paid for at the shop until the owner answers Stripe.
+  payments_restricted: 26,
   // A diver wrote and nobody has written back (ADR 20260907-two-way-inbox).
   // Above the reviews queue and below the money rows: somebody asked the shop
   // a question and is waiting on the answer, which is more than a review asks
@@ -467,6 +472,7 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   failed_photo_deletion: ["owner", "manager"],
   owed_refund: ["owner", "manager"],
   payment_dispute: ["owner", "manager"],
+  payments_restricted: ["owner", "manager"],
   reviews_pending: ["owner", "manager"],
   // Every staff role, since the inbox stopped carrying a gate of its own on
   // 2026-09-10 (issues #1505/#1518). A row pointing at a page its reader
@@ -649,6 +655,7 @@ export const ACTION_KIND_META = {
   failed_photo_deletion: { tone: "warning" },
   owed_refund: { tone: "warning" },
   payment_dispute: { tone: "warning" },
+  payments_restricted: { tone: "warning" },
   reviews_pending: { tone: "neutral" },
   // Neutral: somebody is waiting on an answer, which is the day's work
   // rather than a thing that has gone wrong.

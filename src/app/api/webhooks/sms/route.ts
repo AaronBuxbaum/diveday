@@ -11,6 +11,7 @@ import {
   readWebhookPayload,
   verifySnsMessage,
 } from "@/lib/notifications/sns";
+import { logWebhookRefusal } from "@/lib/webhook-refusal";
 
 /**
  * SMS delivery receipts (docs ADR 20260802-sms-delivery-receipts), and the
@@ -34,8 +35,10 @@ export async function POST(request: Request) {
   if (payload === null) return new Response(null, { status: 400 });
 
   const verification = await verifySnsMessage(payload, process.env.SMS_SNS_TOPIC_ARN);
-  if (verification.status === "not_configured") return new Response(null, { status: 503 });
-  if (verification.status !== "verified") return new Response(null, { status: 400 });
+  if (verification.status !== "verified") {
+    logWebhookRefusal("sms", verification.status);
+    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
+  }
 
   const { message } = verification;
 

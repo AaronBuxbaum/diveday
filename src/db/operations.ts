@@ -478,7 +478,9 @@ export type TripActivityEntry =
         | "departure_offered"
         | "rider_added_at_dock"
         | "seat_moved_away"
-        | "seat_moved_here";
+        | "seat_moved_here"
+        | "party_seat_self_cancelled"
+        | "party_seat_self_refunded";
       diver: string;
     }
   | {
@@ -559,7 +561,17 @@ export async function recordTripActivity(
  */
 export async function recordDiverSelfCancel(
   db: DbExecutor,
-  input: { shopId: string; bookingId: string; refunded: boolean },
+  input: {
+    shopId: string;
+    bookingId: string;
+    refunded: boolean;
+    /**
+     * A party seat that went with its lead's cancel (batch 6 item 10): the
+     * lead's booking and the seat's name, so the line names who cancelled and
+     * whose seat it was.
+     */
+    party?: { leadBookingId: string; seatName: string };
+  },
 ) {
   const [booking] = await db
     .select({ tripId: bookings.tripId, personId: bookings.personId })
@@ -567,6 +579,24 @@ export async function recordDiverSelfCancel(
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
   if (!booking) return null;
+  if (input.party) {
+    const [lead] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.id, input.party.leadBookingId), eq(bookings.shopId, input.shopId)))
+      .limit(1);
+    if (!lead) return null;
+    return recordTripActivity(db, {
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      actorPersonId: lead.personId,
+      subjectPersonId: booking.personId,
+      entry: {
+        code: input.refunded ? "party_seat_self_refunded" : "party_seat_self_cancelled",
+        diver: input.party.seatName,
+      },
+    });
+  }
   return recordTripActivity(db, {
     shopId: input.shopId,
     tripId: booking.tripId,

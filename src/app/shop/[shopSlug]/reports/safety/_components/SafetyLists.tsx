@@ -2,11 +2,15 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { SectionCard } from "@/components/ui/card";
 import type { IncidentReportLine } from "@/db/incident-reports";
+import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "@/i18n/incident-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { SafetyMonth } from "@/lib/safety-report";
 import { shopPath } from "@/lib/staff-notices";
+
+const SEVERITY_TONE = { minor: "neutral", moderate: "warning", serious: "danger" } as const;
 
 const ROW = "flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 py-2";
 
@@ -72,6 +76,16 @@ export function SafetyLists({
                 {t(report.status === "filed" ? "incidents.status.filed" : "incidents.status.draft")}
               </Badge>
               <span className="font-medium">{report.tripTitle}</span>
+              {/* What kind and how serious (batch 6, item 7), once the report
+                  says; a serious one wears the danger the month's reader scans for. */}
+              {report.kind ? (
+                <span className="text-sm font-medium">{t(INCIDENT_KIND_KEYS[report.kind])}</span>
+              ) : null}
+              {report.severity ? (
+                <Badge size="sm" tone={SEVERITY_TONE[report.severity]}>
+                  {t(INCIDENT_SEVERITY_KEYS[report.severity])}
+                </Badge>
+              ) : null}
               <span className="text-sm text-muted">
                 {formatDateTimeTz(report.at, locale, timeZone)}
                 {" "}· {t("incidents.trip.writtenBy", { name: report.createdByName })}

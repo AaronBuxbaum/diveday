@@ -19,6 +19,7 @@ import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
+import { getTripRosterWithPaymentMarks } from "./payment-marks";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
 import { listTripPrepDivers } from "./rental-fit";
 import { listCertificationSummaries } from "./self-declared-cards";
@@ -26,7 +27,7 @@ import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { listTripInvitations } from "./trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
 import { getTripWithBooked } from "./trips-record";
-import { getTripRoster, getTripWaitlist } from "./trips-roster";
+import { getTripWaitlist } from "./trips-roster";
 import type { TripSharedReads } from "./trips-shared-reads";
 
 /**
@@ -76,7 +77,7 @@ export async function getTripGuests(
   const [
     confirmMatches,
     diverCandidates,
-    roster,
+    { roster, paymentMarksByBooking },
     requirement,
     siteRequirement,
     readinessRows,
@@ -98,7 +99,10 @@ export async function getTripGuests(
     isFull(trip) || diverQuery === ""
       ? []
       : listBookableDivers(db, shop.id, tripId, { query: diverQuery }),
-    getTripRoster(db, shop.id, tripId),
+    // The roster with what each seat's Paid mark recorded and still owes
+    // (batch 6 item 1), so the amount field opens on the usual figure: one
+    // statement over the seats, not a second beside it.
+    getTripRosterWithPaymentMarks(db, shop.id, tripId),
     shared ? shared.requirement : getTripRequirements(db, shop.id, tripId),
     shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
     shared ? shared.readiness : listTripReadiness(db, shop.id, tripId),
@@ -303,6 +307,8 @@ export async function getTripGuests(
      * departure; seats with none are absent (issue #1697).
      */
     packageDivesByBooking,
+    /** Per seat, the Paid mark's money and what the seat still owes (`getTripRosterWithPaymentMarks`). */
+    paymentMarksByBooking,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A

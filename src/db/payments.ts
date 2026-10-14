@@ -2,7 +2,12 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { AppTransaction, DbExecutor } from "./client";
-import type { BookingPayment, PaymentEventOperation, PaymentStatus } from "./schema";
+import type {
+  BookingPayment,
+  ManualPaymentMethod,
+  PaymentEventOperation,
+  PaymentStatus,
+} from "./schema";
 import { bookingPaymentEvents, bookingPayments, bookings, trips } from "./schema";
 
 /**
@@ -55,6 +60,10 @@ export type SetPaymentInput = {
   provider?: string | null;
   providerRef?: string | null;
   note?: string | null;
+  /** How a manual mark's money changed hands; null on every provider write. */
+  method?: ManualPaymentMethod | null;
+  /** The staffer making a manual mark; null on every provider write. */
+  recordedByPersonId?: string | null;
   /**
    * What is causing this transition, for the append-only
    * `booking_payment_events` trail (DATA-M3, ADR
@@ -84,7 +93,7 @@ function paymentStateChanged(
   previous: BookingPayment | null,
   next: Pick<
     BookingPayment,
-    "status" | "amountCents" | "currency" | "provider" | "providerRef" | "note"
+    "status" | "amountCents" | "currency" | "provider" | "providerRef" | "note" | "method"
   >,
 ): boolean {
   if (!previous) return true;
@@ -94,7 +103,8 @@ function paymentStateChanged(
     previous.currency !== next.currency ||
     previous.provider !== next.provider ||
     previous.providerRef !== next.providerRef ||
-    previous.note !== next.note
+    previous.note !== next.note ||
+    previous.method !== next.method
   );
 }
 
@@ -130,6 +140,8 @@ export async function setBookingPayment(db: DbExecutor, input: SetPaymentInput) 
       provider: input.provider ?? null,
       providerRef: input.providerRef ?? null,
       note: input.note ?? null,
+      method: input.method ?? null,
+      recordedByPersonId: input.recordedByPersonId ?? null,
       updatedAt: now,
     };
     // Read under the same lock that guards the write below, never before it:
@@ -164,6 +176,8 @@ export async function setBookingPayment(db: DbExecutor, input: SetPaymentInput) 
         providerRef: values.providerRef,
         operation: input.operation ?? "manual_mark",
         note: values.note,
+        method: values.method,
+        recordedByPersonId: values.recordedByPersonId,
         occurredAt: now,
       });
     }

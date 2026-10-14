@@ -15,6 +15,7 @@ import {
   readWebhookPayload,
   verifySnsMessage,
 } from "@/lib/notifications/sns";
+import { logWebhookRefusal } from "@/lib/webhook-refusal";
 
 /**
  * Mail a diver sent back (ADR 20260907-two-way-inbox). SES's receipt rule
@@ -38,8 +39,10 @@ export async function POST(request: Request) {
   if (payload === null) return new Response(null, { status: 400 });
 
   const verification = await verifySnsMessage(payload, process.env.EMAIL_INBOUND_SNS_TOPIC_ARN);
-  if (verification.status === "not_configured") return new Response(null, { status: 503 });
-  if (verification.status !== "verified") return new Response(null, { status: 400 });
+  if (verification.status !== "verified") {
+    logWebhookRefusal("email_inbound", verification.status);
+    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
+  }
 
   const { message } = verification;
   if (message.Type === "SubscriptionConfirmation" || message.Type === "UnsubscribeConfirmation") {

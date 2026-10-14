@@ -10,6 +10,12 @@ import {
 import type { IntegrationCredentials, IntegrationEvent, ShopIntegration } from "@/db/schema";
 import { nowMs } from "@/lib/clock";
 import { minorToMajor } from "@/lib/money";
+import {
+  refundLineDescription,
+  refundReference,
+  type SaleSource,
+  saleReference,
+} from "./sale-reference";
 
 export const QUICKBOOKS_AUTHORIZATION_URL = "https://appcenter.intuit.com/connect/oauth2";
 export const QUICKBOOKS_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
@@ -41,6 +47,7 @@ export type QuickBooksCredentials = {
 };
 
 export type QuickBooksOrderPayload = {
+  source?: SaleSource;
   orderId: string;
   customer: { id: string; name: string; email: string | null };
   currency: string;
@@ -134,7 +141,7 @@ export function quickBooksSalesReceipt(
   return {
     CustomerRef: { value: customerId },
     TxnDate: payload.createdAt.slice(0, 10),
-    PrivateNote: `DiveDay order ${payload.orderId}`,
+    PrivateNote: saleReference(payload),
     Line: payload.lineItems.map((line) => ({
       Amount: minorToMajor(line.quantity * line.unitAmountCents, payload.currency),
       DetailType: "SalesItemLineDetail",
@@ -157,12 +164,12 @@ export function quickBooksRefundReceipt(
   return {
     CustomerRef: { value: customerId },
     TxnDate: payload.createdAt.slice(0, 10),
-    PrivateNote: `DiveDay refund for order ${payload.orderId}`,
+    PrivateNote: refundReference(payload),
     Line: [
       {
         Amount: minorToMajor(refundCents, payload.currency),
         DetailType: "SalesItemLineDetail",
-        Description: `Refund for DiveDay order ${payload.orderId}`,
+        Description: refundLineDescription(payload),
         SalesItemLineDetail: {
           ItemRef: { value: itemId },
           Qty: 1,

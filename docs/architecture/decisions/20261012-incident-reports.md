@@ -1,6 +1,6 @@
 # 20261012-incident-reports — Keep an incident report on the departure, filed once and amended by addenda
 
-- **Status:** Accepted (2026-10-12)
+- **Status:** Accepted (2026-10-12); amended by [20261014-incident-kind-severity](20261014-incident-kind-severity.md)
 - **Date:** 2026-10-12
 
 ## Context

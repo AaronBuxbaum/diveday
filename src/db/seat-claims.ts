@@ -1,4 +1,5 @@
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
@@ -516,12 +517,21 @@ export type PartySeatClaim = {
    */
   waiverSigned: boolean;
   /**
+   * The lead's own cancel would take this seat with it: unclaimed and still
+   * `booked` (batch 6 item 10, `cancelUnclaimedPartySeats`). The confirm lists
+   * these, and the rest as staying.
+   */
+  cancelsWithLead: boolean;
+  /**
    * A fresh claim capability for an unclaimed seat, or null for a claimed one
    * (nothing left to hand out) — and null when issuing failed, which the
    * panel renders as the seat's name with no link rather than an error.
    */
   claim: IssuedCapability | null;
 };
+
+/** The party lead's own booking, joined beside each of the party's seats. */
+const partyLead = alias(bookings, "party_lead");
 
 /**
  * The organizer's view of their party, minting a shareable claim link per
@@ -562,7 +572,13 @@ export async function issuePartySeatClaims(
 ): Promise<PartySeatClaim[]> {
   const now = input.now ?? nowDate();
   const rows = await db
-    .select({ booking: bookings, person: people, trip: trips, waiver: waiverRecords })
+    .select({
+      booking: bookings,
+      person: people,
+      trip: trips,
+      waiver: waiverRecords,
+      leadTripId: partyLead.tripId,
+    })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -572,6 +588,14 @@ export async function issuePartySeatClaims(
     .leftJoin(
       waiverRecords,
       and(eq(waiverRecords.bookingId, bookings.id), isNull(waiverRecords.supersededAt)),
+    )
+    // The lead's own departure, beside every seat rather than a second
+    // statement after them: a seat moved to another departure does not go with
+    // the lead's cancel (`cancelUnclaimedPartySeats` reaches the lead's own
+    // departure only).
+    .leftJoin(
+      partyLead,
+      and(eq(partyLead.id, bookings.partyLeadBookingId), eq(partyLead.shopId, input.shopId)),
     )
     .where(
       and(
@@ -591,6 +615,10 @@ export async function issuePartySeatClaims(
       seatName: seatName(row.person.fullName, row.booking),
       claimed: row.booking.claimedAt !== null,
       waiverSigned: waiverState(row.waiver, now) === "complete",
+      cancelsWithLead:
+        row.booking.status === "booked" &&
+        row.booking.claimedAt === null &&
+        row.booking.tripId === row.leadTripId,
       claim: claimable
         ? await issueBookingCapability(db, {
             shopId: input.shopId,
@@ -602,4 +630,44 @@ export async function issuePartySeatClaims(
     });
   }
   return seats;
+}
+
+/**
+ * **The party seats still booked after the lead's own cancel** (batch 6 item
+ * 10): what the lead's cancelled page names as staying. Read from the seats
+ * themselves, never the URL, and only seats this lead booked in this shop on
+ * the lead's own departure.
+ * Ordered as `issuePartySeatClaims` orders them.
+ */
+export async function partySeatsKeptAfterLeadCancel(
+  db: AppDb,
+  input: { shopId: string; leadBookingId: string },
+): Promise<string[]> {
+  // The page says these keep their seats *on the lead's trip*, so a seat moved
+  // to another departure is not one of them (`cancelUnclaimedPartySeats` is
+  // scoped the same way).
+  const [lead] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!lead) return [];
+  const rows = await db
+    .select({
+      fullName: people.fullName,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      identityBookedAs: bookings.identityBookedAs,
+    })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.partyLeadBookingId, input.leadBookingId),
+        eq(bookings.tripId, lead.tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
+  return rows.map((row) => seatName(row.fullName, row));
 }

@@ -83,7 +83,14 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
         label: `${gap.title} · ${formatDateTimeTz(gap.endsAt, locale, timeZone)}`,
       },
       aboutDeparture: true,
-      detail: rollCallGapDetailText(t, gap),
+      // The owners were alerted (batch 6, item 6): said on the row the alert
+      // was about, with its time in the shop's zone, so whoever opens Today
+      // knows the call has gone out and when.
+      detail: gap.alertedAt
+        ? `${rollCallGapDetailText(t, gap)} ${t("today.detail.rollCallAlerted", {
+            time: formatDateTimeTz(gap.alertedAt, locale, timeZone),
+          })}`
+        : rollCallGapDetailText(t, gap),
       actionLabel: openRollCallActionText(t),
       // Straight to the checkpoint that is open, not the manifest's default
       // departure tab — one tap from the queue to the count that closes it.

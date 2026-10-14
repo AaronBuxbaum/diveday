@@ -28,12 +28,12 @@ import type { AppDb, AppTransaction } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { queryAll } from "./query-helpers";
+import { recordedRollCallRows } from "./roll-call-history";
 import {
   boats,
   bookingPayments,
   bookings,
   courses,
-  rollCallEvents,
   shops,
   tripDives,
   tripScheduleDays,
@@ -1401,23 +1401,8 @@ export async function applyDetailsToFutureSeries(
     // trip (CR-006) — a bulk apply must not silently orphan a sibling's
     // roll-call checkpoints either.
     const siblingIds = siblings.map((sibling) => sibling.id);
-    const siblingCheckpoints =
-      siblingIds.length > 0
-        ? await tx
-            .select({
-              tripId: rollCallEvents.tripId,
-              bookingId: rollCallEvents.bookingId,
-              checkpoint: rollCallEvents.checkpoint,
-              status: rollCallEvents.status,
-              occurredAt: rollCallEvents.occurredAt,
-              createdAt: rollCallEvents.createdAt,
-            })
-            .from(rollCallEvents)
-            // Shop first, for the table's only index (item 27, 2026-10-11).
-            .where(
-              and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, siblingIds)),
-            )
-        : [];
+    // Divers and crew alike, as the single edit reads them (`recordedRollCallRows`).
+    const siblingCheckpoints = await recordedRollCallRows(tx, shopId, siblingIds);
     const checkpointsByTrip = new Map<string, typeof siblingCheckpoints>();
     for (const row of siblingCheckpoints) {
       const list = checkpointsByTrip.get(row.tripId) ?? [];
