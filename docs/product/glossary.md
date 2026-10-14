@@ -179,6 +179,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Last-minute list
 - Learning materials
 - Manifest
+- Medical hold
 - Medical questionnaire
 - Meeting point
 - Milestone stamp
