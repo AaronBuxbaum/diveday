@@ -5,7 +5,8 @@ import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { getRecapPageData, getRecapPageState, type RecapSite } from "@/db/recap";
+import type { RecapSite } from "@/db/recap";
+import { recapPageStateCached } from "@/db/recap-cached";
 import { buildAfterStateProps } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
@@ -33,8 +34,8 @@ export async function generateMetadata({
   const { token } = await params;
   const t = diverTranslator(await requestLocale());
   const bookingId = verifyRecapToken(token);
-  const db = bookingId ? await getDb() : null;
-  const data = db && bookingId ? await getRecapPageData(db, bookingId) : null;
+  const state = bookingId ? await recapPageStateCached(bookingId) : null;
+  const data = state?.kind === "recap" ? state.data : null;
   if (!data) {
     return { title: t("recap.metaTitle"), robots: { index: false, follow: false } };
   }
@@ -132,7 +133,7 @@ export default async function DiveRecapPage({
   }
 
   const db = await getDb();
-  const state = await getRecapPageState(db, bookingId);
+  const state = await recapPageStateCached(bookingId);
   if (state.kind === "unknown") {
     // The signature verified and resolved no booking at all — a booking
     // deleted out from under a link DiveDay itself signed. There is no shop to

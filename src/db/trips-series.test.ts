@@ -1,8 +1,11 @@
+import type { PGlite } from "@electric-sql/pglite";
 import { and, eq, isNull } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/pglite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { calendarDateWeekday } from "@/lib/calendar-date";
+import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
-import { fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail } from "@/test/fakes";
 import { callTripBlowout, getTripBlowout } from "./blowouts";
 import { createBookingParty } from "./bookings";
@@ -160,6 +163,16 @@ describe("recurring trip series (in-memory PGlite)", () => {
         .from(tripRequirements)
         .where(eq(tripRequirements.tripId, trip.id));
       expect(reqs).toHaveLength(1);
+      // The same gates the one-at-a-time insert wrote: waiver on, and a
+      // course-less day's Open Water baseline (code review 2026-10-13b, item 40).
+      expect(reqs[0]).toMatchObject({
+        shopId: shop.id,
+        requiresWaiver: true,
+        minimumCertificationLevel: "open_water",
+        requiredSpecialties: [],
+        requiresNitrox: false,
+        requiresPayment: false,
+      });
     }
 
     const summary = await getTripSeriesSummary(db, shop.id, firstInstance.id);
@@ -1821,3 +1834,40 @@ describe("what keeps running past the public board's last month (2026-10-12)", (
     );
   });
 });
+
+/**
+ * **A daily run over the horizon is written in batches, not one departure at
+ * a time** (code review 2026-10-13b, item 40). Each departure used to be its
+ * own chain of four inserts, so the schedule builder's "repeat daily" waited
+ * on about 480 statements in a row; the nightly roll did the same per run.
+ */
+describe("what materializing a run sends", () => {
+  it("writes 120 daily departures in a bounded number of statements", async () => {
+    const { db: plain, shop } = await seededShopContext();
+    const db = drizzle({
+      client: plain.$client as PGlite,
+      logger: queryTimingLogger,
+    }) as unknown as typeof plain;
+    const { result, stats } = await withQueryStats(() =>
+      createTripSeries(
+        db,
+        seriesInput({
+          shopId: shop.id,
+          weekdays: EVERY_WEEKDAY,
+          anchorDate: "2030-09-07",
+          endsOn: "2031-01-04",
+        }),
+      ),
+    );
+    if (!result) throw new Error("series not created");
+    expect(result.trips).toHaveLength(120);
+    // Every one still gets its dives, its day and its requirement row.
+    expect(await listTripScheduleDays(plain, shop.id, result.trips.at(-1)?.id ?? "")).toHaveLength(
+      1,
+    );
+    expect(stats.queries).toBeLessThanOrEqual(MATERIALIZE_CEILING);
+  });
+});
+
+// Measured 2026-10-13: 489 statements one departure at a time, 17 batched.
+const MATERIALIZE_CEILING = 17;

@@ -1,7 +1,7 @@
 import { MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
 import { SkeletonLineBars } from "@/components/ShopPageHeader";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import {
   DISPLAY_TITLE_CLASS,
   ITEM_TITLE_CLASS,

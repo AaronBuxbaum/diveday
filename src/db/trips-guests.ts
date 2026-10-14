@@ -11,6 +11,7 @@ import {
 import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { listAgencyCheckableCards } from "./agency-check";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
@@ -141,6 +142,7 @@ export async function getTripGuests(
     packageDivesByPerson,
     certificationSummaries,
     courseMaterialsDone,
+    agencyCheckCardsByPerson,
   ] = await Promise.all([
     // What "Different person" on a held seat can offer to move along with it:
     // other held seats under the same name on the same matched diver, on other
@@ -192,6 +194,16 @@ export async function getTripGuests(
           around: trip.startsAt,
         })
       : new Map<string, CourseMaterialsDone>(),
+    // The cards the DiveDay browser extension could check from this tab
+    // (H-105), and the N of its "Check all N". Never a held seat's: until a
+    // staffer confirms who is standing there, the matched diver's name, birth
+    // date and card number are not this seat's to send to an agency.
+    listAgencyCheckableCards(db, {
+      shopId: shop.id,
+      personIds: roster
+        .filter(({ booking }) => !booking.identityUnconfirmedAt)
+        .map(({ person }) => person.id),
+    }),
   ]);
 
   const heldSeatLastDiveDay = new Map<string, Date | null>(
@@ -337,6 +349,11 @@ export async function getTripGuests(
      * page for, per seat, where it can (H-106): a PADI course with materials.
      */
     elearningQueryByBooking: elearningQueries(trip.course ?? null, roster),
+    /**
+     * Per diver, the cards the DiveDay browser extension could check with
+     * their agencies from this tab (H-105). Held seats are never in it.
+     */
+    agencyCheckCardsByPerson,
     /** Done, who and when, by person: the roster's capsule and done line read here. */
     courseMaterialsDoneByPerson: courseMaterialsDone,
     /**

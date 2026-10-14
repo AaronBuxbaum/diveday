@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { type BookingStoryMoney, BookingStoryRow } from "@/components/person/rows";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel, LedgerGroup } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerGroup } from "@/components/ui/ledger";
 import type { OrderStatus, PaymentStatus } from "@/db/schema";
 import { ORDER_STATUS_KEYS } from "@/i18n/order-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";

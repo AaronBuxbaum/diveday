@@ -1,4 +1,4 @@
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { dayAnchorId, type WeekLedgerRow } from "./WeekLedger";
 

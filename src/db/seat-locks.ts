@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
+import { boundLockWaits } from "./lock-bounds";
 import { bookings, trips } from "./schema";
 
 /**
@@ -22,6 +23,7 @@ export async function lockSeatDeparture(
   shopId: string,
   bookingId: string,
 ): Promise<string | null> {
+  await boundLockWaits(tx);
   const [seat] = await tx
     .select({ tripId: bookings.tripId })
     .from(bookings)

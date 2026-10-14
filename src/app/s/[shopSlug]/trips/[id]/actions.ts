@@ -12,6 +12,7 @@ import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals"
 import { type CheckoutPromo, startBookingCheckout } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
 import { recordShopMilestone } from "@/db/founder-metrics";
+import { busyOnLockWait } from "@/db/lock-bounds";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
@@ -152,6 +153,23 @@ const bookingForm = z
     handoff: formValue(),
   })
   .catchall(formValue());
+
+/**
+ * The banner code for a booking `createBookingParty` refused. Anything not
+ * named here is `unavailable`, which is deliberate for the refusals that
+ * describe the person behind a typed email (see `ErrorCode`).
+ */
+function bookingRefusalCode(reason: string): ErrorCode {
+  const codes: Record<string, ErrorCode> = {
+    trip_full: "full",
+    already_booked: "already",
+    course_unstaffed: "course-unavailable",
+    course_ratio_full: "course-ratio-full",
+    divers_full: "divers-full",
+    participant_type_unavailable: "type-unavailable",
+  };
+  return Object.hasOwn(codes, reason) ? (codes[reason] as ErrorCode) : "unavailable";
+}
 
 /** A wait-list joiner's identity fields; the dive declaration is read apart. */
 const waitlistForm = z.object({
@@ -362,6 +380,7 @@ export async function bookSpot(
     shopSlug,
   );
 
+  // A held boat refuses a waiter after five seconds: a crowd, worded "try again".
   const outcome = await createBookingParty(
     dbi,
     validParty.map((entry, index) => ({
@@ -388,7 +407,8 @@ export async function bookSpot(
       // how to reach it.
       referralSource,
     })),
-  );
+  ).catch(busyOnLockWait);
+  if (outcome === "busy") return { error: t(ERROR_MESSAGE_KEYS.busy) };
   if (!outcome.ok) {
     // This form is anonymous (the schedule route is auth-exempt), and the
     // submitter is only ever asked for a name and an email — never proof that
@@ -432,20 +452,7 @@ export async function bookSpot(
       }
     }
 
-    const code: ErrorCode =
-      outcome.reason === "trip_full"
-        ? "full"
-        : outcome.reason === "already_booked"
-          ? "already"
-          : outcome.reason === "course_unstaffed"
-            ? "course-unavailable"
-            : outcome.reason === "course_ratio_full"
-              ? "course-ratio-full"
-              : outcome.reason === "divers_full"
-                ? "divers-full"
-                : outcome.reason === "participant_type_unavailable"
-                  ? "type-unavailable"
-                  : "unavailable";
+    const code = bookingRefusalCode(outcome.reason);
     // "already_booked" is the one refusal that names a specific party member
     // (task 25) — `createBookingParty` reports which index it rolled back
     // on, so the form can highlight that diver's fieldset instead of the

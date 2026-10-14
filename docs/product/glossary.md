@@ -16,11 +16,13 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Adventure Diver
 - Agency
 - Agency check
+- Agency-listed certification
 - Assistant Instructor (AI)
 - Bundled nitrox
 - C-card
 - Card sighting
 - Certification summary
+- Check all (agency)
 - Claimed certification
 - Clearing a declared-uncertified stamp
 - CMAS
@@ -29,6 +31,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Depth ceiling
 - Depth marker
 - Depth unit
+- DiveChek check
 - DSD (Discover Scuba Diving)
 - eLearning check
 - Entry-level in-water ratio

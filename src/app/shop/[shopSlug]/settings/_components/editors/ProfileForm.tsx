@@ -120,6 +120,7 @@ export function ProfileForm({
         >
           <BrandColorField
             initial={shop.brandColor}
+            label={t("settings.main.profile.brandColor")}
             pickerLabel={t("settings.main.profile.brandColorPicker")}
             placeholder={DIVEDAY_BRAND_COLOR}
           />

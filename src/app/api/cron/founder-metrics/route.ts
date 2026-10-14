@@ -46,7 +46,7 @@ const CRON_MONITOR_SLUG = "diveday-founder-metrics";
  * 11:00 UTC: past midnight across the Americas and the Caribbean, so a Monday
  * run reads every shop's Sunday as finished, and clear of the other jobs.
  */
-const CRON_SCHEDULE = "0 11 * * *";
+const CRON_SCHEDULE = "7 11 * * *";
 const CRON_MONITOR_CONFIG = {
   schedule: { type: "crontab", value: CRON_SCHEDULE },
   checkinMargin: 240,

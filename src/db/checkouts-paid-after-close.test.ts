@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakeCheckout } from "@/test/fakes";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { createBookingParty } from "./bookings";
@@ -225,6 +225,31 @@ describe("refundPaidAfterCloseCheckout", () => {
     expect(outcome).toEqual({ status: "failed" });
     expect((await row(db, checkout.id))?.refundedCents).toBe(0);
     expect(await listPaidAfterCloseCheckouts(db, shop.id)).toHaveLength(1);
+  });
+
+  it("never sends a second refund after Stripe left the first unanswered", async () => {
+    const { db, shop, checkout } = await closedCheckout();
+    await markCheckoutPaidBySessionId(db, checkout.stripeSessionId, "acct_test", 17_500);
+    let calls = 0;
+    const provider = (status: "unanswered" | "refunded") =>
+      fakeCheckout({
+        async refundCheckoutSession() {
+          calls += 1;
+          return status === "refunded" ? { status, refundId: "re_second" } : { status };
+        },
+      });
+
+    expect(
+      await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, ACTOR, provider("unanswered")),
+    ).toEqual({ status: "needs_reconciliation" });
+    // Past the stale horizon, from a staffer who read the first as a failure.
+    expect(
+      await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, ACTOR, provider("refunded"), {
+        staleBefore: await dbNowPlus(db, 1_000),
+      }),
+    ).toEqual({ status: "needs_reconciliation" });
+    expect(calls).toBe(1);
+    expect((await row(db, checkout.id))?.refundedCents).toBe(0);
   });
 
   it("refuses a checkout that was never paid after closing", async () => {

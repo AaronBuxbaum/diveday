@@ -4,13 +4,8 @@ import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import {
-  GroupLabel,
-  groupLabelClass,
-  LedgerRow,
-  ledgerRowBoxClass,
-  ledgerRowRoomClass,
-} from "@/components/ui/ledger";
+import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
+import { LedgerRow, ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
