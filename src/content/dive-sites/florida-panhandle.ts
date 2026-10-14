@@ -208,7 +208,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "24–30 m (80–97 ft)",
       maxDepthMeters: 30,
       currentNote:
-        "Short ride from East Pass, with no mooring buoy, so boats tie into the wreck or anchor nearby. Bottom time is short at this depth; the openings cut in the hull are for divers trained in overhead environments only.",
+        "About 10 miles southeast of East Pass, open Gulf, with no mooring buoy, so boats tie into the wreck or anchor nearby. Bottom time is short at this depth; the openings cut in the hull are for divers trained in overhead environments only.",
       divePlan:
         "Down to the main deck, one lap of the hull at deck level, then up to the wheelhouse and the top of the superstructure before heading back to the line.",
       fitTone: "demanding",
@@ -234,6 +234,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "cobia",
         "southern-stingray",
         "lionfish",
+        "vermilion-snapper",
       ],
     },
   },
@@ -278,7 +279,8 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "atlantic-spadefish",
         "french-angelfish",
         "great-barracuda",
-        "long-spined-urchin",
+        "variegated-sea-urchin",
+        "vermilion-snapper",
       ],
     },
   },
@@ -310,7 +312,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["rock-hind", "slipper-lobster", "great-barracuda", "lionfish"],
+      creatureSlugs: [
+        "rock-hind",
+        "slipper-lobster",
+        "great-barracuda",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "Mohawk Chief"
@@ -348,7 +356,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "Six concrete reef sites set in a hexagon around the tug, each about 240 m away.",
         },
       ],
-      creatureSlugs: ["goliath-grouper", "great-barracuda", "gray-snapper", "lionfish"],
+      creatureSlugs: [
+        "goliath-grouper",
+        "great-barracuda",
+        "gray-snapper",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "Tugboat Zuess"
@@ -401,7 +415,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "22–29 m (72–94 ft)",
       maxDepthMeters: 30,
       currentNote:
-        "A short ride southeast of East Pass, in the same water as Janet. Deep enough that bottom time runs out quickly; watch for fishing line.",
+        "About 10 miles southeast of East Pass, in the same water as Janet. Deep enough that bottom time runs out quickly; watch for fishing line.",
       fitTone: "demanding",
       // Advanced Open Water for depth near 30 m: the sand is at about 29 m.
       minimumCertificationLevel: "advanced_open_water",
@@ -448,7 +462,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "Pairs of limestone reef pyramids set in a grid around the tug in 2011.",
         },
       ],
-      creatureSlugs: ["gray-snapper", "great-barracuda", "lionfish", "goliath-grouper"],
+      creatureSlugs: [
+        "gray-snapper",
+        "great-barracuda",
+        "lionfish",
+        "goliath-grouper",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "Mac's Reef"
@@ -471,7 +491,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLife: "Snapper · grouper · triggerfish · octopus",
       marineLifeDescription:
         "Every gap in the concrete is a hiding place, so look into the culverts as well as over them.",
-      difficultyLevel: "beginner",
+      difficultyLevel: "intermediate",
       depthRange: "18–23 m (60–76 ft)",
       maxDepthMeters: 23,
       currentNote:
@@ -479,7 +499,8 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       divePlan:
         "Work the concrete targets on the north side, cross to the culverts on the south half, and finish at the memorial in the northeast corner.",
       fitTone: "welcoming",
-      fitNote: "Shallow for a Destin boat dive and close to the pass. A good second dive.",
+      fitNote:
+        "Shallower than most Destin boat dives, but the whole site sits below 18 m. A good second dive.",
       landmarks: [
         {
           name: "9/11 memorial",
@@ -492,7 +513,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "Concrete culverts covering the southern half of the reef.",
         },
       ],
-      creatureSlugs: ["gray-snapper", "caribbean-reef-octopus", "atlantic-spadefish", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-common-octopus",
+        "atlantic-spadefish",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // Denominator row: "Destin Jetties (East Pass Jetty)"
@@ -511,7 +538,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.3858,
       forecastLongitude: -86.5061,
       description:
-        "The rock jetty on the east side of Destin's East Pass, also called the Finger Jetty, reaching more than 90 m out into the channel. The tumbled boulders are packed with life, and two small statues sit on its northern slope where the rocks meet the sand.",
+        "The rock jetty on the east side of Destin's East Pass, also called the Finger Jetty, reaching more than 90 m out into the channel. The tumbled boulders are packed with life.",
       marineLife: "Stingrays · grouper · octopus · snapper",
       marineLifeDescription:
         "Fish crowd the rocks, and rays rest on the sand at the foot of the jetty.",
@@ -521,22 +548,15 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       currentNote:
         "Dive it only at slack tide: the current through the pass is strong at other times and has carried swimmers off. The clearest water comes in with the high tide. Expect boat traffic in the channel and fishing line on the rocks; the depth at the tip changes as the sand bars move.",
       divePlan:
-        "Go in at slack high water, follow the rocks out toward the tip, and turn back along the northern slope past the statues before the tide turns.",
+        "Go in at slack high water, follow the rocks out toward the tip, and turn back along the northern slope before the tide turns.",
       fitTone: "demanding",
       fitNote:
         "Shallow, but the pass decides everything. Timing the tide matters more here than certification.",
-      landmarks: [
-        {
-          name: "The statues",
-          kind: "underwaterMonument",
-          note: "Two small statues on the northern slope, where the rocks meet the sand.",
-        },
-      ],
       creatureSlugs: [
         "gray-snapper",
         "sergeant-major",
         "southern-stingray",
-        "caribbean-reef-octopus",
+        "atlantic-common-octopus",
       ],
     },
   },
@@ -567,7 +587,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitNote: "Compact and easy to navigate for a deep wreck.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["gray-snapper", "great-barracuda", "goliath-grouper", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "great-barracuda",
+        "goliath-grouper",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "R/V Manta"
@@ -605,7 +631,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "Her slightly longer sister ship, sunk the same year southeast of Destin.",
         },
       ],
-      creatureSlugs: ["great-barracuda", "gray-snapper", "goliath-grouper", "lionfish"],
+      creatureSlugs: [
+        "great-barracuda",
+        "gray-snapper",
+        "goliath-grouper",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "M/V Spirit of Norfolk"
@@ -634,7 +666,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitNote: "Big and deep. Plan to see one part of her well rather than all of her quickly.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["great-barracuda", "gray-snapper", "goliath-grouper", "lionfish"],
+      creatureSlugs: [
+        "great-barracuda",
+        "gray-snapper",
+        "goliath-grouper",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "M/V Courageous"
@@ -674,7 +712,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "Where the explosion split the ship. The bow turned around as it sank, so the two halves lie side by side.",
         },
       ],
-      creatureSlugs: ["great-barracuda", "gray-snapper", "goliath-grouper", "lionfish"],
+      creatureSlugs: [
+        "great-barracuda",
+        "gray-snapper",
+        "goliath-grouper",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "M/V Deep Stim III"
@@ -712,7 +756,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "Concrete reef pyramids and modules bolted across the open working deck before she was sunk.",
         },
       ],
-      creatureSlugs: ["great-barracuda", "gray-snapper", "goliath-grouper", "lionfish"],
+      creatureSlugs: [
+        "great-barracuda",
+        "gray-snapper",
+        "goliath-grouper",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "M/V Nekton Pilot (Ted Forsgren)"
@@ -741,7 +791,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["great-barracuda", "gray-snapper", "lionfish"],
+      creatureSlugs: ["great-barracuda", "gray-snapper", "lionfish", "greater-amberjack"],
     },
   },
   // Denominator row: "M/V Nekton Rorqual (Ted Forsgren)"
@@ -766,11 +816,11 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "28–40 m (92–130 ft)",
       maxDepthMeters: 40,
       currentNote:
-        "Open Gulf, a long ride offshore. The top of the wreck is below 28 m and the sand lies at about 40 m, slightly deeper than a recreational dive goes. A new wreck; expect little growth yet.",
+        "Open Gulf, a long ride offshore. The top of the wreck is below 28 m and the sand lies at about 40 m, right at the recreational limit, so the dive is short and deep. A new wreck; expect little growth yet.",
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["great-barracuda", "gray-snapper", "lionfish"],
+      creatureSlugs: ["great-barracuda", "gray-snapper", "lionfish", "greater-amberjack"],
     },
   },
   // Denominator row: "R/V Dolphin"
@@ -799,7 +849,14 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["goliath-grouper", "great-barracuda", "gray-snapper", "lionfish"],
+      creatureSlugs: [
+        "goliath-grouper",
+        "great-barracuda",
+        "gray-snapper",
+        "lionfish",
+        "vermilion-snapper",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "M/V Brannon"
@@ -840,7 +897,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "A tug with a mermaid statue on her deck, about 23 m away.",
         },
       ],
-      creatureSlugs: ["gray-snapper", "long-spined-urchin", "lionfish"],
+      creatureSlugs: ["gray-snapper", "variegated-sea-urchin", "lionfish"],
     },
   },
   // Denominator row: "S/V Dylan"
@@ -924,7 +981,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "The other two Boat Yard wrecks, about 23 m away.",
         },
       ],
-      creatureSlugs: ["gray-snapper", "great-barracuda", "lionfish"],
+      creatureSlugs: ["gray-snapper", "great-barracuda", "lionfish", "greater-amberjack"],
     },
   },
   // Denominator row: "M/V Fantasea (Alex and Anna Jernigan Fantasea Reef)"
@@ -948,11 +1005,19 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       depthRange: "16–27 m (51–88 ft)",
       maxDepthMeters: 27,
+      // Below 30 m, but the sand is at 27 m, past an Open Water diver's depth, as on the Dupont spans.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
         "A short ride south of East Pass, open Gulf. A young wreck with little growth yet; the sand is at 27 m, so keep an eye on depth if you drop down the hull.",
       fitTone: "welcoming",
-      fitNote: "The upper decks start shallow enough for a newer diver to enjoy her.",
-      creatureSlugs: ["gray-snapper", "great-barracuda", "atlantic-spadefish", "lionfish"],
+      fitNote: "The upper decks start at 16 m, and the sand at 27 m makes her an Advanced dive.",
+      creatureSlugs: [
+        "gray-snapper",
+        "great-barracuda",
+        "atlantic-spadefish",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "M/V Skippin Sue"
@@ -979,7 +1044,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       currentNote:
         "Short ride from East Pass, open Gulf. She lies on her side, so doorways and hatches face sideways or down; stay outside the hull.",
       fitTone: "welcoming",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "lionfish"],
+      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "lionfish", "greater-amberjack"],
     },
   },
   // Denominator row: "RMS Atlantis"
@@ -1000,13 +1065,19 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       description:
         "A 38 m offshore supply vessel built in 1979, sunk upright off Destin in 2023. The top of her wheelhouse is within easy reach, so newer divers get a proper Gulf wreck without going deep.",
       marineLife: "Snapper · amberjack · spadefish · bait schools",
-      difficultyLevel: "beginner",
+      difficultyLevel: "intermediate",
       depthRange: "16–24 m (52–80 ft)",
       maxDepthMeters: 25,
       currentNote:
         "A short ride south of East Pass, open Gulf. Current and visibility vary by the day; watch for fishing line on the rails.",
       fitTone: "welcoming",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "great-barracuda", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "great-barracuda",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "RMS Cyclops"
@@ -1091,7 +1162,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["great-barracuda", "gray-snapper", "lionfish"],
+      creatureSlugs: ["great-barracuda", "gray-snapper", "lionfish", "greater-amberjack"],
     },
   },
   // Denominator row: "M/V Deborah"
@@ -1109,18 +1180,18 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.1252,
       forecastLongitude: -86.5899,
       description:
-        "A 41 m tug sunk off Okaloosa County in 1999, standing tall on a deep stretch of sand south of Destin.",
+        "A 41 m tug sunk off Okaloosa County in 1999 on a deep stretch of sand south of Destin.",
       marineLife: "Amberjack · snapper · grouper",
       difficultyLevel: "advanced",
-      depthRange: "37–39 m (122–127 ft)",
-      maxDepthMeters: 41,
+      depthRange: "37–40 m (120–130 ft)",
+      maxDepthMeters: 40,
       currentNote:
-        "Open Gulf, a long ride offshore. Published depths for the sand vary from 39 to 41 m and the top of the wreck is at about 37 m, so the whole dive is at the recreational limit. Bottom time is very short.",
+        "Open Gulf, a long ride offshore. Sources put the sand at 39–41 m, at or past the recreational limit, and the top of the wreck is at about 37 m: turn at 40 m, not the sand. Bottom time is very short.",
       fitTone: "demanding",
       fitNote: "Only for divers comfortable right at 40 m.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["gray-snapper", "great-barracuda", "lionfish"],
+      creatureSlugs: ["gray-snapper", "great-barracuda", "lionfish", "greater-amberjack"],
     },
   },
   // Denominator row: "M/V Monarch Countess"
@@ -1152,7 +1223,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A big ship with nothing below her but deep water. Depth discipline is the whole dive.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["great-barracuda", "gray-snapper", "cobia", "lionfish"],
+      creatureSlugs: ["great-barracuda", "gray-snapper", "cobia", "lionfish", "greater-amberjack"],
     },
   },
   // Denominator row: "Joseph E. Brown Liberty Ship (J. Brown Liberty Ship)"
@@ -1176,12 +1247,18 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "25–30 m (83–98 ft)",
       maxDepthMeters: 30,
       currentNote:
-        "Open Gulf, a long ride from either Destin or Pensacola. The sand sits at about 26 to 30 m depending on the source; stay outside the structure.",
+        "Open Gulf, a long ride from either Destin or Pensacola. Sources put the sand at 28–30 m; stay outside the structure.",
       fitTone: "demanding",
       // Advanced Open Water for depth near 30 m: the top of the wreck is at 25 m
       // and the sand at up to 30 m.
       minimumCertificationLevel: "advanced_open_water",
-      creatureSlugs: ["goliath-grouper", "great-barracuda", "gray-snapper", "lionfish"],
+      creatureSlugs: [
+        "goliath-grouper",
+        "great-barracuda",
+        "gray-snapper",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Denominator row: "Underwater Museum of Art (UMA, Grayton Beach)"
@@ -1208,7 +1285,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "13–18 m (43–59 ft)",
       maxDepthMeters: 18,
       currentNote:
-        "Usually a calm, shallow Gulf site, but more than fifty sculptures spread over open sand make navigation the real challenge; go with a guide or a compass plan. From Destin it is a two-hour boat ride each way.",
+        "Usually a calm, shallow Gulf site, but more than fifty sculptures spread over open sand make navigation the real challenge; go with a guide or a compass plan. From Destin it is an hour or more each way by boat.",
       divePlan:
         "Descend on the line, take a heading, and move sculpture to sculpture, turning back with enough gas to find the line again.",
       fitTone: "welcoming",
@@ -1233,7 +1310,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.0606,
       forecastLongitude: -85.8232,
       description:
-        "A 56 m oilfield supply ship sunk in 1993 and named for Captain Charles Bartholomew, the Navy's supervisor of salvage. She sits upright about 6.5 nautical miles from St. Andrew Bay Pass, and her open holds, galley and head make her the town's favorite training wreck.",
+        "A 56 m oilfield supply ship sunk in 1993 and named for Captain Charles Bartholomew, the Navy's supervisor of salvage. She sits upright about 6.5 nautical miles from St. Andrew Bay Pass, and her upright hull and open holds make her the town's favorite training wreck.",
       marineLife: "Spadefish · snapper · grouper · flounder · turtles (sometimes)",
       difficultyLevel: "intermediate",
       depthRange: "15–26 m (50–85 ft)",
@@ -1249,7 +1326,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         {
           name: "The bow",
           kind: "wreckFeature",
-          note: "The high point of the hull at about 18 m, and the usual place to start.",
+          note: "The high point of the hull itself, at about 18 m, and the usual place to start.",
         },
         {
           name: "The cargo holds",
@@ -1346,7 +1423,14 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitNote: "A deep dive on an offshore run. Plan the turn on the deck, not the sand.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["atlantic-spadefish", "gray-snapper", "great-barracuda", "lionfish", "cobia"],
+      creatureSlugs: [
+        "atlantic-spadefish",
+        "gray-snapper",
+        "great-barracuda",
+        "lionfish",
+        "cobia",
+        "greater-amberjack",
+      ],
     },
   },
   // USS Accokeek
@@ -1377,7 +1461,14 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitNote: "A deep offshore wreck. Most of the dive happens on the hull, well above the sand.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["atlantic-spadefish", "gray-snapper", "great-barracuda", "lionfish", "cobia"],
+      creatureSlugs: [
+        "atlantic-spadefish",
+        "gray-snapper",
+        "great-barracuda",
+        "lionfish",
+        "cobia",
+        "greater-amberjack",
+      ],
     },
   },
   // FAMI Tugs (Twin Tugs)
@@ -1416,7 +1507,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "One tug resting on the other, the result of a storm after the 2003 sinking.",
         },
       ],
-      creatureSlugs: ["atlantic-spadefish", "gray-snapper", "great-barracuda", "lionfish"],
+      creatureSlugs: [
+        "atlantic-spadefish",
+        "gray-snapper",
+        "great-barracuda",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // El Dorado
@@ -1447,7 +1544,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A deep offshore wreck with plenty of height, so most of the dive can stay well above the sand.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["atlantic-spadefish", "gray-snapper", "great-barracuda", "lionfish"],
+      creatureSlugs: [
+        "atlantic-spadefish",
+        "gray-snapper",
+        "great-barracuda",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // SS Tarpon
@@ -1579,7 +1682,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       maxDepthMeters: 23,
       currentNote:
         "Low relief on sand and rubble, so visibility near the bottom decides the dive. Watch for fishing line, as on every public reef here.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // Chickasaw Tug
@@ -1604,7 +1713,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       maxDepthMeters: 21,
       currentNote:
         "Little relief left, so the dive happens close to the sand where visibility is at its worst. Boat traffic from the pass and fishing line are the usual hazards.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // B.J. Putnam
@@ -1634,7 +1749,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitNote: "A deep offshore wreck. Plan the dive on the hull and leave the sand alone.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["atlantic-spadefish", "gray-snapper", "great-barracuda", "lionfish"],
+      creatureSlugs: [
+        "atlantic-spadefish",
+        "gray-snapper",
+        "great-barracuda",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Grey Ghost
@@ -1663,7 +1784,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitNote: "Deep from the first breath: the top of the wreck is already at about 26 m.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "great-barracuda", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "great-barracuda",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // B&B Barge (B & B Reef)
@@ -1682,7 +1809,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.0821,
       forecastLongitude: -85.7146,
       description:
-        "A steel barge sunk in 1990 together with bridge spans, which is where the two Bs come from. One of the shallowest dives on the Panama City list, about 2.5 nautical miles from the pass.",
+        "A steel barge sunk in 1990 together with bridge spans. One of the shallowest dives on the Panama City list, about 2.5 nautical miles from the pass.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "beginner",
       depthRange: "12–14 m (40–45 ft)",
@@ -1691,7 +1818,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
       fitTone: "welcoming",
       fitNote: "Shallow and short to reach: a good checkout or second dive.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // PCMI Barge
@@ -1716,7 +1849,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       maxDepthMeters: 23,
       currentNote:
         "Low relief, so visibility near the sand decides the dive. Fishing line is common on the public reefs.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // Dan Barge
@@ -1743,7 +1882,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
       fitTone: "welcoming",
       fitNote: "Shallow and compact, close to the pass.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // Century Barge (Century/Cobia Barge)
@@ -1773,7 +1918,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitNote: "Low structure at full depth: the whole dive happens close to 30 m.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "cobia", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "cobia",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Navy Barge (Panama City)
@@ -1801,7 +1952,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
       fitTone: "welcoming",
       fitNote: "Shallow and close in: an easy first Gulf dive.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // Loss Pontoon
@@ -1827,7 +1984,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       maxDepthMeters: 20,
       currentNote:
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // Wet & Wild Spot (Wet and Wild Site)
@@ -1855,7 +2018,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
       fitTone: "welcoming",
       fitNote: "Shallow, flat and close to the pass.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // DuPont Bridge Span #1
@@ -1886,7 +2055,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       // Advanced Open Water below 30 m: the sand is at 27 m, past an Open Water
       // diver's depth, on an open-Gulf site 11 nautical miles out.
       minimumCertificationLevel: "advanced_open_water",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "great-barracuda", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "great-barracuda",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // DuPont Bridge Span #3
@@ -1917,7 +2092,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       // Advanced Open Water below 30 m: the sand is at 27 m, past an Open Water
       // diver's depth, on an open-Gulf site 11 nautical miles out.
       minimumCertificationLevel: "advanced_open_water",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "great-barracuda", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "great-barracuda",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Hathaway Bridge Span #5 (Fontainbleau)
@@ -1943,7 +2124,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       maxDepthMeters: 23,
       currentNote:
         "Nearshore Gulf water: visibility swings with rain and wind, and fishing line snags easily on the steel truss.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // Hathaway Bridge Span #12 (Midway Site)
@@ -1969,7 +2156,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       maxDepthMeters: 22,
       currentNote:
         "Nearshore Gulf water: visibility swings with rain and wind, and fishing line snags easily on the steel truss.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // Hathaway Bridge Span #14 (Warsaw Site)
@@ -1995,7 +2188,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       maxDepthMeters: 23,
       currentNote:
         "Nearshore Gulf water: visibility swings with rain and wind, and fishing line snags easily on the steel truss.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // USS Massachusetts
@@ -2046,7 +2245,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "atlantic-spadefish",
         "remora",
         "spotfin-butterflyfish",
-        "blue-tang",
+        "white-grunt",
         "green-moray",
       ],
     },
@@ -2078,7 +2277,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Close to the pass, so the tide and outflow from the bay set the visibility. Fifty years and many hurricanes have left the barges broken and partly buried; the county rates their condition very poor.",
       fitTone: "welcoming",
       fitNote: "Shallow, close in and forgiving. A common first Gulf wreck for new divers.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "sergeant-major", "lionfish"],
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "sergeant-major",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // Joe Patti Barge (Joe Patti Memorial Reef)
@@ -2112,7 +2317,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Down the line to the deck at about 11 m, a slow lap of the sculptures, then the sand around the barge for shells and sand dollars.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, compact and full of things to look at. A good dive for new and junior divers.",
+        "Shallow, compact and full of things to look at. A good dive for new divers; a Junior Open Water diver under 12 stays on the deck at 11 m, not the sand.",
       landmarks: [
         {
           name: "The sculpture deck",
@@ -2146,8 +2351,14 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "18–23 m (60–75 ft)",
       maxDepthMeters: 23,
       currentNote:
-        "Open Gulf a few miles out, so the sea state decides the day. Fishing line is common on the barge.",
-      creatureSlugs: ["gray-snapper", "atlantic-spadefish", "lionfish", "great-barracuda"],
+        "Open Gulf, about seven miles out east of the pass, so the sea state decides the day. Fishing line is common on the barge.",
+      creatureSlugs: [
+        "gray-snapper",
+        "atlantic-spadefish",
+        "lionfish",
+        "great-barracuda",
+        "gray-triggerfish",
+      ],
     },
   },
   // Joseph L. Meek Liberty Ship (Pensacola Liberty Ship)
@@ -2170,7 +2381,8 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A Second World War Liberty ship built in Oregon in 1942 to carry troops and cargo, then sunk as a reef in 1976. Her low hull sits about 6 m proud of the sand, and fishermen and spearos have worked her for decades.",
       marineLife: "Snapper · spadefish · barracuda · sharks",
       marineLifeDescription: "Long fished, and resident sharks know it.",
-      difficultyLevel: "intermediate",
+      difficultyLevel: "advanced",
+      fitTone: "demanding",
       depthRange: "23–29 m (75–95 ft)",
       maxDepthMeters: 29,
       // The sand is at 29 m, a few feet off the 30 m line: Advanced Open Water, without the Deep specialty.
@@ -2277,7 +2489,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       currentNote:
         "Twelve miles out with no mooring buoy; boats tie into the wreck or anchor nearby. Monofilament and old netting cover parts of the wreck, and wires hang inside the wheelhouse.",
       divePlan:
-        "Down to the wheelhouse at about 19 m, then the main deck and the open holds toward the stern, staying above the sand at about 31 m.",
+        "Down to the wheelhouse at about 19 m, then along the main deck, looking into the open holds from above, staying above the sand at about 31 m.",
       fitTone: "demanding",
       fitNote:
         "The top is in reach of a newer diver, but the sand is past 30 m. Carry a cutting tool for the line.",
@@ -2338,6 +2550,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "gray-snapper",
         "cobia",
         "horse-eye-jack",
+        "greater-amberjack",
       ],
     },
   },
@@ -2444,7 +2657,14 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "The crack across the hull that splits the ship into bow and stern sections.",
         },
       ],
-      creatureSlugs: ["cobia", "gray-snapper", "great-barracuda", "atlantic-spadefish", "lionfish"],
+      creatureSlugs: [
+        "cobia",
+        "gray-snapper",
+        "great-barracuda",
+        "atlantic-spadefish",
+        "lionfish",
+        "gray-triggerfish",
+      ],
     },
   },
   // Antares
@@ -2490,7 +2710,14 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "The one section still intact, from about 27 m.",
         },
       ],
-      creatureSlugs: ["great-barracuda", "gray-snapper", "atlantic-spadefish", "cobia", "lionfish"],
+      creatureSlugs: [
+        "great-barracuda",
+        "gray-snapper",
+        "atlantic-spadefish",
+        "cobia",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Tenneco Rig (Tenneco Platform)
@@ -2528,6 +2755,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "gray-snapper",
         "cobia",
         "horse-eye-jack",
+        "greater-amberjack",
       ],
     },
   },
@@ -2553,11 +2781,11 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthRange: "34–37 m (111–122 ft)",
       maxDepthMeters: 37,
       currentNote:
-        "Deep open Gulf with little relief, so the whole dive is spent near the bottom; gas and no-stop time go quickly. A collapsed barge has sharp edges.",
+        "About 17 miles out in deep open Gulf with little relief, so the whole dive is spent near the bottom; gas and no-stop time go quickly. A collapsed barge has sharp edges.",
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["lionfish", "gray-snapper", "great-barracuda"],
+      creatureSlugs: ["lionfish", "gray-snapper", "great-barracuda", "gray-triggerfish"],
     },
   },
   // Tug Born Again (Born Again Tugboat)
@@ -2579,7 +2807,8 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 20 m tug sunk as a reef on 24 January 1991 with twenty-one steel pipes loaded across her deck. The tug is partly broken now, and the pipes make a maze of hiding places.",
       marineLife: "Lobster · snapper · spadefish · reef fish",
       marineLifeDescription: "Look into the ends of the pipes for lobster.",
-      difficultyLevel: "intermediate",
+      difficultyLevel: "advanced",
+      fitTone: "demanding",
       depthRange: "20–29 m (65–96 ft)",
       maxDepthMeters: 30,
       // The sand is at 29 m, a few feet off the 30 m line: Advanced Open Water, without the Deep specialty.
@@ -2593,7 +2822,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "Twenty-one steel pipes, each about 6 m long, lying across the deck.",
         },
       ],
-      creatureSlugs: ["spiny-lobster", "gray-snapper", "atlantic-spadefish", "lionfish"],
+      creatureSlugs: ["slipper-lobster", "gray-snapper", "atlantic-spadefish", "lionfish"],
     },
   },
   // PC Barge (P.C. Barge)
@@ -2654,7 +2883,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       maxDepthMeters: 23,
       currentNote:
         "Open Gulf about eight miles out. With only about 1.5 m of relief the barge is easy to lose in poor visibility; stay close to the line.",
-      creatureSlugs: ["gray-snapper", "lionfish", "sergeant-major"],
+      creatureSlugs: ["gray-snapper", "lionfish", "sergeant-major", "gray-triggerfish"],
     },
   },
   // Navy Barge (Navy Camel Barge, Pensacola)
@@ -2730,7 +2959,14 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "The top of the wreck at about 18 m.",
         },
       ],
-      creatureSlugs: ["atlantic-spadefish", "gray-snapper", "great-barracuda", "lionfish", "cobia"],
+      creatureSlugs: [
+        "atlantic-spadefish",
+        "gray-snapper",
+        "great-barracuda",
+        "lionfish",
+        "cobia",
+        "greater-amberjack",
+      ],
     },
   },
   // New Venture (Fairfield New Venture)
@@ -2762,7 +2998,13 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       fitNote: "A deep wreck on a long boat ride, built for advanced and technical divers.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
-      creatureSlugs: ["atlantic-spadefish", "gray-snapper", "great-barracuda", "lionfish"],
+      creatureSlugs: [
+        "atlantic-spadefish",
+        "gray-snapper",
+        "great-barracuda",
+        "lionfish",
+        "greater-amberjack",
+      ],
     },
   },
   // Fort Pickens Jetty
@@ -2829,7 +3071,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       currentNote:
         "Not tide dependent, but surf, surge and longshore current can be strong; check the beach flags before going in. There are no lifeguards at the reef, and a dive flag is required.",
       fitTone: "welcoming",
-      creatureSlugs: ["sergeant-major", "atlantic-spadefish", "sharpnose-puffer"],
+      creatureSlugs: ["sergeant-major", "atlantic-spadefish", "sheepshead"],
     },
   },
   // Park West and Captain Bob Quarles Reefs
@@ -2899,7 +3141,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
           note: "On the northernmost module, closest to shore.",
         },
       ],
-      creatureSlugs: ["sergeant-major", "atlantic-spadefish", "sharpnose-puffer"],
+      creatureSlugs: ["sergeant-major", "atlantic-spadefish", "sheepshead"],
     },
   },
   // Perdido Key Reef (Perdido Key Snorkel Reef)
@@ -2927,7 +3169,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       currentNote:
         "Surf and longshore current decide the day; there are no lifeguards at the reef and a dive flag is required. Parking at the beach access is very limited.",
       fitTone: "welcoming",
-      creatureSlugs: ["sergeant-major", "atlantic-spadefish", "sharpnose-puffer"],
+      creatureSlugs: ["sergeant-major", "atlantic-spadefish", "sheepshead"],
     },
   },
   // Navarre Gulf-Side Reef (Navarre Beach Marine Sanctuary)
