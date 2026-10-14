@@ -37,7 +37,7 @@ provider-specific folders are adapters and must not introduce unique requirement
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push` | the pre-commit and pre-push checklist is the **verify** skill |
 | `pnpm lint:fix` | Biome autofix |
-| `pnpm check:repo` | 51 static guards, concurrently; each names itself and the offending line. The *why* of each: [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
+| `pnpm check:repo` | 52 static guards, concurrently; each names itself and the offending line. The *why* of each: [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
 | `pnpm agent:doctor` | what this environment will trip you on (Node, `gh`, stale `origin/main`, strays) |
 | `node scripts/stack-map.mjs` | your stack's layers and top, from git |
 | `pnpm db:generate` | a Drizzle migration after editing `src/db/schema/` (the **schema-change** skill) |

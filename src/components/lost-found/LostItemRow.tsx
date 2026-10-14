@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
@@ -73,23 +74,38 @@ export function LostItemRow({
       <form action={formAction} className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="itemId" value={item.id} />
         {open && item.ownerName && !item.toldChannel ? (
-          <button type="submit" name="intent" value="tell" className={button}>
+          <SubmitButton
+            name="intent"
+            value="tell"
+            pendingLabel={fill(copy.tell, { name: item.ownerName })}
+            className={button}
+          >
             {fill(copy.tell, { name: item.ownerName })}
-          </button>
+          </SubmitButton>
         ) : null}
         {open ? (
           <>
-            <button type="submit" name="intent" value="returned" className={button}>
+            <SubmitButton
+              name="intent"
+              value="returned"
+              pendingLabel={copy.returned}
+              className={button}
+            >
               {copy.returned}
-            </button>
-            <button type="submit" name="intent" value="discarded" className={button}>
+            </SubmitButton>
+            <SubmitButton
+              name="intent"
+              value="discarded"
+              pendingLabel={copy.discarded}
+              className={button}
+            >
               {copy.discarded}
-            </button>
+            </SubmitButton>
           </>
         ) : (
-          <button type="submit" name="intent" value="open" className={button}>
+          <SubmitButton name="intent" value="open" pendingLabel={copy.reopen} className={button}>
             {copy.reopen}
-          </button>
+          </SubmitButton>
         )}
         {state?.status === "refused" ? (
           <FormStatus>

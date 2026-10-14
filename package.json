@@ -44,6 +44,7 @@
     "check:tinted-ink": "node scripts/check-tinted-ink.mjs",
     "check:type-ramp": "node scripts/check-type-ramp.mjs",
     "check:page-length": "node scripts/check-page-length.mjs",
+    "check:form-controls": "node scripts/check-form-controls.mjs",
     "check:voice": "node scripts/check-voice.mjs",
     "check:logical-properties": "node scripts/check-logical-properties.mjs",
     "check:image-sizes": "node scripts/check-image-sizes.mjs",

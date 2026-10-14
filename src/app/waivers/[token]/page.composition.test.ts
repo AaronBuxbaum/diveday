@@ -4,6 +4,7 @@ import { createElement, Fragment } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
+import { routeSource } from "@/test/route-source";
 
 /**
  * **What the waiver page is, and what it stopped being** — ADR
@@ -24,7 +25,7 @@ import { diverTranslator } from "@/i18n/messages";
  * `src/app/ready/[token]/page.composition.test.ts`, for the same reason.
  */
 
-const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const SOURCE = component("page.tsx");
 
 /**
  * The source of a file the page composes, read by name: beside the page, or
@@ -32,12 +33,9 @@ const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
  * with it by changing only the name passed here; the gates themselves (the
  * hold, the rail's progress, the held seat's early return) stay in the page.
  */
+/** The route's source, wherever a split put it (`src/test/route-source.ts`). */
 function component(file: string): string {
-  try {
-    return readFileSync(join(__dirname, file), "utf8");
-  } catch {
-    return readFileSync(join(__dirname, "..", "..", "..", "components", file), "utf8");
-  }
+  return routeSource(import.meta.dirname, file);
 }
 
 /** The two signing doors, which moved out of the page into the route's `actions.ts`. */

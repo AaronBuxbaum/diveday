@@ -284,7 +284,6 @@ export default async function TripDetailPage({
         siteRequirement,
       );
   const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale);
-  const readinessLink = readinessDoorPath(shopSlug, tripId, bookingToken);
 
   const inPast = hasSailed(trip.startsAt, now);
   // Where this departure stands against the head count it needs, if it named
@@ -437,14 +436,14 @@ export default async function TripDetailPage({
             {/* The form, terminal — or whichever state stands in its place —
                 and the contact line under it: the right-hand column from `lg`. */}
             <div className="space-y-10 lg:col-start-2 lg:row-span-6 lg:row-start-1">
-              {confirmed ? (
+              {confirmed && bookingToken ? (
                 <EmbedBookedNotice
                   shop={shop}
                   shopSlug={shopSlug}
                   locale={locale}
                   trip={trip}
                   confirmed={confirmed}
-                  readinessLink={readinessLink}
+                  readinessLink={readinessDoorPath(shopSlug, tripId, bookingToken)}
                   mailState={mailState}
                   payNotice={pay}
                   paymentUrl={paymentUrl}

@@ -146,9 +146,12 @@ export function SeatDiverPanel({
                     <input type="hidden" name="fromNameMatch" value="true" />
                     <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
                     {requestId ? <input type="hidden" name="request" value={requestId} /> : null}
-                    <button type="submit" className="underline font-medium text-left">
+                    <SubmitButton
+                      pendingLabel={copy.adding}
+                      className="underline font-medium text-left"
+                    >
                       {match.fullName}
-                    </button>
+                    </SubmitButton>
                   </form>
                   {match.email || match.phone ? (
                     <span className="text-muted text-xs ms-1">

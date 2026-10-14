@@ -17,6 +17,8 @@ export function SubmitButton({
   observabilityAction,
   formAction,
   formNoValidate,
+  name,
+  value,
 }: {
   children: React.ReactNode;
   /** Usually words; a drawn mark where the control is an icon, so the pending state keeps its drawing. */
@@ -39,9 +41,17 @@ export function SubmitButton({
   formAction?: (formData: FormData) => void | Promise<void>;
   /** Skips the form's validation: an act the form's own fields do not gate. */
   formNoValidate?: boolean;
+  /**
+   * The submitter's own field, for a form with several answers (returned, discarded, reopen).
+   * Every one of them is disabled while the form posts, so no second answer goes after the
+   * first; only the one pressed wears its pending label and `aria-busy`.
+   */
+  name?: string;
+  value?: string;
 }) {
   const status = useFormStatus();
   const pending = status.pending && (formAction === undefined || status.action === formAction);
+  const pressed = pending && (name === undefined || status.data?.get(name) === value);
   const startedAt = useRef<number | null>(null);
   const sawPending = useRef(false);
 
@@ -68,15 +78,17 @@ export function SubmitButton({
       type="submit"
       formAction={formAction}
       formNoValidate={formNoValidate}
+      name={name}
+      value={value}
       disabled={pending || disabled}
       className={className}
       aria-label={ariaLabel}
-      aria-busy={pending}
+      aria-busy={pressed}
       onClick={(event) => {
         if (confirmMessage && !window.confirm(confirmMessage)) event.preventDefault();
       }}
     >
-      {pending ? pendingLabel : children}
+      {pressed ? pendingLabel : children}
     </button>
   );
 }

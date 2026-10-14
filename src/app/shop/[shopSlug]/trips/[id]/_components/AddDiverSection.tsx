@@ -134,9 +134,12 @@ export function AddDiverSection({
                         field: it invents nobody's history. */}
                     <input type="hidden" name="fromNameMatch" value="true" />
                     <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
-                    <button type="submit" className="underline font-medium text-left">
+                    <SubmitButton
+                      pendingLabel={match.fullName}
+                      className="underline font-medium text-left"
+                    >
                       {match.fullName}
-                    </button>
+                    </SubmitButton>
                   </form>
                   <NameMatchCandidateFacts
                     match={match}
