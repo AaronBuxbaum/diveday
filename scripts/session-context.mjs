@@ -172,6 +172,11 @@ export function fastForwardShared(
 ) {
   const plan = fastForwardPlan(git, { source, env });
   if (!plan) return null;
+  // Re-read HEAD just before moving it: another session may have checked out a branch or
+  // another commit since the plan, and `--ff-only` alone would fast-forward that too.
+  const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  if (git(["rev-parse", "--verify", "HEAD^{commit}"]) !== plan.from) return null;
+  if (branch !== "HEAD" && branch !== "main") return null;
   try {
     // `--ff-only` refuses anything but a fast-forward, a second lock on the plan's checks; on
     // a detached HEAD it moves HEAD and stays detached. `--no-overwrite-ignore` keeps an ignored

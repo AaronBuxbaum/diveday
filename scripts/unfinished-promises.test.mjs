@@ -87,12 +87,20 @@ describe("promisesUnfinishedWork", () => {
  * thing to do, so the extra turn is a single tool call or a single sentence.
  */
 describe("the cost of a block", () => {
-  it.each([
-    "Next I'll drop the table.\n\nWhich base do you want, main or the stack? Then I'll push.",
-    "Still to do: the capture. Do you want it in this PR? Otherwise it goes next.",
-  ])("never blocks a closing paragraph that asks a question: %j", (text) => {
+  it("never blocks a closing paragraph whose last sentence is the question", () => {
+    const text = "Next I'll drop the table.\n\nWhich base do you want, main or the stack?**";
     expect(isHandoff(text)).toBe(true);
     expect(promisesUnfinishedWork(text, true)).toBe(false);
+  });
+
+  it.each([
+    // Security review of #2584, finding 2: a question inside a list is not a handoff.
+    "- shipped A\n- open question: does B matter?\n- next I'll do C and push",
+    "Which base do you want, main or the stack? Then I'll push.",
+    "Still to do: the capture. Do you want it in this PR? Otherwise it goes next.",
+  ])("still blocks when the question is not the last sentence: %j", (text) => {
+    expect(isHandoff(text)).toBe(false);
+    expect(promisesUnfinishedWork(text, true)).toBe(true);
   });
 
   it("still blocks when the question is in an earlier paragraph, not the closing one", () => {
