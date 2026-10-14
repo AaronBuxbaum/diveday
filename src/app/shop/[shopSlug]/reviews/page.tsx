@@ -18,6 +18,7 @@ import {
   REVIEW_MODERATION_REASONS,
   type ReviewModerationReason,
   type StaffReview,
+  staffReviewNarrow,
 } from "@/db/reviews";
 import { STAFF_PULSE_CATEGORY_KEYS } from "@/i18n/next-dive-labels";
 import { requestLocale } from "@/i18n/request";
@@ -37,6 +38,7 @@ import {
   PublishAllStatus,
 } from "./_components/ReviewBulkPublish";
 import { type ReviewGroup, ReviewLedgerRow } from "./_components/ReviewLedgerRow";
+import { ReviewNarrowChips, reviewsPageHref } from "./_components/ReviewNarrowChips";
 import { type ReviewRowCopy, ReviewRowProvider } from "./_components/ReviewRowActions";
 import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
 import { reviewReplyContext } from "./_components/review-reply-context";
@@ -99,9 +101,9 @@ const PULSE_NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMess
  * published record, then what the shop took down. The group header owns the
  * state word and the count for every row beneath it, so no row wears a status
  * pill; the four stat tiles that used to sit above the list collapsed into the
- * one aggregate line under the title, and the "All / Waiting on you" filter
- * chips retired with them — the groups *are* the filter, and a filtered list
- * cannot show a staffer that publishing a review moved it somewhere.
+ * one aggregate line, under the Reviews tab it describes (fourth UX review,
+ * item 30). The groups *are* the state filter; the chips narrow by what a
+ * review says ("3 stars and under", "With a comment"), never by its state.
  *
  * **The suppression floor's arithmetic is untouched.** A hidden review still
  * counts against the share that decides whether DiveDay publishes this shop's
@@ -115,10 +117,11 @@ export default async function ReviewsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string; notice?: string }>;
+  searchParams: Promise<{ page?: string; notice?: string; show?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { page, notice } = await searchParams;
+  const { page, notice, show } = await searchParams;
+  const narrow = staffReviewNarrow(show);
   const { session, db, shop } = await requireShopSurface(shopSlug);
   // **Who on the crew may read the private pulses** (issue #1410, the reasoning on
   // `canReadPrivateRecapPulse` in src/lib/authz.ts). Checked live against the database rather than
@@ -147,16 +150,18 @@ export default async function ReviewsPage({
       listShopReviewsForStaff(db, session.user.shopId, {
         scope: "waiting",
         limit: MAX_BULK_PUBLISH,
+        narrow,
       }),
       // A non-numeric or missing `?page=` reads as page 1; the query clamps it
       // into range so a bookmarked page past the end lands on the last real one.
       listShopReviewsForStaff(db, session.user.shopId, {
         page: Number.parseInt(page ?? "", 10),
         scope: "moderated",
+        narrow,
       }),
       getShopReviewAggregate(db, session.user.shopId),
       getShopReviewAggregate(db, session.user.shopId, { since: monthStart }),
-      countStaffReviewGroups(db, session.user.shopId),
+      countStaffReviewGroups(db, session.user.shopId, narrow),
       // **What divers asked this shop to fix, privately** (D40, issue #1200).
       // Never a review and never public: nothing here reaches the aggregate,
       // the public list, or the suppression share (src/db/recap-pulses.ts).
@@ -219,15 +224,13 @@ export default async function ReviewsPage({
     publishedManyOther: t.raw("reviews.notice.publishedManyOther"),
     error: t("reviews.notice.error"),
   };
-  /** This page's URL with only `page` swapped — there are no filters left to keep. */
-  const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
+  const pageHref = (target: number) => reviewsPageHref(base, narrow, target);
 
   const published = moderatedPage.reviews.filter((review) => review.isPublished);
   const hidden = moderatedPage.reviews.filter((review) => review.isHidden);
   const waitingIds = waitingPage.reviews.map((review) => review.id);
-  // Nothing to read and nothing to do: the two lists this page is made of are
-  // both empty, so the page's own empty state speaks instead of three headings
-  // over three absences.
+  // Nothing to read and nothing to do: the page's own empty state speaks
+  // instead of three headings over three absences. Narrowed, the chips stay.
   const nothingAtAll = waitingPage.total === 0 && moderatedPage.total === 0;
 
   const rows = (reviews: StaffReview[], group: ReviewGroup) =>
@@ -251,7 +254,6 @@ export default async function ReviewsPage({
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         title={t("shared.shopSections.inbox")}
-        meta={<ReviewsAggregateLine aggregate={aggregate} month={monthAggregate} t={t} />}
         actions={
           <Link
             href={publicSchedulePath(shopSlug)}
@@ -270,6 +272,8 @@ export default async function ReviewsPage({
         roles={session.user.roles}
         t={t}
       />
+      <ReviewsAggregateLine aggregate={aggregate} month={monthAggregate} t={t} className="mb-4" />
+      {narrow || !nothingAtAll ? <ReviewNarrowChips base={base} narrow={narrow} t={t} /> : null}
 
       {/* The one thing on this page that is neither a row nor a count: the
           rating a shop can still read on its own schedule page has stopped
@@ -367,7 +371,9 @@ export default async function ReviewsPage({
           </SectionCard>
         ) : null}
 
-        {nothingAtAll ? (
+        {nothingAtAll && narrow ? (
+          <p className="text-sm text-muted">{t("reviews.narrow.none")}</p>
+        ) : nothingAtAll ? (
           <EmptyState
             title={t("reviews.emptyHeading")}
             body={t("reviews.emptyDetail")}
@@ -395,17 +401,10 @@ export default async function ReviewsPage({
                 off the page, and that is exactly the pass most worth a sentence. */}
             <PublishAllStatus copy={bulkCopy} className="mb-4" />
 
-            {/* The same reasoning per row, and for the same reason: publishing or
-                hiding a review moves its `<li>` between these three lists, which
-                unmounts it. A `useActionState` inside the row was destroyed by
-                the act it existed to report. */}
-
-            {/* One rhythm between groups, the page-section spacing every staff
-                surface uses — never a per-section `mt-*` that drifts. */}
-            {/* The provider draws the hide's Undo toast, above the lists for
-                the same reason `PublishAllStatus` is: a hide takes its own row
-                off the group, and off the page entirely once there are more
-                moderated reviews than fit one. */}
+            {/* The same per row: publishing or hiding moves a row's `<li>`
+                between these lists, which unmounts it, so the provider draws
+                the hide's Undo toast above them. One rhythm between groups,
+                never a per-section `mt-*` that drifts. */}
             <ReviewRowProvider copy={rowCopy}>
               <div className="space-y-10">
                 {waitingPage.reviews.length > 0 ? (
