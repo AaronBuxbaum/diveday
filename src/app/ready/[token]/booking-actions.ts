@@ -73,7 +73,9 @@ export async function payFromReady(token: string) {
  *
  * Re-derived from the page's own read, never the form: only an `open` ask is
  * filed, so a held seat, a seat inside the window or one already asked about
- * is refused for who is asking. A repeat is the same row (`recordMoveAsk`).
+ * is refused for who is asking. A repeat is the same row (`recordMoveAsk`),
+ * and only a row this tap filed says "Sent": an ask that already stood is
+ * shown as the page's own asked line, never reported as news.
  */
 export async function askToMoveAction(token: string, formData: FormData) {
   const ip = await clientIp();
@@ -86,7 +88,7 @@ export async function askToMoveAction(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   refuseWhileHeld(token, ctx.data);
-  if (ctx.data.moveAsk === "asked") redirect(`${base(token)}?saved=move-ask#move-ask`);
+  if (ctx.data.moveAsk === "asked") redirect(`${base(token)}#move-ask`);
   if (ctx.data.moveAsk !== "open") redirect(`${base(token)}?error=move-ask`);
   const note = formData.get("note");
   const outcome = await recordMoveAsk(ctx.db, {
@@ -96,6 +98,7 @@ export async function askToMoveAction(token: string, formData: FormData) {
     now: nowDate(),
   });
   if (outcome.status === "not_found") redirect(`${base(token)}?error=move-ask`);
+  if (outcome.status === "already") revalidateAndRedirect(base(token), `${base(token)}#move-ask`);
   revalidateAndRedirect(base(token), `${base(token)}?saved=move-ask#move-ask`);
 }
 

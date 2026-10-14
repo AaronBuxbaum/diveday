@@ -57,6 +57,7 @@ import {
   courses,
   gearItemKind,
   gearReservations,
+  inboundMessages,
   notificationSendQueue,
   people,
   personRoles,
@@ -1942,6 +1943,21 @@ export async function moveBooking(
           eq(tripHelpRequests.shopId, shopId),
           eq(tripHelpRequests.bookingId, booking.id),
           isNull(tripHelpRequests.handledAt),
+        ),
+      );
+    // An "Ask to move" from the booking page (H-118) was about the old
+    // departure, and this move is its answer: the Inbox row stops waiting,
+    // and the new date's page may be asked about afresh.
+    await tx
+      .update(inboundMessages)
+      .set({ answeredAt: nowDate() })
+      .where(
+        and(
+          eq(inboundMessages.shopId, shopId),
+          eq(inboundMessages.channel, "page"),
+          eq(inboundMessages.keywordIntent, "move"),
+          eq(inboundMessages.bookingId, booking.id),
+          isNull(inboundMessages.answeredAt),
         ),
       );
     await settlePackageCoverage(tx, {

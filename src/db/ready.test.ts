@@ -261,6 +261,31 @@ describe("getReadyPageData", () => {
     expect((await getReadyPageData(db, bookingId))?.moveAsk).toBeNull();
   });
 
+  /**
+   * Dive-domain review N1 of layer r4-1: a paid seat at a shop with no
+   * cancellation window refunds nothing right away either, so the diver may
+   * ask to move instead there too.
+   */
+  it("offers Ask to move on a paid seat when the trip has no cancellation window", async () => {
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "stripe",
+      providerRef: "pi_move_ask_no_policy",
+    });
+    await db
+      .update(tripTable)
+      .set({ cancellationWindowHours: null })
+      .where(eq(tripTable.id, open.id));
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.cancelPreview).toBe("no_policy");
+    expect(data?.moveAsk).toBe("open");
+  });
+
   it("withdraws the cancel once the seat is checked in", async () => {
     const { db, bookingId } = await unpaidBooking();
     await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));

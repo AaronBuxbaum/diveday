@@ -26,11 +26,12 @@ export type InboxChannel = InboundChannel | "page";
 export const MOVE_ASK_NOTE_MAX_LENGTH = 500;
 
 /**
- * The provider id an "Ask to move" is filed under: one per booking, so a
- * second tap, a double submit or a back-button resend is the same row.
+ * The provider id an "Ask to move" is filed under: one per booking and
+ * departure, so a second tap, a double submit or a back-button resend is the
+ * same row, and a seat the desk moved can ask again about its new date.
  */
-export function moveAskProviderId(bookingId: string): string {
-  return `move-ask:${bookingId}`;
+export function moveAskProviderId(bookingId: string, tripId: string): string {
+  return `move-ask:${bookingId}:${tripId}`;
 }
 
 /**

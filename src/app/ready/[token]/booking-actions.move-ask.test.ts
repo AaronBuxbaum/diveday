@@ -87,10 +87,17 @@ describe("askToMoveAction", () => {
     expect(recordMoveAsk).not.toHaveBeenCalled();
   });
 
-  it("files nothing twice: an asked seat lands on the asked state", async () => {
+  it("files nothing twice: an asked seat lands on the asked state, not on Sent", async () => {
     withPage({ moveAsk: "asked" });
-    await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}?saved=move-ask#move-ask`);
+    await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}#move-ask`);
     expect(recordMoveAsk).not.toHaveBeenCalled();
+  });
+
+  // Dive-domain review F1 of layer r4-1: nothing new recorded is not "Sent".
+  it("says nothing was sent when an ask already stood", async () => {
+    withPage({ moveAsk: "open" });
+    vi.mocked(recordMoveAsk).mockResolvedValue({ status: "already" });
+    await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}#move-ask`);
   });
 
   it("refuses a held seat before anything else", async () => {

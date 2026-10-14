@@ -339,12 +339,13 @@ export type ReadyPageData = {
    */
   runningLate: { open: boolean; saidAt: Date | null };
   /**
-   * **"Ask to move"** (H-118). Past the free-cancellation window a cancel
-   * forfeits the money, so the diver may ask the shop for another date
-   * instead: `open` while that ask could be made — a paid seat the diver may
-   * still release, past the window, not held, on their own booking — and
-   * `asked` once it has been (`hasMoveAsk`), so the page says so rather than
-   * offering it twice. Null everywhere else. The move itself is staff's.
+   * **"Ask to move"** (H-118). Past the free-cancellation window, or on a
+   * trip with none, a paid cancel returns nothing right away, so the diver
+   * may ask the shop for another date instead: `open` while that ask could be
+   * made — a paid seat the diver may still release, not held, on their own
+   * booking — and `asked` while one about this departure stands
+   * (`hasMoveAsk`), so the page says so rather than offering it twice. Null
+   * everywhere else. The move itself is staff's.
    */
   moveAsk: "open" | "asked" | null;
   /**
@@ -582,7 +583,12 @@ export async function getReadyPageData(
   // page that takes no payment here (pay at the dock), opens the door.
   const canAddSeat =
     canCancelBooking && !identityHeld && row.partyLeadBookingId === null && (settled || !canPay);
-  const moveAskable = canCancelBooking && !identityHeld && cancelPreview === "forfeit";
+  // Past the free window, or with no window at all, a paid cancel returns
+  // nothing right away: the diver may ask the shop to move them instead.
+  const moveAskable =
+    canCancelBooking &&
+    !identityHeld &&
+    (cancelPreview === "forfeit" || cancelPreview === "no_policy");
   const moveAsk: ReadyPageData["moveAsk"] = moveAskable
     ? (await hasMoveAsk(db, row.shopId, bookingId))
       ? "asked"

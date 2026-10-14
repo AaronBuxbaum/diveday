@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
@@ -17,7 +17,7 @@ import {
   reopenInboundMessage,
   shopIdForInboundEmailToken,
 } from "./inbound-messages";
-import { bookings, inboundMessages, people, personRoles, shops } from "./schema";
+import { bookings, inboundMessages, people, personRoles, shops, trips } from "./schema";
 
 /**
  * The inbox's contract (ADR 20260907-two-way-inbox): a message lands on the
@@ -562,6 +562,61 @@ describe("an Ask to move", () => {
     const again = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: NOW });
     expect(again.status).toBe("already");
   });
+
+  /**
+   * Dive-domain review F1 of layer r4-1: the ask is about one departure. A
+   * seat the desk moved can ask again about its new date, and an ask staff
+   * answered or deleted no longer stands, so asking again files it anew
+   * rather than vanishing into `already`.
+   */
+  it("stands for one departure: a moved seat asks again", async () => {
+    const { db, shop } = ctx;
+    const { bookingId } = await aBooking();
+    const first = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: NOW });
+    if (first.status !== "recorded") throw new Error(`expected recorded, got ${first.status}`);
+    const [other] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .innerJoin(bookings, eq(bookings.id, bookingId))
+      .where(and(eq(trips.shopId, shop.id), ne(trips.id, bookings.tripId)))
+      .limit(1);
+    if (!other) throw new Error("expected a second seeded trip");
+    await db.update(bookings).set({ tripId: other.id }).where(eq(bookings.id, bookingId));
+    expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(false);
+    const second = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: NOW });
+    if (second.status !== "recorded") throw new Error(`expected recorded, got ${second.status}`);
+    expect(second.id).not.toBe(first.id);
+    expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(true);
+  });
+
+  it.each(["answered", "deleted"] as const)(
+    "no longer stands once %s, and asking again files it anew",
+    async (state) => {
+      const { db, shop } = ctx;
+      const { bookingId } = await aBooking();
+      const first = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: NOW });
+      if (first.status !== "recorded") throw new Error(`expected recorded, got ${first.status}`);
+      await db
+        .update(inboundMessages)
+        .set(state === "answered" ? { answeredAt: NOW } : { deletedAt: NOW })
+        .where(eq(inboundMessages.id, first.id));
+      expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(false);
+      const later = new Date(NOW.getTime() + 60_000);
+      const again = await recordMoveAsk(db, {
+        shopId: shop.id,
+        bookingId,
+        note: "Still sick, any date next month",
+        now: later,
+      });
+      if (again.status !== "recorded") throw new Error(`expected recorded, got ${again.status}`);
+      expect(await getInboundMessage(db, shop.id, again.id)).toMatchObject({
+        body: "Still sick, any date next month",
+        answeredAt: null,
+        receivedAt: later,
+      });
+      expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(true);
+    },
+  );
 
   it("finds no booking from another shop", async () => {
     const { db } = ctx;

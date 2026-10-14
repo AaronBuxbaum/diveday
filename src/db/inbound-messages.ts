@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type InboundChannel,
@@ -242,15 +242,23 @@ async function recordMatchedInboundMessage(
  *
  * The booking is read inside the shop and must belong to a live diver; the
  * address recorded is the one on file, so the row says who to call. One ask
- * per booking (`moveAskProviderId`): a repeat is `already`, never a second
- * row, whether or not the first was answered.
+ * per booking and departure (`moveAskProviderId`): a repeat while it stands
+ * is `already`, never a second row. Once staff answered or deleted it, or the
+ * seat moved (`moveBooking` answers it), it no longer stands, and asking
+ * again files it anew: the same row for the same departure, unanswered again
+ * with the new words and time, so it is never swallowed.
  */
 export async function recordMoveAsk(
   db: DbExecutor,
   input: { shopId: string; bookingId: string; note?: string | null; now: Date },
 ): Promise<{ status: "recorded"; id: string } | { status: "already" } | { status: "not_found" }> {
   const [seat] = await db
-    .select({ personId: people.id, email: people.email, phone: people.phone })
+    .select({
+      personId: people.id,
+      email: people.email,
+      phone: people.phone,
+      tripId: bookings.tripId,
+    })
     .from(bookings)
     .innerJoin(
       people,
@@ -265,33 +273,57 @@ export async function recordMoveAsk(
     .limit(1);
   if (!seat) return { status: "not_found" };
   const note = truncateInboundBody(input.note ?? "").slice(0, MOVE_ASK_NOTE_MAX_LENGTH);
-  const [inserted] = await db
+  const fromAddress =
+    normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "";
+  const [filed] = await db
     .insert(inboundMessages)
     .values({
       shopId: input.shopId,
       personId: seat.personId,
       channel: "page",
-      fromAddress: normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "",
+      fromAddress,
       body: note,
       receivedAt: input.now,
-      providerMessageId: moveAskProviderId(input.bookingId),
+      providerMessageId: moveAskProviderId(input.bookingId, seat.tripId),
       keywordIntent: "move",
       bookingId: input.bookingId,
       // The bearer link vouched for who this is, as WhatsApp vouches for a
       // number: it is a diver waiting, and counts as one.
       senderAuthenticated: true,
     })
-    .onConflictDoNothing({ target: [inboundMessages.channel, inboundMessages.providerMessageId] })
+    .onConflictDoUpdate({
+      target: [inboundMessages.channel, inboundMessages.providerMessageId],
+      set: {
+        personId: seat.personId,
+        fromAddress,
+        body: note,
+        receivedAt: input.now,
+        answeredAt: null,
+        deletedAt: null,
+      },
+      // Only an ask that no longer stands is filed anew; a standing one is
+      // left exactly as the diver first wrote it.
+      setWhere: or(isNotNull(inboundMessages.answeredAt), isNotNull(inboundMessages.deletedAt)),
+    })
     .returning({ id: inboundMessages.id });
-  return inserted ? { status: "recorded", id: inserted.id } : { status: "already" };
+  return filed ? { status: "recorded", id: filed.id } : { status: "already" };
 }
 
-/** Whether this booking's diver has already asked to move it (H-118). */
+/**
+ * Whether this booking's diver has an ask to move it standing (H-118): one
+ * about the departure the seat is on now, not answered and not deleted.
+ */
 export async function hasMoveAsk(
   db: DbExecutor,
   shopId: string,
   bookingId: string,
 ): Promise<boolean> {
+  const [seat] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  if (!seat) return false;
   const [row] = await db
     .select({ id: inboundMessages.id })
     .from(inboundMessages)
@@ -299,7 +331,8 @@ export async function hasMoveAsk(
       and(
         eq(inboundMessages.shopId, shopId),
         eq(inboundMessages.channel, "page"),
-        eq(inboundMessages.providerMessageId, moveAskProviderId(bookingId)),
+        eq(inboundMessages.providerMessageId, moveAskProviderId(bookingId, seat.tripId)),
+        isNull(inboundMessages.answeredAt),
         isNull(inboundMessages.deletedAt),
       ),
     )
