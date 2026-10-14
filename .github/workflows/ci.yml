@@ -91,7 +91,7 @@ jobs:
       # `unit-tests-docs` too. It needs no database and no PGlite template, and
       # this job runs on every pull request, docs-only included, so a guard over
       # a document still answers to a docs-only change.
-      - run: pnpm exec vitest run --project guards --reporter=dot
+      - run: pnpm exec vitest run --project guards --reporter=dot --reporter=./src/test/failed-files-reporter.ts
       # The body names the reviewer agents a safety-critical or security-sensitive diff needs
       # (scripts/check-pr-body.mjs; docs/agents/repo-checks.md#pr-body). The body is read live
       # so an edit counts on a re-run; without `pull-requests: read` that read fails and the
@@ -190,6 +190,9 @@ jobs:
       # and drops everything after that `--` as unparsed — every shard then
       # silently runs the full suite instead of its 1/4 slice.
       #
+      # The third reporter annotates each failed test file, so `pnpm verify:push` on the layer
+      # above can re-run exactly what is red here (src/test/failed-files-reporter.ts).
+      #
       # The second reporter records each file's wall time into the artifact
       # below and prints the same map as one `diveday-test-durations:` log
       # line. That is what `scripts/test-durations.json` (the sequencer's
@@ -202,7 +205,7 @@ jobs:
       # run once, in `repo-safeguards`, instead of a quarter of them in each
       # shard. They are bounded by reading the repository, not by test count,
       # so dealing them four ways bought nothing and cost each shard the walk.
-      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --shard=${{ matrix.shard }}/4
+      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --shard=${{ matrix.shard }}/4
         env:
           DIVEDAY_TEST_DURATIONS_OUT: test-durations/shard-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@v7
@@ -257,7 +260,7 @@ jobs:
             exit 1
           fi
           echo "${#files[@]} unit files quote a document path"
-          pnpm exec vitest run --project '!guards' --reporter=dot "${files[@]}"
+          pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/failed-files-reporter.ts "${files[@]}"
 
   build:
     name: Build
