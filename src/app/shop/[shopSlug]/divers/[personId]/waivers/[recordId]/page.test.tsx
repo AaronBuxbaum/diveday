@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { isValidElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { personRoles, waiverRecords } from "@/db/schema";
+import { personRoles, shops, waiverRecords } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
@@ -45,7 +45,15 @@ function textIn(node: unknown, found: string[] = []): string[] {
   return found;
 }
 
-async function renderAs(viewerRoles: Role[]) {
+async function renderAs(
+  viewerRoles: Role[],
+  options: {
+    /** What the session claims, when it differs from the viewer's live `person_roles`. */
+    sessionRoles?: Role[];
+    /** Move the record to another shop first: the id is then that shop's, not this one's. */
+    recordInAnotherShop?: boolean;
+  } = {},
+) {
   if (!FLAGGED || !UNFLAGGED) throw new Error("questionnaire changed shape");
   const db: AppDb = await seededTestDb();
   const shop = await getShopBySlug(db, "blue-mantis");
@@ -73,6 +81,17 @@ async function renderAs(viewerRoles: Role[]) {
   const viewer = await seededStaffPersonId(db, shop.id, email);
   await db.delete(personRoles).where(eq(personRoles.personId, viewer));
   await db.insert(personRoles).values(viewerRoles.map((role) => ({ personId: viewer, role })));
+  if (options.recordInAnotherShop) {
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Reef Runners", slug: "reef-runners", timezone: "America/New_York" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("second shop insert failed");
+    await db
+      .update(waiverRecords)
+      .set({ shopId: otherShop.id })
+      .where(eq(waiverRecords.id, record.id));
+  }
   vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(auth).mockResolvedValue({
     user: {
@@ -81,7 +100,7 @@ async function renderAs(viewerRoles: Role[]) {
       shopSlug: "blue-mantis",
       name: "Viewer",
       email,
-      roles: viewerRoles,
+      roles: options.sessionRoles ?? viewerRoles,
     },
   });
   const tree = await SignedWaiverPage({
@@ -114,4 +133,25 @@ describe("a signed release's medical answers", () => {
       expect(text).not.toContain(PHYSICIAN);
     },
   );
+});
+
+/**
+ * The wall is the database's, never the session's (security review of the
+ * test-suite layer 1): a session that claims more than `person_roles` grants
+ * reads what the live rows grant, and a record id from another shop is not
+ * found, whoever asks.
+ */
+describe("a signed release's medical answers, against a session that claims too much", () => {
+  it("reads the live roles, not a session that claims the owner's", async () => {
+    const text = await renderAs(["crew"], { sessionRoles: ["owner"] });
+    expect(text).toContain(FLAGGED?.prompt);
+    expect(text).not.toContain(UNFLAGGED?.prompt);
+    expect(text).not.toContain(PHYSICIAN);
+  });
+
+  it("does not find another shop's record, even for this shop's owner", async () => {
+    await expect(renderAs(["owner"], { recordInAnotherShop: true })).rejects.toThrow(
+      /NEXT_HTTP_ERROR_FALLBACK;404/,
+    );
+  });
 });
