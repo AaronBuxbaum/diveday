@@ -174,6 +174,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Imported payment history
 - Imported waiver acceptance
 - In-water certified assistant
+- Incident kind
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
@@ -244,6 +245,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Snorkeler
 - Souls on board
 - Staff invite
+- Stale roll call
 - Standing crew
 - Station acknowledgement
 - Station echo
@@ -272,13 +274,16 @@ fails while it is stale. Grep the domain files for a term; this index says which
 
 [glossary/records-and-evidence.md](glossary/records-and-evidence.md)
 
+- Coverage denominator
 - Day profile
+- Dive area
 - Earliest flight
 - Executed dive
 - Field guide
 - Marine-life catalog
 - Material generation
 - Observed species
+- Photo ledger
 - Sighting
 - Staff credential
 - Supervision claim

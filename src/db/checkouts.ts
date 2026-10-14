@@ -1437,7 +1437,7 @@ export async function markCheckoutPaidBySessionId(
         operation: "checkout_settled",
       });
     }
-    // One sale for the shop's books (batch 6 item 9, H-116): the whole
+    // One sale for the shop's books (batch 6 item 9, H-120): the whole
     // checkout as one receipt naming the party lead, never one per seat.
     // Keyed on the checkout, so the self-healing replay above sends nothing
     // twice.

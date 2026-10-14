@@ -499,6 +499,20 @@ export async function setStaffAccountStatus(
       .update(userAccounts)
       .set({ status: input.status })
       .where(eq(userAccounts.id, input.userAccountId));
+    // A disabled login stops following manifests too, as a removal does
+    // (security review 20261014): the device keeps no subscription a push
+    // about a boat could still reach. Re-enabling does not restore them; the
+    // staffer follows again from the manifest.
+    if (input.status === "disabled") {
+      await tx
+        .delete(pushSubscriptions)
+        .where(
+          and(
+            eq(pushSubscriptions.shopId, input.shopId),
+            eq(pushSubscriptions.personId, input.personId),
+          ),
+        );
+    }
     // Keep the session row until the next request. `requireStaffSession()`
     // must be able to read the unchanged session and turn the live account
     // status check into `/sign-in?session=ended`; deleting it here makes

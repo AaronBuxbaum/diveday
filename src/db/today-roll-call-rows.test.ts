@@ -53,6 +53,47 @@ describe("pushRollCallRows", () => {
   });
 });
 
+/** Batch 6, item 6: the row for a count the owners were alerted about says so. */
+describe("pushRollCallRows after the stale-roll-call alert", () => {
+  const gap = {
+    tripId: "t-1",
+    title: "Two-Tank Reef",
+    startsAt: new Date("2026-07-21T12:00:00Z"),
+    endsAt: new Date("2026-07-21T16:00:00Z"),
+    capacity: 12,
+    priceCents: null,
+    reason: "after_dive_uncounted" as const,
+    diveNumber: 2,
+    uncounted: 2,
+    total: 8,
+    rosterSize: 8,
+    underway: false,
+    stale: false,
+  };
+  const rows = (alertedAt: Date | null) => {
+    const actions: TodayAction[] = [];
+    pushRollCallRows(
+      actions,
+      rowsContext({
+        boatsOut: { out: [], blocked: [] },
+        rollCallGaps: [{ ...gap, alertedAt }],
+        crewClashState: { departures: [], clashes: new Map(), crew: new Map(), divers: new Map() },
+      }),
+    );
+    return actions;
+  };
+
+  it("names when the owners were alerted, in the shop's zone", () => {
+    const [row] = rows(new Date("2026-07-21T16:40:00Z"));
+    expect(row?.detail?.replace(/\s+/gu, " ")).toMatch(/Owners alerted: Jul 21, 12:40 PM EDT\.$/);
+  });
+
+  it("says nothing of an alert that has not gone", () => {
+    const [row] = rows(null);
+    expect(row?.detail).not.toContain("alerted");
+  });
+});
+
 /** One database for the file, one transaction per test (`fileScopedShopContext`, src/test/db.ts). */
 const ctx = fileScopedShopContext();
 

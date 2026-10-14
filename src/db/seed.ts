@@ -360,10 +360,10 @@ const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
   // The photo strip under the cover: four of the bundled reef frames, so the
   // storefront captures draw the strip at the width a real shop's would.
   shopfrontPhotoUrls: [
-    "Blue Tangs Molasses Reef 1999.jpg",
+    "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
     "French Angelfish Pickles Reef 20230713.jpg",
     "FGBNMS - nurse shark (27551309652).jpg",
-    "Yellowtail Snappers Molasses Reef 1999.jpg",
+    "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
   ].map((file) => `/dive-sites/${encodeURIComponent(file)}`),
 };
 

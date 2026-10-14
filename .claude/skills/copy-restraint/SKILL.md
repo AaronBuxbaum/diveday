@@ -113,53 +113,7 @@ A sentence that survives the filter still has to *sound* right. Restraint decide
 em-dash pivot, the "not X, Y" contrast and the *actually* are how a sentence that should have been
 deleted disguises itself as one that earned its place.
 
-## Deleting a string, mechanically
+## Reference
 
-Copy lives in bundles ([i18n-copy](../i18n-copy/SKILL.md)), so a deletion is three edits, and all
-three ship together:
-
-1. Delete the `t("…")` call site (and any `<p>` that existed only to hold it).
-2. Delete the key from `src/i18n/locales/en-US/…`.
-3. Delete the same key from `src/i18n/locales/es-ES/…` — `pnpm check:locale` fails on a key that
-   exists in one locale and not the other, in **either** direction.
-
-Then `pnpm verify:push`, which runs every spec still quoting a sentence you deleted — and, because a
-deleted paragraph changes a layout, look at the surface in light ([verify](../verify/SKILL.md)).
-
-Deleting copy usually **lowers** the `check:copy` / `check:domain-strings` counts, which is fine:
-both baselines sit at zero and the checks refuse an increase, never a decrease.
-
-## Sweeping a surface
-
-When you open any page, read it once as a stranger before you read it as its author:
-
-1. Read every sentence out loud in order. Cross out each one that repeats the heading, the label,
-   the button, or the row above it.
-2. For each survivor, name the thing the reader would get wrong without it. No answer → cut.
-3. Count what is left. A staff surface with more than one explanatory sentence per section is
-   still over-written.
-4. Look at it. Deleting copy is a layout change: a section whose subtitle is gone may now need
-   its spacing revisited, not just its paragraph removed.
-
-## Accessibility is not the tiebreaker
-
-When a more accessible option and a more delightful one for the standard user genuinely conflict,
-**build the delightful one** and record the trade in
-[docs/design/accessibility-tradeoffs.md](../../../docs/design/accessibility-tradeoffs.md) — a
-register a human revisits later, never a follow-up entry and never a silent omission.
-
-This is narrow and it is not a licence:
-
-- It applies to **copy and presentation** choices — a helper sentence, a visible hint, a caption
-  restating a colour. It does not license removing a control from the keyboard, breaking focus
-  order, or shipping a target under 44 px.
-- **Safety surfaces are exempt.** Manifests, roll call, cert gating, and medical flags keep
-  [principle 6](../../../docs/design/principles.md) whole: never colour alone, states in words,
-  timestamps with their zone. A crew member reading a wet screen in glare is the standard user
-  there.
-- An `aria-label` costs the sighted reader nothing, so it is never the thing traded away. What
-  gets traded is *visible* prose — and when it goes, the accessible name is what has to carry the
-  meaning instead.
-
-Every trade goes in the register with what was dropped, who it costs, and what would reverse it.
-An unrecorded trade is a bug.
+- [deleting.md](deleting.md) — removing a string from both bundles and its tests, and sweeping a surface.
+- [accessibility.md](accessibility.md) — when a more accessible option and a more delightful one genuinely conflict.

@@ -3,7 +3,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { lastAssistantText, promisesUnfinishedWork } from "./unfinished-promises.mjs";
+import {
+  isHandoff,
+  lastAssistantText,
+  promisedSentence,
+  promisesUnfinishedWork,
+  reasonFor,
+} from "./unfinished-promises.mjs";
 
 /**
  * The guard exists because of a specific, boring failure: a session ended three
@@ -72,6 +78,54 @@ describe("promisesUnfinishedWork", () => {
     // this turn ending on one — otherwise every long relay would trip it.
     const buried = `An agent reported: "Next I'll re-shoot the capture."\n\n${"Everything below is a finished summary. ".repeat(40)}`;
     expect(promisesUnfinishedWork(buried, DIRTY)).toBe(false);
+  });
+});
+
+/**
+ * A block costs one more full-context turn (2026-10-14 token review, ideas row 8). So the block
+ * stays, but never on a turn that asked something, and its reason is short and names the one
+ * thing to do, so the extra turn is a single tool call or a single sentence.
+ */
+describe("the cost of a block", () => {
+  it("never blocks a closing paragraph whose last sentence is the question", () => {
+    const text = "Next I'll drop the table.\n\nWhich base do you want, main or the stack?**";
+    expect(isHandoff(text)).toBe(true);
+    expect(promisesUnfinishedWork(text, true)).toBe(false);
+  });
+
+  it.each([
+    // Security review of #2584, finding 2: a question inside a list is not a handoff.
+    "- shipped A\n- open question: does B matter?\n- next I'll do C and push",
+    "Which base do you want, main or the stack? Then I'll push.",
+    "Still to do: the capture. Do you want it in this PR? Otherwise it goes next.",
+  ])("still blocks when the question is not the last sentence: %j", (text) => {
+    expect(isHandoff(text)).toBe(false);
+    expect(promisesUnfinishedWork(text, true)).toBe(true);
+  });
+
+  it("still blocks when the question is in an earlier paragraph, not the closing one", () => {
+    expect(
+      promisesUnfinishedWork(
+        "Should this be a column? It should.\n\nNext I'll add the migration.",
+        true,
+      ),
+    ).toBe(true);
+  });
+
+  it("quotes the sentence that promised the work", () => {
+    expect(
+      promisedSentence("The guard is green. Once it lands, I'll drop the table. Done for now."),
+    ).toBe("Once it lands, I'll drop the table.");
+    expect(promisedSentence("Nothing promised here.")).toBe("");
+  });
+
+  it("names the promise and the exact next step, in a few short lines", () => {
+    const reason = reasonFor({ promise: "Next I'll run the visual suite.", uncommitted: 3 });
+    expect(reason).toContain('"Next I\'ll run the visual suite."');
+    expect(reason).toContain("3 uncommitted paths");
+    expect(reason).toContain("TaskCreate");
+    expect(reason.split("\n").length).toBeLessThanOrEqual(4);
+    expect(reason.length).toBeLessThan(600);
   });
 });
 

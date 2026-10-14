@@ -188,7 +188,8 @@
     "ratingLapsed": "{names} {count, plural, one {has a rating that isn’t current} other {have ratings that aren’t current}} for this departure.",
     "missingContactNamed": "No emergency contact.",
     "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open, no last-minute deal sent.",
-    "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} open, {waiting} on the wait list."
+    "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} open, {waiting} on the wait list.",
+    "rollCallAlerted": "Owners alerted: {time}."
   },
   "actionLabel": {
     "openRollCall": "Open roll call",

@@ -188,7 +188,8 @@
     "ratingLapsed": "{names} {count, plural, one {tiene una titulación vencida} other {tienen titulaciones vencidas}} para esta salida.",
     "missingContactNamed": "Sin contacto de emergencia.",
     "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}}, sin oferta de última hora enviada.",
-    "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera."
+    "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera.",
+    "rollCallAlerted": "Propietarios avisados: {time}."
   },
   "actionLabel": {
     "openRollCall": "Abrir recuento",
