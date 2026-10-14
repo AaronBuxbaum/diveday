@@ -5,8 +5,10 @@ import { setupRequests } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
 import { SETUP_REQUESTS_PER_HOUR } from "@/lib/setup-requests";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The public set-up form's action (ADR 20261007-setup-request-form): what it
@@ -84,7 +86,7 @@ async function submit(form: FormData) {
 
 beforeEach(async () => {
   hoisted.afterTasks.length = 0;
-  db = await seededTestDb();
+  db = ctx.db;
   vi.mocked(getDb).mockReset().mockResolvedValue(db);
   vi.mocked(checkRateLimit).mockReset().mockResolvedValue({ allowed: true, retryAfterMs: 0 });
   vi.mocked(trackEvent).mockClear();

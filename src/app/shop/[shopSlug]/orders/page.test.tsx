@@ -28,13 +28,15 @@ import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext, } from "@/test/db";
 import { ariaLabelsIn, findElements, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { PayoutLines } from "./_components/PayoutLines";
+
+const ctx = fileScopedShopContext();
 
 // Same mocking shape as ../settings/SettingsPage.test.tsx: the page is invoked
 // directly, outside Next's request scope, so the three things that only exist
@@ -61,7 +63,7 @@ const SHOP_SLUG = "blue-mantis";
 
 /** A session for the seeded staff member who really holds `role`, roles and all. */
 async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySession }> {
-  const db: AppDb = await seededTestDb();
+  const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, SHOP_SLUG);
   if (!shop) throw new Error("demo shop missing");
   const member = (await listShopStaff(db, shop.id)).find((staff) => staff.roles.includes(role));
