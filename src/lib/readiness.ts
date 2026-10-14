@@ -484,11 +484,12 @@ export type ReadinessInput = {
   /**
    * The shop's zone, which turns the instant a release was signed into the
    * calendar day the guardian rule measures the diver's age on
-   * (`src/lib/guardian.ts`). Defaults to UTC for a caller with no shop in hand
-   * — a day of slack at the boundary against a rule measured in years — and
-   * the one production caller (`src/db/readiness.ts`) passes the shop's own.
+   * (`src/lib/guardian.ts`). Required: a guessed zone moves that day near
+   * midnight, and the guess decides whether a diver signing on the eve of
+   * their 18th birthday needs a guardian. The one production caller
+   * (`src/db/readiness.ts`) passes the shop's own.
    */
-  timezone?: string;
+  timezone: string;
   /**
    * What this person is doing on the boat (ADR 20261007-participant-types).
    * Absent is a diver.
@@ -930,7 +931,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       guardianSignatureMissing(input.waiver, {
         dateOfBirth: input.dateOfBirth,
         minorDeclared: input.minorDeclared ?? false,
-        timezone: input.timezone ?? "UTC",
+        timezone: input.timezone,
       })
     ) {
       blockers.push({ code: "guardian_signature_missing" });

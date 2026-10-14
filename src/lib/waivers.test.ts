@@ -130,6 +130,16 @@ describe("waiver signature currency", () => {
     expect(isCompletedWaiverCurrent(justInside, 1, SIGN_NOW)).toBe(true);
   });
 
+  it("stands today and not on a departure three weeks out, when the year runs out between", () => {
+    const signedAt = new Date(
+      SIGN_NOW.getTime() + 14 * 24 * 60 * 60 * 1000 - WAIVER_SIGNATURE_VALIDITY_MS,
+    );
+    const release = completedWaiver({ signedAt, completedAt: signedAt });
+    const departure = new Date(SIGN_NOW.getTime() + 21 * 24 * 60 * 60 * 1000);
+    expect(isCompletedWaiverCurrent(release, 1, SIGN_NOW)).toBe(true);
+    expect(isCompletedWaiverCurrent(release, 1, departure)).toBe(false);
+  });
+
   it("exempts an imported record from the template-version check, but not the age check", () => {
     // Signed against a template version DiveDay never issued — the version
     // gate would always (wrongly) read this as stale if it applied.
