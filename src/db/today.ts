@@ -84,7 +84,11 @@ import {
   tripWaitlistEntries,
 } from "./schema";
 import { listStaffCredentials } from "./staff-credentials";
-import { canAcceptPayments, shopStripeAccountForRender } from "./stripe-accounts";
+import {
+  canAcceptPayments,
+  paymentsRestrictedSince,
+  shopStripeAccountForRender,
+} from "./stripe-accounts";
 import { pushDepartureRows } from "./today-departure-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { pushRollCallRows } from "./today-roll-call-rows";
@@ -1647,6 +1651,7 @@ async function readTodayWave(
             olderThan: new Date(now.getTime() - OWED_REFUND_STALE_AFTER_MS),
           }),
           listOpenPaymentDisputes(db, shopId),
+          paymentsRestrictedSince(db, shopId),
         ])
       : null,
     readReviewsAwaitingModeration(db, shopId),

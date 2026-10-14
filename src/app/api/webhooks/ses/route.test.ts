@@ -62,6 +62,28 @@ describe("ses webhook route — verification gate", () => {
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
   });
 
+  it("logs every refusal as one webhook.refused line, so the alarm can count it", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(verifySnsMessage).mockResolvedValueOnce({ status: "not_configured" });
+    await POST(webhookRequest("{}"));
+    vi.mocked(verifySnsMessage).mockResolvedValueOnce({ status: "invalid_signature" });
+    await POST(webhookRequest("{}"));
+    const lines = warn.mock.calls.map((call) => JSON.parse(String(call[0])));
+    warn.mockRestore();
+    expect(lines).toEqual([
+      expect.objectContaining({
+        event: "webhook.refused",
+        webhook: "ses",
+        reason: "not_configured",
+      }),
+      expect.objectContaining({
+        event: "webhook.refused",
+        webhook: "ses",
+        reason: "invalid_signature",
+      }),
+    ]);
+  });
+
   it("rejects a message from an unexpected topic", async () => {
     vi.mocked(verifySnsMessage).mockResolvedValue({ status: "invalid_topic" });
     const response = await POST(webhookRequest("{}"));

@@ -21,6 +21,7 @@ import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { enqueueCheckoutIntegrationEvent } from "./integration-events";
 import { applyStripeRefundedTotalToOrder } from "./orders";
 import {
   idempotencyKeyFor,
@@ -329,7 +330,7 @@ async function countCheckoutRefund(
   tx: AppTransaction,
   plan: Pick<BookingRefundPlan, "providerRef" | "stripeAccountId" | "refundCents">,
 ): Promise<void> {
-  await tx
+  const [counted] = await tx
     .update(bookingCheckouts)
     .set({ refundedCents: sql`${bookingCheckouts.refundedCents} + ${plan.refundCents}` })
     .where(
@@ -337,7 +338,33 @@ async function countCheckoutRefund(
         eq(bookingCheckouts.stripeSessionId, plan.providerRef),
         eq(bookingCheckouts.stripeAccountId, plan.stripeAccountId),
       ),
-    );
+    )
+    .returning({
+      id: bookingCheckouts.id,
+      shopId: bookingCheckouts.shopId,
+      refundedCents: bookingCheckouts.refundedCents,
+    });
+  // The shop's books hear about the refund in the same transaction that
+  // counts it, keyed on the running total, so the `charge.refunded` webhook
+  // that reports this same refund later finds nothing new to send (batch 6
+  // item 9).
+  if (counted) await enqueueCheckoutRefundEvent(tx, counted, plan.refundCents);
+}
+
+/** One refund against a completed checkout, for QuickBooks, Xero and Zapier (H-115). */
+async function enqueueCheckoutRefundEvent(
+  tx: AppTransaction,
+  checkout: { id: string; shopId: string; refundedCents: number },
+  refundCents: number,
+): Promise<void> {
+  if (refundCents <= 0) return;
+  await enqueueCheckoutIntegrationEvent(tx, {
+    shopId: checkout.shopId,
+    checkoutId: checkout.id,
+    eventType: "order.refunded",
+    idempotencyKey: `checkout:${checkout.id}:refund:${checkout.refundedCents}`,
+    refundCents,
+  });
 }
 
 /**
@@ -1087,6 +1114,11 @@ async function applyStripeChargeRefund(
       .update(bookingCheckouts)
       .set({ refundedCents: current.refundedCents + delta })
       .where(eq(bookingCheckouts.id, current.id));
+    await enqueueCheckoutRefundEvent(
+      tx,
+      { id: current.id, shopId: current.shopId, refundedCents: current.refundedCents + delta },
+      delta,
+    );
 
     // The seats this session still holds money for. Read under the checkout's
     // lock; each seat's own write below takes that seat's lock as well.

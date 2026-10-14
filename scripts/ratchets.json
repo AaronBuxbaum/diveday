@@ -222,7 +222,7 @@
         }
       }
     ],
-    "src/app/api/webhooks/stripe/route.ts#POST": 457,
+    "src/app/api/webhooks/stripe/route.ts#POST": 454,
     "src/app/ready/[token]/page.tsx#DiverReadinessPage": 494,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 670,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,

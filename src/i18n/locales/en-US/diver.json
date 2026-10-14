@@ -4460,6 +4460,11 @@
       "open": "Open the Inbox",
       "turnOff": "Turn these off in your email settings"
     },
+    "stripeRestricted": {
+      "subject": "{shopName}: Stripe has turned off card payments",
+      "body": "Stripe has paused card payments on your account, so divers can still book but pay at the shop for now. Stripe’s dashboard says what it needs to turn them back on.",
+      "open": "Open payment settings"
+    },
     "smsWorkOrder": {
       "ready": "{shopName}: your gear on ticket #{number} is ready to collect ({pieces}).",
       "readyNoPieces": "{shopName}: your gear on ticket #{number} is ready to collect.",

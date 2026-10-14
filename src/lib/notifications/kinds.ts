@@ -1398,6 +1398,27 @@ const deskAfterHoursSchema = z.object({
   pingedAt: z.date(),
 });
 
+/**
+ * **Stripe has turned the shop's card payments off** (batch 6 item 8): one
+ * email to each owner per change of state, claimed by
+ * `shop_stripe_accounts.payments_restricted_at` (`applyStripeAccountStatus`),
+ * so a redelivered `account.updated` sends nothing. Bookings already fall back
+ * to paying at the shop; this tells the owner why, and where to look. Staff
+ * operational mail: no unsubscribe, no postal footer.
+ */
+const stripePaymentsRestrictedSchema = z.object({
+  kind: z.literal("stripe_payments_restricted"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  settingsUrl: z.url().max(2_000),
+  /** The claim's own time, so a later restriction is a different message. */
+  restrictedAt: z.date(),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -1468,6 +1489,7 @@ export const notificationSchema = z
     gearServiceDueSchema,
     crewScheduleChangeSchema,
     deskAfterHoursSchema,
+    stripePaymentsRestrictedSchema,
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
@@ -1751,5 +1773,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per claim of the person's batching clock.
     case "desk_after_hours":
       return `desk-after-hours/${notification.personId}/${notification.pingedAt.toISOString()}`;
+    // One send per owner per restriction claim.
+    case "stripe_payments_restricted":
+      return `stripe-payments-restricted/${notification.personId}/${notification.restrictedAt.toISOString()}`;
   }
 }

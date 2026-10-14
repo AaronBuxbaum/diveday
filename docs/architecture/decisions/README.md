@@ -387,5 +387,6 @@ script again.
 | 20261012-visual-baseline-layer-below | Compare a stacked layer against… |
 | 20261013-mac-ci-runner | CI's non-browser jobs run on… |
 | 20261013-staff-move-a-seat | Move a booked seat by… |
+| 20261014-checkouts-reach-integrations | Online checkouts, tips and their… |
 
 <!-- adr-index:end -->

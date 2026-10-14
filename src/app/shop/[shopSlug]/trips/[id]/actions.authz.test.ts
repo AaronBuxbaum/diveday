@@ -920,9 +920,24 @@ describe("money on the trip page", () => {
       return data;
     };
 
-    // Cash at the dock is front-desk work.
-    const paid = await redirectedTo(() => markPaymentAction(shop.slug, tripId, form("paid")));
+    // Cash at the dock is front-desk work: the amount and how it was paid.
+    const cash = form("paid");
+    cash.set("amount", "120");
+    cash.set("method", "cash");
+    const paid = await redirectedTo(() => markPaymentAction(shop.slug, tripId, cash));
     expect(paid).not.toContain("notice=not-authorized");
+    expect(await getBookingPayment(db, shop.id, booking.id)).toMatchObject({
+      status: "paid",
+      amountCents: 12_000,
+      method: "cash",
+      recordedByPersonId: captain,
+    });
+
+    // A Paid mark with no money in it is a free seat by another name.
+    await redirectedTo(() => markPaymentAction(shop.slug, tripId, form("unpaid")));
+    const noMoney = await redirectedTo(() => markPaymentAction(shop.slug, tripId, form("paid")));
+    expect(noMoney).toContain("notice=payment-amount");
+    expect((await getBookingPayment(db, shop.id, booking.id))?.status).toBe("unpaid");
 
     // A free seat is not.
     const waived = await redirectedTo(() => markPaymentAction(shop.slug, tripId, form("waived")));
@@ -936,6 +951,49 @@ describe("money on the trip page", () => {
     // A refused write-off leaves no line claiming one happened.
     expect(await activityLines(db, booking.id, "payment_waived")).toEqual([]);
     expect(await activityLines(db, booking.id, "payment_marked_refunded")).toEqual([]);
+  });
+
+  it("refuses an amount it cannot read, and money with no method, without writing", async () => {
+    const { db, shop, tripId, captain } = await context();
+    signIn(shop, captain);
+    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, tripId)).limit(1);
+    if (!booking) throw new Error("seeded trip has no bookings");
+    const before = await getBookingPayment(db, shop.id, booking.id);
+
+    const garbled = paymentForm(booking.id, "paid");
+    garbled.set("amount", "a hundred");
+    garbled.set("method", "cash");
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, garbled))).toContain(
+      "notice=payment-amount",
+    );
+    const noMethod = paymentForm(booking.id, "paid");
+    noMethod.set("amount", "120");
+    noMethod.set("method", "bitcoin");
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, noMethod))).toContain(
+      "notice=payment-amount",
+    );
+    expect(await getBookingPayment(db, shop.id, booking.id)).toEqual(before);
+  });
+
+  it("lets an owner mark a seat paid with no money, as the write-off it is", async () => {
+    const { db, shop, tripId, owner } = await context();
+    signIn(shop, owner);
+    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, tripId)).limit(1);
+    if (!booking) throw new Error("seeded trip has no bookings");
+    await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, paymentForm(booking.id, "unpaid")),
+    );
+
+    const to = await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, paymentForm(booking.id, "paid")),
+    );
+    expect(to).not.toContain("not-authorized");
+    expect(await getBookingPayment(db, shop.id, booking.id)).toMatchObject({
+      status: "paid",
+      amountCents: null,
+      method: null,
+      recordedByPersonId: owner,
+    });
   });
 
   it("names the owner who wrote a seat off in the activity log", async () => {

@@ -500,6 +500,7 @@ const NOTICE_KEYS: Record<
     countKey: "trips.notices.requirementsBlockingCount",
   },
   payment: { form: "roster", tone: "success", key: "trips.notices.payment" },
+  "payment-amount": { form: "roster", tone: "danger", key: "trips.notices.paymentAmount" },
   conditions: { form: "conditions", tone: "success", key: "trips.notices.conditions" },
   "conditions-cleared": {
     form: "conditions",

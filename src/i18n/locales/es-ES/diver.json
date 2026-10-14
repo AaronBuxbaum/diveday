@@ -4460,6 +4460,11 @@
       "open": "Abrir Mensajes",
       "turnOff": "Desactívalos en tus ajustes de correo"
     },
+    "stripeRestricted": {
+      "subject": "{shopName}: Stripe desactivó los pagos con tarjeta",
+      "body": "Stripe pausó los pagos con tarjeta en tu cuenta. Los buceadores pueden seguir reservando, pero por ahora pagan en el centro. El panel de Stripe indica qué necesita para volver a activarlos.",
+      "open": "Abrir la configuración de pagos"
+    },
     "smsWorkOrder": {
       "ready": "{shopName}: ya puedes recoger tu equipo de la orden #{number} ({pieces}).",
       "readyNoPieces": "{shopName}: ya puedes recoger tu equipo de la orden #{number}.",

@@ -4,6 +4,7 @@ import { log } from "@/lib/log";
 import { majorToMinor, type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/checkout";
 import type { AppDb, DbExecutor } from "./client";
+import { enqueueTipIntegrationEvent } from "./integration-events";
 import {
   idempotencyKeyFor,
   recordPaymentOperationStripeObject,
@@ -391,12 +392,18 @@ export async function markTipPaidBySessionId(
     return null;
   }
   if (tip.status === "paid") return tip;
-  const [updated] = await db
-    .update(tips)
-    .set({ status: "paid", completedAt: nowDate() })
-    .where(eq(tips.id, tip.id))
-    .returning();
-  return updated ?? null;
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(tips)
+      .set({ status: "paid", completedAt: nowDate() })
+      .where(eq(tips.id, tip.id))
+      .returning();
+    if (!updated) return null;
+    // The tip reaches the shop's books as income on its own line (batch 6
+    // item 9, H-115), in the same transaction that marks it paid.
+    await enqueueTipIntegrationEvent(tx, { shopId: updated.shopId, tipId: updated.id });
+    return updated;
+  });
 }
 
 /** A Stripe-expired session can no longer be paid; pending → expired. */

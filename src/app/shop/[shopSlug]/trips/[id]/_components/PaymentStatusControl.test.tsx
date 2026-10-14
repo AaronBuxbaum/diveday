@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
 
@@ -18,7 +18,13 @@ const COPY: PaymentStatusControlCopy = {
   },
   update: "Update",
   updating: "Updating…",
+  amountLabel: "Amount taken",
+  methodLabel: "Paid by",
+  methods: { cash: "Cash", card: "Card", other: "Other" },
+  forgiving: { typedAs: "Typed as {raw}" },
 };
+
+const MARK = { amountCents: 12_000, currency: "usd", locale: "en-US" };
 
 /**
  * **The status select stands level with its Update button, in height and in
@@ -38,6 +44,7 @@ describe("PaymentStatusControl control row", () => {
         action={vi.fn()}
         sourceNote={null}
         refundNote={null}
+        mark={MARK}
         copy={COPY}
       />,
     );
@@ -67,6 +74,7 @@ describe("PaymentStatusControl control row", () => {
         action={vi.fn()}
         sourceNote={null}
         refundNote={null}
+        mark={MARK}
         copy={COPY}
       />,
     );
@@ -80,5 +88,53 @@ describe("PaymentStatusControl control row", () => {
     expect(group).toHaveClass("flex", "items-center", "gap-2");
     // The label is the row's other item, outside the pair.
     expect(group?.contains(screen.getByText(/Payment:/))).toBe(false);
+  });
+});
+
+describe("PaymentStatusControl Paid mark", () => {
+  it("asks how much and how the moment Paid is picked, opening on the seat's balance", () => {
+    render(
+      <PaymentStatusControl
+        bookingId="booking-1"
+        status="unpaid"
+        allowedStatuses={["unpaid", "deposit_paid", "paid"]}
+        action={vi.fn()}
+        sourceNote={null}
+        refundNote={null}
+        mark={MARK}
+        copy={COPY}
+      />,
+    );
+    expect(screen.queryByTestId("payment-mark")).toBeNull();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Payment status" }), {
+      target: { value: "paid" },
+    });
+
+    const mark = screen.getByTestId("payment-mark");
+    expect(mark).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Cash" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Card" })).not.toBeChecked();
+    expect(mark.querySelector('input[name="amount"]')).toHaveValue("120");
+  });
+
+  it("asks nothing when the seat's own status is re-submitted, or a non-money status is picked", () => {
+    render(
+      <PaymentStatusControl
+        bookingId="booking-1"
+        status="paid"
+        allowedStatuses={["unpaid", "deposit_paid", "paid", "waived"]}
+        action={vi.fn()}
+        sourceNote={null}
+        refundNote={null}
+        mark={MARK}
+        copy={COPY}
+      />,
+    );
+    expect(screen.queryByTestId("payment-mark")).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "Payment status" }), {
+      target: { value: "waived" },
+    });
+    expect(screen.queryByTestId("payment-mark")).toBeNull();
   });
 });

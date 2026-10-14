@@ -21,15 +21,15 @@
  * `reportRefusedQuery` in `src/proxy.ts`. The number lives in one place; this
  * is the pointer to it.
  *
- * This registry currently declares 20 metrics (11 log signals + 5 web vitals
+ * This registry currently declares 21 metrics (12 log signals + 5 web vitals
  * + the mutation-duration metric + the three render-cost metrics, each one metric
  * *permanently* because its filter carries no dimension -- see
- * `MUTATION_DURATION_SIGNAL` and `RENDER_DB_QUERIES_SIGNAL`) and 14 alarms (8 + the 3 alarmed vitals + the
+ * `MUTATION_DURATION_SIGNAL` and `RENDER_DB_QUERIES_SIGNAL`) and 15 alarms (9 + the 3 alarmed vitals + the
  * 2 SES reputation rates, which alarm on metrics AWS publishes for free, + the
  * external uptime alarm in `UPTIME_TARGETS`, which alarms on a Route 53 metric
  * AWS publishes for the price of the health check itself), so it
- * sits 10 metrics and 4 alarms over the free allowance at about $3.40/month once
- * every metric receives data (10 x $0.30 + 4 x $0.10), plus $2.75/month for the
+ * sits 11 metrics and 5 alarms over the free allowance at about $3.80/month once
+ * every metric receives data (11 x $0.30 + 5 x $0.10), plus $2.75/month for the
  * health check the last of those watches. A counted signal without an
  * alarm costs $0.30/month; an alarmed one costs $0.40/month. Those are the real
  * numbers to weigh, not zero and not the free-tier cliff it looks like from the
@@ -182,11 +182,41 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "cron_platform_backup.pass_failed",
       "cron_trip_series.roll_failed",
       "cron_demo_refresh.pass_failed",
+      // Every other pass's failure code. Before these were listed, a daily
+      // pass failing once reached at most AppErrors' three-in-fifteen-minutes,
+      // which one failure never does; here one is enough.
+      "cron_crew_notices.scan_failed",
+      "cron_desk_pings.scan_failed",
+      "cron_founder_metrics.failed",
+      "cron_integrations.scan_failed",
+      "cron_minimum_seats.sweep_failed",
+      "cron_platform_backup.census_failed",
+      "cron_trip_reminders.scan_failed",
+      "cron_trip_reminders.service_reminders_failed",
+      "cron_weekly_digest.scan_failed",
     ],
     threshold: 1,
     periodMinutes: 1_440,
     response:
       "The line names the scan. Every pass is idempotent, so re-running the route by hand is safe once the cause is understood.",
+  },
+  {
+    metricName: "WebhookRefusals",
+    title: "Webhooks turned away",
+    why:
+      "A rotated Stripe secret or a topic ARN missing from the environment refuses every payment " +
+      "confirmation, bounce or delivery receipt with a bare 400 or 503. The provider retries, then gives " +
+      "up, and nothing inside DiveDay looks wrong: the order just never turns paid.",
+    events: ["webhook.refused"],
+    // Three, not one: the endpoints are public and a scanner posting junk is
+    // refused on the same line. A broken secret refuses every delivery and
+    // every retry, which clears three in an hour on any shop taking bookings.
+    threshold: 3,
+    periodMinutes: 60,
+    response:
+      "The line's webhook and reason fields name the endpoint and why. not_configured: the secret or topic ARN is missing from the deployment. " +
+      "invalid_signature from one provider all at once: the secret was rotated on their side; copy the new one in. " +
+      "Then replay the refused deliveries from the provider's dashboard.",
   },
   {
     metricName: "DatabaseUnavailable",

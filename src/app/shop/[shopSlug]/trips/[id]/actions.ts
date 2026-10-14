@@ -52,6 +52,11 @@ import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
+import {
+  heldCentsAfterMark,
+  markNeedsWriteOffRight,
+  readManualPaymentMark,
+} from "@/lib/payment-marks";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
   blankableDiverEmailSchema,
@@ -909,14 +914,51 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // an unexplained refusal on a money row for a tap that changed nothing
   // (issue #699 security review).
   const submitted = String(formData.get("status") ?? "");
-  if (current?.status !== undefined && current.status === submitted) {
+  // Counter cash is still money the shop took in its own currency — stamping
+  // this row `usd` by default told a Mexican shop's diver their balance was in
+  // dollars. The amount is read in the same currency's major unit.
+  const currency = await getShopCurrency(db, s.user.shopId);
+  // **The Paid mark says how much and how** (batch 6 item 1). A paid row with
+  // no amount reached every revenue sum as $0, so cash taken at the dock never
+  // showed on Reports. An amount that cannot be read is refused rather than
+  // guessed, and a Paid mark with *no* money is the write-off below.
+  const mark = readManualPaymentMark(
+    submitted,
+    formData.get("amount") === null ? null : String(formData.get("amount")),
+    formData.get("method") === null ? null : String(formData.get("method")),
+    currency,
+  );
+  if (mark.kind === "invalid") {
+    redirect(noticeUrl(back, "payment-amount", { bid: bookingId }));
+  }
+  // An unchanged status changes nothing unless it brings money the row does
+  // not already hold: a staffer recording the cash on a seat already marked
+  // paid is a real write, and a re-submit with the amount left blank is not
+  // a request to wipe one.
+  const heldCents =
+    mark.kind === "money" ? heldCentsAfterMark(current ?? null, submitted, mark.amountCents) : null;
+  if (
+    current?.status !== undefined &&
+    current.status === submitted &&
+    (mark.kind !== "money" || (current.amountCents === heldCents && current.method === mark.method))
+  ) {
     revalidateAndRedirect(back, noticeUrl(back, "payment", { bid: bookingId }));
   }
   const decidesAboutMoney =
     (status.success && paymentStatusClass(status.data) === "write_off") ||
     (current?.status !== undefined && paymentStatusClass(current.status) === "write_off");
-  if (decidesAboutMoney && !(await canPersonRefund(db, s.user.shopId, s.user.personId))) {
-    redirect(noticeUrl(back, "not-authorized"));
+  if (
+    (decidesAboutMoney || markNeedsWriteOffRight(mark)) &&
+    !(await canPersonRefund(db, s.user.shopId, s.user.personId))
+  ) {
+    // A Paid mark left blank by someone who may not write a seat off is far
+    // more often a missed field than an attempted comp, so it is asked for
+    // again rather than called a permission problem. Either way nothing lands.
+    redirect(
+      decidesAboutMoney
+        ? noticeUrl(back, "not-authorized")
+        : noticeUrl(back, "payment-amount", { bid: bookingId }),
+    );
   }
   const saved =
     bookingId && status.success
@@ -924,10 +966,12 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
           shopId: s.user.shopId,
           bookingId,
           status: status.data,
-          // Counter cash is still money the shop took in its own currency —
-          // stamping this row `usd` by default told a Mexican shop's diver
-          // their balance was in dollars.
-          currency: await getShopCurrency(db, s.user.shopId),
+          currency,
+          amountCents: heldCents,
+          method: mark.kind === "money" ? mark.method : null,
+          // Who marked it, on every hand mark: the trail row carries it too,
+          // so a dispute about the cash box has a name to start from.
+          recordedByPersonId: s.user.personId,
         })
       : null;
   // A write-off is a decision about money, and the payment trail records the

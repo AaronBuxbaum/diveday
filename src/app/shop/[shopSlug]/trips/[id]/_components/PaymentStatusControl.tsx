@@ -1,9 +1,11 @@
 "use client";
 
-import { useOptimistic } from "react";
+import { useOptimistic, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import type { ForgivingCopy } from "@/components/ui/ForgivingInput";
+import { ChoiceFieldset, ChoicePill, controlClass, PriceField } from "@/components/ui/form";
+import { MANUAL_PAYMENT_METHODS, type ManualPaymentMethodCode } from "@/lib/payment-marks";
 
 /**
  * Every value the column can hold — which is not the same as every value this
@@ -33,6 +35,26 @@ export type PaymentStatusControlCopy = {
   statuses: Record<PaymentStatus, string>;
   update: string;
   updating: string;
+  /** The Paid mark's two questions (batch 6 item 1): how much, and how. */
+  amountLabel: string;
+  methodLabel: string;
+  methods: Record<ManualPaymentMethodCode, string>;
+  forgiving: ForgivingCopy;
+};
+
+/** The statuses a hand mark attaches money to; picking one opens the Paid mark. */
+const MONEY_STATUSES: readonly PaymentStatus[] = ["paid", "deposit_paid"];
+
+/**
+ * What the Paid mark opens holding: the seat's balance in the shop's currency,
+ * so the usual fare is one tap. Left blank, the mark records no money, which
+ * is a free seat by another name: `markPaymentAction` takes it only from
+ * someone with the write-off right and asks anyone else for the amount.
+ */
+export type PaymentMarkDefaults = {
+  amountCents: number | null;
+  currency: string;
+  locale: string;
 };
 
 /**
@@ -50,6 +72,7 @@ export function PaymentStatusControl({
   refundNote,
   packageNote = null,
   allowedStatuses,
+  mark,
   copy,
 }: {
   bookingId: string;
@@ -73,9 +96,15 @@ export function PaymentStatusControl({
    * collected stands, so the line exists to be read before the cash.
    */
   packageNote?: string | null;
+  mark: PaymentMarkDefaults;
   copy: PaymentStatusControlCopy;
 }) {
   const [optimisticStatus, setOptimisticStatus] = useOptimistic(status);
+  // The picked status, so the Paid mark opens the moment Paid is chosen rather
+  // than after a round trip. Only a change *into* a money status asks: the
+  // seat's own status re-submitted is a tap that changes nothing.
+  const [picked, setPicked] = useState<PaymentStatus>(status);
+  const asksForMoney = picked !== status && MONEY_STATUSES.includes(picked);
   const showRefund =
     (optimisticStatus === "paid" || optimisticStatus === "deposit_paid") && refundNote;
   const showPackage =
@@ -127,7 +156,8 @@ export function PaymentStatusControl({
           <select
             name="status"
             aria-label={copy.label}
-            defaultValue={status}
+            value={picked}
+            onChange={(event) => setPicked(event.target.value as PaymentStatus)}
             className={controlClass}
           >
             {/* The booking's current status is always among the options, even
@@ -152,6 +182,34 @@ export function PaymentStatusControl({
           {copy.update}
         </SubmitButton>
       </span>
+      {/* **The Paid mark** (batch 6 item 1): how much changed hands and how,
+          so cash at the dock reaches Reports instead of a $0 paid row. It
+          opens under the picker, before Update, on the pick itself. */}
+      {asksForMoney ? (
+        <div className="grid basis-full gap-3 sm:grid-cols-2" data-testid="payment-mark">
+          <PriceField
+            name="amount"
+            label={copy.amountLabel}
+            cents={mark.amountCents}
+            currency={mark.currency}
+            locale={mark.locale}
+            copy={copy.forgiving}
+          />
+          <ChoiceFieldset legend={copy.methodLabel} bodyClassName="flex flex-wrap gap-2">
+            {MANUAL_PAYMENT_METHODS.map((method) => (
+              <ChoicePill
+                key={method}
+                type="radio"
+                name="method"
+                value={method}
+                defaultChecked={method === "cash"}
+              >
+                {copy.methods[method]}
+              </ChoicePill>
+            ))}
+          </ChoiceFieldset>
+        </div>
+      ) : null}
     </form>
   );
 }
