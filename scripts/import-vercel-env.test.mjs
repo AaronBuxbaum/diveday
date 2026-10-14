@@ -29,7 +29,7 @@ function fingerprint(value) {
 // `aws ssm put-parameter` (records both the raw --value argument -- expected
 // to be a `file://` reference, never the content itself -- and the resolved
 // content of the file it points at, plus the --name it was given) -- plus
-// `pnpm dlx vercel@<pin> env add` (records the key it was called with), and
+// `pnpm exec vercel env add` (records the key it was called with), and
 // `env ls --format json` (prints the seeded Vercel listing, or fails like an
 // unreachable CLI when there is none).
 function writeStubs(

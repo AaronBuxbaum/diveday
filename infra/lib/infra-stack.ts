@@ -3862,7 +3862,7 @@ exports.handler = async () => {
 
     new cdk.CfnOutput(this, "AuditTrailBucketName", {
       value: auditTrailBucket.bucketName,
-      description: `Where the account's CloudTrail (${auditTrail.trailArn}) writes management events from every region. Objects expire after ${AUDIT_TRAIL_RETENTION_DAYS} days. Search recent events with: aws cloudtrail lookup-events --max-results 20`,
+      description: `Where the account's CloudTrail (diveday-audit-trail) writes management events from every region. Objects expire after ${AUDIT_TRAIL_RETENTION_DAYS} days. Search recent events with: aws cloudtrail lookup-events --max-results 20`,
     });
   }
 
