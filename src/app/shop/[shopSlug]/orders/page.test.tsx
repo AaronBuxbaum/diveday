@@ -28,7 +28,7 @@ import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
-import { fileScopedShopContext, } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { ariaLabelsIn, findElements, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
