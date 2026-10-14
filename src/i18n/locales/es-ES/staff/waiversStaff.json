@@ -24,7 +24,8 @@
   "placeholder": "Escribe la exención que leerá y firmará el buceador.",
   "pendingLabel": "Publicando…",
   "releaseDescription": {
-    "sample": "Este es un texto de muestra para empezar. Edítalo para tu centro y haz que tu propio asesor legal lo revise."
+    "sample": "Este es un texto de muestra para empezar. Edítalo para tu centro y haz que tu propio asesor legal lo revise.",
+    "sampleLive": "Los buceadores están firmando el texto de muestra de DiveDay. Edítalo para tu centro y haz que tu propio asesor legal lo revise."
   },
   "versionInfo": "Versión {version} · publicado el {date}",
   "signatures": {
@@ -39,6 +40,16 @@
     "integrityUnsealed": "No se puede verificar si cambió",
     "medicalFlag": "Seguimiento médico marcado",
     "flaggedAnswersHeading": "Respuestas marcadas",
+    "searchLabel": "Buscar registros firmados",
+    "searchPlaceholder": "Nombre, correo o teléfono del buceador",
+    "searchClear": "Borrar la búsqueda",
+    "noMatch": "Ningún registro firmado coincide.",
+    "views": {
+      "label": "Vistas de registros firmados",
+      "all": "Todos",
+      "unchecked": "No se puede verificar",
+      "medical": "Retenciones médicas"
+    },
     "pagination": {
       "total": "{count, plural, one {# registro} other {# registros}}"
     }

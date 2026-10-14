@@ -1,5 +1,6 @@
 "use client";
 
+import { MeetingDaysField } from "@/app/shop/[shopSlug]/_components/MeetingDaysField";
 import { FormDraft, type FormDraftActions, type FormDraftProps } from "@/components/FormDraft";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { INSET_NOTE_BOX } from "@/components/ui/card";
@@ -216,22 +217,18 @@ export function AddPanel({
           the Seats/Dives cell. Expanding must only ever *add* a field below;
           a cell whose label changes out from under the cursor reads as the
           form rewriting itself. */}
-      <Field
-        label={copy.daysLabel}
-        description={copy.daysDescription}
+      <MeetingDaysField
+        copy={{
+          daysLabel: copy.daysLabel,
+          daysDescription: copy.daysDescription,
+          dayLabel: copy.meetingDayLabel,
+        }}
+        minDays={more.minDays}
+        maxDays={more.maxDays}
+        defaultCount={more.minDays}
+        disabled={!expanded}
         className={expanded ? undefined : "hidden"}
-      >
-        <input
-          name="dayCount"
-          type="number"
-          required={expanded}
-          disabled={!expanded}
-          min={more.minDays}
-          max={more.maxDays}
-          defaultValue={more.minDays}
-          className={`${controlClass} tabular-nums max-w-40`}
-        />
-      </Field>
+      />
       <DayKindSelects
         copy={copy}
         options={options}

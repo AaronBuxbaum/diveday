@@ -43,6 +43,7 @@ import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { issueBookingCapability } from "./booking-capabilities";
+import { settledPartyPayment } from "./checkouts";
 import type { AppDb } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
 import { notificationHeldForRehearsal, REHEARSAL_HELD_DELIVERY } from "./rehearsals";
@@ -1333,6 +1334,11 @@ async function sendStoredBookingConfirmation(
         participantType: row.booking.participantType,
         chargesOnline: row.paymentProvider === "stripe",
         origin,
+        // What the party's card checkout settled, for the lead (#2447).
+        partyPaid:
+          row.paymentProvider === "stripe"
+            ? await settledPartyPayment(db, shopId, row.booking.id)
+            : null,
       }),
       // A staff-triggered resend is a new logical send, not a replay of the
       // original booking confirmation's provider idempotency key.
@@ -1560,6 +1566,12 @@ export async function listNotificationDeliveryIssues(
         or(
           inArray(notificationDeliveries.status, ["failed", "not_configured"]),
           inArray(notificationDeliveries.providerStatus, ACTIONABLE_PROVIDER_STATUSES),
+        ),
+        // A send held for a rehearsal is not an issue: nothing was meant to
+        // leave (#2395, ADR 20261012-rehearsal-departures).
+        or(
+          isNull(notificationDeliveries.sendErrorCode),
+          ne(notificationDeliveries.sendErrorCode, REHEARSAL_HELD_DELIVERY.errorCode),
         ),
         ne(bookings.status, "cancelled"),
         window.from ? gte(trips.startsAt, window.from) : undefined,

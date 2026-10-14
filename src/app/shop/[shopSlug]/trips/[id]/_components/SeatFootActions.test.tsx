@@ -48,3 +48,39 @@ describe("the seat's foot row sits on the text column through flush", () => {
     expect(remove).not.toHaveClass("focus-visible:focus-ring-inset");
   });
 });
+
+/**
+ * **"Move to another departure"** (ADR 20261013-staff-move-a-seat): offered on
+ * a booked seat when the page found somewhere to go, as one select of
+ * departures already worded with their zone, and never on a seat the day has
+ * already recorded.
+ */
+describe("the move to another departure", () => {
+  const moveSeat = {
+    action: () => {},
+    targets: [{ id: "t-2", label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT" }],
+  };
+
+  it("offers the departures on a booked seat", () => {
+    renderRoster({ ...fixtures, roster: [ready], moveSeat });
+
+    expect(screen.getByText("Move to another departure")).toBeInTheDocument();
+    const select = screen.getByLabelText("Departure");
+    expect(select).toHaveAttribute("name", "toTripId");
+    expect(screen.getByRole("option", { name: /Sat, Oct 24, 8:00 AM EDT/ })).toHaveValue("t-2");
+    expect(screen.getByRole("button", { name: "Move" })).toBeInTheDocument();
+  });
+
+  it("is absent when the page found nowhere to go", () => {
+    renderRoster({ ...fixtures, roster: [ready] });
+
+    expect(screen.queryByText("Move to another departure")).toBeNull();
+  });
+
+  it("is absent on a checked-in seat", () => {
+    const checkedIn = { ...ready, booking: { ...ready.booking, status: "checked_in" as const } };
+    renderRoster({ ...fixtures, roster: [checkedIn], moveSeat });
+
+    expect(screen.queryByText("Move to another departure")).toBeNull();
+  });
+});

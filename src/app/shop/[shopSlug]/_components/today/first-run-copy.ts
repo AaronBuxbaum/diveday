@@ -36,6 +36,11 @@ export function firstRunChecklistCopy(
       depth: t(
         shop.depthUnit === "feet" ? "shopHome.firstRun.unitsFeet" : "shopHome.firstRun.unitsMeters",
       ),
+      temperature: t(
+        shop.temperatureUnit === "fahrenheit"
+          ? "shopHome.firstRun.unitsFahrenheit"
+          : "shopHome.firstRun.unitsCelsius",
+      ),
     }),
     unitsAction: t("shopHome.firstRun.unitsAction"),
     unitsDone: t("shopHome.firstRun.unitsDone"),
@@ -45,6 +50,10 @@ export function firstRunChecklistCopy(
       : t("shopHome.firstRun.siteBodyOwn"),
     siteAction: t("shopHome.firstRun.siteAction"),
     siteDone: t("shopHome.firstRun.siteDone", { count: counts.diveSiteCount }),
+    releaseTitle: t("shopHome.firstRun.releaseTitle"),
+    releaseBody: t("shopHome.firstRun.releaseBody"),
+    releaseAction: t("shopHome.firstRun.releaseAction"),
+    releaseDone: t("shopHome.firstRun.releaseDone"),
     tripTitle: t("shopHome.firstRun.tripTitle"),
     tripBody: t("shopHome.firstRun.tripBody"),
     tripAction: t("shopHome.firstRun.tripAction"),

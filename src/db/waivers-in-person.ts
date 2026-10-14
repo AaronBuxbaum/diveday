@@ -130,6 +130,8 @@ type WaiverSigner = {
   fullName: string;
   /** For the guardian rule (`src/lib/guardian.ts`); null when the shop never asked. */
   dateOfBirth: string | null;
+  /** The seat's booker said "Under 18"; always false with no seat. */
+  minorDeclared: boolean;
 };
 
 async function bookingSigner(
@@ -143,6 +145,7 @@ async function bookingSigner(
       personId: bookings.personId,
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
+      minorDeclaredAt: bookings.minorDeclaredAt,
       tripStatus: trips.status,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
     })
@@ -170,6 +173,7 @@ async function bookingSigner(
     personId: booking.personId,
     fullName: booking.fullName,
     dateOfBirth: booking.dateOfBirth,
+    minorDeclared: booking.minorDeclaredAt !== null,
   };
 }
 
@@ -206,6 +210,7 @@ async function personSigner(
     personId: person.id,
     fullName: person.fullName,
     dateOfBirth: person.dateOfBirth,
+    minorDeclared: false,
   };
 }
 
@@ -351,8 +356,16 @@ export async function recordInPersonWaiver(
     if (!signer.ok) return signer;
 
     const timezone = await shopTimezone(tx, input.shopId);
-    const guardianSigner: GuardianSigner = { dateOfBirth: signer.dateOfBirth, timezone };
-    const minor = guardianSignatureRequired(signer.dateOfBirth, signingDate(now, timezone));
+    const guardianSigner: GuardianSigner = {
+      dateOfBirth: signer.dateOfBirth,
+      minorDeclared: signer.minorDeclared,
+      timezone,
+    };
+    const minor = guardianSignatureRequired(
+      signer.dateOfBirth,
+      signingDate(now, timezone),
+      signer.minorDeclared,
+    );
     // Refused before anything is read or written, like the medical attestation
     // above: a paper release a minor signed alone is not a release the shop can
     // record as complete, and the crew's roster would say so the moment it was.

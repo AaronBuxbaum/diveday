@@ -254,6 +254,8 @@ export type GearServiceEventRow = {
   nextDueOn: CalendarDate | null;
   note: string | null;
   recordedByName: string | null;
+  /** When the record was written, which orders a same-day service and return. */
+  createdAt: Date;
 };
 
 export async function listGearServiceEvents(
@@ -269,6 +271,7 @@ export async function listGearServiceEvents(
       nextDueOn: gearServiceEvents.nextDueOn,
       note: gearServiceEvents.note,
       recordedByName: people.fullName,
+      createdAt: gearServiceEvents.createdAt,
     })
     .from(gearServiceEvents)
     .leftJoin(

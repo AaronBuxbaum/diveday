@@ -169,7 +169,7 @@ import { seedSightings } from "./seed-sightings";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
-import { seedTrips } from "./seed-trips";
+import { nameDemoNightDeparture, seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
 import { seedWaiverVersions } from "./seed-waiver-versions";
 import { seedWorkOrders } from "./seed-work-orders";
@@ -275,9 +275,10 @@ async function seedStaffShifts(
   const now = nowDate();
   await db.insert(staffShifts).values(
     cast.flatMap((person) =>
-      // The dawn boat's crew (`DEMO_DAWN_CREW_ROLES`) are on from 4:30 too.
+      // The boats' crew (`DEMO_DAWN_CREW_ROLES`) are on from 4:30 too, and
+      // only they work a night boat's hours.
       demoTodayShifts(now, DEMO_SHOP_TIMEZONE, {
-        dawnCrew: person.roles.some((role) => DEMO_DAWN_CREW_ROLES.has(role)),
+        crew: person.roles.some((role) => DEMO_DAWN_CREW_ROLES.has(role)),
       }).map(({ startsAt, endsAt }) => ({
         shopId,
         personId: person.id,
@@ -597,6 +598,12 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     shop.id,
     staff.map((person, i) => ({ id: person.id, roles: staffDefs[i].roles })),
   );
+  // The shop's own checklist items are settings, not schedule (ADR
+  // 20260824-pre-departure-safety-check): seeded once here, never re-seeded by
+  // a reset, which is why it is not inside seedDemoSchedule. Before it, so the
+  // finished dawn boat can record its check against them (UX review
+  // 2026-10-13, item 40).
+  await seedPreDepartureChecklist(db, shop.id);
   await seedDemoSchedule(db, shop.id, opts);
   // Pay-at-booking in Stripe test mode, when configured (ADR
   // 20261009-demo-test-mode-payments); nothing otherwise.
@@ -606,10 +613,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // settings row a demo visitor cannot break, so it lives outside the
   // resettable schedule (ADR 20260804-shop-owned-backup-export).
   await seedBackup(db, shop.id);
-  // Same tier: the shop's own checklist items are settings, not schedule
-  // (ADR 20260824-pre-departure-safety-check) — seeded once here, never
-  // re-seeded by a reset, which is why it is not inside seedDemoSchedule.
-  await seedPreDepartureChecklist(db, shop.id);
   // Same tier: packages are shop configuration a reset leaves standing.
   await seedPackages(db, shop.id);
   // Two listed shops beside a demo no listing may show. Stable half: real
@@ -844,6 +847,9 @@ export async function createDemoShop(
   // canonical demo, including sailed trips, tips, and reviews. Test-only
   // private shops can opt into the lean schedule when they need isolation
   // from history-only rows.
+  // The same checklist the canonical demo keeps, for the same reason and in
+  // the same place: before the schedule, whose dawn boat records against it.
+  await seedPreDepartureChecklist(db, shop.id);
   await seedDemoSchedule(db, shop.id, { history: opts.history !== false });
   // The canonical demo's two packages, for a visitor's demo too. A private
   // test shop mints without history and starts with nothing on sale, which is
@@ -1051,16 +1057,6 @@ export async function seedDemoSchedule(
         divers: customers,
         actorPersonId: instructor.id,
       });
-      // The morning handoff on that same boat: what the desk did after the
-      // owner last looked, plus the two divers who said the crew may know it
-      // is their first trip (src/db/seed-desk-handoff.ts, issues #1202/#1187
-      // and #1182). Written by the instructor so the owner's own login — the
-      // one a demo signs in with — is the reader who is behind on them.
-      await seedDeskHandoff(db, shopId, {
-        trip: reefTrip,
-        roster: bookingRows,
-        actorPersonId: instructor.id,
-      });
       // One unpaid seat on that same boat, so the Overview's pulse has a money
       // fact to state and the Orders index has something to be narrowed to
       // (src/db/seed-open-invoice.ts). Deliberately `open`: a booking-linked
@@ -1203,6 +1199,27 @@ export async function seedDemoSchedule(
   // any health answers. It remains unresolved every time the demo resets; the
   // policy/legal decision behind production medical handling is still H-01–H-03.
   await seedMedicalReview(db, shopId, waiverTemplate, tripRows, instructor.id, isCanonicalDemo);
+
+  // The morning handoff on today's reef boat: what the desk did after the
+  // owner last looked, plus the two divers who said the crew may know it is
+  // their first trip (src/db/seed-desk-handoff.ts, issues #1202/#1187 and
+  // #1182). Written by the instructor so the owner's own login — the one a
+  // demo signs in with — is the reader who is behind on them. Late, after
+  // every scenario that can block a diver on this boat: its check-ins are
+  // real ones, so they ask readiness the question the counter would (UX
+  // review 2026-10-13, item 3). No waiver row is written, so it may sit
+  // before the evidence pass below.
+  if (opts.history !== false && reef) {
+    await seedDeskHandoff(db, shopId, {
+      trip: reef,
+      roster: bookingRows,
+      actorPersonId: instructor.id,
+    });
+  }
+
+  // Updates-only, and after every scenario that finds today's boat by its day
+  // name: an evening seed's late boat is named as a night dive (issue #2440).
+  await nameDemoNightDeparture(db, shopId);
 
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated

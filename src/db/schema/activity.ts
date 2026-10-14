@@ -77,6 +77,8 @@ export const activityEvents = pgTable(
      * reachable through `booking_id` — today, a note written on a diver's
      * record rather than on one of their seats (`addDiverNote`).
      *
+     * It is also set on the one departure line about a diver with no seat on
+     * it: a staffer emailing them that date (`departure_offered`, #2480).
      * Every other line in this table is about a departure or a seat, and stays
      * that way: this column is null for all of them. It exists because the
      * diver record's Activity panel claims a line when the booking is one of

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSesEmailEvent } from "./ses-events";
+import { parseSesEmailEvent, smtpStatusOf } from "./ses-events";
 
 const now = new Date("2026-08-02T18:00:00.000Z");
 
@@ -13,7 +13,12 @@ describe("parseSesEmailEvent", () => {
           timestamp: "2026-08-02T17:05:00.000Z",
           bounceType: "Permanent",
           bounceSubType: "General",
-          bouncedRecipients: [{ diagnosticCode: "smtp; 550 5.1.1 mailbox unavailable" }],
+          bouncedRecipients: [
+            {
+              diagnosticCode:
+                "smtp; 550 5.1.1 <nora@example.com>: Recipient address rejected: mailbox unavailable",
+            },
+          ],
         },
       }),
       now,
@@ -22,7 +27,7 @@ describe("parseSesEmailEvent", () => {
       kind: "delivery",
       providerMessageId: "ses-msg-1",
       status: "bounced",
-      detail: "smtp; 550 5.1.1 mailbox unavailable",
+      detail: "550 5.1.1",
       recipient: null,
       shopId: null,
       occurredAt: new Date("2026-08-02T17:05:00.000Z"),
@@ -223,5 +228,18 @@ describe("parseSesEmailEvent", () => {
       now,
     );
     expect(event).toMatchObject({ status: "complained", shopId: null, recipient: null });
+  });
+});
+
+describe("smtpStatusOf", () => {
+  it("keeps the reply code and the enhanced status, and nothing the server wrote around them", () => {
+    expect(smtpStatusOf("smtp; 552-5.2.2 nora@example.com mailbox full")).toBe("552 5.2.2");
+    expect(smtpStatusOf("smtp; 421 try again later")).toBe("421");
+    expect(smtpStatusOf("smtp;5.7.1 refused for 203.0.113.7")).toBe("5.7.1");
+    expect(smtpStatusOf("smtp; 550 5.7.1 refused for 4.3.2.1 and 250.1.2.3")).toBe("550 5.7.1");
+  });
+
+  it("is null for a diagnostic with no code, so the bounce's classification is kept instead", () => {
+    expect(smtpStatusOf("Amazon SES has suppressed sending to nora@example.com")).toBeNull();
   });
 });

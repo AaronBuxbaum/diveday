@@ -134,6 +134,12 @@ export type CertificationSummaryShape = {
   level: CertificationLevel | null;
   levelSelfDeclared: boolean;
   /**
+   * The highest level on a card the shop has verified. `level` is not checked
+   * unless it is this one: a card a staffer typed and nobody verified carries
+   * no self-declared stamp, and must not read as a card the shop holds (#2428).
+   */
+  verifiedLevel: CertificationLevel | null;
+  /**
    * The joiner said they hold no card at all — *"Not certified yet — diver's
    * word"* rather than the identical-looking silence of somebody who skipped an
    * optional question. It is a fourth shape and the reason the column exists: a
@@ -143,7 +149,21 @@ export type CertificationSummaryShape = {
   noCertificationDeclared: boolean;
   nitrox: boolean;
   nitroxSelfDeclared: boolean;
+  /** True when at least one nitrox card behind `nitrox` is verified. */
+  nitroxVerified: boolean;
 };
+
+/** Whether the level the phrase draws is one nobody has checked, typed by whoever. */
+function levelUnchecked(summary: CertificationSummaryShape): boolean {
+  return (
+    summary.level !== null && (summary.levelSelfDeclared || summary.verifiedLevel !== summary.level)
+  );
+}
+
+/** Whether the phrase's nitrox is one nobody has checked, typed by whoever. */
+function nitroxUnchecked(summary: CertificationSummaryShape): boolean {
+  return summary.nitrox && (summary.nitroxSelfDeclared || !summary.nitroxVerified);
+}
 
 /**
  * **Whether the phrase above is carrying somebody's word for it**, so the row
@@ -159,14 +179,14 @@ export type CertificationSummaryShape = {
 export function certificationSummaryUnchecked(summary: CertificationSummaryShape | null): boolean {
   if (!summary) return false;
   return (
-    (summary.level !== null && summary.levelSelfDeclared) ||
+    levelUnchecked(summary) ||
     // "Not certified yet" is unverified too, and it is the row a staffer
     // most needs to catch before a two-tank charter goes out to it. It only
     // reads that way while no level has landed beside it — the phrase below
     // draws the level instead once one has, and the tone must not contradict
     // the words it is colouring.
     (summary.level === null && summary.noCertificationDeclared) ||
-    (summary.nitrox && summary.nitroxSelfDeclared)
+    nitroxUnchecked(summary)
   );
 }
 
@@ -190,7 +210,7 @@ export function certificationSummaryText(
   } else {
     const level = t(CERTIFICATION_LEVEL_KEYS[summary.level]);
     parts.push(
-      summary.levelSelfDeclared
+      levelUnchecked(summary)
         ? t("shared.certificationSummary.selfDeclared", { value: level })
         : level,
     );
@@ -198,7 +218,7 @@ export function certificationSummaryText(
   if (summary?.nitrox) {
     const nitrox = t("shared.certificationSummary.nitrox");
     parts.push(
-      summary.nitroxSelfDeclared
+      nitroxUnchecked(summary)
         ? t("shared.certificationSummary.selfDeclared", { value: nitrox })
         : nitrox,
     );
@@ -411,6 +431,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   certification_pending: "shared.readiness.blockers.certificationPending",
   certification_self_declared: "shared.readiness.blockers.certificationSelfDeclared",
   certification_insufficient: "shared.readiness.blockers.certificationInsufficient",
+  certification_not_yet: "shared.readiness.blockers.certificationNotYet",
   certification_in_training: "shared.readiness.blockers.certificationInTraining",
   specialty_missing: "shared.readiness.blockers.specialtyMissing",
   specialty_pending: "shared.readiness.blockers.specialtyPending",

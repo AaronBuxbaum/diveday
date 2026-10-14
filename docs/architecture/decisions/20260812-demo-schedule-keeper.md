@@ -33,7 +33,8 @@ Only the canonical fixture ages — and it is the one a marketing page points th
 
 ## Decision
 
-A daily pass, `GET /api/cron/demo-refresh` (`45 3 * * *` in `vercel.json`), calling
+A daily pass, `GET /api/cron/demo-refresh` (`45 9 * * *` in `vercel.json`, before the demo shop's
+morning; it was `45 3 * * *` until issue #2440 found the today pass putting a boat at 11:46 PM), calling
 `refreshCanonicalDemoSchedule` (`src/db/demo-refresh.ts`):
 
 - **Measure the runway** — days between now and the furthest-out upcoming departure. One indexed

@@ -1,6 +1,8 @@
 import { diverTranslator } from "@/i18n/messages";
 import { isDiverLocale } from "@/i18n/settings";
 import { escapeHtml } from "@/lib/html";
+import { courseCertifiedEmail } from "./course-certified";
+import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 import { crewScheduleChangeEmail } from "./crew-emails";
 import { deskAfterHoursEmail } from "./desk-emails";
 import { departureNoteEmail, lostItemEmail } from "./desk-notes";
@@ -144,5 +146,9 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "desk_after_hours") return deskAfterHoursEmail(notification);
   if (notification.kind === "departure_note") return departureNoteEmail(notification);
   if (notification.kind === "lost_item_found") return lostItemEmail(notification);
+  if (notification.kind === "course_certified") return courseCertifiedEmail(notification);
+  if (notification.kind === "course_inquiry_received") {
+    return courseInquiryReceivedEmail(notification);
+  }
   return passwordChangedEmail(notification);
 }

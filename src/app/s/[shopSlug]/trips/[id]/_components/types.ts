@@ -11,7 +11,7 @@ import type { fetchAutomatedMarineForecast } from "@/lib/marine-forecast";
 export type Shop = NonNullable<Awaited<ReturnType<typeof shopBySlugCached>>>;
 export type Trip = NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
 export type TripDive = Awaited<ReturnType<typeof listTripDives>>[number];
-/** One consecutive day a departure meets on — a `trip_schedule_days` row. */
+/** One day a departure meets on — a `trip_schedule_days` row. */
 export type TripMeetingDay = Awaited<ReturnType<typeof listTripScheduleDays>>[number];
 export type Confirmed = NonNullable<Awaited<ReturnType<typeof getBookingForTrip>>>;
 export type Readiness = Awaited<ReturnType<typeof getBookingReadiness>>;

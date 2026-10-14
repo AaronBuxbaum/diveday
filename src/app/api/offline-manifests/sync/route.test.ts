@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getTripManifest } from "@/db/manifests";
@@ -448,7 +448,9 @@ describe("POST /api/offline-manifests/sync", () => {
     const rows = await db
       .select()
       .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.personId, member.id));
+      .where(
+        and(eq(rollCallCrewEvents.tripId, trip.id), eq(rollCallCrewEvents.personId, member.id)),
+      );
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ source: "offline", clientEventId, status: "boarded" });
     // And nothing landed on the diver table, which has its own subject column.

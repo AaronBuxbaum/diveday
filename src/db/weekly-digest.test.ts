@@ -1,10 +1,11 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, count, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { messageFor } from "@/lib/notifications/render";
 import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   bookings,
+  orders,
   paymentOperationIntents,
   people,
   shops,
@@ -64,6 +65,7 @@ async function context() {
     timezone: shop.timezone,
     defaultLocale: shop.defaultLocale,
     diversPerDivemaster: shop.diversPerDivemaster,
+    currency: shop.currency,
   };
   const staff = await db
     .select({ personId: people.id, email: userAccounts.email })
@@ -365,6 +367,55 @@ describe("previewWeeklyDigest", () => {
       // The owner's overdue count is the crew's plus the stuck Stripe call.
       expect(overdueOf(ownerPreview)).toBe(overdueOf(crewPreview) + 1);
     }
+  });
+
+  /**
+   * **What the week made, by role** (third UX review, item 33; decision 5).
+   * The owner's email says what last week's departures took and how many
+   * orders are open, Reports' own figures; a crew member's never carries a
+   * dollar or the Orders link.
+   */
+  it("gives the owner the week's money and the crew none of it", async () => {
+    const { db, shop, owner, captain, monday } = await context();
+    const previewFor = async (personId: string) => {
+      const preview = await previewWeeklyDigest(db, {
+        shop,
+        personId,
+        origin: ORIGIN,
+        now: monday,
+      });
+      if (preview?.kind !== "weekly_digest") throw new Error("no preview");
+      return preview;
+    };
+    // One invoice still waiting on the diver, so the owner has money to hear about.
+    await db.insert(orders).values({
+      shopId: shop.id,
+      personId: owner.personId,
+      createdByPersonId: owner.personId,
+      status: "open",
+      currency: shop.currency,
+      totalCents: 9_500,
+      stripeAccountId: "acct_digest",
+      stripeCustomerId: "cus_digest",
+      stripeInvoiceId: "in_digest_open",
+    });
+    const [open] = await db
+      .select({ n: count() })
+      .from(orders)
+      .where(and(eq(orders.shopId, shop.id), eq(orders.status, "open")));
+
+    const ownerPreview = await previewFor(owner.personId);
+    const money = ownerPreview.sections.find((section) => section.kind === "money");
+    expect(money?.kind).toBe("money");
+    if (money?.kind === "money") {
+      expect(money.openOrders).toBe(open?.n ?? 0);
+      expect(money.currency).toBe(shop.currency);
+      expect(money.url).toBe(`${ORIGIN}/shop/${shop.slug}/orders`);
+    }
+
+    const crewPreview = await previewFor(captain.personId);
+    expect(crewPreview.sections.map((section) => section.kind)).not.toContain("money");
+    expect(messageFor(crewPreview).text).not.toContain("/orders");
   });
 
   it("previews nothing for somebody who is not staff here", async () => {

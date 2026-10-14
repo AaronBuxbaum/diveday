@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import type { bookings, trips } from "./schema";
 import { buddyPairMembers, buddyTeamEvents, people } from "./schema";
+import { demoReefDiverIndexes } from "./seed-bookings";
 import { at } from "./seed-clock";
 
 /**
@@ -67,9 +68,13 @@ export async function seedBuddyPairs(
 
   // Tom Okafor & Lena Fischer; then Diego Alvarez & June Park with Keiko
   // leading (seed-cast.ts order). Priya (blocked) and the rest stay unteamed.
+  // By seat rather than by name: on a night boat the thirteen-year-old's seat
+  // is somebody else's (`demoReefDiverIndexes`), and Tom dives with whoever
+  // holds it.
+  const seats = demoReefDiverIndexes(reef.startsAt);
   const teams: Array<{ divers: number[]; withCrew: boolean; at: Date }> = [
-    { divers: [1, 2], withCrew: false, at: at(0, 7, 5) },
-    { divers: [3, 4], withCrew: true, at: at(0, 7, 10) },
+    { divers: [seats[1] ?? 1, seats[2] ?? 2], withCrew: false, at: at(0, 7, 5) },
+    { divers: [seats[3] ?? 3, seats[4] ?? 4], withCrew: true, at: at(0, 7, 10) },
   ];
 
   for (const team of teams) {

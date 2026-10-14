@@ -22,8 +22,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // within this many seconds instead of hanging the whole `pnpm check` — and everything that
 // shells out to it — forever with no diagnosis.
 //
-// None of them reads the network. `check-follow-ups.mjs`, the one that did (`gh issue list`), ran
-// here until 2026-10-07 and made the live tracker a property of every branch: one malformed
+// None of them reads the network. `check-follow-ups.mjs`, the one that does (it lists the live
+// tracker through `scripts/tracker.mjs`), ran here until 2026-10-07 and made the live tracker a property of every branch: one malformed
 // issue (#2036) turned every open pull request red. It now runs on a schedule
 // (.github/workflows/follow-ups.yml) and as `pnpm check:follow-ups`.
 const CHECK_TIMEOUT_MS = 90_000;
@@ -55,6 +55,7 @@ const checks = [
   ["scroll-preservation", "check-scroll-preservation.mjs"],
   ["exit-curves", "check-exit-curves.mjs"],
   ["shop-word", "check-shop-word.mjs"],
+  ["seat-word", "check-seat-word.mjs"],
   ["capability-runbook", "check-capability-runbook.mjs"],
   ["rental-fit-caps", "check-rental-fit-caps.mjs"],
   ["icu-plurals", "check-icu-plurals.mjs"],

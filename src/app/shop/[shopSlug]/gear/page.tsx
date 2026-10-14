@@ -306,7 +306,7 @@ export default async function GearRegisterPage({
         {fleetTotal === 0 && !showDeleted ? (
           <EmptyState
             title={t("gear.empty.heading")}
-            action={<AddUnitLink className={buttonClass()}>{t("gear.addUnit.door")}</AddUnitLink>}
+            action={<AddUnitLink className={buttonClass()}>{t("gear.addUnit.title")}</AddUnitLink>}
             className="mt-4"
           />
         ) : (
@@ -383,15 +383,15 @@ export default async function GearRegisterPage({
           </section>
         )}
 
-        {/* `AddUnitDetails`, not `SectionCard as="details"` (no `open` prop)
-            or a plain `<details>`: its React state lets `AddUnitLink` open it
-            reliably. `initialOpen` also opens it on a refusal to show. On an
-            empty register the closed band hides, so the empty state's "Add
-            gear" is the one door to it (UX review 2026-10-10, item 30). */}
+        {/* `AddUnitDetails`: its React state lets `AddUnitLink` open it, and
+            `initialOpen` opens it on a refusal. The closed band hides wherever
+            a door opens it, header or empty state, so one door has one name
+            (2026-10-10 item 30; third review #36); only the deleted view of an
+            empty register has no door, so the band stays there. */}
         <AddUnitDetails
           className={sectionCardClass({
             padding: "none",
-            className: `group/add-unit scroll-mt-24${fleetTotal === 0 && !showDeleted ? " hidden open:block" : ""}`,
+            className: `group/add-unit scroll-mt-24${fleetTotal > 0 || !showDeleted ? " hidden open:block" : ""}`,
           })}
           initialOpen={Boolean(addStatus)}
         >

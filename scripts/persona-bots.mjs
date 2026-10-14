@@ -15,6 +15,7 @@ import {
 } from "./persona-bots/findings.mjs";
 import { imageReaderFor, JUDGED_FILE_NAME, judgeAll } from "./persona-bots/judge.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { tracker } from "./tracker.mjs";
 
 /**
  * `pnpm persona:bots` — the weekly persona walk (N-61), and the only thing in
@@ -186,21 +187,13 @@ const classes = classify(findings);
 // run reads it too when it can — that is how a session sees the dedupe working
 // — and simply plans against an empty tracker when `gh` is absent, which it is
 // in most containers this repository is developed in.
-const openIssues = listIssuesByLabel(root, {
-  label: LABEL,
-  // `labels` is here for the brake alone (#1497): an issue a human has parked
-  // or is waiting on somebody else for has been triaged, so it does not count
-  // towards the ceiling. Without the field the filter reads an empty list and
-  // silently counts everything, which is the old behaviour wearing the new
-  // code's clothes.
-  fields: "number,title,body,labels",
-  what: "persona-bots",
-});
+// Each issue carries its `labels`, which the brake reads (#1497): an issue a
+// human has parked or is waiting on somebody else for has been triaged, so it
+// does not count towards the ceiling. The closed list feeds suppression only,
+// which reads nothing but the fingerprint in the body.
+const openIssues = listIssuesByLabel(root, { label: LABEL, what: "persona-bots" });
 const closedIssues = listIssuesByLabel(root, {
   label: LABEL,
-  // No `labels` here: the closed list feeds suppression only, which reads
-  // nothing but the fingerprint in the body.
-  fields: "number,title,body",
   state: "closed",
   what: "persona-bots (closed)",
 });
@@ -292,34 +285,27 @@ if (dryRun) {
   process.exit(0);
 }
 
+// Through the REST tracker (`scripts/tracker.mjs`), never `gh issue`: that
+// command speaks GraphQL, which cloud sessions are refused (issue #2495).
 for (const issue of issues) {
-  const result = runBounded(
-    "gh",
-    ["issue", "create", "--label", "needs-triage", "--title", issue.title, "--body", issue.body],
-    { cwd: root, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCli },
-  );
-  if (result.status !== 0) {
-    console.error(`persona-bots: could not file ${issue.entry.probe} — ${short(result.stderr)}`);
-    continue;
+  try {
+    const filed = tracker().createIssue({
+      title: issue.title,
+      body: issue.body,
+      labels: [LABEL],
+    });
+    console.log(`persona-bots: filed ${issue.entry.probe} — ${filed?.url ?? ""}`);
+  } catch (error) {
+    console.error(`persona-bots: could not file ${issue.entry.probe} — ${short(error.message)}`);
   }
-  console.log(`persona-bots: filed ${issue.entry.probe} — ${String(result.stdout ?? "").trim()}`);
 }
 
 for (const entry of plan.comment) {
-  const result = runBounded(
-    "gh",
-    [
-      "issue",
-      "comment",
-      String(entry.issue.number),
-      "--body",
-      renderComment(entry, { runContext }),
-    ],
-    { cwd: root, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCli },
-  );
-  if (result.status !== 0) {
+  try {
+    tracker().comment(entry.issue.number, renderComment(entry, { runContext }));
+  } catch (error) {
     console.error(
-      `persona-bots: could not comment on #${entry.issue.number} — ${short(result.stderr)}`,
+      `persona-bots: could not comment on #${entry.issue.number} — ${short(error.message)}`,
     );
   }
 }

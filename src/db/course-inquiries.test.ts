@@ -6,8 +6,11 @@ import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
   DATE_REQUESTS_PAGE_SIZE,
+  listDateRequestsForCalendarDates,
   listDateRequestsForStaff,
+  listHandledDateRequests,
   recordCourseInquiry,
+  setDateRequestOutcome,
 } from "./course-inquiries";
 import { getCourseBySlug } from "./courses";
 import { createDiver } from "./divers";
@@ -489,5 +492,89 @@ describe("listDateRequestsForStaff", () => {
       const page = await listDateRequestsForStaff(db, shop.id);
       expect(page.rows[0]?.personId).toBeNull();
     });
+  });
+});
+
+/**
+ * **A request closes** (third UX review, item 13): booked from, or marked
+ * done, it leaves the open list and the day lookups and sits under Done until
+ * someone reopens it.
+ */
+describe("setDateRequestOutcome", () => {
+  async function openRequest() {
+    const { db, shop, course } = await inquiryContext();
+    const record = await recordCourseInquiry(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      name: "Closing Test",
+      email: "closing@example.com",
+      preferredDate: "2031-05-03",
+    });
+    return { db, shop, id: record.id };
+  }
+  const openIds = async (db: AppDb, shopId: string) =>
+    (await listDateRequestsForStaff(db, shopId, { page: 1 })).rows.map((row) => row.id);
+
+  it("moves a done request off the open list and the day lookup, onto Done", async () => {
+    const { db, shop, id } = await openRequest();
+    expect(await openIds(db, shop.id)).toContain(id);
+    const now = nowDate();
+    expect(
+      await setDateRequestOutcome(db, { shopId: shop.id, requestId: id, outcome: "done", now }),
+    ).toBe(true);
+    expect(await openIds(db, shop.id)).not.toContain(id);
+    expect(
+      (await listDateRequestsForCalendarDates(db, shop.id, ["2031-05-03"])).map((r) => r.id),
+    ).not.toContain(id);
+    const [done] = await listHandledDateRequests(db, shop.id);
+    expect(done).toMatchObject({ id, handledAs: "done" });
+  });
+
+  it("keeps the first answer: a later booking does not restamp a closed request", async () => {
+    const { db, shop, id } = await openRequest();
+    const first = new Date("2031-04-01T12:00:00Z");
+    await setDateRequestOutcome(db, {
+      shopId: shop.id,
+      requestId: id,
+      outcome: "done",
+      now: first,
+    });
+    expect(
+      await setDateRequestOutcome(db, {
+        shopId: shop.id,
+        requestId: id,
+        outcome: "booked",
+        now: nowDate(),
+      }),
+    ).toBe(false);
+    const [row] = await db.select().from(courseInquiries).where(eq(courseInquiries.id, id));
+    expect(row).toMatchObject({ handledAs: "done", handledAt: first });
+  });
+
+  it("reopens a request", async () => {
+    const { db, shop, id } = await openRequest();
+    const now = nowDate();
+    await setDateRequestOutcome(db, { shopId: shop.id, requestId: id, outcome: "booked", now });
+    await setDateRequestOutcome(db, { shopId: shop.id, requestId: id, outcome: null, now });
+    expect(await openIds(db, shop.id)).toContain(id);
+  });
+
+  it("never touches another shop's request", async () => {
+    const { db, id } = await openRequest();
+    expect(
+      await setDateRequestOutcome(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        requestId: id,
+        outcome: "done",
+        now: nowDate(),
+      }),
+    ).toBe(false);
+  });
+
+  it("refuses a stamp without its kind at the database", async () => {
+    const { db, id } = await openRequest();
+    await expect(
+      db.update(courseInquiries).set({ handledAt: nowDate() }).where(eq(courseInquiries.id, id)),
+    ).rejects.toThrow();
   });
 });

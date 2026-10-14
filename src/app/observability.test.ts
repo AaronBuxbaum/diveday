@@ -289,6 +289,84 @@ describe("redactEvent", () => {
   });
 });
 
+// Issue #2531. A thrown error's message can quote whatever the failing call was
+// handed (a bounce quoting the recipient, a driver echoing a bound parameter),
+// and every `Sentry.captureException(error)` ships it. One place cleans it for
+// every caller: the class stays as the exception's type, a code when the
+// error carries one, and the text goes.
+describe("redactEvent on an exception", () => {
+  it("replaces the message text of every exception with a fixed token", () => {
+    const event = redactEvent({
+      type: undefined,
+      exception: {
+        values: [
+          { type: "PostgresError", value: "Key (email)=(nora@example.com) already exists" },
+          { type: "Error", value: "Failed query: insert ... params: nora@example.com" },
+        ],
+      },
+    });
+    expect(event.exception?.values?.map((value) => value.type)).toEqual(["PostgresError", "Error"]);
+    expect(event.exception?.values?.map((value) => value.value)).toEqual([
+      "[redacted]",
+      "[redacted]",
+    ]);
+  });
+
+  // React's production build replaces its messages with a number and a link
+  // whose query carries the arguments; the number is the diagnosis and says
+  // nothing about anybody, so it stays and the link goes.
+  it("keeps a minified React error's number and drops its arguments", () => {
+    const event = redactEvent({
+      type: undefined,
+      exception: {
+        values: [
+          {
+            type: "Error",
+            value:
+              "Minified React error #31; visit https://react.dev/errors/31?args[]=Nora for the full message",
+          },
+        ],
+      },
+    });
+    expect(event.exception?.values?.[0]?.value).toBe("Minified React error #31");
+  });
+
+  it("keeps the thrown error's code, or its cause's, when it has the shape of one", () => {
+    const cause = Object.assign(new Error("connect ECONNRESET 10.0.0.1"), { code: "ECONNRESET" });
+    const error = new TypeError("fetch failed for nora@example.com", { cause });
+    const event = redactEvent(
+      { type: undefined, exception: { values: [{ type: "TypeError", value: error.message }] } },
+      { originalException: error },
+    );
+    expect(event.exception?.values?.[0]?.value).toBe("[redacted] ECONNRESET");
+    const coded = Object.assign(new Error("for nora@example.com"), { code: "nora@example.com" });
+    const refused = redactEvent(
+      { type: undefined, exception: { values: [{ type: "Error", value: coded.message }] } },
+      { originalException: coded },
+    );
+    expect(JSON.stringify(refused)).not.toContain("nora@example.com");
+  });
+
+  it("drops the headers that carry the client's IP address", () => {
+    const event = redactEvent({
+      type: undefined,
+      request: {
+        headers: {
+          "X-Forwarded-For": "203.0.113.7, 10.0.0.1",
+          "x-real-ip": "203.0.113.7",
+          forwarded: "for=203.0.113.7",
+          "cf-connecting-ip": "203.0.113.7",
+          "true-client-ip": "203.0.113.7",
+          "user-agent": "Mozilla/5.0",
+        },
+        env: { REMOTE_ADDR: "203.0.113.7" },
+      },
+    });
+    expect(event.request?.headers).toEqual({ "user-agent": "Mozilla/5.0" });
+    expect(JSON.stringify(event)).not.toContain("203.0.113.7");
+  });
+});
+
 describe("SENTRY_DATA_COLLECTION", () => {
   it("collects no bodies, cookies, user info, frame variables or query data", () => {
     expect(SENTRY_DATA_COLLECTION).toMatchObject({
@@ -319,8 +397,32 @@ describe("redactBreadcrumb", () => {
     expect(breadcrumb.data?.url).toBe("/verify/[token]");
   });
 
+  // A console breadcrumb is a logged line: often the same error text
+  // `redactEvent` scrubs from the exception (security review of issue #2531).
+  it("drops a console breadcrumb's text and arguments", () => {
+    const breadcrumb = redactBreadcrumb({
+      category: "console",
+      level: "error",
+      message: "Failed query: insert ... params: nora@example.com",
+      data: { arguments: ["Failed query", { email: "nora@example.com" }], logger: "console" },
+    });
+    expect(breadcrumb.message).toBe("[redacted]");
+    expect(breadcrumb.data?.arguments).toBeUndefined();
+    expect(breadcrumb.data?.logger).toBe("console");
+    expect(JSON.stringify(breadcrumb)).not.toContain("nora@example.com");
+  });
+
+  it("keeps a minified React error's number on a console breadcrumb, never its args", () => {
+    const breadcrumb = redactBreadcrumb({
+      category: "console",
+      message:
+        "Minified React error #31; visit https://react.dev/errors/31?args[]=nora%40example.com for the full message",
+    });
+    expect(breadcrumb.message).toBe("Minified React error #31");
+  });
+
   it("leaves an unrelated breadcrumb untouched", () => {
-    const breadcrumb = redactBreadcrumb({ category: "console", data: { message: "hi" } });
+    const breadcrumb = redactBreadcrumb({ category: "ui.click", data: { message: "hi" } });
     expect(breadcrumb.data?.message).toBe("hi");
   });
 

@@ -383,9 +383,12 @@ export async function getDayCloseout(
  * 20260827-clearwater-surface-language, decision 4; the Evening artboard's
  * "back by 10:26 AM · last roll call closed by Keiko").
  *
- * The latest roll-call event on the trip *is* the moment the count closed:
- * these rows are append-only and a count is closed by its last mark. So this
- * asks for the newest one per trip and nothing else — it decides no state,
+ * The latest standing mark at the trip's **final checkpoint** *is* the moment
+ * the count closed: these rows are append-only and a count is closed by its
+ * last mark. A mark on an earlier checkpoint (a dock mis-tap corrected from the
+ * shop at 4:10) and a `cleared` retraction anywhere close nothing, so neither
+ * moves the time or the name (#2536). So this asks for the newest such mark per
+ * trip and nothing else — it decides no state,
  * raises no gap and disagrees with nobody. Whether a count is closed at all
  * stays `listRollCallGaps`'s answer alone (an absent gap), which is why this
  * can be a plain read.
@@ -421,17 +424,28 @@ export async function listHeadCountCloses(
   const crewClosedTripIds = stations
     .filter((station) => station.crewClosed)
     .map((station) => station.tripId);
-  const [diverRows, crewRows] = await Promise.all([
+  const [tripRows, diverRows, crewRows] = await Promise.all([
+    db
+      .select({ id: trips.id, plannedDives: trips.plannedDives })
+      .from(trips)
+      .where(and(eq(trips.shopId, shopId), inArray(trips.id, [...tripIds]), liveTrip())),
     db
       .select({
         tripId: rollCallEvents.tripId,
+        checkpoint: rollCallEvents.checkpoint,
         occurredAt: rollCallEvents.occurredAt,
         createdAt: rollCallEvents.createdAt,
         closedBy: people.fullName,
       })
       .from(rollCallEvents)
       .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
-      .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          inArray(rollCallEvents.tripId, [...tripIds]),
+          ne(rollCallEvents.status, "cleared"),
+        ),
+      )
       .orderBy(
         desc(rollCallEvents.occurredAt),
         desc(rollCallEvents.createdAt),
@@ -442,6 +456,7 @@ export async function listHeadCountCloses(
       : db
           .select({
             tripId: rollCallCrewEvents.tripId,
+            checkpoint: rollCallCrewEvents.checkpoint,
             occurredAt: rollCallCrewEvents.occurredAt,
             createdAt: rollCallCrewEvents.createdAt,
             closedBy: people.fullName,
@@ -452,6 +467,7 @@ export async function listHeadCountCloses(
             and(
               eq(rollCallCrewEvents.shopId, shopId),
               inArray(rollCallCrewEvents.tripId, crewClosedTripIds),
+              ne(rollCallCrewEvents.status, "cleared"),
             ),
           )
           .orderBy(
@@ -460,10 +476,16 @@ export async function listHeadCountCloses(
             desc(rollCallCrewEvents.seq),
           ),
   ]);
+  const closingCheckpoint = new Map(
+    tripRows.map((trip) => [trip.id, rollCallCheckpoints(trip.plannedDives).at(-1) ?? "departure"]),
+  );
   type Mark = (typeof diverRows)[number];
   const newestPerTrip = (rows: readonly Mark[]) => {
     const newest = new Map<string, Mark>();
-    for (const row of rows) if (!newest.has(row.tripId)) newest.set(row.tripId, row);
+    for (const row of rows) {
+      if (row.checkpoint !== closingCheckpoint.get(row.tripId)) continue;
+      if (!newest.has(row.tripId)) newest.set(row.tripId, row);
+    }
     return newest;
   };
   const diverLast = newestPerTrip(diverRows);

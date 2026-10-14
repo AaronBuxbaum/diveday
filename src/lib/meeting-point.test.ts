@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { meetingPointForMessage, meetingPointMoved, meetingPointOf } from "./meeting-point";
+import {
+  meetingPointForMessage,
+  meetingPointLine,
+  meetingPointMoved,
+  meetingPointOf,
+} from "./meeting-point";
 
 const shopAddress = {
   street: "1 Harbor Rd",
@@ -77,5 +82,25 @@ describe("meetingPointForMessage", () => {
       mapQuery: null,
     });
     expect(point.parking).toHaveLength(600);
+  });
+});
+
+describe("meetingPointLine", () => {
+  const point = (label: string, address: string | null) => ({
+    label,
+    address,
+    landmark: null,
+    parking: null,
+    mapQuery: null,
+  });
+
+  it("names the place, then its address", () => {
+    expect(meetingPointLine(point("Slip 4, the east dock", "12 Ocean Way"))).toBe(
+      "Slip 4, the east dock · 12 Ocean Way",
+    );
+  });
+
+  it("names the place alone when there is no address to give", () => {
+    expect(meetingPointLine(point("North Jetty", null))).toBe("North Jetty");
   });
 });

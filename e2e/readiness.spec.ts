@@ -148,13 +148,16 @@ test.describe("staff-prepared trip", () => {
     // the copy the crew is not reading.
     await expect(page.getByRole("heading", { name: "Emergency contact" })).toHaveCount(0);
 
-    // The diver's own words to the crew: inside Day-of details, saved on its
-    // own action, so it cannot blank the sizes beside it (issue 627).
+    // The diver's own words to the crew: inside Day-of details, written to
+    // the note column alone, so it cannot blank the sizes beside it (issue
+    // 627). One Save for the whole step (third UX review, item 24): the pickup
+    // answered beside it is kept too, not only the last thing typed.
     await openThreadStep(page, "dayof");
     await page.getByLabel("Anything else the crew should know?").fill("Titanium hip, I run heavy.");
-    await page.getByRole("button", { name: "Save note" }).click();
+    await page.getByLabel("Where you’re staying").fill("Ocean Pointe, room 12");
+    await page.getByRole("button", { name: "Save day-of details" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Saved. The crew will see that" }),
+      page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
     ).toBeVisible();
     // Read back off the control itself, which is what the diver comes back to.
     // Re-opened first, because the save is a redirect: the fresh render puts
@@ -163,6 +166,7 @@ test.describe("staff-prepared trip", () => {
     await expect(page.getByLabel("Anything else the crew should know?")).toHaveValue(
       "Titanium hip, I run heavy.",
     );
+    await expect(page.getByLabel("Where you’re staying")).toHaveValue("Ocean Pointe, room 12");
 
     // Where the diver is actually going, and how to reach the people who will
     // be there. This page used to close on a one-line "Questions? Reach out to
@@ -195,16 +199,12 @@ test.describe("staff-prepared trip", () => {
     // 20260821-currency-is-what-catches-people). It gates nothing, so what is
     // worth proving is that the answer round-trips and the row settles.
     await openThreadStep(page, "dayof");
-    const currencyForm = page.locator("form").filter({ hasText: "When did you last dive?" });
-    await currencyForm
+    await page
       .getByLabel("When did you last dive?")
       .selectOption({ label: "More than five years ago" });
-    // Scoped to its own form: the page now also carries "What's this dive for?",
-    // whose Save is the same word on the same page. Two questions, two forms,
-    // and this one is about currency.
-    await currencyForm.getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByRole("button", { name: "Save day-of details" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Thanks. The crew will see that" }),
+      page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
     ).toBeVisible();
     // The answer is the Day-of step's settled line now, so it reads without
     // opening anything — and the step has moved the figure, which is the
@@ -225,6 +225,11 @@ test.describe("staff-prepared trip", () => {
     await page.getByRole("button", { name: "Cancel my spot" }).click();
     await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
     await expect(page.getByRole("heading", { name: "This booking was canceled" })).toBeVisible();
+    // Never a dead end: the schedule is one tap away (third UX review, item 16).
+    await expect(page.getByRole("link", { name: "See what’s coming up" })).toHaveAttribute(
+      "href",
+      /^\/s\/[^/]+$/,
+    );
 
     // **And the same dead token, opened again later, names the shop.**
     //

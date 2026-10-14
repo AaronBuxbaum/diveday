@@ -11,6 +11,27 @@ import { bookings, people, trips } from "./schema";
  * nothing rather than leaking across tenants.
  */
 
+/**
+ * Whether the seat a release is for was marked "Under 18" by whoever booked it
+ * (`bookings.minor_declared_at`). False for a person-scoped release, which has
+ * no seat. The guardian rule reads it only where no date of birth is on file
+ * (`guardianSignatureRequired`), so the signing page and `completeWaiver` ask
+ * the same question.
+ */
+export async function seatMinorDeclared(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string | null,
+): Promise<boolean> {
+  if (!bookingId) return false;
+  const [row] = await db
+    .select({ minorDeclaredAt: bookings.minorDeclaredAt })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  return Boolean(row?.minorDeclaredAt);
+}
+
 /** The departure a booking sits on, or null when the booking is gone. */
 export async function getBookingTripId(
   db: DbExecutor,
@@ -25,19 +46,23 @@ export async function getBookingTripId(
   return row?.tripId ?? null;
 }
 
-/** The name and date of birth a release has to be signed under. */
+/**
+ * The name a release has to be signed under, and what the guardian rule reads:
+ * the date of birth on file and the seat's "Under 18" (`seatMinorDeclared`).
+ */
 export async function getWaiverSignerOnFile(
   db: DbExecutor,
-  shopId: string,
-  personId: string,
-): Promise<{ fullName: string; dateOfBirth: string | null } | undefined> {
+  record: { shopId: string; personId: string; bookingId: string | null },
+): Promise<{ fullName: string; dateOfBirth: string | null; minorDeclared: boolean } | undefined> {
   const [row] = await db
     .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
     .from(people)
     // diveday:allow-deleted-people: the signer of a release already issued.
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId)))
     .limit(1);
-  return row;
+  if (!row) return undefined;
+  const minorDeclared = await seatMinorDeclared(db, record.shopId, record.bookingId);
+  return { ...row, minorDeclared };
 }
 
 /** The trip a booking's waiver is for, named on the page so the diver can check it. */

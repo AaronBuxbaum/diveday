@@ -94,8 +94,10 @@ test.describe("the dive arrival arc", () => {
 
     await openThreadStep(page, "dayof");
     await page.getByRole("radio", { name: "Carry my gear" }).check();
-    await page.getByRole("button", { name: "Save request" }).click();
-    await expect(page.getByRole("status")).toContainText("Your request is with the crew.");
+    await page.getByRole("button", { name: "Save day-of details" }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
+    ).toBeVisible();
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis");

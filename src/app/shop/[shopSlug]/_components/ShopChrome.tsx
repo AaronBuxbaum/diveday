@@ -332,9 +332,18 @@ export async function ShopSidebarSlot({ params }: { params: Promise<{ shopSlug: 
 const SIDEBAR_CLASS =
   "sticky top-(--chrome-h) hidden h-[calc(100dvh-var(--chrome-h))] w-(--sidebar-w) shrink-0 overflow-y-auto border-e border-border bg-surface lg:block print:hidden";
 
-/** The sidebar's own width, held while the chrome streams in. */
+/**
+ * The sidebar's own width, held while the chrome streams in. Marked as a
+ * placeholder like the bar below, for the same reason.
+ */
 export function ShopSidebarSkeleton() {
-  return <div aria-hidden="true" className="hidden w-(--sidebar-w) shrink-0 lg:block" />;
+  return (
+    <div
+      aria-hidden="true"
+      data-suspense-placeholder=""
+      className="hidden w-(--sidebar-w) shrink-0 lg:block"
+    />
+  );
 }
 
 /**
@@ -346,7 +355,17 @@ export function ShopSidebarSkeleton() {
  * change exists to avoid, reintroduced one layer up. Nothing is drawn in it: a
  * skeleton of a nav that arrives in a few hundred milliseconds is a flicker,
  * where a reserved band is simply the page starting where it will stay.
+ *
+ * **Marked `data-suspense-placeholder`**, which `capture()` in
+ * `e2e/visual.spec.ts` waits to see gone (issue #2514). The band stands above
+ * `<main>`, where the wait for the page's own skeleton cannot see it, so a
+ * shot could fire while it stood: `today-empty` at 390 came back on one run
+ * with a blank band for the header and no tab bar, 62px shorter for the tab
+ * bar's missing pad, and the 1280 shot that followed caught the header's ⌘
+ * before its symbols face had loaded.
  */
 export function ShopChromeSkeleton() {
-  return <div aria-hidden="true" className="h-(--chrome-h) shrink-0" />;
+  return (
+    <div aria-hidden="true" data-suspense-placeholder="" className="h-(--chrome-h) shrink-0" />
+  );
 }
