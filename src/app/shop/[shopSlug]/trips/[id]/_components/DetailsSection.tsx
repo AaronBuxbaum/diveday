@@ -319,14 +319,13 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
         </Field>
       </FieldGrid>
       {/* The date/departs/returns boxes describe day one; this says how
-            many days repeat it, and on which dates once there are gaps
-            (third UX review, item 10). Saving rebuilds the whole
+            many days repeat it, and on which dates once gaps are allowed
+            (third UX review, item 10; `MAX_MEETING_DAY_GAP_DAYS`). Saving rebuilds the whole
             meeting-day list, so a departure can grow or shrink here rather
             than being deleted and rebuilt as separate trips. */}
       <MeetingDaysField
         copy={{
           daysLabel: t("trips.details.dayCountLabel"),
-          daysDescription: t("trips.details.dayCountDescription"),
           dayLabel: t.raw("schedule.builder.meetingDayLabel"),
         }}
         minDays={MIN_TRIP_DAYS}

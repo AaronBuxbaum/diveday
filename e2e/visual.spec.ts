@@ -5009,21 +5009,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-add-full", scheme);
       });
 
-      // A course that meets on named days (third UX review, item 10): three
-      // days asked for, and a date field for each day after the first.
-      test(`the add panel's named meeting days render true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/shop/blue-mantis/schedule/board?add=full");
-        await page.getByRole("button", { name: "Fewer options" }).waitFor();
-        await page.getByLabel("Date", { exact: true }).fill(daysFromNow(4));
-        await page.getByLabel("How many days").fill("3");
-        await page.getByLabel("Day 3", { exact: true }).waitFor();
-        await addPanelSettled(page);
-        await boardListSettled(page);
-        await capture(page, "schedule-builder-add-meeting-days", scheme);
-      });
-
       // The repeating-trip panel on a trip's own page. Built through the add
       // panel rather than seeded, because putting a standing charter into the
       // demo seed would move a dozen unrelated baselines (the board, the public

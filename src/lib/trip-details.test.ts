@@ -98,20 +98,26 @@ describe("a course that meets on named days", () => {
       startTime: "08:00",
       endTime: "16:00",
       dayCount: 3,
-      laterDates: ["2026-10-25", "2026-10-31"],
+      laterDates: ["2026-10-25", "2026-10-26"],
     });
     expect(patch.scheduleDays.map((day) => day.startsAt.toISOString())).toEqual([
       "2026-10-24T12:00:00.000Z",
       "2026-10-25T12:00:00.000Z",
-      "2026-10-31T12:00:00.000Z",
+      "2026-10-26T12:00:00.000Z",
     ]);
-    expect(patch.endsAt.toISOString()).toBe("2026-10-31T20:00:00.000Z");
+    expect(patch.endsAt.toISOString()).toBe("2026-10-26T20:00:00.000Z");
   });
 
   it("refuses dates out of order with their own reason", () => {
     expect(
-      refusal({ date: "2026-10-24", dayCount: 3, laterDates: ["2026-10-31", "2026-10-25"] }),
+      refusal({ date: "2026-10-24", dayCount: 3, laterDates: ["2026-10-26", "2026-10-25"] }),
     ).toBe("days_out_of_order");
+  });
+
+  it("refuses an edit that puts two weeks between a departure's days", () => {
+    expect(refusal({ date: "2026-10-24", dayCount: 2, laterDates: ["2026-11-07"] })).toBe(
+      "days_out_of_order",
+    );
   });
 });
 

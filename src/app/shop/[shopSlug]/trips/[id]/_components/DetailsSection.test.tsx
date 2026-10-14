@@ -91,29 +91,16 @@ describe("DetailsSection — the stored arrival photo", () => {
 });
 
 /**
- * **A course that skips days keeps its dates** (third UX review, item 10):
- * the edit form shows a date per later day, so saving it does not fold a
- * course's two weekends back into consecutive days.
+ * **A departure's days run back to back, for now** (`MAX_MEETING_DAY_GAP_DAYS`):
+ * Today and the roll call read a departure as one window, so the edit form
+ * asks only how many days and offers no date to put a gap in. The date boxes
+ * themselves are `MeetingDaysField.test.tsx`'s.
  */
-describe("a departure on named days", () => {
-  it("shows each later day's own date, and moves them with day one", async () => {
-    renderDetails({ dayCount: 3, laterDates: ["2026-10-04", "2026-10-10"] });
-    const day2 = (await screen.findByLabelText("Day 2")) as HTMLInputElement;
-    const day3 = screen.getByLabelText("Day 3") as HTMLInputElement;
-    expect(day2.value).toBe("2026-10-04");
-    expect(day3.value).toBe("2026-10-10");
-    expect(day2.name).toBe("meetingDate");
-
-    const first = document.querySelector('input[name="date"]') as HTMLInputElement;
-    fireEvent.change(first, { target: { value: "2026-10-10" } });
-    expect((screen.getByLabelText("Day 2") as HTMLInputElement).value).toBe("2026-10-11");
-    expect((screen.getByLabelText("Day 3") as HTMLInputElement).value).toBe("2026-10-17");
-  });
-
-  it("offers the next consecutive date for a day the count adds", async () => {
+describe("a departure that meets on several days", () => {
+  it("asks only how many days, with no date box for a later day", () => {
     renderDetails({ dayCount: 1, laterDates: [] });
+    fireEvent.change(screen.getByRole("spinbutton", { name: /Days/ }), { target: { value: "3" } });
     expect(screen.queryByLabelText("Day 2")).toBeNull();
-    fireEvent.change(screen.getByRole("spinbutton", { name: /Days/ }), { target: { value: "2" } });
-    expect(((await screen.findByLabelText("Day 2")) as HTMLInputElement).value).toBe("2026-10-04");
+    expect(document.querySelector('input[name="meetingDate"]')).toBeNull();
   });
 });

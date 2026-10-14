@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { controlClass, DateField, Field } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
+import { MAX_MEETING_DAY_GAP_DAYS } from "@/lib/trip-days";
 
 export type MeetingDaysCopy = {
   daysLabel: string;
-  daysDescription: string;
+  daysDescription?: string;
   /** "Day {number}", raw: filled here per later day. */
   dayLabel: string;
 };
@@ -36,6 +37,12 @@ function shifted(date: string, days: number): string {
  * the way a board move does. The server re-checks the order and the span
  * (`meetingDaysFor`); this only fills the boxes.
  *
+ * **Held back for now.** The date boxes appear only once a day may follow the
+ * one before it by more than a day (`MAX_MEETING_DAY_GAP_DAYS`): until Today
+ * and the roll call read a departure's meeting days, a gap would read as days
+ * on the water, so the form asks for the count alone and the days run back to
+ * back. `namedDates` overrides it for the field's own tests.
+ *
  * Shared by the board's add panel and the departure's edit form, and finds day
  * one through its own form's `date` input rather than a prop, so neither form
  * has to lift its date into state for it.
@@ -47,6 +54,7 @@ export function MeetingDaysField({
   defaultCount,
   defaultLaterDates = [],
   disabled = false,
+  namedDates = MAX_MEETING_DAY_GAP_DAYS > 1,
   className,
 }: {
   copy: MeetingDaysCopy;
@@ -57,6 +65,8 @@ export function MeetingDaysField({
   defaultLaterDates?: readonly string[];
   /** The add panel's collapsed state: nothing submitted, nothing required. */
   disabled?: boolean;
+  /** Offer a date box per later day. Defaults to whether a gap is allowed at all. */
+  namedDates?: boolean;
   className?: string;
 }) {
   const countRef = useRef<HTMLInputElement>(null);
@@ -125,7 +135,7 @@ export function MeetingDaysField({
           className={`${controlClass} tabular-nums max-w-40`}
         />
       </Field>
-      {later > 0 && firstDate ? (
+      {namedDates && later > 0 && firstDate ? (
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {laterOffsets.map((offset, index) => (
             <Field

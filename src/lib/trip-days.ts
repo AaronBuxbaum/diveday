@@ -26,6 +26,13 @@
  * roster, one certify. Each later date must come after the one before it and
  * within {@link MAX_TRIP_SPAN_DAYS} of day one; anything else is refused,
  * never reordered, because a reordered course is not the one the shop typed.
+ *
+ * **For now, no gaps** ({@link MAX_MEETING_DAY_GAP_DAYS}). Today, the open roll
+ * call, check-in and boarding read a departure's day as its one
+ * `startsAt`..`endsAt` window, not its `trip_schedule_days`, so a course on
+ * Saturday and the Saturday after would read as a boat on the water with an
+ * open roll call all week, and would not be today's departure on day two.
+ * Gaps open when those read the meeting days.
  */
 
 import { type CalendarDate, calendarDaysBetween, isValidCalendarDate } from "./calendar-date";
@@ -47,6 +54,16 @@ export const MAX_TRIP_DAYS = 14;
  * departure across a season.
  */
 export const MAX_TRIP_SPAN_DAYS = 42;
+
+/**
+ * The most calendar days one meeting day may come after the one before it.
+ * One, so a departure's days run back to back, until every reader of "the
+ * boat is out" and "today's departure" reads `trip_schedule_days` rather than
+ * the departure's one window (see the module comment). The builder and the
+ * edit form offer a date per later day only once this is more than one.
+ * Typed `number`, so raising it is the one change.
+ */
+export const MAX_MEETING_DAY_GAP_DAYS: number = 1;
 
 /** One meeting day as wall time in the shop's own zone. */
 export type MeetingDayWall = { start: WallTime; end: WallTime };
@@ -89,9 +106,10 @@ const dateOf = (wall: WallTime): CalendarDate =>
  *
  * `invalid` is a count out of range, a date that does not exist, or a list
  * whose length disagrees with the count (a forged or stale form).
- * `days_out_of_order` is a later date on or before the day before it, or more
- * than {@link MAX_TRIP_SPAN_DAYS} after day one: something the staffer can
- * fix by looking at the dates, so it gets its own sentence.
+ * `days_out_of_order` is a later date on or before the day before it, more
+ * than {@link MAX_MEETING_DAY_GAP_DAYS} after it, or more than
+ * {@link MAX_TRIP_SPAN_DAYS} after day one: something the staffer can fix by
+ * looking at the dates, so it gets its own sentence.
  */
 export function meetingDaysFor(
   day: MeetingDayWall,
@@ -112,7 +130,10 @@ export function meetingDaysFor(
   let previous = first;
   const days: MeetingDayWall[] = [day];
   for (const date of laterDates) {
-    if (calendarDaysBetween(previous, date) < 1) return { ok: false, reason: "days_out_of_order" };
+    const step = calendarDaysBetween(previous, date);
+    if (step < 1 || step > MAX_MEETING_DAY_GAP_DAYS) {
+      return { ok: false, reason: "days_out_of_order" };
+    }
     const offset = calendarDaysBetween(first, date);
     if (offset > MAX_TRIP_SPAN_DAYS) return { ok: false, reason: "days_out_of_order" };
     days.push({

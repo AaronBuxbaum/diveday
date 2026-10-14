@@ -13,10 +13,12 @@ import {
 } from "@/test/staff-session";
 
 /**
- * **A course meets on the days it names.** Day one is the departure's date;
- * each later day is its own date, so a course that meets Saturday, Sunday and
- * the next Saturday is one departure, one roster, one certify. Days must run
- * forward, and a repeating departure must end before its next one begins.
+ * **A departure's days, named one by one.** Day one is the departure's date and
+ * each later day is its own date, one departure, one roster, one certify. For
+ * now the days run back to back (`MAX_MEETING_DAY_GAP_DAYS`): Today and the
+ * roll call read a departure as one window, so a gap would read as days on the
+ * water. Days must run forward, and a repeating departure must end before its
+ * next one begins.
  */
 
 vi.mock("next/navigation", () => ({
@@ -86,7 +88,7 @@ async function departures(db: Awaited<ReturnType<typeof signedInOwner>>["db"], s
 describe("adding a course that meets on named days", () => {
   it("puts one departure on the board with a day on each named date", async () => {
     const { db, shop } = await signedInOwner();
-    const form = courseForm(shop.timezone, [1, 7]);
+    const form = courseForm(shop.timezone, [1, 2]);
     expect(await redirectedTo(() => addDepartureAction(shop.slug, form))).toContain(
       "builder=added",
     );
@@ -100,13 +102,22 @@ describe("adding a course that meets on named days", () => {
     expect(days.map((day) => calendarDateInTimezone(day.startsAt, shop.timezone))).toEqual([
       dayAfterStart(shop.timezone, 0),
       dayAfterStart(shop.timezone, 1),
-      dayAfterStart(shop.timezone, 7),
+      dayAfterStart(shop.timezone, 2),
     ]);
+  });
+
+  it("refuses a course with two weeks between its days and adds nothing", async () => {
+    const { db, shop } = await signedInOwner();
+    const form = courseForm(shop.timezone, [14]);
+    expect(await redirectedTo(() => addDepartureAction(shop.slug, form))).toContain(
+      "builder=days-out-of-order",
+    );
+    expect(await departures(db, shop.id)).toEqual([]);
   });
 
   it("refuses days that do not run forward and adds nothing", async () => {
     const { db, shop } = await signedInOwner();
-    const form = courseForm(shop.timezone, [7, 1]);
+    const form = courseForm(shop.timezone, [2, 1]);
     expect(await redirectedTo(() => addDepartureAction(shop.slug, form))).toContain(
       "builder=days-out-of-order",
     );
@@ -115,7 +126,7 @@ describe("adding a course that meets on named days", () => {
 
   it("refuses a weekly departure whose days run into next week's", async () => {
     const { db, shop } = await signedInOwner();
-    const form = courseForm(shop.timezone, [1, 7], {
+    const form = courseForm(shop.timezone, [1, 2, 3, 4, 5, 6, 7], {
       repeatIntervalWeeks: "1",
       repeatWeekday: "0",
     });
