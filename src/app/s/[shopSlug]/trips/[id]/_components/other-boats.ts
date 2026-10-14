@@ -3,7 +3,7 @@ import { formatDayParts, formatTime } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
 import { similarDepartures } from "@/lib/similar-departures";
 import { spotsRemaining } from "@/lib/trips";
-import { worthALook } from "@/lib/worth-a-look";
+import { asksNoMoreThan, worthALook } from "@/lib/worth-a-look";
 import type { publicTripRecord, readTripPage } from "../_lib/page-reads";
 
 type PublicTrip = NonNullable<Awaited<ReturnType<typeof publicTripRecord>>>;
@@ -33,13 +33,16 @@ export type OtherBoatsWhere = {
 export function fullTripAlternatives(trip: PublicTrip, board: Board, where: OtherBoatsWhere) {
   return similarDepartures({
     full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
-    candidates: board.map((candidate) => ({
-      id: candidate.id,
-      title: candidate.title,
-      startsAt: candidate.startsAt,
-      courseId: candidate.courseId,
-      diveSiteId: candidate.diveSiteId,
-    })),
+    // Never a boat that asks more than the full one (fourth UX review, item 10).
+    candidates: board.departures
+      .filter((candidate) => asksNoMoreThan(candidate.requirement, board.ceiling))
+      .map((candidate) => ({
+        id: candidate.id,
+        title: candidate.title,
+        startsAt: candidate.startsAt,
+        courseId: candidate.courseId,
+        diveSiteId: candidate.diveSiteId,
+      })),
   }).map((row) => ({
     tripId: row.tripId,
     title: row.title,
@@ -71,8 +74,9 @@ export function worthALookList(
       difficultyLevel: trip.diveSite?.difficultyLevel ?? null,
       startsAt: trip.startsAt,
       seatsOpen: spotsRemaining(trip),
+      requirement: board.ceiling,
     },
-    candidates: board.map((candidate) => ({
+    candidates: board.departures.map((candidate) => ({
       tripId: candidate.id,
       title: candidate.title,
       courseId: candidate.courseId,
@@ -80,6 +84,7 @@ export function worthALookList(
       difficultyLevel: candidate.diveSite?.difficultyLevel ?? null,
       startsAt: candidate.startsAt,
       seatsOpen: Math.max(candidate.capacity - candidate.booked, 0),
+      requirement: candidate.requirement,
     })),
     timeZone: where.timeZone,
     now: where.now,

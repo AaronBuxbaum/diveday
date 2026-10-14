@@ -1,5 +1,6 @@
 import { nowDate } from "@/lib/clock";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
+import { certificationRank, type SiteCertRequirement } from "@/lib/readiness";
 import { hasSailed } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 
@@ -74,6 +75,12 @@ export type WorthALookSubject = {
   difficultyLevel: DiveSiteDifficulty | null;
   startsAt: Date;
   seatsOpen: number;
+  /**
+   * What the departure asks of anybody (its own gate folded with its sites'),
+   * or null when it asks nothing. A suggestion may never ask more than the
+   * departure being read (fourth UX review, item 10).
+   */
+  requirement?: SiteCertRequirement | null;
 };
 
 /** One departure that might do instead, as the schedule reader already returns it. */
@@ -86,6 +93,27 @@ function partOfDay(startsAt: Date, timeZone: string): PartOfDay {
   const { hour } = utcToWallTime(startsAt, timeZone);
   if (hour < 12) return "morning";
   return hour < 17 ? "afternoon" : "evening";
+}
+
+/**
+ * **Asks no more than the boat being read** (fourth UX review, item 10): no
+ * higher rung on the ladder, no nitrox the read boat does not ask, no
+ * specialty it does not ask. A reader of an Open Water boat, or a first-timer
+ * reading a Discover Scuba session, is never pointed at a boat that would
+ * refuse them at the dock. Guidance only, like the rest of this module:
+ * admission still decides at booking (`src/lib/trip-admission.ts`).
+ */
+export function asksNoMoreThan(
+  candidate: SiteCertRequirement | null | undefined,
+  ceiling: SiteCertRequirement | null | undefined,
+): boolean {
+  if (!candidate) return true;
+  const wanted = candidate.minimumCertificationLevel;
+  const held = ceiling?.minimumCertificationLevel ?? null;
+  if (wanted && (!held || certificationRank(wanted) > certificationRank(held))) return false;
+  if (candidate.requiresNitrox && !ceiling?.requiresNitrox) return false;
+  const allowed = new Set(ceiling?.requiredSpecialties ?? []);
+  return candidate.requiredSpecialties.every((specialty) => allowed.has(specialty));
 }
 
 /**
@@ -137,6 +165,8 @@ export function worthALook(input: {
   for (const candidate of input.candidates) {
     // The boat they are already reading is not an alternative to itself.
     if (candidate.tripId === subject.tripId) continue;
+    // Never a boat that asks more than this one (fourth UX review, item 10).
+    if (!asksNoMoreThan(candidate.requirement, subject.requirement)) continue;
     // A departure that has already left is not worth a look, and the standing
     // late-arrival buffer applies here as everywhere: a boat scheduled forty
     // minutes ago is still at the dock more often than not.
