@@ -1,6 +1,7 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   createContext,
@@ -19,7 +20,6 @@ import type {
 } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
 import { UndoToast } from "@/components/UndoToast";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
-import { fill } from "@/i18n/fill";
 import type { AgencyListedKind, CheckableAgency } from "@/lib/agency-check";
 import {
   AGENCY_CHECK_QUEUE_PAUSE_MS,
@@ -28,6 +28,7 @@ import {
   type AgencyCheckQueueSummary,
   runAgencyCheckQueue,
 } from "@/lib/agency-check-queue";
+import { shopPath } from "@/lib/staff-notices";
 import { AgencyListedOffer, agencyListedForm } from "./AgencyListedOffer";
 import type { AgencyCheckAgencyCopy } from "./agency-check-copy";
 import {
@@ -64,9 +65,12 @@ export type AgencyCheckCardState =
       via: "one" | "all";
       /**
        * The page the server judged, kept only when its match offered the
-       * diver's other cards (layer 3), so a tick posts the same text back.
+       * diver's other cards (layer 3), so a tick posts the same text back,
+       * and dropped once they are filed (S5).
        */
       pageText?: string;
+      /** The offer's cards were filed: it stays on screen saying so, with no page kept. */
+      listedAdded?: true;
     };
 
 /** Where a departure's "Check all" stands. */
@@ -97,10 +101,11 @@ type HostValue = {
   ) => Promise<AgencyListedAddResult>;
   /**
    * Where a match's other cards are offered: under the diver's row (a
-   * departure, whose rows stay), or above the list (Today, whose row leaves
-   * with the card it was about).
+   * departure, whose rows stay), or in the page's own slot
+   * (`AgencyListedOffersSlot`: Today, whose row leaves with the card it was
+   * about).
    */
-  offersAt: "row" | "above";
+  offersAt: "row" | "slot";
 };
 
 /**
@@ -121,12 +126,12 @@ export function agencyCheckCardsToRun(
 
 /**
  * The other cards a match's page offered for this card, while the page text
- * to post them with is kept; null for anything else.
+ * to post them with is kept or once they are filed; null for anything else.
  */
 export function agencyListedOffers(
   state: AgencyCheckCardState | undefined,
 ): readonly AgencyCheckOffer[] | null {
-  if (state?.phase !== "settled" || !state.pageText) return null;
+  if (state?.phase !== "settled" || !(state.pageText || state.listedAdded)) return null;
   const result = state.result;
   return result?.ok === true && result.verdict === "match" && result.offers?.length
     ? result.offers
@@ -179,7 +184,7 @@ export function AgencyCheckHost({
   action: AgencyCheckHostAction;
   /** Without it, a match's other cards are not offered. */
   addListedAction?: AgencyListedHostAction;
-  offersAt?: "row" | "above";
+  offersAt?: "row" | "slot";
   copies: Record<CheckableAgency, AgencyCheckAgencyCopy>;
   /** The pause between two lookups of a "Check all"; a test shortens it. */
   pauseMs?: number;
@@ -351,11 +356,23 @@ export function AgencyCheckHost({
       if (!pageText || !addListedAction) {
         return Promise.resolve<AgencyListedAddResult>({ ok: false });
       }
+      const settle = (result: AgencyListedAddResult) => {
+        // Filed: the page's text has done its work and is not kept (S5).
+        if (result?.ok && alive.current) {
+          setStates((previous) => {
+            const current = previous[card.certificationId];
+            if (current?.phase !== "settled") return previous;
+            const { pageText: _dropped, ...rest } = current;
+            return { ...previous, [card.certificationId]: { ...rest, listedAdded: true } };
+          });
+        }
+        return result;
+      };
       return addListedAction(
         card.personId,
         null,
         agencyListedForm(card.certificationId, pageText, kinds),
-      );
+      ).then(settle);
     },
     [addListedAction, states],
   );
@@ -392,31 +409,8 @@ export function AgencyCheckHost({
     ],
   );
   const toastCopy = toast ? copies[toast.card.agency] : null;
-  // Today's offers, above the list: the diver's row may have left with the card.
-  const above =
-    offersAt === "above"
-      ? Object.values(cards).flatMap((card) => {
-          const offers = agencyListedOffers(states[card.certificationId]);
-          const copy = copies[card.agency];
-          return offers && copy ? [{ card, offers, copy }] : [];
-        })
-      : [];
-
   return (
     <HostContext.Provider value={value}>
-      {above.length > 0 ? (
-        <div className="mb-3">
-          {above.map(({ card, offers, copy }) => (
-            <AgencyListedOffer
-              key={card.certificationId}
-              lead={fill(copy.listedLeadFor, { name: card.fullName })}
-              offers={offers}
-              copy={copy}
-              add={(kinds) => addListed(card, kinds)}
-            />
-          ))}
-        </div>
-      ) : null}
       {children}
       {toast && toastCopy ? (
         <UndoToast
@@ -429,5 +423,47 @@ export function AgencyCheckHost({
         />
       ) : null}
     </HostContext.Provider>
+  );
+}
+
+/**
+ * **Where a page that is not a list of rows puts a match's other cards**
+ * (layer 3, D8): Today draws it under its Needs you list, because a row whose
+ * card the check certified leaves that list on the refresh that follows. Each
+ * offer names the diver, linked to their record, where the cards it files will
+ * wait for Mark certified. Draws nothing outside a host offering them here.
+ */
+export function AgencyListedOffersSlot({ shopSlug }: { shopSlug: string }) {
+  const host = useAgencyCheckHost();
+  if (host?.offersAt !== "slot") return null;
+  const offered = Object.values(host.cards).flatMap((card) => {
+    const offers = agencyListedOffers(host.states[card.certificationId]);
+    const copy = host.copies[card.agency];
+    return offers && copy ? [{ card, offers, copy }] : [];
+  });
+  if (offered.length === 0) return null;
+  return (
+    <div className="mt-3" data-agency-listed-offers="">
+      {offered.map(({ card, offers, copy }) => {
+        const [before, after = ""] = copy.listedLeadFor.split("{name}");
+        return (
+          <AgencyListedOffer
+            key={card.certificationId}
+            lead={
+              <>
+                {before}
+                <Link href={shopPath(shopSlug, "divers", card.personId)} className="underline">
+                  {card.fullName}
+                </Link>
+                {after}
+              </>
+            }
+            offers={offers}
+            copy={copy}
+            add={(kinds) => host.addListed(card, kinds)}
+          />
+        );
+      })}
+    </div>
   );
 }

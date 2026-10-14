@@ -571,3 +571,54 @@ describe("the agency check, with the extension", () => {
     expect(screen.getByText("Priya Sharma · Open Water Diver")).toBeInTheDocument();
   });
 });
+
+/**
+ * **A card an agency check listed** (layer 3): its stamp says the note is the
+ * agency's words, before and after Mark certified, and a card filed with no
+ * number of its own is confirmed through the sighting.
+ */
+describe("a card an agency check listed", () => {
+  function listed(extra: Record<string, unknown> = {}) {
+    return {
+      id: "n-listed",
+      agency: "sdi",
+      status: "pending",
+      identifier: "SDI-2002",
+      selfDeclaredAt: null,
+      reviewNote: "Lena Ortiz · Computer Nitrox Diver",
+      listedFromCertificationId: "c-1",
+      ...extra,
+    };
+  }
+
+  it("says the words are the agency's page, whatever the card's state", () => {
+    for (const status of ["pending", "verified"]) {
+      renderGroup(
+        diver({ nitroxCertifications: [listed({ status })] } as unknown as Partial<DiverProfile>),
+      );
+      expect(screen.getByText("Listed on SDI’s page.")).toBeInTheDocument();
+      expect(screen.getByText("Lena Ortiz · Computer Nitrox Diver")).toBeInTheDocument();
+      cleanup();
+    }
+    // A staffer's own note on a card no check listed claims no page.
+    renderGroup(
+      diver({
+        nitroxCertifications: [listed({ listedFromCertificationId: null })],
+      } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.queryByText("Listed on SDI’s page.")).toBeNull();
+  });
+
+  it("asks for the card when the page showed no number for it", () => {
+    renderGroup(
+      diver({
+        nitroxCertifications: [listed({ identifier: null })],
+      } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.getByText("Verify certification record")).toBeInTheDocument();
+    cleanup();
+    // With the number its own line showed, the ordinary one tap.
+    renderGroup(diver({ nitroxCertifications: [listed()] } as unknown as Partial<DiverProfile>));
+    expect(screen.queryByText("Verify certification record")).toBeNull();
+  });
+});

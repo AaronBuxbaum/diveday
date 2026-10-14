@@ -73,6 +73,9 @@ export function AgencyCheck({
   // The page the server judged, kept so a ticked offer posts the same text
   // and the server can judge it again.
   const [pageText, setPageText] = useState("");
+  // Once the offer's cards are filed the page's text is dropped (S5); the
+  // offer stays, saying so.
+  const [listedAdded, setListedAdded] = useState(false);
   const [, startTransition] = useTransition();
   const busy = asking || judging;
 
@@ -87,6 +90,7 @@ export function AgencyCheck({
       return;
     }
     setPageText(reply.pageText);
+    setListedAdded(false);
     const formData = agencyCheckForm(certificationId, reply.pageText);
     startTransition(() => formAction(formData));
   }
@@ -128,12 +132,19 @@ export function AgencyCheck({
           {hasExtension && query ? link : null}
         </span>
       ) : null}
-      {match?.offers && addListed && pageText ? (
+      {match?.offers && addListed && (pageText || listedAdded) ? (
         <AgencyListedOffer
           lead={copy.listedLead}
           offers={match.offers}
           copy={copy}
-          add={(kinds) => addListed(null, agencyListedForm(certificationId, pageText, kinds))}
+          add={async (kinds) => {
+            const added = await addListed(null, agencyListedForm(certificationId, pageText, kinds));
+            if (added?.ok) {
+              setListedAdded(true);
+              setPageText("");
+            }
+            return added;
+          }}
         />
       ) : null}
       {undo ? (

@@ -364,12 +364,26 @@ describe("judgeAgencyPage", () => {
     const result = judge(
       `Someone Else 1970-01-01\nLena Ortiz ${"x".repeat(400)}\n1990-04-12\nScuba Diver`,
     );
-    expect(result.verdict).toBe("match");
-    if (result.verdict === "match") {
-      expect(result.evidence).not.toContain("Someone Else");
-      expect(result.evidence.length).toBeLessThanOrEqual(EVIDENCE_MAX_LENGTH);
-      expect(result.evidence.endsWith("…")).toBe(true);
+    // The name line keeps only the diver's name: whatever else it says is not theirs.
+    expect(result).toEqual({ verdict: "match", evidence: "Lena Ortiz · 1990-04-12 · Scuba Diver" });
+    const long = judge(
+      `Someone Else 1970-01-01\nLena Ortiz\n1990-04-12 ${"x".repeat(400)}\nScuba Diver`,
+    );
+    expect(long.verdict).toBe("match");
+    if (long.verdict === "match") {
+      expect(long.evidence).not.toContain("Someone Else");
+      expect(long.evidence.length).toBeLessThanOrEqual(EVIDENCE_MAX_LENGTH);
+      expect(long.evidence.endsWith("…")).toBe(true);
     }
+  });
+
+  it("keeps a match's name line to the diver's name, the certification's words, dates and numbers", () => {
+    const row =
+      "Lena Ortiz 12 Apr 1990 Rescue Diver 3 Mar 2021 Instructor Sam Hill #123456 Reef Divers Ltd";
+    expect(judge(row, { agency: "padi", level: "rescue", cardNumber: null })).toEqual({
+      verdict: "match",
+      evidence: "Lena Ortiz 12 Apr 1990 Rescue Diver 3 Mar 2021 #123456",
+    });
   });
 
   it("reads no further than the page-text ceiling", () => {
@@ -613,22 +627,123 @@ describe("agencyListedCards", () => {
     "Enriched Air Nitrox 32 · 12.05.2021",
     "Deep Diving",
   ].join("\n");
+  const SSI_EVIDENCE =
+    "Lena Ortiz · Card N-12345 · Open Water Diver · Enriched Air Nitrox 32 · 12.05.2021 · Deep Diving";
 
   it("offers the nitrox and specialty cards listed in the diver's own record, in the agency's words", () => {
     expect(listed(SSI)).toEqual([
-      {
-        kind: "nitrox",
-        words: "Enriched Air Nitrox 32",
-        evidence:
-          "Lena Ortiz · Card N-12345 · Open Water Diver · Enriched Air Nitrox 32 · 12.05.2021 · Deep Diving",
-      },
-      {
-        kind: "deep",
-        words: "Deep Diving",
-        evidence:
-          "Lena Ortiz · Card N-12345 · Open Water Diver · Enriched Air Nitrox 32 · 12.05.2021 · Deep Diving",
-      },
+      { kind: "nitrox", words: "Enriched Air Nitrox", evidence: SSI_EVIDENCE, cardNumber: null },
+      { kind: "deep", words: "Deep Diving", evidence: SSI_EVIDENCE, cardNumber: null },
     ]);
+  });
+
+  it("keeps the name line to the diver's name in a listed card's words", () => {
+    const page = SSI.replace("Lena Ortiz", "Lena Ortiz (referred by Mark Lee)");
+    const cards = listed(page);
+    expect(kinds(cards)).toEqual(["nitrox", "deep"]);
+    expect(cards[0]?.evidence).toBe(SSI_EVIDENCE);
+  });
+
+  /** Each agency's wording, held to the words its page prints (D4 of the layer 3 review). */
+  it.each([
+    ["ssi", "Night & Limited Visibility Diving", "night"],
+    ["ssi", "Night and Limited Visibility Diving", "night"],
+    ["naui", "Wreck Diver (External Survey)", "wreck"],
+    ["naui", "Wreck Diver", "wreck"],
+  ] as const)("reads %s's %s as %s", (agency, line, kind) => {
+    const record = ["Lena Ortiz 04/12/1990", "Card N-12345", "Open Water Diver", line].join("\n");
+    expect(kinds(listed(record, { agency, birthDate: "1990-04-12" }))).toEqual([kind]);
+  });
+
+  it.each([
+    ["ssi", "Enriched Air Nitrox Instructor"],
+    ["ssi", "Night Diving & Limited Visibility"],
+    ["naui", "Wreck Penetration Diver"],
+  ] as const)("does not read %s's %s", (agency, line) => {
+    const record = ["Lena Ortiz 04/12/1990", "Card N-12345", "Open Water Diver", line].join("\n");
+    expect(listed(record, { agency, birthDate: "1990-04-12" })).toEqual([]);
+  });
+
+  it("reads GUE's nitrox from Recreational Diver 1, which bundles it, on the diver's own number", () => {
+    const gue = ["Lena Ortiz", "GUE-4411", "Recreational Diver 1"].join("\n");
+    expect(
+      listed(gue, { agency: "gue", cardNumber: "GUE-4411" }).map((card) => [
+        card.kind,
+        card.words,
+        card.cardNumber,
+      ]),
+    ).toEqual([["nitrox", "Recreational Diver 1", null]]);
+    expect(
+      listed(gue, {
+        agency: "gue",
+        cardNumber: "GUE-4411",
+        held: new Set<AgencyListedKind>(["nitrox"]),
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * SDI and CMAS number each card (D2), so a listed card takes the number on
+   * its own line, never the checked card's; with none, or with two, it has
+   * none and is confirmed through the sighting.
+   */
+  describe("where the agency numbers each card", () => {
+    const sdi = (...lines: string[]) =>
+      listed(["Lena Ortiz 04/12/1990", "Open Water Scuba Diver #SDI-1001", ...lines].join("\n"), {
+        agency: "sdi",
+        birthDate: "1990-04-12",
+        cardNumber: "SDI-1001",
+      }).map((card) => [card.kind, card.cardNumber]);
+
+    it("takes the number printed on the card's own line", () => {
+      expect(sdi("Computer Nitrox Diver 03/02/2019 #SDI-2002", "Deep Diver 778899")).toEqual([
+        ["nitrox", "SDI-2002"],
+        ["deep", "778899"],
+      ]);
+    });
+
+    it("takes none when the line shows none, two, or only the checked card's", () => {
+      expect(sdi("Computer Nitrox Diver 03/02/2019")).toEqual([["nitrox", null]]);
+      expect(sdi("Computer Nitrox Diver 778899 / 991122")).toEqual([["nitrox", null]]);
+      expect(sdi("Computer Nitrox Diver SDI-1001")).toEqual([["nitrox", null]]);
+      // Two cards on one line: whose number it is, nobody can say.
+      expect(sdi("Deep Diver · Wreck Diver 778899").sort()).toEqual([
+        ["deep", null],
+        ["wreck", null],
+      ]);
+    });
+
+    it("never takes a number where the agency numbers the diver", () => {
+      const record = ["Lena Ortiz", "Card N-12345", "Open Water Diver", "Deep Diving 778899"];
+      expect(listed(record.join("\n")).map((card) => card.cardNumber)).toEqual([null]);
+    });
+  });
+
+  /**
+   * A recreational card DiveDay holds no kind for neither offers nor ends the
+   * record (D3), so the cards under it are still read. Anything else still ends it.
+   */
+  it.each([
+    ["ssi", "Perfect Buoyancy"],
+    ["ssi", "Navigation 03.04.2020"],
+    ["ssi", "Scuba Diver"],
+    ["naui", "Skin Diver"],
+  ] as const)("passes over %s's %s and reads on", (agency, line) => {
+    const deep = { ssi: "Deep Diving", naui: "Deep Diver" }[agency];
+    const record = ["Lena Ortiz 04/12/1990", "Card N-12345", "Open Water Diver", line, deep];
+    expect(kinds(listed(record.join("\n"), { agency, birthDate: "1990-04-12" }))).toEqual(["deep"]);
+  });
+
+  it("still ends the record at a technical or professional rating after a pass-over", () => {
+    const record = [
+      "Lena Ortiz",
+      "Card N-12345",
+      "Open Water Diver",
+      "Perfect Buoyancy",
+      "Tec Navigation",
+      "Deep Diving",
+    ];
+    expect(listed(record.join("\n"))).toEqual([]);
   });
 
   it("offers nothing without a match", () => {
@@ -707,7 +822,7 @@ describe("agencyListedCards", () => {
       "Lena Ortiz",
       "Card N-12345",
       "Open Water Diver",
-      "Perfect Buoyancy",
+      "Freediver Level 2",
       "Deep Diving",
     ].join("\n");
     expect(listed(page)).toEqual([]);
@@ -763,6 +878,32 @@ describe("agencyListedCards", () => {
         "Wreck Diver",
       ].join("\n");
       expect(padi(pro)).toEqual([]);
+    });
+
+    it("reads PADI's 'Specialty' after a specialty's name, never before a trainer's word", () => {
+      const grouped = (line: string) =>
+        padi(
+          [
+            "Lena Ortiz",
+            "Date of Birth: 12 Apr 1990",
+            "Open Water Diver 15 Jun 2015",
+            line,
+            "Wreck Diver",
+          ].join("\n"),
+        );
+      expect(kinds(grouped("Deep Diver Specialty 2 Feb 2020"))).toEqual(["deep", "wreck"]);
+      expect(grouped("Deep Diver Specialty Instructor")).toEqual([]);
+    });
+
+    it("passes over a dated recreational card it holds no kind for, and reads on", () => {
+      const grouped = [
+        "Lena Ortiz",
+        "Date of Birth: 12 Apr 1990",
+        "Open Water Diver 15 Jun 2015",
+        "Peak Performance Buoyancy 2 Feb 2020",
+        "Enriched Air Diver 4 Apr 2021",
+      ].join("\n");
+      expect(kinds(padi(grouped))).toEqual(["nitrox"]);
     });
 
     it("offers nothing when DiveChek lists several divers", () => {

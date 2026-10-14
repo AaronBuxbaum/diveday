@@ -81,11 +81,11 @@
       "noAnswer": "DiveDay no respondió. Recarga para ver cómo quedó esta certificación.",
       "signedOut": "Inicia sesión en el PADI Pros’ Site primero y vuelve a verificar.",
       "listed": {
-        "lead": "{agency} también muestra estas certificaciones. ¿Las añades?",
-        "leadFor": "{agency} también muestra estas certificaciones de {name}. ¿Las añades?",
+        "lead": "{agency} también muestra estas certificaciones. ¿Las añades? Cada una espera a Marcar certificado.",
+        "leadFor": "{agency} también muestra estas certificaciones de {name}. ¿Las añades? Cada una espera a Marcar certificado.",
         "add": "Añadir",
         "adding": "Añadiendo…",
-        "added": "Añadidas. Cada una espera a Marcar certificado.",
+        "added": "Añadidas.",
         "failed": "No se pudieron añadir. Recarga para ver las certificaciones de este buceador."
       }
     },

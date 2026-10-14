@@ -709,7 +709,7 @@ export async function reviewCertification(
  * neither reach another shop's evidence nor resurrect a deleted card.
  */
 export async function unreviewCertification(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; certificationId: string },
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
@@ -764,6 +764,12 @@ export async function unreviewSpecialtyCertification(
       selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
       issuedByShopAt: specialtyCertifications.issuedByShopAt,
       importedAt: specialtyCertifications.importedAt,
+      // A listed card (layer 3): its note is the agency's words, never the
+      // review's, and stays; and at an agency that numbers each card its
+      // number may be a sighting (`unreviewedCardState`).
+      listedFromCertificationId: specialtyCertifications.listedFromCertificationId,
+      agency: specialtyCertifications.agency,
+      reviewNote: specialtyCertifications.reviewNote,
     })
     .from(specialtyCertifications)
     .where(
@@ -781,7 +787,7 @@ export async function unreviewSpecialtyCertification(
     .update(specialtyCertifications)
     .set({
       status: target.status,
-      reviewNote: null,
+      reviewNote: existing.listedFromCertificationId ? existing.reviewNote : null,
       reviewedAt: null,
       reviewedByPersonId: null,
     })
@@ -1194,6 +1200,10 @@ export async function reviewSpecialtyCertification(
       // The agency's words a check filed the card with (layer 3), kept by a
       // confirm that brings none of its own.
       reviewNote: specialtyCertifications.reviewNote,
+      // A card an agency check listed with no number of its own is confirmed
+      // through the sighting too (`needsCardSighting`).
+      identifier: specialtyCertifications.identifier,
+      listedFromCertificationId: specialtyCertifications.listedFromCertificationId,
     })
     .from(specialtyCertifications)
     .where(

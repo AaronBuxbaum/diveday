@@ -405,6 +405,19 @@ export const specialtyCertifications = pgTable(
     }),
     /** The live staff member whose tap issued this card. Set only alongside `issuedByShopAt`. */
     issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
+    /**
+     * **The agency check that listed this card** (layer 3 of ADR
+     * 20261008-cert-check-extension): the level card whose match found it on
+     * the same agency page, set only when a staffer added it from that offer.
+     * Three things read it. The row's "Listed on PADI's page." says the review
+     * note is the agency's words, not a staffer's. The level check's Undo
+     * archives the still-pending rows it spawned. And a row it marks with no
+     * number (an agency that numbers each card, the page showing none) is
+     * confirmed through the card sighting, never the one tap.
+     */
+    listedFromCertificationId: uuid("listed_from_certification_id").references(
+      () => certifications.id,
+    ),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
@@ -438,7 +451,9 @@ export const specialtyCertifications = pgTable(
     // gate waits for somebody to look at the card).
     //
     // The self-declared exemption is unchanged and is conditioned on `pending`
-    // for the same reason.
+    // for the same reason. So is the third: a card an agency check listed
+    // (`listedFromCertificationId`) at an agency that numbers each card, whose
+    // page showed none. Its confirm is the card sighting, which writes one.
     //
     // `is not null` leads, and is not redundant with the length test: a CHECK
     // passes when its expression is TRUE *or NULL*, and `length(btrim(NULL))`
@@ -447,7 +462,7 @@ export const specialtyCertifications = pgTable(
     // afternoon-long bug the level card's own comment records.
     check(
       "specialty_certifications_identifier_present_unless_unsighted",
-      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null and ${table.status} = 'pending')`,
+      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null and ${table.status} = 'pending') or (${table.listedFromCertificationId} is not null and ${table.status} = 'pending')`,
     ),
   ],
 );
@@ -599,6 +614,19 @@ export const nitroxCertifications = pgTable(
     }),
     /** The live staff member whose tap issued this card. Set only alongside `issuedByShopAt`. */
     issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
+    /**
+     * **The agency check that listed this card** (layer 3 of ADR
+     * 20261008-cert-check-extension): the level card whose match found it on
+     * the same agency page, set only when a staffer added it from that offer.
+     * Three things read it. The row's "Listed on PADI's page." says the review
+     * note is the agency's words, not a staffer's. The level check's Undo
+     * archives the still-pending rows it spawned. And a row it marks with no
+     * number (an agency that numbers each card, the page showing none) is
+     * confirmed through the card sighting, never the one tap.
+     */
+    listedFromCertificationId: uuid("listed_from_certification_id").references(
+      () => certifications.id,
+    ),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
@@ -627,7 +655,7 @@ export const nitroxCertifications = pgTable(
     // why leading with the length test alone silently accepts a NULL.
     check(
       "nitrox_certifications_identifier_present_unless_self_declared",
-      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null and ${table.status} = 'pending')`,
+      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null and ${table.status} = 'pending') or (${table.listedFromCertificationId} is not null and ${table.status} = 'pending')`,
     ),
   ],
 );

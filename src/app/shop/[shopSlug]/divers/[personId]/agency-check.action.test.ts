@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { addAgencyListedCards } from "@/db/agency-check";
 import type { AppDb } from "@/db/client";
-import { reviewNitroxCertification } from "@/db/nitrox";
+import { reviewNitroxCertification, unreviewNitroxCertification } from "@/db/nitrox";
 import {
   certifications,
   nitroxCertifications,
@@ -724,6 +725,146 @@ describe("addAgencyListedCardsAction", () => {
       await addAgencyListedCardsAction(shop.slug, other, null, add(card.id, LISTING, ["deep"])),
     ).toEqual({ ok: false });
     expect((await filed(db, other)).specialties).toEqual([]);
+  });
+
+  /** D1: the check's Undo takes back what its page filed, unless a staffer has since certified it. */
+  it("takes back the cards it listed that still wait, when the check is undone", async () => {
+    const { db, shop, owner, personId, card } = await checked();
+    await addAgencyListedCardsAction(
+      shop.slug,
+      personId,
+      null,
+      add(card.id, LISTING, ["nitrox", "deep"]),
+    );
+    const before = await filed(db, personId);
+    for (const row of [...before.nitrox, ...before.specialties]) {
+      expect(row.listedFromCertificationId).toBe(card.id);
+    }
+    const nitroxId = before.nitrox[0]?.id as string;
+    await reviewNitroxCertification(db, {
+      shopId: shop.id,
+      certificationId: nitroxId,
+      status: "verified",
+      reviewedByPersonId: owner,
+    });
+
+    expect(
+      await agencyCheckAction(shop.slug, personId, null, check(card.id, null, "undo")),
+    ).toEqual({ ok: true, verdict: "undone" });
+
+    const after = await filed(db, personId);
+    expect(after.specialties[0]?.deletedAt).toBeInstanceOf(Date);
+    expect(after.specialties[0]?.deletedByPersonId).toBe(owner);
+    // Certified since by a staffer's own tap: theirs, and it stays.
+    expect(after.nitrox[0]).toMatchObject({ status: "verified", deletedAt: null });
+    expect((await cardRow(db, card.id))?.agencyCheckedAt).toBeNull();
+  });
+
+  /** S2: the level card is read again inside the write, so an Undo in between files nothing. */
+  it("files nothing once the check is undone, even from an offer derived before it", async () => {
+    const { db, shop, owner, personId, card } = await checked();
+    await agencyCheckAction(shop.slug, personId, null, check(card.id, null, "undo"));
+    expect(
+      await addAgencyListedCards(db, {
+        shopId: shop.id,
+        personId,
+        certificationId: card.id,
+        filedByPersonId: owner,
+        cards: [{ kind: "deep", evidence: "Lena Ortiz · Deep Diver", cardNumber: null }],
+      }),
+    ).toEqual({ ok: false });
+    expect((await filed(db, personId)).specialties).toEqual([]);
+  });
+
+  /** D6: a diver's own unsighted nitrox tick is a claim, which the agency's card replaces. */
+  it("offers nitrox over an unsighted self-declaration, and retires the claim when it is added", async () => {
+    const { db, shop, owner, personId } = await context();
+    const [claim] = await db
+      .insert(nitroxCertifications)
+      .values({
+        shopId: shop.id,
+        personId,
+        agency: "other",
+        status: "pending",
+        selfDeclaredAt: new Date("2026-09-01T00:00:00Z"),
+      })
+      .returning();
+    const card = await pendingCard(db, shop.id, personId);
+    const result = await agencyCheckAction(shop.slug, personId, null, check(card.id, LISTING));
+    expect(result).toMatchObject({ offers: [{ kind: "nitrox" }, { kind: "deep" }] });
+
+    expect(
+      await addAgencyListedCardsAction(
+        shop.slug,
+        personId,
+        null,
+        add(card.id, LISTING, ["nitrox"]),
+      ),
+    ).toEqual({ ok: true, added: ["nitrox"] });
+    const { nitrox } = await filed(db, personId);
+    const retired = nitrox.find((row) => row.id === claim?.id);
+    expect(retired?.deletedAt).toBeInstanceOf(Date);
+    expect(retired?.deletedByPersonId).toBe(owner);
+    const live = nitrox.filter((row) => row.deletedAt === null);
+    expect(live).toMatchObject([
+      { agency: "naui", identifier: card.identifier, listedFromCertificationId: card.id },
+    ]);
+  });
+
+  /**
+   * D2: SDI numbers each card. A listed card takes the number on its own line,
+   * or none, and then its confirm is the card sighting.
+   */
+  it("takes each card's own number where the agency numbers each card, or none", async () => {
+    const { db, shop, owner, personId } = await context();
+    const card = await pendingCard(db, shop.id, personId, {
+      agency: "sdi",
+      identifier: "SDI-1001",
+    });
+    const page = [
+      "Lena Ortiz",
+      "04/12/1990",
+      "Advanced Diver SDI-1001",
+      "Computer Nitrox Diver 03/02/2019",
+      "Deep Diver 778899",
+    ].join("\n");
+    expect(await agencyCheckAction(shop.slug, personId, null, check(card.id, page))).toMatchObject({
+      verdict: "match",
+      offers: [{ kind: "nitrox" }, { kind: "deep" }],
+    });
+    expect(
+      await addAgencyListedCardsAction(
+        shop.slug,
+        personId,
+        null,
+        add(card.id, page, ["nitrox", "deep"]),
+      ),
+    ).toEqual({ ok: true, added: ["nitrox", "deep"] });
+    const { nitrox, specialties } = await filed(db, personId);
+    expect(nitrox[0]?.identifier).toBeNull();
+    expect(specialties[0]?.identifier).toBe("778899");
+
+    const nitroxId = nitrox[0]?.id as string;
+    expect(
+      await reviewNitroxCertification(db, {
+        shopId: shop.id,
+        certificationId: nitroxId,
+        status: "verified",
+        reviewedByPersonId: owner,
+      }),
+    ).toEqual({ ok: false, reason: "card_sighting_required" });
+    const sighted = await reviewNitroxCertification(db, {
+      shopId: shop.id,
+      certificationId: nitroxId,
+      status: "verified",
+      reviewedByPersonId: owner,
+      sighting: { agency: "sdi", identifier: "SDI-5005" },
+    });
+    expect(sighted.ok && sighted.certification.identifier).toBe("SDI-5005");
+    // A number that may be a sighting is not taken back by a status flip.
+    expect(
+      await unreviewNitroxCertification(db, { shopId: shop.id, certificationId: nitroxId }),
+    ).toEqual({ ok: false, reason: "sighted_card" });
   });
 
   it("refuses another diver's card, and another shop's", async () => {

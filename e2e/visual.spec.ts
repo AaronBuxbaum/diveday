@@ -5462,7 +5462,9 @@ for (const scheme of ["light", "dark"] as const) {
         const group = await openDiverFileGroup(page, "Certification records");
         await group.getByRole("button", { name: "Check with SSI" }).click();
         await group
-          .getByRole("group", { name: "SSI also shows these certifications. Add them?" })
+          .getByRole("group", {
+            name: "SSI also shows these certifications. Add them? Each waits for Mark certified.",
+          })
           .waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "diver-profile-agency-listed", scheme);

@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { type WaiverSendCopy, waiverSendCopy } from "@/app/actions/waiver-send-types";
-import { AgencyCheckHost } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
+import {
+  AgencyCheckHost,
+  AgencyListedOffersSlot,
+} from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { agencyCheckCopies } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
 import {
@@ -1180,6 +1183,9 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           ) : null}
         </LedgerGroup>
       ) : null}
+      {/* The other cards an agency check's page listed (layer 3), under the
+          list: the row they came from leaves it once its card is certified. */}
+      <AgencyListedOffersSlot shopSlug={shopSlug} />
 
       {highWind ? (
         <Suspense fallback={<ForecastPending t={t} />}>
@@ -1306,8 +1312,9 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
  * A "certification pending" row's "Check with SSI" (H-105) is the diver
  * record's own action, bound to the shop. Its outcome and Undo live above the
  * rows: a row whose card the check certifies leaves the list on the refresh
- * that follows. So do the other cards a match's page lists (layer 3), offered
- * above the list with the diver's name.
+ * that follows. The other cards a match's page lists (layer 3) are offered
+ * under the Needs you list (`AgencyListedOffersSlot`), each naming the diver
+ * with a link to their record.
  */
 function TodayAgencyCheck({
   shopSlug,
@@ -1322,7 +1329,7 @@ function TodayAgencyCheck({
     <AgencyCheckHost
       action={agencyCheckAction.bind(null, shopSlug)}
       addListedAction={addAgencyListedCardsAction.bind(null, shopSlug)}
-      offersAt="above"
+      offersAt="slot"
       copies={agencyCheckCopies(t)}
     >
       {children}

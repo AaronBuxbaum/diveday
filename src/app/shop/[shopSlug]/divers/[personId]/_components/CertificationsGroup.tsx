@@ -18,7 +18,7 @@ import {
 } from "@/lib/certification-cards";
 import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate } from "@/lib/format";
-import { isUnsightedSelfDeclaration } from "@/lib/readiness";
+import { isUnsightedSelfDeclaration, needsCardSighting } from "@/lib/readiness";
 import {
   addAgencyListedCardsAction,
   addCardAction,
@@ -137,9 +137,9 @@ function agencyCheckActions(shopSlug: string, personId: string) {
 /**
  * Under a nitrox or specialty card: the agency's link while it waits
  * (`awaiting`), and the agency's own words when it has any. A card an agency
- * check filed from the page's list (layer 3) carries them while it waits for
- * Mark certified, and keeps them once it is confirmed; while it waits, the row
- * says where they came from.
+ * check filed from the page's list (layer 3) carries them, and says where they
+ * came from by its stamp (`listedFromCertificationId`), before and after Mark
+ * certified: its note is the agency's words, never a staffer's.
  */
 function PendingCardFoot({
   t,
@@ -149,7 +149,7 @@ function PendingCardFoot({
   t: StaffTranslator;
   card: {
     reviewNote: string | null;
-    status: "pending" | "verified";
+    listedFromCertificationId: string | null;
     agency: keyof typeof AGENCY_KEYS;
   };
   awaiting: boolean;
@@ -157,7 +157,7 @@ function PendingCardFoot({
   return (
     <>
       {awaiting ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
-      {card.reviewNote && card.status === "pending" ? (
+      {card.listedFromCertificationId ? (
         <span className="block">
           {t("divers.certifications.listedByAgency", { agency: t(AGENCY_KEYS[card.agency]) })}
         </span>
@@ -165,6 +165,23 @@ function PendingCardFoot({
       {card.reviewNote ? <span className="block italic">{card.reviewNote}</span> : null}
     </>
   );
+}
+
+/**
+ * A card an agency check listed with no number of its own (an agency that
+ * numbers each card, its page showing none): confirmed through the sighting,
+ * as an unsighted self-declaration is.
+ */
+function listedWithoutANumber(card: {
+  status: "pending" | "verified";
+  listedFromCertificationId: string | null;
+  identifier: string | null;
+}): boolean {
+  return needsCardSighting({
+    status: card.status,
+    listedFromCertificationId: card.listedFromCertificationId,
+    identifier: card.identifier,
+  });
 }
 
 /** A no-break space, by code point, because a literal one is invisible in the source. */
@@ -534,7 +551,7 @@ export function CertificationsGroup({
         }
         actions={
           <>
-            {selfDeclared ? (
+            {selfDeclared || listedWithoutANumber(card) ? (
               <CardSightingForm
                 t={t}
                 action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
@@ -591,7 +608,7 @@ export function CertificationsGroup({
         }
         actions={
           <>
-            {selfDeclared ? (
+            {selfDeclared || listedWithoutANumber(card) ? (
               <CardSightingForm
                 t={t}
                 action={reviewSpecialtyAction.bind(null, shopSlug, personId)}

@@ -8,7 +8,7 @@ import {
   agencyListedKindsHeld,
   certificationForAgencyCheck,
   certificationForAgencyOffer,
-  isAgencyCheckedCard,
+  undoAgencyCheck,
 } from "@/db/agency-check";
 import type { AppDb } from "@/db/client";
 import {
@@ -47,6 +47,7 @@ import { isPlausibleCardNumber } from "@/lib/card-number";
 import { nowDate } from "@/lib/clock";
 import { formValue, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { unreviewedCardState } from "@/lib/readiness";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { backTo, requireDiverActionContext, successUrl } from "./action-helpers";
@@ -624,10 +625,9 @@ export async function markCertifiedAction(
     // An imported card was already `verified` on arrival; this tap confirmed
     // it rather than certifying it, and the two must not claim the same thing.
     effect: card.importedAt ? "confirmed" : "certified",
-    undo:
-      card.selfDeclaredAt || card.issuedByShopAt
-        ? undefined
-        : { certificationId, cardType: cardType.data },
+    // Only a review its Undo can take back: never a sighting, nor a card an
+    // agency check listed where the agency numbers each card.
+    undo: unreviewedCardState(card).ok ? { certificationId, cardType: cardType.data } : undefined,
   };
 }
 
@@ -718,11 +718,14 @@ export async function agencyCheckAction(
 
   if (fields.intent === "undo") {
     // Only the review a check made, on this diver: never a sighting or a
-    // one-tap review, which have their own Undo.
-    if (!(await isAgencyCheckedCard(db, { shopId, personId, certificationId }))) {
-      return { ok: false, reason: "not-undoable" };
-    }
-    const undone = await unreviewCertification(db, { shopId, certificationId });
+    // one-tap review, which have their own Undo. The cards its page listed
+    // that still wait for Mark certified go with it (layer 3).
+    const undone = await undoAgencyCheck(db, {
+      shopId,
+      personId,
+      certificationId,
+      undoneByPersonId: staff.user.personId,
+    });
     revalidatePath(base);
     refresh();
     return undone.ok ? { ok: true, verdict: "undone" } : { ok: false, reason: "not-undoable" };
@@ -840,8 +843,8 @@ export async function addAgencyListedCardsAction(
   const added = await addAgencyListedCards(db, {
     shopId,
     personId,
-    agency: card.query.agency,
-    identifier: card.identifier,
+    certificationId,
+    filedByPersonId: staff.user.personId,
     cards: chosen,
   });
   if (!added.ok) return { ok: false };

@@ -1,7 +1,7 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import type {
   AgencyCheckOffer,
   AgencyListedAddResult,
@@ -42,8 +42,9 @@ export function agencyListedForm(
  *
  * Shown on the diver record under the card the check certified, on a
  * departure's Divers tab under the diver's row (after a "Check all" has
- * finished, never during it), and on Today above the list, where the diver's
- * row may have left with the card it was about.
+ * finished, never during it), and on Today under the Needs you list, naming
+ * the diver with a link to their record, because the diver's row may have
+ * left with the card it was about.
  */
 export function AgencyListedOffer({
   lead,
@@ -51,8 +52,8 @@ export function AgencyListedOffer({
   copy,
   add,
 }: {
-  /** "PADI also shows these certifications. Add them?", already filled in. */
-  lead: string;
+  /** "PADI also shows these certifications. Add them? …", already filled in; on Today, with a link. */
+  lead: ReactNode;
   offers: readonly AgencyCheckOffer[];
   copy: AgencyListedOfferCopy;
   add: (kinds: AgencyListedKind[]) => Promise<AgencyListedAddResult>;

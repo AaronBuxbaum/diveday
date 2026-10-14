@@ -8,8 +8,8 @@ const SHOP = "blue-mantis";
 /** A seeded diver on this departure whose SSI card is still pending (`seed-divers.ts`, index 34). */
 const SEEDED_DIVER = "Tyler Brooks";
 const DEPARTURE = /Two-Tank Reef — French Reef/;
-const LEAD = "SSI also shows these certifications. Add them?";
-const ADDED = "Added. Each waits for Mark certified.";
+const LEAD = "SSI also shows these certifications. Add them? Each waits for Mark certified.";
+const ADDED = "Added.";
 
 /**
  * **The other cards the agency's page lists, after a match** (layer 3 of ADR
@@ -105,10 +105,11 @@ test("a match offers the page's other cards, which land pending for a one-tap co
   await expect(nitrox.getByText(/Enriched Air Nitrox · Deep Diving$/)).toBeVisible();
   await expect(cards.getByRole("listitem").filter({ hasText: "SSI · Deep" })).toHaveCount(0);
 
-  // The staffer's one tap certifies it, and the agency's words stay.
+  // The staffer's one tap certifies it, and the agency's words stay, still
+  // saying where they came from.
   await nitrox.getByRole("button", { name: "Mark certified" }).click();
-  await expect(nitrox.getByText("Listed on SSI’s page.")).toHaveCount(0);
   await expect(nitrox.getByRole("button", { name: "Mark certified" })).toHaveCount(0);
+  await expect(nitrox.getByText("Listed on SSI’s page.")).toBeVisible();
   await expect(nitrox.getByText(/Enriched Air Nitrox · Deep Diving$/)).toBeVisible();
 });
 

@@ -1,4 +1,5 @@
 import type { DiveSpecialty } from "@/db/schema";
+import { MIN_CARD_NUMBER_LENGTH } from "@/lib/card-number";
 import type { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 
 type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
@@ -61,26 +62,33 @@ type CertificationLevel =
  * `dmy` 12.04.1990), which settles a date whose day and month are both 12 or
  * under. One order per agency: a page that wrote the other one would read as
  * another birth date, which certifies nothing.
+ *
+ * `numbersTheDiver` says whether the agency gives the diver one number that
+ * every card they hold carries (the glossary's **C-card**), so a card the
+ * page lists may borrow the checked card's number. SDI and CMAS number each
+ * card: a listed card there takes the number printed on its own line, or none
+ * and the card sighting (`agencyListedCards`).
  */
 export const AGENCY_CHECKS = {
   // Name and card number.
-  ssi: { needs: "card_number", dates: "dmy" },
+  ssi: { needs: "card_number", dates: "dmy", numbersTheDiver: true },
   // First name, last name, birth date.
-  naui: { needs: "birth_date", dates: "mdy" },
-  sdi: { needs: "birth_date", dates: "mdy" },
+  naui: { needs: "birth_date", dates: "mdy", numbersTheDiver: true },
+  sdi: { needs: "birth_date", dates: "mdy", numbersTheDiver: false },
   // The number after the "#".
-  gue: { needs: "card_number", dates: "mdy" },
+  gue: { needs: "card_number", dates: "mdy", numbersTheDiver: true },
   // A CMAS code, or names and birth date.
-  cmas: { needs: "card_number_or_birth_date", dates: "dmy" },
+  cmas: { needs: "card_number_or_birth_date", dates: "dmy", numbersTheDiver: false },
   // DiveChek, on the PADI Pros' Site behind the shop's own sign-in: first
   // name, last name, birth date. A best guess until #2259's real-page test.
-  padi: { needs: "birth_date", dates: "mdy" },
+  padi: { needs: "birth_date", dates: "mdy", numbersTheDiver: true },
 } as const satisfies Partial<
   Record<
     CertificationAgency,
     {
       needs: "card_number" | "birth_date" | "card_number_or_birth_date";
       dates: "mdy" | "dmy";
+      numbersTheDiver: boolean;
     }
   >
 >;
@@ -193,8 +201,8 @@ const LEVEL_WORDING: Record<
  * wording that is not here is ignored, never guessed, so a "Tec Deep Diver",
  * an "Advanced Nitrox Diver" or a "Deep Diver Specialty Instructor" is not
  * read as the recreational card it contains (`agencyListedCards`). An agency
- * missing a kind is never offered it. GUE bundles enriched air into its level
- * card and lists nothing here.
+ * missing a kind is never offered it. GUE lists no nitrox card of its own: its
+ * enriched air comes bundled in the level card (`BUNDLED_NITROX`).
  *
  * Levels are not here. A level card's number is the agency's number for the
  * diver, unique per agency at a shop, so a second level card for the same
@@ -207,17 +215,20 @@ export const LISTED_CARD_WORDING: Record<
   CheckableAgency,
   Partial<Record<AgencyListedKind, readonly string[]>>
 > = {
+  // SSI's nitrox card is "Enriched Air Nitrox"; a mix written after it is a
+  // number on the line, read as one.
   ssi: {
-    nitrox: ["Enriched Air Nitrox", "Enriched Air Nitrox 32", "Enriched Air Nitrox 40"],
+    nitrox: ["Enriched Air Nitrox"],
     deep: ["Deep Diving"],
     wreck: ["Wreck Diving"],
-    night: ["Night Diving & Limited Visibility", "Night Diving and Limited Visibility"],
+    night: ["Night & Limited Visibility Diving", "Night and Limited Visibility Diving"],
     drysuit: ["Dry Suit Diving"],
   },
+  // "Wreck Penetration" is a technical card and is not here.
   naui: {
     nitrox: ["Enriched Air Nitrox Diver", "Enriched Air Nitrox (EANx) Diver"],
     deep: ["Deep Diver"],
-    wreck: ["Wreck Diver"],
+    wreck: ["Wreck Diver", "Wreck Diver (External Survey)"],
     night: ["Night Diver"],
     drysuit: ["Dry Suit Diver"],
   },
@@ -240,6 +251,59 @@ export const LISTED_CARD_WORDING: Record<
     drysuit: ["Dry Suit Diver", "Drysuit Diver"],
     cavern: ["Cavern Diver"],
   },
+};
+
+/**
+ * **A level card that certifies enriched air with it.** GUE's Recreational
+ * Diver 1 includes nitrox, so the page's own level line offers a nitrox card,
+ * and borrowing the level card's number is right: it is the only number the
+ * diver holds for it (the `nitrox_certifications` unique index says why that
+ * is no collision).
+ */
+export const BUNDLED_NITROX: Partial<Record<CheckableAgency, readonly string[]>> = {
+  gue: ["Recreational Diver 1"],
+};
+
+/**
+ * Agencies that may write "Specialty" after a specialty's name ("Deep Diver
+ * Specialty"). The word is read as part of the name, so "Deep Diver Specialty
+ * Instructor" is still a professional rating.
+ */
+const SPECIALTY_SUFFIX: ReadonlySet<CheckableAgency> = new Set(["padi"]);
+
+/**
+ * **Recreational cards a record may list that DiveDay holds no kind for, and
+ * that say nothing about whose record it is.** A line made of one of these,
+ * its dates and its numbers neither offers a card nor ends the record, so a
+ * diver's Perfect Buoyancy does not hide the Deep card listed under it.
+ * Anything else still ends the record: a technical or professional rating, or
+ * a word nobody explained. Each agency's own words; a closed list, like the
+ * table above.
+ */
+export const PASS_OVER_WORDING: Record<CheckableAgency, readonly string[]> = {
+  ssi: [
+    "Perfect Buoyancy",
+    "Navigation",
+    "Scuba Diver",
+    "Boat Diving",
+    "Fish Identification",
+    "Skin Diver",
+  ],
+  naui: ["Skin Diver", "Underwater Navigation", "Boat Diver", "Drift Diver"],
+  sdi: ["Scuba Diver", "Underwater Navigation", "Boat Diver", "Drift Diver", "Skin Diver"],
+  gue: [],
+  cmas: [],
+  padi: [
+    "Scuba Diver",
+    "Adventure Diver",
+    "Peak Performance Buoyancy",
+    "Underwater Navigator",
+    "Boat Diver",
+    "Drift Diver",
+    "Fish Identification",
+    "AWARE Fish Identification",
+    "Skin Diver",
+  ],
 };
 
 /**
@@ -517,10 +581,18 @@ function readAgencyPage(input: AgencyPageInput): {
   const levelWords = LEVEL_WORDING[input.agency];
   const wording = (levelWords[input.level] ?? []).map(foldText);
   const everyLevelWording = Object.values(levelWords).flat().map(foldText);
-  const everyListedWording = Object.values(LISTED_CARD_WORDING[input.agency]).flat().map(foldText);
+  const everyListedWording = [
+    ...Object.values(LISTED_CARD_WORDING[input.agency]).flat(),
+    ...PASS_OVER_WORDING[input.agency],
+  ].map(foldText);
   const limiting: readonly string[] = oneDiver
     ? LIMITING_WORDS
     : [...LIMITING_WORDS, ...TRAINER_WORDS];
+  const withoutCardNames = (line: string) =>
+    everyListedWording
+      .reduce((rest, phrase) => ` ${rest} `.split(` ${phrase} `).join(" "), line)
+      .replace(/ +/g, " ")
+      .trim();
   const saysNoRecord = (line: string) => NO_RECORD_WORDS.some((phrase) => hasWords(line, phrase));
   const ratingWords = (line: string) =>
     everyLevelWording.some((phrase) => hasWords(line, phrase)) ||
@@ -610,9 +682,13 @@ function readAgencyPage(input: AgencyPageInput): {
       : recordLines;
     const juniorLevel = (line: string) =>
       everyLevelWording.some((phrase) => hasWords(line, `junior ${phrase}`));
+    // A card's own name is not a limit: SSI's "Night & Limited Visibility
+    // Diving" says nothing limited about the diver's card.
     const limited = recordLines.some((line) =>
       limiting.some(
-        (word) => hasWords(line, word) && !(oneDiver && word === "junior" && juniorLevel(line)),
+        (word) =>
+          hasWords(withoutCardNames(line), word) &&
+          !(oneDiver && word === "junior" && juniorLevel(line)),
       ),
     );
     if (limited) return "limited_card";
@@ -641,7 +717,18 @@ function readAgencyPage(input: AgencyPageInput): {
       verdict,
     });
     if (!best || RECORD_RANK[verdict] > RECORD_RANK[best.verdict]) {
-      best = { verdict, evidence: evidence(rawLines.slice(record.from, record.to)) };
+      const raw = rawLines.slice(record.from, record.to);
+      // A match's words become the card's review note: its name line keeps
+      // only what is the diver's (S1). Anything short of a match is shown
+      // once and kept nowhere, with every word a staffer reads it by.
+      best = {
+        verdict,
+        evidence: evidence(
+          verdict === "match"
+            ? [nameLineWords(raw[0] as string, input, recordPhrases(input.agency)), ...raw.slice(1)]
+            : raw,
+        ),
+      };
     }
   }
   if (best) return { verdict: best, diverRecords };
@@ -670,7 +757,132 @@ export type AgencyListedCard = {
   words: string;
   /** The diver's own lines that list it, for the new card's review note. */
   evidence: string;
+  /**
+   * Where the agency numbers each card (`numbersTheDiver` false): the number
+   * printed on the card's own line, when the line lists that one card and
+   * shows exactly one number that is neither a date nor the checked card's.
+   * Null there means the card is filed without one and confirmed through the
+   * card sighting. Always null where the agency numbers the diver: the card
+   * borrows the checked card's number.
+   */
+  cardNumber: string | null;
 };
+
+/** One phrase a record line may be explained by, folded, with what it offers. */
+type RecordPhrase = {
+  folded: string;
+  /** The card it offers, in the agency's words; none for a level or a pass-over. */
+  offers: { kind: AgencyListedKind; word: string } | null;
+};
+
+/**
+ * Every phrase that explains a line of this agency's record: its listed cards
+ * (and "<name> Specialty" where it writes that), a level that bundles nitrox,
+ * its levels and its pass-over cards. Longest first, so "Enriched Air Nitrox
+ * Diver" is taken whole before "Nitrox Diver".
+ */
+function recordPhrases(agency: CheckableAgency): RecordPhrase[] {
+  const offered: RecordPhrase[] = [];
+  for (const [kind, words] of Object.entries(LISTED_CARD_WORDING[agency]) as [
+    AgencyListedKind,
+    readonly string[],
+  ][]) {
+    for (const word of words) {
+      offered.push({ folded: foldText(word), offers: { kind, word } });
+      if (SPECIALTY_SUFFIX.has(agency)) {
+        offered.push({ folded: foldText(`${word} Specialty`), offers: { kind, word } });
+      }
+    }
+  }
+  for (const word of BUNDLED_NITROX[agency] ?? []) {
+    offered.push({ folded: foldText(word), offers: { kind: "nitrox", word } });
+  }
+  const explained = [...Object.values(LEVEL_WORDING[agency]).flat(), ...PASS_OVER_WORDING[agency]]
+    .map((word) => ({ folded: foldText(word), offers: null }))
+    .filter((phrase) => !offered.some((other) => other.folded === phrase.folded));
+  return [...offered, ...explained].sort((a, b) => b.folded.length - a.folded.length);
+}
+
+/**
+ * **A record's name line, cut to what is the diver's** (S1 of the layer 3
+ * review). The line may go on to name the instructor, their dive centre or
+ * anyone else; the card keeps only the diver's name as matched, the
+ * certifications' names in the agency's words, and the dates and numbers.
+ */
+function nameLineWords(
+  raw: string,
+  input: Pick<AgencyPageInput, "firstName" | "lastName">,
+  phrases: readonly RecordPhrase[],
+): string {
+  const tokens = raw.split(" ").filter(Boolean);
+  // Each token's folded words, flattened, remembering which token each came from.
+  const words: { word: string; token: number }[] = [];
+  tokens.forEach((token, index) => {
+    for (const word of foldText(token).split(" ").filter(Boolean)) {
+      words.push({ word, token: index });
+    }
+  });
+  const keep = new Set<number>();
+  const first = foldText(input.firstName);
+  const last = foldText(input.lastName);
+  const at = (word: string, from = 0) =>
+    words.findIndex((entry, index) => index >= from && entry.word === word);
+  const firstAt = at(first);
+  const lastAfter = firstAt >= 0 ? at(last, firstAt + 1) : -1;
+  const lastAt = at(last);
+  const firstAfter = lastAt >= 0 ? at(first, lastAt + 1) : -1;
+  const span =
+    lastAfter >= 0 ? [firstAt, lastAfter] : firstAfter >= 0 ? [lastAt, firstAfter] : null;
+  if (span) {
+    for (
+      let token = words[span[0] as number]?.token ?? 0;
+      token <= (words[span[1] as number]?.token ?? -1);
+      token += 1
+    ) {
+      keep.add(token);
+    }
+  }
+  for (const phrase of phrases) {
+    const parts = phrase.folded.split(" ");
+    for (let start = 0; start + parts.length <= words.length; start += 1) {
+      if (parts.every((part, offset) => words[start + offset]?.word === part)) {
+        for (let offset = 0; offset < parts.length; offset += 1) {
+          keep.add((words[start + offset] as { token: number }).token);
+        }
+      }
+    }
+  }
+  const hasDigit = (index: number) => /\p{N}/u.test(tokens[index] ?? "");
+  tokens.forEach((token, index) => {
+    if (hasDigit(index)) keep.add(index);
+    // A month's name inside a date: "12 Apr 1990".
+    else if (monthNumber(foldText(token)) && (hasDigit(index - 1) || hasDigit(index + 1))) {
+      keep.add(index);
+    }
+  });
+  return tokens.filter((_, index) => keep.has(index)).join(" ");
+}
+
+/**
+ * The number printed on a listed card's own line, at an agency that numbers
+ * each card: exactly one token with a digit that is not part of a date, not
+ * the checked card's own number, and long enough to be a card number.
+ */
+function cardNumberOn(raw: string, checkedNumber: string | null): string | null {
+  const checked = checkedNumber ? compact(checkedNumber) : "";
+  const dateLike = /^(\d{1,4}[-./]\d{1,2}[-./]\d{1,4}|\d{1,2}|\d{4})$/;
+  const candidates = raw
+    .split(" ")
+    .map((token) => token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+    .filter(
+      (token) =>
+        /\p{N}/u.test(token) &&
+        !dateLike.test(token) &&
+        token.length >= MIN_CARD_NUMBER_LENGTH &&
+        compact(token) !== checked,
+    );
+  return candidates.length === 1 ? (candidates[0] as string) : null;
+}
 
 /**
  * Words a line about one of the diver's cards may carry besides the card's
@@ -722,39 +934,37 @@ const RECORD_LINE_WORDS = new Set([
  * - **A record is read only as far as every line is explained**: the name
  *   line, the birth date, and lines made only of a card's name in this
  *   agency's words, its dates, its numbers and a few words such as "issued"
- *   (`RECORD_LINE_WORDS`). The first line with any other word ends it, so a
- *   neighbour's "Mark Lee" and every line after it are never read, and nor is
- *   "Deep Diver Specialty Instructor" or "Tec Deep Diver".
+ *   (`RECORD_LINE_WORDS`). A recreational card DiveDay holds no kind for
+ *   (`PASS_OVER_WORDING`) explains its line too, and offers nothing. The
+ *   first line with any other word ends it, so a neighbour's "Mark Lee" and
+ *   every line after it are never read, and nor is "Deep Diver Specialty
+ *   Instructor" or "Tec Deep Diver".
  * - **On DiveChek** a row may name the instructor who certified the card after
  *   its date ("… 2 Feb 2020 Instructor #123456 Dive Center"): the line is read
  *   up to the trainer's word. A trainer's word straight after a card's name is
  *   a professional rating, and ends the record.
- * - **The agency's own words, from a closed table** (`LISTED_CARD_WORDING`).
- * - **Never a kind the diver already holds** (`held`), whatever its agency or
- *   state.
+ * - **The agency's own words, from a closed table** (`LISTED_CARD_WORDING`),
+ *   and GUE's nitrox from its Recreational Diver 1 (`BUNDLED_NITROX`).
+ * - **Never a kind the diver already holds** (`held`): what the shop holds,
+ *   less an unsighted nitrox self-declaration, which the card replaces.
+ * - **The card's own number** where the agency numbers each card
+ *   (`cardNumber`).
  */
 export function agencyListedCards(
   input: AgencyPageInput & { held: ReadonlySet<AgencyListedKind> },
 ): AgencyListedCard[] {
   const read = readAgencyPage(input);
   if (read.verdict.verdict !== "match") return [];
-  const listed = Object.entries(LISTED_CARD_WORDING[input.agency]) as [
-    AgencyListedKind,
-    readonly string[],
-  ][];
-  const phrases = listed.flatMap(([kind, words]) =>
-    words.map((word) => ({ kind, word, folded: foldText(word) })),
-  );
-  const levelPhrases = Object.values(LEVEL_WORDING[input.agency]).flat().map(foldText);
+  const phrases = recordPhrases(input.agency);
   const oneDiver = ONE_RECORD_ONLY.has(input.agency);
   const nameWords = new Set([foldText(input.firstName), foldText(input.lastName)]);
   const cardNumber = input.cardNumber ? foldText(input.cardNumber) : "";
-  const order = AGENCY_CHECKS[input.agency].dates;
+  const { dates: order, numbersTheDiver } = AGENCY_CHECKS[input.agency];
 
   const found = new Map<AgencyListedKind, AgencyListedCard>();
   for (const record of read.diverRecords) {
     if (record.verdict !== "match" && record.verdict !== "level_unconfirmed") continue;
-    const onRecord: { kind: AgencyListedKind; word: string }[] = [];
+    const onRecord: { kind: AgencyListedKind; word: string; cardNumber: string | null }[] = [];
     let end = record.folded.length;
     for (let index = 0; index < record.folded.length; index += 1) {
       let line = record.folded[index] as string;
@@ -774,20 +984,18 @@ export function agencyListedCards(
       }
       let rest = ` ${line} `;
       const here: { kind: AgencyListedKind; word: string }[] = [];
-      // Longest first, so "Enriched Air Nitrox 32" is taken whole.
-      for (const phrase of [...phrases].sort((a, b) => b.folded.length - a.folded.length)) {
-        if (rest.includes(` ${phrase.folded} `)) {
-          here.push({ kind: phrase.kind, word: phrase.word });
-          rest = rest.split(` ${phrase.folded} `).join(" ");
-        }
+      let explained = false;
+      for (const phrase of phrases) {
+        if (!rest.includes(` ${phrase.folded} `)) continue;
+        rest = rest.split(` ${phrase.folded} `).join("  ");
+        if (phrase.offers) here.push(phrase.offers);
+        else explained = true;
       }
-      // The level's own words, and the card number the shop holds ("N-12345").
-      for (const phrase of [...levelPhrases, cardNumber].sort((a, b) => b.length - a.length)) {
-        if (phrase) rest = ` ${rest.trim()} `.split(` ${phrase} `).join(" ");
-      }
+      // The card number the shop holds ("N-12345").
+      if (cardNumber) rest = ` ${rest.trim()} `.split(` ${cardNumber} `).join(" ");
       const unexplained = rest
         .trim()
-        .split(" ")
+        .split(/ +/)
         .filter(
           (word) =>
             word.length > 0 &&
@@ -803,17 +1011,29 @@ export function agencyListedCards(
       }
       // A date on a line naming no card, and not the birth date, may be
       // another diver's birth date: the judge ends a DiveChek record there too.
-      const bare = here.length === 0 && !levelPhrases.some((phrase) => hasWords(line, phrase));
+      const bare = here.length === 0 && !explained;
       if (index > 0 && bare && datesOn(line, order).some((date) => date !== input.birthDate)) {
         end = index;
         break;
       }
-      onRecord.push(...here);
+      const ownNumber =
+        !numbersTheDiver && here.length === 1
+          ? cardNumberOn(record.raw[index] as string, input.cardNumber)
+          : null;
+      onRecord.push(...here.map((card) => ({ ...card, cardNumber: ownNumber })));
     }
-    const words = evidence(record.raw.slice(0, end));
+    const kept = record.raw.slice(0, end);
+    const words = evidence(
+      kept.length > 0 ? [nameLineWords(kept[0] as string, input, phrases), ...kept.slice(1)] : [],
+    );
     for (const card of onRecord) {
       if (input.held.has(card.kind) || found.has(card.kind)) continue;
-      found.set(card.kind, { kind: card.kind, words: card.word, evidence: words });
+      found.set(card.kind, {
+        kind: card.kind,
+        words: card.word,
+        evidence: words,
+        cardNumber: card.cardNumber,
+      });
     }
   }
   return [...found.values()];

@@ -9,7 +9,7 @@ import type {
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { AgencyCheckAll } from "./AgencyCheckAll";
-import { AgencyCheckHost } from "./AgencyCheckHost";
+import { AgencyCheckHost, AgencyListedOffersSlot } from "./AgencyCheckHost";
 import { AgencyCheckRow } from "./AgencyCheckRow";
 import { agencyCheckAllCopy, agencyCheckCopies } from "./agency-check-copy";
 
@@ -69,7 +69,7 @@ function renderDeparture(
       previous: AgencyListedAddResult,
       formData: FormData,
     ) => Promise<AgencyListedAddResult>;
-    offersAt?: "row" | "above";
+    offersAt?: "row" | "slot";
   } = {},
 ) {
   const action = vi.fn(
@@ -95,6 +95,8 @@ function renderDeparture(
           </li>
         ))}
       </ul>
+      {/* Where Today draws it, under its list; nothing unless the host offers there. */}
+      <AgencyListedOffersSlot shopSlug="blue-mantis" />
     </AgencyCheckHost>,
   );
   return action;
@@ -528,7 +530,11 @@ describe("the other cards a match's page lists", () => {
     });
     expect(await screen.findByText("Checked 2. Certified: 2.")).toBeInTheDocument();
     const offer = row("person-1");
-    expect(offer.getByText("SSI also shows these certifications. Add them?")).toBeVisible();
+    expect(
+      offer.getByText(
+        "SSI also shows these certifications. Add them? Each waits for Mark certified.",
+      ),
+    ).toBeVisible();
     expect(row("person-2").queryByText(/also shows/)).toBeNull();
 
     // Untick nitrox, add Deep: the same page goes back with the one tick.
@@ -542,7 +548,9 @@ describe("the other cards a match's page lists", () => {
     expect(form.get("certificationId")).toBe("card-1");
     expect(form.get("pageText")).toBe("page for Number1");
     expect(form.getAll("kind")).toEqual(["deep"]);
-    expect(await offer.findByText("Added. Each waits for Mark certified.")).toBeVisible();
+    expect(await offer.findByText("Added.")).toBeVisible();
+    // Filed: the offer stays, saying so, and the page's text is not kept to post again.
+    expect(offer.queryByRole("button", { name: "Add" })).toBeNull();
   });
 
   it("offers nothing where no action can file them", async () => {
@@ -555,23 +563,42 @@ describe("the other cards a match's page lists", () => {
     expect(screen.queryByText(/also shows/)).toBeNull();
   });
 
-  it("offers them above the list, with the diver's name, where the row may leave (Today)", async () => {
+  it("offers them under the list, naming the diver with a link to their record, where the row may leave (Today)", async () => {
     withExtension();
     vi.mocked(requestAgencyPage).mockResolvedValue({ ok: true, pageText: "page" });
     const addListed = vi.fn(async (): Promise<AgencyListedAddResult> => ({ ok: false }));
-    renderDeparture([card(1)], () => OFFERED, { addListed, offersAt: "above" });
+    renderDeparture([card(1)], () => OFFERED, { addListed, offersAt: "slot" });
     await act(async () => {
       fireEvent.click(row("person-1").getByRole("button", { name: "Check with SSI" }));
     });
     expect(row("person-1").queryByText(/also shows/)).toBeNull();
-    expect(
-      screen.getByText("SSI also shows these certifications for Diver Number1. Add them?"),
-    ).toBeVisible();
+    const offer = screen.getByRole("group", {
+      name: "SSI also shows these certifications for Diver Number1. Add them? Each waits for Mark certified.",
+    });
+    // Below the list, never above it.
+    const list = screen.getByRole("list");
+    expect(list.compareDocumentPosition(offer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(offer).getByRole("link", { name: "Diver Number1" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/person-1",
+    );
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add" }));
     });
     expect(
       await screen.findByText("Couldn’t add them. Reload to see this diver’s certifications."),
     ).toBeVisible();
+  });
+
+  it("draws nothing in the slot where offers go under each row", async () => {
+    withExtension();
+    vi.mocked(requestAgencyPage).mockResolvedValue({ ok: true, pageText: "page" });
+    const addListed = vi.fn(async (): Promise<AgencyListedAddResult> => ({ ok: true, added: [] }));
+    renderDeparture([card(1)], () => OFFERED, { addListed });
+    await act(async () => {
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with SSI" }));
+    });
+    expect(screen.getAllByRole("group")).toHaveLength(1);
+    expect(row("person-1").getByRole("group")).toBeVisible();
   });
 });

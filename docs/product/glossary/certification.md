@@ -76,20 +76,27 @@
 - **Agency-listed certification** — a nitrox or specialty certification an **Agency check** found on
   the same page as the card it matched, and that the staffer chose to add (layer 3 of ADR
   20261008-cert-check-extension). After a match the staffer reads "PADI also shows these
-  certifications. Add them?" with one tick per certification, all ticked. Only lines inside the
-  diver's own matched record are read, and only as far as every line is explained (the diver's
-  name, the birth date, the certification's name in that agency's words, its dates and numbers);
-  the first other word, such as a neighbour's name or "Instructor" after a certification's name,
-  ends it. Each agency's words come from a closed table, so wording not in it is ignored, and a kind
-  the diver already has on file in any state is never offered. Ticked ones land **pending** with the
-  agency's words as the review note and "Listed on PADI's page." beside them, carrying the card
-  number the shop holds for the diver at that agency, and a staffer's one-tap **Mark certified**
-  certifies them, keeping the words. Never certified by the check: nitrox authorizes a fill and a
-  specialty opens a site. The server judges the posted page again and files only kinds it offers
-  itself. Not levels: a second level card on the diver's one agency number cannot be filed. On a
-  departure's Divers tab the offer sits under the diver's row, after a **Check all (agency)** has
-  finished; on Today it sits above the list with the diver's name, because the row leaves with the
-  card it was about.
+  certifications. Add them? Each waits for Mark certified." with one tick per certification, all
+  ticked. Only lines inside the diver's own matched record are read, and only as far as every line
+  is explained (the diver's name, the birth date, the certification's name in that agency's words,
+  a recreational card DiveDay holds no kind for such as Perfect Buoyancy, its dates and numbers);
+  the first other word, such as a neighbour's name, "Tec" or "Instructor" after a certification's
+  name, ends it. Each agency's words come from a closed table, so wording not in it is ignored. GUE's
+  Recreational Diver 1 offers nitrox (see **Bundled nitrox**). A kind the diver already has on file
+  in any state is never offered, except an unsighted nitrox **Self-declared certification**: adding
+  the card the page lists retires that claim, as any card the shop holds outranks the diver's word.
+  Ticked ones land **pending**, stamped with the level card whose check listed them, with the
+  agency's words as the review note and "Listed on PADI's page." beside them, before and after the
+  confirm. Where the agency numbers the diver (PADI, SSI, NAUI, GUE) they carry the number the shop
+  holds for the diver, and a staffer's one-tap **Mark certified** certifies them, keeping the words.
+  Where it numbers each card (SDI, CMAS) they carry the number printed on their own line, or none,
+  and then the confirm is the card sighting. Never certified by the check: nitrox authorizes a fill
+  and a specialty opens a site. Undoing the check archives the ones still pending. The server judges
+  the posted page again and files only kinds it offers itself. Not levels: a second level card on
+  the diver's one agency number cannot be filed. On a departure's Divers tab the offer sits under
+  the diver's row, after a **Check all (agency)** has finished; on Today it sits under the Needs you
+  list, naming the diver with a link to their record, because the row leaves with the card it was
+  about.
 - **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
   Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
   20261008-cert-check-extension). The server ticks **Materials done** only when one record names
@@ -433,7 +440,8 @@
   per agency and per table, so the same number on a `certifications` row and a `nitrox_certifications`
   row is not a collision. It is written down because it looks like a mistake to whoever does it, and
   the two things a staffer does instead — refuse a fill to a properly trained diver, or hand the
-  tank over off-system — are both worse than an entry that looks odd.
+  tank over off-system — are both worse than an entry that looks odd. An **Agency check** of a GUE Rec 1 card offers the
+  nitrox card on that number for the same reason (**Agency-listed certification**).
 - **Other agency** — the enum's escape hatch (`certification_agency = 'other'`), and **a lossy one**:
   there is no free-text companion column anywhere in the schema, so a diver holding an **SEI**,
   **ANDI**, **ACUC**, **PSAI** or **NASE** card is recorded as "Other agency" with nowhere

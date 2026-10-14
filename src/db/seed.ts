@@ -1508,9 +1508,9 @@ export async function resetDemoSchedule(
   // reset mid-run — the same class of bug the comment above already walks.
   await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
-  await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
+  await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
 
   // Everyone except the staff seeded once at shop creation (`staffDefs`, by
