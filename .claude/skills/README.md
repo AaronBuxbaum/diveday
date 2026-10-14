@@ -38,6 +38,7 @@ The **hooks** in `.claude/settings.json` are the mechanical half of the rules an
 | `stacked-prs` | Cutting a branch or opening a PR while another of yours is still open — the default shape, related work or not — plus dependent chains (schema → db reader → surface), cascading rebase, bottom-up merge |
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 | `switching-pages` | Adding or editing a competitive switching guide (`/switching`, `/switching/[competitor]`, `/switching/spreadsheet`) — new incumbent, coexist-led channel guide, or edits to `src/lib/migration-guides.ts` |
+| `expand-content` | Covering a new dive area, or adding sites or species to the starting content — sourced denominator, templates, species copy and vetted photos, to 80% coverage |
 | `commercial-outreach` | Drafting go-to-market collateral for a stakeholder conversation — the design-partner one-pager, case-study interview prep, DEMA/media pitch notes, or other prep material referenced by `docs/product/rollout.md` and `docs/product/stakeholders/commercial-and-industry.md` |
 
 Reviewer agents (`.claude/agents/`): `design-critic` (delight principles), `dive-domain-expert`
@@ -64,6 +65,10 @@ it replaces the built-in scout with a read-only one on `model: sonnet` at low ef
   not it opens the file, which is why `pnpm check:context-budget` counts them alongside AGENTS.md
   and refuses a silent rise. Specific about the trigger, then short; the body is where the length
   belongs, because the body is loaded on purpose.
+- Keep each local `SKILL.md` under about 6k characters: the steps, and one pointer line per
+  supporting file in the same folder saying when to read it. Reference (incidents, tables, full
+  command walkthroughs) lives in those files. An invoked skill stays in context for the rest of the
+  thread, so its length is paid on every later call (H-114).
 - A skill linked in from `.agents/skills/` is upstream's text, pinned by `skills-lock.json`, and a
   sync overwrites it. The few lines changed locally are listed in `VENDORED_SKILL_OVERRIDES`
   (`scripts/agent-layer.mjs`) with the wording that replaced them; after a sync, `pnpm check:agents`

@@ -253,27 +253,43 @@ export function shopDefaults({
 }
 
 /**
- * **Whether DiveDay's starting dive-site catalog is near this shop.** The
- * catalog is Florida Keys sites (`src/content/dive-site-templates.ts`), so the
- * first-run line that offers it only makes sense to a Florida shop; a shop in
- * Bonaire or Cancun is told to add its own first site instead (UX review
- * 2026-10-11, item 15).
+ * **The catalog areas near this shop** — the dive areas whose templates the
+ * first-run line may offer it (issue #2477; UX review 2026-10-11, item 15).
  *
- * The address wins when the shop has given one: a country other than the US,
- * or a US region other than Florida, is not local. With no address yet, the
- * Eastern zone is the best guess the timezone allows.
+ * The address wins when the shop has given one. A country decides alone for
+ * an area that is a whole country; where one country holds the area among
+ * other places (Florida in the US), the subdivision must match too. Only what
+ * the address leaves unsaid falls back to the timezone, and only to a zone the
+ * area names as mostly its own, so a New York-zone shop that types a North
+ * Carolina address is never offered Florida sites.
+ *
+ * The areas come in as an argument rather than an import: this module is the
+ * framework-free domain layer, and which areas exist is content.
  */
-export function siteCatalogIsLocal(shop: {
-  timezone: string;
-  addressCountry?: string | null;
-  addressRegion?: string | null;
-}): boolean {
-  const country = shop.addressCountry?.trim().toUpperCase();
-  if (country && country !== "US") return false;
-  const region = shop.addressRegion?.trim().toUpperCase();
-  if (region) return region === "FL" || region === "FLORIDA";
-  return shop.timezone === "America/New_York";
+export function catalogAreasForShop<Area extends CatalogArea>(
+  shop: { timezone: string; addressCountry?: string | null; addressRegion?: string | null },
+  areas: readonly Area[],
+): Area[] {
+  const country = shop.addressCountry?.trim().toUpperCase() || null;
+  const subdivision = shop.addressRegion?.trim().toUpperCase() || null;
+  const zoneGuess = (area: CatalogArea) => area.region.timeZones?.includes(shop.timezone) ?? false;
+  return areas.filter((area) => {
+    const { region } = area;
+    if (country && country !== region.country) return false;
+    if (!region.subdivisions) return country ? true : zoneGuess(area);
+    if (subdivision) return region.subdivisions.includes(subdivision);
+    return zoneGuess(area);
+  });
 }
+
+/** The part of a `src/content/dive-areas.ts` area that decides whether it is near a shop. */
+export type CatalogArea = {
+  region: {
+    country: string;
+    subdivisions?: readonly string[];
+    timeZones?: readonly string[];
+  };
+};
 
 /** `shopDefaults` for a shop that has told DiveDay only its timezone (sign-up). */
 export function shopDefaultsForTimeZone(timeZone: string): ShopDefaults {

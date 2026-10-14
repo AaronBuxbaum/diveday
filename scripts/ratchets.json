@@ -48,7 +48,7 @@
       "CLAUDE.md": 54,
       "AGENTS.md": 2438,
       ".claude/rules/*.md (without paths: frontmatter)": 0,
-      ".claude/skills/*/SKILL.md (description lines)": 783,
+      ".claude/skills/*/SKILL.md (description lines)": 805,
       ".claude/agents/*.md (description lines)": 130
     },
     "raises": [
@@ -178,6 +178,12 @@
         "why": "Slice 23e adds the one door in the staff app that is not a place: a diver, laid over the day as a sheet. The route map's job is to answer 'where' for every destination the product has, so a new destination is a new row — the budget exists to keep the rest of the file lean, not to cap how many surfaces DiveDay may have. The how and the why are in .claude/rules/surfaces.md, which is path-scoped and costs a session nothing until it opens a file under src/app or src/components; this row is only the pointer. Paid for in part by deleting 'Guests tab' from the seating row, which slice 23c made untrue.",
         "files": {
           "AGENTS.md": "4271 -> 4299"
+        }
+      },
+      {
+        "why": "a new skill, expand-content: the one follow-up command Aaron asked for to cover a further dive area (ADR 20261014-starting-content-is-measured-and-vetted); its description is 20 words",
+        "files": {
+          ".claude/skills/*/SKILL.md (description lines)": "783 -> 805"
         }
       }
     ]
@@ -366,7 +372,7 @@
     "src/db/export.ts#loadShopExportContext": 338,
     "src/db/reminders.ts#sendDueReminders": 340,
     "src/db/reporting.ts#getMonthlyReport": 338,
-    "src/db/seed-dive-sites.ts#seedDiveSites": 479,
+    "src/db/seed-dive-sites.ts#seedDiveSites": 512,
     "src/db/seed-history.ts#seedHistory": 742,
     "src/db/seed-more-trips.ts#seedMoreTrips": 642,
     "src/db/seed-trips.ts#seedTrips": 431,

@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { SES_REGION } from "../config/aws-regions.mjs";
 import { committedContext, contextValue, runPostDeployWizard } from "./post-deploy-wizard.mjs";
 import { SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
-import { VERCEL_CLI, VERCEL_CLI_PACKAGE } from "./vercel-cli.mjs";
+
+const VERCEL_COMMAND = ["exec", "vercel"];
 
 const allHandoffsNeedUpdate = {
   awsProfiles: true,
@@ -102,11 +103,11 @@ describe("post-deploy wizard", () => {
           "json",
         ],
       ],
-      ["pnpm", [...VERCEL_CLI, "dns", "ls", "dive.day", "--limit", "100"]],
+      ["pnpm", [...VERCEL_COMMAND, "dns", "ls", "dive.day", "--limit", "100"]],
       [
         "pnpm",
         [
-          ...VERCEL_CLI,
+          ...VERCEL_COMMAND,
           "dns",
           "add",
           "dive.day",
@@ -118,7 +119,7 @@ describe("post-deploy wizard", () => {
       [
         "pnpm",
         [
-          ...VERCEL_CLI,
+          ...VERCEL_COMMAND,
           "dns",
           "add",
           "dive.day",
@@ -130,7 +131,7 @@ describe("post-deploy wizard", () => {
       [
         "pnpm",
         [
-          ...VERCEL_CLI,
+          ...VERCEL_COMMAND,
           "dns",
           "add",
           "dive.day",
@@ -142,7 +143,7 @@ describe("post-deploy wizard", () => {
       [
         "pnpm",
         [
-          ...VERCEL_CLI,
+          ...VERCEL_COMMAND,
           "dns",
           "add",
           "dive.day",
@@ -155,7 +156,7 @@ describe("post-deploy wizard", () => {
       [
         "pnpm",
         [
-          ...VERCEL_CLI,
+          ...VERCEL_COMMAND,
           "dns",
           "add",
           "dive.day",
@@ -164,7 +165,7 @@ describe("post-deploy wizard", () => {
           "v=spf1 include:amazonses.com ~all",
         ],
       ],
-      ["pnpm", [...VERCEL_CLI, "--prod", "--archive=tgz"]],
+      ["pnpm", [...VERCEL_COMMAND, "--prod", "--archive=tgz"]],
     ]);
   });
 
@@ -189,18 +190,18 @@ describe("post-deploy wizard", () => {
       });
       return commands.find(
         ({ command, arguments_ }) =>
-          command === "pnpm" && arguments_[1] === VERCEL_CLI_PACKAGE && arguments_[2] === "--prod",
+          command === "pnpm" && arguments_[1] === "vercel" && arguments_[2] === "--prod",
       );
     };
 
     expect((await vercelDeploy(true)).arguments_).toEqual([
-      ...VERCEL_CLI,
+      ...VERCEL_COMMAND,
       "--prod",
       "--archive=tgz",
       "--yes",
     ]);
     expect((await vercelDeploy(false)).arguments_).toEqual([
-      ...VERCEL_CLI,
+      ...VERCEL_COMMAND,
       "--prod",
       "--archive=tgz",
     ]);
@@ -222,7 +223,7 @@ describe("post-deploy wizard", () => {
     });
 
     expect(commands).toEqual([
-      { command: "pnpm", arguments_: [...VERCEL_CLI, "--prod", "--archive=tgz"] },
+      { command: "pnpm", arguments_: [...VERCEL_COMMAND, "--prod", "--archive=tgz"] },
     ]);
   });
 
@@ -312,7 +313,10 @@ describe("post-deploy wizard", () => {
           "json",
         ],
       ],
-      ["pnpm", [...VERCEL_CLI, "dns", "ls", "dive.day", "--limit", "100", "--scope", "team_123"]],
+      [
+        "pnpm",
+        [...VERCEL_COMMAND, "dns", "ls", "dive.day", "--limit", "100", "--scope", "team_123"],
+      ],
     ]);
   });
 
@@ -357,7 +361,7 @@ describe("post-deploy wizard", () => {
     const added = commands.filter(({ arguments_ }) => arguments_[3] === "add");
     expect(added).toEqual([]);
     expect(logs.join("\n")).toContain("rec_2 mail.ses.example.com MX 10");
-    expect(logs.join("\n")).toContain(`${VERCEL_CLI_PACKAGE} dns rm`);
+    expect(logs.join("\n")).toContain("vercel dns rm");
   });
 
   it("passes the Vercel org scope to SES DNS checks and additions", async () => {
@@ -388,7 +392,7 @@ describe("post-deploy wizard", () => {
       ({ command, arguments_ }) => command === "pnpm" && arguments_[2] === "dns",
     );
     expect(dnsCommands[0].arguments_).toEqual([
-      ...VERCEL_CLI,
+      ...VERCEL_COMMAND,
       "dns",
       "ls",
       "dive.day",
@@ -442,7 +446,7 @@ describe("post-deploy wizard", () => {
     );
     expect(dnsCommands).toHaveLength(4);
     expect(dnsCommands[0].arguments_).toEqual([
-      ...VERCEL_CLI,
+      ...VERCEL_COMMAND,
       "dns",
       "ls",
       "dive.day",
@@ -946,9 +950,7 @@ describe("post-deploy wizard", () => {
     expect(
       commands.some(
         ({ command, arguments_ }) =>
-          command === "pnpm" &&
-          arguments_?.[1] === VERCEL_CLI_PACKAGE &&
-          arguments_?.includes("--prod"),
+          command === "pnpm" && arguments_?.[1] === "vercel" && arguments_?.includes("--prod"),
       ),
     ).toBe(true);
   });

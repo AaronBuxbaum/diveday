@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { DIVE_SITE_TEMPLATES } from "@/content/dive-site-templates";
+import { DIVE_SITE_TEMPLATES, type DiveSiteTemplate } from "@/content/dive-site-templates";
 import type { DbExecutor } from "./client";
 import { globalDiveSites, globalDiveSiteVersions } from "./schema";
 
@@ -16,18 +16,47 @@ import { globalDiveSites, globalDiveSiteVersions } from "./schema";
  * **Idempotent by slug.** A shop's imported copy records
  * `source_template_id`/`source_template_version` and the library reads it back
  * to say "a newer version is published", so a re-seed must not mint a second
- * template for a slug a shop is already sourced from. An existing slug is left
- * alone entirely — publishing a *new* version is a deliberate act with a
- * version bump behind it, not something a re-run should do by accident.
+ * template for a slug a shop is already sourced from.
+ *
+ * **A version bump publishes; nothing else does.** An existing slug whose
+ * published version is already the template's is left alone, so a re-run
+ * never rewrites a briefing by accident. A template whose `version` has gone
+ * up gets that one new version row, holding its whole briefing, and the slug's
+ * `current_version` moves to it — which is what puts "Template update ready"
+ * in front of every shop sourced from it. Without this a corrected template
+ * reached only a database that had never seen the slug.
  */
-export async function seedDiveSiteCatalog(db: DbExecutor): Promise<Map<string, string>> {
+export async function seedDiveSiteCatalog(
+  db: DbExecutor,
+  templates: readonly DiveSiteTemplate[] = DIVE_SITE_TEMPLATES,
+): Promise<Map<string, string>> {
   const existing = await db
-    .select({ id: globalDiveSites.id, slug: globalDiveSites.slug })
+    .select({
+      id: globalDiveSites.id,
+      slug: globalDiveSites.slug,
+      currentVersion: globalDiveSites.currentVersion,
+    })
     .from(globalDiveSites);
   const idBySlug = new Map(existing.map((row) => [row.slug, row.id]));
+  const versionBySlug = new Map(existing.map((row) => [row.slug, row.currentVersion]));
 
-  for (const template of DIVE_SITE_TEMPLATES) {
-    if (idBySlug.has(template.slug)) continue;
+  for (const template of templates) {
+    const publishedId = idBySlug.get(template.slug);
+    if (publishedId) {
+      const published = versionBySlug.get(template.slug) ?? template.version;
+      if (template.version > published) {
+        await db.insert(globalDiveSiteVersions).values({
+          globalDiveSiteId: publishedId,
+          version: template.version,
+          briefing: template.briefing,
+        });
+        await db
+          .update(globalDiveSites)
+          .set({ currentVersion: template.version })
+          .where(eq(globalDiveSites.id, publishedId));
+      }
+      continue;
+    }
     const [published] = await db
       .insert(globalDiveSites)
       .values({ slug: template.slug, currentVersion: template.version })
