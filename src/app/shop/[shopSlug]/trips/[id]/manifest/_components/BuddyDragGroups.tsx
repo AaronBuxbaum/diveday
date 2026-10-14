@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { fill } from "@/i18n/fill";
 import type { BuddyMemberOption } from "./BuddyTeamsPanel";
 

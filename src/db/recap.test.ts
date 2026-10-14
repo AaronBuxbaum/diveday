@@ -1225,6 +1225,30 @@ describe("getRecapPageData tip reconciliation", () => {
     expect(data?.tip?.status).toBe("expired");
   });
 
+  // The page's reads now go out before the gate answers (code review
+  // 2026-10-13b, item 32); Stripe is the one read that waits for it, so a
+  // closed recap never reaches out to reconcile a tip nobody will be shown.
+  it("never asks Stripe about a tip on a recap the gate closed", async () => {
+    const { db, bookingId, shop } = await pendingTipContext();
+    await db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shop.id)));
+    let asked = 0;
+    const state = await getRecapPageState(
+      db,
+      bookingId,
+      fakeCheckout({
+        async retrieveCheckoutSession() {
+          asked += 1;
+          return { status: "failed" as const };
+        },
+      }),
+    );
+    expect(state.kind).toBe("dead");
+    expect(asked).toBe(0);
+  });
+
   it("leaves a tip pending, checkout link intact, when Stripe can't be reached to reconcile it", async () => {
     const { db, bookingId, checkoutUrl } = await pendingTipContext();
     const data = await getRecapPageData(db, bookingId, fakeCheckout()); // default retrieveCheckoutSession fails

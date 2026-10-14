@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { SearchField } from "@/components/ui/form";
-import { groupLabelClass, LedgerRow } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 import { QueryForm } from "@/components/ui/QueryForm";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
@@ -486,11 +487,7 @@ function TemplatePreview({
       </div>
 
       {facts.length > 0 ? (
-        <dl
-          className={sectionCardClass({
-            className: "mt-6 grid gap-4 sm:grid-cols-2",
-          })}
-        >
+        <dl className={sectionCardClass({ className: "mt-6 grid gap-4 sm:grid-cols-2" })}>
           {facts.map((fact) => (
             <div key={fact.label}>
               <dt className={groupLabelClass()}>{fact.label}</dt>

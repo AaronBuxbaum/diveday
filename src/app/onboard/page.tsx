@@ -10,7 +10,7 @@ import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneO
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { MAX_FIRST_DAY_NAME, parseFirstDayFields } from "@/lib/first-day";

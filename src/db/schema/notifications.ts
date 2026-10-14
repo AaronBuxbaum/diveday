@@ -519,6 +519,11 @@ export const inboundMessages = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("inbound_messages_person_id_idx").on(table.personId),
     uniqueIndex("inbound_messages_channel_provider_message_unique").on(
       table.channel,
       table.providerMessageId,
@@ -590,6 +595,11 @@ export const staffReplies = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("staff_replies_person_id_idx").on(table.personId),
     index("staff_replies_shop_person_sent_idx").on(table.shopId, table.personId, table.sentAt),
     index("staff_replies_inbound_message_idx").on(table.inboundMessageId),
   ],

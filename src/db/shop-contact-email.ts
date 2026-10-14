@@ -26,8 +26,14 @@ export async function issueShopContactEmailConfirmation(
   const email = input.email.trim().toLowerCase();
   return db.transaction(async (tx) => {
     // Lock the shop row so two saves in flight cannot both leave a live token
-    // (same shape as issueAccountToken).
-    await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, input.shopId)).for("update");
+    // (same shape as issueAccountToken). `no key update`, not `update`: it still
+    // serializes with itself and leaves the `KEY SHARE` of every insert naming
+    // this shop alone (`self-declared-cards.ts` tells the deadlock).
+    await tx
+      .select({ id: shops.id })
+      .from(shops)
+      .where(eq(shops.id, input.shopId))
+      .for("no key update");
     await tx
       .update(shopContactEmailConfirmationTokens)
       .set({ supersededAt: now })
@@ -144,7 +150,12 @@ export async function consumeShopContactEmailConfirmation(
         .where(liveToken(input.token, now))
         .limit(1);
       if (!live) return null;
-      await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, live.shopId)).for("update");
+      // `no key update`, as in issueShopContactEmailConfirmation above.
+      await tx
+        .select({ id: shops.id })
+        .from(shops)
+        .where(eq(shops.id, live.shopId))
+        .for("no key update");
 
       const [claimed] = await tx
         .update(shopContactEmailConfirmationTokens)

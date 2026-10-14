@@ -171,6 +171,13 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "cron_reminders.scan_failed",
       "cron_recaps.scan_failed",
       "cron_retention.prune_failed",
+      // A table still over its window after the run's whole 45-second budget
+      // (fourth review, row 18): the pass ran and did not do its work, which is
+      // this alarm's meaning. One run rather than two running: the run is
+      // weekly and CloudWatch's period ceiling is one day, so no alarm here can
+      // span two; and after 45 seconds of batches one capped run is already a
+      // backlog growing faster than the prune.
+      "cron_retention.prune_capped",
       "cron_usage.scan_failed",
       "cron_backup_export.pass_failed",
       // Added to this signal rather than given its own: a new counted signal is

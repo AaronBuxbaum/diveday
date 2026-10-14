@@ -1080,6 +1080,58 @@ describe("the booking refund claim", () => {
     expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("paid");
   });
 
+  it("never reverses twice when Stripe never answered the first refund", async () => {
+    const { db, shop, bookingId, capturedCents, insideWindow } = await paidBookingContext(48);
+    const calls: RefundCall[] = [];
+
+    // The refund went out and the answer never came back: a timeout, a reset
+    // connection. Stripe may well have reversed the money. Recording that as
+    // `failed` let the next press mint a fresh intent, so a fresh idempotency
+    // key, and Stripe reversed the seat a second time (fifth review, row 17).
+    const first = await refundBookingOnCancellation(
+      db,
+      { shopId: shop.id, bookingId, now: insideWindow },
+      fakeCheckout({ status: "unanswered" }, calls, capturedCents),
+    );
+    expect(first).toEqual({ status: "needs_reconciliation" });
+    const [intent] = await refundIntentsFor(db, bookingId);
+    expect(intent).toMatchObject({ status: "started", errorMessage: "unanswered" });
+
+    // The second press, past the stale horizon, from a staffer who read the
+    // first as a failure.
+    const second = await refundBookingOnCancellation(
+      db,
+      { shopId: shop.id, bookingId, now: insideWindow, staleBefore: await dbNowPlus(db, 1_000) },
+      fakeCheckout({ status: "refunded", refundId: "re_second" }, calls, capturedCents),
+    );
+
+    expect(second).toEqual({ status: "needs_reconciliation" });
+    expect(calls).toHaveLength(1);
+    expect(await refundIntentsFor(db, bookingId)).toHaveLength(1);
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("paid");
+  });
+
+  it("refuses a shop cancellation after an unanswered refund the same way", async () => {
+    const { db, shop, bookingId, capturedCents } = await paidBookingContext(null);
+    const calls: RefundCall[] = [];
+
+    const first = await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId },
+      fakeCheckout({ status: "unanswered" }, calls, capturedCents),
+    );
+    const second = await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId, staleBefore: await dbNowPlus(db, 1_000) },
+      fakeCheckout({ status: "refunded", refundId: "re_second" }, calls, capturedCents),
+    );
+
+    expect(first).toEqual({ status: "needs_reconciliation" });
+    expect(second).toEqual({ status: "needs_reconciliation" });
+    expect(shopCancellationPaymentStory(second)).toBe("refund_owed");
+    expect(calls).toHaveLength(1);
+  });
+
   it("does not refuse on another seat's in-flight refund", async () => {
     // The claim is per booking, not per payment intent. Two party members
     // cancelling at once are two genuine refunds off one shared charge

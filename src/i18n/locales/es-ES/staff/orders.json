@@ -29,6 +29,7 @@
     "lineItemsLegend": "Líneas del pedido",
     "lineItemKindAria": "Tipo de la línea {number}",
     "lineItemDescriptionPlaceholder": "Descripción",
+    "lineItemDescriptionAria": "Descripción de la línea {number}",
     "quantityLabel": "Cantidad",
     "unitPriceLabel": "Precio unitario (USD)",
     "unitPricePlaceholder": "$0.00",

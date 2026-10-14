@@ -44,15 +44,14 @@ const CRON_MONITOR_SLUG = process.env.SENTRY_USAGE_CRON_MONITOR_SLUG || "diveday
  * to decide when a check-in is *missing*, which is the dead-man's switch on the
  * whole guardrail.
  *
- * 09:00 UTC, deliberately away from the other three entries (reminders at
- * 14:00, retention Sundays at 03:30, backup Mondays at 04:00): nothing here
- * needs to race them, and a spread schedule keeps one slow provider from
- * pushing another job's start time around. `checkinMargin` is generous because
+ * 09:07 UTC, in an hour of its own among the dailies and a minute after the
+ * hourly passes, so it rides the compute they woke rather than waking it again
+ * (code review 2026-10-13b, item 36, `cron-schedule.test.ts`). `checkinMargin` is generous because
  * a cost reading arriving a few hours late is not an incident; `maxRuntime`
  * sits above `maxDuration` so a run the platform killed reads as timed-out
  * rather than as still running.
  */
-const CRON_SCHEDULE = "0 9 * * *";
+const CRON_SCHEDULE = "7 9 * * *";
 const CRON_MONITOR_CONFIG = {
   schedule: { type: "crontab", value: CRON_SCHEDULE },
   checkinMargin: 240,

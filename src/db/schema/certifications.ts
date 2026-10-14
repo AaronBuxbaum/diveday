@@ -223,6 +223,11 @@ export const certifications = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("certifications_person_id_idx").on(table.personId),
     index("certifications_shop_person_idx").on(table.shopId, table.personId),
     // Partial on the live rows only, so archiving a card frees its number for
     // re-entry (e.g. a renewed card carrying the same identifier).

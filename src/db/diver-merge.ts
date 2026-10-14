@@ -1165,6 +1165,7 @@ export async function mergeDiverRecords(input: {
         .select()
         .from(people)
         // diveday:allow-deleted-people: both records locked as they stand; the merge's own checks decide.
+        // diveday:allow-update-lock: the merge soft-deletes the source and repoints every key at the survivor; nothing may hold either row meanwhile.
         .where(and(eq(people.shopId, input.shopId), inArray(people.id, lockedIds)))
         .orderBy(asc(people.id))
         .for("update");

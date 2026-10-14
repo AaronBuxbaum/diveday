@@ -791,6 +791,11 @@ export const executedDives = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("executed_dives_recorded_by_person_id_idx").on(table.recordedByPersonId),
     uniqueIndex("executed_dives_trip_number_live_unique")
       .on(table.tripId, table.diveNumber)
       .where(sql`${table.deletedAt} is null`),

@@ -16,5 +16,6 @@
   "addDiverAction": "Añadir buceador",
   "addDiverPrompt": "¿No aparece?",
   "addNewDiverAction": "Añadir buceador",
+  "busy": "Alguien más está reservando esta salida ahora mismo. Vuelve a presionar.",
   "tripSummary": "{title} · {date} · {time} · {booked}/{capacity, plural, one {# reservado} other {# reservados}}"
 }

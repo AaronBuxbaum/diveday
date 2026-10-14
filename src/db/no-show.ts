@@ -468,20 +468,35 @@ export async function noShowSalvage(
   // the day asks that they lack, a course at its ratio). Dive-domain review of
   // layer 8, F1: the panel promises the day is theirs to take. Each diver's
   // walk is their own, and the divers go side by side.
+  //
+  // **A few days at a time, not one** (code review 2026-10-13b, item 36): each
+  // diver's walk asked one candidate, waited, then asked the next, over up to
+  // fifty. Now it asks the next `SALVAGE_STEP` together and keeps the passes
+  // in rank order, so the days offered are exactly the ones the one-at-a-time
+  // walk would have found, usually in one round instead of several. The bound
+  // is per diver: `SALVAGE_STEP` questions in flight for each, with the divers
+  // themselves side by side.
   await Promise.all(
     personIds.map(async (personId) => {
       const alternatives: SimilarDeparture[] = [];
-      for (const departure of similar) {
-        if (alternatives.length === SALVAGE_DAYS) break;
-        if (
-          await departureOpenToDiver(db, {
-            shopId: input.shopId,
-            tripId: departure.tripId,
-            personId,
-            now,
-          })
-        ) {
-          alternatives.push(departure);
+      for (
+        let start = 0;
+        start < similar.length && alternatives.length < SALVAGE_DAYS;
+        start += SALVAGE_STEP
+      ) {
+        const step = similar.slice(start, start + SALVAGE_STEP);
+        const open = await Promise.all(
+          step.map((departure) =>
+            departureOpenToDiver(db, {
+              shopId: input.shopId,
+              tripId: departure.tripId,
+              personId,
+              now,
+            }),
+          ),
+        );
+        for (const [index, departure] of step.entries()) {
+          if (open[index] && alternatives.length < SALVAGE_DAYS) alternatives.push(departure);
         }
       }
       offers.set(personId, salvageOffer({ waitlistCount: 0, alternatives }));
@@ -492,3 +507,6 @@ export async function noShowSalvage(
 
 /** As many days as `similarDepartures` offers by default, for the same reason. */
 const SALVAGE_DAYS = 2;
+
+/** Candidates asked together in a diver's salvage walk: twice the days it keeps. */
+const SALVAGE_STEP = 4;

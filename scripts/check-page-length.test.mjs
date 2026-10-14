@@ -1,15 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  compareFileLengths,
   compareFunctionLengths,
   comparePageLengths,
+  countCodeLines,
   countLines,
+  FILE_LINE_LIMIT,
   FUNCTION_LINE_LIMIT,
   functionCounts,
   measureFunctions,
+  NEAR_LIMIT_BAND,
+  nearLimit,
   nextBaseline,
   PAGE_LINE_LIMIT,
 } from "./check-page-length.mjs";
+import { LARGE_FILE_LINES } from "./guard-read.mjs";
 
 const page = "src/app/shop/[shopSlug]/x/page.tsx";
 
@@ -71,7 +77,7 @@ describe("measuring top-level functions", () => {
 
   it("measures a declaration from its first line to its closing brace", () => {
     const source = `import x from "y";\n\nexport function Row() {\n${body(3)}\n  return null;\n}\n`;
-    expect(measureFunctions(source)).toEqual([{ name: "Row", line: 3, lines: 6 }]);
+    expect(measureFunctions(source)).toEqual([{ name: "Row", line: 3, lines: 6, code: 6 }]);
   });
 
   it("reads past a destructured parameter list's column-0 closers", () => {
@@ -92,8 +98,8 @@ describe("measuring top-level functions", () => {
       "}",
     ].join("\n");
     expect(measureFunctions(source)).toEqual([
-      { name: "RosterRow", line: 1, lines: 13 },
-      { name: "Next", line: 15, lines: 3 },
+      { name: "RosterRow", line: 1, lines: 13, code: 13 },
+      { name: "Next", line: 15, lines: 3, code: 3 },
     ]);
   });
 
@@ -125,7 +131,7 @@ describe("measuring top-level functions", () => {
       "  a: 1,",
       "};",
     ].join("\n");
-    expect(measureFunctions(source)).toEqual([{ name: "double", line: 1, lines: 2 }]);
+    expect(measureFunctions(source)).toEqual([{ name: "double", line: 1, lines: 2, code: 2 }]);
   });
 
   it("does not take an object, a type or a one-line call for a function", () => {
@@ -149,6 +155,33 @@ describe("measuring top-level functions", () => {
     expect(counts.get("src/lib/a.ts#f")).toBe(3);
   });
 
+  it("charges a function for its code lines, not its comments", () => {
+    const source = [
+      "export function Documented() {",
+      "  // Why the next line exists.",
+      "  /**",
+      "   * A long explanation,",
+      "   * over several lines.",
+      "   */",
+      "  const a = 1;",
+      "",
+      "  return (",
+      "    <div>",
+      "      {/* A JSX note. */}",
+      "      {/*",
+      "        A longer JSX note.",
+      "      */}",
+      "      {a}",
+      "    </div>",
+      "  );",
+      "}",
+    ].join("\n");
+    const [measured] = measureFunctions(source);
+    expect(measured.lines).toBe(18);
+    expect(measured.code).toBe(8);
+    expect(functionCounts([["src/lib/a.tsx", source]]).get("src/lib/a.tsx#Documented")).toBe(8);
+  });
+
   it("refuses a new function over its limit with function advice", () => {
     const key = "src/lib/a.ts#f";
     const violations = compareFunctionLengths(new Map([[key, FUNCTION_LINE_LIMIT + 1]]), {});
@@ -162,5 +195,63 @@ describe("measuring top-level functions", () => {
     expect(compareFunctionLengths(new Map([[key, 901]]), { [key]: 900 })[0]).toContain(
       "baseline allows 900",
     );
+  });
+});
+
+describe("counting code lines", () => {
+  it("leaves out blank lines, line comments and block comments", () => {
+    expect(
+      countCodeLines(["const a = 1;", "", "  // note", "/* one */", "/**", " * two", " */"]),
+    ).toBe(1);
+  });
+
+  it("counts code after a closing block comment and code with a trailing comment", () => {
+    expect(countCodeLines(["/* a", "b */ const c = 1;", "const d = 2; // why"])).toBe(2);
+  });
+
+  it("does not take a URL inside a string for a comment", () => {
+    expect(countCodeLines(['  const url = "https://example.com";'])).toBe(1);
+  });
+});
+
+describe("the file half", () => {
+  const file = "src/components/Big.tsx";
+
+  it("uses the read guard's own number", () => {
+    expect(FILE_LINE_LIMIT).toBe(LARGE_FILE_LINES);
+  });
+
+  it("refuses a new file over the read guard's limit, and leaves one at it alone", () => {
+    const violations = compareFileLengths(new Map([[file, FILE_LINE_LIMIT + 1]]), {});
+    expect(violations[0]).toContain("sibling file");
+    expect(compareFileLengths(new Map([[file, FILE_LINE_LIMIT]]), {})).toEqual([]);
+  });
+
+  it("holds a banked file to its count", () => {
+    expect(compareFileLengths(new Map([[file, 1001]]), { [file]: 1000 })[0]).toContain(
+      "baseline allows 1000",
+    );
+    expect(compareFileLengths(new Map([[file, 1000]]), { [file]: 1000 })).toEqual([]);
+  });
+});
+
+describe("near the limit", () => {
+  it("warns about an unbanked entry within the band, longest first", () => {
+    const counts = new Map([
+      ["a#f", FUNCTION_LINE_LIMIT - NEAR_LIMIT_BAND + 1],
+      ["b#g", FUNCTION_LINE_LIMIT],
+    ]);
+    const warnings = nearLimit(counts, {}, FUNCTION_LINE_LIMIT);
+    expect(warnings).toHaveLength(2);
+    expect(warnings[0]).toMatch(/^b#g: 300 of 300/);
+  });
+
+  it("leaves alone an entry below the band, over the limit, or already banked", () => {
+    const counts = new Map([
+      ["low#f", FUNCTION_LINE_LIMIT - NEAR_LIMIT_BAND],
+      ["over#f", FUNCTION_LINE_LIMIT + 1],
+      ["banked#f", FUNCTION_LINE_LIMIT - 1],
+    ]);
+    expect(nearLimit(counts, { "banked#f": 290 }, FUNCTION_LINE_LIMIT)).toEqual([]);
   });
 });
