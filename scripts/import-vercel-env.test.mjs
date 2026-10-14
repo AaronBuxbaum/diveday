@@ -29,13 +29,24 @@ function fingerprint(value) {
 // `aws ssm put-parameter` (records both the raw --value argument -- expected
 // to be a `file://` reference, never the content itself -- and the resolved
 // content of the file it points at, plus the --name it was given) -- plus
-// `pnpm dlx vercel@<pin> env add` (records the key it was called with).
+// `pnpm dlx vercel@<pin> env add` (records the key it was called with), and
+// `env ls --format json` (prints the seeded Vercel listing, or fails like an
+// unreachable CLI when there is none).
 function writeStubs(
   binDirectory,
-  { checkpointDocument, addLogPath, putValueLogPath, putValueArgumentLogPath, ssmCallsLogPath },
+  {
+    checkpointDocument,
+    vercelListing,
+    addLogPath,
+    putValueLogPath,
+    putValueArgumentLogPath,
+    ssmCallsLogPath,
+  },
 ) {
   const checkpointFixturePath = join(binDirectory, "checkpoint-fixture.env");
   if (checkpointDocument !== undefined) writeFileSync(checkpointFixturePath, checkpointDocument);
+  const listingFixturePath = join(binDirectory, "listing-fixture.json");
+  if (vercelListing !== undefined) writeFileSync(listingFixturePath, JSON.stringify(vercelListing));
 
   writeFileSync(
     join(binDirectory, "aws"),
@@ -86,6 +97,11 @@ if [ "$4" = "add" ]; then
   cat >/dev/null
   exit 0
 fi
+if [ "$4" = "ls" ] && [ -f "${listingFixturePath}" ]; then
+  echo "Vercel CLI 62.5.0"
+  cat "${listingFixturePath}"
+  exit 0
+fi
 exit 1
 `,
   );
@@ -94,7 +110,13 @@ exit 1
 
 function runImport(
   candidateLines,
-  { environment = "production", checkpointDocument, checkOnly = false } = {},
+  {
+    environment = "production",
+    checkpointDocument,
+    vercelListing,
+    checkOnly = false,
+    resync = false,
+  } = {},
 ) {
   const binDirectory = temporaryDirectory("diveday-vercel-stub-");
   const addLogPath = join(binDirectory, "add.log");
@@ -103,6 +125,7 @@ function runImport(
   const ssmCallsLogPath = join(binDirectory, "ssm-calls.log");
   writeStubs(binDirectory, {
     checkpointDocument,
+    vercelListing,
     addLogPath,
     putValueLogPath,
     putValueArgumentLogPath,
@@ -119,6 +142,7 @@ function runImport(
       inputPath,
       environment,
       ...(checkOnly ? ["--check"] : []),
+      ...(resync ? ["--resync"] : []),
     ],
     { env: { ...process.env, PATH: `${binDirectory}:${process.env.PATH}` }, encoding: "utf8" },
   );
@@ -142,6 +166,120 @@ describe("import-vercel-env", () => {
       checkpointDocument: `APP_HOST=${fingerprint("https://old.example")}\nAUTH_SECRET=${fingerprint("unchanged")}\n`,
     });
     expect(added).toEqual(["APP_HOST"]);
+  });
+
+  it("pushes a key the checkpoint calls current when Vercel no longer has it, and names it", () => {
+    const { added, stdout } = runImport(["A=1", "B=2"], {
+      checkpointDocument: `A=${fingerprint("1")}\nB=${fingerprint("2")}\n`,
+      vercelListing: { envs: [{ key: "A", type: "sensitive", target: ["production"] }] },
+    });
+    expect(added).toEqual(["B"]);
+    expect(stdout).toContain("no longer matches the last sync for B");
+  });
+
+  it("pushes a key whose readable Vercel value differs, and trusts a sensitive one that exists", () => {
+    const { added } = runImport(["PUBLIC=new", "SECRET=s"], {
+      checkpointDocument: `PUBLIC=${fingerprint("new")}\nSECRET=${fingerprint("s")}\n`,
+      vercelListing: {
+        envs: [
+          { key: "PUBLIC", type: "plain", value: "old", target: ["production"] },
+          { key: "SECRET", type: "sensitive", value: "", target: ["production"] },
+        ],
+      },
+    });
+    expect(added).toEqual(["PUBLIC"]);
+  });
+
+  it("ignores a key that exists only in another environment", () => {
+    const { added } = runImport(["A=1"], {
+      checkpointDocument: `A=${fingerprint("1")}\n`,
+      vercelListing: { envs: [{ key: "A", type: "sensitive", target: ["preview"] }] },
+    });
+    expect(added).toEqual(["A"]);
+  });
+
+  it("reports an update when Vercel lacks a key the checkpoint has", () => {
+    const { stdout, added } = runImport(["A=1"], {
+      checkpointDocument: `A=${fingerprint("1")}\n`,
+      vercelListing: { envs: [] },
+      checkOnly: true,
+    });
+    expect(stdout.trim().split("\n").at(-1)).toBe("UPDATE");
+    expect(added).toEqual([]);
+  });
+
+  it("reports current when the checkpoint and Vercel agree", () => {
+    const { stdout } = runImport(["A=1"], {
+      checkpointDocument: `A=${fingerprint("1")}\n`,
+      vercelListing: { envs: [{ key: "A", type: "sensitive", target: ["production"] }] },
+      checkOnly: true,
+    });
+    expect(stdout.trim()).toBe("CURRENT");
+  });
+
+  it("falls back to the checkpoint when the listing is not the expected shape", () => {
+    const { added } = runImport(["A=1"], {
+      checkpointDocument: `A=${fingerprint("1")}\n`,
+      vercelListing: { nope: [] },
+    });
+    expect(added).toEqual([]);
+  });
+
+  it("does not count an entry with no target as present in this environment", () => {
+    const { added } = runImport(["A=1"], {
+      checkpointDocument: `A=${fingerprint("1")}\n`,
+      vercelListing: { envs: [{ key: "A", type: "sensitive", customEnvironmentIds: ["x"] }] },
+    });
+    expect(added).toEqual(["A"]);
+  });
+
+  it("stops the unattended CI run when the Vercel listing cannot be read", () => {
+    const binDirectory = temporaryDirectory("diveday-vercel-stub-");
+    const addLogPath = join(binDirectory, "add.log");
+    writeStubs(binDirectory, {
+      checkpointDocument: `A=${fingerprint("1")}\n`,
+      addLogPath,
+      putValueLogPath: join(binDirectory, "put-value.log"),
+      putValueArgumentLogPath: join(binDirectory, "put-value-argument.log"),
+      ssmCallsLogPath: join(binDirectory, "ssm-calls.log"),
+    });
+    const inputPath = join(binDirectory, ".env.vercel");
+    writeFileSync(inputPath, "A=1\n");
+
+    const result = spawnSync(
+      "node",
+      [
+        join(process.cwd(), "scripts", "import-vercel-env.mjs"),
+        inputPath,
+        "production",
+        "--ci-unattended",
+      ],
+      { env: { ...process.env, PATH: `${binDirectory}:${process.env.PATH}` }, encoding: "utf8" },
+    );
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("refusing to trust the checkpoint alone");
+    expect(existsSync(addLogPath)).toBe(false);
+  });
+
+  it("--resync pushes every value without reading the checkpoint", () => {
+    const { added, ssmCalls, pushedValue } = runImport(["A=1", "B=2"], {
+      checkpointDocument: `A=${fingerprint("1")}\nB=${fingerprint("2")}\n`,
+      resync: true,
+    });
+    expect(added.sort()).toEqual(["A", "B"]);
+    expect(ssmCalls.some((call) => call.startsWith("get-parameter"))).toBe(false);
+    expect(pushedValue).toBe(`A=${fingerprint("1")}\nB=${fingerprint("2")}`);
+  });
+
+  it("never prints a readable value from the Vercel listing", () => {
+    const { stdout } = runImport(["PUBLIC=new"], {
+      checkpointDocument: `PUBLIC=${fingerprint("new")}\n`,
+      vercelListing: {
+        envs: [{ key: "PUBLIC", type: "plain", value: "listed-value", target: ["production"] }],
+      },
+    });
+    expect(stdout).not.toContain("listed-value");
   });
 
   it("refreshes the full hashed checkpoint even when no Vercel value changed", () => {
@@ -303,6 +441,10 @@ exit 1
         `#!/bin/sh
 if [ "$4" = "add" ]; then
   cat >/dev/null
+  exit 0
+fi
+if [ "$4" = "ls" ]; then
+  echo '{"envs":[]}'
   exit 0
 fi
 exit 1
