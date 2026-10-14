@@ -587,6 +587,13 @@ export async function issuePartySeatClaims(
       ),
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
+  // A seat moved to another departure does not go with the lead's cancel
+  // (`cancelUnclaimedPartySeats` reaches the lead's own departure only).
+  const [lead] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
   const seats: PartySeatClaim[] = [];
   for (const row of rows) {
     const claimable = claimableNow(row.booking, row.trip, now);
@@ -597,7 +604,10 @@ export async function issuePartySeatClaims(
       seatName: seatName(row.person.fullName, row.booking),
       claimed: row.booking.claimedAt !== null,
       waiverSigned: waiverState(row.waiver, now) === "complete",
-      cancelsWithLead: row.booking.status === "booked" && row.booking.claimedAt === null,
+      cancelsWithLead:
+        row.booking.status === "booked" &&
+        row.booking.claimedAt === null &&
+        row.booking.tripId === lead?.tripId,
       claim: claimable
         ? await issueBookingCapability(db, {
             shopId: input.shopId,
