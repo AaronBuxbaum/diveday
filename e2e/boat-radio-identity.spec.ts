@@ -1,0 +1,54 @@
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
+import { tripPathByTitle } from "./helpers";
+
+const REEF = "Two-Tank Reef — Molasses & French";
+const BOAT = "Mantis I";
+
+/** The fleet row whose name box holds this boat. */
+function boatRow(page: Page, name: string) {
+  return page.locator("form").filter({ has: page.locator(`input[name="name"][value="${name}"]`) });
+}
+
+/**
+ * **The departure's own boat on the emergency card** (fourth review, item 11).
+ * The card read one free-text vessel line for the whole shop, so a departure
+ * on Mantis I printed Mantis II's MMSI: the number the coastguard asks for
+ * first, wrong on the sheet made for that call. Each hull now holds its call
+ * sign and MMSI in Settings, Boats, and the card names the departure's own.
+ *
+ * On a private shop, because this writes a boat's settings; no
+ * `signedInAsOwner()`, since the fixture signs in as the minted shop's owner.
+ */
+test("a boat's call sign and MMSI reach the emergency card of the departure on it", async ({
+  page,
+  privateShop,
+}) => {
+  test.setTimeout(45_000);
+  const shop = `/shop/${privateShop.slug}`;
+
+  // A mistyped MMSI is refused with its own sentence, never the name-and-
+  // capacity one that sent the owner looking at the two fields that were fine.
+  await page.goto(`${shop}/settings/boats`);
+  await boatRow(page, BOAT).getByLabel("MMSI").fill("33801");
+  await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
+  await expect(page.getByText("Check the call sign")).toBeVisible();
+
+  // Typed the way it is read over the radio; stored the way it is printed.
+  await boatRow(page, BOAT).getByLabel("Call sign").fill("wdm 3301");
+  await boatRow(page, BOAT).getByLabel("MMSI").fill("338 012 345");
+  await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toBeVisible();
+  await expect(boatRow(page, BOAT).getByLabel("Call sign")).toHaveValue("WDM 3301");
+  await expect(boatRow(page, BOAT).getByLabel("MMSI")).toHaveValue("338012345");
+
+  await page.goto(`${await tripPathByTitle(page, privateShop.slug, REEF)}/manifest`);
+  await page
+    .getByRole("button", { name: "Emergency numbers & response plan" })
+    .filter({ visible: true })
+    .click();
+  const card = page.getByRole("region", { name: "In an emergency" });
+  await expect(card.getByText(`Vessel: ${BOAT}`)).toBeVisible();
+  await expect(card.getByText("Call sign: WDM 3301")).toBeVisible();
+  await expect(card.getByText("MMSI: 338012345")).toBeVisible();
+});

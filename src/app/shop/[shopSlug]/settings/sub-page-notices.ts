@@ -26,6 +26,7 @@ export function boatNoticeMessages(t: StaffTranslator): NoticeMessages {
     "boat-updated": { tone: "success", text: t("boats.boatUpdated") },
     "boat-deleted": { tone: "success", text: t("boats.boatDeleted") },
     "boat-invalid": { tone: "danger", text: t("boats.boatInvalid") },
+    "boat-radio-invalid": { tone: "danger", text: t("boats.boatRadioInvalid") },
   };
 }
 

@@ -408,6 +408,9 @@ describe("departureSailed and leftAboardOpen", () => {
 
   it("is at the dock before the hour, and while the crew says boarding", () => {
     expect(departureSailed(reading("2026-07-21T10:00:00.000Z", null))).toBe(false);
+    // Twenty minutes past the hour with no word: a boat running late is still
+    // at the dock until the departure buffer says otherwise.
+    expect(departureSailed(reading("2026-07-21T11:20:00.000Z", null))).toBe(false);
     expect(departureSailed(reading(atSea, "boarding", "2026-07-21T12:50:00.000Z"))).toBe(false);
   });
 

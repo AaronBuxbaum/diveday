@@ -1,6 +1,6 @@
 import { DAY_MS } from "./clock";
 import type { TripStage } from "./trip-stages";
-import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
+import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "./trips";
 import { shopDayBounds } from "./zoned";
 
 /**
@@ -216,8 +216,10 @@ const AT_SEA_STAGES: ReadonlySet<TripStage> = new Set(["underway", "surface", "h
  * underway, at the surface and heading in are at sea; boarding is still at the
  * dock, however late; a course's "home" from an earlier day is tied up for the
  * night, with tomorrow still to pack for. With no word, the clock answers for
- * a single sailing once its hour has passed, and never for a course, whose
- * later days still need their kit.
+ * a single sailing once its hour and the departure buffer have passed
+ * (`hasSailed`, the dock rider's door's own rule), so a boat running late at
+ * the dock keeps its prompts; never for a course, whose later days still need
+ * their kit.
  */
 export function departureSailed(input: Parameters<typeof tripPhaseOf>[0]): boolean {
   const phase = tripPhaseOf(input);
@@ -225,7 +227,10 @@ export function departureSailed(input: Parameters<typeof tripPhaseOf>[0]): boole
   if (phase !== "aboard") return false;
   const shown = boatStageOf(input);
   if (shown) return AT_SEA_STAGES.has(shown.stage);
-  return input.endsAt.getTime() - input.startsAt.getTime() < DAY_MS;
+  return (
+    input.endsAt.getTime() - input.startsAt.getTime() < DAY_MS &&
+    hasSailed(input.startsAt, input.now)
+  );
 }
 
 /**

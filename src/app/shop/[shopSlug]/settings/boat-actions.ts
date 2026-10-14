@@ -161,7 +161,7 @@ function boatDescription(form: BoatForm): string | null {
  * "nothing said" (roadmap N-10). The radio identity rides with them (fourth
  * review, item 11): an MMSI that is not nine digits refuses the save the same way.
  */
-function boatPapers(form: BoatForm): BoatPapersInput | "invalid" {
+function boatPapers(form: BoatForm): BoatPapersInput | "invalid" | "radio-invalid" {
   const day = (
     name: "inspectionDueOn" | "registrationExpiresOn" | "insuranceExpiresOn",
   ): string | null | "invalid" => {
@@ -189,7 +189,9 @@ function boatPapers(form: BoatForm): BoatPapersInput | "invalid" {
   }
   const callSign = normalizeCallSign(form.callSign ?? "");
   const mmsi = normalizeMmsi(form.mmsi ?? "");
-  if (callSign === "invalid" || mmsi === "invalid") return "invalid";
+  // Its own refusal: "Provide a boat name and capacity." over a mistyped
+  // MMSI sent the owner looking at the two fields that were fine.
+  if (callSign === "invalid" || mmsi === "invalid") return "radio-invalid";
   return {
     certifiedPassengers,
     inspectionDueOn,
@@ -237,6 +239,7 @@ export async function createBoatAction(formData: FormData) {
   const description = boatDescription(form);
   const papers = boatPapers(form);
 
+  if (papers === "radio-invalid") redirect(noticeUrl(page, "boat-radio-invalid"));
   if (!name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
   }
@@ -264,6 +267,7 @@ export async function updateBoatAction(formData: FormData) {
   const description = boatDescription(form);
   const papers = boatPapers(form);
 
+  if (papers === "radio-invalid") redirect(noticeUrl(page, "boat-radio-invalid"));
   if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
   }

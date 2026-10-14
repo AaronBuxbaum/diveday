@@ -10,6 +10,7 @@ import {
   OFFLINE_MANIFEST_RECORD_VERSION,
 } from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
+import { weekStartOf } from "../src/lib/week-board";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -41,6 +42,7 @@ import {
   scheduleCrewedOpenWaterSession,
   seededTripId,
   threadStatus,
+  tripPathByTitle,
   waiverLinkFromResult,
   waiverLinkFromToast,
   writeCourseForm,
@@ -4729,6 +4731,32 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await boardListSettled(page);
         await capture(page, "schedule-builder", scheme);
+      });
+
+      /**
+       * **Rostered and away, on the board** (fourth review, item 12). The demo
+       * marks Marcus Webb away three and four days out; a departure of the
+       * capture's own on the first of those days, with him rostered, carries
+       * the warning line under its facts.
+       */
+      test(`the week says who is rostered while away (${scheme})`, async ({ page }) => {
+        test.setTimeout(60_000);
+        const title = `Away-day refresher (${scheme})`;
+        const day = daysFromNow(3);
+        await createTrip(page, { title, date: day, departsAt: "09:00", returnsAt: "12:00" });
+        await page.goto(await tripPathByTitle(page, "blue-mantis", title));
+        await openTripAbout(page);
+        await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
+        await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+        await page.getByRole("button", { name: "Unassign Marcus Webb" }).waitFor();
+        await page.goto(`/shop/blue-mantis/schedule/board?week=${weekStartOf(day)}`);
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
+        await boardListSettled(page);
+        await page
+          .getByText(/^Marcus Webb away /)
+          .first()
+          .waitFor();
+        await capture(page, "schedule-builder-crew-away", scheme);
       });
 
       /**
