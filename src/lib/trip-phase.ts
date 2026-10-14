@@ -213,20 +213,26 @@ const AT_SEA_STAGES: ReadonlySet<TripStage> = new Set(["underway", "surface", "h
  * dock words on the one page open during the trip.
  *
  * Back is sailed. Otherwise the crew's word answers when it still speaks:
- * underway, at the surface and heading in are at sea; boarding is still at the
- * dock, however late; a course's "home" from an earlier day is tied up for the
- * night, with tomorrow still to pack for. With no word, the clock answers for
- * a single sailing once its hour and the departure buffer have passed
- * (`hasSailed`, the dock rider's door's own rule), so a boat running late at
- * the dock keeps its prompts; never for a course, whose later days still need
- * their kit.
+ * underway, at the surface and heading in are at sea; a course's "home" from
+ * an earlier day is tied up for the night, with tomorrow still to pack for.
+ * With no word, the clock answers for a single sailing once its hour and the
+ * departure buffer have passed (`hasSailed`, the dock rider's door's own
+ * rule), so a boat running late at the dock keeps its prompts; never for a
+ * course, whose later days still need their kit.
+ *
+ * **Boarding yields to the clock the way silence does** (review F3). The tap
+ * a busy dock makes is Boarding and the one it forgets is Underway, so a
+ * Boarding nobody followed up would otherwise hold the boat at the dock all
+ * day. A tap never holds a boat at the dock longer than silence would, as it
+ * never finishes one sooner.
  */
 export function departureSailed(input: Parameters<typeof tripPhaseOf>[0]): boolean {
   const phase = tripPhaseOf(input);
   if (phase === "back") return true;
   if (phase !== "aboard") return false;
   const shown = boatStageOf(input);
-  if (shown) return AT_SEA_STAGES.has(shown.stage);
+  if (shown && AT_SEA_STAGES.has(shown.stage)) return true;
+  if (shown && shown.stage !== "boarding") return false;
   return (
     input.endsAt.getTime() - input.startsAt.getTime() < DAY_MS &&
     hasSailed(input.startsAt, input.now)

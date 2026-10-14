@@ -406,12 +406,33 @@ describe("departureSailed and leftAboardOpen", () => {
   // 09:00 local, two hours into the 07:00 boat.
   const atSea = "2026-07-21T13:00:00.000Z";
 
-  it("is at the dock before the hour, and while the crew says boarding", () => {
+  it("is at the dock before the hour, and while the crew says boarding inside the buffer", () => {
     expect(departureSailed(reading("2026-07-21T10:00:00.000Z", null))).toBe(false);
     // Twenty minutes past the hour with no word: a boat running late is still
     // at the dock until the departure buffer says otherwise.
     expect(departureSailed(reading("2026-07-21T11:20:00.000Z", null))).toBe(false);
-    expect(departureSailed(reading(atSea, "boarding", "2026-07-21T12:50:00.000Z"))).toBe(false);
+    expect(
+      departureSailed(reading("2026-07-21T11:40:00.000Z", "boarding", "2026-07-21T10:50:00.000Z")),
+    ).toBe(false);
+  });
+
+  it("lets a Boarding nobody followed up yield to the clock, as silence does (review F3)", () => {
+    // The tap a busy dock makes is Boarding; the one it forgets is Underway.
+    // A tap never holds a boat at the dock longer than silence would.
+    expect(departureSailed(reading(atSea, "boarding", "2026-07-21T10:50:00.000Z"))).toBe(true);
+    expect(departureStage(reading(atSea, "boarding", "2026-07-21T10:50:00.000Z")).sailed).toBe(
+      true,
+    );
+    // A course's Boarding never does: its later days still need their kit.
+    const course = {
+      startsAt: new Date("2026-07-21T12:00:00.000Z"),
+      endsAt: new Date("2026-07-22T20:00:00.000Z"),
+    };
+    expect(
+      departureSailed(
+        reading("2026-07-21T15:00:00.000Z", "boarding", "2026-07-21T11:50:00.000Z", course),
+      ),
+    ).toBe(false);
   });
 
   it("has sailed once the crew says so, or the clock passes a single sailing's hour", () => {
