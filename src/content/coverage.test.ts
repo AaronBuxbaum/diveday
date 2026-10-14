@@ -1,9 +1,16 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { type CoverageDenominator, coverageOf, coverageProblems } from "./coverage";
+import { isMarineLifeSlug } from "@/db/marine-life-catalog";
+import {
+  COVERAGE_PROMISE,
+  type CoverageDenominator,
+  coverageOf,
+  coverageProblems,
+} from "./coverage";
 import { DIVE_AREA_BY_CODE } from "./dive-areas";
 import { DIVE_SITE_TEMPLATES } from "./dive-site-templates";
+import speciesCoverage from "./species-coverage.json";
 
 const DIR = path.join(process.cwd(), "src", "content", "coverage");
 const denominators: CoverageDenominator[] = readdirSync(DIR)
@@ -44,5 +51,38 @@ describe("the coverage denominators", () => {
       .filter((denominator) => denominator.sources.length < 2 || denominator.method.length < 40)
       .map((denominator) => denominator.area);
     expect(thin).toEqual([]);
+  });
+});
+
+/**
+ * The species half of the promise: every group in `./species-coverage.json`
+ * (fish from REEF survey frequencies, everything else from iNaturalist
+ * observation counts) is held at 80% too, and every row it maps names a
+ * species the catalog really carries.
+ */
+describe("the species denominators", () => {
+  const groups = speciesCoverage.groups as {
+    group: string;
+    rows: { name: string; slug: string | null; excluded?: string }[];
+  }[];
+
+  it("map only to species the catalog carries", () => {
+    const unknown = groups.flatMap((group) =>
+      group.rows
+        .filter((row) => row.slug && !isMarineLifeSlug(row.slug))
+        .map((row) => `${group.group}: ${row.slug}`),
+    );
+    expect(unknown).toEqual([]);
+  });
+
+  it("keep every group at 80% or more", () => {
+    const below = groups.flatMap((group) => {
+      const counted = group.rows.filter((row) => !row.excluded);
+      const defined = counted.filter((row) => row.slug).length;
+      return defined / counted.length < COVERAGE_PROMISE
+        ? [`${group.group}: ${defined} of ${counted.length}`]
+        : [];
+    });
+    expect(below).toEqual([]);
   });
 });

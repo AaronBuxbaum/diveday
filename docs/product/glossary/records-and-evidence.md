@@ -26,7 +26,9 @@
   from public lists (a marine-park or mooring list, operators' site lists) into
   `src/content/coverage/<area>.json`, each mapped to the template that defines it or to none. What
   "the catalog covers 80% of an area" is measured against; an area is **promised** once it reaches
-  that, and may not fall back (`pnpm content:coverage`).
+  that, and may not fall back (`pnpm content:coverage`). The **marine-life catalog** is measured the
+  same way, one denominator per animal group in `src/content/species-coverage.json`: fish from
+  REEF survey sighting frequencies, everything else from iNaturalist observation counts.
 - **Photo ledger** — one record per photograph DiveDay bundles for its starting content, and one
   entry per template that was searched for and has none worth bundling
   (`src/content/photo-records.json`). It says where a file came from, under what licence, how big

@@ -74,7 +74,7 @@ export function marineLifeCard(slug: MarineLifeSlug, t: DiverTranslator): Marine
 /**
  * The whole catalog, resolved, in the order the picker offers it.
  *
- * 93 short records is the entire payload the dive-site form's `<datalist>`
+ * About 330 short records is the entire payload the dive-site form's `<datalist>`
  * needs, which is why it ships whole rather than searching over the network per
  * keystroke on a configure-once form.
  */
