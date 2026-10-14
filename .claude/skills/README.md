@@ -47,7 +47,11 @@ isolation, authz, data exposure — required for auth/allowlist/token/PII/export
 collateral — recommended after drafting or editing a marketing page, switching guide, or
 `commercial-outreach` artifact). `design-critic` and `conversion-reviewer` run on `model: sonnet`, a
 judgement over screenshots or copy that does not need the session's model; the two required
-reviewers inherit it.
+reviewers name the strongest model at high effort. Every reviewer's finding cites the line it
+violates and a failing input or test, labelled confirmed or possible; the safety-critical
+surfaces get two differently framed runs
+([working-rules.md](../../docs/agents/working-rules.md#hard-rules)). `Explore` is not a reviewer:
+it replaces the built-in scout with a read-only one on `model: sonnet` at low effort.
 
 ## Maintenance
 

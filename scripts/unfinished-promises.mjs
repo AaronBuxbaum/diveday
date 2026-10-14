@@ -89,17 +89,25 @@ export function promisesUnfinishedWork(text, dirty) {
  * ends on a question is a fine ending whatever the tree or the branch looks like.
  */
 export function isHandoff(text) {
-  const closing = (text ?? "").slice(-700);
-  if (HANDOFFS.some((pattern) => pattern.test(closing))) return true;
-  // A question anywhere in the closing paragraph hands the turn back, even with a sign-off
-  // after it ("Which base do you want? Then I'll push."): blocking it would spend a whole
-  // full-context turn to re-ask what the person is about to answer.
-  const lastParagraph =
-    closing
-      .trim()
-      .split(/\n\s*\n/)
-      .pop() ?? "";
-  return /\?(?=\s|$)/.test(lastParagraph);
+  const closing = (text ?? "").slice(-700).trim();
+  // A message whose last sentence promises work never hands over, whatever it asked before:
+  // "- open question: does B matter?\n- next I'll do C" is a stall with a question inside it
+  // (security review of #2584).
+  if (PROMISES.some((pattern) => pattern.test(lastSentence(closing)))) return false;
+  // A question hands the turn back only when it is the last sentence; markdown or a closing
+  // quote after the `?` still counts.
+  if (/\?[\s"'”’)*_`]*$/.test(closing)) return true;
+  return HANDOFFS.some((pattern) => pattern.test(closing));
+}
+
+/** The final sentence of a message: its last non-empty line, split on sentence ends. */
+function lastSentence(text) {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const last = lines.at(-1) ?? "";
+  return last.split(/(?<=[.!?])\s+/).at(-1) ?? "";
 }
 
 /** The sentence in the closing paragraphs that made the promise, for the reason; or "". */
