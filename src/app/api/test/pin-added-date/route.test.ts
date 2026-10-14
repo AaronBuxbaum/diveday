@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDiver } from "@/db/divers";
 import { people, shops } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The merge preview's capture prints two records' "Added" dates, and both
@@ -39,7 +41,7 @@ afterEach(() => {
 
 describe("POST /api/test/pin-added-date", () => {
   it("stamps every live record of the name with the app's clock, and no one else", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     await createDiver(db, {
       shopId: shop.id,
@@ -67,7 +69,7 @@ describe("POST /api/test/pin-added-date", () => {
   }, 60_000);
 
   it("refuses a shop that is not the demo, and pins nothing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
 

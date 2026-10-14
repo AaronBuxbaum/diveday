@@ -3,12 +3,14 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { rollCallRowState } from "@/lib/manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { formBuddyTeam, listTripBuddyTeams } from "./buddy-pairs";
 import { getIncidentExport } from "./incident-export";
 import { getTripManifests, recordRollCall } from "./manifests";
 import { bookings } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **A held seat is named as booked, everywhere the boat reads it** (issue
@@ -20,7 +22,7 @@ import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
  */
 describe("a held seat's name on the boat (in-memory PGlite)", () => {
   it("names a held seat that did not come back as booked, never as the matched diver", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");

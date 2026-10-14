@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import type { InquiryFormState } from "@/lib/course-inquiry";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **The acknowledgment a diver gets for a date request** (third UX review,
@@ -61,7 +63,7 @@ const sentKinds = () =>
 
 beforeEach(async () => {
   hoisted.afterTasks.length = 0;
-  db = await seededTestDb();
+  db = ctx.db;
   vi.mocked(getDb).mockReset().mockResolvedValue(db);
   vi.mocked(sendNotification).mockClear();
   vi.mocked(checkRateLimit).mockReset().mockResolvedValue({ allowed: true, retryAfterMs: 0 });

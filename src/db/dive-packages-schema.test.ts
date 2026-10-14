@@ -53,13 +53,19 @@ describe("the dive package tables", () => {
     return { db, shop, person, pkg, order };
   }
 
-  it("refuses a package that sells no dives, or costs nothing", async () => {
+  // One refusal per test: each runs in one transaction, and a statement after a
+  // refused one fails with 25P02 whatever its shape (docs/engineering/testing.md).
+  it("refuses a package that sells no dives", async () => {
     const { db, shop } = await context();
     await expect(
       db
         .insert(divePackages)
         .values({ shopId: shop.id, name: "Zero", diveCount: 0, priceCents: 1 }),
     ).rejects.toThrow();
+  });
+
+  it("refuses a package that costs nothing", async () => {
+    const { db, shop } = await context();
     await expect(
       db
         .insert(divePackages)
