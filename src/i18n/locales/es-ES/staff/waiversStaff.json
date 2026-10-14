@@ -47,7 +47,8 @@
     "views": {
       "label": "Vistas de registros firmados",
       "all": "Todos",
-      "unchecked": "No se puede verificar"
+      "unchecked": "No se puede verificar",
+      "medical": "Retenciones médicas"
     },
     "pagination": {
       "total": "{count, plural, one {# registro} other {# registros}}"

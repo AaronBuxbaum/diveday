@@ -47,7 +47,8 @@
     "views": {
       "label": "Signed record views",
       "all": "All",
-      "unchecked": "Can’t be checked"
+      "unchecked": "Can’t be checked",
+      "medical": "Medical holds"
     },
     "pagination": {
       "total": "{count, plural, one {# record} other {# records}}"

@@ -362,15 +362,16 @@ test.describe("staff", () => {
   test("the roster searches by title and narrows to a view", async ({ page }) => {
     await page.goto("/shop/blue-mantis/courses");
     const search = page.getByRole("searchbox", { name: "Search courses" });
-    await search.fill("Rescue");
+    await search.fill("Drift");
     await search.press("Enter");
-    await page.waitForURL(/[?&]q=Rescue/);
-    const rescue = page
+    await page.waitForURL(/[?&]q=Drift/);
+    const drift = page
       .getByRole("listitem")
-      .filter({ has: page.getByText("Rescue Diver", { exact: true }) });
-    await expect(rescue).toBeVisible();
-    // Never on the board, from the agency's catalog: a door to its editor, no Schedule.
-    await expect(rescue.getByRole("link", { name: /^Schedule a session of/ })).toHaveCount(0);
+      .filter({ has: page.getByText("Drift Diver", { exact: true }) });
+    await expect(drift).toBeVisible();
+    // Copied from the catalog and never on the board (the seed runs no Drift
+    // Diver session): a door to its editor, no Schedule.
+    await expect(drift.getByRole("link", { name: /^Schedule a session of/ })).toHaveCount(0);
 
     const views = page.getByRole("navigation", { name: "Course views" });
     await views.getByRole("link", { name: "Scheduled" }).click();

@@ -71,8 +71,11 @@ export type SignedWaiverEntry = ReturnType<typeof toSignedWaiverEntry>;
  * The signed-record views the Waivers page offers beside "All": records whose
  * seal cannot be checked (`verifyWaiverIntegrity` → `unsealed`: no hash or no
  * seal version, which is every imported record and anything signed before
- * sealing), and records holding a medical follow-up (a `medical_review` with
- * answers, the rows `toSignedWaiverEntry` gives `flaggedPrompts`).
+ * sealing), and every record on a medical hold (`medical_review`: a physician
+ * referral nobody has answered, or one the physician did not clear). The hold
+ * is the status, not the answers: a paper or status-only hold stores none and
+ * still refuses boarding (`src/lib/readiness.ts`), so the view must not need
+ * them.
  */
 export const SIGNED_RECORD_VIEWS = ["unchecked", "medical"] as const;
 export type SignedRecordView = (typeof SIGNED_RECORD_VIEWS)[number];
@@ -84,8 +87,7 @@ export function signedRecordViewParam(value: string | undefined): SignedRecordVi
 function signedRecordViewWhere(view: SignedRecordView | undefined) {
   if (view === "unchecked")
     return or(isNull(waiverRecords.integrityHash), isNull(waiverRecords.integrityVersion));
-  if (view === "medical")
-    return and(eq(waiverRecords.status, "medical_review"), isNotNull(waiverRecords.medicalAnswers));
+  if (view === "medical") return eq(waiverRecords.status, "medical_review");
   return undefined;
 }
 

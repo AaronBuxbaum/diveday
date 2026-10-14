@@ -139,7 +139,7 @@ describe("listWaiverIntegrityAudit search and views", () => {
     expect(page.total).toBe(page.entries.length);
   });
 
-  it("shows only records holding a medical follow-up under that view", async () => {
+  it("shows every record on a medical hold under that view", async () => {
     const ctx = await waiverContext();
     const { db, person, shop, booking } = ctx;
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
@@ -153,7 +153,7 @@ describe("listWaiverIntegrityAudit search and views", () => {
     const page = await listWaiverIntegrityAudit(db, shop.id, { view: "medical", limit: 1000 });
     expect(page.entries.map((entry) => entry.id)).toContain(issued.recordId);
     expect(page.entries.length).toBeGreaterThan(0);
-    expect(page.entries.every((entry) => entry.flaggedPrompts.length > 0)).toBe(true);
+    expect(page.entries.every((entry) => entry.status === "medical_review")).toBe(true);
     expect(page.total).toBe(page.entries.length);
   });
 

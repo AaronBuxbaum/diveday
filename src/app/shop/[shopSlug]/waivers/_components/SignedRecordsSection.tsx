@@ -98,7 +98,7 @@ export function SignedRecordsSection({
     },
     {
       key: "medical",
-      label: t("waiversStaff.signatures.medicalFlag"),
+      label: t("waiversStaff.signatures.views.medical"),
       href: logHref({ nextView: "medical" }),
       active: view === "medical",
     },

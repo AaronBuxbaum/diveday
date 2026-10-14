@@ -1080,19 +1080,17 @@ test("the signature audit pages both ways, and keeps a pinned record while it do
  * The demo holds hundreds of signed records; a search on the diver and a
  * medical view narrow the log and its count together, and keep each other.
  */
-test("the signed records search by diver and narrow to medical follow-ups", async ({ page }) => {
+test("the signed records search by diver and narrow to medical holds", async ({ page }) => {
   await page.goto("/shop/blue-mantis/waivers");
   const pager = page.getByRole("navigation", { name: "Pages" });
   await expect(pager).toContainText(/Page 1 of \d+/);
   const rows = page.locator('details[id^="waiver-record-"]');
 
-  // The demo's synthetic medical hold is the one flagged record we can name.
+  // The demo's medical hold is status-only: a physician referral with no
+  // answers stored. It is a hold all the same, so the view lists it.
   const views = page.getByRole("navigation", { name: "Signed record views" });
-  await views.getByRole("link", { name: "Medical follow-up flagged" }).click();
+  await views.getByRole("link", { name: "Medical holds" }).click();
   await page.waitForURL(/[?&]view=medical/);
-  await expect(rows.first()).toBeVisible();
-  const flaggedCount = await rows.count();
-  await expect(rows.filter({ hasText: "Medical follow-up flagged" })).toHaveCount(flaggedCount);
   await expect(rows.filter({ hasText: "Morgan Vale" }).first()).toBeVisible();
 
   // A search keeps the view it was typed under.

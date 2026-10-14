@@ -6,7 +6,7 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonManageOrders, canPersonManagePaymentSettings } from "@/db/authz";
@@ -597,10 +597,10 @@ export default async function OrdersIndexPage({
           anchor, as Reports' download is, so the browser saves the file rather
           than the router fetching it. */}
       {canExportOrders && days.length > 0 ? (
-        <p className="mt-4 text-end text-sm print:hidden">
+        <p className="mt-2 text-end text-sm print:hidden">
           <a
             href={hrefWith({}, "orders/download")}
-            className="font-medium text-primary hover:underline"
+            className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
           >
             {t("orders.index.downloadCsv")}
           </a>
