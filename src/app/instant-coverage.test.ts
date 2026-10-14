@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { stripComments } from "@/test/source";
 
 /**
  * The two invariants that keep navigation instant, as a test (ADR
@@ -40,18 +41,6 @@ const BLOCKING_LAYOUTS = new Set([
   // directions, which is the whole reason to assert it in both directions.
   "shop/[shopSlug]/trips/[id]/layout.tsx",
 ]);
-
-/**
- * Line comments go first, then block comments — the opposite of the order that
- * reads naturally, and deliberate. A `//` comment mentioning a route glob
- * (`/shop` followed by a double star) contains the characters that open a block
- * comment, so stripping blocks first swallows everything from that word to the
- * next block terminator — in a page file, most of the module. Comments describe
- * this rule as often as they break it; neither should hide a missing declaration.
- */
-function stripComments(source: string): string {
-  return source.replace(/(^|[^:])\/\/[^\n]*/g, "$1").replace(/\/\*[\s\S]*?\*\//g, "");
-}
 
 async function routeFiles(name: string): Promise<string[]> {
   const found: string[] = [];

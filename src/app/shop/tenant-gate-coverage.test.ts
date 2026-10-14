@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { stripComments } from "@/test/source";
 
 /**
  * **Every staff page asks whether the slug in the URL is its reader's own shop**
@@ -33,24 +34,6 @@ import { describe, expect, it } from "vitest";
  */
 
 const STAFF_APP = path.join(process.cwd(), "src/app/shop/[shopSlug]");
-
-/**
- * Comments first, and this is not decoration.
- *
- * `shop/[shopSlug]/page.tsx` mentions `requireShopSurface` three times in
- * prose, explaining why it cannot call the helper from inside its own
- * `<Suspense>` boundary. Scanning the raw text passes that page on its
- * *comments* — which is precisely the page whose missing gate started this
- * file. A guard satisfied by an explanation of why the thing is absent is
- * worse than no guard.
- *
- * Line comments before block comments, for the reason `instant-coverage.test.ts`
- * states at its own copy: a `//` comment naming a route glob contains the
- * characters that open a block comment.
- */
-function stripComments(source: string): string {
-  return source.replace(/(^|[^:])\/\/[^\n]*/g, "$1").replace(/\/\*[\s\S]*?\*\//g, "");
-}
 
 /**
  * The three shapes that ask the second question. Any one of them is the gate;

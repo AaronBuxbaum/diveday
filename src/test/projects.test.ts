@@ -57,6 +57,7 @@ describe("classifyTestFile", () => {
     expect(isSourceGuard(`${reads}import { execFileSync } from "node:child_process";`)).toBe(false);
     expect(isSourceGuard(`import { x } from "node:path";`)).toBe(false);
     expect(isSourceGuard(`${reads}import { rule } from "@/test/stylesheet";`)).toBe(true);
+    expect(isSourceGuard(`${reads}import { sourceFiles } from "@/test/source";`)).toBe(true);
   });
 
   it("does not mistake an import quoted in a comment or a string fixture for the file's own", () => {

@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DIVER_MESSAGES } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
+import { sourceFiles } from "@/test/source";
 import { DOOR_GLYPH_IDS, type DoorGlyphId, EntryDone } from "./EntryShell";
 
 /**
@@ -48,15 +49,6 @@ function withSiblingDoors(relativePath: string): string {
     return [];
   });
   return [source, ...extras].join("\n");
-}
-
-/** Every non-test `.ts`/`.tsx` under a directory, so a sweep can be stated as a fact. */
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(full);
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
-  });
 }
 
 /**

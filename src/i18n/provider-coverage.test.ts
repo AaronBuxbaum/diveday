@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { stripComments } from "@/test/source";
 
 /**
  * The `DiverIntlProvider` footgun, as a test.
@@ -50,11 +51,6 @@ const COMPONENTS = path.join(process.cwd(), "src/components");
 
 /** Segment files that can hold a provider above a component in the same directory. */
 const SEGMENT_FILES = ["layout.tsx", "template.tsx", "page.tsx", "error.tsx"];
-
-/** Comments describe the footgun as often as they cause it — never scan them. */
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
-}
 
 async function tsxFiles(directory: string, found: string[] = []): Promise<string[]> {
   for (const entry of await readdir(directory, { withFileTypes: true })) {

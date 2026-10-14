@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { stripComments } from "@/test/source";
 
 /**
  * **No staff redirect builds its `Location` out of a raw slug** (issue 1569).
@@ -27,10 +28,6 @@ const STAFF_APP = path.join(process.cwd(), "src/app/shop");
 
 /** `Location: ` followed by a template literal that interpolates a bare slug. */
 const RAW_SLUG_LOCATION = /Location:\s*[^,\n]*`[^`]*\$\{\s*shopSlug\s*\}/;
-
-function stripComments(source: string): string {
-  return source.replace(/(^|[^:])\/\/[^\n]*/g, "$1").replace(/\/\*[\s\S]*?\*\//g, "");
-}
 
 async function routeHandlers(): Promise<string[]> {
   const found: string[] = [];
