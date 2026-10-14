@@ -223,7 +223,7 @@ async function inaturalistPhotos(scientificName: string): Promise<Found[]> {
     for (const photo of observation.photos ?? []) {
       const licence = INAT_LICENCES[photo.license_code ?? ""];
       if (!licence || !photo.url) continue;
-      const artist = String(photo.attribution ?? "")
+      const artist = plain(String(photo.attribution ?? ""))
         .replace(/^\(c\)\s*/i, "")
         .replace(/,\s*(some|no) rights reserved.*$/i, "")
         .trim();
