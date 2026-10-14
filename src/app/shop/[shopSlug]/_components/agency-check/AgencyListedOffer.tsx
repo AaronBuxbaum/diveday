@@ -7,6 +7,7 @@ import type {
   AgencyListedAddResult,
 } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
 import { buttonClass } from "@/components/ui/button";
+import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { ChoiceRow, FormStatus } from "@/components/ui/form";
 import type { AgencyListedKind } from "@/lib/agency-check";
 import type { AgencyCheckCopy } from "./agency-check-copy";
@@ -88,7 +89,7 @@ export function AgencyListedOffer({
   return (
     <fieldset
       aria-labelledby={leadId}
-      className="mt-2 rounded-lg border border-border bg-surface-sunken px-3 py-2 text-sm print:hidden"
+      className={`mt-2 ${INSET_NOTE_BOX} border border-border bg-surface-sunken print:hidden`}
       data-agency-listed-offer=""
     >
       <p id={leadId}>{lead}</p>

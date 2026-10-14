@@ -19,6 +19,7 @@ import type {
   AgencyListedAddResult,
 } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
 import { UndoToast } from "@/components/UndoToast";
+import { proseLinkClass } from "@/components/ui/button";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
 import type { AgencyListedKind, CheckableAgency } from "@/lib/agency-check";
 import {
@@ -452,7 +453,7 @@ export function AgencyListedOffersSlot({ shopSlug }: { shopSlug: string }) {
             lead={
               <>
                 {before}
-                <Link href={shopPath(shopSlug, "divers", card.personId)} className="underline">
+                <Link href={shopPath(shopSlug, "divers", card.personId)} className={proseLinkClass}>
                   {card.fullName}
                 </Link>
                 {after}
