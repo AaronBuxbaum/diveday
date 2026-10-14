@@ -1538,6 +1538,15 @@ async function readTodayWave(
     owingBookingIds,
     noOpenOrders,
   } = input;
+  // The shop's Stripe account, read at most once in this wave whoever asks
+  // first: the owner's restricted-payments row and the payment rows' invoice
+  // controls both read it. In a render it is also the page's own read
+  // (`shopStripeAccountForRender`'s `cache()`).
+  let accountRead: ReturnType<typeof shopStripeAccountForRender> | undefined;
+  const stripeAccount = () => {
+    accountRead ??= shopStripeAccountForRender(db, shopId);
+    return accountRead;
+  };
   const [
     departureRollCall,
     departureCrewRollCall,
@@ -1661,7 +1670,7 @@ async function readTodayWave(
             olderThan: new Date(now.getTime() - OWED_REFUND_STALE_AFTER_MS),
           }),
           listOpenPaymentDisputes(db, shopId),
-          paymentsRestrictedSince(db, shopId),
+          stripeAccount().then(paymentsRestrictedSince),
         ])
       : null,
     readReviewsAwaitingModeration(db, shopId),
@@ -1719,7 +1728,7 @@ async function readTodayWave(
     // render (`shopStripeAccountForRender`).
     owingBookingIds.length === 0
       ? noOpenOrders
-      : shopStripeAccountForRender(db, shopId).then((account) =>
+      : stripeAccount().then((account) =>
           canAcceptPayments(account)
             ? openOrdersForBookings(db, shopId, owingBookingIds)
             : noOpenOrders,
