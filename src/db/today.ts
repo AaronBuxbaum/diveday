@@ -37,6 +37,7 @@ import { boatStageOf, tripPhaseOf } from "@/lib/trip-phase";
 import type { TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
 import { shopDayBounds } from "@/lib/zoned";
+import { listAgencyCheckableCards } from "./agency-check";
 import {
   blockedOnNextBoatDay,
   type HorizonReadinessEvidence,
@@ -2000,7 +2001,7 @@ export async function getTodayWork(
       });
   }
 
-  const visibleActions = filterActionsForRoles(actions, roles);
+  const visibleActions = await withAgencyChecks(db, shopId, filterActionsForRoles(actions, roles));
 
   return {
     departures,
@@ -2023,4 +2024,31 @@ export async function getTodayWork(
     crewedSessions,
     availableStaff,
   };
+}
+
+/**
+ * **The cards a "certification pending" row can check from Today** (H-105).
+ * The queue names the diver (`diverBlockerAction`); this reads which of their
+ * cards the DiveDay browser extension could look up, by the same rule as the
+ * action that judges the check (`listAgencyCheckableCards`), and drops the
+ * offer from a row whose diver holds none.
+ */
+export async function withAgencyChecks(
+  db: AppDb,
+  shopId: string,
+  actions: TodayAction[],
+): Promise<TodayAction[]> {
+  const personIds = actions.flatMap((action) =>
+    action.agencyCheck ? [action.agencyCheck.personId] : [],
+  );
+  if (personIds.length === 0) return actions;
+  const cards = await listAgencyCheckableCards(db, { shopId, personIds });
+  return actions.map((action) => {
+    if (!action.agencyCheck) return action;
+    const { agencyCheck, ...rest } = action;
+    const found = cards.get(agencyCheck.personId);
+    return found
+      ? { ...rest, agencyCheck: { personId: agencyCheck.personId, cards: found } }
+      : rest;
+  });
 }

@@ -1,4 +1,10 @@
 import type { ReactNode } from "react";
+import { AgencyCheckAll } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckAll";
+import { AgencyCheckHost } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
+import {
+  agencyCheckAllCopy,
+  agencyCheckCopies,
+} from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
@@ -111,7 +117,13 @@ export function RosterSection({
   };
 
   const hasTail = waitingGroup != null || invitedGroup != null || addDiverGroup != null;
-  return (
+  // This departure's cards the browser extension can check, in roster order:
+  // the whole of what its "Check all" may touch (H-105). Held seats are never
+  // in the map (`getTripGuests`).
+  const agencyCards = actions.agencyCheckAction
+    ? roster.flatMap(({ person }) => rows.agencyCheckCardsByPerson?.get(person.id) ?? [])
+    : [];
+  const section = (
     <section
       id="roster"
       aria-label={showSummaryHeading ? undefined : t("trips.roster.heading")}
@@ -142,6 +154,11 @@ export function RosterSection({
       ) : null}
       {!showSummaryHeading && showAllClear ? (
         <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
+      ) : null}
+      {actions.agencyCheckAction ? (
+        <div className={compact ? "" : "mt-5"}>
+          <AgencyCheckAll cards={agencyCards} copy={agencyCheckAllCopy(t, agencyCards.length)} />
+        </div>
       ) : null}
       {roster.length > 0 || hasTail ? (
         // One ledger, not a stack of cards: everyone this departure is about,
@@ -260,5 +277,14 @@ export function RosterSection({
         </div>
       ) : null}
     </section>
+  );
+  // The check's state lives above the rows, so a row whose card has just been
+  // certified keeps its outcome and its Undo through the refresh (H-105).
+  return actions.agencyCheckAction ? (
+    <AgencyCheckHost action={actions.agencyCheckAction} copies={agencyCheckCopies(t)}>
+      {section}
+    </AgencyCheckHost>
+  ) : (
+    section
   );
 }

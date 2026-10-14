@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { certificationForAgencyCheck, isAgencyCheckedCard } from "@/db/agency-check";
@@ -651,6 +651,13 @@ export type AgencyCheckResult =
  * nothing. A match certifies through the ordinary review, stamped
  * `agencyCheckedAt` with the agency's matching words as the note, and is
  * undone the way a one-tap review is.
+ *
+ * **One action wherever the check is pressed**: the diver record, a row on a
+ * departure's Divers tab, a "certification pending" row on Today, and each
+ * card of a departure's "Check all" (which is only this, one card at a time,
+ * from the browser). So a write ends in `refresh()` as well as revalidating
+ * the record: the page the staffer pressed it on is the one that has to
+ * settle, and only the browser knows which page that is.
  */
 export async function agencyCheckAction(
   shopSlug: string,
@@ -674,6 +681,7 @@ export async function agencyCheckAction(
     }
     const undone = await unreviewCertification(db, { shopId, certificationId });
     revalidatePath(base);
+    refresh();
     return undone.ok ? { ok: true, verdict: "undone" } : { ok: false, reason: "not-undoable" };
   }
 
@@ -700,6 +708,7 @@ export async function agencyCheckAction(
     agencyChecked: true,
   });
   revalidatePath(base);
+  refresh();
   if (!outcome.ok) return { ok: false, reason: "invalid" };
   return { ok: true, verdict: "match", undo: { certificationId } };
 }

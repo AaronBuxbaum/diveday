@@ -4,7 +4,12 @@ import type { AppDb } from "@/db/client";
 import { certifications, people } from "@/db/schema";
 import { recordSelfDeclaredCards } from "@/db/self-declared-cards";
 import { fileScopedShopContext } from "@/test/db";
-import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";
+import {
+  SEEDED_CAPTAIN_EMAIL,
+  SEEDED_OWNER_EMAIL,
+  seededStaffPersonId,
+  staffSession,
+} from "@/test/staff-session";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -27,7 +32,7 @@ vi.mock("next/navigation", () => ({
     throw new Error("NOT_FOUND");
   }),
 }));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), refresh: vi.fn() }));
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
@@ -38,6 +43,7 @@ vi.mock("@/lib/session", async () =>
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
+const { refresh } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
 const { agencyCheckAction } = await import("./card-actions");
 
@@ -111,6 +117,59 @@ describe("agencyCheckAction", () => {
     expect(row?.agencyCheckedAt).toBeInstanceOf(Date);
     expect(row?.reviewedByPersonId).toBe(owner);
     expect(row?.reviewNote).toContain("Advanced Scuba Diver");
+  });
+
+  /**
+   * The same action answers the diver record, a departure's Divers tab, the
+   * Today list and each card of a "Check all": the page it was pressed on has
+   * to settle, whichever that is.
+   */
+  it("refreshes the page it was pressed on after a write, and only after one", async () => {
+    const { db, shop, personId } = await context();
+    const card = await pendingCard(db, shop.id, personId);
+    vi.mocked(refresh).mockClear();
+
+    await agencyCheckAction(shop.slug, personId, null, check(card.id, "No results found"));
+    expect(refresh).not.toHaveBeenCalled();
+
+    await agencyCheckAction(shop.slug, personId, null, check(card.id, NAUI_PAGE));
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    await agencyCheckAction(shop.slug, personId, null, check(card.id, null, "undo"));
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  /**
+   * The check is any live staffer's, as Mark certified is: the same gate as
+   * every card action on the record (`requireDiverActionContext`), whichever
+   * page the button was on. An account no longer staff here writes nothing.
+   */
+  it("refuses an account that is no longer staff here, wherever it was pressed", async () => {
+    const { db, shop, personId } = await context();
+    const card = await pendingCard(db, shop.id, personId);
+    const stranger = await diver(db, shop.id, "Revoked Rae");
+    vi.mocked(requireStaffSession).mockResolvedValue(
+      staffSession({ shopId: shop.id, shopSlug: shop.slug, personId: stranger }),
+    );
+
+    await expect(
+      agencyCheckAction(shop.slug, personId, null, check(card.id, NAUI_PAGE)),
+    ).rejects.toThrow(`REDIRECT:/shop/${shop.slug}/divers/${personId}?notice=not-authorized-cards`);
+    expect((await cardRow(db, card.id))?.status).toBe("pending");
+  });
+
+  it("lets a captain run it, as a captain may mark a card certified", async () => {
+    const { db, shop, personId } = await context();
+    const card = await pendingCard(db, shop.id, personId);
+    const captain = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
+    vi.mocked(requireStaffSession).mockResolvedValue(
+      staffSession({ shopId: shop.id, shopSlug: shop.slug, personId: captain, roles: ["captain"] }),
+    );
+
+    const result = await agencyCheckAction(shop.slug, personId, null, check(card.id, NAUI_PAGE));
+
+    expect(result).toMatchObject({ ok: true, verdict: "match" });
+    expect((await cardRow(db, card.id))?.reviewedByPersonId).toBe(captain);
   });
 
   it("puts the card back, stamp and all, on Undo", async () => {

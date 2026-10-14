@@ -123,6 +123,26 @@ describe("diverBlockerAction", () => {
     expect(result?.waiver).toBeUndefined();
   });
 
+  /**
+   * H-105: a card still waiting for its check names its diver, so the shop
+   * home can offer "Check with SSI" from the row. The cards themselves are the
+   * read's to find (`withAgencyChecks`), and the row keeps its door.
+   */
+  it("names the diver on a pending card's row, and on no other kind", () => {
+    const pending = diverBlockerAction(
+      { ...input, blockers: [blocker("certification_pending")] },
+      "blue-reef",
+      NOW,
+    );
+    expect(pending?.agencyCheck).toEqual({ personId: "p1", cards: [] });
+    expect(pending?.href).toBe("/shop/blue-reef/divers/p1");
+
+    for (const code of ["certification_missing", "nitrox_pending", "waiver_not_sent"] as const) {
+      const other = diverBlockerAction({ ...input, blockers: [blocker(code)] }, "blue-reef", NOW);
+      expect(other?.agencyCheck).toBeUndefined();
+    }
+  });
+
   it("says the headline blocker in a few words, and nothing about the rest", () => {
     // The record the row opens lists every blocker in full; the row names the
     // one the tap fixes (Aaron, 2026-10-05: "reduce the amount of copy").

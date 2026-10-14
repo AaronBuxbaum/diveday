@@ -5423,6 +5423,53 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A Divers-tab row after an agency check that came up short** (H-105).
+       * Nothing here renders without the DiveDay browser extension, so this
+       * stands in for it at the page's one seam (`e2e/agency-check-roster.spec.ts`
+       * does the same): SSI's page finds Tyler Brooks but shows him only as a
+       * Scuba Diver. The row keeps the agency's words under its reason, the
+       * link to SSI's own page, and its "Check with SSI" for another try —
+       * the state a staffer is left to read, and the densest one the row has.
+       */
+      test(`a Divers-tab row's agency check, short of a match, renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.addInitScript(() => {
+          const announce = () => {
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+            window.dispatchEvent(new Event("diveday-cert-check-ready"));
+          };
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", announce);
+          } else {
+            announce();
+          }
+          window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data?.source !== "diveday-page" || data.type !== "agency-check") return;
+            window.postMessage(
+              {
+                source: "diveday-cert-check",
+                type: "agency-check-result",
+                requestId: data.requestId,
+                ok: true,
+                pageText: `Online Diver Check\n${data.query.firstName} ${data.query.lastName}\nCard ${data.query.cardNumber}\nScuba Diver`,
+              },
+              window.location.origin,
+            );
+          });
+        });
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, "Two-Tank Reef — French Reef");
+        await openTripTab(page, "Trip");
+        const roster = page.locator("#roster");
+        await roster.getByRole("button", { name: "Check with SSI" }).click();
+        await roster.getByText("SSI found this diver, but not at this level.").waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "trip-guests-agency-check", scheme);
+      });
+
+      /**
        * **The record of a diver who has been deleted**, which is the only place
        * "Erase personal data" is offered at all (ADR 20260802-diver-data-erasure,
        * 2026-08-21 amendment). Two things this is the sole baseline for: the

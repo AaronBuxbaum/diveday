@@ -471,6 +471,12 @@
       "unreadable": "Couldn’t read PADI’s page. Sign in to the PADI Pros’ Site, then check again.",
       "failed": "That didn’t save. Try again."
     },
+    "agencyCheckAll": {
+      "start": "{count, plural, one {Check # with its agency} other {Check all # with their agencies}}",
+      "progress": "Checking {done} of {total}…",
+      "finished": "Checked {checked}. Certified: {certified}.",
+      "stopped": "Stopped at {name}: couldn’t read {agency}’s page. The rest are left for you."
+    },
     "certifyConfirm": "Confirm certification",
     "certifyDiver": "Certify",
     "certifyLevel": "Level",

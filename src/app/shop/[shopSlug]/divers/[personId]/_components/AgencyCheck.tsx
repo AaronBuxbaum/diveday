@@ -2,26 +2,18 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import type { AgencyCheckCopy } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
+import {
+  agencyCheckForm,
+  agencyCheckOutcomeText,
+} from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-outcome";
 import { UndoToast } from "@/components/UndoToast";
 import { FormStatus } from "@/components/ui/form";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
 import type { AgencyCheckResult } from "../card-actions";
 
-/** Every word this control renders, translated on the server with the agency's name in it. */
-export type AgencyCheckCopy = {
-  /** The link's own words, which the button keeps: "Check with SSI". */
-  check: string;
-  checking: string;
-  matched: string;
-  levelUnconfirmed: string;
-  noRecord: string;
-  unreadable: string;
-  invalid: string;
-  undo: string;
-  undoPending: string;
-  undoFailed: string;
-};
+export type { AgencyCheckCopy };
 
 const LINK_CLASS =
   "mt-1 block w-fit text-sm font-semibold text-primary hover:underline print:hidden";
@@ -77,9 +69,7 @@ export function AgencyCheck({
       setExtensionFailed(true);
       return;
     }
-    const formData = new FormData();
-    formData.set("certificationId", certificationId);
-    formData.set("pageText", reply.pageText);
+    const formData = agencyCheckForm(certificationId, reply.pageText);
     startTransition(() => formAction(formData));
   }
 
@@ -89,21 +79,7 @@ export function AgencyCheck({
     </a>
   );
   const undo = result?.ok && result.verdict === "match" ? result.undo : undefined;
-  const outcome = extensionFailed
-    ? copy.unreadable
-    : !result
-      ? null
-      : !result.ok
-        ? result.reason === "not-undoable"
-          ? copy.undoFailed
-          : copy.invalid
-        : result.verdict === "level_unconfirmed"
-          ? copy.levelUnconfirmed
-          : result.verdict === "no_record"
-            ? copy.noRecord
-            : result.verdict === "unreadable"
-              ? copy.unreadable
-              : null;
+  const outcome = agencyCheckOutcomeText(result, extensionFailed, copy);
 
   return (
     <>

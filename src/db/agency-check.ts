@@ -1,5 +1,6 @@
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { type AgencyCheckQuery, agencyCheckQuery } from "@/lib/agency-check";
+import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { needsImportConfirm } from "@/lib/certification-cards";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import type { AppDb } from "./client";
@@ -48,10 +49,91 @@ export async function certificationForAgencyCheck(
     )
     .limit(1);
   if (!row) return null;
+  const query = checkableQuery(row);
+  return query ? { query, level: row.level } : null;
+}
+
+/**
+ * The one rule for "the extension may check this card", shared by the action
+ * that judges a check and the lists that offer one, so a button is never drawn
+ * for a card the action would refuse.
+ */
+function checkableQuery(row: {
+  agency: (typeof certifications.$inferSelect)["agency"];
+  status: (typeof certifications.$inferSelect)["status"];
+  identifier: string | null;
+  selfDeclaredAt: Date | null;
+  importedAt: Date | null;
+  reviewedAt: Date | null;
+  fullName: string;
+  dateOfBirth: string | null;
+}): AgencyCheckQuery | null {
   if (isUnsightedSelfDeclaration(row)) return null;
   if (row.status !== "pending" && !needsImportConfirm(row)) return null;
-  const query = agencyCheckQuery(row);
-  return query ? { query, level: row.level } : null;
+  return agencyCheckQuery(row);
+}
+
+/**
+ * **Every card these divers hold that the extension could check**, keyed by
+ * diver, oldest card first: the cards a departure's Divers tab and the Today
+ * list offer to check, and the N of a departure's "Check all N". The same rule
+ * as {@link certificationForAgencyCheck}, so nothing is offered that the
+ * action would refuse. A diver with none is absent.
+ */
+export async function listAgencyCheckableCards(
+  db: AppDb,
+  input: { shopId: string; personIds: readonly string[] },
+): Promise<Map<string, AgencyCheckableCard[]>> {
+  const byPerson = new Map<string, AgencyCheckableCard[]>();
+  const personIds = [...new Set(input.personIds)];
+  if (personIds.length === 0) return byPerson;
+  const rows = await db
+    .select({
+      certificationId: certifications.id,
+      personId: certifications.personId,
+      agency: certifications.agency,
+      identifier: certifications.identifier,
+      status: certifications.status,
+      selfDeclaredAt: certifications.selfDeclaredAt,
+      importedAt: certifications.importedAt,
+      reviewedAt: certifications.reviewedAt,
+      fullName: people.fullName,
+      dateOfBirth: people.dateOfBirth,
+    })
+    .from(certifications)
+    .innerJoin(people, eq(people.id, certifications.personId))
+    .where(
+      and(
+        eq(certifications.shopId, input.shopId),
+        inArray(certifications.personId, personIds),
+        eq(people.shopId, input.shopId),
+        isNull(certifications.deletedAt),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+        // Narrowed again by `checkableQuery`; this only keeps settled cards out of the read.
+        or(eq(certifications.status, "pending"), isNotNull(certifications.importedAt)),
+      ),
+    )
+    .orderBy(
+      asc(certifications.createdAt),
+      asc(certifications.agency),
+      asc(certifications.level),
+      asc(certifications.id),
+    );
+  for (const row of rows) {
+    const query = checkableQuery(row);
+    if (!query) continue;
+    const cards = byPerson.get(row.personId) ?? [];
+    cards.push({
+      certificationId: row.certificationId,
+      personId: row.personId,
+      fullName: row.fullName,
+      agency: query.agency,
+      query,
+    });
+    byPerson.set(row.personId, cards);
+  }
+  return byPerson;
 }
 
 /**

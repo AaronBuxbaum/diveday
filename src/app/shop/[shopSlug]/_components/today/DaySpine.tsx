@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { type WaiverSendCopy, waiverSendCopy } from "@/app/actions/waiver-send-types";
+import { AgencyCheckHost } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
+import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
+import { agencyCheckCopies } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
+import { agencyCheckAction } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
 import {
   WaitlistInvite,
   type WaitlistInviteCopy,
@@ -472,6 +476,16 @@ function StationRow({
         {action.actionLabel}
       </SubmitButton>
     </form>
+  ) : action.agencyCheck && action.agencyCheck.cards.length > 0 ? (
+    // **"Check with SSI" beside a card still waiting for its check** (H-105):
+    // drawn only with the browser extension, and then the same check the
+    // diver's record runs. Without it this draws nothing and the row's own
+    // door to the record is the way to the card, as it always was.
+    <AgencyCheckRow
+      personId={action.agencyCheck.personId}
+      cards={action.agencyCheck.cards}
+      align="end"
+    />
   ) : action.rentalFit ? (
     // **The one row whose fix is the tap itself** (issue #1174, D14): the size
     // is already known, so pointing at the diver's record to retype it would
@@ -949,7 +963,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
   const paymentsRows = showPaymentsRow ? 1 : 0;
   const paymentsRow = showPaymentsRow ? <DeskPaymentsRow shopSlug={shopSlug} t={t} /> : null;
 
-  return (
+  const spineBody = (
     <div className="flex flex-col gap-10">
       {/* **The spine's leading group, on the one morning it exists.** Day zero
           is a state of this column of work, not a wizard beside it (ADR
@@ -1277,5 +1291,14 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
         </div>
       ) : null}
     </div>
+  );
+  // A "certification pending" row's "Check with SSI" (H-105) is the diver
+  // record's own action, bound to the shop. Its outcome and Undo live above
+  // the rows: a row whose card the check certifies leaves the list on the
+  // refresh that follows.
+  return (
+    <AgencyCheckHost action={agencyCheckAction.bind(null, shopSlug)} copies={agencyCheckCopies(t)}>
+      {spineBody}
+    </AgencyCheckHost>
   );
 }
