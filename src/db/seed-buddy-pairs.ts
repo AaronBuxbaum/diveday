@@ -141,11 +141,13 @@ export async function seedBuddyPairs(
  *
  * The teams are the divers its own dock count boarded, in pairs by booking
  * order, the last three a trio when the count is odd, formed at the dock
- * before the lines came off. Read from the roll call rather than the roster,
- * so a diver turned away at the dock is never on a team that went in. Their
- * after-dive counts are all "boarded", so no team reads split.
+ * before the lines came off. Read from the roll call's standing result at the
+ * dock rather than the roster (the newest word per booking, a `cleared` undo
+ * leaving none: `standing()` in `src/lib/safety-report.ts`), so a diver
+ * turned away at the dock is never on a team that went in. Their after-dive
+ * counts are all "boarded", so no team reads split.
  */
-async function seedDawnBuddyTeams(
+export async function seedDawnBuddyTeams(
   db: DbExecutor,
   shopId: string,
   recorder: { personId: string; fullName: string },
@@ -157,19 +159,33 @@ async function seedDawnBuddyTeams(
     .where(and(eq(trips.shopId, shopId), eq(trips.title, DEMO_COMPLETED_TRIP_TITLE)))
     .limit(1);
   if (!dawn) return;
-  const aboard = await db
-    .select({ bookingId: bookings.id, fullName: people.fullName })
+  const dockEvents = await db
+    .select({
+      bookingId: bookings.id,
+      fullName: people.fullName,
+      bookedAt: bookings.createdAt,
+      status: rollCallEvents.status,
+    })
     .from(rollCallEvents)
     .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(rollCallEvents.tripId, dawn.id),
-        eq(rollCallEvents.checkpoint, "departure"),
-        eq(rollCallEvents.status, "boarded"),
-      ),
+    .where(and(eq(rollCallEvents.tripId, dawn.id), eq(rollCallEvents.checkpoint, "departure")))
+    .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.createdAt), asc(rollCallEvents.seq));
+  // The newest word per booking stands; a `cleared` undo leaves none.
+  const standing = new Map<string, (typeof dockEvents)[number]>();
+  for (const event of dockEvents) {
+    if (event.status === "cleared") standing.delete(event.bookingId);
+    else standing.set(event.bookingId, event);
+  }
+  const aboard = [...standing.values()]
+    .filter((event) => event.status === "boarded")
+    .sort(
+      (a, b) =>
+        a.bookedAt.getTime() - b.bookedAt.getTime() ||
+        a.fullName.localeCompare(b.fullName) ||
+        a.bookingId.localeCompare(b.bookingId),
     )
-    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
+    .map(({ bookingId, fullName }) => ({ bookingId, fullName }));
   if (aboard.length < 2) return;
   const teams: (typeof aboard)[] = [];
   for (let i = 0; i + 1 < aboard.length; i += 2) teams.push(aboard.slice(i, i + 2));
@@ -177,7 +193,7 @@ async function seedDawnBuddyTeams(
   if (odd) teams.at(-1)?.push(odd);
 
   for (const [index, members] of teams.entries()) {
-    // Five minutes apart from twenty past five, the last before the 5:30 sail.
+    // Two minutes apart, the last at twenty past five, ten before the 5:30 sail.
     const formedAt = at(
       0,
       DEMO_DAWN_BOAT.sails.hour,

@@ -6,6 +6,7 @@ import {
   boats,
   bookings,
   buddyPairMembers,
+  buddyTeamEvents,
   certifications,
   executedDives,
   preDepartureCheckEvents,
@@ -15,6 +16,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
+import { seedDawnBuddyTeams } from "./seed-buddy-pairs";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 
 /**
@@ -156,6 +158,34 @@ describe("the seeded dawn boat's record", () => {
     for (const member of members) {
       expect(member.createdAt.getTime()).toBeLessThan(dawn.startsAt.getTime());
     }
+  });
+
+  it("teams only the divers whose standing word at the dock is boarded (review F5)", async () => {
+    const { db, shop, dawn } = await dawnBoat();
+    const dockEvents = await db
+      .select()
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.tripId, dawn.id), eq(rollCallEvents.checkpoint, "departure")));
+    const [turnedAway, undone] = dockEvents.filter((event) => event.status === "boarded");
+    if (!turnedAway || !undone) throw new Error("expected boarded divers on the dawn boat");
+    // A boarded the crew took back: one turned away, one tap undone.
+    const later = new Date(turnedAway.occurredAt.getTime() + 60_000);
+    await db.insert(rollCallEvents).values([
+      { ...turnedAway, id: undefined, seq: undefined, status: "not_boarded", occurredAt: later },
+      { ...undone, id: undefined, seq: undefined, status: "cleared", occurredAt: later },
+    ]);
+    await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.tripId, dawn.id));
+    await db.delete(buddyPairMembers).where(eq(buddyPairMembers.tripId, dawn.id));
+    await seedDawnBuddyTeams(db, shop.id, {
+      personId: turnedAway.recordedByPersonId,
+      fullName: "Recorder",
+    });
+    const teamed = (
+      await db.select().from(buddyPairMembers).where(eq(buddyPairMembers.tripId, dawn.id))
+    ).map((member) => member.bookingId);
+    expect(teamed.length).toBeGreaterThan(1);
+    expect(teamed).not.toContain(turnedAway.bookingId);
+    expect(teamed).not.toContain(undone.bookingId);
   });
 
   it("sailed on a hull, so its card and packet name the boat (fourth review, item 11)", async () => {
