@@ -86,7 +86,7 @@ jobs:
       - uses: ./.github/actions/setup
       # The failing guards go to the job summary by name, and every guard's
       # result to the `check-repo-results` artifact, so a catch rate per guard
-      # can be read across runs (scripts/check-repo-report.mjs).
+      # can be read across runs (scripts/repo-check-report.mjs).
       - run: pnpm check:repo
         env:
           CHECK_REPO_RESULTS: check-repo-results.json

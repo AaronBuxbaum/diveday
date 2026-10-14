@@ -15,7 +15,7 @@ import { appendFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { checkRepoRecord, checkRepoSummary } from "./check-repo-report.mjs";
+import { checkRepoRecord, checkRepoSummary } from "./repo-check-report.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -153,7 +153,7 @@ for (const result of results) {
 }
 
 // On CI: the failing guards by name in the job summary, and every guard's result as JSON for
-// the `check-repo-results` artifact (`scripts/check-repo-report.mjs`).
+// the `check-repo-results` artifact (`scripts/repo-check-report.mjs`).
 if (process.env.GITHUB_STEP_SUMMARY) {
   appendFileSync(process.env.GITHUB_STEP_SUMMARY, checkRepoSummary(results));
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkRepoRecord, checkRepoSummary } from "./check-repo-report.mjs";
+import { checkRepoRecord, checkRepoSummary } from "./repo-check-report.mjs";
 
 const results = [
   { label: "tokens", scriptFile: "check-tokens.mjs", code: 0, stdout: "ok", stderr: "" },

@@ -17,7 +17,7 @@
 // removes captures nothing could have moved: the e2e harness and helpers, the visual plumbing in
 // `scripts/` and the CI workflow, the seed and the schema, a stylesheet, a root config that
 // shapes the build, a renderer dependency, and a module that runs for every page (the proxy,
-// instrumentation, the service worker, what `next.config.ts` imports).
+// the service worker, what `next.config.ts` imports).
 //
 // Everything else is bounded (test review 2026-10-14: 26 of 28 product PRs captured all):
 //
