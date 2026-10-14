@@ -2,13 +2,15 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { diveSites, globalDiveSites } from "@/db/schema";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The library's "Add to my sites" on a catalog template. It was an inline
@@ -32,7 +34,7 @@ const { requireStaffSession } = await import("@/lib/session");
 const { importDiveSiteTemplateAction } = await import("./actions");
 
 async function signedIn() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const personId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   vi.mocked(requireStaffSession).mockResolvedValue(

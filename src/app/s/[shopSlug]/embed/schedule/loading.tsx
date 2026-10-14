@@ -10,8 +10,7 @@ import { WeekLedgerSkeleton } from "../../_components/WeekLedgerSkeleton";
  * column, identity band and hero card sat 88px in from the frame's edge and
  * then vanished when the list arrived 12px from it.
  *
- * `loading.test.tsx` reads the column off the page's own embed branch, so the
- * two cannot drift apart. Nothing above it either: `EmbedChromeCollapse` keeps
+ * Nothing above it either: `EmbedChromeCollapse` keeps
  * the layout's chrome bar out of the frame.
  */
 export default function EmbeddedScheduleLoading() {

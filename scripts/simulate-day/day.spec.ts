@@ -14,6 +14,7 @@ import {
   offlineCopySaved,
   openManifestPerson,
   openThreadStep,
+  STAFF_DAY_HEADING,
   signInAs,
   threadStatus,
   tripPathByTitle,
@@ -166,7 +167,8 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       await signInAs(staff, { email: minted.ownerEmail, password: minted.password });
 
       await staff.goto(shopPath());
-      await expect(staff.getByRole("heading", { name: /^Good morning,/ })).toBeVisible();
+      // The day is named by its date (the greeting it once opened with is gone).
+      await expect(staff.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
       const shots = [await snap(staff, index, id)];
 
       // The morning read of the board: find the departure and open its manifest
@@ -400,7 +402,11 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
     case "evening": {
       await advanceClock(at(id));
       await staff.goto(shopPath());
-      await expect(staff.getByText(/^All boats are home/)).toBeVisible();
+      // A freshly minted shop has never sailed before, so its first all-home evening is
+      // celebrated as its first boat home (`shopHome.spine.firstBoatHome`).
+      await expect(
+        staff.getByText(/^(?:All boats are home|Your first boat is home):/),
+      ).toBeVisible();
       return { screenshots: [await snap(staff, index, id)] };
     }
 

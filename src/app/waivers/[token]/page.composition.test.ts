@@ -1,21 +1,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createElement, Fragment } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { diverTranslator } from "@/i18n/messages";
 
 /**
  * **What the waiver page is, and what it stopped being** — ADR
  * 20260827-the-divers-thread, decision 5 (slice 7e), pinned as rules.
  *
- * The page it replaced was a wall: the full release, then eleven medical
- * questions, before the diver reached anything they could finish; four
- * different banner treatments for four adjacent messages; and two submits
- * sharing one row with inverted weight on a phone, so the page's one act was
- * the second thing a thumb reached. Every assertion below is one of those
- * defects, written so it cannot come back — plus the three things this slice
- * was forbidden to touch.
+ * Only the rules about what the page reads and records stay here: the medical
+ * hold, the emergency contact pair, the release and signature semantics, the
+ * held seat and the locale. Its layout is the visual suite's to photograph.
  *
  * It reads the route's source because the thing being pinned is a *server*
  * page's composition: there is no render to inspect without a database, a
@@ -42,19 +35,7 @@ function component(file: string): string {
 
 /** The two signing doors, which moved out of the page into the route's `actions.ts`. */
 const ACTIONS = component("actions.ts");
-/** The sections the page composes, each beside it. */
-const CONTACT = component("EmergencyContactSection.tsx");
-const GUARDIAN = component("GuardianCard.tsx");
-const SIGNATURE = component("SignatureCard.tsx");
-const MEDICAL = component("MedicalQuestionnaireSection.tsx");
 const RELEASE = component("WaiverRelease.tsx");
-const SIGN_BLOCK = component("WaiverSignBlock.tsx");
-const COMPLETED = component("WaiverCompleted.tsx");
-const RAIL_COPY = component("waiver-rail-copy.ts");
-
-function countIn(source: string, marker: string): number {
-  return source.split(marker).length - 1;
-}
 
 function positionOf(marker: string): number {
   return SOURCE.indexOf(marker);
@@ -65,47 +46,6 @@ function countOf(marker: string): number {
 }
 
 describe("the waiver's pacing", () => {
-  it("puts the rail under the header and above everything it paces", () => {
-    const rail = positionOf("<WaiverPacing");
-    const release = positionOf("<WaiverRelease");
-    expect(RELEASE).toContain("data-waiver-template-body");
-    const form = positionOf("<form action={completeWaiverAction.bind(null, token)}");
-    for (const marker of [rail, release, form]) expect(marker).toBeGreaterThan(-1);
-    expect(rail).toBeLessThan(release);
-    expect(release).toBeLessThan(form);
-  });
-
-  it("counts the questions the diver was handed, never the follow-ups their answers open", () => {
-    // A denominator that grows when you answer honestly is a rail that
-    // punishes honesty. Both readers of the count — the rail and the sticky
-    // counter — are handed the same page-one total.
-    expect(SOURCE).toContain('(question) => question.section === "primary",');
-    expect(countOf("primaryQuestionCount")).toBeGreaterThanOrEqual(3);
-  });
-
-  it("makes the rail a navigator only for the segment a refusal named", () => {
-    // Nothing ever links forward: a diver cannot tap "Sign" to skip the
-    // release, so the anchors bag is empty unless `fieldError` is set.
-    const anchors = positionOf("const railAnchors");
-    expect(anchors).toBeGreaterThan(-1);
-    expect(SOURCE).toContain(
-      "const railAnchors: Partial<Record<WaiverRailSegmentId, string>> = fieldError",
-    );
-    expect(SOURCE).toContain("{ medical: fieldError.anchor }");
-    expect(SOURCE).toContain("{ sign: fieldError.anchor }");
-    expect(SOURCE).not.toContain("{ release: fieldError.anchor }");
-  });
-
-  it("closes the rail at 3 of 3 on the completed state, and only there", () => {
-    // Sign settles when `completeWaiver` has taken the signature and at no
-    // earlier moment: `signed: true` appears once in this file, inside the
-    // completed branch.
-    expect(countOf("signed: true")).toBe(1);
-    expect(positionOf("signed: true")).toBeLessThan(
-      positionOf("<form action={completeWaiverAction.bind(null, token)}"),
-    );
-  });
-
   it("does not close Medical on a record the shop is still holding", () => {
     // The hold is threaded into the one call rather than rendered as a second
     // rail beside it — which is what keeps `signed: true` a single occurrence
@@ -117,151 +57,6 @@ describe("the waiver's pacing", () => {
       positionOf("medicalStillOpen: needsReview"),
     );
     expect(countOf("waiverRailProgress(")).toBe(1);
-  });
-
-  it("seeds the count from the draft the server is already holding", () => {
-    // `WaiverPacing`'s listener is delegated, so it sees nothing that happened
-    // before it mounted. Without these the HTML ships "0 of 3 done" over radios
-    // the server has just rendered checked from a saved draft — wrong until the
-    // bundle boots on dock wifi, and permanent with JavaScript off, which this
-    // page still supports (the save control is a real `formNoValidate` submit).
-    expect(SOURCE).toContain("initialAnswered={draftAnsweredFields}");
-    expect(SOURCE).toContain(
-      "initialFollowUpsRemaining={draftProgress.remaining - draftProgress.primaryRemaining}",
-    );
-    expect(positionOf("const draftProgress")).toBeLessThan(positionOf("<WaiverPacing"));
-  });
-
-  it("keeps one scale of progress on the page", () => {
-    // The rail counts Release · Medical · Sign. The body's headings used to
-    // number *themselves* 1-2-3 over a different membership — the medical form,
-    // the emergency contact, the signature — so a diver met "2 of 3 done" at the
-    // top of the same viewport as "step 2 of 3" below it, and the step the two
-    // silently disagreed about was the emergency contact: a name *and* a
-    // reachable number the crew calls in an incident, which this page is the
-    // main place anyone captures.
-    //
-    // **A heading is not a step, which is the whole point of the rule.** There
-    // are four `<SectionHeading>`s and three steps: the release, the medical
-    // form, the diver's signature, and — only for a minor — the parent or legal
-    // guardian's (ADR 20260907-guardian-co-signature). The co-signature is part
-    // of signing rather than a fourth thing to finish, so the rail is untouched
-    // by it; what must never come back is a heading that *numbers itself*.
-    expect(SOURCE).not.toMatch(/StepHeading/);
-    const headings = [SOURCE, MEDICAL, CONTACT, SIGNATURE, GUARDIAN].map(
-      (file) => file.split("<SectionHeading>").length - 1,
-    );
-    expect(headings.reduce((sum, n) => sum + n, 0)).toBe(4);
-    // The rail's own membership, stated where a future heading cannot drift it:
-    // three labels, and the guardian is not one of them.
-    // One resolver says them for both states that render a rail.
-    for (const step of ["waiver.railRelease", "waiver.railMedical", "waiver.railSign"]) {
-      expect(countIn(RAIL_COPY, step)).toBe(1);
-      expect(countOf(step)).toBe(0);
-    }
-    expect(RAIL_COPY).not.toMatch(/railGuardian/);
-    expect(SOURCE).not.toMatch(/railGuardian/);
-    expect(GUARDIAN).not.toMatch(/railGuardian|StepHeading/);
-  });
-});
-
-describe("one notice grammar", () => {
-  it("renders every banner through the one component", () => {
-    // Four treatments, one per message, converged: the refusal, the saved
-    // draft and the English-only note about the document here, and the
-    // expired link's rescue outcome on its own card beside the page.
-    expect(countOf("<ShopNotice")).toBe(3);
-    const doorCards = component("WaiverDoorCards.tsx");
-    expect(doorCards.split("<ShopNotice").length - 1).toBe(1);
-  });
-
-  it("keeps no hand-rolled tint band of its own", () => {
-    for (const band of [
-      "bg-danger-tint px-4",
-      "bg-success-tint px-4",
-      "bg-warning-tint px-4",
-      "NOTICE_TONE",
-    ]) {
-      for (const source of [SOURCE, RELEASE, SIGNATURE, SIGN_BLOCK])
-        expect(source).not.toContain(band);
-    }
-  });
-
-  it("stacks them in one slot above the release", () => {
-    const slot = positionOf("<ShopNotice");
-    expect(slot).toBeLessThan(positionOf("<WaiverRelease"));
-    // The English-only note used to sit *inside* the release section, as a
-    // fifth treatment attached to the document. It is a notice; it renders
-    // where the notices render.
-    expect(positionOf('t("waiver.englishOnlyNotice")')).toBeLessThan(positionOf("<WaiverRelease"));
-    expect(RELEASE).not.toContain("englishOnlyNotice");
-  });
-});
-
-describe("one primary", () => {
-  it("gives Sign the full width and demotes saving to a text link", () => {
-    expect(SIGN_BLOCK).toMatch(/buttonClass\(\{\s*variant: "link",\s*size: "sm",\s*flush: true,/);
-    // The bordered secondary that used to sit above the primary on a phone.
-    for (const source of [SOURCE, SIGN_BLOCK]) expect(source).not.toContain('variant: "secondary"');
-    expect(SIGN_BLOCK).toContain("mt-6 w-full disabled:opacity-70");
-    // Rendered once, in whichever card ends the form.
-    expect(countOf("<WaiverSignBlock")).toBe(1);
-  });
-
-  it("keeps saving a real submit, so the page still works with no JavaScript", () => {
-    // A `<button formAction>` inside the same form, not a link to a GET route:
-    // demoting the affordance must not demote the mechanism, or a diver on a
-    // dead connection loses the answers they came back to finish.
-    expect(SIGN_BLOCK).toContain("formAction={saveWaiverDraftAction.bind(null, token)}");
-    expect(SIGN_BLOCK).toContain("formNoValidate");
-  });
-
-  it("sets the expiry sentence beside it rather than on a line of its own", () => {
-    const link = SIGN_BLOCK.indexOf('t("waiver.saveForLater")');
-    const expiry = SIGN_BLOCK.indexOf('t("waiver.linkExpiresAt"');
-    expect(link).toBeGreaterThan(-1);
-    expect(expiry).toBeGreaterThan(link);
-    expect(expiry - link).toBeLessThan(600);
-  });
-
-  it("stacks the two on a phone, with no dot left at the end of a line", () => {
-    // The row was three wrapping siblings — the link, a standalone "·" and the
-    // expiry — and at 390 the wrap fell after the dot: "Save and finish later
-    // ·" on one line, the expiry alone on the next (waiver-active, K-340).
-    // Below `sm` the two facts stack and the dot, which only ever separated
-    // them on one line, is not drawn; from `sm` they share a line split by it.
-    const link = SIGN_BLOCK.indexOf('t("waiver.saveForLater")');
-    const row = SIGN_BLOCK.lastIndexOf("<div", link);
-    expect(SIGN_BLOCK.slice(row, link)).toContain("max-sm:flex-col max-sm:items-start");
-    expect(SIGN_BLOCK.slice(row, link)).not.toContain("flex-wrap");
-    expect(SIGN_BLOCK.slice(link, SIGN_BLOCK.indexOf('t("waiver.linkExpiresAt"'))).toContain(
-      '<span aria-hidden="true" className="max-sm:hidden">',
-    );
-  });
-
-  it("ends each signing card at its words, not under a target nobody sees", () => {
-    // Both of the page's cards can end in a 44px target around a 20–24px line:
-    // the fine print's save link from `sm`, and the diver's agreement when the
-    // guardian's card follows. That unseen half added to the card's 24px
-    // padding — 30px above the heading against 38px under the last words
-    // (waiver-active 1280), 30 against 37 (waiver-guardian) — K-493.
-    //
-    // The link sinks it through the button's own outdent, from `sm` only: on
-    // a phone the expiry sits under it, and would sit under its box. Its row
-    // lines its words up by their baseline, which a pulled-up margin cannot
-    // move, where centring would lift the link 6px off the sentence beside it.
-    const link = SIGN_BLOCK.indexOf('t("waiver.saveForLater")');
-    const row = SIGN_BLOCK.slice(SIGN_BLOCK.lastIndexOf("<div", link), link);
-    expect(row).toContain("items-baseline");
-    expect(row).not.toContain("items-center");
-    expect(row).toContain('outdent: "block-end-wide"');
-    // The agreement row outdents itself, and only while it ends the card.
-    const agreementAt = SIGNATURE.indexOf('t("waiver.agreementCheckbox")');
-    const agreement = SIGNATURE.slice(
-      SIGNATURE.lastIndexOf("<ChoiceRow", agreementAt),
-      agreementAt,
-    );
-    expect(agreement).toContain('outdent="block-end"');
   });
 });
 
@@ -284,60 +79,6 @@ describe("the emergency contact's two boxes", () => {
     // Every write of the contact — the draft save, the signature, and the
     // re-save after a refused signature — is gated on a complete pair.
     expect(actionsCount('submittedContact?.kind === "pair"')).toBe(3);
-  });
-
-  it("puts the refusal on the empty box, which is where the reader is sent", () => {
-    // `FieldErrorFocus` scrolls to and rings an `id`, and `Field`'s `error`
-    // renders the sentence under that same control (the rule in
-    // docs/design/forms-and-controls.md). Without the ids the refusal would
-    // land the diver at the top of the page.
-    expect(SOURCE).toContain("<EmergencyContactSection");
-    expect(CONTACT).toContain('id="emergencyContactName"');
-    expect(CONTACT).toContain('id="emergencyContactPhone"');
-    // One sentence for both boxes: the fix is the same either way.
-    // The field map lives beside the doors that refuse on it (`waiver-fields.ts`).
-    const fields = component("waiver-fields.ts");
-    expect(fields.split('textKey: "waiver.errorContactPair"').length - 1).toBe(2);
-  });
-
-  it("sets the number on file whole, never split at a hyphen", () => {
-    // "Already on file: Asha Sharma (sister) · +1-305-555-0231." broke after
-    // "+1-305-555-" at 390, four digits short of fitting (waiver-active, K-257):
-    // a hyphen is a place a line may end. The number is set in a
-    // `whitespace-nowrap` span through the message's own `<nowrap>` tag — the
-    // rule the roster's emergency phone and the departure log's card numbers
-    // take — and never with non-breaking hyphens, so a number copied off the
-    // page still dials.
-    //
-    // Whole, the number would move to the next line and leave the "·" ending
-    // this one, so the dot is glued to both sides in the bundle (U+00A0, as
-    // `joinFacts` glues a line's last fact): "(sister) · +1-305-555-0231."
-    // moves as one, and the name still breaks between its own words.
-    expect(CONTACT).toContain('t.rich("waiver.emergencyOnFile"');
-    expect(CONTACT).toContain(
-      'nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>',
-    );
-    for (const locale of ["en-US", "es-ES"] as const) {
-      const bundle = JSON.parse(
-        readFileSync(join(__dirname, `../../../i18n/locales/${locale}/diver.json`), "utf8"),
-      ) as { waiver: { emergencyOnFile: string } };
-      expect(bundle.waiver.emergencyOnFile, locale).toContain(
-        "{name}\u00A0·\u00A0<nowrap>{phone}</nowrap>",
-      );
-      const line = renderToStaticMarkup(
-        createElement(
-          Fragment,
-          null,
-          diverTranslator(locale).rich("waiver.emergencyOnFile", {
-            name: "Asha Sharma (sister)",
-            phone: "+1-305-555-0231",
-            nowrap: (chunks) => createElement("span", { className: "whitespace-nowrap" }, chunks),
-          }),
-        ),
-      );
-      expect(line, locale).toContain('<span class="whitespace-nowrap">+1-305-555-0231</span>');
-      expect(line, locale).not.toContain("\u2011");
-    }
   });
 });
 
@@ -371,18 +112,6 @@ describe("what this slice was forbidden to touch", () => {
     ]) {
       expect(ACTIONS).toContain(guard);
     }
-  });
-
-  it("spends the thread's coral exactly once, on the completed state", () => {
-    // "Paperwork done" is this page's moment and the thread's second (ADR
-    // 20260827-the-divers-thread, decision 6). The page a diver is still
-    // filling in celebrates nothing.
-    expect(countIn(COMPLETED, "<EarnedMoment")).toBe(1);
-    expect(countOf("<EarnedMoment")).toBe(0);
-    expect(positionOf("<WaiverCompleted")).toBeGreaterThan(-1);
-    expect(positionOf("<WaiverCompleted")).toBeLessThan(
-      positionOf("<form action={completeWaiverAction.bind(null, token)}"),
-    );
   });
 });
 

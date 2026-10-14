@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { shops } from "./schema";
 import { replaceShopfrontPhotos, setShopProfile } from "./shops";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The brand columns (Harbor, ADR 20260901-diveday-reimagined, decision 2) and
@@ -12,7 +14,7 @@ import { replaceShopfrontPhotos, setShopProfile } from "./shops";
  */
 describe("a shop's brand", () => {
   it("stores the whole brand, and blanks clear it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const shopId = shop.id;
     const saved = await setShopProfile(db, shopId, {
       brandColor: "#178f6a",
@@ -44,6 +46,8 @@ describe("a shop's brand", () => {
   });
 
   it("refuses a color that is not #rrggbb lowercase", async () => {
+    // Its own database: the first refusal aborts a transaction, so inside the
+    // file's one the second would fail for that reason instead (25P02).
     const { db, shop } = await seededShopContext();
     const shopId = shop.id;
     await expect(
@@ -55,7 +59,7 @@ describe("a shop's brand", () => {
   });
 
   it("refuses an implausible opening year", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const shopId = shop.id;
     await expect(
       db.update(shops).set({ establishedYear: 1850 }).where(eq(shops.id, shopId)),
@@ -69,7 +73,7 @@ describe("a shop's brand", () => {
  */
 describe("replacing a shop's photo strip", () => {
   it("writes when the list is unchanged, and refuses a save built on a stale read", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = shop.shopfrontPhotoUrls;
     expect(await replaceShopfrontPhotos(db, shop.id, before, ["/a.jpg"])).toBe(true);
     // A second save that read the list before the first one landed.

@@ -10,7 +10,7 @@ import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typograp
  * block alone, while the page's header puts the 48px Print button beside the
  * name on a desk and wraps it under the name on a phone: at 390 the header's
  * rule, and the unit list under it, dropped 84px when the slip arrived. So the
- * row is the page's (`loading.test.tsx` reads the page's class list), the
+ * row is the page's, the
  * button is a bar of its size, and the text block is the page's lines: the
  * eyebrow's 16px, then the name and the trip line 4px apart, the trip line
  * two lines on a phone and one from `sm`. The text block is about as wide as

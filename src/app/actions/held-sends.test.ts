@@ -4,7 +4,9 @@ import type { AppDb } from "@/db/client";
 import { bookings, heldSends, people, personRoles, trips } from "@/db/schema";
 import { nowMs } from "@/lib/clock";
 import { SEND_HOLD_MS } from "@/lib/held-sends";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const fileCtx = fileScopedShopContext();
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", async (importOriginal) => {
@@ -22,7 +24,7 @@ const { holdRescheduleNotice } = await import("@/db/trip-rescheduled");
 const { moveTrip } = await import("@/db/trips");
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   vi.mocked(getDb).mockResolvedValue(db);
   const staff = await db
     .select({ personId: personRoles.personId, role: personRoles.role })

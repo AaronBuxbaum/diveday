@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { shops } from "@/db/schema";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -10,6 +10,8 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The order page's three Stripe-invoice doors, which lived inline in `page.tsx` until they moved
@@ -50,7 +52,7 @@ const { refreshAction, refundAction, voidAction } = await import("./actions");
 const ORDER_ID = "00000000-0000-4000-8000-000000000001";
 
 async function as(email: string, { demo }: { demo: boolean }) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   await db.update(shops).set({ isDemo: demo }).where(eq(shops.id, shop.id));
   const personId = await seededStaffPersonId(db, shop.id, email);

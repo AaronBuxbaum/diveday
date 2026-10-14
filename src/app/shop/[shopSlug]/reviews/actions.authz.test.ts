@@ -5,7 +5,7 @@ import { submitRecapPulse } from "@/db/recap-pulses";
 import { liveReviewReply } from "@/db/review-replies";
 import { setReviewPublished, submitTripReview } from "@/db/reviews";
 import { bookings, recapPulses, tripReviews } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
   redirectedTo,
@@ -14,6 +14,8 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **Reading a private pulse is owner/manager work** (issue #1410).
@@ -72,7 +74,7 @@ async function pulseFor(db: AppDb, bookingId: string) {
  * — so the fixture files one the way a diver does, through `submitRecapPulse`.
  */
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const [booking] = await db
     .select({ id: bookings.id })
@@ -171,7 +173,7 @@ describe("marking a private pulse addressed", () => {
  */
 describe("replying to a review in public", () => {
   async function replyContext() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
     // The seed publishes no written review, so the fixture writes one the way
