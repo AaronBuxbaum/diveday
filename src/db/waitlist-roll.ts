@@ -85,14 +85,13 @@ async function copyLeads(
 }
 
 /**
- * A departure of this shop that still takes a seat, short of the clock: live,
- * scheduled, not a rehearsal, and not on a conditions hold, which refuses
- * every new seat (`tripTakesSeatFrom` in `./bookings.ts`).
+ * A departure of this shop that still takes a seat, short of the clock and
+ * beside `liveTrip()`: scheduled, not a rehearsal, and not on a conditions
+ * hold, which refuses every new seat (`tripTakesSeatFrom` in `./bookings.ts`).
  */
 function takesSeats(shopId: string) {
   return and(
     eq(trips.shopId, shopId),
-    liveTrip(),
     notRehearsal(),
     eq(trips.status, "scheduled"),
     eq(trips.conditionsHold, false),
@@ -104,7 +103,7 @@ async function openDeparture(db: AppDb, shopId: string, tripId: string, now: Dat
   const [trip] = await db
     .select()
     .from(trips)
-    .where(and(eq(trips.id, tripId), takesSeats(shopId)))
+    .where(and(eq(trips.id, tripId), liveTrip(), takesSeats(shopId)))
     .limit(1);
   return trip && !hasSailed(trip.startsAt, now) ? trip : null;
 }
@@ -242,7 +241,14 @@ export async function rollSailedSeriesWaitlists(
     const [next] = await db
       .select()
       .from(trips)
-      .where(and(takesSeats(row.shopId), eq(trips.seriesId, row.seriesId), gt(trips.startsAt, now)))
+      .where(
+        and(
+          liveTrip(),
+          takesSeats(row.shopId),
+          eq(trips.seriesId, row.seriesId),
+          gt(trips.startsAt, now),
+        ),
+      )
       .orderBy(asc(trips.startsAt))
       .limit(1);
     if (!next) continue;
@@ -272,6 +278,7 @@ export async function rollSailedSeriesWaitlists(
           notExists(db.select({ id: bookings.id }).from(bookings).where(seatedOn(next.id))),
         ),
       )
+      // diveday:allow-time-id-order: the order invites go out in, shown to nobody; the id only breaks a tie between two leads who asked in the same instant.
       .orderBy(asc(tripWaitlistEntries.createdAt), asc(tripWaitlistEntries.id));
     for (const entry of queue) {
       if (open <= 0) break;
