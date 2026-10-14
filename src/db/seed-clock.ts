@@ -148,16 +148,19 @@ export function demoTodayDepartureStart(
 }
 
 /**
- * The local hour from which today's seeded departure is a night boat. It
- * sails five hours after the demo is seeded, so a demo seeded in the evening
- * puts it at 11:30 PM (#2440), and a few things a shop would never put on a
- * boat at that hour are kept off it (UX review 2026-10-13, item 40).
+ * The latest local wall time a day boat leaves, in minutes after midnight
+ * (issue #2440). A demo seeded in the shop's evening has no day-boat slot left
+ * today, and `demoTodayDepartureStart` still has to put a boat on today's
+ * board, so it sails late; past this time it is named as the night dive it
+ * would be (`nameDemoNightDeparture`, `seed-trips.ts`) rather than read as a
+ * two-tank reef trip leaving at 11:30 PM.
  */
-export const DEMO_NIGHT_SAILING_HOUR = 20;
+export const DEMO_DAY_LAST_SAILING_MINUTE = 20 * 60;
 
-/** Whether today's seeded departure, sailing at `sails`, is a night boat. */
-export function demoSailsAtNight(sails: Date, timeZone: string = DEMO_SHOP_TIMEZONE): boolean {
-  return utcToWallTime(sails, timeZone).hour >= DEMO_NIGHT_SAILING_HOUR;
+/** Whether a departure starting at `startsAt` leaves after the day boats do, in shop time. */
+export function sailsAfterDayBoats(startsAt: Date, timeZone: string = DEMO_SHOP_TIMEZONE): boolean {
+  const wall = utcToWallTime(startsAt, timeZone);
+  return wall.hour * 60 + wall.minute > DEMO_DAY_LAST_SAILING_MINUTE;
 }
 
 /** How long today's seeded departure runs, dock to dock (`seed-trips.ts`). */
@@ -209,7 +212,7 @@ export function demoTodayShifts(
   const sails = demoTodayDepartureStart(now, timeZone);
   const day = utcToWallTime(sails, timeZone);
   if (!crew) {
-    if (!demoSailsAtNight(sails, timeZone)) return [shared];
+    if (!sailsAfterDayBoats(sails, timeZone)) return [shared];
     return [
       {
         startsAt: wallTimeToUtc({ ...day, ...DEMO_DESK_DAY.opens }, timeZone),

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
@@ -11,10 +12,11 @@ import {
   heldSends,
   notificationDeliveries,
   people,
+  tripScheduleDays,
   trips,
 } from "./schema";
 import { holdRescheduleNotice, sendRescheduleNotices } from "./trip-rescheduled";
-import { moveTrip, upcomingTripsWithCounts } from "./trips";
+import { createTrip, moveTrip, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **The reschedule notice** (ux review 2026-10-11, item 1). The security
@@ -93,6 +95,70 @@ async function deliveriesFor(db: typeof ctx.db, bookingIds: string[]) {
         eq(notificationDeliveries.kind, "trip_rescheduled"),
       ),
     );
+}
+
+const HOUR = 3_600_000;
+
+/**
+ * A three-day course with two booked seats, booked while it was ahead and
+ * then put `dayOneAgo` hours after day one sailed. Each day is four hours,
+ * a day apart. The meeting point is set, as a save that moved it leaves it.
+ */
+async function courseUnderway(dayOneAgo: number) {
+  const { db, shop } = ctx;
+  const now = nowDate();
+  const days = (dayOne: Date) =>
+    [0, 1, 2].map((day) => ({
+      dayNumber: day + 1,
+      startsAt: new Date(dayOne.getTime() + day * 24 * HOUR),
+      endsAt: new Date(dayOne.getTime() + day * 24 * HOUR + 4 * HOUR),
+    }));
+  const ahead = new Date(now.getTime() + 6 * HOUR);
+  const course = await createTrip(db, {
+    shopId: shop.id,
+    title: "Three-day course",
+    startsAt: ahead,
+    endsAt: new Date(ahead.getTime() + 52 * HOUR),
+    capacity: 8,
+    scheduleDays: days(ahead),
+  });
+  if (!course) throw new Error("course not created");
+  const party = await createBookingParty(db, [
+    {
+      actor: "public",
+      shopId: shop.id,
+      tripId: course.id,
+      fullName: "Ana Course",
+      email: `course-ana-${randomUUID()}@example.com`,
+    },
+    {
+      actor: "public",
+      shopId: shop.id,
+      tripId: course.id,
+      fullName: "Ben Course",
+      email: `course-ben-${randomUUID()}@example.com`,
+    },
+  ]);
+  if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+  const dayOne = new Date(now.getTime() - dayOneAgo * HOUR);
+  await db
+    .update(trips)
+    .set({
+      startsAt: dayOne,
+      endsAt: new Date(dayOne.getTime() + 52 * HOUR),
+      meetingPointLabel: "North Pier",
+      meetingPointAddress: "1 Dock St",
+    })
+    .where(eq(trips.id, course.id));
+  for (const day of days(dayOne)) {
+    await db
+      .update(tripScheduleDays)
+      .set({ startsAt: day.startsAt, endsAt: day.endsAt })
+      .where(
+        and(eq(tripScheduleDays.tripId, course.id), eq(tripScheduleDays.dayNumber, day.dayNumber)),
+      );
+  }
+  return { db, shop, course, dayOne, now };
 }
 
 describe("sendRescheduleNotices", () => {
@@ -252,6 +318,61 @@ describe("sendRescheduleNotices", () => {
     expect(outcome.told).toBe(0);
     expect(email.sent).toHaveLength(0);
   });
+  // #2443: the meeting point moved and the time did not. Booked divers
+  // would otherwise turn up at the old dock.
+  it("tells each seat where to meet when only the meeting point moved", async () => {
+    const { db, shop, reef, kid, moved, now } = await movedTrip();
+    const [kidRow] = await db.select().from(bookings).where(eq(bookings.id, kid));
+    await db.update(people).set({ phone: "+13055550143" }).where(eq(people.id, kidRow.personId));
+    await db
+      .update(trips)
+      .set({ meetingPointLabel: "North Pier", meetingPointAddress: "1 Dock St" })
+      .where(eq(trips.id, reef.id));
+    const { email, sms, options } = providers();
+    const outcome = await sendRescheduleNotices(
+      db,
+      shop.id,
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: moved.startsAt.toISOString(),
+        meetingPointMoved: true,
+      },
+      { ...options, now },
+    );
+    expect(outcome.told).toBe(3);
+    expect(email.sent).toHaveLength(2);
+    const [first] = email.sent;
+    if (first?.kind !== "trip_rescheduled") throw new Error("wrong kind");
+    expect(first.meetingPoint).toMatchObject({ label: "North Pier" });
+    const text = sms.sent.find((m) => m.to === "+13055550143");
+    expect(text?.body).toContain(`${shop.name}: we moved where we meet for ${reef.title}`);
+    expect(text?.body).toContain("Meet at North Pier, 1 Dock St.");
+  });
+
+  it("tells a course's seats where to meet after day one sails, until its last day does", async () => {
+    const { db, shop, course, dayOne, now } = await courseUnderway(30);
+    const payload = {
+      kind: "trip_rescheduled" as const,
+      tripId: course.id,
+      previousStartsAt: dayOne.toISOString(),
+      meetingPointMoved: true,
+    };
+    const { email, options } = providers();
+    const outcome = await sendRescheduleNotices(db, shop.id, payload, { ...options, now });
+    expect(outcome.told).toBe(2);
+    expect(email.sent).toHaveLength(2);
+
+    const late = providers();
+    const afterLastDay = new Date(dayOne.getTime() + 53 * HOUR);
+    const none = await sendRescheduleNotices(db, shop.id, payload, {
+      ...late.options,
+      now: afterLastDay,
+    });
+    expect(none.told).toBe(0);
+    expect(late.email.sent).toHaveLength(0);
+  });
+
   it("mints no trip-prep link for a seat with no email and no phone", async () => {
     const { db, shop, reef, kid, previousStartsAt, now } = await movedTrip();
     const { options } = providers();
@@ -339,6 +460,53 @@ describe("holdRescheduleNotice", () => {
     });
     expect(held).toBeNull();
     expect(await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toHaveLength(0);
+  });
+
+  it("holds one notice for a save that moved only the meeting point (#2443)", async () => {
+    const { db, shop, reef, moved, now } = await movedTrip();
+    const held = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: moved.startsAt,
+      meetingPointMoved: true,
+      actorPersonId: null,
+      now,
+    });
+    expect(held?.told).toBe(3);
+    const rows = await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id));
+    expect(rows.map((row) => row.payload)).toEqual([
+      {
+        kind: "trip_rescheduled",
+        tripId: reef.id,
+        previousStartsAt: moved.startsAt.toISOString(),
+        meetingPointMoved: true,
+      },
+    ]);
+  });
+
+  it("holds a course's meeting-point notice after day one sails, and nothing once its last day has", async () => {
+    const { db, shop, course, dayOne, now } = await courseUnderway(30);
+    const held = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: course.id,
+      movedFrom: dayOne,
+      meetingPointMoved: true,
+      actorPersonId: null,
+      now,
+    });
+    expect(held?.told).toBe(2);
+
+    await db.delete(heldSends).where(eq(heldSends.shopId, shop.id));
+    const sailed = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: course.id,
+      movedFrom: dayOne,
+      meetingPointMoved: true,
+      actorPersonId: null,
+      now: new Date(dayOne.getTime() + 53 * HOUR),
+    });
+    expect(sailed).toBeNull();
+    expect(await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toEqual([]);
   });
 
   it("holds nothing for a rehearsal departure", async () => {

@@ -73,7 +73,9 @@
   once to every held seat on a departure by that diver's usual channel: email when they have an
   address, otherwise the shop's WhatsApp or SMS. Transactional, so it is held to that: at most
   200 characters on one line, no link of any kind except the diver's own `/ready` link DiveDay
-  adds, at most three per departure, and never to a canceled or sailed departure. Sent as a
+  adds, at most three per departure, and never to a canceled or sailed departure. A multi-day
+  course has sailed once its last day has, so the desk can reach students between days, and the
+  note names the day still to come rather than day one (H-110, #2393). Sent as a
   **held send** with the same eight-second Undo every held send has; the checks run at the hold
   and again when it drains. Recorded in `departure_notes` and on the activity trail
   (`src/lib/departure-notes.ts`, `src/db/departure-notes.ts`).

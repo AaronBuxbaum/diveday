@@ -1012,6 +1012,8 @@ export async function getTripManifests(
     capacity: trip.sellableCapacity,
     // Printed beside souls on board, so a practice sheet is never read as a boat.
     isRehearsal: trip.isRehearsal,
+    // The dock-rider form stays shut on a cancelled departure (#2394).
+    cancelled: trip.status === "cancelled",
   };
   const diverInputs = roster.map(({ booking, person }) => {
     return {

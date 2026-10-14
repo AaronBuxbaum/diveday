@@ -135,6 +135,25 @@ describe("mergeRescheduleHolds", () => {
     ).toBeNull();
   });
 
+  // #2443: a save that moved only the meeting point holds a notice whose
+  // "before" is the time it still has; there is still something to say.
+  it("keeps a meeting-point move even when the time is where the divers were told", () => {
+    expect(
+      mergeRescheduleHolds(
+        [],
+        held("2026-10-20T13:00:00.000Z", true),
+        new Date("2026-10-20T13:00:00Z"),
+      ),
+    ).toEqual(held("2026-10-20T13:00:00.000Z", true));
+    expect(
+      mergeRescheduleHolds(
+        [held("2026-10-20T13:00:00.000Z", true)],
+        held("2026-10-21T13:00:00.000Z"),
+        new Date("2026-10-20T13:00:00Z"),
+      ),
+    ).toEqual(held("2026-10-20T13:00:00.000Z", true));
+  });
+
   it("never folds another departure's hold into this one", () => {
     const merged = mergeRescheduleHolds(
       [held("2026-10-01T13:00:00.000Z", true, other)],

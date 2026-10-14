@@ -275,7 +275,9 @@ test("a departure's own meeting point reaches the diver once they hold a seat", 
   await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
   await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByRole("status")).toContainText("Changes saved");
+  await expect(page.getByRole("status").filter({ hasText: "Changes saved" })).toBeVisible();
+  // A booked diver hears about a moved meeting point on its own (#2443).
+  await expect(page.getByRole("status").filter({ hasText: "the new meeting point" })).toBeVisible();
 
   const tripId = tripPath.split("/").pop();
   await page.context().clearCookies();

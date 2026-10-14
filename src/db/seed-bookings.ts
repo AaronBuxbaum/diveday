@@ -10,7 +10,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
-import { at, DEMO_SHOP_TIMEZONE, demoSailsAtNight, nextCreatedAt } from "./seed-clock";
+import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt, sailsAfterDayBoats } from "./seed-clock";
 import { commonsImage } from "./seed-images";
 import { getCurrentWaiverTemplate } from "./waivers";
 
@@ -45,7 +45,7 @@ const DEMO_GUARDIANS: Record<string, { name: string; relationship: "parent" | "l
  * the boat keeps its count and its "3 spots left".
  */
 export function demoReefDiverIndexes(reefSails: Date): number[] {
-  return [0, 1, demoSailsAtNight(reefSails) ? 9 : 2, 3, 4, 5, 6, 7, 8];
+  return [0, 1, sailsAfterDayBoats(reefSails) ? 9 : 2, 3, 4, 5, 6, 7, 8];
 }
 
 /**

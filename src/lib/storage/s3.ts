@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { nowDate } from "../clock";
+import { thrownErrorToken } from "../error-token";
 import { log } from "../log";
 import type { ImageStorageProvider, ImageUpload, StoredImage } from "./index";
 
@@ -260,7 +261,9 @@ export async function deleteS3Image(
     }
     return { ok: true };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "unknown delete error" };
+    // Kept in `media_deletions.last_error`: a code or a class, never the
+    // thrown message, which can quote what the call was handed (issue #2531).
+    return { ok: false, error: `delete threw ${thrownErrorToken(error)}` };
   }
 }
 
@@ -336,6 +339,6 @@ export async function readS3Object(
       contentType: response.headers.get("content-type") ?? "application/octet-stream",
     };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "unknown read error" };
+    return { ok: false, error: `read threw ${thrownErrorToken(error)}` };
   }
 }

@@ -8,7 +8,8 @@ import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents, formatTime } from "@/lib/format";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { formatMoneyScanned, formatTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import type { DayStation as DayStationData } from "@/lib/today";
 import { STAGE_TONE } from "@/lib/trip-stage-tone";
@@ -82,7 +83,8 @@ export function DayStation({
     : "";
   const blocked = Math.min(station.blocked, station.booked);
   const ready = station.booked - blocked;
-  const open = Math.max(0, station.capacity - station.booked);
+  // The seats on sale, not the stated number (H-107, #2388).
+  const open = Math.max(0, station.sellableCapacity - station.booked);
   // **The crew's names are the desktop's**: on a phone the card is the time,
   // the boat and the bar, and who is crewing is one tap away on the departure
   // (and on Schedule's Crew view). Their names ran the line onto a second row.
@@ -92,7 +94,9 @@ export function DayStation({
     { text: station.crewNames.length > 0 ? station.crewNames.join(", ") : null, phone: false },
     {
       text:
-        station.priceCents === null ? null : formatMoneyCents(station.priceCents, currency, locale),
+        station.priceCents === null
+          ? null
+          : formatMoneyScanned(station.priceCents, currency, locale),
       phone: true,
     },
   ].filter((fact): fact is { text: string; phone: boolean } => Boolean(fact.text));
@@ -113,7 +117,17 @@ export function DayStation({
           {formatTime(station.startsAt, locale, timeZone)}
         </time>
         <span className="text-sm text-muted tabular-nums">
-          {t("shopHome.spine.until", { time: formatTime(station.endsAt, locale, timeZone) })}
+          {/* One range form across the app, the en-dash one the trip header
+              and the public card print; "until" is kept for a boat that comes
+              home the next day, where the dash would read as the same evening
+              (third review, item 9). */}
+          {t(
+            calendarDateInTimezone(station.startsAt, timeZone) ===
+              calendarDateInTimezone(station.endsAt, timeZone)
+              ? "shopHome.spine.rangeEnd"
+              : "shopHome.spine.until",
+            { time: formatTime(station.endsAt, locale, timeZone) },
+          )}
         </span>
         {stage ? (
           <>
@@ -143,6 +157,7 @@ export function DayStation({
             </span>
           </span>
         </Link>
+        {station.rehearsal ? <Badge>{t("trips.rehearsal.label")}</Badge> : null}
         {crewed ? <Badge tone="primary">{t("shopHome.spine.crewing")}</Badge> : null}
       </h3>
       {meta.length > 0 ? (
@@ -170,7 +185,12 @@ export function DayStation({
           one bar the boat's capacity wide; the words under it are the
           accessible reading, so the bar itself is decoration. The arrival
           desk draws the same bar (`ReadinessBar`, #2100). */}
-      <ReadinessBar className="mt-4" ready={ready} blocked={blocked} of={station.capacity} />
+      <ReadinessBar
+        className="mt-4"
+        ready={ready}
+        blocked={blocked}
+        of={station.sellableCapacity}
+      />
       <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">
         <span>{t("shopHome.spine.readyCount", { ready, booked: station.booked })}</span>
         {blocked > 0 ? (
@@ -179,7 +199,7 @@ export function DayStation({
           </span>
         ) : null}
         <span className="text-muted">
-          {open === 0 ? t("shopHome.spine.full") : t("shopHome.spine.spotsOpen", { count: open })}
+          {open === 0 ? t("shopHome.spine.full") : t("shopHome.spine.seatsOpen", { count: open })}
         </span>
       </p>
 

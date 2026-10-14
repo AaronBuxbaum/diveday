@@ -169,7 +169,7 @@ import { seedSightings } from "./seed-sightings";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
-import { seedTrips } from "./seed-trips";
+import { nameDemoNightDeparture, seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
 import { seedWaiverVersions } from "./seed-waiver-versions";
 import { seedWorkOrders } from "./seed-work-orders";
@@ -1216,6 +1216,10 @@ export async function seedDemoSchedule(
       actorPersonId: instructor.id,
     });
   }
+
+  // Updates-only, and after every scenario that finds today's boat by its day
+  // name: an evening seed's late boat is named as a night dive (issue #2440).
+  await nameDemoNightDeparture(db, shopId);
 
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated

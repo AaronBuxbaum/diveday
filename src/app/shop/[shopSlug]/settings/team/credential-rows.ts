@@ -1,0 +1,77 @@
+import type { listStaffCredentials } from "@/db/staff-credentials";
+import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { Role } from "@/lib/authz";
+import { formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
+import type { CredentialRow, RenewalState } from "./_components/StaffCredentials";
+import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
+
+/** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
+const RENEWAL_WINDOW_DAYS = 30;
+
+/**
+ * The roles that sail on a card: an instructor's or divemaster's rating, a
+ * captain's license. A card for one of these with nothing recorded says so,
+ * because absence is what the Safety tab cannot judge (third review, item 2).
+ */
+export const CREDENTIALED_ROLES: readonly Role[] = [
+  "instructor",
+  "assistant_instructor",
+  "divemaster",
+  "captain",
+];
+
+/** One person's credentials, as their own card reads them. */
+export type CardCredential = { id: string; name: string; renewalWord: string | null };
+
+/** The ledger's rows, each renewal measured against the shop's own today. */
+export function credentialRowsFor(
+  credentials: Awaited<ReturnType<typeof listStaffCredentials>>,
+  today: string,
+  locale: string,
+  t: StaffTranslator,
+): (CredentialRow & { personId: string; name: string })[] {
+  const dueSoonThrough = shiftCalendarDate(today, RENEWAL_WINDOW_DAYS);
+  return credentials.map(({ credential, person }) => {
+    const renewal: RenewalState = !credential.renewsAt
+      ? "not-recorded"
+      : credential.renewsAt < today
+        ? "overdue"
+        : credential.renewsAt <= dueSoonThrough
+          ? "due-soon"
+          : "current";
+    return {
+      id: credential.id,
+      title: `${person.fullName} · ${credential.name}`,
+      detail: [
+        credential.status === "verified"
+          ? t("staffing.credentials.verified")
+          : t("staffing.credentials.pending"),
+        t(CREDENTIAL_KIND_KEYS[credential.kind]),
+        credential.issuingBody,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      // The word is what carries the state; the ink only seconds it. A
+      // credential whose renewal is comfortably ahead says the date and
+      // nothing more, and one with no renewal recorded says nothing at all.
+      renewalWord:
+        renewal === "overdue"
+          ? t("staffing.credentials.overdue")
+          : renewal === "due-soon"
+            ? t("staffing.credentials.dueSoon")
+            : credential.renewsAt
+              ? t("staffing.credentials.renews", {
+                  date: formatCalendarDate(credential.renewsAt, locale),
+                })
+              : null,
+      renewal,
+      personId: person.id,
+      name: credential.name,
+      reviewed: credential.status === "verified",
+      reviewLabel:
+        credential.status === "verified"
+          ? t("staffing.credentials.markPending")
+          : t("staffing.credentials.markVerified"),
+    };
+  });
+}

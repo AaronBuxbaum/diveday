@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
@@ -20,7 +20,18 @@ export type PreDepartureCheckListCopy = {
   errorRefusal: string;
   checkedLabel: string;
   uncheckedLabel: string;
+  /** "Tap again to clear", shown once the first tap on a checked item has asked. */
+  confirmClear: string;
 };
+
+/** How long a checked item waits for the second tap before it stands down. */
+export const CLEAR_CONFIRM_TIMEOUT_MS = 5000;
+
+/**
+ * How soon after the first tap a second one may clear. A bounced or doubled
+ * tap lands well inside this and is ignored; a deliberate second tap does not.
+ */
+export const CLEAR_CONFIRM_MIN_GAP_MS = 400;
 
 export type PreDepartureCheckListItem = {
   id: string;
@@ -48,16 +59,63 @@ function PreDepartureCheckRow({
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
   const checked = item.checkedByLine !== undefined;
+  // **Checking is one tap; clearing is two** (#2481). A brushed button or a
+  // wet hand on a moving deck must not clear "Emergency oxygen kit aboard"
+  // unnoticed, so the first tap on a checked item only asks. A blur, Escape,
+  // or a few seconds untouched stand it down, so an ask left behind never
+  // turns a later stray tap into a clear.
+  // A bounced double tap (two taps ~50ms apart) is one tap, so the ask only
+  // arms — and only says "Tap again to clear" — once the gap has passed.
+  const [asking, setAsking] = useState(false);
+  const [settled, setSettled] = useState(false);
+  const standDown = () => {
+    setAsking(false);
+    setSettled(false);
+  };
+  const askingNow = asking && checked;
+  const armed = askingNow && settled;
+  useEffect(() => {
+    if (!askingNow) return;
+    const settle = setTimeout(() => setSettled(true), CLEAR_CONFIRM_MIN_GAP_MS);
+    const expire = setTimeout(() => {
+      setAsking(false);
+      setSettled(false);
+    }, CLEAR_CONFIRM_TIMEOUT_MS);
+    return () => {
+      clearTimeout(settle);
+      clearTimeout(expire);
+    };
+  }, [askingNow]);
+  // Whatever the server said, the ask is spent once the submit settles: a
+  // refused clear must not leave the item one tap from clearing.
+  useEffect(() => {
+    if (!isPending) {
+      setAsking(false);
+      setSettled(false);
+    }
+  }, [isPending]);
   return (
     <li>
       <form action={formAction}>
         <input type="hidden" name="checklistItemId" value={item.id} />
         <input type="hidden" name="status" value={checked ? "cleared" : "checked"} />
         <button
-          type="submit"
+          // Only the second tap on a checked item is a submit.
+          type={checked && !armed ? "button" : "submit"}
           disabled={isPending}
           aria-busy={isPending}
           aria-pressed={checked}
+          onClick={(event) => {
+            if (checked && !armed) {
+              event.preventDefault();
+              // A tap inside the gap is the first one bouncing: ignored.
+              if (!askingNow) setAsking(true);
+            }
+          }}
+          onBlur={standDown}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") standDown();
+          }}
           className={buttonClass({
             variant: checked ? "primary" : "secondary",
             size: "md",
@@ -67,12 +125,20 @@ function PreDepartureCheckRow({
           <StatusMark variant={checked ? "checked" : "unchecked"} size="md" />
           <span className="flex flex-col">
             <span>{item.label}</span>
-            {item.checkedByLine ? (
+            {armed ? (
+              <span className="text-sm font-semibold">{copy.confirmClear}</span>
+            ) : item.checkedByLine ? (
               <span className="text-sm font-normal">{item.checkedByLine}</span>
             ) : null}
-            <span className="sr-only">{checked ? copy.checkedLabel : copy.uncheckedLabel}</span>
+            {armed ? null : (
+              <span className="sr-only">{checked ? copy.checkedLabel : copy.uncheckedLabel}</span>
+            )}
           </span>
         </button>
+        {/* A changed button name is not announced; this is. */}
+        <span role="status" className="sr-only">
+          {armed ? copy.confirmClear : ""}
+        </span>
       </form>
       {result && !result.ok ? (
         <p role="alert" className="mt-1 text-sm font-medium text-danger">

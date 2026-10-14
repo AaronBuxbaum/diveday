@@ -388,6 +388,7 @@ export function SiteFields({
             description={parts.description}
             as={parts.grouped ? "fieldset" : "section"}
             lead={index === 0}
+            unsavedTag={t("shared.formDraft.unsavedSection")}
           >
             {parts.body}
           </EditorSection>

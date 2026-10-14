@@ -214,6 +214,12 @@
         "files": {
           "src/db/retention.ts#pruneExpiredRecords": "0 -> 445"
         }
+      },
+      {
+        "why": "Merge of layer 1 into layer 2: seedMoreTrips keeps both the dawn-boat record call (layer 2) and the readiness-gated roll call (#2415)",
+        "files": {
+          "src/db/seed-more-trips.ts#seedMoreTrips": "735 -> 739"
+        }
       }
     ],
     "src/app/api/webhooks/stripe/route.ts#POST": 457,
@@ -221,19 +227,19 @@
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 670,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 568,
-    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 662,
+    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 661,
     "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 488,
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx#DiverDetailPage": 404,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 402,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 603,
-    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 698,
+    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 697,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 460,
     "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 565,
     "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 553,
     "src/app/shop/[shopSlug]/staffing/page.tsx#StaffingPage": 419,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 405,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 457,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 455,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
     "src/db/bookings.ts#createBookingRecord": 463,
     "src/db/checkouts.ts#startBookingCheckout": 443,
@@ -242,7 +248,7 @@
     "src/db/reporting.ts#getMonthlyReport": 510,
     "src/db/seed-dive-sites.ts#seedDiveSites": 525,
     "src/db/seed-history.ts#seedHistory": 854,
-    "src/db/seed-more-trips.ts#seedMoreTrips": 736,
+    "src/db/seed-more-trips.ts#seedMoreTrips": 739,
     "src/db/seed-trips.ts#seedTrips": 582,
     "src/db/seed.ts#resetDemoSchedule": 449,
     "src/lib/import.ts#prepareContactImport": 638
@@ -306,7 +312,7 @@
     "src/app/s/[shopSlug]/page.tsx": 882,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 530,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
-    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 728,
+    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 727,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,
     "src/app/shop/[shopSlug]/dive-sites/page.tsx": 621,
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 506,
@@ -314,18 +320,18 @@
     "src/app/shop/[shopSlug]/gear/page.tsx": 479,
     "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 404,
     "src/app/shop/[shopSlug]/orders/page.tsx": 781,
-    "src/app/shop/[shopSlug]/page.tsx": 983,
+    "src/app/shop/[shopSlug]/page.tsx": 982,
     "src/app/shop/[shopSlug]/promos/page.tsx": 608,
     "src/app/shop/[shopSlug]/reports/page.tsx": 669,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 466,
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 416,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/integrations/page.tsx": 489,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 871,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 789,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 501,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 559
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 556
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

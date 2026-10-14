@@ -303,8 +303,11 @@ export function parseWhatsAppInboundMessages(payload: string, now: Date): WhatsA
 function failureDetail(errors: z.infer<typeof statusSchema>["errors"]): string | null {
   const first = errors?.[0];
   if (!first) return null;
-  // `error_data.details` is the specific one ("Message failed to send because
-  // more than 24 hours have passed"); title is the generic bucket.
-  const detail = first.error_data?.details ?? first.message ?? first.title;
-  return detail?.slice(0, 500) ?? null;
+  // Meta's numeric code and its title, the generic bucket ("Message
+  // undeliverable"); the code is what Meta's error reference is indexed by.
+  // Never `error_data.details` or `message`: they are free prose that can
+  // quote the recipient or the message, and this is stored on the delivery
+  // row (security review of issue #2531).
+  const parts = [first.code?.toString(), first.title?.slice(0, 120)].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : null;
 }

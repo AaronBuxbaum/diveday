@@ -1,6 +1,7 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
+import { listTripReadiness } from "./readiness";
 import {
   bookingPayments,
   bookings,
@@ -654,8 +655,7 @@ export async function seedMoreTrips(
     const completedBookings = insertedBookings.filter(
       (booking) => booking.tripId === completedTrip.id,
     );
-    const rollCallRecorderId = captainId ?? instructorId;
-    await seedDawnBoatRecord(db, shopId, completedTrip, rollCallRecorderId, completedBookings);
+    await seedDawnBoatRecord(db, shopId, completedTrip, captainId ?? instructorId);
 
     // A partially completed report run is more useful demo state than an empty
     // queue: six reports have gone out and two remain for the staffer to notice.
@@ -719,6 +719,10 @@ export async function seedMoreTrips(
     };
   });
   if (extraWaiverRows.length > 0) await db.insert(waiverRecords).values(extraWaiverRows);
+
+  if (completedTrip) {
+    await seedCompletedRollCall(db, shopId, completedTrip, captainId ?? instructorId);
+  }
 
   // The Duane wreck readiness track: three of the six divers paid or on
   // deposit — the other three (blocked by cert/specialty/nitrox regardless,
@@ -855,32 +859,17 @@ function dawnCheckpointAt(trip: { startsAt: Date }, index: number): Date {
  * been saved", under a Today card reading "All home · last roll call closed by
  * Sal Moretti". A crew that ran the day would have left all three, so the seed
  * writes what they would have: the checklist ticked at the dock before the
- * boat left, every diver and every crew member counted at each checkpoint,
- * and both dives logged.
+ * boat left, every crew member counted at each checkpoint, and both dives
+ * logged. The divers' counts, at the same checkpoints, are
+ * `seedCompletedRollCall`'s, written once their releases are on file.
  */
 async function seedDawnBoatRecord(
   db: DbExecutor,
   shopId: string,
   trip: typeof trips.$inferSelect,
   recorderId: string,
-  boarded: readonly { id: string }[],
 ): Promise<void> {
-  // Every diver aboard, at every checkpoint, in the captain's name.
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
-  const diverRows = boarded.flatMap((booking) =>
-    checkpoints.map((checkpoint, index) => ({
-      shopId,
-      tripId: trip.id,
-      bookingId: booking.id,
-      recordedByPersonId: recorderId,
-      status: "boarded" as const,
-      checkpoint,
-      source: "live" as const,
-      occurredAt: dawnCheckpointAt(trip, index),
-    })),
-  );
-  if (diverRows.length > 0) await db.insert(rollCallEvents).values(diverRows);
-
   const minute = 60 * 1000;
 
   // The safety check, a quarter of an hour before the lines came off.
@@ -952,4 +941,43 @@ async function seedDawnBoatRecord(
       }),
     );
   }
+}
+
+/**
+ * The completed dawn boat's roll call, written once its releases are on file
+ * so readiness reads the state it sailed in. Direct inserts skip
+ * `recordRollCall`, so this applies its gate itself (#2415): a diver the gate
+ * would refuse (no card, a card nobody verified) was turned away at the dock,
+ * one explicit `not_boarded` and nothing after it, never "boarded".
+ */
+async function seedCompletedRollCall(
+  db: DbExecutor,
+  shopId: string,
+  completedTrip: { id: string; startsAt: Date; plannedDives: number },
+  rollCallRecorderId: string,
+): Promise<void> {
+  const readiness = await listTripReadiness(db, shopId, completedTrip.id);
+  const mark = (
+    bookingId: string,
+    status: "boarded" | "not_boarded",
+    checkpoint: string,
+    index: number,
+  ) => ({
+    shopId,
+    tripId: completedTrip.id,
+    bookingId,
+    recordedByPersonId: rollCallRecorderId,
+    status,
+    checkpoint,
+    source: "live" as const,
+    occurredAt: dawnCheckpointAt(completedTrip, index),
+  });
+  const rows = readiness.flatMap(({ booking, readiness: result }) =>
+    result.status === "ready"
+      ? rollCallCheckpoints(completedTrip.plannedDives).map((checkpoint, index) =>
+          mark(booking.id, "boarded", checkpoint, index),
+        )
+      : [mark(booking.id, "not_boarded", "departure", 0)],
+  );
+  if (rows.length > 0) await db.insert(rollCallEvents).values(rows);
 }

@@ -1,5 +1,6 @@
 import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import {
+  isRollCallCheckpoint,
   manifestAtCheckpoint,
   type RollCallCheckpoint,
   rollCallCheckpoints,
@@ -8,7 +9,17 @@ import {
 
 /**
  * **The checkpoint this page opens on, and its manifest**: the one the URL
- * asked for when the departure has it, the dock otherwise.
+ * asked for, or the dock when it asked for none.
+ *
+ * Two other answers, and neither is the dock (#2508):
+ *
+ * - `{ stale: true }` for a `?checkpoint=` this departure's plan does not
+ *   have. The page redirects to its canonical address rather than render the
+ *   dock under it, where a bookmarked `after_dive_3` would silently flip to
+ *   the after-dive view once the plan grew to three dives.
+ * - **A throw** for a checkpoint the plan has but no manifest was built for.
+ *   Every manifest comes from `rollCallCheckpoints(plannedDives)`, so that is
+ *   an assembly bug, and answering it as the dock is failing open.
  */
 export function openCheckpoint(
   completeManifests: readonly TripManifest[],
@@ -17,10 +28,12 @@ export function openCheckpoint(
 ) {
   const plannedDiveCount = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDiveCount);
-  // An unknown or absent checkpoint opens the departure list.
-  const checkpointManifest =
-    manifestAtCheckpoint(completeManifests, requestedCheckpoint ?? "departure") ??
-    departureManifest;
+  const requested = requestedCheckpoint ?? "departure";
+  if (!isRollCallCheckpoint(requested, plannedDiveCount)) return { stale: true } as const;
+  const checkpointManifest = manifestAtCheckpoint(completeManifests, requested);
+  if (!checkpointManifest) {
+    throw new Error(`manifest: no manifest was built for checkpoint ${requested}`);
+  }
   const checkpoint: RollCallCheckpoint = checkpointManifest.checkpoint;
   // Held seats are settled once, here, so every reader on the page — the
   // not-back-aboard alarm, the buddy builder, both roll calls — sees the seat

@@ -91,6 +91,20 @@ describe.each([
     }
   });
 
+  /**
+   * **A selected row is not a warning** (#2401). Every `bg-primary-tint` means
+   * selected or info; yellow is the deck's warning. The wash leans navy (more
+   * blue than red), where the warning wash leans the other way.
+   */
+  it("keeps the selected wash navy, never the warning's yellow", () => {
+    const channels = (hex: string) =>
+      [0, 1, 2].map((i) => Number.parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16));
+    const [red = 0, , blue = 0] = channels(token("primary-tint"));
+    expect(blue, "--primary-tint leans blue").toBeGreaterThan(red);
+    const [warnRed = 0, , warnBlue = 0] = channels(token("warning-tint"));
+    expect(warnRed, "--warning-tint leans red").toBeGreaterThan(warnBlue);
+  });
+
   it("keeps a status readable on a 15% fill of itself, the roll-call rows' tint", () => {
     // `check-tinted-ink` exempts the roll-call files on this promise.
     for (const signal of ["success", "warning", "danger"]) {

@@ -236,14 +236,6 @@ export function nameListText(t: StaffTranslator, names: readonly string[], shown
 
 /** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
 
-export function missingFitDetailText(t: StaffTranslator, count: number): string {
-  return t("today.detail.missingFit", { count });
-}
-
-export function ungatedNitroxDetailText(t: StaffTranslator, count: number): string {
-  return t("today.detail.ungatedNitrox", { count });
-}
-
 export function missingFitNamedDetailText(t: StaffTranslator): string {
   return t("today.detail.missingFitNamed");
 }
@@ -497,10 +489,6 @@ export function rollCallGapDetailText(
 /** The unclosed-roll-call row's action label — it opens the checkpoint that is open. */
 export function openRollCallActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openRollCall");
-}
-
-export function missingContactDetailText(t: StaffTranslator, count: number): string {
-  return t("today.detail.missingContact", { count });
 }
 
 /** The single-diver contact row leads with the diver's name; the detail then carries only the gap. */

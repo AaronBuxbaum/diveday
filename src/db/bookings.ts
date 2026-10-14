@@ -487,6 +487,7 @@ export async function addPartySeat(
       .select({
         id: bookings.id,
         tripId: bookings.tripId,
+        personId: bookings.personId,
         status: bookings.status,
         identityUnconfirmedAt: bookings.identityUnconfirmedAt,
         partyLeadBookingId: bookings.partyLeadBookingId,
@@ -527,6 +528,14 @@ export async function addPartySeat(
       .set({ partyLeadBookingId: lead.id })
       .where(eq(bookings.id, outcome.bookingId));
     await flushDeclarations(tx, pending);
+    // The departure's trail says where the booking came from: the lead, from
+    // their own trip link, the way the self-cancel line does (#2475).
+    await recordTripActivity(tx, {
+      shopId: input.shopId,
+      tripId: lead.tripId,
+      actorPersonId: lead.personId,
+      entry: { code: "seat_added_from_trip_link", diver: input.seatName },
+    });
     return { ok: true, bookingId: outcome.bookingId };
   });
 }

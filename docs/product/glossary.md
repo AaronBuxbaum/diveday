@@ -243,6 +243,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Station acknowledgement
 - Station echo
 - STOP list
+- The record
 - Tide window
 - Tip
 - Touch guard

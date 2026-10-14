@@ -195,7 +195,7 @@ describe("listGearRentals", () => {
       todayLocal: TODAY,
       timezone: shop.timezone,
     });
-    expect(withZone.counterWaivers?.get(walker.id)).toBe("none");
+    expect(withZone.counterWaivers?.get(walker.id)).toEqual({ state: "none" });
     expect(withZone.counterWaivers?.has(ana.personId)).toBe(false);
     expect(withZone.counterWaivers?.size).toBe(1);
 

@@ -124,7 +124,8 @@
       "advanced": "Advanced"
     },
     "depthRangeLabel": "Depth range",
-    "depthRangePlaceholder": "20–45 ft",
+    "depthRangePlaceholderFeet": "20–45 ft",
+    "depthRangePlaceholderMeters": "6–14 m",
     "maxDepthMetersLabel": "Maximum depth (meters)",
     "maxDepthFeetLabel": "Maximum depth (feet)",
     "maxDepthHint": "Warns when a diver’s certification doesn’t reach it.",

@@ -264,7 +264,7 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
         <div className="rounded-inset border border-border bg-surface p-4">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className={FIGURE_INLINE_CLASS}>{t("fallback.todayStart")}</span>
-            <span className="text-xs text-muted">{t("fallback.todayUntil")}</span>
+            <span className="text-xs text-muted">{t("fallback.todayEnds")}</span>
             <span className="rounded-full bg-warning-tint px-2 py-0.5 text-xs font-medium text-warning-strong">
               {t("fallback.phaseCheckin")}
             </span>

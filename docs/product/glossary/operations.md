@@ -674,6 +674,13 @@
   A **crew sailing** is one crew member on one departure that is home, unless the crew marked
   them ashore at the dock; the Safety tab reads each against the crew member's credentials as they
   stand today, on the departure's last day.
+- **The record** — a home departure's Divers tab: each seat filed under **Sailed**, **Didn't
+  sail**, **Not counted at the dock** or **No roll call taken** (`recordGroups`,
+  `src/app/shop/[shopSlug]/trips/[id]/_components/roster-model.ts`), built from the crew's
+  roll-call results and the desk's no-show marks. It says who the crew counted aboard. It does
+  **not** say whether those divers were ready to board at the time: `roll_call_events` stores no
+  readiness snapshot, so a diver under "Sailed" may have boarded with a blocker the crew overrode
+  or never saw, and any readiness shown beside the record is today's, not the day's.
 - **Didn't sail** — a finished departure's record band for the seats somebody *said* did not go:
   the crew's `not_boarded` at the `departure` roll-call checkpoint, or a released seat (`no_show`)
   nobody counted aboard at any checkpoint. Only a statement files a seat here (`seatSailed`,
@@ -737,8 +744,8 @@
   start one and read their own; owners and managers read all of them, on the trip's Details tab
   and the Reports **Safety** tab. Nothing a diver sees, and never a gate. It is not the
   **departure log**, which prints recorded facts and judges nothing; the report is the shop's
-  narrative beside it. Kept for ever, like roll call; erasing a diver removes their identity from
-  it and keeps the report
+  narrative beside it. Kept seven years from the incident; erasing a diver removes their identity
+  from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
@@ -923,8 +930,8 @@
   card, rents nothing, and pays the departure's rider price (`trips.rider_price_cents`) under the
   same rule as a snorkeler's. A rider is still a body aboard and is counted at roll call, and is
   never held at boarding on a medical referral or refusal (H-109); the roll call, its printed
-  sheet and the offline copy show it instead as "Physician did not clear: riding only" or
-  "Medical referral open: riding only", with the date.
+  sheet and the offline copy show it instead as "Riding only: MD said no" or
+  "Riding only: referred", with the date.
 - **Diver seats** — an optional cap on how many **divers** a departure carries
   (`trips.diver_capacity`), for a boat whose tanks or guides run out before its deck does. The
   boat's own capacity always counts everyone aboard; the diver cap only refuses a diver, and a cap
@@ -1271,7 +1278,7 @@
   departure into buckets, so a late booking gets only the accurate reminder, never a stale one. An
   external scheduler drives an idempotent cron endpoint; the app holds no timer. See
   [20260721-scheduled-reminder-cadence](../../architecture/decisions/20260721-scheduled-reminder-cadence.md).
-- **Reschedule notice** — the message every booked seat gets when a staffer moves its departure: on the board (Move) or by changing the start on the trip page. Notification kind `trip_rescheduled`: the new date and time, the old one under it, the meeting point only when it moved in the same save, and the diver's own trip-prep link, by the diver's usual channel (email with a courtesy text, or the text alone for a phone-only diver). The move *holds* it as a **held send** (`held_sends`, the eight seconds and Undo every staff send takes, ADR 20260906-before-you-ask); a second move inside the hold folds into the first, and a move back to the time the divers were told sends nothing. Addressed only to each seat's own person record (`booked` or `checked_in`, never a seat whose identity is still held), read off the trip when the hold drains. Rule in `src/lib/held-sends.ts`, the send in `src/db/trip-rescheduled.ts`.
+- **Reschedule notice** — the message every booked seat gets when a staffer moves its departure: on the board (Move) or by changing the start on the trip page. Notification kind `trip_rescheduled`: the new date and time, the old one under it, the meeting point only when it moved in the same save, and the diver's own trip-prep link; a save that moves only the meeting point holds the same notice about the place alone, with no old time (#2443), by the diver's usual channel (email with a courtesy text, or the text alone for a phone-only diver). The move *holds* it as a **held send** (`held_sends`, the eight seconds and Undo every staff send takes, ADR 20260906-before-you-ask); a second move inside the hold folds into the first, and a move back to the time the divers were told sends nothing unless the meeting point moved. A move also re-arms the seat's trip reminders for the new date (#2444). Addressed only to each seat's own person record (`booked` or `checked_in`, never a seat whose identity is still held), read off the trip when the hold drains. Rule in `src/lib/held-sends.ts`, the send in `src/db/trip-rescheduled.ts`.
 - **Night-before brief** — the 24-hour reminder cadence enriched into a full pre-departure brief:
   the crew's plain-language conditions read, what to bring (the shop's packing list), a concrete
   dock-arrival time, and who to text on the day. It is the same `trip_reminder_24h` send, not a new
