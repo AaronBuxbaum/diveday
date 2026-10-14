@@ -114,6 +114,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Arrival event
 - Arrival lookup
 - Arrivals window
+- At sea
 - Automated cancellation refund
 - Automated marine outlook
 - Back on the water

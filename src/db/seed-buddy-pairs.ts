@@ -170,7 +170,11 @@ export async function seedDawnBuddyTeams(
     .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(and(eq(rollCallEvents.tripId, dawn.id), eq(rollCallEvents.checkpoint, "departure")))
-    .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.createdAt), asc(rollCallEvents.seq));
+    .orderBy(
+      asc(rollCallEvents.occurredAt),
+      asc(rollCallEvents.createdAt),
+      asc(rollCallEvents.seq),
+    );
   // The newest word per booking stands; a `cleared` undo leaves none.
   const standing = new Map<string, (typeof dockEvents)[number]>();
   for (const event of dockEvents) {
