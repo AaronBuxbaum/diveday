@@ -197,6 +197,10 @@ test.describe("owner, the Safety tab", () => {
     const chooser = page.getByRole("navigation", { name: "Choose month" });
     await chooser.getByRole("link", { name: "Previous month" }).click();
     await expect(page).toHaveURL(/reports\/safety\?month=\d{4}-\d{2}/);
+    // The section's heading, as on every tabbed section (Inbox, Gear): Safety
+    // is the Money section's tab, and the tab row says which one is open. The
+    // manager's way in is pinned in reports/safety/page.test.tsx; the demo
+    // shop has no manager login to sign in with here.
     await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
   });
 });
