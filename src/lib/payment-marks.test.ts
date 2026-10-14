@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { heldCentsAfterMark, markNeedsWriteOffRight, readManualPaymentMark } from "./payment-marks";
+import { heldAfterMark, markNeedsWriteOffRight, readManualPaymentMark } from "./payment-marks";
 
 describe("readManualPaymentMark", () => {
   it("reads money taken: the amount in minor units and the method", () => {
@@ -70,45 +70,84 @@ describe("readManualPaymentMark", () => {
 });
 
 describe("markNeedsWriteOffRight", () => {
+  const cash = (amountCents: number) => ({
+    kind: "money" as const,
+    amountCents,
+    method: "cash" as const,
+  });
+
   it("lets anyone record money, and only the write-off right mark a seat paid without any", () => {
-    expect(markNeedsWriteOffRight({ kind: "money", amountCents: 100, method: "cash" })).toBe(false);
-    expect(markNeedsWriteOffRight({ kind: "not_money" })).toBe(false);
-    expect(markNeedsWriteOffRight({ kind: "no_money" })).toBe(true);
+    expect(markNeedsWriteOffRight(cash(100), "paid", null)).toBe(false);
+    expect(markNeedsWriteOffRight({ kind: "not_money" }, "unpaid", 12_000)).toBe(false);
+    expect(markNeedsWriteOffRight({ kind: "no_money" }, "paid", null)).toBe(true);
+    expect(markNeedsWriteOffRight({ kind: "no_money" }, "deposit_paid", 12_000)).toBe(true);
+  });
+
+  it("calls Paid on less than the balance a write-off of the rest, a cent short included", () => {
+    expect(markNeedsWriteOffRight(cash(1), "paid", 12_000)).toBe(true);
+    expect(markNeedsWriteOffRight(cash(11_999), "paid", 12_000)).toBe(true);
+    expect(markNeedsWriteOffRight(cash(12_000), "paid", 12_000)).toBe(false);
+    expect(markNeedsWriteOffRight(cash(15_000), "paid", 12_000)).toBe(false);
+  });
+
+  it("lets crew record a part payment as the deposit it is", () => {
+    expect(markNeedsWriteOffRight(cash(1), "deposit_paid", 12_000)).toBe(false);
+    expect(markNeedsWriteOffRight(cash(5_000), "deposit_paid", 12_000)).toBe(false);
   });
 });
 
-describe("heldCentsAfterMark", () => {
+describe("heldAfterMark", () => {
+  const cash = (amountCents: number) => ({
+    kind: "money" as const,
+    amountCents,
+    method: "cash" as const,
+  });
+  const handDeposit = {
+    status: "deposit_paid",
+    amountCents: 5_000,
+    provider: null,
+    method: "card" as const,
+  };
+
   it("adds a balance to a deposit that was also marked by hand", () => {
-    expect(
-      heldCentsAfterMark(
-        { status: "deposit_paid", amountCents: 5_000, provider: null },
-        "paid",
-        7_000,
-      ),
-    ).toBe(12_000);
+    expect(heldAfterMark(handDeposit, "paid", cash(7_000))).toEqual({
+      amountCents: 12_000,
+      method: "cash",
+    });
   });
 
   it("leaves a checkout's deposit to Reports' own add-back, so it is not counted twice", () => {
     expect(
-      heldCentsAfterMark(
-        { status: "deposit_paid", amountCents: 5_000, provider: "stripe" },
-        "paid",
-        7_000,
-      ),
-    ).toBe(7_000);
+      heldAfterMark({ ...handDeposit, provider: "stripe", method: null }, "paid", cash(7_000)),
+    ).toEqual({ amountCents: 7_000, method: "cash" });
+  });
+
+  it("keeps a hand deposit when the rest is written off with a blank Paid mark", () => {
+    expect(heldAfterMark(handDeposit, "paid", { kind: "no_money" })).toEqual({
+      amountCents: 5_000,
+      method: "card",
+    });
+    expect(heldAfterMark(null, "paid", { kind: "no_money" })).toEqual({
+      amountCents: null,
+      method: null,
+    });
   });
 
   it("replaces, never adds, when a mark corrects one already made", () => {
     expect(
-      heldCentsAfterMark({ status: "paid", amountCents: 9_000, provider: null }, "paid", 12_000),
-    ).toBe(12_000);
-    expect(
-      heldCentsAfterMark(
-        { status: "deposit_paid", amountCents: 5_000, provider: null },
-        "deposit_paid",
-        6_000,
+      heldAfterMark(
+        { status: "paid", amountCents: 9_000, provider: null, method: "cash" },
+        "paid",
+        cash(12_000),
       ),
-    ).toBe(6_000);
-    expect(heldCentsAfterMark(null, "paid", 12_000)).toBe(12_000);
+    ).toEqual({ amountCents: 12_000, method: "cash" });
+    expect(heldAfterMark(handDeposit, "deposit_paid", cash(6_000))).toEqual({
+      amountCents: 6_000,
+      method: "cash",
+    });
+    expect(heldAfterMark(null, "paid", cash(12_000))).toEqual({
+      amountCents: 12_000,
+      method: "cash",
+    });
   });
 });

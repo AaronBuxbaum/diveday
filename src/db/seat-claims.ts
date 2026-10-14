@@ -624,13 +624,23 @@ export async function issuePartySeatClaims(
 /**
  * **The party seats still booked after the lead's own cancel** (batch 6 item
  * 10): what the lead's cancelled page names as staying. Read from the seats
- * themselves, never the URL, and only seats this lead booked in this shop.
+ * themselves, never the URL, and only seats this lead booked in this shop on
+ * the lead's own departure.
  * Ordered as `issuePartySeatClaims` orders them.
  */
 export async function partySeatsKeptAfterLeadCancel(
   db: AppDb,
   input: { shopId: string; leadBookingId: string },
 ): Promise<string[]> {
+  // The page says these keep their seats *on the lead's trip*, so a seat moved
+  // to another departure is not one of them (`cancelUnclaimedPartySeats` is
+  // scoped the same way).
+  const [lead] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!lead) return [];
   const rows = await db
     .select({
       fullName: people.fullName,
@@ -643,6 +653,7 @@ export async function partySeatsKeptAfterLeadCancel(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.partyLeadBookingId, input.leadBookingId),
+        eq(bookings.tripId, lead.tripId),
         ne(bookings.status, "cancelled"),
       ),
     )

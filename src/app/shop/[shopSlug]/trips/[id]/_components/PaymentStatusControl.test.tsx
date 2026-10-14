@@ -113,8 +113,11 @@ describe("PaymentStatusControl Paid mark", () => {
 
     const mark = screen.getByTestId("payment-mark");
     expect(mark).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Cash" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "Card" })).not.toBeChecked();
+    // No method is picked for the staffer: one nobody chose would be recorded.
+    for (const name of ["Cash", "Card", "Other"]) {
+      expect(screen.getByRole("radio", { name })).not.toBeChecked();
+      expect(screen.getByRole("radio", { name })).toBeRequired();
+    }
     expect(mark.querySelector('input[name="amount"]')).toHaveValue("120");
   });
 
@@ -136,5 +139,43 @@ describe("PaymentStatusControl Paid mark", () => {
       target: { value: "waived" },
     });
     expect(screen.queryByTestId("payment-mark")).toBeNull();
+  });
+});
+
+describe("PaymentStatusControl on a seat whose money came through DiveDay", () => {
+  it("offers only the seat's own status, since a hand mark would lose the payment's pointer", () => {
+    render(
+      <PaymentStatusControl
+        bookingId="booking-1"
+        status="paid"
+        allowedStatuses={["unpaid", "deposit_paid", "paid", "waived", "refunded"]}
+        action={vi.fn()}
+        sourceNote="Paid online"
+        refundNote={null}
+        mark={{ ...MARK, handMarkRefused: true }}
+        copy={COPY}
+      />,
+    );
+    const options = screen.getAllByRole("option").map((option) => option.textContent);
+    expect(options).toEqual(["Paid"]);
+  });
+
+  it("names the balance beside the amount on a deposit-paid seat", () => {
+    render(
+      <PaymentStatusControl
+        bookingId="booking-1"
+        status="deposit_paid"
+        allowedStatuses={["unpaid", "deposit_paid", "paid"]}
+        action={vi.fn()}
+        sourceNote={null}
+        refundNote={null}
+        mark={{ ...MARK, amountCents: 7_000, balanceHint: "Balance owed: $70.00" }}
+        copy={COPY}
+      />,
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Payment status" }), {
+      target: { value: "paid" },
+    });
+    expect(screen.getByTestId("payment-mark")).toHaveTextContent("Balance owed: $70.00");
   });
 });

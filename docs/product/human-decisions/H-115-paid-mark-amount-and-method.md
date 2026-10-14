@@ -1,4 +1,4 @@
-# H-114: Who may mark a seat paid, and with how much?
+# H-115: Who may mark a seat paid, and with how much?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

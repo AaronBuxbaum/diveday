@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
+import { forgetWebhookRefusalReports } from "@/lib/webhook-refusal";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -146,6 +147,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
   });
 
   it("logs a bad signature as webhook.refused before answering 400", async () => {
+    forgetWebhookRefusalReports();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const payload = eventPayload({ id: "evt_1", type: "invoice.paid", data: { object: {} } });
     const badHeader = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_wrong");

@@ -217,7 +217,7 @@ export async function enqueueOrderIntegrationEvent(
 }
 
 /**
- * **A diver's online booking checkout, as one sale** (batch 6 item 9, H-115).
+ * **A diver's online booking checkout, as one sale** (batch 6 item 9, H-116).
  * One receipt per checkout, never per seat: the party lead paid once, so the
  * books get one sale naming them, with the fare, the gear and the
  * pass-through fees on lines of their own. Tax is not a line, as on an order.
@@ -354,7 +354,7 @@ export async function enqueueCheckoutIntegrationEvent(
 }
 
 /**
- * **A post-dive tip, as a sale of its own** (batch 6 item 9, H-115): income
+ * **A post-dive tip, as a sale of its own** (batch 6 item 9, H-116): income
  * on one line, named as a tip, from the diver who left it. A tip has its own
  * Stripe checkout, days after the booking's, so it is its own receipt rather
  * than a line added to a sale the books already closed.

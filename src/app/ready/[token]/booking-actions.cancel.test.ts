@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * A party lead's own cancel on /ready (batch 6 item 10): the seats
  * `selfCancelBooking` released with the lead are each refunded under the same
- * policy and named on the trail as the lead's act; only the lead is emailed.
+ * policy and named on the trail as the lead's act. The lead is emailed, and so
+ * is a released seat with an address of its own; a seat without one is not.
  */
 
 vi.mock("next/navigation", () => ({
@@ -63,11 +64,11 @@ afterEach(() => {
 });
 
 describe("cancelMyBookingAction with a party", () => {
-  it("asks for the party, refunds each released seat, and emails only the lead", async () => {
+  it("asks for the party, refunds each released seat, and emails the lead and no address-less seat", async () => {
     vi.mocked(selfCancelBooking).mockResolvedValue({
       ok: true,
       party: {
-        cancelled: [{ bookingId: "milo", seatName: "Milo Ortiz" }],
+        cancelled: [{ bookingId: "milo", seatName: "Milo Ortiz", ownAddress: false }],
         stayed: [{ bookingId: "pia", seatName: "Pia Ortiz" }],
       },
     });
@@ -95,10 +96,33 @@ describe("cancelMyBookingAction with a party", () => {
     });
   });
 
+  it("emails a released seat that has its own address (batch 6 layer 2 review)", async () => {
+    vi.mocked(selfCancelBooking).mockResolvedValue({
+      ok: true,
+      party: {
+        cancelled: [
+          { bookingId: "milo", seatName: "Milo Ortiz", ownAddress: true },
+          { bookingId: "tom", seatName: "Tom Ortiz", ownAddress: false },
+        ],
+        stayed: [],
+      },
+    });
+
+    await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}?cancelled=1`);
+
+    expect(vi.mocked(sendBookingCancelledNotice).mock.calls.map(([, input]) => input)).toEqual([
+      expect.objectContaining({ bookingId: LEAD, cancelledBy: "diver" }),
+      expect.objectContaining({ bookingId: "milo", cancelledBy: "diver", from: "booked" }),
+    ]);
+  });
+
   it("keeps going to the next seat when one seat's refund throws", async () => {
     vi.mocked(selfCancelBooking).mockResolvedValue({
       ok: true,
-      party: { cancelled: [{ bookingId: "milo", seatName: "Milo Ortiz" }], stayed: [] },
+      party: {
+        cancelled: [{ bookingId: "milo", seatName: "Milo Ortiz", ownAddress: false }],
+        stayed: [],
+      },
     });
     vi.mocked(refundBookingOnCancellation)
       .mockRejectedValueOnce(new Error("db blip"))

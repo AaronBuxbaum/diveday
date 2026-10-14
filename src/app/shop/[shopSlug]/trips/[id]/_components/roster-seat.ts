@@ -114,10 +114,20 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
           method: markFacts.mark.method,
         }
       : null;
+  const markCurrency = markFacts?.shopCurrency ?? markFacts?.mark?.currency ?? "usd";
   const paymentMark = {
     amountCents: markFacts?.balanceOwedCents ?? markFacts?.mark?.amountCents ?? null,
-    currency: markFacts?.shopCurrency ?? markFacts?.mark?.currency ?? "usd",
+    currency: markCurrency,
     locale,
+    // On a deposit, the field opens on the balance; the hint says that is
+    // what it is, so a staffer taking a different figure knows what is left.
+    balanceHint:
+      paymentStatus === "deposit_paid" && markFacts?.balanceOwedCents
+        ? t("trips.roster.paymentBalanceOwed", {
+            amount: formatMoneyCents(markFacts.balanceOwedCents, markCurrency, locale),
+          })
+        : null,
+    handMarkRefused: paymentSourceCode === "online" || paymentSourceCode === "package",
   };
   const paymentSource = counterMark
     ? markFacts?.mark?.recordedByName

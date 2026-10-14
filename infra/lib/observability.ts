@@ -201,22 +201,35 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "The line names the scan. Every pass is idempotent, so re-running the route by hand is safe once the cause is understood.",
   },
   {
+    metricName: "WebhookUnconfigured",
+    title: "A webhook has no secret to verify with",
+    why:
+      "A Stripe secret or SNS topic ARN missing from the deployment refuses every payment confirmation, " +
+      "bounce or delivery receipt with a 503. Nobody outside can cause it, so one is enough: the provider " +
+      "retries, then gives up, and nothing inside DiveDay looks wrong.",
+    events: ["webhook.unconfigured"],
+    threshold: 1,
+    periodMinutes: 60,
+    response:
+      "The line's webhook field names the endpoint. Put the secret or topic ARN back in the deployment, then replay the refused deliveries from the provider's dashboard.",
+  },
+  {
     metricName: "WebhookRefusals",
     title: "Webhooks turned away",
     why:
-      "A rotated Stripe secret or a topic ARN missing from the environment refuses every payment " +
-      "confirmation, bounce or delivery receipt with a bare 400 or 503. The provider retries, then gives " +
-      "up, and nothing inside DiveDay looks wrong: the order just never turns paid.",
+      "A secret rotated on the provider's side refuses every delivery with a bad signature. The endpoints " +
+      "are public, so a stranger's unsigned post is refused on the same line: the app damps it to one line " +
+      "per webhook and reason a minute per instance (`swallowed` carries the real count), and this counts " +
+      "those minutes, never requests.",
     events: ["webhook.refused"],
-    // Three, not one: the endpoints are public and a scanner posting junk is
-    // refused on the same line. A broken secret refuses every delivery and
-    // every retry, which clears three in an hour on any shop taking bookings.
-    threshold: 3,
+    // Ten damped lines in an hour is ten separate minutes of refusals: a
+    // rotated secret on any shop taking bookings, and never three curls.
+    threshold: 10,
     periodMinutes: 60,
     response:
-      "The line's webhook and reason fields name the endpoint and why. not_configured: the secret or topic ARN is missing from the deployment. " +
-      "invalid_signature from one provider all at once: the secret was rotated on their side; copy the new one in. " +
-      "Then replay the refused deliveries from the provider's dashboard.",
+      "The line's webhook and reason fields name the endpoint and why; swallowed says how many. " +
+      "invalid_signature from one provider, sustained: the secret was rotated on their side; copy the new one in, then replay the refused deliveries. " +
+      "Scattered reasons from many sources is a scanner and needs nothing.",
   },
   {
     metricName: "DatabaseUnavailable",

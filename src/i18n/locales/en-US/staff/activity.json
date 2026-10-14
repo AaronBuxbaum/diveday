@@ -42,6 +42,7 @@
     "seat_refunded": "{actor} removed {diver} and refunded the seat by card",
     "payment_waived": "{actor} marked {diver}’s seat waived",
     "payment_marked_refunded": "{actor} marked {diver}’s seat refunded",
+    "payment_balance_written_off": "{actor} wrote off the rest of {diver}’s seat",
     "departure_added": "{actor} put the departure on the board",
     "series_added": "{actor} put a repeating departure on the board",
     "departure_moved": "{actor} moved the departure",

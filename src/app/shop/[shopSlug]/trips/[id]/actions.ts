@@ -21,6 +21,7 @@ import {
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { recordTripActivity } from "@/db/operations";
+import { paymentMarkFactsForTrip } from "@/db/payment-marks";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
@@ -52,11 +53,7 @@ import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
-import {
-  heldCentsAfterMark,
-  markNeedsWriteOffRight,
-  readManualPaymentMark,
-} from "@/lib/payment-marks";
+import { heldAfterMark, markNeedsWriteOffRight, readManualPaymentMark } from "@/lib/payment-marks";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
   blankableDiverEmailSchema,
@@ -929,35 +926,55 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
     currency,
   );
   if (mark.kind === "invalid") {
-    redirect(noticeUrl(back, "payment-amount", { bid: bookingId }));
+    redirect(
+      noticeUrl(back, mark.field === "method" ? "payment-method" : "payment-amount", {
+        bid: bookingId,
+      }),
+    );
   }
   // An unchanged status changes nothing unless it brings money the row does
   // not already hold: a staffer recording the cash on a seat already marked
   // paid is a real write, and a re-submit with the amount left blank is not
   // a request to wipe one.
-  const heldCents =
-    mark.kind === "money" ? heldCentsAfterMark(current ?? null, submitted, mark.amountCents) : null;
+  const held = heldAfterMark(current ?? null, submitted, mark);
   if (
     current?.status !== undefined &&
     current.status === submitted &&
-    (mark.kind !== "money" || (current.amountCents === heldCents && current.method === mark.method))
+    (mark.kind !== "money" ||
+      (current.amountCents === held.amountCents && current.method === held.method))
   ) {
     revalidateAndRedirect(back, noticeUrl(back, "payment", { bid: bookingId }));
+  }
+  // **A hand mark never touches a seat paid online** (security review, batch
+  // 6). `setBookingPayment` writes the whole row, so any hand mark here nulled
+  // `provider`/`providerRef` and the automatic refund lost the payment it
+  // would reverse. Money that came through Stripe goes back through Stripe:
+  // the seat's own refund, never this control.
+  if (current?.provider) {
+    redirect(noticeUrl(back, "payment-online", { bid: bookingId }));
   }
   const decidesAboutMoney =
     (status.success && paymentStatusClass(status.data) === "write_off") ||
     (current?.status !== undefined && paymentStatusClass(current.status) === "write_off");
+  // What the seat owes before this mark: Paid on less is the rest written off.
+  const balanceOwedCents =
+    (await paymentMarkFactsForTrip(db, s.user.shopId, tripId)).get(bookingId)?.balanceOwedCents ??
+    null;
+  const writesOff = markNeedsWriteOffRight(mark, submitted, balanceOwedCents);
   if (
-    (decidesAboutMoney || markNeedsWriteOffRight(mark)) &&
+    (decidesAboutMoney || writesOff) &&
     !(await canPersonRefund(db, s.user.shopId, s.user.personId))
   ) {
     // A Paid mark left blank by someone who may not write a seat off is far
     // more often a missed field than an attempted comp, so it is asked for
-    // again rather than called a permission problem. Either way nothing lands.
+    // again rather than called a permission problem; a short one is told what
+    // it is and what crew may do instead. Either way nothing lands.
     redirect(
       decidesAboutMoney
         ? noticeUrl(back, "not-authorized")
-        : noticeUrl(back, "payment-amount", { bid: bookingId }),
+        : noticeUrl(back, mark.kind === "money" ? "payment-short" : "payment-amount", {
+            bid: bookingId,
+          }),
     );
   }
   const saved =
@@ -967,8 +984,10 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
           bookingId,
           status: status.data,
           currency,
-          amountCents: heldCents,
-          method: mark.kind === "money" ? mark.method : null,
+          // A blank Paid mark keeps a deposit taken by hand: writing off the
+          // rest never erases cash the shop already holds.
+          amountCents: held.amountCents,
+          method: held.method,
           // Who marked it, on every hand mark: the trail row carries it too,
           // so a dispute about the cash box has a name to start from.
           recordedByPersonId: s.user.personId,
@@ -984,6 +1003,15 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
         code: status.data === "waived" ? "payment_waived" : "payment_marked_refunded",
         bookingId,
       },
+    });
+  }
+  // Paid on less than the seat owed: the money that came in is on the row, and
+  // the rest written off is its own line, with who decided it.
+  if (saved && status.success && status.data === "paid" && writesOff) {
+    await recordShopActivity(db, {
+      shopId: s.user.shopId,
+      actorPersonId: s.user.personId,
+      write: { code: "payment_balance_written_off", bookingId },
     });
   }
   // `bid` rides along so the roster can hold that diver's card open on the

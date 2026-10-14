@@ -9,6 +9,7 @@ import { typeChangedDeskEventKind } from "@/lib/desk-events";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { seatName } from "@/lib/held-seat";
+import { normalizeEmailAddress } from "@/lib/inbox";
 import {
   holdsRegisterKind,
   isDiver,
@@ -2479,9 +2480,12 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
  * item 10). `cancelled` went with the lead: unclaimed and still `booked`.
  * `stayed` did not: claimed by their own diver, or already checked in. Names
  * are the seat's own (`seatName`), the same the lead's party panel shows.
+ * `ownAddress` is a cancelled seat whose own email is not the lead's: that
+ * diver gets their own cancellation notice (glossary "Cancellation notice"),
+ * and a seat on the lead's address, or with none, stays quiet.
  */
 export type PartyCancelOutcome = {
-  cancelled: Array<{ bookingId: string; seatName: string }>;
+  cancelled: Array<{ bookingId: string; seatName: string; ownAddress: boolean }>;
   stayed: Array<{ bookingId: string; seatName: string }>;
 };
 
@@ -2521,8 +2525,8 @@ export async function selfCancelBooking(
     bookingId: string;
     now?: Date;
     /**
-     * The /ready cancel's choice: a party lead's unclaimed seats go with them
-     * (batch 6 item 10). The reply keyword cancels one seat and leaves it off.
+     * A party lead's unclaimed seats go with them (batch 6 item 10). Both
+     * diver paths, `/ready` and the reply keyword, ask for it.
      */
     withUnclaimedParty?: boolean;
   },
@@ -2627,6 +2631,13 @@ export async function cancelUnclaimedPartySeats(
   tx: DbExecutor,
   input: { shopId: string; leadBookingId: string; tripId: string },
 ): Promise<PartyCancelOutcome> {
+  const [lead] = await tx
+    .select({ email: people.email })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  const leadAddress = normalizeEmailAddress(lead?.email);
   const seats = await tx
     .select({
       bookingId: bookings.id,
@@ -2634,6 +2645,7 @@ export async function cancelUnclaimedPartySeats(
       claimedAt: bookings.claimedAt,
       personId: bookings.personId,
       fullName: people.fullName,
+      email: people.email,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       identityBookedAs: bookings.identityBookedAs,
     })
@@ -2678,7 +2690,12 @@ export async function cancelUnclaimedPartySeats(
       tripId: input.tripId,
       personId: seat.personId,
     });
-    outcome.cancelled.push({ bookingId: seat.bookingId, seatName: name });
+    const seatAddress = normalizeEmailAddress(seat.email);
+    outcome.cancelled.push({
+      bookingId: seat.bookingId,
+      seatName: name,
+      ownAddress: seatAddress !== null && seatAddress !== leadAddress,
+    });
   }
   return outcome;
 }

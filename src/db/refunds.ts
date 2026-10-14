@@ -351,7 +351,7 @@ async function countCheckoutRefund(
   if (counted) await enqueueCheckoutRefundEvent(tx, counted, plan.refundCents);
 }
 
-/** One refund against a completed checkout, for QuickBooks, Xero and Zapier (H-115). */
+/** One refund against a completed checkout, for QuickBooks, Xero and Zapier (H-116). */
 async function enqueueCheckoutRefundEvent(
   tx: AppTransaction,
   checkout: { id: string; shopId: string; refundedCents: number },

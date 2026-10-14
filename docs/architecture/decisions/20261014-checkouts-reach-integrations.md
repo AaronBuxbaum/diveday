@@ -7,7 +7,7 @@
 
 QuickBooks, Xero and Zapier heard only about orders (`enqueueOrderIntegrationEvent`, called from
 `src/db/orders.ts`). A seat bought online is a `booking_checkouts` row and a tip is a `tips` row,
-so most of a shop's card revenue never reached its accounting. [H-115](../../product/human-decisions/H-115-checkouts-reach-the-books.md)
+so most of a shop's card revenue never reached its accounting. [H-116](../../product/human-decisions/H-116-checkouts-reach-the-books.md)
 chose one receipt per checkout and tips as income on their own line.
 
 ## Decision

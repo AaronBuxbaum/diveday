@@ -55,9 +55,27 @@ export function readManualPaymentMark(
   return { kind: "money", amountCents, method: methodRaw };
 }
 
-/** Whether this mark is a decision about money — the right `canRefund` gates. */
-export function markNeedsWriteOffRight(reading: ManualPaymentMarkReading): boolean {
-  return reading.kind === "no_money";
+/**
+ * Whether this mark is a decision about money — the right `canRefund` gates.
+ *
+ * Two marks are: Paid or Deposit paid with no money at all, and Paid on less
+ * than the seat owes (`balanceOwedCents`, before the mark), which writes the
+ * rest off however small the amount typed — a cent is not a payment for a
+ * $120 seat. Crew may still record part of the fare as Deposit paid, which
+ * settles nothing.
+ */
+export function markNeedsWriteOffRight(
+  reading: ManualPaymentMarkReading,
+  status: string,
+  balanceOwedCents: number | null,
+): boolean {
+  if (reading.kind === "no_money") return true;
+  return (
+    reading.kind === "money" &&
+    status === "paid" &&
+    balanceOwedCents !== null &&
+    reading.amountCents < balanceOwedCents
+  );
 }
 
 /**
@@ -66,20 +84,37 @@ export function markNeedsWriteOffRight(reading: ManualPaymentMarkReading): boole
  * sum reads it that way — while the mark's amount is what changed hands at the
  * counter just now.
  *
- * The two differ in one case: a balance taken on a seat whose deposit was
- * *also* marked by hand. The row would otherwise forget the deposit, since the
- * write replaces it. A deposit a checkout took is not added here: the row says
- * `stripe`, and Reports already adds that deposit back from the checkout
- * (`getMonthlyReport`), so adding it here too would count it twice.
+ * The two differ when the seat's deposit was *also* marked by hand. The row
+ * would otherwise forget it, since the write replaces the row: a balance taken
+ * adds to it, and a blank Paid mark (the rest written off) keeps it, with the
+ * method it was taken by, rather than erasing cash the shop has. A deposit a
+ * checkout took is not added here: the row says `stripe`, and Reports already
+ * adds that deposit back from the checkout (`getMonthlyReport`), so adding it
+ * here too would count it twice.
  */
-export function heldCentsAfterMark(
-  previous: { status: string; amountCents: number | null; provider: string | null } | null,
+export function heldAfterMark(
+  previous: {
+    status: string;
+    amountCents: number | null;
+    provider: string | null;
+    method: ManualPaymentMethodCode | null;
+  } | null,
   nextStatus: string,
-  takenCents: number,
-): number {
-  const manualDeposit =
-    previous?.status === "deposit_paid" && previous.provider === null
-      ? (previous.amountCents ?? 0)
-      : 0;
-  return nextStatus === "paid" ? manualDeposit + takenCents : takenCents;
+  reading: ManualPaymentMarkReading,
+): { amountCents: number | null; method: ManualPaymentMethodCode | null } {
+  const handDeposit =
+    previous?.status === "deposit_paid" && previous.provider === null && previous.amountCents
+      ? { amountCents: previous.amountCents, method: previous.method }
+      : null;
+  if (reading.kind === "money") {
+    return {
+      amountCents:
+        nextStatus === "paid"
+          ? (handDeposit?.amountCents ?? 0) + reading.amountCents
+          : reading.amountCents,
+      method: reading.method,
+    };
+  }
+  if (reading.kind === "no_money" && nextStatus === "paid" && handDeposit) return handDeposit;
+  return { amountCents: null, method: null };
 }

@@ -199,6 +199,11 @@ type ActivityParamShapes = {
   /** A seat was marked refunded without moving money through DiveDay. */
   payment_marked_refunded: { actor: string; diver: string };
   /**
+   * A seat was marked Paid on less than it owed, or on nothing past a hand
+   * deposit: the rest of the fare written off, the shop's call (batch 6).
+   */
+  payment_balance_written_off: { actor: string; diver: string };
+  /**
    * **Who changed the board**: the schedule builder's four acts, which wrote
    * no actor anywhere until the activity log asked. Each is recorded on the
    * departure it changed; a repeating departure is one line, on its first
@@ -318,6 +323,7 @@ export const ACTIVITY_CODES = [
   "seat_refunded",
   "payment_waived",
   "payment_marked_refunded",
+  "payment_balance_written_off",
   "departure_added",
   "series_added",
   "departure_moved",

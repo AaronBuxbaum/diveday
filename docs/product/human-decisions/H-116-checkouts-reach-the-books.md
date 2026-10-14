@@ -1,4 +1,4 @@
-# H-115: How do online checkouts and tips reach a shop's books?
+# H-116: How do online checkouts and tips reach a shop's books?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

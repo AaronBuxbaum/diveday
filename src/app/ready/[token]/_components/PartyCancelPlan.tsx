@@ -17,7 +17,7 @@ export function partyCancelSeats(
 /**
  * **What a party lead's cancel does to the seats they booked**, inside the
  * confirm and before the tap (batch 6 item 10): who goes with the lead, who
- * stays booked as theirs, then the lead's own money sentence and that the
+ * stays booked, then the lead's own money sentence and that the
  * seats that go share its rule. Drawn from the same rule
  * `cancelUnclaimedPartySeats` applies.
  */

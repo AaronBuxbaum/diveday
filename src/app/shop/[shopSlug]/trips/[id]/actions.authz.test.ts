@@ -970,7 +970,7 @@ describe("money on the trip page", () => {
     noMethod.set("amount", "120");
     noMethod.set("method", "bitcoin");
     expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, noMethod))).toContain(
-      "notice=payment-amount",
+      "notice=payment-method",
     );
     expect(await getBookingPayment(db, shop.id, booking.id)).toEqual(before);
   });
@@ -994,6 +994,157 @@ describe("money on the trip page", () => {
       method: null,
       recordedByPersonId: owner,
     });
+  });
+
+  /** A fresh unpaid seat on a $120 departure, so every balance below is known. */
+  async function unpaidSeatAt120(db: AppDb, shopId: string, tripId: string) {
+    await db.update(trips).set({ priceCents: 12_000 }).where(eq(trips.id, tripId));
+    const seated = await createBooking(db, {
+      actor: "staff",
+      shopId,
+      tripId,
+      fullName: "Ines Calloway",
+      email: "ines.calloway@example.com",
+    });
+    if (!seated.ok) throw new Error("seat not booked");
+    return seated.bookingId;
+  }
+
+  function moneyForm(bookingId: string, status: string, amount: string, method = "cash") {
+    const data = paymentForm(bookingId, status);
+    data.set("amount", amount);
+    data.set("method", method);
+    return data;
+  }
+
+  /**
+   * **A hand mark never touches a seat paid online** (security review of batch
+   * 6 layer 2). `setBookingPayment` writes the whole row, so any hand mark on a
+   * Stripe-paid seat nulled `provider`/`providerRef`, and the automatic refund
+   * lost the payment it would have reversed. A plain POST is enough to try it.
+   */
+  it("refuses any hand mark on a seat paid online, for an owner too, and keeps its Stripe pointer", async () => {
+    const { db, shop, tripId, owner, captain } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      amountCents: 12_000,
+      currency: "usd",
+      provider: "stripe",
+      providerRef: "pi_layer2_regression",
+      operation: "checkout_settled",
+    });
+    const before = await getBookingPayment(db, shop.id, bookingId);
+
+    for (const [who, form] of [
+      [captain, moneyForm(bookingId, "paid", "120")],
+      [captain, moneyForm(bookingId, "deposit_paid", "50")],
+      [owner, moneyForm(bookingId, "paid", "120")],
+      [owner, paymentForm(bookingId, "unpaid")],
+      [owner, paymentForm(bookingId, "refunded")],
+    ] as const) {
+      signIn(shop, who);
+      expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+        "notice=payment-online",
+      );
+    }
+    expect(await getBookingPayment(db, shop.id, bookingId)).toEqual(before);
+    expect(before).toMatchObject({ provider: "stripe", providerRef: "pi_layer2_regression" });
+  });
+
+  it("asks for the amount and the method apart", async () => {
+    const { db, shop, tripId, captain } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    signIn(shop, captain);
+    expect(
+      await redirectedTo(() =>
+        markPaymentAction(shop.slug, tripId, moneyForm(bookingId, "paid", "lots")),
+      ),
+    ).toContain("notice=payment-amount");
+    const noMethod = paymentForm(bookingId, "paid");
+    noMethod.set("amount", "120");
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, noMethod))).toContain(
+      "notice=payment-method",
+    );
+  });
+
+  /**
+   * **A cent is not a payment for a $120 seat** (security review of batch 6
+   * layer 2). The write-off gate read `amountCents === 0`, so typing 0.01 marked
+   * a seat Paid with nobody's say-so. Paid on less than the balance writes the
+   * rest off; Deposit paid on part of it does not.
+   */
+  it("refuses crew a Paid mark short of the balance, and lets them record it as a deposit", async () => {
+    const { db, shop, tripId, captain } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    signIn(shop, captain);
+
+    expect(
+      await redirectedTo(() =>
+        markPaymentAction(shop.slug, tripId, moneyForm(bookingId, "paid", "0.01")),
+      ),
+    ).toContain("notice=payment-short");
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status ?? "unpaid").toBe("unpaid");
+
+    await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, moneyForm(bookingId, "deposit_paid", "0.01")),
+    );
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      status: "deposit_paid",
+      amountCents: 1,
+    });
+    // The rest of the fare, in full, is crew work again.
+    await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, moneyForm(bookingId, "paid", "119.99")),
+    );
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      status: "paid",
+      amountCents: 12_000,
+    });
+  });
+
+  it("lets an owner mark Paid on part of the fare, and names the write-off", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    signIn(shop, owner);
+    const to = await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, moneyForm(bookingId, "paid", "100")),
+    );
+    expect(to).not.toContain("notice=payment-");
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      status: "paid",
+      amountCents: 10_000,
+    });
+    expect(await activityLines(db, bookingId, "payment_balance_written_off")).toEqual([
+      expect.objectContaining({ actorPersonId: owner }),
+    ]);
+  });
+
+  /**
+   * **Comping the balance keeps the deposit** (dive-domain review of batch 6
+   * layer 2). A blank Paid mark wrote `amount_cents: null`, so writing off the
+   * rest of a seat erased the cash deposit the shop already held from Reports.
+   */
+  it("keeps a hand-taken deposit when an owner writes the balance off", async () => {
+    const { db, shop, tripId, owner, captain } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    signIn(shop, captain);
+    await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, moneyForm(bookingId, "deposit_paid", "50", "card")),
+    );
+
+    signIn(shop, owner);
+    await redirectedTo(() => markPaymentAction(shop.slug, tripId, paymentForm(bookingId, "paid")));
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      status: "paid",
+      amountCents: 5_000,
+      method: "card",
+    });
+    expect(await activityLines(db, bookingId, "payment_balance_written_off")).toEqual([
+      expect.objectContaining({ actorPersonId: owner }),
+    ]);
   });
 
   it("names the owner who wrote a seat off in the activity log", async () => {

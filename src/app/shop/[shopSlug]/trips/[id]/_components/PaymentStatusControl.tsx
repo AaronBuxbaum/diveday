@@ -55,6 +55,14 @@ export type PaymentMarkDefaults = {
   amountCents: number | null;
   currency: string;
   locale: string;
+  /** "Balance owed: $70" beside the amount, on a deposit-paid seat. */
+  balanceHint?: string | null;
+  /**
+   * The seat was paid online or from a package. Its row points at the payment
+   * a refund or a release reverses, and `markPaymentAction` refuses any hand
+   * mark on it, so the picker offers nothing but the seat's own status.
+   */
+  handMarkRefused?: boolean;
 };
 
 /**
@@ -167,7 +175,10 @@ export function PaymentStatusControl({
                 silently move a free seat to unpaid. Order comes from the copy
                 map, so the list reads the same for everyone who sees it. */}
             {(Object.keys(copy.statuses) as PaymentStatus[])
-              .filter((value) => value === status || allowedStatuses.includes(value))
+              .filter(
+                (value) =>
+                  value === status || (!mark.handMarkRefused && allowedStatuses.includes(value)),
+              )
               .map((value) => (
                 <option key={value} value={value}>
                   {copy.statuses[value]}
@@ -190,6 +201,7 @@ export function PaymentStatusControl({
           <PriceField
             name="amount"
             label={copy.amountLabel}
+            hint={mark.balanceHint ?? undefined}
             cents={mark.amountCents}
             currency={mark.currency}
             locale={mark.locale}
@@ -202,7 +214,10 @@ export function PaymentStatusControl({
                 type="radio"
                 name="method"
                 value={method}
-                defaultChecked={method === "cash"}
+                // No default: a method nobody picked would be recorded as
+                // how the money came in. The browser asks first, and the
+                // action asks again for a post without one.
+                required
               >
                 {copy.methods[method]}
               </ChoicePill>
