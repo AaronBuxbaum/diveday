@@ -46,6 +46,12 @@ runs. Pass args directly. The shell guard refuses the bare form.
 - Before starting non-trivial work, read the open PRs **and** `pnpm gates`' "Claimed — in flight"
   section. Overlap with your plan → pick a different slice or coordinate in that thread. A claim
   reported **stale** is a dead session, not a reservation — take the work and clear the claim.
+- **Create a worktree from the shell** (`git worktree add -B <branch> <path> <base>`), never with
+  the `EnterWorktree` tool: its permission prompt parks the thread until a human answers, and on
+  2026-10-13 that held a 328k-token thread all night.
+- **Never switch a live thread's model; start a fresh thread with a state note instead.**
+  Switching drops the prompt cache, so the next call re-reads the whole context at full price
+  (H-117).
 - Never bare `git stash` / `git stash pop` — one stack shared with every worktree and every session
   (the shell guard refuses both). Prefer a `git worktree`, then a WIP commit, then
   `git stash push -u -m "<tag>"` restored by sha and popped immediately after.
@@ -119,12 +125,12 @@ runs. Pass args directly. The shell guard refuses the bare form.
   what comes back — a red PR you are driving is fine, a red PR you have stopped driving is not.
   Never report unverified work as done, and *look at* UI you changed, the one thing CI cannot
   answer.
-- **A thought you don't act on goes in the tracker, not in your closing message.** An idea left
-  undone, a question only a human can answer, a risk noticed in passing, a cleanup deliberately
-  scoped out: a GitHub issue labelled `needs-triage`
-  ([docs/agents/issue-tracker.md](issue-tracker.md)'s "Filing a follow-up"), its number
-  in the PR description, written for a reader with none of your context and ending in a prompt they
-  can paste into a fresh session. This never replaces doing the work you were asked to do, a failing
+- **A thought you don't act on goes in the tracker or the PR, never only in your closing
+  message.** A bug, a safety gap, or a decision only a human can make: a GitHub issue labelled
+  `needs-triage` ([docs/agents/issue-tracker.md](issue-tracker.md)'s "Filing a follow-up"), its
+  number in the PR description, written for a reader with none of your context and ending in a
+  prompt they can paste into a fresh session. Anything else (an idea, debt read in passing, an
+  out-of-scope cleanup) is a bullet in one "Notes" comment on the PR. This never replaces doing the work you were asked to do, a failing
   test is never a follow-up, and someone else's entry is never a drive-by.
 - **A failing or flaky test is part of the work, even when unrelated to your change.** Fix it
   before calling the work done — never skip it, widen a timeout to paper over a flake, or leave it

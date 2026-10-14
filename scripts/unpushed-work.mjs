@@ -20,9 +20,9 @@
  *      "shall I push this?" is a fine ending; the user is about to answer.
  *   4. Nothing is unpushed: the branch's upstream holds every local commit
  *      (`@{upstream}..HEAD` is empty), or, for a branch with no upstream yet,
- *      every commit is on some remote branch (`HEAD --not --remotes`). A
- *      detached HEAD has nothing to push to and counts nothing — the same
- *      measure `session-context.mjs` prints at session start.
+ *      every commit is on some remote branch (`HEAD --not --remotes`), which
+ *      is also how a detached HEAD is counted: a commit made on one is lost
+ *      with the container like any other.
  *
  * Only when all four fail does it block, naming the count and the push command.
  * A session that has a reason not to push says so in its closing message and stops
@@ -57,11 +57,20 @@ export function shouldBlock({ remote, reentry, closing, unpushed }) {
   return !isHandoff(closing);
 }
 
+/**
+ * One command to run. A block costs one more turn at the session's full context, so the reason
+ * names the exact command and the one alternative, and nothing else.
+ */
 export function reasonFor({ unpushed, branch }) {
+  if (branch === "HEAD") {
+    return [
+      `${unpushed} commit${unpushed === 1 ? "" : "s"} on a detached HEAD ${unpushed === 1 ? "is" : "are"} on no remote branch, and this container is ephemeral.`,
+      "Run `git switch -c claude/<slug>`, then `pnpm verify:push && git push -u origin claude/<slug>`, or say in one sentence why not; this check does not repeat this turn.",
+    ].join("\n");
+  }
   return [
-    `${unpushed} commit${unpushed === 1 ? "" : "s"} on \`${branch}\` ${unpushed === 1 ? "is" : "are"} on no remote branch, and this container is ephemeral — an unpushed commit is lost when it is reclaimed.`,
-    "",
-    `Push now (\`pnpm verify:push\`, then \`git push -u origin ${branch}\`; to save unverified work first, \`DIVEDAY_PUSH_UNVERIFIED="saving work before the container is reclaimed" git push -u origin ${branch}\`) and open or update the pull request. If there is a reason not to push yet, say so in your closing message; this check does not repeat on the same turn.`,
+    `${unpushed} commit${unpushed === 1 ? "" : "s"} on \`${branch}\` ${unpushed === 1 ? "is" : "are"} on no remote branch, and this container is ephemeral.`,
+    `Run \`pnpm verify:push && git push -u origin ${branch}\`, or say in one sentence why not; this check does not repeat this turn.`,
   ].join("\n");
 }
 
@@ -84,14 +93,22 @@ function git(args) {
  * every remote ref at once (`--not --remotes`), a container whose
  * `origin/main` was days old reported hundreds of phantom commits (issue
  * #2355). A branch with no upstream yet is the one case `--not --remotes`
- * answers honestly. A detached HEAD has nothing to push to.
+ * answers honestly. A detached HEAD is counted the same way: it has no upstream, and the session-start fetch keeps the remote refs current.
  *
  * @param {(args: string[]) => string | null} run git, `null` on failure
  * @returns {number}
  */
 export function countUnpushed(run) {
   const branch = run(["rev-parse", "--abbrev-ref", "HEAD"]);
-  if (!branch || branch === "HEAD") return 0;
+  if (!branch) return 0;
+  // A detached HEAD has no upstream, but a commit made on it is lost with the container like
+  // any other. session-context leaves the shared checkout detached after its fast-forward and
+  // fetches first, so `--not --remotes` reads current refs there.
+  if (branch === "HEAD") {
+    const raw = run(["rev-list", "--count", "HEAD", "--not", "--remotes"]);
+    const count = Number(raw);
+    return raw !== null && Number.isFinite(count) ? count : 0;
+  }
   const upstream = run(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
   const raw = upstream
     ? run(["rev-list", "--count", "@{u}..HEAD"])

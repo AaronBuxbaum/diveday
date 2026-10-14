@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   checkoutState,
+  fastForwardPlan,
+  fastForwardShared,
   fetchNeed,
   fetchOpenPulls,
   findInstalledNode,
@@ -391,5 +398,222 @@ describe("the papercut ask on the prompt line", () => {
       unwrittenPapercut(repeat, "/r", { list: () => ["2026-10-13-guard-bash-never-pipe.md"] }),
     ).toBeNull();
     expect(unwrittenPapercut(null, "/r")).toBeNull();
+  });
+});
+
+/**
+ * The shared checkout (`/home/claude/diveday`) is where every thread's hooks load from, and it
+ * stays at the commit it had when the thread started. The fast-forward moves it only when
+ * nothing could be lost: the main worktree, detached or on `main`, a clean tree, no operation
+ * in progress, and no commit that is not already on `origin/main`.
+ */
+describe("fast-forwarding the shared checkout at session start", () => {
+  const OLD = "a".repeat(40);
+  const NEW = "b".repeat(40);
+  const shared = (overrides = {}) =>
+    gitFrom({
+      "rev-parse --absolute-git-dir": "/repo/.git",
+      "rev-parse --path-format=absolute --git-common-dir": "/repo/.git",
+      "rev-parse --abbrev-ref HEAD": "HEAD",
+      "status --porcelain": "",
+      "rev-parse --verify HEAD^{commit}": OLD,
+      "rev-parse --verify refs/remotes/origin/main^{commit}": NEW,
+      [`rev-list --count ${NEW}..${OLD}`]: "0",
+      [`rev-list --count ${OLD}..${NEW}`]: "659",
+      ...overrides,
+    });
+  const nothing = () => false;
+  const plan = (git, options = {}) =>
+    fastForwardPlan(git, { source: "startup", env: {}, exists: nothing, ...options });
+
+  it("plans a fast-forward for a clean, detached main worktree that is only behind", () => {
+    expect(plan(shared())).toEqual({ from: OLD, to: NEW, behind: 659 });
+    expect(plan(shared(), { source: "resume" })).toEqual({ from: OLD, to: NEW, behind: 659 });
+  });
+
+  it("also moves a clean `main` that is not ahead of origin/main", () => {
+    expect(plan(shared({ "rev-parse --abbrev-ref HEAD": "main" }))).toEqual({
+      from: OLD,
+      to: NEW,
+      behind: 659,
+    });
+  });
+
+  it("never touches a linked worktree", () => {
+    const git = shared({ "rev-parse --absolute-git-dir": "/repo/.git/worktrees/wt-a" });
+    expect(plan(git)).toBeNull();
+  });
+
+  it("never touches any branch but main", () => {
+    expect(plan(shared({ "rev-parse --abbrev-ref HEAD": "claude/feature" }))).toBeNull();
+  });
+
+  it("never touches a dirty tree, untracked files included", () => {
+    expect(plan(shared({ "status --porcelain": " M src/a.ts" }))).toBeNull();
+    expect(plan(shared({ "status --porcelain": "?? notes.txt" }))).toBeNull();
+    expect(plan(shared({ "status --porcelain": null }))).toBeNull();
+  });
+
+  it("never touches a checkout with a commit that is not on origin/main", () => {
+    expect(plan(shared({ [`rev-list --count ${NEW}..${OLD}`]: "1" }))).toBeNull();
+    expect(plan(shared({ [`rev-list --count ${NEW}..${OLD}`]: null }))).toBeNull();
+  });
+
+  it("does nothing when already current, or when origin/main is unknown", () => {
+    expect(plan(shared({ [`rev-list --count ${OLD}..${NEW}`]: "0" }))).toBeNull();
+    expect(plan(shared({ "rev-parse --verify HEAD^{commit}": NEW }))).toBeNull();
+    expect(
+      plan(shared({ "rev-parse --verify refs/remotes/origin/main^{commit}": null })),
+    ).toBeNull();
+  });
+
+  it("never interrupts a rebase, merge, cherry-pick, revert or bisect (each can be clean and detached)", () => {
+    for (const marker of [
+      "rebase-merge",
+      "rebase-apply",
+      "MERGE_HEAD",
+      "CHERRY_PICK_HEAD",
+      "REVERT_HEAD",
+      "BISECT_LOG",
+    ]) {
+      const exists = (file) => file === path.join("/repo/.git", marker);
+      expect(plan(shared(), { exists }), marker).toBeNull();
+    }
+  });
+
+  it("runs only at startup and resume, and can be opted out of", () => {
+    expect(plan(shared(), { source: "compact" })).toBeNull();
+    expect(plan(shared(), { source: "clear" })).toBeNull();
+    expect(plan(shared(), { env: { DIVEDAY_SESSION_FASTFORWARD: "0" } })).toBeNull();
+  });
+
+  it("fails open: any git question that comes back empty means no plan", () => {
+    expect(plan(() => null)).toBeNull();
+    expect(
+      plan(() => {
+        throw new Error("boom");
+      }),
+    ).toBeNull();
+  });
+
+  it("re-reads HEAD just before the merge and skips when another session moved it", () => {
+    // Security review of #2584, finding 3: between the plan and the merge another session can
+    // check out a branch (or another commit); the merge must not move that.
+    const changing = (key, later) => {
+      const base = shared();
+      let seen = 0;
+      return (args) => {
+        if (args.join(" ") === key && ++seen > 1) return later;
+        return base(args);
+      };
+    };
+    for (const [key, later] of [
+      ["rev-parse --abbrev-ref HEAD", "claude/feature"],
+      ["rev-parse --verify HEAD^{commit}", "c".repeat(40)],
+    ]) {
+      const calls = [];
+      const run = (...args) => {
+        calls.push(args);
+        return { status: 0 };
+      };
+      expect(
+        fastForwardShared("/repo", { source: "startup", env: {}, git: changing(key, later), run }),
+        key,
+      ).toBeNull();
+      expect(calls, key).toEqual([]);
+    }
+  });
+
+  it("says what it moved in the session block, and nothing when it did not move", () => {
+    const block = sessionBlock(null, {
+      fastForwarded: { from: OLD, to: NEW, behind: 659 },
+    });
+    expect(block).toContain("Fast-forwarded this checkout 659 commits to origin/main");
+    expect(block).toContain("aaaaaaaaa");
+    expect(sessionBlock(null, {})).not.toContain("Fast-forwarded");
+  });
+});
+
+describe("fast-forwarding a real repository", () => {
+  const dirs = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+  const sh = (cwd, ...args) =>
+    execFileSync("git", args, {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "t",
+        GIT_AUTHOR_EMAIL: "t@example.com",
+        GIT_COMMITTER_NAME: "t",
+        GIT_COMMITTER_EMAIL: "t@example.com",
+      },
+    }).trim();
+  const commit = (cwd, file) => {
+    writeFileSync(path.join(cwd, file), file);
+    sh(cwd, "add", file);
+    sh(cwd, "commit", "-q", "-m", file);
+    return sh(cwd, "rev-parse", "HEAD");
+  };
+
+  /** An origin with two commits on main, and a clone detached at the first, fetched. */
+  function setup() {
+    const root = mkdtempSync(path.join(os.tmpdir(), "ff-shared-"));
+    dirs.push(root);
+    const upstream = path.join(root, "upstream");
+    const clone = path.join(root, "clone");
+    sh(root, "init", "-q", "-b", "main", upstream);
+    const first = commit(upstream, "one.txt");
+    sh(root, "clone", "-q", upstream, clone);
+    sh(clone, "checkout", "-q", "--detach", first);
+    const second = commit(upstream, "two.txt");
+    sh(clone, "fetch", "-q", "origin");
+    return { root, clone, first, second };
+  }
+
+  it("moves a clean detached clone to origin/main and reports it", () => {
+    const { clone, first, second } = setup();
+    const result = fastForwardShared(clone, { source: "startup", env: {} });
+    expect(result).toEqual({ from: first, to: second, behind: 1 });
+    expect(sh(clone, "rev-parse", "HEAD")).toBe(second);
+    expect(sh(clone, "rev-parse", "--abbrev-ref", "HEAD")).toBe("HEAD");
+  });
+
+  it("leaves a dirty clone, a linked worktree and a branch with commits exactly where they were", () => {
+    const { root, clone, first } = setup();
+
+    writeFileSync(path.join(clone, "scratch.txt"), "mine");
+    expect(fastForwardShared(clone, { source: "startup", env: {} })).toBeNull();
+    expect(sh(clone, "rev-parse", "HEAD")).toBe(first);
+    rmSync(path.join(clone, "scratch.txt"));
+
+    const linked = path.join(root, "linked");
+    sh(clone, "worktree", "add", "-q", "--detach", linked, first);
+    expect(fastForwardShared(linked, { source: "startup", env: {} })).toBeNull();
+    expect(sh(linked, "rev-parse", "HEAD")).toBe(first);
+
+    sh(clone, "checkout", "-q", "-b", "claude/wip");
+    const wip = commit(clone, "wip.txt");
+    expect(fastForwardShared(clone, { source: "startup", env: {} })).toBeNull();
+    expect(sh(clone, "rev-parse", "HEAD")).toBe(wip);
+
+    sh(clone, "checkout", "-q", "--detach");
+    expect(fastForwardShared(clone, { source: "startup", env: {} })).toBeNull();
+    expect(sh(clone, "rev-parse", "HEAD")).toBe(wip);
+  });
+
+  it("never overwrites an ignored file with one main starts tracking", () => {
+    const { root, clone, first } = setup();
+    const upstream = path.join(root, "upstream");
+    writeFileSync(path.join(clone, ".git/info/exclude"), "secret.env\n");
+    writeFileSync(path.join(clone, "secret.env"), "mine");
+    commit(upstream, "secret.env");
+    sh(clone, "fetch", "-q", "origin");
+    expect(fastForwardShared(clone, { source: "startup", env: {} })).toBeNull();
+    expect(sh(clone, "rev-parse", "HEAD")).toBe(first);
+    expect(readFileSync(path.join(clone, "secret.env"), "utf8")).toBe("mine");
   });
 });

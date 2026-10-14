@@ -162,8 +162,8 @@ One line each, with what enforces it; the full statement and its incident:
   `tail`/`head` (`Stop` hook `scripts/stray-processes.mjs`, `scripts/guard-bash.mjs`).
 - **Verify before commit, `pnpm verify:push` before push, push once per round.** The **verify**
   skill is the checklist (`scripts/guard-push.mjs`). Never report unverified work as done.
-- **A thought you don't act on is a `needs-triage` issue**, at most ten per run, ending in a
-  prompt a fresh session can paste ([issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up").
+- **File only a bug, safety gap or decision** as a `needs-triage` issue, ten a run at most; the
+  rest is one "Notes" PR comment ([issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up").
 - **A failing or flaky test is part of the work**, even when unrelated: never skipped, never a
   wider timeout; search open PRs for a fix in flight first (`pnpm check:e2e-hygiene`).
 - **A pushed PR is not done until its visual diffs are explained** (the **visual-triage** skill)
