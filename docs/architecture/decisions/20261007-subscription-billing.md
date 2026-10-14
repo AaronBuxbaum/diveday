@@ -168,12 +168,12 @@ each action. A manager is refused, as is a session whose JWT still says owner.
 - **This reverses part of H-12.** On 2026-08-14 H-12 decided the six-month founding term gets **no
   per-shop free-term state in the product**. `free_term_ends_on` is exactly that state. The column
   exists because the market-audit brief asked for "a staff-set free-term end date, so Aaron can
-  grant founding free months by hand". The H-12 row must be amended by Aaron. Until he does:
+  grant founding free months by hand". Aaron amended H-12 on 2026-10-14 to keep it.
   - The column is inert unless the script writes it.
   - A shop without it reads exactly as before: trialing, then trial ended.
 - **The pricing FAQ goes stale once billing is turned on.** It still says to move to paid by
-  emailing `onboarding@dive.day` (`marketing.pricing.faq.trialMeaning`). That copy is owned
-  elsewhere, and its update is tracked with this change rather than made in it.
+  emailing `onboarding@dive.day` (`marketing.pricing.faq.trialMeaning`). Aaron decided on
+  2026-10-14 (H-12) that it stays until billing goes live.
 - Taxes are untouched. Stripe Tax on DiveDay's own invoices is the finance owner's call
   (`docs/product/stakeholders/finance-and-tax.md`). Turning it on is a Stripe price and dashboard
   setting, not a code change.

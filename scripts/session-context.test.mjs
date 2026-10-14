@@ -496,6 +496,34 @@ describe("fast-forwarding the shared checkout at session start", () => {
     ).toBeNull();
   });
 
+  it("re-reads HEAD just before the merge and skips when another session moved it", () => {
+    // Security review of #2584, finding 3: between the plan and the merge another session can
+    // check out a branch (or another commit); the merge must not move that.
+    const changing = (key, later) => {
+      const base = shared();
+      let seen = 0;
+      return (args) => {
+        if (args.join(" ") === key && ++seen > 1) return later;
+        return base(args);
+      };
+    };
+    for (const [key, later] of [
+      ["rev-parse --abbrev-ref HEAD", "claude/feature"],
+      ["rev-parse --verify HEAD^{commit}", "c".repeat(40)],
+    ]) {
+      const calls = [];
+      const run = (...args) => {
+        calls.push(args);
+        return { status: 0 };
+      };
+      expect(
+        fastForwardShared("/repo", { source: "startup", env: {}, git: changing(key, later), run }),
+        key,
+      ).toBeNull();
+      expect(calls, key).toEqual([]);
+    }
+  });
+
   it("says what it moved in the session block, and nothing when it did not move", () => {
     const block = sessionBlock(null, {
       fastForwarded: { from: OLD, to: NEW, behind: 659 },
