@@ -8,8 +8,8 @@ import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
-import { boundLockWaits } from "./lock-bounds";
 import { enqueueCheckoutIntegrationEvent } from "./integration-events";
+import { boundLockWaits } from "./lock-bounds";
 import { applyStripeRefundedTotalToOrder } from "./orders";
 import {
   awaitingStripeReconciliation,

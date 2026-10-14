@@ -3,7 +3,6 @@ import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { AppTransaction, DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
-import type { BookingPayment, PaymentEventOperation, PaymentStatus } from "./schema";
 import type {
   BookingPayment,
   ManualPaymentMethod,

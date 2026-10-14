@@ -250,12 +250,28 @@
         "files": {
           "src/db/dive-sites.test.ts": "1172 -> 1174"
         }
+      },
+      {
+        "why": "merge of opportunities batch 6 (#2596, #2597) into the code review runtime layer: the Stripe webhook route and its test, the trip actions authz test and DetailsSection grew on that side",
+        "files": {
+          "src/app/api/webhooks/stripe/route.test.ts": "1824 -> 1876",
+          "src/app/api/webhooks/stripe/route.ts": "0 -> 932",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "971 -> 1180",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.ts": "990 -> 1062",
+          "src/db/bookings.test.ts": "3418 -> 3540",
+          "src/db/checkouts.test.ts": "2912 -> 2972",
+          "src/db/export.test.ts": "1666 -> 1670",
+          "src/db/seat-claims.test.ts": "1004 -> 1047",
+          "src/db/trips-series.test.ts": "1824 -> 1873",
+          "src/i18n/label-maps.test.ts": "1313 -> 1331"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
     "src/app/api/test/seed-trouble-states/route.ts": 2040,
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1369,
-    "src/app/api/webhooks/stripe/route.test.ts": 1824,
+    "src/app/api/webhooks/stripe/route.test.ts": 1876,
+    "src/app/api/webhooks/stripe/route.ts": 932,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1110,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1281,
@@ -265,8 +281,8 @@
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 948,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1050,
-    "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 971,
-    "src/app/shop/[shopSlug]/trips/[id]/actions.ts": 990,
+    "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1180,
+    "src/app/shop/[shopSlug]/trips/[id]/actions.ts": 1062,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 1016,
     "src/components/ui/button.test.ts": 971,
@@ -274,10 +290,10 @@
     "src/components/ui/form.tsx": 1206,
     "src/components/ui/ledger.test.tsx": 1232,
     "src/db/anonymize.test.ts": 1693,
-    "src/db/bookings.test.ts": 3418,
+    "src/db/bookings.test.ts": 3540,
     "src/db/buddy-pairs.test.ts": 990,
     "src/db/check-in.test.ts": 1212,
-    "src/db/checkouts.test.ts": 2912,
+    "src/db/checkouts.test.ts": 2972,
     "src/db/closeout.test.ts": 903,
     "src/db/course-forms.test.ts": 1274,
     "src/db/courses.test.ts": 1719,
@@ -286,7 +302,7 @@
     "src/db/divers.test.ts": 3105,
     "src/db/erasure-coverage.test.ts": 1176,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1666,
+    "src/db/export.test.ts": 1670,
     "src/db/import.test.ts": 1077,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
@@ -301,15 +317,15 @@
     "src/db/reporting.test.ts": 1594,
     "src/db/retention.test.ts": 1262,
     "src/db/reviews.test.ts": 1004,
-    "src/db/seat-claims.test.ts": 1004,
+    "src/db/seat-claims.test.ts": 1047,
     "src/db/self-declared-cards.test.ts": 1864,
     "src/db/staffing.test.ts": 946,
     "src/db/trips-crew.test.ts": 1489,
     "src/db/trips-queries.test.ts": 1143,
-    "src/db/trips-series.test.ts": 1824,
+    "src/db/trips-series.test.ts": 1873,
     "src/db/waiver-issue.test.ts": 1051,
     "src/db/work-orders.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1313,
+    "src/i18n/label-maps.test.ts": 1331,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,
     "src/lib/incident-export.test.ts": 1187,
@@ -351,6 +367,12 @@
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": "0 -> 301"
         }
+      },
+      {
+        "why": "merge of opportunities batch 6 (#2596, #2597) into the code review runtime layer: the Stripe webhook route and its test, the trip actions authz test and DetailsSection grew on that side",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": "328 -> 329"
+        }
       }
     ],
     "src/app/ready/[token]/page.tsx#DiverReadinessPage": 310,
@@ -369,7 +391,7 @@
     "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 467,
     "src/app/shop/[shopSlug]/settings/integrations/page.tsx#IntegrationsSettingsPage": 306,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 328,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
     "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": 301,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 424,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 366,
@@ -382,8 +404,7 @@
     "src/db/seed-history.ts#seedHistory": 742,
     "src/db/seed-more-trips.ts#seedMoreTrips": 642,
     "src/db/seed-trips.ts#seedTrips": 431,
-    "src/lib/import.ts#prepareContactImport": 508,
-    "src/app/api/webhooks/stripe/route.ts#POST": 454
+    "src/lib/import.ts#prepareContactImport": 508
   },
   "live-people": {
     "//": "Reads of `people` written before scripts/check-live-people.mjs that carry no `livePerson()`, per file. Most are right (a by-id read in a transaction, a name for an activity line); a count may only fall. Written by `node scripts/check-live-people.mjs --write`.",

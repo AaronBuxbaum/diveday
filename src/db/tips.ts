@@ -4,8 +4,8 @@ import { log } from "@/lib/log";
 import { majorToMinor, type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/checkout";
 import type { AppDb, DbExecutor } from "./client";
-import { boundLockWaits } from "./lock-bounds";
 import { enqueueTipIntegrationEvent } from "./integration-events";
+import { boundLockWaits } from "./lock-bounds";
 import {
   idempotencyKeyFor,
   recordPaymentOperationStripeObject,

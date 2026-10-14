@@ -11,8 +11,8 @@ import { allocateSettledTotal } from "@/lib/payments/settlement";
 import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
-import { boundLockWaits } from "./lock-bounds";
 import { enqueueCheckoutIntegrationEvent } from "./integration-events";
+import { boundLockWaits } from "./lock-bounds";
 import {
   claimBookingsForCheckout,
   idempotencyKeyFor,
