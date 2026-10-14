@@ -1,9 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { inHorizonReadiness } from "@/db/blockers";
 import { getTripManifest } from "@/db/manifests";
 import { listTripReadiness } from "@/db/readiness";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { bookings, people, trips } from "@/db/schema";
+import { getShopDayDepartures } from "@/db/today";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 
 /**
@@ -120,5 +123,43 @@ describe("POST /api/test/seed-trouble-states", () => {
       .innerJoin(people, eq(people.id, bookings.personId))
       .where(and(eq(bookings.tripId, tripId), eq(people.fullName, personName)));
     expect(seat?.status).toBe("checked_in");
+  }, 60_000);
+
+  /**
+   * **A full boat nobody has counted the crew on**: the station's warning
+   * needs every seat aboard. The demo's morning hand-off checks two divers in
+   * on that boat, so a helper that boarded only `booked` seats left them
+   * ashore and the warning never showed.
+   */
+  it("boards every seat on the next boat, checked in or not, and counts no crew", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const now = nowDate();
+    const nextOf = async () => {
+      const evidence = await inHorizonReadiness(db, shop.id, now);
+      const cards = await getShopDayDepartures(db, shop.id, shop.timezone, now, evidence);
+      const card = cards
+        .filter((entry) => entry.startsAt.getTime() >= now.getTime() - HOUR_MS)
+        .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
+      if (!card) throw new Error("no departure left today");
+      return card;
+    };
+    // A diver the counter has already checked in, as the demo's hand-off does.
+    const [seat] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, (await nextOf()).tripId), eq(bookings.status, "booked")))
+      .limit(1);
+    if (!seat) throw new Error("the next boat has no booked seat");
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, seat.id));
+
+    const response = await POST(seedRequest("?crewUncounted=1"));
+    expect(response.status).toBe(200);
+
+    const next = await nextOf();
+    expect(next.booked).toBeGreaterThan(0);
+    expect(next.boarded).toBe(next.booked);
+    expect(next.blocked).toBe(0);
+    expect(next.crewAccountedFor).toBe(false);
   }, 60_000);
 });
