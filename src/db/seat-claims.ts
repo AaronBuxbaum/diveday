@@ -1,6 +1,7 @@
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
+import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { seatName } from "@/lib/held-seat";
 import { log } from "@/lib/log";
 import type { ParticipantType } from "@/lib/participant-types";
@@ -604,6 +605,8 @@ export async function issuePartySeatClaims(
       ),
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
+  const lead =
+    rows.length > 0 ? await leadSigningContext(db, input.shopId, input.leadBookingId) : null;
   const seats: PartySeatClaim[] = [];
   for (const row of rows) {
     const claimable = claimableNow(row.booking, row.trip, now);
@@ -616,7 +619,8 @@ export async function issuePartySeatClaims(
       waiverSigned: waiverState(row.waiver, now) === "complete",
       participantType: row.booking.participantType,
       signForMinor:
-        minorSeatSignable(row.booking, claimable) &&
+        lead !== null &&
+        minorSeatSignable(row.booking, row.person, { ...lead, now, claimable }) &&
         (await minorSeatWaiverOwed(db, input.shopId, row.booking.id)),
       claim: claimable
         ? await issueBookingCapability(db, {
@@ -632,24 +636,54 @@ export async function issuePartySeatClaims(
 }
 
 /**
- * The seat's half of "may the lead sign this release as its parent?": unclaimed
- * (a claimed seat is its claimant's, who signs from their own link), declared
- * "Under 18" by the booker, not held on identity (#2125: a held seat's record
- * may be somebody else's), and still claimable (before the boat leaves).
+ * The seat's half of "may the lead sign this release as its parent?":
+ *
+ * - unclaimed (a claimed seat is its claimant's, who signs from their own link)
+ * - declared "Under 18" by the booker, not held on identity (#2125), and still
+ *   claimable (before the boat leaves)
+ * - **a person this booking made**: no email of their own, or only the lead's.
+ *   A seat typed with somebody's real name and email lands on that person's
+ *   record when the names match, and the lead must never sign a release for a
+ *   diver the shop already knows (security review of H-116)
+ * - **a guardian is what the page will ask for**: `guardianSignatureRequired`
+ *   on the shop's day, the rule `/waivers/[token]` and `completeWaiver` read.
+ *   A date of birth on file saying adult would make the page ask for the
+ *   diver's own signature, and the lead is never that.
  */
 function minorSeatSignable(
   booking: Pick<
     typeof bookings.$inferSelect,
     "claimedAt" | "minorDeclaredAt" | "identityUnconfirmedAt"
   >,
-  claimable: boolean,
+  person: Pick<typeof people.$inferSelect, "email" | "dateOfBirth">,
+  context: { leadEmail: string | null; timezone: string; now: Date; claimable: boolean },
 ): boolean {
+  const ownEmail = person.email?.trim().toLowerCase() || null;
+  const leadEmail = context.leadEmail?.trim().toLowerCase() || null;
   return (
-    claimable &&
+    context.claimable &&
     booking.claimedAt === null &&
     booking.minorDeclaredAt !== null &&
-    booking.identityUnconfirmedAt === null
+    booking.identityUnconfirmedAt === null &&
+    (ownEmail === null || ownEmail === leadEmail) &&
+    guardianSignatureRequired(person.dateOfBirth, signingDate(context.now, context.timezone), true)
   );
+}
+
+/** The lead's own email and the shop's zone: what `minorSeatSignable` measures against. */
+async function leadSigningContext(
+  db: AppDb,
+  shopId: string,
+  leadBookingId: string,
+): Promise<{ leadEmail: string | null; timezone: string } | null> {
+  const [row] = await db
+    .select({ email: people.email, timezone: shops.timezone })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .where(and(eq(bookings.id, leadBookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  return row ? { leadEmail: row.email, timezone: row.timezone } : null;
 }
 
 /** The release blockers a parent's signature answers; anything else is not theirs to fix. */
@@ -687,12 +721,13 @@ export async function openMinorSeatWaiver(
 ): Promise<{ ok: true; token: string } | { ok: false }> {
   const now = input.now ?? nowDate();
   const [row] = await db
-    .select({ booking: bookings, trip: trips })
+    .select({ booking: bookings, trip: trips, person: people })
     .from(bookings)
     .innerJoin(
       trips,
       and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId), liveTrip()),
     )
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
     .where(
       and(
         eq(bookings.id, input.seatBookingId),
@@ -703,7 +738,10 @@ export async function openMinorSeatWaiver(
     )
     .limit(1);
   if (!row) return { ok: false };
-  if (!minorSeatSignable(row.booking, claimableNow(row.booking, row.trip, now))) {
+  const lead = await leadSigningContext(db, input.shopId, input.leadBookingId);
+  if (!lead) return { ok: false };
+  const claimable = claimableNow(row.booking, row.trip, now);
+  if (!minorSeatSignable(row.booking, row.person, { ...lead, now, claimable })) {
     return { ok: false };
   }
   if (!(await minorSeatWaiverOwed(db, input.shopId, row.booking.id))) return { ok: false };

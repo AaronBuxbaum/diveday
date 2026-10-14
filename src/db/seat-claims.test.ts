@@ -1128,4 +1128,69 @@ describe("a parent signs a minor seat's release", () => {
     expect(miaPage?.minorDeclared).toBe(true);
     expect(leePage?.minorDeclared).toBe(false);
   });
+
+  /**
+   * Security review of H-116: a seat typed with a known diver's own name and
+   * email lands on that diver's record, not held, because the names match. The
+   * lead must not be able to sign that person's release as their "guardian".
+   */
+  it("never opens a release for a diver the shop already knows", async () => {
+    const { db, shop, open } = await seededContext();
+    await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Vera Known",
+      email: "vera.known@example.com",
+    });
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Eve Booker",
+        email: "eve.booker@example.com",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Vera Known",
+        email: "vera.known@example.com",
+        minorDeclared: true,
+      },
+    ]);
+    if (!outcome.ok) throw new Error(`party booking failed: ${outcome.reason}`);
+    const [lead, vera] = outcome.bookings;
+    if (!lead || !vera) throw new Error("party booking incomplete");
+    // Not held: the names match, so only the email rule stands in the way.
+    expect(vera.identityUnconfirmed).toBe(false);
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === vera.bookingId)?.signForMinor).toBe(false);
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: vera.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  it("never opens one when the date of birth on file says the diver is an adult", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, mia.bookingId));
+    if (!seat) throw new Error("seat missing");
+    await db.update(people).set({ dateOfBirth: "1990-01-01" }).where(eq(people.id, seat.personId));
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
 });
