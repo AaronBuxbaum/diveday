@@ -96,12 +96,15 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Billing standing
 - Cancellation notice
 - Card dispute
+- Checkout sale / tip sale
 - Dashboard refund
 - Failed refund
 - First paid month
 - Free term
 - Paid after close
+- Paid mark
 - Pass-through fee
+- Payments restricted
 - Payout
 - Subscription (DiveDay billing)
 

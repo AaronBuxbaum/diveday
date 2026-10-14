@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
+import { forgetWebhookRefusalReports } from "@/lib/webhook-refusal";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -27,8 +28,11 @@ vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
 vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
 vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
 vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn() }));
+vi.mock("@/db/stripe-restricted", () => ({
+  tellOwnersPaymentsRestricted: vi.fn(),
+}));
 vi.mock("@/db/stripe-accounts", () => ({
-  setShopStripeAccountStatus: vi.fn(),
+  applyStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
   stripeAccountHolder: vi.fn(),
 }));
@@ -58,8 +62,9 @@ const { recordStripeChargeRefund } = await import("@/db/refunds");
 const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
 const { recordStripePayout } = await import("@/db/payouts");
-const { setShopStripeAccountStatus, disconnectShopStripeAccount, stripeAccountHolder } =
-  await import("@/db/stripe-accounts");
+const { applyStripeAccountStatus, disconnectShopStripeAccount, stripeAccountHolder } = await import(
+  "@/db/stripe-accounts"
+);
 const { claimStripeWebhookEvent, hasNewerAccountUpdate, releaseStripeWebhookEventClaim } =
   await import("@/db/webhook-events");
 const Sentry = await import("@sentry/nextjs");
@@ -110,7 +115,9 @@ beforeEach(() => {
     .mockResolvedValue(FAKE_CHECKOUT as never);
   vi.mocked(markOrderPaidByInvoiceId).mockReset();
   vi.mocked(markOrderVoidedByInvoiceId).mockReset();
-  vi.mocked(setShopStripeAccountStatus).mockReset();
+  vi.mocked(applyStripeAccountStatus)
+    .mockReset()
+    .mockResolvedValue({ account: null, newlyRestricted: false });
   vi.mocked(disconnectShopStripeAccount).mockReset();
   vi.mocked(markTipPaidBySessionId).mockReset();
   vi.mocked(markTipExpiredBySessionId).mockReset();
@@ -137,6 +144,20 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     );
     expect(response.status).toBe(503);
     expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+  });
+
+  it("logs a bad signature as webhook.refused before answering 400", async () => {
+    forgetWebhookRefusalReports();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const payload = eventPayload({ id: "evt_1", type: "invoice.paid", data: { object: {} } });
+    const badHeader = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_wrong");
+    const response = await POST(webhookRequest(payload, badHeader));
+    const lines = warn.mock.calls.map((call) => JSON.parse(String(call[0])));
+    warn.mockRestore();
+    expect(response.status).toBe(400);
+    expect(lines).toContainEqual(
+      expect.objectContaining({ event: "webhook.refused", webhook: "stripe" }),
+    );
   });
 
   it("returns 400 with a missing signature header", async () => {
@@ -582,11 +603,42 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       },
     });
     expect(response.status).toBe(200);
-    expect(setShopStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, "acct_123", {
+    expect(applyStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, "acct_123", {
       chargesEnabled: true,
       payoutsEnabled: false,
       detailsSubmitted: true,
     });
+  });
+
+  it("account.updated tells the owners when it is the write that turned payments off", async () => {
+    const { tellOwnersPaymentsRestricted } = await import("@/db/stripe-restricted");
+    const restrictedAt = new Date("2026-10-14T12:00:00Z");
+    vi.mocked(tellOwnersPaymentsRestricted).mockReset();
+    vi.mocked(applyStripeAccountStatus).mockResolvedValueOnce({
+      account: { shopId: "shop-1", paymentsRestrictedAt: restrictedAt } as never,
+      newlyRestricted: true,
+    });
+    const restricted = {
+      type: "account.updated",
+      data: {
+        object: {
+          id: "acct_123",
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: true,
+        },
+      },
+    };
+    expect((await post({ id: "evt_restricted", ...restricted })).status).toBe(200);
+    expect(tellOwnersPaymentsRestricted).toHaveBeenCalledWith(FAKE_DB, {
+      shopId: "shop-1",
+      restrictedAt,
+    });
+
+    // The same state again claims nothing, so nobody is told twice.
+    vi.mocked(tellOwnersPaymentsRestricted).mockClear();
+    expect((await post({ id: "evt_restricted_again", ...restricted })).status).toBe(200);
+    expect(tellOwnersPaymentsRestricted).not.toHaveBeenCalled();
   });
 
   it("account.updated passes the account's own currency through, not a hardcoded usd (task 60)", async () => {
@@ -604,7 +656,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       },
     });
     expect(response.status).toBe(200);
-    expect(setShopStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, "acct_123", {
+    expect(applyStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, "acct_123", {
       chargesEnabled: true,
       payoutsEnabled: false,
       detailsSubmitted: true,
@@ -1097,7 +1149,7 @@ describe("POST /api/webhooks/stripe — event ledger", () => {
       "evt_stale",
       new Date(1_700_000_000 * 1000),
     );
-    expect(setShopStripeAccountStatus).not.toHaveBeenCalled();
+    expect(applyStripeAccountStatus).not.toHaveBeenCalled();
   });
 
   it("applies an account.updated when the ledger has nothing newer for that account", async () => {
@@ -1116,7 +1168,7 @@ describe("POST /api/webhooks/stripe — event ledger", () => {
       },
     });
     expect(response.status).toBe(200);
-    expect(setShopStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, "acct_123", {
+    expect(applyStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, "acct_123", {
       chargesEnabled: true,
       payoutsEnabled: true,
       detailsSubmitted: true,
@@ -1207,7 +1259,7 @@ describe("POST /api/webhooks/stripe — event ledger", () => {
         FAKE_DB,
         expect.objectContaining({ account: null }),
       );
-      expect(setShopStripeAccountStatus).not.toHaveBeenCalled();
+      expect(applyStripeAccountStatus).not.toHaveBeenCalled();
     });
   });
 });
@@ -1464,7 +1516,7 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
           },
         },
       },
-      arrange: () => vi.mocked(setShopStripeAccountStatus).mockRejectedValue(boom),
+      arrange: () => vi.mocked(applyStripeAccountStatus).mockRejectedValue(boom),
     },
     {
       name: "account.application.deauthorized",

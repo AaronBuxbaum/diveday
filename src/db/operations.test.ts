@@ -639,6 +639,25 @@ describe("a diver's own cancellation on the departure's trail (UX review 2026-10
     });
   });
 
+  it("names the lead and the seat when a party seat went with the lead's cancel (batch 6 item 10)", async () => {
+    const { db, shop } = ctx;
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 1);
+    if (!trip) throw new Error("expected a trip with two seats");
+    const [lead, seat] = await getTripRoster(db, shop.id, trip.id);
+    if (!lead || !seat) throw new Error("expected two seats");
+
+    await recordDiverSelfCancel(db, {
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      refunded: false,
+      party: { leadBookingId: lead.booking.id, seatName: "Milo Ortiz" },
+    });
+    expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
+      code: "party_seat_self_cancelled",
+      params: { actor: lead.person.fullName, diver: "Milo Ortiz" },
+    });
+  });
+
   it("still records the diver's act when the shop called the departure off first (#2471)", async () => {
     const { db, shop } = ctx;
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);

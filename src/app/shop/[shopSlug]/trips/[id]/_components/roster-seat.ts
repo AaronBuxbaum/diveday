@@ -3,6 +3,7 @@ import { identityReasonText } from "@/i18n/identity-check-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
+import { formatMoneyCents } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -61,6 +62,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     sameNameHeldSeats,
     heldSeatLastDiveDay,
     packageDivesByBooking,
+    paymentMarksByBooking,
     keepOpenBookingId,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
@@ -102,8 +104,39 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     paymentStatus,
     readinessByBooking.get(booking.id)?.paymentProvider,
   );
-  const paymentSource =
-    paymentSourceCode === "online"
+  // The Paid mark's own record (batch 6 item 1): a counter payment says how
+  // much, how, and who took it, where it used to say only "at the counter".
+  const markFacts = paymentMarksByBooking?.get(booking.id) ?? null;
+  const counterMark =
+    paymentSourceCode === "counter" && markFacts?.mark
+      ? {
+          amount: formatMoneyCents(markFacts.mark.amountCents, markFacts.mark.currency, locale),
+          method: markFacts.mark.method,
+        }
+      : null;
+  const markCurrency = markFacts?.shopCurrency ?? markFacts?.mark?.currency ?? "usd";
+  const paymentMark = {
+    amountCents: markFacts?.balanceOwedCents ?? markFacts?.mark?.amountCents ?? null,
+    currency: markCurrency,
+    locale,
+    // On a deposit, the field opens on the balance; the hint says that is
+    // what it is, so a staffer taking a different figure knows what is left.
+    balanceHint:
+      paymentStatus === "deposit_paid" && markFacts?.balanceOwedCents
+        ? t("trips.roster.paymentBalanceOwed", {
+            amount: formatMoneyCents(markFacts.balanceOwedCents, markCurrency, locale),
+          })
+        : null,
+    handMarkRefused: paymentSourceCode === "online" || paymentSourceCode === "package",
+  };
+  const paymentSource = counterMark
+    ? markFacts?.mark?.recordedByName
+      ? t("trips.roster.paymentMarkLine", {
+          ...counterMark,
+          name: markFacts.mark.recordedByName,
+        })
+      : t("trips.roster.paymentMarkLineUnnamed", counterMark)
+    : paymentSourceCode === "online"
       ? t("trips.roster.paymentSourceOnline")
       : paymentSourceCode === "package"
         ? t("trips.roster.paymentSourcePackage")
@@ -272,6 +305,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     readiness,
     paymentStatus,
     paymentSource,
+    paymentMark,
     currentWaiver,
     waiverStatus,
     refusalRetired,

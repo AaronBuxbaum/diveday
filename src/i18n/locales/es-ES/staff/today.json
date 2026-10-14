@@ -88,6 +88,7 @@
     "failedPhotoDeletion": "Limpieza",
     "owedRefund": "Reembolso pendiente",
     "paymentDispute": "Disputa de tarjeta",
+    "paymentsRestricted": "Pagos con tarjeta",
     "reviewsPending": "Reseñas",
     "unansweredMessages": "Mensajes",
     "gearOverdue": "Equipo atrasado",
@@ -203,6 +204,7 @@
     "openOrders": "Revisar en Pedidos",
     "openOrder": "Abrir pedido",
     "openDataSettings": "Revisar en Ajustes",
+    "openPaymentSettings": "Abrir la configuración de pagos",
     "openReviews": "Ver reseñas",
     "openInbox": "Ver mensajes",
     "openGearRegister": "Abrir registro de equipo",
@@ -246,7 +248,9 @@
     "owedRefundGroupDetailNoAmount": "{tripTitle} del {when}: {names}. Devuélvelo y luego marca cada plaza como reembolsada.",
     "disputeSubject": "Disputa de tarjeta",
     "disputeDetail": "{amount} en disputa. Envía tus pruebas a Stripe antes del {due}.",
-    "disputeDetailNoDeadline": "{amount} en disputa. Respóndela en Stripe."
+    "disputeDetailNoDeadline": "{amount} en disputa. Respóndela en Stripe.",
+    "restrictedSubject": "Los pagos con tarjeta están desactivados",
+    "restrictedDetail": "Stripe los pausó el {when}. Los buceadores pagan en el centro hasta que Stripe los reactive."
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión"

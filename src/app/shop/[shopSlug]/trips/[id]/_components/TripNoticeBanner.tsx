@@ -500,6 +500,10 @@ const NOTICE_KEYS: Record<
     countKey: "trips.notices.requirementsBlockingCount",
   },
   payment: { form: "roster", tone: "success", key: "trips.notices.payment" },
+  "payment-amount": { form: "roster", tone: "danger", key: "trips.notices.paymentAmount" },
+  "payment-method": { form: "roster", tone: "danger", key: "trips.notices.paymentMethod" },
+  "payment-short": { form: "roster", tone: "danger", key: "trips.notices.paymentShort" },
+  "payment-online": { form: "roster", tone: "danger", key: "trips.notices.paymentOnline" },
   conditions: { form: "conditions", tone: "success", key: "trips.notices.conditions" },
   "conditions-cleared": {
     form: "conditions",

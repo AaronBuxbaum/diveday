@@ -209,6 +209,7 @@ export async function upsertShopStripeAccount(
     stripeAccountId,
     connectedAt: nowDate(),
     disconnectedAt: null,
+    paymentsRestrictedAt: null,
     updatedAt: nowDate(),
   };
   const [row] = await db
@@ -220,24 +221,68 @@ export async function upsertShopStripeAccount(
   return row;
 }
 
+export type StripeAccountStatusFlags = {
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  /** Omit to leave the stored currency untouched (e.g. a caller that hasn't read it from Stripe). */
+  defaultCurrency?: string;
+};
+
 export async function setShopStripeAccountStatus(
   db: AppDb,
   stripeAccountId: string,
-  status: {
-    chargesEnabled: boolean;
-    payoutsEnabled: boolean;
-    detailsSubmitted: boolean;
-    /** Omit to leave the stored currency untouched (e.g. a caller that hasn't read it from Stripe). */
-    defaultCurrency?: string;
-  },
+  status: StripeAccountStatusFlags,
 ): Promise<ShopStripeAccount | null> {
+  return (await applyStripeAccountStatus(db, stripeAccountId, status)).account;
+}
+
+/**
+ * Store Stripe's flags for an account, and say whether this write is the one
+ * that turned card payments **off** on an account that had them on (batch 6
+ * item 8): `account.updated` with `charges_enabled` false means Stripe has
+ * restricted the account, and the owner has to hear it from somebody.
+ *
+ * The claim is one conditional update — it matches only a connected row whose
+ * payments were on — so a redelivered event, or two deliveries racing, find
+ * nothing to claim and the owner's email goes once per change of state. An
+ * account that never had payments on (still onboarding) is not restricted;
+ * that is Settings' story. Turning payments back on clears the mark, so the
+ * next restriction is news again.
+ */
+export async function applyStripeAccountStatus(
+  db: AppDb,
+  stripeAccountId: string,
+  status: StripeAccountStatusFlags,
+): Promise<{ account: ShopStripeAccount | null; newlyRestricted: boolean }> {
   const { defaultCurrency, ...flags } = status;
-  const [row] = await db
-    .update(shopStripeAccounts)
-    .set({ ...flags, ...(defaultCurrency ? { defaultCurrency } : {}), updatedAt: nowDate() })
-    .where(eq(shopStripeAccounts.stripeAccountId, stripeAccountId))
-    .returning();
-  return row ?? null;
+  const now = nowDate();
+  return db.transaction(async (tx) => {
+    const claimed = flags.chargesEnabled
+      ? []
+      : await tx
+          .update(shopStripeAccounts)
+          .set({ paymentsRestrictedAt: now })
+          .where(
+            and(
+              eq(shopStripeAccounts.stripeAccountId, stripeAccountId),
+              eq(shopStripeAccounts.chargesEnabled, true),
+              isNull(shopStripeAccounts.disconnectedAt),
+            ),
+          )
+          .returning({ shopId: shopStripeAccounts.shopId });
+    const [row] = await tx
+      .update(shopStripeAccounts)
+      .set({
+        ...flags,
+        ...(defaultCurrency ? { defaultCurrency } : {}),
+        ...(flags.chargesEnabled ? { paymentsRestrictedAt: null } : {}),
+        updatedAt: now,
+      })
+      .where(eq(shopStripeAccounts.stripeAccountId, stripeAccountId))
+      .returning();
+    return { account: row ?? null, newlyRestricted: claimed.length > 0 };
+  });
 }
 
 /**
@@ -277,6 +322,9 @@ export async function disconnectShopStripeAccount(
       disconnectedAt: nowDate(),
       chargesEnabled: false,
       payoutsEnabled: false,
+      // Disconnected is its own state, and a reason of its own for no
+      // payments; the restriction belonged to the connection that ended.
+      paymentsRestrictedAt: null,
       updatedAt: nowDate(),
     })
     .where(
@@ -293,6 +341,29 @@ export async function disconnectShopStripeAccount(
   // Either already disconnected (nothing to do, and nothing to move) or no
   // such account at all — the lookup tells the two apart for the caller.
   return getShopStripeAccountByAccountId(db, stripeAccountId);
+}
+
+/**
+ * When Stripe turned this shop's card payments off, while they are still off
+ * on a connected account (batch 6 item 8); null otherwise. Today's owner row
+ * reads it.
+ */
+export async function paymentsRestrictedSince(
+  db: DbExecutor,
+  shopId: string,
+): Promise<Date | null> {
+  const [row] = await db
+    .select({ at: shopStripeAccounts.paymentsRestrictedAt })
+    .from(shopStripeAccounts)
+    .where(
+      and(
+        eq(shopStripeAccounts.shopId, shopId),
+        isNull(shopStripeAccounts.disconnectedAt),
+        eq(shopStripeAccounts.chargesEnabled, false),
+      ),
+    )
+    .limit(1);
+  return row?.at ?? null;
 }
 
 /**

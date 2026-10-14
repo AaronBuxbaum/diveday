@@ -161,6 +161,10 @@ type ActivityParamShapes = {
   seat_self_cancelled: { actor: string };
   /** …and the shop's cancellation window refunded them by card. */
   seat_self_refunded: { actor: string };
+  /** A party lead's own cancel took an unclaimed seat they booked with it (batch 6 item 10). */
+  party_seat_self_cancelled: { actor: string; diver: string };
+  /** …and the shop's cancellation window refunded that seat by card. */
+  party_seat_self_refunded: { actor: string; diver: string };
   /** A staffer opened a diver's physician's evaluation. */
   medical_clearance_opened: { actor: string; diver: string };
   /** A staffer downloaded a diver's own record. */
@@ -194,6 +198,11 @@ type ActivityParamShapes = {
   payment_waived: { actor: string; diver: string };
   /** A seat was marked refunded without moving money through DiveDay. */
   payment_marked_refunded: { actor: string; diver: string };
+  /**
+   * A seat was marked Paid on less than it owed, or on nothing past a hand
+   * deposit: the rest of the fare written off, the shop's call (batch 6).
+   */
+  payment_balance_written_off: { actor: string; diver: string };
   /**
    * **Who changed the board**: the schedule builder's four acts, which wrote
    * no actor anywhere until the activity log asked. Each is recorded on the
@@ -304,6 +313,8 @@ export const ACTIVITY_CODES = [
   "seat_claimed",
   "seat_self_cancelled",
   "seat_self_refunded",
+  "party_seat_self_cancelled",
+  "party_seat_self_refunded",
   "medical_clearance_opened",
   "record_exported",
   "running_late_from_message",
@@ -312,6 +323,7 @@ export const ACTIVITY_CODES = [
   "seat_refunded",
   "payment_waived",
   "payment_marked_refunded",
+  "payment_balance_written_off",
   "departure_added",
   "series_added",
   "departure_moved",

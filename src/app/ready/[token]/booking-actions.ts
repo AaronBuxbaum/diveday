@@ -1,20 +1,15 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import {
-  type CancellationRefundSeen,
-  sendBookingCancelledNotice,
-} from "@/db/booking-cancelled-notice";
 import { addPartySeat, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { recordDiverSelfCancel } from "@/db/operations";
 import {
   planReadinessLinkRescue,
   type ReadinessLinkRescue,
   sendPlannedReadinessLink,
 } from "@/db/readiness-link-rescue";
-import { refundBookingOnCancellation } from "@/db/refunds";
+import { settleReleasedPartySeats, settleSelfCancelledSeat } from "@/db/self-cancel-settle";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { trackEvent } from "@/lib/analytics";
@@ -70,6 +65,10 @@ export async function payFromReady(token: string) {
  * seat is freed by `selfCancelBooking` first, and a refund failure afterward
  * never re-opens it or blocks the cancellation the diver already sees.
  *
+ * A party lead's unclaimed seats go with them (batch 6 item 10), released in
+ * the same transaction and then refunded one by one under the same policy as
+ * the lead's own. A claimed seat stays, and the cancelled page says which.
+ *
  * The move a diver cannot make here is a *move* — rescheduling is the shop's
  * (ADR 20260821-the-diver-may-release-their-own-seat).
  */
@@ -84,9 +83,11 @@ export async function cancelMyBookingAction(token: string) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
 
+  const shopId = ctx.data.shop.id;
   const cancelled = await selfCancelBooking(ctx.db, {
-    shopId: ctx.data.shop.id,
+    shopId,
     bookingId: ctx.bookingId,
+    withUnclaimedParty: true,
   });
   if (!cancelled.ok) redirect(`${base(token)}?error=cancel`);
   await trackEvent({ name: "booking_cancelled", source: "diver" });
@@ -97,59 +98,11 @@ export async function cancelMyBookingAction(token: string) {
   // the booking's own current payment status — an edited or replayed query
   // string cannot be used to claim a refund that did not happen, or hide one
   // that did.
-  //
-  // Caught, not left to throw: the cancellation above already committed and
-  // this token is already revoked, so a refund failure (a transient DB error,
-  // say) must never turn an already-successful cancellation into an error
-  // response — the diver would see a generic failure with no way to tell the
-  // destructive action actually went through, since refreshing the dead link
-  // only shows the unavailable notice. Staff can still see and fix a missed
-  // refund from the booking's payment record; the diver just needs the
-  // confirmation either way.
-  let refund: CancellationRefundSeen = { status: "not_attempted" };
-  try {
-    refund = await refundBookingOnCancellation(ctx.db, {
-      shopId: ctx.data.shop.id,
-      bookingId: ctx.bookingId,
-    });
-    if (refund.status !== "no_policy" && refund.status !== "unpaid") {
-      await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
-    }
-  } catch (error) {
-    log("booking.self_cancel_refund_failed", "error", {
-      bookingId: ctx.bookingId,
-      errorCode: error instanceof Error ? error.name : "unknown_error",
-    });
-  }
-  // The departure's trail names the diver, so the owner's "who refunded what"
-  // has an answer that is not a staffer. Caught for the same reason as the
-  // refund: the cancellation has already happened.
-  try {
-    const recorded = await recordDiverSelfCancel(ctx.db, {
-      shopId: ctx.data.shop.id,
-      bookingId: ctx.bookingId,
-      refunded: refund.status === "refunded",
-    });
-    // Null when the departure was deleted under the diver: no trail to write
-    // on, so the act is at least in the log for a disputed refund (#2471).
-    if (!recorded) {
-      log("booking.self_cancel_activity_skipped", "warn", { bookingId: ctx.bookingId });
-    }
-  } catch (error) {
-    log("booking.self_cancel_activity_failed", "error", {
-      bookingId: ctx.bookingId,
-      errorCode: error instanceof Error ? error.name : "unknown_error",
-    });
-  }
-  // The written record of what just happened, with the money in it: the page
-  // below says it once, and this is what the diver still has tomorrow.
-  await sendBookingCancelledNotice(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-    cancelledBy: "diver",
-    // `selfCancelBooking` only ever cancels a booked seat.
-    from: "booked",
-    refund,
+  await settleSelfCancelledSeat(ctx.db, { shopId, bookingId: ctx.bookingId, notify: true });
+  await settleReleasedPartySeats(ctx.db, {
+    shopId,
+    leadBookingId: ctx.bookingId,
+    party: cancelled.party,
   });
   redirect(`${base(token)}?cancelled=1`);
 }

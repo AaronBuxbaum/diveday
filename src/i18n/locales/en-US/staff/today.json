@@ -88,6 +88,7 @@
     "failedPhotoDeletion": "Cleanup",
     "owedRefund": "Refund owed",
     "paymentDispute": "Card dispute",
+    "paymentsRestricted": "Stripe",
     "reviewsPending": "Reviews",
     "unansweredMessages": "Messages",
     "gearOverdue": "Late gear",
@@ -203,6 +204,7 @@
     "openOrders": "Review in Orders",
     "openOrder": "Open order",
     "openDataSettings": "Review in Settings",
+    "openPaymentSettings": "Open payment settings",
     "openReviews": "Open reviews",
     "openInbox": "Open inbox",
     "openGearRegister": "Open gear register",
@@ -246,7 +248,9 @@
     "owedRefundGroupDetailNoAmount": "{tripTitle} on {when}: {names}. Return it, then mark each seat refunded.",
     "disputeSubject": "Card dispute",
     "disputeDetail": "{amount} disputed. Send Stripe your evidence by {due}.",
-    "disputeDetailNoDeadline": "{amount} disputed. Answer it in Stripe."
+    "disputeDetailNoDeadline": "{amount} disputed. Answer it in Stripe.",
+    "restrictedSubject": "Card payments are off",
+    "restrictedDetail": "Stripe paused them on {when}. Divers pay at the shop until Stripe turns them back on."
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you"
