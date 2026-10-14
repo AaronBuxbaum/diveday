@@ -167,7 +167,14 @@ handoff already current is omitted from the wizard; if its read-only check canno
 question remains visible and the existing write step reports the failure. The final Vercel
 Production deploy question is always explicit because a deploy can be intentional even when every
 handoff is current. Press Enter or `n` to skip any shown question; `--no-wizard` skips all of it and
-only creates the three files. In CI, the `deploy` job answers yes to every shown question
+only creates the three files.
+
+The Vercel check reads two witnesses: the hashed checkpoint of what the last sync sent (SSM
+`/diveday/env-sync/vercel/production`) and Vercel's own listing (`vercel env ls --format json`). A
+variable missing from Vercel, or one whose readable value differs, is pushed again even when the
+checkpoint calls it current; Vercel never returns a sensitive value, so for those only presence is
+proved. When Vercel may hold a stale sensitive value (a dashboard edit, a push someone declined),
+`pnpm infra:deploy --resync-vercel` ignores the checkpoint and pushes every value. In CI, the `deploy` job answers yes to every shown question
 automatically instead — see
 [ADR 20260811-ci-deploy-full-wizard](../architecture/decisions/20260811-ci-deploy-full-wizard.md) —
 once the required-reviewer approval on `infra-deploy` has already gated the run. SES DNS defaults to

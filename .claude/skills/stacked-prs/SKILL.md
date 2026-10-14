@@ -10,74 +10,15 @@ above targets the head branch of the one below. GitHub runs the cascading rebase
 bottom-up and atomically, and retargets what is left onto `main`
 (ADR [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md)).
 
-## Stack everything, and run one PR's CI at a time
+## The rule
 
 **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
 newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
 the stack pushes one layer at a time, because concurrent runs cancel each other** (AGENTS.md's
-*Parallel work*). Related or unrelated, a schema migration or a padding change, one file or forty —
-the shape is the same, and it is the default rather than a special case for dependent chains (ADR
-[20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
-"Widened: stack by default"). Two different arguments arrive at that one habit.
-
-**A dependent chain has no other honest shape.** Step 2 cannot compile, test, or be read without
-step 1:
-
-- `src/db/schema/` + migration → the `src/db` reader → the surface that renders it
-- a `src/lib` domain rule → the feature module that composes it → the route
-- a refactor that must land before the behaviour change that needs it
-
-Anything else prices it as one unreviewable pull request or a session idling until its own earlier
-one merges.
-
-**Unrelated work stacks for a different reason: the conflicts.** A second branch cut from `main`
-re-edits the same shared files as the first — `AGENTS.md`'s `check:repo` row, a `docs/design/*.md`
-section, a section of `scripts/ratchets.json`, a message bundle — and each one is a merge resolved later, by
-hand, without the context that produced it. Thirteen branches cut from one `main` in a single
-session is the measured case, and every one of them conflicted with every other. On a stack each
-layer already contains the layers below, so those files merge **once, while the change is being
-written**. The ratchets are the sharpest version: a baseline written on layer 4 already counts layer
-3's work, so `--absorb` is left for genuine merges from outside the stack rather than for your own
-previous branch.
-
-**Merging a layer up never stops on a generated file.** `.gitattributes` gives
-`scripts/ratchets.json`, the export-bundle snapshot and the glossary and ADR indexes merge drivers
-(`scripts/merge-drivers.mjs`, installed by the `SessionStart` hook; a human runs
-`node scripts/merge-drivers.mjs install` once). The merge prints a line naming each file it settled
-mechanically; then run **`pnpm regen`**, which rewrites all of them from their sources, and commit
-what it changed before you push (`--no-snapshot` skips the slow one when no seed, schema or export file moved).
-
-**A layer that moves pixels is a layer like any other.** That restriction was lifted on 2026-08-23
-(Aaron's call, issue #905) once the trade was measured: losing the baseline race costs a **re-read,
-not a missed regression**, and the pipeline now names each layer's baseline key and waits for the
-layer below to publish it (issue #909). What replaces the restriction is the reading discipline
-under *What our pipeline does with it* below — never a reason to cut from `main` instead.
-
-### What still goes on its own branch off `main`
-
-1. **No stack is open.** `git fetch origin main` first, every time: if the branch below has merged,
-   the next one cuts from the refreshed `origin/main` and there is no stack at all.
-2. **A fix that must merge now** — a red `main`, a hotfix, a race in a spec you did not touch found
-   while triaging someone else's diff. It should be able to merge without waiting for the layers
-   beneath it.
-
-Another thread's stack is not on that list either: stack on it, and leave the push order to the
-thread that owns it. Its claims stay its own; yours name your layer.
-
-**Depth is not on that list.** A stack has no maximum length — fifteen layers is as legitimate as
-three, and a long chain is the shape this repository wants. Every layer already contains the ones
-below it, so the shared files a session keeps re-editing (`AGENTS.md`'s `check:repo` row, a
-baseline, a message bundle) merge once, while the change is being written, instead of once per
-branch later and by hand. That saving *grows* with depth: the thirteen branches cut from one `main`
-conflicted with each other thirteen ways, and the same thirteen stacked conflict zero. The reason
-to cut from `main` never grows the same way.
-
-CI does not bound depth, but it does set the pace. **Every layer runs the whole gate**, wherever it sits in the stack
-(ADR [20261003-every-stack-layer-runs-ci](../../../docs/architecture/decisions/20261003-every-stack-layer-runs-ci.md)), so a green check on any layer
-means that layer was tested. The middle-layer skip and cancel of
-[20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md) are gone. The only hard ceiling is GitHub's own — a registered stack holds at most 100 pull
-requests, and `scripts/stack-register.mjs` refuses a longer chain rather than truncating it
-(`MAX_LAYERS`).
+*Parallel work*). Pixels and depth are not exceptions. Only two cases go on their own branch off
+`main`: **no stack is open** (`git fetch origin main` first, every time), or **a fix that must
+merge now**. After merging a layer up, run **`pnpm regen`** and commit what it changed before you
+push. The reasoning and the measured incidents are in [why.md](why.md).
 
 ## Building the chain
 
@@ -120,166 +61,14 @@ No commits between claude/<slug>-1-schema and claude/<slug>-2-reader, Base ref m
 which is exactly what PR #893 recorded as a reason to stop stacking. The failure lives entirely in
 the gap between cutting a branch and opening its pull request; closing that gap removes it.
 
-## Where am I in the stack
+## Reference
 
-**Read it from git, never from a record of it.** `node scripts/stack-map.mjs` prints the stack HEAD
-is in: the layers bottom to top, the top, any other tip above HEAD (a fork two sessions made), the
-sub-branches merged into a layer (`-l2-core` into `-2`), and each layer's own paths; `--json` is the
-same record for a machine. Every prompt's context line carries the position (`stack: layer 2 of 4,
-top origin/claude/<slug>-4`), and the session-start block names the top.
+Read the file whose case is in front of you:
 
-It derives all of that from the remote refs: a layer below is a remote branch HEAD contains and
-`origin/main` does not, a layer above is one that contains HEAD, a layer sits on HEAD's first-parent
-chain and a sub-branch is merged in through a second parent. So it is exactly as fresh as the last
-fetch, and the session-start hook fetches `main` and `claude/*` (with `--prune`, so a merged layer
-drops out) for that reason. Two designs were weighed and refused. A committed stack manifest file
-that each PR updates is one more shared file every layer edits, stale the moment a layer merges and
-a conflict on every rebase — the problem it would exist to remove. A `STACK` block in each PR body
-read live would put a GitHub call on every prompt, and a hook cannot count on one: `gh`'s GraphQL
-is refused in cloud sessions and `gh` is not signed in everywhere a session runs.
-
-What git cannot say is intent: which branch you *mean* to cut next, and the paths you mean to own.
-Those stay where they were — the draft PR body's position line below and the issue's claim.
-
-Every body states its position and what is beneath it, because a reviewer who lands on layer 3 from
-a notification has no other way to find the bottom:
-
-```
-Layer 2 of 3 — based on `claude/<slug>-1-schema` (#641). Above: `claude/<slug>-3-surface` (#643).
-Review and merge bottom-up.
-```
-
-## Registration, which is not yours to do
-
-`.github/workflows/stack.yml` fires on every same-repository pull request event, walks the chain of
-open pull requests through the one that fired — down through base refs to `main`, and up again —
-and registers it, or extends the stack that already holds its bottom. So layer 1 alone registers
-nothing (a chain of one is not a stack), layer 2 opening creates the stack, and every layer after
-that extends it.
-
-It is a runner rather than the session because **a session cannot reach the endpoint at all.**
-Measured on 2026-09-07: `gh` is not installed, and `api.github.com` answers every repo-scoped
-request with `403 "GitHub access is not enabled for this session"` with or without an
-`Authorization` header. The GitHub MCP server is a session's only writable path and has no stack
-endpoints. Anything you read elsewhere about running `gh api --method POST .../stacks` yourself
-describes an environment that no longer exists — it is what silently stopped this repository
-registering anything between 2026-08-28 and 2026-09-07, while the chains themselves kept working.
-
-Three things to know, and none of them is a step:
-
-- **Registration is asynchronous.** Reading `stack` on a pull request in the same breath as opening
-  it gives `null`. The workflow's run summary says what it did; read that rather than racing it.
-- **A refusal is quiet and deliberate.** The registrar acts on a linear chain and nothing else — a
-  fork, a cycle, two open pull requests sharing a head branch, or layers spread across two stacks
-  are each named in the job log and left alone, because a stack is an *ordered* list that merges
-  bottom-up and atomically, so a guessed order is first noticed as the wrong pull request having
-  landed. If a chain of yours has not become a stack, that log says why.
-- **Nothing here dissolves one.** `POST /repos/{owner}/{repo}/stacks/{n}/unstack` is a human's call
-  and leaves ordinary chained-base pull requests behind.
-
-On a workstation, where `gh` exists and is authenticated, the same endpoints are reachable directly
-and `gh stack link` / `view` / `sync` / `merge` wrap them. `gh api` needs `-F`, never `-f`: `-f`
-sends every value as a string and `pull_requests` is typed as integers, which returns
-`422 Invalid property /pull_requests/0: "641" is not of type integer`.
-
-Two refusals to expect from GitHub on a registered stack, both of it protecting the stack rather
-than a broken command:
-
-- **`gh pr merge` cannot merge a stacked pull request.** *"This pull request is part of a stack and
-  must be merged using the asynchronous merge REST API."* `gh stack merge <pr-or-stack> --yes`
-  merges everything up to and including that pull request in one all-or-nothing operation.
-- **`gh pr edit --base` is refused on a stacked pull request.** *"Cannot change the base branch
-  because the pull request is part of a stack."* GitHub owns those refs — which is precisely what
-  makes the retarget-on-merge above something you can rely on instead of watch for.
-
-One thing still to do by hand: a branch cut from a layer *before* that layer merged, and attached
-*after*, still carries the pre-merge parent commit, so its pull request diff duplicates the merged
-layer's files. The cascading rebase moves the branches that were in the stack, not that one. Rebase
-it onto the new top — `git rebase --onto <top> <old parent sha> <branch>` — and the diff comes back
-to its own change.
-
-## What our pipeline does with it
-
-- **Every layer runs the whole CI gate.** `.github/workflows/ci.yml` triggers on a bare
-  `pull_request:` with no branch filter and no stack condition, so a base of
-  `claude/<slug>-1-schema` gets the identical gate `main` does (ADR [20261003-every-stack-layer-runs-ci](../../../docs/architecture/decisions/20261003-every-stack-layer-runs-ci.md)).
-  Read every layer's checks: each one's green means it ran. Two things follow:
-
-  1. **A layer's visual diff is its own when it can be.** When the layer below's commit (the
-     `merge-base` of the PR's base sha and HEAD) has a published snapshot, the layer compares
-     against it and the sticky comment says so; otherwise it falls back to the stack's fork point
-     from `main`, and the diff is **cumulative** (ADR [20261012-visual-baseline-layer-below](../../../docs/architecture/decisions/20261012-visual-baseline-layer-below.md)).
-  2. **One PR's CI at a time, bottom first, driven by the thread that owns the stack.** Push a
-     layer, let its run finish, then push the next. Concurrent runs cancel each other: on
-     2026-10-12, 15 to 19 layers pushed together cost 126 cancelled runs and 90 failed jobs as each
-     break rode up the stack. Each layer is a ~25-job run against the account's 20-concurrent-job
-     cap, so even two overlapping runs queue (runs 4558 to 4563 on 2026-10-10 took 23 to 28 min
-     each against 14 to 17 alone). The per-prompt context line counts the account's open pull
-     requests, so a second run in flight is visible before you push.
-- **The destructive-migration guard** anchors on
-  `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
-  layers re-check lower layers' migrations. Slower, never wrong — do not "fix" it by re-anchoring
-  to the layer below. `pnpm verify:push` is the one that diffs against the layer below
-  (`stackBase`), because its tests and specs would otherwise be the whole stack's.
-- **Visual regression handles a stack on its own, and a stack may move pixels.** The baseline key is
-  *named* rather than inferred: `regconfig.json` uses `reg-simple-keygen-plugin` and
-  `scripts/reg-suit-keys.mjs` resolves **every** layer's baseline to
-  `git merge-base origin/main HEAD` — the stack's fork point, whatever branch the layer targets.
-  `main` published that snapshot long before your run started, so no layer waits on another (ADR [20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md), superseding the
-  20-minute poll from
-  [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md)).
-
-  `scripts/wait-for-baseline.mjs` then narrows a stacked layer to the layer below when that commit
-  already published, never waiting for it. On the fallback path, read a report this way: **the top layer's diff is the whole stack's**, because
-  every layer beneath it is also above the fork point. That is usually what you want from the top —
-  it is the closest thing a stack has to a statement about the merged result — but do not read it as
-  "this layer moved 40 surfaces". Compare it against the bottom layer's report, which is its own
-  delta and nothing else.
-
-  Two obligations stand, because they are about reading rather than about any race:
-
-  1. **Read the sticky `diveday:visual-summary` comment on the layer you are triaging.** If it says
-     nothing was compared, nothing was compared: that layer's counts mean **unknown**, never "no
-     visual changes" (see the **visual-triage** skill). It now means the fork point itself published
-     no snapshot — a `main` run that was cancelled or lost a shard — and the comment names the
-     ancestor it fell back to.
-  2. **Never merge a layer whose pixels were never compared** on the grounds that the count was
-     zero. Zero-changed with zero baselines is the failure, not the pass.
-- **Rebase a layer before you read its visual report.** A branch whose parent has fallen behind
-  `main` compares against that *parent*, while CI captures the pull request *merged with `main`* —
-  so every commit merged in between shows up as your diff. That is not a stack-specific bug, but a
-  stack is where a stale parent is most likely: PR #668 reported 60 changed surfaces of which 39
-  belonged to other people's merged work, and rebasing cut it to 21.
-
-## Answering review across layers
-
-Every layer is reviewed on its own — `sourcery-ai` comments on each one as it
-opens, so a stack collects one review per layer — twelve layers, twelve reviews — while you are
-still building the top of it. Read them per layer, on the same pass that reads each layer's CI:
-
-```sh
-R=repos/AaronBuxbaum/diveday
-gh api "$R/pulls?state=open&per_page=100" --jq '[.[] | select(.user.login == "<your login>") | {number, title, head: .head.ref, sha: .head.sha}]'
-gh api "$R/commits/<sha>/check-runs" --jq '.check_runs[] | {name, conclusion}'
-gh api $R/issues/<n>/comments    # the conversation
-gh api $R/pulls/<n>/comments     # the inline review threads
-```
-
-REST, never `gh pr list` / `gh pr view`: those go through GraphQL, which cloud sessions are refused
-([docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)). The GitHub MCP server's
-`search_pull_requests` and `pull_request_read` (method `get_review_comments`, which reports
-`is_resolved` per thread) answer too — see AGENTS.md's rule about answering review threads for the
-reply and resolve calls.
-
-**Answer a comment on the layer that owns the code, never the layer you are standing on.** The
-rule is the one that governs a red check in a stack, for the same reason: a stack merges bottom-up,
-so a fix committed above the layer being commented on arrives *after* that layer has already merged
-without it. Fix at the owning layer, then rebase each layer above onto the one below (on a
-workstation, `gh stack sync --prune` does that in one).
-
-Each thread ends in a state: fixed and replied to with the commit, declined with the reason, or
-filed as a `needs-triage` issue whose number is in the thread. Commit whatever you are holding at
-the top of the stack before you go down (never `git stash` — AGENTS.md's *Parallel work*).
+- [why.md](why.md) — the full rule and its reasoning; what still goes off `main`; depth; merging a layer up (`pnpm regen`); pixel-moving layers.
+- [position.md](position.md) — finding your layer, the top and any fork from git (`node scripts/stack-map.mjs`); the position line every PR body carries.
+- [pipeline.md](pipeline.md) — how `.github/workflows/stack.yml` registers the stack, why a session never does, the refusals of `gh pr merge` / `gh pr edit --base`, and what CI, the migration guard and visual regression do per layer.
+- [review.md](review.md) — a review comment on a stacked layer: answer it on the layer that owns the code.
 
 ## Landing it
 

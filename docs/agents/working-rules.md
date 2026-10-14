@@ -1,9 +1,29 @@
-# AGENTS.md's commands, parallel work and hard rules, in full
+# AGENTS.md's commands, context economy, parallel work, delegation and hard rules, in full
 
 [AGENTS.md](../../AGENTS.md) is loaded by every session, so it carries each of these as one line:
 the rule and the hook or guard that enforces it. This is the full statement each line points at,
 with the incident behind it, as it stood in AGENTS.md on 2026-10-07. A rule changed here is changed
 in AGENTS.md's one-liner in the same commit.
+
+## Sources of truth
+
+`AGENTS.md`, `.claude/rules/`, `docs/`, scripts and tests are the provider-neutral source of
+truth; provider-specific folders are adapters and must not introduce unique requirements. Every
+session needs `AGENTS.md` whatever it touches; the path-scoped rules are each the rules and route
+map for the paths their `paths:` frontmatter names, and the route-map rows AGENTS.md leaves out are
+in [route-map.md](route-map.md).
+
+## Context economy
+
+- Never read `pnpm-lock.yaml`, generated `drizzle/`, `.next/`, `playwright-report/`, or
+  `test-results/` whole; Grep them for the one line a diagnosis needs. The session hooks refuse the
+  whole-file form at both doors (`Read` and the shell).
+- Locate symbols with Grep and read the narrow range; `scripts/guard-read.mjs` refuses a
+  whole-file `Read` of a file over 900 lines, and an explicit `offset` or `limit` always passes.
+- Read `foo.test.ts` before `foo.ts`: tests are the contract.
+- Iterate with one focused test and quiet output. The whole suite belongs to CI; the shell guard
+  refuses a bare `pnpm test` / `pnpm e2e` / `pnpm check`.
+- Redirect a long run to a file and read the failing part; never pipe it through `tail`.
 
 ## Commands
 
@@ -12,6 +32,7 @@ in AGENTS.md's one-liner in the same commit.
 | `pnpm dev` | dev server at localhost:3000, supervised by `scripts/dev-server.mjs`. Wait for its **`dev: serving … — warmed in Ns`**; Next's `✓ Ready` lands ~26s earlier and means only "listening". The supervisor restarts an OOM-bound `next dev` before the kernel does and says so. One dev server per *checkout*: the lock is `.next/dev/lock`, so `--port` does not buy a second (ADR 20260903-the-dev-server-is-supervised; the **run** skill) |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task; with no area, the list of areas |
 | `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push`, `pnpm e2e <spec>`, `pnpm check` | the pre-commit and pre-push checklist, and which of them CI runs instead, is the **verify** skill; the reasoning is [verifying.md](verifying.md) |
+| `pnpm lint:fix` | Biome autofix |
 | `pnpm agent:doctor` | Node against `.nvmrc`, `gh`, `origin/main`'s age, `node_modules`, stray processes, remote branches with no open PR and the stack, each with its fix; a row only a human can change (the Node, the branches) is `info` and stays out of the two-line summary the session-start block carries |
 | `node scripts/stack-map.mjs` | the stack HEAD is in — layers bottom to top, the top, other tips, merged sub-branches, each layer's paths — derived from remote refs (`--json` for a machine); the per-prompt line carries the position |
 | `pnpm check:env` / `pnpm env:manual` | the two structural facts about configuration, and the one file a human edits — see `.claude/rules/infra.md` |
@@ -80,6 +101,31 @@ runs. Pass args directly. The shell guard refuses the bare form.
   20261003-every-stack-layer-runs-ci and 20260907-a-runner-registers-the-stack.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same spec
   or test name; coordinate in that thread instead of pushing a competing fix.
+- **A thread that steers never builds.** A thread that plans, routes or watches a stack hands each
+  ticket or stack layer to a fresh worker (a subagent, or a new thread) with a spec written from
+  [spec-template.md](spec-template.md): goal, files owned, constraints, done-when, verification
+  command, hand-back format. The worker builds, writes its result to a file and hands back the
+  path; the steering thread reads that file, not the tree. A thread whose context passes about
+  150k tokens writes a state note (what is done, what is in flight and where, the next step) and
+  retires, and a fresh thread picks up from the note. The measurement: on 2026-10-14 five
+  steering threads at 200k to 380k context were also building, one with fourteen branches and
+  another with six worktrees, each call paying for the whole history; a long session degrades
+  as its input grows, and a clean one with a better brief outperforms it.
+
+## Delegating
+
+- **Scale the effort to the task.** A one-file change gets no plan and no subagent. A multi-file
+  change gets a plan first. A cross-area change gets at most three parallel subagents, each given
+  an objective, an output format and a boundary (the paths it may read or change). One turn here
+  once spawned nine; most coding work has fewer independent parts than that.
+- **Route cheap work to a cheap model.** Scouting, search, triage, labelling, screenshot capture
+  and test runs go to a subagent on sonnet at low effort; the project's `Explore` agent
+  (`.claude/agents/Explore.md`) is that scout, read-only and without `AGENTS.md`. Design,
+  judging and safety-critical code stay on the main model.
+- **A worker hands back a path.** A subagent or worker writes its full result to a file (the
+  scratchpad, or `docs/` when the result is the deliverable) and hands back the path plus at most
+  ten lines. A hand-back is read twice in the parent's transcript, and a long one crowds out the
+  work; the next step reads the file.
 
 ## Hard rules
 
@@ -94,7 +140,7 @@ runs. Pass args directly. The shell guard refuses the bare form.
   ([docs/agents/verifying.md](verifying.md)).
 - **Verify before commit, and let CI run anything whole.** The checklist is the **verify** skill,
   and nowhere else; the line between what you run and what CI runs, and why, is
-  [docs/agents/verifying.md](verifying.md). Push once per round, when the checklist is green: each
+  [docs/agents/verifying.md](verifying.md). `pnpm verify:push` runs before every push (`scripts/guard-push.mjs` holds it). Push once per round, when the checklist is green: each
   push cancels the CI run of the one before. Open the PR before it is green when that is the
   fastest way to learn what is broken, say in the body what you ran and what you did not, and work
   what comes back — a red PR you are driving is fine, a red PR you have stopped driving is not.
@@ -126,14 +172,26 @@ runs. Pass args directly. The shell guard refuses the bare form.
   `gh` forms are in [docs/agents/issue-tracker.md](issue-tracker.md). **No comments does
   not mean reviewed clean** — `coderabbitai` reviews nothing here — and a bot's comment is never
   automatically right: these tools do not know this repository's rules.
-- **New runtime dependency → ADR.** New domain concept → glossary. Invalidated doc → fix in the
-  same PR.
-- **Safety-critical surfaces** (manifests, roll call, readiness, cert gating, medical flags,
-  erasure) get boring code, failure-path and adversarial tests, and a `dive-domain-expert` review,
+- **New runtime dependency → ADR** (`pnpm check:adrs`). New domain concept → glossary
+  (`pnpm check:glossary`). Invalidated doc → fix in the same PR (`pnpm check:docs`).
+- **Safety-critical surfaces** (manifests, roll call, readiness and cert gating, medical
+  flags and the waiver state they are read from, nitrox fill authorization and the prep list's
+  air/nitrox split, erasure) get boring code, failure-path and adversarial tests, and a `dive-domain-expert` review,
   named in the PR body's "Reviews launched" section, which CI reads
-  ([repo-checks.md](repo-checks.md#pr-body)).
+  ([repo-checks.md](repo-checks.md#pr-body)). On every one of these surfaces that review is **two independent runs with different framing**, launched in parallel
+  so neither sees the other: one as **a dock operator** (the boat is leaving, the count is
+  called, the diver is at the rail — what does this code let happen?) and one as **an attacker**
+  (`security-reviewer` when the change touches personal or medical data, tokens or erasure;
+  otherwise a second `dive-domain-expert` run told to break the rule rather than check it).
+  Act on the union of their findings, each under the reviewers' evidence rule: it cites the
+  rule, ADR or glossary line it violates and a failing input or a test, labelled confirmed or
+  possible. A finding is acted on once its test runs and fails. Both runs are named in "Reviews
+  launched" (CI checks that the agent is named, not that it ran twice). Ordinary PRs, plain
+  waiver signing and rental fit keep one run: two runs double the review
+  spend, and the voting is worth it only where a miss puts a diver in the water.
 - **Security-sensitive changes** (auth/authz, token flows, rows holding personal or medical data,
-  export/import) get a `security-reviewer` review before merge.
+  export/import) get a `security-reviewer` review before merge, named in the same "Reviews
+  launched" section (`scripts/check-pr-body.mjs`).
 - **Layout**: domain logic in `src/lib/` or a feature module; routes in `src/app/` stay thin; e2e
   specs live in `e2e/`. The dependency direction is one way — `app → features → lib/db` — and
   `pnpm check:architecture` enforces it.

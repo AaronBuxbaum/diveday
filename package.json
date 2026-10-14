@@ -96,7 +96,9 @@
     "agent:health": "node scripts/agent-health.mjs",
     "agent:doctor": "node scripts/agent-doctor.mjs",
     "simulate:day": "node scripts/simulate-day.mjs",
-    "persona:bots": "node scripts/persona-bots.mjs"
+    "persona:bots": "node scripts/persona-bots.mjs",
+    "content:photos": "tsx scripts/content-photos.ts",
+    "content:coverage": "tsx scripts/content-coverage.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch-logs": "^3.1151.0",
