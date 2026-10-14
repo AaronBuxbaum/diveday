@@ -25,7 +25,7 @@ more, and the folder is 6.81 MB rather than the 9.9 MB the question was asked ab
 ## `tiles/` — capture-only variants, never rendered to a person
 
 `tiles/48/`, `tiles/96/`, `tiles/171/` and `tiles/224/` hold one downscale of each source per
-rendered box size: 148 species at four widths, 592 files, 2.28 MB in total against 6.49 MB of
+rendered box size: 331 species at four widths, 1324 files, 5.58 MB in total against 16.56 MB of
 sources. They exist for a test defect, not for a diver: the e2e build turns the image
 optimizer off, so a capture is handed the 640px source with no srcset and Chromium chooses its own
 decode scale — and whenever the source is two or more times the rendered box, more than one scaled
@@ -101,6 +101,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `branching-anemone.jpg` — [iNaturalist photo 349894741](https://www.inaturalist.org/photos/349894741) · CC BY 4.0 · Robin White
 - `branching-tube-sponge.jpg` — [iNaturalist photo 255671268](https://www.inaturalist.org/photos/255671268) · CC BY 4.0 · Robin White
 - `branching-vase-sponge.jpg` — [Callyspongia vaginalis (Branching Vase Sponge - pink variation).jpg](https://commons.wikimedia.org/wiki/File:Callyspongia_vaginalis_(Branching_Vase_Sponge_-_pink_variation).jpg) · CC BY-SA 3.0 · Nhobgood (talk) Nick Hobgood
+- `brazilian-reef-octopus.jpg` — [iNaturalist photo 59737507](https://www.inaturalist.org/photos/59737507) · CC BY 4.0 · Don Loarie
 - `bridled-goby.jpg` — [iNaturalist photo 205591090](https://www.inaturalist.org/photos/205591090) · CC BY 4.0 · Pauline Walsh Jacobson
 - `broadstripe-goby.jpg` — [iNaturalist photo 228053340](https://www.inaturalist.org/photos/228053340) · CC BY-SA 4.0 · Cos
 - `brown-chromis.jpg` — [Azurina multilineata 345286514.jpg](https://commons.wikimedia.org/wiki/File:Azurina_multilineata_345286514.jpg) · CC BY 4.0 · Dan Schofield · cropped to 0.15,0.15,0.75,0.7 (left, top, width, height as fractions of the original)
@@ -234,6 +235,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `nurse-shark.jpg` — [Nurse shark.jpg](https://commons.wikimedia.org/wiki/File:Nurse_shark.jpg) · Public domain
 - `ocean-surgeonfish.jpg` — [iNaturalist photo 415505249](https://www.inaturalist.org/photos/415505249) · CC BY 4.0 · Pauline Walsh Jacobson
 - `ocean-triggerfish.jpg` — [Canthidermis sufflamen (ocean triggerfish) (San Salvador Island, Bahamas) 1 (15965263309).jpg](https://commons.wikimedia.org/wiki/File:Canthidermis_sufflamen_(ocean_triggerfish)_(San_Salvador_Island,_Bahamas)_1_(15965263309).jpg) · CC BY 2.0 · James St. John
+- `orange-cup-coral.jpg` — [iNaturalist photo 701831099](https://www.inaturalist.org/photos/701831099) · CC BY 4.0 · Slunky
 - `orange-elephant-ear-sponge.jpg` — [Agelas clathrodes 256774245.jpg](https://commons.wikimedia.org/wiki/File:Agelas_clathrodes_256774245.jpg) · CC BY 4.0 · Jay Brasher
 - `orangeclaw-hermit-crab.jpg` — [iNaturalist photo 624254299](https://www.inaturalist.org/photos/624254299) · CC BY 4.0 · Dan Schofield
 - `orangespotted-filefish.jpg` — [iNaturalist photo 706538609](https://www.inaturalist.org/photos/706538609) · CC BY 4.0 · Donald Davesne · cropped to 0.3,0.25,0.5,0.5 (left, top, width, height as fractions of the original)
@@ -268,6 +270,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `redspotted-hawkfish.jpg` — [iNaturalist photo 59085679](https://www.inaturalist.org/photos/59085679) · CC BY-SA 4.0 · Matteo Cassella
 - `redtail-parrotfish.jpg` — [iNaturalist photo 697922145](https://www.inaturalist.org/photos/697922145) · CC BY 4.0 · Pauline Walsh Jacobson
 - `reef-butterflyfish.jpg` — [Chaetodon sedentarius Brasil.jpg](https://commons.wikimedia.org/wiki/File:Chaetodon_sedentarius_Brasil.jpg) · CC BY 2.5 · Bernard E. Picton
+- `reef-urchin.jpg` — [iNaturalist photo 615456784](https://www.inaturalist.org/photos/615456784) · CC BY 4.0 · Dan Schofield
 - `remora.jpg` — [Echeneis naucrates - Reef1980.jpg](https://commons.wikimedia.org/wiki/File:Echeneis_naucrates_-_Reef1980.jpg) · CC BY 2.0 · NOAA Photo Library
 - `rock-beauty.jpg` — [Holacanthus tricolor 1.jpg](https://commons.wikimedia.org/wiki/File:Holacanthus_tricolor_1.jpg) · CC BY 2.0 · Laszlo Ilyes (laszlo-photo) from Cleveland, Ohio, USA
 - `rock-boring-urchin.jpg` — [iNaturalist photo 546984642](https://www.inaturalist.org/photos/546984642) · CC BY 4.0 · Thomas Irvine
@@ -347,6 +350,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `tiger-grouper.jpg` — [Tiger grouper.JPG](https://commons.wikimedia.org/wiki/File:Tiger_grouper.JPG) · CC BY-SA 3.0 · Albert kok
 - `tobaccofish.jpg` — [iNaturalist photo 454872163](https://www.inaturalist.org/photos/454872163) · CC BY 4.0 · Andrew McKinlay
 - `tomtate.jpg` — [iNaturalist photo 321676079](https://www.inaturalist.org/photos/321676079) · CC BY 4.0 · Robin White
+- `true-tulip.jpg` — [iNaturalist photo 701042045](https://www.inaturalist.org/photos/701042045) · CC BY 4.0 · Cricket Raspet
 - `trumpetfish.jpg` — [Aulostomus maculatus b.jpg](https://commons.wikimedia.org/wiki/File:Aulostomus_maculatus_b.jpg) · CC BY-SA 3.0 · Colling-architektur
 - `turtle-grass.jpg` — [Seagrass Grahams Harbour.jpg](https://commons.wikimedia.org/wiki/File:Seagrass_Grahams_Harbour.jpg) · Public domain · Jstuby at English Wikipedia
 - `twospot-cardinalfish.jpg` — [iNaturalist photo 177067707](https://www.inaturalist.org/photos/177067707) · CC BY 4.0 · Pauline Walsh Jacobson · cropped to 0,0,1,0.88 (left, top, width, height as fractions of the original)

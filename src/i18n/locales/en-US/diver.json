@@ -1526,6 +1526,11 @@
         "description": "Clusters of purple-gray tubes with rough walls, leaning away from the current.",
         "tip": "Look into the tubes. Brittle stars and small gobies live down inside them."
       },
+      "brazilian-reef-octopus": {
+        "name": "Brazilian reef octopus",
+        "description": "A reef octopus that hunts in daylight, often out in the open, shifting from red-brown with pale spots to a mottled white as it moves.",
+        "tip": "Keep your distance and let it hunt. Crowd it and it flattens, changes color and slips into the nearest hole."
+      },
       "bridled-goby": {
         "name": "Bridled goby",
         "description": "A pale, sand-colored goby speckled with small dark marks, resting on sand and rubble at the edge of the reef.",
@@ -2191,6 +2196,11 @@
         "description": "A tall gray diamond with a dark blotch at the pectoral, out in the blue off a wall.",
         "tip": "Look off the wall rather than along it. This one hangs in open water, not on the reef."
       },
+      "orange-cup-coral": {
+        "name": "Orange cup coral",
+        "description": "Clusters of round orange to reddish cups in shade under ledges, in caves and on wrecks and rigs, opening bright yellow-orange tentacles after dark. An Indo-Pacific coral, not from this ocean.",
+        "tip": "Invasive here. Come back on a night dive to see the tentacles open, and report new patches to the crew."
+      },
       "orange-elephant-ear-sponge": {
         "name": "Orange elephant ear sponge",
         "description": "Broad orange sheets folded out from a wall, the brightest thing at depth.",
@@ -2360,6 +2370,11 @@
         "name": "Reef butterflyfish",
         "description": "Pale with a dark wash across the back half, always somewhere near its partner.",
         "tip": "Deeper than the other butterflyfish here. Expect it below twenty meters, in pairs."
+      },
+      "reef-urchin": {
+        "name": "Reef urchin",
+        "description": "A small urchin with long greenish to olive spines, each with a pale ring at the base and a dark, often violet tip, set on a reddish-brown body.",
+        "tip": "Shine a light into shallow crevices and under ledges, where it hides by day; at night it creeps out to graze, so keep hands and knees clear."
       },
       "remora": {
         "name": "Remora",
@@ -2755,6 +2770,11 @@
         "name": "Tomtate",
         "description": "A slim silver grunt with a yellow-bronze stripe along each side and a dark spot at the base of the tail.",
         "tip": "Schools gather over patch reefs and wrecks. Hold your depth beside the school and it will flow around you."
+      },
+      "true-tulip": {
+        "name": "True tulip",
+        "description": "A smooth, spindle-shaped snail shell, cream to tan or orange, with dark brown blotches and many thin dark lines spiraling around each whorl, on sand and seagrass.",
+        "tip": "Look for its trail across the sand. It hunts other snails and clams, so give it room and watch from above."
       },
       "trumpetfish": {
         "name": "Trumpetfish",

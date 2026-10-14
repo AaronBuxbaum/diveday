@@ -1526,6 +1526,11 @@
         "description": "Racimos de tubos gris morado de paredes rugosas, inclinados a favor de la corriente.",
         "tip": "Mira dentro de los tubos. Ahí abajo viven ofiuras y gobios pequeños."
       },
+      "brazilian-reef-octopus": {
+        "name": "Pulpo de arrecife brasileño",
+        "description": "Un pulpo de arrecife que caza de día, muchas veces a la vista, y pasa de pardo rojizo con manchas claras a un blanco moteado mientras se mueve.",
+        "tip": "Mantén la distancia y déjalo cazar. Si lo acorralas se aplana, cambia de color y se mete en el primer agujero."
+      },
       "bridled-goby": {
         "name": "Gobio de brida",
         "description": "Un gobio claro, color arena, salpicado de marquitas oscuras. Descansa en la arena y el cascajo al borde del arrecife.",
@@ -2191,6 +2196,11 @@
         "description": "Un rombo gris y alto con una mancha oscura en la pectoral, en el azul frente a una pared.",
         "tip": "Mira hacia afuera de la pared, no a lo largo. Este se queda en agua abierta, no en el arrecife."
       },
+      "orange-cup-coral": {
+        "name": "Coral copa naranja",
+        "description": "Grupos de copas redondas, de naranja a rojizas, en la sombra bajo salientes, en cuevas y sobre pecios y plataformas. De noche despliega tentáculos amarillo anaranjado. Viene del Indopacífico.",
+        "tip": "Aquí es invasor. Vuelve en una inmersión nocturna para ver abiertos sus tentáculos, y avisa a la tripulación si ves colonias nuevas."
+      },
       "orange-elephant-ear-sponge": {
         "name": "Esponja oreja de elefante",
         "description": "Amplias láminas naranjas plegadas hacia afuera de una pared, lo más brillante en profundidad.",
@@ -2360,6 +2370,11 @@
         "name": "Pez mariposa de arrecife",
         "description": "Pálido con una mancha oscura en la mitad trasera, siempre cerca de su pareja.",
         "tip": "Más hondo que las otras mariposas de aquí. Espéralo bajo los veinte metros, en parejas."
+      },
+      "reef-urchin": {
+        "name": "Erizo de arrecife",
+        "description": "Un erizo pequeño de cuerpo pardo rojizo, con púas largas entre verdosas y oliva que tienen un anillo claro en la base y la punta oscura, a menudo violeta.",
+        "tip": "Alumbra las grietas y los salientes poco profundos, donde se esconde de día. De noche sale a pastar algas; cuida dónde apoyas las manos y las rodillas."
       },
       "remora": {
         "name": "Rémora",
@@ -2755,6 +2770,11 @@
         "name": "Jeníguano",
         "description": "Un ronco plateado y esbelto, con una raya amarillo bronce en cada costado y una mancha oscura en la base de la cola.",
         "tip": "Forma cardúmenes sobre parches de arrecife y pecios. Mantén tu profundidad junto al grupo y te rodeará."
+      },
+      "true-tulip": {
+        "name": "Caracol tulipán",
+        "description": "Concha lisa en forma de huso, de color crema, canela o anaranjado, con manchas pardo oscuras y numerosas líneas finas que rodean cada vuelta. Vive en arena y pastos marinos.",
+        "tip": "Sigue su rastro en la arena. Caza otros caracoles y almejas; obsérvalo desde arriba sin estorbarlo."
       },
       "trumpetfish": {
         "name": "Pez trompeta",

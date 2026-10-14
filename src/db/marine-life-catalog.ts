@@ -327,6 +327,7 @@ export const MARINE_LIFE_CATALOG = [
     kind: "reefInvertebrate",
   },
   { slug: "branching-anemone", scientificName: "Lebrunia neglecta", kind: "reefInvertebrate" },
+  { slug: "brazilian-reef-octopus", scientificName: "Octopus insularis", kind: "mollusc" },
   { slug: "cannonball-jelly", scientificName: "Stomolophus meleagris", kind: "drifter" },
   { slug: "caribbean-reef-octopus", scientificName: "Octopus briareus", kind: "mollusc" },
   { slug: "caribbean-reef-squid", scientificName: "Sepioteuthis sepioidea", kind: "mollusc" },
@@ -371,6 +372,7 @@ export const MARINE_LIFE_CATALOG = [
   { slug: "queen-conch", scientificName: "Lobatus gigas", kind: "mollusc" },
   { slug: "ragged-sea-hare", scientificName: "Bursatella leachii", kind: "mollusc" },
   { slug: "red-reef-hermit", scientificName: "Paguristes cadenati", kind: "crustacean" },
+  { slug: "reef-urchin", scientificName: "Echinometra viridis", kind: "reefInvertebrate" },
   { slug: "rock-boring-urchin", scientificName: "Echinometra lucunter", kind: "reefInvertebrate" },
   { slug: "sea-walnut", scientificName: "Mnemiopsis leidyi", kind: "drifter" },
   {
@@ -408,6 +410,7 @@ export const MARINE_LIFE_CATALOG = [
     scientificName: "Isostichopus badionotus",
     kind: "reefInvertebrate",
   },
+  { slug: "true-tulip", scientificName: "Fasciolaria tulipa", kind: "mollusc" },
   { slug: "upside-down-jellyfish", scientificName: "Cassiopea xamachana", kind: "drifter" },
   {
     slug: "variegated-sea-urchin",
@@ -456,6 +459,7 @@ export const MARINE_LIFE_CATALOG = [
   { slug: "mountainous-star-coral", scientificName: "Orbicella faveolata", kind: "hardCoral" },
   { slug: "mustard-hill-coral", scientificName: "Porites astreoides", kind: "hardCoral" },
   { slug: "netted-barrel-sponge", scientificName: "Verongula gigantea", kind: "sponge" },
+  { slug: "orange-cup-coral", scientificName: "Tubastraea coccinea", kind: "hardCoral" },
   { slug: "orange-elephant-ear-sponge", scientificName: "Agelas clathrodes", kind: "sponge" },
   { slug: "pillar-coral", scientificName: "Dendrogyra cylindrus", kind: "hardCoral" },
   { slug: "pink-vase-sponge", scientificName: "Niphates digitalis", kind: "sponge" },

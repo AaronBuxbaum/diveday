@@ -1,0 +1,1695 @@
+{
+  "note": "The species the marine-life catalog promises to cover: one denominator per group, each held at 80% by src/content/coverage.test.ts. Built from REEF and iNaturalist counts used only to choose species; no frequency is shown in the product.",
+  "groups": [
+    {
+      "group": "fish",
+      "method": "Every species REEF volunteer surveys sighted on at least 10% of dives in at least one Florida or Caribbean region with 500 or more surveys (REEF Geographic Zone Reports, all years to 2026-10-14). Look-alike complexes REEF lumps count once; unidentified and hybrid entries are left out.",
+      "sources": [
+        "https://www.reef.org/database/reports/geozone",
+        "https://www.reef.org/programs/volunteer-survey-project"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Brown Chromis (Azurina multilineata)",
+          "slug": "brown-chromis"
+        },
+        {
+          "name": "Blue Tang (Acanthurus coeruleus)",
+          "slug": "blue-tang"
+        },
+        {
+          "name": "Stoplight Parrotfish (Sparisoma viride)",
+          "slug": "stoplight-parrotfish"
+        },
+        {
+          "name": "Bicolor Damselfish (Stegastes partitus)",
+          "slug": "bicolor-damselfish"
+        },
+        {
+          "name": "Sergeant Major (Abudefduf saxatilis)",
+          "slug": "sergeant-major"
+        },
+        {
+          "name": "Foureye Butterflyfish (Chaetodon capistratus)",
+          "slug": "foureye-butterflyfish"
+        },
+        {
+          "name": "Yellow Goatfish (Mulloidichthys martinicus)",
+          "slug": "yellow-goatfish"
+        },
+        {
+          "name": "Bluehead (Thalassoma bifasciatum)",
+          "slug": "bluehead-wrasse"
+        },
+        {
+          "name": "French Grunt (Haemulon flavolineatum)",
+          "slug": "french-grunt"
+        },
+        {
+          "name": "Trumpetfish (Aulostomus maculatus)",
+          "slug": "trumpetfish"
+        },
+        {
+          "name": "Blue Chromis (Azurina cyanea)",
+          "slug": "blue-chromis"
+        },
+        {
+          "name": "Harlequin Bass (Serranus tigrinus)",
+          "slug": "harlequin-bass"
+        },
+        {
+          "name": "Schoolmaster (Lutjanus apodus)",
+          "slug": "schoolmaster-snapper"
+        },
+        {
+          "name": "Smooth Trunkfish (Lactophrys triqueter)",
+          "slug": "smooth-trunkfish"
+        },
+        {
+          "name": "Princess Parrotfish (Scarus taeniopterus)",
+          "slug": "princess-parrotfish"
+        },
+        {
+          "name": "French Angelfish (Pomacanthus paru)",
+          "slug": "french-angelfish"
+        },
+        {
+          "name": "Great Barracuda (Sphyraena barracuda)",
+          "slug": "great-barracuda"
+        },
+        {
+          "name": "Bar Jack (Caranx ruber)",
+          "slug": "bar-jack"
+        },
+        {
+          "name": "Banded Butterflyfish (Chaetodon striatus)",
+          "slug": "banded-butterflyfish"
+        },
+        {
+          "name": "Doctorfish (Acanthurus chirurgus)",
+          "slug": "doctorfish"
+        },
+        {
+          "name": "Yellowtail Snapper (Ocyurus chrysurus)",
+          "slug": "yellowtail-snapper"
+        },
+        {
+          "name": "Spanish Hogfish (Bodianus rufus)",
+          "slug": "spanish-hogfish"
+        },
+        {
+          "name": "Fairy Basslet (Gramma loreto)",
+          "slug": "royal-gramma"
+        },
+        {
+          "name": "Yellowtail Damselfish (Microspathodon chrysurus)",
+          "slug": "yellowtail-damselfish"
+        },
+        {
+          "name": "Graysby (Cephalopholis cruentata)",
+          "slug": "graysby"
+        },
+        {
+          "name": "Queen Parrotfish (Scarus vetula)",
+          "slug": "queen-parrotfish"
+        },
+        {
+          "name": "Ocean Surgeonfish (Acanthurus tractus)",
+          "slug": "ocean-surgeonfish"
+        },
+        {
+          "name": "Yellowhead Wrasse (Halichoeres garnoti)",
+          "slug": "yellowhead-wrasse"
+        },
+        {
+          "name": "Blackbar Soldierfish (Myripristis jacobus)",
+          "slug": "blackbar-soldierfish"
+        },
+        {
+          "name": "Mahogany Snapper (Lutjanus mahogoni)",
+          "slug": "mahogany-snapper"
+        },
+        {
+          "name": "Redband Parrotfish (Sparisoma aurofrenatum)",
+          "slug": "redband-parrotfish"
+        },
+        {
+          "name": "Gray Snapper (Lutjanus griseus)",
+          "slug": "gray-snapper"
+        },
+        {
+          "name": "Porkfish (Anisotremus virginicus)",
+          "slug": "porkfish"
+        },
+        {
+          "name": "Sharpnose Puffer (Canthigaster rostrata)",
+          "slug": "sharpnose-puffer"
+        },
+        {
+          "name": "Rock Beauty (Holacanthus tricolor)",
+          "slug": "rock-beauty"
+        },
+        {
+          "name": "Striped Parrotfish (Scarus iseri)",
+          "slug": "striped-parrotfish"
+        },
+        {
+          "name": "Reef Butterflyfish (Chaetodon sedentarius)",
+          "slug": "reef-butterflyfish"
+        },
+        {
+          "name": "Threespot Damselfish (Stegastes planifrons)",
+          "slug": "threespot-damselfish"
+        },
+        {
+          "name": "Creole Wrasse (Bodianus parrae)",
+          "slug": "creole-wrasse"
+        },
+        {
+          "name": "Smallmouth Grunt (Haemulon chrysargyreum)",
+          "slug": "smallmouth-grunt"
+        },
+        {
+          "name": "White Grunt (Haemulon plumierii)",
+          "slug": "white-grunt"
+        },
+        {
+          "name": "Black Durgon (Melichthys niger)",
+          "slug": "black-durgon"
+        },
+        {
+          "name": "Belted Sandfish (Serranus subligarius)",
+          "slug": "belted-sandfish"
+        },
+        {
+          "name": "Queen Angelfish (Holacanthus ciliaris)",
+          "slug": "queen-angelfish"
+        },
+        {
+          "name": "Bluestriped Grunt (Haemulon sciurus)",
+          "slug": "bluestriped-grunt"
+        },
+        {
+          "name": "Longspine Squirrelfish (Holocentrus rufus)",
+          "slug": "longspine-squirrelfish"
+        },
+        {
+          "name": "Bermuda Chub/Gray Chub (Kyphosus sectatrix / K. bigibbus)",
+          "slug": "bermuda-chub"
+        },
+        {
+          "name": "Coney (Cephalopholis fulva)",
+          "slug": "coney"
+        },
+        {
+          "name": "Longfin Damselfish (Stegastes diencaeus)",
+          "slug": "longfin-damselfish"
+        },
+        {
+          "name": "Creolefish (Atlantic) (Paranthias furcifer)",
+          "slug": "creolefish"
+        },
+        {
+          "name": "Slippery Dick (Halichoeres bivittatus)",
+          "slug": "slippery-dick"
+        },
+        {
+          "name": "Spotted Goatfish (Pseudupeneus maculatus)",
+          "slug": "spotted-goatfish"
+        },
+        {
+          "name": "Barred Hamlet (Caribbean) (Hypoplectrus puella)",
+          "slug": "barred-hamlet"
+        },
+        {
+          "name": "Gray Angelfish (Pomacanthus arcuatus)",
+          "slug": "gray-angelfish"
+        },
+        {
+          "name": "Masked Goby / Glass Goby (Coryphopterus personatus / hyalinus)",
+          "slug": "masked-goby"
+        },
+        {
+          "name": "Hogfish (Lachnolaimus maximus)",
+          "slug": "hogfish"
+        },
+        {
+          "name": "Bridled Goby Complex (Bridled/Sand-Canyon/Patch-Reef) (C. glaucofraenum/C. venezuelae/C. tortugae)",
+          "slug": "bridled-goby"
+        },
+        {
+          "name": "Nassau Grouper (Epinephelus striatus)",
+          "slug": "nassau-grouper"
+        },
+        {
+          "name": "Puddingwife (Halichoeres radiatus)",
+          "slug": "puddingwife"
+        },
+        {
+          "name": "Caesar Grunt (Haemulon carbonarium)",
+          "slug": "caesar-grunt"
+        },
+        {
+          "name": "Spotfin Butterflyfish (Chaetodon ocellatus)",
+          "slug": "spotfin-butterflyfish"
+        },
+        {
+          "name": "Yellowfin Mojarra (Gerres cinereus)",
+          "slug": "yellowfin-mojarra"
+        },
+        {
+          "name": "Sheepshead (Archosargus probatocephalus)",
+          "slug": "sheepshead"
+        },
+        {
+          "name": "Squirrelfish (Holocentrus adscensionis)",
+          "slug": "squirrelfish"
+        },
+        {
+          "name": "Cottonwick (Haemulon melanurum)",
+          "slug": "cottonwick"
+        },
+        {
+          "name": "Gag (Mycteroperca microlepis)",
+          "slug": "gag"
+        },
+        {
+          "name": "Whitespotted Filefish (Cantherhines macrocerus)",
+          "slug": "whitespotted-filefish"
+        },
+        {
+          "name": "Redlip Blenny (Ophioblennius macclurei)",
+          "slug": "redlip-blenny"
+        },
+        {
+          "name": "Tomtate (Haemulon aurolineatum)",
+          "slug": "tomtate"
+        },
+        {
+          "name": "Cocoa Damselfish (Stegastes xanthurus)",
+          "slug": "cocoa-damselfish"
+        },
+        {
+          "name": "Orangespotted Filefish (Cantherhines pullus)",
+          "slug": "orangespotted-filefish"
+        },
+        {
+          "name": "Cubbyu (Pareques umbrosus)",
+          "slug": null
+        },
+        {
+          "name": "Yellowtail Hamlet (Hypoplectrus chlorurus)",
+          "slug": "yellowtail-hamlet"
+        },
+        {
+          "name": "Clown Wrasse (Halichoeres maculipinna)",
+          "slug": "clown-wrasse"
+        },
+        {
+          "name": "Honeycomb Cowfish (Acanthostracion polygonius)",
+          "slug": "honeycomb-cowfish"
+        },
+        {
+          "name": "Longjaw Squirrelfish (Neoniphon marianus)",
+          "slug": "longjaw-squirrelfish"
+        },
+        {
+          "name": "Sand Tilefish (Malacanthus plumieri)",
+          "slug": "sand-tilefish"
+        },
+        {
+          "name": "Black Margate (Anisotremus surinamensis)",
+          "slug": "black-margate"
+        },
+        {
+          "name": "Redtail Parrotfish (Sparisoma chrysopterum)",
+          "slug": "redtail-parrotfish"
+        },
+        {
+          "name": "Peppermint Goby (Coryphopterus lipernes)",
+          "slug": "peppermint-goby"
+        },
+        {
+          "name": "Sand Diver (Synodus intermedius)",
+          "slug": "sand-diver"
+        },
+        {
+          "name": "Beaugregory (Stegastes leucostictus)",
+          "slug": "beaugregory"
+        },
+        {
+          "name": "Indigo Hamlet (Hypoplectrus indigo)",
+          "slug": "indigo-hamlet"
+        },
+        {
+          "name": "Spinyhead Blenny (Acanthemblemaria spinosa)",
+          "slug": "spinyhead-blenny"
+        },
+        {
+          "name": "Spotted Moray (Gymnothorax moringa)",
+          "slug": "spotted-moray"
+        },
+        {
+          "name": "Spotted Drum (Eques punctatus)",
+          "slug": "spotted-drum"
+        },
+        {
+          "name": "Spotted Trunkfish (Lactophrys bicaudalis)",
+          "slug": "spotted-trunkfish"
+        },
+        {
+          "name": "Goldspot Goby (Gnatholepis thompsoni)",
+          "slug": "goldspot-goby"
+        },
+        {
+          "name": "Saddled Blenny (Malacoctenus triangulatus)",
+          "slug": "saddled-blenny"
+        },
+        {
+          "name": "Tobaccofish (Serranus tabacarius)",
+          "slug": "tobaccofish"
+        },
+        {
+          "name": "Seaweed Blenny (Parablennius marmoreus)",
+          "slug": "seaweed-blenny"
+        },
+        {
+          "name": "Goliath Grouper (Epinephelus itajara)",
+          "slug": "goliath-grouper"
+        },
+        {
+          "name": "Dusky Damselfish (Stegastes adustus)",
+          "slug": "dusky-damselfish"
+        },
+        {
+          "name": "Longsnout Butterflyfish (Chaetodon aculeatus)",
+          "slug": "longsnout-butterflyfish"
+        },
+        {
+          "name": "Atlantic Spadefish (Chaetodipterus faber)",
+          "slug": "atlantic-spadefish"
+        },
+        {
+          "name": "Caribbean Neon Goby (Elacatinus lobeli)",
+          "slug": "caribbean-neon-goby"
+        },
+        {
+          "name": "Saucereye Porgy (Calamus calamus)",
+          "slug": "saucereye-porgy"
+        },
+        {
+          "name": "Red Grouper (Epinephelus morio)",
+          "slug": "red-grouper"
+        },
+        {
+          "name": "Sharknose Goby (Elacatinus evelynae)",
+          "slug": "sharknose-goby"
+        },
+        {
+          "name": "Blue Parrotfish (Scarus coeruleus)",
+          "slug": "blue-parrotfish"
+        },
+        {
+          "name": "Neon Goby (Elacatinus oceanops)",
+          "slug": "neon-goby"
+        },
+        {
+          "name": "Mutton Snapper (Lutjanus analis)",
+          "slug": "mutton-snapper"
+        },
+        {
+          "name": "Highhat (Pareques acuminatus / Pareques lineatus)",
+          "slug": "highhat"
+        },
+        {
+          "name": "Yellowline Goby (Elacatinus horsti)",
+          "slug": "yellowline-goby"
+        },
+        {
+          "name": "Yellowtail (Redfin) Parrotfish (Sparisoma rubripinne)",
+          "slug": "yellowtail-parrotfish"
+        },
+        {
+          "name": "Greater Soapfish (Rypticus saponaceus)",
+          "slug": "greater-soapfish"
+        },
+        {
+          "name": "Porcupinefish (Diodon hystrix)",
+          "slug": "porcupinefish"
+        },
+        {
+          "name": "Sailors Choice (Haemulon parra)",
+          "slug": "sailors-choice"
+        },
+        {
+          "name": "Black Grouper (Mycteroperca bonaci)",
+          "slug": "black-grouper"
+        },
+        {
+          "name": "Horse-eye Jack (Caranx latus)",
+          "slug": "horse-eye-jack"
+        },
+        {
+          "name": "Rainbow Wrasse (Halichoeres pictus)",
+          "slug": null
+        },
+        {
+          "name": "Butter Hamlet (Hypoplectrus unicolor)",
+          "slug": "butter-hamlet"
+        },
+        {
+          "name": "Lane Snapper (Lutjanus synagris)",
+          "slug": "lane-snapper"
+        },
+        {
+          "name": "Cayman Cleaning Goby (Elacatinus cayman)",
+          "slug": "cayman-cleaning-goby"
+        },
+        {
+          "name": "Spanish Grunt (Haemulon macrostoma)",
+          "slug": "spanish-grunt"
+        },
+        {
+          "name": "White Margate (Haemulon album)",
+          "slug": "white-margate"
+        },
+        {
+          "name": "Blue Angelfish (Holacanthus bermudensis)",
+          "slug": "blue-angelfish"
+        },
+        {
+          "name": "Greenblotch Parrotfish (Sparisoma atomarium)",
+          "slug": null
+        },
+        {
+          "name": "Tiger Grouper (Mycteroperca tigris)",
+          "slug": "tiger-grouper"
+        },
+        {
+          "name": "Queen Triggerfish (Balistes vetula)",
+          "slug": "queen-triggerfish"
+        },
+        {
+          "name": "Yellownose Goby (Elacatinus randalli)",
+          "slug": "yellownose-goby"
+        },
+        {
+          "name": "Redspotted Hawkfish (Amblycirrhitus pinos)",
+          "slug": "redspotted-hawkfish"
+        },
+        {
+          "name": "Whitespotted Soapfish (Rypticus maculatus)",
+          "slug": null
+        },
+        {
+          "name": "Scamp (Mycteroperca phenax)",
+          "slug": "scamp"
+        },
+        {
+          "name": "Midnight Parrotfish (Scarus coelestinus)",
+          "slug": "midnight-parrotfish"
+        },
+        {
+          "name": "Green Razorfish (Xyrichtys splendens)",
+          "slug": "green-razorfish"
+        },
+        {
+          "name": "Sargassum Triggerfish (Xanthichthys ringens)",
+          "slug": "sargassum-triggerfish"
+        },
+        {
+          "name": "Greater Amberjack (Seriola dumerili)",
+          "slug": "greater-amberjack"
+        },
+        {
+          "name": "Rock Hind (Epinephelus adscensionis)",
+          "slug": "rock-hind"
+        },
+        {
+          "name": "Glasseye Snapper (Atlantic) (Heteropriacanthus cruentatus)",
+          "slug": "glasseye-snapper"
+        },
+        {
+          "name": "Red Snapper (Lutjanus campechanus)",
+          "slug": null
+        },
+        {
+          "name": "Chalk Bass (Serranus tortugarum)",
+          "slug": "chalk-bass"
+        },
+        {
+          "name": "Purple Reeffish (Chromis scotti)",
+          "slug": "purple-reeffish"
+        },
+        {
+          "name": "Reef Shark (Caribbean) (Carcharhinus perezii)",
+          "slug": "caribbean-reef-shark"
+        },
+        {
+          "name": "Yellowmouth Grouper (Mycteroperca interstitialis)",
+          "slug": "yellowmouth-grouper"
+        },
+        {
+          "name": "Goldentail Moray (Gymnothorax miliaris)",
+          "slug": "goldentail-moray"
+        },
+        {
+          "name": "Scrawled Cowfish (Acanthostracion quadricornis)",
+          "slug": "scrawled-cowfish"
+        },
+        {
+          "name": "Gray Triggerfish (Balistes capriscus)",
+          "slug": "gray-triggerfish"
+        },
+        {
+          "name": "Red Hind (Epinephelus guttatus)",
+          "slug": "red-hind"
+        },
+        {
+          "name": "Yellowhead Jawfish (Opistognathus aurifrons)",
+          "slug": "yellowhead-jawfish"
+        },
+        {
+          "name": "Ocean Triggerfish (Canthidermis sufflamen)",
+          "slug": "ocean-triggerfish"
+        },
+        {
+          "name": "Red Lionfish (exotic) (Pterois volitans)",
+          "slug": "lionfish"
+        },
+        {
+          "name": "Balloonfish (Diodon holocanthus)",
+          "slug": "balloonfish"
+        },
+        {
+          "name": "Cayman Sponge Goby (Elacatinus centralis)",
+          "slug": "cayman-sponge-goby"
+        },
+        {
+          "name": "Peacock Flounder (Bothus lunatus)",
+          "slug": "peacock-flounder"
+        },
+        {
+          "name": "Black Hamlet (Hypoplectrus nigricans)",
+          "slug": "black-hamlet"
+        },
+        {
+          "name": "Sunshinefish (Chromis insolata)",
+          "slug": "sunshinefish"
+        },
+        {
+          "name": "Scrawled Filefish (Aluterus scriptus)",
+          "slug": "scrawled-filefish"
+        },
+        {
+          "name": "Blue Runner (Caranx crysos)",
+          "slug": "blue-runner"
+        },
+        {
+          "name": "Pallid Goby (Coryphopterus eidolon)",
+          "slug": "pallid-goby"
+        },
+        {
+          "name": "Belted Cardinalfish (Apogon townsendi)",
+          "slug": "belted-cardinalfish"
+        },
+        {
+          "name": "Rainbow Parrotfish (Scarus guacamaia)",
+          "slug": "rainbow-parrotfish"
+        },
+        {
+          "name": "Round Scad (Decapterus punctatus)",
+          "slug": "round-scad"
+        },
+        {
+          "name": "Sand Perch (Diplectrum formosum)",
+          "slug": "sand-perch"
+        },
+        {
+          "name": "Flamefish (Apogon maculatus)",
+          "slug": "flamefish"
+        },
+        {
+          "name": "Cleaning Goby (Elacatinus genie)",
+          "slug": "cleaning-goby"
+        },
+        {
+          "name": "Blackcap Basslet (Gramma melacara)",
+          "slug": "blackcap-basslet"
+        },
+        {
+          "name": "Shy Hamlet (Hypoplectrus guttavarius)",
+          "slug": "shy-hamlet"
+        },
+        {
+          "name": "Lantern Bass (Serranus baldwini)",
+          "slug": "lantern-bass"
+        },
+        {
+          "name": "Dog Snapper (Lutjanus jocu)",
+          "slug": "dog-snapper"
+        },
+        {
+          "name": "Spotted Scorpionfish (Scorpaena plumieri plumieri)",
+          "slug": "spotted-scorpionfish"
+        },
+        {
+          "name": "Boga (Haemulon vittatum)",
+          "slug": "boga"
+        },
+        {
+          "name": "Brown Garden Eel (Heteroconger longissimus)",
+          "slug": "garden-eel"
+        },
+        {
+          "name": "Yellowbelly Hamlet (Hypoplectrus aberrans)",
+          "slug": "yellowbelly-hamlet"
+        },
+        {
+          "name": "Sharksucker (Echeneis naucrates)",
+          "slug": "remora"
+        },
+        {
+          "name": "Cubera Snapper (Lutjanus cyanopterus)",
+          "slug": "cubera-snapper"
+        },
+        {
+          "name": "Barred Cardinalfish (Apogon binotatus)",
+          "slug": "barred-cardinalfish"
+        },
+        {
+          "name": "Bandtail Puffer (Sphoeroides spengleri)",
+          "slug": "bandtail-puffer"
+        },
+        {
+          "name": "Green Moray (Gymnothorax funebris)",
+          "slug": "green-moray"
+        },
+        {
+          "name": "Bluelip Parrotfish (Cryptotomus roseus)",
+          "slug": "bluelip-parrotfish"
+        },
+        {
+          "name": "Yellow Stingray (Urobatis jamaicensis)",
+          "slug": "yellow-stingray"
+        },
+        {
+          "name": "Southern Stingray (Hypanus americanus)",
+          "slug": "southern-stingray"
+        },
+        {
+          "name": "Dusky Squirrelfish (Sargocentron vexillarium)",
+          "slug": "dusky-squirrelfish"
+        },
+        {
+          "name": "Vermillion Snapper (Rhomboplites aurorubens)",
+          "slug": "vermilion-snapper"
+        },
+        {
+          "name": "Cero (Scomberomorus regalis)",
+          "slug": "cero"
+        },
+        {
+          "name": "Silver Porgy (Diplodus caudimacula)",
+          "slug": "silver-porgy"
+        },
+        {
+          "name": "Colon Goby (Coryphopterus dicrus)",
+          "slug": "colon-goby"
+        },
+        {
+          "name": "Sharptail Eel (Myrichthys breviceps)",
+          "slug": "sharptail-eel"
+        },
+        {
+          "name": "Twospot Cardinalfish (Apogon pseudomaculatus)",
+          "slug": "twospot-cardinalfish"
+        },
+        {
+          "name": "Cherubfish (Centropyge argi)",
+          "slug": "cherubfish"
+        },
+        {
+          "name": "Yellowcheek Wrasse (Halichoeres cyanocephalus)",
+          "slug": "yellowcheek-wrasse"
+        },
+        {
+          "name": "Almaco Jack (Seriola rivoliana)",
+          "slug": "almaco-jack"
+        },
+        {
+          "name": "Tarpon (Megalops atlanticus)",
+          "slug": "tarpon"
+        },
+        {
+          "name": "Crevalle Jack (Caranx hippos)",
+          "slug": "crevalle-jack"
+        },
+        {
+          "name": "Shortstripe Goby (Elacatinus chancei)",
+          "slug": "shortstripe-goby"
+        },
+        {
+          "name": "Rosy Razorfish (Xyrichtys martinicensis)",
+          "slug": "rosy-razorfish"
+        },
+        {
+          "name": "Blue Dartfish (Blue Goby) (Ptereleotris calliurus)",
+          "slug": "blue-dartfish"
+        },
+        {
+          "name": "Arrow Blenny (Lucayablennius zingaro)",
+          "slug": "arrow-blenny"
+        },
+        {
+          "name": "Spanish Mackerel (Scomberomorus maculatus)",
+          "slug": null
+        },
+        {
+          "name": "Topsail Chub (Kyphosus cinerascens)",
+          "slug": null
+        },
+        {
+          "name": "Common Snook (Centropomus undecimalis)",
+          "slug": "common-snook"
+        },
+        {
+          "name": "Sailfin Blenny (Emblemaria pandionis)",
+          "slug": "sailfin-blenny"
+        },
+        {
+          "name": "Glassy Sweeper (Pempheris schomburgkii)",
+          "slug": "glassy-sweeper"
+        },
+        {
+          "name": "Yellow Jack (Caranx bartholomaei)",
+          "slug": "yellow-jack"
+        },
+        {
+          "name": "Spottail Pinfish (Diplodus holbrookii)",
+          "slug": "spottail-pinfish"
+        },
+        {
+          "name": "Linesnout Goby (Elacatinus lori)",
+          "slug": null
+        },
+        {
+          "name": "Hawksbill Sea Turtle (Eretmochelys imbricata)",
+          "slug": "hawksbill-turtle"
+        },
+        {
+          "name": "Spotfin Hogfish (Bodianus pulchellus)",
+          "slug": null
+        },
+        {
+          "name": "Mottled Mojarra (Eucinostomus lefroyi)",
+          "slug": null
+        },
+        {
+          "name": "Leopard Toadfish (Opsanus pardus)",
+          "slug": null
+        },
+        {
+          "name": "Roughhead Blenny (Acanthemblemaria aspera)",
+          "slug": "roughhead-blenny"
+        },
+        {
+          "name": "Nurse Shark (Ginglymostoma cirratum)",
+          "slug": "nurse-shark"
+        },
+        {
+          "name": "Bank Sea Bass (Centropristis ocyurus)",
+          "slug": null
+        },
+        {
+          "name": "Eyed Flounder (Bothus ocellatus)",
+          "slug": null
+        },
+        {
+          "name": "Orangesided Goby (Tigrigobius dilepis)",
+          "slug": null
+        },
+        {
+          "name": "Blackear Wrasse (Halichoeres poeyi)",
+          "slug": null
+        },
+        {
+          "name": "Reef Croaker (Odontoscion dentex)",
+          "slug": null
+        },
+        {
+          "name": "Black Jack (Caranx lugubris)",
+          "slug": null
+        },
+        {
+          "name": "Saddled Parrotfish (Sparisoma frondosum)",
+          "slug": null
+        },
+        {
+          "name": "Mackerel Scad (Decapterus macarellus)",
+          "slug": null
+        },
+        {
+          "name": "Blue Hamlet (Hypoplectrus gemma)",
+          "slug": null
+        },
+        {
+          "name": "Bonnetmouth (Emmelichthyops atlanticus)",
+          "slug": null
+        },
+        {
+          "name": "Spotted Goby (Coryphopterus punctipectophorus)",
+          "slug": null
+        },
+        {
+          "name": "Gulf Flounder (Paralichthys albigutta)",
+          "slug": null
+        },
+        {
+          "name": "Splendid Toadfish (Sanopus splendidus)",
+          "slug": "splendid-toadfish"
+        },
+        {
+          "name": "Rosy Blenny (Malacoctenus macropus)",
+          "slug": null
+        },
+        {
+          "name": "Yellowfin Grouper (Mycteroperca venenosa)",
+          "slug": "yellowfin-grouper"
+        },
+        {
+          "name": "Bonefish (Albula vulpes)",
+          "slug": null
+        },
+        {
+          "name": "Painted Wrasse (Halichoeres caudalis)",
+          "slug": null
+        },
+        {
+          "name": "Yellowtail Reeffish (Chromis enchrysura)",
+          "slug": null
+        },
+        {
+          "name": "Sheepshead Porgy (Calamus penna)",
+          "slug": null
+        },
+        {
+          "name": "Permit (Trachinotus falcatus)",
+          "slug": "permit-fish"
+        },
+        {
+          "name": "Slender Filefish (Monacanthus tuckeri)",
+          "slug": null
+        },
+        {
+          "name": "Night Sergeant (Abudefduf taurus)",
+          "slug": "night-sergeant"
+        },
+        {
+          "name": "Whitestar Cardinalfish (Apogon lachneri)",
+          "slug": null
+        },
+        {
+          "name": "Spotted Eagle Ray (Aetobatus narinari)",
+          "slug": "spotted-eagle-ray"
+        },
+        {
+          "name": "Highfin (Red Banner) Blenny (pka Red Banner Blenny) (Emblemariopsis tayrona (prev E. ramirezi))",
+          "slug": null
+        },
+        {
+          "name": "Pinfish (Lagodon rhomboides)",
+          "slug": null
+        },
+        {
+          "name": "Jolthead Porgy (Calamus bajonado)",
+          "slug": null
+        },
+        {
+          "name": "Blackfin Snapper (Lutjanus buccanella)",
+          "slug": null
+        },
+        {
+          "name": "Pluma (Calamus pennatula)",
+          "slug": null
+        },
+        {
+          "name": "Barsnout Goby (Elacatinus illecebrosum)",
+          "slug": null
+        },
+        {
+          "name": "Tiger Goby (Gobiosoma macrodon)",
+          "slug": null
+        },
+        {
+          "name": "Latin Grunt (Haemulon steindachneri)",
+          "slug": null
+        },
+        {
+          "name": "Hairy Blenny Complex (Labrisomus nuchipinnis/L. conditus/L.cricota)",
+          "slug": "hairy-blenny"
+        },
+        {
+          "name": "Dwarf Sand Perch (Diplectrum bivittatum)",
+          "slug": null
+        },
+        {
+          "name": "Peppermint Basslet (Liopropoma rubre)",
+          "slug": null
+        },
+        {
+          "name": "Sponge Cardinalfish (Phaeoptyx xenus)",
+          "slug": null
+        },
+        {
+          "name": "Cardinal Soldierfish (Plectrypops retrospinis)",
+          "slug": null
+        },
+        {
+          "name": "Whitefin Sharksucker (Echeneis neucratoides)",
+          "slug": null
+        },
+        {
+          "name": "Black Grunt (Haemulon bonariense)",
+          "slug": null
+        }
+      ]
+    },
+    {
+      "group": "anemones and zoanthids",
+      "method": "Every species with at least 250 research-grade iNaturalist observations in Florida and the Caribbean (to 2026-10-14), a proxy for what divers photograph; animals of beaches, flats, estuaries and the surface are excluded with the reason.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Giant Anemone (Condylactis gigantea)",
+          "slug": "giant-anemone"
+        },
+        {
+          "name": "Caribbean Sea Mat (Palythoa caribaeorum)",
+          "slug": "white-encrusting-zoanthid"
+        },
+        {
+          "name": "Corkscrew Anemone (Bartholomea annulata)",
+          "slug": "corkscrew-anemone"
+        },
+        {
+          "name": "sun anemone (Stichodactyla helianthus)",
+          "slug": "sun-anemone"
+        },
+        {
+          "name": "Pale Anemone (Exaiptasia diaphana)",
+          "slug": null,
+          "excluded": "a mangrove and dock anemone"
+        },
+        {
+          "name": "Branching Anemone (Lebrunia neglecta)",
+          "slug": "branching-anemone"
+        }
+      ]
+    },
+    {
+      "group": "crustaceans",
+      "method": "Every species with at least 250 research-grade iNaturalist observations in Florida and the Caribbean (to 2026-10-14), a proxy for what divers photograph; animals of beaches, flats, estuaries and the surface are excluded with the reason.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Caribbean Spiny Lobster (Panulirus argus)",
+          "slug": "spiny-lobster"
+        },
+        {
+          "name": "Yellowline Arrow Crab (Stenorhynchus seticornis)",
+          "slug": "arrow-crab"
+        },
+        {
+          "name": "Banded Coral Shrimp (Stenopus hispidus)",
+          "slug": "banded-coral-shrimp"
+        },
+        {
+          "name": "Giant Hermit Crab (Petrochirus diogenes)",
+          "slug": "giant-hermit-crab"
+        },
+        {
+          "name": "Florida Stone Crab (Menippe mercenaria)",
+          "slug": null,
+          "excluded": "a stone crab of jetties and traps more than reefs"
+        },
+        {
+          "name": "Dolly Varden Crab (Hepatus epheliticus)",
+          "slug": null,
+          "excluded": "seen almost only on beaches and in nets"
+        },
+        {
+          "name": "Pederson Cleaner Shrimp (Ancylomenes pedersoni)",
+          "slug": "pederson-cleaner-shrimp"
+        },
+        {
+          "name": "West Indian spider crab (Maguimithrax spinosissimus)",
+          "slug": "channel-clinging-crab"
+        },
+        {
+          "name": "Sargassum Swimming Crab (Portunus sayi)",
+          "slug": null,
+          "excluded": "lives in floating sargassum at the surface"
+        },
+        {
+          "name": "Spotted Spiny Lobster (Panulirus guttatus)",
+          "slug": "spotted-spiny-lobster"
+        },
+        {
+          "name": "spotted cleaner shrimp (Periclimenes yucatanicus)",
+          "slug": "spotted-cleaner-shrimp"
+        },
+        {
+          "name": "Nimble Spray Crab (Percnon gibbesi)",
+          "slug": "nimble-spray-crab"
+        },
+        {
+          "name": "Flame Streaked Box Crab (Calappa flammea)",
+          "slug": "flame-box-crab"
+        },
+        {
+          "name": "Tidal Spray Crab (Plagusia depressa)",
+          "slug": null,
+          "excluded": "an intertidal splash-zone crab"
+        },
+        {
+          "name": "Orangeclaw Hermit Crab (Calcinus tibicen)",
+          "slug": "orangeclaw-hermit-crab"
+        },
+        {
+          "name": "Green Porcelain Crab (Petrolisthes armatus)",
+          "slug": null,
+          "excluded": "an intertidal rubble crab"
+        },
+        {
+          "name": "Dicaprio's Squat Anemone Shrimp (Thor dicaprio)",
+          "slug": null
+        },
+        {
+          "name": "Iridescent Swimming Crab (Achelous gibbesii)",
+          "slug": null,
+          "excluded": "a sand-bottom swimming crab met in trawls more than on dives"
+        },
+        {
+          "name": "Blotched Swimming Crab (Achelous spinimanus)",
+          "slug": null,
+          "excluded": "a sand-bottom swimming crab met in trawls more than on dives"
+        },
+        {
+          "name": "White-speckled Hermit (Paguristes puncticeps)",
+          "slug": null
+        },
+        {
+          "name": "Indo-Pacific Swimming Crab (Charybdis hellerii)",
+          "slug": null,
+          "excluded": "an invasive estuarine crab"
+        }
+      ]
+    },
+    {
+      "group": "echinoderms",
+      "method": "Every species with at least 250 research-grade iNaturalist observations in Florida and the Caribbean (to 2026-10-14), a proxy for what divers photograph; animals of beaches, flats, estuaries and the surface are excluded with the reason.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Red Cushion Sea Star (Oreaster reticulatus)",
+          "slug": "cushion-sea-star"
+        },
+        {
+          "name": "Atlantic Long-spined Sea Urchin (Diadema antillarum)",
+          "slug": "long-spined-urchin"
+        },
+        {
+          "name": "Atlantic Rock-boring Urchin (Echinometra lucunter)",
+          "slug": "rock-boring-urchin"
+        },
+        {
+          "name": "Variegated Sea Urchin (Lytechinus variegatus)",
+          "slug": "variegated-sea-urchin"
+        },
+        {
+          "name": "West Indian Sea Egg (Tripneustes ventricosus)",
+          "slug": "west-indian-sea-egg"
+        },
+        {
+          "name": "Chocolate Chip Sea Cucumber (Isostichopus badionotus)",
+          "slug": "three-rowed-sea-cucumber"
+        },
+        {
+          "name": "Slate Pencil Urchin (Eucidaris tribuloides)",
+          "slug": "slate-pencil-urchin"
+        },
+        {
+          "name": "Nine-armed Sea Star (Luidia senegalensis)",
+          "slug": null,
+          "excluded": "a sea star of shallow sand flats"
+        },
+        {
+          "name": "Donkey Dung Sea Cucumber (Holothuria mexicana)",
+          "slug": "donkey-dung-sea-cucumber"
+        },
+        {
+          "name": "Gray Sea Star (Luidia clathrata)",
+          "slug": null,
+          "excluded": "a sea star of shallow sand flats"
+        },
+        {
+          "name": "Five-slotted Sand Dollar (Mellita quinquiesperforata)",
+          "slug": null,
+          "excluded": "a surf-zone sand dollar"
+        },
+        {
+          "name": "Giant Basket Star (Astrophyton muricatum)",
+          "slug": "giant-basket-star"
+        },
+        {
+          "name": "Sponge Brittle Star (Ophiothrix suensonii)",
+          "slug": "sponge-brittle-star"
+        },
+        {
+          "name": "Reef Urchin (Echinometra viridis)",
+          "slug": "reef-urchin"
+        },
+        {
+          "name": "Noble Sea Cucumber (Holothuria princeps)",
+          "slug": null
+        }
+      ]
+    },
+    {
+      "group": "hard corals",
+      "method": "Every species with at least 250 research-grade iNaturalist observations in Florida and the Caribbean (to 2026-10-14), a proxy for what divers photograph; animals of beaches, flats, estuaries and the surface are excluded with the reason.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Mustard Hill Coral (Porites astreoides)",
+          "slug": "mustard-hill-coral"
+        },
+        {
+          "name": "Elkhorn Coral (Acropora palmata)",
+          "slug": "elkhorn-coral"
+        },
+        {
+          "name": "Symmetrical Brain Coral (Pseudodiploria strigosa)",
+          "slug": "symmetrical-brain-coral"
+        },
+        {
+          "name": "Greater Star Coral (Montastraea cavernosa)",
+          "slug": "great-star-coral"
+        },
+        {
+          "name": "Grooved Brain Coral (Diploria labyrinthiformis)",
+          "slug": "grooved-brain-coral"
+        },
+        {
+          "name": "Mountainous Star Coral (Orbicella faveolata)",
+          "slug": "mountainous-star-coral"
+        },
+        {
+          "name": "Lobed Star Coral (Orbicella annularis)",
+          "slug": "boulder-star-coral"
+        },
+        {
+          "name": "Massive Starlet Coral (Siderastrea siderea)",
+          "slug": "massive-starlet-coral"
+        },
+        {
+          "name": "Lettuce Coral (Agaricia agaricites)",
+          "slug": "lettuce-coral"
+        },
+        {
+          "name": "Finger Coral (Porites porites)",
+          "slug": "finger-coral"
+        },
+        {
+          "name": "Branching Fire Coral (Millepora alcicornis)",
+          "slug": "fire-coral"
+        },
+        {
+          "name": "Blade Fire Coral (Millepora complanata)",
+          "slug": "blade-fire-coral"
+        },
+        {
+          "name": "Staghorn Coral (Acropora cervicornis)",
+          "slug": "staghorn-coral"
+        },
+        {
+          "name": "Knobby brain coral (Pseudodiploria clivosa)",
+          "slug": "knobby-brain-coral"
+        },
+        {
+          "name": "Boulder Brain Coral (Colpophyllia natans)",
+          "slug": "boulder-brain-coral"
+        },
+        {
+          "name": "Smooth Flower Coral (Eusmilia fastigiata)",
+          "slug": "smooth-flower-coral"
+        },
+        {
+          "name": "Lesser Starlet Coral (Siderastrea radians)",
+          "slug": "lesser-starlet-coral"
+        },
+        {
+          "name": "Maze Coral (Meandrina meandrites)",
+          "slug": "maze-coral"
+        },
+        {
+          "name": "Rose Coral (Manicina areolata)",
+          "slug": "rose-coral"
+        },
+        {
+          "name": "Lamarck's sheet coral (Agaricia lamarcki)",
+          "slug": "lamarcks-sheet-coral"
+        },
+        {
+          "name": "Pillar Coral (Dendrogyra cylindrus)",
+          "slug": "pillar-coral"
+        },
+        {
+          "name": "Yellow Pencil Coral (Madracis auretenra)",
+          "slug": "yellow-pencil-coral"
+        },
+        {
+          "name": "Orange Cup Coral (Tubastraea coccinea)",
+          "slug": "orange-cup-coral"
+        },
+        {
+          "name": "Ten-Ray Star Coral (Madracis decactis)",
+          "slug": null
+        },
+        {
+          "name": "Artichoke Coral (Scolymia cubensis)",
+          "slug": null
+        },
+        {
+          "name": "Elliptical Star Coral (Dichocoenia stokesii)",
+          "slug": null
+        },
+        {
+          "name": "Thin Leaf Lettuce Coral (Agaricia tenuifolia)",
+          "slug": null
+        }
+      ]
+    },
+    {
+      "group": "jellies and hydroids",
+      "method": "Every species with at least 250 research-grade iNaturalist observations in Florida and the Caribbean (to 2026-10-14), a proxy for what divers photograph; animals of beaches, flats, estuaries and the surface are excluded with the reason.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Portuguese Man o' War (Physalia physalis)",
+          "slug": "portuguese-man-o-war"
+        },
+        {
+          "name": "Cannonball Jelly (Stomolophus meleagris)",
+          "slug": "cannonball-jelly"
+        },
+        {
+          "name": "Southern Moon Jelly (Aurelia marginalis)",
+          "slug": "moon-jelly"
+        },
+        {
+          "name": "Mangrove Upsidedown Jelly (Cassiopea andromeda)",
+          "slug": "upside-down-jellyfish"
+        },
+        {
+          "name": "Blue Button (Porpita porpita)",
+          "slug": null,
+          "excluded": "a surface drifter divers meet washed ashore"
+        },
+        {
+          "name": "Mushroom Jelly (Rhopilema verrilli)",
+          "slug": null,
+          "excluded": "seen almost only stranded on Gulf beaches"
+        },
+        {
+          "name": "Bay Nettle (Chrysaora chesapeakei)",
+          "slug": null,
+          "excluded": "an estuarine bay jelly"
+        },
+        {
+          "name": "Christmas Tree Hydroid (Pennaria disticha)",
+          "slug": "christmas-tree-hydroid"
+        },
+        {
+          "name": "By-the-wind Sailor (Velella velella)",
+          "slug": null,
+          "excluded": "a surface drifter divers meet washed ashore"
+        }
+      ]
+    },
+    {
+      "group": "marine mammals",
+      "method": "The four marine mammals divers and snorkelers get in the water with here: manatee, bottlenose dolphin, Atlantic spotted dolphin and humpback whale.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "West Indian manatee (Trichechus manatus)",
+          "slug": "manatee"
+        },
+        {
+          "name": "Common bottlenose dolphin (Tursiops truncatus)",
+          "slug": "bottlenose-dolphin"
+        },
+        {
+          "name": "Atlantic spotted dolphin (Stenella frontalis)",
+          "slug": "atlantic-spotted-dolphin"
+        },
+        {
+          "name": "Humpback whale (Megaptera novaeangliae)",
+          "slug": "humpback-whale"
+        }
+      ]
+    },
+    {
+      "group": "molluscs",
+      "method": "Every species with at least 250 research-grade iNaturalist observations in Florida and the Caribbean (to 2026-10-14), a proxy for what divers photograph; animals of beaches, flats, estuaries and the surface are excluded with the reason.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Caribbean Reef Squid (Sepioteuthis sepioidea)",
+          "slug": "caribbean-reef-squid"
+        },
+        {
+          "name": "American Crown Conch (Melongena corona)",
+          "slug": null,
+          "excluded": "a mudflat and seagrass-shallows snail"
+        },
+        {
+          "name": "Brazilian Reef Octopus (Octopus insularis)",
+          "slug": "brazilian-reef-octopus"
+        },
+        {
+          "name": "Lightning Whelk (Sinistrofulgur sinistrum)",
+          "slug": null,
+          "excluded": "a beach and flats whelk"
+        },
+        {
+          "name": "Caribbean Reef Octopus (Octopus briareus)",
+          "slug": "caribbean-reef-octopus"
+        },
+        {
+          "name": "Queen Conch (Aliger gigas)",
+          "slug": "queen-conch"
+        },
+        {
+          "name": "Florida Horse Conch (Triplofusus giganteus)",
+          "slug": "florida-horse-conch"
+        },
+        {
+          "name": "Eastern Banded Tulip (Cinctura hunteria)",
+          "slug": null,
+          "excluded": "a snail of intertidal flats"
+        },
+        {
+          "name": "Flamingo Tongue Snail (Cyphoma gibbosum)",
+          "slug": "flamingo-tongue"
+        },
+        {
+          "name": "Fighting Conch (Strombus pugilis)",
+          "slug": null
+        },
+        {
+          "name": "Lettuce Sea Slug (Elysia crispata)",
+          "slug": "lettuce-sea-slug"
+        },
+        {
+          "name": "Lettered Olive (Oliva sayana)",
+          "slug": null,
+          "excluded": "a burrowing beach snail"
+        },
+        {
+          "name": "Ram's Horn Squid (Spirula spirula)",
+          "slug": null,
+          "excluded": "a beach shell; the live animal lives in deep water"
+        },
+        {
+          "name": "True Tulip (Fasciolaria tulipa)",
+          "slug": "true-tulip"
+        }
+      ]
+    },
+    {
+      "group": "octocorals",
+      "method": "Every species with at least 250 research-grade iNaturalist observations in Florida and the Caribbean (to 2026-10-14), a proxy for what divers photograph; animals of beaches, flats, estuaries and the surface are excluded with the reason.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Purple Sea Fan (Gorgonia ventalina)",
+          "slug": "common-sea-fan"
+        },
+        {
+          "name": "Caribbean Sea Whip (Plexaura homomalla)",
+          "slug": "black-sea-rod"
+        },
+        {
+          "name": "Corky Sea Finger (Briareum asbestinum)",
+          "slug": "corky-sea-finger"
+        },
+        {
+          "name": "Encrusting Gorgonian (Erythropodium caribaeorum)",
+          "slug": "encrusting-gorgonian"
+        }
+      ]
+    },
+    {
+      "group": "sea turtles",
+      "method": "The five sea turtles that nest or forage in Florida and Caribbean waters.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Caretta caretta",
+          "slug": "loggerhead-turtle"
+        },
+        {
+          "name": "Chelonia mydas",
+          "slug": "green-sea-turtle"
+        },
+        {
+          "name": "Dermochelys coriacea",
+          "slug": "leatherback-sea-turtle"
+        },
+        {
+          "name": "Eretmochelys imbricata",
+          "slug": "hawksbill-turtle"
+        },
+        {
+          "name": "Lepidochelys kempii",
+          "slug": null
+        }
+      ]
+    },
+    {
+      "group": "sponges",
+      "method": "Every species with at least 250 research-grade iNaturalist observations in Florida and the Caribbean (to 2026-10-14), a proxy for what divers photograph; animals of beaches, flats, estuaries and the surface are excluded with the reason.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Giant Barrel Sponge (Xestospongia muta)",
+          "slug": "giant-barrel-sponge"
+        },
+        {
+          "name": "Yellow Tube Sponge (Aplysina fistularis)",
+          "slug": "yellow-tube-sponge"
+        },
+        {
+          "name": "Scattered Pore Rope Sponge (Amphimedon nodosa)",
+          "slug": "red-rope-sponge"
+        },
+        {
+          "name": "Branching Tube Sponge (Aiolochroia crassa)",
+          "slug": "branching-tube-sponge"
+        },
+        {
+          "name": "Azure Vase Sponge (Callyspongia plicifera)",
+          "slug": "azure-vase-sponge"
+        },
+        {
+          "name": "Stovepipe Sponge (Aplysina archeri)",
+          "slug": "stovepipe-sponge"
+        },
+        {
+          "name": "Branching Vase Sponge (Callyspongia aculeata)",
+          "slug": "branching-vase-sponge"
+        },
+        {
+          "name": "Stinker Sponge (Ircinia felix)",
+          "slug": "stinker-sponge"
+        },
+        {
+          "name": "Pink Vase Sponge (Niphates digitalis)",
+          "slug": "pink-vase-sponge"
+        },
+        {
+          "name": "Row Pore Rope Sponge (Aplysina cauliformis)",
+          "slug": "row-pore-rope-sponge"
+        },
+        {
+          "name": "Pitted Sponge (Verongula rigida)",
+          "slug": "pitted-sponge"
+        },
+        {
+          "name": "Green Finger Sponge (Iotrochota birotulata)",
+          "slug": "green-finger-sponge"
+        },
+        {
+          "name": "Ruetzleri's Scopalina (Scopalina ruetzleri)",
+          "slug": null
+        },
+        {
+          "name": "Scattered Pore Rope Sponge (Aplysina fulva)",
+          "slug": "scattered-pore-rope-sponge"
+        },
+        {
+          "name": " (Agelas tubulata)",
+          "slug": null
+        },
+        {
+          "name": "Brown Tube Sponge (Agelas conifera)",
+          "slug": "brown-tube-sponge"
+        },
+        {
+          "name": "Red Boring Sponge (Cliothosa delitrix)",
+          "slug": "red-boring-sponge"
+        },
+        {
+          "name": "Elephant Ear Sponge (Agelas clathrodes)",
+          "slug": "orange-elephant-ear-sponge"
+        },
+        {
+          "name": "Lumpy Overgrowing Sponge (Desmapsamma anchorata)",
+          "slug": "lumpy-overgrowing-sponge"
+        },
+        {
+          "name": "Vase Garlic Sponge (Ircinia campana)",
+          "slug": "vase-sponge"
+        },
+        {
+          "name": "Lavender Rope Sponge (Niphates erecta)",
+          "slug": "lavender-rope-sponge"
+        },
+        {
+          "name": "Brown Encrusting Octopus Sponge (Ectyoplasia ferox)",
+          "slug": "brown-encrusting-octopus-sponge"
+        },
+        {
+          "name": "Fire Sponge (Tedania ignis)",
+          "slug": null
+        },
+        {
+          "name": "Netted Barrel Sponge (Verongula gigantea)",
+          "slug": "netted-barrel-sponge"
+        },
+        {
+          "name": "Orange Icing Sponge (Mycale laevis)",
+          "slug": null
+        },
+        {
+          "name": "yellow-green candle sponge (Aplysina insularis)",
+          "slug": null
+        }
+      ]
+    },
+    {
+      "group": "tunicates",
+      "method": "Every species with at least 250 research-grade iNaturalist observations in Florida and the Caribbean (to 2026-10-14), a proxy for what divers photograph; animals of beaches, flats, estuaries and the surface are excluded with the reason.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Atlantic Sea Pork (Aplidium stellatum)",
+          "slug": null,
+          "excluded": "met almost only washed up on beaches; every iNaturalist photograph of it is a stranded colony"
+        },
+        {
+          "name": "Mangrove Tunicate (Ecteinascidia turbinata)",
+          "slug": null,
+          "excluded": "a mangrove-root animal rarely met on a dive"
+        }
+      ]
+    },
+    {
+      "group": "worms",
+      "method": "Every species with at least 250 research-grade iNaturalist observations in Florida and the Caribbean (to 2026-10-14), a proxy for what divers photograph; animals of beaches, flats, estuaries and the surface are excluded with the reason.",
+      "sources": [
+        "https://api.inaturalist.org/v1/observations/species_counts",
+        "https://www.marinespecies.org/"
+      ],
+      "counted": "2026-10-14",
+      "rows": [
+        {
+          "name": "Caribbean Christmas Tree Worm (Spirobranchus giganteus)",
+          "slug": "christmas-tree-worm"
+        },
+        {
+          "name": "Bearded Fireworm (Hermodice carunculata)",
+          "slug": "bearded-fireworm"
+        },
+        {
+          "name": "Magnificent Feather Duster Worm (Sabellastarte magnifica)",
+          "slug": "feather-duster-worm"
+        },
+        {
+          "name": "Split-crown Feather Duster (Anamobaea orstedii)",
+          "slug": "split-crown-feather-duster"
+        },
+        {
+          "name": "Social Feather Duster Worm (Bispira brunnea)",
+          "slug": "social-feather-duster"
+        },
+        {
+          "name": "Yellow Fanworm (Notaulax occidentalis)",
+          "slug": null
+        },
+        {
+          "name": "Star Feather Worm (Pomatostegus stellatus)",
+          "slug": "star-horseshoe-worm"
+        }
+      ]
+    }
+  ]
+}

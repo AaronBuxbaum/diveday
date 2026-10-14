@@ -920,6 +920,17 @@
       ],
       "reviewed": "2026-10-14"
     },
+    "marine-life/brazilian-reef-octopus.jpg": {
+      "subject": "species:brazilian-reef-octopus",
+      "source": "https://www.inaturalist.org/photos/59737507",
+      "licence": "CC BY 4.0",
+      "artist": "Don Loarie",
+      "sourceSize": [
+        2048,
+        1478
+      ],
+      "reviewed": "2026-10-14"
+    },
     "marine-life/bridled-goby.jpg": {
       "subject": "species:bridled-goby",
       "source": "https://www.inaturalist.org/photos/205591090",
@@ -2399,6 +2410,17 @@
       ],
       "reviewed": "2026-10-14"
     },
+    "marine-life/orange-cup-coral.jpg": {
+      "subject": "species:orange-cup-coral",
+      "source": "https://www.inaturalist.org/photos/701831099",
+      "licence": "CC BY 4.0",
+      "artist": "Slunky",
+      "sourceSize": [
+        2048,
+        1538
+      ],
+      "reviewed": "2026-10-14"
+    },
     "marine-life/orange-elephant-ear-sponge.jpg": {
       "subject": "species:orange-elephant-ear-sponge",
       "source": "File:Agelas clathrodes 256774245.jpg",
@@ -2771,6 +2793,17 @@
       "sourceSize": [
         1024,
         768
+      ],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/reef-urchin.jpg": {
+      "subject": "species:reef-urchin",
+      "source": "https://www.inaturalist.org/photos/615456784",
+      "licence": "CC BY 4.0",
+      "artist": "Dan Schofield",
+      "sourceSize": [
+        2048,
+        1536
       ],
       "reviewed": "2026-10-14"
     },
@@ -3650,6 +3683,17 @@
       "sourceSize": [
         916,
         687
+      ],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/true-tulip.jpg": {
+      "subject": "species:true-tulip",
+      "source": "https://www.inaturalist.org/photos/701042045",
+      "licence": "CC BY 4.0",
+      "artist": "Cricket Raspet",
+      "sourceSize": [
+        2048,
+        1460
       ],
       "reviewed": "2026-10-14"
     },
