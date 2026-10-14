@@ -295,3 +295,39 @@ describe("DiverRowTrigger, drawn on its own", () => {
     expect(container.querySelector(".basis-full")?.className).toContain("sm:self-start");
   });
 });
+
+/**
+ * **"Checked in at the desk" on the row** (fourth review, item 15): the two
+ * the desk checked in read apart from the eight still to come without a tap
+ * on each name, in the welcome word's quiet clothes, and the boarding tap is
+ * exactly where it was.
+ */
+describe("the desk's check-in is on the dock row", () => {
+  const CHECKED_IN: Record<TestLocale, string> = {
+    "en-US": "Checked in at the desk",
+    "es-ES": "Ya se registró en el mostrador",
+  };
+
+  it.each(["en-US", "es-ES"] as const)(
+    "shows it under the name without opening the sheet, in %s",
+    (locale: TestLocale) => {
+      renderList({ locale, checkpoint: "departure", divers: [diver({ checkedIn: true })] });
+      const row = screen.getByRole("listitem");
+      const trigger = within(row).getByRole("button", { name: /Meera Iyer/ });
+      const line = within(trigger).getByText(CHECKED_IN[locale]);
+      expect(line.className).toContain("text-muted");
+      expect(line.className).not.toMatch(/rounded-full|bg-\w+-tint|border/);
+      expect(
+        within(row).getByRole("button", { name: TRANSLATORS[locale]("manifest.markBoarded") }),
+      ).toBeVisible();
+    },
+  );
+
+  it("says nothing for a diver still to come, or once the crew has boarded them", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [diver(), diver({ bookingId: "b-2", checkedIn: true, rollCall: boardedAt() })],
+    });
+    expect(screen.queryByText(CHECKED_IN["en-US"])).toBeNull();
+  });
+});

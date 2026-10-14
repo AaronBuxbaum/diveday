@@ -53,6 +53,13 @@ export function diverRowState(
   // **"Running late, said 7:42"** (#2319): the diver's word, on a dock row
   // not boarded yet. Context under the name, never a roll-call result.
   const lateAt = runningLateOnManifest({ checkpoint, ...diver, rollCallState: rc?.state });
+  // **The desk's check-in, on the dock row** (fourth review, item 15): "who
+  // are we still waiting for?" is the gangway's question, and the desk has
+  // already answered half of it. Departure only, and only until the crew says
+  // something of its own: once a diver is boarded or left ashore the crew's
+  // word is the row, and after a dive the desk's is history. Never a gate.
+  const checkedInAtDesk =
+    checkpoint === "departure" && diver.checkedIn && !diver.notHere && !rc;
   // Every row is a jump target — the count panel's chips link to any
   // uncalled person — so every row carries the scroll margin that keeps
   // its name clear of the sticky panel. Shared with the crew rows.
@@ -136,6 +143,7 @@ export function diverRowState(
     alarmed,
     boardingControlShown,
     lateAt,
+    checkedInAtDesk,
     medicalDays,
     splitAfterDive,
     capsuleKind,

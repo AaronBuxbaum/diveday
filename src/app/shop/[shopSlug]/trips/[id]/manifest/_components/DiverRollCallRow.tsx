@@ -188,6 +188,7 @@ export function DiverRollCallRow({
               capsule={capsule}
               typeBadge={typeBadge}
               lateAt={state.lateAt}
+              checkedInAtDesk={state.checkedInAtDesk}
               locale={locale}
               timezone={timezone}
               t={t}
