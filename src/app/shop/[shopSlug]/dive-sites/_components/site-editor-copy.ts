@@ -85,8 +85,8 @@ export function fieldGuideEditorCopy(t: StaffTranslator): FieldGuideEditorCopy {
  * than the briefing renders would be the bug. Both dive-site pages already
  * resolve `requestLocale()`, so the staffer sees it in their own language.
  *
- * The whole catalog rides to the browser — 93 short records, well under the
- * weight of one of the photos on this same form — because a `<datalist>` is a
+ * The whole catalog rides to the browser — about 330 short records, roughly
+ * the weight of one of the photos on this same form — because a `<datalist>` is a
  * real autocomplete only when it holds the options. Searching over the network
  * per keystroke would trade that for a round trip and a spinner on a
  * configure-once form.
