@@ -583,49 +583,7 @@ export async function seedHistory(
     )
     .returning();
 
-  // A boat that sailed had requirements. Without this row every history booking
-  // reads `requirements_not_configured` — blocked — while the roll call below
-  // says "Boarded", so a demo history manifest showed a green boarding pill
-  // beside a red "Requirements not configured" on the same line. That is the
-  // exact pairing the boarding gate exists to prevent (`recordRollCall` refuses
-  // to create it, src/db/manifests.ts), so the demo was teaching the opposite of
-  // the product. Plain reef-trip gates: a signed release and an Open Water card,
-  // both of which every diver in the history cohort holds.
-  await db.insert(tripRequirements).values(
-    histTrips.map((trip) => ({
-      tripId: trip.id,
-      shopId,
-      requiresWaiver: true,
-      minimumCertificationLevel: "open_water" as const,
-      requiredSpecialties: [] as DiveSpecialty[],
-      requiresNitrox: false,
-      requiresPayment: false,
-    })),
-  );
-
-  // **Every boat that sailed had somebody driving it** (fourth review, item
-  // 13). The back-fill sailed with nobody on the crew, so Reports listed this
-  // month's boats as "0 crew" while Safety judged "0 of 0" crew sailings: an
-  // insurer's first question, "who was the captain?", answered by the demo
-  // with nothing. The shop's captain and divemaster, the same pair the
-  // upcoming charters carry, one boat a day so nobody is on two at once.
-  // Direct inserts, as the db rules ask of seeded crew: no crew notices.
-  const crewRoles = await db
-    .select({ personId: personRoles.personId, role: personRoles.role })
-    .from(personRoles)
-    .innerJoin(people, eq(people.id, personRoles.personId))
-    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, ["captain", "divemaster"])));
-  const historyCrew = (["captain", "divemaster"] as const).flatMap((role) => {
-    const holder = crewRoles.find((row) => row.role === role);
-    return holder ? [{ personId: holder.personId, tripRole: role }] : [];
-  });
-  if (historyCrew.length > 0) {
-    await db
-      .insert(tripAssignments)
-      .values(
-        histTrips.flatMap((trip) => historyCrew.map((member) => ({ tripId: trip.id, ...member }))),
-      );
-  }
+  await equipHistoryBoats(db, shopId, histTrips);
 
   // Deterministic per-booking plan. `k` is a global booking index; every "is
   // this one a no-show / a deposit / missing its waiver" decision is a fixed
@@ -976,4 +934,56 @@ export async function seedHistory(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
   if (reviewRows.length > 0) await db.insert(tripReviews).values(reviewRows);
+}
+
+/**
+ * The gates and the crew every history boat sailed with.
+ *
+ * **Every boat that sailed had somebody driving it** (fourth review, item
+ * 13). The back-fill sailed with nobody on the crew, so Reports listed this
+ * month's boats as "0 crew" while Safety judged "0 of 0" crew sailings: an
+ * insurer's first question, "who was the captain?", answered by the demo with
+ * nothing. The shop's captain and divemaster, the pair the upcoming charters
+ * carry, one boat a day so nobody is on two at once. Direct inserts, as the db
+ * rules ask of seeded crew: no crew notices.
+ */
+async function equipHistoryBoats(
+  db: DbExecutor,
+  shopId: string,
+  histTrips: readonly { id: string }[],
+): Promise<void> {
+  // A boat that sailed had requirements. Without this row every history booking
+  // reads `requirements_not_configured` — blocked — while the roll call below
+  // says "Boarded", so a demo history manifest showed a green boarding pill
+  // beside a red "Requirements not configured" on the same line. That is the
+  // exact pairing the boarding gate exists to prevent (`recordRollCall` refuses
+  // to create it, src/db/manifests.ts), so the demo was teaching the opposite of
+  // the product. Plain reef-trip gates: a signed release and an Open Water card,
+  // both of which every diver in the history cohort holds.
+  await db.insert(tripRequirements).values(
+    histTrips.map((trip) => ({
+      tripId: trip.id,
+      shopId,
+      requiresWaiver: true,
+      minimumCertificationLevel: "open_water" as const,
+      requiredSpecialties: [] as DiveSpecialty[],
+      requiresNitrox: false,
+      requiresPayment: false,
+    })),
+  );
+  const crewRoles = await db
+    .select({ personId: personRoles.personId, role: personRoles.role })
+    .from(personRoles)
+    .innerJoin(people, eq(people.id, personRoles.personId))
+    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, ["captain", "divemaster"])));
+  const historyCrew = (["captain", "divemaster"] as const).flatMap((role) => {
+    const holder = crewRoles.find((row) => row.role === role);
+    return holder ? [{ personId: holder.personId, tripRole: role }] : [];
+  });
+  if (historyCrew.length === 0) return;
+  await db
+    .insert(tripAssignments)
+    .values(
+      histTrips.flatMap((trip) => historyCrew.map((member) => ({ tripId: trip.id, ...member }))),
+    );
 }

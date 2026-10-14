@@ -8,7 +8,7 @@ import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { scopedHash, scopedId } from "@/lib/element-id";
+import { scopedHash } from "@/lib/element-id";
 import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -43,8 +43,7 @@ import { offlineManifestPayload } from "./_components/offline-payload";
 import { openCheckpoint } from "./_components/open-checkpoint";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import {
-  PrintedKitBlanks,
-  PrintedMissingProcedure,
+  PrintedBoatPaper,
   printedBoatProcedureCopy,
   printedKitValues,
 } from "./_components/PrintedBoatProcedure";
@@ -187,7 +186,6 @@ export default async function TripManifestPage({
   const emergencyCopy = emergencyReferenceCopy(t);
   // This departure's own boat on every copy of the card, the shop line only without one (item 11).
   const emergencyReference = emergencyReferenceForDeparture(shop.emergencyReference, vessel);
-  const printedProcedureCopy = printedBoatProcedureCopy(t);
 
   return (
     <div className="boat-mode">
@@ -418,25 +416,13 @@ export default async function TripManifestPage({
             (ADR 20260827-the-departure-is-two-working-surfaces, decision 2). The
             printed manifest is the fallback under the fallback, so its complete
             copy is rendered outside either interactive disclosure below. */}
-        <div className="hidden print:block">
-          {/* The boat card's two parts that printed nowhere once it was cut
-              (issue #2035): the missing-diver procedure above the numbers it
-              sends the crew to, and the kit blanks under them. */}
-          <PrintedMissingProcedure
-            copy={printedProcedureCopy}
-            headingId={scopedId(idPrefix, "missing-procedure-print-heading")}
-          />
-          <EmergencyReferenceCard
-            headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
-            reference={emergencyReference}
-            copy={emergencyCopy}
-          />
-          <PrintedKitBlanks
-            copy={printedProcedureCopy}
-            values={printedKitValues(kitRecord, t, locale)}
-            headingId={scopedId(idPrefix, "kit-blanks-print-heading")}
-          />
-        </div>
+        <PrintedBoatPaper
+          idPrefix={idPrefix}
+          reference={emergencyReference}
+          emergencyCopy={emergencyCopy}
+          copy={printedBoatProcedureCopy(t)}
+          kit={printedKitValues(kitRecord, t, locale)}
+        />
         {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
             people happens before the boat leaves, while the lists above are
             worked at the rail. Below the lists, still expanded — the teams

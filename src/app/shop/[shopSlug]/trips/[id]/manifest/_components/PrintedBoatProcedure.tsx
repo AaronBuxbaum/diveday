@@ -1,6 +1,12 @@
+import {
+  EmergencyReferenceCard,
+  type EmergencyReferenceCopy,
+} from "@/components/EmergencyReferenceCard";
 import type { DepartureKitRecord } from "@/db/boat-safety";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
+import { scopedId } from "@/lib/element-id";
+import type { DepartureEmergencyReference } from "@/lib/emergency-reference";
 import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 
@@ -149,5 +155,47 @@ export function PrintedKitBlanks({
         ))}
       </dl>
     </section>
+  );
+}
+
+/**
+ * **The boat card on paper**: the missing-diver procedure above the numbers
+ * it sends the crew to, the departure's emergency reference, and the kit
+ * lines under them (issue #2035; the departure's own boat and its register,
+ * fourth review items 11 and 17). Print only: on screen the reference sits
+ * behind the manifest's own menus, and this is its complete copy outside
+ * either disclosure.
+ */
+export function PrintedBoatPaper({
+  idPrefix,
+  reference,
+  emergencyCopy,
+  copy,
+  kit,
+}: {
+  /** Scopes the three headings: the day's paper prints several manifests. */
+  idPrefix: string | undefined;
+  reference: DepartureEmergencyReference;
+  emergencyCopy: EmergencyReferenceCopy;
+  copy: PrintedBoatProcedureCopy;
+  kit: PrintedKitValues;
+}) {
+  return (
+    <div className="hidden print:block">
+      <PrintedMissingProcedure
+        copy={copy}
+        headingId={scopedId(idPrefix, "missing-procedure-print-heading")}
+      />
+      <EmergencyReferenceCard
+        headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
+        reference={reference}
+        copy={emergencyCopy}
+      />
+      <PrintedKitBlanks
+        copy={copy}
+        values={kit}
+        headingId={scopedId(idPrefix, "kit-blanks-print-heading")}
+      />
+    </div>
   );
 }

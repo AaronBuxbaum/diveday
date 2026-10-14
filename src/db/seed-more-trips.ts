@@ -656,17 +656,6 @@ export async function seedMoreTrips(
     const completedBookings = insertedBookings.filter(
       (booking) => booking.tripId === completedTrip.id,
     );
-    // **The dawn boat sailed on a hull** (fourth review, item 11): with none,
-    // its emergency card fell back to the shop line and its packet named no
-    // boat. Mantis II, which nothing else takes out before the day's boats.
-    const [dawnHull] = await db
-      .select({ id: boats.id })
-      .from(boats)
-      .where(and(eq(boats.shopId, shopId), eq(boats.name, "Mantis II")))
-      .limit(1);
-    if (dawnHull) {
-      await db.update(trips).set({ boatId: dawnHull.id }).where(eq(trips.id, completedTrip.id));
-    }
     await seedDawnBoatRecord(db, shopId, completedTrip, captainId ?? instructorId);
 
     // A partially completed report run is more useful demo state than an empty
@@ -883,6 +872,18 @@ async function seedDawnBoatRecord(
 ): Promise<void> {
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
   const minute = 60 * 1000;
+
+  // **It sailed on a hull** (fourth review, item 11): with none, its
+  // emergency card fell back to the shop line and its packet named no boat.
+  // Mantis II, which nothing else takes out before the day's boats.
+  const [dawnHull] = await db
+    .select({ id: boats.id })
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), eq(boats.name, "Mantis II")))
+    .limit(1);
+  if (dawnHull) {
+    await db.update(trips).set({ boatId: dawnHull.id }).where(eq(trips.id, trip.id));
+  }
 
   // The safety check, a quarter of an hour before the lines came off.
   const items = await db
