@@ -64,7 +64,7 @@ describe("each settings group renders as its own component", () => {
         addressLookupEnabled: false,
       }),
       TeamGroup({ view, canManageTeam: true }),
-      BoatsSitesGroup({ view }),
+      BoatsSitesGroup({ view, boatsWithoutRadioIdentity: 0 }),
       BookingsGroup({ view, canManageWaivers: true }),
       RentalsGroup({ view }),
       MoneyGroup({ view, canPayments: true, account: null, connectConfigured: false }),

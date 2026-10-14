@@ -7,7 +7,12 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 import { type Fact, FactLine } from "@/components/ui/FactLine";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
-import { mediaDeletionAttempts, processorErasureObligations, shops } from "@/db/schema";
+import {
+  boats,
+  mediaDeletionAttempts,
+  processorErasureObligations,
+  shops,
+} from "@/db/schema";
 import { getShopBySlug, setShopDivingOptions } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
@@ -479,6 +484,22 @@ describe("the diving options a shop runs", () => {
     // now, not a form in a row: a list of hulls each carrying a Save and a
     // Delete is a page, and the hub is a directory.
     expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/settings/boats`);
+  });
+
+  it("names the boats still missing a call sign and MMSI on the fleet's door (review B1)", async () => {
+    const doorNote = (element: unknown) =>
+      findElements<{ href: string; note?: string }>(element, settingsRowsModule.SettingsDoorRow).find(
+        (door) => door.props.href === `/shop/${SHOP_SLUG}/settings/boats`,
+      )?.props.note;
+    // The seeded fleet carries both facts, so the door states nothing extra.
+    expect(doorNote(await renderSettings("owner"))).toBeUndefined();
+    const element = await renderSettings("owner", async (db, session) => {
+      await db
+        .update(boats)
+        .set({ callSign: null, mmsi: null })
+        .where(eq(boats.shopId, session.user.shopId));
+    });
+    expect(doorNote(element)).toMatch(/^\d+ boats have no call sign or MMSI$/);
   });
 
   it("asks for the divemaster target beside the crew schedule switch", async () => {

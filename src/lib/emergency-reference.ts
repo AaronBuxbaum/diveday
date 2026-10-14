@@ -111,12 +111,19 @@ export type DepartureEmergencyReference = EmergencyReference & {
  * the card is the other boat's. A departure on a boat prints that boat and
  * drops the shop line; a departure on no boat (a shore day, or one nobody has
  * put on a hull yet) keeps the shop line, which is all there is.
+ *
+ * **A boat whose row holds neither radio fact keeps the shop line too**
+ * (review B1). The two fields arrived empty on every existing boat, and the
+ * shop line is where a shop typed its MMSI and working channel; clearing it
+ * then would print a card with only a hull name on it until someone found the
+ * fields in Settings > Boats, whose hub row names how many are still empty.
  */
 export function emergencyReferenceForDeparture(
   reference: EmergencyReference,
   boat: VesselIdentity | null,
 ): DepartureEmergencyReference {
   if (!boat) return { ...reference, boat: null };
+  if (!boat.callSign && !boat.mmsi) return { ...reference, boat };
   return { ...reference, vessel: "", boat };
 }
 

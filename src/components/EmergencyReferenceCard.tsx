@@ -89,7 +89,9 @@ export function EmergencyReferenceCard({
               (fourth review, item 11): the name, then the two facts read
               over the radio, each on its own labelled line so a figure is
               never read as the other. The shop's vessel line is the fallback
-              for a departure on no boat, and never prints beside a boat. */}
+              for a departure on no boat, and for a boat whose row holds no
+              radio fact yet (review B1), where it prints unlabelled under
+              the boat's name, a note on this boat rather than a second vessel. */}
           {reference.boat ? (
             <>
               <p className="text-pretty">
@@ -107,9 +109,9 @@ export function EmergencyReferenceCard({
                   <span className="font-mono tabular-nums">{reference.boat.mmsi}</span>
                 </p>
               ) : null}
+              {reference.vessel ? <p className="text-pretty">{reference.vessel}</p> : null}
             </>
-          ) : null}
-          {reference.vessel ? (
+          ) : reference.vessel ? (
             <p className="text-pretty">
               <span className="font-medium">{copy.vesselLabel}</span> {reference.vessel}
             </p>

@@ -67,5 +67,6 @@
   "seatsAboveCertificateError": "El certificado permite {limit, plural, one {# pasajero} other {# pasajeros}}, así que esta embarcación no puede vender {capacity}. Baja las plazas o corrige el certificado.",
   "departuresAboveCertificateError": "{count, plural, one {# salida próxima de esta embarcación vende más plazas que las {limit} del certificado. Baja antes su capacidad.} other {# salidas próximas de esta embarcación venden más plazas que las {limit} del certificado. Baja antes su capacidad.}}",
   "departuresAboveCertificateDatedError": "{count, plural, one {La salida del {dates} vende más plazas que las {limit} del certificado. Baja antes su capacidad.} other {# salidas próximas de esta embarcación venden más plazas que las {limit} del certificado, entre ellas {dates}. Baja antes su capacidad.}}",
-  "boatRadioInvalid": "Revisa el indicativo (letras, números, espacios y guiones) y el MMSI (nueve dígitos)."
+  "boatRadioInvalid": "Revisa el indicativo (letras, números, espacios y guiones) y el MMSI (nueve dígitos).",
+  "radioIdentityMissing": "{count, plural, one {# barco no tiene indicativo ni MMSI} other {# barcos no tienen indicativo ni MMSI}}"
 }

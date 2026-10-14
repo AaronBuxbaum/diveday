@@ -60,6 +60,28 @@ export async function departureVessels(
   );
 }
 
+/**
+ * **How many live boats hold neither a call sign nor an MMSI** (review B1):
+ * the Settings hub names the number on the fleet's door, so the two fields
+ * that arrived empty on every existing boat are a visible job rather than a
+ * quiet gap. Until one is filled the emergency card keeps the shop's own
+ * vessel line under that boat (`emergencyReferenceForDeparture`).
+ */
+export async function countBoatsWithoutRadioIdentity(db: DbExecutor, shopId: string) {
+  const [row] = await db
+    .select({ value: count() })
+    .from(boats)
+    .where(
+      and(
+        eq(boats.shopId, shopId),
+        isNull(boats.deletedAt),
+        isNull(boats.callSign),
+        isNull(boats.mmsi),
+      ),
+    );
+  return row?.value ?? 0;
+}
+
 /** The shop's fleet: the hulls it has, never the ones it deleted. */
 export async function listBoats(db: AppDb, shopId: string): Promise<Boat[]> {
   return db

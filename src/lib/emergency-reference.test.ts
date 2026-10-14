@@ -117,6 +117,27 @@ describe("the departure's own boat (fourth review, item 11)", () => {
     expect(reference.plan).toBe("Radio first.");
   });
 
+  it("keeps the shop line when the boat's row holds no call sign and no MMSI", () => {
+    // Review B1: on upgrade day every boat has neither, and the shop line is
+    // where the MMSI was typed. Dropping it lost the one figure the card was
+    // read for until someone found the two new fields.
+    const bare = { name: "Mantis I", callSign: null, mmsi: null };
+    const reference = emergencyReferenceForDeparture(shop, bare);
+    expect(reference.boat).toEqual(bare);
+    expect(reference.vessel).toBe(shop.vessel);
+  });
+
+  it("drops the shop line once the boat holds either radio fact", () => {
+    expect(
+      emergencyReferenceForDeparture(shop, { name: "Mantis I", callSign: "WDM2201", mmsi: null })
+        .vessel,
+    ).toBe("");
+    expect(
+      emergencyReferenceForDeparture(shop, { name: "Mantis I", callSign: null, mmsi: "338055502" })
+        .vessel,
+    ).toBe("");
+  });
+
   it("keeps the shop line for a departure on no boat", () => {
     const reference = emergencyReferenceForDeparture(shop, null);
     expect(reference.boat).toBeNull();

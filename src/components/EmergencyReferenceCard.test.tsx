@@ -54,6 +54,23 @@ describe("EmergencyReferenceCard", () => {
     expect(container.textContent).not.toContain("MMSI:");
   });
 
+  it("prints the shop's vessel line under a boat whose row holds no radio fact (review B1)", () => {
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          vessel: "VHF 16, MMSI 338055501",
+          boat: { name: "Mantis I", callSign: null, mmsi: null },
+        }}
+      />,
+    );
+    expect(container.textContent).toContain("Vessel: Mantis I");
+    expect(container.textContent).toContain("VHF 16, MMSI 338055501");
+    // One "Vessel:" label: the shop line reads as the boat's, not a second hull.
+    expect(container.textContent?.match(/Vessel:/g)).toHaveLength(1);
+  });
+
   it("renders every number as reference text — nothing here can place a call", () => {
     const { container } = render(
       <EmergencyReferenceCard

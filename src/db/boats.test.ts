@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import {
   countBoatDepartures,
+  countBoatsWithoutRadioIdentity,
   createBoat,
   deleteBoat,
   departureVessels,
@@ -330,6 +331,26 @@ describe("the boat a departure sails on, for its emergency card (fourth review, 
     const trip = await departureOn(boat.id);
     await deleteBoat(db, shop.id, boat.id);
     expect((await departureVessels(db, shop.id, [trip.id])).get(trip.id)?.name).toBe("Old Hull");
+  });
+
+  it("counts the live boats with neither a call sign nor an MMSI (review B1)", async () => {
+    const { db, shop } = ctx;
+    const before = await countBoatsWithoutRadioIdentity(db, shop.id);
+    const papers = {
+      certifiedPassengers: null,
+      inspectionDueOn: null,
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
+    };
+    await createBoat(db, shop.id, "Bare", 8);
+    await createBoat(db, shop.id, "Call sign only", 8, null, { ...papers, callSign: "WDM9" });
+    await createBoat(db, shop.id, "MMSI only", 8, null, { ...papers, mmsi: "338055509" });
+    const gone = await createBoat(db, shop.id, "Deleted bare", 8);
+    await deleteBoat(db, shop.id, gone.id);
+    expect(await countBoatsWithoutRadioIdentity(db, shop.id)).toBe(before + 1);
+    expect(await countBoatsWithoutRadioIdentity(db, "00000000-0000-4000-8000-000000000000")).toBe(
+      0,
+    );
   });
 
   it("answers nothing about another shop's departure", async () => {
