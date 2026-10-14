@@ -48,7 +48,7 @@
     "expires": "Caduca",
     "expiresHint": "(opcional)",
     "whatFor": "Para qué es",
-    "whatForHint": "(opcional — tu nota, nunca se muestra a los buceadores)",
+    "whatForHint": "(opcional, nunca se muestra a los buceadores)",
     "whatForPlaceholder": "Impulso de otoño para buceadores recurrentes",
     "timezoneHint": "Las horas están en {timezone}, la zona horaria de tu centro."
   },
@@ -77,7 +77,7 @@
   "saving": "Guardando…",
   "copyCode": "Copiar código",
   "copyCodeCopied": "Copiado",
-  "copyCodeFailed": "No se pudo copiar: selecciónalo a mano",
+  "copyCodeFailed": "No se pudo copiar. Selecciónalo y cópialo tú.",
   "retry": "Intentar de nuevo",
   "retrying": "Intentando de nuevo…",
   "delete": "Eliminar",

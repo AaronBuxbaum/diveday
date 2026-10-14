@@ -876,7 +876,8 @@ export async function counterRentalWaiverStandings(
       shopWaiverStatus({
         personSignedWaivers: signed.get(holder.id) ?? [],
         currentTemplateVersion: template?.materialGeneration ?? null,
-        signer: { dateOfBirth: holder.dateOfBirth, timezone: input.timezone },
+        // Person-scoped, a counter rental has no seat: no booker's "Under 18".
+        signer: { dateOfBirth: holder.dateOfBirth, minorDeclared: false, timezone: input.timezone },
       }),
     );
   }

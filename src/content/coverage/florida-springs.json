@@ -1,0 +1,384 @@
+{
+  "area": "florida-springs",
+  "method": "Union of official pages (Florida State Parks 'Experiences & Amenities' scuba rules, read through Wayback snapshots dated 2025–26 because floridastateparks.org returns 403; USFS; USFWS Crystal River; Walton County) and dive-operator and guide lists (Seminole Scuba, American Pro Diving Center, Crystal River Kayak & Dive Center, DAN Alert Diver Q1 2026, Scuba Diving magazine 2020, Natural North Florida, Florida Rambler, Emerald Coast Magazine, Visit Wakulla, Ocala/Marion tourism, FL Springs, a cave-diver forum curated list, and each private park's own dive page). A site counts when open-water-certified divers may dive it under its current rules (open basins and lit cavern zones; cave-only, instruction-only, and no-scuba springs are excluded) and it appears on two or more independent lists. Positions come from the FDEP Florida Springs layer where the spring is in it. Counted 2026-10-14.",
+  "sources": [
+    "https://devilsden.com/scuba-dive",
+    "https://www.seminolescuba.com/florida-springs.htm",
+    "https://www.americanprodiving.com/pages/blue-grotto-devils-den-scuba-diving-combo",
+    "https://crystalriverkayakcompany.com/dive/guided-dive-tours",
+    "https://www.naturalnorthflorida.com/blog/4-spectacular-florida-springs-for-beginner-scuba-divers/",
+    "https://www.scubadiving.com/best-springs-for-diving-in-central-florida",
+    "https://dan.org/alert-diver/article/diving-floridas-springs/",
+    "https://divebluegrotto.com/",
+    "https://ginniespringsoutdoors.com/dive/ginnie-ballroom/",
+    "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009",
+    "https://ginniespringsoutdoors.com/dive/devils-spring-system/",
+    "https://www.americanprodiving.com/pages/rainbow-river-snorkel-or-dive",
+    "https://www.fs.usda.gov/r08/florida/recreation/alexander-springs-recreation-area",
+    "https://www.floridarambler.com/panhandle-getaways/best-springs-in-florida/",
+    "https://www.floridastateparks.org/parks-and-trails/blue-spring-state-park/experiences-amenities",
+    "https://www.floridastateparks.org/parks-and-trails/troy-spring-state-park/experiences-amenities",
+    "https://www.floridastateparks.org/parks-and-trails/manatee-springs-state-park/experiences-amenities",
+    "https://www.americanprodiving.com/pages/manatee-springs-scuba-dive-trip",
+    "https://www.floridastateparks.org/parks-and-trails/fanning-springs-state-park/experiences-amenities",
+    "https://www.floridastateparks.org/learn/cave-diving-peacock-springs",
+    "https://www.floridastateparks.org/parks-and-trails/ichetucknee-springs-state-park/experiences-amenities",
+    "https://www.floridastateparks.org/parks-and-trails/edward-ball-wakulla-springs-state-park/experiences-amenities",
+    "https://www.visitwakulla.com/your-guide-to-scuba-diving-in-wakulla-county/",
+    "https://www.americanprodiving.com/pages/paradise-springs-scuba-dive-trip",
+    "http://www.ocalamarion.com/directory/paradise-springs/",
+    "https://vortexspring.com/",
+    "https://www.emeraldcoastmagazine.com/?p=43876",
+    "https://www.mywaltonfl.gov/Facilities/Facility/Details/Morrison-Springs-29",
+    "https://www.fws.gov/refuge/crystal-river/visit-us/activities/scuba-diving",
+    "https://www.flsprings.com/kings-spring/",
+    "https://www.floridastateparks.org/parks-and-trails/madison-blue-spring-state-park/experiences-amenities",
+    "https://www.floridastateparks.org/parks-and-trails/lafayette-blue-springs-state-park/experiences-amenities",
+    "https://www.floridastateparks.org/parks-and-trails/de-leon-springs-state-park/experiences-amenities",
+    "https://www.floridastateparks.org/parks-and-trails/ponce-de-leon-springs-state-park/experiences-amenities",
+    "https://www.floridastateparks.org/parks-and-trails/rainbow-springs-state-park",
+    "https://www.floridastateparks.org/parks-and-trails/weeki-wachee-springs-state-park/experiences-amenities",
+    "https://www.floridastateparks.org/parks-and-trails/ruth-b-kirby-gilchrist-blue-springs-state-park",
+    "https://ginniespringsoutdoors.com/dive/",
+    "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/SPRINGS/MapServer/1"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Devil's Den (Williston; private, Open Water cert or above, dive buddy required)",
+      "template": "devils-den",
+      "listedBy": [
+        "https://devilsden.com/scuba-dive",
+        "https://www.seminolescuba.com/florida-springs.htm",
+        "https://www.americanprodiving.com/pages/blue-grotto-devils-den-scuba-diving-combo",
+        "https://crystalriverkayakcompany.com/dive/guided-dive-tours",
+        "https://www.naturalnorthflorida.com/blog/4-spectacular-florida-springs-for-beginner-scuba-divers/",
+        "https://www.scubadiving.com/best-springs-for-diving-in-central-florida",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/"
+      ]
+    },
+    {
+      "name": "Blue Grotto (Williston; private; open-water basin and lit upper cavern with air bell, lower chamber beyond light for overhead-trained only)",
+      "template": "blue-grotto",
+      "listedBy": [
+        "https://divebluegrotto.com/",
+        "https://www.seminolescuba.com/florida-springs.htm",
+        "https://www.americanprodiving.com/pages/blue-grotto-devils-den-scuba-diving-combo",
+        "https://crystalriverkayakcompany.com/dive/guided-dive-tours",
+        "https://www.naturalnorthflorida.com/blog/4-spectacular-florida-springs-for-beginner-scuba-divers/",
+        "https://www.scubadiving.com/best-springs-for-diving-in-central-florida",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/"
+      ]
+    },
+    {
+      "name": "Ginnie Ballroom (Ginnie Springs main spring; private; certified divers may carry lights into the lit cavern, grate stops further entry)",
+      "template": "ginnie-springs",
+      "position": [29.83633861, -82.70012083],
+      "listedBy": [
+        "https://ginniespringsoutdoors.com/dive/ginnie-ballroom/",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.scubadiving.com/best-springs-for-diving-in-central-florida",
+        "https://www.naturalnorthflorida.com/blog/4-spectacular-florida-springs-for-beginner-scuba-divers/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009",
+        "https://crystalriverkayakcompany.com/dive/guided-dive-tours"
+      ]
+    },
+    {
+      "name": "Devil's Spring System — Devil's Eye, Devil's Ear, Little Devil (Ginnie Springs; open-water divers in the basins with no lights, only cavern/cave-certified divers may carry lights)",
+      "template": "devils-eye-and-ear",
+      "position": [29.83472222, -82.69666667],
+      "listedBy": [
+        "https://ginniespringsoutdoors.com/dive/devils-spring-system/",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.scubadiving.com/best-springs-for-diving-in-central-florida",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Rainbow River drift (K.P. Hole County Park, Dunnellon; diving only downstream of the marker buoy, not at the state-park headspring)",
+      "template": "rainbow-river",
+      "listedBy": [
+        "https://www.seminolescuba.com/florida-springs.htm",
+        "https://www.americanprodiving.com/pages/rainbow-river-snorkel-or-dive",
+        "https://crystalriverkayakcompany.com/dive/guided-dive-tours",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Alexander Springs (Ocala National Forest; the only scuba site in the forest; certified divers, open water)",
+      "template": "alexander-springs",
+      "position": [29.08130083, -81.57588361],
+      "listedBy": [
+        "https://www.fs.usda.gov/r08/florida/recreation/alexander-springs-recreation-area",
+        "https://www.seminolescuba.com/florida-springs.htm",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.floridarambler.com/panhandle-getaways/best-springs-in-florida/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Blue Spring State Park (Orange City; open water to 60 ft, no lights; 32-diver cap; spring run closed Nov 15 – Mar 15 for manatees)",
+      "template": "blue-spring-orange-city",
+      "position": [28.94748376, -81.3395884],
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/blue-spring-state-park/experiences-amenities",
+        "https://www.seminolescuba.com/florida-springs.htm",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Troy Spring State Park (Branford; open water only, certification shown, no solo, no lights; Madison steamboat wreck in the run)",
+      "template": "troy-spring",
+      "position": [30.00602611, -82.9975025],
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/troy-spring-state-park/experiences-amenities",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Manatee Springs main spring (Manatee Springs State Park, Chiefland; open water; register, card on dashboard, done 1 h before sunset)",
+      "template": "manatee-springs",
+      "position": [29.48963431, -82.9767731],
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/manatee-springs-state-park/experiences-amenities",
+        "https://www.americanprodiving.com/pages/manatee-springs-scuba-dive-trip",
+        "https://www.naturalnorthflorida.com/blog/4-spectacular-florida-springs-for-beginner-scuba-divers/",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Catfish Hotel (Manatee Springs State Park; open water and cavern; no free diving or swimming)",
+      "template": "catfish-hotel",
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/manatee-springs-state-park/experiences-amenities",
+        "https://www.naturalnorthflorida.com/blog/4-spectacular-florida-springs-for-beginner-scuba-divers/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Fanning Springs State Park (open water in the designated swimming area, 18–21 ft; register, no reservations)",
+      "template": "fanning-springs",
+      "position": [29.58758944, -82.93530444],
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/fanning-springs-state-park/experiences-amenities",
+        "https://www.floridarambler.com/panhandle-getaways/best-springs-in-florida/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Orange Grove Sink (Wes Skiles Peacock Springs State Park; the only basin open-water divers may use, no lights)",
+      "template": "orange-grove-sink",
+      "position": [30.127259, -83.130763],
+      "listedBy": [
+        "https://www.floridastateparks.org/learn/cave-diving-peacock-springs",
+        "https://www.scubadiving.com/best-springs-for-diving-in-central-florida",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Ichetucknee Blue Hole (Jug Hole) (Ichetucknee Springs State Park; scuba only here, not in the river; cavern/cave cert to enter the vent)",
+      "template": "ichetucknee-blue-hole",
+      "position": [29.98085556, -82.75918056],
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/ichetucknee-springs-state-park/experiences-amenities",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.floridarambler.com/panhandle-getaways/best-springs-in-florida/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Cherokee Sink (Edward Ball Wakulla Springs State Park; open-water certified, register at the main entrance; no scuba in Wakulla Spring itself)",
+      "template": "cherokee-sink",
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/edward-ball-wakulla-springs-state-park/experiences-amenities",
+        "https://www.visitwakulla.com/your-guide-to-scuba-diving-in-wakulla-county/"
+      ]
+    },
+    {
+      "name": "Paradise Springs (Ocala; private cavern, call ahead; operators require Advanced Open Water and lights)",
+      "template": "paradise-springs",
+      "listedBy": [
+        "https://www.americanprodiving.com/pages/paradise-springs-scuba-dive-trip",
+        "https://crystalriverkayakcompany.com/dive/guided-dive-tours",
+        "http://www.ocalamarion.com/directory/paradise-springs/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Vortex Spring (Ponce de Leon; private dive park, open in 2026 as Vortex Spring Adventures; open-water basin to 50 ft, gated cave)",
+      "template": "vortex-spring",
+      "position": [30.77058634, -85.94831447],
+      "listedBy": [
+        "https://vortexspring.com/",
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.emeraldcoastmagazine.com/?p=43876",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "Morrison Springs (Walton County park, Ponce de Leon; dive dock; closed at times for water quality)",
+      "template": "morrison-springs",
+      "position": [30.65788356, -85.90393836],
+      "listedBy": [
+        "https://www.mywaltonfl.gov/Facilities/Facility/Details/Morrison-Springs-29",
+        "https://www.emeraldcoastmagazine.com/?p=43876",
+        "https://www.floridarambler.com/panhandle-getaways/best-springs-in-florida/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ]
+    },
+    {
+      "name": "King Spring (Kings Bay, Crystal River NWR; boat access; scuba year-round, only in the buoyed keyhole Nov 15 – Mar 31)",
+      "template": "king-spring",
+      "position": [28.88176944, -82.59517778],
+      "listedBy": [
+        "https://www.fws.gov/refuge/crystal-river/visit-us/activities/scuba-diving",
+        "https://www.flsprings.com/kings-spring/"
+      ]
+    },
+    {
+      "name": "Three Sisters Springs (Crystal River NWR)",
+      "template": "three-sisters-springs",
+      "position": [28.88832778, -82.5889],
+      "listedBy": ["https://www.fws.gov/refuge/crystal-river/visit-us/activities/scuba-diving"],
+      "excluded": "On one list only: FWS permits scuba here April 1 – November 14 only (4–18 ft); no operator or guide lists it as a scuba dive (Scuba Diving and DAN name it for snorkeling/manatees). Note the template's 'not a scuba site' line overstates the rule."
+    },
+    {
+      "name": "Madison Blue Spring State Park",
+      "template": null,
+      "position": [30.48043611, -83.24436389],
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/madison-blue-spring-state-park/experiences-amenities",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ],
+      "excluded": "Cave and cavern certification only; FSP: 'no open water diving allowed'."
+    },
+    {
+      "name": "Peacock Springs (Peacock I) and the Peacock cave entrances",
+      "template": null,
+      "position": [30.12322644, -83.13315354],
+      "listedBy": [
+        "https://www.floridastateparks.org/learn/cave-diving-peacock-springs",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ],
+      "excluded": "Cavern/cave certified teams only; FSP allows open-water divers in Orange Grove Sink only."
+    },
+    {
+      "name": "Lafayette Blue Springs State Park (Green Sink)",
+      "template": null,
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/lafayette-blue-springs-state-park/experiences-amenities"
+      ],
+      "excluded": "Cave only; FSP: 'Open water diving is prohibited'."
+    },
+    {
+      "name": "De Leon Springs State Park",
+      "template": null,
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/de-leon-springs-state-park/experiences-amenities"
+      ],
+      "excluded": "Only instructional diving under a park dive permit; FSP: recreational diving is not allowed."
+    },
+    {
+      "name": "Ponce de Leon Springs State Park",
+      "template": null,
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/ponce-de-leon-springs-state-park/experiences-amenities"
+      ],
+      "excluded": "FSP lists swimming and snorkeling, not scuba diving."
+    },
+    {
+      "name": "Rainbow Springs headspring (Rainbow Springs State Park)",
+      "template": null,
+      "listedBy": ["https://www.floridastateparks.org/parks-and-trails/rainbow-springs-state-park"],
+      "excluded": "FSP lists no scuba; diving on the Rainbow River is from K.P. Hole downstream (counted above)."
+    },
+    {
+      "name": "Weeki Wachee Springs",
+      "template": null,
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/weeki-wachee-springs-state-park/experiences-amenities",
+        "https://www.floridarambler.com/panhandle-getaways/best-springs-in-florida/"
+      ],
+      "excluded": "FSP lists no scuba diving; only a travel article says divers may dive there."
+    },
+    {
+      "name": "Gilchrist Blue Springs (Ruth B. Kirby Gilchrist Blue Springs State Park)",
+      "template": null,
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/ruth-b-kirby-gilchrist-blue-springs-state-park"
+      ],
+      "excluded": "FSP lists swimming and snorkeling, not scuba diving."
+    },
+    {
+      "name": "Salt Springs (Ocala National Forest)",
+      "template": null,
+      "listedBy": ["https://www.floridarambler.com/panhandle-getaways/best-springs-in-florida/"],
+      "excluded": "USFS: Alexander Springs is the only place in the Ocala National Forest where scuba is permitted."
+    },
+    {
+      "name": "Wakulla Spring (main spring)",
+      "template": null,
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/edward-ball-wakulla-springs-state-park/experiences-amenities",
+        "https://www.floridarambler.com/panhandle-getaways/best-springs-in-florida/"
+      ],
+      "excluded": "FSP: recreational scuba is not allowed in Wakulla Spring or the swimming area (Cherokee Sink counted instead)."
+    },
+    {
+      "name": "Emerald Sink and Clearcut Sink (Wakulla Springs State Park)",
+      "template": null,
+      "listedBy": [
+        "https://www.floridastateparks.org/parks-and-trails/edward-ball-wakulla-springs-state-park/experiences-amenities",
+        "https://www.visitwakulla.com/your-guide-to-scuba-diving-in-wakulla-county/"
+      ],
+      "excluded": "Cave divers only per FSP; Clearcut closed for road construction."
+    },
+    {
+      "name": "Jackson Blue Spring (Merritt's Mill Pond, Marianna)",
+      "template": null,
+      "position": [30.79051, -85.14009],
+      "listedBy": [
+        "https://www.emeraldcoastmagazine.com/?p=43876",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ],
+      "excluded": "Cavern/cave dive under a Cave Adventurers permit; no source describes an open-water site there."
+    },
+    {
+      "name": "Cypress Spring (Vernon)",
+      "template": null,
+      "listedBy": [
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ],
+      "excluded": "On one list only (a cave-diver forum list); the regional guide mentions it for paddling, not scuba."
+    },
+    {
+      "name": "Santa Fe River drift (Ginnie Springs)",
+      "template": null,
+      "listedBy": ["https://ginniespringsoutdoors.com/dive/"],
+      "excluded": "On one list only (Ginnie Springs' own)."
+    },
+    {
+      "name": "Little River Spring (Branford)",
+      "template": null,
+      "listedBy": [
+        "https://dan.org/alert-diver/article/diving-floridas-springs/",
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ],
+      "excluded": "Cave dive; DAN describes it for cave divers only."
+    },
+    {
+      "name": "Telford, Twin Cave, Bozel, Hole in the Wall, Buford and Warm Springs",
+      "template": null,
+      "listedBy": [
+        "https://www.cavediver.net/forum/showthread.php/37526-Florida-Springs-Dive-Sites-My-Curated-List?p=359009"
+      ],
+      "excluded": "Cave-only sites on one cave-diver list; Bozel reported closed."
+    }
+  ]
+}

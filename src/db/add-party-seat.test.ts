@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
 import { addPartySeat, createBooking, createBookingParty } from "./bookings";
+import { listTripActivity } from "./operations";
 import { bookings, tripRequirements, trips } from "./schema";
 import { issuePartySeatClaims } from "./seat-claims";
 import { upcomingTripsWithCounts } from "./trips";
@@ -46,6 +47,33 @@ describe("addPartySeat", () => {
     expect(seats).toHaveLength(1);
     expect(seats[0]).toMatchObject({ seatName: "Milo Quinn", claimed: false });
     expect(seats[0]?.claim?.token).toBeTruthy();
+  });
+
+  it("puts the lead's act on the departure's trail, naming the friend (#2475)", async () => {
+    const { db, shop, open, leadBookingId } = await soloBooking();
+    const outcome = await addPartySeat(db, {
+      shopId: shop.id,
+      leadBookingId,
+      seatName: "Milo Quinn",
+    });
+    expect(outcome.ok).toBe(true);
+    const [latest] = await listTripActivity(db, shop.id, open.id);
+    expect(latest).toMatchObject({
+      code: "seat_added_from_trip_link",
+      params: { actor: "Nora Quinn", diver: "Milo Quinn" },
+    });
+  });
+
+  it("writes no trail line when the seat is refused", async () => {
+    const { db, shop, open, leadBookingId } = await soloBooking();
+    const before = await listTripActivity(db, shop.id, open.id);
+    const booked = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (t) => t.id === open.id,
+    )?.booked;
+    await db.update(trips).set({ capacity: booked }).where(eq(trips.id, open.id));
+    const outcome = await addPartySeat(db, { shopId: shop.id, leadBookingId, seatName: "Milo" });
+    expect(outcome.ok).toBe(false);
+    expect(await listTripActivity(db, shop.id, open.id)).toHaveLength(before.length);
   });
 
   it("refuses when the boat is full, and adds nothing", async () => {

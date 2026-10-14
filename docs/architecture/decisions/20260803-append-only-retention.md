@@ -73,7 +73,6 @@ Every event-like trail without a window, one line each (the same list heads `src
 - `roll_call_events`, `roll_call_crew_events`, `booking_arrival_events`, `buddy_team_events`: safety records of who was on a boat and with whom ([20260804-buddy-teams](20260804-buddy-teams.md)).
 - `trip_stage_events`: the crew's taps through a departure's day, kept as incident evidence (product owner, 2026-09-10, issue #1397).
 - `pre_departure_check_events`: who confirmed each item of the shop's pre-departure safety check, the document an insurer or investigator asks for ([20260824-pre-departure-safety-check](20260824-pre-departure-safety-check.md); classified by the dive-domain review of code review 2026-10-13).
-- `incident_reports`, `incident_report_people`, `incident_report_addenda`: the shop's own account of an incident, a liability record a claim may reach for after any window ([20261012-incident-reports](20261012-incident-reports.md); product owner, 2026-10-13, H-112). Erasure still redacts a named diver inside it.
 - `gear_service_events`: a unit's service and test history, which is equipment evidence (product owner, 2026-08-20).
 - `trip_change_events`, `work_order_events`: who changed what on a departure or a ticket, read as the record itself.
 - `held_sends`, `media_deletion_attempts`, `processor_erasure_obligations`, `payment_operation_intents`: deleted by their own work when it is done; a clock would delete what is still owed.
@@ -152,3 +151,7 @@ a diver: a dead link stops naming its shop
 ([capability runbook](../../engineering/capability-telemetry-runbook.md#after-the-prune-a-dead-link-names-no-shop)).
 The trails left unbounded on purpose are named in `UNBOUNDED_BY_DECISION` in the same file.
 No window changed in this amendment; the numbers stay HD-11's and H-82's.
+
+## Amendment 2026-10-13 — a run drains, under a time budget
+
+The escape hatch above assumed a capped table would be noticed. It was only logged: `tablesCapped` sat in the `prune_complete` line and nothing alarmed, and at one batch of 5 000 rows a week a table gaining more than about 714 rows a day never converged (fourth review, row 18). `pruneExpiredRecords` now takes batches in rounds, one per table and then again for each table still `capped`, until every table is inside its window or 45 of the route's 60 seconds are spent (`PRUNE_TIME_BUDGET_MS`). `PRUNE_BATCH_LIMIT` is now the bound per batch, not per run. A table still `capped` when the budget runs out logs `cron_retention.prune_capped`, which the CronPassFailures alarm counts (`infra/lib/observability.ts`). It alarms on one such run, not two in a row: the run is weekly, CloudWatch's alarm period ceiling is one day, and a backlog that survives 45 seconds of deletes is already growing faster than the prune. The response is the hatch above: a daily schedule, or a faster arm.

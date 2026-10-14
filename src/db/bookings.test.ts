@@ -200,6 +200,40 @@ describe("createBooking (in-memory PGlite)", () => {
     );
   });
 
+  it("stamps a member's 'Under 18' on their seat alone, never on the person", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Ines Marlow",
+        email: "ines-marlow@example.com",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Maya Marlow",
+        minorDeclared: true,
+      },
+    ]);
+    if (!outcome.ok) throw new Error("setup booking failed");
+    const seats = await db
+      .select({
+        name: people.fullName,
+        minorDeclaredAt: bookings.minorDeclaredAt,
+        dateOfBirth: people.dateOfBirth,
+      })
+      .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(eq(bookings.tripId, open.id));
+    const byName = new Map(seats.map((seat) => [seat.name, seat]));
+    expect(byName.get("Maya Marlow")?.minorDeclaredAt).toBeInstanceOf(Date);
+    expect(byName.get("Maya Marlow")?.dateOfBirth).toBeNull();
+    expect(byName.get("Ines Marlow")?.minorDeclaredAt).toBeNull();
+  });
+
   it("keeps what the diver said this dive was for with the booking", async () => {
     const { db, shop, open } = await seededContext();
     const outcome = await createBooking(db, {
@@ -2399,6 +2433,128 @@ describe("selfCancelBooking (diver self-service, docs ADR 20260727-diver-self-se
         bookingId: "00000000-0000-4000-8000-000000000000",
       }),
     ).toEqual({ ok: false, reason: "not_found" });
+  });
+});
+
+describe("selfCancelBooking with the party (batch 6 item 10)", () => {
+  async function bookParty() {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBookingParty(
+      db,
+      ["Lena Ortiz", "Milo Ortiz", "Pia Ortiz", "Tom Ortiz"].map((fullName, index) => ({
+        actor: "public" as const,
+        shopId: shop.id,
+        tripId: open.id,
+        fullName,
+        ...(index === 0 ? { email: "lena-ortiz@example.com" } : {}),
+      })),
+    );
+    if (!outcome.ok) throw new Error("setup party failed");
+    const [lead, milo, pia, tom] = outcome.bookings.map((seat) => seat.bookingId);
+    if (!lead || !milo || !pia || !tom) throw new Error("setup party failed");
+    return { db, shop, open, lead, milo, pia, tom };
+  }
+
+  async function statusOf(db: AppDb, bookingId: string) {
+    const [row] = await db
+      .select({ status: bookings.status })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    return row?.status;
+  }
+
+  it("cancels the lead's unclaimed seats with the lead, and keeps a claimed or checked-in one", async () => {
+    const { db, shop, lead, milo, pia, tom } = await bookParty();
+    await db.update(bookings).set({ claimedAt: nowDate() }).where(eq(bookings.id, pia));
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, tom));
+
+    const result = await selfCancelBooking(db, {
+      shopId: shop.id,
+      bookingId: lead,
+      withUnclaimedParty: true,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      party: {
+        cancelled: [{ bookingId: milo, seatName: "Milo Ortiz", ownAddress: false }],
+        stayed: expect.arrayContaining([
+          { bookingId: pia, seatName: "Pia Ortiz" },
+          { bookingId: tom, seatName: "Tom Ortiz" },
+        ]),
+      },
+    });
+    expect(await statusOf(db, lead)).toBe("cancelled");
+    expect(await statusOf(db, milo)).toBe("cancelled");
+    expect(await statusOf(db, pia)).toBe("booked");
+    expect(await statusOf(db, tom)).toBe("checked_in");
+  });
+
+  it("marks a released seat with its own address apart from one on the lead's (batch 6 layer 2 review)", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Lena Ortiz",
+        email: "lena-ortiz@example.com",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Milo Ortiz",
+        email: "milo-ortiz@example.com",
+      },
+      { actor: "public", shopId: shop.id, tripId: open.id, fullName: "Pia Ortiz" },
+      { actor: "public", shopId: shop.id, tripId: open.id, fullName: "Tom Ortiz" },
+    ]);
+    if (!outcome.ok) throw new Error(`setup party failed: ${outcome.reason}`);
+    const [lead, milo, pia, tom] = outcome.bookings.map((seat) => seat.bookingId);
+    // An address is unique within a shop (people_shop_email_unique), so a seat
+    // on the lead's address is a seat with no address of its own: Pia and Tom.
+    const result = await selfCancelBooking(db, {
+      shopId: shop.id,
+      bookingId: lead ?? "",
+      withUnclaimedParty: true,
+    });
+
+    if (!result.ok) throw new Error("cancel refused");
+    const own = new Map(result.party?.cancelled.map((seat) => [seat.bookingId, seat.ownAddress]));
+    expect(own.get(milo ?? "")).toBe(true);
+    expect(own.get(pia ?? "")).toBe(false);
+    expect(own.get(tom ?? "")).toBe(false);
+  });
+
+  it("reaches no other seat when a member cancels their own", async () => {
+    const { db, shop, lead, milo, pia } = await bookParty();
+    const result = await selfCancelBooking(db, {
+      shopId: shop.id,
+      bookingId: milo,
+      withUnclaimedParty: true,
+    });
+    expect(result).toEqual({ ok: true });
+    expect(await statusOf(db, lead)).toBe("booked");
+    expect(await statusOf(db, pia)).toBe("booked");
+  });
+
+  it("leaves the party alone unless the caller asks", async () => {
+    const { db, shop, lead, milo } = await bookParty();
+    expect(await selfCancelBooking(db, { shopId: shop.id, bookingId: lead })).toEqual({ ok: true });
+    expect(await statusOf(db, milo)).toBe("booked");
+  });
+
+  it("cancels nothing in the party when the lead's own seat is refused", async () => {
+    const { db, shop, open, lead, milo } = await bookParty();
+    const result = await selfCancelBooking(db, {
+      shopId: shop.id,
+      bookingId: lead,
+      withUnclaimedParty: true,
+      now: new Date(open.startsAt.getTime() + 60 * 60 * 1000),
+    });
+    expect(result).toEqual({ ok: false, reason: "trip_departed" });
+    expect(await statusOf(db, milo)).toBe("booked");
   });
 });
 

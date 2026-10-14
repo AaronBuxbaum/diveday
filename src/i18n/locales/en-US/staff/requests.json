@@ -25,5 +25,14 @@
   },
   "pagination": {
     "total": "{count, plural, one {# request} other {# requests}}"
+  },
+  "markDone": "Mark done",
+  "reopen": "Reopen",
+  "reply": "Reply",
+  "replySubject": "Your request to {shopName}",
+  "done": {
+    "heading": "Done: {count, plural, one {# request} other {# requests}}",
+    "booked": "Booked {date}",
+    "marked": "Marked done {date}"
   }
 }

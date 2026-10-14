@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 
 type RecordPrintAction = (formData: FormData) => void | Promise<void>;
@@ -39,9 +40,12 @@ export function PrintTripBundleButton({
           rarest of the three doors was the only one wearing a bordered box,
           which put the heaviest chrome on the least-used action (principle 8).
           The 44px touch floor comes from the base either way. */}
-      <button type="submit" className={buttonClass({ variant: "ghost", size: "sm", flush })}>
+      <SubmitButton
+        pendingLabel={label}
+        className={buttonClass({ variant: "ghost", size: "sm", flush })}
+      >
         {label}
-      </button>
+      </SubmitButton>
       {popupBlocked ? (
         <p className="mt-2 max-w-xs text-sm text-danger" role="alert">
           {popupBlockedLabel}

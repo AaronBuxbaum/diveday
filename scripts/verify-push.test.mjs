@@ -7,6 +7,7 @@ import {
   plan,
   REACH_BUDGET_MS,
   sourceScanTests,
+  writeStamps,
 } from "./verify-push.mjs";
 
 const names = (steps) => steps.map((step) => step.name);
@@ -182,5 +183,35 @@ describe("the build key", () => {
     const before = appTreeKey(app.join("\n"));
     const after = appTreeKey([line("src/lib/x.ts", "a2"), line("package.json", "b2")].join("\n"));
     expect(after).not.toBe(before);
+  });
+});
+
+describe("the stamp", () => {
+  it("is written per worktree and keyed by sha in the common git dir, which every worktree reads", () => {
+    const sha = "0123456789abcdef0123456789abcdef01234567";
+    const writes = {};
+    const dirs = [];
+    const git = (args) =>
+      ({
+        "rev-parse --git-path diveday-verified.json":
+          "/repo/.git/worktrees/wt/diveday-verified.json",
+        "rev-parse --path-format=absolute --git-common-dir": "/repo/.git",
+      })[args.join(" ")] ?? null;
+    writeStamps(
+      { sha, base: "origin/main" },
+      {
+        git,
+        write: (file, text) => {
+          writes[file] = JSON.parse(text);
+        },
+        mkdir: (dir) => dirs.push(dir),
+      },
+    );
+    expect(Object.keys(writes).sort()).toEqual([
+      `/repo/.git/diveday-verified/${sha}`,
+      "/repo/.git/worktrees/wt/diveday-verified.json",
+    ]);
+    expect(writes[`/repo/.git/diveday-verified/${sha}`].sha).toBe(sha);
+    expect(dirs).toEqual(["/repo/.git/diveday-verified"]);
   });
 });

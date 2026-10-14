@@ -51,7 +51,7 @@
   "emptyHeading": "Todavía no hay nada que preparar",
   "emptyAction": "Abrir la lista de buceadores",
   "rentalKitEmptyOwnKitHeading": "No hay equipo que preparar",
-  "rentalKitEmptyNeedsSortingHeading": "No hay equipo que preparar — todavía",
+  "rentalKitEmptyNeedsSortingHeading": "Todavía no hay equipo que preparar",
   "rentalKitEmptyAction": "Abrir la lista de buceadores",
   "hotelPickupsHeading": "Recogidas en hoteles",
   "hotelPickupsCount": "{count, plural, one {# recogida} other {# recogidas}}",

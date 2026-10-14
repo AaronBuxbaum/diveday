@@ -94,6 +94,11 @@ describe("recordShopCheckoutSession", () => {
     expect(
       await recordShopCheckoutSession(db, shop.id, { previous: "cs_1", sessionId: "cs_3" }),
     ).toBe(true);
+    // Two tabs Stripe's idempotency key handed the same session: the slower
+    // one is told it holds, so it does not expire what the faster recorded.
+    expect(
+      await recordShopCheckoutSession(db, shop.id, { previous: "cs_1", sessionId: "cs_3" }),
+    ).toBe(true);
     expect((await getShopSubscription(db, shop.id))?.stripeCheckoutSessionId).toBe("cs_3");
   });
 

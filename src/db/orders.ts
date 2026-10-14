@@ -1,18 +1,4 @@
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gte,
-  ilike,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -30,7 +16,9 @@ import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
 import {
+  awaitingStripeReconciliation,
   idempotencyKeyFor,
+  markPaymentOperationUnanswered,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
   STALE_AFTER_MS,
@@ -372,6 +360,12 @@ async function issueOrder(
     // on the customer/items/invoice Stripe already created (CR-005).
     idempotencyKey: idempotencyKeyFor(intent.id),
   });
+  if (result.status === "unanswered") {
+    // The invoice may exist at Stripe: left `started`, marked, so the stuck
+    // queue shows it to a human instead of a closed `failed` row hiding it.
+    await markPaymentOperationUnanswered(db, intent.id);
+    return { ok: false, reason: "stripe_failed" };
+  }
   if (result.status !== "created") {
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
     return { ok: false, reason: "stripe_failed" };
@@ -955,7 +949,7 @@ export type ShopOrderFilter = {
  * index it opens has to show those same two rows, which only holds while both
  * ask the database the same question.
  */
-function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
+export function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
   const conditions = [eq(orders.shopId, shopId)];
   if (filter.status) conditions.push(eq(orders.status, filter.status));
   if (filter.personId) conditions.push(eq(orders.personId, filter.personId));
@@ -1281,6 +1275,35 @@ export async function countOpenTripOrders(
   tripId: string,
 ): Promise<number> {
   return countTripOrders(db, shopId, tripId, "open");
+}
+
+/**
+ * Open orders on the given seats, in one read keyed by their departure: the
+ * boat's work (`src/db/boat-work.ts`) asks it for every departure on Today and
+ * for the one the trip page opens, so the two can never count a boat's open
+ * orders differently. Keyed by seat rather than by trip so it counts the same
+ * seats as the boat's other work, which leaves out a cancelled seat's unpaid
+ * invoice (layer 1 review, finding 3). One `shopOrderWhere`, the index's own
+ * joins; a trip with none is absent from the map.
+ */
+export async function countOpenOrdersBySeat(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (bookingIds.length === 0) return counts;
+  const rows = await db
+    .select({ tripId: bookings.tripId, total: count() })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .innerJoin(bookings, eq(bookings.id, orders.bookingId))
+    .where(
+      and(shopOrderWhere(shopId, { status: "open" }), inArray(orders.bookingId, [...bookingIds])),
+    )
+    .groupBy(bookings.tripId);
+  for (const row of rows) if (row.tripId) counts.set(row.tripId, row.total);
+  return counts;
 }
 
 /**
@@ -1994,7 +2017,9 @@ async function claimOrderRefund(
     // removes that backstop and is what makes this check load-bearing rather
     // than belt-and-braces (issue #699 security review). It belongs on the
     // stuck-payment-operations panel, where a human reconciles it against the
-    // Stripe dashboard, never behind a button that reverses more money.
+    // Stripe dashboard, never behind a button that reverses more money. The
+    // same goes for one marked unanswered: the refund was sent, no answer came
+    // back, and Stripe may have made it (`UNANSWERED_BY_STRIPE`).
     const [settledByStripe] = await tx
       .select({ id: paymentOperationIntents.id })
       .from(paymentOperationIntents)
@@ -2004,7 +2029,7 @@ async function claimOrderRefund(
           eq(paymentOperationIntents.orderId, order.id),
           eq(paymentOperationIntents.kind, "refund"),
           eq(paymentOperationIntents.status, "started"),
-          isNotNull(paymentOperationIntents.stripeObjectId),
+          awaitingStripeReconciliation(),
         ),
       )
       .limit(1);
@@ -2070,6 +2095,12 @@ export async function refundOrder(
     idempotencyKeyFor(intent.id),
     options.amountCents,
   );
+  if (result.status === "unanswered") {
+    // Never `failed`: the reversal may exist, and a failed intent is one
+    // `claimOrderRefund` would retry past with a fresh idempotency key.
+    await markPaymentOperationUnanswered(db, intent.id);
+    return { status: "needs_reconciliation" };
+  }
   if (result.status !== "refunded") {
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
     return { status: "failed" };

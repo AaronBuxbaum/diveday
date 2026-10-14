@@ -99,7 +99,6 @@
     "restoreUnit": "Restore {label}"
   },
   "addUnit": {
-    "door": "Add gear",
     "title": "Add a unit",
     "submit": "Add to the register",
     "pending": "Adding…"
@@ -229,7 +228,8 @@
       "reinstating": "Returning…",
       "delete": "Delete unit",
       "deleting": "Deleting…",
-      "deleteHeld": "{name} has this unit until {until}. Release or return it first."
+      "deleteHeld": "{name} has this unit until {until}. Release or return it first.",
+      "returnedConcern": "Returned {date} with a concern: {note}"
     },
     "returnOutcomeAllGood": "Came back fine",
     "returnOutcomeFitAdjusted": "Fit adjusted at return",

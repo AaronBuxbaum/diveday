@@ -58,6 +58,8 @@ type BookingConfirmationEmailInput = {
   calendarUrl?: string;
   /** This seat's money as the booking form showed it. */
   money?: ConfirmationMoney;
+  /** What the party's card checkout settled, as Stripe reported it (#2447). */
+  partyPaid?: { amountCents: number; currency: string; seats: number };
   /** When free cancellation closes, in the shop's zone. */
   freeCancellationUntil?: Date;
 };
@@ -949,6 +951,16 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   // 5): what they pay and where, and until when they can walk away for free.
   const terms = [
     input.money ? confirmationMoneyLine(t, input.money, input) : null,
+    input.partyPaid
+      ? t("notifications.bookingConfirmation.partyPaid", {
+          seats: input.partyPaid.seats,
+          amount: formatMoneyCents(
+            input.partyPaid.amountCents,
+            input.partyPaid.currency,
+            input.locale,
+          ),
+        })
+      : null,
     input.freeCancellationUntil
       ? t("trip.freeCancellationUntil", {
           when: formatDateTimeTz(input.freeCancellationUntil, input.locale, input.timezone),
@@ -1218,6 +1230,8 @@ type TripRescheduledEmailInput = {
   /** Present only when the meeting point moved with the time. */
   meetingPoint?: MeetingPoint;
   readinessUrl?: string;
+  /** The seat moved to another departure, rather than the departure moving. */
+  seatMovedAt?: Date;
 };
 
 /**
@@ -1230,28 +1244,42 @@ export function tripRescheduledEmail(input: TripRescheduledEmailInput): Notifica
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const title = escapeHtml(input.tripTitle);
   const when = whenLines(t, input);
+  // Only the meeting point moved (#2443): the same message without the old
+  // time, led by the place.
+  // A seat moved to another departure is never a place-only notice.
+  const placeOnly =
+    !input.seatMovedAt && input.previousStartsAt.getTime() === input.startsAt.getTime();
   const previous = formatDateTimeTz(input.previousStartsAt, input.locale, input.timezone);
-  const was = t("notifications.tripRescheduled.was", { when: previous });
-  const body = t("notifications.tripRescheduled.body", { tripTitle: input.tripTitle });
-  const bodyHtml = t("notifications.tripRescheduled.body", {
-    tripTitle: `<strong>${title}</strong>`,
-  });
+  const was = placeOnly ? null : t("notifications.tripRescheduled.was", { when: previous });
+  const bodyKey = input.seatMovedAt
+    ? "notifications.tripRescheduled.seatBody"
+    : placeOnly
+      ? "notifications.tripRescheduled.placeBody"
+      : "notifications.tripRescheduled.body";
+  const body = t(bodyKey, { tripTitle: input.tripTitle });
+  const bodyHtml = t(bodyKey, { tripTitle: `<strong>${title}</strong>` });
   const dockNote =
     input.dockCallMinutes === undefined
       ? null
       : t("notifications.tripReminder.dockNote", {
           dock: dockCallPhrase(t, input.dockCallMinutes),
         });
-  const movedToo = input.meetingPoint ? t("notifications.tripRescheduled.meetingPointMoved") : null;
+  const movedToo =
+    input.meetingPoint && !placeOnly ? t("notifications.tripRescheduled.meetingPointMoved") : null;
   const where = meetingPointSection(t, input.meetingPoint);
-  const cantMakeIt = t("notifications.tripRescheduled.cantMakeIt");
+  const cantMakeIt = placeOnly ? null : t("notifications.tripRescheduled.cantMakeIt");
   const seeWhatsLeft = t("notifications.common.seeWhatsLeft");
   const readyText = input.readinessUrl ? `\n\n${seeWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
   const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, seeWhatsLeft) : "";
   return {
-    subject: t("notifications.tripRescheduled.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${when.text}\n${was}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}\n\n${cantMakeIt}${readyText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${when.html}<p style="opacity: 0.8;">${escapeHtml(was)}</p>${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}<p>${escapeHtml(cantMakeIt)}</p>${readyHtml}`,
+    subject: t(
+      placeOnly
+        ? "notifications.tripRescheduled.placeSubject"
+        : "notifications.tripRescheduled.subject",
+      { tripTitle: input.tripTitle },
+    ),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${when.text}${was ? `\n${was}` : ""}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}${cantMakeIt ? `\n\n${cantMakeIt}` : ""}${readyText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${when.html}${was ? `<p style="opacity: 0.8;">${escapeHtml(was)}</p>` : ""}${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}${cantMakeIt ? `<p>${escapeHtml(cantMakeIt)}</p>` : ""}${readyHtml}`,
   };
 }
 

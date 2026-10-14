@@ -12,6 +12,7 @@ import {
 import { CREW_NOTICE_CHANGES, CREW_TRIP_ROLES } from "@/lib/crew-notices";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { DEPARTURE_NOTE_MAX, departureNoteProblem } from "@/lib/departure-notes";
+import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { GEAR_KIND_ORDER, GEAR_SERVICE_KINDS } from "@/lib/gear";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
@@ -167,6 +168,18 @@ const bookingConfirmationSchema = z.object({
    */
   calendarUrl: z.url().max(2_000).optional(),
   money: seatMoneySchema.optional(),
+  /**
+   * What the card checkout this booking leads settled for the whole party,
+   * as Stripe reported it (`settledPartyPayment`, #2447). Display only, and
+   * absent unless Stripe's own figure exists.
+   */
+  partyPaid: z
+    .object({
+      amountCents: centsSchema,
+      currency: z.string().length(3),
+      seats: z.number().int().min(1).max(100),
+    })
+    .optional(),
   /** When free cancellation closes (`cancellationDeadline`); absent when the trip states no window. */
   freeCancellationUntil: z.date().optional(),
   /**
@@ -487,8 +500,10 @@ const tripReminder24hSchema = z.object({
  * sent by the diver's usual channel after the same eight-second hold every
  * other staff send takes (`held_sends`, kind `trip_rescheduled`).
  *
- * The old time and the new, the meeting point **only when it moved with the
- * time**, and the diver's own trip-prep link. Addressed to the address on the
+ * The old time and the new, the meeting point **only when it moved**, and the
+ * diver's own trip-prep link. `previousStartsAt` equal to `startsAt` is a
+ * notice that only the meeting point moved (#2443): no "It was", and the
+ * subject names the place. Addressed to the address on the
  * booking's own person record and nobody else (`src/db/trip-rescheduled.ts`).
  *
  * `revision` is the trip's `revision` after the move, and keys the send: a
@@ -511,6 +526,12 @@ const tripRescheduledSchema = z.object({
   revision: z.number().int().min(0),
   meetingPoint: meetingPointSchema.optional(),
   readinessUrl: z.url().max(2_000).optional(),
+  /**
+   * Set when the seat moved to another departure rather than the departure
+   * moving (ADR 20261013-staff-move-a-seat). It keys the send instead of the
+   * revision, which two departures can share.
+   */
+  seatMovedAt: z.date().optional(),
 });
 
 const tripRecapSchema = z.object({
@@ -1078,6 +1099,14 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
     url: z.url().max(2_000),
   }),
   z.object({
+    kind: z.literal("money"),
+    revenueCents: z.number().int(),
+    tipsCents: z.number().int().min(0),
+    openOrders: z.number().int().min(0),
+    currency: z.string().trim().min(3).max(3),
+    url: z.url().max(2_000),
+  }),
+  z.object({
     kind: z.literal("this_week"),
     departures: z.number().int().min(1),
     seatsFilled: z.number().int().min(0),
@@ -1214,6 +1243,60 @@ const lostItemFoundSchema = z.object({
   toldAt: z.date(),
 });
 
+/**
+ * **A date request, acknowledged to the diver who sent it** (third UX review,
+ * item 13). Addressed to the address the public form took, so it carries
+ * nothing the diver typed: the course title is the shop's, the dates are
+ * parsed calendar days, and the phone and hours are the shop's own
+ * (`courseInquiryReceivedEmail`).
+ */
+const courseInquiryReceivedSchema = z.object({
+  kind: z.literal("course_inquiry_received"),
+  courseInquiryId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  courseTitle: z.string().trim().min(1).max(200).optional(),
+  preferredDate: calendarDateSchema.optional(),
+  alternateDate: calendarDateSchema.optional(),
+  shopPhone: z.string().trim().min(1).max(40).optional(),
+  deskHours: z
+    .object({
+      opensMinute: z.number().int().min(0).max(1439),
+      closesMinute: z.number().int().min(1).max(1440),
+    })
+    .optional(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+/**
+ * **A student's certification, told to the student** (third UX review, item
+ * 14). Sent once, when the instructor's Certify tap writes a new level card
+ * (`issueShopCertification` refuses a level the diver already holds, so a
+ * second tap sends nothing). Not queued, for the reason the lost-item message
+ * is not: a courtesy that missed its moment is not owed a retry row.
+ */
+const courseCertifiedSchema = z.object({
+  kind: z.literal("course_certified"),
+  certificationId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  level: z.enum(DECLARABLE_CERTIFICATION_LEVELS),
+  recordedAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** The shop's next public course on from this level; the url is built server-side. */
+  nextCourse: z
+    .object({
+      title: z.string().trim().min(1).max(200),
+      url: z.url().max(2_000),
+    })
+    .optional(),
+});
+
 const workOrderReadySchema = z.object({
   kind: z.literal("work_order_ready"),
   noticeId: z.uuid(),
@@ -1315,6 +1398,83 @@ const deskAfterHoursSchema = z.object({
   pingedAt: z.date(),
 });
 
+/**
+ * **Stripe has turned the shop's card payments off** (batch 6 item 8): one
+ * email to each owner per change of state, claimed by
+ * `shop_stripe_accounts.payments_restricted_at` (`applyStripeAccountStatus`),
+ * so a redelivered `account.updated` sends nothing. Bookings already fall back
+ * to paying at the shop; this tells the owner why, and where to look. Staff
+ * operational mail: no unsubscribe, no postal footer.
+ */
+const stripePaymentsRestrictedSchema = z.object({
+  kind: z.literal("stripe_payments_restricted"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  settingsUrl: z.url().max(2_000),
+  /** The claim's own time, so a later restriction is a different message. */
+  restrictedAt: z.date(),
+});
+
+/**
+ * **A roll call still open after the boat should be home** (batch 6, item 6;
+ * `sendStaleRollCallAlerts`, src/db/roll-call-alerts.ts). Staff safety mail
+ * to the shop's owners, once per departure.
+ *
+ * **Counts and a link, never names.** Who is unaccounted for stays behind the
+ * manifest's sign-in: the mail lands in a personal inbox that may sit on a
+ * shared phone. `missing` says a crew member recorded somebody not back
+ * aboard, which changes the words, not the payload's reach.
+ *
+ * Not queued (`notificationIsQueueable`): an alert that arrives hours late,
+ * after the count closed, says something false.
+ */
+/**
+ * The longest trip title a notification carries. `trips.title` is unbounded,
+ * so a writer that hands a stored title to a kind capped here clips it first
+ * with {@link notificationTripTitle}: a long title must shorten the subject,
+ * never fail the send (security review 20261014).
+ */
+export const NOTIFICATION_TRIP_TITLE_MAX = 200;
+
+/**
+ * A trip title that fits {@link NOTIFICATION_TRIP_TITLE_MAX} as zod measures
+ * it (UTF-16 units), ending in "…" when cut, and never splitting a surrogate
+ * pair (an emoji in a title stays whole or goes).
+ */
+export function notificationTripTitle(title: string): string {
+  const trimmed = title.trim();
+  if (trimmed.length <= NOTIFICATION_TRIP_TITLE_MAX) return trimmed;
+  let cut = trimmed.slice(0, NOTIFICATION_TRIP_TITLE_MAX - 1);
+  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}…`;
+}
+
+const rollCallStaleSchema = z.object({
+  kind: z.literal("roll_call_stale"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  tripId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(NOTIFICATION_TRIP_TITLE_MAX),
+  /** The after-dive checkpoint that is open: 1–4. */
+  diveNumber: z.number().int().min(1).max(4),
+  /** People not accounted for there, or recorded not back aboard when `missing`. */
+  unaccounted: z.number().int().min(1).max(10_000),
+  missing: z.boolean(),
+  /** When the boat was due back (the departure's end), said in the shop's zone. */
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  rollCallUrl: z.url().max(2_000),
+  alertedAt: z.date(),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -1385,8 +1545,12 @@ export const notificationSchema = z
     gearServiceDueSchema,
     crewScheduleChangeSchema,
     deskAfterHoursSchema,
+    stripePaymentsRestrictedSchema,
+    rollCallStaleSchema,
     departureNoteSchema,
     lostItemFoundSchema,
+    courseCertifiedSchema,
+    courseInquiryReceivedSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1497,8 +1661,10 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "gear_service_due":
     case "crew_schedule_change":
     case "desk_after_hours":
+    case "roll_call_stale":
     case "departure_note":
     case "lost_item_found":
+    case "course_certified":
       return false;
     default:
       return true;
@@ -1554,9 +1720,16 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "trip_reminder_24h":
       return `${notification.kind}/${notification.bookingId}`;
     // One per seat per move: the trip's revision after the move keys it, so a
-    // second move is a second message and a retried send is not.
+    // second move is a second message and a retried send is not. A seat moved
+    // to another departure is keyed by when it moved. A meeting point moves
+    // without a revision (#2443), so a place-only notice is keyed by the place
+    // it names as well.
     case "trip_rescheduled":
-      return `trip-rescheduled/${notification.bookingId}/${notification.revision}`;
+      return notification.seatMovedAt
+        ? `trip-rescheduled/${notification.bookingId}/seat/${notification.seatMovedAt.toISOString()}`
+        : notification.previousStartsAt.getTime() === notification.startsAt.getTime()
+          ? `trip-rescheduled/${notification.bookingId}/${notification.revision}/place/${notification.meetingPoint?.label ?? ""}/${notification.meetingPoint?.address ?? ""}`
+          : `trip-rescheduled/${notification.bookingId}/${notification.revision}`;
     // One recap per booking after the trip departs.
     case "trip_recap":
       return `trip-recap/${notification.bookingId}`;
@@ -1636,6 +1809,12 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per tap on Tell.
     case "lost_item_found":
       return `lost-item-found/${notification.itemId}/${notification.toldAt.toISOString()}`;
+    // One acknowledgment per submitted request row.
+    case "course_inquiry_received":
+      return `course-inquiry-received/${notification.courseInquiryId}`;
+    // One send per card written; a level already held writes none.
+    case "course_certified":
+      return `course-certified/${notification.certificationId}`;
     // One Monday email per person per shop-local week — the same pair
     // `weekly_digest_sends` holds unique, so a queued retry and the claim
     // agree on what "this week's email" means.
@@ -1652,5 +1831,11 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per claim of the person's batching clock.
     case "desk_after_hours":
       return `desk-after-hours/${notification.personId}/${notification.pingedAt.toISOString()}`;
+    // One send per owner per restriction claim.
+    case "stripe_payments_restricted":
+      return `stripe-payments-restricted/${notification.personId}/${notification.restrictedAt.toISOString()}`;
+    // One alert per departure per owner; the departure's claim comes first.
+    case "roll_call_stale":
+      return `roll-call-stale/${notification.tripId}/${notification.personId}`;
   }
 }

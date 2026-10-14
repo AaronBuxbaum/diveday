@@ -13,6 +13,16 @@
     "emptyTitle": "No courses to show",
     "emptyBody": "Every course your shop can teach shows up here, ready to put on the board.",
     "emptyAction": "Open the schedule",
+    "searchLabel": "Search courses",
+    "searchPlaceholder": "Course name",
+    "searchClear": "Clear search",
+    "noMatch": "No courses match.",
+    "views": {
+      "label": "Course views",
+      "all": "All",
+      "scheduled": "Scheduled",
+      "notYet": "Not yet"
+    },
     "pagination": {
       "total": "{count, plural, one {# course} other {# courses}}"
     },

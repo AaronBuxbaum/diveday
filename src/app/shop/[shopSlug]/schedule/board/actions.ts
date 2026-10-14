@@ -447,6 +447,11 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   }
   const crewPersonIds = crewPersonIdsFrom(formData);
   if (!crewPersonIds) return await invalid();
+  // One date per later day when the course skips days (third UX review, item
+  // 10). Absent or empty is the consecutive run; `meetingDaysFor` checks the
+  // rest, so a list that disagrees with the count is refused there.
+  const laterDates = z.array(z.string()).safeParse(formData.getAll("meetingDate"));
+  if (!laterDates.success) return await invalid();
 
   // The same tenant rule the hull obeys: a lens id arriving on this form has to
   // be one of *this* shop's live words.
@@ -464,6 +469,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       startTime,
       endTime,
       dayCount,
+      laterDates: laterDates.data,
       priceDollars,
       depositDollars,
       cancellationWindowHours,
@@ -505,9 +511,26 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       });
       redirect(`${back}?builder=end-before-start`);
     }
+    if (details.reason === "days_out_of_order") {
+      await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
+      redirect(`${back}?builder=days-out-of-order`);
+    }
     return await invalid();
   }
   const { startsAt, endsAt, scheduleDays } = details.patch;
+  // **A repeating departure ends before its next one begins.** Named days can
+  // stretch one departure over weeks; on a weekly cadence that would lay each
+  // occurrence over the next, two rosters for the same students. Refused with
+  // its own sentence rather than trimmed.
+  const lastDay = scheduleDays.at(-1);
+  if (
+    repeatIntervalWeeks > 0 &&
+    lastDay &&
+    lastDay.startsAt.getTime() - startsAt.getTime() >= repeatIntervalWeeks * 7 * 86_400_000
+  ) {
+    await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
+    redirect(`${back}?builder=days-span-repeat`);
+  }
 
   // The per-dive cards only exist while the panel is expanded, so an all-blank
   // read means they were never on screen — fall back to the quick row's single

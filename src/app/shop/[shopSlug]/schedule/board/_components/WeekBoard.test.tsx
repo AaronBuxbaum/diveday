@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import {
   type BuilderWeek,
   WeekBoard,
@@ -34,6 +34,7 @@ const COPY: WeekBoardCopy = {
   noPriceSet: "No price set",
   noPriceSetAria: "Set a price for {ref}",
   noPriceSetAll: "None of these departures has a price yet.",
+  rehearsal: "Rehearsal",
   rollCallOpen: "Roll call · {count} not counted",
   rollCallOpenAria: "Finish the dive {dive} roll call for {ref}",
   noBoats: "No boats",
@@ -53,6 +54,7 @@ function entry(overrides: Partial<WeekEntry> = {}): WeekEntry {
     dayCount: 1,
     status: "upcoming",
     unpriced: false,
+    rehearsal: false,
     rollCallOpen: null,
     ref: "Two-Tank Reef, Thu, Aug 27 7:00 AM",
     time: "7:00 AM",
@@ -243,7 +245,7 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     board(week());
     const today = screen.getByText("27");
     const label = today.parentElement as HTMLElement;
-    const grid = label.closest("h3")?.parentElement as HTMLElement;
+    const grid = label.closest("h2")?.parentElement as HTMLElement;
     const rail = Number(token(grid, /^grid-cols-\[([\d.]+)rem_/)) * 16;
     expect([...grid.classList].filter((name) => name.includes(":grid-cols-"))).toEqual([]);
     const weekday = px(token(screen.getByText("Thu"), /^w-(\d+)$/));
@@ -349,6 +351,7 @@ describe("a departure row is one door (K-325, K-530)", () => {
     dayCount: 3,
     status: "upcoming",
     unpriced: false,
+    rehearsal: false,
     rollCallOpen: null,
     ref: "Open Water Diver — three-day course, Aug 28 – 30, 2026",
     meta: "$595 · Marcus Webb",
@@ -402,6 +405,17 @@ describe("a departure row is one door (K-325, K-530)", () => {
       expect(flag).toHaveClass("relative", "z-10", ...tapTargetLinkClass.split(" "));
       expect(flag).not.toHaveClass("flex");
     }
+  });
+
+  /**
+   * **A rehearsal says so, and asks for no price** (#2395). It is unpriced by
+   * design (ADR 20261012-rehearsal-departures), so "No price set" was a prompt
+   * to do something every money door refuses.
+   */
+  it("marks a rehearsal as one in the flag's slot, with no price prompt", () => {
+    board(week({}, [entry({ rehearsal: true })]));
+    expect(screen.getByText("Rehearsal")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^Set a price for / })).toBeNull();
   });
 
   it("hooks each door, and only the door, for a spec that may read neither its copy nor its place", () => {
@@ -538,7 +552,7 @@ describe("days gone by with no boats (UX review 2026-10-10, item 24)", () => {
     const { container } = board(week({}, [entry()]));
     const quiet = container.querySelectorAll("[data-week-quiet-days]");
     expect(quiet).toHaveLength(1);
-    expect(within(quiet[0] as HTMLElement).getByRole("heading", { level: 3 })).toHaveTextContent(
+    expect(within(quiet[0] as HTMLElement).getByRole("heading", { level: 2 })).toHaveTextContent(
       "Day 24 to Day 26",
     );
     expect(quiet[0]).toHaveTextContent("Mon–Wed");
@@ -547,10 +561,10 @@ describe("days gone by with no boats (UX review 2026-10-10, item 24)", () => {
     expect(within(quiet[0] as HTMLElement).queryByRole("button")).toBeNull();
     // The days that each keep a row: today, and every day still ahead.
     for (const label of ["Day 27", "Day 28", "Day 29", "Day 30"]) {
-      expect(screen.getByRole("heading", { level: 3, name: label })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 2, name: label })).toBeInTheDocument();
     }
     for (const label of ["Day 24", "Day 25", "Day 26"]) {
-      expect(screen.queryByRole("heading", { level: 3, name: label })).toBeNull();
+      expect(screen.queryByRole("heading", { level: 2, name: label })).toBeNull();
     }
   });
 
@@ -558,6 +572,6 @@ describe("days gone by with no boats (UX review 2026-10-10, item 24)", () => {
     const { container } = board(week({}, [entry({ tripId: "t0", dateIso: "2026-08-25" })]));
     // Monday alone before it, Wednesday alone after it: neither is a run.
     expect(container.querySelectorAll("[data-week-quiet-days]")).toHaveLength(0);
-    expect(screen.getByRole("heading", { level: 3, name: "Day 25" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Day 25" })).toBeInTheDocument();
   });
 });

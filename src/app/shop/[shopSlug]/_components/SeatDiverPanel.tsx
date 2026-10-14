@@ -109,6 +109,9 @@ export function SeatDiverPanel({
   // A candidate with no dive day says so only when a sibling has one; the rule
   // and the bias it corrects are in `noDiveDayNeedsSaying`.
   const sayNoDiveDay = noDiveDayNeedsSaying(confirmMatches ?? []);
+  // The request this door was opened from closes as booked when a seat is made
+  // (third UX review, item 13); every seat form below posts it.
+  const requestId = searchHiddenFields?.request;
   const addHref = newDiverHref(shopSlug, {
     query,
     surface,
@@ -142,9 +145,13 @@ export function SeatDiverPanel({
                         by name, carries no such field. */}
                     <input type="hidden" name="fromNameMatch" value="true" />
                     <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
-                    <button type="submit" className="underline font-medium text-left">
+                    {requestId ? <input type="hidden" name="request" value={requestId} /> : null}
+                    <SubmitButton
+                      pendingLabel={copy.adding}
+                      className="underline font-medium text-left"
+                    >
                       {match.fullName}
-                    </button>
+                    </SubmitButton>
                   </form>
                   {match.email || match.phone ? (
                     <span className="text-muted text-xs ms-1">
@@ -172,6 +179,7 @@ export function SeatDiverPanel({
               <input type="hidden" name="email" value={confirmEmail} />
               <input type="hidden" name="phone" value={confirmPhone} />
               <input type="hidden" name="force" value="true" />
+              {requestId ? <input type="hidden" name="request" value={requestId} /> : null}
               <SubmitButton
                 pendingLabel={copy.adding}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
@@ -201,6 +209,7 @@ export function SeatDiverPanel({
                   candidates,
                   tripId,
                   seatAction: seatExistingDiverAction.bind(null, surface, shopSlug),
+                  requestId,
                   personHref,
                   addLabel: copy.addLabel,
                   pendingLabel: copy.adding,

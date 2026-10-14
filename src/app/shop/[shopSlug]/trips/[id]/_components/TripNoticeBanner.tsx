@@ -85,6 +85,50 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRemovedRefundOwner",
   },
   "booking-restored": { form: "roster", tone: "success", key: "trips.notices.bookingRestored" },
+  // A seat moved to another departure, or why it stayed (ADR 20261013-staff-move-a-seat).
+  "seat-moved": { form: "roster", tone: "success", key: "trips.notices.seatMoved" },
+  "seat-moved-untold": { form: "roster", tone: "warning", key: "trips.notices.seatMovedUntold" },
+  "seat-moved-owed": { form: "roster", tone: "warning", key: "trips.notices.seatMovedOwed" },
+  "seat-move-not-movable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMoveNotMovable",
+  },
+  "seat-move-departed": { form: "roster", tone: "danger", key: "trips.notices.seatMoveDeparted" },
+  "seat-move-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMoveUnavailable",
+  },
+  "seat-move-course": { form: "roster", tone: "danger", key: "trips.notices.seatMoveCourse" },
+  "seat-move-already": { form: "roster", tone: "danger", key: "trips.notices.seatMoveAlready" },
+  "seat-move-earlier": { form: "roster", tone: "danger", key: "trips.notices.seatMoveEarlier" },
+  "seat-move-party": { form: "roster", tone: "danger", key: "trips.notices.seatMoveParty" },
+  "seat-move-buddy": { form: "roster", tone: "danger", key: "trips.notices.seatMoveBuddy" },
+  "seat-move-roll-call": { form: "roster", tone: "danger", key: "trips.notices.seatMoveRollCall" },
+  "seat-move-full": { form: "roster", tone: "danger", key: "trips.notices.seatMoveFull" },
+  "seat-move-unstaffed": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMoveUnstaffed",
+  },
+  "seat-move-min-age": { form: "roster", tone: "danger", key: "trips.notices.seatMoveMinAge" },
+  "waitlist-carried": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.waitlistCarried",
+    countKey: "trips.notices.waitlistCarriedCount",
+  },
+  "waitlist-carry-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.waitlistCarryUnavailable",
+  },
+  "seat-move-prerequisite": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMovePrerequisite",
+  },
   "pickup-saved": { form: "roster", tone: "success", key: "trips.notices.pickupSaved" },
   "pickup-invalid": { form: "roster", tone: "danger", key: "trips.notices.pickupInvalid" },
   "booking-restore-full": {
@@ -256,6 +300,7 @@ const NOTICE_KEYS: Record<
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },
+  "seat-busy": { form: "add-diver", tone: "danger", key: "seatDiver.busy" },
   "diver-full": { form: "add-diver", tone: "danger", key: "trips.notices.diverFull" },
   "diver-divers-full": {
     form: "add-diver",
@@ -456,6 +501,10 @@ const NOTICE_KEYS: Record<
     countKey: "trips.notices.requirementsBlockingCount",
   },
   payment: { form: "roster", tone: "success", key: "trips.notices.payment" },
+  "payment-amount": { form: "roster", tone: "danger", key: "trips.notices.paymentAmount" },
+  "payment-method": { form: "roster", tone: "danger", key: "trips.notices.paymentMethod" },
+  "payment-short": { form: "roster", tone: "danger", key: "trips.notices.paymentShort" },
+  "payment-online": { form: "roster", tone: "danger", key: "trips.notices.paymentOnline" },
   conditions: { form: "conditions", tone: "success", key: "trips.notices.conditions" },
   "conditions-cleared": {
     form: "conditions",
@@ -465,6 +514,7 @@ const NOTICE_KEYS: Record<
   "not-authorized": { form: "page", tone: "danger", key: "trips.notices.notAuthorized" },
   invalid: { form: "page", tone: "danger", key: "trips.notices.invalid" },
   "end-before-start": { form: "details", tone: "danger", key: "trips.notices.endBeforeStart" },
+  "days-out-of-order": { form: "details", tone: "danger", key: "trips.notices.daysOutOfOrder" },
   "capacity-below-booked": {
     form: "details",
     tone: "danger",

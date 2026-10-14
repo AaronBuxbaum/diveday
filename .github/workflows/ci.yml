@@ -68,8 +68,13 @@ jobs:
     # Per-commit signal, so it has nothing to say on a nightly re-run of a commit
     # that already passed it. See the `schedule:` trigger above — this guard is
     # what keeps that trigger scoped to `real-postgres`.
-    if: github.event_name != 'schedule'
-    runs-on: ubuntu-24.04
+    # `needs: changes` only for its `runner` answer: the Mac when it is online,
+    # GitHub otherwise (scripts/ci-runner-pick.mjs).
+    needs: changes
+    # `!cancelled()`: a failed `changes` must not skip this job, which ran
+    # unconditionally before it read the runner choice; it falls back to GitHub.
+    if: ${{ !cancelled() && github.event_name != 'schedule' }}
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -112,9 +117,12 @@ jobs:
 
   lint:
     name: Lint
-    # Nightly runs `real-postgres` only.
-    if: github.event_name != 'schedule'
-    runs-on: ubuntu-24.04
+    # Nightly runs `real-postgres` only. The Mac when it is online (`changes`).
+    needs: changes
+    # `!cancelled()`: a failed `changes` must not skip this job, which ran
+    # unconditionally before it read the runner choice; it falls back to GitHub.
+    if: ${{ !cancelled() && github.event_name != 'schedule' }}
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -125,9 +133,12 @@ jobs:
 
   typecheck:
     name: Typecheck
-    # Nightly runs `real-postgres` only.
-    if: github.event_name != 'schedule'
-    runs-on: ubuntu-24.04
+    # Nightly runs `real-postgres` only. The Mac when it is online (`changes`).
+    needs: changes
+    # `!cancelled()`: a failed `changes` must not skip this job, which ran
+    # unconditionally before it read the runner choice; it falls back to GitHub.
+    if: ${{ !cancelled() && github.event_name != 'schedule' }}
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -149,7 +160,8 @@ jobs:
     # so a docs-only pull request still answers to them.
     needs: changes
     if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-24.04
+    # The Mac when it is online (`changes`, scripts/ci-runner-pick.mjs).
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -179,7 +191,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: node_modules/.cache/diveday
-          key: ${{ runner.os }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
       # Not `pnpm test -- ...`: pnpm/npm insert a literal `--` before forwarded
       # args when the target script is itself a bare command (`vitest run`),
       # so the underlying CLI sees `vitest run -- --reporter=dot --shard=…`
@@ -231,7 +243,8 @@ jobs:
     # On a code change the four shards run everything and this skips.
     needs: changes
     if: github.event_name != 'schedule' && needs.changes.outputs.code != 'true'
-    runs-on: ubuntu-24.04
+    # The Mac when it is online (`changes`, scripts/ci-runner-pick.mjs).
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -242,7 +255,7 @@ jobs:
       - uses: actions/cache/restore@v6
         with:
           path: node_modules/.cache/diveday
-          key: ${{ runner.os }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
       - name: Run the unit files that read a document
         run: |
           mapfile -t files < <(git grep -lE "[\"'\`](\./)?(docs/|\.claude/|AGENTS\.md|CLAUDE\.md|README)|[\"'\`](docs|\.claude)[\"'\`]|\.md[\"'\`]" -- \
@@ -1055,6 +1068,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
       db: ${{ steps.filter.outputs.db }}
+      runner: ${{ steps.runner.outputs.runner }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -1149,6 +1163,29 @@ jobs:
             echo "code=false" >> "$GITHUB_OUTPUT"
             echo "Only docs, Markdown or \`.claude/\` changed — the build, the unit, Playwright and visual shards and the reg-suit compare are skipped. The safeguards, lint, typecheck and the unit files that quote a document path still ran. The next code commit's visual baseline resolves past this one (scripts/wait-for-baseline.mjs)." >> "$GITHUB_STEP_SUMMARY"
           fi
+      # Where the safeguards, lint, typecheck and unit jobs run: Aaron's Mac
+      # when one of its runners is online, GitHub-hosted otherwise
+      # (docs/engineering/mac-ci-runner-runbook.md). Only this repository's own
+      # branches are eligible. That is routing, not a security boundary: a
+      # fork's pull request can rewrite this file, and what keeps one off the
+      # Mac is the repository's "Require approval for all external
+      # contributors" setting. The browser jobs stay on GitHub:
+      # their screenshots are compared against GitHub-rendered baselines.
+      # `continue-on-error` and the `||` fallback in each `runs-on` mean a
+      # failure here sends the jobs to GitHub rather than failing the run.
+      - id: runner
+        name: Choose where the non-browser jobs run
+        continue-on-error: true
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          REF: ${{ github.ref }}
+          # Repository variable: `off` sends everything to GitHub.
+          MAC_RUNNER: ${{ vars.MAC_RUNNER }}
+          # Fine-grained token, this repository only, "Administration: Read".
+          RUNNER_STATUS_TOKEN: ${{ secrets.CI_RUNNER_STATUS_TOKEN }}
+        run: node scripts/ci-runner-pick.mjs
 
   real-postgres:
     name: Real Postgres (migrations + concurrency)

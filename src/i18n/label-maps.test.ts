@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { MediaDeletionKind, PaymentOperationKind, WorkOrderLineKindValue } from "@/db/schema";
 import { BOAT_PAPERS, MUST_CARRY_KIT_KINDS } from "@/lib/boat-safety";
+import type { BoatWorkCode } from "@/lib/boat-work";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
 import type { DepthUnit } from "@/lib/depth-units";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
@@ -15,6 +16,7 @@ import {
   type GearServiceKind,
 } from "@/lib/gear";
 import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
+import { INCIDENT_KINDS, INCIDENT_SEVERITIES } from "@/lib/incident-reports";
 import type { BuddyAlert, RollCallLabel } from "@/lib/manifests";
 import { CARDINAL_DIRECTIONS, SEA_STATES, WIND_STATES } from "@/lib/marine-forecast";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
@@ -35,6 +37,7 @@ import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { boatSafetyNoticeText } from "./boat-safety-labels";
+import { boatWorkText } from "./boat-work-labels";
 import { buddyAlertText } from "./buddy-labels";
 import {
   CARD_STATUS_KEYS,
@@ -67,6 +70,7 @@ import {
   guardianRelationshipText,
   staffGuardianRelationshipOptions,
 } from "./guardian-labels";
+import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "./incident-labels";
 import { rollCallLabelText } from "./manifest-labels";
 import { diverTranslator } from "./messages";
 import {
@@ -254,6 +258,13 @@ function everyCodeOf<Code extends string>(present: Record<Code, true>): readonly
   return Object.keys(present) as Code[];
 }
 
+const BOAT_WORK_CODES = everyCodeOf<BoatWorkCode>({
+  missing_sizes: true,
+  ungated_nitrox: true,
+  missing_contact: true,
+  open_orders: true,
+});
+
 const BUDDY_ALERTS = everyCodeOf<BuddyAlert>({
   separated_dock: true,
   separated_after_dive: true,
@@ -411,6 +422,7 @@ const MEDIA_DELETION_KINDS = everyCodeOf<MediaDeletionKind>({
 const BLOCKER_PARAMS: Partial<Record<ReadinessBlockerCode, ReadinessBlockerParams>> = {
   certification_insufficient: { requiredLevel: "advanced_open_water" },
   certification_in_training: { requiredLevel: "advanced_open_water" },
+  certification_not_yet: { requiredLevel: "advanced_open_water" },
   specialty_missing: { specialty: "wreck" },
   specialty_pending: { specialty: "wreck" },
   specialty_import_unconfirmed: { specialty: "wreck" },
@@ -495,6 +507,13 @@ const CASES: readonly LabelMapCase[] = [
     map: "MISSING_KEYS",
     rows: codeRows(MUST_CARRY_KIT_KINDS, (locale, kind) =>
       boatSafetyNoticeText(staffTranslator(locale), { code: "kit_missing", kind }),
+    ),
+  },
+  {
+    module: "boat-work-labels.ts",
+    map: "BOAT_WORK_KEYS",
+    rows: codeRows(BOAT_WORK_CODES, (locale, code) =>
+      boatWorkText(staffTranslator(locale), { code, count: 2 }),
     ),
   },
   {
@@ -629,6 +648,22 @@ const CASES: readonly LabelMapCase[] = [
     map: "DIVER_FACT_SOURCE_KEYS",
     rows: codeRows(keysOf(DIVER_FACT_SOURCE_KEYS), (locale, source) =>
       diverTranslator(locale)(DIVER_FACT_SOURCE_KEYS[source]),
+    ),
+  },
+  {
+    module: "incident-labels.ts",
+    map: "INCIDENT_KIND_KEYS",
+    // `injury` reads "Injury or illness", and `fatality` is its own kind
+    // (dive-domain review 20261014).
+    rows: codeRows(INCIDENT_KINDS, (locale, kind) =>
+      staffTranslator(locale)(INCIDENT_KIND_KEYS[kind]),
+    ),
+  },
+  {
+    module: "incident-labels.ts",
+    map: "INCIDENT_SEVERITY_KEYS",
+    rows: codeRows(INCIDENT_SEVERITIES, (locale, severity) =>
+      staffTranslator(locale)(INCIDENT_SEVERITY_KEYS[severity]),
     ),
   },
   {

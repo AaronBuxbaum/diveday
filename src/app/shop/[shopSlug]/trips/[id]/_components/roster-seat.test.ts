@@ -30,6 +30,17 @@ describe("rosterSeat", () => {
     expect(facts(held).identityUnconfirmed).toBe(true);
   });
 
+  it("reads a seat booked as Under 18 as a minor needing a guardian, unless a date says otherwise", () => {
+    expect(facts().minor).toBe(false);
+    const declared = entry("a", "Asha Osei");
+    Object.assign(declared.booking, { minorDeclaredAt: new Date("2026-10-01T12:00:00Z") });
+    expect(facts(declared).minor).toBe(true);
+    expect(facts(declared).requiresGuardian).toBe(true);
+    Object.assign(declared.person, { dateOfBirth: "1990-01-01" });
+    expect(facts(declared).minor).toBe(false);
+    expect(facts(declared).requiresGuardian).toBe(false);
+  });
+
   it("carries whether the row is filed under a settled group", () => {
     expect(facts(undefined, true).settledRow).toBe(true);
     expect(facts().settledRow).toBe(false);

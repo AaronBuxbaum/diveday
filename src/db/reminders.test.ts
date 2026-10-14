@@ -14,6 +14,7 @@ import {
 } from "./readiness";
 import { sendDueReminders } from "./reminders";
 import {
+  bookingCapabilities,
   bookings,
   courses,
   notificationDeliveries,
@@ -24,7 +25,13 @@ import {
 } from "./schema";
 import { setShopDockDayRhythm } from "./shops";
 import { recordSmsKeyword } from "./sms-opt-outs";
-import { listStaff, upcomingTripsWithCounts, updateTripConditions } from "./trips";
+import {
+  listStaff,
+  moveTrip,
+  upcomingTripsWithCounts,
+  updateTrip,
+  updateTripConditions,
+} from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 // The seeded shop already has bookings on several future trips, so
@@ -457,6 +464,213 @@ describe("sendDueReminders", () => {
     });
     const rows = await rowsFor(db, bookingId);
     expect(rows[0].status).toBe("not_configured");
+  });
+
+  it("mints no trip-prep link for a diver with no email and no phone", async () => {
+    // The link rides the email and the text; with neither, a live readiness
+    // token would only count against the booking's cap (security review of
+    // code review 2026-10-13b, item 36).
+    const { db, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ email: null, phone: null }).where(eq(people.id, personId));
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: "https://dive.day",
+    });
+    expect((await rowsFor(db, bookingId))[0].status).toBe("not_configured");
+    expect(
+      await db
+        .select()
+        .from(bookingCapabilities)
+        .where(eq(bookingCapabilities.bookingId, bookingId)),
+    ).toEqual([]);
+  });
+});
+
+/**
+ * Issue #2444: a reminder is deduped per booking and cadence, so a diver
+ * reminded the night before the old date heard nothing the night before the
+ * new one: the message that carries the meeting time.
+ */
+describe("a moved departure's reminders", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  /** The minimum patch `updateTrip` takes: everything as it stands. */
+  const tripPatchOf = (trip: typeof trips.$inferSelect) => ({
+    title: trip.title,
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    capacity: trip.capacity,
+    plannedDives: trip.plannedDives,
+  });
+
+  it("sends the night-before reminder again for the new date", async () => {
+    const { db, shop, reef, bookingId } = await reminderContext();
+    const email = fakeEmail();
+    const send = (now: Date) =>
+      sendDueReminders(db, {
+        now,
+        emailProvider: email.provider,
+        smsProvider: fakeSms().provider,
+        whatsAppProviders: new Map(),
+        appOrigin: null,
+      });
+    const nightBefore = new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000);
+    await send(nightBefore);
+    expect(emailsFor(email, bookingId).map((n) => n.kind)).toEqual(["trip_reminder_24h"]);
+
+    const moved = await moveTrip(
+      db,
+      shop.id,
+      reef.id,
+      new Date(reef.startsAt.getTime() + 2 * DAY),
+      {
+        now: nightBefore,
+      },
+    );
+    expect(moved.ok).toBe(true);
+    await send(new Date(nightBefore.getTime() + 2 * DAY));
+    expect(emailsFor(email, bookingId).map((n) => n.kind)).toEqual([
+      "trip_reminder_24h",
+      "trip_reminder_24h",
+    ]);
+  });
+
+  it("re-arms on a retime saved from the trip page too", async () => {
+    const { db, shop, reef, bookingId } = await reminderContext();
+    const email = fakeEmail();
+    const send = (now: Date) =>
+      sendDueReminders(db, {
+        now,
+        emailProvider: email.provider,
+        smsProvider: fakeSms().provider,
+        whatsAppProviders: new Map(),
+        appOrigin: null,
+      });
+    const nightBefore = new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000);
+    await send(nightBefore);
+    expect(await rowsFor(db, bookingId)).toHaveLength(1);
+
+    const [trip] = await db.select().from(trips).where(eq(trips.id, reef.id));
+    const outcome = await updateTrip(db, shop.id, reef.id, {
+      ...tripPatchOf(trip),
+      startsAt: new Date(reef.startsAt.getTime() + 2 * DAY),
+      endsAt: new Date(trip.endsAt.getTime() + 2 * DAY),
+    });
+    expect(outcome.ok).toBe(true);
+    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+  });
+
+  it("keeps the reminder already sent when an edit leaves the time alone", async () => {
+    const { db, shop, reef, bookingId } = await reminderContext();
+    const nightBefore = new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000);
+    await sendDueReminders(db, {
+      now: nightBefore,
+      emailProvider: fakeEmail().provider,
+      smsProvider: fakeSms().provider,
+      whatsAppProviders: new Map(),
+      appOrigin: null,
+    });
+    const [trip] = await db.select().from(trips).where(eq(trips.id, reef.id));
+    const outcome = await updateTrip(db, shop.id, reef.id, {
+      ...tripPatchOf(trip),
+      title: "Renamed reef",
+    });
+    expect(outcome.ok).toBe(true);
+    expect(await rowsFor(db, bookingId)).toHaveLength(1);
+  });
+});
+
+/**
+ * Issue #2444: a reminder is deduped per booking and cadence, so a diver
+ * reminded the night before the old date heard nothing the night before the
+ * new one: the message that carries the meeting time.
+ */
+describe("a moved departure's reminders", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  /** The minimum patch `updateTrip` takes: everything as it stands. */
+  const tripPatchOf = (trip: typeof trips.$inferSelect) => ({
+    title: trip.title,
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    capacity: trip.capacity,
+    plannedDives: trip.plannedDives,
+  });
+
+  it("sends the night-before reminder again for the new date", async () => {
+    const { db, shop, reef, bookingId } = await reminderContext();
+    const email = fakeEmail();
+    const send = (now: Date) =>
+      sendDueReminders(db, {
+        now,
+        emailProvider: email.provider,
+        smsProvider: fakeSms().provider,
+        whatsAppProviders: new Map(),
+        appOrigin: null,
+      });
+    const nightBefore = new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000);
+    await send(nightBefore);
+    expect(emailsFor(email, bookingId).map((n) => n.kind)).toEqual(["trip_reminder_24h"]);
+
+    const moved = await moveTrip(
+      db,
+      shop.id,
+      reef.id,
+      new Date(reef.startsAt.getTime() + 2 * DAY),
+      {
+        now: nightBefore,
+      },
+    );
+    expect(moved.ok).toBe(true);
+    await send(new Date(nightBefore.getTime() + 2 * DAY));
+    expect(emailsFor(email, bookingId).map((n) => n.kind)).toEqual([
+      "trip_reminder_24h",
+      "trip_reminder_24h",
+    ]);
+  });
+
+  it("re-arms on a retime saved from the trip page too", async () => {
+    const { db, shop, reef, bookingId } = await reminderContext();
+    const email = fakeEmail();
+    const send = (now: Date) =>
+      sendDueReminders(db, {
+        now,
+        emailProvider: email.provider,
+        smsProvider: fakeSms().provider,
+        whatsAppProviders: new Map(),
+        appOrigin: null,
+      });
+    const nightBefore = new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000);
+    await send(nightBefore);
+    expect(await rowsFor(db, bookingId)).toHaveLength(1);
+
+    const [trip] = await db.select().from(trips).where(eq(trips.id, reef.id));
+    const outcome = await updateTrip(db, shop.id, reef.id, {
+      ...tripPatchOf(trip),
+      startsAt: new Date(reef.startsAt.getTime() + 2 * DAY),
+      endsAt: new Date(trip.endsAt.getTime() + 2 * DAY),
+    });
+    expect(outcome.ok).toBe(true);
+    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+  });
+
+  it("keeps the reminder already sent when an edit leaves the time alone", async () => {
+    const { db, shop, reef, bookingId } = await reminderContext();
+    const nightBefore = new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000);
+    await sendDueReminders(db, {
+      now: nightBefore,
+      emailProvider: fakeEmail().provider,
+      smsProvider: fakeSms().provider,
+      whatsAppProviders: new Map(),
+      appOrigin: null,
+    });
+    const [trip] = await db.select().from(trips).where(eq(trips.id, reef.id));
+    const outcome = await updateTrip(db, shop.id, reef.id, {
+      ...tripPatchOf(trip),
+      title: "Renamed reef",
+    });
+    expect(outcome.ok).toBe(true);
+    expect(await rowsFor(db, bookingId)).toHaveLength(1);
   });
 });
 

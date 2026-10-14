@@ -30,6 +30,8 @@ export function staffingWeekWords(t: StaffTranslator) {
     away: t("staffing.week.away"),
     awayConflict: t.raw("staffing.week.awayConflict"),
     crewClash: t.raw("staffing.week.crewClash"),
+    continuedUntil: t.raw("staffing.week.continuedUntil"),
+    continuedFrom: t.raw("staffing.week.continuedFrom"),
     request: t("staffing.week.request"),
     requestAria: t.raw("staffing.week.requestAria"),
     requesting: t("staffing.week.requesting"),

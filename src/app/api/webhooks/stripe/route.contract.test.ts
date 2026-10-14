@@ -50,8 +50,11 @@ vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
 vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
 vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
 vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn() }));
+vi.mock("@/db/stripe-restricted", () => ({
+  tellOwnersPaymentsRestricted: vi.fn(),
+}));
 vi.mock("@/db/stripe-accounts", () => ({
-  setShopStripeAccountStatus: vi.fn(),
+  applyStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
 }));
 vi.mock("@/db/webhook-events", () => ({
@@ -77,7 +80,7 @@ const { recordStripeChargeRefund } = await import("@/db/refunds");
 const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
 const { recordStripePayout } = await import("@/db/payouts");
-const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
+const { applyStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );
 const { claimStripeWebhookEvent, hasNewerAccountUpdate } = await import("@/db/webhook-events");
@@ -142,7 +145,9 @@ beforeEach(() => {
   vi.mocked(recordStripeChargeRefund).mockReset().mockResolvedValue({ status: "already_recorded" });
   vi.mocked(recordStripeDispute).mockReset().mockResolvedValue({ status: "not_found" });
   vi.mocked(recordStripePayout).mockReset().mockResolvedValue({ status: "not_found" });
-  vi.mocked(setShopStripeAccountStatus).mockReset();
+  vi.mocked(applyStripeAccountStatus)
+    .mockReset()
+    .mockResolvedValue({ account: null, newlyRestricted: false });
   vi.mocked(disconnectShopStripeAccount).mockReset();
   vi.mocked(markTipPaidBySessionId).mockReset();
   vi.mocked(markTipExpiredBySessionId).mockReset();
@@ -382,7 +387,7 @@ describe("payouts (ADR 20261012-payouts-reach-diveday)", () => {
 describe("account events", () => {
   it("account.updated passes the real Account's own flags and currency through", async () => {
     expect((await deliver("account.updated")).status).toBe(200);
-    expect(setShopStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, ACCOUNT, {
+    expect(applyStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, ACCOUNT, {
       chargesEnabled: true,
       payoutsEnabled: true,
       detailsSubmitted: true,

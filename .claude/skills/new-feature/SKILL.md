@@ -31,11 +31,12 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
 6. **Verify** — run the `verify` skill. UI work additionally gets the `design-review` skill.
 7. **Document** — update whatever your change invalidated: glossary for new terms, overview
    for structure, roadmap checkbox, ADR index.
-8. **File the follow-ups** — the slice you deliberately left for later, the question the build
-   raised, the risk you saw in passing: one GitHub issue each, labelled `needs-triage` (see
+8. **File the follow-ups** — a bug, a safety gap, or a decision the build raised: one GitHub issue
+   each, labelled `needs-triage` (see
    [docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)'s "Filing a follow-up"
-   section), each ending in a prompt a fresh session could run. A vertical slice *should* generate
-   these; that is what makes it a slice. List them by number in the PR description.
+   section), each ending in a prompt a fresh session could run, listed by number in the PR
+   description. The slice left for later and the debt seen in passing go in one "Notes" comment
+   on the PR.
 9. **Ship** — commit with an imperative subject and a why-body, push, open/refresh the draft
    PR with a summary and screenshots. Keep draft until CI is green. **The branch was cut from the
    branch you opened last if that one is still open**, related or not, so this is a layer of a stack
@@ -47,7 +48,8 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
    the follow-up visual-only check; run the `visual-triage` skill for any red visual job, forked
    PR, or diff the generated baseline commit does not explain. The PR is not done while a visual
    diff or failure is unexplained.
-11. **Answer the review.** `gh pr view <n> --comments` — `sourcery-ai` reviews
+11. **Answer the review.** `gh api repos/AaronBuxbaum/diveday/issues/<n>/comments` and
+   `.../pulls/<n>/comments` (REST; `gh pr view` is GraphQL and refused in cloud sessions) — `sourcery-ai` reviews
    every pull request here within minutes, and Aaron's comments arrive later. Each open thread gets
    an action and a reply: fixed (push, then say which commit), declined with the reason (a nitpick
    that contradicts a rule in AGENTS.md is declined by naming it), or filed as a `needs-triage`

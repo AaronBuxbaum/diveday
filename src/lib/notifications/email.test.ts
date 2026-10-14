@@ -1346,7 +1346,7 @@ describe("where to go (ux review 2026-10-11, items 4 and 27)", () => {
     const email = bookingConfirmationEmail({ ...base, locale: "es-ES", meetingPoint });
     expect(email.text).toContain("Adónde ir");
     expect(email.text).toContain("Referencia: Blue awning");
-    expect(email.text).toContain("Aparcamiento: Free lot");
+    expect(email.text).toContain("Estacionamiento: Free lot");
     expect(email.text).toContain("Abrir en mapas");
   });
 });
@@ -1385,6 +1385,30 @@ describe("the confirmation's terms (ux review 2026-10-11, item 5)", () => {
         money: { due: "online", amountCents: 12_000, currency: "usd" },
       }).text,
     ).toMatch(/Tu plaza: .*120.*, con tarjeta en línea\./);
+  });
+
+  it("states what the party paid by card, under the seat's own line (#2447)", () => {
+    const email = bookingConfirmationEmail({
+      ...base,
+      money: { due: "online", amountCents: 12_000, currency: "usd" },
+      partyPaid: { amountCents: 63_180, currency: "usd", seats: 4 },
+    });
+    expect(email.text).toContain(
+      "Your seat: $120.00, by card online.\nPaid by card for 4 seats: $631.80.",
+    );
+    expect(
+      bookingConfirmationEmail({
+        ...base,
+        partyPaid: { amountCents: 14_750, currency: "usd", seats: 1 },
+      }).text,
+    ).toContain("Paid by card: $147.50.");
+    expect(
+      bookingConfirmationEmail({
+        ...base,
+        locale: "es-ES",
+        partyPaid: { amountCents: 63_180, currency: "usd", seats: 4 },
+      }).text,
+    ).toMatch(/Pagado con tarjeta por 4 plazas: .*631,80/);
   });
 
   it("says nothing of money, window or calendar when there is none", () => {
@@ -1433,5 +1457,24 @@ describe("tripRescheduledEmail (ux review 2026-10-11, item 1)", () => {
   it("names no dock on a course session", () => {
     const { dockCallMinutes: _omit, ...course } = moved;
     expect(tripRescheduledEmail(course).text).not.toContain("dock");
+  });
+
+  // #2443: only the meeting point moved, so there is no old time to give.
+  it("leads with the place when only the meeting point moved", () => {
+    const email = tripRescheduledEmail({ ...moved, previousStartsAt: base.startsAt, meetingPoint });
+    expect(email.subject).toBe("New meeting point for Two-Tank Reef");
+    expect(email.text).toContain("We moved where we meet for Two-Tank Reef. The time is the same.");
+    expect(email.text).toContain("Where to go\nNorth Pier");
+    expect(email.text).not.toContain("It was");
+    expect(email.text).not.toContain("somewhere new, too");
+    expect(email.text).not.toContain("new time");
+    const spanish = tripRescheduledEmail({
+      ...moved,
+      previousStartsAt: base.startsAt,
+      meetingPoint,
+      locale: "es-ES",
+    });
+    expect(spanish.subject).toBe("Nuevo punto de encuentro para Two-Tank Reef");
+    expect(spanish.text).not.toContain("Antes era");
   });
 });

@@ -1,5 +1,6 @@
 import { EmptyState } from "@/components/EmptyState";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
@@ -43,7 +44,10 @@ export function YearReport({
   }
 
   const months = monthNames(locale);
-  const monthMarkers = monthMarkersFor(year.strip, shortMonthNames(locale));
+  const monthMarkers = monthMarkersFor(year.strip, shortMonthNames(locale)).map((marker) => ({
+    ...marker,
+    href: `${shopPath(shopSlug, "reports")}?month=${marker.key}`,
+  }));
   // The day without its year: the page's own header already names the year,
   // and "Jun 22, 2026" inside a sentence about 2026 says it twice.
   const busiestDayLabel = year.busiestDay
@@ -140,6 +144,7 @@ export function YearReport({
             cells={year.strip}
             months={monthMarkers}
             copy={{
+              monthsLabel: t("reports.chooseMonth"),
               day: (cell: ShopYearCell) =>
                 cell.boats > 0
                   ? t("reports.year.stripDay", {

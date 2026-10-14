@@ -129,6 +129,13 @@ export function parseDockDayRhythm(values: Partial<Record<keyof DockDayRhythm, u
   return parsed;
 }
 
+/**
+ * One beat of a departure's day on the clock. A departure on a boat carries the
+ * ride out to the first site as `rideMinutes` rather than as a beat of its own
+ * at the same minute.
+ */
+export type DockDayBeat = { step: DockDayStep; number?: number; at: Date; rideMinutes?: number };
+
 /** One beat and where it falls relative to departure; negative is before it. */
 export type DockDayOffset = { step: DockDayStep; number?: number; minutesFromDeparture: number };
 
@@ -345,15 +352,22 @@ export function dockDayTimeline(
   siteBottomTimes?: SiteBottomTimes,
   legTravelTimes?: LegTravelTimes,
   diveMode: DiveMode = "boat",
-): Array<{ step: DockDayStep; number?: number; at: Date }> {
-  const beats: Array<{ step: DockDayStep; number?: number; at: Date }> = [];
-  for (const offset of dockDayOffsets(
-    rhythm,
-    plannedDives,
-    siteBottomTimes,
-    legTravelTimes,
-    diveMode,
-  )) {
+): DockDayBeat[] {
+  const beats: DockDayBeat[] = [];
+  const offsets = dockDayOffsets(rhythm, plannedDives, siteBottomTimes, legTravelTimes, diveMode);
+  for (const [index, offset] of offsets.entries()) {
+    // **The ride out is the departure's, not a beat of its own.** It starts the
+    // moment the lines are off, so on the clock it printed "7:00 AM Departure"
+    // then "7:00 AM Ride out to the site" (third UX review, item 29). The
+    // departure carries the ride's length instead; the run between sites
+    // starts at its own time and keeps its row.
+    if (offset.step === "boatRide" && offset.number === 1 && beats.at(-1)?.step === "departure") {
+      const next = offsets[index + 1];
+      const departure = beats.at(-1);
+      if (next && departure)
+        departure.rideMinutes = next.minutesFromDeparture - offset.minutesFromDeparture;
+      continue;
+    }
     // By step, never by "offset > 0" — a shore-entry shop's Dive 1 sits at
     // offset zero alongside the departure itself, and it is still a beat on the
     // water that only a stated return time can bound.
@@ -374,6 +388,9 @@ export function dockDayTimeline(
   ) {
     beats.pop();
   }
+  // A ride out with no dive after it is the same dangling beat, folded in.
+  const last = beats.at(-1);
+  if (last?.step === "departure") delete last.rideMinutes;
   if (endsAt) beats.push({ step: "return", at: endsAt });
   return beats;
 }

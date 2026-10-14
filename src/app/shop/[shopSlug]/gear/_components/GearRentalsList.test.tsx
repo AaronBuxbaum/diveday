@@ -4,8 +4,8 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { GearRentalsPage, GearRentalUnit } from "@/db/gear-rentals";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { CounterRentalWaiverStanding } from "@/lib/counter-rentals";
 import { groupGearRentals } from "@/lib/gear-rentals";
-import type { ShopWaiverStatus } from "@/lib/waivers";
 import { GearRentalsList } from "./GearRentalsList";
 
 afterEach(cleanup);
@@ -42,7 +42,7 @@ function row(overrides: Partial<GearRentalUnit> & { reservationId: string }): Ge
 
 function renderList(
   rows: GearRentalUnit[],
-  counterWaivers?: ReadonlyMap<string, ShopWaiverStatus["state"]>,
+  counterWaivers?: ReadonlyMap<string, CounterRentalWaiverStanding>,
 ) {
   const holders = groupGearRentals(rows, TODAY);
   const page: GearRentalsPage = {
@@ -189,17 +189,38 @@ describe("GearRentalsList's counter waiver word", () => {
     });
 
   it("says a counter holder's waiver is not signed", () => {
-    renderList([counter()], new Map([["person-ana", "none"]]));
+    renderList([counter()], new Map([["person-ana", { state: "none" as const }]]));
     expect(screen.getByText("Waiver: Not signed")).toBeInTheDocument();
   });
 
   it("says nothing once the waiver is signed", () => {
-    renderList([counter()], new Map([["person-ana", "current"]]));
+    renderList([counter()], new Map([["person-ana", { state: "current" as const }]]));
+    expect(screen.queryByText(/Waiver:/)).toBeNull();
+  });
+
+  // #2540: the same warning the counter-rental ticket says, never a gate.
+  it("warns of an earlier refusal and an open referral under a current release", () => {
+    renderList(
+      [counter()],
+      new Map([
+        [
+          "person-ana",
+          { state: "current" as const, refusedOn: "2026-07-18", referredOn: "2026-07-20" },
+        ],
+      ]),
+    );
+    expect(
+      screen.getByText(/A physician did not clear this person on Jul 18, 2026 \(earlier waiver\)/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Referred to a physician on Jul 20, 2026/)).toBeInTheDocument();
     expect(screen.queryByText(/Waiver:/)).toBeNull();
   });
 
   it("says nothing on a trip rental, whatever the person's standing", () => {
-    renderList([row({ reservationId: "1" })], new Map([["person-ana", "none"]]));
+    renderList(
+      [row({ reservationId: "1" })],
+      new Map([["person-ana", { state: "none" as const }]]),
+    );
     expect(screen.queryByText(/Waiver:/)).toBeNull();
   });
 });

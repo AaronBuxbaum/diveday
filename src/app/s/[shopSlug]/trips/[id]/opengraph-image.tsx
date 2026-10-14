@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { CARD_STYLE, OG_COLORS, OG_WORDMARK, ogCredit, ogFooter } from "@/app/_og/card";
+import { CARD_STYLE, OG_CACHE, OG_COLORS, OG_WORDMARK, ogCredit, ogFooter } from "@/app/_og/card";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
@@ -39,7 +39,7 @@ function genericCard() {
       </div>
       {ogFooter()}
     </div>,
-    size,
+    { ...size, headers: OG_CACHE.seats },
   );
 }
 
@@ -120,6 +120,6 @@ export default async function TripOpenGraphImage({
         {ogCredit()}
       </div>
     </div>,
-    size,
+    { ...size, headers: OG_CACHE.seats },
   );
 }

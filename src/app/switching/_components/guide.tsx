@@ -5,7 +5,7 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,

@@ -1,3 +1,5 @@
+import { log } from "./log";
+
 /**
  * Tuning for the `pg` `Pool` used by `src/db/client.ts`'s production
  * (Neon/Postgres) branch. `pg`'s own default `max` is 10 connections *per
@@ -72,4 +74,36 @@ export function getDbPoolConfig(
       DEFAULT_CONNECTION_TIMEOUT_MILLIS,
     ),
   };
+}
+
+/** The one event of a `pg` Pool this listens to; typed narrowly so `src/lib` needs no `pg` import. */
+interface PoolErrorEmitter {
+  on(event: "error", listener: (error: Error) => void): unknown;
+}
+
+/**
+ * Give the pool an `"error"` listener, so a dropped idle connection is a log
+ * line instead of the end of the process.
+ *
+ * A `pg` Pool re-emits an error from any *idle* client — Neon suspending its
+ * compute, a network blip, a server-side `idle_session_timeout` — and Node
+ * treats an `EventEmitter`'s `"error"` with no listener as an uncaught
+ * exception. With none attached, the first idle connection Neon closed took
+ * down the whole server instance, every in-flight request with it. The pool
+ * has already discarded the broken client by the time this runs, and the next
+ * query opens a fresh one, so logging is all there is to do.
+ *
+ * `warn`, not `error`, and counted by no alarm: Neon closing idle connections
+ * when it scales to zero is routine, and a database that is really gone shows
+ * up on the query path (`DatabaseUnavailable`). Codes only — a `pg` error
+ * message can quote a statement.
+ */
+export function listenForPoolErrors(pool: PoolErrorEmitter): void {
+  pool.on("error", (error) => {
+    const code = (error as { code?: unknown }).code;
+    log("db_pool.idle_client_error", "warn", {
+      name: error.name,
+      code: typeof code === "string" ? code : null,
+    });
+  });
 }

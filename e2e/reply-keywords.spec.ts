@@ -170,7 +170,7 @@ test.describe("reply keywords", () => {
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/inbox");
-    const waiting = page.getByRole("heading", { name: /Waiting on you/ });
+    const waiting = page.getByRole("heading", { name: /Needs you/ });
     await expect(waiting).toBeVisible();
     await expect(page.getByText("Asked to move")).toBeVisible();
 

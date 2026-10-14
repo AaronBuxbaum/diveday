@@ -190,7 +190,7 @@ describe("RentalFitForm geometry", () => {
 describe("RentalFitForm scope", () => {
   it("no longer carries the free-text note — it is its own question now (issue 627)", () => {
     // "Anything else the crew should know?" is a category of its own on
-    // `/ready`, saved on its own (`saveNoteFromReady`), so it is no longer a
+    // `/ready`, saved on its own (`saveDayOfDetailsFromReady`), so it is no longer a
     // trailing field of the gear form. Two boxes for one answer is how a diver
     // ends up writing it in the one the crew is not reading.
     renderDiver(

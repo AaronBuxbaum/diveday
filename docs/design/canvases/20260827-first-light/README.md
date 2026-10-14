@@ -50,7 +50,7 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 | 10a — the door speaks Clearwater | shipped | `src/components/account/EntryShell.tsx` | `src/components/account/EntryShell.test.tsx`, `e2e/account-lifecycle.spec.ts` |
 | 10b — onboard is the shop's first form | shipped | `src/app/onboard/page.tsx` | `src/components/SuggestShopLink.test.tsx`, `src/app/onboard/copy.test.ts`, `src/app/onboard/actions.instrumentation.test.ts` |
 | 10c — claim joins the thread | shipped | `src/app/claim/[token]/page.tsx` | `src/db/seat-claims.test.ts`, `src/app/claim/[token]/copy.test.ts`, `src/components/account/EntryShell.test.tsx`, `e2e/seat-claim.spec.ts` |
-| 10d — the first morning | shipped | `src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.tsx` | `src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.test.tsx`, `src/app/shop/[shopSlug]/_components/today/DaySpine.test.tsx`, `src/db/first-booking.test.ts`, `src/lib/today.test.ts` |
+| 10d — the first morning | shipped | `src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.tsx` | `src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.test.tsx`, `src/app/shop/[shopSlug]/_components/today/DaySpine.moments.test.tsx`, `src/db/first-booking.test.ts`, `src/lib/today.test.ts` |
 
 ## Implementing a slice
 

@@ -191,3 +191,47 @@ test("the builder opened from a day's requests reads as finished sentences", asy
   await expect(plan.getByText(/^Bring 1 divemaster for your \d+:1 target\.$/)).toBeVisible();
   expect(await plan.innerText()).not.toContain("{");
 });
+
+/**
+ * **A request closes** (third UX review, item 13): "Mark done" takes it off the
+ * open list into a short Done list under it, where "Reopen" puts it back. The
+ * open list is what staff plan from; the Done list is only there to undo a
+ * mistaken tick.
+ */
+test("staff mark a request done, and reopen it", async ({ page }) => {
+  await page.goto("/s/blue-mantis");
+  await requestRow(page).click();
+  await openMoreDetails(page);
+  await page.getByLabel("What would you like to dive?").fill("A night dive, any week");
+  await page.getByLabel("Your phone").fill("+1 305 555 0788");
+  await page.getByLabel("Your diving experience").selectOption("certified");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByText("Sent", { exact: true })).toBeVisible();
+
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/requests");
+  const open = page.getByRole("region", { name: /^No date named/i });
+  const row = open.locator("li").filter({ hasText: "Wants to dive: A night dive, any week" });
+  await expect(row).toBeVisible();
+  // A lead with only a phone is answered by calling it.
+  await expect(row.getByRole("link", { name: "Reply" })).toHaveAttribute(
+    "href",
+    /^tel:\+13055550788$/,
+  );
+  await row.getByRole("button", { name: "Mark done" }).click();
+
+  const done = page.getByRole("region", { name: /^Done:/i });
+  await expect(done.getByText(/A night dive, any week/)).toBeVisible();
+  await expect(open.getByText("Wants to dive: A night dive, any week")).toHaveCount(0);
+
+  await done
+    .locator("li")
+    .filter({ hasText: "A night dive, any week" })
+    .getByRole("button", { name: "Reopen" })
+    .click();
+  await expect(
+    page
+      .getByRole("region", { name: /^No date named/i })
+      .getByText("Wants to dive: A night dive, any week"),
+  ).toBeVisible();
+});

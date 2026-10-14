@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, notInArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -1014,6 +1014,71 @@ describe("noShowSalvage", () => {
     expect(offered).toContain(open.id);
     expect(offered).not.toContain(alreadyOn.id);
     expect(offered).not.toContain(gated.id);
+  });
+
+  /**
+   * The walk asks `SALVAGE_STEP` days at a time (code review 2026-10-13b, item
+   * 36) and must still offer exactly what the one-at-a-time walk did: the
+   * first open day, then the next open one past a run of refusals that spans
+   * the first step, in rank order. A full day never reaches the walk (the
+   * board reads `hasSpace`), so the refusals here are a held seat and two
+   * cards the diver lacks.
+   */
+  it("walks past refusals a step at a time and keeps the days in rank order", async () => {
+    const { db, shop, trip, personId, now } = await context();
+    const [site] = await db
+      .select({ diveSiteId: trips.diveSiteId })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    const day = (hours: number, title: string) => ({
+      shopId: shop.id,
+      title,
+      startsAt: new Date(trip.startsAt.getTime() + hours * 60 * MINUTE_MS),
+      endsAt: new Date(trip.startsAt.getTime() + (hours + 3) * 60 * MINUTE_MS),
+      capacity: 8,
+      diveSiteId: site?.diveSiteId ?? null,
+    });
+    const [first, held, rescue, master, fifth] = await db
+      .insert(trips)
+      .values([
+        day(20, "Rank One Reef Run"),
+        day(21, "Rank Two Reef Run"),
+        day(22, "Rank Three Reef Run"),
+        day(23, "Rank Four Reef Run"),
+        day(24, "Rank Five Reef Run"),
+      ])
+      .returning();
+    if (!first || !held || !rescue || !master || !fifth) throw new Error("trip insert failed");
+    // The pool is exactly these five: the shop's other days go private, which
+    // the salvage board never reads.
+    const pool = [first, held, rescue, master, fifth].map((row) => row.id);
+    await db
+      .update(trips)
+      .set({ isPrivate: true })
+      .where(and(eq(trips.shopId, shop.id), notInArray(trips.id, [trip.id, ...pool])));
+    const seat = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: held.id,
+      personId,
+    });
+    if (!seat.ok) throw new Error(`booking failed: ${seat.reason}`);
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: "OW-SALVAGE-STEP",
+      status: "verified",
+    });
+    await db.insert(tripRequirements).values([
+      { tripId: rescue.id, shopId: shop.id, minimumCertificationLevel: "rescue" },
+      { tripId: master.id, shopId: shop.id, minimumCertificationLevel: "rescue" },
+    ]);
+
+    const offer = await salvageFor(db, { shopId: shop.id, tripId: trip.id, personId, now });
+    if (offer.kind !== "rebook") throw new Error(`expected a rebook offer, got ${offer.kind}`);
+    expect(offer.departures.map((row) => row.tripId)).toEqual([first.id, fifth.id]);
   });
 
   /**

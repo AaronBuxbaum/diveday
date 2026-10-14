@@ -4,8 +4,9 @@ import Link from "next/link";
 import { type ReactNode, useRef } from "react";
 import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
-import { GroupLabel, groupLabelClass } from "@/components/ui/ledger";
+import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
 import { MENU_PANEL, menuRowClass } from "@/components/ui/menu";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
@@ -44,6 +45,11 @@ export type WeekDeparture = {
   status: "upcoming" | "sailed";
   /** No price has ever been set — the quieter of the two marks a departure carries. */
   unpriced: boolean;
+  /**
+   * A rehearsal departure (ADR 20261012-rehearsal-departures): it wears its
+   * own mark in the flag's slot and is never asked for a price (#2395).
+   */
+  rehearsal: boolean;
   /**
    * The boat is back and somebody on its list was never counted (DOM-H3) —
    * **the loudest thing this board can say**, and it outranks the price flag
@@ -196,6 +202,7 @@ export type WeekBoardCopy = {
   noPriceSet: string;
   noPriceSetAria: string;
   noPriceSetAll: string;
+  rehearsal: string;
   rollCallOpen: string;
   rollCallOpenAria: string;
   /** What a day with nothing on it says, because a blank row is just a gap. */
@@ -623,6 +630,10 @@ function WeekBoat({
               shopSlug={shopSlug}
               copy={copy}
             />
+          ) : departure.rehearsal ? (
+            <Badge size="sm" className="mt-1">
+              {copy.rehearsal}
+            </Badge>
           ) : departure.unpriced && !sailed ? (
             <PriceFlag departure={departure} shopSlug={shopSlug} copy={copy} />
           ) : null}
@@ -811,7 +822,7 @@ export function WeekBoard({
                   className="border-b border-border"
                 >
                   <div className={WEEK_DAY_GRID_CLASS}>
-                    <h3 className="py-2">
+                    <h2 className="py-2">
                       <span className="sr-only">
                         {fill(copy.quietDays, { first: first.label, last: last.label })}
                       </span>
@@ -821,7 +832,7 @@ export function WeekBoard({
                       >
                         {first.weekday}–{last.weekday}
                       </span>
-                    </h3>
+                    </h2>
                     <div className="min-w-0">
                       <div className={WEEK_EMPTY_DAY_CLASS}>
                         <p className="text-sm text-muted">{copy.noBoats}</p>
@@ -895,7 +906,7 @@ export function WeekBoard({
                     first departure's time beside it. Stacked from `sm` up, the
                     weekday and its numeral made every day two lines tall, and
                     an empty day twice the height of the one line it says. */}
-                  <h3
+                  <h2
                     id={`week-day-${day.dateIso}`}
                     className="sticky top-(--chrome-h) z-10 self-start bg-background py-2"
                   >
@@ -923,7 +934,7 @@ export function WeekBoard({
                         {day.dayNumber}
                       </span>
                     </span>
-                  </h3>
+                  </h2>
                   <div className="min-w-0">
                     {/* More departures than hulls, or one hull in two places —
                       the question the board exists to answer, on the day it is

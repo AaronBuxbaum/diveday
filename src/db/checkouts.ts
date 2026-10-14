@@ -11,6 +11,8 @@ import { allocateSettledTotal } from "@/lib/payments/settlement";
 import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
+import { enqueueCheckoutIntegrationEvent } from "./integration-events";
+import { boundLockWaits } from "./lock-bounds";
 import {
   claimBookingsForCheckout,
   idempotencyKeyFor,
@@ -890,6 +892,55 @@ async function latestCheckoutForBookingIds(
   return row?.checkout ?? null;
 }
 
+/**
+ * **What the party paid by card**, for the lead's confirmation (#2447): the
+ * completed checkout this booking leads, the total Stripe itself reported as
+ * settled (`settled_total_cents`, discount and tax already in it), and how
+ * many seats it covered. Display only.
+ *
+ * Null unless every part is Stripe's own: no completed checkout, no settled
+ * figure (never the asked total in its place, which a discount or tax makes
+ * wrong), or a booking that is a party member's own seat rather than the one
+ * that paid. Null too once anything was refunded or a seat it covered was
+ * cancelled: the figure would no longer be what the party paid for.
+ */
+export async function settledPartyPayment(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<{ amountCents: number; currency: string; seats: number } | null> {
+  const [booking] = await db
+    .select({ partyLeadBookingId: bookings.partyLeadBookingId })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  if (!booking || booking.partyLeadBookingId) return null;
+  const checkout = await latestCheckoutForBookingIds(db, shopId, [bookingId]);
+  if (checkout?.status !== "completed" || !checkout.settledTotalCents) return null;
+  // Only while it is still the whole truth: a refund or a cancelled seat
+  // since means the settled total no longer says what the party paid for.
+  if (checkout.refundedCents > 0) return null;
+  const covered = await db
+    .select({ bookingId: bookingCheckoutBookings.bookingId, status: bookings.status })
+    .from(bookingCheckoutBookings)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
+    )
+    .where(
+      and(
+        eq(bookingCheckoutBookings.shopId, shopId),
+        eq(bookingCheckoutBookings.checkoutId, checkout.id),
+      ),
+    );
+  if (covered.some((seat) => seat.status === "cancelled")) return null;
+  return {
+    amountCents: checkout.settledTotalCents,
+    currency: checkout.currency,
+    seats: Math.max(1, covered.length),
+  };
+}
+
 /** The most recent checkout for one booking — drives the confirmation page's payment panel. */
 export async function getLatestCheckoutForBooking(
   db: DbExecutor,
@@ -1058,6 +1109,7 @@ export async function lockCheckoutSeatsBySessionId(
 /** `SELECT … FOR UPDATE` over these bookings, in id order. */
 export async function lockSeatsInOrder(tx: AppTransaction, bookingIds: string[]): Promise<void> {
   if (bookingIds.length === 0) return;
+  await boundLockWaits(tx);
   await tx
     .select({ id: bookings.id })
     .from(bookings)
@@ -1387,6 +1439,16 @@ export async function markCheckoutPaidBySessionId(
         operation: "checkout_settled",
       });
     }
+    // One sale for the shop's books (batch 6 item 9, H-120): the whole
+    // checkout as one receipt naming the party lead, never one per seat.
+    // Keyed on the checkout, so the self-healing replay above sends nothing
+    // twice.
+    await enqueueCheckoutIntegrationEvent(tx, {
+      shopId: updated.shopId,
+      checkoutId: updated.id,
+      eventType: "order.paid",
+      idempotencyKey: `checkout:${updated.id}:paid`,
+    });
     return updated;
   });
 }

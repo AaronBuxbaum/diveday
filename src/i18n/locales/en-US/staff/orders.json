@@ -29,6 +29,7 @@
     "lineItemsLegend": "Line items",
     "lineItemKindAria": "Line item {number} kind",
     "lineItemDescriptionPlaceholder": "Description",
+    "lineItemDescriptionAria": "Line item {number} description",
     "quantityLabel": "Quantity",
     "unitPriceLabel": "Unit price (USD)",
     "unitPricePlaceholder": "$0.00",
@@ -55,6 +56,8 @@
     "raisedOn": "Raised {date}",
     "createdBy": "by {name}",
     "boughtOnline": "bought online",
+    "openTrip": "Open the departure",
+    "balanceOwed": "{amount} still owed on the seat.",
     "status": {
       "open": "Open — awaiting payment",
       "paid": "Paid",
@@ -110,6 +113,7 @@
   },
   "index": {
     "newOrder": "New order",
+    "downloadCsv": "Download orders (CSV)",
     "notice": {
       "paymentNotConnected": "Payments aren’t connected yet, so there’s no account to invoice from. Connect one to start charging divers.",
       "notAuthorized": "Sending an invoice is limited to owners and managers. Ask one of them to bill this diver.",

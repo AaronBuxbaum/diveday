@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeSource } from "@/test/route-source";
 
 /**
  * The manifest is a Server Component over the roll call's reads, so these read
@@ -8,17 +7,12 @@ import { describe, expect, it } from "vitest";
  * its sections sit relative to each other — never what the roll call decides
  * or shows; that is pinned beside each component.
  */
-const HERE = import.meta.dirname;
-const SOURCE = readFileSync(join(HERE, "page.tsx"), "utf8");
+const SOURCE = component("page.tsx");
 
 /** The source of a file under `_components/`, or under `src/components/`. */
+/** The route's source, wherever a split put it (`src/test/route-source.ts`). */
 function component(file: string): string {
-  const local = join(HERE, "_components", file);
-  try {
-    return readFileSync(local, "utf8");
-  } catch {
-    return readFileSync(join(HERE, "..", "..", "..", "..", "..", "..", "components", file), "utf8");
-  }
+  return routeSource(import.meta.dirname, file);
 }
 
 /** The opening `<section …>` tag around `anchor`, braces and all. */
@@ -130,5 +124,19 @@ describe("the dock desk's seat list", () => {
     );
     expect(dockDesk).toContain("seats={manifest.divers}");
     expect(dockDesk).not.toContain("seats={departureManifest.divers}");
+  });
+});
+
+/**
+ * **A stale `?checkpoint=` leaves the address bar** (#2508): the page sends it
+ * to the manifest's canonical URL instead of rendering the dock under the
+ * stale address. `openCheckpoint` decides; the page only acts on it.
+ */
+describe("a stale checkpoint in the URL", () => {
+  it("redirects to the manifest without it", () => {
+    const at = SOURCE.indexOf('"stale" in opened');
+    expect(at, "the page reads openCheckpoint's stale answer").toBeGreaterThan(-1);
+    const branch = SOURCE.slice(at, SOURCE.indexOf(";", at));
+    expect(branch).toContain('redirect(shopPath(shopSlug, "trips", tripId, "manifest"))');
   });
 });

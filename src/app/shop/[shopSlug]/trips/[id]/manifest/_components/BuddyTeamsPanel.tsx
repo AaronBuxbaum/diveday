@@ -5,7 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -283,12 +283,12 @@ export function BuddyTeamsPanel({
                     <li>
                       <form action={dissolveBuddyTeamAction} className="flex">
                         <input type="hidden" name="teamId" value={team.teamId} />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel={t("manifest.buddyDissolve")}
                           className={buttonClass({ variant: "danger-ghost", size: "sm" })}
                         >
                           {t("manifest.buddyDissolve")}
-                        </button>
+                        </SubmitButton>
                       </form>
                     </li>
                   </ul>
@@ -331,9 +331,12 @@ export function BuddyTeamsPanel({
                           </optgroup>
                         </select>
                       </Field>
-                      <button type="submit" className={buttonClass({ variant: "secondary" })}>
+                      <SubmitButton
+                        pendingLabel={t("manifest.buddyAddMemberSubmit")}
+                        className={buttonClass({ variant: "secondary" })}
+                      >
                         {t("manifest.buddyAddMemberSubmit")}
-                      </button>
+                      </SubmitButton>
                     </form>
                   ) : null}
                 </li>
@@ -390,9 +393,12 @@ export function BuddyTeamsPanel({
                 single tick is a worded refusal beside the button that earned
                 it, not a floating line at the top of the panel. */}
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <button type="submit" className={buttonClass()}>
+                  <SubmitButton
+                    pendingLabel={t("manifest.buddyFormSubmit")}
+                    className={buttonClass()}
+                  >
                     {t("manifest.buddyFormSubmit")}
-                  </button>
+                  </SubmitButton>
                   <FormStatus>{builderError}</FormStatus>
                 </div>
               </fieldset>

@@ -7,7 +7,8 @@
     "tapHeadingIn": "Heading in",
     "tapHome": "Home",
     "recordedLine": "{name} · {time}",
-    "errorRefusal": "That didn’t save. Check your connection and tap again."
+    "errorRefusal": "That didn’t save. Check your connection and tap again.",
+    "openRollCall": "Open roll call"
   },
   "skipToRollCall": "Skip to roll call",
   "stillToBoardHeading": "Still to board ({count})",
@@ -35,6 +36,7 @@
   "aboardOfTotal": "{aboard} of {total, plural, one {# diver} other {# divers}} aboard",
   "headCountBlocked": "{count} blocked",
   "headCountBlockedAboard": "{count, plural, one {# blocked person aboard} other {# blocked people aboard}}",
+  "headCountOverCertificate": "{limit, plural, one {Certificate allows # passenger} other {Certificate allows # passengers}}",
   "progressAriaLabel": "Roll-call progress",
   "ofTotalAboard": "of {total, plural, one {# diver} other {# divers}} aboard",
   "allAccountedFor": "Everyone’s accounted for, divers and crew. Ready for the next check.",
@@ -90,7 +92,7 @@
   "seen": {
     "heading": "Seen",
     "consequence": "At {site}. Divers read this on the trip page.",
-    "offlineLabel": "Offline — a tap will not save until the boat has bars",
+    "offlineLabel": "Offline: a tap will not save until the boat has bars",
     "delete": "Delete",
     "deleteNamed": "Delete {species}",
     "refusal": "No signal. Tap it again when the boat has bars."
@@ -122,8 +124,8 @@
   "medicalEarlierRefusalChip": "Physician said no before",
   "medicalReferralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file",
   "medicalReferralUnresolvedChip": "Referral still open",
-  "medicalRidingOnlyNotClearedChip": "Physician did not clear: riding only",
-  "medicalRidingOnlyReferralChip": "Medical referral open: riding only",
+  "medicalRidingOnlyNotClearedChip": "Riding only: MD said no",
+  "medicalRidingOnlyReferralChip": "Riding only: referred",
   "medicalRidingOnlyNotCleared": "A physician did not clear this person on {date}: riding only, not in the water",
   "medicalRidingOnlyReferral": "Referred to a physician on {date} with no answer on file: riding only, not in the water",
   "medicalReferralLink": "View the referral",
@@ -146,7 +148,7 @@
   "buddyNewTeamHint": "Tick two or more. Crew count too, and a divemaster can lead several.",
   "buddyDiverGroupLabel": "Divers",
   "buddyCrewGroupLabel": "Crew",
-  "buddyDragHint": "Press and hold someone, then drag them onto their buddy. Ticking boxes still works.",
+  "buddyDragHint": "Press and hold someone, then drag them onto their buddy, or use the tick boxes.",
   "buddyDragHolding": "Holding {name}. Drag onto a buddy to pair them.",
   "buddyDragOver": "Release to pair {a} with {b}.",
   "buddyFormSubmit": "Form buddy team",
@@ -251,5 +253,18 @@
       "snorkeler": "Diving, booked as snorkeler",
       "rider": "Diving, booked as rider"
     }
+  },
+  "checkpointGap": {
+    "lineDivers": "{divers, plural, one {# diver} other {# divers}} not marked after dive {dive}.",
+    "lineCrew": "{crew} crew not marked after dive {dive}.",
+    "lineBoth": "{divers, plural, one {# diver} other {# divers}} and {crew} crew not marked after dive {dive}.",
+    "notCounted": "Dive {dive} not counted. If it was called off, set the plan to {plan, plural, one {# dive} other {# dives}}.",
+    "setPlan": "Change the plan",
+    "openAnyway": "Open anyway",
+    "back": "Back to dive {dive}"
+  },
+  "staleRollCall": {
+    "pushTitle": "Roll call still open",
+    "pushBody": "{title}: {count, plural, one {# person} other {# people}} not marked after dive {dive}."
   }
 }

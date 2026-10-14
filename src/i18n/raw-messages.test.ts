@@ -147,10 +147,11 @@ describe("messages fetched with .raw()", () => {
   });
 
   it("resolves every key it finds in a bundle", () => {
-    const unresolved = [...sites].filter(
-      ([key]) =>
-        !(key in flatten(DIVER_MESSAGES["en-US"])) && !(key in flatten(STAFF_MESSAGES["en-US"])),
-    );
+    // Flattened once: flattening both bundles per call site took seconds and
+    // timed out on a loaded machine.
+    const diver = flatten(DIVER_MESSAGES["en-US"]);
+    const staff = flatten(STAFF_MESSAGES["en-US"]);
+    const unresolved = [...sites].filter(([key]) => !(key in diver) && !(key in staff));
     expect(unresolved.map(([key, files]) => `${key} (${files.join(", ")})`)).toEqual([]);
   });
 

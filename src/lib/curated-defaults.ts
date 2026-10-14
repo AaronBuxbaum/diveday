@@ -117,13 +117,86 @@ export const ZONE_COUNTRY: Record<CuratedTimeZone, string> = {
   "Pacific/Auckland": "NZ",
 };
 
-/** Each curated country's currency, read off the zone tables above. */
-const COUNTRY_CURRENCY: ReadonlyMap<string, string> = new Map(
-  (Object.keys(ZONE_COUNTRY) as CuratedTimeZone[]).map((zone) => [
-    ZONE_COUNTRY[zone],
-    ZONE_CURRENCY[zone],
-  ]),
-);
+/**
+ * **The euro area, by country** (#2422): the members that price in euros, and
+ * the French overseas regions divers fly to, which are in it too. Spanish is a
+ * shipped locale, and with London the only European shortcut zone a shop in
+ * Spain or Malta started in dollars.
+ */
+const EURO_COUNTRIES: ReadonlySet<string> = new Set([
+  "AT",
+  "BE",
+  "BG",
+  "CY",
+  "DE",
+  "EE",
+  "ES",
+  "FI",
+  "FR",
+  "GR",
+  "HR",
+  "IE",
+  "IT",
+  "LT",
+  "LU",
+  "LV",
+  "MT",
+  "NL",
+  "PT",
+  "SI",
+  "SK",
+  "GP",
+  "MQ",
+  "RE",
+  "YT",
+]);
+
+/**
+ * **The euro area's zones, for a shop that has given only its timezone** —
+ * which is every shop at sign-up. Not curated shortcuts: the picker still lists
+ * them among every IANA zone; this only says which country each is in.
+ */
+const EURO_ZONE_COUNTRY: Readonly<Record<string, string>> = {
+  "Europe/Vienna": "AT",
+  "Europe/Brussels": "BE",
+  "Europe/Sofia": "BG",
+  "Asia/Nicosia": "CY",
+  "Europe/Nicosia": "CY",
+  "Europe/Berlin": "DE",
+  "Europe/Busingen": "DE",
+  "Europe/Tallinn": "EE",
+  "Europe/Madrid": "ES",
+  "Africa/Ceuta": "ES",
+  "Atlantic/Canary": "ES",
+  "Europe/Helsinki": "FI",
+  "Europe/Paris": "FR",
+  "Europe/Athens": "GR",
+  "Europe/Zagreb": "HR",
+  "Europe/Dublin": "IE",
+  "Europe/Rome": "IT",
+  "Europe/Vilnius": "LT",
+  "Europe/Luxembourg": "LU",
+  "Europe/Riga": "LV",
+  "Europe/Malta": "MT",
+  "Europe/Amsterdam": "NL",
+  "Europe/Lisbon": "PT",
+  "Atlantic/Madeira": "PT",
+  "Atlantic/Azores": "PT",
+  "Europe/Ljubljana": "SI",
+  "Europe/Bratislava": "SK",
+  "America/Guadeloupe": "GP",
+  "America/Martinique": "MQ",
+  "Indian/Reunion": "RE",
+  "Indian/Mayotte": "YT",
+};
+
+/** Each known country's currency: the curated zone tables, then the euro area. */
+const COUNTRY_CURRENCY: ReadonlyMap<string, string> = new Map([
+  ...(Object.keys(ZONE_COUNTRY) as CuratedTimeZone[]).map(
+    (zone) => [ZONE_COUNTRY[zone], ZONE_CURRENCY[zone]] as const,
+  ),
+  ...[...EURO_COUNTRIES].map((country) => [country, "eur"] as const),
+]);
 
 /**
  * **Where a dive briefing is given in feet, and the water in Fahrenheit.**
@@ -168,7 +241,8 @@ export function shopDefaults({
   timeZone: string;
 }): ShopDefaults {
   const typed = country?.trim().toUpperCase() || null;
-  const iso = typed ?? ZONE_COUNTRY[timeZone as CuratedTimeZone] ?? null;
+  const iso =
+    typed ?? ZONE_COUNTRY[timeZone as CuratedTimeZone] ?? EURO_ZONE_COUNTRY[timeZone] ?? null;
   const imperial = iso !== null && IMPERIAL_COUNTRIES.has(iso);
   const derived = (iso && COUNTRY_CURRENCY.get(iso)) ?? (imperial ? "usd" : undefined);
   return {
@@ -179,27 +253,43 @@ export function shopDefaults({
 }
 
 /**
- * **Whether DiveDay's starting dive-site catalog is near this shop.** The
- * catalog is Florida Keys sites (`src/content/dive-site-templates.ts`), so the
- * first-run line that offers it only makes sense to a Florida shop; a shop in
- * Bonaire or Cancun is told to add its own first site instead (UX review
- * 2026-10-11, item 15).
+ * **The catalog areas near this shop** — the dive areas whose templates the
+ * first-run line may offer it (issue #2477; UX review 2026-10-11, item 15).
  *
- * The address wins when the shop has given one: a country other than the US,
- * or a US region other than Florida, is not local. With no address yet, the
- * Eastern zone is the best guess the timezone allows.
+ * The address wins when the shop has given one. A country decides alone for
+ * an area that is a whole country; where one country holds the area among
+ * other places (Florida in the US), the subdivision must match too. Only what
+ * the address leaves unsaid falls back to the timezone, and only to a zone the
+ * area names as mostly its own, so a New York-zone shop that types a North
+ * Carolina address is never offered Florida sites.
+ *
+ * The areas come in as an argument rather than an import: this module is the
+ * framework-free domain layer, and which areas exist is content.
  */
-export function siteCatalogIsLocal(shop: {
-  timezone: string;
-  addressCountry?: string | null;
-  addressRegion?: string | null;
-}): boolean {
-  const country = shop.addressCountry?.trim().toUpperCase();
-  if (country && country !== "US") return false;
-  const region = shop.addressRegion?.trim().toUpperCase();
-  if (region) return region === "FL" || region === "FLORIDA";
-  return shop.timezone === "America/New_York";
+export function catalogAreasForShop<Area extends CatalogArea>(
+  shop: { timezone: string; addressCountry?: string | null; addressRegion?: string | null },
+  areas: readonly Area[],
+): Area[] {
+  const country = shop.addressCountry?.trim().toUpperCase() || null;
+  const subdivision = shop.addressRegion?.trim().toUpperCase() || null;
+  const zoneGuess = (area: CatalogArea) => area.region.timeZones?.includes(shop.timezone) ?? false;
+  return areas.filter((area) => {
+    const { region } = area;
+    if (country && country !== region.country) return false;
+    if (!region.subdivisions) return country ? true : zoneGuess(area);
+    if (subdivision) return region.subdivisions.includes(subdivision);
+    return zoneGuess(area);
+  });
 }
+
+/** The part of a `src/content/dive-areas.ts` area that decides whether it is near a shop. */
+export type CatalogArea = {
+  region: {
+    country: string;
+    subdivisions?: readonly string[];
+    timeZones?: readonly string[];
+  };
+};
 
 /** `shopDefaults` for a shop that has told DiveDay only its timezone (sign-up). */
 export function shopDefaultsForTimeZone(timeZone: string): ShopDefaults {

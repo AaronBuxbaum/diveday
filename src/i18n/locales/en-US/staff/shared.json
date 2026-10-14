@@ -51,7 +51,7 @@
     "outcomeNotCleared": "Not cleared",
     "evaluatedOnLabel": "Date of the physician’s evaluation",
     "physicianNameLabel": "Physician",
-    "evidenceHint": "Their name, or attach the evaluation below. One or the other.",
+    "evidenceHint": "Their name, the evaluation below, or both.",
     "documentLabel": "Physician’s evaluation form",
     "documentHint": "An image or PDF of the signed form.",
     "documentChoose": "Choose a file",
@@ -93,7 +93,7 @@
   },
   "capacity": {
     "full": "Full",
-    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
+    "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",
     "certificateCap": "Certificate: {sellable} of {stated} seats"
   },
   "compass": {
@@ -214,6 +214,7 @@
       "certificationInsufficient": "Not certified for this trip. It needs {level} or higher.",
       "certificationInsufficientHeld": "Not certified for this trip. It needs {level} or higher, and the highest certified card on file is {held}.",
       "certificationInTraining": "Not yet certified {level}. Booked on a course that finishes before this trip; this clears when the instructor certifies them.",
+      "certificationNotYet": "Says they’re not certified yet. This trip needs {level} or higher, so get in touch before the day.",
       "specialtyMissing": "{specialty} specialty is required; no certification is on file.",
       "specialtyPending": "{specialty} specialty certification is waiting for staff verification.",
       "specialtyImportUnconfirmed": "{specialty} specialty certification came across in an import, and a staffer needs to confirm it before this dive.",
@@ -524,7 +525,7 @@
     "dockLineSays": "Say hello to {name}: says {level}."
   },
   "diveIntent": {
-    "aboardToday": "Aboard today: {list}",
+    "onTheList": "On the list today: {list}",
     "easingBack": "{count} getting comfortable again",
     "smallLife": "{count} looking for small life",
     "aWreck": "{count} hoping for a wreck",
@@ -548,11 +549,15 @@
     "told": "{count, plural, one {Told # diver the new time.} other {Told # divers the new time.}}",
     "someMissed": "{count, plural, one {# diver could not be reached by email or text.} other {# divers could not be reached by email or text.}}",
     "notTold": "Not told. The divers still have the old time.",
+    "tellingPlace": "{count, plural, one {Telling # diver the new meeting point…} other {Telling # divers the new meeting point…}}",
+    "toldPlace": "{count, plural, one {Told # diver the new meeting point.} other {Told # divers the new meeting point.}}",
+    "notToldPlace": "Not told. The divers still have the old meeting point.",
     "tellThem": "Tell them"
   },
   "formDraft": {
     "pickedUp": "Picked up from the desk, {time}.",
-    "startOver": "Start over"
+    "startOver": "Start over",
+    "unsavedSection": "Unsaved"
   },
   "identityCheck": {
     "reasonSharedEmail": "Booked as {bookedAs} with {name}’s email. Confirm who this is.",
@@ -574,6 +579,12 @@
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Give them their own record",
     "splitting": "Creating…"
+  },
+  "boatWork": {
+    "missingSizes": "{count, plural, one {# person} other {# people}} missing rental sizes",
+    "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} nitrox with no verified card",
+    "missingContact": "{count, plural, one {# person has} other {# people have}} no emergency contact",
+    "openOrders": "{count, plural, one {# order} other {# orders}} awaiting payment"
   },
   "payouts": {
     "paid": "Paid out {amount} on {date}, covering {from} to {to}",

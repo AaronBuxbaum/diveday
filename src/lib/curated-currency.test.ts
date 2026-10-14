@@ -190,3 +190,77 @@ describe("what a shop's country starts it on", () => {
     }
   });
 });
+
+/**
+ * **A euro shop starts in euros** (#2422). Spanish is a shipped locale, and a
+ * shop in Spain, Italy or Malta was created pricing in dollars because the only
+ * European shortcut zone is London. Every member of the euro area is named
+ * here by country, and its zones are known to sign-up, which passes only the
+ * timezone.
+ */
+describe("a shop in the euro area", () => {
+  const EURO_AREA = [
+    "AT",
+    "BE",
+    "BG",
+    "CY",
+    "DE",
+    "EE",
+    "ES",
+    "FI",
+    "FR",
+    "GR",
+    "HR",
+    "IE",
+    "IT",
+    "LT",
+    "LU",
+    "LV",
+    "MT",
+    "NL",
+    "PT",
+    "SI",
+    "SK",
+  ];
+
+  it.each(EURO_AREA)("starts a shop in %s on euros, metres and Celsius", (country) => {
+    expect(shopDefaults({ country, timeZone: "America/New_York" })).toEqual({
+      currency: "eur",
+      depthUnit: "meters",
+      temperatureUnit: "celsius",
+    });
+  });
+
+  it.each([
+    ["Europe/Madrid", "eur"],
+    ["Atlantic/Canary", "eur"],
+    ["Europe/Rome", "eur"],
+    ["Europe/Malta", "eur"],
+    ["Europe/Athens", "eur"],
+    ["Europe/Lisbon", "eur"],
+    ["Atlantic/Madeira", "eur"],
+    ["Europe/Paris", "eur"],
+    ["America/Martinique", "eur"],
+    ["America/Guadeloupe", "eur"],
+    ["Indian/Reunion", "eur"],
+  ])("starts a shop that signed up in %s on %s", (zone, currency) => {
+    expect(shopDefaultsForTimeZone(zone).currency).toBe(currency);
+  });
+
+  it("leaves a European shop outside the euro area alone", () => {
+    expect(shopDefaults({ country: "GB", timeZone: "Europe/London" }).currency).toBe("gbp");
+    expect(shopDefaults({ country: "PL", timeZone: "Europe/Warsaw" }).currency).toBe("usd");
+    expect(shopDefaultsForTimeZone("Europe/Zurich").currency).toBe("usd");
+  });
+
+  it("keeps the dive countries on their own currencies by country alone", () => {
+    expect(shopDefaults({ country: "EG", timeZone: "Europe/Madrid" }).currency).toBe("egp");
+    expect(shopDefaults({ country: "TH", timeZone: "Europe/Madrid" }).currency).toBe("thb");
+    expect(shopDefaults({ country: "ID", timeZone: "Europe/Madrid" }).currency).toBe("idr");
+    expect(shopDefaults({ country: "PH", timeZone: "Europe/Madrid" }).currency).toBe("php");
+    expect(shopDefaults({ country: "MX", timeZone: "Europe/Madrid" }).currency).toBe("mxn");
+    // Stripe does not operate in Belize or Honduras: dollars, by country too.
+    expect(shopDefaults({ country: "BZ", timeZone: "Europe/Madrid" }).currency).toBe("usd");
+    expect(shopDefaults({ country: "HN", timeZone: "Europe/Madrid" }).currency).toBe("usd");
+  });
+});

@@ -207,8 +207,8 @@ test.describe("staff", () => {
     // never named the specialty.
     await expect(library.getByText("Advanced Open Water · Deep", { exact: true })).toBeVisible();
 
-    // Location is searchable too: "Pennekamp" appears in no site's *name*.
-    await search.fill("pennekamp");
+    // Location is searchable too: "Dry Rocks" appears in no site's *name*.
+    await search.fill("dry rocks");
     await search.press("Enter");
     await expect(rows).toHaveCount(1);
     await expect(
@@ -478,7 +478,7 @@ test.describe("staff", () => {
     // which is why scripts/route-coverage.json carried an exemption for it
     // until this test landed.
     //
-    // The seed publishes one global template, Molasses Reef, currently at v2,
+    // The seed publishes one global template, Molasses Reef, currently at v3,
     // and the demo shop already holds a copy imported at v1 — so the library
     // opens offering an update, and importing again makes a *second,
     // independent* site rather than overwriting the tailored one. That
@@ -500,7 +500,7 @@ test.describe("staff", () => {
     // `◆`/`◇` glyph pair and the adopted-version line went back to the site
     // page. `.first()` stays because the assertion is "the library is offering
     // an update", not "exactly one row is".
-    const updateReady = library.getByText("Template update v2 ready.").first();
+    const updateReady = library.getByText("Template update v3 ready.").first();
 
     await page.goto("/shop/blue-mantis/dive-sites");
     await expect(existing).toHaveCount(1);
@@ -520,10 +520,13 @@ test.describe("staff", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
     ).toBeVisible();
-    const template = page.locator("li").filter({ hasText: "Molasses Reef" }).filter({
-      visible: true,
-    });
-    await expect(template.getByText("Template v2")).toBeVisible();
+    // By the row's own link, not loose text: Sand Island's briefing mentions
+    // Molasses Reef too, and `hasText` would match both rows.
+    const template = page
+      .locator("li")
+      .filter({ has: page.getByRole("link", { name: "Molasses Reef", exact: true }) })
+      .filter({ visible: true });
+    await expect(template.getByText("Template v3")).toBeVisible();
 
     // The catalog's one action. It lands on the freshly created site's own
     // briefing, ready to tailor — not back on a list where staff would have to
@@ -754,7 +757,7 @@ test("the day's field guide reads in the shop's own picks, in English", async ({
   await page.getByRole("heading", { name: "The rest of the briefing" }).click();
   await expect(page.getByRole("heading", { name: "Look for" })).toBeVisible();
   await expect(page.getByText("Stoplight parrotfish").first()).toBeVisible();
-  await expect(page.getByText("Elkhorn coral").first()).toBeVisible();
+  await expect(page.getByText("Grooved brain coral").first()).toBeVisible();
 });
 
 test("the same saved field guide reads in Spanish for a Spanish-speaking diver", async ({
@@ -775,7 +778,7 @@ test("the same saved field guide reads in Spanish for a Spanish-speaking diver",
   await page.getByRole("heading", { name: "El resto del briefing" }).click();
   await expect(page.getByRole("heading", { name: "Busca" })).toBeVisible();
   await expect(page.getByText("Loro semáforo").first()).toBeVisible();
-  await expect(page.getByText("Coral cuerno de alce").first()).toBeVisible();
+  await expect(page.getByText("Coral cerebro surcado").first()).toBeVisible();
   await expect(page.getByText("Stoplight parrotfish")).toHaveCount(0);
 });
 

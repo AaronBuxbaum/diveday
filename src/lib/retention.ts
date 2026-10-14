@@ -80,20 +80,6 @@
  * review of code review 2026-10-13 (layer B), which moved it here from the
  * out-of-scope list.
  *
- * **`incident_reports` is kept for ever too, by decision, with its
- * `incident_report_people` and `incident_report_addenda`.** A report is the
- * shop's own account of an incident on a departure (ADR
- * 20261012-incident-reports), the record an insurer, an authority or a court
- * asks for, and a claim can arrive long after any fixed window: a minor's
- * limitation period can run from their eighteenth birthday, and a report with
- * an EMS, hospital or chamber handover is exactly the one a window would delete
- * first. Roll call is kept for ever for the same reason, and the report is the
- * narrative beside it. Erasure does not wait on a clock: `anonymizeDiver`
- * redacts a named diver's identity inside a kept report at once (H-111). The
- * people and addenda are the report's children and have no life of their own.
- * Chosen by the product owner, 2026-10-13 (H-112), over the seven-year window
- * the ADR first set.
- *
  * **`notification_send_queue` empties its own rows of personal data, and the
  * window below only bounds what is left.** It holds a rendered outbound
  * message, a recipient and a subject's address and phone while a row is being
@@ -113,9 +99,7 @@
  * answer for every one of them; ADR 20260803-append-only-retention carries the
  * same list. Safety records about a departure: `roll_call_events`,
  * `roll_call_crew_events`, `booking_arrival_events`, `buddy_team_events`,
- * `trip_stage_events`, `pre_departure_check_events`, and the incident report with its
- * people and addenda (`incident_reports`, `incident_report_people`,
- * `incident_report_addenda`), each argued above. Equipment evidence:
+ * `trip_stage_events`, `pre_departure_check_events` (argued above). Equipment evidence:
  * `gear_service_events` (argued above). Records of who changed what on a
  * departure or a ticket, read as the record itself: `trip_change_events`,
  * `work_order_events`. Queues and obligations deleted by their own work:
@@ -166,6 +150,7 @@ export type RetainedTable =
   | "notification_send_queue"
   | "waiver_deliveries"
   | "setup_requests"
+  | "incident_reports"
   | "lost_items"
   | "departure_notes";
 
@@ -189,9 +174,6 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "roll_call_crew_events",
   "booking_arrival_events",
   "pre_departure_check_events",
-  "incident_reports",
-  "incident_report_people",
-  "incident_report_addenda",
 ];
 
 /**
@@ -415,6 +397,16 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    */
   setup_requests: 365,
   /**
+   * 2555 days (7 years), measured from when the incident happened (a draft
+   * that never said when is measured from when it was started). A record, not
+   * a trail, and listed here for the reason `booking_payment_events` is: the
+   * window is liability-driven, so "how long does a shop keep an incident
+   * report?" needs a stated answer (ADR 20261012-incident-reports). The people
+   * in a report and its addenda go with it by cascade. Erasure does not wait
+   * for this: `anonymizeDiver` redacts a diver's identity in a report at once.
+   */
+  incident_reports: 2555,
+  /**
    * 90 days **past being resolved** (batch 4, J2). An item found aboard is
    * the shop's to hold while it is `open`, so an open one is never eligible
    * however old; once it went home (`returned`) or was given up on
@@ -432,14 +424,14 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
 };
 
 /**
- * The most rows one prune pass may delete per table. A bound, not a target:
- * the pass runs weekly (`vercel.json`, Sundays 03:30 UTC), so a table that is
- * over its window by more than this converges over a few weeks rather than
- * trying to delete a decade of backlog inside one function invocation's time
- * limit; at 5,000 rows a week a table that gains more than that each week
- * never converges, and the `capped` outcome is the signal to raise this. Raising it trades
- * convergence speed for the risk of a run that outlives the platform's
- * function ceiling and is killed halfway.
+ * The most rows one prune **batch** may delete from a table: a bound per
+ * statement pair, not per run. The weekly run (`vercel.json`, Sundays 03:30
+ * UTC) keeps taking batches from a table still over its window until it is
+ * inside it or the run's time budget is spent (`PRUNE_TIME_BUDGET_MS`,
+ * `src/db/retention.ts`), so a backlog drains in one run rather than at 5,000
+ * rows a week. A table still `capped` when the budget runs out logs
+ * `cron_retention.prune_capped`, which alarms: the backlog then exceeds about 45
+ * seconds of deletes, and the fix is a faster arm or a more frequent run.
  */
 export const PRUNE_BATCH_LIMIT = 5_000;
 

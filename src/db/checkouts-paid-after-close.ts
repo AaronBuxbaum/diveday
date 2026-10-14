@@ -4,7 +4,9 @@ import { log } from "@/lib/log";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import type { AppDb } from "./client";
 import {
+  awaitingStripeReconciliation,
   idempotencyKeyFor,
+  markPaymentOperationUnanswered,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
   STALE_AFTER_MS,
@@ -128,9 +130,11 @@ export async function listPaidAfterCloseCheckouts(
  *   still owed (never paid after closing, or already refunded).
  * - `in_progress` — another refund of it is at Stripe right now.
  * - `needs_reconciliation` — a reversal Stripe confirmed was never recorded
- *   here; a human matches it from the stuck-operations queue first.
+ *   here, or one was sent and Stripe never answered; a human matches it from
+ *   the stuck-operations queue first.
  * - `not_connected` — the shop's Stripe account no longer takes payments.
- * - `failed` — Stripe refused, or could not be reached.
+ * - `failed` — Stripe refused, or could not be reached before the refund was
+ *   sent.
  */
 export type PaidAfterCloseRefundOutcome =
   | { status: "refunded"; amountCents: number }
@@ -187,7 +191,7 @@ export async function refundPaidAfterCloseCheckout(
     const [unrecorded] = await tx
       .select({ id: paymentOperationIntents.id })
       .from(paymentOperationIntents)
-      .where(and(refundsOfThisCheckout, isNotNull(paymentOperationIntents.stripeObjectId)))
+      .where(and(refundsOfThisCheckout, awaitingStripeReconciliation()))
       .limit(1);
     if (unrecorded) return { status: "needs_reconciliation" as const };
 
@@ -211,6 +215,13 @@ export async function refundPaidAfterCloseCheckout(
     idempotencyKeyFor(intent.id),
     owedCents,
   );
+  if (result.status === "unanswered") {
+    // The reversal may exist: left `started`, marked, for a human — never
+    // `failed`, which would let the next press reverse the money again.
+    await markPaymentOperationUnanswered(db, intent.id);
+    log("checkout.paid_after_close_refund_unanswered", "warn", { shopId, checkoutId: row.id });
+    return { status: "needs_reconciliation" };
+  }
   if (result.status !== "refunded") {
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
     log("checkout.paid_after_close_refund_failed", "warn", {

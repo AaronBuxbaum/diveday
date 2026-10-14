@@ -15,6 +15,7 @@ import {
   kitMissingNotices,
   lifeSafetyNotices,
   passengersAboveCertificate,
+  passengersAboveCertificateAboard,
   type SafetyKitUnit,
   safetyKitNotices,
   seatsWithinCertificate,
@@ -243,6 +244,19 @@ describe("passengersAboveCertificate", () => {
 
   it("never reads a missing certificate as a limit of zero", () => {
     expect(passengersAboveCertificate(40, null)).toBe(false);
+  });
+});
+
+describe("passengersAboveCertificateAboard (the manifest's head count)", () => {
+  it("is the people counted aboard past the certificate, or null within it", () => {
+    expect(passengersAboveCertificateAboard(13, 12)).toEqual({ aboard: 13, limit: 12 });
+    expect(passengersAboveCertificateAboard(12, 12)).toBeNull();
+    expect(passengersAboveCertificateAboard(0, 12)).toBeNull();
+  });
+
+  it("says nothing for a boat with no certificate recorded, or none known", () => {
+    expect(passengersAboveCertificateAboard(40, null)).toBeNull();
+    expect(passengersAboveCertificateAboard(40, undefined)).toBeNull();
   });
 });
 

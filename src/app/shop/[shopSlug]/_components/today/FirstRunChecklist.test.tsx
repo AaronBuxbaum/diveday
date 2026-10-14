@@ -22,13 +22,17 @@ const COPY: FirstRunChecklistCopy = {
   profileAction: "Set up profile",
   profileDone: "Shop profile configured.",
   unitsTitle: "Check your currency and depth unit",
-  unitsBody: "We started you on USD and feet from your timezone.",
+  unitsBody: "We picked USD, feet and Fahrenheit for where you are.",
   unitsAction: "Check units",
   unitsDone: "Units confirmed.",
   siteTitle: "Add your first dive site",
   siteBody: "The place you’ll pin your trips to.",
   siteAction: "Add a dive site",
   siteDone: "{count} dive sites added.",
+  releaseTitle: "Read your release",
+  releaseBody: "Divers sign DiveDay’s sample wording until you publish your own.",
+  releaseAction: "Read the release",
+  releaseDone: "Your own release is live.",
   tripTitle: "Schedule your first trip",
   tripBody: "Put a departure on the board — divers can’t book until one exists.",
   tripAction: "Add a departure",
@@ -54,6 +58,7 @@ describe("FirstRunChecklist", () => {
         profileDone={false}
         diveSiteCount={0}
         unitsDone={false}
+        releaseDone={false}
         stripeDone={false}
         copy={COPY}
       />,
@@ -93,6 +98,7 @@ describe("FirstRunChecklist", () => {
         profileDone={true}
         diveSiteCount={3}
         unitsDone={false}
+        releaseDone={false}
         stripeDone={true}
         copy={COPY}
       />,
@@ -130,6 +136,7 @@ describe("the share row", () => {
         profileDone={false}
         diveSiteCount={0}
         unitsDone={false}
+        releaseDone={false}
         stripeDone={false}
         copy={COPY}
       />,
@@ -140,6 +147,25 @@ describe("the share row", () => {
       "https://app.diveday.example/s/blue-mantis",
     );
     expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+  });
+
+  /** The path is a door a thumb can hit (#2405): the 44px floor, the line unmoved. */
+  it("gives the schedule's path the 44px floor", () => {
+    render(
+      <FirstRunChecklist
+        shopSlug="blue-mantis"
+        scheduleUrl="https://app.diveday.example/s/blue-mantis"
+        contactDone={false}
+        profileDone={false}
+        diveSiteCount={0}
+        unitsDone={false}
+        releaseDone={false}
+        stripeDone={false}
+        copy={COPY}
+      />,
+    );
+    const path = screen.getByRole("link", { name: "/s/blue-mantis" });
+    expect(path).toHaveClass("-my-3", "min-h-11", "items-center");
   });
 
   it("keeps a relative address as it is", () => {
@@ -166,12 +192,13 @@ describe("the step count", () => {
         profileDone={false}
         diveSiteCount={0}
         unitsDone={false}
+        releaseDone={false}
         stripeDone={false}
         copy={COPY}
       />,
     );
 
-    // Five rows contribute persisted progress; trip and schedule are guided
+    // Six rows contribute persisted progress; trip and schedule are guided
     // actions and remain visible without pretending they can be checked off.
     expect(screen.getAllByRole("listitem")).toHaveLength(FIRST_RUN_STEP_COUNT + 2);
   });
@@ -193,6 +220,7 @@ describe("the one next thing", () => {
         profileDone={false}
         diveSiteCount={0}
         unitsDone={false}
+        releaseDone={false}
         stripeDone={false}
         copy={COPY}
         {...done}
@@ -221,6 +249,7 @@ describe("the one next thing", () => {
       profileDone: true,
       unitsDone: true,
       diveSiteCount: 2,
+      releaseDone: true,
       stripeDone: true,
     });
     const primaries = container.querySelectorAll('[data-first-run-primary="true"]');
@@ -245,6 +274,7 @@ describe("the units step", () => {
         profileDone={false}
         diveSiteCount={0}
         unitsDone={false}
+        releaseDone={false}
         stripeDone={false}
         copy={COPY}
       />,
@@ -254,7 +284,7 @@ describe("the units step", () => {
     // The values themselves, not just an invitation to go and look — a step
     // that says "check your units" without saying what they are makes a shop
     // navigate to find out whether it needs to.
-    expect(screen.getByText(/USD and feet/)).toBeInTheDocument();
+    expect(screen.getByText(/USD, feet and Fahrenheit/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Check units" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/settings#units",
@@ -270,13 +300,14 @@ describe("the units step", () => {
         profileDone={false}
         diveSiteCount={0}
         unitsDone
+        releaseDone={false}
         stripeDone={false}
         copy={COPY}
       />,
     );
 
     expect(screen.getByText("Units confirmed.")).toBeInTheDocument();
-    expect(screen.queryByText(/USD and feet/)).toBeNull();
+    expect(screen.queryByText(/USD, feet and Fahrenheit/)).toBeNull();
   });
 });
 
@@ -297,6 +328,7 @@ describe("one primary, and the rest are the rows themselves", () => {
         profileDone={false}
         diveSiteCount={0}
         unitsDone={false}
+        releaseDone={false}
         stripeDone={false}
         copy={COPY}
         {...done}
@@ -325,6 +357,7 @@ describe("one primary, and the rest are the rows themselves", () => {
       ["Set up profile", "/shop/blue-mantis/settings/profile"],
       ["Check units", "/shop/blue-mantis/settings#units"],
       ["Add a dive site", "/shop/blue-mantis/dive-sites"],
+      ["Read the release", "/shop/blue-mantis/waivers#release"],
       ["Add a departure", "/shop/blue-mantis/schedule/board?add=1"],
     ] as const) {
       expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
@@ -401,5 +434,50 @@ describe("one primary, and the rest are the rows themselves", () => {
     expect(screen.queryByRole("link", { name: "Set up profile" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Connect Stripe" })).not.toBeInTheDocument();
     expect(screen.getByText("Contact details on file.")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **The release is read before the first departure lists** (third UX review,
+ * item 30). Sign-up publishes DiveDay's sample release, so a departure saved
+ * before anyone reads it lists a trip whose divers sign words the shop never
+ * saw. The step sits before the departure and holds the primary until the
+ * live text is the shop's own.
+ */
+describe("the release step", () => {
+  const renderSetUp = (releaseDone: boolean) =>
+    render(
+      <FirstRunChecklist
+        shopSlug="blue-mantis"
+        scheduleUrl="https://app.diveday.example/s/blue-mantis"
+        contactDone
+        profileDone
+        diveSiteCount={1}
+        unitsDone
+        releaseDone={releaseDone}
+        stripeDone={false}
+        copy={COPY}
+      />,
+    );
+
+  it("takes the primary ahead of the departure while the release is still the sample", () => {
+    const { container } = renderSetUp(false);
+    const primaries = container.querySelectorAll('[data-first-run-primary="true"]');
+    expect(primaries).toHaveLength(1);
+    expect(primaries[0]).toHaveTextContent("Read the release");
+    // Lands on the editor open: the waivers page opens its `#release` door.
+    expect(primaries[0]).toHaveAttribute("href", "/shop/blue-mantis/waivers#release");
+    expect(
+      screen.getByText("Divers sign DiveDay’s sample wording until you publish your own."),
+    ).toBeInTheDocument();
+  });
+
+  it("settles once the shop's own words are live", () => {
+    const { container } = renderSetUp(true);
+    expect(screen.getByText("Your own release is live.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Read the release" })).toBeNull();
+    expect(container.querySelector('[data-first-run-primary="true"]')).toHaveTextContent(
+      "Add a departure",
+    );
   });
 });

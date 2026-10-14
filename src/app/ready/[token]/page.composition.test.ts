@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeSource } from "@/test/route-source";
 
 /**
  * **What the thread page is, and what it stopped being** — ADR
@@ -21,21 +20,18 @@ import { describe, expect, it } from "vitest";
  * `src/i18n/provider-coverage.test.ts`, for the same reason.
  */
 
-const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const SOURCE = component("page.tsx");
 /** The after-dive reads the page asks first (code review 2026-10-13, item 29). */
-const AFTER_DIVE_READS = readFileSync(join(__dirname, "_components/after-dive-reads.ts"), "utf8");
+const AFTER_DIVE_READS = component("after-dive-reads.ts");
 
 /**
  * The source of a file the page composes, read by name: under the route's
  * `_components/`, or under `src/components/`. A section that moves out of the
  * page moves its pins with it by changing only the name passed here.
  */
+/** The route's source, wherever a split put it (`src/test/route-source.ts`). */
 function component(file: string): string {
-  try {
-    return readFileSync(join(__dirname, "_components", file), "utf8");
-  } catch {
-    return readFileSync(join(__dirname, "..", "..", "..", "components", file), "utf8");
-  }
+  return routeSource(import.meta.dirname, file);
 }
 
 /** Where a marker first appears in the route's source, or -1. */
@@ -315,49 +311,31 @@ describe("the cancel door", () => {
 });
 
 /**
- * **Day-of details' select rows.** Each is a question with its Save beside it
- * from `sm` and under it on a phone.
+ * **Day-of details is one form with one Save** (third UX review, item 24).
+ * It was six forms and six Save buttons, and a diver who answered every
+ * question and tapped the last Save kept one answer.
  */
 describe("day-of details", () => {
-  // Its own component since the route grew past its line budget; the rules
-  // are the same, read where the forms now live.
+  // Its own component since the route grew past its line budget.
   const DAY_OF = component("DayOfDetails.tsx");
-  /** The source of the form posting to `action`, from `<form` to `</form>`. */
-  const formFor = (action: string) => {
-    const at = DAY_OF.indexOf(action);
-    const start = DAY_OF.lastIndexOf("<form", at);
-    return DAY_OF.slice(start, DAY_OF.indexOf("</form>", at));
-  };
 
-  it("keeps who sees the intent answer with the question, above the next rule", () => {
-    // It was a child of its own in the `divide-y` stack, so a rule fell
-    // between it and "What's this dive for?" and it read as the start of the
-    // next question (K-469).
-    const intent = formFor("saveDiveIntentFromReady.bind(null, token)");
-    expect(intent).toContain('t("booking.intent.audience")');
-    expect(DAY_OF.split('t("booking.intent.audience")').length - 1).toBe(1);
-    expect(countOf('t("booking.intent.audience")')).toBe(0);
-    // …and it describes the select it is about, not only sits near it.
-    const id = /<p id="([^"]+)"[^>]*>\s*\{t\("booking\.intent\.audience"\)\}/.exec(intent)?.[1];
-    expect(id).toBeTruthy();
-    expect(intent).toContain(`aria-describedby="${id}"`);
+  it("posts every question to one action, under one Save", () => {
+    expect(DAY_OF.split("<form").length - 1).toBe(1);
+    expect(DAY_OF).toContain("saveDayOfDetailsFromReady.bind(null, token)");
+    expect(DAY_OF.split("<SubmitButton").length - 1).toBe(1);
+    expect(DAY_OF).toContain('t("ready.dayOfSave")');
   });
 
-  it("keeps each select row's Save at its own width on a phone", () => {
-    // Below `sm` the row is `flex-col`, which stretches a direct child across
-    // the column: these two Saves ran 350px wide beside siblings as wide as
-    // their words (K-470). Wrapped, like the rest of the page's Saves.
-    for (const action of [
-      "saveDiveRecencyFromReady.bind(null, token)",
-      "saveDiveIntentFromReady.bind(null, token)",
-    ]) {
-      const form = formFor(action);
-      expect(form.split("<SubmitButton").length - 1, action).toBe(1);
-      // The wrapper as the Save's own parent element, opened right before it
-      // and closed right after it: the word `<div>` in the comment above the
-      // Save is not a wrapper, and would outlive one that was taken away.
-      expect(form, action).toMatch(/<div>\s*<SubmitButton\b[\s\S]*?<\/SubmitButton>\s*<\/div>/);
-    }
+  it("keeps who sees the intent answer with the question, describing its select", () => {
+    expect(DAY_OF.split('t("booking.intent.audience")').length - 1).toBe(1);
+    expect(countOf('t("booking.intent.audience")')).toBe(0);
+    const id = /<p id="([^"]+)"[^>]*>\s*\{t\("booking\.intent\.audience"\)\}/.exec(DAY_OF)?.[1];
+    expect(id).toBeTruthy();
+    expect(DAY_OF).toContain(`aria-describedby="${id}"`);
+  });
+
+  it("asks nothing it would write as a blank: no select is required", () => {
+    expect(DAY_OF).not.toMatch(/<select[^>]*\brequired\b/);
   });
 });
 
@@ -680,10 +658,7 @@ describe("a held seat after the dive", () => {
     expect(held).toBeLessThan(positionOf("await afterDive.recap()"));
     // The recap starts early beside the roll call (code review 2026-10-13,
     // item 29), but never for a held seat.
-    const AFTER_DIVE_READS = readFileSync(
-      join(__dirname, "_components/after-dive-reads.ts"),
-      "utf8",
-    );
+    const AFTER_DIVE_READS = component("after-dive-reads.ts");
     expect(AFTER_DIVE_READS).toContain(
       "const speculate = boatIsHome && !input.identityHeld && isAfterTheDive({ endsAt });",
     );

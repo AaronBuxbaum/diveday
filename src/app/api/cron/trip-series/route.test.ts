@@ -6,6 +6,9 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/db/trips", () => ({ rollAllSeriesForward: vi.fn() }));
 vi.mock("@/db/rehearsals", () => ({ clearFinishedRehearsals: vi.fn() }));
+vi.mock("@/db/waitlist-roll", () => ({
+  rollSailedSeriesWaitlists: vi.fn(async () => ({ rolled: 0, invited: 0 })),
+}));
 // The routes report only where a DSN is configured; the suite runs without one.
 vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
 vi.mock("@sentry/nextjs", () => ({
@@ -108,6 +111,8 @@ describe("GET /api/cron/trip-series — reporting", () => {
         seriesExtended: 2,
         tripsCreated: 9,
         seriesFailed: 0,
+        waitlistRolled: 0,
+        waitlistInvited: 0,
       }),
     );
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
@@ -181,6 +186,6 @@ describe("the deployed schedule", () => {
       readFileSync(path.join(process.cwd(), "vercel.json"), "utf8"),
     ).crons;
     const entry = crons.find((cron) => cron.path === "/api/cron/trip-series");
-    expect(entry?.schedule).toBe("15 3 * * *");
+    expect(entry?.schedule).toBe("7 3 * * *");
   });
 });

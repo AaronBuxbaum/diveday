@@ -1098,6 +1098,10 @@ async function scrubBookingRows(
         welcomeSharedAt: null,
         // "Running late" (J3) is the diver's own statement on the seat.
         runningLateAt: null,
+        // The booker's "Under 18" is an age fact about this person, cleared
+        // with their date of birth. The release keeps the fact that a guardian
+        // co-signed, which is the evidence; this only said why it was asked.
+        minorDeclaredAt: null,
         // The instructor's next step is prose about this named student — "book
         // your deep dive with Marcus before the card arrives" — so it goes
         // with them (issues #1196, #1205). All three columns together, or the
@@ -2066,7 +2070,7 @@ async function scrubUnfinishedForms(
   // The bound the table was trusted to have is smaller than it looked. Its
   // reader drops anything over 24h and `NEVER_DRAFTED` keeps card, medical and
   // token fields out — but not a name, an address or a phone, and the retention
-  // prune runs **weekly** against that one-day cutoff (`30 3 * * 0`). So a draft
+  // prune runs **weekly** against that one-day cutoff (`8 3 * * 0`). So a draft
   // could outlive an erasure by five more days (issue #1620).
   //
   // Deleted rather than redacted. A draft is one person's unfinished work about

@@ -273,13 +273,38 @@ export function SegmentedControl({
       const trackStyle = getComputedStyle(nav);
       const borderLeft = Number.parseFloat(trackStyle.borderLeftWidth) || 0;
       const borderTop = Number.parseFloat(trackStyle.borderTopWidth) || 0;
+      //
+      // **Each edge is snapped, never the size** (issue #2525). The width is
+      // whatever lies between the two snapped edges, so the pill's sides sit
+      // on the device pixels nearest its option's, and a width measured
+      // either side of .5 cannot move one edge with nothing else moving.
+      // Snapping the width on its own flapped `reports-year-dark-vw-390` by
+      // one column at the pill's right edge.
+      //
+      // **The edges snap where the page is drawn, not inside the track.** The
+      // grid antialiasing happens on is the viewport's, and the track rarely
+      // starts on it: on the prep page's "Group by" at 390px it starts at x
+      // 214.8125. Snapped as offsets from the track, the pill's right edge
+      // came to 292.8125 and was drawn at 293, while the option's own fill —
+      // what the first paint shows, before this effect has run — ends at
+      // 292.4063 and was drawn at 292. So a capture that shot before the
+      // effect and one that shot after it differed by that one column, and
+      // which one a run got was a race (`prep-assignments-need-care-dark-vw-390`).
+      // Snapped in viewport coordinates, the pill's edges are the device
+      // pixels the option's own fill is drawn on, and the race draws the
+      // same picture either way. The written offsets are what is left once
+      // the track's padding-edge origin is subtracted, fraction and all.
       const dpr = window.devicePixelRatio || 1;
       const snap = (value: number) => Math.round(value * dpr) / dpr;
+      const originLeft = navBox.left + borderLeft;
+      const originTop = navBox.top + borderTop;
+      const edgeLeft = snap(box.left);
+      const edgeTop = snap(box.top);
       const next = {
-        left: snap(box.left - navBox.left - borderLeft),
-        top: snap(box.top - navBox.top - borderTop),
-        width: snap(box.width),
-        height: snap(box.height),
+        left: edgeLeft - originLeft,
+        top: edgeTop - originTop,
+        width: snap(box.left + box.width) - edgeLeft,
+        height: snap(box.top + box.height) - edgeTop,
       };
       pill.style.opacity = "1";
       pill.style.left = `${next.left}px`;
@@ -307,11 +332,29 @@ export function SegmentedControl({
     placePill.current = place;
     place(true);
     setPillReady(true);
-    if (typeof ResizeObserver === "undefined") return;
-    // A wrap or a font swap moves the options; the pill follows without motion.
+    // Once the page's fonts have loaded the labels have their final widths,
+    // whatever they measured at the first paint; the pill measures again then
+    // (issue #2525). Without motion: nothing was chosen.
+    let live = true;
+    document.fonts?.ready.then(() => {
+      if (live) place(false);
+    });
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        live = false;
+      };
+    }
+    // A wrap or a font swap moves the options; the pill follows without
+    // motion. Each option is observed as well as the track, because an option
+    // can change width while the track keeps its size, and then only the
+    // option's own observer fires (issue #2525).
     const observer = new ResizeObserver(() => place(false));
     observer.observe(nav);
-    return () => observer.disconnect();
+    for (const option of nav.querySelectorAll<HTMLElement>("[data-key]")) observer.observe(option);
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
   }, [currentKey]);
 
   // One line or a grid, decided by measurement: on every render (the labels

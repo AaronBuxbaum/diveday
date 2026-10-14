@@ -44,9 +44,11 @@ const { recordInPersonWaiver } = await import("@/db/waivers");
 const { requireShopSurface } = await import("@/lib/session");
 const {
   addToWaitlistAction,
+  carryWaitlistAction,
   confirmDiverIdentityAction,
   markRosterWaiverInPersonAction,
   splitDiverIdentityAction,
+  moveSeatAction,
   removeBookingAction,
   undoRemoveBookingAction,
 } = await import("./actions");
@@ -82,6 +84,8 @@ describe("a malformed id on the trip roster", () => {
   it.each([
     ["removing a diver", removeBookingAction],
     ["undoing a removal", undoRemoveBookingAction],
+    ["moving a seat to another departure", moveSeatAction],
+    ["carrying the wait list to another departure", carryWaitlistAction],
     ["confirming a diver's identity", confirmDiverIdentityAction],
     ["splitting a seat off a diver's record", splitDiverIdentityAction],
     ["saving a course next step", saveCourseNextStepAction],

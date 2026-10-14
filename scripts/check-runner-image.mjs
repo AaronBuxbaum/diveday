@@ -22,7 +22,10 @@ import { fileURLToPath } from "node:url";
  *
  * Two rules:
  *
- * 1. Every `runs-on:` in `.github/workflows/` says `RUNNER_IMAGE`.
+ * 1. Every `runs-on:` in `.github/workflows/` says `RUNNER_IMAGE`, or reads
+ *    the Mac-or-GitHub answer of `scripts/ci-runner-pick.mjs` with
+ *    `RUNNER_IMAGE` as its fallback (`RUNNER_PICK`); that script's GitHub
+ *    answer is `RUNNER_IMAGE` too.
  * 2. The Playwright browser cache key names the image (`ImageOS`), not just
  *    `runner.os`, which says only "Linux": a browser downloaded on one image
  *    must not be restored onto the next.
@@ -32,6 +35,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** The one runner image every job runs on. */
 export const RUNNER_IMAGE = "ubuntu-24.04";
+
+/** The one dynamic `runs-on:` allowed: the runner pick, falling back to the image. */
+export const RUNNER_PICK = `\${{ fromJSON(needs.changes.outputs.runner || '"${RUNNER_IMAGE}"') }}`;
 
 export const PLAYWRIGHT_CACHE_ACTION = ".github/actions/playwright-shell/action.yml";
 
@@ -43,7 +49,7 @@ export function findRunnerDrift(workflows) {
       const match = line.match(/^\s*runs-on:\s*(.+?)\s*(?:#.*)?$/);
       if (!match) return;
       const label = match[1].replace(/^["']|["']$/g, "");
-      if (label !== RUNNER_IMAGE) {
+      if (label !== RUNNER_IMAGE && match[1] !== RUNNER_PICK) {
         drift.push(
           `${file}:${index + 1} runs on \`${label}\`; every job runs on \`${RUNNER_IMAGE}\`.`,
         );

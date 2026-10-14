@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 
 /**
  * A group's top rule: a hairline between groups, and none above the first,
@@ -21,6 +21,8 @@ const BAND =
  * down every row (ADR 20260827-the-departure-is-two-working-surfaces, slice
  * 5d; design principle 9). The label is a real heading so "Waiting for a seat"
  * stays findable by a screen reader the way the old section headings were.
+ * An H2: the departure page draws the roster straight under its H1, and an
+ * H3 there skipped a level (UX review 2026-10-13, item 39).
  *
  * Its rows follow it as siblings in the card. A group that has to be one
  * element — a fragment target a spec or a deep link scopes to, with its body
@@ -39,7 +41,7 @@ export function RosterGroupBand({
 }) {
   return (
     <div id={id} className={`${BAND} scroll-mt-24 ${GROUP_RULE}`}>
-      <GroupLabel as="h3">{label}</GroupLabel>
+      <GroupLabel as="h2">{label}</GroupLabel>
       {children}
     </div>
   );
@@ -67,7 +69,7 @@ export function RosterGroup({
   return (
     <div id={id} className={`scroll-mt-24 ${GROUP_RULE} ${className}`.trim()}>
       <div className={BAND}>
-        <GroupLabel as="h3">{label}</GroupLabel>
+        <GroupLabel as="h2">{label}</GroupLabel>
       </div>
       {children}
     </div>

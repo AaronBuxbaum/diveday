@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ShopYearCell, ShopYearFill } from "@/lib/shop-year";
 
 /**
@@ -12,7 +13,10 @@ import type { ShopYearCell, ShopYearFill } from "@/lib/shop-year";
  * columns fit a 390px phone at 5px and a desktop column at 16px without the
  * page ever scrolling sideways.
  *
- * **Decorative, and it says so.** Every fact the strip draws is written in
+ * **The months are doors** (#2434): each label links to its own month's
+ * report, so a far month is one tap rather than a walk along the arrows.
+ *
+ * **The squares are decorative, and say so.** Every fact the strip draws is written in
  * words one screen-inch away — the sentence above it and the four figures
  * below — so a screen reader is not asked to walk 239 squares to learn what
  * "2,907 divers" already told it. That is the same judgement the departure
@@ -31,6 +35,8 @@ const FILL_CLASS: Record<ShopYearFill, string> = {
 export type YearStripCopy = {
   /** "Jul 4 · 44 divers on 3 boats" — hover, never read aloud. */
   day: (cell: ShopYearCell) => string;
+  /** The name of the row of month links. */
+  monthsLabel: string;
 };
 
 export function YearStrip({
@@ -40,15 +46,15 @@ export function YearStrip({
   className = "",
 }: {
   cells: ShopYearCell[];
-  /** The month markers above the strip: a label and the column it starts in (1-based). */
-  months: { key: string; label: string; column: number }[];
+  /** The month markers above the strip: a label, the column it starts in (1-based), and its report. */
+  months: { key: string; label: string; column: number; href: string }[];
   copy: YearStripCopy;
   className?: string;
 }) {
   const weeks = Math.ceil(cells.length / 7);
   const columns = { gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))` };
   return (
-    <div className={className || undefined} aria-hidden="true">
+    <div className={className || undefined}>
       {/* **Uneven on purpose.** Each month's label starts in the week column
           its first day falls in, so the space between two labels is four or
           five weeks wide, as the calendar is. The pixel probe's uneven-gaps
@@ -61,15 +67,32 @@ export function YearStrip({
           word, so it runs on over its own month's empty weeks; the next label
           is four or five weeks along, so nothing is overlapped or clipped.
           The probe's text-spill check reads the overrun as spill (settled
-          there too). */}
-      <div className="grid gap-[3px] text-[10px] text-muted tabular-nums" style={columns}>
-        {months.map((month) => (
-          <span key={month.key} style={{ gridColumnStart: month.column }}>
+          there too).
+
+          **Each label is its month's door**, spanning the weeks to the next
+          label and 44px tall; the negative margin lets the target overhang
+          the line, so the strip does not move (#2434). */}
+      <nav
+        aria-label={copy.monthsLabel}
+        className="grid gap-x-[3px] text-[10px] text-muted tabular-nums"
+        style={columns}
+      >
+        {months.map((month, index) => (
+          <Link
+            key={month.key}
+            href={month.href}
+            style={{ gridColumn: `${month.column} / ${months[index + 1]?.column ?? weeks + 1}` }}
+            className="-my-3.5 flex min-h-11 items-center underline-offset-2 hover:text-foreground hover:underline"
+          >
             {month.label}
-          </span>
+          </Link>
         ))}
-      </div>
-      <div className="mt-1 grid grid-flow-col grid-rows-7 gap-[3px]" style={columns}>
+      </nav>
+      <div
+        className="mt-1 grid grid-flow-col grid-rows-7 gap-[3px]"
+        style={columns}
+        aria-hidden="true"
+      >
         {cells.map((cell, index) =>
           cell.day === null ? (
             // A square before the year's first day: the grid keeps the week's

@@ -43,6 +43,8 @@ function deskRow(page: Page, name: string): Locator {
 const CHECKED_IN_BAND = /^Checked in · \d+$/;
 /** A finished departure's record band for the seats the roll call counted aboard. */
 const SAILED_BAND = /^Sailed · \d+$/;
+/** Its band for the seats the roll call turned away at the dock. */
+const DID_NOT_SAIL_BAND = /^Didn’t sail · \d+$/;
 
 /** A seeded boat still ahead of the frozen clock and inside the counter's window. */
 const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
@@ -164,11 +166,13 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
 
   // A boat that is home is read rather than worked: its Divers tab is the
   // record, every seat filed by the crew's roll call (UX review 2026-10-10,
-  // item 10). The seeded dawn boat boarded everyone, so they all stand under
+  // item 10). The seeded dawn boat carried only divers readiness cleared
+  // (#2415; UX review 2026-10-13, item 40), so every seat stands under
   // "Sailed", and nothing of the live counter is drawn: no count, no taps,
-  // nothing still to clear.
+  // nothing still to clear. "Didn't sail" is the uncounted-seat capture's.
   await page.goto(counterPath("blue-mantis", sailedId));
   await expect(page.getByRole("heading", { name: SAILED_BAND })).toBeVisible();
+  await expect(page.getByRole("heading", { name: DID_NOT_SAIL_BAND })).toHaveCount(0);
   await expect(page.getByText(/^\d+ of \d+ here$/)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: CHECKED_IN_BAND })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /^Still to clear/ })).toHaveCount(0);
@@ -177,6 +181,36 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   ).toHaveCount(0);
   // Nobody can be seated on a boat that has left, so its door is not drawn.
   await expect(page.getByRole("link", { name: "Add as a walk-in" })).toHaveCount(0);
+});
+
+/**
+ * **The all-clear never paints over a diver who cannot board** (#2410). A
+ * diver checked in at the counter whose release is then taken back is
+ * `checked_in` and blocked at once: the counter keeps them under "Still to
+ * clear", says somebody can't board yet, and draws no "Everyone's checked in".
+ * The rule is unit-tested in `CounterInstrument.test.tsx`; this is the browser.
+ */
+test("a checked-in diver who is blocked again stays still to clear", async ({ page, request }) => {
+  const seeded = await request.post("/api/test/seed-trouble-states?checkedInBlocked=1");
+  expect(seeded.ok()).toBe(true);
+  const { checkedInBlocked } = (await seeded.json()) as {
+    checkedInBlocked?: { tripId: string; personName: string };
+  };
+  if (!checkedInBlocked) throw new Error("seed-trouble-states made no checked-in blocked diver");
+  const { tripId, personName } = checkedInBlocked;
+
+  await page.goto(counterPath("blue-mantis", tripId));
+  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+  const stillToClear = page.getByRole("heading", { name: /^Still to clear · \d+$/ });
+  await expect(stillToClear).toBeVisible();
+  await expect(
+    stillToClear
+      .locator("xpath=following::ul[1]")
+      .getByRole("link", { name: personName, exact: true }),
+  ).toBeVisible();
+  await expect(deskRow(page, personName).getByText("Blocked", { exact: true })).toBeVisible();
+  await expect(page.getByText(/can’t board yet$/).first()).toBeVisible();
+  await expect(page.getByText("Everyone’s checked in")).toHaveCount(0);
 });
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {

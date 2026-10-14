@@ -20,8 +20,8 @@ import { trips } from "./trips";
  * 20261012-incident-reports): the report, the people in it, and the dated
  * addenda that follow it once it is filed.
  *
- * Personal and medical data end to end. Kept for ever by decision (H-112;
- * `UNBOUNDED_BY_DECISION`, `src/lib/retention.ts`), carried in the shop export, and reached
+ * Personal and medical data end to end. Kept seven years from the incident
+ * (`RETENTION_DAYS.incident_reports`), carried in the shop export, and reached
  * by `anonymizeDiver`, which redacts a diver's identity and keeps the report.
  * Nothing on the dock reads these tables: a report is a record, never a gate.
  */
@@ -41,6 +41,28 @@ export const incidentHandoverKind = pgEnum("incident_handover_kind", [
   "diver",
   "other",
 ]);
+
+/**
+ * **What kind of incident it was** (batch 6, item 7; ADR
+ * 20261012-incident-reports, amendment 2026-10-14). A missing diver is its own
+ * kind, not an injury: it is the one an insurer and a coastguard ask about
+ * first. A fatality is its own kind too; `injury` reads "Injury or illness".
+ * Null on a draft nobody has answered yet; filing needs it.
+ */
+export const incidentKind = pgEnum("incident_kind", [
+  "injury",
+  "near_miss",
+  "equipment",
+  "missing_diver",
+  "fatality",
+  "other",
+]);
+
+/**
+ * **How serious it was**, in the crew's own judgement on the day — three
+ * words, never a clinical scale. Null until answered; filing needs it.
+ */
+export const incidentSeverity = pgEnum("incident_severity", ["minor", "moderate", "serious"]);
 
 /** How a person was part of the incident. */
 export const incidentInvolvement = pgEnum("incident_involvement", [
@@ -66,6 +88,8 @@ export const incidentReports = pgTable(
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     locationText: text("location_text"),
     whatHappened: text("what_happened"),
+    kind: incidentKind("kind"),
+    severity: incidentSeverity("severity"),
     /**
      * The three yes/no answers stay **null until answered**: an insurer reads
      * "no oxygen" and "nobody said" as different facts, so neither is assumed.

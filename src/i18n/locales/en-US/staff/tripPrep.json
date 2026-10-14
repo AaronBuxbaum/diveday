@@ -51,7 +51,7 @@
   "emptyHeading": "Nothing to pack yet",
   "emptyAction": "Open the divers list",
   "rentalKitEmptyOwnKitHeading": "No gear to pull",
-  "rentalKitEmptyNeedsSortingHeading": "No gear to pull — yet",
+  "rentalKitEmptyNeedsSortingHeading": "No gear to pull yet",
   "rentalKitEmptyAction": "Open the divers list",
   "hotelPickupsHeading": "Hotel Pickups",
   "hotelPickupsCount": "{count, plural, one {# pickup} other {# pickups}}",

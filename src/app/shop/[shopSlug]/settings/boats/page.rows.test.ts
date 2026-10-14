@@ -10,6 +10,10 @@ import { describe, expect, it } from "vitest";
  */
 const SOURCE = readFileSync(join(import.meta.dirname, "page.tsx"), "utf8");
 const CREATE = SOURCE.slice(SOURCE.indexOf("<AddPanel"), SOURCE.indexOf("</AddPanel>"));
+const ROW = SOURCE.slice(
+  SOURCE.indexOf("action={updateBoatAction}"),
+  SOURCE.indexOf("<BoatPaperFields"),
+);
 
 /** Each opening tag carrying `name="description"`, whatever its element. */
 function descriptionControls(source: string): string[] {
@@ -37,6 +41,22 @@ describe("the boats add form", () => {
   it("is a FieldGrid form whose submit stands in FieldActions", () => {
     expect(CREATE).toMatch(/<FieldGrid\s+as="form"[^>]*action=\{createBoatAction\}/);
     expect(CREATE).toContain("<FieldActions>");
+  });
+});
+
+/**
+ * **A saved boat's boxes say what they are, too.** The rows carried only an
+ * `aria-label`, so "Mantis I" and "14" sat in bare boxes above a form that
+ * captioned the same fields, and capacity is a safety number read beside the
+ * certificate's limit (third review #36).
+ */
+describe("the saved boat rows", () => {
+  it("caption name, capacity and description with the add form's Field labels", () => {
+    for (const key of ["boats.nameLabel", "boats.capacityLabel", "boats.descriptionLabel"]) {
+      expect(ROW).toMatch(new RegExp(`<Field\\s+label=\\{t\\("${key.replace(".", "\\.")}"\\)\\}`));
+    }
+    expect(ROW).not.toContain("aria-label=");
+    expect(ROW).not.toContain("placeholder=");
   });
 });
 

@@ -298,6 +298,32 @@ describe("the words the es-ES README settled", () => {
     });
   });
 
+  describe("the three Spain words the vocabulary table named and nothing guarded (2026-10-13)", () => {
+    it("refuses ordenador, aparcamiento and móvil", () => {
+      expect(rules({ k: "Ordenador de buceo" })).toEqual(["computer"]);
+      expect(rules({ k: "reguladores, chalecos, botellas, ordenadores" }, STAFF)).toEqual([
+        "computer",
+      ]);
+      expect(rules({ k: "Aparcamiento: {parking}" })).toEqual(["parking"]);
+      expect(rules({ k: "Nota sobre aparcamiento" }, STAFF)).toEqual(["parking"]);
+      expect(rules({ k: "Al dar un número de móvil, aceptas" })).toEqual(["mobile"]);
+      expect(rules({ k: "Móvil o fijo, como lo tengas escrito." })).toEqual(["mobile"]);
+      // The accent-less spelling is the same word typed in a hurry.
+      expect(rules({ k: "Los números de movil" })).toEqual(["mobile"]);
+    });
+
+    it("accepts the Latin American words and leaves the near-misses alone", () => {
+      expect(rules({ k: "Computadora de buceo" })).toEqual([]);
+      expect(rules({ k: "Estacionamiento: {parking}" })).toEqual([]);
+      expect(rules({ k: "Al dar un número de celular, aceptas" })).toEqual([]);
+      // `ordenada` is "sorted", `inmóvil` is a fish holding still in the field
+      // guide, `automóvil` is a car: each carries the letters and none is the word.
+      expect(rules({ k: "Lista ordenada por fecha" })).toEqual([]);
+      expect(rules({ k: "Una barra plateada larga, inmóvil en la corriente." })).toEqual([]);
+      expect(rules({ k: "Llega en automóvil" })).toEqual([]);
+    });
+  });
+
   it("reports every rule a single string breaks, not only the first", () => {
     // A string can be wrong twice, and reporting one at a time turns a sweep
     // into as many rounds as the string has mistakes.

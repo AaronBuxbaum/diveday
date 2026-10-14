@@ -2,7 +2,7 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { countUnansweredMessages } from "@/db/inbound-messages";
-import { inboundMessages, shops } from "@/db/schema";
+import { bookings, inboundMessages, shops } from "@/db/schema";
 import { seededShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -47,7 +47,8 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { deleteInboxMessageAction, setInboxMessageDoneAction } = await import("./actions");
+const { deleteInboxMessageAction, markInboxSenderLateAction, setInboxMessageDoneAction } =
+  await import("./actions");
 
 /** The seeded row from an address nobody on the roster holds (`src/db/seed-inbox.ts`). */
 async function strangerMessageId(db: AppDb, shopId: string): Promise<string> {
@@ -269,5 +270,75 @@ describe("marking a message done, and taking it back", () => {
     const to = await redirectedTo(() => setInboxMessageDoneAction(doneForm("not-a-uuid", true)));
 
     expect(to).toBe(`/shop/${shop.slug}/inbox?notice=gone`);
+  });
+});
+
+/**
+ * UX review 2026-10-13, item 19: marking the sender of "Running about 15 min
+ * late" running late from the Inbox row. Only a message id is posted; the
+ * person and the seat come from the server's own reads.
+ */
+describe("marking a message's sender running late", () => {
+  /** Diego's WhatsApp, written in his own words (`src/db/seed-inbox.ts`). */
+  async function lateMessage(db: AppDb, shopId: string) {
+    const [row] = await db
+      .select({
+        id: inboundMessages.id,
+        personId: inboundMessages.personId,
+        receivedAt: inboundMessages.receivedAt,
+      })
+      .from(inboundMessages)
+      .where(
+        and(
+          eq(inboundMessages.shopId, shopId),
+          eq(inboundMessages.channel, "whatsapp"),
+          isNotNull(inboundMessages.personId),
+        ),
+      )
+      .limit(1);
+    if (!row?.personId) throw new Error("seeded shop has no running-late WhatsApp");
+    return { ...row, personId: row.personId };
+  }
+
+  async function marks(db: AppDb, shopId: string, personId: string) {
+    return (
+      await db
+        .select({ at: bookings.runningLateAt })
+        .from(bookings)
+        .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)))
+    )
+      .map((row) => row.at)
+      .filter((at): at is Date => at !== null);
+  }
+
+  it("puts the mark on his seat with the moment he wrote, for any staff role", async () => {
+    const { db, shop, captain } = await context();
+    const late = await lateMessage(db, shop.id);
+    signIn(shop, captain);
+
+    const to = await redirectedTo(() => markInboxSenderLateAction(form(late.id)));
+
+    expect(to).toBe(`/shop/${shop.slug}/inbox?notice=late-marked`);
+    expect(await marks(db, shop.id, late.personId)).toEqual([late.receivedAt]);
+  });
+
+  it("404s a session whose claimed shop is not the acting person's", async () => {
+    const { db, shop, owner } = await context();
+    const late = await lateMessage(db, shop.id);
+    signIn({ id: "00000000-0000-4000-8000-000000000000", slug: "other-shop" }, owner);
+
+    await expect(markInboxSenderLateAction(form(late.id))).rejects.toThrow("NOT_FOUND");
+    expect(await marks(db, shop.id, late.personId)).toEqual([]);
+  });
+
+  it("answers a stranger's message and a non-id with gone, and writes nothing", async () => {
+    const { shop, message, owner } = await context();
+    signIn(shop, owner);
+
+    for (const id of [message, "not-a-uuid"]) {
+      expect(await redirectedTo(() => markInboxSenderLateAction(form(id)))).toBe(
+        `/shop/${shop.slug}/inbox?notice=gone`,
+      );
+    }
   });
 });

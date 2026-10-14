@@ -292,6 +292,17 @@ export const bookings = pgTable(
     /** Why the flag was raised — see {@link identityMatchKind}. Set and cleared with it. */
     identityMatchedBy: identityMatchKind("identity_matched_by"),
     /**
+     * **Whoever booked this seat said its diver is under 18** (the "Under 18"
+     * box on the public party form; H-21 follow-up, decision of 2026-10-13).
+     * The guardian co-signature rule reads it beside the date of birth
+     * (`guardianSignatureRequired`): a date of birth on file decides, and with
+     * none this asks a parent or guardian to co-sign the release. It gates
+     * nothing at the sale, so it is no age oracle, and it lives on the seat,
+     * never the person, so an anonymous form can only mark the seat it
+     * created. Null on every seat nobody said this about.
+     */
+    minorDeclaredAt: timestamp("minor_declared_at", { withTimezone: true }),
+    /**
      * Set on every seat of a party booking *except* the organizer's own,
      * pointing at the organizer's booking on the same trip (docs ADR
      * 20260804-seat-claim-links). This is what makes "the other seats of my
@@ -398,6 +409,11 @@ export const bookings = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("bookings_person_id_idx").on(table.personId),
     uniqueIndex("bookings_trip_person_unique").on(table.tripId, table.personId),
     // Enriched air is a gas a diver breathes; a snorkeler or a rider asking for
     // it is a write that went wrong somewhere, and the prep list would pack it.

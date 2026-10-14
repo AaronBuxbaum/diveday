@@ -1,7 +1,7 @@
-import { and, asc, eq, gt, inArray, isNull, ne, or } from "drizzle-orm";
-import { nowDate } from "@/lib/clock";
+import { and, asc, eq, gt, gte, inArray, isNull, ne, or } from "drizzle-orm";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
-import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { seatRefusal } from "@/lib/participant-types";
 import { publicTripPath } from "@/lib/public-routes";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
@@ -9,7 +9,9 @@ import { tripAdmissionFor, tripCourseCrewCounts } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { sendNotification } from "./notifications";
+import { recordTripActivity } from "./operations";
 import {
+  activityEvents,
   bookings,
   certifications,
   courseInquiries,
@@ -265,11 +267,19 @@ export type TripInvitationDelivery = "sent" | "fallback" | "opted_out";
  */
 export async function deliverTripInvitation(
   db: AppDb,
-  input: { shopId: string; shopSlug: string; tripId: string; invitationId: string },
+  input: {
+    shopId: string;
+    shopSlug: string;
+    tripId: string;
+    invitationId: string;
+    /** The stamp to write; an offer passes the one its claim took. */
+    invitedAt?: Date;
+  },
+  provider?: NotificationProvider,
 ): Promise<TripInvitationDelivery> {
   const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
   if (!context) return "fallback";
-  const invitedAt = nowDate();
+  const invitedAt = input.invitedAt ?? nowDate();
   const recorded = await recordTripInvitation(db, {
     shopId: input.shopId,
     tripId: input.tripId,
@@ -302,28 +312,39 @@ export async function deliverTripInvitation(
       shopId: input.shopId,
       personId: person.id,
     });
-    const delivery = await sendNotification(db, {
-      ...shared,
-      kind: "direct_trip_invitation",
-      to: person.email,
-      locale: recipientLocale(person.locale, context.shop.defaultLocale),
-      diverName: person.fullName,
-      bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
-      unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
-    });
+    const delivery = await sendNotification(
+      db,
+      {
+        ...shared,
+        kind: "direct_trip_invitation",
+        to: person.email,
+        locale: recipientLocale(person.locale, context.shop.defaultLocale),
+        diverName: person.fullName,
+        bookingUrl: new URL(
+          publicTripPath(input.shopSlug, context.trip.id),
+          `${origin}/`,
+        ).toString(),
+        unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
+      },
+      provider,
+    );
     return delivery.status === "sent" ? "sent" : "fallback";
   }
 
   const email = context.person?.email ?? context.request?.email ?? null;
   if (!email || !origin) return "fallback";
-  const delivery = await sendNotification(db, {
-    ...shared,
-    kind: "trip_invitation",
-    to: email,
-    locale: recipientLocale(context.person?.locale, context.shop.defaultLocale),
-    diverName: context.person?.fullName ?? context.request?.name ?? "Diver",
-    bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
-  });
+  const delivery = await sendNotification(
+    db,
+    {
+      ...shared,
+      kind: "trip_invitation",
+      to: email,
+      locale: recipientLocale(context.person?.locale, context.shop.defaultLocale),
+      diverName: context.person?.fullName ?? context.request?.name ?? "Diver",
+      bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
+    },
+    provider,
+  );
   return delivery.status === "sent" ? "sent" : "fallback";
 }
 
@@ -337,7 +358,11 @@ export async function deliverTripInvitation(
  * emailed. Nothing is seated and nothing is charged.
  *
  * An invitation already standing for this diver and departure is sent again
- * rather than refused, so a second tap after "no email" was fixed works.
+ * rather than refused, so a second tap after "no email" was fixed works. Mail
+ * that did go out under an hour ago answers `already_sent` and sends nothing
+ * (#2480): a double tap at a busy counter is one email, not two. "Did go out"
+ * is the `departure_offered` line on the departure's trail, written only on a
+ * sent delivery, so a fallback never blocks the retry.
  * `unavailable` covers every reason there is nothing to offer: the departure
  * is gone or full, the diver could not book it (`departureOpenToDiver`), or
  * the person is not this shop's diver. Nothing is written or sent then.
@@ -447,11 +472,12 @@ export async function offerDepartureToDiver(
     personId: string;
     createdByPersonId: string;
   },
-): Promise<TripInvitationDelivery | "unavailable"> {
+  provider?: NotificationProvider,
+): Promise<TripInvitationDelivery | "unavailable" | "already_sent"> {
   if (!(await departureOpenToDiver(db, input))) return "unavailable";
   await createDirectTripInvitation(db, input);
   const [standing] = await db
-    .select({ id: tripInvitations.id })
+    .select({ id: tripInvitations.id, invitedAt: tripInvitations.invitedAt })
     .from(tripInvitations)
     .innerJoin(trips, eq(trips.id, tripInvitations.tripId))
     .where(
@@ -465,10 +491,124 @@ export async function offerDepartureToDiver(
     )
     .limit(1);
   if (!standing) return "unavailable";
-  return deliverTripInvitation(db, {
-    shopId: input.shopId,
-    shopSlug: input.shopSlug,
-    tripId: input.tripId,
-    invitationId: standing.id,
+  const claimedAt = await claimOffer(db, input, standing.id);
+  if (!claimedAt) return "already_sent";
+  const delivery = await deliverTripInvitation(
+    db,
+    {
+      shopId: input.shopId,
+      shopSlug: input.shopSlug,
+      tripId: input.tripId,
+      invitationId: standing.id,
+      invitedAt: claimedAt,
+    },
+    provider,
+  );
+  if (delivery !== "sent") await releaseOffer(db, input.shopId, standing.id, claimedAt);
+  if (delivery === "sent") {
+    const [diver] = await db
+      .select({ fullName: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId), livePerson()))
+      .limit(1);
+    await recordTripActivity(db, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      actorPersonId: input.createdByPersonId,
+      subjectPersonId: input.personId,
+      entry: { code: "departure_offered", diver: diver?.fullName ?? "" },
+    });
+  }
+  return delivery;
+}
+
+/**
+ * How long a fresh stamp with no "offered" line yet is an offer still
+ * sending. A second tap inside it is the same tap; a send takes seconds.
+ */
+const OFFER_IN_FLIGHT_MS = 2 * 60_000;
+
+/**
+ * **Take the offer's send, or learn it is not this tap's** (#2480). The
+ * invitation row is locked, read, and stamped in one transaction, so two taps
+ * that land together cannot both pass: the second waits for the first's
+ * stamp and finds it in flight. Refused when mail already went within the
+ * hour, or another tap is sending now. Returns the stamp the send writes.
+ */
+async function claimOffer(
+  db: AppDb,
+  input: { shopId: string; tripId: string; personId: string },
+  invitationId: string,
+): Promise<Date | null> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ invitedAt: tripInvitations.invitedAt })
+      .from(tripInvitations)
+      .where(and(eq(tripInvitations.id, invitationId), eq(tripInvitations.shopId, input.shopId)))
+      .limit(1)
+      .for("update");
+    if (!row) return null;
+    const now = nowDate();
+    if (row.invitedAt) {
+      if (now.getTime() - row.invitedAt.getTime() < OFFER_IN_FLIGHT_MS) {
+        // Inside the window: a send still going, or one that already went.
+        return null;
+      }
+      if (await offerSentSince(tx, input, row.invitedAt)) return null;
+    }
+    await tx
+      .update(tripInvitations)
+      .set({ invitedAt: now })
+      .where(and(eq(tripInvitations.id, invitationId), eq(tripInvitations.shopId, input.shopId)));
+    return now;
   });
+}
+
+/**
+ * Give the claim back after mail that did not go. The stamp stays, because
+ * "Contacted" is still true (staff reach the diver by hand), but it moves to
+ * just outside the in-flight window so the next tap may try again; only while
+ * it is still this claim's.
+ */
+async function releaseOffer(db: AppDb, shopId: string, invitationId: string, claimedAt: Date) {
+  await db
+    .update(tripInvitations)
+    .set({ invitedAt: new Date(claimedAt.getTime() - OFFER_IN_FLIGHT_MS) })
+    .where(
+      and(
+        eq(tripInvitations.id, invitationId),
+        eq(tripInvitations.shopId, shopId),
+        eq(tripInvitations.invitedAt, claimedAt),
+      ),
+    );
+}
+
+/**
+ * Whether this departure's offer reached this diver by email at or after the
+ * standing invitation's last stamp, and under an hour ago. The stamp is
+ * written before the send and the trail line only after a sent one, so a
+ * last attempt that fell back has no line after its stamp.
+ */
+async function offerSentSince(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; personId: string },
+  invitedAt: Date,
+): Promise<boolean> {
+  const hourAgo = new Date(nowDate().getTime() - HOUR_MS);
+  if (invitedAt.getTime() < hourAgo.getTime()) return false;
+  const [line] = await db
+    .select({ id: activityEvents.id })
+    .from(activityEvents)
+    .where(
+      and(
+        eq(activityEvents.shopId, input.shopId),
+        eq(activityEvents.tripId, input.tripId),
+        eq(activityEvents.subjectPersonId, input.personId),
+        eq(activityEvents.code, "departure_offered"),
+        gte(activityEvents.occurredAt, invitedAt),
+        gte(activityEvents.occurredAt, hourAgo),
+      ),
+    )
+    .limit(1);
+  return Boolean(line);
 }

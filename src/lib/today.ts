@@ -91,6 +91,7 @@ export type TodayActionKind =
   | "failed_photo_deletion"
   | "owed_refund"
   | "payment_dispute"
+  | "payments_restricted"
   | "reviews_pending"
   | "unanswered_messages"
   | "gear_overdue"
@@ -237,6 +238,10 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // answer it (ADR 20261009-stripe-reversals-reach-diveday). Level with the
   // owed refund: both are money with somebody waiting on the shop.
   payment_dispute: 26,
+  // Stripe turned the shop's card payments off (batch 6 item 8). Level with
+  // the other money rows: nobody is in danger, but every booking from now on
+  // is a seat paid for at the shop until the owner answers Stripe.
+  payments_restricted: 26,
   // A diver wrote and nobody has written back (ADR 20260907-two-way-inbox).
   // Above the reviews queue and below the money rows: somebody asked the shop
   // a question and is waiting on the answer, which is more than a review asks
@@ -467,6 +472,7 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   failed_photo_deletion: ["owner", "manager"],
   owed_refund: ["owner", "manager"],
   payment_dispute: ["owner", "manager"],
+  payments_restricted: ["owner", "manager"],
   reviews_pending: ["owner", "manager"],
   // Every staff role, since the inbox stopped carrying a gate of its own on
   // 2026-09-10 (issues #1505/#1518). A row pointing at a page its reader
@@ -573,7 +579,13 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
 
 /**
  * Filters the action queue for the viewer's roles, taking the union for multi-role staff.
- * Owners and managers see everything with zero withheld.
+ * Owners and managers see everything.
+ *
+ * **What is withheld is not counted** (third review, item 5). A captain's
+ * Today used to open on "22 jobs for the front desk", a number about rows the
+ * role cannot see or act on, 60px above the fold of rows it can ("1 more for
+ * other boats and the desk"). Two desk numbers on one screen; the one that
+ * stays is the one the reader can open.
  *
  * **No roles means no viewer, not an empty audience.** Every surface that
  * renders this queue passes `session.user.roles`, which `requireStaffSession`
@@ -583,25 +595,15 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
 export function filterActionsForRoles(
   actions: readonly TodayAction[],
   roles?: readonly Role[],
-): { visibleActions: TodayAction[]; withheldCount: number } {
+): TodayAction[] {
   if (!roles || roles.length === 0 || roles.includes("owner") || roles.includes("manager")) {
-    return { visibleActions: [...actions], withheldCount: 0 };
+    return [...actions];
   }
   const roleSet = new Set(roles);
-  const visibleActions: TodayAction[] = [];
-  let withheldCount = 0;
-
-  for (const action of actions) {
+  return actions.filter((action) => {
     const audience = KIND_AUDIENCE[action.kind];
-    const canSee = audience ? audience.some((r) => roleSet.has(r)) : true;
-    if (canSee) {
-      visibleActions.push(action);
-    } else {
-      withheldCount += 1;
-    }
-  }
-
-  return { visibleActions, withheldCount };
+    return audience ? audience.some((r) => roleSet.has(r)) : true;
+  });
 }
 
 /**
@@ -653,6 +655,7 @@ export const ACTION_KIND_META = {
   failed_photo_deletion: { tone: "warning" },
   owed_refund: { tone: "warning" },
   payment_dispute: { tone: "warning" },
+  payments_restricted: { tone: "warning" },
   reviews_pending: { tone: "neutral" },
   // Neutral: somebody is waiting on an answer, which is the day's work
   // rather than a thing that has gone wrong.
@@ -953,6 +956,7 @@ export const BLOCKER_ACTIONS: Record<
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },
   certification_insufficient: { kind: "certification", target: "diver" },
+  certification_not_yet: { kind: "certification", target: "diver" },
   certification_in_training: { kind: "certification", target: "diver" },
   specialty_missing: { kind: "certification", target: "diver" },
   specialty_pending: { kind: "certification", target: "diver" },
@@ -1504,7 +1508,12 @@ export type SpineDeparture = {
   courseTitle: string | null;
   boatName: string | null;
   priceCents: number | null;
+  /** The stated seats. */
   capacity: number;
+  /** The seats on sale under the boat's certificate (`sellableSeats`); open seats count against it. */
+  sellableCapacity: number;
+  /** A practice departure (ADR 20261012-rehearsal-departures); the card says so (#2395). */
+  rehearsal: boolean;
   booked: number;
   boarded: number;
   blocked: number;

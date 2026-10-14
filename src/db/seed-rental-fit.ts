@@ -34,7 +34,13 @@ export async function seedRentalFit(
          * already renders differently. This one has been asked and answered.
          */
         ownsEverything?: boolean;
-        needsStaffFit?: boolean;
+        /**
+         * The shelf is out of this diver's size: what the desk wrote on the
+         * flag. It names a size the gear register really lacks (`seed-gear.ts`)
+         * — the note used to say "No XL BCD left" above a pick list offering
+         * BCD #6 · XL (UX review 2026-10-13, item 40).
+         */
+        staffFitNote?: string;
       },
     ]
   > = [
@@ -53,7 +59,17 @@ export async function seedRentalFit(
     // H-06 demo: the shop is out of this diver's size, so they're flagged for
     // hands-on fitting — their sizes are deliberately blanked on the prep list and they
     // get named in its "fit these divers at check-in" section instead.
-    [7, { bcd: "XL", wetsuit: "XL", boot: "12", fin: "L", weights: "10 kg", needsStaffFit: true }],
+    [
+      7,
+      {
+        bcd: "XL",
+        wetsuit: "XL",
+        boot: "12",
+        fin: "L",
+        weights: "10 kg",
+        staffFitNote: "No size 12 boots on the shelf, fit from the spares",
+      },
+    ],
     // Sizes half-recorded, which is how a fit book actually looks.
     [12, { bcd: null, wetsuit: "M", boot: "7", fin: "M" }],
     // The extended roster: the fit book a shop actually keeps after a few
@@ -73,7 +89,14 @@ export async function seedRentalFit(
     // Another out-of-stock size — the second XL the prep list flags today.
     [
       42,
-      { bcd: "XL", wetsuit: "XL", boot: "13", fin: "XL", weights: "11 kg", needsStaffFit: true },
+      {
+        bcd: "XL",
+        wetsuit: "XL",
+        boot: "13",
+        fin: "XL",
+        weights: "11 kg",
+        staffFitNote: "No XL fins on the shelf, fit from the spares",
+      },
     ],
     [44, { bcd: "S", wetsuit: "S", boot: "6", fin: "S", weights: "5 kg" }],
     [46, { bcd: "L", wetsuit: "L", boot: "10", fin: "L", weights: "8 kg" }],
@@ -110,8 +133,8 @@ export async function seedRentalFit(
         // read as "nobody asked" on the packing list (schema.ts,
         // `rental_fit_profiles.fit_stated_at`).
         fitStatedAt: nowDate(),
-        needsStaffFitAt: fit.needsStaffFit ? nowDate() : null,
-        needsStaffFitNote: fit.needsStaffFit ? "No XL BCD left — fit from the spares" : null,
+        needsStaffFitAt: fit.staffFitNote ? nowDate() : null,
+        needsStaffFitNote: fit.staffFitNote ?? null,
       };
     })
     .filter((row) => row !== null);

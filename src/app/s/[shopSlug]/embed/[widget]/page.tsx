@@ -7,7 +7,7 @@ import { StarRating } from "@/components/StarRating";
 import { buttonClass } from "@/components/ui/button";
 import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
-import { listActiveCourses } from "@/db/courses";
+import { activeCourseAgencies, listActiveCourses } from "@/db/courses";
 import { getShopReviewAggregate, listPublishedShopReviewsPage } from "@/db/reviews";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -15,7 +15,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
-import { resolveCourseContentDepths } from "@/lib/courses";
+import { courseTotalCents, resolveCourseContentDepths } from "@/lib/courses";
 import { isEmbedWidget } from "@/lib/embed-routes";
 import { formatDayParts, formatMoneyScanned, formatTimeRange } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
@@ -23,6 +23,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import {
   publicCoursePath,
+  publicCoursesPath,
   publicReviewsPath,
   publicSchedulePath,
   publicTripPath,
@@ -36,6 +37,9 @@ export const instant = true;
 
 /** How many diver quotes the reviews widget carries before it hands over to the archive. */
 const WIDGET_QUOTES = 3;
+
+/** How many courses the courses widget lists before it hands over to the catalog. */
+const WIDGET_COURSES = 6;
 
 /**
  * Four thin views of the shop's own content, each a fragment of a page a
@@ -83,10 +87,22 @@ export default async function EmbedWidgetPage({
   // catalog makes (src/lib/courses.ts). Rendered raw, a framed summary read
   // "How to dive between {depth18n} and {depth40}…" (K-376).
   const depthFormat = courseDepthFormat(t, shop.depthUnit);
-  const activeCourses = async () =>
-    (await listActiveCourses(db, shop.id)).map((course) =>
+  // **One agency's ladder, as the catalog opens.** The public courses page
+  // shows one agency at a time and opens on the first; a frame that printed
+  // every agency's Open Water, Advanced and Rescue flat was a 60-card wall on
+  // the shop's own homepage (third UX review, item 25). A named course (`show`)
+  // is looked up across every agency.
+  const activeCourses = async (scope: "primary" | "all") => {
+    const agency = scope === "primary" ? (await activeCourseAgencies(db, shop.id))[0] : undefined;
+    return (await listActiveCourses(db, shop.id, agency ? { agency } : {})).map((course) =>
       resolveCourseContentDepths(course, depthFormat),
     );
+  };
+  // What the diver is asked for at enrollment, fee and eLearning together,
+  // the number the course page itself prints. The fee alone made "$499" here
+  // and "$709" one click later (third UX review, item 22).
+  const coursePrice = (course: Parameters<typeof courseTotalCents>[0]) =>
+    money(courseTotalCents(course));
 
   const money = (cents: number | null) =>
     cents === null ? null : formatMoneyScanned(cents, currency, locale);
@@ -132,8 +148,12 @@ export default async function EmbedWidgetPage({
     const average = aggregate.average;
     body = (
       <section aria-label={t("reviews.sectionTitle")}>
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+        {/* The way out stays on the rating's line (#2502): the frame is a fixed
+            height on the shop's own site, so a link wrapped to a row of its own
+            pushes the last review under the fold. At a phone's width the
+            counts fold under the stars instead. */}
+        <div className="flex items-center justify-between gap-x-4">
+          <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
             <StarRating
               rating={Math.round(average)}
               label={t("reviews.ratingOption", { rating: Math.round(average) })}
@@ -160,7 +180,7 @@ export default async function EmbedWidgetPage({
           <Link
             href={`${origin}${publicReviewsPath(shopSlug)}`}
             target="_top"
-            className={buttonClass({ variant: "secondary", size: "sm" })}
+            className={`${buttonClass({ variant: "secondary", size: "sm" })} shrink-0`}
           >
             {t("reviews.allTitle")}
           </Link>
@@ -196,57 +216,75 @@ export default async function EmbedWidgetPage({
       />
     );
   } else if (widget === "courses") {
-    const active = await activeCourses();
+    const active = await activeCourses(showId ? "all" : "primary");
     // **One course, or the catalogue** (issue #1284, completing ADR
     // 20260901-diveday-reimagined decision 2's "what it shows"). A slug that
     // names no active course is a 404 rather than a silently empty list, the
     // same call the departure card makes one branch up: a shop that unpublished
     // the course its blog post frames should see the frame say so, not show an
     // empty panel that reads as a bug in DiveDay.
-    const courses = showId ? active.filter((course) => course.slug === showId) : active;
+    const courses = showId
+      ? active.filter((course) => course.slug === showId)
+      : active.slice(0, WIDGET_COURSES);
     if (showId && courses.length === 0) notFound();
+    const moreCourses = !showId && active.length > courses.length;
     body = (
-      <ul className="divide-y divide-border rounded-panel border border-border bg-surface shadow-bed">
-        {courses.map((course) => (
-          <li
-            key={course.id}
-            className="flex min-h-14 items-center justify-between gap-3 px-4 py-3"
-          >
-            <div className="min-w-0">
-              <p className="font-brand-display font-semibold">{course.title}</p>
-              {/* Two lines on a phone, as the grid's card clamps the same
+      <section>
+        <ul className="divide-y divide-border rounded-panel border border-border bg-surface shadow-bed">
+          {courses.map((course) => (
+            <li
+              key={course.id}
+              className="flex min-h-14 items-center justify-between gap-3 px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="font-brand-display font-semibold">{course.title}</p>
+                {/* Two lines on a phone, as the grid's card clamps the same
                   field: at one line every summary on a 390px frame was cut
                   to a fragment ("How to dive between…") beside a title
                   that wraps freely (K-376). From `sm` one line holds it. */}
-              {course.summary ? (
-                <p className="line-clamp-2 text-sm text-muted sm:line-clamp-1">{course.summary}</p>
-              ) : null}
-              {/* How long, in the shop's own words — the course index says it,
+                {course.summary ? (
+                  <p className="line-clamp-2 text-sm text-muted sm:line-clamp-1">
+                    {course.summary}
+                  </p>
+                ) : null}
+                {/* How long, in the shop's own words — the course index says it,
                   and a list that dropped it was thinner than the page it stands for. */}
-              {course.durationText ? (
-                <p className="text-xs text-muted">{course.durationText}</p>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 items-center gap-3">
-              {course.priceCents !== null ? (
-                <span className="font-semibold tabular-nums">{money(course.priceCents)}</span>
-              ) : null}
-              <Link
-                href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
-                target="_top"
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("embed.enrol")}
-              </Link>
-            </div>
-          </li>
-        ))}
-      </ul>
+                {course.durationText ? (
+                  <p className="text-xs text-muted">{course.durationText}</p>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                {coursePrice(course) ? (
+                  <span className="font-semibold tabular-nums">{coursePrice(course)}</span>
+                ) : null}
+                <Link
+                  href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
+                  target="_top"
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("embed.enrol")}
+                </Link>
+              </div>
+            </li>
+          ))}
+        </ul>
+        {moreCourses ? (
+          <p className="mt-3 text-end">
+            <Link
+              href={`${origin}${publicCoursesPath(shopSlug)}`}
+              target="_top"
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("courses.shelf.allCourses")}
+            </Link>
+          </p>
+        ) : null}
+      </section>
     );
   } else {
     const [{ trips }, courses] = await Promise.all([
       pagedUpcomingTripsWithCounts(db, shop.id, { now, limit: 6, publicOnly: true }),
-      activeCourses(),
+      activeCourses("primary"),
     ]);
     body = (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -276,7 +314,7 @@ export default async function EmbedWidgetPage({
               <p className="line-clamp-2 text-sm text-muted">{course.summary}</p>
             ) : null}
             <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-              <span className="font-semibold tabular-nums">{money(course.priceCents) ?? ""}</span>
+              <span className="font-semibold tabular-nums">{coursePrice(course) ?? ""}</span>
               <Link
                 href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
                 target="_top"

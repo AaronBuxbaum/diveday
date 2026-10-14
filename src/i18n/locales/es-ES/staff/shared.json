@@ -51,7 +51,7 @@
     "outcomeNotCleared": "No autorizado",
     "evaluatedOnLabel": "Fecha de la evaluación médica",
     "physicianNameLabel": "Médico",
-    "evidenceHint": "Su nombre, o adjunta la evaluación abajo. Una de las dos.",
+    "evidenceHint": "Su nombre, la evaluación de abajo, o ambos.",
     "documentLabel": "Formulario de evaluación médica",
     "documentHint": "Una imagen o un PDF del formulario firmado.",
     "documentChoose": "Elige un archivo",
@@ -93,7 +93,7 @@
   },
   "capacity": {
     "full": "Completo",
-    "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
+    "seatsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
     "certificateCap": "Certificado: {sellable} de {stated} plazas"
   },
   "compass": {
@@ -214,6 +214,7 @@
       "certificationInsufficient": "Sin la certificación para esta salida. Requiere {level} o superior.",
       "certificationInsufficientHeld": "Sin la certificación para esta salida. Requiere {level} o superior, y la certificación más alta registrada es {held}.",
       "certificationInTraining": "Aún sin certificación {level}. Inscrito en un curso que termina antes de esta salida; esto se resuelve cuando el instructor lo certifique.",
+      "certificationNotYet": "Dice que todavía no tiene certificación. Esta salida pide {level} o superior, así que ponte en contacto antes del día.",
       "specialtyMissing": "Se requiere la especialidad {specialty}; no hay certificación registrada.",
       "specialtyPending": "La certificación de especialidad {specialty} espera verificación del personal.",
       "specialtyImportUnconfirmed": "La certificación de especialidad {specialty} llegó en una importación y un miembro del personal debe confirmarla antes de esta inmersión.",
@@ -442,7 +443,7 @@
       "boots": "Escarpines",
       "maskFins": "Máscara y aletas",
       "weights": "Lastre",
-      "diveComputer": "Ordenador de buceo",
+      "diveComputer": "Computadora de buceo",
       "gopro": "GoPro",
       "drysuit": "Traje seco",
       "hood": "Capucha",
@@ -524,7 +525,7 @@
     "dockLineSays": "Saluda a {name}: dice {level}."
   },
   "diveIntent": {
-    "aboardToday": "Hoy a bordo: {list}",
+    "onTheList": "En la lista de hoy: {list}",
     "easingBack": "{count} volviendo a tomar confianza",
     "smallLife": "{count} buscando vida pequeña",
     "aWreck": "{count} con ganas de un naufragio",
@@ -548,11 +549,15 @@
     "told": "{count, plural, one {Avisamos del nuevo horario a # buceador.} other {Avisamos del nuevo horario a # buceadores.}}",
     "someMissed": "{count, plural, one {No pudimos avisar a # buceador por correo ni por mensaje.} other {No pudimos avisar a # buceadores por correo ni por mensaje.}}",
     "notTold": "Sin avisar. Los buceadores siguen con el horario anterior.",
+    "tellingPlace": "{count, plural, one {Avisando del nuevo punto de encuentro a # buceador…} other {Avisando del nuevo punto de encuentro a # buceadores…}}",
+    "toldPlace": "{count, plural, one {Avisamos del nuevo punto de encuentro a # buceador.} other {Avisamos del nuevo punto de encuentro a # buceadores.}}",
+    "notToldPlace": "Sin avisar. Los buceadores siguen con el punto de encuentro anterior.",
     "tellThem": "Avisarles"
   },
   "formDraft": {
     "pickedUp": "Retomado del mostrador, {time}.",
-    "startOver": "Empezar de nuevo"
+    "startOver": "Empezar de nuevo",
+    "unsavedSection": "Sin guardar"
   },
   "identityCheck": {
     "reasonSharedEmail": "Reservó como {bookedAs} con el correo de {name}. Confirma quién es.",
@@ -574,6 +579,12 @@
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Crear su propia ficha",
     "splitting": "Creando…"
+  },
+  "boatWork": {
+    "missingSizes": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler",
+    "ungatedNitrox": "{count, plural, one {# buceador quiere} other {# buceadores quieren}} nitrox sin certificación verificada",
+    "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia",
+    "openOrders": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"
   },
   "payouts": {
     "paid": "Pago de {amount} a tu banco el {date}, por lo cobrado del {from} al {to}",

@@ -99,7 +99,6 @@
     "restoreUnit": "Restaurar {label}"
   },
   "addUnit": {
-    "door": "Agregar equipo",
     "title": "Agregar una unidad",
     "submit": "Agregar al registro",
     "pending": "Agregando…"
@@ -229,7 +228,8 @@
       "reinstating": "Devolviendo…",
       "delete": "Eliminar unidad",
       "deleting": "Eliminando…",
-      "deleteHeld": "{name} tiene esta unidad hasta el {until}. Libérala o márcala como devuelta primero."
+      "deleteHeld": "{name} tiene esta unidad hasta el {until}. Libérala o márcala como devuelta primero.",
+      "returnedConcern": "Devuelto el {date} para revisar: {note}"
     },
     "returnOutcomeAllGood": "Volvió bien",
     "returnOutcomeFitAdjusted": "Talla ajustada al devolverlo",

@@ -1,8 +1,8 @@
-import { and, eq, gt, isNull, max, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, max, ne, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DeskEvent, DeskEventKind } from "@/lib/desk-events";
 import type { AppDb, DbExecutor } from "./client";
-import { people, tripDeskEvents, tripReadMarks, trips } from "./schema";
+import { bookings, people, tripDeskEvents, tripHelpRequests, tripReadMarks, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -109,6 +109,19 @@ export type DeskCatchUp = {
  * subject's name is **joined live** rather than frozen into the event row —
  * which is what makes `anonymizeDiver` reach this surface with no sweep of its
  * own.
+ *
+ * **A roster line is said only while the roster still says it** (UX review
+ * 2026-10-13, item 3). The strip sits above the head count on the manifest,
+ * so "Priya has checked in" over a roll call that has her at the counter's
+ * start is a contradiction on a safety surface. An arrival is read through
+ * the seat it names and kept only while that seat is `checked_in` on this
+ * departure — the projection the roster and the counter read — so an undone
+ * check-in, which writes no event of its own, takes its line with it, and so
+ * does a seat moved to another boat. A seat taken is kept
+ * only while the seat is still held, and a diver's ask for a hand only while
+ * that ask is still open (`trip_help_requests`, the row Today reads). The
+ * append-only rows are untouched; the reader filters, so the trail stays
+ * whole.
  */
 export async function listDeskEventsSince(
   db: AppDb,
@@ -142,6 +155,14 @@ export async function listDeskEventsSince(
     .from(tripDeskEvents)
     .innerJoin(trips, eq(trips.id, tripDeskEvents.tripId))
     .leftJoin(people, eq(people.id, tripDeskEvents.subjectPersonId))
+    .leftJoin(bookings, and(eq(bookings.id, tripDeskEvents.bookingId), eq(bookings.shopId, shopId)))
+    .leftJoin(
+      tripHelpRequests,
+      and(
+        eq(tripHelpRequests.bookingId, tripDeskEvents.bookingId),
+        eq(tripHelpRequests.shopId, shopId),
+      ),
+    )
     .where(
       and(
         eq(tripDeskEvents.shopId, shopId),
@@ -149,6 +170,7 @@ export async function listDeskEventsSince(
         eq(trips.shopId, shopId),
         liveTrip(),
         gt(tripDeskEvents.seq, mark.seq),
+        rosterStillSaysIt(),
         // A null actor is a diver acting on their own link, which is news to
         // every staffer — `ne` alone would drop those rows, since SQL's
         // three-valued logic makes `null <> '…'` neither true nor false.
@@ -158,6 +180,28 @@ export async function listDeskEventsSince(
     .orderBy(tripDeskEvents.seq);
 
   return { mark, events: rows };
+}
+
+/**
+ * The three kinds the strip may only say while the rows behind them still
+ * bear them out (see {@link listDeskEventsSince}). Every other kind is a
+ * statement about something that happened, which stays true once it has.
+ */
+function rosterStillSaysIt() {
+  return and(
+    or(
+      ne(tripDeskEvents.kind, "arrival"),
+      and(eq(bookings.tripId, tripDeskEvents.tripId), eq(bookings.status, "checked_in")),
+    ),
+    or(
+      ne(tripDeskEvents.kind, "seat_taken"),
+      and(eq(bookings.tripId, tripDeskEvents.tripId), ne(bookings.status, "cancelled")),
+    ),
+    or(
+      ne(tripDeskEvents.kind, "help_request"),
+      inArray(tripHelpRequests.status, ["requested", "acknowledged"]),
+    ),
+  );
 }
 
 /**

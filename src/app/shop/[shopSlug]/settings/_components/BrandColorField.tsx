@@ -11,13 +11,21 @@ import { DIVEDAY_BRAND_COLOR, parseBrandColor } from "@/lib/brand";
  * and blank is how a shop says "keep DiveDay's teal". The picker is a hand for
  * the field, not a second source of truth. Words arrive as props: this is a
  * staff Client Component.
+ *
+ * The hex field names itself (`label`): it sits second inside its `<Field>`'s
+ * wrapping `<label>`, which names only the first control, the picker, so without
+ * its own `aria-label` the value the form submits was named by its placeholder
+ * alone (2026-10-13 review; `scripts/check-form-controls.mjs`).
  */
 export function BrandColorField({
   initial,
+  label,
   pickerLabel,
   placeholder,
 }: {
   initial: string | null;
+  /** The hex field's own name, the field's caption. */
+  label: string;
   pickerLabel: string;
   placeholder: string;
 }) {
@@ -41,6 +49,7 @@ export function BrandColorField({
         pattern="#?[0-9a-fA-F]{6}"
         value={value}
         onChange={(event) => setValue(event.target.value)}
+        aria-label={label}
         placeholder={placeholder}
         className={controlClass}
       />

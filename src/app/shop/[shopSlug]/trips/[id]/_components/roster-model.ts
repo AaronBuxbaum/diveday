@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { CourseMaterialsDone } from "@/db/course-materials";
 import type { listBookingNotes } from "@/db/operations";
+import type { PaymentMarkFacts } from "@/db/payment-marks";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -34,6 +36,8 @@ import type {
 /** The departure, and what this staffer may do on it. */
 export type RosterTrip = {
   shopSlug: string;
+  /** A rehearsal departure: nothing about it is sent (ADR 20261012-rehearsal-departures). */
+  rehearsal?: boolean;
   shopTimezone: string;
   locale: string;
   tripId: string;
@@ -131,6 +135,8 @@ export type RosterRows = {
   heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
   /** Per seat, the unspent package dives its diver could put toward this trip (issue #1697). */
   packageDivesByBooking?: ReadonlyMap<string, number>;
+  /** Per seat, the Paid mark's money and the seat's balance (`paymentMarkFactsForTrip`). */
+  paymentMarksByBooking?: ReadonlyMap<string, PaymentMarkFacts>;
   /**
    * The booking a staffer just acted on (`?bid=`), if any — a saved contact,
    * an updated payment. Acting on a row can move what they touched into the
@@ -207,6 +213,18 @@ export type RosterActions = {
     formData: FormData,
   ) => Promise<ElearningCheckResult>;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
+  /**
+   * "Move to another departure" (ADR 20261013-staff-move-a-seat): the action
+   * and the departures it may move to. Absent once the departure has left, or
+   * when there is nowhere to go.
+   */
+  moveSeat?: SeatMove;
+};
+
+/** The departures a seat may move to, already worded with their zone. */
+export type SeatMove = {
+  action: (formData: FormData) => void;
+  targets: readonly { id: string; label: string }[];
 };
 
 /**
@@ -359,10 +377,26 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
 
 export type WaiverControls = Record<ReturnType<typeof waiverState>, WaiverControl>;
 
-/** Every waiver state's control, worded. */
-export function waiverControls(t: StaffTranslator): WaiverControls {
+/**
+ * Every waiver state's control, worded. On a rehearsal an open link was never
+ * sent — every message about one is held, and its links are handed over in
+ * person (ADR 20261012-rehearsal-departures) — so it says held (#2395).
+ */
+export function waiverControls(
+  t: StaffTranslator,
+  { rehearsal = false }: { rehearsal?: boolean } = {},
+): WaiverControls {
+  const keys: typeof WAIVER_CONTROL_KEYS = rehearsal
+    ? {
+        ...WAIVER_CONTROL_KEYS,
+        awaiting_signature: {
+          ...WAIVER_CONTROL_KEYS.awaiting_signature,
+          labelKey: "trips.roster.waiverHeldRehearsal",
+        },
+      }
+    : WAIVER_CONTROL_KEYS;
   return Object.fromEntries(
-    Object.entries(WAIVER_CONTROL_KEYS).map(([status, entry]) => [
+    Object.entries(keys).map(([status, entry]) => [
       status,
       {
         ...entry,
@@ -392,6 +426,14 @@ export function rosterPaymentStatusCopy(t: StaffTranslator): PaymentStatusContro
     },
     update: t("trips.roster.paymentUpdate"),
     updating: t("trips.roster.paymentUpdating"),
+    amountLabel: t("trips.roster.paymentAmountLabel"),
+    methodLabel: t("trips.roster.paymentMethodLabel"),
+    methods: {
+      cash: t("trips.roster.paymentMethodCash"),
+      card: t("trips.roster.paymentMethodCard"),
+      other: t("trips.roster.paymentMethodOther"),
+    },
+    forgiving: forgivingCopy(t),
   };
 }
 

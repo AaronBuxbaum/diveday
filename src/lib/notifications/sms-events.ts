@@ -35,6 +35,36 @@ const PROVIDER_STATUS_BY_SMS_STATUS: Record<string, ProviderEmailStatus | undefi
   FAILURE: "failed",
 };
 
+/**
+ * The failure reasons SNS writes into `providerResponse`, compared
+ * lower-cased. A failed receipt keeps one of these verbatim and anything else
+ * as `unrecognized_response` (issue #2531): the field is the carrier's free
+ * text, a carrier is free to quote the number or the message in it, and it is
+ * stored on the delivery row.
+ */
+const KNOWN_FAILURE_RESPONSES = new Map(
+  [
+    "Phone carrier has blocked this message",
+    "Phone carrier is currently unreachable/unavailable",
+    "Phone has blocked SMS",
+    "Phone is on a blocked list",
+    "Phone is currently unreachable/unavailable",
+    "Phone number is opted out",
+    "This delivery would exceed max price",
+    "Unknown error attempting to reach phone",
+    "Invalid phone number",
+    "Message is invalid",
+    "Unknown error",
+  ].map((response) => [response.toLowerCase(), response]),
+);
+
+/** A failed receipt's detail: a known SNS reason, or a fixed token. */
+function failureDetail(providerResponse: string | undefined): string | null {
+  const response = providerResponse?.trim();
+  if (!response) return null;
+  return KNOWN_FAILURE_RESPONSES.get(response.toLowerCase()) ?? "unrecognized_response";
+}
+
 const smsReceiptSchema = z.object({
   notification: z.object({
     /** The same id `Publish` returned and `recordNotificationDelivery` stored. */
@@ -57,7 +87,7 @@ export type SmsDeliveryEvent =
       kind: "delivery";
       providerMessageId: string;
       status: ProviderEmailStatus;
-      /** The carrier's own explanation, which is the only useful part of a failure. */
+      /** SNS's reason for a failure, from a known list (`failureDetail`). */
       detail: string | null;
       occurredAt: Date;
     }
@@ -92,7 +122,7 @@ export function parseSmsDeliveryEvent(record: string, now: Date): SmsDeliveryEve
     // Only on a failure. `providerResponse` on a success is a cheerful
     // "Message has been accepted by phone", which is noise on a row whose
     // status already says delivered.
-    detail: status === "failed" ? (receipt.data.delivery?.providerResponse?.trim() ?? null) : null,
+    detail: status === "failed" ? failureDetail(receipt.data.delivery?.providerResponse) : null,
     occurredAt: timestampFrom([receipt.data.notification.timestamp], now),
   };
 }

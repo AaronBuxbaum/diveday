@@ -1,6 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-import { OVERRIDE, overrideReason, parsePush, pushViolation } from "./guard-push.mjs";
+import { afterEach, describe, expect, it } from "vitest";
+
+import {
+  gitAnswers,
+  OVERRIDE,
+  overrideReason,
+  parsePush,
+  pushViolation,
+  verifiedFile,
+} from "./guard-push.mjs";
 
 /**
  * A push guard that refuses something legitimate gets routed around, so the "leaves alone"
@@ -89,5 +101,112 @@ describe("the reason a push gave for skipping verify:push", () => {
     expect(overrideReason("git push -u origin claude/layer")).toBeNull();
     expect(overrideReason("git status")).toBeNull();
     expect(overrideReason(`${OVERRIDE}=skip git push`)).toBeNull();
+  });
+});
+
+/**
+ * Every thread's session cwd is the shared checkout, and builds happen in worktrees: the hook's
+ * `cwd` is the shared checkout even for `cd <worktree> && git push` or `git -C <worktree> push`.
+ * The guard reads the worktree the command names, and the stamp is keyed by sha in the common
+ * git dir, so a commit verified in any worktree is verified everywhere.
+ */
+describe("a push from another worktree", () => {
+  const shared = answers({ head: () => "zzz000", branch: () => "HEAD" });
+  const worktree = answers({ head: () => "ccc333", verified: (sha) => sha === "ccc333" });
+  const byDir = (dir) => (dir === "/wt" ? worktree : shared);
+
+  it("reads the worktree a leading `cd <dir> &&` names", () => {
+    expect(pushViolation("cd /wt && git push -u origin claude/layer", byDir, "/shared")).toBeNull();
+    expect(pushViolation("cd /wt && git push", byDir, "/shared")).toBeNull();
+  });
+
+  it("reads the worktree `git -C <dir>` names, relative to the session's cwd", () => {
+    expect(pushViolation("git -C /wt push -u origin claude/layer", byDir, "/shared")).toBeNull();
+    expect(pushViolation("git -C ../wt push", byDir, "/x")).toBeNull();
+  });
+
+  it("still refuses an unverified sha there", () => {
+    const unverified = (dir) => (dir === "/wt" ? answers({ head: () => "ddd444" }) : shared);
+    expect(pushViolation("cd /wt && git push", unverified, "/shared")).toMatch(/ddd444/);
+    expect(pushViolation("git -C /wt push", unverified, "/shared")).toMatch(/ddd444/);
+  });
+
+  it("accepts the sha-keyed stamp beside the old per-worktree one", () => {
+    expect(pushViolation("git push", answers({ verified: (sha) => sha === "aaa111" }))).toBeNull();
+  });
+});
+
+describe("a push from a real worktree", () => {
+  const dirs = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+  const sh = (cwd, ...args) =>
+    execFileSync("git", args, {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "t",
+        GIT_AUTHOR_EMAIL: "t@example.com",
+        GIT_COMMITTER_NAME: "t",
+        GIT_COMMITTER_EMAIL: "t@example.com",
+      },
+    }).trim();
+
+  function setup() {
+    const root = mkdtempSync(path.join(os.tmpdir(), "guard-push-"));
+    dirs.push(root);
+    const repo = path.join(root, "repo");
+    const wt = path.join(root, "wt");
+    sh(root, "init", "-q", "-b", "main", repo);
+    writeFileSync(path.join(repo, "a.txt"), "a");
+    sh(repo, "add", "a.txt");
+    sh(repo, "commit", "-q", "-m", "a");
+    sh(repo, "worktree", "add", "-q", "-b", "claude/layer", wt);
+    writeFileSync(path.join(wt, "b.txt"), "b");
+    sh(wt, "add", "b.txt");
+    sh(wt, "commit", "-q", "-m", "b");
+    return { root, repo, wt, sha: sh(wt, "rev-parse", "HEAD") };
+  }
+  const read = (dir) => gitAnswers(dir);
+
+  it("passes a commit stamped in the worktree, pushed with the shared checkout as cwd", () => {
+    const { repo, wt, sha } = setup();
+    const command = `cd ${wt} && git push -u origin claude/layer`;
+    expect(pushViolation(command, read, repo)).toMatch(/verify:push/);
+    const file = verifiedFile(path.join(repo, ".git"), sha);
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify({ sha }));
+    expect(pushViolation(command, read, repo)).toBeNull();
+    expect(pushViolation(`git -C ${wt} push`, read, repo)).toBeNull();
+  });
+
+  it("reads the stamp of a separate clone, not the shared checkout's", () => {
+    const { repo, root } = setup();
+    const clone = path.join(root, "clone");
+    sh(root, "clone", "-q", repo, clone);
+    sh(clone, "checkout", "-q", "-b", "claude/other");
+    writeFileSync(path.join(clone, "c.txt"), "c");
+    sh(clone, "add", "c.txt");
+    sh(clone, "commit", "-q", "-m", "c");
+    const sha = sh(clone, "rev-parse", "HEAD");
+    const commands = [`cd ${clone} && git push -u origin claude/other`, `git -C ${clone} push`];
+    for (const command of commands)
+      expect(pushViolation(command, read, repo)).toMatch(/verify:push/);
+    const file = verifiedFile(path.join(clone, ".git"), sha);
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify({ sha }));
+    for (const command of commands) expect(pushViolation(command, read, repo)).toBeNull();
+  });
+
+  it("still reads the old per-worktree stamp, from the worktree the command names", () => {
+    const { repo, wt, sha } = setup();
+    writeFileSync(
+      path.join(repo, ".git/worktrees/wt/diveday-verified.json"),
+      JSON.stringify({ sha }),
+    );
+    expect(pushViolation(`cd ${wt} && git push`, read, repo)).toBeNull();
   });
 });

@@ -200,11 +200,15 @@ export default async function NewDiverPage({
                         <>
                           <input type="hidden" name="fromNameMatch" value="true" />
                           <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
+                          <input type="hidden" name="request" value={requestParam ?? ""} />
                         </>
                       )}
-                      <button type="submit" className="underline font-medium text-left">
+                      <SubmitButton
+                        pendingLabel={match.fullName}
+                        className="underline font-medium text-left"
+                      >
                         {match.fullName}
-                      </button>
+                      </SubmitButton>
                     </form>
                   ) : (
                     <Link

@@ -9,7 +9,7 @@ import { MarketingFooter, MarketingFooterFallback } from "@/components/Marketing
 import { SWITCH_EMAIL, SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { tapTargetLinkClass } from "@/components/ui/button";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import {
   BANNER_TITLE_CLASS,
   ITEM_TITLE_CLASS,

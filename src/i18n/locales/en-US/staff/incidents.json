@@ -28,6 +28,8 @@
     "locationHint": "The dock, the boat deck, a spot on the reef.",
     "whatHappened": "What happened",
     "whatHappenedHint": "In order, as you saw it: times, depths, and who did what.",
+    "kind": "What kind of incident",
+    "severity": "How serious",
     "care": "Care given",
     "firstAid": "Was first aid given?",
     "oxygen": "Was oxygen given?",
@@ -55,6 +57,19 @@
     "chamber": "A hyperbaric chamber",
     "diver": "Themselves, released on scene",
     "other": "Someone else"
+  },
+  "kind": {
+    "injury": "Injury or illness",
+    "near_miss": "Near miss",
+    "equipment": "Equipment failure",
+    "missing_diver": "Missing diver",
+    "fatality": "Fatality",
+    "other": "Something else"
+  },
+  "severity": {
+    "minor": "Minor",
+    "moderate": "Moderate",
+    "serious": "Serious"
   },
   "people": {
     "title": "People involved",
@@ -93,6 +108,8 @@
       "occurred_at": "When it happened",
       "location": "Where it happened",
       "what_happened": "What happened",
+      "kind": "What kind of incident it was",
+      "severity": "How serious it was",
       "first_aid": "Whether first aid was given",
       "oxygen": "Whether oxygen was given",
       "emergency_services": "Whether emergency services were called",
@@ -148,6 +165,7 @@
     "certOverridesLink": "The month’s safety activity",
     "crew": "Crew sailing on a lapsed credential",
     "crewValue": "{lapsed} of {sailings}",
+    "crewDetailUnrecorded": "No credential on file for {unrecorded} of {sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "crewDetail": "{sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "incidents": "Incident reports",
     "boardingNote": "The dock roll call refuses a diver the readiness check has not cleared. A diver first counted at a later checkpoint is not in this figure.",
@@ -159,6 +177,8 @@
     "closureNone": "No roll call taken",
     "lapsedTitle": "Crew who sailed on a lapsed credential",
     "lapsedEmpty": "Nobody sailed on a lapsed credential.",
+    "unrecordedTitle": "Crew who sailed with no credential on file",
+    "unrecordedSailings": "{count, plural, one {# sailing} other {# sailings}} this month",
     "noDepartures": "No departures came back this month."
   }
 }

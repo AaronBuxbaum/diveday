@@ -35,6 +35,12 @@ import { type CalendarDate, calendarDaysBetween } from "./calendar-date";
  * as long as the dates can be read off it.
  */
 
+/**
+ * How a request was closed (third UX review, item 13): a booking was made from
+ * it, or a staffer marked it done. Mirrors the `course_inquiry_outcome` enum.
+ */
+export type DateRequestOutcome = "booked" | "done";
+
 /** How near a named date a flexible request will still travel. */
 export const FLEXIBLE_WINDOW_DAYS = 3;
 

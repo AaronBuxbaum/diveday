@@ -21,6 +21,7 @@ import { needsMedicalReview } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
 import { bookings, people, waiverRecords } from "./schema";
+import { seatMinorDeclared } from "./waiver-signing";
 import { shopTimezone } from "./waivers-templates";
 
 export type TokenWaiverState =
@@ -442,7 +443,13 @@ export async function completeWaiver(
   // the diver's age. Refused before the record is touched, like the name
   // mismatch above, so a family that missed the section keeps the link.
   const timezone = await shopTimezone(db, state.record.shopId);
-  const minor = guardianSignatureRequired(signer.dateOfBirth, signingDate(now, timezone));
+  const minor = guardianSignatureRequired(
+    signer.dateOfBirth,
+    signingDate(now, timezone),
+    // The booker's "Under 18" on this release's seat, read where the page
+    // reads it, so the two can never disagree about asking.
+    await seatMinorDeclared(db, state.record.shopId, state.record.bookingId),
+  );
   let guardian: ReturnType<typeof guardianEvidence> | null = null;
   if (minor) {
     if (!input.guardian) return { ok: false, reason: "guardian_required" };

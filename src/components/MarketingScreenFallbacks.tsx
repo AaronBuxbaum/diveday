@@ -1,7 +1,8 @@
 import { RollCallMark } from "@/components/RollCallMark";
 import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { groupLabelClass, LedgerRow } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 import { ReadinessBar } from "@/components/ui/ProgressBar";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
@@ -264,7 +265,7 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
         <div className="rounded-inset border border-border bg-surface p-4">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className={FIGURE_INLINE_CLASS}>{t("fallback.todayStart")}</span>
-            <span className="text-xs text-muted">{t("fallback.todayUntil")}</span>
+            <span className="text-xs text-muted">{t("fallback.todayEnds")}</span>
             <span className="rounded-full bg-warning-tint px-2 py-0.5 text-xs font-medium text-warning-strong">
               {t("fallback.phaseCheckin")}
             </span>

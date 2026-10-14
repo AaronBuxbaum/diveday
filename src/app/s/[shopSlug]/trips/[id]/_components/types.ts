@@ -11,7 +11,7 @@ import type { fetchAutomatedMarineForecast } from "@/lib/marine-forecast";
 export type Shop = NonNullable<Awaited<ReturnType<typeof shopBySlugCached>>>;
 export type Trip = NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
 export type TripDive = Awaited<ReturnType<typeof listTripDives>>[number];
-/** One consecutive day a departure meets on — a `trip_schedule_days` row. */
+/** One day a departure meets on — a `trip_schedule_days` row. */
 export type TripMeetingDay = Awaited<ReturnType<typeof listTripScheduleDays>>[number];
 export type Confirmed = NonNullable<Awaited<ReturnType<typeof getBookingForTrip>>>;
 export type Readiness = Awaited<ReturnType<typeof getBookingReadiness>>;
@@ -70,6 +70,7 @@ export type ErrorCode =
   | "fit"
   | "pay"
   | "waiver"
+  | "busy"
   | "rate_limited";
 
 export const ERROR_MESSAGE_KEYS: Record<ErrorCode, DiverMessageKey> = {
@@ -88,6 +89,9 @@ export const ERROR_MESSAGE_KEYS: Record<ErrorCode, DiverMessageKey> = {
   // on it from either surface reads one sentence, not two.
   waiver: "ready.waiverUnavailable",
   rate_limited: "common.rateLimited",
+  // The booking transaction waited its five seconds for a held boat and gave
+  // up (`isLockWaitRefusal`): a crowd, not a refusal, so it says to try again.
+  busy: "booking.errors.busy",
 };
 
 /** True for any string this page knows how to translate into an error notice. */

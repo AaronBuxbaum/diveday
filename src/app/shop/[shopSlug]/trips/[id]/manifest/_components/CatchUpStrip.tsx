@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { scopedId } from "@/lib/element-id";
 
@@ -74,8 +75,8 @@ export function CatchUpStrip({
             the row's `gap-x-6` takes that room back: its hover fill ends 16px
             short of the title. */}
         <form action={dismissAction} className="flex">
-          <button
-            type="submit"
+          <SubmitButton
+            pendingLabel={dismissLabel}
             className={buttonClass({
               variant: "ghost",
               size: "sm",
@@ -84,7 +85,7 @@ export function CatchUpStrip({
             })}
           >
             {dismissLabel}
-          </button>
+          </SubmitButton>
         </form>
       </div>
       {/* One paragraph, one sentence per kind. Sentences rather than a bulleted

@@ -1,5 +1,6 @@
 import { Badge, type BadgeTone } from "@/components/ui/badge";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 
 /**
  * **Orders as a day ledger** — ADR 20260827-clearwater-surface-language,

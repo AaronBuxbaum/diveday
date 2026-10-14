@@ -87,5 +87,6 @@ Run every `ci.yml` job on `ubuntu-latest`. The Playwright browser cache path mov
 is rendered on 24.04; the latent fragility named above (the image's own Chromium) would land as an
 unexplained full-suite diff, possibly split across one run's shards. The Playwright browser cache key
 names the image through `ImageOS`, since `runner.os` says only "Linux". `scripts/check-runner-image.mjs`
-holds the image in `RUNNER_IMAGE` and refuses any other label. Moving to 26.04 is one pull request
+holds the image in `RUNNER_IMAGE` and refuses any other label, except the Mac-or-GitHub pick of
+ADR 20261013-mac-ci-runner (`RUNNER_PICK`), whose GitHub answer and fallback are that image too. Moving to 26.04 is one pull request
 that changes that constant and rebaselines on purpose.

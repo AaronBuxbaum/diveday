@@ -1,8 +1,10 @@
 import { diverTranslator } from "@/i18n/messages";
 import { isDiverLocale } from "@/i18n/settings";
 import { escapeHtml } from "@/lib/html";
+import { courseCertifiedEmail } from "./course-certified";
+import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 import { crewScheduleChangeEmail } from "./crew-emails";
-import { deskAfterHoursEmail } from "./desk-emails";
+import { deskAfterHoursEmail, stripePaymentsRestrictedEmail } from "./desk-emails";
 import { departureNoteEmail, lostItemEmail } from "./desk-notes";
 import {
   bookingCancelledEmail,
@@ -39,6 +41,7 @@ import {
   wrapEmailHtml,
 } from "./email";
 import type { Notification } from "./kinds";
+import { rollCallStaleEmail } from "./roll-call-emails";
 import { shopVoiceOf } from "./shop-voice";
 import { weeklyDigestEmail } from "./weekly-digest-email";
 import { gearServiceDueEmail, workOrderReadyEmail } from "./work-order-emails";
@@ -142,7 +145,15 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "gear_service_due") return gearServiceDueEmail(notification);
   if (notification.kind === "crew_schedule_change") return crewScheduleChangeEmail(notification);
   if (notification.kind === "desk_after_hours") return deskAfterHoursEmail(notification);
+  if (notification.kind === "stripe_payments_restricted") {
+    return stripePaymentsRestrictedEmail(notification);
+  }
+  if (notification.kind === "roll_call_stale") return rollCallStaleEmail(notification);
   if (notification.kind === "departure_note") return departureNoteEmail(notification);
   if (notification.kind === "lost_item_found") return lostItemEmail(notification);
+  if (notification.kind === "course_certified") return courseCertifiedEmail(notification);
+  if (notification.kind === "course_inquiry_received") {
+    return courseInquiryReceivedEmail(notification);
+  }
   return passwordChangedEmail(notification);
 }

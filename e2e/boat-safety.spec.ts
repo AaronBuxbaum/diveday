@@ -72,7 +72,9 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await page.goto(`${shop}/gear`);
   const panel = page.locator("details:has(> summary#add-unit)");
   await expect(panel).toHaveAttribute("data-hydrated", "true");
-  await page.locator("summary#add-unit").click();
+  const addUnit = page.getByRole("button", { name: "Add a unit", exact: true });
+  await expect(addUnit).toHaveAttribute("data-hydrated", "true");
+  await addUnit.click();
   await page.getByLabel("Kind", { exact: true }).selectOption({ label: "AED" });
   await page.getByLabel("Tag").fill("AED e2e");
   await page.getByRole("button", { name: "Add to the register" }).click();

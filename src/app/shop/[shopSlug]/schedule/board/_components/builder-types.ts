@@ -102,6 +102,8 @@ export type BuilderCopy = {
   noPriceSet: string;
   noPriceSetAria: string;
   noPriceSetAll: string;
+  /** The mark a rehearsal departure wears on the board. */
+  rehearsal: string;
   /** What a week's day with nothing on it says (slice 23f). */
   noBoats: string;
   /** "{first} to {last}": days gone by with no boats, as one row. */
@@ -197,6 +199,8 @@ export type BuilderCopy = {
   selfGuidedHint: string;
   daysLabel: string;
   daysDescription: string;
+  /** "Day {number}" over each later day's date box (third UX review, item 10). */
+  meetingDayLabel: string;
   payAtBookingLegend: string;
   payAtBookingDescription: string;
   depositLabel: string;

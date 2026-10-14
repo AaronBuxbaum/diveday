@@ -53,6 +53,20 @@ export const DEFAULT_WAIVER_BODY = [
   "I have read this release in full, understand it, and agree to it freely.",
 ].join("\n");
 
+/**
+ * **The live release is still DiveDay's starting text, byte for byte.**
+ *
+ * Sign-up publishes {@link DEFAULT_WAIVER_BODY} as a new shop's version 1
+ * (`src/db/shop-signup.ts`), so divers can sign it the hour the shop goes
+ * live. Until somebody at the shop publishes their own words, the Waivers page
+ * says the text is sample wording and the first-run checklist keeps "Read your
+ * release" open. A shop with no release at all reads as sample too: the editor
+ * offers the same text.
+ */
+export function isSampleRelease(body: string | null | undefined): boolean {
+  return body == null || body === DEFAULT_WAIVER_BODY;
+}
+
 // `createWaiverToken` and `hashWaiverToken` used to live here. They are the
 // only two things in this file that need `node:crypto`, and this file is
 // reachable from three client components through `src/lib/readiness.ts` and

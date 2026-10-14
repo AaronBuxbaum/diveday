@@ -10,7 +10,8 @@ import { gearItemKindLabel, gearPhaseLabel } from "@/i18n/gear-labels";
 import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { waiverRowStateText, waiverRowStateTone } from "@/i18n/waiver-labels";
-import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
+import { formatCalendarDate } from "@/lib/calendar-date";
+import { type CounterRentalWaiverStanding, counterRentalWaiverFlag } from "@/lib/counter-rentals";
 import { formatCalendarDateRange } from "@/lib/format";
 import type { GearRental, OpenRentalPhase } from "@/lib/gear-rentals";
 import { rentalPhaseLapsed } from "@/lib/gear-rentals";
@@ -113,7 +114,7 @@ function RentalRow({
   locale,
 }: {
   rental: GearRental<GearRentalUnit>;
-  waiver?: ShopWaiverStatus["state"];
+  waiver?: CounterRentalWaiverStanding;
   holderName: string;
   shopSlug: string;
   t: StaffTranslator;
@@ -178,8 +179,11 @@ function RentalRow({
           </span>
           <PhaseWord phase={rental.phase} t={t} />
           {money ? <MoneyWord money={money} t={t} /> : null}
-          {waiver && counterRentalWaiverFlag(waiver) ? <WaiverWord state={waiver} t={t} /> : null}
+          {waiver && counterRentalWaiverFlag(waiver.state) ? (
+            <WaiverWord state={waiver.state} t={t} />
+          ) : null}
         </p>
+        {waiver ? <MedicalWarnings standing={waiver} t={t} locale={locale} /> : null}
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {rental.units.map((unit) => (
             <li key={unit.reservationId} className="flex min-w-0 items-baseline gap-1.5">
@@ -229,6 +233,47 @@ function MoneyWord({ money, t }: { money: GearRentalMoney; t: StaffTranslator })
     <Badge tone={tone} size="sm">
       {t(key)}
     </Badge>
+  );
+}
+
+/**
+ * A current release standing over a physician's earlier "not cleared" or an
+ * open referral (H-98 as amended, #2540): the ticket's own sentences, in the
+ * warning ink, informing only (H-108). The records are on the ticket.
+ */
+function MedicalWarnings({
+  standing,
+  t,
+  locale,
+}: {
+  standing: CounterRentalWaiverStanding;
+  t: StaffTranslator;
+  locale: string;
+}) {
+  const lines = [
+    standing.refusedOn
+      ? t("manifest.medicalEarlierRefusal", {
+          date: formatCalendarDate(standing.refusedOn, locale),
+        })
+      : null,
+    standing.referredOn
+      ? t("manifest.medicalReferralUnresolved", {
+          date: formatCalendarDate(standing.referredOn, locale),
+        })
+      : null,
+  ].filter((line): line is string => line !== null);
+  if (lines.length === 0) return null;
+  return (
+    <ul className="space-y-1 text-sm font-medium text-warning-strong">
+      {lines.map((line) => (
+        <li key={line} className="flex items-baseline gap-1.5">
+          <span className="flex h-lh shrink-0 items-center self-start">
+            <DiveDayIcon name="warning" className="size-4 shrink-0" />
+          </span>
+          <span>{line}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

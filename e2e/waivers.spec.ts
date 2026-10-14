@@ -63,7 +63,7 @@ test.describe("as captain", () => {
       page.getByText("Editing the waiver is limited to owners and managers."),
     ).toBeVisible();
     // No signed-record evidence ever reaches the page for a refused role.
-    await expect(page.getByText("Medical follow-up flagged")).toHaveCount(0);
+    await expect(page.getByText("Waiting on physician")).toHaveCount(0);
   });
 });
 
@@ -1073,6 +1073,41 @@ test("the signature audit pages both ways, and keeps a pinned record while it do
   await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Next" }).click();
   await expect(page).toHaveURL(/record=/);
   await expect(pinnedRow).toBeVisible();
+});
+
+/**
+ * **A signed release is findable in one line** (third UX review, item 31).
+ * The demo holds hundreds of signed records; a search on the diver and a
+ * medical view narrow the log and its count together, and keep each other.
+ */
+test("the signed records search by diver and narrow to medical holds", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/waivers");
+  const pager = page.getByRole("navigation", { name: "Pages" });
+  await expect(pager).toContainText(/Page 1 of \d+/);
+  const rows = page.locator('details[id^="waiver-record-"]');
+
+  // The demo's medical hold is status-only: a physician referral with no
+  // answers stored. It is a hold all the same, so the view lists it.
+  const views = page.getByRole("navigation", { name: "Signed record views" });
+  await views.getByRole("link", { name: "Medical holds" }).click();
+  await page.waitForURL(/[?&]view=medical/);
+  await expect(rows.filter({ hasText: "Morgan Vale" }).first()).toBeVisible();
+
+  // A search keeps the view it was typed under.
+  const search = page.getByRole("searchbox", { name: "Search signed records" });
+  await search.fill("Morgan Vale");
+  await search.press("Enter");
+  await page.waitForURL(/[?&]q=Morgan/);
+  await expect(page).toHaveURL(/[?&]view=medical/);
+  await expect(rows.filter({ hasNotText: "Morgan Vale" })).toHaveCount(0);
+
+  // Nothing matching says so, and clearing the search widens back out.
+  await search.fill("Nobody-by-this-name");
+  await search.press("Enter");
+  await expect(page.getByText("No signed records match.")).toBeVisible();
+  await page.getByRole("link", { name: "Clear search" }).click();
+  await expect(rows.first()).toBeVisible();
+  await expect(page).not.toHaveURL(/[?&]q=/);
 });
 
 /**

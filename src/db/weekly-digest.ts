@@ -18,6 +18,7 @@ import {
   digestWeeks,
   isWeeklyDigestDue,
   NO_LAST_WEEK,
+  noMoney,
   overdueTodayActions,
   WEEKLY_DIGEST_SECTION_PATHS,
   type WeeklyDigestFactGrades,
@@ -34,6 +35,7 @@ import { readReviewsAwaitingModeration } from "./reviews";
 import {
   bookings,
   courseInquiries,
+  orders,
   people,
   personRoles,
   shops,
@@ -64,6 +66,8 @@ export type WeeklyDigestShop = {
   timezone: string;
   defaultLocale: string;
   diversPerDivemaster: number;
+  /** The shop's one currency: every `*_cents` the money section states is in it. */
+  currency: string;
 };
 
 export type WeeklyDigestRecipient = {
@@ -212,6 +216,19 @@ async function countDateRequestsWaiting(
 }
 
 /**
+ * Orders still open at this shop, whatever they were raised for: the
+ * invoices a shop is waiting on, as the Orders ledger's "Open" filter shows
+ * them.
+ */
+async function countOpenOrders(db: DbExecutor, shopId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(orders)
+    .where(and(eq(orders.shopId, shopId), eq(orders.status, "open")));
+  return row?.n ?? 0;
+}
+
+/**
  * Everything the email could say about this shop at `now`, in both grades
  * (`WeeklyDigestFactGrades`): read once per shop, picked per recipient by
  * their live roles.
@@ -228,7 +245,7 @@ export async function readWeeklyDigestFacts(
     shop.id,
     weeks.lastWeek.startUtc,
     weeks.lastWeek.endUtc,
-    { timeZone: shop.timezone },
+    { timeZone: shop.timezone, currency: shop.currency },
   );
 
   // One readiness pass, shared with Today below so the two cannot disagree.
@@ -266,12 +283,14 @@ export async function readWeeklyDigestFacts(
     );
   const [reportsToday, staffToday] = await Promise.all([todayQueue(true), todayQueue(false)]);
 
-  const [bookingsMade, reviewsReceived, awaiting, dateRequestsWaiting] = await Promise.all([
-    countBookingsMade(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
-    countReviewsReceived(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
-    readReviewsAwaitingModeration(db, shop.id),
-    countDateRequestsWaiting(db, shop.id, weeks, weeks.weekOf),
-  ]);
+  const [bookingsMade, reviewsReceived, awaiting, dateRequestsWaiting, openOrders] =
+    await Promise.all([
+      countBookingsMade(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
+      countReviewsReceived(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
+      readReviewsAwaitingModeration(db, shop.id),
+      countDateRequestsWaiting(db, shop.id, weeks, weeks.weekOf),
+      countOpenOrders(db, shop.id),
+    ]);
 
   const shared = {
     thisWeek: {
@@ -295,11 +314,20 @@ export async function readWeeklyDigestFacts(
           seats: lastWeekReport.trips.reduce((sum, trip) => sum + trip.capacity, 0),
         },
         overdueTodayItems: overdueTodayActions(reportsToday.actions, now),
+        // Reports' own figures for last week's departures, so the email and
+        // the Reports page cannot disagree about what the week took.
+        money: {
+          revenueCents: lastWeekReport.revenueCents,
+          tipsCents: lastWeekReport.tipsCents,
+          openOrders,
+          currency: shop.currency,
+        },
       },
       staff: {
         ...shared,
         lastWeek: NO_LAST_WEEK,
         overdueTodayItems: overdueTodayActions(staffToday.actions, now),
+        money: noMoney(shop.currency),
       },
     },
   };
@@ -544,6 +572,7 @@ export async function sendDueWeeklyDigests(
       timezone: shops.timezone,
       defaultLocale: shops.defaultLocale,
       diversPerDivemaster: shops.diversPerDivemaster,
+      currency: shops.currency,
     })
     .from(shops)
     .where(eq(shops.isDemo, false));

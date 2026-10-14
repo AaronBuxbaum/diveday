@@ -441,10 +441,10 @@ export default async function ReportsPage({
       key: "revenue",
       label: t("reports.metrics.revenueLabel"),
       value: formatReportMoney(report.revenueCents, currency, locale),
-      // Only the imported case says anything: it names money inside this figure
-      // that Stripe has not confirmed. The plain "payments and deposits after
-      // Stripe Tax" line it replaced was the label's own definition read back,
-      // and the tax line under the row now states the same fact as a number.
+      // The basis line: this figure is anchored to the month's departures, and
+      // "Money in, by line" below it to the day money was paid, so the two
+      // totals differ and each says which it is (third review, item 1). The
+      // imported case names money inside this figure Stripe has not confirmed.
       detail:
         report.importedFinancialRecordCount > 0
           ? t("reports.metrics.revenueDetailWithImported", {
@@ -452,7 +452,7 @@ export default async function ReportsPage({
               payments: formatReportMoney(report.importedPaymentCents, currency, locale),
               refunds: formatReportMoney(report.importedRefundCents, currency, locale),
             })
-          : undefined,
+          : t("reports.metrics.revenueBasis"),
       comparison: revenueComparison,
       link: { href: revenueOrdersHref, label: t("reports.metrics.revenueViewOrders") },
     },

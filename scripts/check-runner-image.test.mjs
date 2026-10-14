@@ -8,6 +8,7 @@ import {
   findRunnerDrift,
   PLAYWRIGHT_CACHE_ACTION,
   RUNNER_IMAGE,
+  RUNNER_PICK,
 } from "./check-runner-image.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -43,6 +44,22 @@ describe("findRunnerDrift", () => {
       "    # runs-on: ubuntu-latest was here",
     ].join("\n");
     expect(findRunnerDrift([["a.yml", text]])).toEqual([]);
+  });
+});
+
+describe("the runner pick", () => {
+  it("passes the Mac-or-GitHub pick that falls back to the image", () => {
+    expect(findRunnerDrift([["ci.yml", `    runs-on: ${RUNNER_PICK}\n`]])).toEqual([]);
+  });
+
+  it("refuses a pick that falls back to a moving label", () => {
+    const text = `    runs-on: ${RUNNER_PICK.replace(RUNNER_IMAGE, "ubuntu-latest")}\n`;
+    expect(findRunnerDrift([["ci.yml", text]])).toHaveLength(1);
+  });
+
+  it("answers the image when it picks GitHub", async () => {
+    const { GITHUB_HOSTED } = await import("./ci-runner-pick.mjs");
+    expect(GITHUB_HOSTED).toBe(RUNNER_IMAGE);
   });
 });
 

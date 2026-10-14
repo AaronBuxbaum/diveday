@@ -188,12 +188,17 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   // impossible calendar day is refused, and a free-cancellation window with no
   // minimum beside it is not stored as a policy. Both were the board's rules
   // only until that module existed.
+  // The later days' dates when they are not consecutive (third UX review,
+  // item 10); empty is the consecutive run.
+  const laterDates = z.array(z.string()).safeParse(formData.getAll("meetingDate"));
+  if (!laterDates.success) redirect(noticeUrl(back, "invalid", { form: "details" }));
   const details = tripDetailsPatch(
     {
       date,
       startTime,
       endTime,
       dayCount,
+      laterDates: laterDates.data,
       priceDollars,
       depositDollars,
       cancellationWindowHours,
@@ -212,47 +217,11 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     },
     shopNow,
   );
-  if (!details.ok) {
-    if (details.reason === "end_before_start") redirect(noticeUrl(back, "end-before-start"));
-    if (details.reason === "price_required_by_gate") {
-      redirect(noticeUrl(back, "price-required-by-gate", { form: "details" }));
-    }
-    if (details.reason === "capacity_above_certificate") {
-      redirect(
-        noticeUrl(back, "capacity-above-certificate", { count: details.limit, form: "details" }),
-      );
-    }
-    if (details.reason === "capacity_above_boat") {
-      redirect(
-        noticeUrl(back, "capacity-above-boat", {
-          count: details.boatCapacity,
-          form: "details",
-        }),
-      );
-    }
-    redirect(noticeUrl(back, "invalid", { form: "details" }));
-  }
+  if (!details.ok) redirectDetailsRefusal(back, details);
   const dives = tripDiveDraftsFromForm(formData, plannedDives);
-
-  let uploadedArrivalPhotoUrl: string | undefined;
-  const arrivalPhoto = formData.get("arrivalPhoto");
-  if (arrivalPhoto instanceof File && arrivalPhoto.size > 0) {
-    const stored = await storeArrivalImage({
-      filename: arrivalPhoto.name,
-      contentType: arrivalPhoto.type,
-      bytes: await arrivalPhoto.arrayBuffer(),
-    });
-    if (stored.status !== "stored") {
-      redirect(noticeUrl(back, "arrival-photo-failed", { form: "details" }));
-    }
-    uploadedArrivalPhotoUrl = stored.url;
-  }
-  const removeArrivalPhoto = formData.get("removeArrivalPhoto") === "on";
+  const photo = await arrivalPhotoChange(formData, back);
   const previousArrivalPhotoUrl = tripNow?.arrivalPhotoUrl ?? null;
-  const nextArrivalPhotoUrl = uploadedArrivalPhotoUrl ?? (removeArrivalPhoto ? null : undefined);
-  const discardUploadedArrivalPhoto = async () => {
-    if (uploadedArrivalPhotoUrl) await deleteStoredImage(uploadedArrivalPhotoUrl);
-  };
+  const nextArrivalPhotoUrl = photo.nextUrl;
 
   const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
     title,
@@ -291,25 +260,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     dives,
   });
   if (!outcome.ok) {
-    await discardUploadedArrivalPhoto();
-    // Two of the three refusals carry a number into the banner ("4 divers are
-    // already booked"), which is why this is a ladder over a plain table lookup
-    // — but the code itself comes from one.
-    if (outcome.reason === "capacity_below_booked") {
-      redirect(
-        noticeUrl(back, UPDATE_TRIP_NOTICE[outcome.reason], {
-          count: outcome.detail.bookedCount,
-        }),
-      );
-    }
-    if (outcome.reason === "planned_dives_below_history") {
-      redirect(
-        noticeUrl(back, UPDATE_TRIP_NOTICE[outcome.reason], {
-          count: outcome.detail.recordedDiveCount,
-        }),
-      );
-    }
-    redirect(noticeUrl(back, "invalid", { form: "details" }));
+    await photo.discardUpload();
+    redirectUpdateRefusal(back, outcome);
   }
   if (
     nextArrivalPhotoUrl !== undefined &&
@@ -324,22 +276,30 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   }
   // **A retime tells the divers** (ux review 2026-10-11, item 1), the same
   // held send the board's move takes, and says where too when the meeting
-  // point moved in the same save.
+  // point moved in the same save. A save that moved only the meeting point
+  // holds the same notice, about the place alone (#2443): otherwise the
+  // divers turn up at the old dock.
+  const placeMoved =
+    !!tripNow &&
+    meetingPointMoved(
+      meetingPointOfRows(shopNow, tripNow),
+      meetingPointOfRows(shopNow, {
+        meetingPointLabel: meetingPointLabel || null,
+        meetingPointAddress: meetingPointAddress || null,
+        arrivalLandmark: null,
+        arrivalParkingNote: null,
+      }),
+    );
+  const timeMoved = tripNow
+    ? tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
+    : false;
   const notice =
-    tripNow && tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
+    tripNow && (timeMoved || placeMoved)
       ? await holdRescheduleNotice(dbi, {
           shopId: s.user.shopId,
           tripId,
           movedFrom: tripNow.startsAt,
-          meetingPointMoved: meetingPointMoved(
-            meetingPointOfRows(shopNow, tripNow),
-            meetingPointOfRows(shopNow, {
-              meetingPointLabel: meetingPointLabel || null,
-              meetingPointAddress: meetingPointAddress || null,
-              arrivalLandmark: null,
-              arrivalParkingNote: null,
-            }),
-          ),
+          meetingPointMoved: placeMoved,
           actorPersonId: s.user.personId,
         })
       : null;
@@ -347,6 +307,87 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     back,
     noticeUrl(back, "saved", notice ? { held: notice.id, tell: notice.told } : undefined),
   );
+}
+
+/** The Details form's refusal from `tripDetailsPatch`, as its notice. */
+function redirectDetailsRefusal(
+  back: string,
+  details: Extract<ReturnType<typeof tripDetailsPatch>, { ok: false }>,
+): never {
+  if (details.reason === "end_before_start") redirect(noticeUrl(back, "end-before-start"));
+  if (details.reason === "days_out_of_order") {
+    redirect(noticeUrl(back, "days-out-of-order", { form: "details" }));
+  }
+  if (details.reason === "price_required_by_gate") {
+    redirect(noticeUrl(back, "price-required-by-gate", { form: "details" }));
+  }
+  if (details.reason === "capacity_above_certificate") {
+    redirect(
+      noticeUrl(back, "capacity-above-certificate", { count: details.limit, form: "details" }),
+    );
+  }
+  if (details.reason === "capacity_above_boat") {
+    redirect(
+      noticeUrl(back, "capacity-above-boat", {
+        count: details.boatCapacity,
+        form: "details",
+      }),
+    );
+  }
+  redirect(noticeUrl(back, "invalid", { form: "details" }));
+}
+
+/**
+ * The arrival photo the form asks for: a new upload stored now, a removal, or
+ * no change (`nextUrl` undefined). `discardUpload` deletes the new file again
+ * when the save that would have pointed at it is refused.
+ */
+async function arrivalPhotoChange(formData: FormData, back: string) {
+  let uploadedUrl: string | undefined;
+  const arrivalPhoto = formData.get("arrivalPhoto");
+  if (arrivalPhoto instanceof File && arrivalPhoto.size > 0) {
+    const stored = await storeArrivalImage({
+      filename: arrivalPhoto.name,
+      contentType: arrivalPhoto.type,
+      bytes: await arrivalPhoto.arrayBuffer(),
+    });
+    if (stored.status !== "stored") {
+      redirect(noticeUrl(back, "arrival-photo-failed", { form: "details" }));
+    }
+    uploadedUrl = stored.url;
+  }
+  const remove = formData.get("removeArrivalPhoto") === "on";
+  return {
+    nextUrl: uploadedUrl ?? (remove ? null : undefined),
+    discardUpload: async () => {
+      if (uploadedUrl) await deleteStoredImage(uploadedUrl);
+    },
+  };
+}
+
+/** `updateTrip`'s refusal, as its notice. */
+function redirectUpdateRefusal(
+  back: string,
+  outcome: Extract<UpdateTripOutcome, { ok: false }>,
+): never {
+  // Two of the three refusals carry a number into the banner ("4 divers are
+  // already booked"), which is why this is a ladder over a plain table lookup
+  // — but the code itself comes from one.
+  if (outcome.reason === "capacity_below_booked") {
+    redirect(
+      noticeUrl(back, UPDATE_TRIP_NOTICE[outcome.reason], {
+        count: outcome.detail.bookedCount,
+      }),
+    );
+  }
+  if (outcome.reason === "planned_dives_below_history") {
+    redirect(
+      noticeUrl(back, UPDATE_TRIP_NOTICE[outcome.reason], {
+        count: outcome.detail.recordedDiveCount,
+      }),
+    );
+  }
+  redirect(noticeUrl(back, "invalid", { form: "details" }));
 }
 
 export async function cancelTripAction(shopSlug: string, tripId: string) {

@@ -1,4 +1,4 @@
-import { nowDate } from "@/lib/clock";
+import { at } from "./seed-clock";
 
 /**
  * **Who checked this card, and when** — the stamp every seeded *verified*
@@ -27,11 +27,20 @@ export function reviewedBy(personId: string): {
   reviewedAt: Date;
   reviewedByPersonId: string;
 } {
-  // **`nowDate()`, never `nextCreatedAt()`.** That helper is a shared monotonic
+  // **One instant, never `nextCreatedAt()`.** That helper is a shared monotonic
   // counter handed out to break insertion-order ties, and a review date needs
   // no tie broken — but calling it ~90 more times shifts the `createdAt` of
   // every seeded row *after* each call, which moved 60 visual baselines on the
   // first run of this change for reasons that had nothing to do with reviewers.
-  // One frozen instant keeps the diff to the sentence that actually changed.
-  return { reviewedAt: nowDate(), reviewedByPersonId: personId };
+  //
+  // **Before every seeded sailing, not the moment the seed ran** (UX review
+  // 2026-10-13, item 40). Stamped at `nowDate()`, the dawn boat's departure
+  // log read "reviewed by Marcus Webb" hours after that boat sailed with the
+  // card aboard, on the document a shop hands an insurer. The card was
+  // checked when the diver first came in, which in this demo is before its
+  // oldest sailing (`seed-history.ts`, 270 days back).
+  return { reviewedAt: at(-DEMO_CARDS_REVIEWED_DAYS_AGO, 16, 0), reviewedByPersonId: personId };
 }
+
+/** How long before the seeded clock every demo card was checked: before its oldest sailing. */
+const DEMO_CARDS_REVIEWED_DAYS_AGO = 280;

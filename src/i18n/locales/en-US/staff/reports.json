@@ -14,6 +14,7 @@
   "taxLine": "Tax collected {amount}",
   "metrics": {
     "revenueLabel": "Net revenue",
+    "revenueBasis": "For this month’s departures",
     "revenueDetailWithImported": "Current-trip payments and deposits after Stripe Tax, plus {count, plural, one {# unverified imported source record} other {# unverified imported source records}}: {payments} payments and {refunds} refunds.",
     "bookingsLabel": "Seats",
     "bookingsThisMonth": "{count, plural, one {# trip} other {# trips}} on the books so far",
@@ -81,7 +82,7 @@
   "buddySeats": "{count, plural, one {# seat} other {# seats}} arrived on a buddy’s link",
   "byLine": {
     "heading": "Money in, by line",
-    "caption": "By the day it was paid, after tax and refunds",
+    "caption": "Paid this month, whichever departure it was for, after tax and refunds",
     "courses": "Courses",
     "funDives": "Fun dives and trips",
     "rentals": "Rentals",

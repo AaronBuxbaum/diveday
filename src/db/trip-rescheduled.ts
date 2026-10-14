@@ -16,8 +16,13 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
-import { issueBookingCapability } from "./booking-capabilities";
+import {
+  type IssuedCapability,
+  issueBookingCapabilities,
+  issueBookingCapability,
+} from "./booking-capabilities";
 import type { AppDb } from "./client";
+import { lastDayStartsAt } from "./departure-notes";
 import { holdSend } from "./held-sends";
 import {
   notificationProviderForDb,
@@ -86,6 +91,41 @@ export async function rescheduleAudienceCount(
 
 export type HeldRescheduleNotice = { id: string; runAt: Date; told: number };
 
+/**
+ * Whether a held notice is about the meeting point alone (#2443): the time it
+ * would tell the divers they had is the time the departure still has. The
+ * staff row says "the new meeting point" for it rather than "the new time".
+ */
+export async function heldRescheduleIsPlaceOnly(
+  db: AppDb,
+  shopId: string,
+  payload: TripRescheduledPayload,
+): Promise<boolean> {
+  if (!payload.meetingPointMoved) return false;
+  const [trip] = await db
+    .select({ startsAt: trips.startsAt })
+    .from(trips)
+    .where(and(eq(trips.id, payload.tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  return trip?.startsAt.getTime() === Date.parse(payload.previousStartsAt);
+}
+
+/**
+ * Whether the departure is still ahead of the divers: its last day has not
+ * started. A multi-day course is reachable between its days, so a meeting
+ * point moved after day one still reaches its students (as departure notes
+ * do, H-110).
+ */
+async function stillAhead(
+  db: AppDb,
+  trip: { id: string; startsAt: Date },
+  now: Date,
+): Promise<boolean> {
+  const lastDay = await lastDayStartsAt(db, trip.id);
+  const sails = lastDay && lastDay > trip.startsAt ? lastDay : trip.startsAt;
+  return sails.getTime() > now.getTime();
+}
+
 /** The divers know the current time again: nothing is owed them. */
 async function clearDiversTold(db: AppDb, shopId: string, tripId: string) {
   await db
@@ -123,6 +163,7 @@ export async function holdRescheduleNotice(
 ): Promise<HeldRescheduleNotice | null> {
   const [trip] = await db
     .select({
+      id: trips.id,
       startsAt: trips.startsAt,
       status: trips.status,
       diversToldStartsAt: trips.diversToldStartsAt,
@@ -135,6 +176,9 @@ export async function holdRescheduleNotice(
     )
     .limit(1);
   if (trip?.status !== "scheduled") return null;
+  // A departure that has sailed hears nothing, so the staffer is told nothing
+  // is on its way rather than "Telling 11 divers".
+  if (!(await stillAhead(db, trip, input.now ?? nowDate()))) return null;
   const toldStartsAt = trip.diversToldStartsAt ?? input.movedFrom ?? null;
 
   const pendingRows = await db
@@ -229,10 +273,13 @@ export async function sendRescheduleNotices(
   if (row?.trip.status !== "scheduled") return outcome;
   const { trip, shop } = row;
   const previousStartsAt = new Date(payload.previousStartsAt);
-  // Moved and moved back before the cron swept a closed tab's hold.
-  if (previousStartsAt.getTime() === trip.startsAt.getTime()) return outcome;
-  // Nothing to tell about a departure that has already left.
-  if (trip.startsAt.getTime() <= now.getTime()) return outcome;
+  const timeMoved = previousStartsAt.getTime() !== trip.startsAt.getTime();
+  // Moved and moved back before the cron swept a closed tab's hold. A save
+  // that moved only the meeting point still has that to say (#2443).
+  if (!timeMoved && !payload.meetingPointMoved) return outcome;
+  // Nothing to tell about a departure that has already left: for a
+  // multi-day course, once its last day has.
+  if (!(await stillAhead(db, trip, now))) return outcome;
 
   const seats = await db
     .select({ booking: bookings, person: people })
@@ -250,124 +297,274 @@ export async function sendRescheduleNotices(
     );
   if (seats.length === 0) return outcome;
 
-  const emailProvider = notificationProviderForDb(options.emailProvider);
-  const smsProvider = stopListedSmsProvider(
-    db,
-    options.smsProvider ?? smsProviderFromEnvironment(),
-  );
-  const whatsApp =
-    (options.whatsAppProviders ?? (await whatsAppProvidersForShops(db, [shop.id]))).get(shop.id) ??
-    null;
-  const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const meetingPoint = payload.meetingPointMoved
     ? meetingPointForMessage(meetingPointOfRows(shop, trip))
     : undefined;
-  const courseSession = Boolean(trip.courseId);
-
+  const channels = await seatChannels(db, shop.id, options);
+  // **Every reachable seat's link in one insert, before the sends** (code
+  // review 2026-10-13b, item 36): this loop minted one per seat, three
+  // statements each, the shape `sendDepartureNote` left (item 35). The same
+  // seats as before: not a held one, not one with nowhere to send it.
+  const links = channels.origin
+    ? await issueBookingCapabilities(db, {
+        shopId: shop.id,
+        bookingIds: seats
+          .filter(
+            ({ booking, person }) =>
+              !booking.identityUnconfirmedAt && (person.email || smsRecipient(person.phone)),
+          )
+          .map(({ booking }) => booking.id),
+        purpose: "readiness",
+        now,
+      })
+    : new Map<string, IssuedCapability>();
   for (const { booking, person } of seats) {
-    // **A held seat waits for staff** (#2082), exactly as the reminders do.
     if (booking.identityUnconfirmedAt) {
       outcome.identityHeld += 1;
       continue;
     }
-    const phone = smsRecipient(person.phone);
-    // Nowhere to send it: recorded, and no readiness capability minted for a
-    // link nobody will receive (the order `src/db/reminders.ts` keeps).
-    if (!person.email && !phone) {
-      await recordNotificationDelivery(db, {
-        shopId: shop.id,
-        bookingId: booking.id,
-        kind: "trip_rescheduled",
-        delivery: { status: "not_configured" },
-      });
-      outcome.failed += 1;
-      continue;
-    }
-    const locale = recipientLocale(person.locale, shop.defaultLocale);
-    const t = diverTranslator(locale);
-    const capability = origin
-      ? await issueBookingCapability(db, {
-          shopId: shop.id,
-          bookingId: booking.id,
-          purpose: "readiness",
-          now,
-        })
-      : null;
-    const readinessUrl = capability
-      ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
-      : undefined;
-    const smsBody = [
-      t("notifications.sms.rescheduled", {
-        shopName: shop.name,
-        tripTitle: trip.title,
-        date: formatShortDate(trip.startsAt, locale, shop.timezone),
-        time: formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone),
-        previous: formatDateTimeTz(previousStartsAt, locale, shop.timezone),
-      }),
-      meetingPoint
-        ? t("trip.calendarMeetingPoint", {
-            place: [meetingPoint.label, meetingPoint.address].filter(Boolean).join(", "),
-          })
-        : null,
-      readinessUrl ? t("notifications.sms.readyLink", { url: readinessUrl }) : null,
-    ]
-      .filter(Boolean)
-      .join(" ");
-    const courtesy = phone
-      ? {
-          to: phone,
-          body: smsBody,
-          smsStopLine: t("notifications.sms.stopLine"),
-          shopName: shop.name,
-        }
-      : null;
-
-    if (person.email) {
-      const delivery = await sendAndRecordNotification(
-        db,
-        {
-          kind: "trip_rescheduled",
-          bookingId: booking.id,
-          shopId: shop.id,
-          to: person.email,
-          locale,
-          diverName: person.fullName,
-          shopName: shop.name,
-          tripTitle: trip.title,
-          previousStartsAt,
-          startsAt: trip.startsAt,
-          endsAt: trip.endsAt,
-          timezone: shop.timezone,
-          ...(courseSession ? {} : { dockCallMinutes: shop.dockCallMinutes }),
-          revision: trip.revision,
-          ...(meetingPoint ? { meetingPoint } : {}),
-          ...(readinessUrl ? { readinessUrl } : {}),
-        },
-        { provider: emailProvider },
-      );
-      // The courtesy text rides a delivered email, as the reminders' does; its
-      // own result is not recorded over the email's.
-      if (delivery.status === "sent" && courtesy) {
-        await sendCourtesyMessage(courtesy, { sms: smsProvider, whatsapp: whatsApp });
-      }
-      if (delivery.status === "sent") outcome.told += 1;
-      else outcome.failed += 1;
-    } else if (courtesy) {
-      const { delivery } = await sendCourtesyMessage(courtesy, {
-        sms: smsProvider,
-        whatsapp: whatsApp,
-      });
-      await recordNotificationDelivery(db, {
-        shopId: shop.id,
-        bookingId: booking.id,
-        kind: "trip_rescheduled",
-        delivery,
-      });
-      if (delivery.status === "sent") outcome.told += 1;
-      else outcome.failed += 1;
-    }
+    const told = await tellSeat(db, {
+      shop,
+      trip,
+      booking,
+      person,
+      previousStartsAt,
+      meetingPoint,
+      channels,
+      now,
+      capability: links.get(booking.id) ?? null,
+    });
+    outcome[told] += 1;
   }
   // The divers have the new time now; a later move starts from this one.
   if (outcome.told > 0) await clearDiversTold(db, shop.id, trip.id);
   return outcome;
+}
+
+type SeatChannels = {
+  emailProvider: NotificationProvider;
+  smsProvider: SmsProvider;
+  whatsApp: CourtesyProvider | null;
+  origin: string | null;
+};
+
+async function seatChannels(
+  db: AppDb,
+  shopId: string,
+  options: SendRescheduleNoticesOptions,
+): Promise<SeatChannels> {
+  return {
+    emailProvider: notificationProviderForDb(options.emailProvider),
+    smsProvider: stopListedSmsProvider(db, options.smsProvider ?? smsProviderFromEnvironment()),
+    whatsApp:
+      (options.whatsAppProviders ?? (await whatsAppProvidersForShops(db, [shopId]))).get(shopId) ??
+      null,
+    origin: options.appOrigin === undefined ? publicAppUrl() : options.appOrigin,
+  };
+}
+
+/**
+ * Tell one seat its new time, by its usual channel: the email on the seat's own
+ * person record with the courtesy text riding a delivered email, or the
+ * courtesy text alone when there is no email. `seatMovedAt` marks a seat that
+ * moved to another departure rather than a departure that moved. `capability`
+ * is the seat's readiness link when the caller minted it ahead (a whole
+ * departure's, in one insert); left out, one is minted here.
+ */
+async function tellSeat(
+  db: AppDb,
+  input: {
+    shop: typeof shops.$inferSelect;
+    trip: typeof trips.$inferSelect;
+    booking: typeof bookings.$inferSelect;
+    person: typeof people.$inferSelect;
+    previousStartsAt: Date;
+    meetingPoint: ReturnType<typeof meetingPointForMessage> | undefined;
+    channels: SeatChannels;
+    now: Date;
+    seatMovedAt?: Date;
+    capability?: IssuedCapability | null;
+  },
+): Promise<"told" | "failed"> {
+  const {
+    shop,
+    trip,
+    booking,
+    person,
+    previousStartsAt,
+    meetingPoint,
+    channels,
+    now,
+    seatMovedAt,
+  } = input;
+  const phone = smsRecipient(person.phone);
+  // Nowhere to send it: recorded, and no readiness capability minted for a
+  // link nobody will receive (the order `src/db/reminders.ts` keeps).
+  if (!person.email && !phone) {
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      kind: "trip_rescheduled",
+      delivery: { status: "not_configured" },
+    });
+    return "failed";
+  }
+  const locale = recipientLocale(person.locale, shop.defaultLocale);
+  const t = diverTranslator(locale);
+  const capability =
+    input.capability !== undefined
+      ? input.capability
+      : channels.origin
+        ? await issueBookingCapability(db, {
+            shopId: shop.id,
+            bookingId: booking.id,
+            purpose: "readiness",
+            now,
+          })
+        : null;
+  const readinessUrl = capability
+    ? new URL(readinessLinkPath(capability.token), `${channels.origin}/`).toString()
+    : undefined;
+  // A save that moved only the meeting point says the place alone (#2443).
+  const timeMoved = previousStartsAt.getTime() !== trip.startsAt.getTime();
+  const date = formatShortDate(trip.startsAt, locale, shop.timezone);
+  const time = formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone);
+  const smsBody = [
+    seatMovedAt || timeMoved
+      ? t(seatMovedAt ? "notifications.sms.rescheduledSeat" : "notifications.sms.rescheduled", {
+          shopName: shop.name,
+          tripTitle: trip.title,
+          date,
+          time,
+          previous: formatDateTimeTz(previousStartsAt, locale, shop.timezone),
+        })
+      : t("notifications.sms.meetingPointMoved", {
+          shopName: shop.name,
+          tripTitle: trip.title,
+          date,
+          time,
+        }),
+    meetingPoint
+      ? t("trip.calendarMeetingPoint", {
+          place: [meetingPoint.label, meetingPoint.address].filter(Boolean).join(", "),
+        })
+      : null,
+    readinessUrl ? t("notifications.sms.readyLink", { url: readinessUrl }) : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const courtesy = phone
+    ? {
+        to: phone,
+        body: smsBody,
+        smsStopLine: t("notifications.sms.stopLine"),
+        shopName: shop.name,
+      }
+    : null;
+
+  if (person.email) {
+    const delivery = await sendAndRecordNotification(
+      db,
+      {
+        kind: "trip_rescheduled",
+        bookingId: booking.id,
+        shopId: shop.id,
+        to: person.email,
+        locale,
+        diverName: person.fullName,
+        shopName: shop.name,
+        tripTitle: trip.title,
+        previousStartsAt,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        timezone: shop.timezone,
+        ...(trip.courseId ? {} : { dockCallMinutes: shop.dockCallMinutes }),
+        ...(seatMovedAt ? { seatMovedAt } : {}),
+        revision: trip.revision,
+        ...(meetingPoint ? { meetingPoint } : {}),
+        ...(readinessUrl ? { readinessUrl } : {}),
+      },
+      { provider: channels.emailProvider },
+    );
+    // The courtesy text rides a delivered email, as the reminders' does; its
+    // own result is not recorded over the email's.
+    if (delivery.status === "sent" && courtesy) {
+      await sendCourtesyMessage(courtesy, {
+        sms: channels.smsProvider,
+        whatsapp: channels.whatsApp,
+      });
+    }
+    return delivery.status === "sent" ? "told" : "failed";
+  } else if (courtesy) {
+    const { delivery } = await sendCourtesyMessage(courtesy, {
+      sms: channels.smsProvider,
+      whatsapp: channels.whatsApp,
+    });
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      kind: "trip_rescheduled",
+      delivery,
+    });
+    return delivery.status === "sent" ? "told" : "failed";
+  }
+  return "failed";
+}
+
+/**
+ * **One seat moved to another departure** (ADR 20261013-staff-move-a-seat):
+ * the same reschedule notice, to that seat alone, with the old departure's
+ * start as "It was". Sent at once rather than held, because the staffer who
+ * moved the seat is the person the diver asked; nothing is sent when the time
+ * did not change, the departure is a rehearsal, or the seat's identity is held.
+ */
+export async function sendSeatMoveNotice(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; fromTripId: string; movedAt: Date },
+  options: SendRescheduleNoticesOptions = {},
+): Promise<"told" | "failed" | "skipped"> {
+  const now = options.now ?? nowDate();
+  const [row] = await db
+    .select({ trip: trips, shop: shops, booking: bookings, person: people })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId)))
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.status, "booked"),
+        isNull(bookings.identityUnconfirmedAt),
+        isNull(people.deletedAt),
+        liveTrip(),
+        notRehearsal(),
+      ),
+    )
+    .limit(1);
+  if (row?.trip.status !== "scheduled") return "skipped";
+  // Read regardless of state: a seat moved off a departure that was since
+  // stood down still left from that time and place.
+  const [from] = await db
+    .select()
+    .from(trips)
+    // diveday:allow-deleted-trips: the seat left this departure's time, taken off the board since or not.
+    .where(and(eq(trips.id, input.fromTripId), eq(trips.shopId, input.shopId)))
+    .limit(1);
+  if (!from) return "skipped";
+  if (row.trip.startsAt.getTime() === from.startsAt.getTime()) return "skipped";
+  if (row.trip.startsAt.getTime() <= now.getTime()) return "skipped";
+  const meetingPoint = meetingPointForMessage(meetingPointOfRows(row.shop, row.trip));
+  const meetingPointMoved =
+    JSON.stringify(meetingPoint) !==
+    JSON.stringify(meetingPointForMessage(meetingPointOfRows(row.shop, from)));
+  return tellSeat(db, {
+    ...row,
+    previousStartsAt: from.startsAt,
+    // Only when it differs: the email says "We meet somewhere new, too."
+    meetingPoint: meetingPointMoved ? meetingPoint : undefined,
+    channels: await seatChannels(db, input.shopId, options),
+    now,
+    seatMovedAt: input.movedAt,
+  });
 }

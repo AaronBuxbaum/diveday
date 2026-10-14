@@ -1,8 +1,9 @@
 "use client";
 
 import { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { EDITOR_REVEAL_EVENT } from "@/components/ui/reveal-event";
 
 /**
@@ -20,6 +21,8 @@ export type EditorSectionRef = {
   id: string;
   /** Already-translated: staff copy is resolved on the server. */
   label: string;
+  /** The phone header's unsaved word; spread onto `EditorSection` with the rest. */
+  unsavedTag?: string;
 };
 
 /**
@@ -71,6 +74,7 @@ export function EditorSection({
   description,
   as = "section",
   lead = false,
+  unsavedTag,
   children,
 }: {
   id: string;
@@ -81,6 +85,8 @@ export function EditorSection({
   as?: "section" | "fieldset";
   /** The first section of the form, which opens with no rule above it. */
   lead?: boolean;
+  /** The word the phone's header wears while the section holds unsaved edits. */
+  unsavedTag?: string;
   children: ReactNode;
 }) {
   const rootRef = useRef<HTMLElement | null>(null);
@@ -89,6 +95,9 @@ export function EditorSection({
   // `null` until the wiring has read the fields once (after hydration), so
   // the line can say it is ready: the visual suite waits on that (#2509).
   const [preview, setPreview] = useState<string | null>(null);
+  // Edited since the page loaded or the form last saved: dirty once, it
+  // stays dirty, as the sentence beside Save does (`useDirtySections`).
+  const [edited, setEdited] = useState(false);
   const labelId = `${id}-label`;
   const bodyId = `${id}-body`;
 
@@ -100,7 +109,7 @@ export function EditorSection({
     document.dispatchEvent(new CustomEvent(EDITOR_SECTION_OPEN_EVENT, { detail: id }));
   }, [id]);
 
-  useSectionWiring({ id, rootRef, bodyRef, setOpen, setPreview, openAlone });
+  useSectionWiring({ id, rootRef, bodyRef, setOpen, setPreview, setEdited, openAlone });
 
   // Hairlines between, never above the first: the rule separates two sections,
   // and a rule under the page header separates nothing. Below `lg` the header
@@ -143,7 +152,16 @@ export function EditorSection({
         className="flex min-h-12 w-full items-center gap-3 rounded-lg py-3 text-start focus-visible:focus-ring lg:hidden"
       >
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span>{label}</span>
+          {/* **Where the edits are**, on the folded header a staffer scans
+              (#2438). Inside the button, so its name says it too. */}
+          <span className="flex items-center gap-2">
+            <span>{label}</span>
+            {edited && unsavedTag ? (
+              <Badge size="sm" className="tracking-normal normal-case">
+                {unsavedTag}
+              </Badge>
+            ) : null}
+          </span>
           {/* The line under a folded section's name says what is in it, read
               off its own fields; the space is kept while it is empty so the
               row does not grow when the page wakes up. */}
@@ -239,6 +257,7 @@ function useSectionWiring({
   bodyRef,
   setOpen,
   setPreview,
+  setEdited,
   openAlone,
 }: {
   id: string;
@@ -246,6 +265,7 @@ function useSectionWiring({
   bodyRef: { current: HTMLDivElement | null };
   setOpen: (open: boolean) => void;
   setPreview: (preview: string) => void;
+  setEdited: (edited: boolean) => void;
   openAlone: () => void;
 }) {
   useLayoutEffect(() => {
@@ -282,6 +302,13 @@ function useSectionWiring({
       if (href?.startsWith("#")) jump(decodeFragment(href.slice(1)));
     };
     const refreshPreview = () => setPreview(sectionPreview(body));
+    const onEdit = () => {
+      setEdited(true);
+      refreshPreview();
+    };
+    // Saving is the one thing that makes the section clean again.
+    const form = root.closest("form");
+    const onSubmit = () => setEdited(false);
 
     // Arriving at an address that names something in here.
     const field = new URLSearchParams(window.location.search).get("field");
@@ -298,18 +325,20 @@ function useSectionWiring({
     root.addEventListener(EDITOR_REVEAL_EVENT, reveal);
     // `invalid` does not bubble, so it is heard on the way down.
     root.addEventListener("invalid", reveal, true);
-    root.addEventListener("input", refreshPreview, true);
-    root.addEventListener("change", refreshPreview, true);
+    root.addEventListener("input", onEdit, true);
+    root.addEventListener("change", onEdit, true);
+    form?.addEventListener("submit", onSubmit);
     return () => {
       document.removeEventListener(EDITOR_SECTION_OPEN_EVENT, onOtherOpened);
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("hashchange", onHashChange);
       root.removeEventListener(EDITOR_REVEAL_EVENT, reveal);
       root.removeEventListener("invalid", reveal, true);
-      root.removeEventListener("input", refreshPreview, true);
-      root.removeEventListener("change", refreshPreview, true);
+      root.removeEventListener("input", onEdit, true);
+      root.removeEventListener("change", onEdit, true);
+      form?.removeEventListener("submit", onSubmit);
     };
-  }, [id, rootRef, bodyRef, setOpen, setPreview, openAlone]);
+  }, [id, rootRef, bodyRef, setOpen, setPreview, setEdited, openAlone]);
 }
 
 /**

@@ -195,152 +195,189 @@ export async function resolveCourse(
   return course ? { ok: true, course } : { ok: false, course: null };
 }
 
+/** One departure as {@link insertTripInstances} writes it. */
+export type TripInstanceParams = {
+  shopId: string;
+  seriesId?: string;
+  /** The cadence slot a series instance fills — see `trips.series_occurrence_date`. */
+  seriesOccurrenceDate?: string;
+  courseId?: string;
+  course: Course | null;
+  title: string;
+  description?: string;
+  startsAt: Date;
+  endsAt: Date;
+  capacity: number;
+  plannedDives: number;
+  priceCents?: number | null;
+  depositCents?: number | null;
+  /** A copied departure's snorkeler and rider prices and diver limit (ADR 20261007-participant-types). */
+  snorkelerPriceCents?: number | null;
+  riderPriceCents?: number | null;
+  diverCapacity?: number | null;
+  cancellationWindowHours?: number | null;
+  minimumBookings?: number | null;
+  minimumDecisionHours?: number | null;
+  drafts: ReturnType<typeof normalizedDiveDrafts>;
+  scheduleDays?: TripScheduleDayInput[];
+  isPrivate?: boolean;
+  /** The shop's own divemaster target does not apply to this departure (issue #973). */
+  selfGuided?: boolean;
+  exceedsNoDecoLimits?: boolean;
+  diveMode?: "boat" | "shore" | "pool";
+  boatId?: string | null;
+  lensId?: string | null;
+  /** A practice departure (ADR 20261012-rehearsal-departures). Never part of a series. */
+  isRehearsal?: boolean;
+};
+
+/** One departure through {@link insertTripInstances}. */
+export async function insertTripInstance(tx: AppTransaction, params: TripInstanceParams) {
+  const [trip] = await insertTripInstances(tx, [params]);
+  if (!trip) throw new Error("insertTripInstance: insert returned no row");
+  return trip;
+}
+
 /**
- * Insert one trip plus its dives and readiness requirements. The single source
+ * Insert trips plus their dives and readiness requirements. The single source
  * of truth for materializing a trip so a one-off and every instance of a series
  * share identical dive and requirement wiring — a missing requirement row is a
  * readiness blocker, never an accidental pass, and a course session snapshots
  * its catalog baseline against later catalog edits.
+ *
+ * **Any number of departures in four statements**: the trips, their dives,
+ * their schedule days and their requirement rows, each one multi-row insert
+ * (code review 2026-10-13b, item 40). A daily run over the series horizon is
+ * 121 departures, and one at a time it was about 480 statements in a row while
+ * a staffer waited on the schedule builder. Each trip's id is minted here so
+ * its children are keyed without trusting the order `RETURNING` hands rows
+ * back in. The trips come back in the order they were asked for.
  */
-export async function insertTripInstance(
-  tx: AppTransaction,
-  params: {
-    shopId: string;
-    seriesId?: string;
-    /** The cadence slot a series instance fills — see `trips.series_occurrence_date`. */
-    seriesOccurrenceDate?: string;
-    courseId?: string;
-    course: Course | null;
-    title: string;
-    description?: string;
-    startsAt: Date;
-    endsAt: Date;
-    capacity: number;
-    plannedDives: number;
-    priceCents?: number | null;
-    depositCents?: number | null;
-    /** A copied departure's snorkeler and rider prices and diver limit (ADR 20261007-participant-types). */
-    snorkelerPriceCents?: number | null;
-    riderPriceCents?: number | null;
-    diverCapacity?: number | null;
-    cancellationWindowHours?: number | null;
-    minimumBookings?: number | null;
-    minimumDecisionHours?: number | null;
-    drafts: ReturnType<typeof normalizedDiveDrafts>;
-    scheduleDays?: TripScheduleDayInput[];
-    isPrivate?: boolean;
-    /** The shop's own divemaster target does not apply to this departure (issue #973). */
-    selfGuided?: boolean;
-    exceedsNoDecoLimits?: boolean;
-    diveMode?: "boat" | "shore" | "pool";
-    boatId?: string | null;
-    lensId?: string | null;
-    /** A practice departure (ADR 20261012-rehearsal-departures). Never part of a series. */
-    isRehearsal?: boolean;
-  },
-) {
-  // **A rehearsal is coerced, not trusted** (ADR 20261012-rehearsal-departures).
-  // It is private, so every public listing that already leaves private
-  // departures out leaves it out (and `trips_rehearsal_is_private` holds that
-  // in the database); it has no price, deposit or minimum, so no money path and
-  // no minimum-seats sweep has anything to act on; and it is never an instance
-  // of a series, which would re-mint it nightly.
-  const rehearsal = params.isRehearsal === true;
-  if (rehearsal && params.seriesId) {
-    throw new Error("insertTripInstance: a rehearsal is never part of a series");
+export async function insertTripInstances(tx: AppTransaction, list: TripInstanceParams[]) {
+  if (list.length === 0) return [];
+  for (const params of list) {
+    // **A rehearsal is coerced, not trusted** (ADR 20261012-rehearsal-departures).
+    // It is private, so every public listing that already leaves private
+    // departures out leaves it out (and `trips_rehearsal_is_private` holds that
+    // in the database); it has no price, deposit or minimum, so no money path and
+    // no minimum-seats sweep has anything to act on; and it is never an instance
+    // of a series, which would re-mint it nightly.
+    if (params.isRehearsal === true && params.seriesId) {
+      throw new Error("insertTripInstance: a rehearsal is never part of a series");
+    }
   }
-  const [trip] = await tx
+  const planned = list.map((params) => ({ id: crypto.randomUUID(), params }));
+  const inserted = await tx
     .insert(trips)
-    .values({
-      shopId: params.shopId,
-      seriesId: params.seriesId,
-      seriesOccurrenceDate: params.seriesOccurrenceDate,
-      courseId: params.courseId,
-      title: params.title,
-      description: params.description,
-      startsAt: params.startsAt,
-      endsAt: params.endsAt,
-      capacity: params.capacity,
-      priceCents: rehearsal ? null : params.priceCents,
-      depositCents: rehearsal ? null : params.depositCents,
-      snorkelerPriceCents: rehearsal ? null : (params.snorkelerPriceCents ?? null),
-      riderPriceCents: rehearsal ? null : (params.riderPriceCents ?? null),
-      diverCapacity: params.diverCapacity ?? null,
-      cancellationWindowHours: rehearsal ? null : params.cancellationWindowHours,
-      minimumBookings: rehearsal ? null : params.minimumBookings,
-      minimumDecisionHours: rehearsal ? null : params.minimumDecisionHours,
-      plannedDives: params.plannedDives,
-      diveSiteId: primaryDiveSiteId(params.drafts),
-      isPrivate: rehearsal ? true : (params.isPrivate ?? false),
-      isRehearsal: rehearsal,
-      // **A course session is never self-guided** (issue #1342).
-      //
-      // The mark silences the shop's own advisory divemaster target for one
-      // departure and reaches nothing else. A departure that runs a course has
-      // an instructor of record whether or not they are in the water, so that
-      // target is exactly the signal that should keep applying to it — the
-      // glossary's **Target diver:divemaster ratio** says it applies to every
-      // dive, fun dive or course session alike.
-      //
-      // **The direction of error is the safety argument.** Coercing to false
-      // can only ever *add* an advisory, never suppress one:
-      // `divemasterRatioGap` returns `none` outright when the mark is set. So
-      // even for the courses DiveDay actually ships with no in-water
-      // requirement — Emergency Oxygen Provider and Equipment Specialist are
-      // dry classroom courses, PADI's Nitrox specialty has no training dives,
-      // and a Divemaster candidate's mapping project is unguided by design —
-      // the worst case is one extra advisory row on a departure that
-      // legitimately has no guide. Never a missed gap. (An earlier version of
-      // this comment claimed no certification dive is ever unsupervised, which
-      // this repository's own course catalog contradicts.)
-      //
-      // Coerced here rather than in `createTrip` because this is the one
-      // function all three creation doors pass through: `createTrip`,
-      // `duplicateTrip` (which copies `source.selfGuided` straight in) and the
-      // series horizon roll (which copies `template.trip.selfGuided`, nightly,
-      // forever — so one bad template would re-mint the state indefinitely).
-      // Coerced rather than refused because two of those three have no human
-      // to receive a refusal, and a nightly roll that drops a date leaves a
-      // shop's Saturday missing from the board over a normalized flag.
-      //
-      // This refuses the *input*. It deliberately does not change the output
-      // for a row that already holds it: `courseCrewGap` takes no `selfGuided`
-      // parameter and must never grow one (ADR
-      // 20260827-self-guided-departures).
-      selfGuided: params.courseId ? false : (params.selfGuided ?? false),
-      exceedsNoDecoLimits: params.exceedsNoDecoLimits ?? false,
-      diveMode: params.diveMode ?? "boat",
-      boatId: params.boatId ?? null,
-      lensId: params.lensId ?? null,
-    })
+    .values(
+      planned.map(({ id, params }) => {
+        const rehearsal = params.isRehearsal === true;
+        return {
+          id,
+          shopId: params.shopId,
+          seriesId: params.seriesId,
+          seriesOccurrenceDate: params.seriesOccurrenceDate,
+          courseId: params.courseId,
+          title: params.title,
+          description: params.description,
+          startsAt: params.startsAt,
+          endsAt: params.endsAt,
+          capacity: params.capacity,
+          priceCents: rehearsal ? null : params.priceCents,
+          depositCents: rehearsal ? null : params.depositCents,
+          snorkelerPriceCents: rehearsal ? null : (params.snorkelerPriceCents ?? null),
+          riderPriceCents: rehearsal ? null : (params.riderPriceCents ?? null),
+          diverCapacity: params.diverCapacity ?? null,
+          cancellationWindowHours: rehearsal ? null : params.cancellationWindowHours,
+          minimumBookings: rehearsal ? null : params.minimumBookings,
+          minimumDecisionHours: rehearsal ? null : params.minimumDecisionHours,
+          plannedDives: params.plannedDives,
+          diveSiteId: primaryDiveSiteId(params.drafts),
+          isPrivate: rehearsal ? true : (params.isPrivate ?? false),
+          isRehearsal: rehearsal,
+          // **A course session is never self-guided** (issue #1342).
+          //
+          // The mark silences the shop's own advisory divemaster target for one
+          // departure and reaches nothing else. A departure that runs a course has
+          // an instructor of record whether or not they are in the water, so that
+          // target is exactly the signal that should keep applying to it — the
+          // glossary's **Target diver:divemaster ratio** says it applies to every
+          // dive, fun dive or course session alike.
+          //
+          // **The direction of error is the safety argument.** Coercing to false
+          // can only ever *add* an advisory, never suppress one:
+          // `divemasterRatioGap` returns `none` outright when the mark is set. So
+          // even for the courses DiveDay actually ships with no in-water
+          // requirement — Emergency Oxygen Provider and Equipment Specialist are
+          // dry classroom courses, PADI's Nitrox specialty has no training dives,
+          // and a Divemaster candidate's mapping project is unguided by design —
+          // the worst case is one extra advisory row on a departure that
+          // legitimately has no guide. Never a missed gap. (An earlier version of
+          // this comment claimed no certification dive is ever unsupervised, which
+          // this repository's own course catalog contradicts.)
+          //
+          // Coerced here rather than in `createTrip` because this is the one
+          // function all three creation doors pass through: `createTrip`,
+          // `duplicateTrip` (which copies `source.selfGuided` straight in) and the
+          // series horizon roll (which copies `template.trip.selfGuided`, nightly,
+          // forever — so one bad template would re-mint the state indefinitely).
+          // Coerced rather than refused because two of those three have no human
+          // to receive a refusal, and a nightly roll that drops a date leaves a
+          // shop's Saturday missing from the board over a normalized flag.
+          //
+          // This refuses the *input*. It deliberately does not change the output
+          // for a row that already holds it: `courseCrewGap` takes no `selfGuided`
+          // parameter and must never grow one (ADR
+          // 20260827-self-guided-departures).
+          selfGuided: params.courseId ? false : (params.selfGuided ?? false),
+          exceedsNoDecoLimits: params.exceedsNoDecoLimits ?? false,
+          diveMode: params.diveMode ?? "boat",
+          boatId: params.boatId ?? null,
+          lensId: params.lensId ?? null,
+        };
+      }),
+    )
     .returning();
-  if (!trip) throw new Error("insertTripInstance: insert returned no row");
-  await tx.insert(tripDives).values(params.drafts.map((draft) => ({ tripId: trip.id, ...draft })));
+  const byId = new Map(inserted.map((trip) => [trip.id, trip]));
+  const created = planned.map(({ id }) => {
+    const trip = byId.get(id);
+    if (!trip) throw new Error("insertTripInstances: insert returned no row");
+    return trip;
+  });
+  await tx
+    .insert(tripDives)
+    .values(
+      planned.flatMap(({ id, params }) => params.drafts.map((draft) => ({ tripId: id, ...draft }))),
+    );
   await tx
     .insert(tripScheduleDays)
     .values(
-      (params.scheduleDays?.length
-        ? params.scheduleDays
-        : [{ dayNumber: 1, startsAt: params.startsAt, endsAt: params.endsAt }]
-      ).map((day, index) => ({ tripId: trip.id, ...day, dayNumber: index + 1 })),
+      planned.flatMap(({ id, params }) =>
+        (params.scheduleDays?.length
+          ? params.scheduleDays
+          : [{ dayNumber: 1, startsAt: params.startsAt, endsAt: params.endsAt }]
+        ).map((day, index) => ({ tripId: id, ...day, dayNumber: index + 1 })),
+      ),
     );
-  await tx.insert(tripRequirements).values({
-    tripId: trip.id,
-    shopId: params.shopId,
-    // Every trip starts waiver-gated; staff can lift it per trip, but nothing
-    // in the catalog schedules an unsigned session by default.
-    requiresWaiver: true,
-    // A course session inherits its catalog baseline verbatim, including a
-    // deliberate null: uncertified students are the whole point of Discover
-    // Scuba and Open Water. `??` cannot tell "no course" from "a course open to
-    // uncertified divers", and collapsing the two put an Open Water gate on
-    // every entry-level class — which staff then clear by blanking the trip's
-    // requirements, taking the waiver gate down with it.
-    minimumCertificationLevel: params.course
-      ? params.course.minimumCertificationLevel
-      : "open_water",
-  });
-  return trip;
+  await tx.insert(tripRequirements).values(
+    planned.map(({ id, params }) => ({
+      tripId: id,
+      shopId: params.shopId,
+      // Every trip starts waiver-gated; staff can lift it per trip, but nothing
+      // in the catalog schedules an unsigned session by default.
+      requiresWaiver: true,
+      // A course session inherits its catalog baseline verbatim, including a
+      // deliberate null: uncertified students are the whole point of Discover
+      // Scuba and Open Water. `??` cannot tell "no course" from "a course open to
+      // uncertified divers", and collapsing the two put an Open Water gate on
+      // every entry-level class — which staff then clear by blanking the trip's
+      // requirements, taking the waiver gate down with it.
+      minimumCertificationLevel: params.course
+        ? params.course.minimumCertificationLevel
+        : "open_water",
+    })),
+  );
+  return created;
 }
 
 // `DbExecutor` rather than `AppDb`: the whole body is one transaction, and a

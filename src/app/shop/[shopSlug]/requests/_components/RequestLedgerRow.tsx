@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { DateRequestRow } from "@/db/course-inquiries";
@@ -67,8 +68,9 @@ const ADDRESS_TARGET =
  *   second pill grammar by the back door, and a badge on a row that is only
  *   ever a lead is a state word where the group header already owns the day.
  *   `RequestLedgerRow.test.tsx` pins the absence.
- * - **It carries no status.** Nothing about a request has a state — it is a
- *   lead, and the only question is whether the shop puts a boat on that day.
+ * - **It carries no status word.** An open request is a lead; a closed one
+ *   leaves its day for the Done list (`RequestDoneRow`, third UX review item
+ *   13), so the state is where the row sits, never a badge on it.
  *
  * The name is the door when this lead is linked to a diver on file
  * (`personId`: an exact email match, made at capture time and again on every
@@ -83,12 +85,18 @@ export function RequestLedgerRow({
   locale,
   timezone,
   shopSlug,
+  shopName,
+  markDoneAction,
   t,
 }: {
   request: DateRequestRow;
   locale: string;
   timezone: string;
   shopSlug: string;
+  /** Names the reply's subject line, so the diver knows who is writing. */
+  shopName: string;
+  /** Closes the lead (third UX review, item 13); posts `requestId` and `outcome`. */
+  markDoneAction: (formData: FormData) => void;
   t: StaffTranslator;
 }) {
   const name = request.name ?? t("requests.anonymous");
@@ -117,6 +125,22 @@ export function RequestLedgerRow({
     },
   ].filter((fact): fact is { text: string; whole: boolean; desktop?: boolean } => fact !== null);
 
+  // **The way back to whoever asked** (third UX review, item 13): an email
+  // with the shop named in the subject, or the number they left when there is
+  // no address. The inbox composer answers a diver's own message, and a lead
+  // has none yet, so the door is the channel the diver gave.
+  const replyHref = request.email
+    ? `mailto:${request.email}?subject=${encodeURIComponent(t("requests.replySubject", { shopName }))}`
+    : request.phone
+      ? `tel:${request.phone.replace(/[^\d+]/g, "")}`
+      : null;
+  const actionLink = buttonClass({
+    variant: "link",
+    size: "sm",
+    flush: true,
+    className: "focus-visible:focus-ring-inset",
+  });
+
   return (
     <LedgerRow
       as="li"
@@ -131,18 +155,35 @@ export function RequestLedgerRow({
       // ring is drawn inside it.
       stacked
       trailing={
-        <Link
-          href={`${shopPath(shopSlug, "bookings", "new")}?request=${encodeURIComponent(request.id)}`}
-          className={buttonClass({
-            variant: "link",
-            size: "sm",
-            flush: true,
-            outdent: "block-end-phone",
-            className: "focus-visible:focus-ring-inset",
-          })}
-        >
-          {t("requests.createBooking")}
-        </Link>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:flex-col sm:items-end">
+          <Link
+            href={`${shopPath(shopSlug, "bookings", "new")}?request=${encodeURIComponent(request.id)}`}
+            className={actionLink}
+          >
+            {t("requests.createBooking")}
+          </Link>
+          {replyHref ? (
+            <a href={replyHref} className={actionLink}>
+              {t("requests.reply")}
+            </a>
+          ) : null}
+          <form action={markDoneAction}>
+            <input type="hidden" name="requestId" value={request.id} />
+            <input type="hidden" name="outcome" value="done" />
+            <SubmitButton
+              pendingLabel={t("requests.markDone")}
+              className={buttonClass({
+                variant: "link",
+                size: "sm",
+                flush: true,
+                outdent: "block-end-phone",
+                className: "focus-visible:focus-ring-inset",
+              })}
+            >
+              {t("requests.markDone")}
+            </SubmitButton>
+          </form>
+        </div>
       }
     >
       <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4">
@@ -195,7 +236,12 @@ export function RequestLedgerRow({
                   E.164 into the public form. One unbreakable run: it split
                   after its hyphens at 390 (K-462). */}
               {request.phone ? (
-                <span className="whitespace-nowrap">{displayStoredPhone(request.phone)}</span>
+                <a
+                  href={`tel:${request.phone.replace(/[^\d+]/g, "")}`}
+                  className={`${ADDRESS_TARGET} whitespace-nowrap text-primary underline`}
+                >
+                  {displayStoredPhone(request.phone)}
+                </a>
               ) : null}
             </p>
           ) : null}

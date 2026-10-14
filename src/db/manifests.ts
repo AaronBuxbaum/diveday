@@ -1010,8 +1010,13 @@ export async function getTripManifests(
     // path refuses, so this is the only place the boat being over gets said.
     // Capped at the boat's certificate (#2321): over the certificate is over.
     capacity: trip.sellableCapacity,
+    // The certificate itself, so the head count can say when the people the
+    // crew counted aboard pass it (batch 6, item 2).
+    certifiedPassengers: trip.certifiedPassengers,
     // Printed beside souls on board, so a practice sheet is never read as a boat.
     isRehearsal: trip.isRehearsal,
+    // The dock-rider form stays shut on a cancelled departure (#2394).
+    cancelled: trip.status === "cancelled",
   };
   const diverInputs = roster.map(({ booking, person }) => {
     return {
@@ -1042,10 +1047,14 @@ export async function getTripManifests(
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
       riderMedicalHold: riderHoldByBooking.get(booking.id) ?? null,
-      // Null/false whenever the shop holds no date of birth, so the captain's
-      // list stays quiet rather than showing "unknown" down the whole boat.
+      // Null whenever the shop holds no date of birth, so the captain's list
+      // stays quiet rather than showing "unknown" down the whole boat.
       age: person.dateOfBirth ? ageOnDate(person.dateOfBirth, tripDate) : null,
-      minor: person.dateOfBirth ? isMinorOnDate(person.dateOfBirth, tripDate) : false,
+      // A date of birth decides; with none, the seat's "Under 18" stamp does,
+      // the same rule as the roster's Minor badge (roster-seat.ts).
+      minor: person.dateOfBirth
+        ? isMinorOnDate(person.dateOfBirth, tripDate)
+        : Boolean(booking.minorDeclaredAt),
       birthday: birthdayCallout(person.dateOfBirth, tripDate),
       // Null unless the diver said so, and null again an hour after this boat
       // is home — the whole expiry lives in `welcomeCueFor`, so nothing here

@@ -54,6 +54,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 import { tripReservationWindow } from "@/lib/gear";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { MAX_SUPPRESSED_SHARE_FOR_RATING } from "@/lib/reviews";
+import { boatSliceStates } from "./boat-states";
 
 /**
  * Puts the seeded demo shop into the trouble states that only render when
@@ -466,9 +467,11 @@ export async function POST(request: Request) {
       : null;
 
   const batchFour = await batchFourStates(request, db, shop, actor.id, now);
+  const boatSlice = await boatSliceStates(request, db, shop.id, now);
   return NextResponse.json({
     ok: true,
     ...batchFour,
+    ...boatSlice,
     ...(boatSafety ? { boatSafety } : {}),
     ...(introOverRatio ? { introOverRatio } : {}),
     ...(unitsNeedingCare ? { unitsNeedingCare } : {}),
@@ -1495,7 +1498,14 @@ async function boardEveryDiverAndNoCrew(
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(
-      and(eq(bookings.shopId, shopId), eq(bookings.tripId, next.id), eq(bookings.status, "booked")),
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, next.id),
+        // Checked in as well as booked: the demo's morning hand-off checks
+        // two divers in at the counter, and the station counts their seats
+        // too, so leaving them ashore would never fill the boat.
+        inArray(bookings.status, ["booked", "checked_in"]),
+      ),
     )
     .orderBy(people.fullName);
 
