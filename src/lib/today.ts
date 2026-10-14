@@ -1182,7 +1182,12 @@ export function diverBlockerAction(
     href: destination.href,
     ...(sendsWaiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
     ...(kind === "payment" ? { payment: { bookingId: input.bookingId } } : {}),
-    ...(blocker.code === "certification_pending"
+    // Never on a held seat (H-13): the human on this booking may not be the
+    // one whose cards are on file, so nobody checks that person's card from
+    // here until a staffer confirms who it is. Said outright, not left to
+    // which blocker heads the row.
+    ...(blocker.code === "certification_pending" &&
+    !input.blockers.some((each) => each.code === "identity_unconfirmed")
       ? { agencyCheck: { personId: input.personId, cards: [] } }
       : {}),
     dueAt: input.startsAt,

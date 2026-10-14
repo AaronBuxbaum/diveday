@@ -1,6 +1,7 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -27,6 +28,7 @@ import {
   type AgencyCheckFailure,
   agencyCheckFailure,
   agencyCheckForm,
+  agencyCheckMatchedText,
   agencyCheckOutcome,
 } from "./agency-check-outcome";
 
@@ -66,8 +68,27 @@ type HostValue = {
   checkOne: (card: AgencyCheckableCard) => void;
   undo: (card: AgencyCheckableCard) => Promise<void>;
   queue: AgencyCheckQueueState;
+  /** Run these cards one at a time, skipping any this page already settled. */
   runAll: (cards: readonly AgencyCheckableCard[]) => void;
+  /** Stop a running "Check all" after the card in flight. */
+  stopAll: () => void;
 };
+
+/**
+ * The cards a "Check all" would still send: those this page has not already
+ * settled with a verdict from the agency's page. A card that came back with
+ * no verdict (the extension, DiveDay or a sign-in in the way) goes again, so a
+ * re-run never stops at the same diver for the same reason.
+ */
+export function agencyCheckCardsToRun(
+  cards: readonly AgencyCheckableCard[],
+  states: Record<string, AgencyCheckCardState>,
+): AgencyCheckableCard[] {
+  return cards.filter((card) => {
+    const state = states[card.certificationId];
+    return !(state?.phase === "settled" && state.failure === null && state.result !== null);
+  });
+}
 
 const HostContext = createContext<HostValue | null>(null);
 
@@ -93,9 +114,12 @@ function pause(ms: number): Promise<void> {
  * and the Undo has to outlive that.
  *
  * It also owns a departure's "Check all": the cards go one at a time through
- * `runAgencyCheckQueue`, which pauses between lookups and stops on the first
- * page it cannot read. While anything is in flight every other button waits,
- * so the page never sends two lookups at once.
+ * `runAgencyCheckQueue`, which pauses between lookups, skips one unreadable
+ * result, stops on two in a row or on a signed-out agency, and stops when the
+ * staffer says so. A re-run skips the cards this page already settled. The
+ * page repaints once, when a run that certified something ends. While
+ * anything is in flight every other button waits, so the page never sends two
+ * lookups at once.
  *
  * Undo is per card and nothing else: a single check's toast, or the line a
  * "Check all" leaves on each row it certified. There is no Undo for a whole
@@ -119,9 +143,15 @@ export function AgencyCheckHost({
   const [queue, setQueue] = useState<AgencyCheckQueueState>({ phase: "idle" });
   const [singleBusy, setSingleBusy] = useState(false);
   // The single check whose toast is up, keyed so a second match lands as a new toast.
-  const [toast, setToast] = useState<{ card: AgencyCheckableCard; key: number } | null>(null);
+  const [toast, setToast] = useState<{
+    card: AgencyCheckableCard;
+    key: number;
+    message: string;
+  } | null>(null);
+  const router = useRouter();
   const alive = useRef(true);
   const inFlight = useRef(false);
+  const stopRequested = useRef(false);
   const toasts = useRef(0);
   useEffect(() => {
     alive.current = true;
@@ -132,7 +162,10 @@ export function AgencyCheckHost({
 
   /** One card, end to end: the extension reads the page, the server judges it. */
   const checkCard = useCallback(
-    async (card: AgencyCheckableCard, via: "one" | "all"): Promise<AgencyCheckOutcome> => {
+    async (
+      card: AgencyCheckableCard,
+      via: "one" | "all",
+    ): Promise<{ outcome: AgencyCheckOutcome; result: AgencyCheckResult }> => {
       setCards((previous) => ({ ...previous, [card.certificationId]: card }));
       setStates((previous) => ({ ...previous, [card.certificationId]: { phase: "checking" } }));
       const settle = (result: AgencyCheckResult, failure: AgencyCheckFailure) => {
@@ -144,27 +177,29 @@ export function AgencyCheckHost({
       };
       const reply = await requestAgencyPage(card.query);
       if (!reply.ok) {
-        // Signed out of PADI stops a "Check all" as an unreadable page does,
-        // and says why: every PADI card after it would meet the same sign-in.
+        // Signed out of PADI stops a "Check all" at once, and says why: every
+        // PADI card after it would meet the same sign-in. Any other failure is
+        // a page that could not be read.
         const failure = agencyCheckFailure(reply.reason);
         settle(null, failure);
-        return failure ?? "transport";
+        return { outcome: agencyCheckOutcome(null, failure) ?? "unreadable", result: null };
       }
       let result: AgencyCheckResult;
       try {
         result = await action(
           card.personId,
           null,
-          agencyCheckForm(card.certificationId, reply.pageText),
+          // A run repaints the page once, at its end (`runAll`).
+          agencyCheckForm(card.certificationId, reply.pageText, { refreshLater: via === "all" }),
         );
       } catch {
-        // DiveDay's own server did not answer: nothing was written that the
-        // staffer was told about, and the run stops as for the extension.
+        // DiveDay's own server did not answer: the card may or may not have
+        // been written, and the staffer is told to reload and see.
         settle(null, "transport");
-        return "transport";
+        return { outcome: "transport", result: null };
       }
       settle(result, null);
-      return agencyCheckOutcome(result, null) ?? "refused";
+      return { outcome: agencyCheckOutcome(result, null) ?? "refused", result };
     },
     [action],
   );
@@ -174,42 +209,53 @@ export function AgencyCheckHost({
       if (inFlight.current) return;
       inFlight.current = true;
       setSingleBusy(true);
-      void checkCard(card, "one").then((outcome) => {
+      void checkCard(card, "one").then(({ result }) => {
         inFlight.current = false;
         if (!alive.current) return;
         setSingleBusy(false);
-        if (outcome === "match") {
+        const copy = copies[card.agency];
+        if (result?.ok && result.verdict === "match" && copy) {
           toasts.current += 1;
-          setToast({ card, key: toasts.current });
+          setToast({ card, key: toasts.current, message: agencyCheckMatchedText(result, copy) });
         }
       });
     },
-    [checkCard],
+    [checkCard, copies],
   );
 
   const runAll = useCallback(
     (list: readonly AgencyCheckableCard[]) => {
-      if (inFlight.current || list.length === 0) return;
+      const toRun = agencyCheckCardsToRun(list, states);
+      if (inFlight.current || toRun.length === 0) return;
       inFlight.current = true;
+      stopRequested.current = false;
       setToast(null);
-      const total = list.length;
+      const total = toRun.length;
       setQueue({ phase: "running", done: 0, total });
       void runAgencyCheckQueue({
-        cards: list,
-        check: (card) => checkCard(card, "all"),
+        cards: toRun,
+        check: async (card) => (await checkCard(card, "all")).outcome,
         pause,
         pauseMs,
         onStart: (_card, done) => {
           if (alive.current) setQueue({ phase: "running", done: done + 1, total });
         },
-        cancelled: () => !alive.current,
+        cancelled: () => !alive.current || stopRequested.current,
       }).then((summary) => {
         inFlight.current = false;
-        if (alive.current) setQueue({ phase: "ended", total, ...summary });
+        if (!alive.current) return;
+        setQueue({ phase: "ended", total, ...summary });
+        // Each card's post left the repaint to here: once for the whole run,
+        // and only when it wrote something.
+        if (summary.certified + summary.confirmed > 0) router.refresh();
       });
     },
-    [checkCard, pauseMs],
+    [checkCard, pauseMs, states, router],
   );
+
+  const stopAll = useCallback(() => {
+    stopRequested.current = true;
+  }, []);
 
   const undo = useCallback(
     async (card: AgencyCheckableCard) => {
@@ -240,8 +286,8 @@ export function AgencyCheckHost({
 
   const busy = singleBusy || queue.phase === "running";
   const value = useMemo<HostValue>(
-    () => ({ hasExtension, copies, cards, states, busy, checkOne, undo, queue, runAll }),
-    [hasExtension, copies, cards, states, busy, checkOne, undo, queue, runAll],
+    () => ({ hasExtension, copies, cards, states, busy, checkOne, undo, queue, runAll, stopAll }),
+    [hasExtension, copies, cards, states, busy, checkOne, undo, queue, runAll, stopAll],
   );
   const toastCopy = toast ? copies[toast.card.agency] : null;
 
@@ -251,7 +297,7 @@ export function AgencyCheckHost({
       {toast && toastCopy ? (
         <UndoToast
           key={toast.key}
-          message={toastCopy.matched}
+          message={toast.message}
           action={() => undo(toast.card)}
           fields={{}}
           pendingLabel={toastCopy.undoPending}

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { certifications, people } from "@/db/schema";
+import { certifications, people, shops } from "@/db/schema";
 import { recordSelfDeclaredCards } from "@/db/self-declared-cards";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -111,12 +111,94 @@ describe("agencyCheckAction", () => {
 
     const result = await agencyCheckAction(shop.slug, personId, null, check(card.id, NAUI_PAGE));
 
-    expect(result).toEqual({ ok: true, verdict: "match", undo: { certificationId: card.id } });
+    expect(result).toEqual({
+      ok: true,
+      verdict: "match",
+      effect: "certified",
+      undo: { certificationId: card.id },
+    });
     const row = await cardRow(db, card.id);
     expect(row?.status).toBe("verified");
     expect(row?.agencyCheckedAt).toBeInstanceOf(Date);
     expect(row?.reviewedByPersonId).toBe(owner);
     expect(row?.reviewNote).toContain("Advanced Scuba Diver");
+  });
+
+  /**
+   * An imported card was `verified` on arrival: the agency's page confirms it
+   * rather than certifying it, and the staffer is told which (as Mark
+   * certified tells them).
+   */
+  it("says an imported card was confirmed, not certified", async () => {
+    const { db, shop, personId } = await context();
+    const imported = await pendingCard(db, shop.id, personId, {
+      status: "verified",
+      importedAt: new Date("2026-10-01T00:00:00Z"),
+    });
+
+    const result = await agencyCheckAction(
+      shop.slug,
+      personId,
+      null,
+      check(imported.id, NAUI_PAGE),
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      verdict: "match",
+      effect: "confirmed",
+      undo: { certificationId: imported.id },
+    });
+    expect((await cardRow(db, imported.id))?.agencyCheckedAt).toBeInstanceOf(Date);
+  });
+
+  /**
+   * A departure's "Check all" asks the page to settle once, at the end of the
+   * run, rather than after every card it certifies (D7): each card's post says
+   * so, and the write and its revalidation are unchanged.
+   */
+  it("leaves the refresh to the end of a Check all run", async () => {
+    const { db, shop, personId } = await context();
+    const card = await pendingCard(db, shop.id, personId);
+    vi.mocked(refresh).mockClear();
+    const form = check(card.id, NAUI_PAGE);
+    form.set("refresh", "later");
+
+    const result = await agencyCheckAction(shop.slug, personId, null, form);
+
+    expect(result).toMatchObject({ ok: true, verdict: "match" });
+    expect((await cardRow(db, card.id))?.status).toBe("verified");
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Tenant isolation. The shop is the session's and the diver and card are
+   * read under it, so another shop's card certifies nothing and undoes
+   * nothing, whether its ids are posted under this shop's slug or under the
+   * other shop's.
+   */
+  it("refuses another shop's diver and card, under either shop's slug", async () => {
+    const { db, shop } = await context();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Reef Runners", slug: "reef-runners-agency", timezone: "America/New_York" })
+      .returning();
+    if (!otherShop) throw new Error("failed to insert a shop");
+    const theirDiver = await diver(db, otherShop.id, "Lena Ortiz");
+    const theirCard = await pendingCard(db, otherShop.id, theirDiver);
+
+    expect(
+      await agencyCheckAction(shop.slug, theirDiver, null, check(theirCard.id, NAUI_PAGE)),
+    ).toEqual({ ok: false, reason: "invalid" });
+    expect(
+      await agencyCheckAction(shop.slug, theirDiver, null, check(theirCard.id, null, "undo")),
+    ).toEqual({ ok: false, reason: "not-undoable" });
+    await expect(
+      agencyCheckAction(otherShop.slug, theirDiver, null, check(theirCard.id, NAUI_PAGE)),
+    ).rejects.toThrow();
+    const row = await cardRow(db, theirCard.id);
+    expect(row?.status).toBe("pending");
+    expect(row?.agencyCheckedAt).toBeNull();
   });
 
   /**
@@ -325,7 +407,12 @@ describe("agencyCheckAction", () => {
 
       const result = await agencyCheckAction(shop.slug, personId, null, check(card.id, DIVECHEK));
 
-      expect(result).toEqual({ ok: true, verdict: "match", undo: { certificationId: card.id } });
+      expect(result).toEqual({
+        ok: true,
+        verdict: "match",
+        effect: "certified",
+        undo: { certificationId: card.id },
+      });
       const row = await cardRow(db, card.id);
       expect(row?.status).toBe("verified");
       expect(row?.agencyCheckedAt).toBeInstanceOf(Date);

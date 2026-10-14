@@ -7,6 +7,7 @@ import {
   type AgencyCheckFailure,
   agencyCheckFailure,
   agencyCheckForm,
+  agencyCheckMatchedText,
   agencyCheckOutcomeText,
 } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-outcome";
 import { UndoToast } from "@/components/UndoToast";
@@ -80,8 +81,14 @@ export function AgencyCheck({
       {copy.link}
     </a>
   );
-  const undo = result?.ok && result.verdict === "match" ? result.undo : undefined;
-  const outcome = agencyCheckOutcomeText(result, failure, copy);
+  const match = result?.ok && result.verdict === "match" ? result : null;
+  const undo = match?.undo;
+  const outcome = agencyCheckOutcomeText(
+    result,
+    failure,
+    copy,
+    query ? `${query.firstName} ${query.lastName}` : "",
+  );
 
   return (
     <>
@@ -109,7 +116,7 @@ export function AgencyCheck({
       ) : null}
       {undo ? (
         <UndoToast
-          message={copy.matched}
+          message={match ? agencyCheckMatchedText(match, copy) : copy.matched}
           action={formAction}
           fields={{ certificationId: undo.certificationId, intent: "undo" }}
           pendingLabel={copy.undoPending}

@@ -113,7 +113,7 @@ test("Check all certifies the departure one card at a time, and each card keeps 
   await installFakeExtension(page, "match");
   const { newcomer } = await departureWithTwoPendingCards(page);
 
-  await page.getByRole("button", { name: "Check all 2 with their agencies" }).click();
+  await page.getByRole("button", { name: "Check all 2 cards with their agencies" }).click();
 
   await expect(page.getByText("Checked 2. Certified: 2.")).toBeVisible({ timeout: 20_000 });
   expect(await lookups(page)).toBe(2);
@@ -135,24 +135,26 @@ test("Check all certifies the departure one card at a time, and each card keeps 
   ).toBeVisible();
 });
 
-test("Check all stops on the first page it cannot read and leaves the rest for the staffer", async ({
+test("Check all skips one page it cannot read, stops on two in a row, and leaves them for the staffer", async ({
   page,
 }) => {
   test.setTimeout(90_000);
   await installFakeExtension(page, "captcha");
   const { newcomer } = await departureWithTwoPendingCards(page);
 
-  await page.getByRole("button", { name: "Check all 2 with their agencies" }).click();
+  await page.getByRole("button", { name: "Check all 2 cards with their agencies" }).click();
 
   await expect(page.getByText(/^Stopped at .+: couldn’t read SSI’s page\./)).toBeVisible({
     timeout: 20_000,
   });
-  expect(await lookups(page)).toBe(1);
-  // Nothing was written: both cards still wait, each with its own check.
+  expect(await lookups(page)).toBe(2);
+  // Nothing was written: each card waits, named, with the agency's page to open.
   for (const diver of [SEEDED_DIVER, newcomer]) {
+    const row = rosterRow(page, diver);
     await expect(
-      rosterRow(page, diver).getByRole("button", { name: "Check with SSI" }),
+      row.getByText(/^Couldn’t find .+ on SSI’s page\. Open it and look\.$/),
     ).toBeVisible();
+    await expect(row.getByRole("link", { name: "Check with SSI" })).toBeVisible();
   }
   await expect(page.getByText("SSI shows this certification. Marked certified.")).toHaveCount(0);
 });

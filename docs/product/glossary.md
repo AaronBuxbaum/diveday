@@ -21,6 +21,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - C-card
 - Card sighting
 - Certification summary
+- Check all (agency)
 - Claimed certification
 - Clearing a declared-uncertified stamp
 - CMAS

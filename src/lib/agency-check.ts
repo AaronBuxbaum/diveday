@@ -104,12 +104,16 @@ export function agencyCheckQuery(input: {
   if (needs === "card_number" && !cardNumber) return null;
   if (needs === "birth_date" && !birthDate) return null;
   if (needs === "card_number_or_birth_date" && !cardNumber && !birthDate) return null;
+  // The query crosses to the extension and is typed into a third party's page,
+  // so it carries only what this agency's form asks for: a birth date never
+  // goes to a lookup by number, nor a number to a lookup by birth date. The
+  // server re-derives the query to judge the page, so nothing is lost there.
   return {
     agency: input.agency,
     firstName: words[0] as string,
     lastName: words.at(-1) as string,
-    birthDate,
-    cardNumber,
+    birthDate: needs === "card_number" ? null : birthDate,
+    cardNumber: needs === "birth_date" ? null : cardNumber,
   };
 }
 

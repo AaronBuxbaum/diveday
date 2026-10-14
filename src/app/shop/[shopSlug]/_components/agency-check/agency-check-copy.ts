@@ -1,5 +1,6 @@
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import type { CertificationAgency } from "@/db/schema";
+import { fill } from "@/i18n/fill";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { AGENCY_CHECKS, type CheckableAgency } from "@/lib/agency-check";
 import { type AgencyVerificationPage, agencyVerificationPage } from "@/lib/agency-verification";
@@ -21,12 +22,20 @@ export type AgencyCheckCopy = {
    */
   link: string;
   checking: string;
+  /** A pending card certified. */
   matched: string;
+  /** An imported card confirmed. */
+  matchedConfirmed: string;
   levelUnconfirmed: string;
   noRecord: string;
   /** PADI listed more than one diver by this name. */
   severalRecords: string;
+  /** The agency's page could not be read at all (the extension came back without it). */
   unreadable: string;
+  /** A template: `{name}`. The page came back, but did not show this diver cleanly. */
+  notFoundOnPage: string;
+  /** DiveDay's own server did not answer: reload to see where the card stands. */
+  noAnswer: string;
   /** "Sign in to PADI first": a lookup behind the shop's sign-in met a sign-in page. */
   signedOut: string;
   invalid: string;
@@ -40,14 +49,26 @@ export type AgencyCheckAgencyCopy = AgencyCheckCopy & { agency: string; href: st
 
 /** The words a departure's "Check all" adds around the per-card ones. */
 export type AgencyCheckAllCopy = {
-  /** "Check all 9 with their agencies", counted on the server. */
-  start: string;
+  /**
+   * "Check all 9 cards with their agencies", by how many are left to check,
+   * counted on the server: index N is the words for N cards. A re-run skips
+   * the cards this page already settled, so the count can fall below the list.
+   */
+  start: readonly string[];
+  /** The button that stops a running batch. */
+  stop: string;
   /** A template: `{done}` of `{total}`, while it runs (`fill`). */
   progress: string;
   /** A template: `{checked}` and `{certified}`, once it ran to the end. */
   finished: string;
-  /** A template: `{name}` and `{agency}`, when a page could not be read. */
+  /** A template: `{confirmed}`, added after `finished` or `cancelled` when imported cards were confirmed. */
+  confirmed: string;
+  /** A template: `{checked}` and `{certified}`, when the staffer stopped it. */
+  cancelled: string;
+  /** A template: `{name}` and `{agency}`, when two pages in a row could not be read. */
   stopped: string;
+  /** A template: `{name}`, when DiveDay's own server did not answer. */
+  stoppedTransport: string;
   /** A template: `{name}` and `{agency}`, when the staffer is not signed in to the agency. */
   stoppedSignedOut: string;
 };
@@ -90,10 +111,16 @@ export function agencyCheckCopy(
     link,
     checking: t("divers.certifications.agencyCheck.checking", { agency: name }),
     matched: t("divers.certifications.agencyCheck.matched", { agency: name }),
+    matchedConfirmed: t("divers.certifications.agencyCheck.matchedConfirmed", { agency: name }),
     levelUnconfirmed: t("divers.certifications.agencyCheck.levelUnconfirmed", { agency: name }),
     noRecord: t("divers.certifications.agencyCheck.noRecord", { agency: name }),
     severalRecords: t("divers.certifications.agencyCheck.severalRecords", { agency: name }),
     unreadable: t("divers.certifications.agencyCheck.unreadable", { agency: name }),
+    // The agency now, the diver in the browser: one host holds many divers.
+    notFoundOnPage: fill(t.raw("divers.certifications.agencyCheck.notFoundOnPage"), {
+      agency: name,
+    }),
+    noAnswer: t("divers.certifications.agencyCheck.noAnswer"),
     signedOut: t("divers.certifications.agencyCheck.signedOut", { agency: name }),
     invalid: t("divers.notices.invalid"),
     undo: t("shared.undoToast.undo"),
@@ -120,13 +147,19 @@ export function agencyCheckCopies(
   return copies;
 }
 
-/** The departure's "Check all" words: the count now, the running numbers in the browser. */
+/** The departure's "Check all" words: the counts now, the running numbers in the browser. */
 export function agencyCheckAllCopy(t: StaffTranslator, count: number): AgencyCheckAllCopy {
   return {
-    start: t("trips.roster.agencyCheckAll.start", { count }),
+    start: Array.from({ length: count + 1 }, (_, each) =>
+      t("trips.roster.agencyCheckAll.start", { count: each }),
+    ),
+    stop: t("trips.roster.agencyCheckAll.stop"),
     progress: t.raw("trips.roster.agencyCheckAll.progress"),
     finished: t.raw("trips.roster.agencyCheckAll.finished"),
+    confirmed: t.raw("trips.roster.agencyCheckAll.confirmed"),
+    cancelled: t.raw("trips.roster.agencyCheckAll.cancelled"),
     stopped: t.raw("trips.roster.agencyCheckAll.stopped"),
+    stoppedTransport: t.raw("trips.roster.agencyCheckAll.stoppedTransport"),
     stoppedSignedOut: t.raw("trips.roster.agencyCheckAll.stoppedSignedOut"),
   };
 }

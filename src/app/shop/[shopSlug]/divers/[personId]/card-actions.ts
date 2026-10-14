@@ -99,6 +99,7 @@ const cardForm = z.object({
   identifier: formValue(),
   intent: formValue(),
   pageText: formValue(),
+  refresh: formValue(),
   sightedAgency: formValue(),
   sightedIdentifier: formValue(),
   sightedLevel: formValue(),
@@ -627,6 +628,11 @@ export type AgencyCheckResult =
       ok: true;
       /** The agency's page named this diver at this level, and the card is certified. */
       verdict: "match";
+      /**
+       * `certified` promoted a pending card; `confirmed` cleared an imported
+       * card's gate. The words say which, as {@link MarkCertifiedResult}'s do.
+       */
+      effect: "certified" | "confirmed";
       undo?: { certificationId: string };
     }
   | { ok: true; verdict: "undone" }
@@ -661,7 +667,10 @@ export type AgencyCheckResult =
  * card of a departure's "Check all" (which is only this, one card at a time,
  * from the browser). So a write ends in `refresh()` as well as revalidating
  * the record: the page the staffer pressed it on is the one that has to
- * settle, and only the browser knows which page that is.
+ * settle, and only the browser knows which page that is. A "Check all" posts
+ * `refresh=later` on each card and refreshes the page once when the run ends,
+ * so a departure is not re-rendered after every card it certifies. That field
+ * changes only when the page repaints, never what is written.
  */
 export async function agencyCheckAction(
   shopSlug: string,
@@ -712,7 +721,14 @@ export async function agencyCheckAction(
     agencyChecked: true,
   });
   revalidatePath(base);
-  refresh();
+  if (fields.refresh !== "later") refresh();
   if (!outcome.ok) return { ok: false, reason: "invalid" };
-  return { ok: true, verdict: "match", undo: { certificationId } };
+  return {
+    ok: true,
+    verdict: "match",
+    // An imported card was already `verified` on arrival: the agency's page
+    // confirmed it rather than certifying it.
+    effect: outcome.certification.importedAt ? "confirmed" : "certified",
+    undo: { certificationId },
+  };
 }

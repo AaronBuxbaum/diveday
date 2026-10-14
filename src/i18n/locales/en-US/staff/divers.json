@@ -68,10 +68,13 @@
     "agencyCheck": {
       "checking": "Checking with {agency}…",
       "matched": "{agency} shows this certification. Marked certified.",
+      "matchedConfirmed": "{agency} shows this certification. Confirmed.",
       "levelUnconfirmed": "{agency} found this diver, but not at this level.",
       "noRecord": "{agency} has no match for this name.",
       "severalRecords": "{agency} lists more than one diver by this name.",
       "unreadable": "Couldn’t read {agency}’s page.",
+      "notFoundOnPage": "Couldn’t find {name} on {agency}’s page. Open it and look.",
+      "noAnswer": "DiveDay didn’t answer. Reload to see where this certification stands.",
       "signedOut": "Sign in to {agency} first, then check again."
     },
     "sightCard": "Verify certification record",

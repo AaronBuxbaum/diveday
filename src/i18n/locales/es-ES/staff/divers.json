@@ -68,10 +68,13 @@
     "agencyCheck": {
       "checking": "Verificando con {agency}…",
       "matched": "{agency} muestra esta certificación. Marcado como certificado.",
+      "matchedConfirmed": "{agency} muestra esta certificación. Confirmada.",
       "levelUnconfirmed": "{agency} encontró a este buceador, pero no con este nivel.",
       "noRecord": "{agency} no tiene ningún resultado con este nombre.",
       "severalRecords": "{agency} muestra más de un buceador con este nombre.",
       "unreadable": "No se pudo leer la página de {agency}.",
+      "notFoundOnPage": "No se encontró a {name} en la página de {agency}. Ábrela y revísala.",
+      "noAnswer": "DiveDay no respondió. Recarga para ver cómo quedó esta certificación.",
       "signedOut": "Inicia sesión en {agency} primero y vuelve a verificar."
     },
     "sightCard": "Verificar registro de certificación",

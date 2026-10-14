@@ -31,11 +31,36 @@ describe("agencyCheckQuery", () => {
     identifier: "N-12345",
   } as const;
 
-  it("types the first and last words of the name, with the birth date and number", () => {
+  it("types the first and last words of the name, with only what the agency's form asks for", () => {
     expect(agencyCheckQuery(base)).toEqual({
       agency: "naui",
       firstName: "Lena",
       lastName: "Ortiz",
+      birthDate: "1990-04-12",
+      cardNumber: null,
+    });
+    expect(agencyCheckQuery({ ...base, agency: "ssi" })).toEqual({
+      agency: "ssi",
+      firstName: "Lena",
+      lastName: "Ortiz",
+      birthDate: null,
+      cardNumber: "N-12345",
+    });
+  });
+
+  /**
+   * The query crosses to the extension and is typed into a third party's page:
+   * a diver's birth date never goes to an agency that looks up by number, nor
+   * a card number to one that looks up by birth date. CMAS takes either.
+   */
+  it("hands the extension nothing the agency's form does not ask for", () => {
+    for (const agency of ["ssi", "gue"] as const) {
+      expect(agencyCheckQuery({ ...base, agency })?.birthDate).toBeNull();
+    }
+    for (const agency of ["naui", "sdi", "padi"] as const) {
+      expect(agencyCheckQuery({ ...base, agency })?.cardNumber).toBeNull();
+    }
+    expect(agencyCheckQuery({ ...base, agency: "cmas" })).toMatchObject({
       birthDate: "1990-04-12",
       cardNumber: "N-12345",
     });

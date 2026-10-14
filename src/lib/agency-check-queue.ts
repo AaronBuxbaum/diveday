@@ -13,10 +13,18 @@ import type { AgencyCheckQuery, CheckableAgency } from "./agency-check";
  *
  * - **One request at a time**, with a short pause between, because twelve
  *   lookups in a row from one browser reads as a script, not a person.
- * - **Stops on the first page it cannot read** and on the first transport
- *   failure (the extension did not answer, or DiveDay's server did not), so a
+ * - **Skips one unreadable result, stops on two in a row.** A single diver the
+ *   agency's page does not show cleanly is that diver's (an odd spelling, a
+ *   record the page lays out differently), so the run goes on. Two unreadable
+ *   results or transport failures (the extension did not answer, or DiveDay's
+ *   server did not) in a row is the page or the line, and the run stops so a
  *   broken or captcha'd agency page is not hammered. What was not checked is
  *   left exactly as it was, for the staffer.
+ * - **Stops at once when the staffer is signed out of the agency** (PADI):
+ *   that is the agency's state, not one diver's, and every card after it
+ *   would meet the same sign-in.
+ * - **The staffer can stop it.** `cancelled` is asked before each card; the
+ *   card in flight finishes, and nothing after it is sent.
  * - **Capped at the departure.** The caller hands in one departure's cards; the
  *   queue never reaches beyond the list it was given.
  * - **No undo of its own.** Each card's own Undo is the only way back, so one
@@ -35,19 +43,21 @@ export type AgencyCheckableCard = {
 
 /** What one card's check came to, as the queue reads it. */
 export type AgencyCheckOutcome =
-  /** The agency's page shows this diver at this level; the card is certified. */
-  | "match"
+  /** The agency's page shows this diver at this level; the pending card is certified. */
+  | "certified"
+  /** The agency's page shows this diver at this level; the imported card is confirmed. */
+  | "confirmed"
   /** The diver is on the page, this level is not: left for the staffer, with the page's words. */
   | "level_unconfirmed"
   /** The agency found nobody under this name: left for the staffer. */
   | "no_record"
   /** The agency listed several divers by this name (PADI): left for the staffer. */
   | "several_records"
-  /** The page did not read as a result (a captcha, a redesign): stops the queue. */
+  /** The page did not read as a result for this diver: skipped, and two in a row stop the queue. */
   | "unreadable"
-  /** A lookup behind the shop's own sign-in (PADI) met a sign-in page: stops the queue. */
+  /** A lookup behind the shop's own sign-in (PADI) met a sign-in page: stops the queue at once. */
   | "signed_out"
-  /** The extension or DiveDay's server did not answer: stops the queue. */
+  /** DiveDay's server did not answer: as unreadable, two in a row stop the queue. */
   | "transport"
   /** DiveDay refused this one card (already certified meanwhile, gone): the queue goes on. */
   | "refused";
@@ -55,10 +65,18 @@ export type AgencyCheckOutcome =
 /** The pause between two lookups. Short enough to wait out, long enough not to look like a script. */
 export const AGENCY_CHECK_QUEUE_PAUSE_MS = 2_000;
 
-/** Whether this outcome ends the run: the next agency page would most likely fail the same way. */
+/** Whether this outcome ends the run at once: every card after it would meet the same state. */
 export function stopsAgencyCheckQueue(outcome: AgencyCheckOutcome): boolean {
-  return outcome === "unreadable" || outcome === "transport" || outcome === "signed_out";
+  return outcome === "signed_out";
 }
+
+/** Whether this outcome counts toward the two in a row that stop the run. */
+export function isUnreadableOutcome(outcome: AgencyCheckOutcome): boolean {
+  return outcome === "unreadable" || outcome === "transport";
+}
+
+/** How many unreadable results or transport failures in a row stop the run. */
+const UNREADABLE_IN_A_ROW = 2;
 
 /**
  * The cards a "Check all" would send, in the order given, each card once.
@@ -80,11 +98,13 @@ export function agencyCheckQueueCards<Card extends { certificationId: string }>(
 export type AgencyCheckQueueSummary<Card> = {
   /** How many cards were sent to the extension. */
   checked: number;
-  /** How many of those the agency's page certified. */
+  /** How many pending cards the agency's page certified. */
   certified: number;
+  /** How many imported cards the agency's page confirmed. */
+  confirmed: number;
   /** The card the run stopped on, and why, or null when it ran to the end or was cancelled. */
   stopped: { card: Card; outcome: AgencyCheckOutcome } | null;
-  /** The run was cancelled before it finished (the page went away). */
+  /** The run was cancelled before it finished (the staffer stopped it, or the page went away). */
   cancelled: boolean;
 };
 
@@ -109,11 +129,17 @@ export async function runAgencyCheckQueue<Card extends { certificationId: string
   const pauseMs = input.pauseMs ?? AGENCY_CHECK_QUEUE_PAUSE_MS;
   let checked = 0;
   let certified = 0;
+  let confirmed = 0;
+  let unreadableInARow = 0;
+  const summary = (
+    stopped: AgencyCheckQueueSummary<Card>["stopped"],
+    cancelled: boolean,
+  ): AgencyCheckQueueSummary<Card> => ({ checked, certified, confirmed, stopped, cancelled });
   for (const [index, card] of cards.entries()) {
-    if (input.cancelled?.()) return { checked, certified, stopped: null, cancelled: true };
+    if (input.cancelled?.()) return summary(null, true);
     if (index > 0) {
       await input.pause(pauseMs);
-      if (input.cancelled?.()) return { checked, certified, stopped: null, cancelled: true };
+      if (input.cancelled?.()) return summary(null, true);
     }
     input.onStart?.(card, checked);
     let outcome: AgencyCheckOutcome;
@@ -123,11 +149,13 @@ export async function runAgencyCheckQueue<Card extends { certificationId: string
       outcome = "transport";
     }
     checked += 1;
-    if (outcome === "match") certified += 1;
+    if (outcome === "certified") certified += 1;
+    if (outcome === "confirmed") confirmed += 1;
+    unreadableInARow = isUnreadableOutcome(outcome) ? unreadableInARow + 1 : 0;
     input.onSettle?.(card, outcome, checked);
-    if (stopsAgencyCheckQueue(outcome)) {
-      return { checked, certified, stopped: { card, outcome }, cancelled: false };
+    if (stopsAgencyCheckQueue(outcome) || unreadableInARow >= UNREADABLE_IN_A_ROW) {
+      return summary({ card, outcome }, false);
     }
   }
-  return { checked, certified, stopped: null, cancelled: false };
+  return summary(null, false);
 }

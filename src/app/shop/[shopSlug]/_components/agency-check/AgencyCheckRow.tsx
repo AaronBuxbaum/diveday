@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { useAgencyCheckHost } from "./AgencyCheckHost";
-import { agencyCheckOutcomeText } from "./agency-check-outcome";
+import { agencyCheckMatchedText, agencyCheckOutcomeText } from "./agency-check-outcome";
 
 const LINK_BUTTON = buttonClass({
   variant: "link",
@@ -61,27 +61,38 @@ export function AgencyCheckRow({
       const copy = host.copies[card.agency];
       const state = host.states[card.certificationId];
       const settled = state?.phase === "settled" ? state : null;
-      const matched = settled?.result?.ok === true && settled.result.verdict === "match";
-      // The agency's page answered, short of a match: the next step is the
-      // staffer reading it on the agency's own page, so the link takes the
-      // button's place rather than standing under it with the same words. A
-      // page that could not be read keeps the button, for another try.
+      const match =
+        settled?.result?.ok === true && settled.result.verdict === "match" ? settled.result : null;
+      const matched = match !== null;
+      // The agency's page answered, short of a match (or came back without
+      // this diver on it): the next step is the staffer reading it on the
+      // agency's own page, so the link takes the button's place rather than
+      // standing under it with the same words. A check that came back with no
+      // page keeps the button, for another try.
       const answered =
         settled?.result?.ok === true &&
         (settled.result.verdict === "level_unconfirmed" ||
           settled.result.verdict === "no_record" ||
-          settled.result.verdict === "several_records");
+          settled.result.verdict === "several_records" ||
+          settled.result.verdict === "unreadable");
       const showButton =
         host.hasExtension && pendingIds.has(card.certificationId) && !matched && !answered && copy;
       const outcome =
-        settled && copy ? agencyCheckOutcomeText(settled.result, settled.failure, copy) : null;
+        settled && copy
+          ? agencyCheckOutcomeText(
+              settled.result,
+              settled.failure,
+              copy,
+              `${card.query.firstName} ${card.query.lastName}`,
+            )
+          : null;
       const evidence =
         settled?.result?.ok === true && settled.result.verdict === "level_unconfirmed"
           ? settled.result.evidence
           : null;
       // A "Check all" leaves each certified card its own Undo on the row; a
       // single check's Undo is its toast, as on the diver record.
-      const rowUndo = matched && settled.via === "all";
+      const rowUndo = match && settled?.via === "all" ? match : null;
       if (!copy || (!showButton && !outcome && !rowUndo)) return null;
       return (
         <div
@@ -100,7 +111,9 @@ export function AgencyCheckRow({
             </button>
           ) : null}
           {outcome && settled ? (
-            <div className="mt-1 text-sm">
+            // The page's words and the agency's link are for the desk, not a
+            // printed roster: a printout carries the card's state, not this.
+            <div className="mt-1 text-sm print:hidden">
               <FormStatus tone={settled.result && !settled.result.ok ? "danger" : "warning"}>
                 {outcome}
               </FormStatus>
@@ -110,7 +123,7 @@ export function AgencyCheckRow({
                   href={copy.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`${LINK_BUTTON} print:hidden`}
+                  className={LINK_BUTTON}
                 >
                   {copy.link}
                 </a>
@@ -120,9 +133,9 @@ export function AgencyCheckRow({
           {rowUndo ? (
             <form
               action={() => host.undo(card)}
-              className="flex flex-wrap items-center gap-x-3 text-sm"
+              className="flex flex-wrap items-center gap-x-3 text-sm print:hidden"
             >
-              <span className="text-success-strong">{copy.matched}</span>
+              <span className="text-success-strong">{agencyCheckMatchedText(rowUndo, copy)}</span>
               <SubmitButton pendingLabel={copy.undoPending} className={LINK_BUTTON}>
                 {copy.undo}
               </SubmitButton>

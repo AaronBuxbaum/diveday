@@ -171,7 +171,7 @@ test("Check all on a departure stops at the first PADI card when signed out of P
   ).toBeVisible();
   await expect(rosterRow(page, SEEDED_DIVER)).toBeVisible();
 
-  await page.getByRole("button", { name: /^Check all \d+ with their agencies$/ }).click();
+  await page.getByRole("button", { name: /^Check all \d+ cards with their agencies$/ }).click();
 
   await expect(
     page.getByText(`Stopped at ${name}: sign in to PADI first.`, { exact: false }),

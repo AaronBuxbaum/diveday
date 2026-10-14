@@ -61,7 +61,7 @@ describe("listAgencyCheckableCards", () => {
           agency: "ssi",
           firstName: "Lena",
           lastName: "Ortiz",
-          birthDate: "1990-04-12",
+          birthDate: null,
           cardNumber: "SSI-4471",
         },
       },

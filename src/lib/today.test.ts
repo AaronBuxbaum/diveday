@@ -143,6 +143,23 @@ describe("diverBlockerAction", () => {
     }
   });
 
+  /**
+   * A held seat (H-13): the human on this booking may not be the one whose
+   * cards are on file, so no row offers to check that person's card with an
+   * agency until a staffer confirms who it is, whichever blocker heads it.
+   */
+  it("offers no agency check on a held seat, even with a pending card", () => {
+    for (const blockers of [
+      [blocker("certification_pending"), blocker("identity_unconfirmed")],
+      [blocker("identity_unconfirmed"), blocker("certification_pending")],
+    ]) {
+      for (const aboard of [false, true]) {
+        const held = diverBlockerAction({ ...input, blockers, aboard }, "blue-reef", NOW);
+        expect(held?.agencyCheck).toBeUndefined();
+      }
+    }
+  });
+
   it("says the headline blocker in a few words, and nothing about the rest", () => {
     // The record the row opens lists every blocker in full; the row names the
     // one the tap fixes (Aaron, 2026-10-05: "reduce the amount of copy").

@@ -42,8 +42,20 @@
   only when one record on that page names the diver, carries the birth date or card number the lookup
   was typed with, and states the claimed level in the agency's own words, with nothing limiting it.
   It stamps `agency_checked_at`, with those words as the review note, and names the staffer whose
-  browser ran it. Anything else writes nothing and leaves the link. Level cards only, for SSI, NAUI,
-  SDI, GUE, CMAS and PADI; an unsighted self-declaration still needs its sighting.
+  browser ran it. That stamp means *the staffer's browser reported a match*: the words came from
+  their browser, not signed by the agency, so it attests no more than **Mark certified** does, with
+  the same permission. Anything else writes nothing and leaves the link. A match on a pending card
+  says it certified it; on an imported card, that it confirmed it. Level cards only, for SSI, NAUI,
+  SDI, GUE, CMAS and PADI; an unsighted self-declaration still needs its sighting. The lookup carries
+  only what the agency's form asks for: a birth date or a card number, both only for CMAS.
+- **Check all (agency)** — a departure's "Check all 9 cards with their agencies" on its Divers tab
+  (H-105): each **Agency check** the departure holds, one card at a time with a pause between, from
+  the staffer's browser. Each card is judged and certified on its own and keeps its own Undo; there
+  is no Undo for the departure. One diver the agency's page does not show is skipped, named, with
+  the agency's page to open; two unreadable pages or unanswered requests in a row stop the run, and
+  a signed-out **DiveChek check** stops it at once. The staffer can stop it. A re-run skips the cards
+  the page already settled. Never a bulk confirm: nothing is certified that its agency's page did
+  not show.
 - **DiveChek check** — the **Agency check** for a PADI card, on PADI's DiveChek in the staffer's own
   browser, signed in to the PADI Pros' Site (H-114). Searched by name and birth date, so a diver
   with no birth date on file keeps the link. Narrower than a public page: one record only, so a page
@@ -233,7 +245,9 @@
   Every imported card still confirms on one tap; what came back here is narrower and applies only to
   the diver-written rows that did not exist then. What did **not** change for imports is that the
   confirm exists at all: an imported card clears nothing until a staffer makes that tap, per card,
-  and there is still deliberately no bulk confirm. Cards reviewed before that date keep the sentence
+  and there is still deliberately no bulk confirm. An **Agency check** confirms an imported level
+  card only when the agency's own page shows it, one card at a time, and a **Check all (agency)** is
+  only that, card after card. Cards reviewed before that date keep the sentence
   the old attestation wrote into their `review_note`.
 - **Prior visit** — one line of a diver's history at the shop's *previous* system, brought across by
   the contact importer from a bookings or orders export (one row per booking). It is a **booking
