@@ -33,7 +33,8 @@
     "oneTime": "Salida única",
     "perDiver": "por buceador",
     "cancel": "Cancelar esta salida",
-    "more": "Más para esta salida"
+    "more": "Más para esta salida",
+    "meetingDaysSummary": "{count, plural, other {# días}} · {first} – {last}"
   },
   "openSeats": {
     "label": "Plazas sin vender",
@@ -257,7 +258,9 @@
     "minimumDecisionLabel": "Decidir con",
     "minimumDecisionDescription": "Cuánto antes de la salida se toma la decisión. La página de reserva publica el momento exacto.",
     "diversSuffix": "buceadores",
-    "hoursBeforeSuffix": "horas de antelación"
+    "hoursBeforeSuffix": "horas de antelación",
+    "coursePrice": "{amount} por buceador, el precio del curso",
+    "coursePriceHint": "Se fija en el curso, con su cuota de eLearning"
   },
   "conditions": {
     "description": "Se muestra a los buceadores en lugar del pronóstico marino automático.",

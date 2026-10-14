@@ -100,6 +100,7 @@ export function TripPageHeader({
   actions,
   headerAside,
   price,
+  daySpan,
   className,
 }: {
   trip: { title: string; startsAt: Date; endsAt: Date };
@@ -132,6 +133,11 @@ export function TripPageHeader({
   headerAside?: ReactNode;
   /** Optional fare shown with the departure's date and time. */
   price?: ReactNode;
+  /**
+   * "3 days · Fri, Oct 23 – Sun, Oct 25" for a departure meeting on more than
+   * one day, in place of the first day's date and hours (item 26).
+   */
+  daySpan?: string;
   /** Allows a surface to tighten the space after its masthead when needed. */
   className?: string;
 }) {
@@ -201,8 +207,12 @@ export function TripPageHeader({
       >
         {badge}
         <span>
-          {formatShortDate(trip.startsAt, locale, timeZone)} ·{" "}
-          {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
+          {daySpan ?? (
+            <>
+              {formatShortDate(trip.startsAt, locale, timeZone)} ·{" "}
+              {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
+            </>
+          )}
           {price ? <> · {price}</> : null}
         </span>
       </div>
