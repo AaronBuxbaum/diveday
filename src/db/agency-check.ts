@@ -351,7 +351,7 @@ export async function addAgencyListedCards(
             isNull(people.anonymizedAt),
           ),
         )
-        .for("update")
+        .for("no key update")
         .limit(1);
       if (!person) return { ok: false } as const;
       // The level card, read again under a share lock so the check's Undo
