@@ -434,8 +434,10 @@ describe("releaseLapsedForBooking", () => {
     expect(resolve({ personSignedWaivers: [lapsed, hold] })).toBe(false);
   });
 
-  it("ignores a superseded signature", () => {
-    expect(resolve({ personSignedWaivers: [{ ...lapsed, supersededAt: SIGN_NOW }] })).toBe(false);
+  it("counts a signature a fresh link on another seat superseded (D2)", () => {
+    // The evidence carries a superseded clean signature only from the
+    // signer's own seat (`listSignedWaiversByPerson`); it still lapsed.
+    expect(resolve({ personSignedWaivers: [{ ...lapsed, supersededAt: SIGN_NOW }] })).toBe(true);
   });
 
   it("reads a rider's lapsed release the same way, held record or not", () => {

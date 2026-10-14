@@ -1138,7 +1138,13 @@
   physician has cleared: an open referral, or one the physician refused. It is the record's status
   (`medical_review`), never the stored answers, because a paper or status-only hold stores none and
   still refuses boarding (`isUnresolvedMedicalHold`, `isStandingRefusal` in `src/lib/waivers.ts`).
-  Only a **physician clearance** ends it, or a clean later release standing over it (below). A
+  Only a **physician clearance** ends it, or a clean later release standing over it (below).
+  **Superseding never ends a hold**: a fresh link on its seat, a seat claim or retiring a refusal
+  moves the hold off that seat and answers nothing, so it still outranks every signature older than
+  it on every seat the diver has. `isUnresolvedMedicalHold` asks of a seat's own live record;
+  `isUnclearedReferral` asks of the diver's evidence, superseded or not. The one record that does
+  not count is one given on a seat that has since passed to somebody else (a split or a claim):
+  those answers were never the record's person's, and the seat's new holder signs their own. A
   cleared record keeps its status, so the signed records' **Medical holds** view lists every
   referral, and each row says where it stands: Waiting on physician, Cleared by physician, or Not
   cleared.

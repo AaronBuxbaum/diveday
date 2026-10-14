@@ -336,10 +336,13 @@ export function effectiveReleaseForRiderSeat(input: {
  *
  * True only where the seat's own resolution ({@link effectiveWaiverForBooking},
  * or {@link effectiveReleaseForRiderSeat} for a seat not held to the medical)
- * finds nothing, and the diver has a signature here that is not superseded and
- * no longer stands: aged past its year, a physician's evaluation aged past its
- * own, or given against terms the shop has since changed. The same reading
- * {@link shopWaiverStatus} gives the diver record as `expired`.
+ * finds nothing, and the diver has a signature here that no longer stands:
+ * aged past its year, a physician's evaluation aged past its own, given against
+ * terms the shop has since changed, or superseded by a fresh link on another of
+ * the diver's seats (the evidence carries that one only from the signer's own
+ * seat, `listSignedWaiversByPerson`). A send on one seat never turns another
+ * seat's lapse into "not sent". The same reading {@link shopWaiverStatus} gives
+ * the diver record as `expired`.
  *
  * It names the blocker and nothing more. The seat is blocked whichever it is;
  * a lapsed signature asks the diver to sign again, where an unsent release asks
@@ -360,7 +363,7 @@ export function releaseLapsedForBooking(input: {
     ? isCleanCompletion
     : (record: WaiverRecord) => record.status === "completed" || record.status === "medical_review";
   return [...(input.bookingWaiver ? [input.bookingWaiver] : []), ...input.personSignedWaivers].some(
-    (record) => signed(record) && !record.supersededAt,
+    signed,
   );
 }
 

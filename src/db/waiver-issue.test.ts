@@ -3,7 +3,11 @@ import { and, eq, gt, isNotNull, isNull, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { WAIVER_LINK_TTL_MS, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
+import {
+  DEFAULT_WAIVER_BODY,
+  WAIVER_LINK_TTL_MS,
+  WAIVER_SIGNATURE_VALIDITY_MS,
+} from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { revokeBookingCapabilities, verifyBookingCapability } from "./booking-capabilities";
 import { cancelBooking, createBooking } from "./bookings";
@@ -46,6 +50,7 @@ import {
   getWaiverForToken,
   issueWaiverRequest,
   saveWaiverDraft,
+  saveWaiverTemplate,
 } from "./waivers";
 
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
@@ -403,6 +408,55 @@ describe("issueAndDeliverWaiver", () => {
     if (!seat) throw new Error("seat missing");
     const profile = await getDiverProfile(db, shop.id, seat.personId);
     expect(profile?.waiver).toEqual({ state: "expired", signedAt: longAgo });
+  });
+
+  /**
+   * **A send on one seat never turns another seat's lapse into "not sent"**
+   * (dive-domain-expert run 4, D2). The terms changed, so the diver's clean
+   * release lapsed on every seat; staff sending a fresh link on one seat
+   * supersedes it there, and the diver's other seat still reads
+   * `waiver_lapsed` (glossary: Sign once) — the diver signed once, it lapsed.
+   */
+  it("keeps a second seat on waiver_lapsed after a send on the first supersedes the release", async () => {
+    const { db, shop, trip, bookingId } = await seededBooking();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+    });
+    const [other] = (await upcomingTripsWithCounts(db, shop.id)).filter((t) => t.id !== trip.id);
+    if (!other) throw new Error("second demo trip missing");
+    const second = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: other.id,
+      fullName: "Nora Quinn",
+      email: "delivered@dive.day",
+    });
+    if (!second.ok) throw new Error(`booking failed: ${second.reason}`);
+    const terms = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      body: `${DEFAULT_WAIVER_BODY}\n\nRevised terms.`,
+      material: true,
+    });
+    expect(terms.versioned).toBe(true);
+
+    const sent = await issueAndDeliverWaiver(db, shop.id, bookingId);
+    expect(sent).toMatchObject({ ok: true });
+    const [signed] = await db
+      .select({ supersededAt: waiverRecords.supersededAt })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    expect(signed?.supersededAt).not.toBeNull();
+
+    const codes =
+      (await getBookingReadiness(db, shop.id, second.bookingId))?.blockers.map(
+        (blocker) => blocker.code,
+      ) ?? [];
+    expect(codes).toContain("waiver_lapsed");
+    expect(codes).not.toContain("waiver_not_sent");
   });
 
   it("sends a fresh link on joining when the diver's only release has lapsed", async () => {

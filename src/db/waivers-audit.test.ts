@@ -658,3 +658,52 @@ describe("listSignedWaiversByPerson with superseded clean signatures", () => {
     expect(signed.get(claimant.id) ?? []).toEqual([]);
   });
 });
+
+/**
+ * **A superseded referral no physician cleared carries only from the signer's
+ * own seat too** (security-reviewer run 2, S1). A split or claimed seat's
+ * records are superseded under someone else's name, so a hold signed there is
+ * a stranger's answers: carrying it would pin their medical disclosure on the
+ * record's person.
+ */
+describe("listSignedWaiversByPerson with superseded uncleared referrals", () => {
+  async function supersededReferral() {
+    const { db, shop, booking, person } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+      now,
+    });
+    const [record] = await db
+      .update(waiverRecords)
+      .set({ supersededAt: new Date(now.getTime() + 60_000) })
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      )
+      .returning();
+    if (!record) throw new Error("expected a referred record to supersede");
+    return { db, shop, booking, person, record };
+  }
+
+  it("keeps one given on the signer's own seat", async () => {
+    const { db, shop, person, record } = await supersededReferral();
+    const signed = await listSignedWaiversByPerson(db, shop.id, [person.id]);
+    expect((signed.get(person.id) ?? []).map((row) => row.id)).toContain(record.id);
+  });
+
+  it("drops one given on a seat that now belongs to somebody else", async () => {
+    const { db, shop, booking, person, record } = await supersededReferral();
+    const [claimant] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Held Claimant", email: "held.claimant@example.org" })
+      .returning({ id: people.id });
+    if (!claimant) throw new Error("fixture insert failed");
+    await db.update(bookings).set({ personId: claimant.id }).where(eq(bookings.id, booking.id));
+    const signed = await listSignedWaiversByPerson(db, shop.id, [person.id, claimant.id]);
+    expect((signed.get(person.id) ?? []).map((row) => row.id)).not.toContain(record.id);
+    expect(signed.get(claimant.id) ?? []).toEqual([]);
+  });
+});

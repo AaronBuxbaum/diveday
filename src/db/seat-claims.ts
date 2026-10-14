@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
@@ -6,7 +6,7 @@ import { log } from "@/lib/log";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
-import { waiverState } from "@/lib/waivers";
+import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import {
   type IssuedCapability,
   issueBookingCapability,
@@ -29,6 +29,7 @@ import {
   shops,
   trips,
   waiverRecords,
+  waiverTemplates,
 } from "./schema";
 import { liveTrip } from "./trips-live";
 import { issueWaiverOnJoin } from "./waiver-issue";
@@ -568,7 +569,21 @@ export async function issuePartySeatClaims(
 ): Promise<PartySeatClaim[]> {
   const now = input.now ?? nowDate();
   const rows = await db
-    .select({ booking: bookings, person: people, trip: trips, waiver: waiverRecords })
+    .select({
+      booking: bookings,
+      person: people,
+      trip: trips,
+      waiver: waiverRecords,
+      // The shop's current material terms, in the same statement
+      // (`getCurrentWaiverGeneration`'s read): no extra round trip on a page
+      // the render-cost ratchet counts.
+      generation: sql<number | null>`(${db
+        .select({ materialGeneration: waiverTemplates.materialGeneration })
+        .from(waiverTemplates)
+        .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.deletedAt)))
+        .orderBy(desc(waiverTemplates.createdAt))
+        .limit(1)})`,
+    })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -603,7 +618,16 @@ export async function issuePartySeatClaims(
       // record's name would tell whoever typed the email whose it is (#2125).
       seatName: seatName(row.person.fullName, row.booking),
       claimed: row.booking.claimedAt !== null,
-      waiverSigned: waiverState(row.waiver, now) === "complete",
+      // "Signed" is the sign-once question, not the record's status: a
+      // release aged past its year or signed against terms the shop has since
+      // changed is one the diver signs again (dive-domain-expert run 4, D3).
+      waiverSigned: row.waiver
+        ? isCompletedWaiverCurrent(
+            row.waiver,
+            row.generation === null ? null : Number(row.generation),
+            now,
+          )
+        : false,
       cancelsWithLead:
         row.booking.status === "booked" &&
         row.booking.claimedAt === null &&

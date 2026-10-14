@@ -218,9 +218,16 @@ export async function recordMedicalEvaluation(
     const answered = held.find(
       (record) => record.medicalClearedAt !== null || record.medicalClearanceDeclinedAt !== null,
     );
-    const open = held.find(
+    // A live hold before a superseded one: it is the one holding its own seat
+    // outright (`isUnresolvedMedicalHold`), so an answer landing on a newer
+    // superseded referral instead would leave that seat blocked while the desk
+    // reads "recorded". Newest first within each.
+    const unanswered = held.filter(
       (record) => record.medicalClearedAt === null && record.medicalClearanceDeclinedAt === null,
     );
+    const open =
+      unanswered.find((record) => record.supersededAt === null) ??
+      unanswered.find((record) => record.supersededAt !== null);
     if (!open) {
       if (!answered) return { ok: false, reason: "no_medical_hold" };
       const standing: MedicalEvaluationOutcome = answered.medicalClearedAt
