@@ -317,6 +317,61 @@ describe("moveSeat (the consequence path)", () => {
   });
 });
 
+  it("forgets what was said about the old departure: briefing, facts check, pickup, lateness", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    // The new departure's conditions were posted before the diver had any
+    // reason to read them: a stamp carried over would say they had.
+    await db
+      .update(trips)
+      .set({ conditionsUpdatedAt: new Date(nowMs() - DAY_MS) })
+      .where(eq(trips.id, to.id));
+    await db
+      .update(bookings)
+      .set({
+        conditionsBriefedAt: new Date(nowMs() - 60_000),
+        carriedFactsConfirmedAt: new Date(nowMs() - 60_000),
+        pickupTime: "07:15",
+        runningLateAt: new Date(nowMs() - 60_000),
+      })
+      .where(eq(bookings.id, seat.bookingId));
+
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toMatchObject({ ok: true });
+    const [row] = await db
+      .select({
+        conditionsBriefedAt: bookings.conditionsBriefedAt,
+        carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
+        pickupTime: bookings.pickupTime,
+        runningLateAt: bookings.runningLateAt,
+      })
+      .from(bookings)
+      .where(eq(bookings.id, seat.bookingId));
+    expect(row).toEqual({
+      conditionsBriefedAt: null,
+      carriedFactsConfirmedAt: null,
+      pickupTime: null,
+      runningLateAt: null,
+    });
+  });
+
+  it("leaves a help request the old crew already handled on the old departure", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    await db.insert(tripHelpRequests).values({
+      shopId: shop.id,
+      tripId: from.id,
+      bookingId: seat.bookingId,
+      kind: "carry_gear",
+      status: "handled",
+      handledAt: new Date(nowMs() - 60_000),
+    });
+
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toMatchObject({ ok: true });
+    const [help] = await db
+      .select({ tripId: tripHelpRequests.tripId })
+      .from(tripHelpRequests)
+      .where(eq(tripHelpRequests.bookingId, seat.bookingId));
+    expect(help?.tripId).toBe(from.id);
+  });
+
 describe("listSeatMoveTargets", () => {
   it("lists later dive departures, never this one or a course session", async () => {
     const { db, shop, from, to } = await setup();

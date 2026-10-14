@@ -1894,17 +1894,38 @@ export async function moveBooking(
         tripId: target.id,
         // Moving alone leaves the party it was booked in.
         partyLeadBookingId: null,
-        // Said about the old departure, and about its conditions.
+        // Each of these was said about the old departure, so none is true of
+        // the new one. Lateness was about the old start. The briefing was on
+        // the old day's conditions: the notice carries the new time and
+        // meeting point, never the new conditions, so the diver has read
+        // nothing about them yet and /ready must say so. "Anything changed?"
+        // is asked once per departure. A pickup time was set for the old
+        // day's run.
         runningLateAt: null,
-        conditionsBriefedAt: target.conditionsUpdatedAt,
+        conditionsBriefedAt: null,
+        carriedFactsConfirmedAt: null,
+        pickupTime: null,
       })
-      .where(and(eq(bookings.id, booking.id), eq(bookings.status, "booked")));
+      .where(
+        and(
+          eq(bookings.id, booking.id),
+          eq(bookings.shopId, shopId),
+          eq(bookings.status, "booked"),
+        ),
+      );
     // The diver's one open ask follows them: it is about their day, and the
-    // new departure's crew is who answers it now.
+    // new departure's crew is who answers it now. One the old crew already
+    // handled is a record of that day, and stays with it.
     await tx
       .update(tripHelpRequests)
       .set({ tripId: target.id })
-      .where(and(eq(tripHelpRequests.shopId, shopId), eq(tripHelpRequests.bookingId, booking.id)));
+      .where(
+        and(
+          eq(tripHelpRequests.shopId, shopId),
+          eq(tripHelpRequests.bookingId, booking.id),
+          isNull(tripHelpRequests.handledAt),
+        ),
+      );
     await settlePackageCoverage(tx, {
       shopId,
       personId: booking.personId,
