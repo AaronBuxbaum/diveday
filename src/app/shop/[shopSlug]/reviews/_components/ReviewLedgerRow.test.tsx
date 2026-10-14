@@ -107,7 +107,7 @@ describe("a review row", () => {
       const { container } = row(review, group);
       expect(screen.queryByText("Published")).toBeNull();
       expect(screen.queryByText("Hidden")).toBeNull();
-      expect(screen.queryByText("Waiting on you")).toBeNull();
+      expect(screen.queryByText("Needs you")).toBeNull();
       // The one pill shape in the app, and no row in a calm state wears it.
       expect(container.querySelectorAll(".rounded-full")).toHaveLength(0);
       cleanup();
