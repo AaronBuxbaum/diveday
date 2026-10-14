@@ -153,11 +153,11 @@ runs. Pass args directly. The shell guard refuses the bare form.
   automatically right: these tools do not know this repository's rules.
 - **New runtime dependency → ADR.** New domain concept → glossary. Invalidated doc → fix in the
   same PR.
-- **Safety-critical surfaces** (manifests, roll call, readiness, cert gating, medical flags,
-  erasure) get boring code, failure-path and adversarial tests, and a `dive-domain-expert` review,
+- **Safety-critical surfaces** (manifests, roll call, readiness and cert gating, medical
+  flags and the waiver state they are read from, nitrox fill authorization and the prep list's
+  air/nitrox split, erasure) get boring code, failure-path and adversarial tests, and a `dive-domain-expert` review,
   named in the PR body's "Reviews launched" section, which CI reads
-  ([repo-checks.md](repo-checks.md#pr-body)). For manifests, roll call, readiness, medical and
-  erasure, that review is **two independent runs with different framing**, launched in parallel
+  ([repo-checks.md](repo-checks.md#pr-body)). On every one of these surfaces that review is **two independent runs with different framing**, launched in parallel
   so neither sees the other: one as **a dock operator** (the boat is leaving, the count is
   called, the diver is at the rail — what does this code let happen?) and one as **an attacker**
   (`security-reviewer` when the change touches personal or medical data, tokens or erasure;
@@ -165,7 +165,8 @@ runs. Pass args directly. The shell guard refuses the bare form.
   Act on the union of their findings, each under the reviewers' evidence rule: it cites the
   rule, ADR or glossary line it violates and a failing input or a test, labelled confirmed or
   possible. A finding is acted on once its test runs and fails. Both runs are named in "Reviews
-  launched". Ordinary PRs, and cert gating on its own, keep one run: two runs double the review
+  launched" (CI checks that the agent is named, not that it ran twice). Ordinary PRs, plain
+  waiver signing and rental fit keep one run: two runs double the review
   spend, and the voting is worth it only where a miss puts a diver in the water.
 - **Security-sensitive changes** (auth/authz, token flows, rows holding personal or medical data,
   export/import) get a `security-reviewer` review before merge.

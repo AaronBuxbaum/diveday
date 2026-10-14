@@ -170,9 +170,9 @@ One line each, with what enforces it; the full statement and its incident:
   **and every review thread is fixed, declined with a reason, or filed**.
 - **New runtime dependency → ADR** (`pnpm check:adrs`); **new domain concept → glossary**
   (`pnpm check:glossary`); **invalidated doc → fixed in the same PR** (`pnpm check:docs`).
-- **Safety-critical surfaces** (manifests, roll call, readiness, cert gating, medical, erasure) get
-  boring code, adversarial tests and a `dive-domain-expert` review, two differently framed runs
-  for all but cert gating; **security-sensitive changes** (auth, tokens, personal or medical
+- **Safety-critical surfaces** (manifests, roll call, readiness and cert gating, medical and
+  waiver state, nitrox fills, erasure) get boring code, adversarial tests and two differently
+  framed `dive-domain-expert` runs; **security-sensitive changes** (auth, tokens, personal or medical
   data, export/import) a `security-reviewer` review; the PR body names both
   (`scripts/check-pr-body.mjs`).
 - **`app → features → lib/db`, one way; routes stay thin** (`pnpm check:architecture`).
