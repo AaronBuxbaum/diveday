@@ -19,6 +19,7 @@
  */
 import { and, count, eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import { orders } from "./schema";
 import { owedSeatsAfterSailing } from "./seat-payments";
 
@@ -34,22 +35,23 @@ export async function readOwed(
   now: Date,
 ): Promise<Owed> {
   const currency = shop.currency.toLowerCase();
-  const [[openOrders], seats] = await Promise.all([
-    db
-      .select({
-        count: count(),
-        cents: sql<string>`coalesce(sum(${orders.totalCents} - ${orders.amountPaidCents}), 0)`,
-        oldestAt: sql<Date | string | null>`min(${orders.createdAt})`,
-      })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.shopId, shop.id),
-          eq(orders.status, "open"),
-          eq(sql`lower(${orders.currency})`, currency),
+  const [[openOrders], seats] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          count: count(),
+          cents: sql<string>`coalesce(sum(${orders.totalCents} - ${orders.amountPaidCents}), 0)`,
+          oldestAt: sql<Date | string | null>`min(${orders.createdAt})`,
+        })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.shopId, shop.id),
+            eq(orders.status, "open"),
+            eq(sql`lower(${orders.currency})`, currency),
+          ),
         ),
-      ),
-    owedSeatsAfterSailing(db, shop.id, now),
+    () => owedSeatsAfterSailing(db, shop.id, now),
   ]);
   const oldest = openOrders?.oldestAt ?? null;
   return {
