@@ -34,6 +34,29 @@ describe("post-deploy wizard", () => {
     ).toBe("mail.ses.example.com");
   });
 
+  it("forwards --resync-vercel to both the Vercel check and the Vercel push", async () => {
+    const commands = [];
+    await runPostDeployWizard({
+      committed: {},
+      ask: async (question) => (question.includes("Vercel Production environment") ? "yes" : "no"),
+      cdkArguments: [],
+      credentialsDocument: "AWS_ACCESS_KEY_ID=deployer-id\n",
+      syncEnvironment: {},
+      resyncVercel: true,
+      execute: (command, arguments_) => {
+        commands.push(arguments_);
+        return "UPDATE";
+      },
+      log: () => {},
+    });
+    const vercel = commands.filter((arguments_) =>
+      String(arguments_[0]).includes("import-vercel-env.mjs"),
+    );
+    expect(vercel).toHaveLength(2);
+    for (const arguments_ of vercel) expect(arguments_).toContain("--resync");
+    expect(vercel[0]).toContain("--check");
+  });
+
   it("runs only the selected handoffs and derives SES DNS records from AWS", async () => {
     const answers = ["yes", "yes", "y", "no", "no", "yes", "yes"];
     const commands = [];

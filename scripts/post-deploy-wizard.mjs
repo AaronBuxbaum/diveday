@@ -68,6 +68,10 @@ export async function runPostDeployWizard({
   // infra-deploy.mjs's isCiDeploy comment for why an ambient signal is unsafe
   // here). Never true when called from the interactive branch.
   ciUnattended = false,
+  // `pnpm infra:deploy --resync-vercel`: forwarded as import-vercel-env.mjs's
+  // `--resync`, so the Vercel step pushes every value instead of only what the
+  // checkpoint says changed.
+  resyncVercel = false,
   // Injectable so a test does not read whatever this checkout commits.
   committed = committedContext(),
 }) {
@@ -132,6 +136,7 @@ export async function runPostDeployWizard({
       "production",
       "--check",
       ...(ciUnattended ? ["--ci-unattended"] : []),
+      ...(resyncVercel ? ["--resync"] : []),
     ]) &&
     yes(
       await ask(
@@ -146,6 +151,7 @@ export async function runPostDeployWizard({
         ".env.vercel",
         "production",
         ...(ciUnattended ? ["--ci-unattended"] : []),
+        ...(resyncVercel ? ["--resync"] : []),
       ],
       SUBPROCESS_TIMEOUTS.wizardStep,
     );

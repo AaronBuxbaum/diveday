@@ -62,7 +62,7 @@ describe("marine-life capture tiles", () => {
      */
     it("refuses a box no committed width can serve, and names the fix", () => {
       expect(() => tileWidthFor(500)).toThrow(/share no committed width inside/);
-      expect(() => tileWidthFor(500)).toThrow(/--tiles-only/);
+      expect(() => tileWidthFor(500)).toThrow(/content:photos tiles/);
       expect(() => tileWidthFor(16)).toThrow(/share no committed width inside/);
       expect(() => tileWidthFor(0)).toThrow(/not a rendered box size/);
       expect(() => tileWidthFor(Number.NaN)).toThrow(/not a rendered box size/);

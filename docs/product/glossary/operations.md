@@ -761,7 +761,7 @@
   the first pass past the half hour. Once per departure the owners are emailed ("after the boat was
   due back at 4:00 PM EDT") and every device following the manifest is pushed
   (`sendStaleRollCallAlerts`), and the Today row says when; the
-  shore contact is free text and is not messaged (H-114). It informs and never closes or changes
+  shore contact is free text and is not messaged (H-118). It informs and never closes or changes
   the count.
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
