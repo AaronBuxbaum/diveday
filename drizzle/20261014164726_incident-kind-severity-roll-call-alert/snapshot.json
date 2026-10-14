@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "06ed87e6-4f93-43e7-b882-fcf159d6a83b",
+  "id": "2610a22f-1c53-4474-8061-b6630911d351",
   "prevIds": [
     "403003f9-7703-42d1-8f14-f5f030a633d1"
   ],
@@ -707,6 +707,7 @@
         "near_miss",
         "equipment",
         "missing_diver",
+        "fatality",
         "other"
       ],
       "name": "incident_kind",

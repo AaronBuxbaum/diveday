@@ -59,10 +59,11 @@
     "other": "Otra persona"
   },
   "kind": {
-    "injury": "Lesión",
+    "injury": "Lesión o enfermedad",
     "near_miss": "Casi accidente",
     "equipment": "Fallo del equipo",
     "missing_diver": "Buceador desaparecido",
+    "fatality": "Fallecimiento",
     "other": "Otra cosa"
   },
   "severity": {

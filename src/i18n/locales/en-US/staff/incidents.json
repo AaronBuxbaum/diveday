@@ -59,10 +59,11 @@
     "other": "Someone else"
   },
   "kind": {
-    "injury": "Injury",
+    "injury": "Injury or illness",
     "near_miss": "Near miss",
     "equipment": "Equipment failure",
     "missing_diver": "Missing diver",
+    "fatality": "Fatality",
     "other": "Something else"
   },
   "severity": {

@@ -36,7 +36,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
     .getByLabel("What happened")
     .fill("Diver surfaced from 18 m short of breath after a fast ascent. Brought aboard.");
   // What sort of thing it was, and how bad (ADR 20261014-incident-kind-severity).
-  await page.getByLabel("What kind of incident").selectOption({ label: "Injury" });
+  await page.getByLabel("What kind of incident").selectOption({ label: "Injury or illness" });
   await page.getByLabel("How serious").selectOption({ label: "Moderate" });
   const care = page.getByRole("region", { name: "Care given" });
   await care.getByRole("group", { name: "Was first aid given?" }).getByLabel("Yes").check();
@@ -66,7 +66,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await expect(page.getByText("Report filed.")).toBeVisible();
   await expect(page.getByText("Yes, for 20 minutes")).toBeVisible();
   await expect(page.getByText("Stayed with the crew")).toBeVisible();
-  await expect(page.getByText("Injury", { exact: true })).toBeVisible();
+  await expect(page.getByText("Injury or illness", { exact: true })).toBeVisible();
   await expect(page.getByText("Moderate", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Save draft" })).toHaveCount(0);
 
@@ -91,7 +91,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
     .getByRole("region", { name: "Incident reports" })
     .getByRole("link", { name: /Two-Tank Reef/ });
   await expect(listed).toBeVisible();
-  await expect(listed).toContainText("Injury");
+  await expect(listed).toContainText("Injury or illness");
   await expect(listed).toContainText("Moderate");
   await listed.click();
   await expect(page.getByText("Diver called at 18:00: discharged, feeling fine.")).toBeVisible();

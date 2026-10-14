@@ -11,6 +11,7 @@ export const INCIDENT_KIND_KEYS: Record<IncidentKind, StaffMessageKey> = {
   near_miss: "incidents.kind.near_miss",
   equipment: "incidents.kind.equipment",
   missing_diver: "incidents.kind.missing_diver",
+  fatality: "incidents.kind.fatality",
   other: "incidents.kind.other",
 };
 

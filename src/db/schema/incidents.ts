@@ -46,13 +46,15 @@ export const incidentHandoverKind = pgEnum("incident_handover_kind", [
  * **What kind of incident it was** (batch 6, item 7; ADR
  * 20261012-incident-reports, amendment 2026-10-14). A missing diver is its own
  * kind, not an injury: it is the one an insurer and a coastguard ask about
- * first. Null on a draft nobody has answered yet; filing needs it.
+ * first. A fatality is its own kind too; `injury` reads "Injury or illness".
+ * Null on a draft nobody has answered yet; filing needs it.
  */
 export const incidentKind = pgEnum("incident_kind", [
   "injury",
   "near_miss",
   "equipment",
   "missing_diver",
+  "fatality",
   "other",
 ]);
 

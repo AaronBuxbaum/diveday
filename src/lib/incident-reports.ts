@@ -25,13 +25,17 @@ export type IncidentHandoverKind = (typeof INCIDENT_HANDOVER_KINDS)[number];
 
 /**
  * What kind of incident it was (batch 6, item 7). Keep aligned with the
- * `incident_kind` pg enum. `missing_diver` is its own kind, apart from injury.
+ * `incident_kind` pg enum. `missing_diver` is its own kind, apart from injury,
+ * and so is `fatality`: an insurer, a coastguard and a training agency each
+ * ask for a death first, and "injury, serious" does not say it (dive-domain
+ * review 20261014). `injury` covers illness too (DCS, a seasick faint).
  */
 export const INCIDENT_KINDS = [
   "injury",
   "near_miss",
   "equipment",
   "missing_diver",
+  "fatality",
   "other",
 ] as const;
 export type IncidentKind = (typeof INCIDENT_KINDS)[number];

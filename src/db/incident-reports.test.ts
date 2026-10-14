@@ -4,6 +4,7 @@ import type { IncidentDraftFields } from "@/lib/incident-reports";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
+import { loadShopExportBundleInput } from "./export";
 import {
   addIncidentAddendum,
   addIncidentPerson,
@@ -215,6 +216,33 @@ describe("a draft, then a filed report", () => {
     expect(view?.status).toBe("filed");
     expect(view?.fields.whatHappened).toBe(complete.whatHappened);
     expect(view?.filedByName).toBe(crew.fullName);
+  });
+
+  it("files a fatality as its own kind, and the shop export says so", async () => {
+    // Dive-domain review 20261014: a death is not "injury, serious".
+    const { db, shop } = ctx;
+    const { reportId, tripId, crew } = await draftBy("crew");
+    const fields = { ...complete, kind: "fatality" as const, severity: "serious" as const };
+    expect(
+      await saveIncidentDraft(db, {
+        shopId: shop.id,
+        reportId,
+        tripId,
+        actorPersonId: crew.id,
+        fields,
+      }),
+    ).toEqual({ ok: true });
+    expect(
+      await fileIncidentReport(db, { shopId: shop.id, reportId, tripId, actorPersonId: crew.id }),
+    ).toEqual({ ok: true });
+    expect((await getIncidentReport(db, shop.id, reportId, crew.id))?.fields.kind).toBe("fatality");
+
+    const input = await loadShopExportBundleInput(db, shop.id);
+    const file = input?.tables.find((candidate) => candidate.file === "incident_reports.csv");
+    if (!file) throw new Error("expected the incident export");
+    const kindColumn = file.header.indexOf("kind");
+    const row = file.rows.find((candidate) => candidate.includes(reportId));
+    expect(row?.[kindColumn]).toBe("fatality");
   });
 
   it("drops oxygen minutes that stand beside a no", async () => {

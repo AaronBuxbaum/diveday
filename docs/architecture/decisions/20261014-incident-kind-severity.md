@@ -12,8 +12,11 @@ how bad it was. The narrative answers both, but not in a shape a list can show.
 ## Decision
 
 - **Two closed enums on the report:** `incident_reports.kind` (`injury`, `near_miss`,
-  `equipment`, `missing_diver`, `other`) and `incident_reports.severity` (`minor`, `moderate`,
-  `serious`). Both stay null on a draft until chosen, like every other answer, and **filing needs
+  `equipment`, `missing_diver`, `fatality`, `other`) and `incident_reports.severity` (`minor`,
+  `moderate`, `serious`). `injury` reads "Injury or illness": decompression sickness, a
+  seasick faint and a cut hand are the same kind of report. A death is its own kind, never
+  "injury, serious": an insurer, a coastguard and a training agency each ask for it first, and
+  a list has to be able to find it (dive-domain review 2026-10-14). Both stay null on a draft until chosen, like every other answer, and **filing needs
   both** (`incidentFilingGaps`, checked in the filing transaction).
 - **The database's filed check is unchanged**, so a report filed before this stays valid without
   a guessed backfill of its kind.
