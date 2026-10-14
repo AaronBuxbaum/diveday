@@ -78,6 +78,7 @@ export type CertificationNextCode = Extract<
   | "certification_self_declared"
   | "certification_insufficient"
   | "certification_in_training"
+  | "certification_not_yet"
   | "specialty_missing"
   | "specialty_pending"
   | "specialty_import_unconfirmed"
@@ -93,6 +94,8 @@ export const CERTIFICATION_NEXT_KEYS: Record<CertificationNextCode, DiverMessage
   certification_insufficient: "thread.next.certificationLevel",
   // The card is the instructor's to issue; the diver's part is the course.
   certification_in_training: "thread.next.certificationInTraining",
+  // The diver has answered; the crew's conversation at the dock is next.
+  certification_not_yet: "thread.next.certificationNotYet",
   specialty_missing: "thread.next.specialty",
   specialty_pending: "thread.next.cardWithShop",
   specialty_import_unconfirmed: "thread.next.cardWithShop",

@@ -58,7 +58,7 @@ describe("isRefresherCourse", () => {
 
 /**
  * **The rendered offers and the accepted ones are one list.** Both the
- * readiness page and `saveReEntryAskFromReady` read this, which is the point:
+ * readiness page and `saveDayOfDetailsFromReady` read this, which is the point:
  * the action re-derived only the saved intent and the 24-hour window and took
  * `refresher_course` from anyone who posted it, so a shop with no refresher
  * course could have one asked of it (caught in review of PR #1416).

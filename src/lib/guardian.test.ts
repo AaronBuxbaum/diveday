@@ -26,14 +26,32 @@ function record(overrides: Partial<WaiverRecord> = {}): WaiverRecord {
 
 describe("guardianSignatureRequired (ADR 20260907-guardian-co-signature)", () => {
   it("fails open when the shop holds no date of birth", () => {
-    expect(guardianSignatureRequired(null, "2026-07-18")).toBe(false);
-    expect(guardianSignatureRequired(undefined, "2026-07-18")).toBe(false);
+    expect(guardianSignatureRequired(null, "2026-07-18", false)).toBe(false);
+    expect(guardianSignatureRequired(undefined, "2026-07-18", false)).toBe(false);
   });
 
   it("is required for a diver under 18 on the signing day and not on their birthday", () => {
-    expect(guardianSignatureRequired("2008-07-19", "2026-07-18")).toBe(true);
-    expect(guardianSignatureRequired("2008-07-18", "2026-07-18")).toBe(false);
-    expect(guardianSignatureRequired("1990-01-01", "2026-07-18")).toBe(false);
+    expect(guardianSignatureRequired("2008-07-19", "2026-07-18", false)).toBe(true);
+    expect(guardianSignatureRequired("2008-07-18", "2026-07-18", false)).toBe(false);
+    expect(guardianSignatureRequired("1990-01-01", "2026-07-18", false)).toBe(false);
+  });
+});
+
+describe("a seat its booker marked Under 18 (decision 2026-10-13)", () => {
+  it("asks for a guardian when the shop holds no date of birth", () => {
+    expect(guardianSignatureRequired(null, "2026-07-18", true)).toBe(true);
+    expect(guardianSignatureRequired(undefined, "2026-07-18", true)).toBe(true);
+  });
+
+  it("lets a date of birth on file decide, so a staffer can correct a wrong tick", () => {
+    expect(guardianSignatureRequired("1990-01-01", "2026-07-18", true)).toBe(false);
+    expect(guardianSignatureRequired("2012-01-01", "2026-07-18", false)).toBe(true);
+  });
+
+  it("blocks a release the declared minor signed alone, and clears a co-signed one", () => {
+    const declared = { dateOfBirth: null, minorDeclared: true, timezone: TZ };
+    expect(guardianSignatureMissing(record(), declared)).toBe(true);
+    expect(guardianSignatureMissing(record({ guardianSignedAt: signedAt }), declared)).toBe(false);
   });
 });
 
@@ -45,9 +63,9 @@ describe("signingDate", () => {
 });
 
 describe("guardianSignatureMissing", () => {
-  const minor = { dateOfBirth: "2012-03-04", timezone: TZ };
-  const adult = { dateOfBirth: "1990-03-04", timezone: TZ };
-  const unknown = { dateOfBirth: null, timezone: TZ };
+  const minor = { dateOfBirth: "2012-03-04", minorDeclared: false, timezone: TZ };
+  const adult = { dateOfBirth: "1990-03-04", minorDeclared: false, timezone: TZ };
+  const unknown = { dateOfBirth: null, minorDeclared: false, timezone: TZ };
 
   it("blocks a minor who signed alone", () => {
     expect(guardianSignatureMissing(record(), minor)).toBe(true);
@@ -63,7 +81,7 @@ describe("guardianSignatureMissing", () => {
   });
 
   it("measures minority on the signing day: a diver who turned 18 the day after still signed as a minor", () => {
-    const eighteenOnThe19th = { dateOfBirth: "2008-07-19", timezone: TZ };
+    const eighteenOnThe19th = { dateOfBirth: "2008-07-19", minorDeclared: false, timezone: TZ };
     expect(guardianSignatureMissing(record(), eighteenOnThe19th)).toBe(true);
     // ...and the zone decides which day that was.
     expect(guardianSignatureMissing(record(), { ...eighteenOnThe19th, timezone: "UTC" })).toBe(

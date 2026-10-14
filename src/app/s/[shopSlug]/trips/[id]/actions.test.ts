@@ -203,6 +203,22 @@ describe("what this dive is for, and what would help", () => {
 });
 
 /**
+ * **"Under 18", per member** (decision 2026-10-13, after H-21): the box beside
+ * a member's name reaches that member's seat and no other.
+ */
+describe("the Under 18 box", () => {
+  it("marks only the seat whose box was ticked", async () => {
+    const form = submission([{ email: "parent@example.com" }, { email: "" }]);
+    form.set("minor-1", "on");
+
+    await bookSpot(ref(TRIP_ID), {}, form);
+
+    const [, requests] = vi.mocked(createBookingParty).mock.calls[0] ?? [];
+    expect(requests?.map((request) => request.minorDeclared)).toEqual([false, true]);
+  });
+});
+
+/**
  * **The already-booked refusal names the inbox its door sends to** (UX review
  * 2026-10-11, item 8): the party member it was about, as typed, and nothing
  * for any other refusal.

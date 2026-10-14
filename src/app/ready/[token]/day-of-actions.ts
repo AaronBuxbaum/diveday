@@ -10,111 +10,120 @@ import {
 } from "@/db/bookings";
 import { saveHelpRequest } from "@/db/help-requests";
 import { saveRentalFitNote } from "@/db/rental-fit";
-import { markBookingRunningLate } from "@/db/running-late";
+import { clearBookingRunningLate, markBookingRunningLate } from "@/db/running-late";
 import { setWelcomeConsent } from "@/db/welcome-cues";
 import { nowDate } from "@/lib/clock";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { isDiver } from "@/lib/participant-types";
 import { RE_ENTRY_ASKS, reEntryOffersFor } from "@/lib/re-entry";
-import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";
+import { base, bounceTarget, contextFor } from "./action-helpers";
 
 /**
- * The diver's own words to the crew, saved on their own.
+ * **Day-of details, one form and one Save** (third UX review, item 24).
  *
- * Its own action rather than a field of `saveFitFromReady` (issue 627): the
- * note is a question of its own on the page now, and `saveRentalFitNote` writes
- * the note column alone — so answering it cannot blank sizes the diver set on a
- * different day, and saving sizes cannot blank the note.
+ * It was six forms with six Save buttons, so a diver who answered all six and
+ * tapped the last Save kept one answer. Every question now posts together, and
+ * each is written **only when its answer changed**: a question left as it was
+ * is not rewritten, so a help request the crew already acknowledged keeps its
+ * status, and an empty select ("Choose one") means "not answered", never a
+ * blank. Each write is still its own guarded column write, so answering one
+ * cannot blank another, and the sizes in the gear step are never touched.
+ *
+ * Every gate is re-derived here, never trusted from the post:
+ *
+ * - **Who.** The booking comes from the verified capability, never the form.
+ * - **What fits the seat.** A seat that is not diving is not asked when it
+ *   last dived, what the dive is for, or for a refresher (ADR
+ *   20261007-participant-types), and a post that says so anyway is ignored.
+ * - **D18's offers** (ADR 20260904-reef-all-the-way-down): an ask is taken
+ *   only while `reEntryOffersOpen` (the saved intent and the window), only if
+ *   this same post did not move the intent off `easing_back`, and only from
+ *   `reEntryOffersFor`, which drops `refresher_course` for a shop that
+ *   publishes no refresher.
+ * - **A held seat** (`identityHeld`) writes nothing to the diver's record: the
+ *   note and the welcome word are about the person, so they wait, as their own
+ *   actions refused before.
+ * - **The welcome word** (issue #1182, D22) is written only when the page
+ *   offered it (`welcomeAsked`), and withdrawing is the same box unticked.
  */
-const noteSchema = z.object({ note: z.string().trim().max(300) });
-
-export async function saveNoteFromReady(token: string, formData: FormData) {
-  const ctx = await contextFor(token);
-  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-  refuseWhileHeld(token, ctx.data);
-  const parsed = noteSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base(token)}?error=note`);
-  const saved = await saveRentalFitNote(ctx.db, {
-    shopId: ctx.data.shop.id,
-    personId: ctx.data.person.id,
-    note: parsed.data.note,
-  });
-  revalidateAndRedirect(base(token), `${base(token)}?${saved ? "saved=note" : "error=note"}`);
-}
-
-const hotelPickupSchema = z.object({
-  hotelPickupLocation: z.string().trim().max(300),
+const dayOfSchema = z.object({
+  lastDivedBand: z.union([z.enum(DIVE_RECENCY_BANDS), z.literal("")]).optional(),
+  diveIntent: z.union([z.enum(DIVE_INTENTS), z.literal("")]).optional(),
+  reEntryAsk: z.enum(RE_ENTRY_ASKS).optional(),
+  note: z.string().trim().max(300).optional(),
+  hotelPickupLocation: z.string().trim().max(300).optional(),
+  kind: z.enum(["carry_gear", "first_timer", "find_group", "none"]).optional(),
+  welcomeAsked: z.literal("1").optional(),
+  welcomeShare: z.literal("on").optional(),
 });
 
-export async function saveHotelPickupLocationFromReady(token: string, formData: FormData) {
+export async function saveDayOfDetailsFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-  const parsed = hotelPickupSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base(token)}?error=pickup`);
-  const location = parsed.data.hotelPickupLocation || null;
-  const saved = await setBookingHotelPickup(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-    hotelPickupLocation: location,
-  });
-  revalidateAndRedirect(base(token), `${base(token)}?${saved ? "saved=pickup" : "error=pickup"}`);
-}
+  const parsed = dayOfSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=day-of`);
+  const answers = parsed.data;
+  const { data } = ctx;
+  const shopId = data.shop.id;
+  const bookingId = ctx.bookingId;
+  const diving = isDiver(data.participantType);
+  const writes: Array<Promise<boolean>> = [];
 
-const helpRequestSchema = z.object({
-  kind: z.enum(["carry_gear", "first_timer", "find_group", "none"]),
-});
-
-/** Capture one small day-of request and let the shop visibly settle it. */
-export async function saveHelpRequestFromReady(token: string, formData: FormData) {
-  const ctx = await contextFor(token);
-  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-  const parsed = helpRequestSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base(token)}?error=help`);
-  const result = await saveHelpRequest(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-    kind: parsed.data.kind,
-  });
-  if (!result.ok) {
-    revalidateAndRedirect(
-      base(token),
-      `${base(token)}?error=${result.reason === "handled" ? "help-handled" : "help"}`,
-    );
+  if (diving && answers.lastDivedBand && answers.lastDivedBand !== data.lastDivedBand) {
+    writes.push(setBookingLastDived(ctx.db, { shopId, bookingId, band: answers.lastDivedBand }));
   }
-  revalidateAndRedirect(base(token), `${base(token)}?saved=help`);
-}
-
-const welcomeConsentSchema = z.object({ share: z.enum(["on", "off"]) });
-
-/**
- * **Tell the crew, or take it back** (issue #1182, delight report D22).
- *
- * The only writer of `bookings.welcome_shared_at` anywhere in the app: staff
- * have no door to it, because a cue a shop switched on about a diver is the
- * profile badge D22's boundary refuses. Both directions are one action —
- * withdrawing has to be exactly as easy as consenting, which is Budget rule 6's
- * "the way back" made a button rather than a sentence.
- */
-export async function saveWelcomeConsentFromReady(token: string, formData: FormData) {
-  const ctx = await contextFor(token);
-  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-  refuseWhileHeld(token, ctx.data);
-  const parsed = welcomeConsentSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base(token)}?error=welcome`);
-  const result = await setWelcomeConsent(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-    shared: parsed.data.share === "on",
-  });
-  if (!result.ok) {
-    revalidateAndRedirect(base(token), `${base(token)}?error=welcome`);
+  const intent = diving && answers.diveIntent ? answers.diveIntent : null;
+  if (intent && intent !== data.diveIntent) {
+    writes.push(setBookingDiveIntent(ctx.db, { shopId, bookingId, intent }));
   }
-  // No success notice, unlike every other action on this page. The block's own
-  // line says what the answer now is, and it keeps saying it on a reload — a
-  // banner reading "Saved." above a form that already states the standing
-  // answer is the second confirmation, not the first.
-  revalidateAndRedirect(base(token));
+  if (
+    diving &&
+    answers.reEntryAsk &&
+    answers.reEntryAsk !== data.reEntryAsk &&
+    data.reEntryOffersOpen &&
+    (intent === null || intent === "easing_back") &&
+    reEntryOffersFor(data.refresherCourseOffered).includes(answers.reEntryAsk)
+  ) {
+    writes.push(setBookingReEntryAsk(ctx.db, { shopId, bookingId, ask: answers.reEntryAsk }));
+  }
+  if (answers.hotelPickupLocation !== undefined) {
+    const location = answers.hotelPickupLocation || null;
+    if (location !== (data.hotelPickupLocation ?? null)) {
+      writes.push(
+        setBookingHotelPickup(ctx.db, { shopId, bookingId, hotelPickupLocation: location }),
+      );
+    }
+  }
+  if (!data.identityHeld) {
+    if (answers.note !== undefined && answers.note !== (data.rentalFit?.note ?? "")) {
+      writes.push(
+        saveRentalFitNote(ctx.db, { shopId, personId: data.person.id, note: answers.note }).then(
+          Boolean,
+        ),
+      );
+    }
+    if (answers.welcomeAsked && data.welcomeOffer) {
+      const shared = answers.welcomeShare === "on";
+      if (shared !== data.welcomeShared) {
+        writes.push(
+          setWelcomeConsent(ctx.db, { shopId, bookingId, shared }).then((result) => result.ok),
+        );
+      }
+    }
+  }
+  // Last, and alone: the one write with a refusal of its own to report.
+  let helpHandled = false;
+  const currentHelp = data.helpRequest?.kind ?? "none";
+  if (answers.kind && answers.kind !== currentHelp) {
+    const result = await saveHelpRequest(ctx.db, { shopId, bookingId, kind: answers.kind });
+    if (!result.ok && result.reason === "handled") helpHandled = true;
+    else writes.push(Promise.resolve(result.ok));
+  }
+  const saved = (await Promise.all(writes)).every(Boolean);
+  if (helpHandled) revalidateAndRedirect(base(token), `${base(token)}?error=help-handled`);
+  revalidateAndRedirect(base(token), `${base(token)}?${saved ? "saved=day-of" : "error=day-of"}`);
 }
 
 /**
@@ -139,118 +148,17 @@ export async function sayRunningLateAction(token: string) {
 }
 
 /**
- * **How recently the diver says they last dived** (ADR
- * 20260821-currency-is-what-catches-people).
- *
- * The one question on this page whose answer nothing checks and nothing gates —
- * it is shown to the crew and that is the whole of it. Validated against the
- * pgEnum's own tuple rather than a hand-written list, so widening the bands can
- * never leave this refusing an answer the column accepts (the same rule
- * `certificationSchema` follows for agency and level).
- *
- * There is no "prefer not to say" value to post: that answer is simply not
- * submitting the form, which is the state every booking is in already.
+ * **Taking "running late" back** (third UX review, item 26): the second tap
+ * on the same control. A closed seat (checked in, the boat gone) keeps its
+ * record and the page simply reloads, since the block is no longer drawn.
  */
-const diveRecencySchema = z.object({
-  lastDivedBand: z.enum(DIVE_RECENCY_BANDS),
-});
-
-/**
- * **What this dive is for, changed after the booking** (ADR
- * 20260904-reef-all-the-way-down, D12).
- *
- * The booking form promises "change it any time from the link we send you";
- * this is that link. It also reaches the divers who never saw the booking form
- * at all — a party member, a walk-in a staffer seated — which is the argument
- * ADR 20260821-currency-is-what-catches-people already made for putting the
- * recency question here.
- *
- * Validated against the pgEnum's own tuple, like the band below it, and there
- * is no "prefer not to say" value to post: that answer is not submitting the
- * form, which is the state every booking is in already.
- */
-const diveIntentSchema = z.object({
-  diveIntent: z.enum(DIVE_INTENTS),
-});
-
-export async function saveDiveIntentFromReady(token: string, formData: FormData) {
+export async function clearRunningLateAction(token: string) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-  const parsed = diveIntentSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base(token)}?error=dive-intent`);
-
-  // The booking comes from the verified capability, never from the form: a
-  // bearer of this token can only ever answer for its own seat.
-  const saved = await setBookingDiveIntent(ctx.db, {
+  await clearBookingRunningLate(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
-    intent: parsed.data.diveIntent,
+    now: nowDate(),
   });
-  if (!saved) redirect(`${base(token)}?error=dive-intent`);
-  revalidateAndRedirect(base(token), `${base(token)}?saved=dive-intent`);
-}
-
-/**
- * **What would help, from a diver easing back in** (ADR
- * 20260904-reef-all-the-way-down, D18).
- *
- * **Every gate is re-derived here, never trusted from the post** — the same
- * rule the nitrox request follows. All three are `getReadyPageData`'s own, so
- * what this accepts is exactly what the page offered:
- *
- * - the saved intent is `easing_back`, so an ask cannot arrive without the
- *   answer that opens it;
- * - the departure is more than a day out, because inside 24 hours nobody at
- *   the shop can act on an ask and a request recorded then would read to the
- *   crew as one somebody could have;
- * - and the ask is one of `reEntryOffersFor`, which drops `refresher_course`
- *   for a shop that publishes no refresher. That third gate was missing until
- *   review of PR #1416: the page filtered the option out, so a crafted post —
- *   or an ordinary one from a page rendered before the shop deactivated its
- *   refresher course — recorded an offer the shop could not make.
- */
-const reEntryAskSchema = z.object({
-  reEntryAsk: z.enum(RE_ENTRY_ASKS),
-});
-
-export async function saveReEntryAskFromReady(token: string, formData: FormData) {
-  const ctx = await contextFor(token);
-  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-  const parsed = reEntryAskSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base(token)}?error=re-entry-ask`);
-  // `reEntryOffersOpen` is the saved intent and the window together, resolved
-  // by the same read the page rendered from; `refresherCourseOffered` is the
-  // third. Both are read fresh on this request, so a shop that switched its
-  // refresher off a minute ago is answered as it is now.
-  if (
-    !ctx.data.reEntryOffersOpen ||
-    !reEntryOffersFor(ctx.data.refresherCourseOffered).includes(parsed.data.reEntryAsk)
-  ) {
-    redirect(`${base(token)}?error=re-entry-ask`);
-  }
-
-  const saved = await setBookingReEntryAsk(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-    ask: parsed.data.reEntryAsk,
-  });
-  if (!saved) redirect(`${base(token)}?error=re-entry-ask`);
-  revalidateAndRedirect(base(token), `${base(token)}?saved=re-entry-ask`);
-}
-
-export async function saveDiveRecencyFromReady(token: string, formData: FormData) {
-  const ctx = await contextFor(token);
-  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-  const parsed = diveRecencySchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base(token)}?error=last-dived`);
-
-  // The booking comes from the verified capability, never from the form: a
-  // bearer of this token can only ever answer for its own seat.
-  const saved = await setBookingLastDived(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-    band: parsed.data.lastDivedBand,
-  });
-  if (!saved) redirect(`${base(token)}?error=last-dived`);
-  revalidateAndRedirect(base(token), `${base(token)}?saved=last-dived`);
+  revalidateAndRedirect(base(token));
 }

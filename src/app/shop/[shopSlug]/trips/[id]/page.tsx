@@ -22,8 +22,6 @@ import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips"
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents } from "@/lib/format";
-import { toShopCurrency } from "@/lib/money";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -49,6 +47,7 @@ import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRos
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
 import { tripCrewNotes } from "./_components/trip-crew-notes";
+import { tripHeaderPrice } from "./_components/trip-header-price";
 import { DETAILS_FORMS, pageNoticesFor } from "./_components/trip-notice-tabs";
 import { tripPulseFacts } from "./_components/trip-pulse-facts";
 import type { TripPageSearchParams } from "./_components/trip-search-params";
@@ -195,6 +194,7 @@ export default async function ManageTripPage({
       : undefined);
   const lifecycleStatus = noticeForForm(tripNotice, "lifecycle");
 
+  const now = nowDate();
   const pulseFacts = tripPulseFacts({
     pulseNeeded,
     pulse,
@@ -205,6 +205,8 @@ export default async function ManageTripPage({
     liveBoatClashes,
     shopSlug,
     tripId,
+    startsAt: trip.startsAt,
+    now,
     t,
   });
 
@@ -223,9 +225,8 @@ export default async function ManageTripPage({
   });
 
   const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
-  const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const { shown: shownStage, finished } = departureStage({
+  const { shown, finished, checkInOpen } = departureStage({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -248,7 +249,7 @@ export default async function ManageTripPage({
     finished,
   });
 
-  const tabsCopy = tripTabsCopy(t);
+  const tabsCopy = tripTabsCopy(t, checkInOpen ? { trip, shop, locale } : undefined);
   const rosterActions = await tripRosterActions({
     db,
     shop,
@@ -300,7 +301,7 @@ export default async function ManageTripPage({
           timeZone={shop.timezone}
           badge={
             <>
-              <TripStageBadge stage={shownStage?.stage ?? null} copy={tabsCopy} />
+              <TripStageBadge stage={shown?.stage ?? null} copy={tabsCopy} />
               <TripCapacityBadge
                 trip={trip}
                 finished={finished}
@@ -329,11 +330,7 @@ export default async function ManageTripPage({
               />
             ) : undefined
           }
-          price={
-            trip.priceCents === null
-              ? undefined
-              : `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`
-          }
+          price={tripHeaderPrice(trip.priceCents, shop.currency, locale, t)}
           // Only while the boat can take a seat: full, sailed, held or
           // cancelled, and the header offers nothing (owner, 2026-10-06). A
           // full boat's wait list stays in the roster's own Add band.

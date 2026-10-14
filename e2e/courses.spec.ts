@@ -114,7 +114,7 @@ test("a signed-out visitor browses the public course catalog, with the editor st
   await page.goto("/s/blue-mantis/courses/paths");
   // Inside a shop's namespace the refusal is the shop's own, framed by its
   // chrome and pointing back at its schedule (issue #765).
-  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That page isn’t here" })).toBeVisible();
 });
 
 /**

@@ -7,7 +7,7 @@ import { cancelBooking } from "./bookings";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { recordNotificationDelivery } from "./notifications";
 import { listTripReadiness } from "./readiness";
-import { shops as shopsTable, tripAssignments } from "./schema";
+import { boats, shops as shopsTable, tripAssignments } from "./schema";
 import { markShopUnitsConfirmed } from "./shops";
 import { getTodayWork } from "./today";
 import { recordTripStage } from "./trip-stages";
@@ -54,6 +54,29 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(departure?.blocked).toBe(1);
     expect(departure?.boarded).toBe(0);
     expect(work.nextDeparture).toBeNull();
+  });
+
+  /**
+   * **Open seats are the seats on sale** (H-107, #2388). The departure states
+   * 14 on a hull certified for 12; the booking transaction sells only up to
+   * the certificate, so Today counts against it too: the card's open seats,
+   * and its readiness bar.
+   */
+  it("counts a departure's open seats against its boat's certificate, not the stated number", async () => {
+    const { db, shop } = ctx;
+    const today = (await getTodayWork(db, shop.id, shop.slug, shop.timezone)).departures[0];
+    if (!today) throw new Error("expected today's departure");
+    const [trip] = (await upcomingTripsWithCounts(db, shop.id)).filter(
+      (row) => row.id === today.tripId,
+    );
+    if (!trip?.boatId) throw new Error("expected today's departure on a boat");
+    await db.update(boats).set({ certifiedPassengers: 12 }).where(eq(boats.id, trip.boatId));
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const [departure] = work.departures;
+    expect(departure?.capacity).toBe(14);
+    expect(departure?.sellableCapacity).toBe(12);
+    expect(departure?.booked).toBe(11);
   });
 
   it("collapses a boat's identical blockers so one busy trip cannot bury the rest", async () => {

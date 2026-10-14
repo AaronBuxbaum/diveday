@@ -330,7 +330,7 @@ const sizes = {
  *   eyebrow back-link over a page title (`EYEBROW_TAP_WRAPPER`, K-395), whose
  *   focus ring ran through the title's cap tops while the box was centred.
  * - `down`: the content on the box's top edge, the spare below the line. The
- *   log door under "3 spots open" beside the seat dial (`DayStation.tsx`,
+ *   log door under "3 seats open" beside the seat dial (`DayStation.tsx`,
  *   K-186), where a centred ring would run through the line above.
  *
  * `target` goes on the link and is spelled whole, not `tapTargetLinkClass`

@@ -113,7 +113,11 @@ export default async function CourseFormsPage({
   // either way the guardian's half is what this page collects.
   const guardianRequired =
     form.gap === "guardian_missing" ||
-    guardianSignatureRequired(enrollment.dateOfBirth, signingDate(nowDate(), enrollment.timezone));
+    guardianSignatureRequired(
+      enrollment.dateOfBirth,
+      signingDate(nowDate(), enrollment.timezone),
+      enrollment.minorDeclared,
+    );
   const errorKey = error && Object.hasOwn(ERRORS, error) ? ERRORS[error] : undefined;
 
   const signBlock = (

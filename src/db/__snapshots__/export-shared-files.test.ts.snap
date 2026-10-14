@@ -43,6 +43,7 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "last_dived_band",
     "claimed_at",
     "running_late_at",
+    "minor_declared_at",
     "payment_status",
     "payment_amount_cents",
     "payment_currency",

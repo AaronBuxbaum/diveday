@@ -34,7 +34,7 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
 
   // The worklist shape: unanswered first, under a group carrying the count.
-  await expect(page.getByRole("heading", { name: /Waiting on you/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Needs you/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Done" })).toBeVisible();
   // A stranger's row has no record to open, so it shows the address instead.
   await expect(page.getByText("marta.keller@mail.example")).toBeVisible();
@@ -117,14 +117,14 @@ test("a staffer deletes the message from a sender nobody on the roster holds", a
  */
 test("a staffer marks a message done and moves it back", async ({ page }) => {
   await page.goto("/shop/blue-mantis/inbox");
-  const waiting = page.getByRole("heading", { name: /Waiting on you · 3/ });
+  const waiting = page.getByRole("heading", { name: /Needs you · 3/ });
   await expect(waiting).toBeVisible();
 
   await page.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
   await page.getByRole("button", { name: "Mark done" }).click();
-  await expect(page.getByRole("heading", { name: /Waiting on you · 2/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Needs you · 2/ })).toBeVisible();
 
   await page.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
   await page.getByRole("button", { name: "Move back to waiting" }).click();
-  await expect(page.getByRole("heading", { name: /Waiting on you · 3/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Needs you · 3/ })).toBeVisible();
 });

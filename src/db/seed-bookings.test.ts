@@ -2,6 +2,8 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { trips } from "./schema";
+import { demoReefDiverIndexes } from "./seed-bookings";
+import { customerDefs } from "./seed-cast";
 
 /**
  * The seeded crew shout-out is prose the demo shop "wrote" about its own day,
@@ -37,5 +39,25 @@ describe("the seeded crew shout-out", () => {
       expect(words).not.toContain(shop.name);
       expect(words).not.toContain(brand);
     }
+  });
+});
+
+/**
+ * **No child on a night boat** (UX review 2026-10-13, item 40). A demo seeded
+ * in the evening sails today's reef boat at 11:30 PM, and its thirteen-year-old
+ * with a birthday callout was aboard until 3:00 AM.
+ */
+describe("demoReefDiverIndexes", () => {
+  const LENA = customerDefs.findIndex((diver) => diver.fullName === "Lena Fischer");
+
+  it("seats the thirteen-year-old on a day boat", () => {
+    expect(demoReefDiverIndexes(new Date("2026-07-21T18:30:00Z"))).toContain(LENA); // 2:30 PM EDT
+  });
+
+  it("keeps her off a night boat, and keeps the boat's count", () => {
+    const night = demoReefDiverIndexes(new Date("2026-10-13T03:30:00Z")); // 11:30 PM EDT
+    expect(night).not.toContain(LENA);
+    expect(night).toHaveLength(9);
+    expect(new Set(night).size).toBe(9);
   });
 });

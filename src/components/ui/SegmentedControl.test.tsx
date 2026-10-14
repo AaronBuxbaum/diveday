@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SegmentedControl } from "./SegmentedControl";
 import { SEGMENT_CORNER, segmentedGridTrackClass } from "./segmented";
 
@@ -399,6 +399,23 @@ describe("the pill's measured box", () => {
   });
 
   /**
+   * **Each edge is snapped, never the width** (issue #2525). The option runs
+   * from 74.2135 to 148.5504; its edges snap to 74 and 149, so the pill is 75
+   * wide. Snapping the width on its own (74.3369 → 74) put the right edge at
+   * 148, a pixel inside the option, and let a width measured either side of
+   * .5 move the right edge with nothing else on the page moving:
+   * `reports-year-dark-vw-390` flapped by that one column.
+   */
+  it("snaps the two edges, so the width is whatever lies between them", () => {
+    const pill = renderMeasured(0);
+    expect(pill.style.left).toBe("74px");
+    expect(pill.style.width).toBe("75px");
+    // 4.4018 to 48.4626: 4 to 48.
+    expect(pill.style.top).toBe("4px");
+    expect(pill.style.height).toBe("44px");
+  });
+
+  /**
    * **The pill sits on its option, not one border-width below and right of
    * it.** `getBoundingClientRect` measures from the track's *border* edge; an
    * absolutely positioned child is placed from its container's *padding* edge.
@@ -413,8 +430,8 @@ describe("the pill's measured box", () => {
     // 84.3369 - 10.1234 - 1 = 73.2135, and 24.9696 - 20.5678 - 1 = 3.4018.
     expect(pill.style.left).toBe("73px");
     expect(pill.style.top).toBe("3px");
-    // The border moves the pill; it never resizes it.
-    expect(pill.style.width).toBe("74px");
+    // The border moves the pill; it never resizes it (73.2135 to 147.5504).
+    expect(pill.style.width).toBe("75px");
     expect(pill.style.height).toBe("44px");
   });
 
@@ -429,5 +446,90 @@ describe("the pill's measured box", () => {
   it("subtracts the border's laid-out width, fraction and all, at 125% zoom", () => {
     const pill = renderMeasured(0.8, 1.25);
     expect(pill.style.top).toBe("4px");
+  });
+});
+
+/**
+ * **The pill follows its options, not only the track** (issue #2525). An
+ * option can change width while the track keeps its size (a webfont settling,
+ * a label swap), and the track's observer never fires for it: the pill kept
+ * the width it measured first, and two runs of one commit drew it a pixel
+ * apart.
+ */
+describe("the pill after layout settles", () => {
+  it("observes every option, and re-places the pill when one resizes", () => {
+    const observed: Element[] = [];
+    const callbacks: ResizeObserverCallback[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          callbacks.push(callback);
+        }
+        observe(element: Element) {
+          observed.push(element);
+        }
+        disconnect() {}
+        unobserve() {}
+      },
+    );
+    let width = 60;
+    const originalRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function stubbed(this: Element) {
+      const box =
+        this.tagName === "NAV"
+          ? { left: 0, top: 0, width: 300, height: 52 }
+          : { left: 10, top: 4, width, height: 44 };
+      return { ...box, right: 0, bottom: 0, x: box.left, y: box.top, toJSON: () => box } as DOMRect;
+    };
+    try {
+      render(<SegmentedControl ariaLabel="Trip" items={items} currentKey="guests" />);
+      const nav = screen.getByRole("navigation", { name: "Trip" });
+      const pill = nav.querySelector('span[aria-hidden="true"]') as HTMLElement;
+      expect(pill.style.width).toBe("60px");
+      for (const option of nav.querySelectorAll("[data-key]")) expect(observed).toContain(option);
+
+      width = 61;
+      act(() => {
+        for (const callback of callbacks) callback([], {} as ResizeObserver);
+      });
+      expect(pill.style.width).toBe("61px");
+    } finally {
+      Element.prototype.getBoundingClientRect = originalRect;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("re-places the pill once the page's fonts have loaded", async () => {
+    let loaded: () => void = () => {};
+    const ready = new Promise<void>((resolve) => {
+      loaded = resolve;
+    });
+    Object.defineProperty(document, "fonts", { configurable: true, value: { ready } });
+    let width = 60;
+    const originalRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function stubbed(this: Element) {
+      const box =
+        this.tagName === "NAV"
+          ? { left: 0, top: 0, width: 300, height: 52 }
+          : { left: 10, top: 4, width, height: 44 };
+      return { ...box, right: 0, bottom: 0, x: box.left, y: box.top, toJSON: () => box } as DOMRect;
+    };
+    try {
+      render(<SegmentedControl ariaLabel="Trip" items={items} currentKey="guests" />);
+      const nav = screen.getByRole("navigation", { name: "Trip" });
+      const pill = nav.querySelector('span[aria-hidden="true"]') as HTMLElement;
+      expect(pill.style.width).toBe("60px");
+
+      width = 62;
+      await act(async () => {
+        loaded();
+        await ready;
+      });
+      expect(pill.style.width).toBe("62px");
+    } finally {
+      Element.prototype.getBoundingClientRect = originalRect;
+      Reflect.deleteProperty(document, "fonts");
+    }
   });
 });

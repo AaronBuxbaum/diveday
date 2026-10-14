@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
-import { cancelledNotice } from "@/app/ready/[token]/_components/CancelledNotice";
+import { cancelledNoticeForReady } from "@/app/ready/[token]/_components/CancelledNotice";
 import { CertificationEntries } from "@/app/ready/[token]/_components/CertificationEntries";
 import { ChangedFacts, fitRecallFrom } from "@/app/ready/[token]/_components/ChangedFacts";
 import { CourseNextStepNote } from "@/app/ready/[token]/_components/CourseNextStepNote";
@@ -45,7 +45,6 @@ import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { countSpendableDives } from "@/db/dive-packages";
-import { getBookingPayment } from "@/db/payments";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
@@ -214,8 +213,7 @@ async function DiverReadinessPage({
     // rare, and the one path on which a diver learns from this page rather than
     // from the shop. What it says about their money is read from the payment
     // row, never from anything on the URL.
-    const payment = await getBookingPayment(db, data.shop.id, bookingId);
-    return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name, t);
+    return cancelledNoticeForReady(db, data, bookingId, locale, t);
   }
 
   /**
@@ -494,6 +492,7 @@ async function DiverReadinessPage({
               token={token}
               item={step.item}
               offerNitrox={nitroxCardEntryOffered}
+              notYet={data.certificationNotYet}
               t={t}
             />
           );
@@ -538,7 +537,7 @@ async function DiverReadinessPage({
             />
           );
         case "dayof":
-          return <DayOfDetails token={token} data={data} t={t} />;
+          return <DayOfDetails token={token} data={data} saved={saved === "day-of"} t={t} />;
       }
     };
 

@@ -347,6 +347,10 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
     // made on this seat, in the same class as the two above.
     // "Running late" (J3): a statement the diver made, so it is theirs.
     { header: "running_late_at", in: "both", value: (row) => row.runningLateAt },
+    // The booker's "Under 18" on this seat (decision 2026-10-13): what
+    // asked for a guardian's co-signature on the release, so it travels
+    // with the release it explains.
+    { header: "minor_declared_at", in: "both", value: (row) => row.minorDeclaredAt },
     // The instructor's own words to this student, and who wrote them
     // (issues #1196, #1205). The student read it on their recap; a
     // shop moving its data takes the sentence with it.

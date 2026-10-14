@@ -92,6 +92,22 @@ describe("the week's shared price fact", () => {
     ).toBe(false);
   });
 
+  it("leaves a rehearsal out: it is unpriced by design, never a price to set (#2395)", () => {
+    const rehearsal = { status: "upcoming" as const, priceCents: null, isRehearsal: true };
+    expect(
+      weekIsWhollyUnpriced({
+        days: { ...noDays(), "2026-08-24": [unpriced(), unpriced(), rehearsal] },
+        spans: [],
+      }),
+    ).toBe(false);
+    expect(
+      weekIsWhollyUnpriced({
+        days: { ...noDays(), "2026-08-24": [unpriced(), unpriced(), unpriced(), rehearsal] },
+        spans: [],
+      }),
+    ).toBe(true);
+  });
+
   it("weighs only what is still to sail, on both sides of the question", () => {
     // A boat already home cannot be booked, so its missing price is nobody's
     // morning — it neither triggers the banner nor keeps it away.

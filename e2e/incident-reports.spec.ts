@@ -75,6 +75,12 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await page.goto("/shop/blue-mantis/reports");
   await page.getByRole("link", { name: "Safety" }).click();
   await page.waitForURL(/\/reports\/safety/);
+  // The demo crew have no credential on file, and the tab says so rather than
+  // reading a clean zero (third review, item 2).
+  await expect(page.getByText(/No credential on file for \d+ of/)).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Crew who sailed with no credential on file" }),
+  ).toBeVisible();
   const listed = page
     .getByRole("region", { name: "Incident reports" })
     .getByRole("link", { name: /Two-Tank Reef/ });

@@ -34,7 +34,12 @@ export function confirmationExtras(input: {
   /** Whether this booking went to a card checkout (the shop takes payment online). */
   chargesOnline: boolean;
   origin: string | null;
-}): Pick<BookingConfirmation, "meetingPoint" | "calendarUrl" | "money" | "freeCancellationUntil"> {
+  /** What the party's completed card checkout settled (`settledPartyPayment`), when it has. */
+  partyPaid?: BookingConfirmation["partyPaid"] | null;
+}): Pick<
+  BookingConfirmation,
+  "meetingPoint" | "calendarUrl" | "money" | "partyPaid" | "freeCancellationUntil"
+> {
   const { shop, trip } = input;
   const money = seatMoneyTerms(trip, input.course, input.participantType, input.chargesOnline);
   const freeCancellationUntil = cancellationDeadline(trip);
@@ -49,6 +54,7 @@ export function confirmationExtras(input: {
         }
       : {}),
     ...(money ? { money: { ...money, currency: toShopCurrency(shop.currency) } } : {}),
+    ...(input.partyPaid ? { partyPaid: input.partyPaid } : {}),
     ...(freeCancellationUntil ? { freeCancellationUntil } : {}),
   };
 }

@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { shiftCalendarDateMonths } from "./calendar-date";
 import {
+  benchReturnConcerns,
   GEAR_KIND_ORDER,
   GEAR_SERVICE_DUE_SOON_DAYS,
   GEAR_SERVICE_DUE_SOON_DIVES,
@@ -737,5 +738,106 @@ describe("gear kinds a diver takes one of", () => {
     expect(gearKindIsLifeSupport("dive_computer")).toBe(true);
     expect(gearKindIsLifeSupport("wetsuit")).toBe(false);
     expect(gearKindIsLifeSupport("tank")).toBe(false);
+  });
+});
+
+/**
+ * Issue #2540: a concern raised at a return on a unit already on the bench
+ * never overwrites the technician's note, so the unit's status card says it
+ * on its own line instead of the concern living only in the rental history.
+ */
+describe("benchReturnConcerns", () => {
+  const TZ = "America/New_York";
+  const concern = (note: string | null, returnedAt: string, outcome = "service_concern") => ({
+    returnOutcome: outcome as "service_concern" | "all_good" | "fit_adjusted",
+    returnNote: note,
+    returnedAt: new Date(returnedAt),
+  });
+  const bench = { status: "needs_service" as const, serviceNote: "Inflator sticks" };
+
+  it("names a concern returned while the unit is on the bench, newest first", () => {
+    expect(
+      benchReturnConcerns(
+        bench,
+        [
+          concern("Second stage free-flows", "2026-10-09T15:00:00Z"),
+          concern("Hose cracked", "2026-10-10T15:00:00Z"),
+        ],
+        [],
+        TZ,
+      ),
+    ).toEqual([
+      { note: "Hose cracked", returnedOn: "2026-10-10" },
+      { note: "Second stage free-flows", returnedOn: "2026-10-09" },
+    ]);
+  });
+
+  it("leaves out the concern that is already the unit's service note, and returns with none", () => {
+    expect(
+      benchReturnConcerns(
+        bench,
+        [
+          concern("Inflator sticks", "2026-10-09T15:00:00Z"),
+          concern("  ", "2026-10-09T15:00:00Z"),
+          concern("Came back wet", "2026-10-09T15:00:00Z", "all_good"),
+        ],
+        [],
+        TZ,
+      ),
+    ).toEqual([]);
+  });
+
+  it("forgets concerns the last service already answered", () => {
+    expect(
+      benchReturnConcerns(
+        bench,
+        [concern("Hose cracked", "2026-09-01T15:00:00Z")],
+        [
+          {
+            servicedOn: "2026-09-05",
+            kind: "service",
+            createdAt: new Date("2026-09-05T14:00:00Z"),
+          },
+        ],
+        TZ,
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps a concern a later condition note did not answer", () => {
+    expect(
+      benchReturnConcerns(
+        bench,
+        [concern("Hose cracked", "2026-09-01T15:00:00Z")],
+        [{ servicedOn: "2026-09-05", kind: "note", createdAt: new Date("2026-09-05T14:00:00Z") }],
+        TZ,
+      ),
+    ).toEqual([{ note: "Hose cracked", returnedOn: "2026-09-01" }]);
+  });
+
+  it("on the day of the return, weighs the service against the moment it came home", () => {
+    const returned = [concern("Hose cracked", "2026-09-05T18:00:00Z")];
+    const servicedAt = (at: string) => [
+      { servicedOn: "2026-09-05", kind: "service" as const, createdAt: new Date(at) },
+    ];
+    // Serviced that morning, before the evening return: still open.
+    expect(benchReturnConcerns(bench, returned, servicedAt("2026-09-05T13:00:00Z"), TZ)).toEqual([
+      { note: "Hose cracked", returnedOn: "2026-09-05" },
+    ]);
+    // Serviced after it came home the same evening: answered.
+    expect(benchReturnConcerns(bench, returned, servicedAt("2026-09-05T20:00:00Z"), TZ)).toEqual(
+      [],
+    );
+  });
+
+  it("says nothing for a unit on the wall", () => {
+    expect(
+      benchReturnConcerns(
+        { status: "in_service", serviceNote: null },
+        [concern("Hose cracked", "2026-10-10T15:00:00Z")],
+        [],
+        TZ,
+      ),
+    ).toEqual([]);
   });
 });

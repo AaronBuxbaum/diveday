@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "9bf820b4-48a9-45f7-a349-8de06279841c",
+  "id": "403003f9-7703-42d1-8f14-f5f030a633d1",
   "prevIds": [
-    "4aa8e858-4176-4b85-853b-94921ce07209"
+    "eda806a0-f5bb-4d21-aed1-4f25d552b075"
   ],
   "ddl": [
     {
@@ -4186,6 +4186,19 @@
       "generated": null,
       "identity": null,
       "name": "identity_matched_by",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "minor_declared_at",
       "entityType": "columns",
       "schema": "public",
       "table": "bookings"

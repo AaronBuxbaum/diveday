@@ -816,8 +816,6 @@ export type DaySpineContext = {
    * due) stays open under the crew lens instead of folding with the desk's.
    */
   readerPersonId?: string;
-  /** How many rows the reader's role lens withheld (issue #715). */
-  withheldCount?: number;
   helpRequestAction?: SpineHelpRequestAction;
   /**
    * The reader's own unfinished forms (ADR 20260906-before-you-ask, decision
@@ -867,6 +865,33 @@ export type DaySpineContext = {
   now: Date;
 };
 
+/**
+ * **The list says how long it is** (UX audit 2026-10-07, item 1): the summary
+ * under the date counts what is due before the next boat and the badge counts
+ * blocked divers, so the list carries its own total rather than leaving the
+ * reader to reconcile three numbers.
+ *
+ * **And says how much of it is the next boat's** (#2413) when that is not all
+ * of it, so the sentence's smaller number over this one reads as a part of it
+ * rather than a contradiction.
+ */
+function needsYouMeta(
+  t: StaffTranslator,
+  reading: NeedsYouReading,
+  locale: string,
+  timeZone: string,
+): string {
+  const { count, next, dueBeforeNext } = reading;
+  if (next == null || dueBeforeNext === count) {
+    return t("shopHome.spine.needsYouCount", { count });
+  }
+  return t("shopHome.spine.needsYouCountBeforeNext", {
+    count,
+    before: dueBeforeNext,
+    time: formatTime(next.startsAt, locale, timeZone),
+  });
+}
+
 export function DaySpine({ context }: { context: DaySpineContext }) {
   const {
     spine,
@@ -877,7 +902,6 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     currency,
     crewedTripIds,
     readerPersonId,
-    withheldCount = 0,
     helpRequestAction,
     drafts = [],
     showPaymentsRow = false,
@@ -921,18 +945,12 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     wind.some((row) => row.departure != null && liveTripIds.has(row.departure.tripId));
   const closing = evening?.close.closing === true;
   // **One "Needs you" list**, read once (`readNeedsYou`) with the header's sentence.
-  const { lead, folded: deskFold, count: needsYouCount } = needsYouReading;
+  const { lead, folded: deskFold } = needsYouReading;
   const paymentsRows = showPaymentsRow ? 1 : 0;
   const paymentsRow = showPaymentsRow ? <DeskPaymentsRow shopSlug={shopSlug} t={t} /> : null;
 
   return (
     <div className="flex flex-col gap-10">
-      {withheldCount > 0 ? (
-        <p className="-mt-4 text-xs text-muted">
-          {t("today.todayQueue.withheldDeskWork", { count: withheldCount })}
-        </p>
-      ) : null}
-
       {/* **The spine's leading group, on the one morning it exists.** Day zero
           is a state of this column of work, not a wizard beside it (ADR
           20260827-first-light, decision 6) — so the setup ledger renders here,
@@ -1103,11 +1121,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
         <LedgerGroup
           as="h2"
           label={t("shopHome.spine.needsYouLabel")}
-          // **The list says how long it is** (UX audit 2026-10-07, item 1): the
-          // summary under the date counts what is due before the next boat and
-          // the badge counts blocked divers, so the list carries its own total
-          // rather than leaving the reader to reconcile three numbers.
-          meta={t("shopHome.spine.needsYouCount", { count: needsYouCount })}
+          meta={needsYouMeta(t, needsYouReading, locale, timeZone)}
         >
           <ul>
             {lead.map((action) => (

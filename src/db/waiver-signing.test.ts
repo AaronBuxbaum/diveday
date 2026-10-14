@@ -33,7 +33,9 @@ describe("the waiver signing page's reads (in-memory PGlite)", () => {
       .limit(1);
     if (!person) throw new Error("seed has no person");
 
-    expect(await getWaiverSignerOnFile(db, shop.id, person.id)).toMatchObject({
+    expect(
+      await getWaiverSignerOnFile(db, { shopId: shop.id, personId: person.id, bookingId: null }),
+    ).toMatchObject({
       fullName: person.fullName,
     });
   });
@@ -42,7 +44,9 @@ describe("the waiver signing page's reads (in-memory PGlite)", () => {
     const { db, shop } = await seededShopContext();
     expect(await getBookingTripId(db, shop.id, MISSING)).toBeNull();
     expect(await getWaiverTripHeader(db, shop.id, MISSING)).toBeNull();
-    expect(await getWaiverSignerOnFile(db, shop.id, MISSING)).toBeUndefined();
+    expect(
+      await getWaiverSignerOnFile(db, { shopId: shop.id, personId: MISSING, bookingId: null }),
+    ).toBeUndefined();
     expect(await getEmergencyContactForBearer(db, shop.id, MISSING)).toBeNull();
   });
 
@@ -63,11 +67,19 @@ describe("the waiver signing page's reads (in-memory PGlite)", () => {
     // The same ids under their own shop do resolve, so the nulls below are the shop filter.
     expect(await getBookingTripId(db, shop.id, row.bookingId)).not.toBeNull();
     expect(await getEmergencyContactForBearer(db, shop.id, row.bookingId)).not.toBeNull();
-    expect(await getWaiverSignerOnFile(db, shop.id, row.personId)).toBeDefined();
+    expect(
+      await getWaiverSignerOnFile(db, { shopId: shop.id, personId: row.personId, bookingId: null }),
+    ).toBeDefined();
 
     expect(await getBookingTripId(db, other.id, row.bookingId)).toBeNull();
     expect(await getWaiverTripHeader(db, other.id, row.bookingId)).toBeNull();
-    expect(await getWaiverSignerOnFile(db, other.id, row.personId)).toBeUndefined();
+    expect(
+      await getWaiverSignerOnFile(db, {
+        shopId: other.id,
+        personId: row.personId,
+        bookingId: null,
+      }),
+    ).toBeUndefined();
     expect(await getEmergencyContactForBearer(db, other.id, row.bookingId)).toBeNull();
   });
 });

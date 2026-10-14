@@ -15,6 +15,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { depthInUnit } from "@/lib/depth-units";
 import { formatShortDate, weekdayNames } from "@/lib/format";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
+import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
 import type { requireShopSurface } from "@/lib/session";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
@@ -246,6 +247,15 @@ export function tripAboutRows(context: TripAboutRowsContext) {
           }}
         />
       ) : undefined,
+    },
+    // **Where the boat meets** (UX review 2026-10-13, item 18): the diver's
+    // `/ready` and every message say it, and until this no staff page did —
+    // it lived only as two fields inside the plan's editor, which is still
+    // where it changes. The shop's own door when the departure names none.
+    {
+      id: "meeting",
+      label: t("trips.about.meetingPoint"),
+      value: meetingPointLine(meetingPointOfRows(shop, trip)),
     },
     {
       id: "conditions",

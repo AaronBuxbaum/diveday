@@ -1,6 +1,8 @@
 import type { getTripOverview } from "@/db/trips";
+import { boatWorkText } from "@/i18n/boat-work-labels";
 import { overRatioPulseKey } from "@/i18n/crew-gap-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -34,6 +36,8 @@ export function tripPulseFacts({
   liveBoatClashes,
   shopSlug,
   tripId,
+  startsAt,
+  now,
   t,
 }: {
   pulseNeeded: boolean;
@@ -46,6 +50,9 @@ export function tripPulseFacts({
   liveBoatClashes: TripOverview["boatClashes"];
   shopSlug: string;
   tripId: string;
+  /** When the boat leaves, and the page's clock: the boat's work asks both. */
+  startsAt: Date;
+  now: Date;
   t: StaffTranslator;
 }): TripPulseFact[] {
   return pulseNeeded
@@ -117,29 +124,37 @@ export function tripPulseFacts({
               },
             ]
           : []),
-        ...(pulse.prepGaps > 0
-          ? [
-              {
-                text: t("trips.pulse.prepGaps", { count: pulse.prepGaps }),
-                // The packing list is the Gear tab (ADR 20261001-logbook).
-                href: `${shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}`,
-              },
-            ]
-          : []),
-        // Money owed is work, not a boarding hazard — so it reads in the pulse's
-        // neutral ink, below the facts that hold the boat up, and it is the one
-        // fact here whose fix lives off the trip entirely. `range=all` because the
-        // count is unwindowed: a seat sold months ahead was invoiced months ago,
-        // and the index's default 90-day window would open on fewer orders than
-        // the fact just promised.
-        ...(pulse.openOrders > 0
-          ? [
-              {
-                text: t("trips.pulse.awaitingPayment", { count: pulse.openOrders }),
-                href: `${shopPath(shopSlug, "orders")}?tripId=${tripId}&status=open&range=all`,
-              },
-            ]
-          : []),
+        // **The boat's work** (third review, item 4): the same items, counts
+        // and words Today's rows for this boat carry, from one reader
+        // (`boatWorkItems`). Work, not hazards, so it reads in the pulse's
+        // neutral ink below the facts that hold the boat up.
+        ...boatWorkItems(pulse.work, { startsAt, now }).map((item) => ({
+          text: boatWorkText(t, item),
+          href: boatWorkHref(item, { shopSlug, tripId }),
+        })),
       ]
     : [];
+}
+
+/**
+ * Where each item of the boat's work is fixed. Sizes and nitrox are the Gear
+ * tab's packing list (ADR 20261001-logbook); a missing contact is the diver's
+ * own row on the roster; money owed is the Orders index filtered to this
+ * departure, `range=all` because the count is unwindowed: a seat sold months
+ * ahead was invoiced months ago, and the index's default 90-day window would
+ * open on fewer orders than the fact just promised.
+ */
+function boatWorkHref(
+  item: BoatWorkItem,
+  { shopSlug, tripId }: { shopSlug: string; tripId: string },
+) {
+  switch (item.code) {
+    case "missing_sizes":
+    case "ungated_nitrox":
+      return `${shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}`;
+    case "missing_contact":
+      return `${shopPath(shopSlug, "trips", tripId)}#roster`;
+    case "open_orders":
+      return `${shopPath(shopSlug, "orders")}?tripId=${tripId}&status=open&range=all`;
+  }
 }

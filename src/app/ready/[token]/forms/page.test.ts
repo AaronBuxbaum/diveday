@@ -60,7 +60,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { default: CourseFormsPage } = await import("./page");
-const { saveNoteFromReady } = await import("../day-of-actions");
+const { saveDayOfDetailsFromReady } = await import("../day-of-actions");
 const { signCourseFormFromReady } = await import("../paperwork-actions");
 
 afterEach(() => vi.clearAllMocks());
@@ -425,7 +425,7 @@ describe("the forms-only link", () => {
     formData.set("note", "Written with a forms-only link");
     let to = "";
     try {
-      await saveNoteFromReady(token, formData);
+      await saveDayOfDetailsFromReady(token, formData);
     } catch (error) {
       to = error instanceof Error ? error.message : "";
     }

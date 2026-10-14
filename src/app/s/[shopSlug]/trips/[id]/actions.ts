@@ -188,7 +188,7 @@ export async function bookSpot(
   // Validate per field so the form can point at the exact box that is wrong,
   // and keep everything else the diver typed.
   const fieldErrors: Record<string, string> = {};
-  const validParty: { fullName: string; email: string }[] = [];
+  const validParty: { fullName: string; email: string; minorDeclared: boolean }[] = [];
   for (let index = 0; index < partySize.data; index++) {
     const fullName = String(fields[`fullName-${index}`] ?? "").trim();
     const email = String(fields[`email-${index}`] ?? "").trim();
@@ -209,7 +209,7 @@ export async function bookSpot(
     } else if (email && !emailField.safeParse(email).success) {
       fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
     }
-    validParty.push({ fullName, email });
+    validParty.push({ fullName, email, minorDeclared: fields[`minor-${index}`] === "on" });
   }
   const { phone, promoCode: promoCodeInput } = fields;
   if (phone.length > DIVER_PHONE_MAX) fieldErrors.phone = t("booking.fieldErrors.phoneTooLong");
@@ -368,7 +368,7 @@ export async function bookSpot(
       shopId: shopNow.id,
       tripId,
       actor: "public" as const,
-      fullName: entry.fullName,
+      ...entry,
       participantType: partyTypes[index] ?? "diver",
       // No `declared`, and so no `admissionGate: "advise"` either: advising
       // rather than refusing was earned by the form warning a diver as they

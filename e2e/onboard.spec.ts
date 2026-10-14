@@ -257,7 +257,7 @@ test.describe("a shop signing up from the Caribbean", () => {
     // saying "check your units" without saying what they are makes a shop
     // navigate to find out whether it needs to.
     await expect(page.getByText("Check your currency and depth unit")).toBeVisible();
-    await expect(page.getByText(/MXN and meters/)).toBeVisible();
+    await expect(page.getByText(/MXN, meters and Celsius/)).toBeVisible();
 
     // ...and the shop row itself agrees, which is the assertion that the
     // derivation reached the database rather than only the checklist copy. The

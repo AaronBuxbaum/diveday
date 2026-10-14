@@ -1,10 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Atkinson_Hyperlegible,
-  IBM_Plex_Mono,
-  IBM_Plex_Sans,
-  Noto_Sans_Symbols_2,
-} from "next/font/google";
 import { Suspense } from "react";
 import { boatModeScript } from "@/lib/boat-mode";
 import { THEME_COLORS } from "./_brand/colors";
@@ -22,52 +16,8 @@ import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 // one type, and nothing else.
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { openGraphSite, sharedLinkCardImage } from "@/lib/site-metadata";
+import { fontVariables } from "./_fonts/fonts";
 import { Observability } from "./observability-client";
-
-// Logbook's one face (ADR 20261001-logbook). `latin-ext` because divers'
-// names are not all ASCII (Bjørn, Łucja, Şule), and a fallback glyph in the
-// middle of a name on a manifest is the wrong place for a second typeface.
-const plexSans = IBM_Plex_Sans({
-  variable: "--font-plex-sans",
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "600"],
-});
-
-// Boat mode's face, drawn for legibility in sun and spray. Only the roll call
-// wears it, so it does not preload on every page.
-const atkinson = Atkinson_Hyperlegible({
-  variable: "--font-atkinson",
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "700"],
-  preload: false,
-});
-
-// Plex's "latin" subset does not cover the arrows, checkmarks, and dingbats
-// (→ ✓ ★ ☀ …) this app renders in real UI — they fell back to whatever font
-// the OS happened to have, which is the runner image's fontconfig in CI.
-// Self-hosting them the same way as Plex pins that fallback to the build,
-// closing the residual risk ADR 20260730-pinned-browser-visual-determinism
-// left open. `preload: false`: these only cover rare glyphs, not the
-// above-the-fold text every page pays for on first paint.
-//
-// Pictographic emoji (🤿 🐬 ⛵ …) deliberately stay unpinned: a self-hosted
-// Noto_Color_Emoji was tried and reverted (see the ADR) because it overrides
-// every browser's own platform emoji font — Apple Color Emoji, Segoe UI
-// Emoji — with Google's set, which renders visibly smaller and flatter than
-// what users' actual browsers show natively. Matching real Chrome mattered
-// more than pinning emoji for CI, so those glyphs still resolve through
-// `system-ui, sans-serif` and remain a known source of CI-only diffs.
-const notoSymbols = Noto_Sans_Symbols_2({
-  variable: "--font-noto-symbols",
-  weight: "400",
-  preload: false,
-});
 
 export const metadata: Metadata = {
   // The canonical origin comes from APP_HOST (the same source bearer-token
@@ -151,7 +101,7 @@ export default function RootLayout({
       // indicator can match at all, which it never could (issue #733).
       dir={localeDirection(DEFAULT_DIVER_LOCALE)}
       suppressHydrationWarning
-      className={`${plexSans.variable} ${plexMono.variable} ${atkinson.variable} ${notoSymbols.variable} h-full antialiased`}
+      className={`${fontVariables} h-full antialiased`}
     >
       <head>
         <script

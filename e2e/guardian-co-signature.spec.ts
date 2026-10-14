@@ -2,10 +2,13 @@ import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
+  createTrip,
   daysFromNow,
   openDiverFileGroup,
   openPaperWaiverForm,
   openRosterDetails,
+  openThreadStep,
+  signOut,
   waiverLinkFromToast,
 } from "./helpers";
 
@@ -281,4 +284,45 @@ test("the diver record refuses a namesake co-signer and offers no tick", async (
   await expect(
     page.getByLabel("This co-signer and this diver have the same name", { exact: false }),
   ).toHaveCount(0);
+});
+
+/**
+ * **"Under 18" on the public party form** (H-113, 2026-10-13). The form asks
+ * nobody a date of birth, so before this box a child booked online signed her
+ * release alone. Ticked, the seat asks for a parent on the same release page a
+ * known minor's does.
+ */
+test("a seat booked as under 18 asks for a parent on its release", async ({ page }) => {
+  test.setTimeout(90_000);
+  const stamp = Date.now();
+  const title = `Under 18 Run ${stamp}`;
+  const diver = `Teen E2E Diver ${stamp}`;
+  await createTrip(page, {
+    title,
+    date: daysFromNow(6),
+    departsAt: "08:00",
+    returnsAt: "11:00",
+    capacity: 6,
+  });
+  await signOut(page);
+
+  await page.goto(`/s/${SHOP}`, { waitUntil: "domcontentloaded" });
+  await page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: title })
+    .getByRole("link")
+    .click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill(diver);
+  await page.getByLabel("Email", { exact: true }).fill(`teen-${stamp}@example.com`);
+  await page.getByRole("checkbox", { name: /^Under 18/ }).check();
+  await expect(page.getByText("A parent or guardian signs the waiver too.")).toBeVisible();
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+
+  const sign = await openThreadStep(page, "sign");
+  await sign.getByRole("button", { name: "Sign your waiver" }).click();
+  await expect(page.getByRole("heading", { name: "Parent or guardian" })).toBeVisible();
+  await expect(page.getByText(`${diver} is under 18`)).toBeVisible();
 });

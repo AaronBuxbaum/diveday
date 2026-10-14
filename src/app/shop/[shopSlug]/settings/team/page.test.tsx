@@ -1,5 +1,6 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
@@ -83,7 +84,7 @@ function rowTree(row: ReactElement<StaffRowProps>, member: StaffMember = row.pro
   return render({ ...row.props, member });
 }
 
-async function renderTeam() {
+async function renderTeam(searchParams: Record<string, string> = {}) {
   const db: AppDb = await seededTestDb();
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
@@ -101,7 +102,7 @@ async function renderTeam() {
   });
   return TeamSettingsPage({
     params: Promise.resolve({ shopSlug: "blue-mantis" }),
-    searchParams: Promise.resolve({}),
+    searchParams: Promise.resolve(searchParams),
   });
 }
 
@@ -120,6 +121,23 @@ describe("the page's section headings", () => {
     ).filter((h2) => h2.props.children === heading);
     expect(headings).toHaveLength(1);
     expect(headings[0]?.props.className).toBe(LEAD_TITLE_CLASS);
+  });
+});
+
+/**
+ * Both invite sends redirect with `send-limit` past the hourly cap (#2491).
+ * The resend comes from a roster row and the invite from the form, so the
+ * refusal is the page's banner: the one place both land in view.
+ */
+describe("the send-limit refusal", () => {
+  it("shows a banner saying nothing went out", async () => {
+    const text = STAFF_MESSAGES["en-US"].settings.team.notice.sendLimit;
+    const banners = findElements<{ tone?: string; children?: unknown }>(
+      await renderTeam({ notice: "send-limit" }),
+      StaffNoticeBanner,
+    );
+    expect(banners.map((banner) => banner.props.children)).toEqual([text]);
+    expect(banners[0]?.props.tone).toBe("warning");
   });
 });
 

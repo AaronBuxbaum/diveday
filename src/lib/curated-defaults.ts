@@ -117,13 +117,86 @@ export const ZONE_COUNTRY: Record<CuratedTimeZone, string> = {
   "Pacific/Auckland": "NZ",
 };
 
-/** Each curated country's currency, read off the zone tables above. */
-const COUNTRY_CURRENCY: ReadonlyMap<string, string> = new Map(
-  (Object.keys(ZONE_COUNTRY) as CuratedTimeZone[]).map((zone) => [
-    ZONE_COUNTRY[zone],
-    ZONE_CURRENCY[zone],
-  ]),
-);
+/**
+ * **The euro area, by country** (#2422): the members that price in euros, and
+ * the French overseas regions divers fly to, which are in it too. Spanish is a
+ * shipped locale, and with London the only European shortcut zone a shop in
+ * Spain or Malta started in dollars.
+ */
+const EURO_COUNTRIES: ReadonlySet<string> = new Set([
+  "AT",
+  "BE",
+  "BG",
+  "CY",
+  "DE",
+  "EE",
+  "ES",
+  "FI",
+  "FR",
+  "GR",
+  "HR",
+  "IE",
+  "IT",
+  "LT",
+  "LU",
+  "LV",
+  "MT",
+  "NL",
+  "PT",
+  "SI",
+  "SK",
+  "GP",
+  "MQ",
+  "RE",
+  "YT",
+]);
+
+/**
+ * **The euro area's zones, for a shop that has given only its timezone** —
+ * which is every shop at sign-up. Not curated shortcuts: the picker still lists
+ * them among every IANA zone; this only says which country each is in.
+ */
+const EURO_ZONE_COUNTRY: Readonly<Record<string, string>> = {
+  "Europe/Vienna": "AT",
+  "Europe/Brussels": "BE",
+  "Europe/Sofia": "BG",
+  "Asia/Nicosia": "CY",
+  "Europe/Nicosia": "CY",
+  "Europe/Berlin": "DE",
+  "Europe/Busingen": "DE",
+  "Europe/Tallinn": "EE",
+  "Europe/Madrid": "ES",
+  "Africa/Ceuta": "ES",
+  "Atlantic/Canary": "ES",
+  "Europe/Helsinki": "FI",
+  "Europe/Paris": "FR",
+  "Europe/Athens": "GR",
+  "Europe/Zagreb": "HR",
+  "Europe/Dublin": "IE",
+  "Europe/Rome": "IT",
+  "Europe/Vilnius": "LT",
+  "Europe/Luxembourg": "LU",
+  "Europe/Riga": "LV",
+  "Europe/Malta": "MT",
+  "Europe/Amsterdam": "NL",
+  "Europe/Lisbon": "PT",
+  "Atlantic/Madeira": "PT",
+  "Atlantic/Azores": "PT",
+  "Europe/Ljubljana": "SI",
+  "Europe/Bratislava": "SK",
+  "America/Guadeloupe": "GP",
+  "America/Martinique": "MQ",
+  "Indian/Reunion": "RE",
+  "Indian/Mayotte": "YT",
+};
+
+/** Each known country's currency: the curated zone tables, then the euro area. */
+const COUNTRY_CURRENCY: ReadonlyMap<string, string> = new Map([
+  ...(Object.keys(ZONE_COUNTRY) as CuratedTimeZone[]).map(
+    (zone) => [ZONE_COUNTRY[zone], ZONE_CURRENCY[zone]] as const,
+  ),
+  ...[...EURO_COUNTRIES].map((country) => [country, "eur"] as const),
+]);
 
 /**
  * **Where a dive briefing is given in feet, and the water in Fahrenheit.**
@@ -168,7 +241,8 @@ export function shopDefaults({
   timeZone: string;
 }): ShopDefaults {
   const typed = country?.trim().toUpperCase() || null;
-  const iso = typed ?? ZONE_COUNTRY[timeZone as CuratedTimeZone] ?? null;
+  const iso =
+    typed ?? ZONE_COUNTRY[timeZone as CuratedTimeZone] ?? EURO_ZONE_COUNTRY[timeZone] ?? null;
   const imperial = iso !== null && IMPERIAL_COUNTRIES.has(iso);
   const derived = (iso && COUNTRY_CURRENCY.get(iso)) ?? (imperial ? "usd" : undefined);
   return {

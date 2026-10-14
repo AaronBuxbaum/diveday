@@ -537,19 +537,15 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
       retryable: false,
       httpStatus: 400,
       errorCode: "MessageRejected",
-      detail: "Email address is not verified",
     });
   });
 
-  // A 403 whose resource ARN names a personal mailbox is the SES *sandbox*, not a
-  // misconfigured sender: a pre-verified recipient is an identity too, and a send is
-  // authorized against every identity it touches. The sender user is granted
-  // `ses.dive.day` and the configuration set alone, so the recipient's own identity is
-  // what the denial names — reading it as a bad `SES_FROM_EMAIL` sends an operator after
-  // the wrong thing, which is why docs/engineering/ses-email-runbook.md's troubleshooting
-  // table gives the sender case and this one separate rows. Either way the address may
-  // never reach the log line.
-  it("keeps the refused identity in the failure detail but out of the log line", async () => {
+  // **No SES prose is kept** (security review of issue #2531). A rejection can
+  // name the recipient, and an AccessDeniedException in the sandbox names a
+  // pre-verified recipient's own identity, so the failure row would hold an
+  // address in a column built for diagnosis. The AWS error's name and status
+  // are the diagnosis; the runbook says how to read the ARN when it matters.
+  it("keeps the refused address out of the failure row and the log line", async () => {
     const error = Object.assign(
       new Error(
         "User `arn:aws:iam::417160702652:user/diveday-ses-sender' is not authorized to perform `ses:SendEmail' on resource `arn:aws:ses:us-east-1:417160702652:identity/diver@gmail.com'",
@@ -561,20 +557,29 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const delivery = await notify(booking, provider);
-    // The operator-facing failure row keeps the address — it is the whole diagnosis.
-    expect(delivery).toMatchObject({
+    expect(delivery).toEqual({
       status: "failed",
       retryable: false,
       httpStatus: 403,
       errorCode: "AccessDeniedException",
-      detail: expect.stringContaining("identity/diver@gmail.com"),
     });
 
     const line = warn.mock.calls[0]?.[0] as string;
-    expect(line).not.toContain("diver@gmail.com");
-    expect(line).toContain("identity/<redacted>@gmail.com");
+    expect(line).not.toContain("diver");
     expect(line).toContain("AccessDeniedException");
     warn.mockRestore();
+  });
+
+  it("keeps a rejected recipient out of the failure row", async () => {
+    const error = Object.assign(
+      new Error("Email address is not verified. The following identities failed: nora@example.com"),
+      { name: "MessageRejected", $metadata: { httpStatusCode: 400 } },
+    );
+    const client = { send: vi.fn().mockRejectedValue(error) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    const delivery = await notify(booking, provider);
+    expect(JSON.stringify(delivery)).not.toContain("nora");
   });
 
   it("marks a thrown throttling error as retryable", async () => {
@@ -615,7 +620,8 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
       status: "failed",
       retryable: true,
       errorCode: "network_error",
-      detail: "fetch failed",
+      // The thrown error's class or its cause's code, never its message.
+      detail: "Error",
     });
   });
 });

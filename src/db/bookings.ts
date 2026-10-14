@@ -233,6 +233,15 @@ export type BookingRequest = {
    */
   referralSource?: string | null;
   /**
+   * **Whoever booked this seat said its diver is under 18** (the public party
+   * form's "Under 18" box; decision of 2026-10-13, after H-21). Stamped on the
+   * seat as `minor_declared_at`, never on the person: the form is anonymous,
+   * so it may only mark the seat it is creating. It gates nothing here (no age
+   * oracle at the sale, H-22); the guardian co-signature rule reads it where
+   * no date of birth is on file.
+   */
+  minorDeclared?: boolean;
+  /**
    * What this person is doing on the boat (ADR 20261007-participant-types).
    * Omitted is a diver, which is every caller that predates the type and the
    * stricter reading: a diver is asked for more, never less.
@@ -488,6 +497,7 @@ export async function addPartySeat(
       .select({
         id: bookings.id,
         tripId: bookings.tripId,
+        personId: bookings.personId,
         status: bookings.status,
         identityUnconfirmedAt: bookings.identityUnconfirmedAt,
         partyLeadBookingId: bookings.partyLeadBookingId,
@@ -528,6 +538,14 @@ export async function addPartySeat(
       .set({ partyLeadBookingId: lead.id })
       .where(eq(bookings.id, outcome.bookingId));
     await flushDeclarations(tx, pending);
+    // The departure's trail says where the booking came from: the lead, from
+    // their own trip link, the way the self-cancel line does (#2475).
+    await recordTripActivity(tx, {
+      shopId: input.shopId,
+      tripId: lead.tripId,
+      actorPersonId: lead.personId,
+      entry: { code: "seat_added_from_trip_link", diver: input.seatName },
+    });
     return { ok: true, bookingId: outcome.bookingId };
   });
 }
@@ -1215,17 +1233,16 @@ async function createBookingRecord(
         claimedAt: null,
         // "Running late" (J3) was said about the seat's earlier life.
         runningLateAt: null,
-        // Same reasoning as the two lines above: a reactivated row is a *new*
-        // booking, so it carries this booking's referral — including null,
-        // which un-credits a partner who did not send this visit rather than
-        // letting a cancelled seat's old attribution ride along.
+        // Same reasoning as the two lines above: a reactivated row is a *new* booking, so it
+        // carries this booking's referral — including null, which un-credits a partner who did not
+        // send this visit rather than letting a cancelled seat's old attribution ride along.
         //
-        // The cost, stated: a caller that reactivates a cancelled *public*
-        // booking without passing a referral — a staff reschedule, a seat claim
-        // — silently drops a genuine partner's credit through an act nobody
-        // thinks of as touching attribution. Accepted over the alternative,
+        // The cost, stated: a caller that reactivates a cancelled *public* booking without passing
+        // a referral — a staff reschedule, a seat claim — silently drops a genuine partner's credit
+        // through an act nobody thinks of as touching attribution. Accepted over the alternative,
         // which is a stale credit surviving a cancellation nobody can see.
         referralSource: partnerReferralSlug(req.referralSource),
+        minorDeclaredAt: req.minorDeclared ? nowDate() : null,
       })
       .where(eq(bookings.id, existing.id));
     await settlePackageCoverage(tx, {
@@ -1262,6 +1279,7 @@ async function createBookingRecord(
       identityBookedAs: identityUnconfirmed ? (identityClaim?.bookedAs ?? null) : null,
       identityMatchedBy: identityUnconfirmed ? (identityClaim?.matchedBy ?? null) : null,
       referralSource: partnerReferralSlug(req.referralSource),
+      minorDeclaredAt: req.minorDeclared ? nowDate() : null,
       // **Stamped by the application clock, not the column's `defaultNow()`.**
       //
       // `defaultNow()` is Postgres' clock, which `DIVEDAY_CLOCK` does not
