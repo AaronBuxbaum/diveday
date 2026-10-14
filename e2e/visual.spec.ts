@@ -7207,7 +7207,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The moderation queue as a worklist: one aggregate line under the title,
-      // "Waiting on you" leading with its clear-the-lot act, then the published
+      // "Needs you" leading with its clear-the-lot act, then the published
       // record quiet beneath it (ADR 20260827-people-not-lists, decision 3).
       // Waiting on the worklist group specifically, not just the heading: the
       // groups render above the published run, and a capture taken before they
