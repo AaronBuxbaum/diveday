@@ -14,10 +14,27 @@
 //               layer's captures include every layer beneath it.
 //
 // A pull request whose diff this cannot bound captures everything, so the narrowing only ever
-// removes captures nothing could have moved: anything under `e2e/` but another spec (the
-// harness, the helpers, the visual spec itself), the visual plumbing in `scripts/` and the CI
-// workflow, the seed and the schema, a stylesheet, a locale bundle, `public/`, a root config,
-// and any `src/` module that reaches no page.
+// removes captures nothing could have moved: the e2e harness and helpers, the visual plumbing in
+// `scripts/` and the CI workflow, the seed and the schema, a stylesheet, a root config that
+// shapes the build, a renderer dependency, and a module that runs for every page (the proxy,
+// instrumentation, the service worker, what `next.config.ts` imports).
+//
+// Everything else is bounded (test review 2026-10-14: 26 of 28 product PRs captured all):
+//
+//   - inert: docs, playbooks, infra, unit tests, functional specs, snapshots, migrations
+//     (`drizzle/`: the seed is what pixels show, and it has its own rule), the lockfile, and
+//     root files the build never reads (`.gitignore`, `.env.example`, `vercel.json`, …);
+//   - `package.json`: inert unless a dependency, a renderer dev dependency, or a build script
+//     changed;
+//   - a locale bundle: the keys whose value changed, mapped to the modules that name them;
+//   - a `public/` asset: the modules that name its path (or its folder, for a path built from
+//     a slug);
+//   - `e2e/visual.spec.ts`: the captures whose lines changed, and the captures that call a
+//     helper whose lines changed;
+//   - a module: its changed lines, followed name by name to the pages that read them
+//     (`symbol-reach.mjs`; a layout's reach is every page beneath it); a module no page reads
+//     (a test fixture, a script's helper, a deleted file whose importers are in the same diff)
+//     moves nothing, and a not-found or error page moves only the captures that show one.
 //
 // Which routes a capture visits is read from its own source: the test's lines in
 // `e2e/visual.spec.ts` and the bodies of the helpers it calls (the spec's own and
@@ -33,9 +50,12 @@
 // commits), so the copies never stand in for pixels anyone compares against.
 //
 //   node scripts/visual-affected.mjs --list <playwright --list json> --out <filtered json>
-//        [--base <ref>] [--all] [--github-output]
+//        [--base <ref>] [--all] [--github-output] [--grep <file>]
+//
+// `--grep` writes a Playwright `--grep` for the chosen captures in light mode only: the local
+// pass a push can afford (#2517).
 
-import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -43,6 +63,7 @@ import { fileURLToPath } from "node:url";
 import { importersOf, importGraph, routeOf } from "./e2e-affected.mjs";
 import { listedTests } from "./e2e-shard.mjs";
 import { gitReader } from "./stack-map.mjs";
+import { changedLinesByFile, moduleIndex, readModules, symbolReach } from "./symbol-reach.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -61,65 +82,334 @@ export const SMOKE = [
   /› the sign-in page renders true to the design \(/,
 ];
 
-/** Paths no capture can move: docs, playbooks, infrastructure, unit tests, other specs. */
+/**
+ * Paths no capture can move: docs, playbooks, infrastructure, unit tests, functional specs,
+ * snapshots, migrations, the lockfile, and root files neither the build nor the browser reads.
+ */
 const INERT =
-  /^(?:docs\/|\.claude\/|infra\/|LICENSE$)|\.md$|(?:^|\/)[^/]+\.test\.(?:ts|tsx|mts|mjs|js)$|^e2e\/(?!visual\.spec\.ts$)[^/]+\.spec\.ts$/;
+  /^(?:docs\/|\.claude\/|\.agents\/|infra\/|drizzle\/|extension\/|LICENSE$)|\.md$|\.snap$|(?:^|\/)[^/]+\.test\.(?:ts|tsx|mts|mjs|js)$|^e2e\/(?!visual\.spec\.ts$).+\.spec\.ts$|^(?:\.gitignore|\.gitattributes|\.env\.example|\.coderabbit\.yaml|\.mcp\.json|\.vercelignore|vercel\.json|biome\.json|cdk\.json|skills-lock\.json|pnpm-lock\.yaml|vitest\.config\.ts|drizzle\.config(?:\.prod)?\.ts|next-env\.d\.ts|tsconfig\.tsbuildinfo)$|\.d\.ts$/;
 
 /** `scripts/` and `.github/` are inert except the files the capture or the build runs. */
 const VISUAL_PLUMBING =
-  /^scripts\/(?:visual-|e2e-shard|reg-suit-keys|wait-for-baseline|build-service-worker|check-e2e-build)|^\.github\/(?:workflows\/ci\.yml|actions\/)/;
+  /^scripts\/(?:visual-|symbol-reach|e2e-affected|e2e-shard|reg-suit-keys|wait-for-baseline|build-service-worker|check-e2e-build)|^\.github\/(?:workflows\/ci\.yml|actions\/)/;
 
 /** `src/` paths whose blast radius is every page: the data every capture shows. */
 const EVERYWHERE = /^src\/db\/(?:seed|schema\/|dev-credentials)/;
+
+/**
+ * Modules Next runs for every page without a page importing them. `instrumentation.ts` is not
+ * one: it runs once at boot, and reads the providers it registers by reference, which a name
+ * walk cannot tell from a call.
+ */
+const RUNTIME_ROOT = /^src\/proxy\.ts$|^src\/worker\//;
+
+/** A message bundle: `en-US/diver.json`, `es-ES/staff/<namespace>.json`. */
+const LOCALE = /^src\/i18n\/locales\/[^/]+\/(?:diver|staff\/[^/]+)\.json$/;
+
+/** Dev dependencies that change what a page looks like when they move. */
+const RENDERER =
+  /^(?:next|react|react-dom|@next\/.+|@playwright\/test|playwright(?:-core)?|tailwindcss|@tailwindcss\/.+|postcss|lightningcss|babel-plugin-react-compiler|typescript)$/;
+
+/** `package.json` scripts the e2e build or the capture runs. */
+const BUILD_SCRIPT = /^(?:build|start|e2e|visual)/;
 
 const CODE = /\.(?:ts|tsx|mts|mjs|js|jsx)$/;
 const ENTRY = /\/(?:page|layout|route|template|loading|default|not-found|error)\.tsx?$/;
 
 /**
- * Why `changed` cannot be bounded (a reason to capture everything), or the routes it reaches:
- * `{ all: string }` or `{ routes: [{ route, broad }] }`.
+ * Why a `package.json` change can move pixels, or null when it cannot: a runtime dependency, a
+ * renderer dev dependency, a build script, or any other top-level field (engines, overrides).
  */
-export function changedRoutes(changed, graph) {
+export function packageJsonReach(before, after) {
+  let a;
+  let b;
+  try {
+    a = JSON.parse(before);
+    b = JSON.parse(after);
+  } catch {
+    return "package.json could not be read on both sides";
+  }
+  const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (key === "scripts" || key === "devDependencies") continue;
+    if (!same(a[key], b[key])) return `package.json changes ${key}`;
+  }
+  for (const [field, matches] of [
+    ["devDependencies", RENDERER],
+    ["scripts", BUILD_SCRIPT],
+  ]) {
+    const x = a[field] ?? {};
+    const y = b[field] ?? {};
+    for (const name of new Set([...Object.keys(x), ...Object.keys(y)])) {
+      if (matches.test(name) && x[name] !== y[name]) return `package.json changes ${field}.${name}`;
+    }
+  }
+  return null;
+}
+
+/** Every leaf of a JSON object, by dotted path. */
+function leaves(value, prefix = "", out = new Map()) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    for (const [key, child] of Object.entries(value)) {
+      leaves(child, prefix ? `${prefix}.${key}` : key, out);
+    }
+  } else {
+    out.set(prefix, JSON.stringify(value));
+  }
+  return out;
+}
+
+/**
+ * The message keys a bundle change adds, removes or rewords, as code names them, each with
+ * whether HEAD still has it: a removed key's readers were edited in the same diff.
+ */
+export function changedMessageKeys(file, before, after) {
+  const namespace = file.match(/\/staff\/([^/]+)\.json$/)?.[1];
+  const parse = (text) => (text === null ? {} : JSON.parse(text));
+  const a = leaves(parse(before));
+  const b = leaves(parse(after));
+  const keys = [];
+  for (const key of new Set([...a.keys(), ...b.keys()])) {
+    if (a.get(key) === b.get(key)) continue;
+    keys.push({ key: namespace ? `${namespace}.${key}` : key, removed: !b.has(key) });
+  }
+  return keys;
+}
+
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const QUOTE = "[\"'`]";
+
+/**
+ * The source modules that may read message `key`: one that writes the key out (whole, or without
+ * its leading segments, the way a scoped `t` names it), builds it from a template on part of its
+ * path (`` t(`status.${kind}`) ``), or names a scope and the rest of the key. Over-reading only
+ * costs a capture; empty means no module names it.
+ */
+export function messageConsumers(key, sources) {
+  const segments = key.split(".");
+  const leaf = segments.at(-1);
+  const joined = (from, to) => escapeRegExp(segments.slice(from, to).join("."));
+  const patterns = [];
+  for (let i = 0; i <= segments.length - Math.min(2, segments.length); i += 1) {
+    patterns.push(new RegExp(`${QUOTE}${joined(i)}${QUOTE}`));
+  }
+  for (let end = segments.length - 1; end >= 1; end -= 1) {
+    for (let start = 0; start < end; start += 1) {
+      patterns.push(new RegExp(`${QUOTE}${joined(start, end)}\\.\\$\\{`));
+    }
+  }
+  const scopes = [];
+  for (let i = 1; i < segments.length; i += 1) {
+    scopes.push([
+      new RegExp(`${QUOTE}${joined(0, i)}${QUOTE}`),
+      new RegExp(`${QUOTE}${joined(i)}${QUOTE}`),
+    ]);
+  }
+  const hits = new Map();
+  for (const [file, text] of sources) {
+    if (
+      !text.includes(leaf) &&
+      !segments.slice(0, -1).some((segment) => text.includes(`${segment}.\${`))
+    ) {
+      continue;
+    }
+    const tests = [...patterns];
+    // A scope (`useTranslations("shopHome.spine")`) and the rest of the key in one module.
+    for (const [scope, rest] of scopes) {
+      if (scope.test(text) && rest.test(text)) tests.push(scope, rest);
+    }
+    const lines = linesWhere(text, (line) => tests.some((pattern) => pattern.test(line)));
+    if (lines.size > 0) hits.set(file, lines);
+  }
+  return hits;
+}
+
+/**
+ * The source files that name a `public/` asset: by its path, or, when nothing does, by its
+ * folder (a path built from a slug, `` `/marine-life/${slug}.jpg` ``). A JSON file that names
+ * it stands in for the modules that import that JSON.
+ */
+export function assetConsumers(file, sources) {
+  const served = file.slice("public".length);
+  const encoded = encodeURI(served);
+  const folder = served.slice(0, served.lastIndexOf("/") + 1);
+  let found = namedBy([served, encoded], sources, { code: false });
+  if (found.size === 0 && folder.length > 1) found = namedBy([folder], sources, { code: false });
+  const out = new Map();
+  for (const [consumer, lines] of found) {
+    if (!consumer.endsWith(".json")) {
+      out.set(consumer, lines);
+      continue;
+    }
+    const name = consumer.split("/").pop();
+    for (const [importer, at] of namedBy([`/${name}"`, `/${name}'`], sources)) {
+      out.set(importer, at);
+    }
+  }
+  return out;
+}
+
+/** The line numbers (1-based) of `text` that `test` accepts. */
+function linesWhere(text, test) {
+  const lines = new Set();
+  text.split("\n").forEach((line, i) => {
+    if (test(line)) lines.add(i + 1);
+  });
+  return lines;
+}
+
+/**
+ * The files in `sources` (code only, unless `code` is false) that name one of `needles`, each
+ * with the lines that do.
+ */
+function namedBy(needles, sources, { code = true } = {}) {
+  const found = new Map();
+  for (const [file, text] of sources) {
+    if (code && !CODE.test(file)) continue;
+    if (!needles.some((needle) => text.includes(needle))) continue;
+    found.set(
+      file,
+      linesWhere(text, (line) => needles.some((needle) => line.includes(needle))),
+    );
+  }
+  return found;
+}
+
+/**
+ * Why `changed` cannot be bounded (a reason to capture everything), or the routes it reaches:
+ * `{ all: string }` or `{ routes: [{ route, broad }], boundaries, visualSpec, helpersEdited }`:
+ * `boundaries` are the not-found and error pages edited (`{ route, boundary }`); the two flags
+ * say {@link editedCaptures} must read `e2e/visual.spec.ts`'s or `e2e/helpers.ts`'s changed lines.
+ *
+ * `context` reads what a path alone cannot say; each piece left out falls back to capturing
+ * everything for the files that need it:
+ *   - `before(file)` / `after(file)`: the file's text at the fork point / at HEAD, null when it
+ *     does not exist there (a locale bundle, `package.json`, a deleted module);
+ *   - `sources`: `src/` text by path, to find who names a message key or an asset;
+ *   - `configImports`: the `src/` modules `next.config.ts` imports;
+ *   - `lines`: each changed `src/` file's changed lines, and `modules`: the
+ *     `symbol-reach.mjs` index, to follow an edit name by name (without them, a module reaches
+ *     every page that imports it, through any chain).
+ */
+export function changedRoutes(changed, graph, context = {}) {
+  const { before, after, sources, configImports = [], lines, modules } = context;
   const routes = new Map();
   const add = (route) => {
     const key = route.route;
     const prior = routes.get(key);
     routes.set(key, { route: key, broad: Boolean(prior?.broad || route.broad) });
   };
-  const edited = [];
+  // Modules the diff changes, each with its changed lines or "all".
+  const edited = new Map();
+  const seed = (file, at) => {
+    const prior = edited.get(file);
+    if (prior === "all" || at === "all") edited.set(file, "all");
+    else edited.set(file, new Set([...(prior ?? []), ...at]));
+  };
+  const seedAll = (found) => {
+    for (const [file, at] of found) seed(file, at);
+  };
+  let visualSpec = false;
+  let helpersEdited = false;
+  const boundaries = [];
+  // A layout or loading state draws every page beneath it; a not-found or error page draws only
+  // the captures that hit it.
+  const addEntry = (file) => {
+    const route = routeOf(file);
+    if (!route) return;
+    const boundary = file.match(/\/(not-found|error)\.tsx?$/)?.[1];
+    if (boundary) boundaries.push({ route: route.route, boundary });
+    else add(route);
+  };
   for (const file of changed) {
     if (INERT.test(file)) continue;
+    if (file === "e2e/visual.spec.ts") {
+      visualSpec = true;
+      continue;
+    }
     if (file.startsWith("scripts/") || file.startsWith(".github/")) {
       if (VISUAL_PLUMBING.test(file)) return { all: `${file} is the capture's own plumbing` };
       continue;
     }
-    if (file.startsWith("e2e/"))
-      return { all: `${file} is the capture harness or the visual spec` };
+    if (file === "e2e/helpers.ts") {
+      helpersEdited = true;
+      continue;
+    }
+    if (file.startsWith("e2e/")) return { all: `${file} is the capture harness` };
+    if (file.startsWith("config/") && CODE.test(file)) {
+      if (!sources) return { all: `${file} was not traced to its importers` };
+      seedAll(namedBy([file.replace(/\.[^.]+$/, "")], sources));
+      continue;
+    }
+    if (file === "package.json") {
+      if (!before || !after) return { all: "package.json was not read" };
+      const why = packageJsonReach(before(file), after(file));
+      if (why) return { all: why };
+      continue;
+    }
+    if (file.startsWith("public/")) {
+      if (!sources) return { all: `${file} was not traced to its consumers` };
+      const consumers = assetConsumers(file, sources);
+      const css = [...consumers.keys()].find((consumer) => !CODE.test(consumer));
+      if (css) return { all: `${file} is named by ${css}, which no import can follow` };
+      seedAll(consumers);
+      continue;
+    }
+    if (LOCALE.test(file)) {
+      if (!sources || !before || !after) return { all: `${file} was not traced to its keys` };
+      let keys;
+      try {
+        keys = changedMessageKeys(file, before(file), after(file));
+      } catch {
+        return { all: `${file} could not be parsed` };
+      }
+      for (const { key, removed } of keys) {
+        if (removed) continue;
+        // A key no module names is not on any screen (`check:copy` reports it as unused).
+        for (const [consumer, at] of messageConsumers(key, sources)) {
+          if (CODE.test(consumer)) seed(consumer, at);
+        }
+      }
+      continue;
+    }
     if (!file.startsWith("src/")) return { all: `${file} can reach every page` };
     if (EVERYWHERE.test(file)) return { all: `${file} is data every capture shows` };
+    if (file.endsWith(".json") && sources) {
+      // Data a module imports (`src/content/*.json`): its importers carry the reach.
+      seedAll(namedBy([`/${file.split("/").pop()}`], sources));
+      continue;
+    }
     if (!CODE.test(file)) return { all: `${file} is not code an import can be followed through` };
     if (file.startsWith("src/app/")) {
-      const route = routeOf(file);
-      if (route) add(route);
+      addEntry(file);
+      // A route's own component can be imported by another route's page too.
+      if (modules && graph.has(file)) seed(file, lines?.get(file) ?? "all");
       continue;
     }
     if (!graph.has(file)) {
-      // Deleted, or not a module the graph read: its importers are not knowable from here.
+      // Deleted: every module that imported it is in the same diff, and carries the reach.
+      if (after && after(file) === null) continue;
       return { all: `${file} is not in the import graph` };
     }
-    edited.push(file);
+    seed(file, lines?.get(file) ?? "all");
   }
-  if (edited.length > 0) {
-    for (const file of edited) {
-      const reached = [...importersOf(graph, [file])].filter((f) => ENTRY.test(f));
-      if (reached.length === 0) return { all: `${file} reaches no page, so its reach is unknown` };
-      for (const entry of reached) {
-        const route = routeOf(entry);
-        if (route) add({ ...route, broad: false });
-      }
+  // The modules the edits reach: name by name when the module index is given, else file by file.
+  const reached = new Set();
+  if (modules) {
+    for (const file of symbolReach(modules, edited, { before }).keys()) reached.add(file);
+  } else {
+    for (const file of edited.keys()) {
+      if (graph.has(file)) for (const importer of importersOf(graph, [file])) reached.add(importer);
     }
   }
-  return { routes: [...routes.values()] };
+  // An edit the seed runs (a write helper it calls) changes the data every capture shows.
+  const data = [...reached].find((f) => EVERYWHERE.test(f));
+  if (data) return { all: `the diff reaches ${data}, which builds the data every capture shows` };
+  const root = [...reached].find((f) => RUNTIME_ROOT.test(f) || configImports.includes(f));
+  if (root) return { all: `the diff reaches ${root}, which runs for every page` };
+  // A module no page reaches (a test fixture, a script's helper) moves no capture.
+  for (const entry of [...reached].filter((f) => ENTRY.test(f))) addEntry(entry);
+  return { routes: [...routes.values()], boundaries, visualSpec, helpersEdited };
 }
 
 /** A route or a literal path, as segments; a `[param]` or `${…}` segment matches anything. */
@@ -163,12 +453,13 @@ export function literalPaths(text) {
 }
 
 /**
- * Top-level declarations in a module, by name: a function's body, or a constant's statement (a
- * path is often a constant, `const BOARD = "/shop/blue-mantis/schedule/board"`).
+ * Top-level declarations in a module, with the lines they span (1-based): a function's body, or
+ * a constant's statement (a path is often a constant,
+ * `const BOARD = "/shop/blue-mantis/schedule/board"`).
  */
-export function helperBodies(source) {
+export function helperSpans(source) {
   const lines = source.split("\n");
-  const bodies = new Map();
+  const spans = [];
   const FUNCTION = /^(\s*)(?:export\s+)?(?:async\s+)?function\s+(\w+)\b/;
   // A constant at the top level, or a function-valued one at any depth (a describe block's own
   // `const openWalkIn = async (page) => {`).
@@ -193,8 +484,20 @@ export function helperBodies(source) {
         end += 1;
       }
     }
-    const name = match[2];
-    const body = lines.slice(i, end + 1).join("\n");
+    spans.push({
+      name: match[2],
+      start: i + 1,
+      end: end + 1,
+      body: lines.slice(i, end + 1).join("\n"),
+    });
+  }
+  return spans;
+}
+
+/** {@link helperSpans} by name, a name declared twice keeping both bodies. */
+export function helperBodies(source) {
+  const bodies = new Map();
+  for (const { name, body } of helperSpans(source)) {
     bodies.set(name, bodies.has(name) ? `${bodies.get(name)}\n${body}` : body);
   }
   return bodies;
@@ -215,7 +518,22 @@ function captureText(block, helpers) {
       queue.push(helpers.get(name));
     }
   }
-  return parts.join("\n");
+  return { text: parts.join("\n"), names: seen };
+}
+
+/** The new-side line numbers a `git diff -U0` touches in one file; a pure deletion marks both neighbours. */
+export function changedLines(diffText) {
+  const lines = new Set();
+  for (const match of diffText.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)) {
+    const start = Number(match[1]);
+    const count = match[2] === undefined ? 1 : Number(match[2]);
+    if (count === 0) {
+      lines.add(start);
+      lines.add(start + 1);
+    }
+    for (let line = start; line < start + count; line += 1) lines.add(line);
+  }
+  return lines;
 }
 
 /**
@@ -240,13 +558,95 @@ export function captureSpans(report, sourceLines) {
 }
 
 /**
- * The selection. Returns `{ mode: "all", why }` or `{ mode: "affected", lines, why }`, where
- * `lines` is the set of `--test-list` lines to capture.
+ * What an edit to `e2e/visual.spec.ts` recaptures: the captures whose test body holds a changed
+ * line, and those that call (transitively) a helper whose lines changed. A changed line in
+ * neither (an import, a `beforeEach`, a describe's options) can move any capture: `{ all }`.
  */
-export function selectCaptures({ changed, graph, report, source, helpers }) {
-  const reach = changedRoutes(changed, graph);
+export function editedCaptures(spans, source, changed) {
+  const sourceLines = source.split("\n");
+  const helpers = helperSpans(source);
+  const touched = new Set();
+  const bodies = [...new Set(spans.map((span) => span.at))].map((at) => {
+    const indent = sourceLines[at - 1]?.match(/^\s*/)[0] ?? "";
+    let end = at;
+    const closes = new RegExp(`^${indent}\\}\\);?\\s*$`);
+    while (end < sourceLines.length && !closes.test(sourceLines[end])) {
+      end += 1;
+    }
+    return { at, end: end + 1 };
+  });
+  const hitAt = new Set();
+  for (const line of changed) {
+    if (line > sourceLines.length) continue;
+    const body = bodies.find((b) => line >= b.at && line <= b.end);
+    if (body) {
+      hitAt.add(body.at);
+      continue;
+    }
+    const helper = helpers.find((h) => line >= h.start && line <= h.end);
+    if (helper) {
+      touched.add(helper.name);
+      continue;
+    }
+    if (/^\s*(?:\/\/.*)?$/.test(sourceLines[line - 1] ?? "")) continue;
+    return { all: `e2e/visual.spec.ts line ${line} sits outside every capture and helper` };
+  }
+  return { at: hitAt, helpers: touched };
+}
+
+/**
+ * The helpers an edit to a helper module touches, by name, or `{ all }` when a changed line sits
+ * outside every helper (an import, a module-level statement).
+ */
+export function editedHelpers(source, changed) {
+  const sourceLines = source.split("\n");
+  const helpers = helperSpans(source);
+  const touched = new Set();
+  for (const line of changed) {
+    if (line > sourceLines.length) continue;
+    const helper = helpers.find((h) => line >= h.start && line <= h.end);
+    if (helper) touched.add(helper.name);
+    else if (!/^\s*(?:\/\/.*|\*.*|\/\*.*)?$/.test(sourceLines[line - 1] ?? "")) {
+      return { all: `e2e/helpers.ts line ${line} sits outside every helper` };
+    }
+  }
+  return { helpers: touched };
+}
+
+/**
+ * The selection. Returns `{ mode: "all", why }` or `{ mode: "affected", lines, why }`, where
+ * `lines` is the set of `--test-list` lines to capture. `context` is {@link changedRoutes}'s;
+ * `visualLines` and `helperLines` the new-side lines a diff changes in `e2e/visual.spec.ts` and
+ * `e2e/helpers.ts` (whose text is `helpersSource`).
+ */
+export function selectCaptures({
+  changed,
+  graph,
+  report,
+  source,
+  helpers,
+  context = {},
+  visualLines,
+  helperLines,
+  helpersSource,
+}) {
+  const reach = changedRoutes(changed, graph, context);
   if (reach.all) return { mode: "all", why: reach.all };
   const spans = captureSpans(report, source.split("\n"));
+  let edits = { at: new Set(), helpers: new Set() };
+  if (reach.visualSpec) {
+    if (!visualLines) return { mode: "all", why: "e2e/visual.spec.ts changed in lines not read" };
+    edits = editedCaptures(spans, source, visualLines);
+    if (edits.all) return { mode: "all", why: edits.all };
+  }
+  if (reach.helpersEdited) {
+    if (!helperLines || helpersSource === undefined) {
+      return { mode: "all", why: "e2e/helpers.ts changed in lines not read" };
+    }
+    const touched = editedHelpers(helpersSource, helperLines);
+    if (touched.all) return { mode: "all", why: touched.all };
+    for (const name of touched.helpers) edits.helpers.add(name);
+  }
   const lines = new Set();
   const why = new Map();
   for (const span of spans) {
@@ -255,7 +655,29 @@ export function selectCaptures({ changed, graph, report, source, helpers }) {
       why.set(span.line, "smoke");
       continue;
     }
-    const named = literalPaths(captureText(span.text, helpers));
+    const read = captureText(span.text, helpers);
+    const helper = [...read.names].find((name) => edits.helpers.has(name));
+    if (edits.at.has(span.at) || helper) {
+      lines.add(span.line);
+      why.set(span.line, helper ? `calls ${helper}, which changed` : "its lines changed");
+      continue;
+    }
+    const named = literalPaths(read.text);
+    const boundary = (reach.boundaries ?? []).find(
+      ({ route, boundary: kind }) =>
+        new RegExp(kind === "error" ? String.raw`\berror\b` : "not[- ]found", "i").test(
+          span.text,
+        ) &&
+        (route === "/" || [...named].some((visited) => covers(route, visited))),
+    );
+    if (boundary) {
+      lines.add(span.line);
+      why.set(
+        span.line,
+        `shows ${boundary.route === "/" ? "" : boundary.route}/${boundary.boundary}`,
+      );
+      continue;
+    }
     if (named.size === 0) {
       lines.add(span.line);
       why.set(span.line, "names no route");
@@ -314,13 +736,90 @@ function option(args, name) {
   return at >= 0 ? args[at + 1] : undefined;
 }
 
+/** `src/` text by path, tests left out: where a message key or an asset path is named. */
+export function readSources(root = ROOT) {
+  const sources = new Map();
+  const walk = (dir) => {
+    for (const entry of readdirSync(path.join(root, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) walk(rel);
+      else if (
+        /\.(?:ts|tsx|mts|mjs|js|jsx|json|css)$/.test(rel) &&
+        !/\.test\.[^/]+$/.test(rel) &&
+        !/^src\/i18n\/locales\//.test(rel)
+      ) {
+        sources.set(rel, readFileSync(path.join(root, rel), "utf8"));
+      }
+    }
+  };
+  walk("src");
+  return sources;
+}
+
+/**
+ * Everything {@link selectCaptures} reads from git and the tree, for a diff from `forkPoint` to
+ * HEAD: the changed paths, the {@link changedRoutes} context, and the changed lines of the visual
+ * spec and the e2e helpers.
+ */
+export function diffContext({ root = ROOT, git = gitReader(root), forkPoint }) {
+  const names = git(["diff", "--name-only", forkPoint, "HEAD"]);
+  if (names === null) return null;
+  const read = (file) => {
+    try {
+      return readFileSync(path.join(root, file), "utf8");
+    } catch {
+      return null;
+    }
+  };
+  const nextConfig = read("next.config.ts") ?? "";
+  const configImports = [...nextConfig.matchAll(/from\s+["']\.\/(src\/[^"']+)["']/g)].flatMap(
+    ([, spec]) => [".ts", ".tsx", "/index.ts"].map((ext) => spec + ext),
+  );
+  const lines = (file) => {
+    const text = git(["diff", "-U0", "--no-color", forkPoint, "HEAD", "--", file]);
+    return text === null ? undefined : changedLines(text);
+  };
+  return {
+    changed: names.split("\n").filter(Boolean),
+    context: {
+      before: (file) => git(["show", `${forkPoint}:${file}`]),
+      after: read,
+      sources: readSources(root),
+      configImports,
+      lines: changedLinesByFile(
+        git(["diff", "-U0", "--no-color", forkPoint, "HEAD", "--", "src"]) ?? "",
+      ),
+      modules: moduleIndex(readModules(root)),
+    },
+    visualLines: lines("e2e/visual.spec.ts"),
+    helperLines: lines("e2e/helpers.ts"),
+    helpersSource: read("e2e/helpers.ts") ?? undefined,
+  };
+}
+
+/**
+ * A Playwright `--grep` for `lines`' light-mode captures only, the cheap local pass (#2517):
+ * every capture waits for the state it photographs, so a moved heading fails it before CI does.
+ */
+export function lightGrep(lines) {
+  const titles = [...lines]
+    .filter((line) => / › light mode › /.test(line))
+    .map((line) =>
+      line
+        .split(" › ")
+        .at(-1)
+        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    );
+  return titles.length === 0 ? null : `(?:${titles.join("|")})$`;
+}
+
 function main() {
   const args = process.argv.slice(2);
   const listFile = option(args, "list");
   const outFile = option(args, "out");
   if (!listFile || !outFile) {
     console.error(
-      "usage: node scripts/visual-affected.mjs --list <json> --out <json> [--base <ref>] [--all] [--github-output]",
+      "usage: node scripts/visual-affected.mjs --list <json> --out <json> [--base <ref>] [--all] [--github-output] [--grep <file>]",
     );
     process.exit(2);
   }
@@ -333,18 +832,19 @@ function main() {
     const git = gitReader(ROOT);
     const base = option(args, "base") ?? "origin/main";
     const forkPoint = git(["merge-base", base, "HEAD"]);
-    const names = forkPoint ? git(["diff", "--name-only", forkPoint, "HEAD"]) : null;
-    if (names === null) {
+    const diff = forkPoint ? diffContext({ git, forkPoint }) : null;
+    if (diff === null) {
       result = { mode: "all", why: `git could not diff against ${base}` };
     } else {
+      const source = readFileSync(path.join(ROOT, "e2e/visual.spec.ts"), "utf8");
       result = selectCaptures({
-        changed: names.split("\n").filter(Boolean),
+        ...diff,
         graph: importGraph(ROOT),
         report,
-        source: readFileSync(path.join(ROOT, "e2e/visual.spec.ts"), "utf8"),
+        source,
         helpers: new Map([
           ...helperBodies(readFileSync(path.join(ROOT, "e2e/helpers.ts"), "utf8")),
-          ...helperBodies(readFileSync(path.join(ROOT, "e2e/visual.spec.ts"), "utf8")),
+          ...helperBodies(source),
         ]),
       });
     }
@@ -358,6 +858,8 @@ function main() {
   const chosen = result.mode === "all" ? every : every.filter((line) => result.lines.has(line));
   const filtered = result.mode === "all" ? report : filterReport(report, result.lines);
   writeFileSync(outFile, JSON.stringify(filtered));
+  const grepFile = option(args, "grep");
+  if (grepFile) writeFileSync(grepFile, lightGrep(chosen) ?? "");
   const shards = result.mode === "all" ? FULL_SHARDS : shardCount(chosen, durations);
 
   const headline =

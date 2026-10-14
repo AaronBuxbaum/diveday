@@ -460,12 +460,13 @@ jobs:
   #   it always did: main's snapshot is the baseline every later commit and
   #   every branch cut from it compares against, and it is never narrowed.
   # - A pull request captures what its diff can reach plus a smoke set
-  #   (`scripts/visual-affected.mjs`: the e2e-affected walk of routes and
-  #   importers, read against each capture's own source), on as few shards as
-  #   that weighs, and `visual-report` copies every other surface from the
-  #   expected snapshot before the compare (`scripts/visual-fill.mjs`), so it
-  #   reads as unchanged and the published report is whole. A diff it cannot
-  #   bound (the harness, the seed, a stylesheet, a locale bundle, a config,
+  #   (`scripts/visual-affected.mjs`: the changed lines followed name by name
+  #   to the pages that read them, `scripts/symbol-reach.mjs`, read against each
+  #   capture's own source), on as few shards as that weighs, and
+  #   `visual-report` copies every other surface from the expected snapshot
+  #   before the compare (`scripts/visual-fill.mjs`), so it reads as unchanged
+  #   and the published report is whole. A diff it cannot bound (the harness,
+  #   the seed or what the seed runs, the schema, a stylesheet, a build config,
   #   this file) captures everything.
   #
   # The diff is taken against the fork point from the default branch, which is
