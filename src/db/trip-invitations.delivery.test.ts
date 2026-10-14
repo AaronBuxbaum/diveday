@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications/kinds";
 import { seededShopContext } from "@/test/db";
 
@@ -28,7 +29,7 @@ const { sendNotification } = await import("./notifications");
 const { recordCourseInquiry } = await import("./course-inquiries");
 const { getCourseBySlug } = await import("./courses");
 const { listBookableDivers } = await import("./divers");
-const { people, personCourtesyEmailUnsubscribeTokens } = await import("./schema");
+const { people, personCourtesyEmailUnsubscribeTokens, tripInvitations } = await import("./schema");
 const {
   createDirectTripInvitation,
   createTripRequestInvitations,
@@ -205,5 +206,97 @@ describe("deliverTripInvitation", () => {
     const notification = sent();
     expect(notification.kind).toBe("trip_invitation");
     expect("unsubscribeUrl" in notification).toBe(false);
+  });
+
+  /**
+   * Issue #2133: every re-send stamped a fresh `invitedAt`, and with it a new
+   * unsubscribe token and idempotency key, so any staff role could mail the
+   * same diver a cold (commercial) invitation over and over. Aaron,
+   * 2026-10-13: a repeat within 24 hours of the last stamp is refused with
+   * the composer fallback; roles are not narrowed.
+   */
+  describe("re-sending a cold invitation", () => {
+    async function sentOnce() {
+      const ctx = await context();
+      const { invitationId } = await directInvitation(ctx);
+      const input = {
+        shopId: ctx.shop.id,
+        shopSlug: ctx.shop.slug,
+        tripId: ctx.trip.id,
+        invitationId,
+      };
+      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
+      return { ctx, input };
+    }
+
+    async function stampOf(ctx: Awaited<ReturnType<typeof context>>, invitationId: string) {
+      const [row] = await ctx.db
+        .select({ invitedAt: tripInvitations.invitedAt })
+        .from(tripInvitations)
+        .where(eq(tripInvitations.id, invitationId));
+      return row?.invitedAt ?? null;
+    }
+
+    it("refuses a second email within 24 hours and hands back the composer", async () => {
+      const { ctx, input } = await sentOnce();
+      const stamped = await stampOf(ctx, input.invitationId);
+
+      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("fallback");
+
+      expect(sendNotification).toHaveBeenCalledTimes(1);
+      // The refusal neither mints another link nor moves the window forward.
+      const tokens = await ctx.db.select().from(personCourtesyEmailUnsubscribeTokens);
+      expect(tokens).toHaveLength(1);
+      expect(await stampOf(ctx, input.invitationId)).toEqual(stamped);
+    });
+
+    it("refuses at 23 hours and sends again once 24 hours have passed", async () => {
+      const { ctx, input } = await sentOnce();
+      const at = (hours: number) =>
+        ctx.db
+          .update(tripInvitations)
+          .set({ invitedAt: new Date(nowDate().getTime() - hours * HOUR_MS) })
+          .where(eq(tripInvitations.id, input.invitationId));
+
+      await at(23);
+      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("fallback");
+      await at(24);
+      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
+      expect(sendNotification).toHaveBeenCalledTimes(2);
+    });
+
+    it("leaves a reply to a diver's own date request unthrottled", async () => {
+      const ctx = await context();
+      const course = await getCourseBySlug(ctx.db, ctx.shop.id, "open-water-diver");
+      if (!course) throw new Error("expected seeded course missing");
+      const request = await recordCourseInquiry(ctx.db, {
+        shopId: ctx.shop.id,
+        courseId: course.id,
+        name: "Rae Asker",
+        email: "rae.asker@example.com",
+        experienceLevel: "certified",
+        divers: 1,
+      });
+      await createTripRequestInvitations(ctx.db, {
+        shopId: ctx.shop.id,
+        tripId: ctx.trip.id,
+        requestIds: [request.id],
+        createdByPersonId: ctx.author.id,
+      });
+      const row = (await listTripInvitations(ctx.db, ctx.shop.id, ctx.trip.id)).find(
+        ({ invitation }) => invitation.courseInquiryId === request.id,
+      );
+      if (!row) throw new Error("request invitation missing");
+      const input = {
+        shopId: ctx.shop.id,
+        shopSlug: ctx.shop.slug,
+        tripId: ctx.trip.id,
+        invitationId: row.invitation.id,
+      };
+
+      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
+      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
+      expect(sendNotification).toHaveBeenCalledTimes(2);
+    });
   });
 });

@@ -247,6 +247,9 @@ export async function recordTripInvitation(
  */
 export type TripInvitationDelivery = "sent" | "fallback" | "opted_out";
 
+/** How long after its last stamp a cold invitation may not be emailed again (#2133). */
+const DIRECT_RESEND_WINDOW_MS = 24 * HOUR_MS;
+
 /**
  * Stamp one invitation as contacted and email it — as service mail or as
  * commercial mail, by where the invitation came from (Aaron, 2026-10-06, issue
@@ -264,6 +267,16 @@ export type TripInvitationDelivery = "sent" | "fallback" | "opted_out";
  *
  * The stamp is written first in every case, as it always was: "Contacted" is
  * the record that staff reached out, by email or by hand.
+ *
+ * **A cold invitation is not sent twice in a day** (Aaron, 2026-10-13, issue
+ * #2133). Every send stamps a fresh `invitedAt`, and with it a new unsubscribe
+ * token and idempotency key, so a repeat inside `DIRECT_RESEND_WINDOW_MS` of
+ * the last stamp is refused before anything is written or sent: the composer
+ * fallback, so staff can still write by hand, and the window does not slide
+ * forward on a refusal. Any staff role may still send; a reply to a date
+ * request is service mail and is not throttled. An offer from the counter
+ * (`offerDepartureToDiver`) passes the stamp its own claim took (#2480) and
+ * is held by that claim instead.
  */
 export async function deliverTripInvitation(
   db: AppDb,
@@ -279,7 +292,17 @@ export async function deliverTripInvitation(
 ): Promise<TripInvitationDelivery> {
   const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
   if (!context) return "fallback";
-  const invitedAt = input.invitedAt ?? nowDate();
+  const now = nowDate();
+  const last = context.invitation.invitedAt;
+  if (
+    context.invitation.source === "direct" &&
+    !input.invitedAt &&
+    last &&
+    now.getTime() - last.getTime() < DIRECT_RESEND_WINDOW_MS
+  ) {
+    return "fallback";
+  }
+  const invitedAt = input.invitedAt ?? now;
   const recorded = await recordTripInvitation(db, {
     shopId: input.shopId,
     tripId: input.tripId,
