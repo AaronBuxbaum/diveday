@@ -15,4 +15,6 @@ Provider: AWS SES (switched from Resend 2026-08-03, [20260803-ses-sole-email-pro
 
 Durable notification policy and multi-channel delivery.
 
+**Extended 2026-10-14 (Aaron Buxbaum):** the Monday email (`src/lib/weekly-digest.ts`) is staff service mail, so it needs no marketing opt-in; it is on for owners by default and off for everyone else, and anyone can turn it off in Settings.
+
 Part of the [human decision log](README.md#decision-register).
