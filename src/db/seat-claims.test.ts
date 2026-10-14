@@ -7,6 +7,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
 import { cancelBooking, createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
+import { mergeDiverRecords } from "./diver-merge";
 import { createDiver } from "./divers";
 import { getBookingReadiness } from "./readiness";
 import {
@@ -63,6 +64,16 @@ async function bookParty(db: AppDb, shopId: string, tripId: string) {
   const [lead, memberOne, memberTwo] = outcome.bookings;
   if (!lead || !memberOne || !memberTwo) throw new Error("party booking incomplete");
   return { lead, memberOne, memberTwo };
+}
+
+/** The person a seat is booked to. */
+async function personOfSeat(db: AppDb, bookingId: string): Promise<string> {
+  const [seat] = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId));
+  if (!seat) throw new Error("seat missing");
+  return seat.personId;
 }
 
 /** Mints one claim link for the given member seat, as the organizer surfaces do. */
@@ -1185,6 +1196,105 @@ describe("a parent signs a minor seat's release", () => {
       .where(eq(bookings.id, mia.bookingId));
     if (!seat) throw new Error("seat missing");
     await db.update(people).set({ dateOfBirth: "1990-01-01" }).where(eq(people.id, seat.personId));
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  /**
+   * Security review F1: a seat whose person staff removed or erased is not a
+   * release anyone signs from the party panel, and a removed lead opens none.
+   */
+  it.each(["removed", "erased"] as const)("never opens a release on a %s record", async (state) => {
+    const { db, shop, lead, mia } = await familyParty();
+    const personId = await personOfSeat(db, mia.bookingId);
+    await db
+      .update(people)
+      .set(
+        state === "removed"
+          ? { deletedAt: new Date(nowMs()) }
+          : { deletedAt: new Date(nowMs()), anonymizedAt: new Date(nowMs()) },
+      )
+      .where(eq(people.id, personId));
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)?.signForMinor).toBe(false);
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  it("never opens one when the lead's own record is removed", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    await db
+      .update(people)
+      .set({ deletedAt: new Date(nowMs()) })
+      .where(eq(people.id, await personOfSeat(db, lead.bookingId)));
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  /**
+   * Security review F2: "a person this booking made" is about the record, not
+   * its email. A walk-in the shop already knows has no address either; once a
+   * staff merge points the seat at that record, the lead signs nothing for it.
+   */
+  it("never opens one after a merge points the seat at a known diver with no email", async () => {
+    const { db, shop, open, lead, mia } = await familyParty();
+    const otherTrip = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (trip) => trip.id !== open.id,
+    );
+    if (!otherTrip) throw new Error("expected a second seeded trip");
+    const earlier = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: otherTrip.id,
+        fullName: "Gus Guardian",
+        email: "gus.guardian@example.com",
+      },
+      { actor: "public", shopId: shop.id, tripId: otherTrip.id, fullName: "Mia Child" },
+    ]);
+    if (!earlier.ok) throw new Error(`earlier booking failed: ${earlier.reason}`);
+    const knownSeat = earlier.bookings[1];
+    if (!knownSeat) throw new Error("earlier party incomplete");
+    const known = await personOfSeat(db, knownSeat.bookingId);
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!owner) throw new Error("expected the seeded owner");
+    const merged = await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: await personOfSeat(db, mia.bookingId),
+      survivorId: known,
+      actorPersonId: owner.id,
+    });
+    expect(merged).toMatchObject({ ok: true });
+    expect(await personOfSeat(db, mia.bookingId)).toBe(known);
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)?.signForMinor).toBe(false);
     expect(
       await openMinorSeatWaiver(db, {
         shopId: shop.id,

@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, isNull, ne, or } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
@@ -621,6 +621,7 @@ export async function issuePartySeatClaims(
       signForMinor:
         lead !== null &&
         minorSeatSignable(row.booking, row.person, { ...lead, now, claimable }) &&
+        (await seatPersonIsThisBookings(db, input.shopId, row.booking)) &&
         (await minorSeatWaiverOwed(db, input.shopId, row.booking.id)),
       claim: claimable
         ? await issueBookingCapability(db, {
@@ -644,7 +645,10 @@ export async function issuePartySeatClaims(
  * - **a person this booking made**: no email of their own, or only the lead's.
  *   A seat typed with somebody's real name and email lands on that person's
  *   record when the names match, and the lead must never sign a release for a
- *   diver the shop already knows (security review of H-116)
+ *   diver the shop already knows (security review of H-116). The email is only
+ *   the cheap half: `seatPersonIsThisBookings` reads the record itself, because
+ *   a walk-in has no address either and a staff merge can point the seat at one
+ * - a record still standing: not removed or erased, the seat's and the lead's
  * - **a guardian is what the page will ask for**: `guardianSignatureRequired`
  *   on the shop's day, the rule `/waivers/[token]` and `completeWaiver` read.
  *   A date of birth on file saying adult would make the page ask for the
@@ -655,7 +659,7 @@ function minorSeatSignable(
     typeof bookings.$inferSelect,
     "claimedAt" | "minorDeclaredAt" | "identityUnconfirmedAt"
   >,
-  person: Pick<typeof people.$inferSelect, "email" | "dateOfBirth">,
+  person: Pick<typeof people.$inferSelect, "email" | "dateOfBirth" | "deletedAt" | "anonymizedAt">,
   context: { leadEmail: string | null; timezone: string; now: Date; claimable: boolean },
 ): boolean {
   const ownEmail = person.email?.trim().toLowerCase() || null;
@@ -665,6 +669,8 @@ function minorSeatSignable(
     booking.claimedAt === null &&
     booking.minorDeclaredAt !== null &&
     booking.identityUnconfirmedAt === null &&
+    person.deletedAt === null &&
+    person.anonymizedAt === null &&
     (ownEmail === null || ownEmail === leadEmail) &&
     guardianSignatureRequired(person.dateOfBirth, signingDate(context.now, context.timezone), true)
   );
@@ -679,11 +685,53 @@ async function leadSigningContext(
   const [row] = await db
     .select({ email: people.email, timezone: shops.timezone })
     .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(
+      people,
+      and(eq(people.id, bookings.personId), isNull(people.deletedAt), isNull(people.anonymizedAt)),
+    )
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(and(eq(bookings.id, leadBookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   return row ? { leadEmail: row.email, timezone: row.timezone } : null;
+}
+
+/**
+ * Whether the seat's person is one this booking made, read from the record:
+ * no other booking under any status, and no release filed anywhere but this
+ * seat. A name-only seat always inserts a fresh person, so this holds for
+ * every seat the door is meant for; a diver the shop knew before (a walk-in
+ * with no address, a record a staff merge pointed the seat at) has history,
+ * and the lead never signs for them (security review F2 of H-116).
+ */
+async function seatPersonIsThisBookings(
+  db: AppDb,
+  shopId: string,
+  booking: Pick<typeof bookings.$inferSelect, "id" | "personId">,
+): Promise<boolean> {
+  const [otherBooking] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.personId, booking.personId),
+        ne(bookings.id, booking.id),
+      ),
+    )
+    .limit(1);
+  if (otherBooking) return false;
+  const [otherRelease] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, booking.personId),
+        or(isNull(waiverRecords.bookingId), ne(waiverRecords.bookingId, booking.id)),
+      ),
+    )
+    .limit(1);
+  return !otherRelease;
 }
 
 /** The release blockers a parent's signature answers; anything else is not theirs to fix. */
@@ -727,7 +775,15 @@ export async function openMinorSeatWaiver(
       trips,
       and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId), liveTrip()),
     )
-    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
+    .innerJoin(
+      people,
+      and(
+        eq(people.id, bookings.personId),
+        eq(people.shopId, input.shopId),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
     .where(
       and(
         eq(bookings.id, input.seatBookingId),
@@ -744,6 +800,7 @@ export async function openMinorSeatWaiver(
   if (!minorSeatSignable(row.booking, row.person, { ...lead, now, claimable })) {
     return { ok: false };
   }
+  if (!(await seatPersonIsThisBookings(db, input.shopId, row.booking))) return { ok: false };
   if (!(await minorSeatWaiverOwed(db, input.shopId, row.booking.id))) return { ok: false };
   const issued = await issueWaiverRequest(db, {
     shopId: input.shopId,
