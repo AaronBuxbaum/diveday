@@ -405,7 +405,9 @@ test.describe("with Accept-Language: es", () => {
     await page
       .getByLabel("Correo electrónico", { exact: true })
       .fill(`nora-es-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: /^Reservar (estas plazas|la última plaza)$/ }).click();
+    await page
+      .getByRole("button", { name: /^Reservar (esta plaza|\d+ plazas|la última plaza)$/ })
+      .click();
 
     // Where booking lands — the diver's own readiness page (ADR
     // 20260820-one-page-after-booking) — and the next step it offers, both in
