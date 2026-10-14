@@ -183,17 +183,13 @@ test.describe("staff-prepared trip", () => {
     await expect(
       arrivalCard.getByRole("link", { name: "front.desk@mail.example" }),
     ).toHaveAttribute("href", "mailto:front.desk@mail.example");
-    // The map is a plain roadmap embed built from the shop's own address —
-    // never a guessed location. The e2e context answers maps.google.com
-    // with an empty page (fixtures.ts), so this asserts the frame, not its
-    // contents.
-    await expect(arrivalCard.locator('iframe[title="Map of Blue Mantis Divers"]')).toHaveAttribute(
-      "src",
-      /100%20Ocean%20Drive/,
-    );
-    // And it is the *only* one: the deleted card is gone, not relocated.
+    // The map is drawn only once the map host answers (fourth UX review
+    // item 4, `useMapReachable`). The e2e context refuses that probe
+    // (fixtures.ts), which is a marina with one bar: the card carries no
+    // empty frame, and the address above it stands alone. The frame's own
+    // `src`, the shop's own address, is pinned in TripArrivalCard.test.tsx.
     await expect(page.getByRole("heading", { name: "Your dive shop" })).toHaveCount(0);
-    await expect(page.locator("iframe[title^='Map of']")).toHaveCount(1);
+    await expect(page.locator("iframe[title^='Map of']")).toHaveCount(0);
 
     // The question no form asked until 2026-08-21 (ADR
     // 20260821-currency-is-what-catches-people). It gates nothing, so what is
