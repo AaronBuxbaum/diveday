@@ -11,7 +11,10 @@ const seen = vi.hoisted(() => ({
   party: null as Record<string, unknown> | null,
 }));
 
-vi.mock("../booking-actions", () => ({ cancelMyBookingAction: async () => {} }));
+vi.mock("../booking-actions", () => ({
+  cancelMyBookingAction: async () => {},
+  askToMoveAction: async () => {},
+}));
 vi.mock("./RunningLate", () => ({ RunningLate: () => <p>late</p> }));
 vi.mock("./CourseMaterials", () => ({ CourseMaterials: () => <p>materials</p> }));
 vi.mock("@/components/TripArrivalCard", () => ({
@@ -50,7 +53,10 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
   return {
     token: "tok",
     data: {
-      detail: { trip: { title: "Two-Tank Reef" }, shop: { timezone: "America/New_York" } },
+      detail: {
+        trip: { title: "Two-Tank Reef" },
+        shop: { name: "Blue Mantis Divers", timezone: "America/New_York" },
+      },
       shop: { dockCallMinutes: 30 },
       pickupTime: null,
       rentalFit: null,
@@ -146,5 +152,43 @@ describe("ThreadSections", () => {
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByText("arrival")).toBeNull();
     expect(screen.queryByText("packing")).toBeNull();
+  });
+
+  /** H-118: past the free window, the ask comes before the forfeit. */
+  it("offers Ask to move above the cancel once a cancel would forfeit, with the shop's phone", () => {
+    const past = context({
+      fullShop: {
+        name: "Blue Mantis Divers",
+        contactPhone: "+1 305-555-0100",
+      } as unknown as ReadyThreadSectionsContext["fullShop"],
+    });
+    Object.assign(past.data, { moveAsk: "open", cancelPreview: "forfeit" });
+    const { container } = render(<ThreadSections context={past} />);
+    expect(
+      screen.getByText(
+        "Can’t make this date? Ask Blue Mantis Divers to move you to another one, or call +1 305-555-0100.",
+      ),
+    ).toBeTruthy();
+    const ask = screen.getByRole("button", { name: "Ask to move" });
+    const cancel = screen.getByRole("button", { name: t("ready.cancelSpot") });
+    expect(ask.compareDocumentPosition(cancel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelector('input[name="note"]')).toBeTruthy();
+  });
+
+  it("says the ask was sent instead of offering it twice, and shows nothing before the window closes", () => {
+    const asked = context();
+    Object.assign(asked.data, { moveAsk: "asked" });
+    render(<ThreadSections context={asked} />);
+    expect(
+      screen.getByText(
+        "You asked Blue Mantis Divers to move you. They’ll be in touch about another date.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Ask to move" })).toBeNull();
+    cleanup();
+    const early = context();
+    Object.assign(early.data, { moveAsk: null });
+    render(<ThreadSections context={early} />);
+    expect(screen.queryByRole("button", { name: "Ask to move" })).toBeNull();
   });
 });

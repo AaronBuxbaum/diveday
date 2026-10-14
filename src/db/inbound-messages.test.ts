@@ -5,17 +5,19 @@ import {
   countUnansweredMessages,
   deleteStrangerInboundMessage,
   getInboundMessage,
+  hasMoveAsk,
   lastInboundAt,
   markInboundAnswered,
   matchPersonByAddress,
   pagedInboxMessages,
   personThread,
   recordInboundMessage,
+  recordMoveAsk,
   recordStaffReply,
   reopenInboundMessage,
   shopIdForInboundEmailToken,
 } from "./inbound-messages";
-import { inboundMessages, people, personRoles, shops } from "./schema";
+import { bookings, inboundMessages, people, personRoles, shops } from "./schema";
 
 /**
  * The inbox's contract (ADR 20260907-two-way-inbox): a message lands on the
@@ -514,5 +516,60 @@ describe("the WhatsApp window", () => {
       new Date("2026-07-21T12:00:00.000Z"),
     );
     expect(await lastInboundAt(db, shop.id, diver.id, "sms")).toBeNull();
+  });
+});
+
+/**
+ * H-118: "Ask to move" from the booking page. One row per booking, filed on
+ * the diver the booking belongs to and only inside its shop.
+ */
+describe("an Ask to move", () => {
+  async function aBooking() {
+    const { db, shop } = ctx;
+    const [row] = await db
+      .select({ bookingId: bookings.id, personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.shopId, shop.id))
+      .limit(1);
+    if (!row) throw new Error("seeded booking missing");
+    return row;
+  }
+
+  it("files one page message naming the booking, as a move, from the diver on file", async () => {
+    const { db, shop } = ctx;
+    const { bookingId, personId } = await aBooking();
+    expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(false);
+    const first = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId,
+      note: "  Any Saturday in August  ",
+      now: NOW,
+    });
+    if (first.status !== "recorded") throw new Error(`expected recorded, got ${first.status}`);
+    const row = await getInboundMessage(db, shop.id, first.id);
+    expect(row).toMatchObject({
+      channel: "page",
+      keywordIntent: "move",
+      bookingId,
+      personId,
+      body: "Any Saturday in August",
+      answeredAt: null,
+      senderAuthenticated: true,
+    });
+    expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(true);
+    expect(await countUnansweredMessages(db, shop.id)).toBeGreaterThan(0);
+
+    const again = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: NOW });
+    expect(again.status).toBe("already");
+  });
+
+  it("finds no booking from another shop", async () => {
+    const { db } = ctx;
+    const { bookingId } = await aBooking();
+    const elsewhere = await shopWithCountry(db, "US", "move-ask-elsewhere");
+    expect(await recordMoveAsk(db, { shopId: elsewhere, bookingId, now: NOW })).toEqual({
+      status: "not_found",
+    });
+    expect(await hasMoveAsk(db, elsewhere, bookingId)).toBe(false);
   });
 });

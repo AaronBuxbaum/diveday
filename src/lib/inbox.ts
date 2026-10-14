@@ -12,7 +12,26 @@ import { toE164 } from "@/lib/phone";
  * `staff/inbox.json`.
  */
 
+/** A channel a diver can write in on, and a webhook files. */
 export type InboundChannel = "email" | "sms" | "whatsapp";
+
+/**
+ * Every source an Inbox row can have: the channels above, and the diver's own
+ * booking page (`page`, an "Ask to move", H-118). A page row has no address to
+ * answer on, so it is never a reply target.
+ */
+export type InboxChannel = InboundChannel | "page";
+
+/** The longest note a diver may add to an "Ask to move" (H-118). */
+export const MOVE_ASK_NOTE_MAX_LENGTH = 500;
+
+/**
+ * The provider id an "Ask to move" is filed under: one per booking, so a
+ * second tap, a double submit or a back-button resend is the same row.
+ */
+export function moveAskProviderId(bookingId: string): string {
+  return `move-ask:${bookingId}`;
+}
 
 /**
  * How much of a diver's message is kept. A reply to a confirmation is a

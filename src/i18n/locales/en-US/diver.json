@@ -815,6 +815,16 @@
     "paymentUnavailable": "We couldn’t open the payment page. Your seat is safe. Try again, or pay at the shop.",
     "paymentCancelled": "Payment canceled. Your seat is still held.",
     "codeUsedUp": "That code’s been used up. Your seat is held, and you can pay the full price below.",
+    "moveAsk": {
+      "body": "Can’t make this date? Ask {shop} to move you to another one, or call {phone}.",
+      "bodyNoPhone": "Can’t make this date? Ask {shop} to move you to another one.",
+      "noteLabel": "Dates that would work (optional)",
+      "action": "Ask to move",
+      "pending": "Sending…",
+      "asked": "You asked {shop} to move you. They’ll be in touch about another date.",
+      "sent": "Sent. The shop will be in touch about another date.",
+      "unavailable": "That couldn’t be sent. Call the shop on the number below."
+    },
     "cancelSpot": "Cancel my seat",
     "lateLead": "On your way but behind?",
     "lateButton": "Running late",

@@ -478,3 +478,34 @@ describe("clearBookingRunningLate", () => {
     expect(await lateAt(ownWord.bookingId)).toEqual(earlier);
   });
 });
+
+/**
+ * H-118: an "Ask to move" names its booking, so the row reads that seat
+ * whenever it departs, not the one the running-late window would infer.
+ */
+describe("a message that names its booking", () => {
+  it("is about that seat even a week out, and a stranger's booking id reads nothing", async () => {
+    const { db, shop, trip, bookingId, personId, now } = await context();
+    const weekBefore = new Date(now.getTime() - 7 * 24 * HOUR_MS);
+    const seats = await messageSeats(
+      db,
+      shop.id,
+      [
+        { id: "a", personId, receivedAt: weekBefore, bookingId },
+        { id: "b", personId, receivedAt: weekBefore, bookingId: null },
+      ],
+      now,
+    );
+    expect(seats.get("a")).toMatchObject({ bookingId, tripId: trip.id, title: trip.title });
+    // Inferred from the window, a message from a week ago names nothing.
+    expect(seats.has("b")).toBe(false);
+
+    const otherShop = await messageSeats(
+      db,
+      "00000000-0000-4000-8000-000000000000",
+      [{ id: "a", personId, receivedAt: now, bookingId }],
+      now,
+    );
+    expect(otherShop.size).toBe(0);
+  });
+});

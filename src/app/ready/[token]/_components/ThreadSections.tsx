@@ -17,9 +17,10 @@ import { claimLinkPath } from "@/lib/booking-capabilities";
 import { formatShortDate } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
-import { addSeatFromReady, cancelMyBookingAction } from "../booking-actions";
+import { addSeatFromReady, askToMoveAction, cancelMyBookingAction } from "../booking-actions";
 import { CourseMaterials } from "./CourseMaterials";
 import { CANCEL_PREVIEW_KEY } from "./cancel-notices";
+import { MoveAsk } from "./MoveAsk";
 import { PartySection } from "./PartySection";
 import { RunningLate } from "./RunningLate";
 
@@ -188,6 +189,16 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           // there is a refund to preview, and the form's own `mt-3` stood
           // "Cancel my spot" 36px under the rule without one (K-156).
           <section className={`flex flex-col gap-3 ${THREAD_FOOT_SECTION_CLASS}`}>
+            {/* Past the free window, the ask comes before the forfeit (H-118). */}
+            {data.moveAsk ? (
+              <MoveAsk
+                state={data.moveAsk}
+                shopName={detail.shop.name}
+                shopPhone={fullShop?.contactPhone ?? null}
+                action={askToMoveAction.bind(null, token)}
+                t={t}
+              />
+            ) : null}
             {cancelPreviewKey ? (
               <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
             ) : null}

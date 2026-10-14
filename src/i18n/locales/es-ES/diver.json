@@ -815,6 +815,16 @@
     "paymentUnavailable": "No hemos podido abrir la página de pago. Tu plaza está a salvo. Inténtalo otra vez o paga en el centro.",
     "paymentCancelled": "Pago cancelado. Tu plaza sigue reservada.",
     "codeUsedUp": "Ese código ya se ha agotado. Tu plaza sigue reservada y puedes pagar el precio completo abajo.",
+    "moveAsk": {
+      "body": "¿No puedes en esta fecha? Pídele a {shop} que te cambie a otra, o llama al {phone}.",
+      "bodyNoPhone": "¿No puedes en esta fecha? Pídele a {shop} que te cambie a otra.",
+      "noteLabel": "Fechas que te sirven (opcional)",
+      "action": "Pedir cambio de fecha",
+      "pending": "Enviando…",
+      "asked": "Le pediste a {shop} que te cambie de fecha. Te contactarán para elegir otra.",
+      "sent": "Enviado. El centro te contactará para elegir otra fecha.",
+      "unavailable": "No se pudo enviar. Llama al centro al número de abajo."
+    },
     "cancelSpot": "Cancelar mi plaza",
     "lateLead": "¿Vas de camino pero con retraso?",
     "lateButton": "Llego tarde",

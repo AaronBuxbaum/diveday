@@ -12,6 +12,7 @@ import {
   createBooking,
   setBookingLastDived,
 } from "./bookings";
+import { recordMoveAsk } from "./inbound-messages";
 import { setBookingPayment } from "./payments";
 import {
   createCertification,
@@ -21,7 +22,7 @@ import {
 } from "./readiness";
 import { carriedPreparationForDiver, getBookedCard, getReadyPageData } from "./ready";
 import { getRentalFit, toDiverRentalFit } from "./rental-fit";
-import { bookings, people, shops, waiverRecords } from "./schema";
+import { bookings, people, shops, trips as tripTable, waiverRecords } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers";
@@ -219,6 +220,45 @@ describe("getReadyPageData", () => {
     expect(data?.canPay).toBe(false);
     // And the money it still holds is money a cancellation would return.
     expect(data?.cancelPreview).not.toBe("unpaid");
+  });
+
+  /**
+   * H-118: "Ask to move" is offered exactly when a cancel would forfeit what
+   * was paid, and says it was asked once it has been.
+   */
+  it("offers Ask to move only past the free window on a paid seat, then says it was asked", async () => {
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    // Unpaid: a cancel costs nothing, so there is nothing to ask instead.
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBeNull();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "stripe",
+      providerRef: "pi_move_ask",
+    });
+    // Inside a generous window the cancel refunds.
+    await db.update(tripTable).set({ cancellationWindowHours: 1 }).where(eq(tripTable.id, open.id));
+    expect((await getReadyPageData(db, bookingId))?.cancelPreview).toBe("refund");
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBeNull();
+    // A window wider than the time left: the cancel forfeits.
+    await db
+      .update(tripTable)
+      .set({ cancellationWindowHours: 24 * 365 })
+      .where(eq(tripTable.id, open.id));
+    const past = await getReadyPageData(db, bookingId);
+    expect(past?.cancelPreview).toBe("forfeit");
+    expect(past?.moveAsk).toBe("open");
+    await recordMoveAsk(db, { shopId: shop.id, bookingId, now: nowDate() });
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBe("asked");
+    // A held seat is owed nothing (#2125).
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate() })
+      .where(eq(bookings.id, bookingId));
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBeNull();
   });
 
   it("withdraws the cancel once the seat is checked in", async () => {

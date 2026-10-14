@@ -56,6 +56,10 @@ export const READY_NOTICES: Record<
   // are deliberately never distinguished to a diver (a booking-state oracle is
   // still a leak); the shop's number is on the card below.
   "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
+  // "Ask to move" (H-118): filed in the shop's Inbox, or refused because the
+  // seat is no longer one that can be asked about. The shop's number is below.
+  "saved-move-ask": { tone: "success", key: "ready.moveAsk.sent" },
+  "error-move-ask": { tone: "danger", key: "ready.moveAsk.unavailable" },
   // "Running late" tapped on a seat that is no longer open (J3): checked in,
   // or the boat's time has passed since the page loaded.
   "error-late": { tone: "danger", key: "ready.lateUnavailable" },

@@ -2,6 +2,8 @@ import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type InboundChannel,
+  MOVE_ASK_NOTE_MAX_LENGTH,
+  moveAskProviderId,
   normalizeEmailAddress,
   normalizePhoneAddress,
   phoneMatches,
@@ -10,7 +12,14 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { queryAll } from "./query-helpers";
-import { inboundMessages, notificationDeliveries, people, shops, staffReplies } from "./schema";
+import {
+  bookings,
+  inboundMessages,
+  notificationDeliveries,
+  people,
+  shops,
+  staffReplies,
+} from "./schema";
 
 /**
  * The shop inbox's readers and writers (ADR 20260907-two-way-inbox).
@@ -222,6 +231,80 @@ async function recordMatchedInboundMessage(
     .onConflictDoNothing({ target: [inboundMessages.channel, inboundMessages.providerMessageId] })
     .returning({ id: inboundMessages.id });
   return inserted ? { status: "recorded", id: inserted.id, personId } : { status: "duplicate" };
+}
+
+/**
+ * **A diver asks to move a seat** (H-118). Past the free-cancellation window a
+ * cancel forfeits the money, so the booking page offers "Ask to move" instead:
+ * a request, not a move. It lands in the Inbox as a `page` message naming the
+ * booking, with the diver's optional note as its words, and staff decide —
+ * moving a paid seat stays staff-side.
+ *
+ * The booking is read inside the shop and must belong to a live diver; the
+ * address recorded is the one on file, so the row says who to call. One ask
+ * per booking (`moveAskProviderId`): a repeat is `already`, never a second
+ * row, whether or not the first was answered.
+ */
+export async function recordMoveAsk(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; note?: string | null; now: Date },
+): Promise<{ status: "recorded"; id: string } | { status: "already" } | { status: "not_found" }> {
+  const [seat] = await db
+    .select({ personId: people.id, email: people.email, phone: people.phone })
+    .from(bookings)
+    .innerJoin(
+      people,
+      and(
+        eq(people.id, bookings.personId),
+        eq(people.shopId, input.shopId),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!seat) return { status: "not_found" };
+  const note = truncateInboundBody(input.note ?? "").slice(0, MOVE_ASK_NOTE_MAX_LENGTH);
+  const [inserted] = await db
+    .insert(inboundMessages)
+    .values({
+      shopId: input.shopId,
+      personId: seat.personId,
+      channel: "page",
+      fromAddress: normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "",
+      body: note,
+      receivedAt: input.now,
+      providerMessageId: moveAskProviderId(input.bookingId),
+      keywordIntent: "move",
+      bookingId: input.bookingId,
+      // The bearer link vouched for who this is, as WhatsApp vouches for a
+      // number: it is a diver waiting, and counts as one.
+      senderAuthenticated: true,
+    })
+    .onConflictDoNothing({ target: [inboundMessages.channel, inboundMessages.providerMessageId] })
+    .returning({ id: inboundMessages.id });
+  return inserted ? { status: "recorded", id: inserted.id } : { status: "already" };
+}
+
+/** Whether this booking's diver has already asked to move it (H-118). */
+export async function hasMoveAsk(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: inboundMessages.id })
+    .from(inboundMessages)
+    .where(
+      and(
+        eq(inboundMessages.shopId, shopId),
+        eq(inboundMessages.channel, "page"),
+        eq(inboundMessages.providerMessageId, moveAskProviderId(bookingId)),
+        isNull(inboundMessages.deletedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }
 
 /** The shop a reply-to token names, or null for a token nobody holds. */
