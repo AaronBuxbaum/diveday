@@ -47,7 +47,8 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
    the follow-up visual-only check; run the `visual-triage` skill for any red visual job, forked
    PR, or diff the generated baseline commit does not explain. The PR is not done while a visual
    diff or failure is unexplained.
-11. **Answer the review.** `gh pr view <n> --comments` — `sourcery-ai` reviews
+11. **Answer the review.** `gh api repos/AaronBuxbaum/diveday/issues/<n>/comments` and
+   `.../pulls/<n>/comments` (REST; `gh pr view` is GraphQL and refused in cloud sessions) — `sourcery-ai` reviews
    every pull request here within minutes, and Aaron's comments arrive later. Each open thread gets
    an action and a reply: fixed (push, then say which commit), declined with the reason (a nitpick
    that contradicts a rule in AGENTS.md is declined by naming it), or filed as a `needs-triage`

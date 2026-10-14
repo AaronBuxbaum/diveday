@@ -3,14 +3,16 @@ import { nowDate } from "@/lib/clock";
 import { hasSailed } from "@/lib/trips";
 import { addDockRiderAction } from "../dock-rider-actions";
 import { DockRiderForm } from "./DockRiderForm";
+import { dockRiderDoorOpen } from "./dock-rider-door";
 import { LostItemsSection } from "./LostItemsSection";
 
 /**
  * **The dock's own two jobs** (batch 4), under the crew list on the Boat tab.
  * Before the boat leaves: add somebody who turned up to ride along (D6), at
- * the departure checkpoint only, and only until the crew says the boat has
- * left. After it sails: what the crew found aboard (J2). The two never show
- * together, because the one is over before the other begins.
+ * the departure checkpoint only, only until the crew says the boat has left,
+ * and never on a cancelled departure (`dockRiderDoorOpen`). After it sails:
+ * what the crew found aboard (J2). The two never show together, because the
+ * one is over before the other begins.
  */
 export function DockDesk({
   t,
@@ -19,6 +21,7 @@ export function DockDesk({
   isDeparture,
   startsAt,
   stage,
+  cancelled,
   seats,
 }: {
   t: StaffTranslator;
@@ -27,10 +30,11 @@ export function DockDesk({
   isDeparture: boolean;
   startsAt: Date;
   stage: { stage: string } | null;
+  cancelled: boolean;
   seats: readonly { bookingId: string; fullName: string }[];
 }) {
   const sailed = hasSailed(startsAt, nowDate());
-  const atTheDock = isDeparture && !sailed && (!stage || stage.stage === "boarding");
+  const atTheDock = dockRiderDoorOpen({ isDeparture, sailed, stage, cancelled });
   return (
     <>
       {atTheDock ? (

@@ -338,3 +338,17 @@ describe("the roster's worded controls", () => {
     expect(PAYMENT_STATUSES_ALL).not.toContain("partly_refunded");
   });
 });
+
+/**
+ * **A rehearsal's waiver link was never sent** (#2395). Every message about a
+ * rehearsal is held, and its waiver links are handed over in person, so the
+ * roster never says "Waiver sent" for one; it says the link was held.
+ */
+describe("waiverControls on a rehearsal", () => {
+  it("says an open link was held, not sent, and still offers it", () => {
+    const control = waiverControls(t, { rehearsal: true }).awaiting_signature;
+    expect(control.label).toBe("Held: rehearsal");
+    expect(control.action).toBe("resend");
+    expect(waiverControls(t).awaiting_signature.label).toBe("Waiver sent");
+  });
+});

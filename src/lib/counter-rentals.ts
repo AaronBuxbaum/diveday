@@ -9,7 +9,7 @@ import {
   type RentableItemKind,
   type RentalPricing,
 } from "./rentals";
-import type { ShopWaiverStatus } from "./waivers";
+import { medicalWarningDays, type ShopWaiverStatus } from "./waivers";
 
 /**
  * **A counter rental** — units from the register lent to a person who is not
@@ -258,4 +258,31 @@ export function counterRentalWaiverFlag(
     case "medical_not_cleared":
       return { offerLink: false };
   }
+}
+
+/**
+ * What the Rentals list carries of a counter holder's standing (#2540): its
+ * state, and for a current release standing over a physician's earlier "not
+ * cleared" or an open referral (H-98 as amended), the day of each, so the list
+ * says the warning the ticket says (`CounterRentalWaiverLine`). Days only: the
+ * record behind them stays a tap away on the ticket and the diver record.
+ * Informing only, never a gate (H-108).
+ */
+export type CounterRentalWaiverStanding = {
+  state: ShopWaiverStatus["state"];
+  refusedOn?: CalendarDate;
+  referredOn?: CalendarDate;
+};
+
+export function counterRentalWaiverStanding(
+  status: ShopWaiverStatus,
+  timeZone: string,
+): CounterRentalWaiverStanding {
+  if (status.state !== "current") return { state: status.state };
+  const { refusedOn, referredOn } = medicalWarningDays(status.medical, timeZone);
+  return {
+    state: status.state,
+    ...(refusedOn ? { refusedOn } : {}),
+    ...(referredOn ? { referredOn } : {}),
+  };
 }

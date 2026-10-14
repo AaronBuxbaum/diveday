@@ -438,12 +438,20 @@ const CHROME_CEILING = 20;
 // payment row was raised (code review 2026-10-11, item 26). In a render that is
 // the page's own read, shared through `shopStripeAccountForRender`'s `cache()`;
 // here `cache()` calls straight through, so the replay counts it twice.
-const TODAY_CEILING = 67;
+// 67 → 65 (third review, item 4): a boat's work is one reader
+// (`readBoatWork`), its sizes, nitrox and contact questions one statement over
+// the seats, where Today used to send four. It also counts each boat's open
+// orders, a statement Today did not send before.
+const TODAY_CEILING = 65;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
 // seat on the departure is held, as none is on the one measured here.
-const TRIP_CEILING = 50;
+// 50 → 51 (third review, item 4): the band reads the boat's work through the
+// reader Today reads (`readBoatWork`), so it now also names nitrox with no card
+// and missing emergency contacts. One statement over the seats replaces the
+// shared prep list's fit check, and the open-orders count is the one it sent.
+const TRIP_CEILING = 51;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never

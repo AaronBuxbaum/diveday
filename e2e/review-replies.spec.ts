@@ -29,7 +29,7 @@ test("an owner replies under a published review, and the reply reaches the publi
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/reviews");
-  const waiting = page.getByRole("region", { name: /^Waiting on you/ });
+  const waiting = page.getByRole("region", { name: /^Needs you/ });
   await waiting
     .locator("li")
     .filter({ hasText: comment })

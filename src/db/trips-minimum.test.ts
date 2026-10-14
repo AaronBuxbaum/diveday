@@ -1,8 +1,10 @@
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { MINIMUM_SEATS_DECISION_HOURS_DEFAULT, minimumSeatsDecisionAt } from "@/lib/minimum-seats";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { getTripWithBooked } from "./trips";
+import { crewNotices } from "./schema";
+import { getTripWithBooked, listStaff, setTripCrew } from "./trips";
 import { createTrip } from "./trips-create";
 import {
   cancelDeparturesBelowMinimum,
@@ -199,6 +201,24 @@ describe("cancelDeparturesBelowMinimum", () => {
     const swept = result.cancelled.find((row) => row.tripId === trip.id);
     expect(swept).toMatchObject({ minimum: 4, booked: 2, shopId: shop.id });
     expect((await getTripWithBooked(db, shop.id, trip.id))?.status).toBe("cancelled");
+  });
+
+  // Issue #2284: the call-off is the system's, so its record names no person.
+  // A staffer named here would be read as the one who called it, and would not
+  // be told the boat they crew is off (a crew notice skips its own actor).
+  it("records the call-off as the system's, and tells every crew member", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id, { startsAt: TOMORROW, title: "Crewed and short" });
+    const crewIds = [...new Set((await listStaff(db, shop.id)).map((row) => row.person.id))];
+    await setTripCrew(db, shop.id, trip.id, crewIds.slice(0, 2));
+
+    await cancelDeparturesBelowMinimum(db, { now: NOW });
+    const notices = await db
+      .select({ personId: crewNotices.personId, actorPersonId: crewNotices.actorPersonId })
+      .from(crewNotices)
+      .where(and(eq(crewNotices.tripId, trip.id), eq(crewNotices.change, "called_off")));
+    expect(notices).toHaveLength(2);
+    for (const notice of notices) expect(notice.actorPersonId).toBeNull();
   });
 
   it("leaves the bookings alone, so the shop still knows who to tell", async () => {

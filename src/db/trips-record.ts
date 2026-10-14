@@ -18,6 +18,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
 import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
+import { rearmTripReminders } from "./reminder-rearm";
 import type { Trip } from "./schema";
 import {
   boats,
@@ -317,6 +318,35 @@ export async function getShopTripTitle(
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
   return row?.title ?? null;
+}
+
+/**
+ * The columns {@link meetingPointOfRows} reads off one departure, for a staff
+ * page that states where the boat meets without loading the whole row (the
+ * manifest's plan; UX review 2026-10-13, item 18). Shop-scoped and live-only,
+ * so another tenant's id or a departure off the board reads as null.
+ */
+export async function getTripMeetingPointFields(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<{
+  meetingPointLabel: string | null;
+  meetingPointAddress: string | null;
+  arrivalLandmark: string | null;
+  arrivalParkingNote: string | null;
+} | null> {
+  const [row] = await db
+    .select({
+      meetingPointLabel: trips.meetingPointLabel,
+      meetingPointAddress: trips.meetingPointAddress,
+      arrivalLandmark: trips.arrivalLandmark,
+      arrivalParkingNote: trips.arrivalParkingNote,
+    })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  return row ?? null;
 }
 
 /** One dive site's diver-facing preview facts — no shop-internal fields. */
@@ -692,6 +722,8 @@ export async function updateTrip(
         occurredAt: changedAt,
       });
     }
+    // The divers' reminders fire again for the new date (#2444).
+    if (startMoved) await rearmTripReminders(tx, { shopId, tripId });
     // The crew hear a moved start time (#2283), the same notice the schedule
     // board's move records (`moveTrip`).
     if (existing.status === "scheduled" && startMoved) {

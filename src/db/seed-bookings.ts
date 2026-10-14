@@ -10,7 +10,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
-import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt } from "./seed-clock";
+import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt, sailsAfterDayBoats } from "./seed-clock";
 import { commonsImage } from "./seed-images";
 import { getCurrentWaiverTemplate } from "./waivers";
 
@@ -33,6 +33,20 @@ const DEMO_GUARDIANS: Record<string, { name: string; relationship: "parent" | "l
   {
     "Lena Fischer": { name: "Jonas Fischer", relationship: "parent" },
   };
+
+/**
+ * **Who sails on today's reef boat**, by position in `customerDefs`. Nine
+ * divers, in the order every roster-indexed scenario reads them.
+ *
+ * The thirteen-year-old (Lena Fischer, 2) is aboard by day and not by night:
+ * a demo seeded in the evening sails this boat at 11:30 PM, and a shop does
+ * not put a child on a boat back at 3:00 AM (UX review 2026-10-13, item 40).
+ * Ravi Menon (9), carded and already on the wreck charter, takes her seat, so
+ * the boat keeps its count and its "3 spots left".
+ */
+export function demoReefDiverIndexes(reefSails: Date): number[] {
+  return [0, 1, sailsAfterDayBoats(reefSails) ? 9 : 2, 3, 4, 5, 6, 7, 8];
+}
 
 /**
  * A fixed booking id on the seeded reef trip, so a signed recap link can be
@@ -87,11 +101,14 @@ export async function seedBookings(
   const bookingRows = [
     // The first reef booking is pinned (canonical demo only) so a recap link can
     // be minted deterministically for the visual tests.
-    ...customers.slice(0, 9).map((c, index) => ({
-      tripId: reef.id,
-      personId: c.id,
-      ...(index === 0 && pinRecapBooking ? { id: DEMO_RECAP_BOOKING_ID } : {}),
-    })),
+    ...demoReefDiverIndexes(reef.startsAt)
+      .map((customerIndex) => customers[customerIndex])
+      .filter((c) => c !== undefined)
+      .map((c, index) => ({
+        tripId: reef.id,
+        personId: c.id,
+        ...(index === 0 && pinRecapBooking ? { id: DEMO_RECAP_BOOKING_ID } : {}),
+      })),
     ...customers.slice(4, 7).map((c) => ({ tripId: night.id, personId: c.id })),
     ...customers.slice(0, 10).map((c) => ({ tripId: wreck.id, personId: c.id })),
     ...laterRosters.flatMap(([title, indexes]) => {

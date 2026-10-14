@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { MediaDeletionKind, PaymentOperationKind, WorkOrderLineKindValue } from "@/db/schema";
 import { BOAT_PAPERS, MUST_CARRY_KIT_KINDS } from "@/lib/boat-safety";
+import type { BoatWorkCode } from "@/lib/boat-work";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
 import type { DepthUnit } from "@/lib/depth-units";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
@@ -35,6 +36,7 @@ import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { boatSafetyNoticeText } from "./boat-safety-labels";
+import { boatWorkText } from "./boat-work-labels";
 import { buddyAlertText } from "./buddy-labels";
 import {
   CARD_STATUS_KEYS,
@@ -253,6 +255,13 @@ function codeRows<Code extends string>(
 function everyCodeOf<Code extends string>(present: Record<Code, true>): readonly Code[] {
   return Object.keys(present) as Code[];
 }
+
+const BOAT_WORK_CODES = everyCodeOf<BoatWorkCode>({
+  missing_sizes: true,
+  ungated_nitrox: true,
+  missing_contact: true,
+  open_orders: true,
+});
 
 const BUDDY_ALERTS = everyCodeOf<BuddyAlert>({
   separated_dock: true,
@@ -496,6 +505,13 @@ const CASES: readonly LabelMapCase[] = [
     map: "MISSING_KEYS",
     rows: codeRows(MUST_CARRY_KIT_KINDS, (locale, kind) =>
       boatSafetyNoticeText(staffTranslator(locale), { code: "kit_missing", kind }),
+    ),
+  },
+  {
+    module: "boat-work-labels.ts",
+    map: "BOAT_WORK_KEYS",
+    rows: codeRows(BOAT_WORK_CODES, (locale, code) =>
+      boatWorkText(staffTranslator(locale), { code, count: 2 }),
     ),
   },
   {

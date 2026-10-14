@@ -11,6 +11,7 @@
     "gear": "Equipo",
     "details": "Detalles"
   },
+  "checkInOpen": "Check-in abierto · en el muelle a las {time}",
   "stageLabel": "Etapa",
   "about": {
     "add": "Añadir",
@@ -19,6 +20,7 @@
     "viewPublic": "Ver página pública",
     "printPacket": "Imprimir paquete",
     "plan": "El plan",
+    "meetingPoint": "Dónde nos encontramos",
     "conditions": "Condiciones",
     "whoCanBook": "Quién puede reservar",
     "boatAndCrew": "Barco y tripulación",
@@ -29,7 +31,7 @@
     "noBoat": "Barco sin asignar",
     "noCrew": "Tripulación sin asignar",
     "oneTime": "Salida única",
-    "perSeat": "por plaza",
+    "perDiver": "por buceador",
     "cancel": "Cancelar esta salida",
     "more": "Más para esta salida"
   },
@@ -56,7 +58,7 @@
     "noteDeleted": "Nota privada del personal eliminada.",
     "bookingRemoved": "Reserva cancelada. La plaza vuelve a estar disponible.",
     "bookingRemovedRefunded": "Reserva cancelada y pago reembolsado. La plaza vuelve a estar disponible.",
-    "bookingRemovedForfeit": "Reserva cancelada. La plaza vuelve a estar disponible. Fue después del plazo de cancelación, así que la plaza no era reembolsable.",
+    "bookingRemovedForfeit": "Reserva cancelada. La plaza vuelve a estar disponible. Fue después del plazo de cancelación, así que no era reembolsable.",
     "bookingRemovedRefundManual": "Reserva cancelada. Se debe un reembolso, pero hay que emitirlo a mano (pago en mostrador, o Stripe no está conectado). Reembolsa desde los pagos del buceador.",
     "bookingRemovedRefundFailed": "Reserva cancelada, pero el reembolso automático no se completó. Emítelo desde los pagos del buceador.",
     "bookingRemovedRefundReview": "Reserva cancelada. El registro de pago y Stripe no coinciden en lo que se cobró, así que revisa los pagos del buceador antes de emitir cualquier reembolso.",
@@ -161,8 +163,6 @@
     "overRatioInstructor": "Ratio de alumnos excedida: añade un instructor",
     "overIntroRatio": "Ratio de bautismo excedida: añade un instructor",
     "toSort": "{count, plural, one {# cosa por resolver} other {# cosas por resolver}}",
-    "prepGaps": "{count, plural, one {A # persona le faltan tallas de alquiler} other {A # personas les faltan tallas de alquiler}}",
-    "awaitingPayment": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}",
     "noRequirements": "Define los requisitos para que alguien pueda embarcar",
     "boatClash": "{boat} también está asignado a {departure}"
   },
@@ -556,6 +556,7 @@
     "waiverResendHint": "Reenviar",
     "waiverSend": "Enviar exención",
     "waiverSent": "Exención enviada",
+    "waiverHeldRehearsal": "Retenida: ensayo",
     "waiverSigned": "Exención firmada",
     "noteCount": "{count, plural, one {# nota} other {# notas}}",
     "emergencyContactAddFull": "Añadir contacto de emergencia",
@@ -647,7 +648,8 @@
     "printLineChecked": "{label} — {status}",
     "printLineNotChecked": "{label} — Sin verificar",
     "errorRefusal": "Eso no se guardó. Inténtalo de nuevo.",
-    "checkedLabel": "Verificado — presiona para quitar la marca",
+    "checkedLabel": "Verificado — presiona dos veces para quitar la marca",
+    "confirmClear": "Presiona otra vez para quitar la marca",
     "uncheckedLabel": "Sin verificar — presiona para marcarlo",
     "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
   },

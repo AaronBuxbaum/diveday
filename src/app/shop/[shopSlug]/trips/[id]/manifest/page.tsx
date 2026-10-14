@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
@@ -57,6 +57,7 @@ import { SummaryPanel } from "./_components/SummaryPanel";
 import { seenGroupView } from "./_components/seen-group-view";
 import { stageStripProps } from "./_components/stage-strip-props";
 import { TripPlanSection } from "./_components/TripPlanSection";
+import { tripPlanRows } from "./_components/trip-plan-rows";
 import type { ManifestActionContext } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -130,6 +131,7 @@ export default async function TripManifestPage({
     catchUp,
     diveIntents,
     stage,
+    meetingPoint,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
@@ -139,11 +141,10 @@ export default async function TripManifestPage({
   if (!departureManifest || !completeManifests) notFound();
   const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t);
 
-  const { checkpoints, checkpoint, isDeparture, manifest } = openCheckpoint(
-    completeManifests,
-    departureManifest,
-    requestedCheckpoint,
-  );
+  const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
+  // A checkpoint this plan lacks leaves the address bar, never opening the dock (#2508).
+  if ("stale" in opened) redirect(shopPath(shopSlug, "trips", tripId, "manifest"));
+  const { checkpoints, checkpoint, isDeparture, manifest } = opened;
   const todayTrailBySubject = personTrailIndex(completeManifests, locale, shop.timezone, t);
   // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
   // ADR 20260804-crew-roll-call-is-per-person). This used to be written inline
@@ -193,7 +194,7 @@ export default async function TripManifestPage({
           page used to hand-roll its own, so switching to the Manifest redrew
           the top of the page for no reason a reader could act on.
           Deliberately without the seats badge the others carry: the whole body
-          below is a live head count, and a "3 spots left" pill above a roll
+          below is a live head count, and a "3 seats left" pill above a roll
           call reading "6 of 9 aboard" invites reading the seat count as a
           boarding count. */}
       <TripPageHeader
@@ -365,6 +366,7 @@ export default async function TripManifestPage({
           isDeparture={isDeparture}
           startsAt={departureManifest.trip.startsAt}
           stage={stage}
+          cancelled={departureManifest.trip.cancelled === true}
           seats={manifest.divers}
         />
 
@@ -376,15 +378,7 @@ export default async function TripManifestPage({
           <TripPlanSection
             idPrefix={idPrefix}
             heading={t("manifest.planChange.heading")}
-            dives={plannedDives.map(({ dive, diveSite }) => ({
-              diveNumber: dive.diveNumber,
-              line: diveSite
-                ? t("manifest.planChange.diveRow", {
-                    number: dive.diveNumber,
-                    site: diveSite.name,
-                  })
-                : t("manifest.planChange.diveRowNoSite", { number: dive.diveNumber }),
-            }))}
+            {...tripPlanRows(t, shop, plannedDives, meetingPoint)}
           />
         ) : null}
 

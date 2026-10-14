@@ -3,8 +3,9 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { LedgerRow } from "@/components/ui/ledger";
 import { menuRowClass } from "@/components/ui/menu";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
+import type { MessageSeat } from "@/db/running-late";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz } from "@/lib/format";
+import { formatDateTimeTz, formatTime, formatWeekdayTime } from "@/lib/format";
 import { type InboundChannel, inboxMessageAnchor } from "@/lib/inbox";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -82,6 +83,14 @@ function excerpt(body: string): string {
  * server accepts. The delete asks first: the write is soft (ADR
  * 20260820-every-delete-is-soft), but nothing a staffer can reach restores it.
  *
+ * **A message about a boat names the boat** (UX review 2026-10-13, item 19).
+ * When the sender holds a seat that was inside the running-late window when
+ * they wrote (`messageSeats`, src/db/running-late.ts), the row says which
+ * departure, and its "⋯" offers **Mark running late**: the mark the diver's
+ * own tap sets, which the roster and the manifest already show. A sentence is
+ * never read as a command (ADR 20260909-reply-keywords), so a person decides;
+ * once the seat carries the mark, by any door, the row says so instead.
+ *
  * **The door lands on the message, not the top of the conversation.** Each
  * inbound message on the record carries `id="message-<id>"`, and the record's
  * disclosure opens whichever group holds the fragment and scrolls it in.
@@ -94,6 +103,8 @@ export function InboxRow({
   t,
   deleteAction,
   doneAction,
+  seat = null,
+  lateAction,
 }: {
   row: InboxMessageRow;
   shopSlug: string;
@@ -104,6 +115,10 @@ export function InboxRow({
   deleteAction: (formData: FormData) => Promise<void>;
   /** Marks the message done (`done=true`) or puts it back (`done=false`). */
   doneAction: (formData: FormData) => Promise<void>;
+  /** The open seat this message could be about, or null. */
+  seat?: MessageSeat | null;
+  /** Puts the running-late mark on `seat`; required whenever `seat` is passed. */
+  lateAction?: (formData: FormData) => Promise<void>;
 }) {
   const { message, personName } = row;
   const done = message.answeredAt !== null;
@@ -128,7 +143,19 @@ export function InboxRow({
     // The address is on the stranger's row only: for a diver on file the name
     // above already says who this is, and their address is on their record.
     message.personId ? null : message.fromAddress,
-    message.keywordIntent ? t(KEYWORD_KEYS[message.keywordIntent]) : null,
+    // A LATE reply already marked the seat; the seat's own fact says so.
+    message.keywordIntent && !(message.keywordIntent === "late" && seat?.runningLateAt)
+      ? t(KEYWORD_KEYS[message.keywordIntent])
+      : null,
+    seat
+      ? t("inbox.seat", {
+          trip: seat.title,
+          when: formatWeekdayTime(seat.startsAt, locale, timezone),
+        })
+      : null,
+    seat?.runningLateAt
+      ? t("inbox.late.marked", { time: formatTime(seat.runningLateAt, locale, timezone) })
+      : null,
     message.mediaCount > 0 ? t("inbox.attachments", { count: message.mediaCount }) : null,
   ].filter((fact): fact is string => Boolean(fact));
 
@@ -147,6 +174,18 @@ export function InboxRow({
             {formatDateTimeTz(message.receivedAt, locale, timezone)}
           </span>
           <RowMenu label={t("inbox.menu.label", { name })}>
+            {seat && !seat.runningLateAt && lateAction ? (
+              <form action={lateAction}>
+                <input type="hidden" name="messageId" value={message.id} />
+                <SubmitButton
+                  pendingLabel={t("inbox.done.pending")}
+                  className={MENU_ROW_CLASS}
+                  ariaLabel={t("inbox.late.actionFor", { name, trip: seat.title })}
+                >
+                  {t("inbox.late.action")}
+                </SubmitButton>
+              </form>
+            ) : null}
             <form action={doneAction}>
               <input type="hidden" name="messageId" value={message.id} />
               <input type="hidden" name="done" value={done ? "false" : "true"} />

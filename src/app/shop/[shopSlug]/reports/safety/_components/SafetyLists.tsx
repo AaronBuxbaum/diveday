@@ -32,7 +32,10 @@ function ListCard({
   );
 }
 
-/** The month's three lists: the reports, the counts left open, the lapsed sailings. */
+/**
+ * The month's lists: the reports, the counts left open, the lapsed sailings,
+ * and, when there are any, the crew who sailed with nothing on file.
+ */
 export function SafetyLists({
   month,
   incidents,
@@ -127,6 +130,28 @@ export function SafetyLists({
           </li>
         ))}
       </ListCard>
+
+      {month.unrecordedCrew.length > 0 ? (
+        <ListCard
+          title={t("incidents.safety.unrecordedTitle")}
+          empty=""
+          count={month.unrecordedCrew.length}
+        >
+          {month.unrecordedCrew.map((person) => (
+            <li key={person.personId}>
+              <Link
+                href={shopPath(shopSlug, "settings", "team")}
+                className={`${ROW} hover:underline`}
+              >
+                <span className="font-medium">{person.name}</span>
+                <span className="text-sm text-muted">
+                  {t("incidents.safety.unrecordedSailings", { count: person.sailings })}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ListCard>
+      ) : null}
     </>
   );
 }

@@ -108,5 +108,55 @@ test("a LATE reply marks the seat, and the inbox says what the word meant", asyn
   await expect(page.getByText(/^Running late, said \d/)).toBeVisible();
   await page.goto("/shop/blue-mantis/inbox");
   const message = page.getByRole("listitem").filter({ hasText: name }).first();
-  await expect(message.getByText("Running late", { exact: true })).toBeVisible();
+  // The word, read as the seat it marked (UX review 2026-10-13, item 19).
+  await expect(message.getByText(/On the manifest: running late, said \d/)).toBeVisible();
+});
+
+test("a diver says it in their own words, and the desk marks it from the inbox row", async ({
+  page,
+  request,
+}) => {
+  const stamp = e2eNow().getTime();
+  const name = `Ines Late ${stamp}`;
+  const email = `ines-late-${stamp}@example.com`;
+  await bookOnTodaysBoat(page, name, email);
+
+  // A sentence is never read as a command (ADR 20260909-reply-keywords).
+  const wrote = await request.post("/api/test/inbound-message", {
+    data: {
+      shopSlug: "blue-mantis",
+      from: email,
+      channel: "email",
+      body: "Running about 15 min late, traffic on the causeway",
+    },
+  });
+  expect(wrote.ok()).toBe(true);
+  expect(await wrote.json()).not.toMatchObject({ outcome: "running_late" });
+
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/inbox");
+  const message = page.getByRole("listitem").filter({ hasText: name }).first();
+  // The row names the boat the message is about…
+  await expect(message.getByText(new RegExp(`Booked on ${OPEN_BOAT}`))).toBeVisible();
+  // …and its ⋯ puts the mark on that seat.
+  await message.getByRole("button", { name: `More for the message from ${name}` }).click();
+  await page.getByRole("button", { name: `Mark ${name} running late for ${OPEN_BOAT}` }).click();
+  await expect(
+    page.getByText("Marked running late. The roster and the manifest show it."),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("listitem")
+      .filter({ hasText: name })
+      .first()
+      .getByText(/On the manifest: running late, said \d/),
+  ).toBeVisible();
+
+  // The boat hears it: the Divers tab's row carries the same mark.
+  await openCounterFor(page, "blue-mantis", name);
+  const row = page
+    .locator('#roster li[id^="booking-"]')
+    .filter({ visible: true })
+    .filter({ has: page.getByRole("link", { name, exact: true }) });
+  await expect(row.getByText(/^Running late, said \d/)).toBeVisible();
 });

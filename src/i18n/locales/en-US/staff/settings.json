@@ -541,6 +541,7 @@
       "restored": "Team access restored.",
       "restoreFailed": "Couldn’t restore that person’s access. Check their account first.",
       "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
+      "sendLimit": "You have sent a lot of invites this hour. Nothing went out; try again in a little while.",
       "rolesInvalid": "Check at least one role before saving.",
       "rolesConflict": "Somebody else changed these roles while you had the row open, so nothing was saved. Reload to see where they stand now.",
       "inviteAlreadyOnTeam": "That person already has an account here.",
@@ -612,7 +613,6 @@
       "label": "Emergency contact",
       "addValue": "Add"
     },
-    "languagesEmpty": "Not set",
     "publicNameSeen": "Divers see “{name}”, agreed on {date}"
   },
   "safetyChecklist": {

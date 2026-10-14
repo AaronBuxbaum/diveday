@@ -40,7 +40,7 @@ describe("tripAboutRows (in-memory PGlite)", () => {
   it("lays the departure flat in its rows' order", async () => {
     const rows = await rowsFor();
     const ids = rows.map((row) => row.id);
-    expect(ids.slice(0, 3)).toEqual(["details", "conditions", "requirements"]);
+    expect(ids.slice(0, 4)).toEqual(["details", "meeting", "conditions", "requirements"]);
     expect(ids.slice(-2)).toEqual(["about-crew", "series"]);
   });
 
@@ -51,6 +51,16 @@ describe("tripAboutRows (in-memory PGlite)", () => {
     const who = rows.find((row) => row.id === "requirements");
     expect(typeof who?.value).toBe("string");
     expect(who?.value).not.toBe("");
+  });
+
+  it("says where the boat meets, the shop's own door when the departure names none", async () => {
+    // UX review 2026-10-13, item 18: the meeting point lived only inside the
+    // plan's editor, so the crew knew less than the diver about the dock.
+    const rows = await rowsFor();
+    const meeting = rows.find((row) => row.id === "meeting");
+    expect(meeting?.label).toBe("Where we meet");
+    expect(String(meeting?.value)).toContain(ctx.shop.name);
+    expect(meeting?.editor).toBeUndefined();
   });
 
   it("opens the row its own form reported back to", async () => {

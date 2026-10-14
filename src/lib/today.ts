@@ -573,7 +573,13 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
 
 /**
  * Filters the action queue for the viewer's roles, taking the union for multi-role staff.
- * Owners and managers see everything with zero withheld.
+ * Owners and managers see everything.
+ *
+ * **What is withheld is not counted** (third review, item 5). A captain's
+ * Today used to open on "22 jobs for the front desk", a number about rows the
+ * role cannot see or act on, 60px above the fold of rows it can ("1 more for
+ * other boats and the desk"). Two desk numbers on one screen; the one that
+ * stays is the one the reader can open.
  *
  * **No roles means no viewer, not an empty audience.** Every surface that
  * renders this queue passes `session.user.roles`, which `requireStaffSession`
@@ -583,25 +589,15 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
 export function filterActionsForRoles(
   actions: readonly TodayAction[],
   roles?: readonly Role[],
-): { visibleActions: TodayAction[]; withheldCount: number } {
+): TodayAction[] {
   if (!roles || roles.length === 0 || roles.includes("owner") || roles.includes("manager")) {
-    return { visibleActions: [...actions], withheldCount: 0 };
+    return [...actions];
   }
   const roleSet = new Set(roles);
-  const visibleActions: TodayAction[] = [];
-  let withheldCount = 0;
-
-  for (const action of actions) {
+  return actions.filter((action) => {
     const audience = KIND_AUDIENCE[action.kind];
-    const canSee = audience ? audience.some((r) => roleSet.has(r)) : true;
-    if (canSee) {
-      visibleActions.push(action);
-    } else {
-      withheldCount += 1;
-    }
-  }
-
-  return { visibleActions, withheldCount };
+    return audience ? audience.some((r) => roleSet.has(r)) : true;
+  });
 }
 
 /**
@@ -1505,7 +1501,12 @@ export type SpineDeparture = {
   courseTitle: string | null;
   boatName: string | null;
   priceCents: number | null;
+  /** The stated seats. */
   capacity: number;
+  /** The seats on sale under the boat's certificate (`sellableSeats`); open seats count against it. */
+  sellableCapacity: number;
+  /** A practice departure (ADR 20261012-rehearsal-departures); the card says so (#2395). */
+  rehearsal: boolean;
   booked: number;
   boarded: number;
   blocked: number;

@@ -2470,7 +2470,12 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
         await db
           .select()
           .from(rollCallCrewEvents)
-          .where(eq(rollCallCrewEvents.personId, missing.id)),
+          .where(
+            and(
+              eq(rollCallCrewEvents.tripId, reef.id),
+              eq(rollCallCrewEvents.personId, missing.id),
+            ),
+          ),
       ).toHaveLength(2);
     });
 
@@ -2672,7 +2677,9 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
 
       // Nothing was written by either, so the checkpoint stays open — the
       // fail-closed direction.
-      expect(await db.select().from(rollCallCrewEvents)).toHaveLength(0);
+      expect(
+        await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id)),
+      ).toHaveLength(0);
     });
 
     it("undoes a mis-tap with a cleared event, returning the crew member to awaiting", async () => {
@@ -3502,6 +3509,13 @@ describe("roll call on a cancelled trip that is already counting heads", () => {
   async function cancel(db: Awaited<ReturnType<typeof manifestContext>>["db"], tripId: string) {
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, tripId));
   }
+
+  it("says so on the manifest, so the dock-rider form stays shut (#2394)", async () => {
+    const { db, shop, reef } = await manifestContext();
+    expect((await getTripManifest(db, shop.id, reef.id))?.trip.cancelled).toBe(false);
+    await cancel(db, reef.id);
+    expect((await getTripManifest(db, shop.id, reef.id))?.trip.cancelled).toBe(true);
+  });
 
   it("keeps accepting a diver's roll call after the trip is cancelled mid-count", async () => {
     const { db, shop, reef, booking, staff } = await manifestContext();

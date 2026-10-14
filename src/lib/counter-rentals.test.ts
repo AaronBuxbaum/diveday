@@ -10,6 +10,7 @@ import {
   counterRentalDays,
   counterRentalLineCents,
   counterRentalWaiverFlag,
+  counterRentalWaiverStanding,
   isLifeSupportKind,
 } from "./counter-rentals";
 import type { RentalPricing } from "./rentals";
@@ -220,5 +221,49 @@ describe("counterRentalWaiverFlag", () => {
     ["medical_not_cleared", { offerLink: false }],
   ] as const)("reads %s as %o", (state, expected) => {
     expect(counterRentalWaiverFlag(state)).toEqual(expected);
+  });
+});
+
+/**
+ * Issue #2540: the Rentals list carries the standing's two warning dates
+ * beside its state, so it can say what the ticket says.
+ */
+describe("counterRentalWaiverStanding", () => {
+  const signed = {
+    state: "current" as const,
+    recordId: "w-1",
+    signedAt: new Date("2026-09-01T15:00:00Z"),
+    expiresAt: new Date("2027-09-01T15:00:00Z"),
+  };
+
+  it("carries an earlier refusal and an open referral as days, and nothing else", () => {
+    expect(
+      counterRentalWaiverStanding(
+        {
+          ...signed,
+          medical: {
+            at: new Date("2026-09-01T15:00:00Z"),
+            overriddenRefusal: {
+              recordId: "r-1",
+              personId: "p-1",
+              at: new Date("2026-07-18T15:00:00Z"),
+              evaluatedOn: "2026-07-18",
+            },
+            overriddenReferral: null,
+            overriddenReferralAt: new Date("2026-07-20T15:00:00Z"),
+          } as never,
+        },
+        "America/New_York",
+      ),
+    ).toEqual({ state: "current", refusedOn: "2026-07-18", referredOn: "2026-07-20" });
+  });
+
+  it("is the bare state otherwise", () => {
+    expect(counterRentalWaiverStanding({ ...signed, medical: null }, "America/New_York")).toEqual({
+      state: "current",
+    });
+    expect(counterRentalWaiverStanding({ state: "none" }, "America/New_York")).toEqual({
+      state: "none",
+    });
   });
 });

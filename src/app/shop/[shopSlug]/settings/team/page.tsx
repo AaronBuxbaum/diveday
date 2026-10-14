@@ -30,24 +30,16 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
-import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
-import {
-  type FormNotice,
-  type NoticeMessages,
-  noticeForForm,
-  noticeFromParam,
-} from "@/lib/staff-notices";
+import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
-import {
-  type CredentialRow,
-  type RenewalState,
-  StaffCredentials,
-} from "./_components/StaffCredentials";
+import { StaffCardCredentials } from "./_components/StaffCardCredentials";
+import { StaffCredentials } from "./_components/StaffCredentials";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import {
   deleteStaffCredentialAction,
@@ -63,6 +55,8 @@ import {
   setStaffStatusAction,
 } from "./actions";
 import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
+import { type CardCredential, credentialRowsFor } from "./credential-rows";
+import { noticeMessages } from "./notice-messages";
 import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -75,96 +69,6 @@ import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 export const instant = true;
 
 export const metadata: Metadata = { title: "Team — DiveDay" };
-
-/** Built per request; see `NoticeMessages`. */
-function noticeMessages(t: StaffTranslator): NoticeMessages {
-  return {
-    invited: { tone: "success", text: t("settings.team.notice.invited") },
-    "invite-resent": { tone: "success", text: t("settings.team.notice.inviteResent") },
-    "changes-saved": { tone: "success", text: t("settings.team.notice.changesSaved") },
-    reactivated: { tone: "success", text: t("settings.team.notice.reactivated") },
-    disabled: { tone: "success", text: t("settings.team.notice.disabled") },
-    removed: { tone: "success", text: t("settings.team.notice.removed") },
-    restored: { tone: "success", text: t("settings.team.notice.restored") },
-    "restore-failed": { tone: "danger", text: t("settings.team.notice.restoreFailed") },
-    "invite-invalid": { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
-    "roles-invalid": { tone: "danger", text: t("settings.team.notice.rolesInvalid") },
-    "roles-conflict": { tone: "danger", text: t("settings.team.notice.rolesConflict") },
-    "invite-already-on-team": {
-      tone: "danger",
-      text: t("settings.team.notice.inviteAlreadyOnTeam"),
-    },
-    "invite-email-taken": { tone: "danger", text: t("settings.team.notice.inviteEmailTaken") },
-    "invite-email-reserved": {
-      tone: "danger",
-      text: t("settings.team.notice.inviteEmailReserved"),
-    },
-    "contact-saved": { tone: "success", text: t("settings.team.notice.contactSaved") },
-    "languages-saved": { tone: "success", text: t("settings.team.notice.languagesSaved") },
-    "half-filled": { tone: "danger", text: t("settings.team.notice.contactHalfFilled") },
-    "last-owner": { tone: "danger", text: t("settings.team.notice.lastOwner") },
-    "not-found": { tone: "danger", text: t("settings.team.notice.notFound") },
-    "not-authorized": { tone: "danger", text: t("settings.team.notice.notAuthorized") },
-    "credential-saved": { tone: "success", text: t("staffing.notice.credentialSaved") },
-    "credential-reviewed": { tone: "success", text: t("staffing.notice.credentialReviewed") },
-    "credential-deleted": { tone: "success", text: t("staffing.notice.credentialDeleted") },
-    "credential-invalid": { tone: "danger", text: t("staffing.notice.credentialInvalid") },
-  };
-}
-
-/** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
-const RENEWAL_WINDOW_DAYS = 30;
-
-/** The ledger's rows, each renewal measured against the shop's own today. */
-function credentialRowsFor(
-  credentials: Awaited<ReturnType<typeof listStaffCredentials>>,
-  today: string,
-  locale: string,
-  t: StaffTranslator,
-): CredentialRow[] {
-  const dueSoonThrough = shiftCalendarDate(today, RENEWAL_WINDOW_DAYS);
-  return credentials.map(({ credential, person }) => {
-    const renewal: RenewalState = !credential.renewsAt
-      ? "not-recorded"
-      : credential.renewsAt < today
-        ? "overdue"
-        : credential.renewsAt <= dueSoonThrough
-          ? "due-soon"
-          : "current";
-    return {
-      id: credential.id,
-      title: `${person.fullName} · ${credential.name}`,
-      detail: [
-        credential.status === "verified"
-          ? t("staffing.credentials.verified")
-          : t("staffing.credentials.pending"),
-        t(CREDENTIAL_KIND_KEYS[credential.kind]),
-        credential.issuingBody,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      // The word is what carries the state; the ink only seconds it. A
-      // credential whose renewal is comfortably ahead says the date and
-      // nothing more, and one with no renewal recorded says nothing at all.
-      renewalWord:
-        renewal === "overdue"
-          ? t("staffing.credentials.overdue")
-          : renewal === "due-soon"
-            ? t("staffing.credentials.dueSoon")
-            : credential.renewsAt
-              ? t("staffing.credentials.renews", {
-                  date: formatCalendarDate(credential.renewsAt, locale),
-                })
-              : null,
-      renewal,
-      reviewed: credential.status === "verified",
-      reviewLabel:
-        credential.status === "verified"
-          ? t("staffing.credentials.markPending")
-          : t("staffing.credentials.markVerified"),
-    };
-  });
-}
 
 /**
  * **Only the exceptional state wears a badge.** Four rows each carrying a green
@@ -283,6 +187,7 @@ function publicName(member: StaffMember): string {
 
 function StaffRow({
   member,
+  credentials,
   notice,
   priorRoles,
   locale,
@@ -290,6 +195,8 @@ function StaffRow({
   t,
 }: {
   member: StaffMember;
+  /** This person's credentials on file, from the ledger at the foot. */
+  credentials: readonly CardCredential[];
   /** The page's one resolved notice, already told which form it belongs to. */
   notice: FormNotice | undefined;
   /** The roles this row held before the save it just made — its Undo, or nothing. */
@@ -403,7 +310,7 @@ function StaffRow({
                     (language) => languageNameIn(language, locale) ?? language,
                   ),
                 )
-              : t("settings.team.languagesEmpty")
+              : t("settings.team.emergencyContact.addValue")
           }
           open={Boolean(languagesStatus)}
         >
@@ -422,6 +329,14 @@ function StaffRow({
           </form>
         </CompactDisclosureRow>
       </div>
+
+      <StaffCardCredentials
+        personId={member.personId}
+        roles={member.roles}
+        credentials={credentials}
+        locale={locale}
+        t={t}
+      />
 
       {/* Who to call for this person, and the one place a shop can say so.
           Behind a disclosure because it is the rare edit — a contact is typed
@@ -776,6 +691,9 @@ export default async function TeamSettingsPage({
                 <StaffRow
                   key={member.personId}
                   member={member}
+                  credentials={credentialRows
+                    .filter((row) => row.personId === member.personId)
+                    .map(({ id, name, renewalWord }) => ({ id, name, renewalWord }))}
                   notice={pageNotice}
                   priorRoles={rolesFor === member.personId ? undoRolesFor : []}
                   locale={locale}

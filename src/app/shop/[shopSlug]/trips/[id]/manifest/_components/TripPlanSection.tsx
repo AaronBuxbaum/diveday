@@ -32,20 +32,34 @@ export function TripPlanSection({
   idPrefix,
   heading,
   dives,
+  meeting,
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
   heading: string;
   /** One line per planned dive, already worded — "Dive 1 · Molasses Reef". */
   dives: readonly { diveNumber: number; line: string }[];
+  /**
+   * **Where the boat meets** (UX review 2026-10-13, item 18), its word and the
+   * place, already worded. First, because it is where the day starts: the
+   * diver's `/ready` and every message say it, and the crew reading "The
+   * meeting point moved." on the strip above had no staff page that did.
+   */
+  meeting?: { label: string; line: string };
 }) {
-  if (dives.length === 0) return null;
+  if (dives.length === 0 && !meeting) return null;
   return (
     <section className="print:hidden" aria-labelledby={scopedId(idPrefix, "trip-plan-heading")}>
       <h2 id={scopedId(idPrefix, "trip-plan-heading")} className={SECTION_TITLE_CLASS}>
         {heading}
       </h2>
       <ul className="mt-3 divide-y divide-border border-y border-border">
+        {meeting ? (
+          <li className="flex min-h-13 flex-col justify-center py-3 text-base">
+            <span className="text-sm text-muted">{meeting.label}</span>
+            <span>{meeting.line}</span>
+          </li>
+        ) : null}
         {dives.map((dive) => (
           <li key={dive.diveNumber} className="flex min-h-13 items-center py-3 text-base">
             {dive.line}

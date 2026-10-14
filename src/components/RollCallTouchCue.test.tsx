@@ -15,6 +15,12 @@ afterEach(() => {
 
 const LINE = "Tap again with one finger.";
 
+/** The painted pill, wherever its accessible role went. */
+const pill = () =>
+  Array.from(document.body.querySelectorAll("p")).find(
+    (node) => node.textContent === LINE && !node.classList.contains("sr-only"),
+  ) ?? null;
+
 const refuse = (inside: HTMLElement = document.body) => {
   const control = document.createElement("button");
   inside.append(control);
@@ -89,9 +95,60 @@ describe("the roll call's touch cue", () => {
     document.body.append(sheet);
     render(<RollCallTouchCue message={LINE} />);
     act(() => refuse(sheet));
-    expect(screen.getByRole("status").parentElement?.style.top).toBe(
-      "calc(var(--chrome-h, 0px) + 1rem)",
-    );
+    expect(pill()?.parentElement?.style.top).toBe("calc(var(--chrome-h, 0px) + 1rem)");
+  });
+
+  /**
+   * **Heard inside the open sheet** (#2534). The sheet is `aria-modal`, so a
+   * screen reader confined to it never reached a status line painted outside
+   * it. The words go into the sheet as well; the pill painted over it is then
+   * hidden from assistive tech, so nobody hears them twice.
+   */
+  it("speaks inside the open person sheet for a press refused there", () => {
+    const sheet = document.createElement("section");
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-modal", "true");
+    sheet.setAttribute("data-fixture", "");
+    document.body.append(sheet);
+    render(<RollCallTouchCue message={LINE} />);
+    act(() => refuse(sheet));
+    const statuses = screen.getAllByRole("status");
+    expect(statuses).toHaveLength(1);
+    expect(sheet.contains(statuses[0] ?? null)).toBe(true);
+    expect(statuses[0]).toHaveTextContent(LINE);
+    expect(pill()).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("keeps a single status line outside any sheet", () => {
+    render(<RollCallTouchCue message={LINE} />);
+    act(() => refuse());
+    expect(screen.getAllByRole("status")).toEqual([pill()]);
+    expect(pill()).not.toHaveAttribute("aria-hidden");
+  });
+
+  /**
+   * **In the boat palette when raised from a boat-mode page** (#2534). The
+   * pill is portalled to `body`, outside the manifest's `.boat-mode` wrapper,
+   * so it painted in the office palette. It carries the class itself, with
+   * the wrapper's own ground left transparent so no band crosses the screen.
+   */
+  it("wears the boat palette when the page it was raised from is in boat mode", () => {
+    const boat = document.createElement("div");
+    boat.className = "boat-mode";
+    boat.setAttribute("data-fixture", "");
+    document.body.append(boat);
+    render(<RollCallTouchCue message={LINE} />, { container: boat });
+    act(() => refuse());
+    const wrapper = pill()?.parentElement;
+    expect(wrapper).toHaveClass("boat-mode");
+    expect(wrapper?.style.backgroundColor).toBe("transparent");
+    expect(boat.contains(wrapper ?? null)).toBe(false);
+  });
+
+  it("stays in the office palette elsewhere", () => {
+    render(<RollCallTouchCue message={LINE} />);
+    act(() => refuse());
+    expect(pill()?.parentElement).not.toHaveClass("boat-mode");
   });
 
   /**

@@ -1,7 +1,8 @@
-import { and, asc, eq, gt, isNull, lte, ne, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { AppDb } from "./client";
+import { recordDiverActivity } from "./operations";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -31,12 +32,17 @@ export type RunningLateOutcome =
   /** No seat this could be about: checked in, released, the boat gone, or too far off. */
   | { status: "closed" };
 
-/** The one write. Guarded by the same rule the read applied. */
+/**
+ * The one write. Guarded by the same rule the read applied. `saidAt` is the
+ * instant stored, when the diver said it somewhere other than this request (a
+ * message a staffer marks later); the window is always checked at `now`.
+ */
 async function stamp(
   db: AppDb,
   shopId: string,
   bookingId: string,
   now: Date,
+  saidAt: Date = now,
 ): Promise<RunningLateOutcome> {
   const [row] = await db
     .select({
@@ -70,7 +76,7 @@ async function stamp(
   if (row.runningLateAt) return { status: "already", bookingId, at: row.runningLateAt };
   const [updated] = await db
     .update(bookings)
-    .set({ runningLateAt: now })
+    .set({ runningLateAt: saidAt })
     .where(
       and(
         eq(bookings.shopId, shopId),
@@ -173,8 +179,9 @@ async function stampWithParty(
   shopId: string,
   bookingId: string,
   now: Date,
+  saidAt: Date = now,
 ): Promise<RunningLateOutcome> {
-  const own = await stamp(db, shopId, bookingId, now);
+  const own = await stamp(db, shopId, bookingId, now, saidAt);
   if (own.status !== "marked") return own;
   const party = await db
     .select({ id: bookings.id })
@@ -186,7 +193,7 @@ async function stampWithParty(
         eq(bookings.status, "booked"),
       ),
     );
-  for (const seat of party) await stamp(db, shopId, seat.id, now);
+  for (const seat of party) await stamp(db, shopId, seat.id, now, saidAt);
   return own;
 }
 
@@ -288,5 +295,141 @@ export async function markPhoneRunningLate(
       ),
     );
   for (const seat of family) await stamp(db, next.shopId, seat.bookingId, input.now);
+  return outcome;
+}
+
+/** The seat a message from this diver could be about, as the Inbox row names it. */
+export type MessageSeat = {
+  bookingId: string;
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  /** Already said, by any door: the row says so and offers nothing. */
+  runningLateAt: Date | null;
+};
+
+type SeatRow = MessageSeat & { personId: string; tripStatus: string; bookingStatus: string };
+
+/** Every seat these people could still be late for, soonest first. */
+async function openSeatsOf(
+  db: AppDb,
+  shopId: string,
+  personIds: readonly string[],
+  now: Date,
+): Promise<SeatRow[]> {
+  if (personIds.length === 0) return [];
+  return db
+    .select({
+      personId: bookings.personId,
+      bookingId: bookings.id,
+      bookingStatus: bookings.status,
+      runningLateAt: bookings.runningLateAt,
+      tripId: trips.id,
+      tripStatus: trips.status,
+      title: trips.title,
+      startsAt: trips.startsAt,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
+        inArray(bookings.personId, [...new Set(personIds)]),
+        openSeatsWhere(now),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(bookings.id));
+}
+
+/**
+ * **The seat a message was about** (UX review 2026-10-13, item 19): the
+ * sender's soonest seat that is open now *and* was already inside the
+ * running-late window when they wrote. The second half keeps a "running late"
+ * from last Tuesday off this Saturday's boat: the words were about a boat that
+ * has gone, and the soonest seat now is a different one.
+ */
+function seatForMessage(seats: readonly SeatRow[], personId: string, receivedAt: Date) {
+  return (
+    seats.find(
+      (seat) =>
+        seat.personId === personId &&
+        canSayRunningLate({
+          bookingStatus: seat.bookingStatus,
+          tripStatus: seat.tripStatus,
+          startsAt: seat.startsAt,
+          now: receivedAt,
+        }),
+    ) ?? null
+  );
+}
+
+/**
+ * The seat each Inbox message could be about, keyed by message id, for the
+ * rows of one page. A message from a stranger, or from a diver with no open
+ * seat it could be about, is absent.
+ */
+export async function messageSeats(
+  db: AppDb,
+  shopId: string,
+  messages: readonly { id: string; personId: string | null; receivedAt: Date }[],
+  now: Date,
+): Promise<Map<string, MessageSeat>> {
+  const attributed = messages.filter(
+    (message): message is { id: string; personId: string; receivedAt: Date } =>
+      message.personId !== null,
+  );
+  const seats = await openSeatsOf(
+    db,
+    shopId,
+    attributed.map((message) => message.personId),
+    now,
+  );
+  const found = new Map<string, MessageSeat>();
+  for (const message of attributed) {
+    const seat = seatForMessage(seats, message.personId, message.receivedAt);
+    if (seat) {
+      const { bookingId, tripId, title, startsAt, runningLateAt } = seat;
+      found.set(message.id, { bookingId, tripId, title, startsAt, runningLateAt });
+    }
+  }
+  return found;
+}
+
+/**
+ * **A staffer marks it from what the diver wrote** (UX review 2026-10-13,
+ * item 19). "Running about 15 min late, traffic on the causeway" is a
+ * sentence, and a sentence is never read as a command (ADR
+ * 20260909-reply-keywords), so nothing marks it on arrival; the Inbox row
+ * names the seat and a person decides. The seat is the one the row named
+ * (`seatForMessage`), the instant stored is when the diver wrote, and an
+ * organizer's party travels with them as on every other door.
+ *
+ * A fresh mark files a line on the diver's record naming the staffer
+ * (`running_late_from_message`), because the roster's "said {time}" reads as
+ * the diver's own tap otherwise. A repeat changes nothing and files nothing.
+ */
+export async function markMessageRunningLate(
+  db: AppDb,
+  input: { shopId: string; personId: string; receivedAt: Date; now: Date; actorPersonId: string },
+): Promise<RunningLateOutcome> {
+  const seats = await openSeatsOf(db, input.shopId, [input.personId], input.now);
+  const seat = seatForMessage(seats, input.personId, input.receivedAt);
+  if (!seat) return { status: "closed" };
+  const outcome = await stampWithParty(
+    db,
+    input.shopId,
+    seat.bookingId,
+    input.now,
+    input.receivedAt,
+  );
+  if (outcome.status === "marked") {
+    await recordDiverActivity(db, {
+      shopId: input.shopId,
+      personId: input.personId,
+      actorPersonId: input.actorPersonId,
+      code: "running_late_from_message",
+    });
+  }
   return outcome;
 }
