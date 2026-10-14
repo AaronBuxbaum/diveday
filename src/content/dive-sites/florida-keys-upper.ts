@@ -507,7 +507,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       depthRange: "3–12 m (10–40 ft)",
       maxDepthMeters: 12,
       currentNote:
-        "Shallow and usually easy on the reef top. The northern moorings (North North Dry Rocks) sit deeper, near 8 m, so check which one the boat is on.",
+        "Shallow and usually easy on the reef top. The northern moorings (North North Dry Rocks) are the deeper ones, so check which one the boat is on.",
       divePlan:
         "Swim the reef edge from the mooring to Minnow Cave, look in from outside, and finish over the shallow coral heads.",
       fitTone: "welcoming",
@@ -617,9 +617,9 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       fitNote: "History you can read from the surface, at a depth anyone can manage.",
       landmarks: [
         {
-          name: "Propeller shaft tunnel",
+          name: "The stern",
           kind: "wreckFeature",
-          note: "The most recognisable piece of her, at the less broken stern end.",
+          note: "The less broken end of her, where the iron frames still stand highest.",
         },
         {
           name: "The collapsed hull",

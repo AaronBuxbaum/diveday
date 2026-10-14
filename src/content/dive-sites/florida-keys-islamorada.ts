@@ -219,8 +219,8 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Dense soft coral on the reef top, and big schools sheltering in the cuts below it.",
       difficultyLevel: "beginner",
-      depthRange: "5–12 m (15–40 ft)",
-      maxDepthMeters: 12,
+      depthRange: "5–17 m (15–55 ft)",
+      maxDepthMeters: 17,
       currentNote:
         "Easy navigation along the ledge. A preservation area, so no fishing or collecting and no touching the coral; boats use the mooring buoys. Some moorings on the seaward side sit near 17 m, so check which one the boat is on.",
       divePlan:
@@ -318,12 +318,12 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       currentNote:
         "The wall is run as a drift, and the slope continues below recreational depth, so the floor is the diver’s to hold. The reef top is a Sanctuary Preservation Area (no fishing or collecting), and the Research Only area beside it, marked by yellow buoys, is closed to all entry.",
       divePlan:
-        "Drop onto the top of the wall, drift along it at your planned depth, and ascend over the reef with the boat following your bubbles.",
+        "Drop onto the top of the wall, drift along it no deeper than 30 m (100 ft), and ascend over the reef with the boat following your bubbles.",
       fitTone: "demanding",
       fitNote:
         "A deep drift along a wall that does not end where you should. For divers confident with both.",
-      // Below 30 m only on paper: the wall drops past 30 m and is dived as a current drift, so the
-      // gate is Advanced Open Water without the Deep specialty. The shallow reef-top moorings are an
+      // The wall drops past 30 m; the plan holds a hard floor at 30 m, so the gate is Advanced
+      // Open Water without the Deep specialty. The shallow reef-top moorings are an
       // Open Water dive a shop can open by lowering this.
       minimumCertificationLevel: "advanced_open_water",
       landmarks: [

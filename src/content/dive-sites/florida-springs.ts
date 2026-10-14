@@ -369,7 +369,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       // Capped at the park's 60 ft limit for Open Water divers; the vent drops far deeper, into cave.
       maxDepthMeters: 18,
       currentNote:
-        "Steady outflow from the vent. The spring and run close to all water activity from 15 November to at least mid-March, and stay closed longer if the manatees stay.",
+        "Strong outflow at the boil, enough to push a diver up and out; the run below it is gentle. The spring and run close to all water activity from 15 November to at least mid-March, and stay closed longer if the manatees stay.",
       divePlan:
         "Park rules: Open Water divers carry no lights and go no deeper than 18 m (60 ft), though the vent keeps going; dive only in the designated areas, at least two to a party, with no more than 32 divers in the water at once, and finish an hour before sunset. If a manatee is still in the run, keep 15 m (50 ft) away: no touching, chasing or feeding.",
       landmarks: [
@@ -441,8 +441,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "A first-magnitude spring that boils up blue among the cypress and runs a short way into the Suwannee. In winter manatees come up the run for the warm water, which is how the park got its name.",
       marineLife: "Manatees in winter · fish · turtles",
       difficultyLevel: "intermediate",
-      depthRange: "2–9 m (5–30 ft)",
-      // Some operators log 12 m at the vent.
+      depthRange: "2–12 m (5–40 ft)",
       maxDepthMeters: 12,
       currentNote:
         "Very strong outflow at the vent, and divers' bubbles stir up the iron bacteria that cut the visibility. In winter the park closes the run to boats and can keep divers out of the headspring while manatees are in it. The run opens onto the Suwannee: tow a flag past the swimming area.",
@@ -560,7 +559,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLife: "Freshwater fish · turtles",
       difficultyLevel: "intermediate",
       depthRange: "3–18 m (10–60 ft)",
-      // The basin floor slopes on toward the cavern zone; Open Water divers stop at the open basin.
+      // Capped at the open basin's floor; the cavern zone below, to 30 m, is gated by card.
       maxDepthMeters: 21,
       currentNote:
         "No real current in the open basin. Summer algae blooms can cloud it; on those days open water diving is not worth it.",
@@ -572,8 +571,8 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       landmarks: [
         {
           name: "The north wall",
-          kind: "reefFormation",
-          note: "A sheer drop of about 5 m on the north edge; the rest of the basin slopes gently in from the woods.",
+          kind: "pointOfInterest",
+          note: "The deeper, steeper edge of the basin; the rest slopes gently in from the woods.",
         },
       ],
       creatureSlugs: [],
@@ -612,7 +611,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         {
           name: "The shaft",
           kind: "pointOfInterest",
-          note: "A limestone chimney dropping about 12 m to the cave entrance. The current comes straight up it; coming back up is a fast ride, so mind your head.",
+          note: "A limestone chimney dropping about 12 m to the cave entrance. The current comes straight up it and will carry you up faster than a safe ascent: dump gas early, hold the wall or the line, and watch your rate.",
         },
       ],
       creatureSlugs: [],
@@ -674,12 +673,12 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       currentNote:
         "No current, but this is an overhead dive in the dark: a primary and a backup light are required. The passage continues past the cavern as cave, for cave-trained divers only.",
       divePlan:
-        "A guided dive, booked ahead: the site is private and keeps its own schedule. Down the entry shaft to the amphitheater and back out the way you came; the only way up is the opening. The shop running the dive decides what overhead training it asks for.",
+        "A guided dive, booked ahead: the site is private and keeps its own schedule. Down the entry shaft to the amphitheater and back out the way you came; the only way up is the opening.",
       fitTone: "demanding",
       fitNote:
         "Deep, dark and roofed over the whole way. Operators take Advanced divers with lights, and only with a guide.",
       minimumCertificationLevel: "advanced_open_water",
-      requiredSpecialties: ["deep"],
+      requiredSpecialties: ["deep", "cavern"],
       creatureSlugs: [],
     },
   },

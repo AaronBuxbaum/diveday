@@ -24,11 +24,11 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · barracuda · spadefish · snapper · amberjack",
       marineLifeDescription:
         "Bait and mackerel hang over the hull, and the big grouper keep to the shade beneath it.",
-      difficultyLevel: "intermediate",
+      difficultyLevel: "advanced",
       depthRange: "12–24 m (40–80 ft)",
       maxDepthMeters: 25,
       currentNote:
-        "Open Gulf, a long boat ride out, so current and visibility change from day to day. A heavily fished reef: watch for line and tackle on the hull. A wreck dive stays outside the structure unless you are trained for more.",
+        "Open Gulf, a long boat ride out, so current and visibility change from day to day. A heavily fished reef: watch for line and tackle on the hull. Stay outside the hull.",
       fitTone: "demanding",
       fitNote:
         "Local operators run it for Advanced divers: the depth sits near the bottom of recreational comfort and the ride out is long.",
@@ -76,7 +76,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · spadefish · snapper · amberjack · barracuda",
       marineLifeDescription:
         "Schools of mackerel and spadefish often cover the wreck, and whale sharks have passed through.",
-      difficultyLevel: "intermediate",
+      difficultyLevel: "advanced",
       depthRange: "15–24 m (50–80 ft)",
       maxDepthMeters: 25,
       currentNote:
@@ -93,13 +93,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
           note: "The tug sunk on the same reef, a short swim away.",
         },
       ],
-      creatureSlugs: [
-        "goliath-grouper",
-        "atlantic-spadefish",
-        "gray-snapper",
-        "great-barracuda",
-        "whale-shark",
-      ],
+      creatureSlugs: ["goliath-grouper", "atlantic-spadefish", "gray-snapper", "great-barracuda"],
     },
   },
   // Denominator row: "Indian Shores Reef"
@@ -281,7 +275,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       depthRange: "12–14 m (40–45 ft)",
       maxDepthMeters: 14,
       currentNote:
-        "Open Gulf, so current and visibility vary with the day. A memorial: look, photograph, and leave the statues as you found them.",
+        "Open Gulf, so current and visibility vary with the day. A memorial: look, photograph, and leave the statues as you found them. A fished reef: fly a flag and watch for line on the barges.",
       fitTone: "welcoming",
       fitNote: "A moderate depth and a dive with a story. Open Water divers are welcome here.",
       landmarks: [
@@ -323,7 +317,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       depthRange: "3–6 m (10–20 ft)",
       maxDepthMeters: 6,
       currentNote:
-        "A shore dive or snorkel from the beach. Surf and stirred sand set the visibility, and the bottom shifts as the beach is renourished. It is outside the swim zone, so tow a dive flag.",
+        "A shore dive or snorkel from the beach. Surf and stirred sand set the visibility, and the bottom shifts as the beach is renourished. It is outside the swim zone, so tow a dive flag. Longshore and rip currents run along this beach; check the flags before you wade in. Jet skis and boats work just outside the swim zone, so stay on the flag and surface beside it.",
       fitTone: "welcoming",
       fitNote: "Shallow enough to snorkel. A protected preserve: nothing comes off it.",
       creatureSlugs: ["manatee", "gray-snapper", "white-grunt"],
@@ -351,7 +345,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       depthRange: "9–27 m (30–90 ft)",
       maxDepthMeters: 28,
       currentNote:
-        "A long open-Gulf run with no shelter, so current, visibility and sea state all decide the day. Moored at bow and stern. Stay outside the hull unless you are trained for more.",
+        "A long open-Gulf run with no shelter, so current, visibility and sea state all decide the day. Moored at bow and stern. Stay outside the hull.",
       fitTone: "demanding",
       fitNote:
         "Far offshore and close to 30 m on the sand. Plan it as a deep dive with a hard turn pressure.",

@@ -217,7 +217,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       forecastLatitude: 24.4642,
       forecastLongitude: -81.7378,
       description:
-        "A 27 m tugboat sunk off Key West in 1989, now broken up by years of storms and settled against a living reef. Small as wrecks go, and you never quite know what will be sitting in it.",
+        "A 23 m tugboat sunk off Key West in 1989, now broken up by years of storms and settled against a living reef. Small as wrecks go, and you never quite know what will be sitting in it.",
       marineLife: "Sea turtles · moray eels · grouper · reef fish",
       marineLifeDescription:
         "The wreckage and the reef beside it share their fish, so a dive here is two sites in one.",
@@ -509,7 +509,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       marineLife: "Hogfish · snapper · grunts · great barracuda",
       marineLifeDescription:
         "Remote and protected, so the fish are larger and more numerous than on most Keys reefs.",
-      difficultyLevel: "intermediate",
+      difficultyLevel: "beginner",
       depthRange: "1–6 m (3–21 ft)",
       maxDepthMeters: 7,
       currentNote:
