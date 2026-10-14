@@ -257,7 +257,7 @@ test.describe("staff", () => {
 
     await page.goto(manageUrl);
     await page.getByRole("button", { name: "Reinstate trip" }).click();
-    await expect(page.getByRole("status")).toContainText("Back on");
+    await expect(page.getByRole("status")).toContainText("The trip is back on the schedule.");
     await page.goto(tripWeek);
     await expect(
       page.locator("[data-week-board]").getByRole("link", { name: renamed, exact: true }),
