@@ -55,8 +55,15 @@ export const DIVE_AREAS = [
   { code: "florida-keys-marathon", label: "Marathon", region: FLORIDA },
   { code: "florida-keys-lower", label: "Lower Keys", region: FLORIDA },
   { code: "florida-keys-key-west", label: "Key West and the Dry Tortugas", region: FLORIDA },
-  { code: "florida-southeast", label: "South-east Florida", region: FLORIDA },
-  { code: "florida-gulf", label: "Florida Gulf coast and Panhandle", region: FLORIDA },
+  {
+    code: "florida-palm-beach",
+    label: "Palm Beach County and the Treasure Coast",
+    region: FLORIDA,
+  },
+  { code: "florida-broward", label: "Broward County (Fort Lauderdale)", region: FLORIDA },
+  { code: "florida-miami", label: "Miami-Dade and Biscayne", region: FLORIDA },
+  { code: "florida-panhandle", label: "Florida Panhandle", region: FLORIDA },
+  { code: "florida-gulf-coast", label: "Florida Gulf coast", region: FLORIDA },
   { code: "florida-springs", label: "Florida springs", region: FLORIDA },
 ] as const satisfies readonly DiveArea[];
 

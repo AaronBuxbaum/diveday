@@ -51,7 +51,7 @@ describe("dive-site library", () => {
     // By name, not "the first card": the catalog is a real library of Florida
     // sites ordered by slug now, and only this one collides with a site the
     // seeded shop already holds — which is the collision under test.
-    const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
+    const catalogEntry = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(
       (row) => row.version.briefing.name === "Molasses Reef",
     );
     if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");
@@ -72,7 +72,7 @@ describe("dive-site library", () => {
 
   it("pulls a newer template revision without overwriting a local edit", async () => {
     const { db, shop } = ctx;
-    const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
+    const catalogEntry = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(
       (row) => row.version.briefing.name === "Molasses Reef",
     );
     if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");
@@ -1086,7 +1086,7 @@ describe("a dive site's public slug", () => {
 
   it("gives an imported template the segment of its deconflicted name", async () => {
     const { db, shop } = ctx;
-    const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
+    const catalogEntry = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(
       (row) => row.version.briefing.name === "Molasses Reef",
     );
     if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");
