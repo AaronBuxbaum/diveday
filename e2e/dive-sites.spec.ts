@@ -520,9 +520,12 @@ test.describe("staff", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
     ).toBeVisible();
-    const template = page.locator("li").filter({ hasText: "Molasses Reef" }).filter({
-      visible: true,
-    });
+    // By the row's own link, not loose text: Sand Island's briefing mentions
+    // Molasses Reef too, and `hasText` would match both rows.
+    const template = page
+      .locator("li")
+      .filter({ has: page.getByRole("link", { name: "Molasses Reef", exact: true }) })
+      .filter({ visible: true });
     await expect(template.getByText("Template v3")).toBeVisible();
 
     // The catalog's one action. It lands on the freshly created site's own
