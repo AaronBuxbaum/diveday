@@ -39,8 +39,17 @@ export type StageStripCopy = {
    * 4; `homewardCheckpointGap`): the line and the one tap to it. Said only
    * once the boat's word is "Heading in" or "Home" — before that, the count
    * is simply not due yet.
+   *
+   * `plan`: the last dive has no result for anybody and the one before is
+   * closed (`not_counted`), so the line asks whether the dive was called off
+   * and this is the way to the dive count, beside the roll call.
    */
-  rollCallOpen?: { line: string; openLabel: string; href: string };
+  rollCallOpen?: {
+    line: string;
+    openLabel: string;
+    href: string;
+    plan?: { label: string; href: string };
+  };
 };
 
 export function StageStrip({
@@ -132,6 +141,14 @@ export function StageStrip({
           >
             {rollCallOpen.openLabel}
           </Link>
+          {rollCallOpen.plan ? (
+            <Link
+              href={rollCallOpen.plan.href}
+              className={buttonClass({ variant: "secondary", size: "boat" })}
+            >
+              {rollCallOpen.plan.label}
+            </Link>
+          ) : null}
         </div>
       ) : null}
       {result && !result.ok ? (

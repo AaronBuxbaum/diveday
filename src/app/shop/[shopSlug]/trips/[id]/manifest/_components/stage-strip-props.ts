@@ -1,12 +1,14 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { homewardCheckpointGap } from "@/lib/checkpoint-gaps";
 import { formatTime } from "@/lib/format";
-import { rollCallCheckpointOrdinal, type TripManifest } from "@/lib/manifests";
+import { shopPath } from "@/lib/staff-notices";
+import type { TripManifest } from "@/lib/manifests";
 import { boatStageOf } from "@/lib/trip-phase";
 import { STAGE_WORD_KEYS, TRIP_STAGES, type TripStageReading } from "@/lib/trip-stages";
 import type { StageStripCopy } from "./StageStrip";
+import { checkpointGapLine } from "./checkpoint-gap-words";
 
-type GapManifest = Pick<TripManifest, "trip" | "checkpoint" | "summary" | "completeness">;
+type GapManifest = Pick<TripManifest, "trip" | "checkpoint" | "summary" | "crew">;
 
 /**
  * `StageStrip`'s selected word and copy, read once on the server.
@@ -30,6 +32,8 @@ export function stageStripProps(
          * (`homewardCheckpointGap`, batch 6 item 4).
          */
         manifests: readonly GapManifest[];
+        /** For the dive-count link a `not_counted` gap offers. */
+        shopSlug: string;
       }
   ) & {
     stage: TripStageReading | null;
@@ -41,6 +45,13 @@ export function stageStripProps(
   const trip = "trip" in input ? input.trip : input.manifests[0]?.trip;
   if (!trip) throw new Error("stageStripProps: a departure has at least its dock manifest");
   const homewardGap = "manifests" in input ? homewardCheckpointGap(input.manifests) : null;
+  // The dive count lives on the departure's Details tab (`TripDiveFields`): a
+  // dive called off is a plan edit, and the floor (`updateTrip`) allows it
+  // because nobody was counted there.
+  const planHref =
+    "manifests" in input && input.manifests[0]
+      ? `${shopPath(input.shopSlug, "trips", input.manifests[0].trip.id)}?view=details#dives`
+      : undefined;
   const shown = boatStageOf({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
@@ -64,12 +75,13 @@ export function stageStripProps(
       // A same-page address: the roll call is this manifest at that checkpoint.
       rollCallOpen: homewardGap
         ? {
-            line: t("manifest.stage.rollCallOpen", {
-              count: homewardGap.unaccounted,
-              dive: rollCallCheckpointOrdinal(homewardGap.checkpoint),
-            }),
+            line: checkpointGapLine(t, homewardGap),
             openLabel: t("manifest.stage.openRollCall"),
             href: `?checkpoint=${homewardGap.checkpoint}`,
+            plan:
+              homewardGap.kind === "not_counted" && planHref
+                ? { label: t("manifest.checkpointGap.setPlan"), href: planHref }
+                : undefined,
           }
         : undefined,
     },

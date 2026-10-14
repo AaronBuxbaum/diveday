@@ -8,7 +8,6 @@
     "tapHome": "En puerto",
     "recordedLine": "{name} · {time}",
     "errorRefusal": "No se guardó. Revisa tu conexión y vuelve a tocar.",
-    "rollCallOpen": "Aún {count, plural, one {hay # persona sin marcar} other {hay # personas sin marcar}} después de la inmersión {dive}.",
     "openRollCall": "Abrir pase de lista"
   },
   "skipToRollCall": "Ir al pase de lista",
@@ -256,7 +255,11 @@
     }
   },
   "checkpointGap": {
-    "line": "{count, plural, one {# persona sin marcar} other {# personas sin marcar}} después de la inmersión {dive}.",
+    "lineDivers": "{divers, plural, one {# buceador sin marcar} other {# buceadores sin marcar}} después de la inmersión {dive}.",
+    "lineCrew": "{crew, plural, one {# tripulante sin marcar} other {# tripulantes sin marcar}} después de la inmersión {dive}.",
+    "lineBoth": "{divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}} sin marcar después de la inmersión {dive}.",
+    "notCounted": "La inmersión {dive} no se ha contado. Si se canceló, deja el plan en {plan, plural, one {# inmersión} other {# inmersiones}}.",
+    "setPlan": "Cambiar el plan",
     "openAnyway": "Abrir igualmente",
     "back": "Volver a la inmersión {dive}"
   },

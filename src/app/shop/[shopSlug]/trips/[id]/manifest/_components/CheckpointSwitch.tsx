@@ -2,24 +2,17 @@ import Link from "next/link";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { rollCallCheckpointShortText, rollCallCheckpointText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { type CheckpointGap, previousCheckpointGaps } from "@/lib/checkpoint-gaps";
+import { previousCheckpointGaps } from "@/lib/checkpoint-gaps";
 import {
   type RollCallCheckpoint,
   rollCallCheckpointOrdinal,
   type TripManifest,
 } from "@/lib/manifests";
 import { CheckpointGapGuard, type CheckpointGapPrompt } from "./CheckpointGapGuard";
+import { checkpointGapLine } from "./checkpoint-gap-words";
 
 function checkpointHref(shopSlug: string, tripId: string, checkpoint: RollCallCheckpoint): string {
   return `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;
-}
-
-/** "2 people not marked after dive 1." — the guard's line and the opened page's. */
-export function checkpointGapLine(t: StaffTranslator, gap: CheckpointGap): string {
-  return t("manifest.checkpointGap.line", {
-    count: gap.unaccounted,
-    dive: rollCallCheckpointOrdinal(gap.checkpoint),
-  });
 }
 
 /**
@@ -40,7 +33,7 @@ export function CheckpointSwitch({
   t,
 }: {
   /** The departure's manifests, dock first: one segment each, and their gaps. */
-  manifests: readonly Pick<TripManifest, "checkpoint" | "summary" | "completeness">[];
+  manifests: readonly Pick<TripManifest, "checkpoint" | "summary" | "crew">[];
   checkpoint: RollCallCheckpoint;
   shopSlug: string;
   tripId: string;

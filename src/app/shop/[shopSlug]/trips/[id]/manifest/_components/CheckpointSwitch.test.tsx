@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 import { CheckpointSwitch } from "./CheckpointSwitch";
 import { t } from "./diver-roll-call-test-fixtures";
-import { tripManifest } from "./manifest-page-test-fixtures";
+import { crewMember, tripManifest } from "./manifest-page-test-fixtures";
 
 /** One manifest per checkpoint; `open` names how many each has not accounted for. */
 function manifests(
@@ -62,7 +62,7 @@ describe("CheckpointSwitch", () => {
       const clicked = fireEvent.click(dive2);
       // The navigation was held back, not refused.
       expect(clicked).toBe(false);
-      expect(screen.getByRole("alert").textContent).toBe("2 people not marked after dive 1.");
+      expect(screen.getByRole("alert").textContent).toBe("2 divers not marked after dive 1.");
       expect(screen.getByRole("link", { name: "Open anyway" })).toHaveAttribute(
         "href",
         "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=after_dive_2",
@@ -98,11 +98,36 @@ describe("CheckpointSwitch", () => {
           t={t}
         />,
       );
-      expect(screen.getByText(/2 people not marked after dive 1\./)).toHaveClass("text-danger");
+      expect(screen.getByText(/2 divers not marked after dive 1\./)).toHaveClass("text-danger");
       expect(screen.getByRole("link", { name: "Back to dive 1" })).toHaveAttribute(
         "href",
         "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=after_dive_1",
       );
+    });
+
+    it("words divers and crew apart (dive-domain review 20261014)", () => {
+      const dm = (state?: "boarded") =>
+        crewMember({
+          rollCall: state
+            ? { state, occurredAt: new Date("2026-10-14T12:00:00Z"), recordedByName: "Keiko" }
+            : undefined,
+        });
+      const list = manifests(["departure", "after_dive_1", "after_dive_2"], {
+        after_dive_1: 11,
+      }).map((manifest) => ({
+        ...manifest,
+        crew: [dm(manifest.checkpoint === "departure" ? "boarded" : undefined)],
+      }));
+      render(
+        <CheckpointSwitch
+          manifests={list}
+          checkpoint="after_dive_2"
+          shopSlug="blue-mantis"
+          tripId="trip-1"
+          t={t}
+        />,
+      );
+      expect(screen.getByText(/11 divers and 1 crew not marked after dive 1\./)).toBeInTheDocument();
     });
 
     it("never stands between an open dock count and the first head count", () => {

@@ -315,7 +315,7 @@ describe("recordTripStage on the way home", () => {
     });
     expect(outcome).toMatchObject({
       ok: true,
-      rollCallOpen: { checkpoint: "after_dive_2", unaccounted: 1 },
+      rollCallOpen: { kind: "unmarked", checkpoint: "after_dive_2", divers: 1, crew: 0 },
     });
     // Warned, never refused: the word stands.
     expect(await latestTripStage(db, shopId, trip.id)).toMatchObject({ stage: "heading_in" });
@@ -379,6 +379,6 @@ describe("recordTripStage on the way home", () => {
         recordedByPersonId: staffer,
         recordedAt: NOW,
       }),
-    ).toMatchObject({ ok: true, rollCallOpen: { checkpoint: "after_dive_2", unaccounted: 1 } });
+    ).toMatchObject({ ok: true, rollCallOpen: { kind: "unmarked", checkpoint: "after_dive_2", divers: 1, crew: 0 } });
   });
 });

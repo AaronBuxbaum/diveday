@@ -8,7 +8,6 @@
     "tapHome": "Home",
     "recordedLine": "{name} · {time}",
     "errorRefusal": "That didn’t save. Check your connection and tap again.",
-    "rollCallOpen": "Still {count, plural, one {# person} other {# people}} not marked after dive {dive}.",
     "openRollCall": "Open roll call"
   },
   "skipToRollCall": "Skip to roll call",
@@ -256,7 +255,11 @@
     }
   },
   "checkpointGap": {
-    "line": "{count, plural, one {# person} other {# people}} not marked after dive {dive}.",
+    "lineDivers": "{divers, plural, one {# diver} other {# divers}} not marked after dive {dive}.",
+    "lineCrew": "{crew} crew not marked after dive {dive}.",
+    "lineBoth": "{divers, plural, one {# diver} other {# divers}} and {crew} crew not marked after dive {dive}.",
+    "notCounted": "Dive {dive} not counted. If it was called off, set the plan to {plan, plural, one {# dive} other {# dives}}.",
+    "setPlan": "Change the plan",
     "openAnyway": "Open anyway",
     "back": "Back to dive {dive}"
   },

@@ -144,7 +144,7 @@ describe("StageStrip on the way home with a roll call open", () => {
   const open = {
     ...copy,
     rollCallOpen: {
-      line: "Still 2 people not marked after dive 2.",
+      line: "2 divers not marked after dive 2.",
       openLabel: "Open roll call",
       href: "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=after_dive_2",
     },
@@ -152,7 +152,7 @@ describe("StageStrip on the way home with a roll call open", () => {
 
   it("says who is unmarked and links straight to that roll call", () => {
     render(<StageStrip action={noop} copy={open} current="heading_in" />);
-    expect(screen.getByRole("status").textContent).toBe("Still 2 people not marked after dive 2.");
+    expect(screen.getByRole("status").textContent).toBe("2 divers not marked after dive 2.");
     expect(screen.getByRole("link", { name: "Open roll call" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=after_dive_2",
@@ -160,6 +160,34 @@ describe("StageStrip on the way home with a roll call open", () => {
     for (const tap of copy.taps) {
       expect(screen.getByRole("button", { name: tap.label })).toBeEnabled();
     }
+  });
+
+  it("offers the plan beside the roll call when the last dive was never counted", () => {
+    render(
+      <StageStrip
+        action={noop}
+        copy={{
+          ...open,
+          rollCallOpen: {
+            ...open.rollCallOpen,
+            line: "Dive 2 not counted. If it was called off, set the plan to 1 dive.",
+            plan: {
+              label: "Change the plan",
+              href: "/shop/blue-mantis/trips/trip-1?view=details#dives",
+            },
+          },
+        }}
+        current="home"
+      />,
+    );
+    expect(screen.getByRole("status").textContent).toBe(
+      "Dive 2 not counted. If it was called off, set the plan to 1 dive.",
+    );
+    expect(screen.getByRole("link", { name: "Change the plan" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-1?view=details#dives",
+    );
+    expect(screen.getByRole("link", { name: "Open roll call" })).toBeInTheDocument();
   });
 
   it("holds the line until the boat's word says the diving is over", () => {

@@ -276,6 +276,7 @@ export default async function TripManifestPage({
         action={actions.setTripStage}
         {...stageStripProps(t, {
           manifests: completeManifests,
+          shopSlug,
           stage,
           now: nowDate(),
           timeZone: shop.timezone,
