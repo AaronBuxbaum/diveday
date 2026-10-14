@@ -157,7 +157,16 @@
     "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# buceador} other {# buceadores}}"
-    }
+    },
+    "viewNotBack": "Sin volver en 12 meses",
+    "lastDivedGroup": "Inmersión más reciente primero",
+    "lastDived": "última inmersión {date}",
+    "neverDived": "aún sin inmersiones",
+    "sortLabel": "Ordenar:",
+    "sortName": "Nombre",
+    "sortLastDived": "Última inmersión",
+    "sortAriaLabel": "Orden del registro",
+    "downloadList": "Descargar esta lista (CSV)"
   },
   "header": {
     "noContactDetails": "Aún sin datos de contacto",

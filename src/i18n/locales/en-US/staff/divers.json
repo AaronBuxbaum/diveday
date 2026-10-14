@@ -157,7 +157,16 @@
     "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# diver} other {# divers}}"
-    }
+    },
+    "viewNotBack": "Not back in 12 months",
+    "lastDivedGroup": "Most recent dive first",
+    "lastDived": "last dived {date}",
+    "neverDived": "no dives yet",
+    "sortLabel": "Sort:",
+    "sortName": "Name",
+    "sortLastDived": "Last dived",
+    "sortAriaLabel": "Roster order",
+    "downloadList": "Download this list (CSV)"
   },
   "header": {
     "noContactDetails": "No contact details yet",
