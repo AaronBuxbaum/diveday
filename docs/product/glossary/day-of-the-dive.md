@@ -84,7 +84,9 @@
   tap tells the diver by their usual channel, once. It is **open** until it goes home
   (**returned**) or the shop gives up on it (**discarded**); open items across every departure
   are listed at Lost and found. Resolved items are pruned after 90 days, and an erasure deletes
-  the diver's items outright (`src/db/lost-items.ts`).
+  the diver's items outright (`src/db/lost-items.ts`). The Boat tab's "Left aboard" form opens
+  at Heading in, Home, or once the departure is Back (`leftAboardOpen`; see **At sea**,
+  [operations.md](operations.md)).
 - **Dock line** — the one sentence under a consented first-timer's "first time with us" on the
   arrivals roster: the first name to greet and the level they hold ("Say hello to Priya: Open
   Water."). It names a level only when a card at that level is **verified** (`verifiedLevel` on
