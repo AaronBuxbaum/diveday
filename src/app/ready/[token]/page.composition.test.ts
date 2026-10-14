@@ -109,7 +109,7 @@ describe("the confirmation paints before the thread", () => {
       "issuePartySeatClaims(",
       "resolvePaymentReceipt(",
       "listTripDives(",
-      "countSpendableDives(",
+      "packageDivesForBooking(",
     ]) {
       expect(fastPath).not.toContain(read);
     }
@@ -136,7 +136,7 @@ describe("the confirmation paints before the thread", () => {
       "issuePartySeatClaims(",
       "resolvePaymentReceipt(",
       "listTripDives(",
-      "countSpendableDives(",
+      "packageDivesForBooking(",
     ]) {
       expect(SOURCE.slice(readyThread, body)).not.toContain(read);
       expect(thread).toContain(read);
