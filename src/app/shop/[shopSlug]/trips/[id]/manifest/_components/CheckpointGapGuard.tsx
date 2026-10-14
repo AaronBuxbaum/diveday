@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { TONE_PANEL_CLASS } from "@/components/ui/card";
 
 /**
  * **Opening the next after-dive roll call asks first while the one before it
@@ -73,7 +74,7 @@ export function CheckpointGapGuard({
     >
       {children}
       {prompt ? (
-        <div className="mt-3 rounded-panel border border-danger/60 bg-surface p-4 print:hidden">
+        <div className={`mt-3 ${TONE_PANEL_CLASS} border-danger/60 bg-surface print:hidden`}>
           <p ref={lineRef} tabIndex={-1} role="alert" className="text-base font-bold text-danger">
             {prompt.line}
           </p>
