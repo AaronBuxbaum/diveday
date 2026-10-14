@@ -2,7 +2,7 @@ import { and, eq, gte, inArray, isNull, notInArray } from "drizzle-orm";
 import { checkInBooking } from "@/db/check-in";
 import type { AppDb } from "@/db/client";
 import { getBookingReadiness } from "@/db/readiness";
-import { bookings, people, personRoles, trips, waiverRecords } from "@/db/schema";
+import { bookings, people, personRoles, rollCallEvents, trips, waiverRecords } from "@/db/schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "@/db/seed-more-trips";
 import { livePerson, liveTrip } from "@/db/trips-live";
 import { STAFF_ROLES } from "@/lib/authz";
@@ -18,9 +18,11 @@ import { HOUR_MS } from "@/lib/clock";
  *   inside its arrivals window. The counter must keep them under "Still to
  *   clear" and never paint the all-clear over them.
  * - `uncountedSeat` (#2408): one more seat on the demo's finished dawn boat
- *   that nobody said anything about at the dock, so its record carries all
- *   three dock outcomes: Sailed, Didn't sail (the seed turns away the divers
- *   readiness refuses, #2415) and Not counted at the dock.
+ *   that nobody said anything about at the dock, and one more turned away
+ *   there, so its record carries all three dock outcomes: Sailed, Didn't sail
+ *   and Not counted at the dock. The seed itself sails nobody readiness would
+ *   refuse (#2415, UX review 2026-10-13 item 40), so "Didn't sail" is written
+ *   here rather than left to the seed's draw.
  */
 export async function boatSliceStates(request: Request, db: AppDb, shopId: string, now: Date) {
   const asked = (flag: string) => new URL(request.url).searchParams.get(flag) === "1";
@@ -126,21 +128,43 @@ async function leaveASeatUncounted(
     .select({ personId: bookings.personId })
     .from(bookings)
     .where(eq(bookings.tripId, trip.id));
-  const [person] = await db
-    .select({ id: people.id, fullName: people.fullName })
+  const candidates = await db
+    .selectDistinct({ id: people.id, fullName: people.fullName })
     .from(people)
     .innerJoin(bookings, eq(bookings.personId, people.id))
     .where(and(eq(people.shopId, shopId), livePerson(), notInArray(people.id, aboard)))
     .orderBy(people.fullName)
-    .limit(1);
+    .limit(2);
+  const [person, turnedAway] = candidates;
   if (!person) return null;
-  await db.insert(bookings).values({
+  const seat = (personId: string) => ({
     shopId,
     tripId: trip.id,
-    personId: person.id,
-    bookedAs: "diver",
-    status: "checked_in",
+    personId,
+    bookedAs: "diver" as const,
+    status: "checked_in" as const,
     createdAt: new Date(trip.startsAt.getTime() - 24 * HOUR_MS),
   });
+  await db.insert(bookings).values(seat(person.id));
+  const [counted] = await db
+    .select({ recorderId: rollCallEvents.recordedByPersonId })
+    .from(rollCallEvents)
+    .where(eq(rollCallEvents.tripId, trip.id))
+    .limit(1);
+  if (turnedAway && counted) {
+    const [refused] = await db.insert(bookings).values(seat(turnedAway.id)).returning();
+    if (refused) {
+      await db.insert(rollCallEvents).values({
+        shopId,
+        tripId: trip.id,
+        bookingId: refused.id,
+        recordedByPersonId: counted.recorderId,
+        status: "not_boarded",
+        checkpoint: "departure",
+        source: "live",
+        occurredAt: trip.startsAt,
+      });
+    }
+  }
   return { tripId: trip.id, personName: person.fullName };
 }
