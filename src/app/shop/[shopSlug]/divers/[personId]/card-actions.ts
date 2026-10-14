@@ -31,7 +31,9 @@ import {
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { judgeAgencyPage, PAGE_TEXT_MAX_LENGTH } from "@/lib/agency-check";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
+import { nowDate } from "@/lib/clock";
 import { formValue, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { noticeUrl } from "@/lib/staff-notices";
@@ -638,14 +640,22 @@ export type AgencyCheckResult =
   | { ok: true; verdict: "undone" }
   | {
       ok: true;
-      /** The diver is on the page, this level is not: the staffer reads it. */
-      verdict: "level_unconfirmed";
+      /**
+       * The diver is on the page, short of a match: this level is not
+       * (`level_unconfirmed`), the card is junior, limited or unfinished
+       * (`limited_card`), or PADI shows a junior rating for a diver under 15
+       * (`junior_under_15`). The staffer reads it, with the diver's own lines.
+       */
+      verdict: "level_unconfirmed" | "limited_card" | "junior_under_15";
       evidence: string;
     }
   | {
       ok: true;
-      /** Nobody found; a page that reads as no result; or PADI listing several divers. */
-      verdict: "no_record" | "unreadable" | "several_records";
+      /**
+       * Nobody found; a page that reads as no result; PADI listing several
+       * divers; or someone by this name, never with this birth date or number.
+       */
+      verdict: "no_record" | "unreadable" | "several_records" | "namesake";
     }
   | { ok: false; reason: "invalid" | "not-undoable" };
 
@@ -704,11 +714,19 @@ export async function agencyCheckAction(
   if (!card) return { ok: false, reason: "invalid" };
   const judged = judgeAgencyPage({
     ...card.query,
+    ...card.identity,
     level: card.level,
+    // A junior rating's age is read on the earliest calendar day anywhere,
+    // so a diver is never taken for 15 a day early.
+    today: calendarDateInTimezone(nowDate(), "Etc/GMT+12"),
     pageText: pageText.slice(0, PAGE_TEXT_MAX_LENGTH),
   });
-  if (judged.verdict === "level_unconfirmed") {
-    return { ok: true, verdict: "level_unconfirmed", evidence: judged.evidence };
+  if (
+    judged.verdict === "level_unconfirmed" ||
+    judged.verdict === "limited_card" ||
+    judged.verdict === "junior_under_15"
+  ) {
+    return { ok: true, verdict: judged.verdict, evidence: judged.evidence };
   }
   if (judged.verdict !== "match") return { ok: true, verdict: judged.verdict };
 

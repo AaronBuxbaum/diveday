@@ -480,7 +480,7 @@
       "cancelled": "Stopped. Checked {checked}. Certified: {certified}.",
       "stopped": "Stopped at {name}: couldn’t read {agency}’s page. The rest are left for you.",
       "stoppedTransport": "Stopped at {name}: DiveDay didn’t answer. Reload to see where each certification stands.",
-      "stoppedSignedOut": "Stopped at {name}: sign in to {agency} first. The rest are left for you."
+      "stoppedSignedOut": "Stopped at {name}: sign in to the PADI Pros’ Site first. The rest are left for you."
     },
     "certifyConfirm": "Confirm certification",
     "certifyDiver": "Certify",

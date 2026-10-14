@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { AgencyCheckCopy } from "./agency-check-copy";
 import {
+  agencyCheckAnswered,
+  agencyCheckEvidence,
   agencyCheckFailure,
   agencyCheckForm,
   agencyCheckMatchedText,
@@ -15,6 +17,9 @@ const COPY = {
   matched: "matched",
   matchedConfirmed: "matchedConfirmed",
   levelUnconfirmed: "levelUnconfirmed",
+  limitedCard: "limitedCard",
+  juniorUnder15: "juniorUnder15",
+  namesake: "namesake",
   noRecord: "noRecord",
   severalRecords: "severalRecords",
   unreadable: "unreadable",
@@ -74,6 +79,28 @@ describe("agencyCheckOutcome", () => {
     expect(
       agencyCheckOutcomeText({ ok: true, verdict: "several_records" }, null, COPY, "Lena Ortiz"),
     ).toBe("severalRecords");
+  });
+
+  it("says a namesake, a limited card and a junior under 15 in their own words", () => {
+    const say = (result: Parameters<typeof agencyCheckOutcomeText>[0]) =>
+      agencyCheckOutcomeText(result, null, COPY, "Lena Ortiz");
+    expect(say({ ok: true, verdict: "namesake" })).toBe("namesake");
+    expect(say({ ok: true, verdict: "limited_card", evidence: "x" })).toBe("limitedCard");
+    expect(say({ ok: true, verdict: "junior_under_15", evidence: "x" })).toBe("juniorUnder15");
+    expect(agencyCheckOutcome({ ok: true, verdict: "namesake" }, null)).toBe("namesake");
+  });
+
+  /** A namesake is another person: none of their words are shown. */
+  it("shows the agency's words only about this diver", () => {
+    expect(agencyCheckEvidence({ ok: true, verdict: "namesake" })).toBeNull();
+    expect(agencyCheckEvidence({ ok: true, verdict: "limited_card", evidence: "Lena" })).toBe(
+      "Lena",
+    );
+    expect(agencyCheckEvidence({ ok: true, verdict: "match", effect: "certified" })).toBeNull();
+    expect(agencyCheckAnswered({ ok: true, verdict: "namesake" })).toBe(true);
+    expect(agencyCheckAnswered({ ok: true, verdict: "match", effect: "certified" })).toBe(false);
+    expect(agencyCheckAnswered({ ok: true, verdict: "undone" })).toBe(false);
+    expect(agencyCheckAnswered({ ok: false, reason: "invalid" })).toBe(false);
   });
 
   it("reads each verdict as the queue sees it", () => {

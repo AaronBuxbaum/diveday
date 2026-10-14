@@ -392,7 +392,7 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
     });
 
     expect(
-      await row("person-1").findByText("Sign in to PADI first, then check again."),
+      await row("person-1").findByText("Sign in to the PADI Pros’ Site first, then check again."),
     ).toBeVisible();
     expect(row("person-1").queryByText("Couldn’t read PADI’s page.")).toBeNull();
     expect(row("person-1").getByRole("button", { name: "Check with PADI" })).toBeEnabled();
@@ -419,7 +419,7 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
 
     expect(
       await screen.findByText(
-        "Stopped at Diver Number2: sign in to PADI first. The rest are left for you.",
+        "Stopped at Diver Number2: sign in to the PADI Pros’ Site first. The rest are left for you.",
       ),
     ).toBeInTheDocument();
     expect(vi.mocked(requestAgencyPage)).toHaveBeenCalledTimes(2);

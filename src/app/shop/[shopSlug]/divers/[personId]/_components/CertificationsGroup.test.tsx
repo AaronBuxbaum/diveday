@@ -460,7 +460,7 @@ describe("the agency check link", () => {
     );
     expect(screen.getByRole("link", { name: "Check with PADI (member sign-in)" })).toHaveAttribute(
       "href",
-      "https://pro.padi.com/",
+      "https://pros.padi.com/",
     );
   });
 

@@ -49,6 +49,12 @@ export type AgencyCheckOutcome =
   | "confirmed"
   /** The diver is on the page, this level is not: left for the staffer, with the page's words. */
   | "level_unconfirmed"
+  /** The diver's card on the page is junior, limited or unfinished: left for the staffer. */
+  | "limited_card"
+  /** PADI shows a junior rating for a diver under 15: recorded by hand. */
+  | "junior_under_15"
+  /** Someone by this name, not with this birth date or number: left for the staffer. */
+  | "namesake"
   /** The agency found nobody under this name: left for the staffer. */
   | "no_record"
   /** The agency listed several divers by this name (PADI): left for the staffer. */

@@ -10,15 +10,21 @@
 /**
  * Fill the agency's form with one diver and submit it.
  *
+ * Nothing is typed until every box the lookup needs, and the button that
+ * sends it, has been found: a lookup that cannot be finished leaves the page
+ * exactly as it was.
+ *
  * A page behind the shop's own sign-in (`spec.signIn`, PADI's Pros' Site) is
  * held tighter than a public lookup: nothing is typed on a sign-in, sign-up or
- * account address, every box filled must be one that searches, and the only
- * button pressed is that search's own.
+ * account address (`signInPath`, from protocol.js) or a page asking for a
+ * password or, outside any search, an email; every box filled must search;
+ * and the only button pressed is that search's own.
  * @param {{firstName: string, lastName: string, birthDate?: string|null, cardNumber?: string|null, email?: string}} query
  * @param {{fields: string[], dateFormat: string, either?: boolean, signIn?: boolean}} spec
+ * @param {string} [signInPath] the source of `SIGN_IN_PATH` (protocol.js)
  * @returns {{ok: true} | {ok: false, missing: string[]}}
  */
-function fillAgencyForm(query, spec) {
+function fillAgencyForm(query, spec, signInPath) {
   const PATTERNS = {
     first: /first|given|fname|forename|nombre/i,
     last: /last|family|surname|lname|apellido/i,
@@ -30,6 +36,18 @@ function fillAgencyForm(query, spec) {
     number: /number|card|cert|code|c[oó]digo|#/i,
     email: /e-?mail|correo|student/i,
   };
+  // Whole words, so "Research" is not a search. A box says it searches with
+  // these; a signed-in search's own button may also say check or verify.
+  const BOX_SEARCH = /\b(search|find|look ?up|buscar)\b/i;
+  const BUTTON_SEARCH = /\b(search|find|look ?up|check|chek|divechek|verify|buscar|verificar)\b/i;
+  const SUBMITS = 'button, input[type="submit"]';
+
+  /** Words as a person reads them: "searchFirstName" and "search_first" are two words each. */
+  function words(text) {
+    return String(text || "")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/[_\-.]+/g, " ");
+  }
 
   function describe(element) {
     const parts = [
@@ -49,17 +67,55 @@ function fillAgencyForm(query, spec) {
     return parts.filter(Boolean).join(" ");
   }
 
+  function buttonWords(button) {
+    return words(button.textContent || button.value || button.getAttribute("aria-label") || "");
+  }
+
   function visible(element) {
     if (element.type === "hidden" || element.disabled || element.readOnly) return false;
     const style = window.getComputedStyle(element);
     return style.display !== "none" && style.visibility !== "hidden";
   }
 
+  /** A box a lookup could type into: not a button, a tick, a file, a password or an email. */
+  function typable(element) {
+    return (
+      visible(element) &&
+      !/^(submit|button|checkbox|radio|file|image|reset|password|email)$/i.test(element.type)
+    );
+  }
+
   const signedInPage = spec.signIn === true;
+
+  // A search box says so itself: by its type, a search landmark around it, or
+  // its own words.
+  function boxSearches(box) {
+    return (
+      box.type === "search" ||
+      Boolean(box.closest('[role="search"]')) ||
+      BOX_SEARCH.test(words(describe(box)))
+    );
+  }
+
+  // A form's button speaks for its boxes only when the form is small: its one
+  // submit control says search ("one"), or it says search among others and
+  // every box in the form is one this lookup fills ("all", checked once the
+  // boxes are found). A profile form with a Search beside its Save is neither.
+  function formSearches(form) {
+    if (!form) return null;
+    const submits = Array.from(form.querySelectorAll(SUBMITS)).filter(visible);
+    const searching = submits.filter((button) => BUTTON_SEARCH.test(buttonWords(button)));
+    if (searching.length === 0) return null;
+    return submits.length === 1 ? "one" : "all";
+  }
+
+  function searches(box) {
+    return boxSearches(box) || formSearches(box.form) !== null;
+  }
+
   const controls = Array.from(document.querySelectorAll("input, select")).filter(
     (element) =>
-      visible(element) &&
-      !/^(submit|button|checkbox|radio|file|image|reset|password|email)$/i.test(element.type) &&
+      typable(element) &&
       // Behind a sign-in, a diver's details go only into a search.
       (!signedInPage || searches(element)),
   );
@@ -85,25 +141,20 @@ function fillAgencyForm(query, spec) {
     element.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  function selectOption(element, wanted) {
+  function optionValue(element, wanted) {
     const options = Array.from(element.options);
     const match = options.find(
       (option) =>
         wanted.some((value) => option.value === value) ||
         wanted.some((value) => option.textContent.trim().toLowerCase() === value.toLowerCase()),
     );
-    if (!match) return false;
-    setValue(element, match.value);
-    return true;
+    return match ? match.value : null;
   }
 
   function formatDate(iso, format) {
     const [year, month, day] = iso.split("-");
     return format.replace("YYYY", year).replace("MM", month).replace("DD", day);
   }
-
-  const used = [];
-  const missing = [];
 
   // A sign-in page is never filled: typing a diver's details into an agency's
   // sign-in form would be an attempt to sign in as them. The staffer signs in
@@ -115,46 +166,61 @@ function fillAgencyForm(query, spec) {
   // A student's email goes only into a search, never a page that signs in,
   // signs up or manages an account, whose first box may also ask for an email.
   const typesEmail = Array.isArray(spec.fields) && spec.fields.includes("email");
+  if (typesEmail || signedInPage) {
+    // No address rule to hold the page to is no page to type on.
+    if (typeof signInPath !== "string" || signInPath.length === 0) {
+      return { ok: false, missing: ["signedIn"] };
+    }
+    if (new RegExp(signInPath, "i").test(location.pathname)) {
+      return { ok: false, missing: ["signedIn"] };
+    }
+  }
+  // A sign-in that asks for the email first and the password on the next
+  // step: an email box that is not a search, on a signed-in page.
   if (
-    (typesEmail || signedInPage) &&
-    /log-?in|sign-?in|sign-?up|register|account|auth|profile/i.test(location.pathname)
+    signedInPage &&
+    Array.from(document.querySelectorAll('input[type="email"]')).some(
+      (box) => visible(box) && !searches(box),
+    )
   ) {
     return { ok: false, missing: ["signedIn"] };
   }
 
-  function fillName() {
-    const first = find(PATTERNS.first, used);
-    const last = first ? find(PATTERNS.last, [...used, first]) : null;
+  // What will be typed where, decided before anything is typed.
+  const plan = [];
+  const used = () => plan.map((entry) => entry.box);
+  const missing = [];
+
+  function planName() {
+    const first = find(PATTERNS.first, used());
+    const last = first ? find(PATTERNS.last, [...used(), first]) : null;
     if (first && last) {
-      setValue(first, query.firstName);
-      setValue(last, query.lastName);
-      used.push(first, last);
+      plan.push({ box: first, value: query.firstName }, { box: last, value: query.lastName });
       return true;
     }
-    const whole = find(PATTERNS.name, used);
+    const whole = find(PATTERNS.name, used());
     if (whole) {
-      setValue(whole, `${query.firstName} ${query.lastName}`);
-      used.push(whole);
+      plan.push({ box: whole, value: `${query.firstName} ${query.lastName}` });
       return true;
     }
     return false;
   }
 
-  function fillBirthDate() {
+  function planBirthDate() {
     if (!query.birthDate) return false;
-    const single = find(PATTERNS.birthDate, used);
+    const single = find(PATTERNS.birthDate, used());
     if (single && single.tagName === "INPUT") {
-      setValue(
-        single,
-        single.type === "date" ? query.birthDate : formatDate(query.birthDate, spec.dateFormat),
-      );
-      used.push(single);
+      plan.push({
+        box: single,
+        value:
+          single.type === "date" ? query.birthDate : formatDate(query.birthDate, spec.dateFormat),
+      });
       return true;
     }
     const [year, month, day] = query.birthDate.split("-");
-    const monthBox = find(PATTERNS.month, used);
-    const dayBox = find(PATTERNS.day, [...used, monthBox]);
-    const yearBox = find(PATTERNS.year, [...used, monthBox, dayBox]);
+    const monthBox = find(PATTERNS.month, used());
+    const dayBox = find(PATTERNS.day, [...used(), monthBox]);
+    const yearBox = find(PATTERNS.year, [...used(), monthBox, dayBox]);
     if (!monthBox || !dayBox || !yearBox) return false;
     const monthNames = [
       "january",
@@ -171,106 +237,106 @@ function fillAgencyForm(query, spec) {
       "december",
     ];
     const monthName = monthNames[Number(month) - 1];
-    function put(box, typed, options) {
-      if (box.tagName === "SELECT") return selectOption(box, options);
-      setValue(box, typed);
-      return true;
+    function value(box, typed, options) {
+      return box.tagName === "SELECT" ? optionValue(box, options) : typed;
     }
-    const ok = [
-      put(monthBox, month, [month, String(Number(month)), monthName, monthName.slice(0, 3)]),
-      put(dayBox, day, [day, String(Number(day))]),
-      put(yearBox, year, [year]),
-    ].every(Boolean);
-    if (ok) used.push(monthBox, dayBox, yearBox);
-    return ok;
+    const entries = [
+      {
+        box: monthBox,
+        value: value(monthBox, month, [
+          month,
+          String(Number(month)),
+          monthName,
+          monthName.slice(0, 3),
+        ]),
+      },
+      { box: dayBox, value: value(dayBox, day, [day, String(Number(day))]) },
+      { box: yearBox, value: value(yearBox, year, [year]) },
+    ];
+    if (entries.some((entry) => entry.value === null)) return false;
+    plan.push(...entries);
+    return true;
   }
 
-  function fillNumber() {
+  function planNumber() {
     if (!query.cardNumber) return false;
-    const box = find(PATTERNS.number, used);
+    const box = find(PATTERNS.number, used());
     if (box?.tagName !== "INPUT") return false;
-    setValue(box, query.cardNumber);
-    used.push(box);
+    plan.push({ box, value: query.cardNumber });
     return true;
   }
 
-  // A box that searches: by its type, a search landmark around it, or what it
-  // or its form's buttons say. An invite or newsletter box is not one.
-  function searches(box) {
-    const words = /search|find|look ?up|buscar/i;
-    if (box.type === "search" || box.closest('[role="search"]')) return true;
-    if (words.test(describe(box))) return true;
-    const buttons = box.form
-      ? Array.from(box.form.querySelectorAll('button, input[type="submit"]'))
-      : [];
-    return buttons.some((button) => words.test(button.textContent || button.value || ""));
-  }
-
-  function fillEmail() {
+  function planEmail() {
     if (!query.email) return false;
-    const box = emailBoxes.find((element) => !used.includes(element) && searches(element));
+    const box = emailBoxes.find((element) => !used().includes(element) && searches(element));
     if (!box) return false;
-    setValue(box, query.email);
-    used.push(box);
+    plan.push({ box, value: query.email });
     return true;
   }
 
-  const fillers = {
-    name: fillName,
-    birthDate: fillBirthDate,
-    number: fillNumber,
-    email: fillEmail,
+  const planners = {
+    name: planName,
+    birthDate: planBirthDate,
+    number: planNumber,
+    email: planEmail,
   };
   if (spec.either) {
     // CMAS: the code alone when there is one, or names and birth date.
-    const byNumber = Boolean(query.cardNumber) && fillNumber();
+    const byNumber = Boolean(query.cardNumber) && planNumber();
     if (!byNumber) {
-      if (!fillName()) missing.push("name");
-      if (!fillBirthDate()) missing.push("birthDate");
+      if (!planName()) missing.push("name");
+      if (!planBirthDate()) missing.push("birthDate");
     }
   } else {
-    for (const field of spec.fields) if (!fillers[field]()) missing.push(field);
+    for (const field of spec.fields) if (!planners[field]()) missing.push(field);
   }
-  if (missing.length > 0 || used.length === 0) return { ok: false, missing };
+  if (missing.length > 0 || plan.length === 0) return { ok: false, missing };
 
-  const form = used[0].form;
+  const boxes = used();
+  const form = boxes[0].form;
+  let button = null;
   if (signedInPage) {
-    // Only the search's own button, or its form's own submit: never another
-    // of the signed-in page's buttons, whatever it says.
-    const own = form
-      ? Array.from(form.querySelectorAll('button, input[type="submit"]')).find((element) =>
-          /search|find|look ?up|buscar/i.test(element.textContent || element.value || ""),
-        )
-      : Array.from(
-          (used[0].closest('[role="search"]') || document.createElement("div")).querySelectorAll(
-            'button, input[type="submit"]',
-          ),
-        )[0];
-    if (own) {
-      own.click();
-    } else if (form) {
-      form.requestSubmit();
-    } else {
-      return { ok: false, missing: ["submit"] };
+    // Every box in one search. A box that searches only because its form's
+    // button says so is in a form whose every box this lookup fills.
+    if (boxes.some((box) => box.form !== form)) return { ok: false, missing: ["submit"] };
+    if (!boxes.every(boxSearches) && formSearches(form) === "all") {
+      const others = Array.from(form.querySelectorAll("input, select")).filter(
+        (element) => typable(element) && !boxes.includes(element),
+      );
+      if (others.length > 0) return { ok: false, missing: spec.fields.slice() };
     }
-    return { ok: true };
+    // Only the search's own button: never another of the signed-in page's
+    // buttons, whatever it says, and never a bare submit of the form.
+    button = form
+      ? Array.from(form.querySelectorAll(SUBMITS)).find(
+          (element) => visible(element) && BUTTON_SEARCH.test(buttonWords(element)),
+        ) || null
+      : Array.from(
+          (boxes[0].closest('[role="search"]') || document.createElement("div")).querySelectorAll(
+            SUBMITS,
+          ),
+        ).find(visible) || null;
+    if (!button) return { ok: false, missing: ["submit"] };
+  } else {
+    button =
+      (form &&
+        Array.from(form.querySelectorAll(SUBMITS)).find(
+          (element) => element.type === "submit" || element.tagName === "BUTTON",
+        )) ||
+      Array.from(document.querySelectorAll(SUBMITS)).find((element) =>
+        /search|find|verify|check|submit|buscar|verificar/i.test(
+          element.textContent || element.value || "",
+        ),
+      ) ||
+      null;
+    if (!button && !form) return { ok: false, missing: ["submit"] };
   }
-  const button =
-    (form &&
-      Array.from(form.querySelectorAll('button, input[type="submit"]')).find(
-        (element) => element.type === "submit" || element.tagName === "BUTTON",
-      )) ||
-    Array.from(document.querySelectorAll('button, input[type="submit"]')).find((element) =>
-      /search|find|verify|check|submit|buscar|verificar/i.test(
-        element.textContent || element.value || "",
-      ),
-    );
+
+  for (const entry of plan) setValue(entry.box, entry.value);
   if (button) {
     button.click();
-  } else if (form) {
-    form.requestSubmit();
   } else {
-    return { ok: false, missing: ["submit"] };
+    form.requestSubmit();
   }
   return { ok: true };
 }
@@ -304,17 +370,23 @@ function excerptAround(text, email) {
 
 /**
  * Only the part of a signed-in lookup page about the diver searched for: each
- * line naming them (first and last name, accents and case aside) and the few
- * lines under it, plus any line saying how many divers were found, which says
- * nothing about anyone. When no line names them, the page's first lines, to
- * say "No results" or "Sign in". Read with the shop's own PADI sign-in, the
+ * line naming them (first and last name in either order, accents and case
+ * aside) and the `AFTER` lines under it, the most the server reads as one
+ * record (`RECORD_LINES` in src/lib/agency-check.ts), plus the words of any
+ * line saying how many divers were found, which say nothing about anyone. When
+ * no line names them, only the lines saying why: no result, several divers, or
+ * a sign-in, at most `WHY_LINES`. Read with the shop's own PADI sign-in, the
  * rest of the page is not DiveDay's to take.
  * @param {string} text
  * @param {string} firstName
  * @param {string} lastName
  */
 function excerptAroundName(text, firstName, lastName) {
-  const AFTER = 6;
+  const AFTER = 4;
+  const WHY_LINES = 10;
+  const COUNT = /(^| )\d+ divers?( found)?( |$)/;
+  const WHY =
+    /(^| )(no results?|no records?|no matching|no diver|not found|could not find|unable to find|0 results|sign ?in|log ?in|password|session (has )?expired)( |$)/;
   const fold = (value) =>
     ` ${value
       .normalize("NFD")
@@ -325,21 +397,30 @@ function excerptAroundName(text, firstName, lastName) {
   const first = fold(firstName);
   const last = fold(lastName);
   const lines = text.split(/\r?\n/);
-  const keep = new Set();
-  lines.forEach((line, index) => {
-    const folded = fold(line);
-    if (folded.length < 60 && / \d+ (results?|divers?|records?|matches) /.test(folded)) {
-      keep.add(index);
+  const folded = lines.map(fold);
+  const names = (line) => line.includes(first) && line.includes(last);
+  const kept = new Map();
+  folded.forEach((line, index) => {
+    // The count's own words, never the rest of a long line around them.
+    const count = line.match(COUNT);
+    if (count && !kept.has(index)) {
+      kept.set(index, line.length < 60 ? lines[index] : count[0].trim());
     }
-    if (!folded.includes(first) || !folded.includes(last)) return;
-    for (let at = index; at <= Math.min(lines.length - 1, index + AFTER); at += 1) keep.add(at);
+    if (!names(line)) return;
+    for (let at = index; at <= Math.min(lines.length - 1, index + AFTER); at += 1) {
+      kept.set(at, lines[at]);
+    }
   });
-  const named = lines.some((line) => {
-    const folded = fold(line);
-    return folded.includes(first) && folded.includes(last);
-  });
-  if (!named) return lines.slice(0, 40).join("\n");
-  return lines.filter((_, index) => keep.has(index)).join("\n");
+  if (!folded.some(names)) {
+    return lines
+      .filter((_, index) => WHY.test(folded[index]) || COUNT.test(folded[index]))
+      .slice(0, WHY_LINES)
+      .join("\n");
+  }
+  return [...kept.keys()]
+    .sort((a, b) => a - b)
+    .map((index) => kept.get(index))
+    .join("\n");
 }
 
 globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {

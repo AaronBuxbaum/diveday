@@ -15,10 +15,10 @@ Whether to build it before PADI's member terms are read and before anyone has tr
 
 **Decided 2026-10-14 (Aaron Buxbaum, in the project thread):** "build those 3", taking the top three ideas for the extension, of which this is the second. PADI's member terms were weighed as the open question; the default is to build it, pending a read of the PADI Pros' Site terms and a test against the real page. Built as the PADI section of [20261008-cert-check-extension](../../architecture/decisions/20261008-cert-check-extension.md):
 
-- "Check with PADI" on a pending PADI level card whose diver has a birth date on file, on the diver record, a departure's Divers tab and Today, and inside a departure's "Check all".
-- The extension types the diver's first name, last name and birth date into DiveChek's search boxes only, presses only that search's own button, never acts on a sign-in, sign-up or account page or one with a visible password box, and hands back only the lines about this diver.
-- A signed-out browser says "Sign in to PADI first", and stops a "Check all" with that reason.
-- The server certifies only one record with this diver's name, birth date and PADI's own wording for the level; a namesake, another level, or a page listing several divers certifies nothing.
+- "Check with PADI" on a pending PADI Open Water, Advanced Open Water or Rescue card whose diver has a birth date on file, on the diver record, a departure's Divers tab and Today, and inside a departure's "Check all". A divemaster or instructor card keeps its link.
+- The extension types the diver's first name, last name and birth date into DiveChek's search boxes only, and only once every box and the search's own button are found; presses only that button, never a bare submit; never acts on a sign-in, sign-up or account page, one with a visible password box, or one with an email box that does not search; and hands back only the lines about this diver.
+- A signed-out browser says "Sign in to the PADI Pros' Site first", and stops a "Check all" with that reason. The "(member sign-in)" link opens the same Pros' Site host.
+- The server certifies only one diver: DiveChek's rows sharing the typed birth date are that diver's cards, and the record carrying the level must carry the birth date first and, when the card has one, its number. A namesake born another day, a transposed date, another level, a neighbor's row or a page listing several divers certifies nothing. An instructor named on the row is the trainer; a "Junior" rating counts as the level from the diver's 15th birthday, and under 15 is recorded by hand.
 
 ## Unblocks / follow-up
 

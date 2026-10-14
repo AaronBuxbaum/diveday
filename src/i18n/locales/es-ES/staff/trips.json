@@ -480,7 +480,7 @@
       "cancelled": "Detenida. Verificadas: {checked}. Certificadas: {certified}.",
       "stopped": "Se detuvo en {name}: no se pudo leer la página de {agency}. El resto queda para ti.",
       "stoppedTransport": "Se detuvo en {name}: DiveDay no respondió. Recarga para ver cómo quedó cada certificación.",
-      "stoppedSignedOut": "Se detuvo en {name}: inicia sesión en {agency} primero. El resto queda para ti."
+      "stoppedSignedOut": "Se detuvo en {name}: inicia sesión en el PADI Pros’ Site primero. El resto queda para ti."
     },
     "certifyConfirm": "Confirmar certificación",
     "certifyDiver": "Certificar",

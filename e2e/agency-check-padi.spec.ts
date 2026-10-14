@@ -62,7 +62,10 @@ async function installFakeExtension(page: Page, mode: Mode) {
       const name = `${data.query.firstName} ${data.query.lastName}`;
       const [year, month, day] = String(data.query.birthDate).split("-");
       const born = `${month}/${day}/${year}`;
-      const record = [name, `Date of Birth: ${born}`, "Open Water Diver 06/15/2015 1506AB1234"];
+      // DiveChek's row carries the card's number, which the server needs when
+      // the card has one; the test hands the fake the number it typed.
+      const number = window.sessionStorage.getItem("padiCardNumber") ?? "1506AB1234";
+      const record = [name, `Date of Birth: ${born}`, `Open Water Diver 06/15/2015 ${number}`];
       const namesake = [name, "Date of Birth: 09/03/1987", "Open Water Diver 02/02/2020"];
       reply({
         ok: true,
@@ -100,7 +103,12 @@ async function diverWithPendingPadiCard(page: Page) {
     .filter({ visible: true });
   await form.locator('select[name="agency"]').selectOption("padi");
   await form.locator('select[name="card"]').selectOption("level:open_water");
-  await form.getByLabel("Certification number").fill(`1506AB${String(stamp).slice(-4)}`);
+  const cardNumber = `1506AB${String(stamp).slice(-4)}`;
+  await form.getByLabel("Certification number").fill(cardNumber);
+  await page.evaluate(
+    (number) => window.sessionStorage.setItem("padiCardNumber", number),
+    cardNumber,
+  );
   await form.getByRole("button", { name: "Capture for review", exact: true }).click();
   const cards = await openDiverFileGroup(page, "Certification records");
   await expect(cards.getByRole("button", { name: "Check with PADI" })).toBeVisible();
@@ -134,7 +142,9 @@ test("signed out of PADI, the check says to sign in first and writes nothing", a
 
   await cards.getByRole("button", { name: "Check with PADI" }).click();
 
-  await expect(cards.getByText("Sign in to PADI first, then check again.")).toBeVisible();
+  await expect(
+    cards.getByText("Sign in to the PADI Pros’ Site first, then check again."),
+  ).toBeVisible();
   await expect(cards.getByText("Couldn’t read PADI’s page.")).toHaveCount(0);
   await expect(cards.getByRole("link", { name: "Check with PADI (member sign-in)" })).toBeVisible();
   await expect(cards.getByRole("button", { name: "Check with PADI" })).toBeEnabled();
@@ -174,14 +184,14 @@ test("Check all on a departure stops at the first PADI card when signed out of P
   await page.getByRole("button", { name: /^Check all \d+ cards with their agencies$/ }).click();
 
   await expect(
-    page.getByText(`Stopped at ${name}: sign in to PADI first.`, { exact: false }),
+    page.getByText(`Stopped at ${name}: sign in to the PADI Pros’ Site first.`, { exact: false }),
   ).toBeVisible({
     timeout: 20_000,
   });
   await expect(page.getByText(/couldn’t read PADI’s page/)).toHaveCount(0);
   expect(await padiLookups(page)).toBe(1);
   await expect(
-    rosterRow(page, name).getByText("Sign in to PADI first, then check again."),
+    rosterRow(page, name).getByText("Sign in to the PADI Pros’ Site first, then check again."),
   ).toBeVisible();
   await expect(
     rosterRow(page, name).getByRole("button", { name: "Check with PADI" }),

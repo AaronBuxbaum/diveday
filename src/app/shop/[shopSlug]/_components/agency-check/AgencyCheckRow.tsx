@@ -6,7 +6,12 @@ import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { useAgencyCheckHost } from "./AgencyCheckHost";
-import { agencyCheckMatchedText, agencyCheckOutcomeText } from "./agency-check-outcome";
+import {
+  agencyCheckAnswered,
+  agencyCheckEvidence,
+  agencyCheckMatchedText,
+  agencyCheckOutcomeText,
+} from "./agency-check-outcome";
 
 const LINK_BUTTON = buttonClass({
   variant: "link",
@@ -69,12 +74,7 @@ export function AgencyCheckRow({
       // agency's own page, so the link takes the button's place rather than
       // standing under it with the same words. A check that came back with no
       // page keeps the button, for another try.
-      const answered =
-        settled?.result?.ok === true &&
-        (settled.result.verdict === "level_unconfirmed" ||
-          settled.result.verdict === "no_record" ||
-          settled.result.verdict === "several_records" ||
-          settled.result.verdict === "unreadable");
+      const answered = settled ? agencyCheckAnswered(settled.result) : false;
       const showButton =
         host.hasExtension && pendingIds.has(card.certificationId) && !matched && !answered && copy;
       const outcome =
@@ -86,10 +86,7 @@ export function AgencyCheckRow({
               `${card.query.firstName} ${card.query.lastName}`,
             )
           : null;
-      const evidence =
-        settled?.result?.ok === true && settled.result.verdict === "level_unconfirmed"
-          ? settled.result.evidence
-          : null;
+      const evidence = settled ? agencyCheckEvidence(settled.result) : null;
       // A "Check all" leaves each certified card its own Undo on the row; a
       // single check's Undo is its toast, as on the diver record.
       const rowUndo = match && settled?.via === "all" ? match : null;

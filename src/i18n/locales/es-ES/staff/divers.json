@@ -70,12 +70,15 @@
       "matched": "{agency} muestra esta certificación. Marcado como certificado.",
       "matchedConfirmed": "{agency} muestra esta certificación. Confirmada.",
       "levelUnconfirmed": "{agency} encontró a este buceador, pero no con este nivel.",
+      "limitedCard": "{agency} muestra una certificación Junior o limitada.",
+      "juniorUnder15": "{agency} muestra una certificación Junior. Con menos de 15 años, regístrala a mano.",
+      "namesake": "{agency} muestra un buceador con este nombre, pero no con {identity, select, card_number {este número de certificación} birth_date {esta fecha de nacimiento} other {esta fecha de nacimiento ni este número de certificación}}.",
       "noRecord": "{agency} no tiene ningún resultado con este nombre.",
       "severalRecords": "{agency} muestra más de un buceador con este nombre.",
       "unreadable": "No se pudo leer la página de {agency}.",
       "notFoundOnPage": "No se encontró a {name} en la página de {agency}. Ábrela y revísala.",
       "noAnswer": "DiveDay no respondió. Recarga para ver cómo quedó esta certificación.",
-      "signedOut": "Inicia sesión en {agency} primero y vuelve a verificar."
+      "signedOut": "Inicia sesión en el PADI Pros’ Site primero y vuelve a verificar."
     },
     "sightCard": "Verificar registro de certificación",
     "sightCardHint": "El buceador nos indicó este nivel. Introduce la agencia y el número del registro de certificación que verificaste.",

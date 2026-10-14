@@ -39,14 +39,19 @@
 - **Agency check** — the DiveDay browser extension doing the "Check with SSI" lookup from the
   staffer's own browser (H-105, ADR 20261008-cert-check-extension). The extension types the diver
   into the agency's own lookup page and hands back the page's text; the server certifies the card
-  only when one record on that page names the diver, carries the birth date or card number the lookup
-  was typed with, and states the claimed level in the agency's own words, with nothing limiting it.
+  only when one record on that page names the diver ("Lena Ortiz" or "Ortiz, Lena"), carries the
+  birth date or card number the lookup was typed with, and states the claimed level in the agency's
+  own words, with nothing limiting it. A birth date written all in numbers whose day and month could
+  swap is read in that agency's own order only, so a transposed date is another diver's. Short of a
+  match the staffer is told which: someone by this name but not with this birth date or number (a
+  namesake, whose words are never shown), a Junior or limited card, or the diver at another level.
   It stamps `agency_checked_at`, with those words as the review note, and names the staffer whose
   browser ran it. That stamp means *the staffer's browser reported a match*: the words came from
   their browser, not signed by the agency, so it attests no more than **Mark certified** does, with
   the same permission. Anything else writes nothing and leaves the link. A match on a pending card
   says it certified it; on an imported card, that it confirmed it. Level cards only, for SSI, NAUI,
-  SDI, GUE, CMAS and PADI; an unsighted self-declaration still needs its sighting. The lookup carries
+  SDI, GUE, CMAS and PADI, never divemaster or instructor (a professional rating is checked on the
+  agency's professional tool); an unsighted self-declaration still needs its sighting. The lookup carries
   only what the agency's form asks for: a birth date or a card number, both only for CMAS.
 - **Check all (agency)** — a departure's "Check all 9 cards with their agencies" on its Divers tab
   (H-105): each **Agency check** the departure holds, one card at a time with a pause between, from
@@ -57,11 +62,17 @@
   the page already settled. Never a bulk confirm: nothing is certified that its agency's page did
   not show.
 - **DiveChek check** — the **Agency check** for a PADI card, on PADI's DiveChek in the staffer's own
-  browser, signed in to the PADI Pros' Site (H-114). Searched by name and birth date, so a diver
-  with no birth date on file keeps the link. Narrower than a public page: one record only, so a page
-  listing several divers by the name certifies nothing ("PADI lists more than one diver by this
-  name"), and a signed-out browser says "Sign in to PADI first" and stops a "Check all". A best
-  guess of PADI's page until a staffer tries it (#2259).
+  browser, signed in to the PADI Pros' Site (H-114); the "(member sign-in)" link opens the same
+  site. Searched by name and birth date, so a diver with no birth date on file keeps the link.
+  Narrower than a public page. One diver: DiveChek may list a row per certification, so rows with
+  the typed birth date are one diver's cards, and two birth dates under the name, or a page saying
+  it found two divers or more, certify nothing ("PADI lists more than one diver by this name"). A
+  record ends at the first line that could be someone else's (another name, or a name and another
+  birth date), its birth date comes before its level, and it carries the card's number when the card
+  has one. An instructor named on the row is the trainer, not a limit. A **Junior certification**
+  reads as its level for a diver 15 or older on the day of the check; under 15 it says "PADI shows a
+  Junior card. Under 15, record it by hand." A signed-out browser says "Sign in to the PADI Pros'
+  Site first" and stops a "Check all". A best guess of PADI's page until a staffer tries it (#2259).
 - **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
   Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
   20261008-cert-check-extension). The server ticks **Materials done** only when one record names

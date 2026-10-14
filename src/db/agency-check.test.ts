@@ -81,6 +81,9 @@ describe("listAgencyCheckableCards", () => {
       await card(db, shop.id, personId, { agency: "tdi", identifier: "T-1" }),
       // Deleted.
       await card(db, shop.id, personId, { deletedAt: new Date("2026-10-01T00:00:00Z") }),
+      // A professional rating, at any agency: checked on the agency's pro tool.
+      await card(db, shop.id, personId, { level: "divemaster", identifier: "SSI-DM-1" }),
+      await card(db, shop.id, personId, { agency: "padi", level: "instructor", identifier: "P-1" }),
     ];
     await recordSelfDeclaredCards(db, { shopId: shop.id, personId, level: "advanced_open_water" });
     const [claim] = await db

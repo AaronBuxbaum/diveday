@@ -2,7 +2,7 @@ import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components
 import type { CertificationAgency } from "@/db/schema";
 import { fill } from "@/i18n/fill";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import { AGENCY_CHECKS, type CheckableAgency } from "@/lib/agency-check";
+import { AGENCY_CHECKS, type CheckableAgency, isCheckableAgency } from "@/lib/agency-check";
 import { type AgencyVerificationPage, agencyVerificationPage } from "@/lib/agency-verification";
 
 /**
@@ -27,6 +27,12 @@ export type AgencyCheckCopy = {
   /** An imported card confirmed. */
   matchedConfirmed: string;
   levelUnconfirmed: string;
+  /** The diver's record is junior, limited or unfinished. */
+  limitedCard: string;
+  /** PADI shows a junior rating, and the diver is under 15. */
+  juniorUnder15: string;
+  /** Someone by this name, never with the birth date or card number typed. */
+  namesake: string;
   noRecord: string;
   /** PADI listed more than one diver by this name. */
   severalRecords: string;
@@ -36,7 +42,7 @@ export type AgencyCheckCopy = {
   notFoundOnPage: string;
   /** DiveDay's own server did not answer: reload to see where the card stands. */
   noAnswer: string;
-  /** "Sign in to PADI first": a lookup behind the shop's sign-in met a sign-in page. */
+  /** "Sign in to the PADI Pros’ Site first": a lookup behind the shop's sign-in met a sign-in page. */
   signedOut: string;
   invalid: string;
   undo: string;
@@ -113,6 +119,12 @@ export function agencyCheckCopy(
     matched: t("divers.certifications.agencyCheck.matched", { agency: name }),
     matchedConfirmed: t("divers.certifications.agencyCheck.matchedConfirmed", { agency: name }),
     levelUnconfirmed: t("divers.certifications.agencyCheck.levelUnconfirmed", { agency: name }),
+    limitedCard: t("divers.certifications.agencyCheck.limitedCard", { agency: name }),
+    juniorUnder15: t("divers.certifications.agencyCheck.juniorUnder15", { agency: name }),
+    namesake: t("divers.certifications.agencyCheck.namesake", {
+      agency: name,
+      identity: isCheckableAgency(agency) ? AGENCY_CHECKS[agency].needs : "birth_date",
+    }),
     noRecord: t("divers.certifications.agencyCheck.noRecord", { agency: name }),
     severalRecords: t("divers.certifications.agencyCheck.severalRecords", { agency: name }),
     unreadable: t("divers.certifications.agencyCheck.unreadable", { agency: name }),

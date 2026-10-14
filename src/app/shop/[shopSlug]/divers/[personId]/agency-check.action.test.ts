@@ -430,7 +430,36 @@ describe("agencyCheckAction", () => {
         check(card.id, DIVECHEK.replace("12 Apr 1990", "3 Sep 1987")),
       );
 
+      // Another person: none of their words come back.
+      expect(result).toEqual({ ok: true, verdict: "namesake" });
+      expect((await cardRow(db, card.id))?.status).toBe("pending");
+    });
+
+    it("needs the card's number on DiveChek's record when the card has one", async () => {
+      const { db, shop, personId, card } = await padiCard();
+
+      const result = await agencyCheckAction(
+        shop.slug,
+        personId,
+        null,
+        check(card.id, DIVECHEK.replace("1506AB1234", "1712CD5678")),
+      );
+
       expect(result).toMatchObject({ ok: true, verdict: "level_unconfirmed" });
+      expect((await cardRow(db, card.id))?.status).toBe("pending");
+    });
+
+    it("refuses a pending PADI divemaster card, which keeps its link", async () => {
+      const { db, shop, personId } = await context();
+      const card = await pendingCard(db, shop.id, personId, {
+        agency: "padi",
+        level: "divemaster",
+        identifier: "1506AB1234",
+      });
+
+      const result = await agencyCheckAction(shop.slug, personId, null, check(card.id, DIVECHEK));
+
+      expect(result).toEqual({ ok: false, reason: "invalid" });
       expect((await cardRow(db, card.id))?.status).toBe("pending");
     });
 

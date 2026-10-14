@@ -11,14 +11,15 @@ const {
   PAGE_TEXT_MAX_LENGTH,
   REQUEST_TYPE,
   ELEARNING_REQUEST_TYPE,
+  SIGN_IN_PATH: SIGN_IN_PATH_SOURCE,
   fillAgencyForm,
   readAgencyPage,
   excerptAround,
   excerptAroundName,
 } = globalThis.DiveDayCertCheck;
 
-/** An address that signs in, signs up or manages an account, never a lookup. */
-const SIGN_IN_PATH = /log-?in|sign-?in|sign-?up|register|account|auth|profile/i;
+/** An address that signs in, signs up or manages an account, never a lookup (protocol.js). */
+const SIGN_IN_PATH = new RegExp(SIGN_IN_PATH_SOURCE, "i");
 
 /**
  * Whether a page behind the shop's own sign-in landed somewhere other than
@@ -97,7 +98,7 @@ async function check(query, pages) {
     let before = "";
     for (let attempt = 0; attempt < 5; attempt += 1) {
       before = (await run(tab.id, readAgencyPage)) || "";
-      filled = await run(tab.id, fillAgencyForm, [query, spec]);
+      filled = await run(tab.id, fillAgencyForm, [query, spec, SIGN_IN_PATH_SOURCE]);
       if (filled?.ok) break;
       // A sign-in form: nothing was typed, and retrying would not change that.
       if (filled?.missing?.includes("signedIn")) return { ok: false, reason: "signed_out" };

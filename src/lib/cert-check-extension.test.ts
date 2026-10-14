@@ -118,6 +118,20 @@ describe("the extension's agencies", () => {
     );
   });
 
+  it("links a staffer to PADI on the host the check signs in to", () => {
+    const page = AGENCY_VERIFICATION_PAGES.padi;
+    expect(new URL(page?.url ?? "").origin).toBe(new URL(agencies.padi?.url ?? "").origin);
+  });
+
+  it("spells the sign-in address rule once, in protocol.js", async () => {
+    const { readFile } = await import("node:fs/promises");
+    expect(typeof extension.SIGN_IN_PATH).toBe("string");
+    for (const file of ["background.js", "fill.js"]) {
+      const source = await readFile(new URL(`../../extension/${file}`, import.meta.url), "utf8");
+      expect(source, file).not.toContain("sign-?up");
+    }
+  });
+
   it("talks only to DiveDay's own staff pages", () => {
     const matches = manifest.content_scripts.flatMap((script) => script.matches);
     expect(matches).toEqual(["https://dive.day/shop/*"]);

@@ -1,5 +1,9 @@
 import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
-import { type AgencyCheckQuery, agencyCheckQuery } from "@/lib/agency-check";
+import {
+  type AgencyCheckQuery,
+  agencyCheckQuery,
+  isAgencyCheckableLevel,
+} from "@/lib/agency-check";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { needsImportConfirm } from "@/lib/certification-cards";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
@@ -21,6 +25,12 @@ export async function certificationForAgencyCheck(
 ): Promise<{
   query: AgencyCheckQuery;
   level: (typeof certifications.$inferSelect)["level"];
+  /**
+   * What the shop holds to tell this diver from a namesake, whichever the
+   * lookup typed: DiveChek is searched by birth date, and the record must
+   * carry the card's number too when it has one.
+   */
+  identity: { birthDate: string | null; cardNumber: string | null };
 } | null> {
   const [row] = await db
     .select({
@@ -50,7 +60,17 @@ export async function certificationForAgencyCheck(
     .limit(1);
   if (!row) return null;
   const query = checkableQuery(row);
-  return query ? { query, level: row.level } : null;
+  if (!query) return null;
+  return {
+    query,
+    level: row.level,
+    identity: {
+      birthDate:
+        query.birthDate ??
+        (row.dateOfBirth && /^\d{4}-\d{2}-\d{2}$/.test(row.dateOfBirth) ? row.dateOfBirth : null),
+      cardNumber: query.cardNumber ?? (row.identifier?.trim() || null),
+    },
+  };
 }
 
 /**
@@ -60,6 +80,7 @@ export async function certificationForAgencyCheck(
  */
 function checkableQuery(row: {
   agency: (typeof certifications.$inferSelect)["agency"];
+  level: (typeof certifications.$inferSelect)["level"];
   status: (typeof certifications.$inferSelect)["status"];
   identifier: string | null;
   selfDeclaredAt: Date | null;
@@ -69,6 +90,9 @@ function checkableQuery(row: {
   dateOfBirth: string | null;
 }): AgencyCheckQuery | null {
   if (isUnsightedSelfDeclaration(row)) return null;
+  // A pending divemaster or instructor card keeps its link: a pro rating is
+  // checked on the agency's professional tool.
+  if (!isAgencyCheckableLevel(row.level)) return null;
   if (row.status !== "pending" && !needsImportConfirm(row)) return null;
   return agencyCheckQuery(row);
 }
@@ -92,6 +116,7 @@ export async function listAgencyCheckableCards(
       certificationId: certifications.id,
       personId: certifications.personId,
       agency: certifications.agency,
+      level: certifications.level,
       identifier: certifications.identifier,
       status: certifications.status,
       selfDeclaredAt: certifications.selfDeclaredAt,

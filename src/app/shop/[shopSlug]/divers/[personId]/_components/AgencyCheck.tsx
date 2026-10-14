@@ -5,6 +5,7 @@ import { useActionState, useState, useTransition } from "react";
 import type { AgencyCheckCopy } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
 import {
   type AgencyCheckFailure,
+  agencyCheckEvidence,
   agencyCheckFailure,
   agencyCheckForm,
   agencyCheckMatchedText,
@@ -83,6 +84,7 @@ export function AgencyCheck({
   );
   const match = result?.ok && result.verdict === "match" ? result : null;
   const undo = match?.undo;
+  const evidence = agencyCheckEvidence(result);
   const outcome = agencyCheckOutcomeText(
     result,
     failure,
@@ -108,9 +110,7 @@ export function AgencyCheck({
       {awaiting && outcome ? (
         <span className="mt-1 block">
           <FormStatus tone={result && !result.ok ? "danger" : "warning"}>{outcome}</FormStatus>
-          {result?.ok && result.verdict === "level_unconfirmed" ? (
-            <span className="mt-1 block italic">{result.evidence}</span>
-          ) : null}
+          {evidence ? <span className="mt-1 block italic">{evidence}</span> : null}
           {hasExtension && query ? link : null}
         </span>
       ) : null}

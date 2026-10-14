@@ -68,6 +68,12 @@ export function agencyCheckOutcomeText(
   switch (result.verdict) {
     case "level_unconfirmed":
       return copy.levelUnconfirmed;
+    case "limited_card":
+      return copy.limitedCard;
+    case "junior_under_15":
+      return copy.juniorUnder15;
+    case "namesake":
+      return copy.namesake;
     case "no_record":
       return copy.noRecord;
     case "several_records":
@@ -77,6 +83,22 @@ export function agencyCheckOutcomeText(
     default:
       return null;
   }
+}
+
+/**
+ * The agency's own words about this diver, shown under a result short of a
+ * match: only ever this diver's record, never a namesake's.
+ */
+export function agencyCheckEvidence(result: AgencyCheckResult): string | null {
+  return result?.ok === true && "evidence" in result ? result.evidence : null;
+}
+
+/**
+ * Whether the agency's page answered, short of a match: the staffer's next
+ * step is reading the agency's own page, so its link takes the button's place.
+ */
+export function agencyCheckAnswered(result: AgencyCheckResult): boolean {
+  return result?.ok === true && result.verdict !== "match" && result.verdict !== "undone";
 }
 
 /**
