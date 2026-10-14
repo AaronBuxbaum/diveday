@@ -1,14 +1,22 @@
 import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import {
   type AgencyCheckQuery,
+  type AgencyListedKind,
   agencyCheckQuery,
   isAgencyCheckableLevel,
 } from "@/lib/agency-check";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { needsImportConfirm } from "@/lib/certification-cards";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
-import type { AppDb } from "./client";
-import { certifications, people } from "./schema";
+import type { AppDb, DbExecutor } from "./client";
+import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
+import {
+  type CertificationAgency,
+  certifications,
+  nitroxCertifications,
+  people,
+  specialtyCertifications,
+} from "./schema";
 
 /**
  * One level card the DiveDay browser extension may check with its agency
@@ -183,4 +191,170 @@ export async function isAgencyCheckedCard(
     )
     .limit(1);
   return Boolean(row);
+}
+
+/**
+ * The nitrox and specialty kinds this diver has on file at this shop, in any
+ * state and from any agency: what the agency's page is never asked to offer
+ * again. A deleted card is not on file.
+ */
+export async function agencyListedKindsHeld(
+  db: DbExecutor,
+  input: { shopId: string; personId: string },
+): Promise<Set<AgencyListedKind>> {
+  const [specialties, nitrox] = await queryAll(db, [
+    () =>
+      db
+        .select({ specialty: specialtyCertifications.specialty })
+        .from(specialtyCertifications)
+        .where(
+          and(
+            eq(specialtyCertifications.shopId, input.shopId),
+            eq(specialtyCertifications.personId, input.personId),
+            isNull(specialtyCertifications.deletedAt),
+          ),
+        ),
+    () =>
+      db
+        .select({ id: nitroxCertifications.id })
+        .from(nitroxCertifications)
+        .where(
+          and(
+            eq(nitroxCertifications.shopId, input.shopId),
+            eq(nitroxCertifications.personId, input.personId),
+            isNull(nitroxCertifications.deletedAt),
+          ),
+        )
+        .limit(1),
+  ]);
+  const held = new Set<AgencyListedKind>(specialties.map((row) => row.specialty));
+  if (nitrox.length > 0) held.add("nitrox");
+  return held;
+}
+
+/**
+ * **The card an agency check just matched, read again to offer the page's
+ * other cards** (layer 3). A live level card on this live diver at this shop
+ * that an agency check certified (`agencyCheckedAt`), with the lookup and the
+ * identity the judge reads it by, the number the shop holds for the diver at
+ * that agency, and the kinds already on file. Null for anything else: a card
+ * certified by hand, another diver's, another shop's, or one the check's Undo
+ * took back.
+ */
+export async function certificationForAgencyOffer(
+  db: AppDb,
+  input: { shopId: string; personId: string; certificationId: string },
+): Promise<{
+  query: AgencyCheckQuery;
+  level: (typeof certifications.$inferSelect)["level"];
+  identity: { birthDate: string | null; cardNumber: string | null };
+  /** The agency's number for this diver, as the matched card holds it. */
+  identifier: string;
+  held: Set<AgencyListedKind>;
+} | null> {
+  const [row] = await db
+    .select({
+      agency: certifications.agency,
+      level: certifications.level,
+      identifier: certifications.identifier,
+      fullName: people.fullName,
+      dateOfBirth: people.dateOfBirth,
+    })
+    .from(certifications)
+    .innerJoin(people, eq(people.id, certifications.personId))
+    .where(
+      and(
+        eq(certifications.id, input.certificationId),
+        eq(certifications.shopId, input.shopId),
+        eq(certifications.personId, input.personId),
+        eq(certifications.status, "verified"),
+        isNotNull(certifications.agencyCheckedAt),
+        eq(people.shopId, input.shopId),
+        isNull(certifications.deletedAt),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .limit(1);
+  const identifier = row?.identifier?.trim();
+  if (!row || !identifier || !isAgencyCheckableLevel(row.level)) return null;
+  const query = agencyCheckQuery(row);
+  if (!query) return null;
+  return {
+    query,
+    level: row.level,
+    identity: {
+      birthDate:
+        row.dateOfBirth && /^\d{4}-\d{2}-\d{2}$/.test(row.dateOfBirth) ? row.dateOfBirth : null,
+      cardNumber: identifier,
+    },
+    identifier,
+    held: await agencyListedKindsHeld(db, input),
+  };
+}
+
+/**
+ * **File the cards an agency's page listed, as pending with its words**
+ * (layer 3). Never verified: a nitrox card authorizes a fill and a specialty
+ * opens a site, so each waits for a staffer's one-tap confirm, which keeps the
+ * agency's words as its review note. Each card takes the agency's number the
+ * shop already holds for this diver, so the confirm is the ordinary one tap.
+ *
+ * The caller has already judged the page; this only writes. It writes all of
+ * them or none: a kind that is on file by now (another tab, another staffer)
+ * or a number already on another card refuses the lot, and the staffer sees
+ * the record as it stands.
+ */
+export async function addAgencyListedCards(
+  db: AppDb,
+  input: {
+    shopId: string;
+    personId: string;
+    agency: CertificationAgency;
+    identifier: string;
+    cards: readonly { kind: AgencyListedKind; evidence: string }[];
+  },
+): Promise<{ ok: true; added: AgencyListedKind[] } | { ok: false }> {
+  if (input.cards.length === 0) return { ok: false };
+  try {
+    return await db.transaction(async (tx) => {
+      // Lock the diver so two posts of the same offer serialize.
+      const [person] = await tx
+        .select({ id: people.id })
+        .from(people)
+        .where(
+          and(
+            eq(people.id, input.personId),
+            eq(people.shopId, input.shopId),
+            isNull(people.deletedAt),
+            isNull(people.anonymizedAt),
+          ),
+        )
+        .for("update")
+        .limit(1);
+      if (!person) return { ok: false } as const;
+      const held = await agencyListedKindsHeld(tx, input);
+      if (input.cards.some((card) => held.has(card.kind))) return { ok: false } as const;
+      const base = {
+        shopId: input.shopId,
+        personId: input.personId,
+        agency: input.agency,
+        identifier: input.identifier,
+        status: "pending" as const,
+      };
+      for (const card of input.cards) {
+        if (card.kind === "nitrox") {
+          await tx.insert(nitroxCertifications).values({ ...base, reviewNote: card.evidence });
+        } else {
+          await tx
+            .insert(specialtyCertifications)
+            .values({ ...base, specialty: card.kind, reviewNote: card.evidence });
+        }
+      }
+      return { ok: true, added: input.cards.map((card) => card.kind) } as const;
+    });
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return { ok: false };
+    throw error;
+  }
 }

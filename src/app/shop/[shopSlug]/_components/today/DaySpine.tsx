@@ -4,7 +4,10 @@ import { type WaiverSendCopy, waiverSendCopy } from "@/app/actions/waiver-send-t
 import { AgencyCheckHost } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { agencyCheckCopies } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
-import { agencyCheckAction } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+import {
+  addAgencyListedCardsAction,
+  agencyCheckAction,
+} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
 import {
   WaitlistInvite,
   type WaitlistInviteCopy,
@@ -1292,13 +1295,37 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
       ) : null}
     </div>
   );
-  // A "certification pending" row's "Check with SSI" (H-105) is the diver
-  // record's own action, bound to the shop. Its outcome and Undo live above
-  // the rows: a row whose card the check certifies leaves the list on the
-  // refresh that follows.
   return (
-    <AgencyCheckHost action={agencyCheckAction.bind(null, shopSlug)} copies={agencyCheckCopies(t)}>
+    <TodayAgencyCheck shopSlug={shopSlug} t={t}>
       {spineBody}
+    </TodayAgencyCheck>
+  );
+}
+
+/**
+ * A "certification pending" row's "Check with SSI" (H-105) is the diver
+ * record's own action, bound to the shop. Its outcome and Undo live above the
+ * rows: a row whose card the check certifies leaves the list on the refresh
+ * that follows. So do the other cards a match's page lists (layer 3), offered
+ * above the list with the diver's name.
+ */
+function TodayAgencyCheck({
+  shopSlug,
+  t,
+  children,
+}: {
+  shopSlug: string;
+  t: StaffTranslator;
+  children: React.ReactNode;
+}) {
+  return (
+    <AgencyCheckHost
+      action={agencyCheckAction.bind(null, shopSlug)}
+      addListedAction={addAgencyListedCardsAction.bind(null, shopSlug)}
+      offersAt="above"
+      copies={agencyCheckCopies(t)}
+    >
+      {children}
     </AgencyCheckHost>
   );
 }

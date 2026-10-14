@@ -5423,6 +5423,52 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The other cards an agency's page lists, offered after a match**
+       * (layer 3 of ADR 20261008-cert-check-extension). The extension is
+       * stood in for at the page's one seam, as next door: SSI's page shows
+       * Mateo Duarte's Open Water card, which the check certifies, and his
+       * nitrox and Deep cards, which the panel under it offers with a tick
+       * each. Safe to mutate: each test resets the shop's cards.
+       */
+      test(`an agency check's offer of the page's other cards renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.addInitScript(() => {
+          const announce = () => {
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.2.0");
+            window.dispatchEvent(new Event("diveday-cert-check-ready"));
+          };
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", announce);
+          } else {
+            announce();
+          }
+          window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data?.source !== "diveday-page" || data.type !== "agency-check") return;
+            window.postMessage(
+              {
+                source: "diveday-cert-check",
+                type: "agency-check-result",
+                requestId: data.requestId,
+                ok: true,
+                pageText: `Online Diver Check\n${data.query.firstName} ${data.query.lastName}\nCard ${data.query.cardNumber}\nOpen Water Diver\nEnriched Air Nitrox · Deep Diving`,
+              },
+              window.location.origin,
+            );
+          });
+        });
+        await openDiverProfile(page, "Mateo", "Mateo Duarte");
+        const group = await openDiverFileGroup(page, "Certification records");
+        await group.getByRole("button", { name: "Check with SSI" }).click();
+        await group
+          .getByRole("group", { name: "SSI also shows these certifications. Add them?" })
+          .waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-profile-agency-listed", scheme);
+      });
+
+      /**
        * **A Divers-tab row after an agency check that came up short** (H-105).
        * Nothing here renders without the DiveDay browser extension, so this
        * stands in for it at the page's one seam (`e2e/agency-check-roster.spec.ts`

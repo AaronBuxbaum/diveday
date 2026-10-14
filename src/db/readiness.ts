@@ -1191,6 +1191,9 @@ export async function reviewSpecialtyCertification(
       // opens the depth gate — so it asks for the card exactly as a
       // self-declaration's does (issue #975).
       issuedByShopAt: specialtyCertifications.issuedByShopAt,
+      // The agency's words a check filed the card with (layer 3), kept by a
+      // confirm that brings none of its own.
+      reviewNote: specialtyCertifications.reviewNote,
     })
     .from(specialtyCertifications)
     .where(
@@ -1216,7 +1219,7 @@ export async function reviewSpecialtyCertification(
     .update(specialtyCertifications)
     .set({
       status: input.status,
-      reviewNote: reviewNoteFor(input.reviewNote),
+      reviewNote: reviewNoteFor(input.reviewNote) ?? existing.reviewNote,
       reviewedAt: nowDate(),
       ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
       ...(sighting

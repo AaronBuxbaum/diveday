@@ -73,6 +73,23 @@
   reads as its level for a diver 15 or older on the day of the check; under 15 it says "PADI shows a
   Junior card. Under 15, record it by hand." A signed-out browser says "Sign in to the PADI Pros'
   Site first" and stops a "Check all". A best guess of PADI's page until a staffer tries it (#2259).
+- **Agency-listed certification** — a nitrox or specialty certification an **Agency check** found on
+  the same page as the card it matched, and that the staffer chose to add (layer 3 of ADR
+  20261008-cert-check-extension). After a match the staffer reads "PADI also shows these
+  certifications. Add them?" with one tick per certification, all ticked. Only lines inside the
+  diver's own matched record are read, and only as far as every line is explained (the diver's
+  name, the birth date, the certification's name in that agency's words, its dates and numbers);
+  the first other word, such as a neighbour's name or "Instructor" after a certification's name,
+  ends it. Each agency's words come from a closed table, so wording not in it is ignored, and a kind
+  the diver already has on file in any state is never offered. Ticked ones land **pending** with the
+  agency's words as the review note and "Listed on PADI's page." beside them, carrying the card
+  number the shop holds for the diver at that agency, and a staffer's one-tap **Mark certified**
+  certifies them, keeping the words. Never certified by the check: nitrox authorizes a fill and a
+  specialty opens a site. The server judges the posted page again and files only kinds it offers
+  itself. Not levels: a second level card on the diver's one agency number cannot be filed. On a
+  departure's Divers tab the offer sits under the diver's row, after a **Check all (agency)** has
+  finished; on Today it sits above the list with the diver's name, because the row leaves with the
+  card it was about.
 - **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
   Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
   20261008-cert-check-extension). The server ticks **Materials done** only when one record names

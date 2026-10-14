@@ -56,6 +56,7 @@ export type TripRosterActions = {
   setCourseMaterialsDoneAction?: FormAction;
   elearningCheckAction?: RosterActions["elearningCheckAction"];
   agencyCheckAction?: RosterActions["agencyCheckAction"];
+  agencyListedAction?: RosterActions["agencyListedAction"];
   addInternalNoteAction: FormAction;
   deleteInternalNoteAction: FormAction;
   saveRosterEmergencyContactAction: FormAction;
@@ -291,6 +292,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
             : undefined,
           // A finished departure is its record: nothing on it is checked.
           agencyCheckAction: record ? undefined : actions.agencyCheckAction,
+          agencyListedAction: record ? undefined : actions.agencyListedAction,
           // A course form signed on paper (ADR 20261008-course-forms). Bound
           // here rather than on the page: only a seat that owes a form draws it.
           recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),

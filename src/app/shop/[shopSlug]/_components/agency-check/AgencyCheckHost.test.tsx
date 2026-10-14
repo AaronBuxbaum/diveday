@@ -2,7 +2,10 @@
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgencyCheckResult } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+import type {
+  AgencyCheckResult,
+  AgencyListedAddResult,
+} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { AgencyCheckAll } from "./AgencyCheckAll";
@@ -60,6 +63,14 @@ function withExtension() {
 function renderDeparture(
   cards: AgencyCheckableCard[],
   answer: (personId: string, formData: FormData) => AgencyCheckResult | Promise<AgencyCheckResult>,
+  options: {
+    addListed?: (
+      personId: string,
+      previous: AgencyListedAddResult,
+      formData: FormData,
+    ) => Promise<AgencyListedAddResult>;
+    offersAt?: "row" | "above";
+  } = {},
 ) {
   const action = vi.fn(
     async (
@@ -69,7 +80,13 @@ function renderDeparture(
     ): Promise<AgencyCheckResult> => answer(personId, form),
   );
   render(
-    <AgencyCheckHost action={action} copies={copies} pauseMs={0}>
+    <AgencyCheckHost
+      action={action}
+      addListedAction={options.addListed}
+      offersAt={options.offersAt}
+      copies={copies}
+      pauseMs={0}
+    >
       <AgencyCheckAll cards={cards} copy={agencyCheckAllCopy(t, cards.length)} />
       <ul>
         {cards.map((each) => (
@@ -458,5 +475,103 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
 
     expect(await screen.findByText("SSI shows this certification. Confirmed.")).toBeVisible();
     expect(screen.queryByText("SSI shows this certification. Marked certified.")).toBeNull();
+  });
+});
+
+/**
+ * **The page's other cards, after a match** (layer 3): offered under the
+ * diver's row, never while a "Check all" is still running, and posted back
+ * with the page the server judged so it can judge it again.
+ */
+describe("the other cards a match's page lists", () => {
+  const OFFERED = {
+    ...MATCH,
+    offers: [
+      { kind: "nitrox", words: "Enriched Air Nitrox" },
+      { kind: "deep", words: "Deep Diving" },
+    ],
+  } as const;
+
+  it("waits for a Check all to finish, then offers them under each diver's row", async () => {
+    withExtension();
+    vi.mocked(requestAgencyPage).mockImplementation(async (query) => ({
+      ok: true,
+      pageText: `page for ${query.lastName}`,
+    }));
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const addListed = vi.fn(
+      async (): Promise<AgencyListedAddResult> => ({ ok: true, added: ["deep"] }),
+    );
+    renderDeparture(
+      [card(1), card(2)],
+      async (personId) => {
+        if (personId === "person-2") await held;
+        return personId === "person-1" ? OFFERED : MATCH;
+      },
+      { addListed },
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Check all 2 cards with their agencies" }),
+      );
+    });
+    // The first diver matched; the run is still on the second: no offer yet.
+    expect(row("person-1").queryByText(/also shows these certifications/)).toBeNull();
+
+    await act(async () => {
+      release();
+      await held;
+    });
+    expect(await screen.findByText("Checked 2. Certified: 2.")).toBeInTheDocument();
+    const offer = row("person-1");
+    expect(offer.getByText("SSI also shows these certifications. Add them?")).toBeVisible();
+    expect(row("person-2").queryByText(/also shows/)).toBeNull();
+
+    // Untick nitrox, add Deep: the same page goes back with the one tick.
+    fireEvent.click(offer.getByRole("checkbox", { name: "Enriched Air Nitrox" }));
+    await act(async () => {
+      fireEvent.click(offer.getByRole("button", { name: "Add" }));
+    });
+    expect(addListed).toHaveBeenCalledTimes(1);
+    const [personId, , form] = addListed.mock.calls[0] as unknown as [string, null, FormData];
+    expect(personId).toBe("person-1");
+    expect(form.get("certificationId")).toBe("card-1");
+    expect(form.get("pageText")).toBe("page for Number1");
+    expect(form.getAll("kind")).toEqual(["deep"]);
+    expect(await offer.findByText("Added. Each waits for Mark certified.")).toBeVisible();
+  });
+
+  it("offers nothing where no action can file them", async () => {
+    withExtension();
+    vi.mocked(requestAgencyPage).mockResolvedValue({ ok: true, pageText: "page" });
+    renderDeparture([card(1)], () => OFFERED);
+    await act(async () => {
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with SSI" }));
+    });
+    expect(screen.queryByText(/also shows/)).toBeNull();
+  });
+
+  it("offers them above the list, with the diver's name, where the row may leave (Today)", async () => {
+    withExtension();
+    vi.mocked(requestAgencyPage).mockResolvedValue({ ok: true, pageText: "page" });
+    const addListed = vi.fn(async (): Promise<AgencyListedAddResult> => ({ ok: false }));
+    renderDeparture([card(1)], () => OFFERED, { addListed, offersAt: "above" });
+    await act(async () => {
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with SSI" }));
+    });
+    expect(row("person-1").queryByText(/also shows/)).toBeNull();
+    expect(
+      screen.getByText("SSI also shows these certifications for Diver Number1. Add them?"),
+    ).toBeVisible();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    });
+    expect(
+      await screen.findByText("Couldn’t add them. Reload to see this diver’s certifications."),
+    ).toBeVisible();
   });
 });

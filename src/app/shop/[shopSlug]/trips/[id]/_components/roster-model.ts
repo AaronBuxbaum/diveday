@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
-import type { AgencyCheckHostAction } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
+import type {
+  AgencyCheckHostAction,
+  AgencyListedHostAction,
+} from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { CourseMaterialsDone } from "@/db/course-materials";
 import type { listBookingNotes } from "@/db/operations";
@@ -218,6 +221,8 @@ export type RosterActions = {
    * and stamp as the diver record's.
    */
   agencyCheckAction?: AgencyCheckHostAction;
+  /** Files the other cards a match's page listed, ticked under the diver's row (layer 3). */
+  agencyListedAction?: AgencyListedHostAction;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
   /**
    * "Move to another departure" (ADR 20261013-staff-move-a-seat): the action

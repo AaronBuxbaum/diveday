@@ -1,3 +1,4 @@
+import type { DiveSpecialty } from "@/db/schema";
 import type { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 
 type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
@@ -182,6 +183,62 @@ const LEVEL_WORDING: Record<
     open_water: ["Open Water Diver"],
     advanced_open_water: ["Advanced Open Water Diver"],
     rescue: ["Rescue Diver"],
+  },
+};
+
+/**
+ * **The other cards an agency's page may list for this diver**, in that
+ * agency's own words, mapped to DiveDay's own card kinds: nitrox and the
+ * specialties a site or trip can require (`dive_specialty`). A closed table:
+ * wording that is not here is ignored, never guessed, so a "Tec Deep Diver",
+ * an "Advanced Nitrox Diver" or a "Deep Diver Specialty Instructor" is not
+ * read as the recreational card it contains (`agencyListedCards`). An agency
+ * missing a kind is never offered it. GUE bundles enriched air into its level
+ * card and lists nothing here.
+ *
+ * Levels are not here. A level card's number is the agency's number for the
+ * diver, unique per agency at a shop, so a second level card for the same
+ * diver and agency cannot be filed beside the one just checked; a higher
+ * rating on the page is the staffer's to record.
+ */
+export type AgencyListedKind = "nitrox" | DiveSpecialty;
+
+export const LISTED_CARD_WORDING: Record<
+  CheckableAgency,
+  Partial<Record<AgencyListedKind, readonly string[]>>
+> = {
+  ssi: {
+    nitrox: ["Enriched Air Nitrox", "Enriched Air Nitrox 32", "Enriched Air Nitrox 40"],
+    deep: ["Deep Diving"],
+    wreck: ["Wreck Diving"],
+    night: ["Night Diving & Limited Visibility", "Night Diving and Limited Visibility"],
+    drysuit: ["Dry Suit Diving"],
+  },
+  naui: {
+    nitrox: ["Enriched Air Nitrox Diver", "Enriched Air Nitrox (EANx) Diver"],
+    deep: ["Deep Diver"],
+    wreck: ["Wreck Diver"],
+    night: ["Night Diver"],
+    drysuit: ["Dry Suit Diver"],
+  },
+  sdi: {
+    nitrox: ["Computer Nitrox Diver"],
+    deep: ["Deep Diver"],
+    wreck: ["Wreck Diver"],
+    night: ["Night / Limited Visibility Diver"],
+    drysuit: ["Drysuit Diver", "Dry Suit Diver"],
+  },
+  gue: {},
+  cmas: {
+    nitrox: ["Nitrox Diver"],
+  },
+  padi: {
+    nitrox: ["Enriched Air Diver"],
+    deep: ["Deep Diver"],
+    wreck: ["Wreck Diver"],
+    night: ["Night Diver"],
+    drysuit: ["Dry Suit Diver", "Drysuit Diver"],
+    cavern: ["Cavern Diver"],
   },
 };
 
@@ -419,7 +476,12 @@ type RecordVerdict = keyof typeof RECORD_RANK;
  * must carry it when the card has one. `today` is the day of the check
  * (`YYYY-MM-DD`), for a junior rating's age.
  */
-export function judgeAgencyPage(input: {
+export function judgeAgencyPage(input: AgencyPageInput): AgencyCheckVerdict {
+  return readAgencyPage(input).verdict;
+}
+
+/** What the judge is given: the card and diver as the shop holds them, and the page. */
+export type AgencyPageInput = {
   agency: CheckableAgency;
   level: CertificationLevel;
   firstName: string;
@@ -428,7 +490,19 @@ export function judgeAgencyPage(input: {
   cardNumber: string | null;
   today: string;
   pageText: string;
-}): AgencyCheckVerdict {
+};
+
+/** One record the judge read as this diver's: its lines as written and folded, and its verdict. */
+type DiverRecord = { raw: string[]; folded: string[]; verdict: RecordVerdict };
+
+/**
+ * The judge itself: the verdict, and the records it read as this diver's,
+ * which are the only lines {@link agencyListedCards} may read.
+ */
+function readAgencyPage(input: AgencyPageInput): {
+  verdict: AgencyCheckVerdict;
+  diverRecords: DiverRecord[];
+} {
   const rawLines = input.pageText
     .slice(0, PAGE_TEXT_MAX_LENGTH)
     .split(/\r?\n/)
@@ -437,18 +511,20 @@ export function judgeAgencyPage(input: {
   const lines = rawLines.map(foldText);
   const first = foldText(input.firstName);
   const last = foldText(input.lastName);
-  if (!first || !last) return { verdict: "unreadable" };
+  if (!first || !last) return { verdict: { verdict: "unreadable" }, diverRecords: [] };
   const { needs, dates: order } = AGENCY_CHECKS[input.agency];
   const oneDiver = ONE_RECORD_ONLY.has(input.agency);
   const levelWords = LEVEL_WORDING[input.agency];
   const wording = (levelWords[input.level] ?? []).map(foldText);
   const everyLevelWording = Object.values(levelWords).flat().map(foldText);
+  const everyListedWording = Object.values(LISTED_CARD_WORDING[input.agency]).flat().map(foldText);
   const limiting: readonly string[] = oneDiver
     ? LIMITING_WORDS
     : [...LIMITING_WORDS, ...TRAINER_WORDS];
   const saysNoRecord = (line: string) => NO_RECORD_WORDS.some((phrase) => hasWords(line, phrase));
   const ratingWords = (line: string) =>
     everyLevelWording.some((phrase) => hasWords(line, phrase)) ||
+    everyListedWording.some((phrase) => hasWords(line, phrase)) ||
     limiting.some((word) => hasWords(line, word));
 
   // First and last on one line, in order with any middle names between, or
@@ -522,7 +598,7 @@ export function judgeAgencyPage(input: {
   if (oneDiver && records.length > 0) {
     const divers = new Set(records.map(recordBirthDate).filter((date) => date !== null));
     if (divers.size > 1 || lines.some((line) => SEVERAL_DIVERS.test(line))) {
-      return { verdict: "several_records" };
+      return { verdict: { verdict: "several_records" }, diverRecords: [] };
     }
   }
 
@@ -554,21 +630,26 @@ export function judgeAgencyPage(input: {
     return "match";
   };
 
+  const diverRecords: DiverRecord[] = [];
   let best: { verdict: RecordVerdict; evidence: string } | null = null;
   for (const record of records) {
     if (!isThisDiver(record)) continue;
     const verdict = judgeRecord(record);
+    diverRecords.push({
+      raw: rawLines.slice(record.from, record.to),
+      folded: lines.slice(record.from, record.to),
+      verdict,
+    });
     if (!best || RECORD_RANK[verdict] > RECORD_RANK[best.verdict]) {
       best = { verdict, evidence: evidence(rawLines.slice(record.from, record.to)) };
     }
-    if (verdict === "match") break;
   }
-  if (best) return best;
+  if (best) return { verdict: best, diverRecords };
   // Someone by this name, never with this birth date or number: another
   // person, whose lines are not the shop's to keep.
-  if (records.length > 0) return { verdict: "namesake" };
-  if (lines.some(saysNoRecord)) return { verdict: "no_record" };
-  return { verdict: "unreadable" };
+  if (records.length > 0) return { verdict: { verdict: "namesake" }, diverRecords };
+  if (lines.some(saysNoRecord)) return { verdict: { verdict: "no_record" }, diverRecords };
+  return { verdict: { verdict: "unreadable" }, diverRecords };
 }
 
 function escapeRegExp(text: string): string {
@@ -580,4 +661,160 @@ function evidence(lines: readonly string[]): string {
   return joined.length > EVIDENCE_MAX_LENGTH
     ? `${joined.slice(0, EVIDENCE_MAX_LENGTH - 1).trimEnd()}…`
     : joined;
+}
+
+/** One card the agency's page lists for this diver that the shop does not hold. */
+export type AgencyListedCard = {
+  kind: AgencyListedKind;
+  /** The agency's name for it, from {@link LISTED_CARD_WORDING}: what the staffer ticks. */
+  words: string;
+  /** The diver's own lines that list it, for the new card's review note. */
+  evidence: string;
+};
+
+/**
+ * Words a line about one of the diver's cards may carry besides the card's
+ * own name, its dates and its numbers. Anything else on a line is a word
+ * nobody explained (another diver's name, a pro rating, a course in
+ * progress), and the record is read no further.
+ */
+const RECORD_LINE_WORDS = new Set([
+  "date",
+  "of",
+  "birth",
+  "dob",
+  "born",
+  "certified",
+  "certification",
+  "certifications",
+  "cert",
+  "issued",
+  "issue",
+  "card",
+  "number",
+  "no",
+  "id",
+  "diver",
+  "member",
+  "level",
+  "rating",
+  "padi",
+  "ssi",
+  "naui",
+  "sdi",
+  "gue",
+  "cmas",
+  ...MONTH_NAMES,
+  ...MONTH_NAMES.map((name) => name.slice(0, 3)),
+  "sept",
+]);
+
+/**
+ * **The other cards an agency's page lists for this diver** (layer 3 of the
+ * agency check, ADR 20261008-cert-check-extension): after a match, what the
+ * same page shows that DiveDay could hold as nitrox or a specialty and does
+ * not yet. Pure, and narrower than the judge on purpose, because these become
+ * cards a nitrox fill or a deep site may one day read:
+ *
+ * - **Only after a match**, and only from the records the judge itself read as
+ *   this diver's (the same window, birth date and card number rules), never a
+ *   limited or junior one.
+ * - **A record is read only as far as every line is explained**: the name
+ *   line, the birth date, and lines made only of a card's name in this
+ *   agency's words, its dates, its numbers and a few words such as "issued"
+ *   (`RECORD_LINE_WORDS`). The first line with any other word ends it, so a
+ *   neighbour's "Mark Lee" and every line after it are never read, and nor is
+ *   "Deep Diver Specialty Instructor" or "Tec Deep Diver".
+ * - **On DiveChek** a row may name the instructor who certified the card after
+ *   its date ("… 2 Feb 2020 Instructor #123456 Dive Center"): the line is read
+ *   up to the trainer's word. A trainer's word straight after a card's name is
+ *   a professional rating, and ends the record.
+ * - **The agency's own words, from a closed table** (`LISTED_CARD_WORDING`).
+ * - **Never a kind the diver already holds** (`held`), whatever its agency or
+ *   state.
+ */
+export function agencyListedCards(
+  input: AgencyPageInput & { held: ReadonlySet<AgencyListedKind> },
+): AgencyListedCard[] {
+  const read = readAgencyPage(input);
+  if (read.verdict.verdict !== "match") return [];
+  const listed = Object.entries(LISTED_CARD_WORDING[input.agency]) as [
+    AgencyListedKind,
+    readonly string[],
+  ][];
+  const phrases = listed.flatMap(([kind, words]) =>
+    words.map((word) => ({ kind, word, folded: foldText(word) })),
+  );
+  const levelPhrases = Object.values(LEVEL_WORDING[input.agency]).flat().map(foldText);
+  const oneDiver = ONE_RECORD_ONLY.has(input.agency);
+  const nameWords = new Set([foldText(input.firstName), foldText(input.lastName)]);
+  const cardNumber = input.cardNumber ? foldText(input.cardNumber) : "";
+  const order = AGENCY_CHECKS[input.agency].dates;
+
+  const found = new Map<AgencyListedKind, AgencyListedCard>();
+  for (const record of read.diverRecords) {
+    if (record.verdict !== "match" && record.verdict !== "level_unconfirmed") continue;
+    const onRecord: { kind: AgencyListedKind; word: string }[] = [];
+    let end = record.folded.length;
+    for (let index = 0; index < record.folded.length; index += 1) {
+      let line = record.folded[index] as string;
+      if (oneDiver) {
+        const trainer = TRAINER_WORDS.map((word) => ` ${line} `.indexOf(` ${word} `))
+          .filter((at) => at >= 0)
+          .sort((a, b) => a - b)[0];
+        if (trainer !== undefined) {
+          const before = line.slice(0, trainer).trim();
+          // "Deep Diver Instructor": a professional rating, not the card.
+          if (phrases.some((phrase) => before.endsWith(phrase.folded)) || !before) {
+            end = index;
+            break;
+          }
+          line = before;
+        }
+      }
+      let rest = ` ${line} `;
+      const here: { kind: AgencyListedKind; word: string }[] = [];
+      // Longest first, so "Enriched Air Nitrox 32" is taken whole.
+      for (const phrase of [...phrases].sort((a, b) => b.folded.length - a.folded.length)) {
+        if (rest.includes(` ${phrase.folded} `)) {
+          here.push({ kind: phrase.kind, word: phrase.word });
+          rest = rest.split(` ${phrase.folded} `).join(" ");
+        }
+      }
+      // The level's own words, and the card number the shop holds ("N-12345").
+      for (const phrase of [...levelPhrases, cardNumber].sort((a, b) => b.length - a.length)) {
+        if (phrase) rest = ` ${rest.trim()} `.split(` ${phrase} `).join(" ");
+      }
+      const unexplained = rest
+        .trim()
+        .split(" ")
+        .filter(
+          (word) =>
+            word.length > 0 &&
+            !/\d/.test(word) &&
+            !RECORD_LINE_WORDS.has(word) &&
+            !(index === 0 && nameWords.has(word)),
+        );
+      if (unexplained.length > 0) {
+        // The name line starts the record whatever else it says; it just lists nothing.
+        if (index === 0) continue;
+        end = index;
+        break;
+      }
+      // A date on a line naming no card, and not the birth date, may be
+      // another diver's birth date: the judge ends a DiveChek record there too.
+      const bare = here.length === 0 && !levelPhrases.some((phrase) => hasWords(line, phrase));
+      if (index > 0 && bare && datesOn(line, order).some((date) => date !== input.birthDate)) {
+        end = index;
+        break;
+      }
+      onRecord.push(...here);
+    }
+    const words = evidence(record.raw.slice(0, end));
+    for (const card of onRecord) {
+      if (input.held.has(card.kind) || found.has(card.kind)) continue;
+      found.set(card.kind, { kind: card.kind, words: card.word, evidence: words });
+    }
+  }
+  return [...found.values()];
 }

@@ -65,6 +65,7 @@
     "checkWithAgencyMemberSignIn": "Verificar con {agency} (acceso de miembro)",
     "searchAgencyPortal": "Buscar en el portal de {agency}",
     "checkedWithAgencyBy": "Verificado con {agency} por {name} el {date}.",
+    "listedByAgency": "Aparece en la página de {agency}.",
     "agencyCheck": {
       "checking": "Verificando con {agency}…",
       "matched": "{agency} muestra esta certificación. Marcado como certificado.",
@@ -78,7 +79,15 @@
       "unreadable": "No se pudo leer la página de {agency}.",
       "notFoundOnPage": "No se encontró a {name} en la página de {agency}. Ábrela y revísala.",
       "noAnswer": "DiveDay no respondió. Recarga para ver cómo quedó esta certificación.",
-      "signedOut": "Inicia sesión en el PADI Pros’ Site primero y vuelve a verificar."
+      "signedOut": "Inicia sesión en el PADI Pros’ Site primero y vuelve a verificar.",
+      "listed": {
+        "lead": "{agency} también muestra estas certificaciones. ¿Las añades?",
+        "leadFor": "{agency} también muestra estas certificaciones de {name}. ¿Las añades?",
+        "add": "Añadir",
+        "adding": "Añadiendo…",
+        "added": "Añadidas. Cada una espera a Marcar certificado.",
+        "failed": "No se pudieron añadir. Recarga para ver las certificaciones de este buceador."
+      }
     },
     "sightCard": "Verificar registro de certificación",
     "sightCardHint": "El buceador nos indicó este nivel. Introduce la agencia y el número del registro de certificación que verificaste.",

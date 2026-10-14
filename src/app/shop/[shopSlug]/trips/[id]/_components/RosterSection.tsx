@@ -281,7 +281,11 @@ export function RosterSection({
   // The check's state lives above the rows, so a row whose card has just been
   // certified keeps its outcome and its Undo through the refresh (H-105).
   return actions.agencyCheckAction ? (
-    <AgencyCheckHost action={actions.agencyCheckAction} copies={agencyCheckCopies(t)}>
+    <AgencyCheckHost
+      action={actions.agencyCheckAction}
+      addListedAction={actions.agencyListedAction}
+      copies={agencyCheckCopies(t)}
+    >
       {section}
     </AgencyCheckHost>
   ) : (

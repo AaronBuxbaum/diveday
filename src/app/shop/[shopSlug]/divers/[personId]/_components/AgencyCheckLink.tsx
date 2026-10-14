@@ -5,7 +5,7 @@ import {
 import type { CertificationAgency } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
-import type { AgencyCheckResult } from "../card-actions";
+import type { AgencyCheckResult, AgencyListedAddResult } from "../card-actions";
 import { AgencyCheck } from "./AgencyCheck";
 
 /**
@@ -33,6 +33,11 @@ export function AgencyCheckLink({
     awaiting: boolean;
     query: AgencyCheckQuery | null;
     action: (previous: AgencyCheckResult, formData: FormData) => Promise<AgencyCheckResult>;
+    /** Files the page's other cards the staffer ticked, after a match (layer 3). */
+    addListed?: (
+      previous: AgencyListedAddResult,
+      formData: FormData,
+    ) => Promise<AgencyListedAddResult>;
   };
 }) {
   const link = agencyLinkLabel(t, agency);
@@ -56,6 +61,7 @@ export function AgencyCheckLink({
       certificationId={check.certificationId}
       awaiting={check.awaiting}
       action={check.action}
+      addListed={check.addListed}
       copy={agencyCheckCopy(t, agency, link.label)}
     />
   );

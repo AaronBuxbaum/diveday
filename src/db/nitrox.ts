@@ -100,6 +100,9 @@ export async function reviewNitroxCertification(
       // A shop-issued row is numberless too, and this confirm is what
       // authorizes a fill — so it asks for the card (issue #975).
       issuedByShopAt: nitroxCertifications.issuedByShopAt,
+      // The agency's words a check filed the card with (layer 3), kept by a
+      // confirm that brings none of its own.
+      reviewNote: nitroxCertifications.reviewNote,
     })
     .from(nitroxCertifications)
     .where(
@@ -122,7 +125,7 @@ export async function reviewNitroxCertification(
       .update(nitroxCertifications)
       .set({
         status: input.status,
-        reviewNote: reviewNoteFor(input.reviewNote),
+        reviewNote: reviewNoteFor(input.reviewNote) ?? existing.reviewNote,
         reviewedAt: nowDate(),
         ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
         ...(sighting

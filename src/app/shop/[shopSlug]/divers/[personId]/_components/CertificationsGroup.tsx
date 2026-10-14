@@ -20,6 +20,7 @@ import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import {
+  addAgencyListedCardsAction,
   addCardAction,
   agencyCheckAction,
   clearNoCertificationAction,
@@ -122,6 +123,47 @@ function CardRow({
       actionsId={anchor ? AWAITING_ANCHOR : undefined}
       rowId={rowAnchor}
     />
+  );
+}
+
+/** The agency check's two actions, bound to this diver: the check, and filing the page's other cards. */
+function agencyCheckActions(shopSlug: string, personId: string) {
+  return {
+    action: agencyCheckAction.bind(null, shopSlug, personId),
+    addListed: addAgencyListedCardsAction.bind(null, shopSlug, personId),
+  };
+}
+
+/**
+ * Under a nitrox or specialty card: the agency's link while it waits
+ * (`awaiting`), and the agency's own words when it has any. A card an agency
+ * check filed from the page's list (layer 3) carries them while it waits for
+ * Mark certified, and keeps them once it is confirmed; while it waits, the row
+ * says where they came from.
+ */
+function PendingCardFoot({
+  t,
+  card,
+  awaiting,
+}: {
+  t: StaffTranslator;
+  card: {
+    reviewNote: string | null;
+    status: "pending" | "verified";
+    agency: keyof typeof AGENCY_KEYS;
+  };
+  awaiting: boolean;
+}) {
+  return (
+    <>
+      {awaiting ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+      {card.reviewNote && card.status === "pending" ? (
+        <span className="block">
+          {t("divers.certifications.listedByAgency", { agency: t(AGENCY_KEYS[card.agency]) })}
+        </span>
+      ) : null}
+      {card.reviewNote ? <span className="block italic">{card.reviewNote}</span> : null}
+    </>
   );
 }
 
@@ -296,7 +338,7 @@ export function CertificationsGroup({
 
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
-  const agencyCheck = agencyCheckAction.bind(null, shopSlug, personId);
+  const agencyCheck = agencyCheckActions(shopSlug, personId);
   const deleteLevel = deleteCertificationAction.bind(null, shopSlug, personId);
   const deleteSpecialty = deleteSpecialtyAction.bind(null, shopSlug, personId);
   // The diver's own "I hold no card", still standing: set, never cleared by
@@ -413,7 +455,7 @@ export function CertificationsGroup({
                       dateOfBirth: diver.person.dateOfBirth,
                       identifier: card.identifier,
                     }),
-                action: agencyCheck,
+                ...agencyCheck,
               }}
             />
             {card.reviewNote ? <span className="block italic">{card.reviewNote}</span> : null}
@@ -487,7 +529,7 @@ export function CertificationsGroup({
         detail={
           <>
             {card.identifier}
-            {awaiting ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+            <PendingCardFoot t={t} card={card} awaiting={awaiting} />
           </>
         }
         actions={
@@ -544,7 +586,7 @@ export function CertificationsGroup({
                 sighted: its agency is often the "other" placeholder and its
                 title drops the agency, so a lookup link would send the staffer
                 to an agency nobody named. The sighted claim gets one. */}
-            {awaiting && !selfDeclared ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+            <PendingCardFoot t={t} card={card} awaiting={awaiting && !selfDeclared} />
           </>
         }
         actions={

@@ -12,10 +12,15 @@ import {
   useRef,
   useState,
 } from "react";
-import type { AgencyCheckResult } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+import type {
+  AgencyCheckOffer,
+  AgencyCheckResult,
+  AgencyListedAddResult,
+} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
 import { UndoToast } from "@/components/UndoToast";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
-import type { CheckableAgency } from "@/lib/agency-check";
+import { fill } from "@/i18n/fill";
+import type { AgencyListedKind, CheckableAgency } from "@/lib/agency-check";
 import {
   AGENCY_CHECK_QUEUE_PAUSE_MS,
   type AgencyCheckableCard,
@@ -23,6 +28,7 @@ import {
   type AgencyCheckQueueSummary,
   runAgencyCheckQueue,
 } from "@/lib/agency-check-queue";
+import { AgencyListedOffer, agencyListedForm } from "./AgencyListedOffer";
 import type { AgencyCheckAgencyCopy } from "./agency-check-copy";
 import {
   type AgencyCheckFailure,
@@ -39,6 +45,13 @@ export type AgencyCheckHostAction = (
   formData: FormData,
 ) => Promise<AgencyCheckResult>;
 
+/** `addAgencyListedCardsAction`, bound to the shop on the server; the diver is the card's. */
+export type AgencyListedHostAction = (
+  personId: string,
+  previous: AgencyListedAddResult,
+  formData: FormData,
+) => Promise<AgencyListedAddResult>;
+
 /** Where one card's check stands on this page. */
 export type AgencyCheckCardState =
   | { phase: "checking" }
@@ -49,6 +62,11 @@ export type AgencyCheckCardState =
       failure: AgencyCheckFailure;
       /** Pressed on its own row ("one"), or one card of a departure's "Check all". */
       via: "one" | "all";
+      /**
+       * The page the server judged, kept only when its match offered the
+       * diver's other cards (layer 3), so a tick posts the same text back.
+       */
+      pageText?: string;
     };
 
 /** Where a departure's "Check all" stands. */
@@ -72,6 +90,17 @@ type HostValue = {
   runAll: (cards: readonly AgencyCheckableCard[]) => void;
   /** Stop a running "Check all" after the card in flight. */
   stopAll: () => void;
+  /** File the ticked cards a match's page listed, as pending. */
+  addListed: (
+    card: AgencyCheckableCard,
+    kinds: AgencyListedKind[],
+  ) => Promise<AgencyListedAddResult>;
+  /**
+   * Where a match's other cards are offered: under the diver's row (a
+   * departure, whose rows stay), or above the list (Today, whose row leaves
+   * with the card it was about).
+   */
+  offersAt: "row" | "above";
 };
 
 /**
@@ -88,6 +117,20 @@ export function agencyCheckCardsToRun(
     const state = states[card.certificationId];
     return !(state?.phase === "settled" && state.failure === null && state.result !== null);
   });
+}
+
+/**
+ * The other cards a match's page offered for this card, while the page text
+ * to post them with is kept; null for anything else.
+ */
+export function agencyListedOffers(
+  state: AgencyCheckCardState | undefined,
+): readonly AgencyCheckOffer[] | null {
+  if (state?.phase !== "settled" || !state.pageText) return null;
+  const result = state.result;
+  return result?.ok === true && result.verdict === "match" && result.offers?.length
+    ? result.offers
+    : null;
 }
 
 const HostContext = createContext<HostValue | null>(null);
@@ -127,11 +170,16 @@ function pause(ms: number): Promise<void> {
  */
 export function AgencyCheckHost({
   action,
+  addListedAction,
+  offersAt = "row",
   copies,
   pauseMs = AGENCY_CHECK_QUEUE_PAUSE_MS,
   children,
 }: {
   action: AgencyCheckHostAction;
+  /** Without it, a match's other cards are not offered. */
+  addListedAction?: AgencyListedHostAction;
+  offersAt?: "row" | "above";
   copies: Record<CheckableAgency, AgencyCheckAgencyCopy>;
   /** The pause between two lookups of a "Check all"; a test shortens it. */
   pauseMs?: number;
@@ -168,11 +216,23 @@ export function AgencyCheckHost({
     ): Promise<{ outcome: AgencyCheckOutcome; result: AgencyCheckResult }> => {
       setCards((previous) => ({ ...previous, [card.certificationId]: card }));
       setStates((previous) => ({ ...previous, [card.certificationId]: { phase: "checking" } }));
-      const settle = (result: AgencyCheckResult, failure: AgencyCheckFailure) => {
+      const settle = (
+        result: AgencyCheckResult,
+        failure: AgencyCheckFailure,
+        pageText?: string,
+      ) => {
         if (!alive.current) return;
+        const offered =
+          addListedAction && result?.ok === true && result.verdict === "match" && result.offers;
         setStates((previous) => ({
           ...previous,
-          [card.certificationId]: { phase: "settled", result, failure, via },
+          [card.certificationId]: {
+            phase: "settled",
+            result,
+            failure,
+            via,
+            ...(offered && pageText ? { pageText } : {}),
+          },
         }));
       };
       const reply = await requestAgencyPage(card.query);
@@ -198,10 +258,10 @@ export function AgencyCheckHost({
         settle(null, "transport");
         return { outcome: "transport", result: null };
       }
-      settle(result, null);
+      settle(result, null, reply.pageText);
       return { outcome: agencyCheckOutcome(result, null) ?? "refused", result };
     },
-    [action],
+    [action, addListedAction],
   );
 
   const checkOne = useCallback(
@@ -284,15 +344,79 @@ export function AgencyCheckHost({
     [action],
   );
 
+  const addListed = useCallback(
+    (card: AgencyCheckableCard, kinds: AgencyListedKind[]) => {
+      const state = states[card.certificationId];
+      const pageText = state?.phase === "settled" ? state.pageText : undefined;
+      if (!pageText || !addListedAction) {
+        return Promise.resolve<AgencyListedAddResult>({ ok: false });
+      }
+      return addListedAction(
+        card.personId,
+        null,
+        agencyListedForm(card.certificationId, pageText, kinds),
+      );
+    },
+    [addListedAction, states],
+  );
+
   const busy = singleBusy || queue.phase === "running";
   const value = useMemo<HostValue>(
-    () => ({ hasExtension, copies, cards, states, busy, checkOne, undo, queue, runAll, stopAll }),
-    [hasExtension, copies, cards, states, busy, checkOne, undo, queue, runAll, stopAll],
+    () => ({
+      hasExtension,
+      copies,
+      cards,
+      states,
+      busy,
+      checkOne,
+      undo,
+      queue,
+      runAll,
+      stopAll,
+      addListed,
+      offersAt,
+    }),
+    [
+      hasExtension,
+      copies,
+      cards,
+      states,
+      busy,
+      checkOne,
+      undo,
+      queue,
+      runAll,
+      stopAll,
+      addListed,
+      offersAt,
+    ],
   );
   const toastCopy = toast ? copies[toast.card.agency] : null;
+  // Today's offers, above the list: the diver's row may have left with the card.
+  const above =
+    offersAt === "above"
+      ? Object.values(cards).flatMap((card) => {
+          const offers = agencyListedOffers(states[card.certificationId]);
+          const copy = copies[card.agency];
+          return offers && copy ? [{ card, offers, copy }] : [];
+        })
+      : [];
 
   return (
     <HostContext.Provider value={value}>
+      {above.length > 0 ? (
+        <div className="mb-3">
+          {above.map(({ card, offers, copy }) => (
+            <AgencyListedOffer
+              key={card.certificationId}
+              lead={fill(copy.listedLeadFor, { name: card.fullName })}
+              offers={offers}
+              copy={copy}
+              add={(kinds) => addListed(card, kinds)}
+            />
+          ))}
+        </div>
+      ) : null}
       {children}
       {toast && toastCopy ? (
         <UndoToast

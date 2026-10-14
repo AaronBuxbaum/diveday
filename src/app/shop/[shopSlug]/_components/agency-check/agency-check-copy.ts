@@ -48,6 +48,15 @@ export type AgencyCheckCopy = {
   undo: string;
   undoPending: string;
   undoFailed: string;
+  /** "PADI also shows these certifications. Add them?": the page's other cards, after a match. */
+  listedLead: string;
+  /** A template: `{name}`. The same, where the diver's row may have left the page (Today). */
+  listedLeadFor: string;
+  listedAdd: string;
+  listedAdding: string;
+  /** The ticked cards were filed, pending a staffer's Mark certified. */
+  listedAdded: string;
+  listedFailed: string;
 };
 
 /** One agency's words, its name, and the page they fall back to. */
@@ -138,6 +147,14 @@ export function agencyCheckCopy(
     undo: t("shared.undoToast.undo"),
     undoPending: t("shared.undoToast.pendingLabel"),
     undoFailed: t("divers.notices.cardUndoFailed"),
+    listedLead: t("divers.certifications.agencyCheck.listed.lead", { agency: name }),
+    listedLeadFor: fill(t.raw("divers.certifications.agencyCheck.listed.leadFor"), {
+      agency: name,
+    }),
+    listedAdd: t("divers.certifications.agencyCheck.listed.add"),
+    listedAdding: t("divers.certifications.agencyCheck.listed.adding"),
+    listedAdded: t("divers.certifications.agencyCheck.listed.added"),
+    listedFailed: t("divers.certifications.agencyCheck.listed.failed"),
   };
 }
 

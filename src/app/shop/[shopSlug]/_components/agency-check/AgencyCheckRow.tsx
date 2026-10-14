@@ -5,7 +5,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
-import { useAgencyCheckHost } from "./AgencyCheckHost";
+import { agencyListedOffers, useAgencyCheckHost } from "./AgencyCheckHost";
+import { AgencyListedOffer } from "./AgencyListedOffer";
 import {
   agencyCheckAnswered,
   agencyCheckEvidence,
@@ -90,7 +91,13 @@ export function AgencyCheckRow({
       // A "Check all" leaves each certified card its own Undo on the row; a
       // single check's Undo is its toast, as on the diver record.
       const rowUndo = match && settled?.via === "all" ? match : null;
-      if (!copy || (!showButton && !outcome && !rowUndo)) return null;
+      // The page's other cards for this diver (layer 3), under the row; never
+      // while a "Check all" is still running, which nothing interrupts.
+      const offers =
+        host.offersAt === "row" && host.queue.phase !== "running"
+          ? agencyListedOffers(state)
+          : null;
+      if (!copy || (!showButton && !outcome && !rowUndo && !offers)) return null;
       return (
         <div
           key={card.certificationId}
@@ -137,6 +144,14 @@ export function AgencyCheckRow({
                 {copy.undo}
               </SubmitButton>
             </form>
+          ) : null}
+          {offers ? (
+            <AgencyListedOffer
+              lead={copy.listedLead}
+              offers={offers}
+              copy={copy}
+              add={(kinds) => host.addListed(card, kinds)}
+            />
           ) : null}
         </div>
       );

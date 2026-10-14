@@ -30,6 +30,12 @@ const COPY = {
   undo: "Undo",
   undoPending: "Undoing…",
   undoFailed: "undoFailed",
+  listedLead: "listedLead",
+  listedLeadFor: "listedLeadFor {name}",
+  listedAdd: "Add",
+  listedAdding: "Adding…",
+  listedAdded: "listedAdded",
+  listedFailed: "listedFailed",
 } satisfies AgencyCheckCopy;
 
 describe("agencyCheckOutcome", () => {

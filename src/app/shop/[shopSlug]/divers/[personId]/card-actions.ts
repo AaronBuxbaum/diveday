@@ -3,7 +3,13 @@
 import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { certificationForAgencyCheck, isAgencyCheckedCard } from "@/db/agency-check";
+import {
+  addAgencyListedCards,
+  agencyListedKindsHeld,
+  certificationForAgencyCheck,
+  certificationForAgencyOffer,
+  isAgencyCheckedCard,
+} from "@/db/agency-check";
 import type { AppDb } from "@/db/client";
 import {
   createNitroxCertification,
@@ -30,7 +36,12 @@ import {
 } from "@/db/readiness";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
-import { judgeAgencyPage, PAGE_TEXT_MAX_LENGTH } from "@/lib/agency-check";
+import {
+  type AgencyListedKind,
+  agencyListedCards,
+  judgeAgencyPage,
+  PAGE_TEXT_MAX_LENGTH,
+} from "@/lib/agency-check";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
 import { nowDate } from "@/lib/clock";
@@ -636,6 +647,12 @@ export type AgencyCheckResult =
        */
       effect: "certified" | "confirmed";
       undo?: { certificationId: string };
+      /**
+       * The diver's other cards the same page lists and the shop does not
+       * hold, in the agency's words (`agencyListedCards`): offered, never
+       * filed, until the staffer ticks them (`addAgencyListedCardsAction`).
+       */
+      offers?: readonly AgencyCheckOffer[];
     }
   | { ok: true; verdict: "undone" }
   | {
@@ -658,6 +675,9 @@ export type AgencyCheckResult =
       verdict: "no_record" | "unreadable" | "several_records" | "namesake";
     }
   | { ok: false; reason: "invalid" | "not-undoable" };
+
+/** One card the agency's page lists for this diver, as the staffer is offered it. */
+export type AgencyCheckOffer = { kind: AgencyListedKind; words: string };
 
 /**
  * **Certify a card from the agency's own page** (H-105).
@@ -741,6 +761,18 @@ export async function agencyCheckAction(
   revalidatePath(base);
   if (fields.refresh !== "later") refresh();
   if (!outcome.ok) return { ok: false, reason: "invalid" };
+  // The page's other cards for this diver, offered and never filed here. A
+  // card with no number on file has none to lend them, so it offers nothing.
+  const offers = card.identity.cardNumber
+    ? agencyListedCards({
+        ...card.query,
+        ...card.identity,
+        level: card.level,
+        today: calendarDateInTimezone(nowDate(), "Etc/GMT+12"),
+        pageText: pageText.slice(0, PAGE_TEXT_MAX_LENGTH),
+        held: await agencyListedKindsHeld(db, { shopId, personId }),
+      }).map(({ kind, words }) => ({ kind, words }))
+    : [];
   return {
     ok: true,
     verdict: "match",
@@ -748,5 +780,72 @@ export async function agencyCheckAction(
     // confirmed it rather than certifying it.
     effect: outcome.certification.importedAt ? "confirmed" : "certified",
     undo: { certificationId },
+    ...(offers.length > 0 ? { offers } : {}),
   };
+}
+
+const agencyListedKindSchema = z.enum(["nitrox", ...diveSpecialty.enumValues]);
+
+/** What filing the page's other cards did, for the panel that asked. */
+export type AgencyListedAddResult = null | { ok: true; added: AgencyListedKind[] } | { ok: false };
+
+/**
+ * **File the other cards the agency's page lists, as pending** (layer 3 of
+ * the agency check, ADR 20261008-cert-check-extension).
+ *
+ * After a match the staffer is offered the diver's nitrox and specialty cards
+ * the same page shows, and ticks the ones to keep. Nothing the browser sends
+ * is believed but the page's text and the ticks: the card the check matched
+ * is read again from the database (this shop, this diver, certified by an
+ * agency check), the page is judged again and must still match, and the offer
+ * is derived again from it. Every tick must name a kind that offer holds, or
+ * nothing is filed, so a forged or replayed tick cannot make a card the page
+ * did not show, or a second copy of one the diver holds.
+ *
+ * The cards land `pending` with the agency's words as their review note, for
+ * a staffer's one-tap confirm: a nitrox card authorizes a fill and a
+ * specialty opens a site, so the page alone never certifies them.
+ */
+export async function addAgencyListedCardsAction(
+  shopSlug: string,
+  personId: string,
+  _previous: AgencyListedAddResult,
+  formData: FormData,
+): Promise<AgencyListedAddResult> {
+  const fields = readForm(cardForm, formData);
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const certificationId = cardIdFromForm(formData);
+  const pageText = fields.pageText;
+  const kinds = z.array(agencyListedKindSchema).min(1).safeParse(formData.getAll("kind"));
+  if (!certificationId || typeof pageText !== "string" || !kinds.success) return { ok: false };
+  const ticked = new Set(kinds.data);
+  if (ticked.size !== kinds.data.length) return { ok: false };
+  const shopId = staff.user.shopId;
+
+  const card = await certificationForAgencyOffer(db, { shopId, personId, certificationId });
+  if (!card) return { ok: false };
+  const offered = agencyListedCards({
+    ...card.query,
+    ...card.identity,
+    level: card.level,
+    today: calendarDateInTimezone(nowDate(), "Etc/GMT+12"),
+    pageText: pageText.slice(0, PAGE_TEXT_MAX_LENGTH),
+    held: card.held,
+  });
+  const chosen = offered.filter((offer) => ticked.has(offer.kind));
+  if (chosen.length !== ticked.size) return { ok: false };
+
+  const added = await addAgencyListedCards(db, {
+    shopId,
+    personId,
+    agency: card.query.agency,
+    identifier: card.identifier,
+    cards: chosen,
+  });
+  if (!added.ok) return { ok: false };
+  revalidatePath(base);
+  refresh();
+  return { ok: true, added: added.added };
 }

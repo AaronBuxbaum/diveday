@@ -2,6 +2,10 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import {
+  AgencyListedOffer,
+  agencyListedForm,
+} from "@/app/shop/[shopSlug]/_components/agency-check/AgencyListedOffer";
 import type { AgencyCheckCopy } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
 import {
   type AgencyCheckFailure,
@@ -15,7 +19,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { FormStatus } from "@/components/ui/form";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
-import type { AgencyCheckResult } from "../card-actions";
+import type { AgencyCheckResult, AgencyListedAddResult } from "../card-actions";
 
 export type { AgencyCheckCopy };
 
@@ -44,6 +48,7 @@ export function AgencyCheck({
   certificationId,
   awaiting,
   action,
+  addListed,
   copy,
 }: {
   href: string;
@@ -54,12 +59,20 @@ export function AgencyCheck({
   awaiting: boolean;
   /** `agencyCheckAction` bound to this shop and diver, on the server. */
   action: (previous: AgencyCheckResult, formData: FormData) => Promise<AgencyCheckResult>;
+  /** `addAgencyListedCardsAction` bound to this shop and diver: the page's other cards (layer 3). */
+  addListed?: (
+    previous: AgencyListedAddResult,
+    formData: FormData,
+  ) => Promise<AgencyListedAddResult>;
   copy: AgencyCheckCopy;
 }) {
   const hasExtension = useCertCheckExtension();
   const [result, formAction, judging] = useActionState(action, null);
   const [asking, setAsking] = useState(false);
   const [failure, setFailure] = useState<AgencyCheckFailure>(null);
+  // The page the server judged, kept so a ticked offer posts the same text
+  // and the server can judge it again.
+  const [pageText, setPageText] = useState("");
   const [, startTransition] = useTransition();
   const busy = asking || judging;
 
@@ -73,6 +86,7 @@ export function AgencyCheck({
       setFailure(agencyCheckFailure(reply.reason));
       return;
     }
+    setPageText(reply.pageText);
     const formData = agencyCheckForm(certificationId, reply.pageText);
     startTransition(() => formAction(formData));
   }
@@ -113,6 +127,14 @@ export function AgencyCheck({
           {evidence ? <span className="mt-1 block italic">{evidence}</span> : null}
           {hasExtension && query ? link : null}
         </span>
+      ) : null}
+      {match?.offers && addListed && pageText ? (
+        <AgencyListedOffer
+          lead={copy.listedLead}
+          offers={match.offers}
+          copy={copy}
+          add={(kinds) => addListed(null, agencyListedForm(certificationId, pageText, kinds))}
+        />
       ) : null}
       {undo ? (
         <UndoToast

@@ -1,7 +1,14 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { certifications, people, shops } from "@/db/schema";
+import { reviewNitroxCertification } from "@/db/nitrox";
+import {
+  certifications,
+  nitroxCertifications,
+  people,
+  shops,
+  specialtyCertifications,
+} from "@/db/schema";
 import { recordSelfDeclaredCards } from "@/db/self-declared-cards";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -45,7 +52,7 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { refresh } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
-const { agencyCheckAction } = await import("./card-actions");
+const { addAgencyListedCardsAction, agencyCheckAction } = await import("./card-actions");
 
 const NAUI_PAGE = "Verify Diver Certification\nLena Ortiz\n1990-04-12\nAdvanced Scuba Diver";
 
@@ -519,5 +526,232 @@ describe("agencyCheckAction", () => {
       ).toEqual({ ok: false, reason: "invalid" });
       expect((await cardRow(db, card.id))?.status).toBe("pending");
     });
+  });
+});
+
+/**
+ * **The page's other cards, filed as pending** (layer 3). After a match the
+ * staffer is offered the diver's nitrox and specialty cards the same page
+ * lists. The server believes only the page's text and the ticks, and the
+ * ticks only where the page, judged again, offers them.
+ */
+describe("addAgencyListedCardsAction", () => {
+  const LISTING = `${NAUI_PAGE}\nEnriched Air Nitrox Diver\nDeep Diver`;
+
+  function add(certificationId: string, pageText: string, kinds: readonly string[]) {
+    const formData = check(certificationId, pageText);
+    for (const kind of kinds) formData.append("kind", kind);
+    return formData;
+  }
+
+  async function checked(pageText = LISTING) {
+    const ctxValues = await context();
+    const card = await pendingCard(ctxValues.db, ctxValues.shop.id, ctxValues.personId);
+    const result = await agencyCheckAction(
+      ctxValues.shop.slug,
+      ctxValues.personId,
+      null,
+      check(card.id, pageText),
+    );
+    return { ...ctxValues, card, result };
+  }
+
+  async function filed(db: AppDb, personId: string) {
+    const nitrox = await db
+      .select()
+      .from(nitroxCertifications)
+      .where(eq(nitroxCertifications.personId, personId));
+    const specialties = await db
+      .select()
+      .from(specialtyCertifications)
+      .where(eq(specialtyCertifications.personId, personId));
+    return { nitrox, specialties };
+  }
+
+  it("offers the page's other cards with the match, in the agency's words", async () => {
+    const { result } = await checked();
+    expect(result).toMatchObject({
+      ok: true,
+      verdict: "match",
+      offers: [
+        { kind: "nitrox", words: "Enriched Air Nitrox Diver" },
+        { kind: "deep", words: "Deep Diver" },
+      ],
+    });
+    // Nothing is filed until the staffer ticks it.
+  });
+
+  it("files the ticked cards as pending, with the agency's words and the diver's number", async () => {
+    const { db, shop, owner, personId, card } = await checked();
+
+    const result = await addAgencyListedCardsAction(
+      shop.slug,
+      personId,
+      null,
+      add(card.id, LISTING, ["nitrox", "deep"]),
+    );
+
+    expect(result).toEqual({ ok: true, added: ["nitrox", "deep"] });
+    const { nitrox, specialties } = await filed(db, personId);
+    expect(nitrox).toHaveLength(1);
+    expect(specialties).toHaveLength(1);
+    for (const row of [...nitrox, ...specialties]) {
+      expect(row.status).toBe("pending");
+      expect(row.agency).toBe("naui");
+      expect(row.identifier).toBe(card.identifier);
+      expect(row.reviewNote).toContain("Lena Ortiz");
+      expect(row.reviewedAt).toBeNull();
+    }
+    expect(nitrox[0]?.reviewNote).toContain("Enriched Air Nitrox Diver");
+    expect(specialties[0]?.specialty).toBe("deep");
+
+    // The staffer's one tap certifies it and keeps the agency's words.
+    const nitroxId = nitrox[0]?.id as string;
+    const confirmed = await reviewNitroxCertification(db, {
+      shopId: shop.id,
+      certificationId: nitroxId,
+      status: "verified",
+      reviewedByPersonId: owner,
+    });
+    expect(confirmed.ok).toBe(true);
+    expect(confirmed.ok && confirmed.certification.reviewNote).toContain(
+      "Enriched Air Nitrox Diver",
+    );
+  });
+
+  it("files only what was ticked", async () => {
+    const { db, shop, personId, card } = await checked();
+    await addAgencyListedCardsAction(shop.slug, personId, null, add(card.id, LISTING, ["deep"]));
+    const { nitrox, specialties } = await filed(db, personId);
+    expect(nitrox).toHaveLength(0);
+    expect(specialties.map((row) => row.specialty)).toEqual(["deep"]);
+  });
+
+  /** Security: a forged tick never makes a card the page did not show. */
+  it("refuses a tick for a card the page does not list, and files none of the rest", async () => {
+    const { db, shop, personId, card } = await checked();
+    for (const kinds of [["wreck"], ["deep", "wreck"], ["cavern", "nitrox"]]) {
+      expect(
+        await addAgencyListedCardsAction(shop.slug, personId, null, add(card.id, LISTING, kinds)),
+      ).toEqual({ ok: false });
+    }
+    // Page text rewritten to list a card: the judge reads it, but a page that
+    // no longer matches offers nothing.
+    expect(
+      await addAgencyListedCardsAction(
+        shop.slug,
+        personId,
+        null,
+        add(card.id, "Lena Ortiz\n1987-09-03\nAdvanced Scuba Diver\nWreck Diver", ["wreck"]),
+      ),
+    ).toEqual({ ok: false });
+    // A neighbour's cards under the diver's record are not the diver's.
+    expect(
+      await addAgencyListedCardsAction(
+        shop.slug,
+        personId,
+        null,
+        add(card.id, `${NAUI_PAGE}\nMark Lee\nWreck Diver`, ["wreck"]),
+      ),
+    ).toEqual({ ok: false });
+    expect(await filed(db, personId)).toEqual({ nitrox: [], specialties: [] });
+  });
+
+  it("refuses a kind that is not a card, a repeated tick, or no tick at all", async () => {
+    const { db, shop, personId, card } = await checked();
+    for (const kinds of [["specialty:nitrox"], ["rescue"], ["deep", "deep"], []]) {
+      expect(
+        await addAgencyListedCardsAction(shop.slug, personId, null, add(card.id, LISTING, kinds)),
+      ).toEqual({ ok: false });
+    }
+    expect(await filed(db, personId)).toEqual({ nitrox: [], specialties: [] });
+  });
+
+  it("never offers or files a card the diver already holds", async () => {
+    const { db, shop, personId } = await context();
+    await db.insert(nitroxCertifications).values({
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      identifier: "P-777",
+      status: "verified",
+    });
+    const card = await pendingCard(db, shop.id, personId);
+    const result = await agencyCheckAction(shop.slug, personId, null, check(card.id, LISTING));
+    expect(result).toMatchObject({ offers: [{ kind: "deep", words: "Deep Diver" }] });
+
+    expect(
+      await addAgencyListedCardsAction(
+        shop.slug,
+        personId,
+        null,
+        add(card.id, LISTING, ["nitrox"]),
+      ),
+    ).toEqual({ ok: false });
+    expect(
+      await addAgencyListedCardsAction(shop.slug, personId, null, add(card.id, LISTING, ["deep"])),
+    ).toEqual({ ok: true, added: ["deep"] });
+    // A second post of the same tick finds the card on file.
+    expect(
+      await addAgencyListedCardsAction(shop.slug, personId, null, add(card.id, LISTING, ["deep"])),
+    ).toEqual({ ok: false });
+    const { nitrox, specialties } = await filed(db, personId);
+    expect(nitrox).toHaveLength(1);
+    expect(specialties).toHaveLength(1);
+  });
+
+  it("refuses a card no agency check certified, or one its Undo took back", async () => {
+    const { db, shop, owner, personId } = await context();
+    const byHand = await pendingCard(db, shop.id, personId, {
+      status: "verified",
+      reviewedAt: new Date("2026-10-01T00:00:00Z"),
+      reviewedByPersonId: owner,
+    });
+    expect(
+      await addAgencyListedCardsAction(
+        shop.slug,
+        personId,
+        null,
+        add(byHand.id, LISTING, ["deep"]),
+      ),
+    ).toEqual({ ok: false });
+
+    const other = await diver(db, shop.id, "Lena Ortiz");
+    const card = await pendingCard(db, shop.id, other);
+    await agencyCheckAction(shop.slug, other, null, check(card.id, LISTING));
+    await agencyCheckAction(shop.slug, other, null, check(card.id, null, "undo"));
+    expect(
+      await addAgencyListedCardsAction(shop.slug, other, null, add(card.id, LISTING, ["deep"])),
+    ).toEqual({ ok: false });
+    expect((await filed(db, other)).specialties).toEqual([]);
+  });
+
+  it("refuses another diver's card, and another shop's", async () => {
+    const { db, shop, card } = await checked();
+    const stranger = await diver(db, shop.id, "Lena Ortiz");
+    expect(
+      await addAgencyListedCardsAction(shop.slug, stranger, null, add(card.id, LISTING, ["deep"])),
+    ).toEqual({ ok: false });
+
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Reef Runners", slug: "reef-runners-listed", timezone: "America/New_York" })
+      .returning();
+    if (!otherShop) throw new Error("failed to insert a shop");
+    const theirDiver = await diver(db, otherShop.id, "Lena Ortiz");
+    const theirCard = await pendingCard(db, otherShop.id, theirDiver, {
+      status: "verified",
+      agencyCheckedAt: new Date("2026-10-01T00:00:00Z"),
+    });
+    expect(
+      await addAgencyListedCardsAction(
+        shop.slug,
+        theirDiver,
+        null,
+        add(theirCard.id, LISTING, ["deep"]),
+      ),
+    ).toEqual({ ok: false });
+    expect((await filed(db, stranger)).specialties).toEqual([]);
+    expect((await filed(db, theirDiver)).specialties).toEqual([]);
   });
 });
