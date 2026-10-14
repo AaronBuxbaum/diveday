@@ -226,7 +226,7 @@ export default async function ManageTripPage({
 
   const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const { shown, finished, checkInOpen } = departureStage({
+  const { shown, finished, sailed, checkInOpen } = departureStage({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -304,7 +304,7 @@ export default async function ManageTripPage({
               <TripStageBadge stage={shown?.stage ?? null} copy={tabsCopy} />
               <TripCapacityBadge
                 trip={trip}
-                finished={finished}
+                finished={sailed}
                 cancelledLabel={t("trips.detail.cancelledBadge")}
                 t={t}
               />
@@ -459,7 +459,7 @@ export default async function ManageTripPage({
               refreshing: t("checkIn.pullToRefresh.refreshing"),
             }}
           >
-            {pulseNeeded && !finished ? (
+            {pulseNeeded && !sailed ? (
               <MinimumSeatsBand
                 trip={trip}
                 booked={trip.booked}
@@ -470,7 +470,7 @@ export default async function ManageTripPage({
             ) : null}
 
             <PulseFacts
-              facts={shownPulseFacts(pulseFacts, { desk, finished })}
+              facts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
               foldLabel={(count) => t("trips.pulse.toSort", { count })}
             />
 

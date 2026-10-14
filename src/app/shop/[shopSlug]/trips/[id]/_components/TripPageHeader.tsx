@@ -24,8 +24,9 @@ export function TripCapacityBadge({
   trip: TripCapacity & { status: string; sellableCapacity: number };
   cancelledLabel: string;
   /**
-   * The departure is back (`tripPhaseOf`): nothing is for sale, so "4 spots
-   * left" would be a live-day word on a record (UX review 2026-10-10, item 10).
+   * The boat has left the dock (`departureSailed`): nothing is for sale, so
+   * "4 seats left" would be a dock word at sea or on a record (UX review
+   * 2026-10-10, item 10; fourth review, item 16).
    */
   finished?: boolean;
   t: StaffTranslator;

@@ -126,9 +126,9 @@ describe("diverRowState's desk check-in", () => {
   const zone = "America/New_York";
 
   it("says it at the dock for a checked-in diver the crew has not called", () => {
-    expect(
-      diverRowState(diver({ checkedIn: true }), "departure", true, zone).checkedInAtDesk,
-    ).toBe(true);
+    expect(diverRowState(diver({ checkedIn: true }), "departure", true, zone).checkedInAtDesk).toBe(
+      true,
+    );
   });
 
   it("gives way to the crew's own word once the diver is boarded", () => {

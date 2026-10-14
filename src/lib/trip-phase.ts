@@ -188,15 +188,54 @@ export function checkInOpen(input: Parameters<typeof tripPhaseOf>[0]): boolean {
  * A departure page's readings of where the boat is, from one input: the
  * crew's word the header chip prints (`boatStageOf`), whether the departure is
  * finished, which turns its Divers tab into a record and stops its header
- * counting seats (UX review 2026-10-10, items 1 and 10), and whether the
- * Divers tab says check-in is open (`checkInOpen`).
+ * counting seats (UX review 2026-10-10, items 1 and 10), whether the boat has
+ * sailed (`departureSailed`), and whether the Divers tab says check-in is open
+ * (`checkInOpen`).
  */
 export function departureStage<R extends { stage: TripStage; recordedAt: Date }>(
   input: Parameters<typeof boatStageOf<R>>[0],
-): { shown: R | null; finished: boolean; checkInOpen: boolean } {
+): { shown: R | null; finished: boolean; sailed: boolean; checkInOpen: boolean } {
   return {
     shown: boatStageOf(input),
     finished: tripPhaseOf(input) === "back",
+    sailed: departureSailed(input),
     checkInOpen: checkInOpen(input),
   };
+}
+
+/** The crew's words that mean the boat is off the dock and not yet tied up. */
+const AT_SEA_STAGES: ReadonlySet<TripStage> = new Set(["underway", "surface", "heading_in"]);
+
+/**
+ * **Has this departure left the dock?** (fourth review, item 16). Once it has,
+ * nothing on its pages is for sale and nothing is still to pack: "4 seats
+ * left", "6 people missing rental sizes" and "12 pieces still to pick" are
+ * dock words on the one page open during the trip.
+ *
+ * Back is sailed. Otherwise the crew's word answers when it still speaks:
+ * underway, at the surface and heading in are at sea; boarding is still at the
+ * dock, however late; a course's "home" from an earlier day is tied up for the
+ * night, with tomorrow still to pack for. With no word, the clock answers for
+ * a single sailing once its hour has passed, and never for a course, whose
+ * later days still need their kit.
+ */
+export function departureSailed(input: Parameters<typeof tripPhaseOf>[0]): boolean {
+  const phase = tripPhaseOf(input);
+  if (phase === "back") return true;
+  if (phase !== "aboard") return false;
+  const shown = boatStageOf(input);
+  if (shown) return AT_SEA_STAGES.has(shown.stage);
+  return input.endsAt.getTime() - input.startsAt.getTime() < DAY_MS;
+}
+
+/**
+ * **When the "Left aboard" form is the crew's job** (fourth review, item 16):
+ * from "Heading in", when the crew sweeps the deck, and on a departure that is
+ * back. Not while the boat is still diving, where a form for what was found
+ * after the trip is a question nobody can answer yet.
+ */
+export function leftAboardOpen(input: Parameters<typeof tripPhaseOf>[0]): boolean {
+  if (tripPhaseOf(input) === "back") return true;
+  const shown = boatStageOf(input);
+  return shown?.stage === "heading_in" || shown?.stage === "home";
 }

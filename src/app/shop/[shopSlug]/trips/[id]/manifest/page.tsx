@@ -368,9 +368,9 @@ export default async function TripManifestPage({
           shopId={shop.id}
           tripId={tripId}
           isDeparture={isDeparture}
-          startsAt={departureManifest.trip.startsAt}
+          trip={departureManifest.trip}
+          timeZone={shop.timezone}
           stage={stage}
-          cancelled={departureManifest.trip.cancelled === true}
           seats={manifest.divers}
         />
 

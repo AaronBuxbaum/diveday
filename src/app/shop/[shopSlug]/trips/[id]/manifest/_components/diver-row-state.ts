@@ -58,8 +58,7 @@ export function diverRowState(
   // already answered half of it. Departure only, and only until the crew says
   // something of its own: once a diver is boarded or left ashore the crew's
   // word is the row, and after a dive the desk's is history. Never a gate.
-  const checkedInAtDesk =
-    checkpoint === "departure" && diver.checkedIn && !diver.notHere && !rc;
+  const checkedInAtDesk = checkpoint === "departure" && diver.checkedIn && !diver.notHere && !rc;
   // Every row is a jump target — the count panel's chips link to any
   // uncalled person — so every row carries the scroll margin that keeps
   // its name clear of the sticky panel. Shared with the crew rows.
