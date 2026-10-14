@@ -1443,7 +1443,7 @@
       },
       "blue-angelfish": {
         "name": "Blue angelfish",
-        "description": "A blue-gray angelfish with yellow-rimmed fins and a pale-edged tail. It has no dark crown on the forehead, which sets it apart from the queen.",
+        "description": "A blue-gray angelfish with yellow-rimmed fins and a blue tail with a yellow edge. It has no dark crown on the forehead, which sets it apart from the queen.",
         "tip": "Check the forehead and the tail before you call it a queen. It feeds on sponges, so look where they grow thick."
       },
       "blue-chromis": {
@@ -1584,7 +1584,7 @@
       "caribbean-reef-shark": {
         "name": "Caribbean reef shark",
         "description": "A classic gray requiem shark that patrols the reef edge in open water.",
-        "tip": "Stay off the bottom, keep the group together, and watch it rather than follow it."
+        "tip": "Stay calm and level, keep the group together, and watch it rather than follow it."
       },
       "caribbean-reef-squid": {
         "name": "Caribbean reef squid",
@@ -1609,7 +1609,7 @@
       "chain-moray": {
         "name": "Chain moray",
         "description": "Dark brown printed with a yellow chain-link pattern, and short for a moray.",
-        "tip": "Hunts crabs in the shallows by day, sometimes half out of the water. Look shallow."
+        "tip": "Hunts crabs in the shallows by day, sometimes half out of the water. Look shallow. Keep your hands out of the holes."
       },
       "chalk-bass": {
         "name": "Chalk bass",
@@ -1634,11 +1634,11 @@
       "christmas-tree-worm": {
         "name": "Christmas tree worm",
         "description": "Pairs of tiny colored spirals growing straight out of hard coral.",
-        "tip": "Wave a hand near one and every worm on the head vanishes at once. Then wait."
+        "tip": "Let your shadow cross one and every worm on the head vanishes at once. Then hold still and wait for them to reopen."
       },
       "cleaning-goby": {
         "name": "Cleaning goby",
-        "description": "A tiny cleaner goby with a bright yellow V on the snout that runs into a wide white to yellow stripe, found in the Bahamas and Cuba.",
+        "description": "A tiny cleaner goby with a bright yellow V on the snout that runs into a wide white to yellow stripe, found in the Bahamas.",
         "tip": "Fish lining up on a coral head point you to its station. Settle beside it and let the queue carry on."
       },
       "clown-wrasse": {
@@ -1664,7 +1664,7 @@
       "common-sea-fan": {
         "name": "Common sea fan",
         "description": "A purple lattice standing across the current like a window frame.",
-        "tip": "They grow square to the prevailing current, which makes them a useful natural compass."
+        "tip": "They grow square to the surge, so a stand of fans tells you which way the water moves."
       },
       "common-snook": {
         "name": "Common snook",
@@ -1766,11 +1766,6 @@
         "description": "Stubby blunt fingers in low thickets, tan to pale purple, in shallow water.",
         "tip": "A nursery: look between the fingers for the smallest fish on the reef."
       },
-      "fingerprint-cyphoma": {
-        "name": "Fingerprint cyphoma",
-        "description": "A small snail on a sea fan or sea rod, its mantle pale yellow with tight black lines like a fingerprint.",
-        "tip": "Check the branches of sea rods and fans; it is rarer than the flamingo tongue, so take a long look."
-      },
       "fire-coral": {
         "name": "Branching fire coral",
         "description": "Mustard-tan blades with pale tips, growing over anything that stops moving.",
@@ -1859,7 +1854,7 @@
       "golden-coral-shrimp": {
         "name": "Golden coral shrimp",
         "description": "A small golden-yellow shrimp with red-and-white banded claws and long white antennae, sheltering in a crevice.",
-        "tip": "Look deep under ledges near moray eels, which it often cleans."
+        "tip": "Look deep under ledges near moray eels, which it often cleans, with a light and never a hand."
       },
       "golden-crinoid": {
         "name": "Golden crinoid",
@@ -1964,7 +1959,7 @@
       "hawksbill-turtle": {
         "name": "Hawksbill turtle",
         "description": "A narrow beak and a serrated shell edge, picking sponges off the reef face.",
-        "tip": "The beak is the tell: pointed and hooked, where a green turtle’s is blunt."
+        "tip": "The beak is the tell: pointed and hooked, where a green turtle’s is blunt. Watch from the side and never touch or chase it."
       },
       "highhat": {
         "name": "Highhat",
@@ -2139,7 +2134,7 @@
       "moon-jelly": {
         "name": "Moon jelly",
         "description": "A translucent saucer with four horseshoe rings, pulsing through open water.",
-        "tip": "Mild sting at worst, but a hood and gloves make a swarm a pleasure instead of a chore."
+        "tip": "Mild sting at worst, but a hood and a full suit make a swarm a pleasure instead of a chore."
       },
       "mountainous-star-coral": {
         "name": "Mountainous star coral",
@@ -2179,12 +2174,12 @@
       "nimble-spray-crab": {
         "name": "Nimble spray crab",
         "description": "A flat, spidery crab with long legs ringed in gold, clinging to rock in the shallow surge.",
-        "tip": "Check under long-spined urchins and rock ledges in the shallows; it darts sideways at the slightest move."
+        "tip": "Check under long-spined urchins and rock ledges in the shallows with a light, not a hand; it darts sideways at the slightest move."
       },
       "nurse-shark": {
         "name": "Nurse shark",
         "description": "A broad, mellow bottom-rester with rounded fins and two barbels at the snout.",
-        "tip": "Check quiet ledges without crowding or blocking an animal’s way out."
+        "tip": "Check quiet ledges without crowding or blocking an animal’s way out. Never touch or grab one; it bites when handled."
       },
       "ocean-surgeonfish": {
         "name": "Ocean surgeonfish",
@@ -2199,7 +2194,7 @@
       "orange-cup-coral": {
         "name": "Orange cup coral",
         "description": "Clusters of round orange to reddish cups in shade under ledges, in caves and on wrecks and rigs, opening bright yellow-orange tentacles after dark. An Indo-Pacific coral, not from this ocean.",
-        "tip": "Invasive here. Come back on a night dive to see the tentacles open, and report new patches to the crew."
+        "tip": "Invasive here. Come back on a night dive to see the tentacles open."
       },
       "orange-elephant-ear-sponge": {
         "name": "Orange elephant ear sponge",
@@ -2229,7 +2224,7 @@
       "pederson-cleaner-shrimp": {
         "name": "Pederson cleaner shrimp",
         "description": "A glass shrimp with violet spots, waving from inside an anemone.",
-        "tip": "Hold a bare hand still near the anemone and it may well come and clean it."
+        "tip": "Settle a hand’s length from the anemone and hold still. It comes to the edge and works whatever fish stops there."
       },
       "peppermint-goby": {
         "name": "Peppermint goby",
@@ -2664,7 +2659,7 @@
       "spotted-moray": {
         "name": "Spotted moray",
         "description": "White peppered with dark spots, usually one head poking from the rubble.",
-        "tip": "Look into rubble and wreck gaps rather than the open reef face."
+        "tip": "Look into rubble and wreck gaps rather than the open reef face. Keep your hands out of the holes."
       },
       "spotted-scorpionfish": {
         "name": "Spotted scorpionfish",
@@ -2744,7 +2739,7 @@
       "tarpon": {
         "name": "Tarpon",
         "description": "A slab of living chrome, up to two meters, hanging in a wreck’s lee.",
-        "tip": "Cut your light on a night dive and let them work the edge of everyone else’s."
+        "tip": "Shield your light against your chest on a night dive and let them work the edge of everyone else’s."
       },
       "three-rowed-sea-cucumber": {
         "name": "Three-rowed sea cucumber",
@@ -2859,7 +2854,7 @@
       "yellow-stingray": {
         "name": "Yellow stingray",
         "description": "A small, round, mottled ray that lies still in the sand between coral heads.",
-        "tip": "Shuffle rather than kick down onto sand. This is the one most divers land on."
+        "tip": "It carries a venomous spine at the tail. Look before you settle onto sand and come down slowly; this is the one most divers land on."
       },
       "yellow-tube-sponge": {
         "name": "Yellow tube sponge",

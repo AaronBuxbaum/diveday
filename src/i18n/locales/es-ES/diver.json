@@ -1261,7 +1261,7 @@
       "predator": "Depredador",
       "shark": "Tiburón",
       "ray": "Raya",
-      "eel": "Morena",
+      "eel": "Anguila",
       "camouflage": "Camuflaje",
       "invasive": "Invasor",
       "marineMammal": "Mamífero marino",
@@ -1347,7 +1347,7 @@
         "tip": "De día se esconde al fondo de las grietas. En una nocturna sale a la vista, así que no le apuntes la luz a los ojos."
       },
       "barred-hamlet": {
-        "name": "Vaca",
+        "name": "Vaca barrada",
         "description": "Una pequeña cabrilla color canela con una montura oscura al medio, suspendida junto al coral.",
         "tip": "Las vacas se quedan en su sitio y te observan, así que acércate despacio a una en vez de barrer el arrecife."
       },
@@ -1443,7 +1443,7 @@
       },
       "blue-angelfish": {
         "name": "Ángel azul",
-        "description": "Un ángel gris azulado con las aletas bordeadas de amarillo y la cola de borde claro. No tiene la corona oscura en la frente que distingue a la reina.",
+        "description": "Un ángel gris azulado con las aletas bordeadas de amarillo y la cola azul con el borde amarillo. No tiene la corona oscura en la frente que distingue a la reina.",
         "tip": "Revisa la frente y la cola antes de llamarlo reina. Come esponjas, así que búscalo donde abundan."
       },
       "blue-chromis": {
@@ -1584,7 +1584,7 @@
       "caribbean-reef-shark": {
         "name": "Tiburón de arrecife del Caribe",
         "description": "El clásico tiburón gris de arrecife que patrulla el borde en agua abierta.",
-        "tip": "No te pegues al fondo, mantén al grupo junto y obsérvalo en vez de seguirlo."
+        "tip": "Mantén la calma y el equilibrio, el grupo junto, y obsérvalo en vez de seguirlo."
       },
       "caribbean-reef-squid": {
         "name": "Calamar de arrecife del Caribe",
@@ -1609,7 +1609,7 @@
       "chain-moray": {
         "name": "Morena cadena",
         "description": "Marrón oscuro estampada con un patrón de cadena amarilla, y corta para ser una morena.",
-        "tip": "Caza cangrejos en lo somero de día, a veces medio fuera del agua. Busca en poca profundidad."
+        "tip": "Caza cangrejos en lo somero de día, a veces medio fuera del agua. Busca en poca profundidad. No metas las manos en los huecos."
       },
       "chalk-bass": {
         "name": "Serrano tiza",
@@ -1634,11 +1634,11 @@
       "christmas-tree-worm": {
         "name": "Gusano árbol de Navidad",
         "description": "Pares de espirales diminutas de colores que salen directo del coral duro.",
-        "tip": "Pasa la mano cerca de uno y todos los gusanos de esa cabeza desaparecen a la vez. Luego espera."
+        "tip": "Deja que tu sombra cruce uno y todos los gusanos de esa cabeza desaparecen a la vez. Luego quédate quieto y espera a que vuelvan a abrirse."
       },
       "cleaning-goby": {
         "name": "Gobio limpiador de las Bahamas",
-        "description": "Un gobio limpiador diminuto con una V amarilla brillante en el hocico que se une a una franja ancha entre blanca y amarilla. Vive en las Bahamas y Cuba.",
+        "description": "Un gobio limpiador diminuto con una V amarilla brillante en el hocico que se une a una franja ancha entre blanca y amarilla. Vive en las Bahamas.",
         "tip": "Los peces que hacen fila sobre una cabeza de coral te señalan su estación. Acomódate al lado y deja que la fila siga."
       },
       "clown-wrasse": {
@@ -1664,7 +1664,7 @@
       "common-sea-fan": {
         "name": "Abanico de mar común",
         "description": "Una celosía morada plantada de través a la corriente como el marco de una ventana.",
-        "tip": "Crecen en ángulo recto a la corriente dominante, lo que los convierte en una brújula natural muy útil."
+        "tip": "Crecen en ángulo recto al oleaje, así que un grupo de abanicos te dice hacia dónde se mueve el agua."
       },
       "common-snook": {
         "name": "Róbalo común",
@@ -1766,11 +1766,6 @@
         "description": "Dedos cortos y romos en matorrales bajos, de canela a morado pálido, en agua somera.",
         "tip": "Es una guardería: mira entre los dedos para ver los peces más pequeños del arrecife."
       },
-      "fingerprint-cyphoma": {
-        "name": "Cifoma huella digital",
-        "description": "Un caracol pequeño sobre un abanico o una vara de mar, con el manto amarillo pálido cubierto de líneas negras apretadas como una huella digital.",
-        "tip": "Revisa las ramas de las varas y los abanicos de mar; es más raro que la lengua de flamenco, así que míralo con calma."
-      },
       "fire-coral": {
         "name": "Coral de fuego ramificado",
         "description": "Láminas color mostaza con las puntas pálidas, que crecen sobre cualquier cosa que deje de moverse.",
@@ -1859,7 +1854,7 @@
       "golden-coral-shrimp": {
         "name": "Camarón dorado de coral",
         "description": "Un camarón pequeño, amarillo dorado, con tenazas en bandas rojas y blancas y antenas blancas y largas, refugiado en una grieta.",
-        "tip": "Búscalo bajo las cornisas profundas cerca de las morenas, a las que suele limpiar."
+        "tip": "Búscalo bajo las cornisas profundas cerca de las morenas, a las que suele limpiar, con la linterna y nunca con la mano."
       },
       "golden-crinoid": {
         "name": "Crinoideo dorado",
@@ -1953,7 +1948,7 @@
       },
       "hairy-blenny": {
         "name": "Trambollo peludo",
-        "description": "Un blenio grande, jaspeado de pardo y verde, con penachos de cirros sobre los ojos y una mancha ocular oscura en el opérculo. Vive en lo somero rocoso.",
+        "description": "Un trambollo grande, jaspeado de pardo y verde, con penachos de cirros sobre los ojos y una mancha ocular oscura en el opérculo. Vive en lo somero rocoso.",
         "tip": "Revisa agujeros y grietas en roca somera y escolleras. Descansa con la cabeza afuera y no se mueve si te acercas despacio."
       },
       "harlequin-bass": {
@@ -1964,7 +1959,7 @@
       "hawksbill-turtle": {
         "name": "Tortuga carey",
         "description": "Un pico angosto y un borde de caparazón aserrado, arrancando esponjas de la pared del arrecife.",
-        "tip": "El pico es la señal: puntiagudo y ganchudo, donde el de la tortuga verde es romo."
+        "tip": "El pico es la señal: puntiagudo y ganchudo, donde el de la tortuga verde es romo. Obsérvala de lado y nunca la toques ni la persigas."
       },
       "highhat": {
         "name": "Tambor rayado",
@@ -1987,7 +1982,7 @@
         "tip": "Busca la pared de peces en el azul sobre el pecio en vez de repasar la cubierta."
       },
       "hovering-dartfish": {
-        "name": "Gobio dardo",
+        "name": "Dardo suspendido",
         "description": "Un pez delgado de tono azul pálido con líneas brillantes en la cara, suspendido a un palmo sobre su madriguera en arena o cascajo.",
         "tip": "Al primer movimiento brusco se mete en el agujero. Acércate bajo y despacio, y detente bastante antes."
       },
@@ -2139,7 +2134,7 @@
       "moon-jelly": {
         "name": "Medusa luna",
         "description": "Un platillo translúcido con cuatro anillos en herradura, latiendo por el agua abierta.",
-        "tip": "A lo mucho pica suave, pero con capucha y guantes un enjambre es un gusto en vez de una molestia."
+        "tip": "A lo mucho pica suave, pero con capucha y neopreno completo un enjambre es un gusto en vez de una molestia."
       },
       "mountainous-star-coral": {
         "name": "Coral estrella montañoso",
@@ -2173,18 +2168,18 @@
       },
       "night-sergeant": {
         "name": "Sargento nocturno",
-        "description": "Una damisela robusta, color canela a oliva y sin nada de amarillo, con cinco barras oscuras anchas; vive en la rompiente de costas rocosas.",
+        "description": "Una jaqueta robusta, color canela a oliva y sin nada de amarillo, con cinco barras oscuras anchas; vive en la rompiente de costas rocosas.",
         "tip": "Míralo en los primeros metros de una entrada rocosa, donde rompe el oleaje. No te agarres de nada y deja que el vaivén te lleve."
       },
       "nimble-spray-crab": {
         "name": "Cangrejo plano",
         "description": "Un cangrejo aplanado, con aspecto de araña y patas largas con anillos dorados, aferrado a la roca en el oleaje somero.",
-        "tip": "Revisa bajo los erizos de espinas largas y las cornisas en lo somero; sale disparado de lado al menor movimiento."
+        "tip": "Revisa bajo los erizos de espinas largas y las cornisas en lo somero con la linterna, no con la mano; sale disparado de lado al menor movimiento."
       },
       "nurse-shark": {
         "name": "Tiburón gata",
         "description": "Un tranquilo habitante del fondo, ancho, de aletas redondeadas y dos barbillas en el hocico.",
-        "tip": "Revisa las cornisas tranquilas sin amontonarte ni taparle la salida al animal."
+        "tip": "Revisa las cornisas tranquilas sin amontonarte ni taparle la salida al animal. Nunca lo toques ni lo agarres; muerde si lo manipulan."
       },
       "ocean-surgeonfish": {
         "name": "Cirujano pardo",
@@ -2199,7 +2194,7 @@
       "orange-cup-coral": {
         "name": "Coral copa naranja",
         "description": "Grupos de copas redondas, de naranja a rojizas, en la sombra bajo salientes, en cuevas y sobre pecios y plataformas. De noche despliega tentáculos amarillo anaranjado. Viene del Indopacífico.",
-        "tip": "Aquí es invasor. Vuelve en una inmersión nocturna para ver abiertos sus tentáculos, y avisa a la tripulación si ves colonias nuevas."
+        "tip": "Aquí es invasor. Vuelve en una inmersión nocturna para ver abiertos sus tentáculos."
       },
       "orange-elephant-ear-sponge": {
         "name": "Esponja oreja de elefante",
@@ -2229,7 +2224,7 @@
       "pederson-cleaner-shrimp": {
         "name": "Camarón limpiador de Pederson",
         "description": "Un camarón de vidrio con puntos violetas, saludando desde dentro de una anémona.",
-        "tip": "Mantén una mano desnuda quieta cerca de la anémona y es muy posible que venga a limpiarla."
+        "tip": "Quédate quieto a un palmo de la anémona. Sale al borde y atiende al pez que se detenga ahí."
       },
       "peppermint-goby": {
         "name": "Gobio menta",
@@ -2512,7 +2507,7 @@
         "tip": "Un macho que cuida huevos te va a golpear la máscara. Retrocede en vez de insistir."
       },
       "sharknose-goby": {
-        "name": "Gobio limpiador",
+        "name": "Gobio nariz de tiburón",
         "description": "Un gobio diminuto de franja neón que atiende una estación de limpieza sobre una cabeza de coral.",
         "tip": "Encuentra uno y espera. Lo que haga fila para su servicio es el resto del arrecife llegando."
       },
@@ -2664,7 +2659,7 @@
       "spotted-moray": {
         "name": "Morena pintada",
         "description": "Blanca salpicada de manchas oscuras, casi siempre una cabeza asomada entre el cascajo.",
-        "tip": "Mira dentro del cascajo y de las rendijas de un pecio en vez de la pared abierta."
+        "tip": "Mira dentro del cascajo y de las rendijas de un pecio en vez de la pared abierta. No metas las manos en los huecos."
       },
       "spotted-scorpionfish": {
         "name": "Pez escorpión manchado",
@@ -2744,7 +2739,7 @@
       "tarpon": {
         "name": "Sábalo",
         "description": "Una plancha de cromo vivo, de hasta dos metros, suspendida al resguardo de un pecio.",
-        "tip": "Apaga tu luz en una inmersión nocturna y déjalos trabajar el borde de las luces de los demás."
+        "tip": "Tapa tu luz contra el pecho en una inmersión nocturna y déjalos trabajar el borde de las luces de los demás."
       },
       "three-rowed-sea-cucumber": {
         "name": "Pepino de mar de tres hileras",
@@ -2832,7 +2827,7 @@
         "tip": "Sí roncan. En una inmersión tranquila oyes al cardumen a través del agua."
       },
       "white-margate": {
-        "name": "Margarita blanca",
+        "name": "Jallao",
         "description": "Un ronco grande y alto, de color gris perla uniforme, con labios gruesos y sin franjas.",
         "tip": "Suele andar solo o en grupos pequeños por los canales de arena junto al arrecife. Mantente bajo y seguirá comiendo en el fondo."
       },
@@ -2859,7 +2854,7 @@
       "yellow-stingray": {
         "name": "Raya amarilla",
         "description": "Una raya pequeña, redonda y jaspeada que se queda quieta en la arena entre cabezas de coral.",
-        "tip": "Baja sobre la arena con calma en vez de aletear hacia el fondo. Es la que más buzos pisan sin querer."
+        "tip": "Tiene una púa venenosa en la cola. Mira antes de posarte en la arena y baja despacio; es la que más buzos pisan sin querer."
       },
       "yellow-tube-sponge": {
         "name": "Esponja tubo amarilla",

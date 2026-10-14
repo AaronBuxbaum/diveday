@@ -1456,17 +1456,6 @@
       ],
       "reviewed": "2026-10-14"
     },
-    "marine-life/fingerprint-cyphoma.jpg": {
-      "subject": "species:fingerprint-cyphoma",
-      "source": "https://www.inaturalist.org/photos/256321219",
-      "licence": "CC BY 4.0",
-      "artist": "Dan Schofield",
-      "sourceSize": [
-        2048,
-        1536
-      ],
-      "reviewed": "2026-10-14"
-    },
     "marine-life/fire-coral.jpg": {
       "subject": "species:fire-coral",
       "source": "File:Millepora alcicornis 338801632.jpg",

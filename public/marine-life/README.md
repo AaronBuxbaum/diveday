@@ -149,7 +149,6 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `encrusting-gorgonian.jpg` — [iNaturalist photo 384010807](https://www.inaturalist.org/photos/384010807) · CC BY 4.0 · Robin White
 - `feather-duster-worm.jpg` — [Sabellastarte magnifica (Magnificent feather duster worm).jpg](https://commons.wikimedia.org/wiki/File:Sabellastarte_magnifica_(Magnificent_feather_duster_worm).jpg) · CC BY-SA 3.0 · Nhobgood Nick Hobgood
 - `finger-coral.jpg` — [Porites porites porites (clubbed finger coral) (San Salvador Island, Bahamas) 5 (16066417536).jpg](https://commons.wikimedia.org/wiki/File:Porites_porites_porites_(clubbed_finger_coral)_(San_Salvador_Island,_Bahamas)_5_(16066417536).jpg) · CC BY 2.0 · James St. John
-- `fingerprint-cyphoma.jpg` — [iNaturalist photo 256321219](https://www.inaturalist.org/photos/256321219) · CC BY 4.0 · Dan Schofield
 - `fire-coral.jpg` — [Millepora alcicornis 338801632.jpg](https://commons.wikimedia.org/wiki/File:Millepora_alcicornis_338801632.jpg) · CC BY 4.0 · Pauline Walsh Jacobson
 - `flagfin-mojarra.jpg` — [Eucinostomus melanopterus 325784184.jpg](https://commons.wikimedia.org/wiki/File:Eucinostomus_melanopterus_325784184.jpg) · CC0 · Adrian Torres B.
 - `flame-box-crab.jpg` — [iNaturalist photo 327890453](https://www.inaturalist.org/photos/327890453) · CC BY 4.0 · Pauline Walsh Jacobson · cropped to 0,0.08,1,0.92 (left, top, width, height as fractions of the original)
