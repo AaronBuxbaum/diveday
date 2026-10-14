@@ -159,6 +159,7 @@ describe("the share row", () => {
         profileDone={false}
         diveSiteCount={0}
         unitsDone={false}
+        releaseDone={false}
         stripeDone={false}
         copy={COPY}
       />,
