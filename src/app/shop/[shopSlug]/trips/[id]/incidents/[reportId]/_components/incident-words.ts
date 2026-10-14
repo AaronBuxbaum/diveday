@@ -31,6 +31,8 @@ export const FILING_GAP_KEYS: Record<IncidentFilingGap, StaffMessageKey> = {
   occurred_at: "incidents.file.gap.occurred_at",
   location: "incidents.file.gap.location",
   what_happened: "incidents.file.gap.what_happened",
+  kind: "incidents.file.gap.kind",
+  severity: "incidents.file.gap.severity",
   first_aid: "incidents.file.gap.first_aid",
   oxygen: "incidents.file.gap.oxygen",
   emergency_services: "incidents.file.gap.emergency_services",

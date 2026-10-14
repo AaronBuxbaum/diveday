@@ -1010,6 +1010,9 @@ export async function getTripManifests(
     // path refuses, so this is the only place the boat being over gets said.
     // Capped at the boat's certificate (#2321): over the certificate is over.
     capacity: trip.sellableCapacity,
+    // The certificate itself, so the head count can say when the people the
+    // crew counted aboard pass it (batch 6, item 2).
+    certifiedPassengers: trip.certifiedPassengers,
     // Printed beside souls on board, so a practice sheet is never read as a boat.
     isRehearsal: trip.isRehearsal,
     // The dock-rider form stays shut on a cancelled departure (#2394).

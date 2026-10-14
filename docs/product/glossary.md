@@ -171,6 +171,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Imported payment history
 - Imported waiver acceptance
 - In-water certified assistant
+- Incident kind
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
@@ -241,6 +242,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Snorkeler
 - Souls on board
 - Staff invite
+- Stale roll call
 - Standing crew
 - Station acknowledgement
 - Station echo

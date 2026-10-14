@@ -434,6 +434,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "recap_shoutout", // recap copy travels with recap_photos.csv
     "recap_auto_send_paused", // auto-send countdown / pause is ephemeral operational state
     "recap_auto_send_at",
+    // When this installation alerted the owners about a stale after-dive roll
+    // call: once-per-departure send state, like `recap_auto_send_at`. The
+    // roll-call events it was about travel in their own file.
+    "roll_call_alerted_at",
     // How many times this installation has re-issued the calendar events whose
     // UIDs are `trip-<uuid>@diveday` — a counter about *our* published
     // revisions, not a fact the shop entered. A re-imported bundle mints new

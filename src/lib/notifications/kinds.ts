@@ -1398,6 +1398,62 @@ const deskAfterHoursSchema = z.object({
   pingedAt: z.date(),
 });
 
+/**
+ * **A roll call still open after the boat should be home** (batch 6, item 6;
+ * `sendStaleRollCallAlerts`, src/db/roll-call-alerts.ts). Staff safety mail
+ * to the shop's owners, once per departure.
+ *
+ * **Counts and a link, never names.** Who is unaccounted for stays behind the
+ * manifest's sign-in: the mail lands in a personal inbox that may sit on a
+ * shared phone. `missing` says a crew member recorded somebody not back
+ * aboard, which changes the words, not the payload's reach.
+ *
+ * Not queued (`notificationIsQueueable`): an alert that arrives hours late,
+ * after the count closed, says something false.
+ */
+/**
+ * The longest trip title a notification carries. `trips.title` is unbounded,
+ * so a writer that hands a stored title to a kind capped here clips it first
+ * with {@link notificationTripTitle}: a long title must shorten the subject,
+ * never fail the send (security review 20261014).
+ */
+export const NOTIFICATION_TRIP_TITLE_MAX = 200;
+
+/**
+ * A trip title that fits {@link NOTIFICATION_TRIP_TITLE_MAX} as zod measures
+ * it (UTF-16 units), ending in "…" when cut, and never splitting a surrogate
+ * pair (an emoji in a title stays whole or goes).
+ */
+export function notificationTripTitle(title: string): string {
+  const trimmed = title.trim();
+  if (trimmed.length <= NOTIFICATION_TRIP_TITLE_MAX) return trimmed;
+  let cut = trimmed.slice(0, NOTIFICATION_TRIP_TITLE_MAX - 1);
+  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}…`;
+}
+
+const rollCallStaleSchema = z.object({
+  kind: z.literal("roll_call_stale"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  tripId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(NOTIFICATION_TRIP_TITLE_MAX),
+  /** The after-dive checkpoint that is open: 1–4. */
+  diveNumber: z.number().int().min(1).max(4),
+  /** People not accounted for there, or recorded not back aboard when `missing`. */
+  unaccounted: z.number().int().min(1).max(10_000),
+  missing: z.boolean(),
+  /** When the boat was due back (the departure's end), said in the shop's zone. */
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  rollCallUrl: z.url().max(2_000),
+  alertedAt: z.date(),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -1468,6 +1524,7 @@ export const notificationSchema = z
     gearServiceDueSchema,
     crewScheduleChangeSchema,
     deskAfterHoursSchema,
+    rollCallStaleSchema,
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
@@ -1582,6 +1639,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "gear_service_due":
     case "crew_schedule_change":
     case "desk_after_hours":
+    case "roll_call_stale":
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
@@ -1751,5 +1809,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per claim of the person's batching clock.
     case "desk_after_hours":
       return `desk-after-hours/${notification.personId}/${notification.pingedAt.toISOString()}`;
+    // One alert per departure per owner; the departure's claim comes first.
+    case "roll_call_stale":
+      return `roll-call-stale/${notification.tripId}/${notification.personId}`;
   }
 }

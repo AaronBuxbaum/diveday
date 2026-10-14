@@ -102,7 +102,7 @@ export function tileWidthFor(boxes: number | readonly number[]): number {
     throw new RangeError(
       `marine-life tile: boxes ${rendered.join(", ")} share no committed width inside (${low}, ${high}) — committed are ${MARINE_LIFE_TILE_WIDTHS.join(
         ", ",
-      )}. Add one to MARINE_LIFE_TILE_WIDTHS and run ` + "`pnpm content:photos tiles`.",
+      )}. Add one to MARINE_LIFE_TILE_WIDTHS and run \`pnpm content:photos tiles\`.`,
     );
   }
   const widest = Math.max(...rendered);
