@@ -31,7 +31,7 @@ what is currently wired.
 | --- | --- | --- |
 | `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once, then fast-forwards the checkout to `origin/main` when it is the main worktree, clean, detached or on `main`, and has nothing main lacks; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`, read after the fetch), "Merge drivers: not installed" when `scripts/merge-drivers.mjs install` could not write them and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position, and the account's open pull requests (`gh api`, cached ten minutes in the git common dir; `DIVEDAY_OPEN_PULLS=0` turns it off), because one PR's CI runs at a time; on the first prompt of a session, the last session's hook refusals, and "write a papercut" with a ready `file-follow-up.mjs --papercut` command when one rule has refused three or more times this week and no papercut has its slug |
-| `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form |
+| `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form; writes the quiet reporter into a focused test or e2e run |
 | `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
 | `PreToolUse` on `Bash` | `scripts/guard-push.mjs` | refuses a `git push` of a commit `pnpm verify:push` has not stamped, unless a reason is written in front |
 | `PreToolUse` on the GitHub MCP's pull request create/update | `scripts/guard-pr-body.mjs` | runs CI's `check-pr-body.mjs` over the body first and refuses one CI would refuse |
@@ -156,6 +156,13 @@ The guard blanks heredoc bodies and quoted strings before matching, so a commit 
 script that *mentions* a refused shape is not refused. The cost — a shell-in-a-string like
 `sh -c "pnpm test | tail"` going unrefused — is deliberate and one way round only: a false negative
 costs one uncaught command, a false positive costs the guard its credibility.
+
+It also **rewrites one shape instead of refusing it**: a single focused `pnpm test <file>`,
+`pnpm e2e <spec>` or `pnpm e2e:run <spec>` that names no reporter gets `--reporter=dot` (unit) or
+`--reporter=line` (e2e) written in before any redirection, through the hook's `updatedInput`. A
+refusal would cost a wasted call and a retry for a fix that is purely mechanical. It sets no
+`permissionDecision`, so the rewritten command still goes through the normal permission flow, and
+it leaves chains, pipes, background jobs and any run that already names a reporter as typed.
 
 ## `guard-push.mjs` — a push is of a verified commit, or says why not
 
