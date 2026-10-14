@@ -1178,8 +1178,11 @@
   that flagged every question the refused one did, ordered by when each physician answered.
   A clean later release also stands over a referral no physician has answered (H-98 amended,
   #2195). The diver record, the Divers tab and the live manifest warn with a link to the referral
-  (`overriddenReferral`); the offline copy and paper show the date only. A booking whose own
-  release is the open referral still waits for a physician.
+  (`overriddenReferral`); the offline copy and paper show the date only. That warning ends, as
+  the refusal's does, once a physician has cleared a record flagging every question the referral
+  did, evaluated no earlier than the day it was signed. A booking whose own release is the open
+  referral still waits for a physician, and a referral a seat's fresh link superseded can still be
+  cleared: superseding moves a hold off a seat and answers nothing.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded

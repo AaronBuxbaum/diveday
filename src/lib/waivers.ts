@@ -650,9 +650,13 @@ export function overriddenReferral(
 ): OverriddenReferral | null {
   if (!standing || !isCleanCompletion(standing)) return null;
   const standingTime = signatureTime(standing);
+  const records = personSignedWaivers.some((record) => record.id === standing.id)
+    ? personSignedWaivers
+    : [...personSignedWaivers, standing];
   const referral = personSignedWaivers
     .filter((record) => isUnclearedReferral(record) && !isStandingRefusal(record))
     .filter((record) => record.id !== standing.id && signatureTime(record) < standingTime)
+    .filter((record) => !answeredByLaterClearance(record, records))
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   return referral
     ? { recordId: referral.id, personId: referral.personId, at: new Date(signatureTime(referral)) }
@@ -677,6 +681,31 @@ function decidedAfter(a: WaiverRecord, b: WaiverRecord): boolean {
   const [dayA, recordedA] = decisionOrder(a);
   const [dayB, recordedB] = decisionOrder(b);
   return dayA !== dayB ? dayA > dayB : recordedA > recordedB;
+}
+
+/**
+ * **A referral a physician has since answered on another record**: a clearance
+ * evaluated on or after the day the referral was signed (the day rule
+ * `recordMedicalEvaluation` applies to its own record), on a record that
+ * flagged at least every question this one did — {@link overriddenRefusal}'s
+ * rule for a refusal. Without it the record read "stood over a referral"
+ * beside "Cleared by physician" for one diver. A clearance decided before the
+ * diver disclosed again answers nothing about the new disclosure.
+ */
+function answeredByLaterClearance(
+  referral: WaiverRecord,
+  records: readonly WaiverRecord[],
+): boolean {
+  const referredOn = calendarDateInTimezone(new Date(signatureTime(referral)), "UTC");
+  const referredDay = Date.parse(`${referredOn}T00:00:00.000Z`);
+  const referred = flaggedPromptsOf(referral);
+  return records.some(
+    (record) =>
+      record.id !== referral.id &&
+      record.medicalClearedAt !== null &&
+      decisionOrder(record)[0] >= referredDay &&
+      referred.every((prompt) => flaggedPromptsOf(record).includes(prompt)),
+  );
 }
 
 /** The questions a record flagged, which are what a physician answered. */

@@ -916,6 +916,35 @@ describe("overriddenRefusal", () => {
     });
   });
 
+  it("lets a clearance a fresh link superseded still answer a refusal, only when decided after it and on its questions", () => {
+    // A clean signature a fresh link replaced stays in the evidence
+    // (`listSignedWaiversByPerson`), so a superseded clearance is read too: a
+    // physician's later "yes" is no less an answer for its seat taking a link.
+    const supersededYes = (overrides: Partial<WaiverRecord> = {}) =>
+      completedWaiver({
+        id: "superseded-yes",
+        status: "medical_review",
+        signedAt: new Date(SIGN_NOW.getTime() - 300_000),
+        completedAt: new Date(SIGN_NOW.getTime() - 300_000),
+        medicalClearedAt: new Date(SIGN_NOW.getTime() - 200_000),
+        supersededAt: new Date(SIGN_NOW.getTime() - 100_000),
+        ...overrides,
+      });
+    expect(overriddenRefusal(reSigned(), [refusal(), supersededYes(), reSigned()])).toBeNull();
+
+    // Decided before the "no": not an answer to it.
+    const earlyYes = supersededYes({ medicalClearanceEvaluatedOn: "2026-07-01" });
+    const lateNo = refusal({ medicalClearanceEvaluatedOn: "2026-07-10" });
+    expect(overriddenRefusal(reSigned(), [lateNo, earlyYes, reSigned()])?.recordId).toBe("refusal");
+
+    // About another question: not an answer to it either.
+    const cardiacNo = refusal({ medicalAnswers: flagging(cardiacId) });
+    const earsYes = supersededYes({ medicalAnswers: flagging(earsId) });
+    expect(overriddenRefusal(reSigned(), [cardiacNo, earsYes, reSigned()])?.recordId).toBe(
+      "refusal",
+    );
+  });
+
   it("says nothing for a diver no physician refused, or with no clean release", () => {
     expect(overriddenRefusal(reSigned(), [reSigned()])).toBeNull();
     expect(overriddenRefusal(null, [refusal()])).toBeNull();
@@ -1055,6 +1084,71 @@ describe("a referral a later clean signature stood over", () => {
       completedAt: new Date(SIGN_NOW.getTime() - 600_000),
     });
     expect(overriddenReferralAt(reSigned(), [resolvedReferral, reSigned()])).toBeNull();
+  });
+
+  const [heartId, earId] = RSTC_QUESTIONNAIRE.questions
+    .filter((question) => question.referral)
+    .map((question) => question.id);
+  const flags = (...ids: string[]) => ({
+    ...clear,
+    responses: { ...clear.responses, ...Object.fromEntries(ids.map((id) => [id, true])) },
+  });
+
+  it("says nothing once a physician cleared a later referral on the same questions", () => {
+    // Without this the record read "stood over a referral" beside "Cleared
+    // by physician" for one diver: the clearance answered both disclosures.
+    const heartReferral = completedWaiver({
+      id: "referral",
+      status: "medical_review",
+      medicalAnswers: flags(heartId),
+      signedAt: new Date(SIGN_NOW.getTime() - 600_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 600_000),
+    });
+    const heartCleared = cleared({
+      id: "heart-cleared",
+      medicalAnswers: flags(heartId),
+      signedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      medicalClearanceEvaluatedOn: "2026-07-18",
+    });
+    expect(overriddenReferral(heartCleared, [heartReferral, heartCleared])).toBeNull();
+    expect(overriddenReferral(reSigned(), [heartReferral, heartCleared, reSigned()])).toBeNull();
+    expect(medicalWaiverMark(heartCleared, [heartReferral, heartCleared])).toMatchObject({
+      source: "cleared",
+      overriddenReferral: null,
+    });
+  });
+
+  it("still names the referral when the clearance was about another question, or came before it", () => {
+    const heartReferral = completedWaiver({
+      id: "referral",
+      status: "medical_review",
+      medicalAnswers: flags(heartId),
+      signedAt: new Date(SIGN_NOW.getTime() - 600_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 600_000),
+    });
+    // An ENT clearing ears says nothing about the heart.
+    const earCleared = cleared({
+      id: "ear-cleared",
+      medicalAnswers: flags(earId),
+      signedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      medicalClearanceEvaluatedOn: "2026-07-18",
+    });
+    expect(overriddenReferral(earCleared, [heartReferral, earCleared])?.recordId).toBe("referral");
+    // A clearance a physician gave before the diver disclosed again is not an
+    // answer to the new disclosure, whatever it covered.
+    const oldClearance = cleared({
+      id: "old-clearance",
+      medicalAnswers: flags(heartId),
+      signedAt: new Date("2026-06-01T12:00:00.000Z"),
+      completedAt: new Date("2026-06-01T12:00:00.000Z"),
+      medicalClearanceEvaluatedOn: "2026-06-03",
+      medicalClearedAt: new Date("2026-06-04T12:00:00.000Z"),
+    });
+    expect(
+      overriddenReferral(reSigned(), [oldClearance, heartReferral, reSigned()])?.recordId,
+    ).toBe("referral");
   });
 });
 
