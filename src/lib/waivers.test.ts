@@ -18,6 +18,7 @@ import {
   overriddenReferral,
   overriddenReferralAt,
   overriddenRefusal,
+  releaseLapsedForBooking,
   riderMedicalHold,
   shopWaiverStatus,
   WAIVER_SIGNATURE_VALIDITY_MS,
@@ -364,6 +365,87 @@ describe("effective waiver (sign once per diver)", () => {
     // A current own signature still stands.
     const currentOwn = completedWaiver({ id: "own-current" });
     expect(effectiveWaiverForBooking(args({ bookingWaiver: currentOwn }))?.id).toBe("own-current");
+  });
+});
+
+/**
+ * **A signed release that ran out is not one nobody sent** (dive-domain review
+ * of the test-suite layer 1). Both block; the words and the fix differ, so the
+ * engine needs to know which it is.
+ */
+describe("releaseLapsedForBooking", () => {
+  const lapsedAt = new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1);
+  const lapsed = completedWaiver({ signedAt: lapsedAt, completedAt: lapsedAt });
+  const resolve = (overrides: Partial<Parameters<typeof releaseLapsedForBooking>[0]>) =>
+    releaseLapsedForBooking({
+      bookingWaiver: null,
+      personSignedWaivers: [],
+      currentTemplateVersion: 1,
+      now: SIGN_NOW,
+      ...overrides,
+    });
+
+  it("is false for a diver who never signed here", () => {
+    expect(resolve({})).toBe(false);
+  });
+
+  it("is true for a release signed on this booking that aged past its year", () => {
+    expect(resolve({ bookingWaiver: lapsed, personSignedWaivers: [lapsed] })).toBe(true);
+  });
+
+  it("is true for a release signed on another booking that aged out", () => {
+    expect(resolve({ personSignedWaivers: [lapsed] })).toBe(true);
+  });
+
+  it("is true for a release signed against terms the shop has since changed", () => {
+    expect(resolve({ personSignedWaivers: [completedWaiver()], currentTemplateVersion: 2 })).toBe(
+      true,
+    );
+  });
+
+  it("is true for a cleared referral whose physician's evaluation is over a year old", () => {
+    const cleared = completedWaiver({
+      status: "medical_review",
+      medicalClearedAt: SIGN_NOW,
+      medicalClearanceEvaluatedOn: "2025-01-02",
+    });
+    expect(resolve({ personSignedWaivers: [cleared] })).toBe(true);
+  });
+
+  it("is false while a current release covers the seat", () => {
+    expect(resolve({ personSignedWaivers: [lapsed, completedWaiver({ id: "record-2" })] })).toBe(
+      false,
+    );
+  });
+
+  it("is false once a fresh link is out: the seat reads as awaiting that signature", () => {
+    const fresh = completedWaiver({
+      id: "record-2",
+      status: "pending",
+      signedAt: null,
+      completedAt: null,
+      expiresAt: new Date(SIGN_NOW.getTime() + 60_000),
+    });
+    expect(resolve({ bookingWaiver: fresh, personSignedWaivers: [lapsed] })).toBe(false);
+  });
+
+  it("is false under an open medical hold, which outranks it", () => {
+    const hold = completedWaiver({ id: "record-2", status: "medical_review" });
+    expect(resolve({ personSignedWaivers: [lapsed, hold] })).toBe(false);
+  });
+
+  it("ignores a superseded signature", () => {
+    expect(resolve({ personSignedWaivers: [{ ...lapsed, supersededAt: SIGN_NOW }] })).toBe(false);
+  });
+
+  it("reads a rider's lapsed release the same way, held record or not", () => {
+    const parked = completedWaiver({
+      status: "medical_review",
+      signedAt: lapsedAt,
+      completedAt: lapsedAt,
+    });
+    expect(resolve({ personSignedWaivers: [parked], heldToMedical: false })).toBe(true);
+    expect(resolve({ personSignedWaivers: [completedWaiver()], heldToMedical: false })).toBe(false);
   });
 });
 

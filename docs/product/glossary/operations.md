@@ -1128,8 +1128,12 @@
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and
   within a year of signing. A medical-review record carries only once a **physician clearance** is
-  recorded against it — until then it never does — and a stale or old-version signature falls back to
-  "send a fresh link." See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
+  recorded against it — until then it never does. A signature that stops being current has
+  **lapsed**: aged past its year (or a physician clearance's own year), or signed against terms the
+  shop has since changed. The seat is blocked as surely as one with no release, under its own code,
+  `waiver_lapsed` ("Signed waiver lapsed"), never `waiver_not_sent` ("Not sent yet") or
+  `waiver_expired` (a link that expired unsigned), and the fix is a fresh link the diver signs again
+  (`releaseLapsedForBooking`). See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
 - **Medical hold** — a signed release the medical questionnaire **referred** to a physician and no
   physician has cleared: an open referral, or one the physician refused. It is the record's status
   (`medical_review`), never the stored answers, because a paper or status-only hold stores none and

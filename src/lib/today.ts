@@ -901,13 +901,15 @@ export type TodayAction = {
 };
 
 /**
- * The four blocker codes a one-tap send actually resolves. A minor's solo
- * signature is the fourth: the issue path refuses to count that record as
- * standing, so the tap supersedes it and mints a link that asks for both
- * signatures (ADR 20260907-guardian-co-signature).
+ * The blocker codes a one-tap send actually resolves. A minor's solo
+ * signature is one: the issue path refuses to count that record as standing,
+ * so the tap supersedes it and mints a link that asks for both signatures
+ * (ADR 20260907-guardian-co-signature). A lapsed release is another, for the
+ * same reason: it no longer stands, so the tap mints a fresh link.
  */
 const WAIVER_CODES = new Set<ReadinessBlockerCode>([
   "waiver_not_sent",
+  "waiver_lapsed",
   "waiver_pending",
   "waiver_expired",
   "guardian_signature_missing",
@@ -935,6 +937,7 @@ export const BLOCKER_ACTIONS: Record<
   // record or a conversation with the family, never a change to the trip.
   under_minimum_age: { kind: "certification", target: "diver" },
   waiver_not_sent: { kind: "waiver", target: "trip" },
+  waiver_lapsed: { kind: "waiver", target: "trip" },
   waiver_pending: { kind: "waiver", target: "trip" },
   waiver_expired: { kind: "waiver", target: "trip" },
   // **The diver, not the departure**, since #1252 gave the hold a door: the

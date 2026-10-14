@@ -22,7 +22,11 @@ import {
   REQUIRABLE_CERTIFICATION_LEVELS,
   unreviewedCardState,
 } from "./readiness";
-import { effectiveWaiverForBooking, WAIVER_SIGNATURE_VALIDITY_MS } from "./waivers";
+import {
+  effectiveWaiverForBooking,
+  releaseLapsedForBooking,
+  WAIVER_SIGNATURE_VALIDITY_MS,
+} from "./waivers";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
 const requirement = {
@@ -1690,15 +1694,16 @@ describe("a release that lapses between today and the departure", () => {
   } as unknown as TripRequirement;
 
   function rosterAt(at: Date) {
-    const waiver = effectiveWaiverForBooking({
+    const resolution = {
       bookingWaiver: release,
       personSignedWaivers: [release],
       currentTemplateVersion: 1,
       now: at,
-    });
+    };
     return calculateReadiness({
       requirement: waiverOnly,
-      waiver,
+      waiver: effectiveWaiverForBooking(resolution),
+      releaseLapsed: releaseLapsedForBooking(resolution),
       certifications: [],
       paymentStatus: "paid",
       timezone: "UTC",
@@ -1710,9 +1715,9 @@ describe("a release that lapses between today and the departure", () => {
     expect(rosterAt(today)).toEqual({ status: "ready", blockers: [] });
   });
 
-  it("reads as blocked on the morning of the dive, asking for a new release", () => {
+  it("reads as blocked on the morning of the dive, as a lapsed release and not an unsent one", () => {
     const result = rosterAt(new Date(departure.getTime() - 3 * 60 * 60 * 1000));
     expect(result.status).toBe("blocked");
-    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_not_sent"]);
+    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_lapsed"]);
   });
 });

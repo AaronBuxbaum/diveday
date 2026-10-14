@@ -858,6 +858,7 @@
       "waiverNotSent": "The shop hasn’t sent your waiver yet. You can ask for it when you arrive, or reach them below.",
       "waiverPending": "Sign your waiver. It only takes about two minutes.",
       "waiverExpired": "Your waiver link ran out. Grab a fresh one; it only takes about two minutes.",
+      "waiverLapsed": "Your signed waiver has lapsed. Grab a fresh link and sign again; it only takes about two minutes.",
       "medicalReview": "Thanks for signing. One medical answer needs a closer look. A doctor’s sign-off may be required, and your shop will be in touch about next steps.",
       "guardianSignatureMissing": "A parent or legal guardian also has to sign the waiver. Grab a fresh link and sign it together.",
       "certificationMissing": "Add your certification details to your record.",
@@ -5000,6 +5001,7 @@
     "reminderAction": {
       "waiverPending": "Sign your waiver",
       "waiverExpired": "Your waiver link expired. Grab a fresh one; it only takes about two minutes",
+      "waiverLapsed": "Sign your waiver again",
       "certificationMissing": "Send us your certification details",
       "certificationInsufficient": "Check your certification level with us",
       "certificationSelfDeclared": "Bring your certification card so we can check it",

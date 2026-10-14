@@ -21,6 +21,7 @@ import {
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "./trip-admission";
+import { effectiveWaiverForBooking, releaseLapsedForBooking } from "./waivers";
 
 function certification(overrides: Partial<Certification> = {}): Certification {
   return {
@@ -946,25 +947,37 @@ describe("decideTripAdmission — a release that lapses before the departure", (
       }),
     ).toEqual({ admitted: true });
 
-    const readinessAt = (now: Date, waiver: WaiverRecord | null) =>
-      calculateReadiness({
-        timezone: "UTC",
-        requirement: { ...source, requiresWaiver: true, requiresPayment: false } as TripRequirement,
-        siteRequirement: null,
-        waiver,
-        certifications: [card],
-        now,
-      });
     const release = {
       status: "completed",
       signedAt,
       completedAt: signedAt,
       expiresAt: signedAt,
+      supersededAt: null,
     } as WaiverRecord;
-    expect(readinessAt(today, release).status).toBe("ready");
-    // On the day, the db layer no longer hands the lapsed release in
-    // (`effectiveWaiverForBooking`), and the seat reads as owing one.
-    expect(readinessAt(departure, null).blockers).toContainEqual(
+    const readinessAt = (now: Date) => {
+      const resolution = {
+        bookingWaiver: release,
+        personSignedWaivers: [release],
+        currentTemplateVersion: null,
+        now,
+      };
+      return calculateReadiness({
+        timezone: "UTC",
+        requirement: { ...source, requiresWaiver: true, requiresPayment: false } as TripRequirement,
+        siteRequirement: null,
+        waiver: effectiveWaiverForBooking(resolution),
+        releaseLapsed: releaseLapsedForBooking(resolution),
+        certifications: [card],
+        now,
+      });
+    };
+    expect(readinessAt(today).status).toBe("ready");
+    // On the day the release has lapsed: blocked, and named as a signature
+    // that ran out rather than one nobody ever sent.
+    const onTheDay = readinessAt(departure);
+    expect(onTheDay.status).toBe("blocked");
+    expect(onTheDay.blockers).toContainEqual(expect.objectContaining({ code: "waiver_lapsed" }));
+    expect(onTheDay.blockers).not.toContainEqual(
       expect.objectContaining({ code: "waiver_not_sent" }),
     );
   });

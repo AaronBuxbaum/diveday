@@ -325,7 +325,11 @@ describe("the gates a non-diver is not asked to clear", () => {
       (candidate) => candidate.booking.id === rider.bookingId,
     );
     expect(row?.readiness.status).toBe("blocked");
-    expect(row?.readiness.blockers.map((b) => b.code)).toContain("waiver_not_sent");
+    // Named as a release that lapsed, not one nobody sent, and the fresh link
+    // it asks for is one the shop can actually issue.
+    expect(row?.readiness.blockers.map((b) => b.code)).toContain("waiver_lapsed");
+    const fresh = await issueWaiverRequest(db, { shopId: shop.id, bookingId: rider.bookingId });
+    expect(fresh).toMatchObject({ ok: true });
   });
 
   it("refuses a snorkeler or a rider on a course session", async () => {

@@ -199,7 +199,7 @@ export function isCompletedWaiverCurrent(
  * the shop's current material terms, and inside the validity window. Fails
  * closed on a missing signature time.
  */
-function isSignatureCurrent(
+export function isSignatureCurrent(
   record: WaiverRecord,
   currentTemplateGeneration: number | null,
   now: Date,
@@ -313,6 +313,39 @@ export function effectiveReleaseForRiderSeat(input: {
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   if (signed) return signed;
   return own && own.status === "pending" ? own : null;
+}
+
+/**
+ * **Whether a seat no release covers has one the diver signed and outlived.**
+ *
+ * True only where the seat's own resolution ({@link effectiveWaiverForBooking},
+ * or {@link effectiveReleaseForRiderSeat} for a seat not held to the medical)
+ * finds nothing, and the diver has a signature here that is not superseded and
+ * no longer stands: aged past its year, a physician's evaluation aged past its
+ * own, or given against terms the shop has since changed. The same reading
+ * {@link shopWaiverStatus} gives the diver record as `expired`.
+ *
+ * It names the blocker and nothing more. The seat is blocked whichever it is;
+ * a lapsed signature asks the diver to sign again, where an unsent release asks
+ * the shop to send one.
+ */
+export function releaseLapsedForBooking(input: {
+  bookingWaiver: WaiverRecord | null;
+  personSignedWaivers: readonly WaiverRecord[];
+  currentTemplateVersion: number | null;
+  /** False for a rider's seat (H-109); defaults to a seat in the water. */
+  heldToMedical?: boolean;
+  now?: Date;
+}): boolean {
+  const heldToMedical = input.heldToMedical ?? true;
+  const resolve = heldToMedical ? effectiveWaiverForBooking : effectiveReleaseForRiderSeat;
+  if (resolve(input) !== null) return false;
+  const signed = heldToMedical
+    ? isCleanCompletion
+    : (record: WaiverRecord) => record.status === "completed" || record.status === "medical_review";
+  return [...(input.bookingWaiver ? [input.bookingWaiver] : []), ...input.personSignedWaivers].some(
+    (record) => signed(record) && !record.supersededAt,
+  );
 }
 
 /**

@@ -186,6 +186,12 @@ export type ReadinessBlockerCode =
   | "requirements_not_configured"
   | "identity_unconfirmed"
   | "waiver_not_sent"
+  /**
+   * A release the diver signed here has lapsed (its year, a physician's
+   * evaluation's year, or the shop's terms changed) and no fresh link is out.
+   * Blocks exactly as `waiver_not_sent` does; the fix is the diver signing again.
+   */
+  | "waiver_lapsed"
   | "waiver_pending"
   | "waiver_expired"
   | "medical_review"
@@ -260,6 +266,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   readiness_unavailable: "setup",
   identity_unconfirmed: "setup",
   waiver_not_sent: "waiver",
+  waiver_lapsed: "waiver",
   waiver_pending: "waiver",
   waiver_expired: "waiver",
   medical_review: "waiver",
@@ -348,6 +355,8 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   medical_not_cleared: "medical",
 
   waiver_not_sent: "unknown",
+  // A lapsed release is no current medical declaration either.
+  waiver_lapsed: "unknown",
   waiver_pending: "unknown",
   waiver_expired: "unknown",
   // A minor's release with no guardian on it is not a release the shop can
@@ -426,6 +435,12 @@ export type ReadinessInput = {
   /** The primary dive site's inherent gate, composed with the trip's own. */
   siteRequirement?: SiteCertRequirement | null;
   waiver: WaiverStateFields | null;
+  /**
+   * With no `waiver` handed in: the diver signed a release here that has since
+   * lapsed (`releaseLapsedForBooking`). Changes the blocker's name from
+   * `waiver_not_sent` to `waiver_lapsed`, never whether there is one.
+   */
+  releaseLapsed?: boolean;
   certifications: readonly Certification[];
   /**
    * Courses this diver is booked on that certify a level and finish before
@@ -915,7 +930,9 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
 
   // The release's own blockers follow the departure's setting.
   if (input.requirement.requiresWaiver) {
-    if (state === "not_sent") blockers.push({ code: "waiver_not_sent" });
+    if (state === "not_sent") {
+      blockers.push({ code: input.releaseLapsed ? "waiver_lapsed" : "waiver_not_sent" });
+    }
     if (state === "awaiting_signature") {
       blockers.push({ code: "waiver_pending" });
     }
