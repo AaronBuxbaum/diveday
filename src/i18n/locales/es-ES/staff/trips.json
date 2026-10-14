@@ -68,6 +68,7 @@
     "seatMoveBuddy": "Primero saca a este buceador de su pareja de buceo.",
     "seatMoveRollCall": "El pase de lista ya tiene esta plaza, así que se queda en esta salida.",
     "seatMoveFull": "Esa salida no tiene plaza para este buceador.",
+    "seatMoveUnstaffed": "Esa sesión necesita un instructor asignado antes de poder mover a este buceador allí.",
     "seatMovePrerequisite": "Esa salida pide una certificación que este buceador no tiene.",
     "seatMoveMinAge": "Este buceador no tiene la edad mínima del curso en la fecha de esa sesión.",
     "waitlistCarried": "La lista de espera ya está aquí. Invítalos abajo.",

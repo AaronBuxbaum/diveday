@@ -68,6 +68,7 @@
     "seatMoveBuddy": "Take this diver off their buddy team first.",
     "seatMoveRollCall": "Roll call has this seat, so it stays on this departure.",
     "seatMoveFull": "That departure has no seat for this diver.",
+    "seatMoveUnstaffed": "That session needs an instructor assigned before this diver can move to it.",
     "seatMovePrerequisite": "That departure asks for a card this diver does not hold.",
     "seatMoveMinAge": "This diver is under the course’s minimum age on that session’s date.",
     "waitlistCarried": "The wait list is here now. Invite them below.",

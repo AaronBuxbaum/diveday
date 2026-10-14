@@ -99,6 +99,7 @@ describe("moveSeatAction", () => {
     [{ ...moved, owedCents: 2_000 }, "seat-moved-owed"],
     [{ ok: false as const, reason: "on_buddy_team" as const }, "seat-move-buddy"],
     [{ ok: false as const, reason: "divers_full" as const }, "seat-move-full"],
+    [{ ok: false as const, reason: "course_unstaffed" as const }, "seat-move-unstaffed"],
     [
       {
         ok: false as const,
