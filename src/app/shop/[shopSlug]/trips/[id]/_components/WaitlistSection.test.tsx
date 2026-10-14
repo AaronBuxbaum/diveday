@@ -113,6 +113,7 @@ describe("WaitlistGroup declared level", () => {
             noCertificationDeclared: false,
             nitrox: false,
             nitroxSelfDeclared: false,
+            nitroxVerified: false,
             verifiedLevel: null,
           } satisfies CertificationSummary,
         ],
@@ -141,7 +142,8 @@ describe("WaitlistGroup declared level", () => {
             noCertificationDeclared: false,
             nitrox: true,
             nitroxSelfDeclared: true,
-            verifiedLevel: null,
+            nitroxVerified: false,
+            verifiedLevel: "advanced_open_water",
           } satisfies CertificationSummary,
         ],
       ]),
@@ -156,6 +158,33 @@ describe("WaitlistGroup declared level", () => {
     // One unchecked claim anywhere on the line tones the whole line: the row is
     // a single decision ("do I invite this person?"), and the weakest fact on
     // it is the one that has to survive a glance.
+    expect(line).toHaveClass("text-warning-strong");
+  });
+
+  /**
+   * A card a staffer typed and nobody verified has no self-declared stamp, and
+   * used to print as a plain "Open Water", identical to a checked card (#2428).
+   */
+  it("marks a staff-typed card nobody has verified", () => {
+    renderSection(
+      waiting,
+      new Map([
+        [
+          "p-a",
+          {
+            level: "open_water",
+            levelSelfDeclared: false,
+            noCertificationDeclared: false,
+            nitrox: false,
+            nitroxSelfDeclared: false,
+            nitroxVerified: false,
+            verifiedLevel: null,
+          } satisfies CertificationSummary,
+        ],
+      ]),
+    );
+
+    const line = screen.getByText(/Open Water — unverified/);
     expect(line).toHaveClass("text-warning-strong");
   });
 
@@ -188,6 +217,7 @@ describe("WaitlistGroup declared level", () => {
             noCertificationDeclared: true,
             nitrox: false,
             nitroxSelfDeclared: false,
+            nitroxVerified: false,
             verifiedLevel: null,
           } satisfies CertificationSummary,
         ],
@@ -220,7 +250,8 @@ describe("WaitlistGroup below the departure's bar", () => {
     noCertificationDeclared: false,
     nitrox: false,
     nitroxSelfDeclared: false,
-    verifiedLevel: null,
+    nitroxVerified: false,
+    verifiedLevel: "open_water",
     ...over,
   });
   const summaries = (over?: Partial<CertificationSummary>) => new Map([["p-a", card(over)]]);
@@ -252,7 +283,7 @@ describe("WaitlistGroup below the departure's bar", () => {
   it("says nothing of the sort about a diver at or above the bar", () => {
     renderSection(
       waiting,
-      summaries({ level: "advanced_open_water" }),
+      summaries({ level: "advanced_open_water", verifiedLevel: "advanced_open_water" }),
       requirement("advanced_open_water"),
     );
 

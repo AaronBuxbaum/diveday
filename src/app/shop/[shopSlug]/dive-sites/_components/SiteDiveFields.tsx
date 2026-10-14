@@ -47,7 +47,11 @@ export function SiteDiveFields({
             name="depthRange"
             maxLength={120}
             defaultValue={values?.depthRange ?? ""}
-            placeholder={t("diveSites.form.depthRangePlaceholder")}
+            placeholder={t(
+              depthUnit === "feet"
+                ? "diveSites.form.depthRangePlaceholderFeet"
+                : "diveSites.form.depthRangePlaceholderMeters",
+            )}
             className={controlClass}
           />
         </Field>

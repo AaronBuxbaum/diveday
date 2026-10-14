@@ -7,6 +7,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices, recordCrewTimeMoved } from "./crew-notices";
 import { rewindowTripGearReservations } from "./gear";
 import { queryAll } from "./query-helpers";
+import { rearmTripReminders } from "./reminder-rearm";
 import type { Trip } from "./schema";
 import {
   bookings,
@@ -223,6 +224,8 @@ export async function moveTrip(
       tripId,
       window: tripReservationWindow(trip, shop.timezone),
     });
+    // The divers' reminders fire again for the new date (#2444).
+    await rearmTripReminders(tx, { shopId, tripId });
     await recordCrewTimeMoved(tx, {
       shopId,
       tripId,

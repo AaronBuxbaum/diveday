@@ -633,6 +633,8 @@ Both alignment paths are relaxed by default, so `mail.ses.dive.day` (envelope) a
 
 ## When mail doesn't arrive
 
+A failed send's row keeps the AWS error's name and HTTP status, never SES's message, because that message can quote a recipient's address (issue #2531). The resource ARN the 403 rows below turn on is in that message: read it by repeating the send with the AWS CLI under the `diveday-ses-sender` user, which prints it.
+
 | Symptom | Look at |
 | --- | --- |
 | Endpoint returns 503 | `SES_SNS_TOPIC_ARN` unset |

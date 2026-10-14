@@ -8,7 +8,7 @@ import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
 import { setBookingNitrox } from "./nitrox";
-import { nitroxCertifications, orders, people, tripWaitlistEntries } from "./schema";
+import { boats, nitroxCertifications, orders, people, tripWaitlistEntries } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { pushDepartureRows } from "./today-departure-rows";
@@ -115,6 +115,29 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     const row = work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`);
     expect(row?.kind).toBe("last_minute_fill");
     expect(row?.detail).toContain(`${reef.capacity - reef.booked} seats open`);
+  });
+
+  /** The seats to fill are the seats on sale (H-107, #2388), not the stated number. */
+  it("counts the seats to fill against the boat's certificate", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef?.boatId) throw new Error("demo reef trip missing its boat");
+    await db
+      .update(boats)
+      .set({ certifiedPassengers: reef.booked + 1 })
+      .where(eq(boats.id, reef.boatId));
+    expect(reef.capacity - reef.booked).toBeGreaterThan(1);
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      fullName: "Nora Quinn",
+      email: "nora@example.com",
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
+    });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`);
+    expect(row?.detail).toMatch(/^1 seat open/);
   });
 
   it("does not nudge to fill seats when nobody on the last-minute list is around for that date", async () => {

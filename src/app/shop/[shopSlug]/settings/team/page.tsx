@@ -36,12 +36,7 @@ import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
-import {
-  type FormNotice,
-  type NoticeMessages,
-  noticeForForm,
-  noticeFromParam,
-} from "@/lib/staff-notices";
+import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { StaffCardCredentials } from "./_components/StaffCardCredentials";
 import { StaffCredentials } from "./_components/StaffCredentials";
@@ -61,6 +56,7 @@ import {
 } from "./actions";
 import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
 import { type CardCredential, credentialRowsFor } from "./credential-rows";
+import { noticeMessages } from "./notice-messages";
 import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -73,42 +69,6 @@ import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 export const instant = true;
 
 export const metadata: Metadata = { title: "Team — DiveDay" };
-
-/** Built per request; see `NoticeMessages`. */
-function noticeMessages(t: StaffTranslator): NoticeMessages {
-  return {
-    invited: { tone: "success", text: t("settings.team.notice.invited") },
-    "invite-resent": { tone: "success", text: t("settings.team.notice.inviteResent") },
-    "changes-saved": { tone: "success", text: t("settings.team.notice.changesSaved") },
-    reactivated: { tone: "success", text: t("settings.team.notice.reactivated") },
-    disabled: { tone: "success", text: t("settings.team.notice.disabled") },
-    removed: { tone: "success", text: t("settings.team.notice.removed") },
-    restored: { tone: "success", text: t("settings.team.notice.restored") },
-    "restore-failed": { tone: "danger", text: t("settings.team.notice.restoreFailed") },
-    "invite-invalid": { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
-    "roles-invalid": { tone: "danger", text: t("settings.team.notice.rolesInvalid") },
-    "roles-conflict": { tone: "danger", text: t("settings.team.notice.rolesConflict") },
-    "invite-already-on-team": {
-      tone: "danger",
-      text: t("settings.team.notice.inviteAlreadyOnTeam"),
-    },
-    "invite-email-taken": { tone: "danger", text: t("settings.team.notice.inviteEmailTaken") },
-    "invite-email-reserved": {
-      tone: "danger",
-      text: t("settings.team.notice.inviteEmailReserved"),
-    },
-    "contact-saved": { tone: "success", text: t("settings.team.notice.contactSaved") },
-    "languages-saved": { tone: "success", text: t("settings.team.notice.languagesSaved") },
-    "half-filled": { tone: "danger", text: t("settings.team.notice.contactHalfFilled") },
-    "last-owner": { tone: "danger", text: t("settings.team.notice.lastOwner") },
-    "not-found": { tone: "danger", text: t("settings.team.notice.notFound") },
-    "not-authorized": { tone: "danger", text: t("settings.team.notice.notAuthorized") },
-    "credential-saved": { tone: "success", text: t("staffing.notice.credentialSaved") },
-    "credential-reviewed": { tone: "success", text: t("staffing.notice.credentialReviewed") },
-    "credential-deleted": { tone: "success", text: t("staffing.notice.credentialDeleted") },
-    "credential-invalid": { tone: "danger", text: t("staffing.notice.credentialInvalid") },
-  };
-}
 
 /**
  * **Only the exceptional state wears a badge.** Four rows each carrying a green

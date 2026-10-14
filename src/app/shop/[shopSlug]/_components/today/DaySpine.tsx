@@ -865,6 +865,33 @@ export type DaySpineContext = {
   now: Date;
 };
 
+/**
+ * **The list says how long it is** (UX audit 2026-10-07, item 1): the summary
+ * under the date counts what is due before the next boat and the badge counts
+ * blocked divers, so the list carries its own total rather than leaving the
+ * reader to reconcile three numbers.
+ *
+ * **And says how much of it is the next boat's** (#2413) when that is not all
+ * of it, so the sentence's smaller number over this one reads as a part of it
+ * rather than a contradiction.
+ */
+function needsYouMeta(
+  t: StaffTranslator,
+  reading: NeedsYouReading,
+  locale: string,
+  timeZone: string,
+): string {
+  const { count, next, dueBeforeNext } = reading;
+  if (next == null || dueBeforeNext === count) {
+    return t("shopHome.spine.needsYouCount", { count });
+  }
+  return t("shopHome.spine.needsYouCountBeforeNext", {
+    count,
+    before: dueBeforeNext,
+    time: formatTime(next.startsAt, locale, timeZone),
+  });
+}
+
 export function DaySpine({ context }: { context: DaySpineContext }) {
   const {
     spine,
@@ -918,7 +945,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     wind.some((row) => row.departure != null && liveTripIds.has(row.departure.tripId));
   const closing = evening?.close.closing === true;
   // **One "Needs you" list**, read once (`readNeedsYou`) with the header's sentence.
-  const { lead, folded: deskFold, count: needsYouCount } = needsYouReading;
+  const { lead, folded: deskFold } = needsYouReading;
   const paymentsRows = showPaymentsRow ? 1 : 0;
   const paymentsRow = showPaymentsRow ? <DeskPaymentsRow shopSlug={shopSlug} t={t} /> : null;
 
@@ -1094,11 +1121,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
         <LedgerGroup
           as="h2"
           label={t("shopHome.spine.needsYouLabel")}
-          // **The list says how long it is** (UX audit 2026-10-07, item 1): the
-          // summary under the date counts what is due before the next boat and
-          // the badge counts blocked divers, so the list carries its own total
-          // rather than leaving the reader to reconcile three numbers.
-          meta={t("shopHome.spine.needsYouCount", { count: needsYouCount })}
+          meta={needsYouMeta(t, needsYouReading, locale, timeZone)}
         >
           <ul>
             {lead.map((action) => (

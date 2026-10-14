@@ -53,7 +53,7 @@ already verifies, rather than inventing a fourth inbound auth scheme for one cal
 | SNS status | Recorded as | Detail kept |
 | --- | --- | --- |
 | `SUCCESS` | `delivered` | none — the success `providerResponse` is boilerplate |
-| `FAILURE` | `failed` | the carrier's `providerResponse`, verbatim |
+| `FAILURE` | `failed` | `providerResponse` when it is one of SNS's own reasons (`KNOWN_FAILURE_RESPONSES` in `src/lib/notifications/sms-events.ts`), else `unrecognized_response`: a carrier's free text may quote the number |
 | anything else | ignored, answered 200 | — |
 
 `SUCCESS` maps to **delivered**, not sent: SNS reports it on carrier confirmation of handset

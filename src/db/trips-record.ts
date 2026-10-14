@@ -18,6 +18,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
 import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
+import { rearmTripReminders } from "./reminder-rearm";
 import type { Trip } from "./schema";
 import {
   boats,
@@ -692,6 +693,8 @@ export async function updateTrip(
         occurredAt: changedAt,
       });
     }
+    // The divers' reminders fire again for the new date (#2444).
+    if (startMoved) await rearmTripReminders(tx, { shopId, tripId });
     // The crew hear a moved start time (#2283), the same notice the schedule
     // board's move records (`moveTrip`).
     if (existing.status === "scheduled" && startMoved) {

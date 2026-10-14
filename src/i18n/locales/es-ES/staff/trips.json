@@ -554,6 +554,7 @@
     "waiverResendHint": "Reenviar",
     "waiverSend": "Enviar exención",
     "waiverSent": "Exención enviada",
+    "waiverHeldRehearsal": "Retenida: ensayo",
     "waiverSigned": "Exención firmada",
     "noteCount": "{count, plural, one {# nota} other {# notas}}",
     "emergencyContactAddFull": "Añadir contacto de emergencia",
@@ -645,7 +646,8 @@
     "printLineChecked": "{label} — {status}",
     "printLineNotChecked": "{label} — Sin verificar",
     "errorRefusal": "Eso no se guardó. Inténtalo de nuevo.",
-    "checkedLabel": "Verificado — presiona para quitar la marca",
+    "checkedLabel": "Verificado — presiona dos veces para quitar la marca",
+    "confirmClear": "Presiona otra vez para quitar la marca",
     "uncheckedLabel": "Sin verificar — presiona para marcarlo",
     "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
   },

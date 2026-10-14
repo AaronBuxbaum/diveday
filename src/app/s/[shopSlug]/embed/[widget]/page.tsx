@@ -132,8 +132,12 @@ export default async function EmbedWidgetPage({
     const average = aggregate.average;
     body = (
       <section aria-label={t("reviews.sectionTitle")}>
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+        {/* The way out stays on the rating's line (#2502): the frame is a fixed
+            height on the shop's own site, so a link wrapped to a row of its own
+            pushes the last review under the fold. At a phone's width the
+            counts fold under the stars instead. */}
+        <div className="flex items-center justify-between gap-x-4">
+          <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
             <StarRating
               rating={Math.round(average)}
               label={t("reviews.ratingOption", { rating: Math.round(average) })}
@@ -160,7 +164,7 @@ export default async function EmbedWidgetPage({
           <Link
             href={`${origin}${publicReviewsPath(shopSlug)}`}
             target="_top"
-            className={buttonClass({ variant: "secondary", size: "sm" })}
+            className={`${buttonClass({ variant: "secondary", size: "sm" })} shrink-0`}
           >
             {t("reviews.allTitle")}
           </Link>

@@ -162,7 +162,8 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
     // seats are still open — a shop that's already tried isn't nagged, but
     // can always resend from the trip page itself (docs ADR
     // 20260727-last-minute-fill-promos).
-    const openSeats = Math.max(0, trip.capacity - trip.booked);
+    // Against the seats on sale, as the booking transaction counts (#2388).
+    const openSeats = Math.max(0, trip.sellableCapacity - trip.booked);
     // The reach test goes last on purpose: it is the only clause that scans a
     // list, and the three before it rule out most departures for free.
     //

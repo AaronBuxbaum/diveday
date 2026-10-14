@@ -76,7 +76,7 @@ import { mintOnboardFormPath } from "./setup-link";
  * extra width is a small addition, not the 50% a third viewport applied to
  * every surface would have cost.
  *
- * Three of the 254 are the same surface twice, in a second language: see
+ * Four of them are the same surface twice, in a second language: see
  * {@link SPANISH}. A Spanish sibling takes the standard pair and keys its own
  * baseline off `<name>-es-ES`, so it is a new item in the report rather than a
  * change to the English one.
@@ -141,8 +141,8 @@ import { mintOnboardFormPath } from "./setup-link";
  *
  * Before every screenshot, `capture` runs `paintWholeDocument` (see its own
  * comment): it scrolls the document through to force the compositor to
- * rasterize every band, then waits on `document.fonts.ready`. The Geist fonts
- * (next/font/google) load asynchronously; without that wait a capture can land
+ * rasterize every band, then waits on `document.fonts.ready`. The webfonts
+ * (next/font/local, `src/app/_fonts/`) load asynchronously; without that wait a capture can land
  * on either side of the fallback→webfont swap and render the same text with
  * different sub-pixel antialiasing, which reads as a false diff.
  *
@@ -4130,9 +4130,10 @@ for (const scheme of ["light", "dark"] as const) {
       // no longer the desk but the record (UX review 2026-10-10, item 10),
       // every seat filed by the crew's roll call under "Sailed", "Didn't
       // sail", "Not counted at the dock" or "No roll call taken". The seeded
-      // dawn boat boarded everyone, so the frame holds one "Sailed" band and
-      // no count, no taps and nothing still to clear: a record never asks for
-      // action. Reading the seeded state keeps this capture independent of
+      // dawn boat boarded everyone readiness cleared and turned the rest away
+      // at the dock (#2415), so the frame holds "Sailed" and "Didn't sail"
+      // and no count, no taps and nothing still to clear: a record never asks
+      // for action. Reading the seeded state keeps this capture independent of
       // the mutable roll-call action. The capture keeps its name so the
       // baseline diff reads as this surface changing, not a new one.
       test(`the desk's settled boat renders true to the design (${scheme})`, async ({ page }) => {
@@ -4141,6 +4142,27 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: SAILED_TRIP }).waitFor();
         await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
         await capture(page, "trip-desk-checked", scheme);
+      });
+
+      // The same record with a seat the dock never counted (#2408): the "Not
+      // counted at the dock" band had only been checked in jsdom. One seat
+      // sailed, one was turned away, one has no dock result at all, so all
+      // three bands stand on one finished departure.
+      test(`a finished boat's record with an uncounted seat renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        const seeded = await page.request.post("/api/test/seed-trouble-states?uncountedSeat=1");
+        expect(seeded.ok()).toBe(true);
+        const { uncountedSeat } = (await seeded.json()) as {
+          uncountedSeat?: { tripId: string };
+        };
+        if (!uncountedSeat) throw new Error("seed-trouble-states left no seat uncounted");
+        await page.goto(counterPath("blue-mantis", uncountedSeat.tripId));
+        await page.getByRole("heading", { level: 1, name: SAILED_TRIP }).waitFor();
+        await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
+        await page.getByRole("heading", { name: /^Didn’t sail · \d+$/ }).waitFor();
+        await page.getByRole("heading", { name: /^Not counted at the dock · 1$/ }).waitFor();
+        await capture(page, "trip-record-uncounted", scheme);
       });
 
       /**
@@ -8327,7 +8349,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **Three dense surfaces, read in Spanish** (issue #1681).
+       * **Four dense surfaces, read in Spanish** (issues #1681, #2407).
        *
        * Every other capture in this file signs in with an English reader, so no
        * baseline had ever seen an `es-ES` string in a layout — in a product
@@ -8335,8 +8357,8 @@ for (const scheme of ["light", "dark"] as const) {
        * recorded and guarded (`src/i18n/locales/es-ES/README.md`). What no
        * check held was whether the chosen word *fits*.
        *
-       * Three, not everything: the surfaces where length is most likely to
-       * break something are the dense fixed-width ones, and these are the three
+       * Four, not everything: the surfaces where length is most likely to
+       * break something are the dense fixed-width ones, and these are the four
        * reviews have pointed at. Each costs four screenshots and a triage
        * burden on every future pull request, which is why the set is named here
        * rather than derived.
@@ -8413,6 +8435,44 @@ for (const scheme of ["light", "dark"] as const) {
           // heading above it is true before the checkpoints render.
           await expect(page.getByText("Punto de control activo").first()).toBeVisible();
           await capture(page, "manifest", scheme, { locale: SPANISH });
+        });
+
+        /**
+         * **The after-dive buddy alert, in Spanish** (#2407). "Compañero sin
+         * regresar a bordo" was measured by hand at about 229px against the
+         * roughly 246px capsule line a phone gives it; this is the baseline
+         * that holds it there. The same state as the English
+         * `manifest-buddy-divergence`: Tom aboard, his teammate Lena recorded
+         * not back.
+         */
+        test(`the manifest's split buddy team reads in Spanish (${scheme})`, async ({ page }) => {
+          test.setTimeout(FLOW_TIMEOUT_MS);
+          await openReefTrip(page);
+          await page.goto(`${new URL(page.url()).pathname}/manifest`);
+          await expect(
+            page.getByText(/Copia (actualizada|envejeciendo|desactualizada)/),
+          ).toBeVisible();
+          await page
+            .getByRole("link", { name: "Después de la inmersión 1" })
+            .evaluate((link: HTMLElement) => link.click());
+          await page.waitForURL(/checkpoint=after_dive_1/);
+          const tomRow = manifestRow(page, "Tom Okafor");
+          const lenaRow = manifestRow(page, "Lena Fischer");
+          const boardTom = tomRow.getByRole("button", { name: "Marcar embarcado" });
+          await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
+          await boardTom.click();
+          await openManifestPerson(lenaRow);
+          const dialog = page.getByRole("dialog");
+          const lenaNotBack = dialog.getByRole("button", { name: "Marcar sin regresar a bordo" });
+          await lenaNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
+          await lenaNotBack.click();
+          await expect(
+            dialog.getByRole("button", { name: "Sin regresar a bordo", exact: true }),
+          ).toBeVisible();
+          await dialog.getByRole("button", { name: "Cerrar detalles de la persona" }).click();
+          await expect(tomRow.getByText("Compañero sin regresar a bordo")).toBeVisible();
+          await page.mouse.move(0, 0);
+          await capture(page, "manifest-buddy-divergence", scheme, { locale: SPANISH });
         });
 
         /**

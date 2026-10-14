@@ -23,6 +23,8 @@ describe("pnpm task:context", () => {
       "offline-manifests",
       "setup-links",
       "work-orders",
+      "retention",
+      "i18n",
     ]) {
       expect(areas[name], name).toBeDefined();
     }

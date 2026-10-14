@@ -146,7 +146,9 @@ export default async function EditCoursePage({
     { id: "scheduleDaysJson", label: t("courses.edit.dayByDayLegend") },
     { id: "faq", label: t("courses.edit.faqLegend") },
   ];
-  const [pitch, pricing, photos, glance, enroll, feeCovers, materials, dayByDay, faq] = sections;
+  const unsavedTag = t("shared.formDraft.unsavedSection");
+  const [pitch, pricing, photos, glance, enroll, feeCovers, materials, dayByDay, faq] =
+    sections.map((section) => ({ ...section, unsavedTag }));
   // The forms section is its own `<form>` below the save form, so the rail
   // names it but the unsaved-changes note (which reads the save form) does not.
   const formsSection: EditorSectionRef = { id: "forms", label: t("courses.edit.forms.legend") };
@@ -298,7 +300,7 @@ export default async function EditCoursePage({
               the previous section's last field, so eight sections read as one
               undifferentiated column. */}
               <div className="flex flex-col gap-10">
-                <EditorSection id={pitch.id} label={pitch.label} as="fieldset" lead>
+                <EditorSection {...pitch} as="fieldset" lead>
                   <FieldGrid columns={1} className="gap-y-5">
                     <Field
                       label={t("courses.edit.subheadLabel")}
@@ -343,8 +345,7 @@ export default async function EditCoursePage({
 
                 <EditorSection
                   as="fieldset"
-                  id={pricing.id}
-                  label={pricing.label}
+                  {...pricing}
                   description={t("courses.edit.pricingDescription")}
                 >
                   <FieldGrid columns={2} className="gap-y-5">
@@ -390,8 +391,7 @@ export default async function EditCoursePage({
                     section's line, not after every box (Aaron, 2026-10-05). */}
                 <EditorSection
                   as="fieldset"
-                  id={photos.id}
-                  label={photos.label}
+                  {...photos}
                   description={t("courses.edit.photosDescription")}
                 >
                   <FieldGrid columns={1} className="gap-y-6">
@@ -477,7 +477,7 @@ export default async function EditCoursePage({
                   </FieldGrid>
                 </EditorSection>
 
-                <EditorSection as="fieldset" id={glance.id} label={glance.label}>
+                <EditorSection as="fieldset" {...glance}>
                   <FieldGrid columns={2} className="gap-y-5">
                     <Field label={t("courses.edit.durationLabel")}>
                       <input
@@ -535,8 +535,7 @@ export default async function EditCoursePage({
 
                 <EditorSection
                   as="fieldset"
-                  id={enroll.id}
-                  label={enroll.label}
+                  {...enroll}
                   description={t.rich("courses.edit.enrollDescription", {
                     levelAge,
                     strong: (chunks: ReactNode) => (
@@ -570,7 +569,7 @@ export default async function EditCoursePage({
                   </FieldGrid>
                 </EditorSection>
 
-                <EditorSection id={feeCovers.id} label={feeCovers.label} as="fieldset">
+                <EditorSection {...feeCovers} as="fieldset">
                   <FieldGrid columns={2} className="gap-y-5">
                     <Field
                       label={t("courses.edit.includedLabel")}
@@ -610,7 +609,7 @@ export default async function EditCoursePage({
                   t={t}
                 />
 
-                <EditorSection id={dayByDay.id} label={dayByDay.label} as="fieldset">
+                <EditorSection {...dayByDay} as="fieldset">
                   <DayByDayEditor
                     initialDays={course.scheduleDays}
                     storageKey={`course-draft:${course.id}`}
@@ -637,7 +636,7 @@ export default async function EditCoursePage({
                   />
                 </EditorSection>
 
-                <EditorSection id={faq.id} label={faq.label} as="fieldset">
+                <EditorSection {...faq} as="fieldset">
                   <FaqEditor
                     initialFaqs={course.faqs}
                     storageKey={`course-draft:${course.id}`}
