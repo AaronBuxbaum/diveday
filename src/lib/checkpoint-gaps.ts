@@ -83,7 +83,9 @@ function unmarkedAt(manifest: GapManifest, counted: ReadonlySet<string>): Checkp
       ? isNotBackAboard(manifest.checkpoint, member.rollCall)
       : counted.has(member.id),
   ).length;
-  return divers + crew > 0 ? { kind: "unmarked", checkpoint: manifest.checkpoint, divers, crew } : null;
+  return divers + crew > 0
+    ? { kind: "unmarked", checkpoint: manifest.checkpoint, divers, crew }
+    : null;
 }
 
 /**

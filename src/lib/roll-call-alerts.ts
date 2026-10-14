@@ -5,10 +5,13 @@ import type { RollCallGapReason } from "./today";
 /**
  * **A roll call still open after the boat should be home** (batch 6, item 6).
  *
- * Once an after-dive count is still open half an hour past a departure's end,
- * the owner hears about it — by email, and by a push to every device following
+ * Once an after-dive count is still open after the boat was due back, the
+ * owner hears about it — by email, and by a push to every device following
  * that departure's manifest — once per departure, and Today's row for the
- * count says the alert went. It informs; it never closes, reopens or gates
+ * count says the alert went. The pass is hourly and asks from half an hour
+ * past the end; a count nobody started is only open to Today once the boat
+ * is due home (the end plus the hour's return buffer, `hasReturned`), so its
+ * alert goes at the first pass after that. It informs; it never closes, reopens or gates
  * anything.
  *
  * "Open" is never decided here. The hourly pass asks the one detector the
@@ -18,7 +21,10 @@ import type { RollCallGapReason } from "./today";
  * an alert nobody reads by the second week.
  */
 
-/** How long past a departure's end an open after-dive count waits before it alerts. */
+/**
+ * How long past a departure's end the pass starts asking. The earliest an
+ * alert can go, not when it does: see the note above.
+ */
 export const STALE_ROLL_CALL_AFTER_MS = 30 * MINUTE_MS;
 
 /**

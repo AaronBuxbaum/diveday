@@ -4462,8 +4462,8 @@
     },
     "rollCallStale": {
       "subject": "{shopName}: pase de lista aún abierto en {tripTitle}",
-      "body": "El pase de lista después de la inmersión {dive} de {tripTitle} sigue abierto media hora después de la hora de regreso. {count, plural, one {# persona no está marcada} other {# personas no están marcadas}} a bordo.",
-      "bodyMissing": "En {tripTitle}, {count, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo después de la inmersión {dive}, media hora después de la hora de regreso.",
+      "body": "El pase de lista después de la inmersión {dive} de {tripTitle} sigue abierto pasada la hora de regreso del barco ({time}). {count, plural, one {# persona no está marcada} other {# personas no están marcadas}} a bordo.",
+      "bodyMissing": "En {tripTitle}, {count, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo después de la inmersión {dive}, pasada la hora de regreso del barco ({time}).",
       "open": "Abrir el pase de lista"
     },
     "smsWorkOrder": {

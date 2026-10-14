@@ -1,12 +1,12 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { homewardCheckpointGap } from "@/lib/checkpoint-gaps";
 import { formatTime } from "@/lib/format";
-import { shopPath } from "@/lib/staff-notices";
 import type { TripManifest } from "@/lib/manifests";
+import { shopPath } from "@/lib/staff-notices";
 import { boatStageOf } from "@/lib/trip-phase";
 import { STAGE_WORD_KEYS, TRIP_STAGES, type TripStageReading } from "@/lib/trip-stages";
-import type { StageStripCopy } from "./StageStrip";
 import { checkpointGapLine } from "./checkpoint-gap-words";
+import type { StageStripCopy } from "./StageStrip";
 
 type GapManifest = Pick<TripManifest, "trip" | "checkpoint" | "summary" | "crew">;
 

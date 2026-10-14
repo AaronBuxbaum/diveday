@@ -269,9 +269,8 @@ export default async function TripManifestPage({
       {/* **Where the boat is** — ADR 20260904-reef-all-the-way-down, decision
           2, Budget rule 4. Directly under the panel that counts the people
           aboard, because it is the same question asked of the boat rather than
-          of the roster, and because the crew taps it at the rail. No drawing,
-          no coral and no motion: this is a safety surface, and the boat that
-          drifts on the home and the storefront is deliberately not here. */}
+          of the roster, and because the crew taps it at the rail. A safety
+          surface: no drawing, no coral, no motion (`StageStrip`). */}
       <StageStrip
         action={actions.setTripStage}
         {...stageStripProps(t, {

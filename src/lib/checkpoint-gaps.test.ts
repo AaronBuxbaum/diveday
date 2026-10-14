@@ -6,7 +6,7 @@ import {
   plannedDivesWithout,
   previousCheckpointGaps,
 } from "./checkpoint-gaps";
-import type { RollCallCheckpoint, TripManifest } from "./manifests";
+import type { RollCallCheckpoint } from "./manifests";
 
 /**
  * Batch 6, items 3 and 4: the two roll-call warnings. Divers are the ones the
@@ -50,13 +50,18 @@ function at(
           }
         : undefined,
     })),
-  } satisfies Pick<TripManifest, "checkpoint" | "summary" | "crew">;
+  };
 }
 
 describe("checkpointGap", () => {
   it("reports divers and crew apart: unmarked and not back aboard in each half", () => {
     const list = [
-      at("departure", { crew: [{ id: "dm", state: "boarded" }, { id: "ow", state: "boarded" }] }),
+      at("departure", {
+        crew: [
+          { id: "dm", state: "boarded" },
+          { id: "ow", state: "boarded" },
+        ],
+      }),
       at("after_dive_1", {
         awaiting: 1,
         notBackAboard: 1,
@@ -231,7 +236,10 @@ describe("homewardCheckpointGap", () => {
 
     it("never offers a one-dive trip a plan of none", () => {
       expect(
-        homewardCheckpointGap([at("departure", { boarded: 8 }), at("after_dive_1", { awaiting: 8 })]),
+        homewardCheckpointGap([
+          at("departure", { boarded: 8 }),
+          at("after_dive_1", { awaiting: 8 }),
+        ]),
       ).toMatchObject({ kind: "unmarked", divers: 8 });
     });
   });

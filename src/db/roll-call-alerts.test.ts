@@ -1,8 +1,26 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { sendStaleRollCallAlerts } from "./roll-call-alerts";
+
+// The push half of the send path, made to throw on demand: the email half
+// reports a provider failure as a status, so a throw there is the database's.
+const pushFault = vi.hoisted(() => ({ throws: false }));
+vi.mock("./push-subscriptions", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./push-subscriptions")>();
+  return {
+    ...actual,
+    pushTripAlert: async (...args: Parameters<typeof actual.pushTripAlert>) => {
+      if (pushFault.throws) throw new Error("push exploded");
+      return actual.pushTripAlert(...args);
+    },
+  };
+});
+afterEach(() => {
+  pushFault.throws = false;
+});
+
 import { bookings, people, personRoles, rollCallEvents, shops, trips } from "./schema";
 import { createTrip, listStaff } from "./trips";
 
@@ -165,6 +183,49 @@ describe("sendStaleRollCallAlerts", () => {
     const second = recorder();
     await sendStaleRollCallAlerts(real.db, { now: NOW, origin: ORIGIN, provider: second.provider });
     expect(second.sent).toEqual([]);
+  });
+
+  it("clips a title longer than the kind holds, and still sends (security review 20261014)", async () => {
+    const { db } = await departure(2 * HOUR, { title: `Reef ${"x".repeat(400)}` });
+    const { sent, provider } = recorder();
+    expect(await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider })).toMatchObject(
+      { alerted: 1 },
+    );
+    const [first] = sent;
+    if (first?.kind !== "roll_call_stale") throw new Error("expected the alert");
+    expect(first.tripTitle.length).toBeLessThanOrEqual(200);
+    expect(first.tripTitle.endsWith("…")).toBe(true);
+  });
+
+  it("carries when the boat was due back", async () => {
+    const { db, trip } = await departure(2 * HOUR);
+    const { sent, provider } = recorder();
+    await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider });
+    expect(sent[0]).toMatchObject({ endsAt: trip.endsAt, timezone: ctx.shop.timezone });
+  });
+
+  it("gives the claim back when the send path throws, and the next pass tries again", async () => {
+    const { db, trip } = await departure(2 * HOUR);
+    pushFault.throws = true;
+    await expect(
+      sendStaleRollCallAlerts(db, {
+        now: NOW,
+        origin: ORIGIN,
+        provider: recorder("failed").provider,
+      }),
+    ).rejects.toThrow("push exploded");
+    pushFault.throws = false;
+    const [row] = await db
+      .select({ alertedAt: trips.rollCallAlertedAt })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(row?.alertedAt).toBeNull();
+
+    const retry = recorder();
+    const later = new Date(NOW.getTime() + HOUR);
+    expect(
+      await sendStaleRollCallAlerts(db, { now: later, origin: ORIGIN, provider: retry.provider }),
+    ).toMatchObject({ alerted: 1 });
   });
 
   it("gives the claim back when it reached nobody, so the next pass tries again", async () => {

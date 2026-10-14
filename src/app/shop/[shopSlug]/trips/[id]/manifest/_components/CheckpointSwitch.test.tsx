@@ -127,7 +127,9 @@ describe("CheckpointSwitch", () => {
           t={t}
         />,
       );
-      expect(screen.getByText(/11 divers and 1 crew not marked after dive 1\./)).toBeInTheDocument();
+      expect(
+        screen.getByText(/11 divers and 1 crew not marked after dive 1\./),
+      ).toBeInTheDocument();
     });
 
     it("never stands between an open dock count and the first head count", () => {

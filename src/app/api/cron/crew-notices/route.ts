@@ -29,7 +29,7 @@ const CRON_MONITOR_CONFIG = {
  * queued for a retry.
  *
  * The same pass raises the **stale roll-call alert** (`sendStaleRollCallAlerts`):
- * an after-dive count still open 30 minutes after a trip's end reaches the
+ * an after-dive count still open after the boat was due back reaches the
  * shop's owners once per trip. It runs in its own try so a failure there never
  * costs the crew their notices, and theirs never costs the alert.
  */

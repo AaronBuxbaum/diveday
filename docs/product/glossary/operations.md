@@ -750,13 +750,17 @@
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Incident kind** / **incident severity** — the two closed answers an **incident report** files
-  with: its kind (injury, near miss, equipment, missing diver, other) and how serious the writer
-  judged it (minor, moderate, serious). Shown on the report and the Safety tab; read by nothing
-  that gates. A severity is the crew's judgment, never a medical classification
+  with: its kind (injury or illness, near miss, equipment, missing diver, fatality, other) and how
+  serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety tab;
+  read by nothing that gates. A severity is the crew's judgment, never a medical classification
   ([20261014-incident-kind-severity](../../architecture/decisions/20261014-incident-kind-severity.md)).
-- **Stale roll call** — an after-dive roll call still open 30 minutes after its departure's end.
-  Once per departure the owners are emailed and every device following the manifest is pushed
-  (`sendStaleRollCallAlerts`, hourly with the crew notices), and the Today row says when; the
+- **Stale roll call** — an after-dive roll call still open after its departure was due back. The
+  hourly crew-notices pass asks from 30 minutes past the end; a count nobody started is open only
+  once the boat is due home (the end plus the one-hour return buffer), so it alerts at the first
+  hourly pass after that, while a started count or a person recorded not back aboard can alert at
+  the first pass past the half hour. Once per departure the owners are emailed ("after the boat was
+  due back at 4:00 PM EDT") and every device following the manifest is pushed
+  (`sendStaleRollCallAlerts`), and the Today row says when; the
   shore contact is free text and is not messaged (H-114). It informs and never closes or changes
   the count.
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is

@@ -1,12 +1,21 @@
-import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, exists, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { sendWebPush, type WebPushTarget, webPushConfig } from "@/lib/notifications/web-push";
 import { isInPushWindow } from "@/lib/push-window";
 import type { AppDb } from "./client";
-import { people, pushSubscriptions, shops, tripScheduleDays, trips } from "./schema";
-import { liveTrip, notRehearsal } from "./trips-live";
+import {
+  people,
+  personRoles,
+  pushSubscriptions,
+  shops,
+  tripScheduleDays,
+  trips,
+  userAccounts,
+} from "./schema";
+import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * Who gets woken when a trip's roll call changes, and how often (ADR
@@ -409,6 +418,14 @@ export async function pushManifestChanged(
  * and the same "never throws": a push service being down must not stop the
  * owner's email beside it. Words are resolved per device in its owner's
  * locale, never in the service worker. Returns how many sends went.
+ *
+ * **Only to staff who still are** (security review 20261014): a device is
+ * pushed only while its person is live in this shop, their login is active,
+ * and they hold a staff role now. A subscription outlives its follower's
+ * account (a disabled login, a demotion to diver), and a push about who is
+ * unaccounted for on a boat is not news for someone who has left; the
+ * subscription row itself is cleared by `setStaffAccountStatus` and
+ * `removeStaffMember`, and this join holds whatever path missed it.
  */
 export async function pushTripAlert(
   db: AppDb,
@@ -431,7 +448,34 @@ export async function pushTripAlert(
         auth: pushSubscriptions.auth,
       })
       .from(pushSubscriptions)
-      .where(and(eq(pushSubscriptions.shopId, shopId), eq(pushSubscriptions.tripId, tripId)))
+      .innerJoin(
+        people,
+        and(eq(people.id, pushSubscriptions.personId), eq(people.shopId, shopId), livePerson()),
+      )
+      .innerJoin(
+        userAccounts,
+        and(
+          eq(userAccounts.personId, pushSubscriptions.personId),
+          eq(userAccounts.status, "active"),
+        ),
+      )
+      .where(
+        and(
+          eq(pushSubscriptions.shopId, shopId),
+          eq(pushSubscriptions.tripId, tripId),
+          exists(
+            db
+              .select({ one: sql`1` })
+              .from(personRoles)
+              .where(
+                and(
+                  eq(personRoles.personId, pushSubscriptions.personId),
+                  inArray(personRoles.role, [...STAFF_ROLES]),
+                ),
+              ),
+          ),
+        ),
+      )
       .limit(MAX_PUSH_TARGETS_PER_EVENT);
     if (targets.length === 0) return 0;
     const [shop] = await db

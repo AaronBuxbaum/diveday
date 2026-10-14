@@ -5,7 +5,7 @@
 
 ## Decision or approval needed
 
-**When an after-dive roll call is still open 30 minutes after a departure's end (batch 6, item 6), DiveDay tells someone ashore.** The brief asked for the owner and the shop's shore/emergency contact. The shore contact on the emergency reference (`emergencyReference.shoreContact`) is free text — a name and a number written for a person to read in an emergency — with no address DiveDay can send to and no consent to receive messages, so nothing is sent to it.
+**When an after-dive roll call is still open after the boat was due back (batch 6, item 6; the hourly pass asks from 30 minutes past the end, and a count nobody started opens an hour past it), DiveDay tells someone ashore.** The brief asked for the owner and the shop's shore/emergency contact. The shore contact on the emergency reference (`emergencyReference.shoreContact`) is free text — a name and a number written for a person to read in an emergency — with no address DiveDay can send to and no consent to receive messages, so nothing is sent to it.
 
 ## What shipped, as the recommended default
 

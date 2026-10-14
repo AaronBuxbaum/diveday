@@ -1,5 +1,6 @@
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { formatTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import { firstNameOf } from "@/lib/person-name";
 import { emailButton, type NotificationEmail } from "./email";
@@ -18,6 +19,9 @@ export type RollCallStaleEmailInput = {
   unaccounted: number;
   missing: boolean;
   rollCallUrl: string;
+  /** When the boat was due back: the departure's end, said in the shop's zone. */
+  endsAt: Date;
+  timezone: string;
 };
 
 /**
@@ -34,6 +38,7 @@ export function rollCallStaleEmail(input: RollCallStaleEmailInput): Notification
     count: input.unaccounted,
     dive: input.diveNumber,
     tripTitle: input.tripTitle,
+    time: formatTimeTz(input.endsAt, input.locale, input.timezone),
   };
   const body = t(
     input.missing ? "notifications.rollCallStale.bodyMissing" : "notifications.rollCallStale.body",

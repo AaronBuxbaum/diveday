@@ -379,6 +379,9 @@ describe("recordTripStage on the way home", () => {
         recordedByPersonId: staffer,
         recordedAt: NOW,
       }),
-    ).toMatchObject({ ok: true, rollCallOpen: { kind: "unmarked", checkpoint: "after_dive_2", divers: 1, crew: 0 } });
+    ).toMatchObject({
+      ok: true,
+      rollCallOpen: { kind: "unmarked", checkpoint: "after_dive_2", divers: 1, crew: 0 },
+    });
   });
 });

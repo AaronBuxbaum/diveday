@@ -4462,8 +4462,8 @@
     },
     "rollCallStale": {
       "subject": "{shopName}: roll call still open on {tripTitle}",
-      "body": "The roll call after dive {dive} on {tripTitle} is still open half an hour after the boat was due back. {count, plural, one {# person is} other {# people are}} not marked aboard.",
-      "bodyMissing": "On {tripTitle}, {count, plural, one {# person is} other {# people are}} recorded not back aboard after dive {dive}, half an hour after the boat was due back.",
+      "body": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back at {time}. {count, plural, one {# person is} other {# people are}} not marked aboard.",
+      "bodyMissing": "On {tripTitle}, {count, plural, one {# person is} other {# people are}} recorded not back aboard after dive {dive}, after the boat was due back at {time}.",
       "open": "Open the roll call"
     },
     "smsWorkOrder": {
