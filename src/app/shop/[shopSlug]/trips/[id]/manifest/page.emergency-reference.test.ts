@@ -15,11 +15,14 @@ import { describe, expect, it } from "vitest";
  * all three.
  *
  * Read off the source because this is a server page: there is no render to
- * inspect without a database, a request and a shop.
+ * inspect without a database, a request and a shop. The paper copy lives in
+ * `PrintedBoatPaper`, which the page renders once.
  */
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const PAPER = readFileSync(join(__dirname, "_components", "PrintedBoatProcedure.tsx"), "utf8");
 
-const CARDS = SOURCE.split("<EmergencyReferenceCard")
+const CARDS = `${SOURCE}${PAPER}`
+  .split("<EmergencyReferenceCard")
   .slice(1)
   .map((rest) => rest.slice(0, rest.indexOf("/>")));
 
@@ -32,6 +35,7 @@ function card(headingId: string): string {
 describe("the manifest's emergency reference", () => {
   it("is rendered three times: the phone menu, the desktop footer and paper", () => {
     expect(CARDS).toHaveLength(3);
+    expect(SOURCE.split("<PrintedBoatPaper")).toHaveLength(2);
   });
 
   it("drops the bed inside the phone header's menu, whose popover lifts it", () => {
@@ -48,9 +52,9 @@ describe("the manifest's emergency reference", () => {
    * numbers below", so it sits above the card it points at.
    */
   it("prints the missing-diver procedure above the numbers and the kit blanks below, on paper only", () => {
-    const printOnly = SOURCE.indexOf('<div className="hidden print:block">');
+    const printOnly = PAPER.indexOf('<div className="hidden print:block">');
     expect(printOnly).toBeGreaterThan(-1);
-    const block = SOURCE.slice(printOnly, SOURCE.indexOf("</div>", printOnly));
+    const block = PAPER.slice(printOnly, PAPER.indexOf("</div>", printOnly));
     const procedure = block.indexOf("<PrintedMissingProcedure");
     const numbers = block.indexOf("emergency-reference-print-heading");
     const blanks = block.indexOf("<PrintedKitBlanks");
@@ -58,8 +62,10 @@ describe("the manifest's emergency reference", () => {
     expect(blanks).toBeGreaterThan(-1);
     expect(procedure).toBeLessThan(numbers);
     expect(numbers).toBeLessThan(blanks);
-    expect(SOURCE.split("<PrintedMissingProcedure")).toHaveLength(2);
-    expect(SOURCE.split("<PrintedKitBlanks")).toHaveLength(2);
+    expect(PAPER.split("<PrintedMissingProcedure")).toHaveLength(2);
+    expect(PAPER.split("<PrintedKitBlanks")).toHaveLength(2);
+    expect(SOURCE).not.toContain("<PrintedMissingProcedure");
+    expect(SOURCE).not.toContain("<PrintedKitBlanks");
   });
 
   it("keeps the bed at rest in the desktop footer and on paper", () => {

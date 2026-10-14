@@ -84,9 +84,10 @@ describe("the manifest's section rhythm", () => {
   });
 
   it("hangs none on the printed emergency card between them either", () => {
-    const card = SOURCE.slice(
-      SOURCE.indexOf('<div className="hidden print:block">'),
-      SOURCE.indexOf("</div>", SOURCE.indexOf('<div className="hidden print:block">')),
+    const paper = component("PrintedBoatProcedure.tsx");
+    const card = paper.slice(
+      paper.indexOf('<div className="hidden print:block">'),
+      paper.indexOf("</div>", paper.indexOf('<div className="hidden print:block">')),
     );
     expect(card).toContain("<EmergencyReferenceCard");
     expect(card).not.toMatch(/\bmt-\d/);
