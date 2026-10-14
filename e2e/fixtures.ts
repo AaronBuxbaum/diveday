@@ -130,8 +130,10 @@ function settleStaffHydrationAfterNavigation(page: Page): void {
  * this tag click filters, type in search boxes and open disclosures without
  * touching a row, so such a check would be wrong in both directions.
  *
- * Read-only means "writes nothing", not "signs in nothing" — `signedInAs*` is
- * fine under it, since the sign-in fixture mints its state in its own context.
+ * Read-only means "changes no shop data": no booking, trip, person or setting.
+ * It does not mean "writes no row" — signing in writes a session row under
+ * Better Auth — so `signedInAs*` is fine under it; a session is the visitor's
+ * own state, not the shop's.
  *
  * Per **test**, not per file, and that is the point of it being a tag rather
  * than the second `test` export this replaces: with a file-level import, a test

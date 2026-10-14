@@ -896,7 +896,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       // whole content is a heading and a single link.
       {
         path: "/s/blue-mantis/trips/00000000-0000-4000-8000-000000000000",
-        heading: "That page isn’t here any more",
+        heading: "That page isn’t here",
       },
     ]);
   });

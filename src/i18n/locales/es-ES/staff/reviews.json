@@ -48,9 +48,9 @@
   "aggregate": "media de {rating} en {count, plural, one {# reseña publicada} other {# reseñas publicadas}}",
   "aggregateMonth": "este mes {rating} de {count, plural, one {# reseña} other {# reseñas}}",
   "group": {
-    "waiting": "Esperando tu revisión — {count}",
-    "published": "Publicadas — {count}",
-    "hidden": "Ocultas — {count}"
+    "waiting": "Pendiente · {count}",
+    "published": "Publicadas · {count}",
+    "hidden": "Ocultas · {count}"
   },
   "publishAll": "{count, plural, =2 {Publicar ambas} other {Publicar las #}}",
   "republish": "Volver a publicar",

@@ -148,6 +148,7 @@
     "certOverridesLink": "The month’s safety activity",
     "crew": "Crew sailing on a lapsed credential",
     "crewValue": "{lapsed} of {sailings}",
+    "crewDetailUnrecorded": "No credential on file for {unrecorded} of {sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "crewDetail": "{sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "incidents": "Incident reports",
     "boardingNote": "The dock roll call refuses a diver the readiness check has not cleared. A diver first counted at a later checkpoint is not in this figure.",
@@ -159,6 +160,8 @@
     "closureNone": "No roll call taken",
     "lapsedTitle": "Crew who sailed on a lapsed credential",
     "lapsedEmpty": "Nobody sailed on a lapsed credential.",
+    "unrecordedTitle": "Crew who sailed with no credential on file",
+    "unrecordedSailings": "{count, plural, one {# sailing} other {# sailings}} this month",
     "noDepartures": "No departures came back this month."
   }
 }

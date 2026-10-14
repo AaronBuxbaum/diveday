@@ -78,6 +78,9 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   course_form_unsigned: "today.blockerAction.getCourseFormsSigned",
   course_form_guardian_missing: "today.blockerAction.getCourseFormsSigned",
   certification_missing: "today.blockerAction.addCard",
+  // Nothing to add or verify: the diver said there is no card. The fix is a
+  // conversation before boarding (third UX review, item 23).
+  certification_not_yet: "today.blockerAction.contactDiver",
   certification_pending: "today.blockerAction.verifyCard",
   // Never "Verify card": there is no number to look up with an agency, only a
   // level the diver typed. The work is getting the card in front of somebody.
@@ -111,6 +114,7 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   course_form_unsigned: "today.blockerGroup.getCourseFormsSigned",
   course_form_guardian_missing: "today.blockerGroup.getCourseFormsSigned",
   certification_missing: "today.blockerGroup.reviewCards",
+  certification_not_yet: "today.blockerGroup.contactDivers",
   certification_pending: "today.blockerGroup.verifyCards",
   certification_self_declared: "today.blockerGroup.askForCards",
   certification_insufficient: "today.blockerGroup.reviewCards",
@@ -172,6 +176,7 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   course_form_unsigned: "today.blockerRow.courseFormUnsigned",
   course_form_guardian_missing: "today.blockerRow.courseFormUnsigned",
   certification_missing: "today.blockerRow.certificationMissing",
+  certification_not_yet: "today.blockerRow.certificationNotYet",
   certification_pending: "today.blockerRow.certificationPending",
   certification_self_declared: "today.blockerRow.certificationSelfDeclared",
   certification_insufficient: "today.blockerRow.certificationInsufficient",
@@ -235,14 +240,6 @@ export function nameListText(t: StaffTranslator, names: readonly string[], shown
 }
 
 /** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
-
-export function missingFitDetailText(t: StaffTranslator, count: number): string {
-  return t("today.detail.missingFit", { count });
-}
-
-export function ungatedNitroxDetailText(t: StaffTranslator, count: number): string {
-  return t("today.detail.ungatedNitrox", { count });
-}
 
 export function missingFitNamedDetailText(t: StaffTranslator): string {
   return t("today.detail.missingFitNamed");
@@ -497,10 +494,6 @@ export function rollCallGapDetailText(
 /** The unclosed-roll-call row's action label — it opens the checkpoint that is open. */
 export function openRollCallActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openRollCall");
-}
-
-export function missingContactDetailText(t: StaffTranslator, count: number): string {
-  return t("today.detail.missingContact", { count });
 }
 
 /** The single-diver contact row leads with the diver's name; the detail then carries only the gap. */

@@ -69,7 +69,9 @@ export function staffDiveIntentLine(
 ): string | null {
   if (tally.length === 0) return null;
   const phrases = tally.map(({ intent, count }) => t(STAFF_DIVE_INTENT_KEYS[intent], { count }));
-  return t("shared.diveIntent.aboardToday", {
+  // "On the list", never "Aboard": aboard is a stage the crew taps, and this
+  // line is read before anybody has boarded (third review, item 8).
+  return t("shared.diveIntent.onTheList", {
     list: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(phrases),
   });
 }

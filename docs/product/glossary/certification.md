@@ -171,6 +171,10 @@
   "Ignored" is that same three-table test: any live card the shop holds drops it from the summary,
   while a level the diver merely *claimed* later leaves it standing and simply renders ahead of it.
   It gates nothing ([20260814-self-declared-cards](../../architecture/decisions/20260814-self-declared-cards.md)).
+  Since 2026-10-13 a booked diver can also give it on `/ready`'s certification step, the first place
+  the sale's silence (2026-08-27) meets a first-timer. While it stands on a seat whose level gate is
+  unmet, the blocker reads `certification_not_yet` ("Says they're not certified yet") instead of
+  `certification_missing`: the same Blocked seat, named so the desk knows which conversation to have.
 - **Clearing a declared-uncertified stamp** — a staffer saying, on the diver record, that this diver
   never gave that answer. The forms that write it are unauthenticated and resolve a person by shop +
   email, so for a diver the shop holds no card for anybody with a name and an email address can leave
@@ -456,6 +460,9 @@
   because that is who is on the boat; the co-signature asks whether they were under 18 on the day
   they **signed**, because a release a seventeen-year-old executed alone does not become valid on
   their eighteenth birthday.
+  Since 2026-10-13 a seat can also be a minor's **by its booker's word**: the public party form's
+  "Under 18" box stamps `bookings.minor_declared_at` on that seat alone. A date of birth on file
+  decides; with none, the stamp asks for the guardian and shows the badge ([H-113](../human-decisions/H-113-under-18-on-party-form.md)).
 - **Guardian co-signature** — the second signature a **minor's** liability release takes: a parent
   or legal guardian signing the same release, on the same page, under the same signature provider
   as the diver's own (ADR

@@ -114,6 +114,7 @@ export function CourseFormsRequirement({
   return (
     <form action={action} className="mt-8">
       <EditorSection
+        unsavedTag={t("shared.formDraft.unsavedSection")}
         id={id}
         label={label}
         as="fieldset"

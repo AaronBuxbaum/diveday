@@ -201,7 +201,7 @@ test.describe("per-trip crew role", () => {
  * to the surface that fixes it (design principle 10). The seeded reef trip
  * carries one blocked diver (an unsent waiver) and several rental-fit gaps,
  * so both facts render; the seat caption owns the numbers, so the header's
- * "spots left" pill stands down on this tab (principle 9 — one fact, once).
+ * "seats left" pill stands down on this tab (principle 9 — one fact, once).
  */
 test.describe("trip pulse", () => {
   signedInAsOwner();
@@ -216,7 +216,7 @@ test.describe("trip pulse", () => {
 
     // **How the boat stands, said once**: the header's capacity pill, the same
     // pill every tab of the departure wears.
-    await expect(page.locator("header").getByText("3 spots left")).toBeVisible();
+    await expect(page.locator("header").getByText("3 seats left")).toBeVisible();
 
     // Each fact is a door to its fix: the blocked one lands on the Trip
     // ledger, whose "Still to clear" group leads the roster with the divers
@@ -412,7 +412,7 @@ test.describe("undoing a removal after the trip is canceled", () => {
     }).toPass();
     await row.getByRole("button", { name: "Yes, remove booking" }).click();
     const removedNotice = page.getByRole("status").filter({ hasText: "Booking canceled" });
-    await expect(removedNotice).toContainText("Booking canceled. The spot is open again.");
+    await expect(removedNotice).toContainText("Booking canceled. The seat is open again.");
     const undo = removedNotice.getByRole("button", { name: "Undo" });
     await expect(undo).toBeVisible();
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { CourseCrewGapCourse } from "./course-ratios";
 import type { CrewAssignmentRequest } from "./crew-requests";
 import {
+  crewGapFor,
   GAP_TONE,
   type StaffGapCode,
   staffGapForCourseGap,
@@ -317,6 +319,58 @@ describe("staffWeek", () => {
     expect(on("2026-08-28")).toEqual(["night"]);
     expect(on("2026-08-29")).toEqual(["evening"]);
     expect(on("2026-08-30")).toEqual([]);
+  });
+
+  /**
+   * UX review 2026-10-13, item 21: the second day's chip printed the whole
+   * "11:30 PM – 3:00 AM" window above that morning's dawn boat, which read as
+   * a second night boat. Each placement now says whether it is the day the
+   * window began, and whether it ends there.
+   */
+  it("marks the later days of a window with the day it began and whether it ends there", () => {
+    const week = build({
+      people: [
+        person({
+          crewingTrips: [
+            {
+              tripId: "night",
+              // 11:30 PM Monday to 3:00 AM Tuesday, Key Largo.
+              title: "Night Dive",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-25T03:30:00.000Z"),
+                  endsAt: new Date("2026-08-25T07:00:00.000Z"),
+                },
+              ],
+            },
+            {
+              tripId: "liveaboard",
+              // 8:00 PM Wednesday to 9:00 AM Friday: Thursday is a middle day.
+              title: "Overnight",
+              meetings: [
+                {
+                  startsAt: new Date("2026-08-27T00:00:00.000Z"),
+                  endsAt: new Date("2026-08-28T13:00:00.000Z"),
+                },
+              ],
+            },
+          ],
+        }),
+      ],
+    });
+
+    const days = week.people[0]?.days ?? [];
+    const placed = (date: string) =>
+      (days.find((day) => day.date === date)?.crewing ?? []).map((trip) => ({
+        id: trip.tripId,
+        from: trip.continuesFrom,
+        ends: trip.endsThisDay,
+      }));
+    expect(placed("2026-08-24")).toEqual([{ id: "night", from: null, ends: false }]);
+    expect(placed("2026-08-25")).toEqual([{ id: "night", from: "2026-08-24", ends: true }]);
+    expect(placed("2026-08-26")).toEqual([{ id: "liveaboard", from: null, ends: false }]);
+    expect(placed("2026-08-27")).toEqual([{ id: "liveaboard", from: "2026-08-26", ends: false }]);
+    expect(placed("2026-08-28")).toEqual([{ id: "liveaboard", from: "2026-08-26", ends: true }]);
   });
 
   it("orders a day's shifts and gaps by when they start", () => {
@@ -975,5 +1029,87 @@ describe("a standing crew clash", () => {
     expect(clashesOn("2026-08-26", [course, bothDays], "trip-course", now)).toEqual([
       { tripId: "trip-charter", title: "The two-day charter" },
     ]);
+  });
+});
+
+/**
+ * **One decision for a departure's crew gap** (issue #2482). The staffing week
+ * and Today's queue both read it, so a ratio rule changed in one place cannot
+ * leave the week saying a boat is fine while Today says it is short.
+ */
+describe("crewGapFor", () => {
+  const entryLevel: CourseCrewGapCourse = {
+    agency: "padi",
+    minimumCertificationLevel: null,
+    isIntroCourse: false,
+  };
+  const intro: CourseCrewGapCourse = { ...entryLevel, isIntroCourse: true };
+  const gap = (input: {
+    course?: CourseCrewGapCourse;
+    instructors?: number;
+    assistants?: number;
+    booked?: number;
+    divers?: number;
+    target?: number | null;
+    selfGuided?: boolean;
+  }) =>
+    crewGapFor({
+      course: input.course ?? null,
+      counts: { instructorCount: input.instructors ?? 0, assistantCount: input.assistants ?? 0 },
+      booked: input.booked ?? 0,
+      bookedDivers: input.divers ?? input.booked ?? 0,
+      diversPerDivemaster: input.target === undefined ? 6 : input.target,
+      selfGuided: input.selfGuided ?? false,
+    }).code;
+
+  it("says nothing of a crewed fun dive inside the shop's target", () => {
+    expect(gap({ assistants: 1, booked: 6 })).toBeNull();
+  });
+
+  it("says nothing of an empty boat, or a self-guided one", () => {
+    expect(gap({ booked: 0 })).toBeNull();
+    expect(gap({ booked: 8, selfGuided: true })).toBeNull();
+    expect(gap({ booked: 8, target: null })).toBeNull();
+  });
+
+  it("names a fun dive with nobody in the water, and one short of the target", () => {
+    expect(gap({ booked: 4 })).toBe("uncrewed_departure");
+    expect(gap({ assistants: 1, booked: 7 })).toBe("crew_below_target");
+  });
+
+  it("names a course session with nobody in the water in both words", () => {
+    expect(gap({ course: entryLevel, booked: 4 })).toBe("uncrewed_course");
+  });
+
+  it("keeps the instructor gap where the shop's target exempts the zero-crew row", () => {
+    expect(gap({ course: entryLevel, booked: 0 })).toBe("no_instructor");
+    expect(gap({ course: entryLevel, booked: 4, selfGuided: true })).toBe("no_instructor");
+    expect(gap({ course: entryLevel, assistants: 1, booked: 4 })).toBe("no_instructor");
+  });
+
+  it("names each ratio breach by the phone call that closes it", () => {
+    expect(gap({ course: entryLevel, instructors: 1, booked: 9, target: 20 })).toBe("over_ratio");
+    expect(gap({ course: entryLevel, instructors: 1, assistants: 2, booked: 13, target: 20 })).toBe(
+      "over_ratio_instructor",
+    );
+    expect(gap({ course: intro, instructors: 1, booked: 3, target: 20 })).toBe("over_intro_ratio");
+  });
+
+  it("lets the agency's ratio outrank the shop's own target", () => {
+    expect(gap({ course: entryLevel, instructors: 1, booked: 9, target: 2 })).toBe("over_ratio");
+  });
+
+  it("hands back the two rules it decided from, for the words a caller draws", () => {
+    const decided = crewGapFor({
+      course: null,
+      counts: { instructorCount: 0, assistantCount: 1 },
+      booked: 7,
+      bookedDivers: 7,
+      diversPerDivemaster: 6,
+      selfGuided: false,
+    });
+    expect(decided.courseGap).toEqual({ code: "none" });
+    expect(decided.ratioGap).toMatchObject({ code: "under_target", divers: 7, divemasterCount: 1 });
+    expect(decided.uncrewed).toBe(false);
   });
 });

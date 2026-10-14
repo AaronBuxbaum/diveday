@@ -55,6 +55,9 @@ describe("teamNoticeForm", () => {
     expect(teamNoticeForm("not-authorized", {})).toBe(TEAM_FORMS.page);
     expect(teamNoticeForm("removed", {})).toBe(TEAM_FORMS.page);
     expect(teamNoticeForm("disabled", {})).toBe(TEAM_FORMS.page);
+    // The invite form and a roster row's Resend both hit the hourly cap, so
+    // its refusal stays where both can see it.
+    expect(teamNoticeForm("send-limit", {})).toBe(TEAM_FORMS.page);
     // A row code with no row named cannot be placed, so it stays on the page
     // rather than being pinned to an arbitrary teammate.
     expect(teamNoticeForm("roles-invalid", {})).toBe(TEAM_FORMS.page);

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { pendingHeldSend } from "@/db/held-sends";
+import { heldRescheduleIsPlaceOnly } from "@/db/trip-rescheduled";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowMs } from "@/lib/clock";
 import { RescheduleHold } from "./RescheduleHold";
@@ -30,9 +31,11 @@ export async function RescheduleNotice({
   const id = z.uuid().safeParse(heldId);
   const count = z.coerce.number().int().min(1).max(500).safeParse(tell);
   if (!id.success || !count.success) return null;
-  const row = await pendingHeldSend(await getDb(), shopId, id.data);
+  const db = await getDb();
+  const row = await pendingHeldSend(db, shopId, id.data);
   if (row?.payload.kind !== "trip_rescheduled") return null;
   if (tripId && row.payload.tripId !== tripId) return null;
+  const placeOnly = await heldRescheduleIsPlaceOnly(db, shopId, row.payload);
   return (
     <RescheduleHold
       ticket={{
@@ -42,7 +45,7 @@ export async function RescheduleNotice({
       }}
       tripId={row.payload.tripId}
       meetingPointMoved={row.payload.meetingPointMoved}
-      copy={rescheduleHoldCopy(t, count.data)}
+      copy={rescheduleHoldCopy(t, count.data, placeOnly)}
     />
   );
 }

@@ -1111,6 +1111,43 @@ describe("proxy retired-query redirects", () => {
   });
 });
 
+/**
+ * **The offline manifests have no shop in their address** (#2433). The page is
+ * `/offline-manifest`, outside the staff shell on purpose, since it has to open
+ * with no network and no session. A staffer who types the shape every other
+ * staff page has got a staff 404, at exactly the moment they were thinking
+ * about being offline. The edge sends that shape to the real page.
+ */
+describe("the staff-shaped offline manifest address", () => {
+  it("308s /shop/<slug>/offline-manifest to /offline-manifest, keeping its query", async () => {
+    for (const [from, to] of [
+      ["/shop/blue-mantis/offline-manifest", "/offline-manifest"],
+      ["/shop/blue-mantis/offline-manifest/", "/offline-manifest"],
+      ["/shop/another-shop/offline-manifest?trip=abc", "/offline-manifest?trip=abc"],
+    ] as const) {
+      const res = await run(request(from));
+      expect(res.status, from).toBe(308);
+      const location = new URL(res.headers.get("location") ?? "", "http://x");
+      expect(location.origin, from).toBe(new URL(request(from).url).origin);
+      expect(`${location.pathname}${location.search}`, from).toBe(to);
+    }
+  });
+
+  it("leaves every other address with the words in it alone", async () => {
+    for (const path of [
+      "/offline-manifest",
+      "/shop/blue-mantis/offline-manifest/extra",
+      "/shop/blue-mantis/trips/abc/offline-manifest",
+      "/shop/offline-manifest",
+      "/s/blue-mantis/offline-manifest",
+    ]) {
+      expect((await run(request(path))).headers.get("location") ?? "", path).not.toMatch(
+        /\/offline-manifest$/,
+      );
+    }
+  });
+});
+
 describe("the partner referral cookie (issue #1285)", () => {
   /**
    * A real top-level navigation. `SameSite` does not stop a cross-site

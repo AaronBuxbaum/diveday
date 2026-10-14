@@ -34,11 +34,14 @@ export function LogEntryPreview({
   line: string;
   /** The departure's date, already formatted in the shop's zone. */
   date: string;
-  /** The day's planned sites, in plan order. */
+  /** The day's planned sites, in plan order; a repeat is named once. */
   siteNames: string[];
   isCourse?: boolean;
   t: DiverTranslator;
 }) {
+  // A two-tank on one site plans the site twice; the card names it once
+  // ("Molasses Reef, Molasses Reef", third UX review, item 29).
+  const sites = [...new Set(siteNames)];
   return (
     <section>
       <p className="text-base">{line}</p>
@@ -49,7 +52,7 @@ export function LogEntryPreview({
       >
         <div className="flex items-center gap-3 bg-primary-tint px-4 py-3">
           <SiteMark
-            mark={siteMarkFor({ siteName: siteNames[0] ?? null, isCourse })}
+            mark={siteMarkFor({ siteName: sites[0] ?? null, isCourse })}
             size="sm"
             ground="surface"
           />
@@ -62,12 +65,12 @@ export function LogEntryPreview({
             <dt className="w-14 shrink-0 text-xs font-medium text-muted">{t("recap.dateLabel")}</dt>
             <dd className="min-w-0">{date}</dd>
           </div>
-          {siteNames.length > 0 ? (
+          {sites.length > 0 ? (
             <div className="flex gap-3 py-2">
               <dt className="w-14 shrink-0 text-xs font-medium text-muted">
                 {t("recap.sitesLabel")}
               </dt>
-              <dd className="min-w-0 font-medium">{siteNames.join(", ")}</dd>
+              <dd className="min-w-0 font-medium">{sites.join(", ")}</dd>
             </div>
           ) : null}
         </dl>

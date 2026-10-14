@@ -112,7 +112,7 @@ test("the roster narrows to today's divers and to whoever needs a staffer", {
   // in between on purpose — a `waitFor` would hide the regression rather than
   // catch it. The URL check below is what fails if the chip is undone.
   await search.fill("");
-  await views.getByRole("link", { name: "Needs attention" }).click();
+  await views.getByRole("link", { name: "Needs you" }).click();
   await expect(page).toHaveURL(/\/divers\?filter=needs_attention$/);
   await search.fill(PENDING_CARD_DIVER);
   await expect(rowFor(PENDING_CARD_DIVER)).toHaveCount(1);

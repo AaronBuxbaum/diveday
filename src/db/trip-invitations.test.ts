@@ -2,12 +2,14 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
+import { fakeEmail } from "@/test/fakes";
 import { createBooking } from "./bookings";
 import { recordCourseInquiry } from "./course-inquiries";
 import { getCourseBySlug } from "./courses";
 import { listBookableDivers } from "./divers";
 import { loadShopExportBundleInput } from "./export";
 import {
+  activityEvents,
   bookings,
   certifications,
   people,
@@ -227,6 +229,76 @@ describe("trip invitations", () => {
     expect(listed).toHaveLength(1);
     expect(listed[0]?.invitation.invitedAt).toBeInstanceOf(Date);
     expect(await getTripRoster(db, shop.id, firstTrip.id)).toHaveLength(0);
+  });
+
+  /**
+   * Issue #2480: a double tap at a busy counter sent two commercial emails,
+   * because every send stamps a fresh `invitedAt` and so a fresh idempotency
+   * key. Mail that went out under an hour ago answers "already sent".
+   */
+  describe("a second tap on Email them this date", () => {
+    async function offerInput() {
+      const { db, shop, author, firstTrip } = await invitationContext();
+      const [candidate] = await listBookableDivers(db, shop.id, firstTrip.id, {
+        query: "mail.example",
+      });
+      if (!candidate) throw new Error("expected a bookable seeded diver");
+      return {
+        db,
+        input: {
+          shopId: shop.id,
+          shopSlug: shop.slug,
+          tripId: firstTrip.id,
+          personId: candidate.person.id,
+          createdByPersonId: author.id,
+        },
+      };
+    }
+
+    it("sends one email for two taps, and says so on the second", async () => {
+      const { db, input } = await offerInput();
+      const mail = fakeEmail();
+      await expect(offerDepartureToDiver(db, input, mail.provider)).resolves.toBe("sent");
+      await expect(offerDepartureToDiver(db, input, mail.provider)).resolves.toBe("already_sent");
+      expect(mail.sent).toHaveLength(1);
+    });
+
+    it("sends one email for two taps that land together", async () => {
+      const { db, input } = await offerInput();
+      const mail = fakeEmail();
+      const outcomes = await Promise.all([
+        offerDepartureToDiver(db, input, mail.provider),
+        offerDepartureToDiver(db, input, mail.provider),
+      ]);
+      expect(outcomes.sort()).toEqual(["already_sent", "sent"]);
+      expect(mail.sent).toHaveLength(1);
+    });
+
+    it("sends on the second tap when the first one's mail did not go", async () => {
+      const { db, input } = await offerInput();
+      const failed = fakeEmail({ status: "failed", retryable: false, errorCode: "rejected" });
+      await expect(offerDepartureToDiver(db, input, failed.provider)).resolves.toBe("fallback");
+      const mail = fakeEmail();
+      await expect(offerDepartureToDiver(db, input, mail.provider)).resolves.toBe("sent");
+      expect(mail.sent).toHaveLength(1);
+    });
+
+    it("sends again once the hour has passed", async () => {
+      const { db, input } = await offerInput();
+      const mail = fakeEmail();
+      await expect(offerDepartureToDiver(db, input, mail.provider)).resolves.toBe("sent");
+      const earlier = new Date(nowDate().getTime() - 2 * 3_600_000);
+      await db
+        .update(tripInvitations)
+        .set({ invitedAt: earlier })
+        .where(eq(tripInvitations.tripId, input.tripId));
+      await db
+        .update(activityEvents)
+        .set({ occurredAt: earlier })
+        .where(eq(activityEvents.tripId, input.tripId));
+      await expect(offerDepartureToDiver(db, input, mail.provider)).resolves.toBe("sent");
+      expect(mail.sent).toHaveLength(2);
+    });
   });
 
   it("does not email a diver who turned off shop email", async () => {

@@ -273,13 +273,22 @@ export function SegmentedControl({
       const trackStyle = getComputedStyle(nav);
       const borderLeft = Number.parseFloat(trackStyle.borderLeftWidth) || 0;
       const borderTop = Number.parseFloat(trackStyle.borderTopWidth) || 0;
+      //
+      // **Each edge is snapped, never the size** (issue #2525). The width is
+      // whatever lies between the two snapped edges, so the pill's sides sit
+      // on the device pixels nearest its option's, and a width measured
+      // either side of .5 cannot move one edge with nothing else moving.
+      // Snapping the width on its own flapped `reports-year-dark-vw-390` by
+      // one column at the pill's right edge.
       const dpr = window.devicePixelRatio || 1;
       const snap = (value: number) => Math.round(value * dpr) / dpr;
+      const left = box.left - navBox.left - borderLeft;
+      const top = box.top - navBox.top - borderTop;
       const next = {
-        left: snap(box.left - navBox.left - borderLeft),
-        top: snap(box.top - navBox.top - borderTop),
-        width: snap(box.width),
-        height: snap(box.height),
+        left: snap(left),
+        top: snap(top),
+        width: snap(left + box.width) - snap(left),
+        height: snap(top + box.height) - snap(top),
       };
       pill.style.opacity = "1";
       pill.style.left = `${next.left}px`;
@@ -307,11 +316,29 @@ export function SegmentedControl({
     placePill.current = place;
     place(true);
     setPillReady(true);
-    if (typeof ResizeObserver === "undefined") return;
-    // A wrap or a font swap moves the options; the pill follows without motion.
+    // Once the page's fonts have loaded the labels have their final widths,
+    // whatever they measured at the first paint; the pill measures again then
+    // (issue #2525). Without motion: nothing was chosen.
+    let live = true;
+    document.fonts?.ready.then(() => {
+      if (live) place(false);
+    });
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        live = false;
+      };
+    }
+    // A wrap or a font swap moves the options; the pill follows without
+    // motion. Each option is observed as well as the track, because an option
+    // can change width while the track keeps its size, and then only the
+    // option's own observer fires (issue #2525).
     const observer = new ResizeObserver(() => place(false));
     observer.observe(nav);
-    return () => observer.disconnect();
+    for (const option of nav.querySelectorAll<HTMLElement>("[data-key]")) observer.observe(option);
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
   }, [currentKey]);
 
   // One line or a grid, decided by measurement: on every render (the labels

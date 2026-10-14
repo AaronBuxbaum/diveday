@@ -20,7 +20,8 @@ import { createHash } from "node:crypto";
  * sessions" and "revoke by token from a list" would miss. DiveDay uses
  * neither: the security settings page revokes by session id
  * (`src/db/account-security.ts`), and every other sign-out path deletes by
- * account. A digest is never accepted as a token, so this can only fail
+ * account; those endpoints are disabled and no source may call them
+ * (`DIGEST_BLIND_SESSION_PATHS`, src/lib/auth.ts). A digest is never accepted as a token, so this can only fail
  * closed: a `where` value is always hashed, never trusted as "already hashed".
  */
 

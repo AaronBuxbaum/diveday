@@ -429,7 +429,7 @@ async function TodayBody({
         withTakings: eveningClose.closing && canReadShopMoney,
       }),
     ]);
-  const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;
+  const { actions, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
   // The day's whole board, clock order — the strip's marks and the count under the date both read
   // it.
@@ -848,7 +848,7 @@ async function TodayBody({
                       {formatTime(nextDeparture.startsAt, locale, shop.timezone)}
                     </span>
                     <span>
-                      {nextDeparture.booked}/{nextDeparture.capacity}
+                      {nextDeparture.booked}/{nextDeparture.sellableCapacity}
                     </span>
                   </p>
                 </div>
@@ -868,7 +868,6 @@ async function TodayBody({
             currency: shop.currency,
             crewedTripIds: lens === "boat" ? crewedTripIds : undefined,
             readerPersonId: session.user.personId,
-            withheldCount,
             drafts: spineDrafts,
             helpRequestAction: updateHelpRequestAction,
             showPaymentsRow,

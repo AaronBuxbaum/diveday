@@ -300,6 +300,8 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
         welcomeSharedAt: new Date("2026-07-20T12:00:00Z"),
         // "Running late" (J3) is the diver's own statement too.
         runningLateAt: new Date("2026-07-20T12:30:00Z"),
+        // So is the booker's "Under 18" on the seat (H-113).
+        minorDeclaredAt: new Date("2026-07-20T12:45:00Z"),
       })
       .where(eq(bookings.id, booking.id));
 
@@ -311,11 +313,16 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
     expect(erased.ok).toBe(true);
 
     const [after] = await db
-      .select({ welcomeSharedAt: bookings.welcomeSharedAt, runningLateAt: bookings.runningLateAt })
+      .select({
+        welcomeSharedAt: bookings.welcomeSharedAt,
+        runningLateAt: bookings.runningLateAt,
+        minorDeclaredAt: bookings.minorDeclaredAt,
+      })
       .from(bookings)
       .where(eq(bookings.id, booking.id));
     expect(after?.welcomeSharedAt).toBeNull();
     expect(after?.runningLateAt).toBeNull();
+    expect(after?.minorDeclaredAt).toBeNull();
   });
 
   /**

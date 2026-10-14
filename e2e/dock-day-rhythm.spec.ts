@@ -82,7 +82,8 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   // shop settings these two were unconditional, so this pair of assertions is
   // the whole fix in one place.
   await expect(rhythm).not.toContainText("Crew briefing");
-  await expect(rhythm).not.toContainText("Ride out to the site");
+  // The ride out is said on the departure's own row, so no ride, no clause.
+  await expect(rhythm).not.toContainText("minutes to the site");
 
   // The packing list stops promising a briefing the shop just said it does
   // not run — the two used to sit three inches apart and disagree.
@@ -138,6 +139,11 @@ test("a departure's own legs are the day the diver reads", async ({ page, privat
   await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
 
   const rhythm = page.getByRole("list").filter({ hasText: "Arrive and check in" }).last();
+  // The ride out on the departure's row, one minute one row (third UX review,
+  // item 29).
+  await expect(rhythm.getByRole("listitem").filter({ hasText: "Departure" })).toContainText(
+    "Departure, about 10 minutes to the site",
+  );
   // Dive one at the trip's own ten minutes, not the shop's twenty: 8:00 + 0:10.
   await expect(rhythm.getByRole("listitem").filter({ hasText: "Dive 1" })).toContainText("8:10 AM");
   // ...and dive two 45 under plus a 150-minute run, rather than the 60-minute

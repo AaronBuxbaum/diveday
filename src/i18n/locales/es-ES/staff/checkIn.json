@@ -52,6 +52,7 @@
     "offerOptedOut": "No se envió nada: desactivó los correos del centro. Avísale por teléfono de la fecha.",
     "offerNotSent": "No se envió nada: no hay correo registrado o el correo no está configurado. Avísale por teléfono de la fecha.",
     "offerSent": "Oferta enviada por correo. La persona reserva su plaza desde el enlace.",
+    "offerAlreadySent": "Ya se envió por correo en esta hora. No se envió nada nuevo.",
     "notReady": "Algo ha cambiado y todavía no puede embarcar. Su fila dice qué lo impide.",
     "notBookable": "Esa reserva ya no está disponible para el check-in.",
     "alreadyCheckedIn": "Ese buceador ya había hecho el check-in.",

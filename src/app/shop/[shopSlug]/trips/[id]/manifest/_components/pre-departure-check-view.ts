@@ -56,6 +56,7 @@ export function preDepartureCheckView({
       errorRefusal: t("trips.preDepartureCheck.errorRefusal"),
       checkedLabel: t("trips.preDepartureCheck.checkedLabel"),
       uncheckedLabel: t("trips.preDepartureCheck.uncheckedLabel"),
+      confirmClear: t("trips.preDepartureCheck.confirmClear"),
     },
   };
 }

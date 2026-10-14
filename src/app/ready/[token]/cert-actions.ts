@@ -5,8 +5,10 @@ import { z } from "zod";
 import { createNitroxCertification } from "@/db/nitrox";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
+import { recordSelfDeclaredCards } from "@/db/self-declared-cards";
 import { nowDate } from "@/lib/clock";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { isDiver } from "@/lib/participant-types";
 import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";
 
 /**
@@ -130,4 +132,41 @@ export async function saveNitroxCertificationFromReady(token: string, formData: 
     selfDeclaredAt: nowDate(),
   });
   revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
+}
+
+/**
+ * **"I'm not certified yet"**, said on the diver's own link (third UX review,
+ * item 23).
+ *
+ * The sale never asks (Aaron, 2026-08-27), so this step is the first place a
+ * first-timer meets "Training agency / Level / Number" with nothing to pick.
+ * This gives them an honest answer instead of a form they cannot fill.
+ *
+ * The same writer the public join uses (`recordSelfDeclaredCards`), so the same
+ * rules hold: a stamp on the person, never a card; refused outright
+ * (`card_on_file`) when the shop holds any real card for them; and it retracts
+ * only the diver's own unsighted claims. It clears nothing: the seat stays
+ * Blocked, now under `certification_not_yet`, which is what tells Today and the
+ * roster to have the conversation before the day. A staffer undoes it with
+ * `clearNoCertificationDeclaration`.
+ *
+ * A snorkeler or ride-along has no cert gate and no reason to say this, so a
+ * hand-made post from one changes nothing.
+ */
+export async function declareNoCertificationFromReady(token: string) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
+  if (!isDiver(ctx.data.participantType)) redirect(base(token));
+
+  const outcome = await ctx.db.transaction((tx) =>
+    recordSelfDeclaredCards(tx, {
+      // Shop and person from the verified capability, never the form.
+      shopId: ctx.data.shop.id,
+      personId: ctx.data.person.id,
+      noCertification: true,
+    }),
+  );
+  const saved = outcome.noCertification === "recorded" ? "not-yet" : "not-yet-card";
+  revalidateAndRedirect(base(token), `${base(token)}?saved=${saved}`);
 }

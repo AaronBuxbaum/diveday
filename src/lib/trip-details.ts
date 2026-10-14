@@ -1,7 +1,7 @@
 import { isValidCalendarDate } from "./calendar-date";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "./money";
 import { paymentGateIsUnclearable } from "./readiness";
-import { tripMeetingDays } from "./trip-days";
+import { meetingDaysFor } from "./trip-days";
 import { parseWallTime, wallTimeToUtc } from "./zoned";
 
 /**
@@ -46,6 +46,11 @@ export type TripDetailsFields = {
   startTime: string;
   endTime: string;
   dayCount: number;
+  /**
+   * One date per day after the first, when the days are not consecutive
+   * (third UX review, item 10). Empty or absent is the consecutive run.
+   */
+  laterDates?: readonly string[];
   priceDollars?: number;
   /**
    * Whether the departure's requirement row demands payment. Absent on the
@@ -102,6 +107,7 @@ export type TripDetailsShop = {
 export type TripDetailsRefusal =
   | "invalid"
   | "end_before_start"
+  | "days_out_of_order"
   | "capacity_above_boat"
   | "capacity_above_certificate"
   | "price_required_by_gate";
@@ -122,7 +128,7 @@ export type TripDetailsPatch = {
 
 export type TripDetailsResult =
   | { ok: true; patch: TripDetailsPatch }
-  | { ok: false; reason: "invalid" | "end_before_start" }
+  | { ok: false; reason: "invalid" | "end_before_start" | "days_out_of_order" }
   // Carries the hull's number so the notice can say "Reef Runner holds 6"
   // rather than a bare "that didn't work".
   | { ok: false; reason: "capacity_above_boat"; boatCapacity: number }
@@ -190,9 +196,13 @@ export function tripDetailsPatch(
     };
   }
 
-  const meetingDays = tripMeetingDays({ start: startWall, end: endWall }, fields.dayCount);
-  if (!meetingDays) return invalid;
-  const scheduleDays = meetingDays.map((meeting, index) => ({
+  const meetingDays = meetingDaysFor(
+    { start: startWall, end: endWall },
+    fields.dayCount,
+    fields.laterDates,
+  );
+  if (!meetingDays.ok) return { ok: false, reason: meetingDays.reason };
+  const scheduleDays = meetingDays.days.map((meeting, index) => ({
     dayNumber: index + 1,
     startsAt: wallTimeToUtc(meeting.start, shop.timezone),
     endsAt: wallTimeToUtc(meeting.end, shop.timezone),

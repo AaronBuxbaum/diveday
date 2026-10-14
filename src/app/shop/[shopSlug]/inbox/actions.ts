@@ -6,9 +6,12 @@ import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
   deleteStrangerInboundMessage,
+  getInboundMessage,
   markInboundAnswered,
   reopenInboundMessage,
 } from "@/db/inbound-messages";
+import { markMessageRunningLate } from "@/db/running-late";
+import { nowDate } from "@/lib/clock";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -107,4 +110,44 @@ export async function setInboxMessageDoneAction(formData: FormData): Promise<voi
     ? await markInboundAnswered(db, session.user.shopId, messageId)
     : await reopenInboundMessage(db, session.user.shopId, messageId);
   revalidateAndRedirect(inbox, changed ? inbox : noticeUrl(inbox, "gone"));
+}
+
+/**
+ * **Mark the sender running late, from what they wrote** (UX review
+ * 2026-10-13, item 19). "Running about 15 min late, traffic on the causeway"
+ * sat in the Inbox while the manifest said nothing; this puts the same mark
+ * the diver's own tap sets on the seat the row named, so the roster and the
+ * manifest show it.
+ *
+ * Same gate and the same tenant binding as the acts above. **Only a message
+ * id is posted**: the person comes from the stored message, inside the
+ * session's shop, and the seat from `markMessageRunningLate`'s own read, so a
+ * hand-built form can name neither somebody else's seat nor a boat the
+ * message was not about. The mark gates nothing (src/lib/running-late.ts),
+ * which is why any live staff role may set it.
+ */
+export async function markInboxSenderLateAction(formData: FormData): Promise<void> {
+  const session = await requireStaffSession();
+  const inbox = shopPath(session.user.shopSlug, "inbox");
+  const db = await getDb();
+  if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
+
+  const parsed = parseForm(messageForm, formData);
+  const messageId = parsed.ok ? uuidParam(parsed.data.messageId) : null;
+  if (!parsed.ok || !messageId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
+
+  const message = await getInboundMessage(db, session.user.shopId, messageId);
+  if (!message?.personId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
+
+  const outcome = await markMessageRunningLate(db, {
+    shopId: session.user.shopId,
+    personId: message.personId,
+    receivedAt: message.receivedAt,
+    now: nowDate(),
+    actorPersonId: session.user.personId,
+  });
+  revalidateAndRedirect(
+    inbox,
+    noticeUrl(inbox, outcome.status === "closed" ? "late-closed" : "late-marked"),
+  );
 }

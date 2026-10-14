@@ -46,6 +46,14 @@ export function demoStageTaps(
  * one within half an hour of sailing reads boarding; one later in the day
  * reads nothing yet, and its stepper falls back to the clock.
  *
+ * **The taps are written once, as of the seed (or a reset), and never move
+ * after it** (issue #2421). A crew's word is a row, not a clock, so a demo
+ * seeded while the dawn boat was underway still says Underway after she is
+ * back, until `liveStageOf` retires the word two hours past her end
+ * (`STAGE_STALE_AFTER_MS`). Nothing re-runs this between resets: a pass once a
+ * night could only add the words due at that one hour, and stamping taps
+ * ahead of the clock would be words nobody has said yet.
+ *
  * A tap is a thing a person did, so it is recorded by somebody on that boat:
  * the departure's own captain, else the first of its crew, and only for a
  * departure with no crew at all the shop's captain (`fallbackRecorderId`). The

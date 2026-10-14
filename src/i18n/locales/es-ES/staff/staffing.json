@@ -45,6 +45,7 @@
     "removing": "Quitando…",
     "saving": "Guardando…",
     "add": "Añadir una credencial",
+    "noneOnFile": "Sin acreditaciones registradas",
     "kinds": {
       "instructor_rating": "Titulación de instructor",
       "assistant_instructor_rating": "Titulación de Instructor Asistente",
@@ -90,6 +91,8 @@
     "assignAria": "Asignar tripulación a {trip}",
     "away": "Ausente",
     "awayConflict": "Ausente {dates}",
+    "continuedFrom": "desde el {day}",
+    "continuedUntil": "hasta {time} · desde el {day}",
     "crewClash": "También en la tripulación de {departure}",
     "crewing": "Tripulación",
     "deciding": "Guardando…",

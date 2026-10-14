@@ -1000,6 +1000,8 @@ export async function nextSessionStartByCourse(
 export type WeekBoardEntry = {
   tripId: string;
   title: string;
+  /** A rehearsal departure (ADR 20261012-rehearsal-departures): its own mark, and no price prompt. */
+  isRehearsal: boolean;
   startsAt: Date;
   endsAt: Date;
   booked: number;
@@ -1181,6 +1183,7 @@ export async function weekBoard(
       booked,
       capacity: trip.capacity,
       priceCents: trip.priceCents,
+      isRehearsal: trip.isRehearsal,
       status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",
       courseId: trip.courseId,
       diveSiteName,

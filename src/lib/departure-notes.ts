@@ -65,14 +65,23 @@ export type DepartureNoteBlock = "cancelled" | "past" | "limit";
  * Why this departure takes no note now, or null when it does. A cancelled
  * departure has its own messages (the blow-out, the cancellation), and one
  * that has sailed has nobody left to tell where to park.
+ *
+ * A multi-day course has sailed when its **last** day has (#2393): after day
+ * one its students still have days two and three to turn up for, and those
+ * are the people a "parking moved" note is for. `lastDayStartsAt` is that
+ * day's start; absent or earlier, the departure's own start decides.
  */
 export function departureNoteBlock(
-  trip: { status: string; startsAt: Date },
+  trip: { status: string; startsAt: Date; lastDayStartsAt?: Date | null },
   sentSoFar: number,
   now: Date,
 ): DepartureNoteBlock | null {
   if (trip.status !== "scheduled") return "cancelled";
-  if (hasSailed(trip.startsAt, now)) return "past";
+  const lastStart =
+    trip.lastDayStartsAt && trip.lastDayStartsAt.getTime() > trip.startsAt.getTime()
+      ? trip.lastDayStartsAt
+      : trip.startsAt;
+  if (hasSailed(lastStart, now)) return "past";
   if (sentSoFar >= DEPARTURE_NOTES_PER_DEPARTURE) return "limit";
   return null;
 }

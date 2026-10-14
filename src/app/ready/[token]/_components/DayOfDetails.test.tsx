@@ -5,18 +5,7 @@ import type { ReadyPageData } from "@/db/ready";
 import { diverTranslator } from "@/i18n/messages";
 import { DayOfDetails } from "./DayOfDetails";
 
-vi.mock("../day-of-actions", () => {
-  const action = async () => {};
-  return {
-    saveDiveIntentFromReady: action,
-    saveDiveRecencyFromReady: action,
-    saveHelpRequestFromReady: action,
-    saveHotelPickupLocationFromReady: action,
-    saveNoteFromReady: action,
-    saveReEntryAskFromReady: action,
-    saveWelcomeConsentFromReady: action,
-  };
-});
+vi.mock("../day-of-actions", () => ({ saveDayOfDetailsFromReady: async () => {} }));
 
 const t = diverTranslator("en-US");
 
@@ -42,17 +31,44 @@ describe("the day-of step asks a seat only what fits it (ADR 20261007-participan
   // Regression (dive-domain review, PR #2224): a rider's trip prep asked
   // "When did you last dive?" and what the dive was for.
   it("asks a diver when they last dived", () => {
-    render(<DayOfDetails token="tok" data={data("diver")} t={t} />);
+    render(<DayOfDetails token="tok" data={data("diver")} saved={false} t={t} />);
     expect(screen.getByLabelText(t("ready.lastDivedHeading"))).toBeInTheDocument();
   });
 
   it("never asks a rider or a snorkeler about diving, and still offers the pickup", () => {
     for (const type of ["rider", "snorkeler"] as const) {
-      render(<DayOfDetails token="tok" data={data(type)} t={t} />);
+      render(<DayOfDetails token="tok" data={data(type)} saved={false} t={t} />);
       expect(screen.queryByLabelText(t("ready.lastDivedHeading"))).toBeNull();
       expect(screen.queryByLabelText(t("ready.intentHeading"))).toBeNull();
       expect(screen.getByText(t("ready.hotelPickupLabel"))).toBeInTheDocument();
       cleanup();
     }
+  });
+});
+
+/**
+ * **One form, one Save** (third UX review, item 24): six questions used to be
+ * six forms, and only the last Save tapped kept its answer.
+ */
+describe("the day-of step saves as one", () => {
+  it("asks every question inside one form, under one Save", () => {
+    const { container } = render(
+      <DayOfDetails
+        token="tok"
+        data={{ ...data("diver"), welcomeOffer: { kind: "first_trip" } } as ReadyPageData}
+        saved={false}
+        t={t}
+      />,
+    );
+    expect(container.querySelectorAll("form")).toHaveLength(1);
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Save day-of details" })).toBeInTheDocument();
+    // The welcome word is a box in the same form now, not a button of its own.
+    expect(screen.getByRole("checkbox", { name: "Yes, tell the crew" })).not.toBeChecked();
+  });
+
+  it("says Saved. in the step itself after a save", () => {
+    render(<DayOfDetails token="tok" data={data("diver")} saved t={t} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Saved.");
   });
 });

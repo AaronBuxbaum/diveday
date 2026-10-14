@@ -20,6 +20,7 @@ vi.mock("@/db/booking-capabilities", () => ({
 vi.mock("@/db/ready", () => ({ getReadyPageData: db.getReadyPageData }));
 vi.mock("@/db/payments", () => ({ getBookingPayment: db.getBookingPayment }));
 vi.mock("@/db/shops", () => ({ getShopById: db.getShopById }));
+vi.mock("@/db/series-next", () => ({ nextPublicTripInSeries: async () => null }));
 vi.mock("@/i18n/request", () => ({ requestLocale: async () => "en-US" }));
 vi.mock("./ExpiredLink", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./ExpiredLink")>()),
@@ -43,8 +44,13 @@ describe("readyDeadLink", () => {
   it("confirms the diver's own cancel from the booking's payment row", async () => {
     db.resolveRevokedBookingCapability.mockResolvedValue({ bookingId: "b1" });
     db.getReadyPageData.mockResolvedValue({
-      detail: { cancelled: true, trip: { title: "Two-Tank Reef" }, shop: { name: "Blue Mantis" } },
-      shop: { id: "s1" },
+      detail: {
+        cancelled: true,
+        trip: { title: "Two-Tank Reef" },
+        shop: { name: "Blue Mantis", timezone: "America/New_York" },
+      },
+      trip: { id: "t1" },
+      shop: { id: "s1", slug: "blue-mantis" },
     });
     db.getBookingPayment.mockResolvedValue(null);
     await show("1");

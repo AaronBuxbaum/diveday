@@ -152,7 +152,7 @@ describe("getTripOverview", () => {
       if (!seated.ok) throw new Error("could not seat a rider");
       const after = await overviewFor(ctx);
       expect(after.trip.booked).toBe(before.trip.booked + 1);
-      expect(after.pulse.prepGaps).toBe(before.pulse.prepGaps);
+      expect(after.pulse.work.missingFit).toBe(before.pulse.work.missingFit);
     });
   });
 
@@ -192,7 +192,11 @@ describe("getTripOverview", () => {
         new Date(endsAt + 61 * 60_000),
       );
       expect(home?.pulseNeeded).toBe(false);
-      expect(home?.pulse).toEqual({ blocked: 0, prepGaps: 0, boarded: 0, openOrders: 0 });
+      expect(home?.pulse).toEqual({
+        blocked: 0,
+        boarded: 0,
+        work: { missingFit: 0, ungatedNitrox: 0, missingContact: 0, openOrders: 0 },
+      });
     });
   });
 

@@ -1,10 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { assembleEveningClose } from "@/lib/closeout";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { fileScopedShopContext } from "@/test/db";
 import { standingArrivalStatus } from "./arrival-provenance";
+import type { AppDb } from "./client";
 import { getDayCloseout, listHeadCountCloses } from "./closeout";
 import { recordRollCall } from "./manifests";
 import { markBookingNoShow } from "./no-show";
@@ -24,6 +25,20 @@ import { recordTripStage } from "./trip-stages";
 import { listStaff } from "./trips";
 
 const HOUR = 60 * 60 * 1000;
+
+/**
+ * The seed counts the finished dawn boat's crew at every checkpoint (UX review
+ * 2026-10-13, item 40). The tests that need a crew nobody has counted yet
+ * start by taking that record back off, inside their own rolled-back
+ * transaction.
+ */
+async function uncountDawnBoatCrew(db: AppDb, shopId: string): Promise<void> {
+  const [dawn] = await db
+    .select({ id: tripsTable.id })
+    .from(tripsTable)
+    .where(and(eq(tripsTable.shopId, shopId), eq(tripsTable.title, DEMO_COMPLETED_TRIP_TITLE)));
+  if (dawn) await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, dawn.id));
+}
 
 describe("day close-out (in-memory PGlite)", () => {
   // One hydration for the file, one rolled-back transaction per test. Every
@@ -149,6 +164,7 @@ describe("day close-out (in-memory PGlite)", () => {
   describe("the crew the evening counts", () => {
     const crewOfCompletedTrip = async () => {
       const { db, shop } = shared;
+      await uncountDawnBoatCrew(db, shop.id);
       const now = new Date(nowMs() + HOUR);
       const state = await getDayCloseout(db, shop.id, shop.timezone, now);
       const completed = state.departures.find(
@@ -167,8 +183,8 @@ describe("day close-out (in-memory PGlite)", () => {
 
       expect(completed.crew).toHaveLength(assigned.length);
       expect(assigned.length).toBeGreaterThan(0);
-      // No seed writes a `roll_call_crew_events` row, so absence is what the
-      // evening sees — and absence is awaiting, never accounted for.
+      // With the seeded crew count taken off, absence is what the evening
+      // sees, and absence is awaiting, never accounted for.
       expect(completed.crew.every((member) => member.rollCall === undefined)).toBe(true);
       expect(assembleEveningClose([completed]).allHome).toBe(false);
     });
@@ -249,6 +265,7 @@ describe("day close-out (in-memory PGlite)", () => {
   describe("the head count's close", () => {
     const closingFixture = async () => {
       const { db, shop } = shared;
+      await uncountDawnBoatCrew(db, shop.id);
       const now = new Date(nowMs() + HOUR);
       const state = await getDayCloseout(db, shop.id, shop.timezone, now);
       const completed = state.departures.find(
@@ -274,25 +291,30 @@ describe("day close-out (in-memory PGlite)", () => {
       const closing = rollCallCheckpoints(completed.plannedDives).at(-1) ?? "departure";
       // Later than anything the seed wrote, so these two marks are the last.
       const late = (minutes: number) => new Date(completed.endsAt.getTime() + minutes * 60_000);
-      const diverMark = (occurredAt: Date, createdAt?: Date) =>
+      type MarkOptions = {
+        checkpoint?: string;
+        status?: "boarded" | "not_boarded" | "cleared";
+        recordedBy?: string;
+      };
+      const diverMark = (occurredAt: Date, createdAt?: Date, options: MarkOptions = {}) =>
         db.insert(rollCallEvents).values({
           shopId: shop.id,
           tripId: completed.tripId,
           bookingId: seat.id,
-          recordedByPersonId: diverMarker.person.id,
-          status: "boarded",
-          checkpoint: closing,
+          recordedByPersonId: options.recordedBy ?? diverMarker.person.id,
+          status: options.status ?? "boarded",
+          checkpoint: options.checkpoint ?? closing,
           occurredAt,
           ...(createdAt ? { createdAt } : {}),
         });
-      const crewMark = (occurredAt: Date, createdAt?: Date) =>
+      const crewMark = (occurredAt: Date, createdAt?: Date, options: MarkOptions = {}) =>
         db.insert(rollCallCrewEvents).values({
           shopId: shop.id,
           tripId: completed.tripId,
           personId: crew.personId,
-          recordedByPersonId: crewMarker.person.id,
-          status: "boarded",
-          checkpoint: closing,
+          recordedByPersonId: options.recordedBy ?? crewMarker.person.id,
+          status: options.status ?? "boarded",
+          checkpoint: options.checkpoint ?? closing,
           occurredAt,
           ...(createdAt ? { createdAt } : {}),
         });
@@ -365,6 +387,51 @@ describe("day close-out (in-memory PGlite)", () => {
         closedAt: late(60),
         closedBy: crewMarker.person.fullName,
       });
+    });
+
+    /**
+     * **The close is the final checkpoint's, not the last mark anywhere**
+     * (#2536). A mis-tap fixed on the dock checkpoint at 4:10 by the office
+     * manager, or a retraction, says nothing about who closed the final head
+     * count or when.
+     */
+    it("ignores a later correction on an earlier checkpoint", async () => {
+      const { diverMarker, crewMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await crewMark(late(55));
+      await diverMark(late(60));
+      await diverMark(late(130), undefined, {
+        checkpoint: "departure",
+        recordedBy: crewMarker.person.id,
+      });
+      await crewMark(late(140), undefined, {
+        checkpoint: "departure",
+        recordedBy: diverMarker.person.id,
+      });
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: diverMarker.person.fullName });
+      expect(await read(false)).toEqual({
+        closedAt: late(60),
+        closedBy: diverMarker.person.fullName,
+      });
+    });
+
+    it("ignores a retraction on an earlier checkpoint", async () => {
+      const { diverMarker, crewMarker, late, diverMark, read } = await closingFixture();
+      await diverMark(late(60));
+      await diverMark(late(130), undefined, {
+        checkpoint: "departure",
+        status: "cleared",
+        recordedBy: crewMarker.person.id,
+      });
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: diverMarker.person.fullName });
+    });
+
+    it("never counts a retraction at the final checkpoint as the close", async () => {
+      const { diverMarker, crewMarker, late, diverMark, crewMark, read } = await closingFixture();
+      await crewMark(late(55));
+      await diverMark(late(60));
+      await diverMark(late(70), undefined, { status: "cleared", recordedBy: crewMarker.person.id });
+      await crewMark(late(75), undefined, { status: "cleared", recordedBy: diverMarker.person.id });
+      expect(await read()).toEqual({ closedAt: late(60), closedBy: diverMarker.person.fullName });
     });
 
     it("never reads another shop's marks", async () => {

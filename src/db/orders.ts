@@ -1284,6 +1284,35 @@ export async function countOpenTripOrders(
 }
 
 /**
+ * Open orders on the given seats, in one read keyed by their departure: the
+ * boat's work (`src/db/boat-work.ts`) asks it for every departure on Today and
+ * for the one the trip page opens, so the two can never count a boat's open
+ * orders differently. Keyed by seat rather than by trip so it counts the same
+ * seats as the boat's other work, which leaves out a cancelled seat's unpaid
+ * invoice (layer 1 review, finding 3). One `shopOrderWhere`, the index's own
+ * joins; a trip with none is absent from the map.
+ */
+export async function countOpenOrdersBySeat(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (bookingIds.length === 0) return counts;
+  const rows = await db
+    .select({ tripId: bookings.tripId, total: count() })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .innerJoin(bookings, eq(bookings.id, orders.bookingId))
+    .where(
+      and(shopOrderWhere(shopId, { status: "open" }), inArray(orders.bookingId, [...bookingIds])),
+    )
+    .groupBy(bookings.tripId);
+  for (const row of rows) if (row.tripId) counts.set(row.tripId, row.total);
+  return counts;
+}
+
+/**
  * The same count for any one status, built from the same `shopOrderWhere` as
  * the index it would link to. The schedule builder's move preview asks it for
  * `paid`, to say what money is already standing against a departure whose date

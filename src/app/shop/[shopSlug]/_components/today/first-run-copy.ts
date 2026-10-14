@@ -36,6 +36,11 @@ export function firstRunChecklistCopy(
       depth: t(
         shop.depthUnit === "feet" ? "shopHome.firstRun.unitsFeet" : "shopHome.firstRun.unitsMeters",
       ),
+      temperature: t(
+        shop.temperatureUnit === "fahrenheit"
+          ? "shopHome.firstRun.unitsFahrenheit"
+          : "shopHome.firstRun.unitsCelsius",
+      ),
     }),
     unitsAction: t("shopHome.firstRun.unitsAction"),
     unitsDone: t("shopHome.firstRun.unitsDone"),

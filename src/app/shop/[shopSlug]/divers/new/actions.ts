@@ -22,6 +22,9 @@ const newDiverContextForm = z.object({
   surface: z.string().optional(),
   tripId: z.string().optional(),
   waitlist: z.string().optional(),
+  // The date request a booking door was opened from; carried back so the seat
+  // that answers it can close it (third UX review, item 13).
+  request: z.string().optional(),
   force: z.string().optional(),
 });
 
@@ -81,6 +84,7 @@ export async function createDiverFormAction(formData: FormData) {
       if (activeSurface) search.surface = activeSurface;
       if (activeTripId) search.tripId = activeTripId;
       if (activeWaitlist) search.waitlist = "true";
+      if (context.request) search.request = context.request;
       redirect(buildNewDiverUrl(search));
     }
   }

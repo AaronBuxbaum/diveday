@@ -338,7 +338,7 @@ describe("DiverList ledger", () => {
   /**
    * **The slice's pin.** A diver with nothing outstanding wears no pill at all
    * — not "Certified", not "Ready", not a level. The roster used to badge
-   * every row of the "Needs attention" view with the very count that view is
+   * every row of the "Needs you" view with the very count that view is
    * *made* of, which is the same fact at two volumes (principle 9).
    */
   it("carries no badge on a clear diver's row", () => {
@@ -451,7 +451,7 @@ describe("DiverList roster views", () => {
     ).toEqual([
       ["All divers", "/shop/blue-mantis/divers"],
       ["Diving today", "/shop/blue-mantis/divers?filter=diving_today"],
-      ["Needs attention", "/shop/blue-mantis/divers?filter=needs_attention"],
+      ["Needs you", "/shop/blue-mantis/divers?filter=needs_attention"],
       ["Missing contact", "/shop/blue-mantis/divers?filter=missing_contact"],
       // Last, and apart from the three: not a question about today, but the
       // only way to find a diver somebody removed.
@@ -467,7 +467,7 @@ describe("DiverList roster views", () => {
     expect([...views.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
       "All divers",
       "Diving today",
-      "Needs attention",
+      "Needs you",
       "Missing contact",
     ]);
   });
@@ -528,7 +528,7 @@ describe("DiverList removed view", () => {
 
   it("keeps the search on when a view chip is followed", () => {
     renderList({ query: "nadia" });
-    expect(screen.getByRole("link", { name: "Needs attention" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Needs you" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers?q=nadia&filter=needs_attention",
     );
@@ -547,7 +547,7 @@ describe("DiverList removed view", () => {
       renderList({ filter: "diving_today" });
       const input = screen.getByRole("searchbox", { name: "Search divers" });
       fireEvent.change(input, { target: { value: "priya" } });
-      fireEvent.click(screen.getByRole("link", { name: "Needs attention" }));
+      fireEvent.click(screen.getByRole("link", { name: "Needs you" }));
       act(() => {
         vi.advanceTimersByTime(1000);
       });

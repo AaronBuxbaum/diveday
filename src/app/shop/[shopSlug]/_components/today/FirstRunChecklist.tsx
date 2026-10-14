@@ -319,14 +319,16 @@ export function FirstRunChecklist({
             <p className="mt-0.5 text-sm text-muted">{copy.scheduleBody}</p>
             {/* The address as a short door, not a URL in prose (UX review
                 2026-10-10, item 29): the path names the page, the copy control
-                beside it carries the whole address. */}
+                beside it carries the whole address. The 44px floor overhangs
+                the line (`-my-3`), so the target costs the row no height; the
+                inner span truncates, since a flex box cannot (#2405). */}
             <a
               href={scheduleUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-1 block max-w-full truncate font-mono text-xs text-muted underline-offset-2 hover:underline"
+              className="-my-3 flex min-h-11 max-w-full items-center pt-1 font-mono text-xs text-muted underline-offset-2 hover:underline"
             >
-              {schedulePathOf(scheduleUrl)}
+              <span className="truncate">{schedulePathOf(scheduleUrl)}</span>
             </a>
           </div>
         </LedgerRow>

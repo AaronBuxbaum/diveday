@@ -848,7 +848,13 @@ export async function getDiverProfile(
     waiver: shopWaiverStatus({
       personSignedWaivers: signedWaivers.get(personId) ?? [],
       currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
-      signer: { dateOfBirth: personRow.person.dateOfBirth, timezone: shopTimezone },
+      // Person-scoped: no seat in hand, so no booker's "Under 18" (a seat's
+      // own readiness reads it).
+      signer: {
+        dateOfBirth: personRow.person.dateOfBirth,
+        minorDeclared: false,
+        timezone: shopTimezone,
+      },
     }),
     waiverRequest,
     /**
