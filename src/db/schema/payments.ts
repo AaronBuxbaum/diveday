@@ -545,8 +545,9 @@ export const orderStatus = pgEnum("order_status", [
  * How an order's money was taken (ADR 20261009-counter-payments).
  * `stripe_invoice` is the ordinary path: a Stripe invoice on the shop's
  * connected account, settled by webhook. `cash` and `card_machine` are paid at
- * the counter outside Stripe and recorded already paid; such an order carries
- * no Stripe ids, and every Stripe operation refuses it.
+ * the counter outside Stripe and recorded paid; such an order carries no
+ * Stripe ids unless it settled an invoice already sent, and every Stripe
+ * operation refuses it either way.
  */
 export const orderCollection = pgEnum("order_collection", [
   "stripe_invoice",
@@ -672,9 +673,16 @@ export const orders = pgTable(
     check("orders_tax_nonnegative", sql`${table.taxCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
     check("orders_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
+    /**
+     * A Stripe invoice carries all three ids. Money taken at the counter
+     * carries none, or, when it settled an invoice already sent (fourth UX
+     * review, item 19), that invoice's three ids and never a PaymentIntent:
+     * Stripe took no card for it. The ids stay so diver erasure still files
+     * the Stripe customer's deletion request (`src/db/anonymize.ts`).
+     */
     check(
       "orders_stripe_ids_match_collection",
-      sql`(${table.collection} = 'stripe_invoice' and ${table.stripeAccountId} is not null and ${table.stripeCustomerId} is not null and ${table.stripeInvoiceId} is not null) or (${table.collection} <> 'stripe_invoice' and ${table.stripeAccountId} is null and ${table.stripeCustomerId} is null and ${table.stripeInvoiceId} is null and ${table.stripePaymentIntentId} is null)`,
+      sql`(${table.collection} = 'stripe_invoice' and ${table.stripeAccountId} is not null and ${table.stripeCustomerId} is not null and ${table.stripeInvoiceId} is not null) or (${table.collection} <> 'stripe_invoice' and ${table.stripePaymentIntentId} is null and ((${table.stripeAccountId} is null and ${table.stripeCustomerId} is null and ${table.stripeInvoiceId} is null) or (${table.stripeAccountId} is not null and ${table.stripeCustomerId} is not null and ${table.stripeInvoiceId} is not null)))`,
     ),
   ],
 );

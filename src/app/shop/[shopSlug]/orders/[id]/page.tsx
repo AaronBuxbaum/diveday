@@ -22,7 +22,11 @@ import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { PaidAtCounterLine, VoidCounterOrderForm } from "./_components/CounterPayment";
+import {
+  PaidAtCounterLine,
+  RecordPaymentForm,
+  VoidCounterOrderForm,
+} from "./_components/CounterPayment";
 import { DisabledDemoButton } from "./_components/DisabledDemoButton";
 import { OrderBookingLine } from "./_components/OrderBookingLine";
 import { OrderDisputeBanner, OrderMeta } from "./_components/OrderMeta";
@@ -255,6 +259,11 @@ export default async function OrderDetailPage({
             demo ? (
               <>
                 <DisabledDemoButton
+                  label={t("orders.detail.recordPayment.label")}
+                  hint={demoActionHint}
+                  variant="secondary"
+                />
+                <DisabledDemoButton
                   label={t("orders.detail.refreshStatus")}
                   hint={demoActionHint}
                   variant="secondary"
@@ -267,6 +276,9 @@ export default async function OrderDetailPage({
               </>
             ) : (
               <>
+                {/* Money that came over the counter for an invoice already
+                    sent (fourth UX review, item 19). */}
+                <RecordPaymentForm orderId={order.order.id} t={t} />
                 <form action={refreshAction}>
                   <input type="hidden" name="orderId" value={order.order.id} />
                   <SubmitButton

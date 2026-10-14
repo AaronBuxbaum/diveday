@@ -922,6 +922,6 @@ describe("the day ledger", () => {
     // Two of the three orders are Thursday's in New York; the 02:00Z one is
     // Wednesday evening there, and its money belongs to Wednesday.
     expect(thursday?.rows).toHaveLength(2);
-    expect(thursday?.meta).toBe("2 orders · $268.00");
+    expect(thursday?.meta).toBe("2 entries · $268.00");
   });
 });

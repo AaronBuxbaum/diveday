@@ -512,6 +512,9 @@ describe("invoice.* hostile sequences (real handlers, real db)", () => {
           taxCents: 0,
         };
       },
+      async markInvoicePaidOutOfBand() {
+        return { status: "paid" as const };
+      },
       async voidInvoice() {
         return { status: "voided" as const };
       },
@@ -776,6 +779,9 @@ describe("charge.refunded hostile sequences (real handlers, real db)", () => {
             taxCents: 0,
           };
         },
+        async markInvoicePaidOutOfBand() {
+          return { status: "paid" as const };
+        },
         async voidInvoice() {
           return { status: "voided" as const };
         },
@@ -859,6 +865,9 @@ describe("charge.refunded hostile sequences (real handlers, real db)", () => {
       {
         async createInvoice() {
           return { status: "failed" as const };
+        },
+        async markInvoicePaidOutOfBand() {
+          return { status: "paid" as const };
         },
         async voidInvoice() {
           return { status: "failed" as const };

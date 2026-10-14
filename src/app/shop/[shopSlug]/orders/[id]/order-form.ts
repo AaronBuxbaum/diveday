@@ -10,6 +10,7 @@ import { uuidParam } from "@/lib/uuid";
 const orderForm = z.object({
   orderId: z.string().default(""),
   amountMajor: z.string().optional(),
+  collection: z.string().optional(),
 });
 
 /** The posted order id narrowed to a uuid, or "" — never a 500 on junk. */
@@ -29,4 +30,14 @@ export function postedRefundAmount(formData: FormData): string | null {
   if (!parsed.ok) return null;
   const typed = (parsed.data.amountMajor ?? "").trim();
   return typed && !Number.isFinite(Number(typed)) ? null : typed;
+}
+
+/**
+ * How counter money was taken, from the Record payment buttons: `cash` or
+ * `card_machine`, and nothing else; anything else is `null` and refused.
+ */
+export function postedCollection(formData: FormData): "cash" | "card_machine" | null {
+  const parsed = parseForm(orderForm, formData);
+  const value = parsed.ok ? parsed.data.collection : undefined;
+  return value === "cash" || value === "card_machine" ? value : null;
 }

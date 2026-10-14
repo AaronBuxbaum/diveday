@@ -17,8 +17,13 @@ import {
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
 import { createGearItem } from "./gear";
-import { markOrderVoidedByInvoiceId } from "./orders";
-import { customerGearItems, customerGearNotices, people, shops } from "./schema";
+import {
+  markOrderPaidByInvoiceId,
+  markOrderVoidedByInvoiceId,
+  recordPaymentOnOpenOrder,
+  refundOrder,
+} from "./orders";
+import { customerGearItems, customerGearNotices, orders, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   billWorkOrder,
@@ -27,6 +32,7 @@ import {
   latestReadyNotice,
   listWorkOrdersNeedingAttention,
   piecesWithRemindersOff,
+  recordWorkOrderCounterPayment,
   sendDueServiceReminders,
   sendWorkOrderReadyNotice,
   setCustomerGearReminders,
@@ -346,6 +352,9 @@ function fakeInvoicing(): InvoicingProvider & { created: CreateInvoiceRequest[] 
         ),
         taxCents: 0,
       };
+    },
+    async markInvoicePaidOutOfBand() {
+      return { status: "paid" as const };
     },
     async voidInvoice() {
       return { status: "voided" };
@@ -725,5 +734,165 @@ describe("what Today asks about the bench", () => {
       [late.workOrder.id, "past_promise"],
       [ready.id, "uncollected"],
     ]);
+  });
+});
+
+/**
+ * Money taken at the counter for a bench job or an invoice already sent
+ * (fourth UX review, item 19; ADR 20261009-counter-payments, amended
+ * 2026-10-14).
+ */
+describe("recording a payment taken at the counter", () => {
+  it("records cash at pickup as the ticket's paid bill, by any staff, once", async () => {
+    const { db, shop, ticket } = await billingContext();
+    const captain = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
+    const record = () =>
+      recordWorkOrderCounterPayment(db, {
+        shopId: shop.id,
+        workOrderId: ticket.id,
+        actorPersonId: captain,
+        collection: "cash",
+        description: "Service ticket",
+        lineItems: LINES,
+      });
+
+    expect((await record()).ok).toBe(true);
+    const bill = await getWorkOrderBill(db, shop.id, ticket.id);
+    expect(bill).toMatchObject({
+      status: "paid",
+      collection: "cash",
+      totalCents: 11_500,
+      amountPaidCents: 11_500,
+    });
+    expect(await record()).toEqual({ ok: false, reason: "already_billed" });
+  });
+
+  it("refuses someone who is not staff here", async () => {
+    const { db, shop, ticket, maya } = await billingContext();
+    expect(
+      await recordWorkOrderCounterPayment(db, {
+        shopId: shop.id,
+        workOrderId: ticket.id,
+        actorPersonId: maya.id,
+        collection: "card_machine",
+        description: "Service ticket",
+        lineItems: LINES,
+      }),
+    ).toEqual({ ok: false, reason: "invalid" });
+    expect(await getWorkOrderBill(db, shop.id, ticket.id)).toBeNull();
+  });
+
+  it("settles an open invoice in cash, tells Stripe first, and keeps Stripe's ids", async () => {
+    const { db, shop, owner, ticket } = await billingContext();
+    const captain = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
+    const marked: string[] = [];
+    const invoicing = {
+      ...fakeInvoicing(),
+      async markInvoicePaidOutOfBand(_account: string, invoiceId: string) {
+        marked.push(invoiceId);
+        return { status: "paid" as const };
+      },
+    };
+    const billed = await billWorkOrder(
+      db,
+      {
+        shopId: shop.id,
+        workOrderId: ticket.id,
+        actorPersonId: owner,
+        description: "Service ticket",
+        lineItems: LINES,
+      },
+      invoicing,
+    );
+    if (!billed.ok) throw new Error("bill not sent");
+
+    const outcome = await recordPaymentOnOpenOrder(
+      db,
+      { shopId: shop.id, orderId: billed.orderId, actorPersonId: captain, collection: "cash" },
+      invoicing,
+    );
+    expect(outcome.ok).toBe(true);
+    const [order] = await db.select().from(orders).where(eq(orders.id, billed.orderId));
+    expect(order).toMatchObject({ status: "paid", collection: "cash", amountPaidCents: 11_500 });
+    expect(order?.paidAt).not.toBeNull();
+    // Kept, so erasure still files the Stripe customer's deletion request.
+    expect(order?.stripeCustomerId).not.toBeNull();
+    expect(marked).toEqual([order?.stripeInvoiceId]);
+
+    // The `invoice.paid` the out-of-band mark sends back changes nothing.
+    await markOrderPaidByInvoiceId(db, order?.stripeInvoiceId ?? "", 0, "acct_bench");
+    const [after] = await db.select().from(orders).where(eq(orders.id, billed.orderId));
+    expect(after?.amountPaidCents).toBe(11_500);
+    // And no Stripe refund can reach money Stripe never took.
+    expect((await refundOrder(db, shop.id, billed.orderId, invoicing)).status).toBe("not_invoiced");
+    expect(await getWorkOrderBill(db, shop.id, ticket.id)).toMatchObject({
+      status: "paid",
+      collection: "cash",
+    });
+  });
+
+  it("records nothing when Stripe will not mark the invoice paid", async () => {
+    const { db, shop, owner, ticket } = await billingContext();
+    const invoicing = {
+      ...fakeInvoicing(),
+      async markInvoicePaidOutOfBand() {
+        return { status: "failed" as const };
+      },
+    };
+    const billed = await billWorkOrder(
+      db,
+      {
+        shopId: shop.id,
+        workOrderId: ticket.id,
+        actorPersonId: owner,
+        description: "Service ticket",
+        lineItems: LINES,
+      },
+      invoicing,
+    );
+    if (!billed.ok) throw new Error("bill not sent");
+    expect(
+      await recordPaymentOnOpenOrder(
+        db,
+        { shopId: shop.id, orderId: billed.orderId, actorPersonId: owner, collection: "cash" },
+        invoicing,
+      ),
+    ).toEqual({ ok: false, reason: "stripe_refused" });
+    const [order] = await db.select().from(orders).where(eq(orders.id, billed.orderId));
+    expect(order).toMatchObject({ status: "open", collection: "stripe_invoice" });
+  });
+
+  it("refuses another shop's order and anyone who is not staff", async () => {
+    const { db, shop, owner, ticket, maya } = await billingContext();
+    const invoicing = fakeInvoicing();
+    const billed = await billWorkOrder(
+      db,
+      {
+        shopId: shop.id,
+        workOrderId: ticket.id,
+        actorPersonId: owner,
+        description: "Service ticket",
+        lineItems: LINES,
+      },
+      invoicing,
+    );
+    if (!billed.ok) throw new Error("bill not sent");
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Divers", slug: "bench-other-shop", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("shop insert failed");
+    for (const attempt of [
+      { shopId: other.id, actorPersonId: owner },
+      { shopId: shop.id, actorPersonId: maya.id },
+    ]) {
+      expect(
+        await recordPaymentOnOpenOrder(
+          db,
+          { ...attempt, orderId: billed.orderId, collection: "cash" },
+          invoicing,
+        ),
+      ).toEqual({ ok: false, reason: "invalid" });
+    }
   });
 });

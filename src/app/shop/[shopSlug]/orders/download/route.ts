@@ -1,6 +1,7 @@
 import { getDb } from "@/db/client";
-import { listOrderLinesForExport } from "@/db/order-export";
+import { listOrderLinesForExport, ORDER_EXPORT_MAX_LINES } from "@/db/order-export";
 import { canPersonViewShopReports } from "@/db/reporting";
+import { listSeatPaymentsForExport } from "@/db/seat-payments";
 import { getShopById } from "@/db/shops";
 import { nowDate } from "@/lib/clock";
 import { exportDateStamp } from "@/lib/export";
@@ -48,9 +49,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ shop
     shop.timezone,
     now,
   );
-  const lines = await listOrderLinesForExport(db, shop.id, filter);
+  // The seats divers paid for online ride beside the orders (fourth UX review,
+  // item 18), under the same filter, so the file matches the ledger on screen.
+  const [lines, seats] = await Promise.all([
+    listOrderLinesForExport(db, shop.id, filter),
+    listSeatPaymentsForExport(db, shop.id, filter, ORDER_EXPORT_MAX_LINES),
+  ]);
   const fileName = `diveday-orders-${shop.slug}-${exportDateStamp(now, shop.timezone)}.csv`;
-  return new Response(ordersCsv(lines, shop.timezone), {
+  return new Response(ordersCsv(lines, seats, shop.timezone), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fileName}"`,

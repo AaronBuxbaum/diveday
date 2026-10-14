@@ -110,6 +110,13 @@ export type InvoiceLookupResult =
   | { status: "failed" };
 
 export type VoidInvoiceResult = { status: "voided" | "not_configured" | "failed" };
+/**
+ * `paid` — Stripe now holds the invoice as paid outside Stripe and will not ask
+ * the diver for it again. `failed` — Stripe refused, most often because the
+ * diver paid it online in the meantime; the caller reads the invoice back
+ * rather than recording money twice.
+ */
+export type MarkInvoicePaidResult = { status: "paid" | "not_configured" | "failed" };
 export type ResendInvoiceResult = { status: "sent" | "not_configured" | "failed" };
 export type RefundInvoiceResult = {
   status: "refunded" | "not_configured" | "not_refundable" | "failed";
@@ -127,6 +134,16 @@ export type RefundInvoiceResult = {
 export interface InvoicingProvider {
   createInvoice(request: CreateInvoiceRequest): Promise<CreateInvoiceResult>;
   voidInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<VoidInvoiceResult>;
+  /**
+   * Marks an open invoice paid out of band: the money came at the counter, in
+   * cash or on the shop's own card machine (fourth UX review, item 19). Stripe
+   * stops collecting it, so the diver's hosted invoice reads paid and no
+   * reminder asks them a second time.
+   */
+  markInvoicePaidOutOfBand(
+    stripeAccountId: string,
+    stripeInvoiceId: string,
+  ): Promise<MarkInvoicePaidResult>;
   /**
    * Re-sends the email for an invoice already created and finalized (the
    * same `/send` call `createInvoice` makes best-effort on the way out) —
@@ -418,6 +435,20 @@ export function stripeInvoicingProvider(
       }
     },
 
+    async markInvoicePaidOutOfBand(stripeAccountId, stripeInvoiceId) {
+      try {
+        const response = await post(
+          stripeAccountId,
+          `/invoices/${stripeInvoiceId}/pay`,
+          new URLSearchParams({ paid_out_of_band: "true" }),
+        );
+        return { status: response.ok ? "paid" : "failed" };
+      } catch (error) {
+        logStripeRequestThrew("mark_invoice_paid_out_of_band", error);
+        return { status: "failed" };
+      }
+    },
+
     async resendInvoice(stripeAccountId, stripeInvoiceId) {
       try {
         const response = await post(
@@ -501,6 +532,9 @@ const disabledInvoicingProvider: InvoicingProvider = {
     return { status: "not_configured" };
   },
   async voidInvoice() {
+    return { status: "not_configured" };
+  },
+  async markInvoicePaidOutOfBand() {
     return { status: "not_configured" };
   },
   async resendInvoice() {

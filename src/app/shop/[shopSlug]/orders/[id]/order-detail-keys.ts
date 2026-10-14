@@ -52,4 +52,7 @@ export const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }>
   },
   "not-authorized": { tone: "danger", key: "orders.detail.notice.notAuthorized" },
   "demo-disabled": { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
+  "payment-recorded": { tone: "success", key: "orders.detail.notice.paymentRecorded" },
+  "payment-stripe-refused": { tone: "warning", key: "orders.detail.notice.paymentStripeRefused" },
+  "payment-record-failed": { tone: "danger", key: "orders.detail.notice.paymentRecordFailed" },
 };

@@ -13,6 +13,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { unionAll } from "drizzle-orm/pg-core";
 import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -59,6 +60,7 @@ import {
   personRoles,
   trips,
 } from "./schema";
+import { type SeatPaymentRow, seatLedgerEntries, seatPaymentsByIds } from "./seat-payments";
 import {
   canAcceptPayments,
   demoShopBillingAddress,
@@ -491,8 +493,12 @@ const COUNTER_COLLECTIONS: ReadonlySet<string> = new Set<CounterCollection>([
   "card_machine",
 ]);
 
-/** The line kinds a counter order may carry. */
-const COUNTER_LINE_KINDS: ReadonlySet<string> = new Set(["rental"]);
+/**
+ * The line kinds a counter order may carry: a rental, and the parts and labor
+ * of a bench job paid at pickup (`recordWorkOrderCounterPayment`), which bills
+ * as `other` exactly as its Stripe bill does.
+ */
+const COUNTER_LINE_KINDS: ReadonlySet<string> = new Set(["rental", "other"]);
 
 /**
  * Record money a shop has already taken at the counter, in cash or on its own
@@ -616,6 +622,129 @@ export async function recordCounterOrder(
   return { ok: true, order };
 }
 
+export type RecordPaymentOnOrderOutcome =
+  | { ok: true; order: Order }
+  | {
+      ok: false;
+      /**
+       * - `invalid` — no such open invoice here, a method that is not counter
+       *   money, or a caller who is not staff.
+       * - `stripe_refused` — Stripe would not mark the invoice paid, most often
+       *   because the diver paid it online meanwhile; Refresh shows which.
+       * - `not_configured` — no Stripe key to tell Stripe with.
+       */
+      reason: "invalid" | "stripe_refused" | "not_configured";
+    };
+
+/**
+ * **Record payment: cash / card machine** on an open order (fourth UX review,
+ * item 19; ADR 20261009-counter-payments, amended 2026-10-14). Felix walks in
+ * and pays the $340 balance the shop invoiced him; the order is still a
+ * Stripe invoice, and nothing could record that the money came over the
+ * counter.
+ *
+ * **Stripe first, then the row.** The invoice is marked paid out of band, so
+ * Stripe stops asking the diver for it and the hosted invoice reads paid; a
+ * diver who paid online a minute earlier makes Stripe refuse, and nothing here
+ * records the same money twice. Then, under the row's lock and only while it
+ * is still an open invoice, the order becomes a paid counter order: its
+ * `collection` says how the money came, `amount_paid_cents` is its total and
+ * `paid_at` is now. The Stripe ids stay, so diver erasure still files the
+ * Stripe customer's deletion request; every Stripe operation refuses the order
+ * from here on (`stripeInvoiceOf`), as it does any counter order, and the
+ * `invoice.paid` the out-of-band mark sends back changes nothing
+ * (`markOrderPaidByInvoiceId`).
+ *
+ * The booking the order was raised for is marked paid, as a settled invoice
+ * marks it, with the method as the seat's provider so the roster says it was
+ * paid at the counter. **Any active staff member may record one**, like any
+ * counter money (H-06); the caller asks for the money step-up.
+ */
+export async function recordPaymentOnOpenOrder(
+  db: AppDb,
+  input: {
+    shopId: string;
+    orderId: string;
+    actorPersonId: string;
+    collection: CounterCollection;
+  },
+  invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
+): Promise<RecordPaymentOnOrderOutcome> {
+  const invalid = { ok: false, reason: "invalid" } as const;
+  if (!COUNTER_COLLECTIONS.has(input.collection)) return invalid;
+  const roles = await loadActiveStaffRoles(db, input.shopId, input.actorPersonId);
+  if (!roles || !isStaff(roles)) return invalid;
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
+    .limit(1);
+  const invoice = order ? stripeInvoiceOf(order) : null;
+  if (order?.status !== "open" || !invoice) return invalid;
+
+  const marked = await invoicing.markInvoicePaidOutOfBand(
+    invoice.stripeAccountId,
+    invoice.stripeInvoiceId,
+  );
+  if (marked.status === "not_configured") return { ok: false, reason: "not_configured" };
+  if (marked.status !== "paid") return { ok: false, reason: "stripe_refused" };
+
+  const now = nowDate();
+  const settled = await db.transaction(async (tx) => {
+    const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).for("update");
+    if (current?.status !== "open" || current.collection !== "stripe_invoice") return null;
+    const [updated] = await tx
+      .update(orders)
+      .set({
+        status: "paid",
+        collection: input.collection,
+        amountPaidCents: current.totalCents,
+        paidAt: now,
+        updatedAt: now,
+      })
+      .where(eq(orders.id, current.id))
+      .returning();
+    if (!updated) return null;
+    if (updated.bookingId) {
+      await setBookingPaymentIfNotFinal(tx, {
+        shopId: updated.shopId,
+        bookingId: updated.bookingId,
+        status: "paid",
+        amountCents: updated.totalCents,
+        currency: updated.currency,
+        provider: input.collection,
+        // The invoice id, as a settled invoice writes it: Reports matches a
+        // seat's payment to the order that paid it by this reference.
+        providerRef: updated.stripeInvoiceId,
+        operation: "order_settled",
+      });
+    }
+    await grantPackageEntitlementsForPaidOrder(tx, {
+      shopId: updated.shopId,
+      orderId: updated.id,
+      purchasedAt: now,
+    });
+    await enqueueOrderIntegrationEvent(tx, {
+      shopId: updated.shopId,
+      orderId: updated.id,
+      eventType: "order.paid",
+      idempotencyKey: `order:${updated.id}:paid`,
+      status: updated.status,
+      amountPaidCents: updated.amountPaidCents,
+      refundedCents: updated.refundedCents,
+    });
+    return updated;
+  });
+  if (!settled) {
+    // Stripe holds the invoice paid and the row moved on without us: a
+    // webhook settled it, or a second tap won the lock. Logged, never thrown;
+    // the page reads the order as it now stands.
+    log("order.counter_settle_lost_race", "warn", { orderId: order.id, shopId: order.shopId });
+    return invalid;
+  }
+  return { ok: true, order: settled };
+}
+
 export type VoidCounterOrderOutcome =
   | { ok: true; order: Order }
   | { ok: false; reason: "not_authorized" | "not_found" | "not_voidable" };
@@ -638,11 +767,25 @@ export async function voidCounterOrder(
   if (!(await canPersonManageOrders(db, input.shopId, input.actorPersonId))) {
     return { ok: false, reason: "not_authorized" };
   }
+  return voidPaidCounterOrder(db, input.shopId, input.orderId);
+}
+
+/**
+ * The void itself, with no role check: `voidCounterOrder` after its
+ * owner/manager gate, and the bench's undo of a counter order a second tap
+ * recorded a moment ago and lost the race to link (`recordWorkOrderCounterPayment`),
+ * which is the system correcting itself rather than anyone's decision.
+ */
+export async function voidPaidCounterOrder(
+  db: AppDb,
+  shopId: string,
+  orderId: string,
+): Promise<VoidCounterOrderOutcome> {
   return db.transaction(async (tx): Promise<VoidCounterOrderOutcome> => {
     const [current] = await tx
       .select()
       .from(orders)
-      .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
+      .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
       .for("update");
     if (!current) return { ok: false, reason: "not_found" };
     if (current.collection === "stripe_invoice" || current.status !== "paid") {
@@ -1073,6 +1216,16 @@ export async function listShopOrders(
 export type ShopOrderListRow = Awaited<ReturnType<typeof listShopOrders>>["rows"][number];
 
 /**
+ * One row of the Money ledger: an order, or a seat a diver paid for online at
+ * booking (fourth UX review, item 18; `src/db/seat-payments.ts`). Both are
+ * money the shop took, and a ledger that listed only one of them disagreed
+ * with Reports by the shop's main revenue stream.
+ */
+export type LedgerRow =
+  | ({ kind: "order" } & ShopOrderListRow)
+  | { kind: "seat"; seat: SeatPaymentRow };
+
+/**
  * One shop-local day of the order ledger: the rows that landed on this page,
  * and the two facts the day's header owns for all of them.
  */
@@ -1080,13 +1233,13 @@ export type OrdersDayGroup = {
   /** The shop-local calendar day. */
   day: CalendarDate;
   /** This day's rows *on this page*, newest first. */
-  orders: ShopOrderListRow[];
-  /** Every order this day holds under the active filter — not just this page's. */
+  orders: LedgerRow[];
+  /** Every row this day holds under the active filter — not just this page's. */
   count: number;
   /**
    * What the day is worth under the active filter — the whole day's, never the
-   * page slice's — in minor units, **one entry per currency the day's orders
-   * were actually charged in**, largest first.
+   * page slice's — in minor units, **one entry per currency the day's money
+   * was actually charged in**, largest first.
    *
    * Almost always exactly one: a shop declares a single `shops.currency` (ADR
    * 20260731-shop-currency) and every new row takes it. But that setting is
@@ -1113,32 +1266,61 @@ function byLargest(a: { currency: string; cents: number }, b: { currency: string
 }
 
 /**
- * **The order index, grouped into the days its rows belong to** — ADR
+ * Every entry of the ledger under the filter, orders and seat payments as one
+ * list: the kind, the id, the instant it belongs to, the name it sorts by, and
+ * what it is worth. Paging, the total and the day subtotals all read this one
+ * union, so they can never disagree about which rows exist.
+ */
+function ledgerEntries(db: DbExecutor, shopId: string, filter: ShopOrderFilter) {
+  const orderEntries = db
+    .select({
+      kind: sql<"order" | "seat">`'order'`.as("kind"),
+      id: sql<string>`${orders.id}`.as("id"),
+      at: sql<Date>`${orders.createdAt}`.as("at"),
+      personName: sql<string>`${people.fullName}`.as("person_name"),
+      currency: sql<string>`${orders.currency}`.as("currency"),
+      // `status = 'void'` contributes 0; everything else contributes what is
+      // left after refunds.
+      netCents:
+        sql<number>`case when ${orders.status} = 'void' then 0 else ${orders.totalCents} - ${orders.refundedCents} end`.as(
+          "net_cents",
+        ),
+    })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .where(shopOrderWhere(shopId, filter));
+  return unionAll(orderEntries, seatLedgerEntries(db, shopId, filter)).as("ledger_entries");
+}
+
+/**
+ * **The Money ledger, grouped into the days its rows belong to** — ADR
  * 20260827-clearwater-surface-language, decision 7. The day owns the date and
  * the day's count and subtotal; a row is a diver, a departure, and an amount,
  * and never repeats what its group already said.
  *
+ * A row is an order or a seat paid online at booking (`LedgerRow`), read
+ * through one union (`ledgerEntries`) and then filled in by kind, one query
+ * per kind whatever the page size.
+ *
  * Three things are worth knowing about the arithmetic, because they are what
  * make a group header honest:
  *
- * - **The page still slices rows, not days.** `listShopOrders` is unchanged
- *   underneath, so "Page 3 of 8" counts orders exactly as it always did and
- *   every existing deep link still lands where it did. Groups are how this
- *   page's rows are *drawn*, not a second pagination unit.
+ * - **The page slices rows, not days.** "Page 3 of 8" counts ledger rows, and
+ *   groups are how this page's rows are *drawn*, not a second pagination unit.
  * - **A day's count and subtotal cover the whole day**, computed by one
- *   aggregate over the same `shopOrderWhere` and the same joins as the rows —
- *   the pager-scope rule of ADR 20260803-one-pagination-model, applied to a
- *   subtotal instead of a total. A day split by a page boundary therefore
- *   states the same subtotal on both pages, and the second one says
- *   `continued` so a reader is never told the same money twice as if it were
- *   new.
+ *   aggregate over the same union as the rows — the pager-scope rule of ADR
+ *   20260803-one-pagination-model, applied to a subtotal instead of a total.
+ *   A day split by a page boundary therefore states the same subtotal on both
+ *   pages, and the second one says `continued` so a reader is never told the
+ *   same money twice as if it were new.
  * - **The subtotal is the money, not the sum of the printed amounts.** A void
  *   order contributes nothing and a refunded one contributes its net, because
  *   the question a shop asks a day's foot is "what came in". A row still
- *   prints the order's own total — the exceptional status beside it is what
- *   says why the column and the subtotal disagree, and the order record is
- *   where the split is spelled out. Revenue proper is the monthly report's,
- *   not this ledger's.
+ *   prints its own amount — the exceptional status beside it is what says why
+ *   the column and the subtotal disagree. Revenue proper is the monthly
+ *   report's, not this ledger's.
  *
  * The days are sliced out of the aggregate by cumulative count rather than by
  * re-deriving each row's local day in JavaScript: the aggregate and the rows
@@ -1152,13 +1334,34 @@ export async function pagedOrdersByDay(
   timeZone: string,
   filter: ShopOrderFilter = {},
   page: { page?: number; pageSize?: number } = {},
-): Promise<{ groups: OrdersDayGroup[]; page: OffsetPage<ShopOrderListRow> }> {
+): Promise<{ groups: OrdersDayGroup[]; page: OffsetPage<LedgerRow> }> {
+  const entries = ledgerEntries(db, shopId, filter);
   // `::text` on the bound zone, not decoration: `AT TIME ZONE` has both a
   // `text` and an `interval` overload, and an untyped parameter leaves Postgres
   // to pick between them.
-  const localDay = sql<string>`to_char(${orders.createdAt} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
+  const localDay = sql<string>`to_char(${entries.at} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
   const [paged, perCurrency] = await queryAll(db, [
-    () => listShopOrders(db, shopId, filter, page),
+    () =>
+      offsetPage({
+        page: page.page,
+        pageSize: page.pageSize ?? ORDER_PAGE_SIZE,
+        countRows: async () => {
+          const [counted] = await db.select({ total: count() }).from(entries);
+          return counted?.total ?? 0;
+        },
+        fetchRows: (offset, limit) =>
+          db
+            .select({ kind: entries.kind, id: entries.id })
+            .from(entries)
+            // The diver's name, then the id, break ties on the non-unique
+            // timestamp: the id so a row can never land on two pages (or on
+            // none) just because it shares a second with its neighbour, the
+            // name first so a frozen test clock does not hand the order to a
+            // random uuid (issue #1762).
+            .orderBy(desc(entries.at), asc(entries.personName), desc(entries.id))
+            .limit(limit)
+            .offset(offset),
+      }),
     () =>
       db
         .select({
@@ -1166,32 +1369,18 @@ export async function pagedOrdersByDay(
           // Grouped alongside the day, never summed across: a stored amount is
           // an integer count of *this* currency's minor units, and ¥ and $ do
           // not even share an exponent.
-          currency: orders.currency,
+          currency: entries.currency,
           count: count(),
-          // `status = 'void'` contributes 0; everything else contributes what is
-          // left after refunds. `coalesce` because an empty group sums to null.
-          subtotalCents: sql<
-            number | string
-          >`coalesce(sum(case when ${orders.status} = 'void' then 0 else ${orders.totalCents} - ${orders.refundedCents} end), 0)`,
+          subtotalCents: sql<number | string>`coalesce(sum(${entries.netCents}), 0)`,
         })
-        .from(orders)
-        .innerJoin(people, eq(people.id, orders.personId))
-        .leftJoin(bookings, eq(bookings.id, orders.bookingId))
-        .leftJoin(trips, eq(trips.id, bookings.tripId))
-        .where(shopOrderWhere(shopId, filter))
-        // **By ordinal, not by re-emitting the expression.** Writing
-        // `localDay` a second and third time *looks* like it makes the three
-        // clauses agree by construction, and it is how this was first written
-        // — but drizzle binds a fresh placeholder on every embed, so the select
-        // reads `$1` where the group-by reads `$3`. Postgres matches a
-        // grouped expression to a selected one structurally, and `$1` is not
-        // `$3`, so it refused the whole query: *column "orders.created_at"
-        // must appear in the GROUP BY clause* (42803), pointing at a GROUP BY
-        // that plainly contains it. `1` is the one form that cannot drift from
-        // the column it names.
+        .from(entries)
+        // **By ordinal, not by re-emitting the expression.** drizzle binds a
+        // fresh placeholder on every embed, so a select reading `$1` and a
+        // group-by reading `$3` are different expressions to Postgres (42803).
         .groupBy(sql`1`, sql`2`)
         .orderBy(sql`1 desc`, sql`2`),
   ]);
+  const rows = await ledgerRowsFor(db, shopId, paged.rows);
 
   // Back to one entry per day. Ordered by the day descending above, so the
   // insertion order here *is* the render order and nothing re-sorts by a date
@@ -1209,42 +1398,42 @@ export async function pagedOrdersByDay(
   for (const day of dayTotals) day.subtotals.sort(byLargest);
 
   const offset = (paged.page - 1) * paged.pageSize;
-  const end = offset + paged.rows.length;
+  const end = offset + rows.length;
   const groups: OrdersDayGroup[] = [];
   let taken = 0;
   let cursor = 0;
   for (const day of dayTotals) {
-    const dayCount = Number(day.count);
     const start = cursor;
-    const stop = cursor + dayCount;
+    const stop = cursor + day.count;
     cursor = stop;
     if (stop <= offset) continue;
     if (start >= end) break;
     const slice = Math.min(stop, end) - Math.max(start, offset);
     groups.push({
       day: day.day,
-      orders: paged.rows.slice(taken, taken + slice),
-      count: dayCount,
+      orders: rows.slice(taken, taken + slice),
+      count: day.count,
       subtotals: day.subtotals,
       continued: start < offset,
     });
     taken += slice;
   }
-  // Only reachable if a row was written between the two queries above, which
+  // Only reachable if a row was written between the queries above, which
   // would shift every day's count under the slice arithmetic. The leftover
   // rows are still this page's rows and still have to render, so they take the
-  // day they were created on and a subtotal covering only themselves — a
-  // momentary undercount beats a page that silently drops orders.
-  if (taken < paged.rows.length) {
-    const rest = paged.rows.slice(taken);
-    const day = calendarDateInTimezone(rest[0]?.order.createdAt ?? nowDate(), timeZone);
+  // day they belong to and a subtotal covering only themselves — a momentary
+  // undercount beats a page that silently drops money.
+  if (taken < rows.length) {
+    const rest = rows.slice(taken);
+    const first = rest[0];
+    const at = first ? ledgerRowAt(first) : nowDate();
     const subtotals = new Map<string, number>();
     for (const row of rest) {
-      const net = row.order.status === "void" ? 0 : row.order.totalCents - row.order.refundedCents;
-      subtotals.set(row.order.currency, (subtotals.get(row.order.currency) ?? 0) + net);
+      const { currency, cents } = ledgerRowNet(row);
+      subtotals.set(currency, (subtotals.get(currency) ?? 0) + cents);
     }
     groups.push({
-      day,
+      day: calendarDateInTimezone(at, timeZone),
       orders: rest,
       count: rest.length,
       subtotals: [...subtotals].map(([currency, cents]) => ({ currency, cents })).sort(byLargest),
@@ -1252,7 +1441,58 @@ export async function pagedOrdersByDay(
     });
   }
 
-  return { groups, page: paged };
+  return { groups, page: { ...paged, rows } };
+}
+
+function ledgerRowAt(row: LedgerRow): Date {
+  return row.kind === "order" ? row.order.createdAt : row.seat.paidAt;
+}
+
+function ledgerRowNet(row: LedgerRow): { currency: string; cents: number } {
+  if (row.kind === "seat") {
+    return { currency: row.seat.currency, cents: row.seat.amountCents - row.seat.refundedCents };
+  }
+  const { order } = row;
+  return {
+    currency: order.currency,
+    cents: order.status === "void" ? 0 : order.totalCents - order.refundedCents,
+  };
+}
+
+/**
+ * The page's entries, filled in by kind in the union's order: one query for
+ * the orders and one for the seat payments, whatever the page size.
+ */
+async function ledgerRowsFor(
+  db: DbExecutor,
+  shopId: string,
+  entries: readonly { kind: "order" | "seat"; id: string }[],
+): Promise<LedgerRow[]> {
+  const orderIds = entries.filter((entry) => entry.kind === "order").map((entry) => entry.id);
+  const seatIds = entries.filter((entry) => entry.kind === "seat").map((entry) => entry.id);
+  const [orderRows, seats] = await queryAll(db, [
+    // Both reads run whatever the page holds, so a page costs the same however
+    // its rows divide between the kinds (`query-budgets.test.ts`).
+    () =>
+      db
+        .select({ order: orders, person: people, trip: trips })
+        .from(orders)
+        .innerJoin(people, eq(people.id, orders.personId))
+        .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+        // diveday:allow-deleted-trips: an order names the departure it was raised for, deleted or not.
+        .leftJoin(trips, eq(trips.id, bookings.tripId))
+        .where(and(eq(orders.shopId, shopId), inArray(orders.id, orderIds))),
+    () => seatPaymentsByIds(db, shopId, seatIds),
+  ]);
+  const byOrderId = new Map(orderRows.map((row) => [row.order.id, row]));
+  return entries.flatMap((entry): LedgerRow[] => {
+    if (entry.kind === "seat") {
+      const seat = seats.get(entry.id);
+      return seat ? [{ kind: "seat", seat }] : [];
+    }
+    const row = byOrderId.get(entry.id);
+    return row ? [{ kind: "order", ...row }] : [];
+  });
 }
 
 /**
@@ -1720,6 +1960,10 @@ export async function markOrderPaidByInvoiceId(
     .where(eq(orders.stripeInvoiceId, stripeInvoiceId))
     .limit(1);
   if (!order) return null;
+  // Settled at the counter (`recordPaymentOnOpenOrder`): marking the invoice
+  // paid out of band sends this event back, and Stripe's `amount_paid` on it
+  // is not the money the shop took. The row already says what happened.
+  if (order.collection !== "stripe_invoice") return order;
   if (!accountMatches(expectedAccountId, order.stripeAccountId)) {
     log("order.paid_account_mismatch", "error", {
       orderId: order.id,

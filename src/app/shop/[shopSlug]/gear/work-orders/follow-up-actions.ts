@@ -4,9 +4,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
+import type { WorkOrderLine } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import {
   billWorkOrder,
+  recordWorkOrderCounterPayment,
   sendWorkOrderReadyNotice,
   setCustomerGearReminders,
 } from "@/db/work-order-follow-up";
@@ -33,6 +35,31 @@ import { workOrderQuantityInput } from "@/lib/work-orders";
  */
 
 const orderSchema = z.object({ workOrderId: z.uuid() });
+const paymentSchema = z.object({
+  workOrderId: z.uuid(),
+  collection: z.enum(["cash", "card_machine"]),
+});
+
+/**
+ * The ticket's live parts and labor as order lines. The words are the shop's,
+ * in the shop's language: the order freezes them (`NewOrderLineItem.description`).
+ */
+function benchLineItems(lines: readonly WorkOrderLine[]) {
+  return billLinesForWorkOrder(lines.filter((line) => line.deletedAt === null)).map(
+    ({ fractionalQuantityHundredths, ...line }) => ({
+      ...line,
+      // An hour and a half at the bench goes on as one line at its total, so
+      // the quantity rides in the words where the customer can still read it.
+      description:
+        fractionalQuantityHundredths === null
+          ? line.description
+          : `${line.description} (${workOrderQuantityInput(fractionalQuantityHundredths)})`.slice(
+              0,
+              200,
+            ),
+    }),
+  );
+}
 
 /** Send the ready message again, on a staffer's word. */
 export async function resendReadyNoticeAction(formData: FormData) {
@@ -90,24 +117,8 @@ export async function sendWorkOrderBillAction(formData: FormData) {
     revalidateAndRedirect(landing, noticeUrl(landing, "not-found"));
   }
 
-  // The words on the invoice are the shop's, in the shop's language: the
-  // order freezes them (`NewOrderLineItem.description`).
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
-  const lineItems = billLinesForWorkOrder(
-    detail.lines.filter((line) => line.deletedAt === null),
-  ).map(({ fractionalQuantityHundredths, ...line }) => ({
-    ...line,
-    // An hour and a half at the bench goes on as one line at its total, so the
-    // quantity rides in the words where the customer can still read it.
-    description:
-      fractionalQuantityHundredths === null
-        ? line.description
-        : `${line.description} (${workOrderQuantityInput(fractionalQuantityHundredths)})`.slice(
-            0,
-            200,
-          ),
-  }));
-
+  const lineItems = benchLineItems(detail.lines);
   const outcome = await billWorkOrder(db, {
     shopId: shop.id,
     workOrderId: detail.workOrder.id,
@@ -159,4 +170,51 @@ export async function setCustomerGearRemindersAction(formData: FormData) {
     back,
     noticeUrl(back, outcome.ok ? (on ? "reminders-on" : "reminders-off") : "reminders-not-found"),
   );
+}
+
+/**
+ * **Paid at pickup** (fourth UX review, item 19): the customer paid for the
+ * bench job in cash or on the shop's card machine. Any active staff member,
+ * as any counter money is (ADR 20261009-counter-payments), behind the money
+ * step-up; `recordWorkOrderCounterPayment` records it as the ticket's bill.
+ */
+export async function recordBenchPaymentAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const board = shopPath(session.user.shopSlug, "gear", "work-orders");
+  const parsed = paymentSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
+  const landing = shopPath(session.user.shopSlug, "gear", "work-orders", parsed.data.workOrderId);
+  const db = await getDb();
+  if (!(await hasRequiredStepUp(db, session, "money"))) {
+    redirect(stepUpChallengeUrl(session.user.shopSlug, "money", landing));
+  }
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop) revalidateAndRedirect(landing, noticeUrl(landing, "not-found"));
+  const detail = await getWorkOrderDetail(db, shop.id, parsed.data.workOrderId, {
+    todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
+  });
+  if (!detail || detail.workOrder.deletedAt) {
+    revalidateAndRedirect(landing, noticeUrl(landing, "not-found"));
+  }
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const outcome = await recordWorkOrderCounterPayment(db, {
+    shopId: shop.id,
+    workOrderId: detail.workOrder.id,
+    actorPersonId: session.user.personId,
+    collection: parsed.data.collection,
+    description: t("benchFollowUp.bill.description", { number: detail.workOrder.number }),
+    lineItems: benchLineItems(detail.lines),
+  });
+  if (!outcome.ok) {
+    const code = {
+      not_found: "not-found",
+      not_customer: "invalid",
+      no_lines: "bill-no-lines",
+      already_billed: "bill-already",
+      invalid: "bill-invalid",
+    }[outcome.reason];
+    revalidateAndRedirect(landing, noticeUrl(landing, code));
+  }
+  dispatchIntegrationsAfterResponse();
+  revalidateAndRedirect(landing, noticeUrl(landing, "bill-paid-counter"));
 }
