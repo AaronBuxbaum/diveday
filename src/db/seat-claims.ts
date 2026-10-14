@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
@@ -530,6 +531,9 @@ export type PartySeatClaim = {
   claim: IssuedCapability | null;
 };
 
+/** The party lead's own booking, joined beside each of the party's seats. */
+const partyLead = alias(bookings, "party_lead");
+
 /**
  * The organizer's view of their party, minting a shareable claim link per
  * still-unclaimed seat. Authorization is the caller's *verified* capability
@@ -583,6 +587,7 @@ export async function issuePartySeatClaims(
         .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.deletedAt)))
         .orderBy(desc(waiverTemplates.createdAt))
         .limit(1)})`,
+      leadTripId: partyLead.tripId,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -594,6 +599,14 @@ export async function issuePartySeatClaims(
       waiverRecords,
       and(eq(waiverRecords.bookingId, bookings.id), isNull(waiverRecords.supersededAt)),
     )
+    // The lead's own departure, beside every seat rather than a second
+    // statement after them: a seat moved to another departure does not go with
+    // the lead's cancel (`cancelUnclaimedPartySeats` reaches the lead's own
+    // departure only).
+    .leftJoin(
+      partyLead,
+      and(eq(partyLead.id, bookings.partyLeadBookingId), eq(partyLead.shopId, input.shopId)),
+    )
     .where(
       and(
         eq(bookings.shopId, input.shopId),
@@ -602,13 +615,6 @@ export async function issuePartySeatClaims(
       ),
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
-  // A seat moved to another departure does not go with the lead's cancel
-  // (`cancelUnclaimedPartySeats` reaches the lead's own departure only).
-  const [lead] = await db
-    .select({ tripId: bookings.tripId })
-    .from(bookings)
-    .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
-    .limit(1);
   const seats: PartySeatClaim[] = [];
   for (const row of rows) {
     const claimable = claimableNow(row.booking, row.trip, now);
@@ -631,7 +637,7 @@ export async function issuePartySeatClaims(
       cancelsWithLead:
         row.booking.status === "booked" &&
         row.booking.claimedAt === null &&
-        row.booking.tripId === lead?.tripId,
+        row.booking.tripId === row.leadTripId,
       claim: claimable
         ? await issueBookingCapability(db, {
             shopId: input.shopId,
