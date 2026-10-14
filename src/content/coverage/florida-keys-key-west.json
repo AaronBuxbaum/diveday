@@ -1,0 +1,257 @@
+{
+  "area": "florida-keys-key-west",
+  "method": "Key West reef line from Western Sambo to Western Dry Rocks, the Mule Keys, the artificial wrecks off Key West, and Dry Tortugas National Park's NPS-buoyed recreational sites: NOAA FKNMS 2025 mooring buoys (plus the 2014 buoy list for Joe's Tug), Monroe County TDC's Reef Explorer guide and shipwrecks page, FWC artificial reefs and the NPS Dry Tortugas mooring-buoy page, checked against Key West operators' own pages (Captain Hook's Dive Key West, Finz Dive Center, Lost Reef Adventures, Southpoint Divers, Snuba Key West, Key West Custom Charter, Forever Young). Counting rule: named, recreational scuba (not snorkel-only, technical-depth, closed or permit-only), and on at least two independent lists. NOAA FKNMS's mooring-buoy list and its Shipwreck Trail are one publisher and count once; Monroe County TDC's Reef Explorer guide and its shipwrecks page count once; FWC's artificial-reef dataset counts once and only for a named vessel an operator also advertises; each dive operator's own published site list counts once (Captain Hook's and its Dive Key West shop are one operator). Lodging guides, magazines and hobby sites were read but never counted. Counted 2026-10-14.",
+  "sources": [
+    "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+    "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0",
+    "https://nmsfloridakeys.blob.core.windows.net/floridakeys-prod/media/archive/mbuoy/mooringbuoy20140228.pdf",
+    "https://floridakeys.noaa.gov/shipwrecktrail/",
+    "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+    "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/shipwrecks",
+    "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+    "https://www.nps.gov/drto/planyourvisit/drtomooringbuoys.htm",
+    "https://www.nps.gov/drto/planyourvisit/swimming-snorkeling-and-diving.htm",
+    "https://divekeywest.com/wreck-diving-key-west/",
+    "https://finzdivecenter.com/dives/wreck-dive/",
+    "https://finzdivecenter.com/dives/tortugas/",
+    "https://lostreefadventures.com/padi-scuba-certifications/scuba-diving-key-west-reefs-wrecks-dive-trips/",
+    "https://southpointdivers.com/dive-in-a-day/",
+    "https://southpointdivers.com/",
+    "https://www.snubakeywest.com/about-us/dive-sites-in-key-west-with-snuba-diving-florida-reefs-shipwrecks-sandbar-trips/",
+    "https://keywestcustomcharter.com/key-west-scuba-diving/",
+    "https://www.tourparks.com/tours/dry-tortugas-scuba-snorkel-charter/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "USNS Vandenberg (General Hoyt S. Vandenberg)",
+      "template": "usns-vandenberg",
+      "position": [24.45947, -81.73689],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Hoyt%20Vandenberg%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json",
+        "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/shipwrecks",
+        "https://divekeywest.com/wreck-diving-key-west/",
+        "https://finzdivecenter.com/dives/wreck-dive/",
+        "https://southpointdivers.com/",
+        "https://lostreefadventures.com/padi-scuba-certifications/scuba-diving-key-west-reefs-wrecks-dive-trips/",
+        "https://keywestcustomcharter.com/key-west-scuba-diving/"
+      ]
+    },
+    {
+      "name": "Cayman Salvager (Cayman Salvor, Cayman Salvage Master)",
+      "template": "cayman-salvager",
+      "position": [24.46197, -81.75736],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Cayman%20Salvage%20Master%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json",
+        "https://divekeywest.com/wreck-diving-key-west/",
+        "https://finzdivecenter.com/dives/wreck-dive/",
+        "https://lostreefadventures.com/padi-scuba-certifications/scuba-diving-key-west-reefs-wrecks-dive-trips/"
+      ]
+    },
+    {
+      "name": "Joe's Tug",
+      "template": "joes-tug",
+      "position": [24.46418, -81.73781],
+      "listedBy": [
+        "https://nmsfloridakeys.blob.core.windows.net/floridakeys-prod/media/archive/mbuoy/mooringbuoy20140228.pdf",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Joe%27%27s%20Tug%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json",
+        "https://finzdivecenter.com/dives/wreck-dive/",
+        "https://lostreefadventures.com/padi-scuba-certifications/scuba-diving-key-west-reefs-wrecks-dive-trips/"
+      ]
+    },
+    {
+      "name": "Sand Key Reef (Sand Key Lighthouse)",
+      "template": "sand-key-reef",
+      "position": [24.45264, -81.87737],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://southpointdivers.com/dive-in-a-day/",
+        "https://lostreefadventures.com/padi-scuba-certifications/scuba-diving-key-west-reefs-wrecks-dive-trips/",
+        "https://www.snubakeywest.com/about-us/dive-sites-in-key-west-with-snuba-diving-florida-reefs-shipwrecks-sandbar-trips/"
+      ]
+    },
+    {
+      "name": "Western Dry Rocks",
+      "template": "western-dry-rocks",
+      "position": [24.4452, -81.92714],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://lostreefadventures.com/padi-scuba-certifications/scuba-diving-key-west-reefs-wrecks-dive-trips/"
+      ]
+    },
+    {
+      "name": "Eastern Dry Rocks",
+      "template": "eastern-dry-rocks",
+      "position": [24.45997, -81.84549],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://southpointdivers.com/dive-in-a-day/",
+        "https://www.snubakeywest.com/about-us/dive-sites-in-key-west-with-snuba-diving-florida-reefs-shipwrecks-sandbar-trips/"
+      ]
+    },
+    {
+      "name": "Rock Key",
+      "template": "rock-key",
+      "position": [24.45492, -81.85807],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://southpointdivers.com/dive-in-a-day/",
+        "https://www.snubakeywest.com/about-us/dive-sites-in-key-west-with-snuba-diving-florida-reefs-shipwrecks-sandbar-trips/"
+      ]
+    },
+    {
+      "name": "Western Sambo (Sambos, Western Sambos)",
+      "template": "western-sambo",
+      "position": [24.48135, -81.7124],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://southpointdivers.com/dive-in-a-day/",
+        "https://lostreefadventures.com/padi-scuba-certifications/scuba-diving-key-west-reefs-wrecks-dive-trips/",
+        "https://www.snubakeywest.com/about-us/dive-sites-in-key-west-with-snuba-diving-florida-reefs-shipwrecks-sandbar-trips/",
+        "https://keywestcustomcharter.com/key-west-scuba-diving/"
+      ]
+    },
+    {
+      "name": "Cottrell Key",
+      "template": "cottrell-key",
+      "position": [24.61458, -81.91954],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://southpointdivers.com/dive-in-a-day/",
+        "https://www.snubakeywest.com/about-us/dive-sites-in-key-west-with-snuba-diving-florida-reefs-shipwrecks-sandbar-trips/"
+      ]
+    },
+    {
+      "name": "Nine Foot Stake (9 Foot Stake)",
+      "template": "nine-foot-stake",
+      "position": [24.47209, -81.76423],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://southpointdivers.com/dive-in-a-day/"
+      ]
+    },
+    {
+      "name": "Toppino's Reef (Marker 32)",
+      "template": "toppinos-reef",
+      "position": [24.47399, -81.74349],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://southpointdivers.com/dive-in-a-day/"
+      ]
+    },
+    {
+      "name": "Windjammer (Avanti), Dry Tortugas",
+      "template": "windjammer-wreck",
+      "position": [24.6236, -82.9429],
+      "listedBy": [
+        "https://www.nps.gov/drto/planyourvisit/drtomooringbuoys.htm",
+        "https://finzdivecenter.com/dives/tortugas/",
+        "https://www.tourparks.com/tours/dry-tortugas-scuba-snorkel-charter/"
+      ]
+    },
+    {
+      "name": "Amesbury (Alexander's Wreck)",
+      "template": null,
+      "position": [24.62328, -81.98186],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://floridakeys.noaa.gov/shipwrecktrail/"
+      ],
+      "excluded": "NOAA only (buoy list and Shipwreck Trail are one publisher); no operator list found."
+    },
+    {
+      "name": "Archer Key",
+      "template": null,
+      "position": [24.55958, -81.88151],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://www.snubakeywest.com/about-us/dive-sites-in-key-west-with-snuba-diving-florida-reefs-shipwrecks-sandbar-trips/"
+      ],
+      "excluded": "Snorkel/SNUBA depth (about 8 ft); no scuba operator list."
+    },
+    {
+      "name": "Mule Key",
+      "template": null,
+      "position": [24.56229, -81.85688],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "One list only; snorkel depth (about 8 ft)."
+    },
+    {
+      "name": "Lost Reef",
+      "template": null,
+      "position": [24.444, -81.93315],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "On one list only (NOAA buoys)."
+    },
+    {
+      "name": "Texas Rock, Dry Tortugas",
+      "template": null,
+      "position": [24.68033, -82.88542],
+      "listedBy": [
+        "https://www.nps.gov/drto/planyourvisit/drtomooringbuoys.htm",
+        "https://www.nps.gov/drto/planyourvisit/swimming-snorkeling-and-diving.htm"
+      ],
+      "excluded": "NPS only (one publisher); no operator page names it."
+    },
+    {
+      "name": "Davis Rock, Dry Tortugas",
+      "template": null,
+      "position": [24.68682, -82.90733],
+      "listedBy": ["https://www.nps.gov/drto/planyourvisit/drtomooringbuoys.htm"],
+      "excluded": "NPS only; no operator page names it."
+    },
+    {
+      "name": "The Maze, Dry Tortugas",
+      "template": null,
+      "position": [24.60887, -82.94948],
+      "listedBy": ["https://www.nps.gov/drto/planyourvisit/drtomooringbuoys.htm"],
+      "excluded": "NPS only; no operator page names it."
+    },
+    {
+      "name": "Offramp, Dry Tortugas",
+      "template": null,
+      "position": [24.66927, -82.90843],
+      "listedBy": ["https://www.nps.gov/drto/planyourvisit/drtomooringbuoys.htm"],
+      "excluded": "NPS only; no operator page names it."
+    },
+    {
+      "name": "Fort Jefferson moat wall, Dry Tortugas",
+      "template": null,
+      "listedBy": ["https://www.nps.gov/drto/planyourvisit/swimming-snorkeling-and-diving.htm"],
+      "excluded": "Snorkel site (NPS)."
+    },
+    {
+      "name": "Little Africa, Dry Tortugas",
+      "template": null,
+      "listedBy": ["https://www.nps.gov/drto/planyourvisit/swimming-snorkeling-and-diving.htm"],
+      "excluded": "Snorkel site off Loggerhead Key (NPS)."
+    },
+    {
+      "name": "Sherwood Forest, Tortugas Bank",
+      "template": null,
+      "position": [24.70877, -83.04663],
+      "listedBy": [
+        "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0"
+      ],
+      "excluded": "FKNMS Tortugas North Ecological Reserve buoy (one of 38): reserve access permit, no operator list; the other 38 Tortugas Bank buoys are left out on the same grounds."
+    },
+    {
+      "name": "Wilkes-Barre",
+      "template": null,
+      "position": [24.48448, -81.5523],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Wilkes%20Barre-Stern%20Section%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json"
+      ],
+      "excluded": "Technical depth (250 ft); FWC only."
+    }
+  ]
+}

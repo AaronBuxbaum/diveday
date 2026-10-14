@@ -1,0 +1,746 @@
+{
+  "area": "florida-palm-beach",
+  "method": "Treasure Coast and Palm Beach County (St. Lucie, Martin, Jupiter, Palm Beach, Boynton/Delray, Boca Raton). Operator lists: Jupiter Dive Center, Jupiter Scuba Diving (Kyalami), Divocean, Pura Vida Divers, Stuart Scuba, South Florida Diving Headquarters (Boynton/Boca), Parrot Island; plus Discover The Palm Beaches' site list. Sites are counted when named on at least two independent lists; an official list (FWC artificial reefs, the 2024 FDEP Southeast Florida mooring-buoy brochure, a county reef layer, Florida's underwater archaeological preserves, NPS) counts as one, each operator or tourism-board site list as another. FWC deployments count only when an operator names them; technical-depth wrecks (operator- or FWC-stated depth beyond ~135 ft) and one-list names are recorded as excluded. Multi-wreck dives sold as one dive are one row, with the wrecks as aliases. Counted 2026-10-14 from pages fetched that day.",
+  "sources": [
+    "https://jupiterdivecenter.com/local-reefs/",
+    "https://www.jupiterscubadiving.com/dive-sites",
+    "https://www.divoceandivecharters.com/dive-sites",
+    "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites",
+    "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0",
+    "https://www.stuartscuba.com/charters/dive-sites/",
+    "https://www.puravidadivers.com/deep-reef-diving-south-florida-reefs/",
+    "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+    "https://www.puravidadivers.com/beach-diving-south-florida/",
+    "https://www.scubadivinginmiami.com/dive-sites/",
+    "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+    "https://www.puravidadivers.com/south-florida-reefs-60ft/",
+    "https://www.puravidadivers.com/shallow-dive-sites-south-florida/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/pauls-reef/",
+    "https://www.puravidadivers.com/wreck-diving-sites-south-florida/",
+    "https://www.stuartscuba.com/charters/dive-the-best-wrecks-in-west-palm-beach-with-stuart-scuba",
+    "https://www.stuartscuba.com/charters/60-110-reefs-in-west-palm-beach",
+    "https://www.southfloridadiving.com/dive-sites/recreational/horseshoe-reef-2/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/lynns-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/briny-breezes/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/gazebo-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/gulfstream-ledge/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/delray-ledges/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/moray-bend/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/boca-artificial-reef/",
+    "https://www.parrotislandscuba.com/reef.php",
+    "https://www.southfloridadiving.com/dive-sites/recreational/stepping-stone-north/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/mv-castor/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/bud-bar/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/captain-tony/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/sea-emperor/",
+    "https://www.scubadivinginmiami.com/dive-sites/page/4/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/united-caribbean/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/noulla-express/",
+    "https://museumsinthesea.com/",
+    "https://discovermartin.com/directory/dive-site-wreck-george-valentine/",
+    "https://www.nps.gov/articles/urcadelima.htm",
+    "https://www.southfloridadiving.com/dive-sites/recreational/black-condo-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/casino-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/rags-reef/",
+    "https://www.parrotislandscuba.com/wreks.php",
+    "https://www.southfloridadiving.com/dive-sites/technical/hydro-atlantic/",
+    "https://www.southfloridadiving.com/dive-sites/technical/miss-lourdies/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Area 51",
+      "template": null,
+      "listedBy": [
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites"
+      ]
+    },
+    {
+      "name": "Bluffs (The Bluffs)",
+      "template": null,
+      "listedBy": [
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Bonnie's Reef",
+      "template": "bonnies-reef-jupiter",
+      "position": [26.9308, -80.0205],
+      "listedBy": [
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Captain Kirle's (Captain Kurls)",
+      "template": "captain-kirles-reef",
+      "position": [26.9265, -80.0202],
+      "listedBy": [
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0",
+        "https://www.stuartscuba.com/charters/dive-sites/"
+      ]
+    },
+    {
+      "name": "Julie's Reef",
+      "template": "julies-reef-jupiter",
+      "position": [26.9558, -80.0231],
+      "listedBy": [
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Loggerhead Reef",
+      "template": "loggerhead-reef-jupiter",
+      "position": [26.9467, -80.0223],
+      "listedBy": [
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Scarface",
+      "template": null,
+      "listedBy": [
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Spadefish (Spadefish Point)",
+      "template": null,
+      "listedBy": [
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Tunnels",
+      "template": null,
+      "listedBy": [
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Lighthouse",
+      "template": null,
+      "listedBy": [
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Juno Ledge (Monkey's Ledge)",
+      "template": "juno-ledge",
+      "position": [26.8724, -80.0135],
+      "listedBy": [
+        "https://www.puravidadivers.com/deep-reef-diving-south-florida-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Jupiter Wreck Trek (Zion Train, Miss Jenny, Esso Bonaire)",
+      "template": null,
+      "position": [26.96303, -80.00733],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://jupiterdivecenter.com/local-reefs/",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites"
+      ]
+    },
+    {
+      "name": "MG-111 Barge",
+      "template": "mg-111-barge",
+      "position": [26.9775, -80.025],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.jupiterscubadiving.com/dive-sites",
+        "https://www.divoceandivecharters.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Blue Heron Bridge (Phil Foster Park)",
+      "template": "blue-heron-bridge",
+      "listedBy": [
+        "https://www.puravidadivers.com/beach-diving-south-florida/",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/",
+        "https://www.stuartscuba.com/charters/dive-sites/"
+      ]
+    },
+    {
+      "name": "Breakers Reef (Fourth Window, Breakers 3rd Window, Breakers Reef East)",
+      "template": "breakers-reef",
+      "position": [26.71987, -80.03113],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0",
+        "https://www.puravidadivers.com/south-florida-reefs-60ft/",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites",
+        "https://www.stuartscuba.com/charters/dive-sites/"
+      ]
+    },
+    {
+      "name": "Cable Crossing",
+      "template": "cable-crossing-palm-beach",
+      "listedBy": [
+        "https://www.puravidadivers.com/shallow-dive-sites-south-florida/",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites"
+      ]
+    },
+    {
+      "name": "Elevator Shaft",
+      "template": null,
+      "listedBy": [
+        "https://www.puravidadivers.com/south-florida-reefs-60ft/",
+        "https://www.stuartscuba.com/charters/dive-sites/"
+      ]
+    },
+    {
+      "name": "Flower Gardens (South Flower Gardens)",
+      "template": "flower-gardens-palm-beach",
+      "position": [26.696, -80.0179],
+      "listedBy": [
+        "https://www.puravidadivers.com/south-florida-reefs-60ft/",
+        "https://www.stuartscuba.com/charters/dive-sites/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "The Trench (Moray Alley)",
+      "template": "the-trench-moray-alley",
+      "position": [26.7054, -80.0171],
+      "listedBy": [
+        "https://www.puravidadivers.com/south-florida-reefs-60ft/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Teardrop (Ron's Rock)",
+      "template": null,
+      "listedBy": [
+        "https://www.puravidadivers.com/south-florida-reefs-60ft/",
+        "https://www.stuartscuba.com/charters/dive-sites/"
+      ]
+    },
+    {
+      "name": "Paul's Reef",
+      "template": "pauls-reef-palm-beach",
+      "position": [26.6441, -80.021],
+      "listedBy": [
+        "https://www.puravidadivers.com/south-florida-reefs-60ft/",
+        "https://www.stuartscuba.com/charters/dive-sites/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/pauls-reef/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Northwest Double Ledges (Shark Dive)",
+      "template": "northwest-double-ledges",
+      "position": [26.8644, -80.0172],
+      "listedBy": [
+        "https://www.puravidadivers.com/deep-reef-diving-south-florida-reefs/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "South Double Ledges",
+      "template": "south-double-ledges",
+      "position": [26.755, -80.0117],
+      "listedBy": [
+        "https://www.puravidadivers.com/deep-reef-diving-south-florida-reefs/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Jolly Jacks",
+      "template": "jolly-jacks-reef",
+      "position": [26.837, -80.0182],
+      "listedBy": [
+        "https://www.puravidadivers.com/deep-reef-diving-south-florida-reefs/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Mid-Reef",
+      "template": "mid-reef-palm-beach",
+      "position": [26.7774, -80.011],
+      "listedBy": [
+        "https://www.puravidadivers.com/wreck-diving-sites-south-florida/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Drifting Spot",
+      "template": null,
+      "position": [26.7547, -80.0115],
+      "listedBy": [
+        "https://www.stuartscuba.com/charters/dive-sites/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Toy Box & Playpen",
+      "template": null,
+      "listedBy": [
+        "https://www.puravidadivers.com/wreck-diving-sites-south-florida/",
+        "https://www.puravidadivers.com/south-florida-reefs-60ft/",
+        "https://www.stuartscuba.com/charters/dive-sites/"
+      ]
+    },
+    {
+      "name": "Mizpah Corridor (Corridor Wreck Trek: Mizpah, PC-1174, Amaryllis, Brazilian Docks, China Barge)",
+      "template": "mizpah-corridor",
+      "position": [26.78633, -80.016],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.puravidadivers.com/wreck-diving-sites-south-florida/",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites"
+      ]
+    },
+    {
+      "name": "Ana Cecilia",
+      "template": "ana-cecilia-wreck",
+      "position": [26.78478, -80.0158],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites",
+        "https://www.stuartscuba.com/charters/dive-sites/"
+      ]
+    },
+    {
+      "name": "Princess Anne",
+      "template": "princess-anne-wreck",
+      "position": [26.7936, -80.00383],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.puravidadivers.com/wreck-diving-sites-south-florida/",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites",
+        "https://www.stuartscuba.com/charters/dive-the-best-wrecks-in-west-palm-beach-with-stuart-scuba"
+      ]
+    },
+    {
+      "name": "Governor's Riverwalk Reef (Shasha Boekanier, St. Jacques, Gilbert Sea, Thozina)",
+      "template": "governors-riverwalk-reef",
+      "position": [26.75123, -80.0099],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.puravidadivers.com/wreck-diving-sites-south-florida/",
+        "https://www.stuartscuba.com/charters/dive-the-best-wrecks-in-west-palm-beach-with-stuart-scuba"
+      ]
+    },
+    {
+      "name": "Eidsvag (Owens, The Triangle)",
+      "template": "eidsvag-triangle",
+      "position": [26.767, -80.00833],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.puravidadivers.com/wreck-diving-sites-south-florida/"
+      ]
+    },
+    {
+      "name": "Danny McCauley Reef (The Danny)",
+      "template": "danny-mccauley-reef",
+      "position": [26.79333, -80.01833],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.puravidadivers.com/wreck-diving-sites-south-florida/"
+      ]
+    },
+    {
+      "name": "Spearman's Barge",
+      "template": "spearmans-barge",
+      "position": [26.79316, -80.00583],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.puravidadivers.com/wreck-diving-sites-south-florida/",
+        "https://www.stuartscuba.com/charters/60-110-reefs-in-west-palm-beach"
+      ]
+    },
+    {
+      "name": "Horseshoe Reef (Boynton)",
+      "template": "horseshoe-reef-boynton",
+      "position": [26.6259, -80.0229],
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/horseshoe-reef-2/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Lynn's Reef",
+      "template": "lynns-reef",
+      "position": [26.5256, -80.0326],
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/lynns-reef/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Briny Breezes Reef",
+      "template": "briny-breezes-reef",
+      "position": [26.4995, -80.0368],
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/briny-breezes/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Gazebo Reef",
+      "template": "gazebo-reef",
+      "position": [26.5117, -80.0335],
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/gazebo-reef/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Gulfstream Ledge (Gulfstream Reef)",
+      "template": "gulfstream-ledge",
+      "position": [26.4902, -80.0387],
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/gulfstream-ledge/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Delray Ledges (Delray Ledge)",
+      "template": "delray-ledges",
+      "position": [26.4695, -80.0433],
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/delray-ledges/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Moray Bend",
+      "template": "moray-bend",
+      "position": [26.3342, -80.0582],
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/moray-bend/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Boca Artificial Reef",
+      "template": "boca-artificial-reef",
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/boca-artificial-reef/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "Stepping Stones Reef (Stepping Stone North)",
+      "template": "boynton-stepping-stone-reef",
+      "position": [26.54517, -80.03683],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/stepping-stone-north/"
+      ]
+    },
+    {
+      "name": "MV Castor",
+      "template": "mv-castor-wreck",
+      "position": [26.47883, -80.03713],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/mv-castor/",
+        "https://www.scubadivinginmiami.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Bud Bar (Budweiser Bar)",
+      "template": "bud-bar-wreck",
+      "position": [26.47916, -80.0385],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/bud-bar/"
+      ]
+    },
+    {
+      "name": "Captain Tony (Becks Reef)",
+      "template": "captain-tony-wreck",
+      "position": [26.48116, -80.03916],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/captain-tony/"
+      ]
+    },
+    {
+      "name": "Sea Emperor (Aqua Zoo)",
+      "template": "sea-emperor-aqua-zoo",
+      "position": [26.32228, -80.05913],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/sea-emperor/",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "United Caribbean",
+      "template": "united-caribbean-wreck",
+      "position": [26.32113, -80.05898],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/united-caribbean/",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites"
+      ]
+    },
+    {
+      "name": "Noula Express (Noulla Express)",
+      "template": "noula-express-wreck",
+      "position": [26.3213, -80.05746],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/noulla-express/",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites"
+      ]
+    },
+    {
+      "name": "Lofthus",
+      "template": "lofthus-shipwreck-preserve",
+      "position": [26.5629, -80.0385],
+      "listedBy": [
+        "https://museumsinthesea.com/",
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ]
+    },
+    {
+      "name": "Georges Valentine",
+      "template": "georges-valentine-shipwreck-preserve",
+      "listedBy": [
+        "https://museumsinthesea.com/",
+        "https://discovermartin.com/directory/dive-site-wreck-george-valentine/"
+      ]
+    },
+    {
+      "name": "Urca de Lima",
+      "template": "urca-de-lima-shipwreck-preserve",
+      "listedBy": ["https://museumsinthesea.com/", "https://www.nps.gov/articles/urcadelima.htm"]
+    },
+    {
+      "name": "USS Rankin",
+      "template": "uss-rankin-wreck",
+      "position": [27.18886, -80.02385],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.stuartscuba.com/charters/dive-sites/"
+      ]
+    },
+    {
+      "name": "Area 29",
+      "template": null,
+      "listedBy": ["https://jupiterdivecenter.com/local-reefs/"],
+      "excluded": "on one operator list only (Jupiter Dive Center)"
+    },
+    {
+      "name": "Captain Mike's",
+      "template": null,
+      "listedBy": ["https://jupiterdivecenter.com/local-reefs/"],
+      "excluded": "on one operator list only (Jupiter Dive Center)"
+    },
+    {
+      "name": "19th Hole",
+      "template": null,
+      "listedBy": ["https://jupiterdivecenter.com/local-reefs/"],
+      "excluded": "on one operator list only (Jupiter Dive Center, lobster season)"
+    },
+    {
+      "name": "Center Street",
+      "template": null,
+      "listedBy": ["https://jupiterdivecenter.com/local-reefs/"],
+      "excluded": "on one operator list only (Jupiter Dive Center, lobster season)"
+    },
+    {
+      "name": "Finz Den / High Ledge / Leigh's Ledge / Gary's",
+      "template": null,
+      "listedBy": ["https://www.jupiterscubadiving.com/dive-sites"],
+      "excluded": "each on one operator list only (Jupiter Scuba Diving)"
+    },
+    {
+      "name": "Shark Canyon",
+      "template": null,
+      "listedBy": ["https://www.stuartscuba.com/charters/dive-sites/"],
+      "excluded": "on one operator list only (Stuart Scuba); otherwise only in magazine articles"
+    },
+    {
+      "name": "Bath and Tennis / Dive-O-Rama / Turtle Mounds / The Statue / Lopadas",
+      "template": null,
+      "listedBy": [
+        "https://www.puravidadivers.com/south-florida-reefs-60ft/",
+        "https://www.puravidadivers.com/deep-reef-diving-south-florida-reefs/"
+      ],
+      "excluded": "each named only by Pura Vida Divers (sections of the Breakers reef line)"
+    },
+    {
+      "name": "North Double Ledges",
+      "template": null,
+      "listedBy": ["https://www.puravidadivers.com/deep-reef-diving-south-florida-reefs/"],
+      "excluded": "on one operator list only (Pura Vida Divers); PBC names only NW and S Double Ledges"
+    },
+    {
+      "name": "Atlantis (Royal Park Bridge rubble, Spud Barge)",
+      "template": null,
+      "listedBy": ["https://www.puravidadivers.com/wreck-diving-sites-south-florida/"],
+      "excluded": "on one operator list only (Pura Vida Divers)"
+    },
+    {
+      "name": "60' Rock Piles",
+      "template": null,
+      "listedBy": ["https://www.puravidadivers.com/south-florida-reefs-60ft/"],
+      "excluded": "on one operator list only (Pura Vida Divers)"
+    },
+    {
+      "name": "Ballentine's / Pink House",
+      "template": null,
+      "listedBy": ["https://www.puravidadivers.com/shallow-dive-sites-south-florida/"],
+      "excluded": "Pura Vida only, and listed as snorkel/training spots it does not regularly visit"
+    },
+    {
+      "name": "Singer Island mitigation reef / Ocean Reef Park / Worth Avenue pier debris",
+      "template": null,
+      "listedBy": ["https://www.puravidadivers.com/beach-diving-south-florida/"],
+      "excluded": "shore sites on one operator list only (Pura Vida Divers)"
+    },
+    {
+      "name": "Coral Cove Park nearshore reef",
+      "template": null,
+      "position": [26.9622, -80.0773],
+      "listedBy": [
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ],
+      "excluded": "county reef layer only; no operator list found"
+    },
+    {
+      "name": "Mar-a-Lago Reef",
+      "template": null,
+      "position": [26.6842, -80.0309],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf"
+      ],
+      "excluded": "buoy list only (FDEP brochure and the PBC buoy layer are one list); no operator list found"
+    },
+    {
+      "name": "Diamondhead Radnor Reef",
+      "template": null,
+      "position": [26.91223, -80.05808],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf"
+      ],
+      "excluded": "buoy list only; no operator list found"
+    },
+    {
+      "name": "Boca Raton Patch Reef",
+      "template": null,
+      "position": [26.34343, -80.0651],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf"
+      ],
+      "excluded": "buoy list only (PBC 'Boca Patch Reefs' is the same buoyed patch-reef area); no operator list found"
+    },
+    {
+      "name": "Inchulva (Delray Wreck)",
+      "template": null,
+      "position": [26.4535, -80.0562],
+      "listedBy": [
+        "https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Environment_Open_Data/MapServer/0"
+      ],
+      "excluded": "county reef layer only; no operator list found"
+    },
+    {
+      "name": "Black Condo Reef / Casino Reef / Rags Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/black-condo-reef/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/casino-reef/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/rags-reef/"
+      ],
+      "excluded": "each on one operator list only (South Florida Diving Headquarters)"
+    },
+    {
+      "name": "No Shoes Reef 4",
+      "template": null,
+      "listedBy": [
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites"
+      ],
+      "excluded": "tourism list only; the FWC row is a module deployment no operator advertises"
+    },
+    {
+      "name": "Hydro Atlantic",
+      "template": null,
+      "position": [26.325, -80.05071],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.parrotislandscuba.com/wreks.php",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites",
+        "https://www.southfloridadiving.com/dive-sites/technical/hydro-atlantic/"
+      ],
+      "excluded": "technical depth (deck ~150 ft, sand 166-175 ft); operators sell it as a technical dive"
+    },
+    {
+      "name": "Miss Lourdies",
+      "template": null,
+      "position": [26.3198, -80.05333],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/technical/miss-lourdies/"
+      ],
+      "excluded": "technical depth (101-140 ft); SFDHQ lists it under technical sites"
+    },
+    {
+      "name": "Sylvina Express",
+      "template": null,
+      "position": [26.7945, -79.98617],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.thepalmbeaches.com/explore/beaches-watersports/diving-snorkeling/diving-sites"
+      ],
+      "excluded": "technical depth (FWC bottom 277 ft)"
+    },
+    {
+      "name": "Ande / The Playground / Wickstrom Reef / USS Muliphen",
+      "template": null,
+      "listedBy": ["https://www.stuartscuba.com/charters/dive-sites/"],
+      "excluded": "technical dives (140-195 ft); Stuart Scuba sells them as tech or 6-pack charters"
+    },
+    {
+      "name": "St. Lucie Inlet Preserve State Park reef",
+      "template": null,
+      "position": [27.13193, -80.134],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf"
+      ],
+      "excluded": "buoy list only; no operator list found"
+    },
+    {
+      "name": "Martin County artificial reef sites (Donaldson, Ernst, Sirotkin, Guardian)",
+      "template": null,
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ],
+      "excluded": "FWC and county deployments that no operator list names"
+    }
+  ]
+}

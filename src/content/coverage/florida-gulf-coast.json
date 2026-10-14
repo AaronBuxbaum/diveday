@@ -1,0 +1,244 @@
+{
+  "area": "florida-gulf-coast",
+  "method": "Counted 2026-10-14 from the Big Bend south to Collier County (Tampa Bay/Pinellas, Manatee, Sarasota/Venice, Lee, Naples/Marco). A site is counted when it is named on at least two independent lists: county reef lists (Pinellas GPS page, Lee County reef layer), the FL underwater preserves, the FWC artificial-reef dataset (only alongside another list), operator site lists (SCUBA Heroes, Narcosis Scuba, Tanks-A-Lot/2 Shea), and tourism-board dive pages (Bradenton, Fort Myers, Sanibel-Captiva, Naples). Few operators on this coast publish named site lists, so many well-known sites stay on one list and are recorded as excluded. No Big Bend site met the rule.",
+  "sources": [
+    "https://pinellas.gov/artificial-reef-gps-coordinates",
+    "https://www.scubaheroes.com/about/dive-sites",
+    "https://narcosisscuba.com/charters",
+    "https://2sheacharters.com/scubadiving",
+    "https://museumsinthesea.fpan.us/",
+    "https://www.bradentongulfislands.com/blogs/snorkeling-and-scuba-diving-in-the-bradenton-area/",
+    "https://services2.arcgis.com/LvWGAAhHwbCJ2GMP/arcgis/rest/services/ArtificialReef/FeatureServer/0",
+    "https://visitfortmyers.com/listing/uss-mohawk-memorial-reef/45594",
+    "https://sanibel-captiva.org/sanibel-island-snorkeling-scuba-diving/",
+    "https://www.paradisecoast.com/Articles/Six-Beautiful-Places-for-Snorkeling-and-Scuba-Diving-Near-Naples",
+    "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Sheridan (Pinellas #2)",
+      "template": "sheridan-tug",
+      "position": [27.8763, -83.18583],
+      "listedBy": [
+        "https://pinellas.gov/artificial-reef-gps-coordinates",
+        "https://www.scubaheroes.com/about/dive-sites",
+        "https://narcosisscuba.com/charters",
+        "https://2sheacharters.com/scubadiving"
+      ]
+    },
+    {
+      "name": "USCGC Blackthorn (Pinellas #2)",
+      "template": "uscgc-blackthorn",
+      "position": [27.87663, -83.18607],
+      "listedBy": [
+        "https://pinellas.gov/artificial-reef-gps-coordinates",
+        "https://www.scubaheroes.com/about/dive-sites",
+        "https://narcosisscuba.com/charters",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Indian Shores Reef",
+      "template": "indian-shores-reef",
+      "position": [27.8629, -83.02875],
+      "listedBy": [
+        "https://pinellas.gov/artificial-reef-gps-coordinates",
+        "https://www.scubaheroes.com/about/dive-sites"
+      ]
+    },
+    {
+      "name": "Indian Shores Landing Ships (LSM 1 and LSM 2)",
+      "template": "indian-shores-landing-ships",
+      "position": [27.85735, -83.03055],
+      "listedBy": [
+        "https://pinellas.gov/artificial-reef-gps-coordinates",
+        "https://www.scubaheroes.com/about/dive-sites"
+      ]
+    },
+    {
+      "name": "St. Pete Beach Reef",
+      "template": "st-pete-beach-reef",
+      "position": [27.67667, -82.8625],
+      "listedBy": [
+        "https://pinellas.gov/artificial-reef-gps-coordinates",
+        "https://www.scubaheroes.com/about/dive-sites"
+      ]
+    },
+    {
+      "name": "Tug Orange (South County Reef)",
+      "template": "tug-orange",
+      "position": [27.72292, -82.97417],
+      "listedBy": [
+        "https://pinellas.gov/artificial-reef-gps-coordinates",
+        "https://www.scubaheroes.com/about/dive-sites"
+      ]
+    },
+    {
+      "name": "Veterans Reef (Circle of Heroes underwater veterans memorial)",
+      "template": "veterans-reef-circle-of-heroes",
+      "position": [28.05, -83.0125],
+      "listedBy": [
+        "https://pinellas.gov/artificial-reef-gps-coordinates",
+        "https://www.scubaheroes.com/about/dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Regina (Sugar Barge)",
+      "template": "regina-wreck",
+      "listedBy": [
+        "https://museumsinthesea.fpan.us/preserves/regina",
+        "https://www.bradentongulfislands.com/blogs/snorkeling-and-scuba-diving-in-the-bradenton-area/"
+      ]
+    },
+    {
+      "name": "USS Mohawk CGC Veterans Memorial Reef (Charlie's Reef)",
+      "template": "uss-mohawk-memorial-reef",
+      "position": [26.55125, -82.72468],
+      "listedBy": [
+        "https://services2.arcgis.com/LvWGAAhHwbCJ2GMP/arcgis/rest/services/ArtificialReef/FeatureServer/0",
+        "https://visitfortmyers.com/listing/uss-mohawk-memorial-reef/45594",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Pegasus Tugboat (Charlie's Reef)",
+      "template": "pegasus-tug",
+      "position": [26.55216, -82.72358],
+      "listedBy": [
+        "https://sanibel-captiva.org/sanibel-island-snorkeling-scuba-diving/",
+        "https://services2.arcgis.com/LvWGAAhHwbCJ2GMP/arcgis/rest/services/ArtificialReef/FeatureServer/0",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Edison Reef",
+      "template": "edison-reef",
+      "position": [26.30877, -82.22243],
+      "listedBy": [
+        "https://sanibel-captiva.org/sanibel-island-snorkeling-scuba-diving/",
+        "https://services2.arcgis.com/LvWGAAhHwbCJ2GMP/arcgis/rest/services/ArtificialReef/FeatureServer/0"
+      ]
+    },
+    {
+      "name": "Belton Johnson Reef",
+      "template": "belton-johnson-reef",
+      "position": [26.42505, -82.1947],
+      "listedBy": [
+        "https://sanibel-captiva.org/sanibel-island-snorkeling-scuba-diving/",
+        "https://services2.arcgis.com/LvWGAAhHwbCJ2GMP/arcgis/rest/services/ArtificialReef/FeatureServer/0"
+      ]
+    },
+    {
+      "name": "Gunsmoke",
+      "template": null,
+      "listedBy": ["https://www.scubaheroes.com/about/dive-sites"],
+      "excluded": "one dive list only (SCUBA Heroes); not an FWC deployment"
+    },
+    {
+      "name": "Upside-down Barge (Indian Shores salt hopper barge)",
+      "template": null,
+      "listedBy": ["https://www.scubaheroes.com/about/dive-sites"],
+      "excluded": "one dive list only (SCUBA Heroes)"
+    },
+    {
+      "name": "South County Reef One (Site One)",
+      "template": null,
+      "listedBy": ["https://www.scubaheroes.com/about/dive-sites"],
+      "excluded": "one dive list only (SCUBA Heroes)"
+    },
+    {
+      "name": "Rube Allyn Reef",
+      "template": null,
+      "position": [27.93368, -83.02523],
+      "listedBy": ["https://pinellas.gov/artificial-reef-gps-coordinates"],
+      "excluded": "official list only; no operator list found"
+    },
+    {
+      "name": "Treasure Island II (steel trawler and shrimp boat)",
+      "template": null,
+      "position": [27.69477, -83.29245],
+      "listedBy": ["https://pinellas.gov/artificial-reef-gps-coordinates"],
+      "excluded": "official list only; no operator list found"
+    },
+    {
+      "name": "St. Petersburg Bay Reef",
+      "template": null,
+      "position": [27.78783, -82.5925],
+      "listedBy": ["https://pinellas.gov/artificial-reef-gps-coordinates"],
+      "excluded": "official list only; inside Tampa Bay"
+    },
+    {
+      "name": "USS Narcissus",
+      "template": null,
+      "listedBy": ["https://museumsinthesea.fpan.us/preserves/uss-narcissus"],
+      "excluded": "preserve list only; no operator list found"
+    },
+    {
+      "name": "Spanish Rocks (Anna Maria Island)",
+      "template": null,
+      "listedBy": [
+        "https://www.bradentongulfislands.com/blogs/snorkeling-and-scuba-diving-in-the-bradenton-area/"
+      ],
+      "excluded": "one list only (Bradenton tourism board)"
+    },
+    {
+      "name": "1-Mile, 3-Mile and 7-Mile Reefs (Manatee)",
+      "template": null,
+      "listedBy": [
+        "https://www.bradentongulfislands.com/blogs/snorkeling-and-scuba-diving-in-the-bradenton-area/"
+      ],
+      "excluded": "one list only; FWC Manatee reefs carry several overlapping names"
+    },
+    {
+      "name": "Bay Ronto",
+      "template": null,
+      "position": [26.76593, -82.84668],
+      "listedBy": [
+        "https://services2.arcgis.com/LvWGAAhHwbCJ2GMP/arcgis/rest/services/ArtificialReef/FeatureServer/0"
+      ],
+      "excluded": "official list only; no operator list found"
+    },
+    {
+      "name": "Fantastico",
+      "template": null,
+      "position": [26.29647, -82.83477],
+      "listedBy": [
+        "https://services2.arcgis.com/LvWGAAhHwbCJ2GMP/arcgis/rest/services/ArtificialReef/FeatureServer/0"
+      ],
+      "excluded": "official list only; no operator list found"
+    },
+    {
+      "name": "Baja California (Naples)",
+      "template": null,
+      "listedBy": [
+        "https://www.paradisecoast.com/Articles/Six-Beautiful-Places-for-Snorkeling-and-Scuba-Diving-Near-Naples"
+      ],
+      "excluded": "one list only (Naples tourism board)"
+    },
+    {
+      "name": "The Black Hole (Naples)",
+      "template": null,
+      "listedBy": [
+        "https://www.paradisecoast.com/Articles/Six-Beautiful-Places-for-Snorkeling-and-Scuba-Diving-Near-Naples"
+      ],
+      "excluded": "one list only; deeper cavern reaches 225 ft"
+    },
+    {
+      "name": "The Kidd (Naples)",
+      "template": null,
+      "listedBy": [
+        "https://www.paradisecoast.com/Articles/Six-Beautiful-Places-for-Snorkeling-and-Scuba-Diving-Near-Naples"
+      ],
+      "excluded": "one list only (Naples tourism board)"
+    },
+    {
+      "name": "Caspersen Beach (Venice fossil shore dive)",
+      "template": null,
+      "listedBy": ["https://www.scubadiving.com/travel/florida-florida-keys/venice-beach-fla"],
+      "excluded": "only a magazine piece and crowd-sourced logs; no operator or official list found"
+    }
+  ]
+}

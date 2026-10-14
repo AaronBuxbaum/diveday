@@ -1,0 +1,151 @@
+{
+  "area": "florida-keys-islamorada",
+  "method": "Islamorada reef line from Conch Reef south to the San Pedro, Tavernier to Lower Matecumbe: NOAA FKNMS 2025 mooring buoys and Shipwreck Trail, Monroe County TDC's Reef Explorer guide (Islamorada page), FWC artificial reefs and Florida State Parks' San Pedro preserve, checked against Islamorada operators' own pages (Islamorada Dive Center, Key Dives, Deep Sea Scuba's TDC directory entry, Conch Republic Divers) plus Rainbow Reef for Conch Reef/Wall. Counting rule: named, recreational scuba (not snorkel-only, technical-depth, closed or permit-only), and on at least two independent lists. NOAA FKNMS's mooring-buoy list and its Shipwreck Trail are one publisher and count once; Monroe County TDC's Reef Explorer guide and its shipwrecks page count once; FWC's artificial-reef dataset counts once and only for a named vessel an operator also advertises; each dive operator's own published site list counts once (Captain Hook's and its Dive Key West shop are one operator). Lodging guides, magazines and hobby sites were read but never counted. Counted 2026-10-14.",
+  "sources": [
+    "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+    "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0",
+    "https://nmsfloridakeys.blob.core.windows.net/floridakeys-prod/media/archive/mbuoy/mooringbuoy20140228.pdf",
+    "https://floridakeys.noaa.gov/shipwrecktrail/",
+    "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+    "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+    "https://www.floridastateparks.org/parks-and-trails/san-pedro-underwater-archaeological-preserve-state-park",
+    "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+    "https://www.keydives.com/",
+    "https://visitfloridakeys.com/business-directory/deep-sea-scuba",
+    "https://conchrepublicdivers.com/dive-sites/",
+    "https://www.rainbowreef.com/dive-locations-in-key-largo/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Alligator Reef (incl. Alligator Wreck / USS Alligator ballast)",
+      "template": "alligator-reef",
+      "position": [24.8451, -80.6223],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://nmsfloridakeys.blob.core.windows.net/floridakeys-prod/media/archive/mbuoy/mooringbuoy20140228.pdf",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+        "https://www.keydives.com/",
+        "https://visitfloridakeys.com/business-directory/deep-sea-scuba"
+      ]
+    },
+    {
+      "name": "Eagle (The Eagle)",
+      "template": "eagle-wreck",
+      "position": [24.86977, -80.57027],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://floridakeys.noaa.gov/shipwrecktrail/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Eagle%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json",
+        "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+        "https://www.keydives.com/",
+        "https://conchrepublicdivers.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Cheeca Rocks",
+      "template": "cheeca-rocks",
+      "position": [24.90387, -80.61411],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/business-directory/deep-sea-scuba"
+      ]
+    },
+    {
+      "name": "Crocker Reef (Crocker Wall)",
+      "template": "crocker-reef",
+      "position": [24.90845, -80.52166],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+        "https://www.keydives.com/"
+      ]
+    },
+    {
+      "name": "Davis Reef (Davis Ledge)",
+      "template": "davis-reef",
+      "position": [24.92221, -80.50436],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+        "https://www.keydives.com/"
+      ]
+    },
+    {
+      "name": "Hen and Chickens (Hens & Chickens)",
+      "template": "hen-and-chickens",
+      "position": [24.93481, -80.54917],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+        "https://www.keydives.com/",
+        "https://visitfloridakeys.com/business-directory/deep-sea-scuba"
+      ]
+    },
+    {
+      "name": "Conch Reef (Conch Wall)",
+      "template": "conch-reef",
+      "position": [24.95439, -80.4581],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://visitfloridakeys.com/business-directory/deep-sea-scuba"
+      ]
+    },
+    {
+      "name": "Rocky Top",
+      "template": "rocky-top",
+      "position": [24.89508, -80.574],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://www.islamoradadivecenter.com/florida-keys-dive-sites"
+      ]
+    },
+    {
+      "name": "San Pedro (1733 Spanish Plate Fleet)",
+      "template": "san-pedro",
+      "position": [24.86331, -80.67982],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://floridakeys.noaa.gov/shipwrecktrail/",
+        "https://www.floridastateparks.org/parks-and-trails/san-pedro-underwater-archaeological-preserve-state-park",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf"
+      ]
+    },
+    {
+      "name": "Alexander Barge",
+      "template": "alexander-barge",
+      "position": [24.86166, -80.56833],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Alexander%20Barge%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json",
+        "https://www.islamoradadivecenter.com/florida-keys-dive-sites"
+      ]
+    },
+    {
+      "name": "Little Conch",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf"
+      ],
+      "excluded": "On one list only (TDC Reef Explorer); no buoy or operator list names it."
+    },
+    {
+      "name": "Victory Reef",
+      "template": null,
+      "listedBy": ["https://www.islamoradadivecenter.com/florida-keys-dive-sites"],
+      "excluded": "On one operator list only (Islamorada Dive Center)."
+    },
+    {
+      "name": "Hammerhead",
+      "template": null,
+      "listedBy": ["https://www.islamoradadivecenter.com/florida-keys-dive-sites"],
+      "excluded": "On one operator list only (Islamorada Dive Center)."
+    }
+  ]
+}

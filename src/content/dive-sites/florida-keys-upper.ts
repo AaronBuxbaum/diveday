@@ -483,4 +483,293 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       ],
     },
   },
+  // Denominator row: North Dry Rocks (Key Largo Northern Dry Rocks, Minnow Cave; incl. North North Dry Rocks)
+  {
+    slug: "north-dry-rocks",
+    version: 1,
+    area: "florida-keys-upper",
+    sources: [
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27N%20Dry%20Rocks%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://www.rainbowreef.com/dive-locations-in-key-largo/key-largo-northern-dry-rocks",
+      "https://www.pcwatersports.com/key-largo-dive-sites",
+    ],
+    briefing: {
+      name: "North Dry Rocks",
+      locationName: "Key Largo, Florida Keys National Marine Sanctuary",
+      forecastLatitude: 25.1299,
+      forecastLongitude: -80.2937,
+      description:
+        "A small, shallow reef just north of Key Largo Dry Rocks, with everything its famous neighbour has except the statue and the crowd. Its best-known corner is Minnow Cave, a coral undercut that fills with glassy baitfish.",
+      marineLife: "Glass minnows · great barracuda · grouper · spiny lobster",
+      marineLifeDescription:
+        "Baitfish hang in the mouth of the undercut, and the barracuda that hunt them are rarely far away.",
+      difficultyLevel: "beginner",
+      depthRange: "3–12 m (10–40 ft)",
+      maxDepthMeters: 12,
+      currentNote:
+        "Shallow and usually easy on the reef top. The northern moorings (North North Dry Rocks) sit deeper, near 8 m, so check which one the boat is on.",
+      divePlan:
+        "Swim the reef edge from the mooring to Minnow Cave, look in from outside, and finish over the shallow coral heads.",
+      fitTone: "welcoming",
+      fitNote: "Bright, shallow and quieter than the Dry Rocks next door.",
+      landmarks: [
+        {
+          name: "Minnow Cave",
+          kind: "reefFormation",
+          note: "A coral undercut named for the baitfish that crowd it. A place to look into, not to swim into.",
+        },
+      ],
+      creatureSlugs: [
+        "great-barracuda",
+        "black-grouper",
+        "spiny-lobster",
+        "bluestriped-grunt",
+        "boulder-star-coral",
+      ],
+    },
+  },
+  // Denominator row: The Elbow (Elbow Reef)
+  {
+    slug: "the-elbow",
+    version: 1,
+    area: "florida-keys-upper",
+    sources: [
+      "https://floridakeys.noaa.gov/zones/spas/elbow.html",
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27The%20Elbow%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://www.rainbowreef.com/dive-locations-in-key-largo/elbow-reef",
+      "https://www.pcwatersports.com/key-largo-dive-sites",
+    ],
+    briefing: {
+      name: "The Elbow",
+      locationName: "Key Largo, Florida Keys National Marine Sanctuary",
+      forecastLatitude: 25.1433,
+      forecastLongitude: -80.2571,
+      description:
+        "A spur-and-groove reef that crooks out toward the Gulf Stream like a bent arm, marked by a light tower. It has been catching ships for well over a century, so wreckage lies among the coral, and the clear blue water comes with the location.",
+      marineLife: "Bluestriped grunts · porkfish · angelfish · sea turtles",
+      marineLifeDescription:
+        "Grunts and snapper school in the grooves, and turtles are regulars along the deeper fingers.",
+      difficultyLevel: "intermediate",
+      depthRange: "3–17 m (10–55 ft)",
+      maxDepthMeters: 17,
+      currentNote:
+        "Closer to the Gulf Stream than most Key Largo reefs: clearer water, and more current in exchange, so it is often run as a drift. A Sanctuary Preservation Area, so no fishing or collecting, and boats use the mooring buoys.",
+      divePlan:
+        "Follow a spur from the mooring toward the deeper edge, turn with the current, and come back up a neighbouring groove. Wreck pieces turn up on most of the moorings near the tower.",
+      fitTone: "demanding",
+      fitNote: "Easy depths, but the current deserves respect. Comfortable in a drift is the bar.",
+      landmarks: [
+        {
+          name: "Elbow light tower",
+          kind: "navigationMark",
+          note: "The light tower over the reef. The City of Washington lies just off it.",
+        },
+        {
+          name: "The Civil War wreck",
+          kind: "reefHistory",
+          note: "Wooden beams and iron fastenings just north of the tower, a favourite with photographers.",
+        },
+        {
+          name: "Mike’s Wreck",
+          kind: "reefHistory",
+          note: "Scattered remains in about 6–8 m, one of several wrecks the reef claimed.",
+        },
+      ],
+      creatureSlugs: [
+        "bluestriped-grunt",
+        "porkfish",
+        "french-angelfish",
+        "hawksbill-turtle",
+        "yellowtail-snapper",
+        "giant-barrel-sponge",
+      ],
+    },
+  },
+  // Denominator row: City of Washington
+  {
+    slug: "city-of-washington",
+    version: 1,
+    area: "florida-keys-upper",
+    sources: [
+      "https://floridakeys.noaa.gov/shipwrecktrail/cityofwashington.html",
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27The%20Elbow%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://www.pcwatersports.com/key-largo-dive-sites",
+      "https://www.rainbowreef.com/dive-locations-in-key-largo/elbow-reef",
+    ],
+    briefing: {
+      name: "City of Washington",
+      locationName: "The Elbow, Key Largo, Florida Keys National Marine Sanctuary",
+      forecastLatitude: 25.1464,
+      forecastLongitude: -80.2559,
+      description:
+        "An 1877 iron steamship that stood by the USS Maine when she blew up in Havana in 1898, carried troops in the war that followed, and ended her days as a coal barge. A tug ran her onto the Elbow in 1917, and her flattened hull now lies across the reef in shallow water.",
+      marineLife: "Black grouper · great barracuda · moray eels · nurse sharks",
+      marineLifeDescription:
+        "Coral has grown through the broken iron, and the fish use it like any other ledge.",
+      difficultyLevel: "beginner",
+      depthRange: "4–8 m (12–25 ft)",
+      maxDepthMeters: 8,
+      currentNote:
+        "Shallow, but on the Elbow, so current can run across the wreck. Inside The Elbow Sanctuary Preservation Area: nothing is taken, and every piece of the wreck is protected.",
+      divePlan:
+        "Trace the hull from the mooring, bow to stern, and look for the propeller shaft tunnel at the stern end. A good second dive and a good night dive.",
+      fitTone: "welcoming",
+      fitNote: "History you can read from the surface, at a depth anyone can manage.",
+      landmarks: [
+        {
+          name: "Propeller shaft tunnel",
+          kind: "wreckFeature",
+          note: "The most recognisable piece of her, at the less broken stern end.",
+        },
+        {
+          name: "The collapsed hull",
+          kind: "wreckFeature",
+          note: "Her iron sides have fallen outward, so the wreck spreads wider than the ship ever was.",
+        },
+      ],
+      creatureSlugs: [
+        "black-grouper",
+        "great-barracuda",
+        "green-moray",
+        "nurse-shark",
+        "french-grunt",
+      ],
+    },
+  },
+  // Denominator row: Bibb (USCGC Bibb)
+  {
+    slug: "uscgc-bibb",
+    version: 1,
+    area: "florida-keys-upper",
+    sources: [
+      "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Bibb%27&outFields=Name,Depth,Relief,Lat_DD,Long_DD,DeployDate&returnGeometry=false&f=json",
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27The%20Bibb%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://www.rainbowreef.com/dive-locations-in-key-largo/uscg-bibb-wreck",
+      "https://www.pcwatersports.com/key-largo-dive-sites",
+    ],
+    briefing: {
+      name: "USCGC Bibb",
+      locationName: "Key Largo, Florida",
+      forecastLatitude: 24.9952,
+      forecastLongitude: -80.3795,
+      description:
+        "The Duane’s sister, a 100 m Coast Guard cutter that served from 1937 through World War II and Vietnam. Sunk beside her in 1987, she landed on her starboard side, which keeps her deep and keeps the crowds away.",
+      marineLife: "Goliath grouper · great barracuda · jacks · passing sharks",
+      marineLifeDescription:
+        "Close enough to the Gulf Stream for big visibility and big animals passing through.",
+      difficultyLevel: "advanced",
+      depthRange: "29–40 m (95–130 ft)",
+      maxDepthMeters: 40,
+      currentNote:
+        "Current here can be strong enough to call the dive off. The port rail is the shallowest point, near 29 m, and the sand lies at about 40 m. Stay outside the hull: cables and debris make penetration a different dive and a different card.",
+      divePlan:
+        "Down the line to the port rail, a short swim along the side she lies on, and back to the line with gas to spare. Plan nitrox and a short bottom time.",
+      fitTone: "demanding",
+      fitNote:
+        "Deep from the first metre of steel, often current-swept. For divers already at home on the Duane.",
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep"],
+      landmarks: [
+        {
+          name: "The port rail",
+          kind: "wreckFeature",
+          note: "The highest part of the wreck, about 29 m down, and where most dives are spent.",
+        },
+        {
+          name: "Crow’s nest",
+          kind: "wreckFeature",
+          note: "Because she lies on her side, the mast reaches out sideways over the sand.",
+        },
+      ],
+      creatureSlugs: ["goliath-grouper", "great-barracuda", "horse-eye-jack", "bar-jack"],
+    },
+  },
+  // Denominator row: Snapper Ledge
+  {
+    slug: "snapper-ledge",
+    version: 1,
+    area: "florida-keys-upper",
+    sources: [
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27Snapper%20Ledge%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://www.rainbowreef.com/dive-locations-in-key-largo/snapper-ledge",
+      "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+      "https://www.pcwatersports.com/key-largo-dive-sites",
+    ],
+    briefing: {
+      name: "Snapper Ledge",
+      locationName: "Key Largo, Florida Keys National Marine Sanctuary",
+      forecastLatitude: 24.9819,
+      forecastLongitude: -80.4212,
+      description:
+        "A low coral ledge named for the yellowtail and other snapper that school along it, sometimes thickly enough to hide the reef. It also holds one of the biggest boulder brain corals in the Upper Keys.",
+      marineLife: "Yellowtail snapper · nurse sharks · moray eels · hogfish",
+      marineLifeDescription:
+        "Schools along the ledge, nurse sharks tucked underneath it, and morays in the holes between.",
+      difficultyLevel: "beginner",
+      depthRange: "5–8 m (15–25 ft)",
+      maxDepthMeters: 8,
+      currentNote: "Usually gentle, and shallow enough for snorkelers on the same boat.",
+      divePlan:
+        "Follow the ledge from the mooring with it on one shoulder, look under it for sharks and eels, and turn back along the top.",
+      fitTone: "welcoming",
+      fitNote: "Shallow, easy and full of fish. A favourite second tank.",
+      landmarks: [
+        {
+          name: "The ledge",
+          kind: "reefFormation",
+          note: "The undercut that gives the site its shape and its sleeping nurse sharks.",
+        },
+        {
+          name: "The big boulder brain coral",
+          kind: "reefFormation",
+          note: "One of the largest of its kind in the Upper Keys. Admire it from a fin’s length away.",
+        },
+      ],
+      creatureSlugs: [
+        "yellowtail-snapper",
+        "nurse-shark",
+        "green-moray",
+        "spotted-moray",
+        "hogfish",
+        "corkscrew-anemone",
+      ],
+    },
+  },
+  // Denominator row: Sand Island
+  {
+    slug: "sand-island",
+    version: 1,
+    area: "florida-keys-upper",
+    sources: [
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27Sand%20Island%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://www.rainbowreef.com/dive-locations-in-key-largo/sand-island",
+      "https://www.seadwellers.com/blog/scuba-diving/best-scuba-diving-in-key-largo-top-reefs-wrecks-what-to-expect",
+    ],
+    briefing: {
+      name: "Sand Island",
+      locationName: "Key Largo, Florida Keys National Marine Sanctuary",
+      forecastLatitude: 25.0185,
+      forecastLongitude: -80.3673,
+      description:
+        "Scattered coral heads and soft corals on open sand, just north of Molasses Reef. Shallow and forgiving, it is where Key Largo boats go when the outer reef is too rough or the current too strong.",
+      marineLife: "Juvenile reef fish · puffers · sea fans · parrotfish",
+      marineLifeDescription:
+        "Look into the nooks on the shallow northeast side, where the young fish hide.",
+      difficultyLevel: "beginner",
+      depthRange: "5–9 m (15–30 ft)",
+      maxDepthMeters: 9,
+      currentNote: "The rough-weather choice: sheltered and easy when the deeper reefs are not.",
+      divePlan:
+        "A slow loop from coral head to coral head, coming back across the sand to the mooring.",
+      fitTone: "welcoming",
+      fitNote: "Easy navigation and gentle depths. A good first ocean dive or a calm checkout.",
+      creatureSlugs: [
+        "sharpnose-puffer",
+        "stoplight-parrotfish",
+        "common-sea-fan",
+        "sea-plume",
+        "yellowhead-jawfish",
+      ],
+    },
+  },
 ];

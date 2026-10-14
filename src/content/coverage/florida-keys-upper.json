@@ -1,0 +1,278 @@
+{
+  "area": "florida-keys-upper",
+  "method": "Key Largo reef line from Carysfort south to Pickles/Snapper Ledge: started from the NOAA FKNMS 2025 mooring-buoy layer and Shipwreck Trail, Monroe County TDC's Reef Explorer guide and the FWC artificial-reef dataset, then checked each candidate against five Key Largo/Tavernier operators' own dive-site pages (Rainbow Reef, BlueWater Divers, Pirates Cove Watersports, Silent World, Sea Dwellers, Conch Republic Divers). Counting rule: named, recreational scuba (not snorkel-only, technical-depth, closed or permit-only), and on at least two independent lists. NOAA FKNMS's mooring-buoy list and its Shipwreck Trail are one publisher and count once; Monroe County TDC's Reef Explorer guide and its shipwrecks page count once; FWC's artificial-reef dataset counts once and only for a named vessel an operator also advertises; each dive operator's own published site list counts once (Captain Hook's and its Dive Key West shop are one operator). Lodging guides, magazines and hobby sites were read but never counted. Counted 2026-10-14.",
+  "sources": [
+    "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+    "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0",
+    "https://floridakeys.noaa.gov/shipwrecktrail/",
+    "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+    "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/shipwrecks",
+    "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+    "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+    "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+    "https://www.pcwatersports.com/key-largo-dive-sites",
+    "https://www.silentworldkeylargo.com/dive-sites/",
+    "https://www.seadwellers.com/blog/scuba-diving/best-scuba-diving-in-key-largo-top-reefs-wrecks-what-to-expect",
+    "https://conchrepublicdivers.com/dive-sites/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Molasses Reef",
+      "template": "molasses-reef",
+      "position": [25.00906, -80.37497],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://www.silentworldkeylargo.com/dive-sites/",
+        "https://www.seadwellers.com/blog/scuba-diving/best-scuba-diving-in-key-largo-top-reefs-wrecks-what-to-expect"
+      ]
+    },
+    {
+      "name": "French Reef",
+      "template": "french-reef",
+      "position": [25.03466, -80.34799],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://www.silentworldkeylargo.com/dive-sites/",
+        "https://www.seadwellers.com/blog/scuba-diving/best-scuba-diving-in-key-largo-top-reefs-wrecks-what-to-expect"
+      ]
+    },
+    {
+      "name": "Key Largo Dry Rocks (Christ of the Abyss, Dry Rocks)",
+      "template": "christ-of-the-abyss",
+      "position": [25.12346, -80.29785],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://www.silentworldkeylargo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Grecian Rocks",
+      "template": "grecian-rocks",
+      "position": [25.11053, -80.30562],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://www.seadwellers.com/blog/scuba-diving/best-scuba-diving-in-key-largo-top-reefs-wrecks-what-to-expect"
+      ]
+    },
+    {
+      "name": "North Dry Rocks (Key Largo Northern Dry Rocks, Minnow Cave; incl. North North Dry Rocks)",
+      "template": "north-dry-rocks",
+      "position": [25.12992, -80.29374],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites"
+      ]
+    },
+    {
+      "name": "The Elbow (Elbow Reef)",
+      "template": "the-elbow",
+      "position": [25.14334, -80.25713],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://www.silentworldkeylargo.com/dive-sites/",
+        "https://www.seadwellers.com/blog/scuba-diving/best-scuba-diving-in-key-largo-top-reefs-wrecks-what-to-expect"
+      ]
+    },
+    {
+      "name": "City of Washington",
+      "template": "city-of-washington",
+      "position": [25.14643, -80.2559],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/shipwrecktrail/",
+        "https://www.pcwatersports.com/key-largo-dive-sites"
+      ]
+    },
+    {
+      "name": "Carysfort Reef (incl. Carysfort South, Carysfort Trench / Carysfort Wall)",
+      "template": "carysfort-reef",
+      "position": [25.22211, -80.21116],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://www.silentworldkeylargo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Benwood (SS Benwood)",
+      "template": "benwood-wreck",
+      "position": [25.05247, -80.33256],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://floridakeys.noaa.gov/shipwrecktrail/",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://www.silentworldkeylargo.com/dive-sites/",
+        "https://conchrepublicdivers.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Spiegel Grove (USS Spiegel Grove)",
+      "template": "spiegel-grove",
+      "position": [25.06621, -80.31386],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Spiegel%20Grove%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json",
+        "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/shipwrecks",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://www.silentworldkeylargo.com/dive-sites/",
+        "https://conchrepublicdivers.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Duane (USCGC Duane)",
+      "template": "uscgc-duane",
+      "position": [24.98964, -80.38155],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Duane%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://conchrepublicdivers.com/dive-sites/",
+        "https://www.islamoradadivecenter.com/florida-keys-dive-sites"
+      ]
+    },
+    {
+      "name": "Bibb (USCGC Bibb)",
+      "template": "uscgc-bibb",
+      "position": [24.99528, -80.37952],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Bibb%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://www.islamoradadivecenter.com/florida-keys-dive-sites"
+      ]
+    },
+    {
+      "name": "Pickles Reef",
+      "template": "pickles-reef",
+      "position": [24.98832, -80.41267],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites",
+        "https://conchrepublicdivers.com/dive-sites/",
+        "https://www.seadwellers.com/blog/scuba-diving/best-scuba-diving-in-key-largo-top-reefs-wrecks-what-to-expect"
+      ]
+    },
+    {
+      "name": "Snapper Ledge",
+      "template": "snapper-ledge",
+      "position": [24.98186, -80.42119],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.bwdiver.com/dive-the-best-key-largo-dive-sites-bluewater-divers",
+        "https://www.pcwatersports.com/key-largo-dive-sites"
+      ]
+    },
+    {
+      "name": "Sand Island",
+      "template": "sand-island",
+      "position": [25.0185, -80.36727],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://www.rainbowreef.com/dive-locations-in-key-largo/",
+        "https://www.seadwellers.com/blog/scuba-diving/best-scuba-diving-in-key-largo-top-reefs-wrecks-what-to-expect"
+      ]
+    },
+    {
+      "name": "Turtle Rocks",
+      "template": null,
+      "position": [25.2856, -80.21513],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "On one list only (NOAA buoys); no operator list names it."
+    },
+    {
+      "name": "White Banks",
+      "template": null,
+      "position": [25.0418, -80.37104],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "On one list only (NOAA buoys); a shallow patch-reef snorkel stop, no operator list names it."
+    },
+    {
+      "name": "Three Sisters",
+      "template": null,
+      "position": [25.02744, -80.39569],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "On one list only (NOAA buoys)."
+    },
+    {
+      "name": "Wolfe Reef",
+      "template": null,
+      "position": [25.02167, -80.39637],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Wolfe%20Reef%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json"
+      ],
+      "excluded": "NOAA buoys plus an FWC module deployment; the FWC entry is not a vessel and no operator advertises the site."
+    },
+    {
+      "name": "Horseshoe Reef",
+      "template": null,
+      "position": [25.13913, -80.29445],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "On one list only (NOAA buoys)."
+    },
+    {
+      "name": "North Patch / North East Patch",
+      "template": null,
+      "position": [25.31248, -80.19876],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "On one list only (NOAA buoys)."
+    },
+    {
+      "name": "Carysfort Shoal",
+      "template": null,
+      "position": [25.25505, -80.20147],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "On one list only (NOAA buoys); operators fold it into Carysfort."
+    },
+    {
+      "name": "Tarpon Basin (drift)",
+      "template": null,
+      "listedBy": ["https://www.silentworldkeylargo.com/dive-sites/"],
+      "excluded": "On one operator list only (Silent World)."
+    },
+    {
+      "name": "Alva Chapman Reef",
+      "template": null,
+      "position": [25.29445, -80.15166],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Alva%20Chapman%20Reef%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json"
+      ],
+      "excluded": "FWC-only vessel at 220 ft: technical depth, no operator list."
+    }
+  ]
+}

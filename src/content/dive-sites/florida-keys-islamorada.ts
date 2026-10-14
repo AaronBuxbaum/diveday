@@ -150,4 +150,330 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       ],
     },
   },
+  // Denominator row: Crocker Reef (Crocker Wall)
+  {
+    slug: "crocker-reef",
+    version: 1,
+    area: "florida-keys-islamorada",
+    sources: [
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27Crocker%20Reef%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+      "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+    ],
+    briefing: {
+      name: "Crocker Reef and Wall",
+      locationName: "Islamorada, Florida Keys National Marine Sanctuary",
+      forecastLatitude: 24.9085,
+      forecastLongitude: -80.5217,
+      description:
+        "An outer reef off Islamorada whose south end becomes Crocker Wall, a spur-and-groove slope more than 120 m long that runs from mounding coral heads near 9 m down toward 24 m. Big barrel sponges line the slope, and the bigger fish follow it.",
+      marineLife: "Spotted eagle rays · sea turtles · green morays · barrel sponges",
+      marineLifeDescription:
+        "Grunts, yellowtail and grouper on the reef top, and rays and turtles cruising the face of the slope.",
+      difficultyLevel: "intermediate",
+      depthRange: "5–24 m (16–80 ft)",
+      maxDepthMeters: 24,
+      currentNote:
+        "Outer-reef current is common along the wall, and the slope keeps going deeper than the dive should. Agree a floor before descending.",
+      divePlan:
+        "Drop onto the wall moorings, work along the slope at your planned depth with the current, and climb the spurs to the coral heads for the end of the dive.",
+      fitTone: "demanding",
+      fitNote:
+        "Comfortable for a diver who watches a gauge on a slope. The shallow moorings suit everyone else.",
+      landmarks: [
+        {
+          name: "Crocker Wall",
+          kind: "reefFormation",
+          note: "The sea slope on the reef’s south end, cut by spurs, grooves and small canyons.",
+        },
+      ],
+      creatureSlugs: [
+        "spotted-eagle-ray",
+        "hawksbill-turtle",
+        "green-moray",
+        "giant-barrel-sponge",
+        "yellowtail-snapper",
+        "black-grouper",
+      ],
+    },
+  },
+  // Denominator row: Davis Reef (Davis Ledge)
+  {
+    slug: "davis-reef",
+    version: 1,
+    area: "florida-keys-islamorada",
+    sources: [
+      "https://floridakeys.noaa.gov/zones/spas/davisreef.html",
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27Davis%20Ledge%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/explore-islamorada-most-amazing-dives",
+      "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+    ],
+    briefing: {
+      name: "Davis Reef",
+      locationName: "Islamorada, Florida Keys National Marine Sanctuary",
+      forecastLatitude: 24.9222,
+      forecastLongitude: -80.5044,
+      description:
+        "A long reef ledge off Plantation Key, protected as a Sanctuary Preservation Area for its sea fans, sea rods and sea plumes. Grunts and schoolmaster snapper gather in the gullies, and a few very relaxed green morays live along the ledge.",
+      marineLife: "Schoolmaster snapper · grunts · green morays · grouper",
+      marineLifeDescription:
+        "Dense soft coral on the reef top, and big schools sheltering in the cuts below it.",
+      difficultyLevel: "beginner",
+      depthRange: "5–12 m (15–40 ft)",
+      maxDepthMeters: 12,
+      currentNote:
+        "Easy navigation along the ledge. A preservation area, so no fishing or collecting and no touching the coral; boats use the mooring buoys. Some moorings on the seaward side sit near 17 m, so check which one the boat is on.",
+      divePlan:
+        "Follow the ledge from the mooring, look into the gullies and archways, and come back over the soft-coral reef top.",
+      fitTone: "welcoming",
+      fitNote: "Shallow, easy to follow and busy with fish. Good for any certified diver.",
+      landmarks: [
+        {
+          name: "The ledge",
+          kind: "reefFormation",
+          note: "The north-to-south ledge the site is built around, with canyons and archways cut into it.",
+        },
+      ],
+      creatureSlugs: [
+        "schoolmaster-snapper",
+        "french-grunt",
+        "green-moray",
+        "black-grouper",
+        "common-sea-fan",
+        "sea-plume",
+      ],
+    },
+  },
+  // Denominator row: Hen and Chickens (Hens & Chickens)
+  {
+    slug: "hen-and-chickens",
+    version: 1,
+    area: "florida-keys-islamorada",
+    sources: [
+      "https://floridakeys.noaa.gov/zones/spas/henchickens.html",
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27Hens%20%26%20Chickens%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+      "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/explore-islamorada-most-amazing-dives",
+    ],
+    briefing: {
+      name: "Hen and Chickens",
+      locationName: "Plantation Key, Florida Keys National Marine Sanctuary",
+      forecastLatitude: 24.9348,
+      forecastLongitude: -80.5492,
+      description:
+        "A patch reef in the middle of Hawk Channel, its coral clustered like chicks around a mother hen. The big star and brain coral mounds are why it is a Sanctuary Preservation Area, and some stand taller than a diver.",
+      marineLife: "Bluestriped grunts · grouper · nurse sharks · sea fans",
+      marineLifeDescription:
+        "Grunt schools around the mounds and a forest of purple sea fans between them.",
+      difficultyLevel: "beginner",
+      depthRange: "3–7 m (10–22 ft)",
+      maxDepthMeters: 7,
+      currentNote:
+        "Inshore and shallow, the place to go when the outer reef is blown out, though visibility is usually lower than offshore. It sits in Hawk Channel, so boat traffic passes close: fly the dive flag and come up by the boat. No fishing or collecting inside the preservation area.",
+      divePlan:
+        "Circle from mound to mound around the mooring and back. At this depth, gas lasts longer than most people’s attention.",
+      fitTone: "welcoming",
+      fitNote: "Shallow, sheltered and easy. A gentle first reef.",
+      landmarks: [
+        {
+          name: "The coral mounds",
+          kind: "reefFormation",
+          note: "Clusters of star and brain coral that give the reef its name, some several metres tall.",
+        },
+      ],
+      creatureSlugs: [
+        "bluestriped-grunt",
+        "nurse-shark",
+        "great-star-coral",
+        "grooved-brain-coral",
+        "common-sea-fan",
+        "green-moray",
+      ],
+    },
+  },
+  // Denominator row: Conch Reef (Conch Wall)
+  {
+    slug: "conch-reef",
+    version: 1,
+    area: "florida-keys-islamorada",
+    sources: [
+      "https://floridakeys.noaa.gov/zones/spas/conchreef.html",
+      "https://floridakeys.noaa.gov/zones/special/conchreef.html",
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27Conch%20Wall%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://www.rainbowreef.com/dive-locations-in-key-largo/conch-reef-and-wall",
+    ],
+    briefing: {
+      name: "Conch Reef and Wall",
+      locationName: "Tavernier, Florida Keys National Marine Sanctuary",
+      forecastLatitude: 24.9544,
+      forecastLongitude: -80.4581,
+      description:
+        "A shallow reef with one of the best-developed reef walls in the Keys on its seaward side. The wall’s top lies around 14–17 m and it slopes away past 30 m, lined with barrel sponges and sea fans, with the Aquarius undersea laboratory working next door.",
+      marineLife: "Giant barrel sponges · sea fans · spotted eagle rays · grouper",
+      marineLifeDescription:
+        "Sponges and gorgonians crowd the slope, and big animals pass along it on the current.",
+      difficultyLevel: "advanced",
+      depthRange: "5–30 m (15–100 ft)",
+      maxDepthMeters: 30,
+      currentNote:
+        "The wall is run as a drift, and the slope continues below recreational depth, so the floor is the diver’s to hold. The reef top is a Sanctuary Preservation Area (no fishing or collecting), and the Research Only area beside it, marked by yellow buoys, is closed to all entry.",
+      divePlan:
+        "Drop onto the top of the wall, drift along it at your planned depth, and ascend over the reef with the boat following your bubbles.",
+      fitTone: "demanding",
+      fitNote:
+        "A deep drift along a wall that does not end where you should. For divers confident with both.",
+      // Below 30 m only on paper: the wall drops past 30 m and is dived as a current drift, so the
+      // gate is Advanced Open Water without the Deep specialty. The shallow reef-top moorings are an
+      // Open Water dive a shop can open by lowering this.
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Conch Wall",
+          kind: "reefFormation",
+          note: "The sloping wall on the reef’s seaward edge, top near 15 m.",
+        },
+        {
+          name: "Research Only area",
+          kind: "pointOfInterest",
+          note: "Yellow buoys marked “Research Only” around the Aquarius laboratory. Closed to entry.",
+        },
+      ],
+      creatureSlugs: [
+        "giant-barrel-sponge",
+        "common-sea-fan",
+        "spotted-eagle-ray",
+        "black-grouper",
+      ],
+    },
+  },
+  // Denominator row: Rocky Top
+  {
+    slug: "rocky-top",
+    version: 1,
+    area: "florida-keys-islamorada",
+    sources: [
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27Rocky%20Top%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+      "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+    ],
+    briefing: {
+      name: "Rocky Top",
+      locationName: "Islamorada, Florida Keys National Marine Sanctuary",
+      forecastLatitude: 24.8951,
+      forecastLongitude: -80.574,
+      description:
+        "A patch reef of large coral heads and purple gorgonians off Islamorada, with resident turtles and schools of fish thick enough to shade the bottom.",
+      marineLife: "Sea turtles · schooling grunts · purple sea fans · parrotfish",
+      difficultyLevel: "beginner",
+      depthRange: "5–9 m (16–30 ft)",
+      maxDepthMeters: 9,
+      currentNote: "Usually easy. Moor on the buoys and keep fins off the coral heads.",
+      divePlan:
+        "Work around the coral heads from the mooring, then circle back through the gorgonians.",
+      fitTone: "welcoming",
+      creatureSlugs: [
+        "green-sea-turtle",
+        "french-grunt",
+        "common-sea-fan",
+        "stoplight-parrotfish",
+        "yellowtail-snapper",
+      ],
+    },
+  },
+  // Denominator row: San Pedro (1733 Spanish Plate Fleet)
+  {
+    slug: "san-pedro",
+    version: 1,
+    area: "florida-keys-islamorada",
+    sources: [
+      "https://floridakeys.noaa.gov/shipwrecktrail/sanpedro.html",
+      "https://www.floridastateparks.org/parks-and-trails/san-pedro-underwater-archaeological-preserve-state-park",
+      "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0/query?where=Location%3D%27The%20San%20Pedro%27&outFields=Location,BuoyType,Depth__ft_&outSR=4326&f=json",
+    ],
+    briefing: {
+      name: "San Pedro",
+      locationName: "Indian Key, Islamorada, Florida",
+      forecastLatitude: 24.8633,
+      forecastLongitude: -80.6797,
+      description:
+        "A ship of the 1733 Spanish fleet, sunk in a hurricane a mile south of Indian Key and the oldest wreck on the Florida Keys Shipwreck Trail. What remains is her mound of river-stone ballast, with replica cannons, an anchor from another ship of the fleet and a bronze plaque set beside it.",
+      marineLife: "Grunts · snapper · parrotfish · turtle grass",
+      marineLifeDescription:
+        "The ballast pile is a reef of its own in the middle of the seagrass, and it is full of small fish.",
+      difficultyLevel: "beginner",
+      depthRange: "5–6 m (15–20 ft)",
+      maxDepthMeters: 6,
+      currentNote:
+        "Shallow and in Hawk Channel, so watch for boat traffic and fly a dive flag. A state Underwater Archaeological Preserve: every stone and brick stays exactly where it lies.",
+      divePlan:
+        "Circle the ballast mound slowly, find the plaque, then the cannons and anchor. An easy dive and a good snorkel.",
+      fitTone: "welcoming",
+      fitNote: "Shallow, calm and full of history. Anyone certified can enjoy it.",
+      landmarks: [
+        {
+          name: "The ballast mound",
+          kind: "reefHistory",
+          note: "Smooth European river stones from her hold, with red galley bricks mixed in.",
+        },
+        {
+          name: "Replica cannons and anchor",
+          kind: "underwaterMonument",
+          note: "Set on the site when it became a preserve. The anchor is a real one, from another ship of the same fleet.",
+        },
+        {
+          name: "Bronze plaque",
+          kind: "underwaterMonument",
+          note: "On a concrete base on the sand, telling the ship’s story.",
+        },
+      ],
+      creatureSlugs: [
+        "french-grunt",
+        "gray-snapper",
+        "stoplight-parrotfish",
+        "turtle-grass",
+        "sergeant-major",
+      ],
+    },
+  },
+  // Denominator row: Alexander Barge
+  {
+    slug: "alexander-barge",
+    version: 1,
+    area: "florida-keys-islamorada",
+    sources: [
+      "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Alexander%20Barge%27&outFields=Name,Depth,Relief,Lat_DD,Long_DD,DeployDate&returnGeometry=false&f=json",
+      "https://www.islamoradadivecenter.com/florida-keys-dive-sites",
+    ],
+    briefing: {
+      name: "Alexander Barge",
+      locationName: "Islamorada, Florida",
+      forecastLatitude: 24.8617,
+      forecastLongitude: -80.5683,
+      description:
+        "A 37 m steel barge sunk off Islamorada in 1984 with a field of bridge rubble around it. Plain to look at, it draws big animals well beyond its size.",
+      marineLife: "Goliath grouper · sea turtles · sharks · reef fish",
+      difficultyLevel: "advanced",
+      depthRange: "24–32 m (80–105 ft)",
+      maxDepthMeters: 32,
+      currentNote: "Deep and in open water, with current possible. Stay outside the structure.",
+      divePlan:
+        "Down the line to the barge, around it and the nearest rubble, and back to the line on a short, planned bottom time.",
+      fitTone: "demanding",
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep"],
+      landmarks: [
+        {
+          name: "Bridge rubble",
+          kind: "pointOfInterest",
+          note: "Concrete placed around the barge when it went down, now part of the reef.",
+        },
+      ],
+      creatureSlugs: [
+        "goliath-grouper",
+        "green-sea-turtle",
+        "nurse-shark",
+        "great-barracuda",
+        "gray-snapper",
+      ],
+    },
+  },
 ];
