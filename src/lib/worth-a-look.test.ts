@@ -218,3 +218,29 @@ describe("worthALook asks no more than the boat being read", () => {
     expect(rows.map((row) => row.tripId)).toEqual(["reef"]);
   });
 });
+
+/**
+ * Dive-domain review F3 of layer r4-1: a Discover Scuba session carries no
+ * site level, and a reef whose sites the shop never rated asks nothing on
+ * paper either, so the ladder alone let a first-timer be offered a fun dive.
+ * The reader of a course that admits the uncertified may hold no card, and
+ * is only ever offered another session of that course.
+ */
+describe("worthALook for a course open to the uncertified", () => {
+  const morning = at("2026-09-08T12:00:00.000Z");
+
+  it("offers another session of the course and never an unrated fun dive", () => {
+    const rows = look(subject({ courseId: "dsd", requirement: null, opensToUncertified: true }), [
+      candidate("reef", { startsAt: morning, requirement: null }),
+      candidate("dsd-tue", { courseId: "dsd", requirement: null }),
+    ]);
+    expect(rows.map((row) => row.tripId)).toEqual(["dsd-tue"]);
+  });
+
+  it("keeps a certified course's reader on the ordinary rules", () => {
+    const rows = look(subject({ courseId: "aow", requirement: null }), [
+      candidate("reef", { startsAt: morning, requirement: null }),
+    ]);
+    expect(rows.map((row) => row.tripId)).toEqual(["reef"]);
+  });
+});

@@ -81,6 +81,13 @@ export type WorthALookSubject = {
    * departure being read (fourth UX review, item 10).
    */
   requirement?: SiteCertRequirement | null;
+  /**
+   * A session of a course that admits the uncertified (Discover Scuba, Open
+   * Water: the course asks no card). Its reader may hold none, and a
+   * departure that is not this course asks at least a card whatever its sites
+   * say, so only another session of the same course is offered.
+   */
+  opensToUncertified?: boolean;
 };
 
 /** One departure that might do instead, as the schedule reader already returns it. */
@@ -167,6 +174,9 @@ export function worthALook(input: {
     if (candidate.tripId === subject.tripId) continue;
     // Never a boat that asks more than this one (fourth UX review, item 10).
     if (!asksNoMoreThan(candidate.requirement, subject.requirement)) continue;
+    // A first-timer's course session is only ever offered its own course: a
+    // fun dive asks a card even where the shop never rated the site.
+    if (subject.opensToUncertified && candidate.courseId !== subject.courseId) continue;
     // A departure that has already left is not worth a look, and the standing
     // late-arrival buffer applies here as everywhere: a boat scheduled forty
     // minutes ago is still at the dock more often than not.

@@ -18,6 +18,15 @@ export type OtherBoatsWhere = {
 };
 
 /**
+ * A session of a course that asks no card of its students (Discover Scuba,
+ * Open Water): its reader may hold none, so another departure is offered only
+ * when it is the same course (dive-domain review F3 of layer r4-1).
+ */
+function opensToUncertified(trip: PublicTrip): boolean {
+  return trip.course?.minimumCertificationLevel === null;
+}
+
+/**
  * **What else this shop is running, for a boat with no seats left** (issue
  * #1166, D06), off the one read of the shop's own board. Each row's day is
  * preformatted in the shop's own zone, like every other date the booking page
@@ -31,11 +40,14 @@ export type OtherBoatsWhere = {
  * link serves better anyway.
  */
 export function fullTripAlternatives(trip: PublicTrip, board: Board, where: OtherBoatsWhere) {
+  const ownCourseOnly = opensToUncertified(trip);
   return similarDepartures({
     full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
-    // Never a boat that asks more than the full one (fourth UX review, item 10).
+    // Never a boat that asks more than the full one (fourth UX review, item 10),
+    // and a first-timer's session is only offered its own course.
     candidates: board.departures
       .filter((candidate) => asksNoMoreThan(candidate.requirement, board.ceiling))
+      .filter((candidate) => !ownCourseOnly || candidate.courseId === trip.courseId)
       .map((candidate) => ({
         id: candidate.id,
         title: candidate.title,
@@ -75,6 +87,7 @@ export function worthALookList(
       startsAt: trip.startsAt,
       seatsOpen: spotsRemaining(trip),
       requirement: board.ceiling,
+      opensToUncertified: opensToUncertified(trip),
     },
     candidates: board.departures.map((candidate) => ({
       tripId: candidate.id,
