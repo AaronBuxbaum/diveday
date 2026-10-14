@@ -684,6 +684,7 @@
       "certified": "{shopName} registró tu {level} de esta sesión.",
       "notYetCertified": "Tu sesión de {course} está registrada. {shopName} todavía no ha registrado una certificación por ella.",
       "nextStepBy": "Siguiente paso de {name}",
+      "nextStepByInstructor": "Siguiente paso de tu instructor",
       "nextStepQuote": "“{words}”"
     },
     "crewQuote": "“{words}”",

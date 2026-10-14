@@ -6,7 +6,7 @@ import {
   courseNextStepsByBooking,
   recordCourseNextStep,
 } from "./course-next-step";
-import { bookings } from "./schema";
+import { bookings, people } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -185,7 +185,42 @@ describe("courseNextStepForBooking", () => {
     });
     const note = await courseNextStepForBooking(db, shop.id, studentBookingId);
     expect(note?.words).toBe("Practice mask clearing before Sunday.");
-    expect(note?.byName).toBeTruthy();
+  });
+
+  it("signs with the name the instructor agreed to show divers, never their full name", async () => {
+    const { db, shop, instructorId, studentBookingId } = await courseContext();
+    await db
+      .update(people)
+      .set({ crewPublicName: "Keiko", crewPublicConsentAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(people.id, instructorId));
+    await recordCourseNextStep(db, {
+      shopId: shop.id,
+      bookingId: studentBookingId,
+      instructorPersonId: instructorId,
+      note: "Practice mask clearing before Sunday.",
+    });
+    expect(await courseNextStepForBooking(db, shop.id, studentBookingId)).toEqual({
+      words: "Practice mask clearing before Sunday.",
+      byName: "Keiko",
+    });
+  });
+
+  it("keeps the words but names nobody when the instructor shows divers no name", async () => {
+    const { db, shop, instructorId, studentBookingId } = await courseContext();
+    await db
+      .update(people)
+      .set({ crewPublicName: null, crewPublicConsentAt: null })
+      .where(eq(people.id, instructorId));
+    await recordCourseNextStep(db, {
+      shopId: shop.id,
+      bookingId: studentBookingId,
+      instructorPersonId: instructorId,
+      note: "Practice mask clearing before Sunday.",
+    });
+    expect(await courseNextStepForBooking(db, shop.id, studentBookingId)).toEqual({
+      words: "Practice mask clearing before Sunday.",
+      byName: null,
+    });
   });
 
   it("never reads another shop's booking", async () => {

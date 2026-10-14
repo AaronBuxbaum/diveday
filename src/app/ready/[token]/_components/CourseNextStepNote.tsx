@@ -8,8 +8,8 @@ import type { DiverTranslator } from "@/i18n/messages";
  * note written after day one ("Practice mask clearing before Sunday") is for
  * before day two, so the live thread shows it under the spine's "Next".
  *
- * The instructor's own words under their own name, the recap's two keys, and
- * nothing when there is no note. Read live here, so the route file only places
+ * The instructor's own words under the name they show divers (or "your
+ * instructor" when they show none), and nothing when there is no note. Read live here, so the route file only places
  * it: a seat that is not a course session, or has no note, reads null.
  */
 export async function CourseNextStepNote({
@@ -31,7 +31,9 @@ export async function CourseNextStepNote({
         {t("recap.course.nextStepQuote", { words: note.words })}
       </blockquote>
       <figcaption className="mt-2 text-sm text-muted">
-        {t("recap.course.nextStepBy", { name: note.byName })}
+        {note.byName
+          ? t("recap.course.nextStepBy", { name: note.byName })
+          : t("recap.course.nextStepByInstructor")}
       </figcaption>
     </figure>
   );

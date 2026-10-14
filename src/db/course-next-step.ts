@@ -97,17 +97,26 @@ export async function courseNextStepsByBooking(
  * this is the read `/ready` makes before then, so "Practice mask clearing
  * before Sunday" written after day one reaches the student before Sunday.
  *
- * Scoped by shop and booking, a live course session only, and null unless the
- * words and the name that wrote them are both there: a sentence with nobody
- * under it is not one a student should read (the same rule the recap keeps).
+ * Scoped by shop and booking, a live course session only, and null unless
+ * there are words and an instructor of this shop wrote them.
+ *
+ * **Signed with the crew public name**, the name that instructor agreed to
+ * show divers, never `full_name`: that is one free-text box the shop fills in,
+ * and it is not what anybody agreed to put in front of a student. An
+ * instructor who shows divers no name still wrote the words, so they are kept
+ * and `byName` is null: the note is then "from your instructor".
  */
 export async function courseNextStepForBooking(
   db: AppDb,
   shopId: string,
   bookingId: string,
-): Promise<{ words: string; byName: string } | null> {
+): Promise<{ words: string; byName: string | null } | null> {
   const [row] = await db
-    .select({ words: bookings.courseNextStep, byName: people.fullName })
+    .select({
+      words: bookings.courseNextStep,
+      byName: people.crewPublicName,
+      consentAt: people.crewPublicConsentAt,
+    })
     .from(bookings)
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
     .innerJoin(
@@ -125,6 +134,7 @@ export async function courseNextStepForBooking(
     )
     .limit(1);
   const words = row?.words?.trim();
-  const byName = row?.byName?.trim();
-  return words && byName ? { words, byName } : null;
+  if (!row || !words) return null;
+  const byName = (row.consentAt && row.byName?.trim()) || null;
+  return { words, byName };
 }

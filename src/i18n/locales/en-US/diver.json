@@ -684,6 +684,7 @@
       "certified": "{shopName} recorded your {level} from this session.",
       "notYetCertified": "Your {course} session is on file. {shopName} has not recorded a certification for it.",
       "nextStepBy": "Next step from {name}",
+      "nextStepByInstructor": "Next step from your instructor",
       "nextStepQuote": "“{words}”"
     },
     "crewQuote": "“{words}”",
