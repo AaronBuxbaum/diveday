@@ -5,6 +5,7 @@
       "packingSaved": "Packing checklist saved for every trip.",
       "packingInvalid": "Add between one and twelve packing items.",
       "dockSaved": "Dock call time saved for every confirmation and reminder.",
+      "pickupSaved": "Saved. Divers are asked about a pickup only when this is on.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
       "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
@@ -221,6 +222,12 @@
       "submit": "Save packing checklist",
       "submitting": "Saving…",
       "value": "{count, plural, one {# item} other {# items}}"
+    },
+    "pickup": {
+      "label": "We offer hotel pickup",
+      "description": "When on, each diver’s page asks whether they want a pickup and where they’re staying.",
+      "submit": "Save pickup",
+      "submitting": "Saving…"
     },
     "dockCall": {
       "heading": "Dock-day rhythm",

@@ -940,7 +940,7 @@
     "certMinimumLevel": "This trip is for {level} and above.",
     "hotelPickupHeaderLine": "{time} pickup at {location}",
     "hotelPickupLocationNotSet": "your hotel",
-    "hotelPickupLabel": "Want a morning pickup?",
+    "hotelPickupLabel": "Want a pickup?",
     "hotelPickupFieldLabel": "Where you’re staying",
     "hotelPickupPlaceholder": "Hotel name, room, or landmark",
     "hotelPickupDetail": "{location}",
@@ -4209,7 +4209,7 @@
       "dayOpenerFirstTimer": "You dive with us tomorrow. Everything you need for the day is below.",
       "dayOpenerReturning": "A quick reminder that {tripTitle} sails tomorrow.",
       "arrival": "Aim to be at the dock by {time}, {dock} before we sail.",
-      "hotelPickupArrival": "Your morning pickup is scheduled for {time} at {location}.",
+      "hotelPickupArrival": "Your pickup is at {time} from {location}.",
       "hotelNotSet": "your hotel"
     },
     "courseMaterials": {

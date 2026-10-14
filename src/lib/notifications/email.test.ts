@@ -515,9 +515,7 @@ describe("tripReminderEmail", () => {
       pickupTime: "07:15",
       hotelPickupLocation: "Sunset Palms Resort",
     });
-    expect(email.text).toContain(
-      "Your morning pickup is scheduled for 07:15 at Sunset Palms Resort.",
-    );
+    expect(email.text).toContain("Your pickup is at 07:15 from Sunset Palms Resort.");
     expect(email.text).not.toContain("Aim to be at the dock by");
   });
 

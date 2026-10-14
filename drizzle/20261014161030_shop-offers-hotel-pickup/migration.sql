@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "offers_hotel_pickup" boolean DEFAULT false NOT NULL;

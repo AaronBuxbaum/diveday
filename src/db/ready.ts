@@ -281,6 +281,8 @@ export type ReadyPageData = {
   helpRequest: HelpRequest | null;
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
+  /** The shop runs hotel pickups, so Day-of details asks about one (fourth UX review, item 8). */
+  offersHotelPickup: boolean;
   /**
    * This seat is priced, unpaid, and the page cannot take a card for it: the
    * money is owed at the shop, and `/ready` says how much, the party's unclaimed
@@ -410,6 +412,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       rentalItems: shops.rentalItems,
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
+      offersHotelPickup: shops.offersHotelPickup,
       personEmail: people.email,
       personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
@@ -632,6 +635,7 @@ export async function getReadyPageData(
     hotelPickupLocation: row.hotelPickupLocation,
     pickupTime: row.pickupTime,
     canPay,
+    offersHotelPickup: row.offersHotelPickup,
     owesAtShop: Boolean(perDiverPriceCents) && !settled && !canPay,
     cancelPreview,
     canCancelBooking,

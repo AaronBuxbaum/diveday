@@ -317,6 +317,13 @@ export const shops = pgTable(
      */
     dockCallMinutes: integer("dock_call_minutes").notNull().default(30),
     /**
+     * Whether the shop runs hotel pickups (fourth UX review item 8). Off by
+     * default, because most shops do not: `/ready` asked every diver at every
+     * shop "Want a morning pickup?", a promise the shop never made. Only a
+     * shop that says it offers them has the question asked.
+     */
+    offersHotelPickup: boolean("offers_hotel_pickup").notNull().default(false),
+    /**
      * The rest of the shop's dock-day rhythm, in minutes (src/lib/diver-planning.ts).
      * Before these columns existed the whole day was inferred from
      * `dock_call_minutes` alone — the briefing was half of it capped at 15, and

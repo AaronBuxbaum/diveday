@@ -78,7 +78,7 @@ test.describe("staff-prepared trip", () => {
     // keeps the address label. Both ride inside Day-of details, which gates on
     // neither (ADR 20260827-the-divers-thread, decision 3).
     await openThreadStep(page, "dayof");
-    await expect(page.getByRole("heading", { name: "Want a morning pickup?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Want a pickup?" })).toBeVisible();
     await expect(page.getByLabel("Where you’re staying")).toBeVisible();
   });
 

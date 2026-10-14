@@ -434,6 +434,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // new shop (`shops.crew_schedule_enabled`), and the demo is where every
       // crew surface is photographed and exercised.
       crewScheduleEnabled: true,
+      // A Key Largo shop picks divers up from the resorts, so `/ready` asks
+      // "Want a pickup?" here; a new shop runs none until it says so (fourth
+      // UX review, item 8).
+      offersHotelPickup: true,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: demoEmail("front.desk"),

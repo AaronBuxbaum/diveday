@@ -5,6 +5,7 @@
       "packingSaved": "Lista de equipo guardada para todas las salidas.",
       "packingInvalid": "Añade entre uno y doce artículos a la lista.",
       "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
+      "pickupSaved": "Guardado. A los buceadores solo se les pregunta por la recogida cuando esto está activado.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
       "unitsSaved": "Unidades guardadas.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
@@ -221,6 +222,12 @@
       "submit": "Guardar lista de equipo",
       "submitting": "Guardando…",
       "value": "{count, plural, one {# artículo} other {# artículos}}"
+    },
+    "pickup": {
+      "label": "Ofrecemos recogida en el hotel",
+      "description": "Si está activado, la página de cada buceador pregunta si quiere que lo recojan y dónde se aloja.",
+      "submit": "Guardar recogida",
+      "submitting": "Guardando…"
     },
     "dockCall": {
       "heading": "Ritmo del día de buceo",
