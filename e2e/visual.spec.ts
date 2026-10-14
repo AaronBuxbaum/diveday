@@ -5268,6 +5268,25 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A cleared date of birth asks for an age** (issue #2167). Lena is
+       * the seeded thirteen-year-old; emptying her date without "They're 18
+       * or older" is refused on the date field, with the box beside it, so a
+       * known minor never reads as an adult by a blanked field. Safe to
+       * mutate: the refusal writes nothing.
+       */
+      test(`a refused date-of-birth clear renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Lena", "Lena Fischer");
+        await openDiverFileGroup(page, "Contact details");
+        await page.getByLabel("Date of birth").fill("");
+        await page.getByRole("button", { name: "Save details" }).click();
+        await page.waitForURL(/notice=date-of-birth-age-unstated/);
+        await page.getByText("To clear the date of birth").waitFor();
+        await capture(page, "diver-record-dob-clear-refused", scheme);
+      });
+
+      /**
        * **The form that ends a medical hold** (issue #1252).
        *
        * The one readiness blocker a shop cannot clear from the boat, and until

@@ -4,7 +4,14 @@ import { sectionCardClass } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
-import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import {
+  ChoiceRow,
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+} from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
 import type { DiverStatusRow } from "@/lib/diver-status";
@@ -146,8 +153,14 @@ export function DiverDetailsGroup({
             copy={forgivingCopy(t)}
           />
         </Field>
-        <Field label={t("divers.header.dateOfBirthLabel")} hint={dateOfBirthHint(t, diver)}>
+        <Field
+          label={t("divers.header.dateOfBirthLabel")}
+          hint={dateOfBirthHint(t, diver)}
+          htmlFor="diver-date-of-birth"
+          error={formStatus?.field === "diver-date-of-birth" ? formStatus.text : undefined}
+        >
           <DateField
+            id="diver-date-of-birth"
             name="dateOfBirth"
             // Mirrors the server-side plausibility bound so a mistyped year
             // is caught in the field, not by a redirect to `?notice=invalid`.
@@ -156,6 +169,15 @@ export function DiverDetailsGroup({
             defaultValue={diver.person.dateOfBirth ?? ""}
           />
         </Field>
+        {/* Issue #2167: emptying a stored date takes the staffer's "18 or
+            older" in the same save, or the guardian rule and the minimum-age
+            gate would read a known minor as an adult. Only offered while a
+            date is on file, since that is the only save that reads it. */}
+        {diver.person.dateOfBirth ? (
+          <ChoiceRow type="checkbox" name="adultAttested" value="yes" className="col-span-full">
+            {t("divers.header.clearDateAdultAttested")}
+          </ChoiceRow>
+        ) : null}
         {/* Task 144 — Today used to tell staff to "ask at the counter" and
             link to a roster with nowhere to type it in. This and the
             roster's per-diver card are the two staff entry points; both

@@ -40,6 +40,8 @@ const personSchema = z.object({
       // predicate, which would land in the injectable `now` parameter.
       .refine((value) => isPlausibleDateOfBirth(value), "not a plausible date of birth"),
   ]),
+  // The "They're 18 or older" box beside a stored date: unticked posts nothing.
+  adultAttested: z.literal("yes").optional(),
 });
 export async function savePersonAction(shopSlug: string, personId: string, formData: FormData) {
   const context = await requireDiverActionContext(
@@ -55,21 +57,29 @@ export async function savePersonAction(shopSlug: string, personId: string, formD
   // form that emitted it, instead of into a banner at the top of a 6,400px page
   // (`resolveDiverNotice`).
   if (!parsed.success) redirect(backTo(base, "invalid", "details"));
+  const { adultAttested, ...fields } = parsed.data;
   const saved = await updateDiver(db, {
     shopId: staff.user.shopId,
     personId,
-    ...parsed.data,
+    ...fields,
+    // "They're 18 or older" is this staffer's word, filed with them; it is
+    // what lets a stored date of birth be emptied (issue #2167).
+    adultAttestedByPersonId: adultAttested ? staff.user.personId : undefined,
   });
-  // Two very different things come back as null, and only one of them is an
-  // email conflict. `updateDiver` will not touch a removed record at all, and
-  // this record is reachable now — so telling a staffer to go fix a duplicate
-  // email would send them after a conflict that does not exist. The extra read
-  // is paid only on the failure path.
-  const notice = saved
+  // A record this staffer reached but cannot write is either removed since
+  // (read-only) or merged away; neither is an email conflict, so it is not
+  // worded as one. The extra read is paid only on that path.
+  const notice = saved.ok
     ? "person-saved"
-    : (await isDiverRemoved(db, staff.user.shopId, personId))
-      ? "removed-read-only"
-      : "duplicate";
+    : saved.reason === "email_in_use"
+      ? "duplicate"
+      : saved.reason === "age_unstated"
+        ? "date-of-birth-age-unstated"
+        : saved.reason === "date_of_birth_required"
+          ? "date-of-birth-course-minimum-age"
+          : (await isDiverRemoved(db, staff.user.shopId, personId))
+            ? "removed-read-only"
+            : "invalid";
   revalidateAndRedirect(base, backTo(base, notice, "details"));
 }
 

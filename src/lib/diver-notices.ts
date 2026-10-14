@@ -176,6 +176,19 @@ const NOTICE_KEYS: DiverNoticeMap = {
     // The refusal is about one box, so it renders on that box.
     field: "diver-email",
   },
+  // Issue #2167: a stored date of birth emptied without "They're 18 or older".
+  "date-of-birth-age-unstated": {
+    form: "details",
+    tone: "danger",
+    key: "divers.notices.dateOfBirthAgeUnstated",
+    field: "diver-date-of-birth",
+  },
+  "date-of-birth-course-minimum-age": {
+    form: "details",
+    tone: "danger",
+    key: "divers.notices.dateOfBirthCourseMinimumAge",
+    field: "diver-date-of-birth",
+  },
   "removed-read-only": {
     form: "details",
     tone: "danger",

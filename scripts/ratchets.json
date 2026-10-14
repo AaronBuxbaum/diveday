@@ -308,7 +308,7 @@
     "src/db/courses.test.ts": 1719,
     "src/db/dive-sites.test.ts": 1174,
     "src/db/diver-merge.test.ts": 1285,
-    "src/db/divers.test.ts": 3105,
+    "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1176,
     "src/db/executed-dives.test.ts": 1085,
     "src/db/export.test.ts": 1670,

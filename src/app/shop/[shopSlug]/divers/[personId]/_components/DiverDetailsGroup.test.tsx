@@ -105,7 +105,7 @@ describe("DiverDetailsGroup", () => {
         }}
       />,
     );
-    expect(document.body).not.toHaveTextContent("18 or older");
+    expect(document.body).not.toHaveTextContent("18 or older, per");
   });
 
   it("is a closed door that names a missing contact in warning ink", () => {
@@ -169,5 +169,46 @@ describe("DiverDetailsGroup", () => {
     expect(details).toHaveAttribute("open");
     expect(details).toHaveTextContent(/15/);
     expect(details).toHaveTextContent(/Can’t board/);
+  });
+
+  // Issue #2167: emptying a stored date takes "They're 18 or older" in the
+  // same save, so the box is offered beside a date and refused on the field.
+  it("offers the 18-or-older box only while a date is on file", () => {
+    const props = {
+      shopSlug: "blue-mantis",
+      personId: "person-1",
+      t,
+      locale: "en-US",
+      timezone: "America/New_York",
+      country: "US",
+    };
+    const bare = diver(null);
+    const { queryByLabelText, getByLabelText, rerender } = render(
+      <DiverDetailsGroup {...props} diver={bare} />,
+    );
+    expect(queryByLabelText(/needed to clear the date/)).toBeNull();
+
+    rerender(
+      <DiverDetailsGroup
+        {...props}
+        diver={{ ...bare, person: { ...bare.person, dateOfBirth: "2013-05-02" } }}
+      />,
+    );
+    const box = getByLabelText("They’re 18 or older (needed to clear the date)");
+    expect(box).toHaveAttribute("name", "adultAttested");
+    expect(box).not.toBeChecked();
+  });
+
+  it("puts a refused clear on the date field", () => {
+    const status: GroupStatus = {
+      form: "details",
+      tone: "danger",
+      text: "To clear the date of birth, select “They’re 18 or older”.",
+      field: "diver-date-of-birth",
+    };
+    const { getByLabelText } = renderGroup({ open: true, status });
+    const field = getByLabelText(/Date of birth/);
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(status.text);
   });
 });
