@@ -32,7 +32,7 @@ export type ExportFile = { name: string; content: string | Uint8Array };
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
   "boats.csv":
-    "The shop's boats: the seats each sells, the passenger limit on its certificate when the shop recorded one, and the dates its next safety inspection is due and its registration and insurance expire. Every date is a calendar day the shop typed; an empty one was never recorded.",
+    "The shop's boats: the seats each sells, the passenger limit on its certificate when the shop recorded one, and the dates its next safety inspection is due and its registration and insurance expire, and its radio identity: the call sign, upper case, and the nine-digit MMSI the emergency card prints for departures on that boat. Every date is a calendar day the shop typed; an empty one was never recorded.",
   "trip_lenses.csv":
     "The shop's trip tags, as they appear on its public schedule. trips.csv points at one by lens_id.",
   "contacts.csv":
