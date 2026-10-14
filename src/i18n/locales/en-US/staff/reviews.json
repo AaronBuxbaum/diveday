@@ -48,9 +48,9 @@
   "aggregate": "{rating} average across {count, plural, one {# published review} other {# published reviews}}",
   "aggregateMonth": "this month {rating} from {count, plural, one {# review} other {# reviews}}",
   "group": {
-    "waiting": "Waiting on you — {count}",
-    "published": "Published — {count}",
-    "hidden": "Hidden — {count}"
+    "waiting": "Needs you · {count}",
+    "published": "Published · {count}",
+    "hidden": "Hidden · {count}"
   },
   "publishAll": "{count, plural, =2 {Publish both} other {Publish all #}}",
   "republish": "Republish",

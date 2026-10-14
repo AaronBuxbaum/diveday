@@ -40,17 +40,17 @@ import { daySpineSummaryText } from "./today-labels";
  * first station, both rendered at one.
  */
 describe("the day spine's counts", () => {
-  it.each(DIVER_LOCALES)("inflects the open-spots line in %s at one", (locale) => {
+  it.each(DIVER_LOCALES)("inflects the open-seats line in %s at one", (locale) => {
     const t = staffTranslator(locale);
     for (const count of [0, 1, 2, 11]) {
-      const line = t("shopHome.spine.spotsOpen", { count });
+      const line = t("shopHome.spine.seatsOpen", { count });
       expect(line, `${locale} at ${count}`).not.toContain("{");
       expect(line, `${locale} at ${count}`).not.toContain("plural,");
     }
     // The singular and the plural are genuinely different sentences; asserting
     // only "no braces left" would pass against a pair identical by mistake.
-    expect(t("shopHome.spine.spotsOpen", { count: 1 })).not.toBe(
-      t("shopHome.spine.spotsOpen", { count: 2 }).replace("2", "1"),
+    expect(t("shopHome.spine.seatsOpen", { count: 1 })).not.toBe(
+      t("shopHome.spine.seatsOpen", { count: 2 }).replace("2", "1"),
     );
   });
 

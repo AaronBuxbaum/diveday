@@ -192,7 +192,7 @@ export default async function TripManifestPage({
           page used to hand-roll its own, so switching to the Manifest redrew
           the top of the page for no reason a reader could act on.
           Deliberately without the seats badge the others carry: the whole body
-          below is a live head count, and a "3 spots left" pill above a roll
+          below is a live head count, and a "3 seats left" pill above a roll
           call reading "6 of 9 aboard" invites reading the seat count as a
           boarding count. */}
       <TripPageHeader

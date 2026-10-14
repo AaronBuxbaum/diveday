@@ -336,7 +336,7 @@ test.describe("schedule builder", () => {
     // Details summary states it at rest, and the form behind the Edit
     // disclosure comes back pre-filled with what the board was told.
     await row.getByRole("link", { name: title }).click();
-    await expect(page.getByText("$129.00 per seat")).toBeVisible();
+    await expect(page.getByText("$129 per diver")).toBeVisible();
     await openTripAbout(page);
     await page.getByText("Edit details", { exact: true }).click();
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");

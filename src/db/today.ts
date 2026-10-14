@@ -26,7 +26,6 @@ import {
 } from "@/lib/marine-forecast";
 import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
-import { rentalFitCompleteness } from "@/lib/rentals";
 import { inAfterDivePopulation, isAccountedForAfterDive } from "@/lib/roll-call-population";
 import {
   filterActionsForRoles,
@@ -46,6 +45,7 @@ import {
   sharedInHorizonReadiness,
 } from "./blockers";
 import { todayBoatSafety } from "./boat-safety";
+import { readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
 import { diveIntentTallyForTrips } from "./dive-intent";
@@ -64,7 +64,6 @@ import {
   listDepartureRollCallByTrip,
 } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
-import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { openOrdersForBookings } from "./orders";
 import { listOpenPaymentDisputes } from "./payment-disputes";
@@ -75,10 +74,8 @@ import { readReviewsAwaitingModeration } from "./reviews";
 import {
   boats,
   bookings,
-  nitroxCertifications,
   people,
   personRoles,
-  rentalFitProfiles,
   rollCallCrewEvents,
   rollCallEvents,
   shops,
@@ -282,8 +279,6 @@ export type TodayWork = {
    * the summary's blocked figure (`blockedOnNextBoatDay`).
    */
   blockedAboard: number;
-  /** How many actions were filtered out for the reader's role lens (issue #715). */
-  withheldCount: number;
   /** Shown only when nothing sails today, so the page still orients the crew. */
   nextDeparture: {
     tripId: string;
@@ -905,167 +900,6 @@ export async function openAfterDiveRollCalls(
 }
 
 /**
- * Divers on an upcoming departure whose rental fit can't be packed from yet.
- * The prep list is derived entirely from fit, so a gap in one is a hole in
- * tomorrow's packing that nobody sees until the diver is standing at the
- * counter.
- *
- * "Gap" means what `rentalFitCompleteness` means (src/lib/rentals.ts): any
- * piece the diver takes from the shop with no size recorded against it. This
- * used to ask only whether a fit *row* existed, which let the commoner failure
- * through — a diver who ticked BCD, wetsuit and weights and gave one shoe size
- * had a row, so Today said nothing and the packer found out at the rack.
- *
- * Scoped to the shop's own catalog, so a fit written before the shop stopped
- * renting an item never nags about a size nobody can be handed. The catalog is
- * one bounded read on a row this function already has the id for; it is not
- * worth threading through every `getTodayWork` caller to save.
- */
-async function missingFitByTrip(
-  db: AppDb,
-  shopId: string,
-  bookingIdsByTrip: Map<string, string[]>,
-) {
-  const bookingIds = [...bookingIdsByTrip.values()].flat();
-  // Divers, not a bare count: one diver's row leads with their name, like
-  // every other single-diver row on Today, and the caller counts from it.
-  const missing = new Map<string, { fullName: string }[]>();
-  if (bookingIds.length === 0) return missing;
-  const [rows, [shop]] = await Promise.all([
-    db
-      .select({
-        bookingId: bookings.id,
-        fullName: people.fullName,
-        participantType: bookings.participantType,
-        fit: rentalFitProfiles,
-      })
-      .from(bookings)
-      .innerJoin(people, eq(people.id, bookings.personId))
-      .leftJoin(
-        rentalFitProfiles,
-        and(
-          eq(rentalFitProfiles.personId, bookings.personId),
-          eq(rentalFitProfiles.shopId, bookings.shopId),
-        ),
-      )
-      .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, bookingIds))),
-    db.select({ rentalItems: shops.rentalItems }).from(shops).where(eq(shops.id, shopId)).limit(1),
-  ]);
-  const withoutFit = new Map(
-    rows
-      .filter(
-        (row) =>
-          rentalFitCompleteness(row.fit, shop?.rentalItems, row.participantType).state !==
-          "complete",
-      )
-      .map((row) => [row.bookingId, row.fullName]),
-  );
-  for (const [tripId, ids] of bookingIdsByTrip) {
-    const divers = ids
-      .filter((id) => withoutFit.has(id))
-      .map((id) => ({ fullName: withoutFit.get(id) ?? "" }));
-    if (divers.length > 0) missing.set(tripId, divers);
-  }
-  return missing;
-}
-
-/**
- * Divers who asked for Nitrox but hold no verified nitrox card right
- * now. A diver may request nitrox before their card is verified (it's flagged,
- * not blocked), and a card can be pulled after a request was accepted — either
- * way the tank has to go back to air unless someone verifies a card before the
- * boat leaves. Reads the card live and fails closed: an archived card counts
- * as no card.
- */
-async function ungatedNitroxByTrip(
-  db: AppDb,
-  shopId: string,
-  bookingIdsByTrip: Map<string, string[]>,
-) {
-  const bookingIds = [...bookingIdsByTrip.values()].flat();
-  const ungated = new Map<string, { fullName: string }[]>();
-  if (bookingIds.length === 0) return ungated;
-  const rows = await db
-    .select({
-      bookingId: bookings.id,
-      fullName: people.fullName,
-      cardId: nitroxCertifications.id,
-    })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .leftJoin(
-      nitroxCertifications,
-      and(
-        eq(nitroxCertifications.personId, bookings.personId),
-        eq(nitroxCertifications.shopId, bookings.shopId),
-        // Shared fill-gate predicate: an imported-but-unconfirmed card does not
-        // authorize a fill (ADR 20260724-import-verified-cards).
-        authorizesNitroxFill,
-      ),
-    )
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.wantsNitrox, true),
-        inArray(bookings.id, bookingIds),
-      ),
-    );
-  const blocked = new Map(
-    rows.filter((row) => !row.cardId).map((row) => [row.bookingId, row.fullName]),
-  );
-  for (const [tripId, ids] of bookingIdsByTrip) {
-    const divers = ids
-      .filter((id) => blocked.has(id))
-      .map((id) => ({ fullName: blocked.get(id) ?? "" }));
-    if (divers.length > 0) ungated.set(tripId, divers);
-  }
-  return ungated;
-}
-
-/**
- * Booked divers with no emergency contact name on file, per trip. This is never
- * a boarding blocker — it is a low-priority, dock-settleable nudge — so it is
- * derived here rather than through the readiness engine, and the caller only
- * surfaces it for boats close enough to matter.
- */
-async function missingEmergencyContactByTrip(
-  db: AppDb,
-  shopId: string,
-  bookingIdsByTrip: Map<string, string[]>,
-) {
-  const bookingIds = [...bookingIdsByTrip.values()].flat();
-  // Divers, not a bare count: a queue row about one person leads with their
-  // name (design/principles.md #10 — the answer, not a door), so the reader
-  // carries who is missing a contact, and the caller counts from it.
-  const missing = new Map<string, { fullName: string }[]>();
-  if (bookingIds.length === 0) return missing;
-  const rows = await db
-    .select({
-      bookingId: bookings.id,
-      fullName: people.fullName,
-      contactName: people.emergencyContactName,
-      contactPhone: people.emergencyContactPhone,
-    })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, bookingIds)));
-  // A contact is only usable if the crew can dial it: both a name and a phone.
-  // A name with no number reads as "on file" but is unreachable in an incident.
-  const without = new Map(
-    rows
-      .filter((row) => !row.contactName || !row.contactPhone)
-      .map((row) => [row.bookingId, row.fullName]),
-  );
-  for (const [tripId, ids] of bookingIdsByTrip) {
-    const divers = ids
-      .filter((id) => without.has(id))
-      .map((id) => ({ fullName: without.get(id) ?? "" }));
-    if (divers.length > 0) missing.set(tripId, divers);
-  }
-  return missing;
-}
-
-/**
  * Wait-list depth *and* one suggested entry per trip, so a freed seat can be
  * offered to a real person without leaving Today. The suggestion is the
  * longest-waiting diver — a sensible default, not an entitlement: nothing tells
@@ -1647,7 +1481,7 @@ async function highWindActions(
       dueAt: trip.startsAt,
     });
   }
-  return filterActionsForRoles(rows, context.roles).visibleActions;
+  return filterActionsForRoles(rows, context.roles);
 }
 
 /** What the Today queue's one wave of reads answers. */
@@ -1693,9 +1527,7 @@ async function readTodayWave(
   const [
     departureRollCall,
     departureCrewRollCall,
-    missingFit,
-    ungatedNitrox,
-    missingContact,
+    boatWork,
     waitlisted,
     courseCrewCounts,
     deliveryIssues,
@@ -1741,9 +1573,9 @@ async function readTodayWave(
       shopId,
       todayTrips.map((trip) => trip.id),
     ),
-    missingFitByTrip(db, shopId, bookingIdsByTrip),
-    ungatedNitroxByTrip(db, shopId, bookingIdsByTrip),
-    missingEmergencyContactByTrip(db, shopId, bookingIdsByTrip),
+    // The boat's work, one reader shared with the trip's own band
+    // (`./boat-work`): sizes, nitrox, contacts and open orders per departure.
+    readBoatWork(db, shopId, bookingIdsByTrip),
     waitlistFrontByTrip(
       db,
       shopId,
@@ -1881,9 +1713,7 @@ async function readTodayWave(
   return {
     departureRollCall,
     departureCrewRollCall,
-    missingFit,
-    ungatedNitrox,
-    missingContact,
+    boatWork,
     waitlisted,
     courseCrewCounts,
     deliveryIssues,
@@ -1963,7 +1793,7 @@ export async function getTodayWork(
   /**
    * The viewer's roles, for filtering the action queue to the relevant audience
    * (issue #715). Multi-role viewers see the union; owners and managers see all.
-   * Omitted, all actions are returned (withheldCount = 0).
+   * Omitted, all actions are returned.
    */
   roles?: readonly Role[],
 ): Promise<TodayWork> {
@@ -2170,7 +2000,7 @@ export async function getTodayWork(
       });
   }
 
-  const { visibleActions, withheldCount } = filterActionsForRoles(actions, roles);
+  const visibleActions = filterActionsForRoles(actions, roles);
 
   return {
     departures,
@@ -2180,7 +2010,6 @@ export async function getTodayWork(
       ...new Set([...crewClashState.outTripIds, ...boatsOut.out.map((trip) => trip.id)]),
     ],
     blockedAboard: boatsOut.blocked.filter((row) => isBlockedAboard(row.readiness.blockers)).length,
-    withheldCount,
     nextDeparture: next
       ? {
           title: next.title,

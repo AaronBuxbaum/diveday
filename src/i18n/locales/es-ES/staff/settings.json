@@ -613,7 +613,6 @@
       "label": "Contacto de emergencia",
       "addValue": "Añadir"
     },
-    "languagesEmpty": "No indicado",
     "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}"
   },
   "safetyChecklist": {

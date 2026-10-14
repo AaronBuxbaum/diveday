@@ -8,7 +8,8 @@ import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents, formatTime } from "@/lib/format";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { formatMoneyScanned, formatTime } from "@/lib/format";
 import type { DayStation as DayStationData } from "@/lib/today";
 import { STAGE_TONE } from "@/lib/trip-stage-tone";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
@@ -92,7 +93,9 @@ export function DayStation({
     { text: station.crewNames.length > 0 ? station.crewNames.join(", ") : null, phone: false },
     {
       text:
-        station.priceCents === null ? null : formatMoneyCents(station.priceCents, currency, locale),
+        station.priceCents === null
+          ? null
+          : formatMoneyScanned(station.priceCents, currency, locale),
       phone: true,
     },
   ].filter((fact): fact is { text: string; phone: boolean } => Boolean(fact.text));
@@ -113,7 +116,17 @@ export function DayStation({
           {formatTime(station.startsAt, locale, timeZone)}
         </time>
         <span className="text-sm text-muted tabular-nums">
-          {t("shopHome.spine.until", { time: formatTime(station.endsAt, locale, timeZone) })}
+          {/* One range form across the app, the en-dash one the trip header
+              and the public card print; "until" is kept for a boat that comes
+              home the next day, where the dash would read as the same evening
+              (third review, item 9). */}
+          {t(
+            calendarDateInTimezone(station.startsAt, timeZone) ===
+              calendarDateInTimezone(station.endsAt, timeZone)
+              ? "shopHome.spine.rangeEnd"
+              : "shopHome.spine.until",
+            { time: formatTime(station.endsAt, locale, timeZone) },
+          )}
         </span>
         {stage ? (
           <>
@@ -185,7 +198,7 @@ export function DayStation({
           </span>
         ) : null}
         <span className="text-muted">
-          {open === 0 ? t("shopHome.spine.full") : t("shopHome.spine.spotsOpen", { count: open })}
+          {open === 0 ? t("shopHome.spine.full") : t("shopHome.spine.seatsOpen", { count: open })}
         </span>
       </p>
 

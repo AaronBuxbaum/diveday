@@ -93,7 +93,7 @@
   },
   "capacity": {
     "full": "Completo",
-    "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
+    "seatsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
     "certificateCap": "Certificado: {sellable} de {stated} plazas"
   },
   "compass": {
@@ -524,7 +524,7 @@
     "dockLineSays": "Saluda a {name}: dice {level}."
   },
   "diveIntent": {
-    "aboardToday": "Hoy a bordo: {list}",
+    "onTheList": "En la lista de hoy: {list}",
     "easingBack": "{count} volviendo a tomar confianza",
     "smallLife": "{count} buscando vida pequeña",
     "aWreck": "{count} con ganas de un naufragio",
@@ -578,6 +578,12 @@
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Crear su propia ficha",
     "splitting": "Creando…"
+  },
+  "boatWork": {
+    "missingSizes": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler",
+    "ungatedNitrox": "{count, plural, one {# buceador quiere} other {# buceadores quieren}} nitrox sin certificación verificada",
+    "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia",
+    "openOrders": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"
   },
   "payouts": {
     "paid": "Pago de {amount} a tu banco el {date}, por lo cobrado del {from} al {to}",

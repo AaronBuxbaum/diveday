@@ -7212,7 +7212,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The moderation queue as a worklist: one aggregate line under the title,
-      // "Waiting on you" leading with its clear-the-lot act, then the published
+      // "Needs you" leading with its clear-the-lot act, then the published
       // record quiet beneath it (ADR 20260827-people-not-lists, decision 3).
       // Waiting on the worklist group specifically, not just the heading: the
       // groups render above the published run, and a capture taken before they
@@ -7225,7 +7225,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/reviews");
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
-        await page.getByRole("region", { name: /^Waiting on you/ }).waitFor();
+        await page.getByRole("region", { name: /^Needs you/ }).waitFor();
         await page.getByRole("region", { name: /^Published/ }).waitFor();
         await capture(page, "staff-reviews", scheme);
       });
@@ -7237,7 +7237,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the review row menu opens beside its button (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/reviews");
         await page.getByRole("region", { name: /^Published/ }).waitFor();
-        const waiting = page.getByRole("region", { name: /^Waiting on you/ });
+        const waiting = page.getByRole("region", { name: /^Needs you/ });
         await waiting.getByRole("button", { name: /^More for/ }).click();
         await capture(page, "staff-reviews-row-menu", scheme);
         await waiting.getByRole("button", { name: "Hide", exact: true }).click();

@@ -30,6 +30,13 @@ test.describe("owner", () => {
     await expect(metrics.getByText("Fill", { exact: true })).toBeVisible();
     await expect(metrics.getByText("Waivers", { exact: true })).toBeVisible();
 
+    // Two "this month" totals on one page say which month each one means
+    // (third review, item 1): the headline by departure, the by-line table by
+    // the day the money was paid.
+    await expect(
+      page.getByText("Paid this month, whichever departure it was for, after tax and refunds"),
+    ).toBeVisible();
+
     // The tax figure is a footnote to net revenue now, not a sixth tile beside
     // it — it shares one quiet line with the CSV door.
     await expect(page.getByText(/Tax collected/)).toBeVisible();

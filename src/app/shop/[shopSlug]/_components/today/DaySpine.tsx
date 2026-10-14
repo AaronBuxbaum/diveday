@@ -816,8 +816,6 @@ export type DaySpineContext = {
    * due) stays open under the crew lens instead of folding with the desk's.
    */
   readerPersonId?: string;
-  /** How many rows the reader's role lens withheld (issue #715). */
-  withheldCount?: number;
   helpRequestAction?: SpineHelpRequestAction;
   /**
    * The reader's own unfinished forms (ADR 20260906-before-you-ask, decision
@@ -904,7 +902,6 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     currency,
     crewedTripIds,
     readerPersonId,
-    withheldCount = 0,
     helpRequestAction,
     drafts = [],
     showPaymentsRow = false,
@@ -954,12 +951,6 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
 
   return (
     <div className="flex flex-col gap-10">
-      {withheldCount > 0 ? (
-        <p className="-mt-4 text-xs text-muted">
-          {t("today.todayQueue.withheldDeskWork", { count: withheldCount })}
-        </p>
-      ) : null}
-
       {/* **The spine's leading group, on the one morning it exists.** Day zero
           is a state of this column of work, not a wizard beside it (ADR
           20260827-first-light, decision 6) — so the setup ledger renders here,
