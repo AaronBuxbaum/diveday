@@ -17,7 +17,12 @@ import {
   dockDayOffsets,
 } from "@/lib/diver-planning";
 import { EMERGENCY_LINE_SLOTS } from "@/lib/emergency-reference";
-import { saveDockDayRhythmAction, saveEmergencyReferenceAction } from "../../boat-actions";
+import { MIN_TURNAROUND_LIMITS } from "@/lib/move-preflight";
+import {
+  saveDockDayRhythmAction,
+  saveEmergencyReferenceAction,
+  saveTurnaroundAction,
+} from "../../boat-actions";
 import type { SettingsShop } from "../groups/kit";
 
 /*
@@ -281,5 +286,42 @@ export function DockDayForm({
         </div>
       ) : null}
     </>
+  );
+}
+
+/**
+ * **The turnaround between departures** (issue #2141, Aaron's decision (b)):
+ * one number, its own save. Advice for the schedule builder's Move panel when
+ * a hull, or a crew member leaving from another meeting point, would get less
+ * than this between one departure and the next; it never refuses a move.
+ */
+export function TurnaroundForm({ shop, t }: { shop: SettingsShop; t: StaffTranslator }) {
+  return (
+    <FieldGrid as="form" action={saveTurnaroundAction} columns={2} className="mt-8">
+      <Field
+        label={t("settings.main.turnaround.label")}
+        description={t("settings.main.turnaround.description")}
+      >
+        <input
+          name="minTurnaroundMinutes"
+          type="number"
+          inputMode="numeric"
+          required
+          min={MIN_TURNAROUND_LIMITS.min}
+          max={MIN_TURNAROUND_LIMITS.max}
+          step={5}
+          defaultValue={shop.minTurnaroundMinutes}
+          className={`${controlClass} tabular-nums`}
+        />
+      </Field>
+      <FieldActions>
+        <SubmitButton
+          pendingLabel={t("settings.main.dockCall.submitting")}
+          className={buttonClass({ variant: "secondary" })}
+        >
+          {t("settings.main.turnaround.submit")}
+        </SubmitButton>
+      </FieldActions>
+    </FieldGrid>
   );
 }

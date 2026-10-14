@@ -157,6 +157,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "boat_ride_minutes",
       "bottom_time_minutes",
       "surface_interval_minutes",
+      // The turnaround the shop wants between departures (issue #2141): its
+      // own operating policy, so a restore keeps the Move panel's advice.
+      "min_turnaround_minutes",
       "review_url",
       "packing_list",
       "rental_items",
@@ -243,6 +246,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.boatRideMinutes,
         shop.bottomTimeMinutes,
         shop.surfaceIntervalMinutes,
+        shop.minTurnaroundMinutes,
         shop.reviewUrl,
         JSON.stringify(shop.packingList),
         JSON.stringify(shop.rentalItems),

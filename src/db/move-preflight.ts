@@ -1,11 +1,31 @@
-import { and, countDistinct, eq, inArray, ne } from "drizzle-orm";
-import { composeMovePreflight, type MovePreflight } from "@/lib/move-preflight";
+import { and, asc, countDistinct, eq, gt, inArray, isNull, lt, ne } from "drizzle-orm";
+import {
+  composeMovePreflight,
+  type MovePreflight,
+  type MoveTurnaround,
+  turnaroundGapMinutes,
+} from "@/lib/move-preflight";
 import type { AppDb } from "./client";
 import { countOpenTripGearReservations } from "./gear";
 import { countTripOrders } from "./orders";
-import { bookings, notificationDeliveries, type notificationKind, trips } from "./schema";
-import { boatMoveClashes } from "./trips-clashes";
-import { crewMoveConflicts } from "./trips-crew";
+import {
+  boats,
+  bookings,
+  notificationDeliveries,
+  type notificationKind,
+  people,
+  shops,
+  tripAssignments,
+  tripScheduleDays,
+  trips,
+} from "./schema";
+import {
+  boatMoveClashes,
+  type DepartureWindow,
+  legWindow,
+  proposedDepartureWindows,
+} from "./trips-clashes";
+import { crewMoveConflicts, getTripCrewIds } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { countRollCallEvidence } from "./trips-schedule";
 
@@ -53,18 +73,22 @@ export async function getMovePreflight(
   // no preview — the panel simply shows its fields, exactly as it does today.
   if (!trip) return null;
 
-  const [toldSeats, gearReserved, paidOrders, rollCallEvidence, crew, boat] = await Promise.all([
-    countToldSeats(db, shopId, tripId),
-    countOpenTripGearReservations(db, shopId, tripId),
-    countTripOrders(db, shopId, tripId, "paid"),
-    countRollCallEvidence(db, shopId, tripId),
-    target
-      ? crewMoveConflicts(db, shopId, tripId, target.startsAt, target.timeZone)
-      : { clashes: [], away: [] },
-    // The hull's own overlap (H-80, issue #1780), asked of the same proposed
-    // windows by the same predicate the crew clash uses.
-    target ? boatMoveClashes(db, shopId, tripId, target.startsAt, target.timeZone) : [],
-  ]);
+  const [toldSeats, gearReserved, paidOrders, rollCallEvidence, crew, boat, turnarounds] =
+    await Promise.all([
+      countToldSeats(db, shopId, tripId),
+      countOpenTripGearReservations(db, shopId, tripId),
+      countTripOrders(db, shopId, tripId, "paid"),
+      countRollCallEvidence(db, shopId, tripId),
+      target
+        ? crewMoveConflicts(db, shopId, tripId, target.startsAt, target.timeZone)
+        : { clashes: [], away: [] },
+      // The hull's own overlap (H-80, issue #1780), asked of the same proposed
+      // windows by the same predicate the crew clash uses.
+      target ? boatMoveClashes(db, shopId, tripId, target.startsAt, target.timeZone) : [],
+      // The near miss beside the clash (issue #2141), against the same proposed
+      // windows; quiet until a time is chosen, like the two clash lines.
+      target ? moveTurnarounds(db, shopId, tripId, target.startsAt, target.timeZone) : [],
+    ]);
 
   return composeMovePreflight({
     toldSeats,
@@ -79,7 +103,158 @@ export async function getMovePreflight(
       departure: row.otherTitle ?? "",
     })),
     crewAway: crew.away.map((row) => row.fullName),
+    turnarounds,
   });
+}
+
+/**
+ * **The tight turnarounds a move would make** (issue #2141, Aaron's decision
+ * (b), 2026-10-13): other live, scheduled departures the proposed windows
+ * would sit closer to than the shop's `min_turnaround_minutes`, without
+ * overlapping them — on the same hull, or sharing a crew member when the two
+ * departures meet in different places (the same-dock hand-off stays quiet).
+ *
+ * Advice only. The overlap itself is H-80's clash, asked by `boatMoveClashes`
+ * and `crewMoveConflicts` through the half-open predicate; nothing here changes
+ * it, refuses anything, or reaches the move's own path. Reads only, tenancy
+ * through `trips.shop_id` on both sides (and `people.shop_id` for crew).
+ */
+async function moveTurnarounds(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  newStartsAt: Date,
+  timeZone: string,
+): Promise<MoveTurnaround[]> {
+  const [shop] = await db
+    .select({ minTurnaroundMinutes: shops.minTurnaroundMinutes })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  const minGap = shop?.minTurnaroundMinutes ?? 0;
+  if (minGap <= 0) return [];
+  const proposed = await proposedDepartureWindows(db, shopId, tripId, newStartsAt, timeZone);
+  if (!proposed || proposed.length === 0) return [];
+  const [moving] = await db
+    .select({
+      boatId: trips.boatId,
+      boatName: boats.name,
+      meetingPointLabel: trips.meetingPointLabel,
+      meetingPointAddress: trips.meetingPointAddress,
+    })
+    .from(trips)
+    .leftJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  if (!moving) return [];
+
+  // Only legs that could sit inside the gap at either end are worth reading.
+  const gapMs = minGap * 60_000;
+  const from = new Date(Math.min(...proposed.map((day) => day.startsAt.getTime())) - gapMs);
+  const to = new Date(Math.max(...proposed.map((day) => day.endsAt.getTime())) + gapMs);
+  const leg = legWindow(tripScheduleDays, trips);
+  const nearby = and(
+    eq(trips.shopId, shopId),
+    eq(trips.status, "scheduled"),
+    ne(trips.id, tripId),
+    lt(leg.startsAt, to),
+    gt(leg.endsAt, from),
+  );
+
+  const turnarounds: MoveTurnaround[] = [];
+
+  if (moving.boatId && moving.boatName) {
+    const rows = await db
+      .select({
+        otherTripId: trips.id,
+        title: trips.title,
+        legStartsAt: leg.startsAt.mapWith(trips.startsAt),
+        legEndsAt: leg.endsAt.mapWith(trips.endsAt),
+      })
+      .from(trips)
+      .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+      .where(and(liveTrip(), nearby, eq(trips.boatId, moving.boatId)))
+      .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
+    for (const other of groupLegs(rows, (row) => row.otherTripId)) {
+      const minutes = turnaroundGapMinutes(proposed, other.legs, minGap);
+      if (minutes !== null) {
+        turnarounds.push({ kind: "boat", name: moving.boatName, departure: other.title, minutes });
+      }
+    }
+  }
+
+  const crewIds = await getTripCrewIds(db, shopId, tripId);
+  if (crewIds.length > 0) {
+    const rows = await db
+      .select({
+        personId: tripAssignments.personId,
+        fullName: people.fullName,
+        otherTripId: trips.id,
+        title: trips.title,
+        meetingPointLabel: trips.meetingPointLabel,
+        meetingPointAddress: trips.meetingPointAddress,
+        legStartsAt: leg.startsAt.mapWith(trips.startsAt),
+        legEndsAt: leg.endsAt.mapWith(trips.endsAt),
+      })
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+      .where(
+        and(
+          liveTrip(),
+          nearby,
+          inArray(tripAssignments.personId, crewIds),
+          eq(people.shopId, shopId),
+          isNull(people.deletedAt),
+        ),
+      )
+      .orderBy(asc(people.fullName), asc(trips.startsAt), asc(trips.title), asc(trips.id));
+    for (const other of groupLegs(rows, (row) => `${row.personId}:${row.otherTripId}`)) {
+      // A hand-off on the same dock is the plan: the crew member steps off one
+      // boat and onto the next. Only a different meeting point costs travel.
+      if (sameMeetingPoint(moving, other.first)) continue;
+      const minutes = turnaroundGapMinutes(proposed, other.legs, minGap);
+      if (minutes !== null) {
+        turnarounds.push({
+          kind: "crew",
+          name: other.first.fullName,
+          departure: other.title,
+          minutes,
+        });
+      }
+    }
+  }
+  return turnarounds;
+}
+
+/** One entry per key, its legs gathered: the left join repeats a row per leg. */
+function groupLegs<Row extends { title: string; legStartsAt: Date; legEndsAt: Date }>(
+  rows: readonly Row[],
+  keyOf: (row: Row) => string,
+): { title: string; first: Row; legs: DepartureWindow[] }[] {
+  const grouped = new Map<string, { title: string; first: Row; legs: DepartureWindow[] }>();
+  for (const row of rows) {
+    const key = keyOf(row);
+    const entry = grouped.get(key) ?? { title: row.title, first: row, legs: [] };
+    entry.legs.push({ startsAt: row.legStartsAt, endsAt: row.legEndsAt });
+    grouped.set(key, entry);
+  }
+  return [...grouped.values()];
+}
+
+type MeetingPointColumns = {
+  meetingPointLabel: string | null;
+  meetingPointAddress: string | null;
+};
+
+/** Whether two departures meet in the same place: both unset is the shop's own door. */
+function sameMeetingPoint(a: MeetingPointColumns, b: MeetingPointColumns): boolean {
+  const clean = (value: string | null) => value?.trim().toLowerCase() || null;
+  return (
+    clean(a.meetingPointLabel) === clean(b.meetingPointLabel) &&
+    clean(a.meetingPointAddress) === clean(b.meetingPointAddress)
+  );
 }
 
 type DeliveryKind = (typeof notificationKind.enumValues)[number];

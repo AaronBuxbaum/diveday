@@ -6,6 +6,8 @@
       "packingInvalid": "Add between one and twelve packing items.",
       "dockSaved": "Dock call time saved for every confirmation and reminder.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
+      "turnaroundSaved": "Turnaround saved.",
+      "turnaroundInvalid": "Enter a turnaround between 0 and 240 minutes.",
       "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "taxSaved": "Tax setting saved.",
@@ -252,6 +254,11 @@
       "atDeparture": "On time",
       "siteOverrides": "{count, plural, one {# dive site sets its own time in the water, so this rhythm doesn’t describe a dive there:} other {# dive sites set their own time in the water, so this rhythm doesn’t describe a dive at any of them:}}",
       "siteOverride": "{name} · {count} min"
+    },
+    "turnaround": {
+      "label": "Turnaround between departures",
+      "description": "Moving a departure warns when a boat, or crew leaving from another meeting point, gets less than this. 0 turns it off.",
+      "submit": "Save turnaround"
     },
     "units": {
       "heading": "Units",

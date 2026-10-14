@@ -255,6 +255,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - STOP list
 - The record
 - Tide window
+- Tight turnaround
 - Tip
 - Touch guard
 - Transactional notification

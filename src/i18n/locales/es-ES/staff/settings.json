@@ -6,6 +6,8 @@
       "packingInvalid": "Añade entre uno y doce artículos a la lista.",
       "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
+      "turnaroundSaved": "Margen entre salidas guardado.",
+      "turnaroundInvalid": "Introduce un margen de entre 0 y 240 minutos.",
       "unitsSaved": "Unidades guardadas.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
       "taxSaved": "Configuración de impuestos guardada.",
@@ -252,6 +254,11 @@
       "atDeparture": "A la hora",
       "siteOverrides": "{count, plural, one {# sitio de buceo tiene su propio tiempo en el agua, así que este ritmo no describe una inmersión allí:} other {# sitios de buceo tienen su propio tiempo en el agua, así que este ritmo no describe una inmersión en ninguno de ellos:}}",
       "siteOverride": "{name} · {count} min"
+    },
+    "turnaround": {
+      "label": "Margen entre salidas",
+      "description": "Al mover una salida, avisa si un barco, o un tripulante que sale desde otro punto de encuentro, tiene menos que esto. Con 0 no avisa.",
+      "submit": "Guardar margen"
     },
     "units": {
       "heading": "Unidades",
