@@ -6,7 +6,9 @@ import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { createAuth, readSessionFrom, sessionCookieWriteDue } from "@/lib/auth";
 import { authSecret } from "@/lib/auth-secret";
 import { DAY_MS } from "@/lib/clock";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 /**
  * Issue #2263: every staff server action used to re-set the session cookie
@@ -33,7 +35,7 @@ type Harness = {
 };
 
 async function signedInHarness(): Promise<Harness> {
-  const db = await seededTestDb();
+  const db = ctx.db;
   const auth = createAuth(db);
   const [account] = await db
     .select({
