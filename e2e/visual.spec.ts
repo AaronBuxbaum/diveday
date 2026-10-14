@@ -5135,6 +5135,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "divers", scheme);
       });
 
+      // The roster in the order a "who hasn't been back" call needs (fourth
+      // UX review, item 27): one group, most recent dive first, with the
+      // order line saying so and offering the alphabet back.
+      test(`the diver roster sorted by last dive (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/divers?sort=last_dived");
+        await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+        await page.getByText("Most recent dive first").first().waitFor();
+        await page.locator("main ul li").first().waitFor();
+        await capture(page, "divers-last-dived", scheme);
+      });
+
       /**
        * **The same roster, scrolled — the bar wearing the page's name.**
        *
@@ -7239,6 +7250,21 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("region", { name: /^Needs you/ }).waitFor();
         await page.getByRole("region", { name: /^Published/ }).waitFor();
         await capture(page, "staff-reviews", scheme);
+      });
+
+      // The same queue narrowed by a chip (fourth UX review, item 30): the
+      // chip row under the aggregate line, the chosen chip marked, and the
+      // groups holding only the reviews that carry a comment.
+      test(`the review queue narrowed to reviews with a comment (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/reviews?show=comment");
+        await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
+        await page.locator('a[aria-current="true"]', { hasText: "With a comment" }).waitFor();
+        await page
+          .getByRole("region", { name: /^Published/ })
+          .or(page.getByText("No reviews match this view."))
+          .first()
+          .waitFor();
+        await capture(page, "staff-reviews-narrowed", scheme);
       });
 
       // The review row's "⋯" open, then its Hide: the list floats under its
