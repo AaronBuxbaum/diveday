@@ -232,15 +232,46 @@ export async function payInvoiceThroughWebhook(
   request: APIRequestContext,
   invoice: { invoiceId: string; stripeAccountId: string; amountCents: number },
 ): Promise<void> {
-  const created = Math.floor(e2eNow().getTime() / 1000);
-  const payload = JSON.stringify({
+  await postSignedStripeEvent(request, {
     id: `evt_e2e_${invoice.invoiceId}`,
     type: "invoice.paid",
     account: invoice.stripeAccountId,
-    created,
-    livemode: false,
     data: { object: { id: invoice.invoiceId, amount_paid: invoice.amountCents } },
   });
+}
+
+/**
+ * **Settle a card payment at booking the way Stripe does** (ADR
+ * 20260721-checkout-at-booking): a test-mode `checkout.session.completed`
+ * carrying `payment_status: "paid"`, the one event that clears a booking's
+ * payment gate, signed and posted like `payInvoiceThroughWebhook`.
+ */
+export async function payCheckoutThroughWebhook(
+  request: APIRequestContext,
+  checkout: { sessionId: string; stripeAccountId: string; amountCents: number },
+): Promise<void> {
+  await postSignedStripeEvent(request, {
+    id: `evt_e2e_${checkout.sessionId}`,
+    type: "checkout.session.completed",
+    account: checkout.stripeAccountId,
+    data: {
+      object: {
+        id: checkout.sessionId,
+        object: "checkout.session",
+        payment_status: "paid",
+        status: "complete",
+        amount_total: checkout.amountCents,
+      },
+    },
+  });
+}
+
+async function postSignedStripeEvent(
+  request: APIRequestContext,
+  event: { id: string; type: string; account: string; data: { object: Record<string, unknown> } },
+): Promise<void> {
+  const created = Math.floor(e2eNow().getTime() / 1000);
+  const payload = JSON.stringify({ ...event, created, livemode: false });
   const signature = createHmac("sha256", E2E_STRIPE_TEST_WEBHOOK_SECRET)
     .update(`${created}.${payload}`)
     .digest("hex");

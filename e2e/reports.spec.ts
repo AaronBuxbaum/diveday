@@ -180,6 +180,27 @@ test.describe("owner", () => {
   });
 });
 
+test.describe("owner, the Safety tab", () => {
+  signedInAsOwner();
+
+  // The month's safety record (ADR 20261012-incident-reports): the figures and
+  // the roll calls left open, read from what the shop already records.
+  test("shows the month's safety figures and the roll calls left open", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/reports/safety");
+
+    await expect(page.getByRole("region", { name: "This month’s safety record" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Roll calls left open" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Incident reports" })).toBeVisible();
+
+    const chooser = page.getByRole("navigation", { name: "Choose month" });
+    await chooser.getByRole("link", { name: "Previous month" }).click();
+    await expect(page).toHaveURL(/reports\/safety\?month=\d{4}-\d{2}/);
+    await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
+  });
+});
+
 test.describe("as captain", () => {
   signedInAs("captain");
 
@@ -191,5 +212,11 @@ test.describe("as captain", () => {
     // them — bounced to Today rather than shown a read-only/explained page.
     await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
     await expect(page.getByRole("region", { name: "This month’s numbers" })).toHaveCount(0);
+  });
+
+  test("the Safety tab is gated the same way", { tag: READ_ONLY }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/reports/safety");
+    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+    await expect(page.getByRole("region", { name: "Roll calls left open" })).toHaveCount(0);
   });
 });
