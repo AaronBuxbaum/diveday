@@ -94,15 +94,20 @@ test.describe("the dive arrival arc", () => {
 
     await openThreadStep(page, "dayof");
     await page.getByRole("radio", { name: "Carry my gear" }).check();
-    await page.getByRole("button", { name: "Save request" }).click();
-    await expect(page.getByRole("status")).toContainText("Your request is with the crew.");
+    await page.getByRole("button", { name: "Save day-of details" }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
+    ).toBeVisible();
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis");
     await expect(page.getByText(/Arrival Diver asked for help/)).toBeVisible();
-    await page.getByRole("button", { name: "Acknowledge" }).click();
+    // The demo seed keeps its own open help request (Diego's, from the desk
+    // hand-off), so Today lists two; act on this diver's row only.
+    const helpRow = page.getByRole("listitem").filter({ hasText: "Arrival Diver" });
+    await helpRow.getByRole("button", { name: "Acknowledge" }).click();
     await expect(page.getByText(/Arrival Diver is waiting for help/)).toBeVisible();
-    await page.getByRole("button", { name: "Mark handled" }).click();
+    await helpRow.getByRole("button", { name: "Mark handled" }).click();
     // Wait for the write to *land* before navigating away: the action ends in
     // `revalidateAndRedirect(home, home)`, and Today lists only open requests,
     // so the row leaving is the destination's own proof. Without it the `goto`

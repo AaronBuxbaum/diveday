@@ -1098,6 +1098,10 @@ async function scrubBookingRows(
         welcomeSharedAt: null,
         // "Running late" (J3) is the diver's own statement on the seat.
         runningLateAt: null,
+        // The booker's "Under 18" is an age fact about this person, cleared
+        // with their date of birth. The release keeps the fact that a guardian
+        // co-signed, which is the evidence; this only said why it was asked.
+        minorDeclaredAt: null,
         // The instructor's next step is prose about this named student — "book
         // your deep dive with Marcus before the card arrives" — so it goes
         // with them (issues #1196, #1205). All three columns together, or the

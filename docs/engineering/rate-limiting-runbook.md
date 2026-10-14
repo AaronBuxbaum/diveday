@@ -42,6 +42,7 @@ cannot see it.
 | Last-minute-list join | `src/app/s/[shopSlug]/actions.ts` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.lastMinuteListJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Buying a dive package online | `src/app/s/[shopSlug]/packages/actions.ts` | IP **and** the shop plus the email typed | `RATE_LIMITS.packagePurchaseByIp` (10/hour) + `RATE_LIMITS.packagePurchaseByEmail` (5/hour) |
 | Course inquiry | `src/app/s/[shopSlug]/courses/[slug]/actions.ts` | IP | `RATE_LIMITS.courseInquiry` (10/hour) |
+| Course inquiry's acknowledgment to the diver | `src/app/actions/inquiry.ts` | recipient address, across every shop | `RATE_LIMITS.courseInquiryAck` (2/day) — drops the send, never the request |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | IP | `RATE_LIMITS.selfRegisterByIp` (10/hour) |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | shop | `RATE_LIMITS.selfRegisterByShop` (120/hour) |
 | Self-registration's waiver mail | `src/app/s/[shopSlug]/register/actions.ts` | recipient address | `RATE_LIMITS.selfRegisterEmailByRecipient` (3/hour) — drops the send, never the registration |

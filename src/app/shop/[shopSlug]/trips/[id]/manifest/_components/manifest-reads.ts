@@ -9,7 +9,7 @@ import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
-import { listTripDives } from "@/db/trips";
+import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
 
 /**
  * **Everything the boat manifest reads, in the waves the page awaits them**:
@@ -40,6 +40,7 @@ export async function readManifestPage(
     catchUp,
     diveIntents,
     stage,
+    meetingPoint,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -69,6 +70,9 @@ export async function readManifestPage(
     // Today's card and the departure header print, so the strip still speaks
     // on a boat that is hours overdue.
     latestTripStage(db, shopId, tripId),
+    // Where the boat meets, so the plan says what the diver's `/ready` says
+    // (UX review 2026-10-13, item 18).
+    getTripMeetingPointFields(db, shopId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -100,6 +104,7 @@ export async function readManifestPage(
     catchUp,
     diveIntents,
     stage,
+    meetingPoint,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,

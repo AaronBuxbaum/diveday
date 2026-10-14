@@ -75,7 +75,7 @@
   },
   "deliveryError": {
     "upload_unauthorized": "El bucket rechazó la credencial: revisa la clave de acceso y su permiso de escritura.",
-    "bucket_not_found": "Ningún bucket con ese nombre respondió en el endpoint: revisa ambos.",
+    "bucket_not_found": "Ningún bucket con ese nombre respondió en ese endpoint. Revisa el nombre del bucket y el endpoint.",
     "upload_rejected": "El proveedor de almacenamiento rechazó la subida.",
     "network_unreachable": "No se pudo alcanzar el endpoint.",
     "credential_unreadable": "La clave secreta guardada ya no se puede abrir: ingrésala de nuevo para corregirlo.",

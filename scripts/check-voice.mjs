@@ -523,6 +523,30 @@ export function straightDoubleQuotes(value) {
 }
 
 /**
+ * Three periods where the house ellipsis `…` (U+2026) belongs.
+ *
+ * The apostrophe's drift, at a smaller volume: on 2026-10-13 the bundles said
+ * "…" 281 times and "..." five, every one of them a pending label ("Saving...",
+ * "Adding...") or a placeholder trailing off, and the Spanish copied all five.
+ * Both render, nobody notices one at a time, and Playwright matches them as
+ * different strings. Typography, so it sits beside the apostrophe rather than
+ * in `RULES`, and a third locale inherits it without naming it.
+ */
+export function threeDots(value) {
+  const found = [];
+  for (const match of value.matchAll(/\.{3}/g)) {
+    const before = value.slice(0, match.index).split(/\s+/).filter(Boolean).slice(-2);
+    const after = value
+      .slice(match.index + 3)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2);
+    found.push({ rule: "ellipsis", text: `${before.join(" ")}...${after.join(" ")}`.trim() });
+  }
+  return found;
+}
+
+/**
  * The four **shape** rules (2026-09-24, the voice decision — H-89 in
  * docs/product/human-decisions/README.md, "The builder's note" in docs/design/brand.md).
  *
@@ -562,6 +586,22 @@ export function straightDoubleQuotes(value) {
  * notices are the register docs/design/brand.md calls the divemaster's, where
  * a short sentence is the norm rather than a beat. The house-phrase rule is
  * per file and only ever compares those same namespaces.
+ *
+ * **Measured over the app bundles, and kept off them (2026-10-13, UX review
+ * item 38).** Run over every diver and staff key outside these scopes, the
+ * three shapes flagged 77 values. One sitting over the list rewrote fourteen
+ * whose short last sentence was a habit rather than the next action: four
+ * merge refusals in a row ending "Nothing was moved." now open "Not merged:",
+ * and "Check both.", "No undo.", "Pick another.", "Find them above." and the
+ * Settings foot's list-with-a-tail joined the sentence before them. The 63
+ * left are the register this scope exists for: a refusal's last sentence is
+ * what to do next ("Check the address.", "Use the template below.", "Nothing
+ * was lost." after a rate limit), a field-guide tip is an imperative, and the
+ * mirrored-pair rule reads an ICU plural's two branches as two clauses that
+ * mirror each other, which they do by construction. A ratchet over those
+ * would bank 63 honest strings as debt, so the shapes stay on the public
+ * pages; the typography rules (dash, apostrophe, quote, ellipsis) read every
+ * bundle.
  */
 export const SHAPE_SCOPES = ["marketing.", "switching.", "account.onboard.", "metadata."];
 
@@ -930,6 +970,7 @@ export function findTells(value, locale, key = "") {
     ...proseDashes(value),
     ...straightApostrophes(value),
     ...straightDoubleQuotes(value),
+    ...threeDots(value),
     ...(inShapeScope(key) ? shapeTells(value) : []),
     ...implementationWords(value, locale, key),
   ];

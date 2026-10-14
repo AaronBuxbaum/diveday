@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { clearFinishedRehearsals } from "@/db/rehearsals";
 import { rollAllSeriesForward } from "@/db/trips";
+import { rollSailedSeriesWaitlists } from "@/db/waitlist-roll";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
@@ -75,6 +76,9 @@ export async function GET(request: Request) {
     // The same nightly pass takes finished rehearsals off the board once
     // fly-safe no longer reads them (ADR 20261012-rehearsal-departures).
     const rehearsalsCleared = await clearFinishedRehearsals(db);
+    // Leads nobody invited on a series date that sailed roll onto the run's
+    // next date (third UX review, item 12).
+    const waitlist = await rollSailedSeriesWaitlists(db);
 
     // A series that cannot be rolled is not a transient blip: it has had every
     // instance deleted, or its course was archived under it, and it will fail
@@ -100,6 +104,8 @@ export async function GET(request: Request) {
       // more slowly than they should.
       seriesDeferred: summary.deferred,
       rehearsalsCleared,
+      waitlistRolled: waitlist.rolled,
+      waitlistInvited: waitlist.invited,
     });
 
     await sentry.captureCheckIn({
@@ -112,7 +118,7 @@ export async function GET(request: Request) {
     // with Sentry that this run was not clean. The pass is idempotent, so a
     // retry re-attempts only what is still missing.
     return NextResponse.json(
-      { ...summary, rehearsalsCleared },
+      { ...summary, rehearsalsCleared, waitlistRolled: waitlist.rolled },
       { status: summary.failures > 0 ? 500 : 200 },
     );
   } catch (error) {

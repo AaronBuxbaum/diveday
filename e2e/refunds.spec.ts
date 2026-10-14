@@ -160,7 +160,7 @@ test.describe("refunds", () => {
     await expect(
       page
         .getByRole("status")
-        .filter({ hasText: "past the cancellation window, so the seat was non-refundable" }),
+        .filter({ hasText: "past the cancellation window, so it was non-refundable" }),
     ).toBeVisible();
     // Same roster scoping as above: the activity trail now names the removed
     // diver on purpose.

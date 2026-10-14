@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
+import type { MessageSeat } from "@/db/running-late";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { InboxRow } from "./InboxRow";
@@ -35,6 +36,7 @@ const MESSAGE: InboxMessageRow["message"] = {
 function renderRow(
   overrides: Partial<InboxMessageRow["message"]> = {},
   personName: string | null = "Priya Sharma",
+  seat: MessageSeat | null = null,
 ) {
   const { container } = render(
     <ul>
@@ -46,6 +48,8 @@ function renderRow(
         t={t}
         deleteAction={vi.fn()}
         doneAction={vi.fn()}
+        seat={seat}
+        lateAction={vi.fn()}
       />
     </ul>,
   );
@@ -267,5 +271,58 @@ describe("what arrived with it", () => {
     expect(screen.getByText("Running 15 min late")).toBeInTheDocument();
     // No empty subject slot, and nothing apologising for one.
     expect(container.textContent).not.toMatch(/subject/i);
+  });
+});
+
+/**
+ * UX review 2026-10-13, item 19: "Running about 15 min late, traffic on the
+ * causeway" sat in the Inbox with no boat named while the manifest said
+ * nothing. The row names the seat, and its "⋯" puts the mark on it.
+ */
+describe("a message from somebody with a boat to catch", () => {
+  const SEAT: MessageSeat = {
+    bookingId: "bf000000-1111-4222-8333-444444444444",
+    tripId: "cf000000-1111-4222-8333-444444444444",
+    title: "Night Dive",
+    // 11:30 PM Tuesday in Cancún.
+    startsAt: new Date("2026-07-22T04:30:00.000Z"),
+    runningLateAt: null,
+  };
+  const LATE = { channel: "whatsapp" as const, subject: null, body: "Running about 15 min late" };
+
+  it("names the departure, and offers to mark the sender running late on it", async () => {
+    renderRow(LATE, "Diego Alvarez", SEAT);
+    expect(screen.getByText(/Booked on Night Dive, Tuesday 11:30\sPM/)).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Diego Alvarez" }),
+    );
+    const mark = screen.getByRole("button", {
+      name: "Mark Diego Alvarez running late for Night Dive",
+    });
+    expect(mark).toHaveTextContent("Mark running late");
+    // Only the message is posted: the server finds the person and the seat.
+    const fields = [...(mark.closest("form")?.querySelectorAll("input") ?? [])].map(
+      (input) => input.name,
+    );
+    expect(fields).toEqual(["messageId"]);
+  });
+
+  it("says the mark is on the manifest once it is, and offers it no more", async () => {
+    renderRow({ ...LATE, keywordIntent: "late" }, "Diego Alvarez", {
+      ...SEAT,
+      runningLateAt: new Date("2026-07-22T02:30:00.000Z"),
+    });
+    expect(screen.getByText(/On the manifest: running late, said 9:30\sPM/)).toBeInTheDocument();
+    // The keyword's own "Running late" would say the same thing twice.
+    expect(screen.queryByText(/^Running late ·|· Running late$/)).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Diego Alvarez" }),
+    );
+    expect(screen.queryByRole("button", { name: /running late/i })).toBeNull();
+  });
+
+  it("names nothing when there is no seat the message could be about", () => {
+    const container = renderRow(LATE, "Diego Alvarez", null);
+    expect(container.textContent).not.toMatch(/Booked on/);
   });
 });

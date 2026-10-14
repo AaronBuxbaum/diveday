@@ -58,6 +58,8 @@ const WORDS: StaffingWeekWords = {
   askWontClose: "You add no seats to this session. Only another instructor does.",
   requestWontClose: "Approving this one won’t close the gap. Only an instructor adds seats.",
   ratingLapsed: "A crew rating isn’t current",
+  continuedUntil: "until {time} · from {day}",
+  continuedFrom: "from {day}",
 };
 
 const GAP_WORDS: GapWords = {
@@ -240,6 +242,41 @@ describe("StaffingWeek", () => {
     for (const door of doors) {
       expect(door).toHaveAttribute("href", "/shop/blue-mantis/trips/trip-7?view=details#crew");
     }
+  });
+
+  /**
+   * UX review 2026-10-13, item 21: Tuesday's chip for Monday's 11:30 PM boat
+   * printed "11:30 PM – 3:00 AM" above Tuesday's own dawn boat, and read as a
+   * second night boat. The day after says when it ends and which day it left.
+   */
+  it("says the tail of an overnight window ends on its own day and left the day before", () => {
+    const night = {
+      tripId: "trip-night",
+      title: "Night Dive",
+      meetings: [
+        {
+          startsAt: new Date("2026-08-25T03:30:00.000Z"),
+          endsAt: new Date("2026-08-25T07:00:00.000Z"),
+        },
+      ],
+    };
+    renderWeek({
+      people: [{ ...KEIKO, shifts: [], crewingTrips: [night] }],
+      gaps: [{ ...night, tripId: "trip-night-gap", gap: "uncrewed_departure" }],
+    });
+
+    // Times keep their units whole with a no-break space, hence `\s`.
+    const texts = screen
+      .getAllByRole("link", { name: /^Crewing:.*Night Dive/ })
+      .map((chip) => chip.textContent ?? "");
+    const tail = /until\s3:00\sAM · from Monday/;
+    const whole = /11:30\sPM\s–\s3:00\sAM/;
+    expect(texts.some((text) => tail.test(text))).toBe(true);
+    expect(texts.some((text) => whole.test(text))).toBe(true);
+    // Each chip says one or the other, never the whole window on both days.
+    for (const text of texts) expect(tail.test(text) !== whole.test(text)).toBe(true);
+    // The phone list, which runs the time and the title together, says it too.
+    expect(document.body.textContent).toMatch(/until\s3:00\sAM · from Monday Night Dive/);
   });
 
   /**

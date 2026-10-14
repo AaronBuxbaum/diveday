@@ -949,7 +949,7 @@ export type ShopOrderFilter = {
  * index it opens has to show those same two rows, which only holds while both
  * ask the database the same question.
  */
-function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
+export function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
   const conditions = [eq(orders.shopId, shopId)];
   if (filter.status) conditions.push(eq(orders.status, filter.status));
   if (filter.personId) conditions.push(eq(orders.personId, filter.personId));
@@ -1275,6 +1275,35 @@ export async function countOpenTripOrders(
   tripId: string,
 ): Promise<number> {
   return countTripOrders(db, shopId, tripId, "open");
+}
+
+/**
+ * Open orders on the given seats, in one read keyed by their departure: the
+ * boat's work (`src/db/boat-work.ts`) asks it for every departure on Today and
+ * for the one the trip page opens, so the two can never count a boat's open
+ * orders differently. Keyed by seat rather than by trip so it counts the same
+ * seats as the boat's other work, which leaves out a cancelled seat's unpaid
+ * invoice (layer 1 review, finding 3). One `shopOrderWhere`, the index's own
+ * joins; a trip with none is absent from the map.
+ */
+export async function countOpenOrdersBySeat(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (bookingIds.length === 0) return counts;
+  const rows = await db
+    .select({ tripId: bookings.tripId, total: count() })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .innerJoin(bookings, eq(bookings.id, orders.bookingId))
+    .where(
+      and(shopOrderWhere(shopId, { status: "open" }), inArray(orders.bookingId, [...bookingIds])),
+    )
+    .groupBy(bookings.tripId);
+  for (const row of rows) if (row.tripId) counts.set(row.tripId, row.total);
+  return counts;
 }
 
 /**

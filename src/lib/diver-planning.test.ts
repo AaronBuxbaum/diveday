@@ -47,18 +47,37 @@ describe("dock-day rhythm", () => {
     expect(beats(timeline)).toEqual([
       "arrive",
       "briefing",
+      // The ride out belongs to the departure (below); only a run between
+      // sites is a beat of its own.
       "departure",
-      // Numbered by the dive it delivers to, now that a departure has one run
-      // per leg rather than a single ride out.
-      "boatRide1",
       "dive1",
       "surfaceInterval1",
       "dive2",
       "return",
     ]);
     // 20 min out, 45 min under, 60 min on the surface: dive two starts at 2:05.
-    expect(timeline[6]?.at.toISOString()).toBe("2026-07-18T14:05:00.000Z");
+    expect(timeline[5]?.at.toISOString()).toBe("2026-07-18T14:05:00.000Z");
+  });
+
+  it("folds the ride out into the departure, so one minute is one row", () => {
+    // "7:00 AM Departure" over "7:00 AM Ride out to the site" read as two
+    // things at once (third UX review, item 29).
+    const timeline = dockDayTimeline(start, rhythm(), end, 2);
+    const departure = timeline.find(({ step }) => step === "departure");
+    expect(departure?.rideMinutes).toBe(20);
+    expect(new Set(timeline.map(({ at }) => at.getTime())).size).toBe(timeline.length);
+    expect(timeline.find(({ step }) => step === "dive")?.at.toISOString()).toBe(
+      "2026-07-18T12:20:00.000Z",
+    );
     expect(timeline.at(-1)?.at).toEqual(end);
+  });
+
+  it("names no ride when the day stops at the dock", () => {
+    const docks = dockDayTimeline(start, rhythm());
+    expect(docks.find(({ step }) => step === "departure")?.rideMinutes).toBeUndefined();
+    // Nor when the first dive does not fit the window the shop sold.
+    const tight = dockDayTimeline(start, rhythm(), new Date("2026-07-18T12:10:00Z"), 2);
+    expect(tight.find(({ step }) => step === "departure")?.rideMinutes).toBeUndefined();
   });
 
   it("gives a one-dive trip no surface interval", () => {
@@ -295,7 +314,6 @@ describe("a departure's own legs", () => {
       "arrive",
       "briefing",
       "departure",
-      "boatRide1",
       "dive1",
       "boatRide2",
       "dive2",
@@ -309,7 +327,7 @@ describe("a departure's own legs", () => {
     // Same site twice, or a walk-in entry: `0` is an answer here, so the ride
     // out drops rather than falling back to the shop's twenty minutes.
     const timeline = dockDayTimeline(start, rhythm(), end, 2, undefined, [0]);
-    expect(beats(timeline)).not.toContain("boatRide1");
+    expect(timeline.find(({ step }) => step === "departure")?.rideMinutes).toBeUndefined();
     expect(diveAt(timeline, 1)).toBe(start.toISOString());
   });
 
@@ -324,14 +342,7 @@ describe("a departure's own legs", () => {
     const timeline = dockDayTimeline(start, rhythm(), short, 2, undefined, [120, 120]);
     // The second run is walked back off the tail with the dive it existed for,
     // rather than sitting at the end as a boat that set off and gave up.
-    expect(beats(timeline)).toEqual([
-      "arrive",
-      "briefing",
-      "departure",
-      "boatRide1",
-      "dive1",
-      "return",
-    ]);
+    expect(beats(timeline)).toEqual(["arrive", "briefing", "departure", "dive1", "return"]);
     expect(timeline.every(({ at }) => at <= short)).toBe(true);
   });
 });

@@ -91,6 +91,36 @@ describe("a multi-day trip straddling a DST change", () => {
   });
 });
 
+describe("a course that meets on named days", () => {
+  it("stores one day per named date, each in the shop's own window", () => {
+    const patch = ok({
+      date: "2026-10-24",
+      startTime: "08:00",
+      endTime: "16:00",
+      dayCount: 3,
+      laterDates: ["2026-10-25", "2026-10-26"],
+    });
+    expect(patch.scheduleDays.map((day) => day.startsAt.toISOString())).toEqual([
+      "2026-10-24T12:00:00.000Z",
+      "2026-10-25T12:00:00.000Z",
+      "2026-10-26T12:00:00.000Z",
+    ]);
+    expect(patch.endsAt.toISOString()).toBe("2026-10-26T20:00:00.000Z");
+  });
+
+  it("refuses dates out of order with their own reason", () => {
+    expect(
+      refusal({ date: "2026-10-24", dayCount: 3, laterDates: ["2026-10-26", "2026-10-25"] }),
+    ).toBe("days_out_of_order");
+  });
+
+  it("refuses an edit that puts two weeks between a departure's days", () => {
+    expect(refusal({ date: "2026-10-24", dayCount: 2, laterDates: ["2026-11-07"] })).toBe(
+      "days_out_of_order",
+    );
+  });
+});
+
 describe("the price boxes", () => {
   it("reads the numbers in the shop's own currency", () => {
     const patch = ok({ priceDollars: 120, depositDollars: 25 });

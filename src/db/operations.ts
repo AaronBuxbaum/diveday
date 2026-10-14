@@ -129,7 +129,8 @@ export type DiverActivityCode =
   | "identity_confirmed"
   | "identity_split_off"
   | "medical_clearance_opened"
-  | "record_exported";
+  | "record_exported"
+  | "running_late_from_message";
 
 /**
  * One line on the diver-record trail, subject-only — the same shape
@@ -475,7 +476,9 @@ export type TripActivityEntry =
         | "seat_added_walk_in"
         | "seat_added_from_trip_link"
         | "departure_offered"
-        | "rider_added_at_dock";
+        | "rider_added_at_dock"
+        | "seat_moved_away"
+        | "seat_moved_here";
       diver: string;
     }
   | {

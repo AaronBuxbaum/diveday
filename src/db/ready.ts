@@ -8,7 +8,9 @@ import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
 import type { ParticipantType } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
+import { publicCoursePath } from "@/lib/public-routes";
 import { type ReEntryAsk, reEntryWindowOpen } from "@/lib/re-entry";
+import { noCertificationStands } from "@/lib/readiness";
 import type { RentalPricing } from "@/lib/rentals";
 import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
@@ -16,7 +18,7 @@ import { shopWaiverStatus } from "@/lib/waivers";
 import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
-import { hasActiveRefresherCourse } from "./courses";
+import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
@@ -258,6 +260,13 @@ export type ReadyPageData = {
    * almost always, and the query behind it only runs then.
    */
   refresherCourseOffered: boolean;
+  /**
+   * Present when this seat's level gate is unmet because the diver said "I'm
+   * not certified yet" (`certification_not_yet`, third UX review item 23): the
+   * try-it course (`is_intro_course`) the certification step points them at,
+   * null when the shop publishes none. Null on every other seat.
+   */
+  certificationNotYet: { introCourse: { title: string; href: string } | null } | null;
   reEntryOffersOpen: boolean;
   nitroxCardVerified: boolean;
   /**
@@ -399,6 +408,8 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
+      noCertificationDeclaredAt: people.noCertificationDeclaredAt,
+      noCertificationClearedAt: people.noCertificationClearedAt,
       tripStartsAt: trips.startsAt,
       tripCourseId: trips.courseId,
     })
@@ -426,6 +437,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
   const [
     trip,
     refresherCourseOffered,
+    introCourse,
     materialsDoneElsewhere,
     rentalFit,
     helpRequest,
@@ -438,6 +450,9 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
   ] = await Promise.all([
     getTripWithBooked(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
+    // Only for a diver whose "I'm not certified yet" stands: the one door the
+    // certification step opens for them (third UX review, item 23).
+    noCertificationStands(row) ? firstActiveIntroCourse(db, row.shopId) : null,
     // Someone marked this student's materials done on another departure of the
     // same course; asked only when this seat carries no mark of its own.
     row.courseMaterialsDoneAt === null && row.tripCourseId !== null
@@ -468,6 +483,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     row,
     trip,
     refresherCourseOffered,
+    introCourse,
     reEntryOffersOpen,
     rentalFit,
     helpRequest,
@@ -501,6 +517,7 @@ export async function getReadyPageData(
     row,
     trip,
     refresherCourseOffered,
+    introCourse,
     reEntryOffersOpen,
     rentalFit,
     helpRequest,
@@ -593,6 +610,15 @@ export async function getReadyPageData(
     reEntryAsk: row.reEntryAsk,
     reEntryOffersOpen,
     refresherCourseOffered,
+    certificationNotYet:
+      !identityHeld &&
+      detail.readiness.blockers.some((blocker) => blocker.code === "certification_not_yet")
+        ? {
+            introCourse: introCourse
+              ? { title: introCourse.title, href: publicCoursePath(row.slug, introCourse.slug) }
+              : null,
+          }
+        : null,
     nitroxCardVerified: !identityHeld && nitroxVerified.has(row.personId),
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),
@@ -676,7 +702,11 @@ export async function carriedPreparationForDiver(
     waiver: shopWaiverStatus({
       personSignedWaivers: signedWaivers.get(input.personId) ?? [],
       currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
-      signer: signer ? { dateOfBirth: signer.dateOfBirth, timezone: signer.timezone } : undefined,
+      // Person-scoped, so no seat's "Under 18" is in hand: the next booking
+      // carries its own, and its readiness asks for the co-signature then.
+      signer: signer
+        ? { dateOfBirth: signer.dateOfBirth, minorDeclared: false, timezone: signer.timezone }
+        : undefined,
     }),
     certifications: levelCards,
     hasRentalFit: input.hasRentalFit,

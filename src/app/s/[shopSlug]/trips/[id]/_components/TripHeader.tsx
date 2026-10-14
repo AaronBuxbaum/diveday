@@ -36,7 +36,7 @@ export function TripHeader({
    */
   showMeetingPoint?: boolean;
   /**
-   * Every consecutive day this departure meets on, in order. One entry is an
+   * Every day this departure meets on, in order. One entry is an
    * ordinary single-day trip; more is an Open Water weekend or a liveaboard,
    * and until now the diver was never told: the hero printed day one's date and
    * time range and stopped, so a three-day course read as a Tuesday morning and

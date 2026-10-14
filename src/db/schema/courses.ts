@@ -290,6 +290,13 @@ export const courseInquiryExperience = pgEnum("course_inquiry_experience", [
 ]);
 
 /**
+ * How a date request was closed (third UX review, item 13): a booking was made
+ * from it, or a staffer marked it done. Mirrors `DateRequestOutcome` in
+ * src/lib/date-requests.ts exactly; keep both in sync on change.
+ */
+export const courseInquiryOutcome = pgEnum("course_inquiry_outcome", ["booked", "done"]);
+
+/**
  * A diver asking a shop to run something on a date that is not on the board.
  *
  * Written from two places now, and the table is deliberately one:
@@ -381,6 +388,16 @@ export const courseInquiries = pgTable(
     /** How many people, including the writer; null when left blank. */
     divers: integer("divers"),
     message: text("message"),
+    /**
+     * **When the shop closed this lead, and how** (third UX review, item 13).
+     * Null is open: the request still counts in its day's groups and divers.
+     * `booked` is stamped by the seat a staffer made from it
+     * (`bookings/new?request=`); `done` by a staffer's tick on the Requests
+     * page. Either moves the row under "Done", and Reopen clears both. Both
+     * columns move together (check below).
+     */
+    handledAt: timestamp("handled_at", { withTimezone: true }),
+    handledAs: courseInquiryOutcome("handled_as"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -396,6 +413,11 @@ export const courseInquiries = pgTable(
     check(
       "course_inquiries_subject_present",
       sql`${table.courseId} is not null or length(btrim(coalesce(${table.interest}, ''))) > 0`,
+    ),
+    // A stamp says how, and a how carries its stamp.
+    check(
+      "course_inquiries_handled_together",
+      sql`(${table.handledAt} is null) = (${table.handledAs} is null)`,
     ),
   ],
 );

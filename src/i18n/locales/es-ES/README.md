@@ -69,14 +69,16 @@ in the waiver's own English-only notice — still pass. It was added on 2026-08-
 turned up still carrying the word this section had already removed, one of them the sentence
 explaining the certification question on all three public forms.
 
-**It now guards six of this file's decisions, not one.** The same thing had happened to four more
+**It grew from one decision to many.** The same thing had happened to four more
 of them by 2026-09-04 (issue #1316): `descargo` and `liberación` for the waiver, `punto de
 buceo`/`punto de inmersión` for a dive site, guillemets, and a `viaje` that should have been a
 `salida` — twenty-nine strings between them, one of them a settings heading reading "Puntos de
 buceo". Every rule in that file quotes the section of this README it enforces, and each is paired
 in `check-shop-word.test.mjs` with the near-miss it must **not** take (`trastienda`, `punto de
 venta`, `punto de pronóstico`, `país`). A decision recorded here and not checked there has, on the
-evidence, about a fortnight.
+evidence, about a fortnight. On 2026-10-13 three words from the vocabulary table below (`ordenador`,
+`aparcamiento`, `móvil`) were found in thirteen strings, the consent line under every phone field among
+them, and became rules too.
 
 ## Register: Latin-American-readable, warm, tú
 
@@ -96,6 +98,8 @@ evidence, about a fortnight.
 | apuntarse (a una lista) | inscribirse / anotarse |
 | "también vale" | "también está bien" |
 | comprobar / comprobación | verificar / revisar (see below) |
+| aparcamiento | estacionamiento |
+| (número de) móvil | (número de) celular |
 
 - **verificar vs. revisar.** *Verificar* is confirming a fact against evidence — a card, an age, a
   connection, readiness. *Revisar* is looking something over — a price list, an address, a browser

@@ -122,45 +122,44 @@ export default async function BoatsSettingsPage({
                       className="flex flex-1 flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 w-full"
                     >
                       <input type="hidden" name="boatId" value={boat.id} />
-                      <div className="flex-1 w-full">
-                        <input
-                          name="name"
-                          type="text"
-                          required
-                          defaultValue={boat.name}
-                          placeholder={t("boats.nameLabel")}
-                          aria-label={t("boats.nameLabel")}
-                          className={controlClass}
-                        />
-                      </div>
-                      <div className="w-full sm:w-32 flex items-center gap-2">
-                        <input
-                          name="capacity"
-                          type="number"
-                          required
-                          min={1}
-                          defaultValue={boat.capacity}
-                          placeholder={t("boats.capacityLabel")}
-                          aria-label={t("boats.capacityLabel")}
-                          aria-invalid={error ? true : undefined}
-                          aria-describedby={error?.id}
-                          className={`${controlClass} tabular-nums`}
-                        />
-                      </div>
-                      {/* A textarea, because the value is a sentence of up to
-                        200 characters: a one-line box cut the seed's 72 at
-                        its padding edge, mid-word (K-446). It grows with its
-                        text and never shows fewer than two lines. */}
-                      <div className="w-full sm:basis-full">
-                        <textarea
-                          name="description"
-                          rows={2}
-                          maxLength={200}
-                          defaultValue={boat.description ?? ""}
-                          placeholder={t("boats.descriptionLabel")}
-                          aria-label={t("boats.descriptionLabel")}
-                          className={textareaClassFor(2)}
-                        />
+                      {/* Captioned like the add form below (third review #36):
+                        capacity is a safety number, and a bare "14" beside
+                        the certificate's limit read as either. */}
+                      <div className="grid w-full grid-cols-1 gap-3 sm:basis-full sm:grid-cols-2">
+                        <Field label={t("boats.nameLabel")}>
+                          <input
+                            name="name"
+                            type="text"
+                            required
+                            defaultValue={boat.name}
+                            className={controlClass}
+                          />
+                        </Field>
+                        <Field label={t("boats.capacityLabel")}>
+                          <input
+                            name="capacity"
+                            type="number"
+                            required
+                            min={1}
+                            defaultValue={boat.capacity}
+                            aria-invalid={error ? true : undefined}
+                            aria-describedby={error?.id}
+                            className={`${controlClass} tabular-nums`}
+                          />
+                        </Field>
+                        {/* A textarea, because the value is a sentence of up to
+                          200 characters: a one-line box cut the seed's 72 at
+                          its padding edge, mid-word (K-446). It grows with its
+                          text and never shows fewer than two lines. */}
+                        <Field label={t("boats.descriptionLabel")} className="sm:col-span-2">
+                          <textarea
+                            name="description"
+                            rows={2}
+                            maxLength={200}
+                            defaultValue={boat.description ?? ""}
+                            className={textareaClassFor(2)}
+                          />
+                        </Field>
                       </div>
                       <BoatPaperFields
                         boat={boat}
@@ -254,8 +253,7 @@ export default async function BoatsSettingsPage({
               no values to read a box by, and its placeholders were its only
               labels: the 128px capacity box read "Capacity (se" and the
               description lost twenty characters of its own at 390 (K-145).
-              Captions; a row above keeps its placeholders because its values say what each box
-              holds. */}
+              Captions, the same ones the rows above carry. */}
           <AddPanel title={t("boats.createTitle")}>
             <FieldGrid
               as="form"

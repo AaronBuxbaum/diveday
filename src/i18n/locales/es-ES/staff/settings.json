@@ -123,7 +123,7 @@
       "tagline": "Lema",
       "taglinePlaceholder": "ej. Buceando en Key Largo y los Cayos de Florida desde 2012",
       "descriptionLabel": "Acerca de tu centro",
-      "descriptionPlaceholder": "Una breve presentación de tu centro, embarcaciones, equipo o buceo local...",
+      "descriptionPlaceholder": "Una breve presentación de tu centro, embarcaciones, equipo o buceo local…",
       "logo": "Logotipo del centro",
       "logoHint": "PNG, JPG o WebP. Se recomienda una imagen cuadrada.",
       "removeLogo": "Eliminar logotipo actual",
@@ -363,7 +363,7 @@
     },
     "certCheck": {
       "heading": "Verificación de certificaciones",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE y CMAS, en Chrome o Edge en un ordenador.",
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE y CMAS, en Chrome o Edge en una computadora.",
       "added": "Añadida a este navegador",
       "notAdded": "Sin añadir",
       "install": "Añadir a Chrome"
@@ -372,7 +372,7 @@
       "heading": "Integraciones del centro"
     },
     "support": {
-      "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo. Escribe cuando quieras.",
+      "description": "Escribe cuando quieras: una mala mañana en el mostrador, una función que te falta o un error.",
       "emailCta": "Escribir a {email}"
     },
     "groups": {
@@ -613,7 +613,6 @@
       "label": "Contacto de emergencia",
       "addValue": "Añadir"
     },
-    "languagesEmpty": "No indicado",
     "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}"
   },
   "safetyChecklist": {

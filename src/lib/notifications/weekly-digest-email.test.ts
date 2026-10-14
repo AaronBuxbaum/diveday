@@ -38,6 +38,46 @@ const BASE = {
 } satisfies Notification;
 
 describe("the weekly_digest notification", () => {
+  it("says what last week took, the tips and the open orders, in the shop's money", () => {
+    const { text } = messageFor({
+      ...BASE,
+      sections: [
+        {
+          kind: "money",
+          revenueCents: 412_000,
+          tipsCents: 39_500,
+          openOrders: 2,
+          currency: "usd",
+          url: "https://diveday.example/shop/blue-mantis/orders",
+        },
+      ],
+    });
+    expect(text).toContain("Money");
+    expect(text).toContain("Last week’s departures took $4,120.00 after tax.");
+    expect(text).toContain("$395.00 in tips to pass on to the crew.");
+    expect(text).toContain("2 orders are still open.");
+    expect(text).toContain("Open Money: https://diveday.example/shop/blue-mantis/orders");
+  });
+
+  it("leaves out a money line with nothing to say", () => {
+    const { text } = messageFor({
+      ...BASE,
+      sections: [
+        {
+          kind: "money",
+          revenueCents: 0,
+          tipsCents: 0,
+          openOrders: 1,
+          currency: "usd",
+          url: "https://diveday.example/shop/blue-mantis/orders",
+        },
+      ],
+    });
+    expect(text).toContain("1 order is still open.");
+    expect(text).not.toContain("took");
+    expect(text).not.toContain("tips");
+  });
+
   it("validates, and keys one email per person per week", () => {
     const parsed = notificationSchema.parse(BASE);
     expect(notificationIdempotencyKey(parsed)).toBe(

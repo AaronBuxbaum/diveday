@@ -379,40 +379,64 @@ describe("the pill's measured box", () => {
     return nav.querySelector('span[aria-hidden="true"]') as HTMLElement;
   }
 
-  it("writes whole device pixels, never the fraction it measured", () => {
-    const pill = renderMeasured(0);
+  /** The pill's four edges where the page draws them, read back from what was written. */
+  function drawnEdges(pill: HTMLElement, trackBorder: number) {
+    const px = (value: string) => {
+      expect(value, "every side should have been written").toMatch(/^-?[\d.]+px$/);
+      return Number.parseFloat(value);
+    };
+    const left = NAV_BOX.left + trackBorder + px(pill.style.left);
+    const top = NAV_BOX.top + trackBorder + px(pill.style.top);
+    return {
+      left,
+      top,
+      right: left + px(pill.style.width),
+      bottom: top + px(pill.style.height),
+    };
+  }
 
-    // Every written value is whole at dpr 1 — and none of them is empty, or
-    // the assertion below would be satisfied by a pill that measured nothing.
-    for (const [name, value] of Object.entries({
-      left: pill.style.left,
-      top: pill.style.top,
-      width: pill.style.width,
-      height: pill.style.height,
-    })) {
-      expect(value, `${name} should have been written`).not.toBe("");
-      expect(value, `${name} was ${value}, not a whole pixel at dpr 1`).toMatch(/^-?\d+px$/);
+  it("lands every edge on a whole device pixel, never the fraction it measured", () => {
+    const edges = drawnEdges(renderMeasured(0), 0);
+    for (const [name, value] of Object.entries(edges)) {
+      expect(Math.abs(value - Math.round(value)), `${name} was drawn at ${value}`).toBeLessThan(
+        1e-9,
+      );
     }
-    // And snapped to the nearest, not truncated: 84.3369 - 10.1234 = 74.2135.
-    expect(pill.style.left).toBe("74px");
-    expect(pill.style.height).toBe("44px");
+    // And snapped to the nearest, not truncated: 84.3369 to 84, 24.9696 to 25.
+    expect(Math.round(edges.left)).toBe(84);
+    expect(Math.round(edges.top)).toBe(25);
   });
 
   /**
    * **Each edge is snapped, never the width** (issue #2525). The option runs
-   * from 74.2135 to 148.5504; its edges snap to 74 and 149, so the pill is 75
-   * wide. Snapping the width on its own (74.3369 → 74) put the right edge at
-   * 148, a pixel inside the option, and let a width measured either side of
-   * .5 move the right edge with nothing else on the page moving:
+   * from 84.3369 to 158.6738; its edges snap to 84 and 159, so the pill is 75
+   * wide. Snapping the width on its own (74.3369 → 74) put the right edge a
+   * pixel inside the option, and let a width measured either side of .5 move
+   * the right edge with nothing else on the page moving:
    * `reports-year-dark-vw-390` flapped by that one column.
    */
   it("snaps the two edges, so the width is whatever lies between them", () => {
     const pill = renderMeasured(0);
-    expect(pill.style.left).toBe("74px");
     expect(pill.style.width).toBe("75px");
-    // 4.4018 to 48.4626: 4 to 48.
-    expect(pill.style.top).toBe("4px");
+    // 24.9696 to 69.0304: 25 to 69.
     expect(pill.style.height).toBe("44px");
+  });
+
+  /**
+   * **The edges snap where the page is drawn, not inside the track.** The
+   * track starts at x 10.1234, so the option's left edge is 74.2135 inside
+   * it. Snapped there, the pill was drawn from 84.1234 (pixel 84) to 159.1234,
+   * but the option's right edge, 158.6738, is drawn at 159 only by luck of
+   * this fixture: on the prep page's "Group by" the option's own fill ended
+   * at 292.4063 (pixel 292) and the track-snapped pill at 292.8125 (pixel
+   * 293). The first paint draws the option's fill and the effect draws the
+   * pill, so a capture on either side of the effect differed by that column.
+   */
+  it("snaps the edges in page coordinates, so the pill is drawn on its option's own pixels", () => {
+    const pill = renderMeasured(0);
+    // 84 - 10.1234 and 25 - 20.5678: the track's fraction stays in the offset.
+    expect(Number.parseFloat(pill.style.left)).toBeCloseTo(73.8766, 4);
+    expect(Number.parseFloat(pill.style.top)).toBeCloseTo(4.4322, 4);
   });
 
   /**
@@ -427,25 +451,27 @@ describe("the pill's measured box", () => {
    */
   it("places the pill from the track's padding edge, inside its border", () => {
     const pill = renderMeasured(1);
-    // 84.3369 - 10.1234 - 1 = 73.2135, and 24.9696 - 20.5678 - 1 = 3.4018.
-    expect(pill.style.left).toBe("73px");
-    expect(pill.style.top).toBe("3px");
-    // The border moves the pill; it never resizes it (73.2135 to 147.5504).
+    // 84 - 10.1234 - 1 and 25 - 20.5678 - 1.
+    expect(Number.parseFloat(pill.style.left)).toBeCloseTo(72.8766, 4);
+    expect(Number.parseFloat(pill.style.top)).toBeCloseTo(3.4322, 4);
+    // The border moves the offsets; it never moves the drawn edges or the size.
+    const edges = drawnEdges(pill, 1);
+    expect(edges.left).toBeCloseTo(84, 9);
+    expect(edges.top).toBeCloseTo(25, 9);
     expect(pill.style.width).toBe("75px");
     expect(pill.style.height).toBe("44px");
   });
 
   /**
    * At 125% zoom a 1px border is laid out one device pixel wide, 0.8 CSS px,
-   * but `clientTop` rounds it back to 1. The option's top sits 4.4018px below
-   * the track's border edge. Less the laid-out 0.8px that is 3.6018px, 4.50
-   * device pixels, which snaps to 5: 4px. Less a rounded 1px it is 3.4018px,
-   * 4.25 device pixels, which snaps to 4: 3.2px, one device pixel above its
-   * option.
+   * but `clientTop` rounds it back to 1. The option's top, 24.9696, is 31.21
+   * device pixels down the page and snaps to 31: 24.8. Less the track's top
+   * and its laid-out 0.8px border that is 3.4322; less a rounded 1px it would
+   * be 3.2322, and the pill would be drawn one device pixel above its option.
    */
   it("subtracts the border's laid-out width, fraction and all, at 125% zoom", () => {
     const pill = renderMeasured(0.8, 1.25);
-    expect(pill.style.top).toBe("4px");
+    expect(Number.parseFloat(pill.style.top)).toBeCloseTo(3.4322, 4);
   });
 });
 

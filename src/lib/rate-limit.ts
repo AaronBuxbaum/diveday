@@ -453,6 +453,15 @@ export const RATE_LIMITS = {
   /** Course inquiry submissions from the public course page, per IP. */
   courseInquiry: perHour(10),
   /**
+   * The acknowledgment a date request sends the diver, per recipient address
+   * across every shop. The address is whatever was typed into a public form,
+   * so the IP bucket above is not what keeps one inbox from being written to
+   * in a shop's name on every submission. Two a day covers a diver who asks
+   * about a course and then about a date; past that the send is dropped and
+   * the request is still recorded.
+   */
+  courseInquiryAck: perDay(2),
+  /**
    * Set-up requests from `/get-set-up` (ADR 20261007-setup-request-form), per
    * IP. A shop asks once; five an hour covers a typo resubmitted and a second
    * person at the same desk.

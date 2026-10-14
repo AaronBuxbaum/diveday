@@ -172,6 +172,10 @@ describe("threadNextKey", () => {
       "Siguiente: consulta tu nivel de certificación con el centro.",
     ],
     certification_in_training: ["Next: finish your course.", "Siguiente: termina tu curso."],
+    certification_not_yet: [
+      "Next: nothing from you. The shop will get in touch before the day.",
+      "Siguiente: nada de tu parte. El centro se pondrá en contacto contigo antes del día.",
+    ],
     specialty_missing: [
       "Next: add your specialty card.",
       "Siguiente: agrega tu tarjeta de especialidad.",

@@ -25,5 +25,14 @@
   },
   "pagination": {
     "total": "{count, plural, one {# petición} other {# peticiones}}"
+  },
+  "markDone": "Marcar como resuelta",
+  "reopen": "Reabrir",
+  "reply": "Responder",
+  "replySubject": "Tu petición a {shopName}",
+  "done": {
+    "heading": "Resueltas: {count, plural, one {# petición} other {# peticiones}}",
+    "booked": "Reservada el {date}",
+    "marked": "Resuelta el {date}"
   }
 }

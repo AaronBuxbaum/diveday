@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 /**
  * READ_ONLY holds here: every one of these reads the orders index, its toolbar and its
@@ -80,6 +80,51 @@ test.describe("demo billing history", () => {
     await expect(page.getByRole("link", { name: "Diver record" })).toBeVisible();
     await page.getByRole("main").getByRole("link", { name: "Orders", exact: true }).click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/orders$/);
+  });
+
+  /**
+   * **A deposit names the departure it was for** (third UX review, item 32).
+   * "Trip deposit (Deposit) $54.00" was the whole page: which boat, on what
+   * day, was on the new-order form and lost once the order was sent.
+   */
+  test("a deposit order names its departure and links to it", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/orders?q=Trip+deposit");
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+    await ledgerRows(page).first().getByRole("link").first().click();
+    await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
+    await expect(page.getByText(/^Linked to .+’s booking on .+ \(.+\)\./)).toBeVisible();
+    await page.getByRole("link", { name: "Open the departure" }).click();
+    await page.waitForURL(/\/trips\/[0-9a-f-]{36}/);
+  });
+
+  /**
+   * **The ledger as a bookkeeper's file** (third UX review, item 34): the
+   * filtered orders, one row per line, across every page.
+   */
+  test("downloads the filtered orders as one CSV", { tag: READ_ONLY }, async ({
+    page,
+    request,
+  }) => {
+    await page.goto("/shop/blue-mantis/orders?range=all&status=paid");
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+    const link = page.getByRole("link", { name: "Download orders (CSV)" });
+    await expect(link).toHaveAttribute("href", /\/orders\/download\?.*status=paid/);
+    const downloadPromise = page.waitForEvent("download");
+    await link.click();
+    expect((await downloadPromise).suggestedFilename()).toMatch(
+      /^diveday-orders-blue-mantis-\d{4}-\d{2}-\d{2}\.csv$/,
+    );
+
+    const response = await request.get("/shop/blue-mantis/orders/download?range=all&status=paid");
+    expect(response.status()).toBe(200);
+    const [header, ...rows] = (await response.text()).trimEnd().split("\r\n");
+    expect(header).toBe(
+      "Order,Raised,Diver,Departure,Departure date,Status,Line kind,Line,Quantity,Line amount,Order total,Tax,Paid,Refunded,Currency",
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => row.includes(",paid,"))).toBe(true);
   });
 
   /**
@@ -317,5 +362,19 @@ test.describe("no connected payment account", () => {
     // This is the code that rendered *nothing* before — the whole bug.
     await expect(page.getByText(/Payments aren’t connected yet/i).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Connect payments" }).first()).toBeVisible();
+  });
+});
+
+// A bulk file of diver names and money is the owner's or manager's to take
+// away, as Reports' CSV is; the daily crew reads the ledger but gets no file.
+test.describe("the orders download, for the daily crew", () => {
+  signedInAs("captain");
+
+  test("is refused, and not offered", { tag: READ_ONLY }, async ({ page, request }) => {
+    const response = await request.get("/shop/blue-mantis/orders/download?range=all");
+    expect(response.status()).toBe(403);
+    await page.goto("/shop/blue-mantis/orders");
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+    await expect(page.getByRole("link", { name: "Download orders (CSV)" })).toHaveCount(0);
   });
 });

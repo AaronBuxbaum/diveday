@@ -74,16 +74,30 @@ export async function OurYearSection({
       className={className}
       heading={t("shopYear.panel.heading")}
       range={copy.range}
-      sentence={
-        // A shop that plans no site still went to sea; "0 reefs and wrecks"
-        // would publish a gap in its records as a fact about its year.
-        year.siteCount > 0
-          ? copy.sentence
-          : t("shopYear.panel.sentenceNoSites", { divers: year.divers, boats: year.boatsOut })
-      }
+      sentence={ourYearSentence(year, copy.sentence, t)}
     />
   );
 }
+
+/**
+ * The year's one sentence, sites and all only when the count is believable. A
+ * shop that plans no site still went to sea; "0 reefs and wrecks" would publish
+ * a gap in its records as a fact about its year. One reads the same way: "45
+ * boats out. 1 reef or wreck." under a schedule naming seven is a plan nobody
+ * filled in, not a year spent on one reef (third UX review, item 29).
+ */
+export function ourYearSentence(
+  year: { siteCount: number; divers: number; boatsOut: number },
+  withSites: string,
+  t: DiverTranslator,
+): string {
+  return year.siteCount >= MIN_SITES_TO_PUBLISH
+    ? withSites
+    : t("shopYear.panel.sentenceNoSites", { divers: year.divers, boats: year.boatsOut });
+}
+
+/** Below this many planned sites the year's sentence leaves the sites out. */
+export const MIN_SITES_TO_PUBLISH = 2;
 
 /** The panel itself: a heading, the range it covers, and the one sentence. */
 export function OurYearPanel({

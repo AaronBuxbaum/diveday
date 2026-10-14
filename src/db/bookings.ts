@@ -1,5 +1,5 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
-import { isPlausibleDateOfBirth } from "@/lib/age";
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { checkMinimumAge, isPlausibleDateOfBirth } from "@/lib/age";
 import {
   bookingIdentityColumns,
   courseEnrollmentRefusal,
@@ -25,7 +25,11 @@ import {
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
 import type { ReEntryAsk } from "@/lib/re-entry";
-import { BLOCKER_CATEGORY, type CertificationLevel } from "@/lib/readiness";
+import {
+  BLOCKER_CATEGORY,
+  type CertificationLevel,
+  hasVerifiedCertificationAtLeast,
+} from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
 import {
   decideTripAdmission,
@@ -66,6 +70,7 @@ import {
   rollCallEvents,
   shops,
   tripAssignments,
+  tripHelpRequests,
   trips,
   waiverRecords,
 } from "./schema";
@@ -234,6 +239,15 @@ export type BookingRequest = {
    * completes, credited to nobody. Nothing about the booking depends on it.
    */
   referralSource?: string | null;
+  /**
+   * **Whoever booked this seat said its diver is under 18** (the public party
+   * form's "Under 18" box; decision of 2026-10-13, after H-21). Stamped on the
+   * seat as `minor_declared_at`, never on the person: the form is anonymous,
+   * so it may only mark the seat it is creating. It gates nothing here (no age
+   * oracle at the sale, H-22); the guardian co-signature rule reads it where
+   * no date of birth is on file.
+   */
+  minorDeclared?: boolean;
   /**
    * What this person is doing on the boat (ADR 20261007-participant-types).
    * Omitted is a diver, which is every caller that predates the type and the
@@ -1101,17 +1115,16 @@ async function writeSeat(
         claimedAt: null,
         // "Running late" (J3) was said about the seat's earlier life.
         runningLateAt: null,
-        // Same reasoning as the two lines above: a reactivated row is a *new*
-        // booking, so it carries this booking's referral — including null,
-        // which un-credits a partner who did not send this visit rather than
-        // letting a cancelled seat's old attribution ride along.
+        // Same reasoning as the two lines above: a reactivated row is a *new* booking, so it
+        // carries this booking's referral — including null, which un-credits a partner who did not
+        // send this visit rather than letting a cancelled seat's old attribution ride along.
         //
-        // The cost, stated: a caller that reactivates a cancelled *public*
-        // booking without passing a referral — a staff reschedule, a seat claim
-        // — silently drops a genuine partner's credit through an act nobody
-        // thinks of as touching attribution. Accepted over the alternative,
+        // The cost, stated: a caller that reactivates a cancelled *public* booking without passing
+        // a referral — a staff reschedule, a seat claim — silently drops a genuine partner's credit
+        // through an act nobody thinks of as touching attribution. Accepted over the alternative,
         // which is a stale credit surviving a cancellation nobody can see.
         referralSource: partnerReferralSlug(req.referralSource),
+        minorDeclaredAt: req.minorDeclared ? nowDate() : null,
       })
       .where(eq(bookings.id, existing.id));
     await settlePackageCoverage(tx, {
@@ -1146,6 +1159,7 @@ async function writeSeat(
       reEntryAsk: req.reEntryAsk ?? null,
       ...bookingIdentityColumns(identityUnconfirmed, identityClaim, nowDate()),
       referralSource: partnerReferralSlug(req.referralSource),
+      minorDeclaredAt: req.minorDeclared ? nowDate() : null,
       // **Stamped by the application clock, not the column's `defaultNow()`.**
       //
       // `defaultNow()` is Postgres' clock, which `DIVEDAY_CLOCK` does not
@@ -1702,6 +1716,419 @@ export async function restoreBooking(
     });
     return "restored";
   });
+}
+
+/**
+ * Why a seat move did not happen. Codes, never sentences: the roster maps each
+ * to its own words (docs ADR 20260731-domain-layer-copy-leaks).
+ */
+export type MoveBookingRefusal =
+  /** No booked seat by that id on that departure. */
+  | "not_found"
+  /** Checked in or marked absent: a day-of state, not a plan to change. */
+  | "not_movable"
+  /** The departure the seat is on has already sailed. */
+  | "departed"
+  /** The other departure does not take a seat: gone, held, sailed, a rehearsal, or this one. */
+  | "target_unavailable"
+  /** A course seat moves only to another session of the same course, and a dive seat only to a dive. */
+  | "course_mismatch"
+  /** The diver already holds a seat there. */
+  | "already_booked"
+  /** The diver had a seat there once; seating them there reactivates it. */
+  | "earlier_seat"
+  /** Other live seats name this one as their party lead. */
+  | "leads_party"
+  /** Still on a buddy team here: the team is taken apart first, on its own trail. */
+  | "on_buddy_team"
+  /** The crew has recorded this seat at roll call. */
+  | "roll_call_started"
+  | "trip_full"
+  | "divers_full"
+  | "course_ratio_full"
+  | "course_unstaffed"
+  /** The course's prerequisite card is no longer on file. */
+  | "course_prerequisite"
+  /** Too young for the course on the day that session runs. */
+  | "course_min_age"
+  | "trip_prerequisite";
+
+export type MoveBookingOutcome =
+  | {
+      ok: true;
+      personId: string;
+      personName: string;
+      fromTripId: string;
+      toTripId: string;
+      /** When the diver was last told to come: the old departure's start. */
+      previousStartsAt: Date;
+      /** A paid seat whose new departure lists higher owes this. Said, never collected. */
+      owedCents: number;
+    }
+  | { ok: false; reason: Exclude<MoveBookingRefusal, "trip_prerequisite"> }
+  | { ok: false; reason: "trip_prerequisite"; refusal: TripAdmissionRefusal };
+
+/**
+ * **Move a booked seat to another departure** (ADR
+ * 20261013-staff-move-a-seat). The same booking row changes trip, so its
+ * order, payment, waiver, readiness link and notes travel with it: nothing is
+ * charged and nothing is refunded. A seat that would cost more is said back as
+ * `owedCents`, the way a type change says it.
+ *
+ * The new seat is measured exactly as a new staff seat is: the target trip's
+ * row is locked, both capacity limits and the course ratio are read under
+ * that lock, and the trip's own certification gate **refuses** (the
+ * `admissionGate: "enforce"` posture a reschedule always had), because
+ * silently landing a diver on a departure they cannot dive is worse than the
+ * refusal.
+ *
+ * What does not travel is refused rather than rewritten. A seat at roll call,
+ * on a buddy team, or leading a party carries the old departure's evidence
+ * and relationships; each is undone on its own surface first, with its own
+ * trail, and then the seat moves. What stays behind on purpose: the old
+ * departure's activity, desk events, arrival marks and sealed course forms,
+ * which are a record of what happened there.
+ */
+/**
+ * A course session's prerequisite card and minimum age, for a person already
+ * on the books: the same two checks `createBookingRecord` makes for staff, with
+ * the same postures. A missing card fails closed; an unknown date of birth
+ * fails open, because nothing collects one at booking and readiness checks age
+ * at the dock.
+ */
+async function courseGateRefusal(
+  tx: DbExecutor,
+  shopId: string,
+  personId: string,
+  course: typeof courses.$inferSelect | undefined,
+  startsAt: Date,
+): Promise<"course_prerequisite" | "course_min_age" | null> {
+  if (!course) return null;
+  if (course.minimumCertificationLevel) {
+    const cardRows = await tx
+      .select()
+      .from(certifications)
+      .where(
+        and(
+          eq(certifications.shopId, shopId),
+          eq(certifications.personId, personId),
+          isNull(certifications.deletedAt),
+        ),
+      );
+    if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
+      return "course_prerequisite";
+    }
+  }
+  if (course.minimumAge) {
+    const [row] = await tx
+      .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
+      .from(people)
+      .innerJoin(shops, eq(shops.id, people.shopId))
+      // diveday:allow-deleted-people: the seat's own diver, whose age the session measures.
+      .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+      .limit(1);
+    if (row?.dateOfBirth) {
+      const day = calendarDateInTimezone(startsAt, row.timezone);
+      if (checkMinimumAge(row.dateOfBirth, course.minimumAge, day).status === "under") {
+        return "course_min_age";
+      }
+    }
+  }
+  return null;
+}
+
+export async function moveBooking(
+  db: AppDb,
+  input: { shopId: string; fromTripId: string; toTripId: string; bookingId: string; now?: Date },
+): Promise<MoveBookingOutcome> {
+  const { shopId, fromTripId, toTripId, bookingId } = input;
+  const now = input.now ?? nowDate();
+  if (fromTripId === toTripId) return { ok: false, reason: "target_unavailable" };
+  return db.transaction(async (tx): Promise<MoveBookingOutcome> => {
+    // Both trip rows before the seat (the lock order at `tripTakesSeatFrom`),
+    // and the two trips in id order, so two moves crossing between the same
+    // pair of departures never hold one each. The target is `for update`
+    // because a seat is being added to it; the source only loses one.
+    const tripRow = (id: string) =>
+      tx
+        .select()
+        .from(trips)
+        .where(and(eq(trips.id, id), eq(trips.shopId, shopId), liveTrip()))
+        .limit(1);
+    const lockSource = () => tripRow(fromTripId).for("no key update");
+    const lockTarget = () => tripRow(toTripId).for("update");
+    let source: typeof trips.$inferSelect | undefined;
+    let target: typeof trips.$inferSelect | undefined;
+    if (fromTripId < toTripId) {
+      [source] = await lockSource();
+      [target] = await lockTarget();
+    } else {
+      [target] = await lockTarget();
+      [source] = await lockSource();
+    }
+    const [booking] = await tx
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, bookingId),
+          eq(bookings.shopId, shopId),
+          eq(bookings.tripId, fromTripId),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!source || !booking || booking.status === "cancelled") {
+      return { ok: false, reason: "not_found" };
+    }
+    if (booking.status !== "booked") return { ok: false, reason: "not_movable" };
+    if (hasSailed(source.startsAt, now)) return { ok: false, reason: "departed" };
+    if (!tripTakesSeatFrom(target, "staff") || target.isRehearsal || source.isRehearsal) {
+      return { ok: false, reason: "target_unavailable" };
+    }
+    if ((source.courseId ?? null) !== (target.courseId ?? null)) {
+      return { ok: false, reason: "course_mismatch" };
+    }
+
+    const [earlier] = await tx
+      .select({ status: bookings.status })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, target.id), eq(bookings.personId, booking.personId)))
+      .limit(1);
+    if (earlier) {
+      return {
+        ok: false,
+        reason: earlier.status === "cancelled" ? "earlier_seat" : "already_booked",
+      };
+    }
+    const [follower] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          eq(bookings.partyLeadBookingId, booking.id),
+          ne(bookings.status, "cancelled"),
+        ),
+      )
+      .limit(1);
+    if (follower) return { ok: false, reason: "leads_party" };
+    const [teamed] = await tx
+      .select({ id: buddyPairMembers.id })
+      .from(buddyPairMembers)
+      .where(
+        and(
+          eq(buddyPairMembers.shopId, shopId),
+          eq(buddyPairMembers.tripId, source.id),
+          eq(buddyPairMembers.bookingId, booking.id),
+        ),
+      )
+      .limit(1);
+    if (teamed) return { ok: false, reason: "on_buddy_team" };
+    const [rolled] = await tx
+      .select({ id: rollCallEvents.id })
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.bookingId, booking.id)))
+      .limit(1);
+    if (rolled) return { ok: false, reason: "roll_call_started" };
+
+    // Both limits and the course ratio, read under the target's lock, exactly
+    // as `createBookingRecord` reads them for a new seat.
+    const held = await heldSeatCounts(tx, target.shopId, target.id);
+    const full = seatRefusal(
+      booking.participantType,
+      { ...target, capacity: await sellableCapacity(tx, target) },
+      held,
+    );
+    if (full) return { ok: false, reason: full };
+    if (target.courseId) {
+      const [course] = await tx
+        .select()
+        .from(courses)
+        .where(and(eq(courses.id, target.courseId), eq(courses.shopId, shopId)))
+        .limit(1);
+      const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, target.id);
+      if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
+      const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
+      if (seatCap !== null && held.aboard >= seatCap) {
+        return { ok: false, reason: "course_ratio_full" };
+      }
+      // The course's own two gates, read again rather than trusted from the
+      // sale: a card can be revoked since, and age is measured on the day the
+      // session runs, so an earlier session of the same course can be one the
+      // student is still too young for (H-08).
+      const gate = await courseGateRefusal(tx, shopId, booking.personId, course, target.startsAt);
+      if (gate) return { ok: false, reason: gate };
+    }
+    const identityUnconfirmed = booking.identityUnconfirmedAt !== null;
+    const admission = await tripAdmissionFor(
+      tx,
+      shopId,
+      target.id,
+      { id: booking.personId },
+      identityUnconfirmed,
+      Boolean(target.courseId),
+      undefined,
+      booking.participantType,
+    );
+    if (!admission.admitted) {
+      return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
+    }
+
+    // The units held for the old day's window are not the new day's. Units
+    // already handed over stay with the diver, as on a cancel.
+    await releaseUnclaimedGearReservations(tx, { shopId, bookingId: booking.id });
+    // A package dive spent on the old departure is given back and the new one
+    // settles it again, under the new trip's own rules.
+    await releasePackageCoverageForBooking(tx, shopId, booking.id);
+    await tx
+      .update(bookings)
+      .set({
+        tripId: target.id,
+        // Moving alone leaves the party it was booked in.
+        partyLeadBookingId: null,
+        // Each of these was said about the old departure, so none is true of
+        // the new one. Lateness was about the old start. The briefing was on
+        // the old day's conditions: the notice carries the new time and
+        // meeting point, never the new conditions, so the diver has read
+        // nothing about them yet and /ready must say so. "Anything changed?"
+        // is asked once per departure. A pickup time was set for the old
+        // day's run.
+        runningLateAt: null,
+        conditionsBriefedAt: null,
+        carriedFactsConfirmedAt: null,
+        pickupTime: null,
+      })
+      .where(
+        and(
+          eq(bookings.id, booking.id),
+          eq(bookings.shopId, shopId),
+          eq(bookings.status, "booked"),
+        ),
+      );
+    // The diver's one open ask follows them: it is about their day, and the
+    // new departure's crew is who answers it now. One the old crew already
+    // handled is a record of that day, and stays with it.
+    await tx
+      .update(tripHelpRequests)
+      .set({ tripId: target.id })
+      .where(
+        and(
+          eq(tripHelpRequests.shopId, shopId),
+          eq(tripHelpRequests.bookingId, booking.id),
+          isNull(tripHelpRequests.handledAt),
+        ),
+      );
+    await settlePackageCoverage(tx, {
+      shopId,
+      personId: booking.personId,
+      bookingId: booking.id,
+      identityUnconfirmed,
+      trip: target,
+      participantType: booking.participantType,
+    });
+
+    let owedCents = 0;
+    const payment = await getBookingPayment(tx, shopId, booking.id);
+    if (isCapturedPaymentStatus(payment?.status)) {
+      const before = seatListPriceCents(source, null, booking.participantType) ?? 0;
+      const after = seatListPriceCents(target, null, booking.participantType);
+      if (after !== null && after > before) owedCents = after - before;
+    }
+    // A pending checkout quoted the old departure's price. Withdrawn, as a
+    // type change withdraws it; a completion that already landed is money
+    // that moved, and stays where it is.
+    const linked = tx
+      .select({ id: bookingCheckoutBookings.checkoutId })
+      .from(bookingCheckoutBookings)
+      .where(
+        and(
+          eq(bookingCheckoutBookings.shopId, shopId),
+          eq(bookingCheckoutBookings.bookingId, booking.id),
+        ),
+      );
+    await tx
+      .update(bookingCheckouts)
+      .set({ status: "expired" })
+      .where(
+        and(
+          eq(bookingCheckouts.shopId, shopId),
+          eq(bookingCheckouts.status, "pending"),
+          inArray(bookingCheckouts.id, linked),
+        ),
+      );
+
+    const [person] = await tx
+      .select({ fullName: people.fullName })
+      .from(people)
+      // diveday:allow-deleted-people: the seat's own diver, named on both trails.
+      .where(and(eq(people.id, booking.personId), eq(people.shopId, shopId)))
+      .limit(1);
+    // The crew of each boat reads it on the catch-up strip: one fewer here,
+    // one more there.
+    await recordDeskEvent(tx, {
+      shopId,
+      tripId: source.id,
+      kind: "seat_released",
+      bookingId: booking.id,
+      subjectPersonId: booking.personId,
+    });
+    await recordDeskEvent(tx, {
+      shopId,
+      tripId: target.id,
+      kind: "seat_taken",
+      bookingId: booking.id,
+      subjectPersonId: booking.personId,
+    });
+    return {
+      ok: true,
+      personId: booking.personId,
+      personName: person?.fullName ?? "",
+      fromTripId: source.id,
+      toTripId: target.id,
+      previousStartsAt: source.startsAt,
+      owedCents,
+    };
+  });
+}
+
+/**
+ * The departures a seat on this one could move to: this shop's, live,
+ * scheduled, not held, not rehearsals, not yet left, and of the same kind
+ * (another session of the same course, or another dive). The roster's "Move
+ * to another departure" lists these; `moveBooking` is still the gate, so a
+ * departure that fills between the list and the tap is refused there.
+ */
+export async function listSeatMoveTargets(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  now: Date = nowDate(),
+  limit = 30,
+): Promise<{ id: string; title: string; startsAt: Date }[]> {
+  const [trip] = await db
+    .select({ courseId: trips.courseId })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  if (!trip) return [];
+  return db
+    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+        eq(trips.conditionsHold, false),
+        eq(trips.isRehearsal, false),
+        ne(trips.id, tripId),
+        gt(trips.startsAt, now),
+        trip.courseId ? eq(trips.courseId, trip.courseId) : isNull(trips.courseId),
+      ),
+    )
+    .orderBy(asc(trips.startsAt))
+    .limit(limit);
 }
 
 export type SetParticipantTypeOutcome =

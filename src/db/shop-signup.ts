@@ -130,6 +130,11 @@ export async function createSignedUpShop(
       // Every new shop starts clean: just its default waiver, ready for the
       // owner's own trips and divers. No sample data — that only ever lives in
       // a demo shop (ADR 20260724-per-visitor-demo-shops).
+      //
+      // The default is published as version 1, so divers can sign it the hour
+      // the shop goes live. Until the shop publishes its own words the
+      // first-run checklist keeps "Read your release" open and the Waivers
+      // page says the text is sample wording (`isSampleRelease`).
       await tx.insert(waiverTemplates).values({
         shopId: shop.id,
         title: DEFAULT_WAIVER_TITLE,

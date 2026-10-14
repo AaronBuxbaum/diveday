@@ -431,6 +431,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   certification_pending: "shared.readiness.blockers.certificationPending",
   certification_self_declared: "shared.readiness.blockers.certificationSelfDeclared",
   certification_insufficient: "shared.readiness.blockers.certificationInsufficient",
+  certification_not_yet: "shared.readiness.blockers.certificationNotYet",
   certification_in_training: "shared.readiness.blockers.certificationInTraining",
   specialty_missing: "shared.readiness.blockers.specialtyMissing",
   specialty_pending: "shared.readiness.blockers.specialtyPending",

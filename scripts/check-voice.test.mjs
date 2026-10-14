@@ -13,6 +13,7 @@ import {
   straightApostrophes,
   straightDoubleQuotes,
   stringLiterals,
+  threeDots,
 } from "./check-voice.mjs";
 
 const rules = (value, locale = "en-US") => findTells(value, locale).map((hit) => hit.rule);
@@ -277,6 +278,23 @@ describe("the house quotation marks", () => {
       // shape too, and it is what makes both greppable back to the string.
       { rule: "quote", text: 'Its "manifest"is a' },
     ]);
+  });
+});
+
+describe("the house ellipsis (UX review 2026-10-13, item 38)", () => {
+  it("catches three periods in a pending label and a trailing placeholder", () => {
+    expect(rules("Saving...")).toContain("ellipsis");
+    expect(rules("Guardando...", "es-ES")).toContain("ellipsis");
+    expect(rules("your shop, boats, crew, or local diving...")).toContain("ellipsis");
+  });
+
+  it("leaves the one-character ellipsis and a sentence's full stop alone", () => {
+    expect(rules("Saving\u2026")).toEqual([]);
+    expect(rules("Add a diver. Then save.")).toEqual([]);
+  });
+
+  it("reports the words around it, so the hit greps back to its string", () => {
+    expect(threeDots("Adding... now")).toEqual([{ rule: "ellipsis", text: "Adding...now" }]);
   });
 });
 

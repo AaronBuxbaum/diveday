@@ -1,21 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/group-label";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { courseFormResignImpact, listCourseForms } from "@/db/course-forms";
 import {
   getCurrentWaiverTemplate,
   getSignedWaiverRecordForShop,
   listWaiverIntegrityAudit,
+  signedRecordViewParam,
   standingWaiverExposure,
 } from "@/db/waivers";
 import { requestLocale } from "@/i18n/request";
@@ -25,10 +23,10 @@ import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
+import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
 import { type CourseFormNotice, CourseFormsSection } from "./_components/CourseFormsSection";
 import { PublishRelease, type PublishReleaseCopy } from "./_components/PublishRelease";
-import { SignatureLog } from "./_components/SignatureLog";
+import { SignedRecordsSection } from "./_components/SignedRecordsSection";
 import { saveWaiverAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -90,10 +88,24 @@ export default async function WaiversPage({
     page?: string;
     record?: string;
     form?: string;
+    q?: string;
+    view?: string;
   }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, count, page, record: recordParam, form: formParam } = await searchParams;
+  const {
+    notice,
+    count,
+    page,
+    record: recordParam,
+    form: formParam,
+    q,
+    view: viewParam,
+  } = await searchParams;
+  // **Find a signed release in one line** (third UX review, item 31): the
+  // diver's name, email or phone, and two views a reviewer goes looking for.
+  const query = q?.trim() ?? "";
+  const view = signedRecordViewParam(viewParam);
   // `waiver_records.id` is a `uuid` column, so a truncated or hand-edited
   // `?record=` does not resolve to nothing — it throws `invalid input syntax
   // for type uuid` and 500s this page. A malformed id is simply no pin: the
@@ -127,11 +139,16 @@ export default async function WaiversPage({
     record ? getSignedWaiverRecordForShop(db, shop.id, record) : null,
     // A non-numeric or missing `?page=` reads as page 1; the query clamps it
     // into range so a bookmarked page past the end lands on the last real one.
-    listWaiverIntegrityAudit(db, shop.id, { page: Number.parseInt(page ?? "", 10) }),
+    listWaiverIntegrityAudit(db, shop.id, {
+      page: Number.parseInt(page ?? "", 10),
+      query,
+      view,
+    }),
     listCourseForms(db, shop.id),
     courseFormResignImpact(db, shop.id),
   ]);
   const courseFormNotice = courseFormNoticeFor(notice, formParam, t);
+  const sampleRelease = isSampleRelease(current?.body);
 
   const resigning = notice === "waiver-resigning" ? Number(count) : Number.NaN;
   // Two refusals, two sentences. `invalid` says the release is too short;
@@ -194,34 +211,6 @@ export default async function WaiversPage({
     pending: t("waiversStaff.pendingLabel"),
   };
 
-  // The pin renders inside its own day group below, so the page's own rows
-  // must not render it a second time. `SignatureRow` puts
-  // `id="waiver-record-<id>"` on its `<li>`, and a pinned record that also
-  // falls on the visible page produced **two elements with the same DOM id** —
-  // invalid HTML, two hit targets for one anchor, and the same evidence row
-  // shown twice on one screen.
-  //
-  // It only ever surfaced as a test failure because it depends on where the
-  // record lands: the list orders by `signedAt desc, id desc`, and `id` is a
-  // random UUID, so a record sitting on a page boundary among rows that share
-  // a timestamp crosses it or not depending on the UUIDs a given seed drew.
-  //
-  // Only the rendered rows are filtered. `auditPage`'s total and page count
-  // describe the whole log and stay untouched — the record has not gone
-  // anywhere, it is one day group further up.
-  const entries = auditPage.entries.filter((entry) => entry.id !== highlighted?.id);
-  const base = `/shop/${shopSlug}/waivers`;
-  // The `?record=` pin travels with the page rather than being dropped the
-  // moment a reviewer turns one, and the anchor keeps a page turn landing on
-  // the log instead of back at the release editor above it.
-  const pageHref = (target: number) => {
-    const query = new URLSearchParams();
-    if (target > 1) query.set("page", String(target));
-    if (record) query.set("record", record);
-    const search = query.toString();
-    return `${search ? `${base}?${search}` : base}#signed-records-heading`;
-  };
-
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "count", "form"]} />
@@ -235,14 +224,29 @@ export default async function WaiversPage({
         // where it sat while that card had a heading of its own repeating the
         // field's.
         meta={
-          current ? (
-            <p className="text-sm text-muted">
-              {t("waiversStaff.versionInfo", {
-                version: current.version,
-                date: formatShortDate(current.createdAt, locale, shop.timezone),
-              })}
-            </p>
-          ) : undefined
+          <>
+            {current ? (
+              <p className="text-sm text-muted">
+                {t("waiversStaff.versionInfo", {
+                  version: current.version,
+                  date: formatShortDate(current.createdAt, locale, shop.timezone),
+                })}
+              </p>
+            ) : null}
+            {/* **Said at rest, not only inside the editor** (third UX review,
+                item 30). Sign-up publishes DiveDay's sample release as a new
+                shop's version 1, and divers sign it from that hour. The note
+                used to render only for a shop with no release, which a
+                signed-up shop never is; it now holds for as long as the live
+                text is byte-equal to the sample (`isSampleRelease`). */}
+            {sampleRelease ? (
+              <p className="mt-1 text-sm text-warning-strong">
+                {current
+                  ? t("waiversStaff.releaseDescription.sampleLive")
+                  : t("waiversStaff.releaseDescription.sample")}
+              </p>
+            ) : null}
+          </>
         }
       />
 
@@ -280,13 +284,7 @@ export default async function WaiversPage({
         <SectionCard padding="lg" className="mt-4">
           <form action={saveWaiverAction} className="flex flex-col gap-5">
             <FieldGrid columns={1} className="gap-y-5">
-              <Field
-                label={t("waiversStaff.fieldLabel")}
-                // Only for a shop that has never published one: a starting text
-                // nobody's counsel has read is the one thing about this box a
-                // reader could get wrong.
-                description={current ? undefined : t("waiversStaff.releaseDescription.sample")}
-              >
+              <Field label={t("waiversStaff.fieldLabel")}>
                 <textarea
                   name="body"
                   required
@@ -332,34 +330,17 @@ export default async function WaiversPage({
         t={t}
       />
 
-      <section className="mt-10" aria-labelledby="signed-records-heading">
-        <GroupLabel as="h2" id="signed-records-heading" className="scroll-mt-24">
-          {t("waiversStaff.signatures.heading")}
-        </GroupLabel>
-        {auditPage.total === 0 ? (
-          <EmptyState title={t("waiversStaff.signatures.noSignedRecords")} className="mt-4" />
-        ) : (
-          <>
-            <div className="mt-4">
-              <SignatureLog
-                entries={entries}
-                pinned={highlighted}
-                shopSlug={shopSlug}
-                locale={locale}
-                timezone={shop.timezone}
-                t={t}
-              />
-            </div>
-            <Pager
-              page={auditPage.page}
-              pageCount={auditPage.pageCount}
-              href={pageHref}
-              total={t("waiversStaff.signatures.pagination.total", { count: auditPage.total })}
-              words={staffPagerWords(t)}
-            />
-          </>
-        )}
-      </section>
+      <SignedRecordsSection
+        auditPage={auditPage}
+        pinned={highlighted}
+        query={query}
+        view={view}
+        record={record}
+        shopSlug={shopSlug}
+        locale={locale}
+        timezone={shop.timezone}
+        t={t}
+      />
     </main>
   );
 }

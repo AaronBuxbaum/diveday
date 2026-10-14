@@ -3,7 +3,14 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SETTLED_CHECK_TEXT_INSET } from "@/components/ui/settled-mark";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
-import type { ThreadStepId, ThreadStepState } from "@/lib/thread-steps";
+import type { DiverTranslator } from "@/i18n/messages";
+import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "@/i18n/thread-labels";
+import type {
+  ThreadSpine as ThreadSpineModel,
+  ThreadStep,
+  ThreadStepId,
+  ThreadStepState,
+} from "@/lib/thread-steps";
 
 /**
  * **The thread page's step spine** — ADR 20260827-the-divers-thread, decision
@@ -131,6 +138,28 @@ const OPEN_STEP_HEAD_CLASS = "group-open/step:min-h-12 group-open/step:pb-1";
  * `AutoOpenDetails` rides on top of it for deep links, which a client-side
  * route change would otherwise leave collapsed.
  */
+/**
+ * The engine's spine as the figure draws it: each step's title and state word
+ * in the diver's language, the one open at rest marked current, and the line
+ * and body the page composed for it.
+ */
+export function threadSpineSteps(
+  spine: Pick<ThreadSpineModel, "steps" | "current">,
+  t: DiverTranslator,
+  stepLine: (step: ThreadStep) => string | null,
+  stepBody: (step: ThreadStep) => ReactNode,
+): ThreadSpineStep[] {
+  return spine.steps.map((step) => ({
+    id: step.id,
+    state: step.state,
+    current: step.id === spine.current,
+    title: t(THREAD_STEP_TITLE_KEYS[step.id]),
+    stateWord: step.state === "done" ? null : t(THREAD_STEP_STATE_KEYS[step.state]),
+    line: stepLine(step),
+    body: stepBody(step) ?? undefined,
+  }));
+}
+
 export function ThreadSpine({
   steps,
   className = "",

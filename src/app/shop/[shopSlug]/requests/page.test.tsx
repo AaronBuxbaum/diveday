@@ -19,12 +19,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/db/authz", () => ({ canPersonConfigureTrips: vi.fn() }));
 vi.mock("@/db/boats", () => ({ listBoats: vi.fn(async () => []) }));
-vi.mock("@/db/course-inquiries", () => ({ listDateRequestsForStaff: vi.fn() }));
+vi.mock("@/db/course-inquiries", () => ({
+  listDateRequestsForStaff: vi.fn(),
+  listHandledDateRequests: vi.fn(async () => []),
+}));
+vi.mock("./actions", () => ({ setRequestOutcomeAction: vi.fn() }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { canPersonConfigureTrips } = await import("@/db/authz");
-const { listDateRequestsForStaff } = await import("@/db/course-inquiries");
+const { listDateRequestsForStaff, listHandledDateRequests } = await import("@/db/course-inquiries");
 const { requireShopSurface } = await import("@/lib/session");
 const { default: RequestsPage } = await import("./page");
 
@@ -47,6 +51,8 @@ const REQUEST = {
   divers: 2,
   message: null,
   createdAt: new Date("2026-09-01T12:00:00Z"),
+  handledAt: null,
+  handledAs: null,
 };
 
 async function renderPage() {
@@ -69,6 +75,7 @@ beforeEach(() => {
       timezone: "America/New_York",
       crewScheduleEnabled: true,
       diversPerDivemaster: 6,
+      name: "Blue Mantis Divers",
     },
   } as never);
   vi.mocked(listDateRequestsForStaff).mockResolvedValue({
@@ -107,5 +114,57 @@ describe("a day's Add a departure", () => {
       screen.getByRole("heading", { level: 2, name: /1 group · 2 divers/ }),
     ).toBeInTheDocument();
     expect(screen.getByText("Priya Sharma")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **A request closes** (third UX review, item 13). A closed lead leaves its
+ * day, so the day's count is open requests only, and it is listed under Done
+ * with how it was closed and a way to reopen it.
+ */
+describe("closed requests", () => {
+  it("lists a booked request under Done, with Reopen", async () => {
+    vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
+    vi.mocked(listHandledDateRequests).mockResolvedValue([
+      {
+        ...REQUEST,
+        id: "44444444-4444-4444-8444-444444444444",
+        name: "Dee Whitlock",
+        handledAt: new Date("2026-10-14T15:00:00Z"),
+        handledAs: "booked",
+      },
+    ] as never);
+    await renderPage();
+
+    expect(screen.getByRole("heading", { level: 2, name: /Done: 1 request/ })).toBeInTheDocument();
+    expect(screen.getByText("Dee Whitlock")).toBeInTheDocument();
+    expect(screen.getByText(/Booked Wed, Oct\s14/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reopen" })).toBeInTheDocument();
+  });
+
+  it("gives an open request Mark done and a reply door", async () => {
+    vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
+    await renderPage();
+
+    expect(screen.getByRole("button", { name: "Mark done" })).toBeInTheDocument();
+    const reply = screen.getByRole("link", { name: "Reply" });
+    expect(reply.getAttribute("href")).toMatch(/^mailto:priya@example\.test\?subject=/);
+  });
+
+  it("says nothing is open without claiming nobody ever asked", async () => {
+    vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
+    vi.mocked(listDateRequestsForStaff).mockResolvedValue({
+      rows: [],
+      total: 0,
+      page: 1,
+      pageCount: 1,
+    } as never);
+    vi.mocked(listHandledDateRequests).mockResolvedValue([
+      { ...REQUEST, handledAt: new Date("2026-10-14T15:00:00Z"), handledAs: "done" },
+    ] as never);
+    await renderPage();
+
+    expect(screen.queryByText("No requests yet")).toBeNull();
+    expect(screen.getByText(/Marked done Wed, Oct\s14/)).toBeInTheDocument();
   });
 });

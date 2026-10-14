@@ -134,6 +134,14 @@ export type WeeklyDigestFacts = {
   reviews: { received: number; awaitingModeration: number };
   dateRequestsWaiting: number;
   overdueTodayItems: number;
+  /**
+   * What last week made, for the Reports grade only (third UX review, item
+   * 33): revenue after tax and pass-through on last week's departures and the
+   * tips settled on them, Reports' own month query cut to the week, and the
+   * orders still open shop-wide. Zero in the staff grade, so the section is
+   * never built for a crew member.
+   */
+  money: { revenueCents: number; tipsCents: number; openOrders: number; currency: string };
 };
 
 /**
@@ -154,6 +162,11 @@ export function weeklyDigestGrade(roles: readonly Role[]): keyof WeeklyDigestFac
   return canViewShopReports(roles) ? "reports" : "staff";
 }
 
+/** The staff-grade money: nothing, so the money section is never built. */
+export function noMoney(currency: string): WeeklyDigestFacts["money"] {
+  return { revenueCents: 0, tipsCents: 0, openOrders: 0, currency };
+}
+
 /** The staff-grade last week: nothing, so the Reports section is never built. */
 export const NO_LAST_WEEK: WeeklyDigestFacts["lastWeek"] = {
   bookingsMade: 0,
@@ -169,6 +182,13 @@ export type WeeklyDigestSection =
       departures: number;
       seatsFilled: number;
       seats: number;
+    }
+  | {
+      kind: "money";
+      revenueCents: number;
+      tipsCents: number;
+      openOrders: number;
+      currency: string;
     }
   | { kind: "this_week"; departures: number; seatsFilled: number; seats: number }
   | { kind: "waivers"; divers: number; departures: number }
@@ -187,6 +207,10 @@ export function weeklyDigestSections(facts: WeeklyDigestFacts): WeeklyDigestSect
   const { lastWeek, thisWeek, waiversOutstanding, reviews } = facts;
   if (lastWeek.bookingsMade > 0 || lastWeek.departures > 0) {
     sections.push({ kind: "last_week", ...lastWeek });
+  }
+  const { money } = facts;
+  if (money.revenueCents > 0 || money.tipsCents > 0 || money.openOrders > 0) {
+    sections.push({ kind: "money", ...money });
   }
   if (thisWeek.departures > 0) sections.push({ kind: "this_week", ...thisWeek });
   if (waiversOutstanding.divers > 0) sections.push({ kind: "waivers", ...waiversOutstanding });
@@ -214,6 +238,7 @@ export function seatFillPercent(seatsFilled: number, seats: number): number | nu
  */
 export const WEEKLY_DIGEST_SECTION_PATHS: Record<WeeklyDigestSectionKind, readonly string[]> = {
   last_week: ["reports"],
+  money: ["orders"],
   this_week: ["schedule", "board"],
   waivers: [],
   reviews: ["reviews"],

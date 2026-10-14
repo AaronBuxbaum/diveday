@@ -147,7 +147,6 @@ function renderSpine({
   departures?: SpineDeparture[];
   actions?: TodayAction[];
   tomorrow?: SpineDeparture[];
-  withheldCount?: number;
   showPaymentsRow?: boolean;
   drafts?: SpineDraft[];
   crewedTripIds?: string[];
@@ -223,7 +222,7 @@ describe("a station owns its departure's facts", () => {
    */
   it("renders no extra line on a station whose bookings carry no intent", () => {
     renderSpine({ departures: [departure({ intents: [] })] });
-    expect(screen.queryByText(/Aboard today/)).toBeNull();
+    expect(screen.queryByText(/On the list today/)).toBeNull();
   });
 
   it("counts what the divers came for, naming numbers and nobody", () => {
@@ -237,7 +236,7 @@ describe("a station owns its departure's facts", () => {
         }),
       ],
     });
-    const line = screen.getByText(/Aboard today/);
+    const line = screen.getByText(/On the list today/);
     expect(line).toHaveTextContent("4 out for a good day");
     expect(line).toHaveTextContent("2 getting comfortable again");
     // An aggregate, never a pairing: no diver is named by it.
@@ -245,12 +244,37 @@ describe("a station owns its departure's facts", () => {
     expect(line.textContent).not.toMatch(/Priya|Grace|Yara/);
   });
 
+  // Third review, item 9: one range form across the app. A same-day boat
+  // reads "7:00 AM – 10:30 AM" like the trip header; "until" stays for a boat
+  // that comes home the next day.
+  it("prints a same-day boat's return with the en dash, and an overnight one with until", () => {
+    const { unmount } = renderSpine({
+      departures: [
+        departure({
+          startsAt: new Date("2026-10-13T11:00:00Z"),
+          endsAt: new Date("2026-10-13T14:30:00Z"),
+        }),
+      ],
+    });
+    expect(screen.getByText("– 10:30 AM")).toBeInTheDocument();
+    unmount();
+    renderSpine({
+      departures: [
+        departure({
+          startsAt: new Date("2026-10-14T03:30:00Z"),
+          endsAt: new Date("2026-10-14T07:00:00Z"),
+        }),
+      ],
+    });
+    expect(screen.getByText("until 3:00 AM")).toBeInTheDocument();
+  });
+
   it("says the site, hull, crew and price on the station's own line", () => {
     renderSpine();
     const line = screen.getByText(
       (_, element) =>
         element?.tagName === "P" &&
-        element.textContent === "Molasses Reef · Mantis II · Keiko Tanaka · $95.00",
+        element.textContent === "Molasses Reef · Mantis II · Keiko Tanaka · $95",
     );
     expect(line).toBeInTheDocument();
     // The crew's names are the desktop's: below `sm` the line is the site,
@@ -261,11 +285,11 @@ describe("a station owns its departure's facts", () => {
     );
   });
 
-  it("says how many of the booked divers are ready, and the open spots beside it", () => {
+  it("says how many of the booked divers are ready, and the open seats beside it", () => {
     renderSpine({ departures: [departure({ blocked: 2 })] });
     expect(screen.getByText("8 of 10 ready")).toBeInTheDocument();
     expect(screen.getByText("2 blocked")).toBeInTheDocument();
-    expect(screen.getByText("2 spots open")).toBeInTheDocument();
+    expect(screen.getByText("2 seats open")).toBeInTheDocument();
   });
 
   it("says nothing about blocked divers on a boat whose divers are all ready", () => {
@@ -275,11 +299,11 @@ describe("a station owns its departure's facts", () => {
   });
 
   /** H-107, #2388: the seats on sale, which the booking transaction sells up to. */
-  it("counts open spots and the bar against the boat's certificate, not the stated seats", () => {
+  it("counts open seats and the bar against the boat's certificate, not the stated seats", () => {
     const { container } = renderSpine({
       departures: [departure({ capacity: 14, sellableCapacity: 11, booked: 10 })],
     });
-    expect(screen.getByText("1 spot open")).toBeInTheDocument();
+    expect(screen.getByText("1 seat open")).toBeInTheDocument();
     const [, ready] = [
       ...(container.querySelector("[data-readiness-bar]")?.children ?? []),
     ] as HTMLElement[];
@@ -296,10 +320,10 @@ describe("a station owns its departure's facts", () => {
     expect(screen.queryByText("Rehearsal")).toBeNull();
   });
 
-  it("says Full rather than nought spots open on a boat with no seats left", () => {
+  it("says Full rather than nought seats open on a boat with no seats left", () => {
     renderSpine({ departures: [departure({ booked: 12 })] });
     expect(screen.getByText("Full")).toBeInTheDocument();
-    expect(screen.queryByText(/spots? open/)).toBeNull();
+    expect(screen.queryByText(/seats? open/)).toBeNull();
   });
 
   it("draws readiness as one bar the boat's capacity wide: ready, then blocked, then open", () => {
@@ -341,6 +365,26 @@ describe("a station owns its departure's facts", () => {
     expect(headings[0]).toContain("Morning Reef");
     expect(headings[1]).toContain("Wreck Trip");
     expect(headings[1]).toContain("You’re crewing");
+  });
+
+  it("opens the boat the reader crews straight onto its manifest, and only that one", () => {
+    // UX review 2026-10-13, item 17: the roll call was the title, then the
+    // Boat tab, then a scroll, and the role card promised a manifest door.
+    renderSpine({
+      departures: [
+        departure({ tripId: "morning", title: "Morning Reef", startsAt: hoursFromNow(1) }),
+        departure({ tripId: "wreck", title: "Wreck Trip", startsAt: hoursFromNow(6) }),
+      ],
+      crewedTripIds: ["wreck"],
+    });
+    const doors = screen.getAllByRole("link", { name: "Open the boat" });
+    expect(doors).toHaveLength(1);
+    expect(doors[0]).toHaveAttribute("href", "/shop/blue-mantis/trips/wreck/manifest");
+    // The title still goes to Divers, the desk's tab.
+    expect(screen.getByRole("link", { name: "Wreck Trip" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/wreck",
+    );
   });
 });
 
@@ -816,19 +860,10 @@ describe("the first booking ever", () => {
 });
 
 describe("the role lens", () => {
-  it("keeps the withheld-work line under the summary sentence, above the first station", () => {
-    const { container } = renderSpine({
-      actions: [action({ id: "on-boat", departure: boat("t1") })],
-      withheldCount: 3,
-    });
-    const line = screen.getByText("3 jobs for the front desk");
-    const firstStation = container.querySelector("ol li");
-    expect(
-      line.compareDocumentPosition(firstStation as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  it("renders no withheld line for a reader nothing was withheld from", () => {
+  // Third review, item 5: a captain's Today opened on "22 jobs for the front
+  // desk", rows the role cannot see, above a fold of rows it can. The count of
+  // what is withheld is not a line any more; the fold is the one desk number.
+  it("prints no count of the work a role does not see", () => {
     renderSpine({ actions: [action({ id: "on-boat", departure: boat("t1") })] });
     expect(screen.queryByText(/jobs? for the front desk/)).toBeNull();
   });
@@ -1176,7 +1211,6 @@ describe("the words on the spine", () => {
         action({ id: "chore", kind: "reviews_pending" }),
       ],
       showPaymentsRow: true,
-      withheldCount: 2,
     });
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/\b(she|he|her|hers|his|him|they|them|their|theirs)\b/i);

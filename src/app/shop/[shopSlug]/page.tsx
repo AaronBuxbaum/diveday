@@ -32,8 +32,8 @@ import { daySummaryBlocked, sharedInHorizonReadiness } from "@/db/blockers";
 import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
-import { listDiveSites } from "@/db/dive-sites";
 import { shopFirstBooking } from "@/db/first-booking";
+import { loadFirstRunFacts } from "@/db/first-run";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
@@ -429,7 +429,7 @@ async function TodayBody({
         withTakings: eveningClose.closing && canReadShopMoney,
       }),
     ]);
-  const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;
+  const { actions, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
   // The day's whole board, clock order — the strip's marks and the count under the date both read
   // it.
@@ -450,19 +450,8 @@ async function TodayBody({
   // ledger would open on ticked boxes and a call to action nobody needs. Its count is never read
   // (`shopTripCount` is null for it).
   const showFirstRunChecklist = !nextDeparture && shopTripCount === 0;
-  // The one read only a first-run shop makes, so the one third wave.
-  const firstRunDiveSites = showFirstRunChecklist ? await listDiveSites(db, shop.id) : null;
-  const firstRunStripeAccount = showFirstRunChecklist ? stripeAccount : null;
-  // A first-run shop gets one quiet progress fact, derived from persisted
-  // records. The trip and public-link rows are guided actions, not completion
-  // states, so they are intentionally excluded from the progress total.
-  const firstRunDoneCount = [
-    Boolean(shop.contactEmail || shop.contactPhone),
-    Boolean(shop.tagline || shop.description || shop.logoUrl),
-    Boolean(shop.unitsConfirmedAt),
-    Boolean(firstRunDiveSites?.length),
-    canAcceptPayments(firstRunStripeAccount),
-  ].filter(Boolean).length;
+  // The reads only a first-run shop makes, so the one third wave.
+  const firstRun = showFirstRunChecklist ? await loadFirstRunFacts(db, shop, stripeAccount) : null;
   // The desk group's one presence-derived row (ADR 20260827-first-light,
   // decision 6): the shop has departures, cannot take money online, and has
   // never taken an order at all. Two bounded reads, and only for a shop past
@@ -879,7 +868,6 @@ async function TodayBody({
             currency: shop.currency,
             crewedTripIds: lens === "boat" ? crewedTripIds : undefined,
             readerPersonId: session.user.personId,
-            withheldCount,
             drafts: spineDrafts,
             helpRequestAction: updateHelpRequestAction,
             showPaymentsRow,
@@ -902,20 +890,16 @@ async function TodayBody({
             // 20260827-first-light, decision 6). Composed here rather than inside
             // the spine because the five persisted facts behind it are this
             // page's reads; the spine only decides where the group sits.
-            firstRun: showFirstRunChecklist ? (
+            firstRun: firstRun ? (
               <FirstRunChecklist
                 shopSlug={shopSlug}
                 // No APP_HOST (local dev, some tests) means no origin for an absolute
                 // URL: `publicScheduleUrl` falls back to the path rather than crash.
                 scheduleUrl={publicScheduleUrl}
-                contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
-                profileDone={Boolean(shop.tagline || shop.description || shop.logoUrl)}
-                diveSiteCount={firstRunDiveSites?.length ?? 0}
-                unitsDone={Boolean(shop.unitsConfirmedAt)}
-                stripeDone={canAcceptPayments(firstRunStripeAccount)}
+                {...firstRun.steps}
                 copy={firstRunChecklistCopy(t, shop, {
-                  diveSiteCount: firstRunDiveSites?.length ?? 0,
-                  doneCount: firstRunDoneCount,
+                  diveSiteCount: firstRun.steps.diveSiteCount,
+                  doneCount: firstRun.doneCount,
                 })}
               />
             ) : null,

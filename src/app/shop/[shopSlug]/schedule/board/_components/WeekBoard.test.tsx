@@ -245,7 +245,7 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     board(week());
     const today = screen.getByText("27");
     const label = today.parentElement as HTMLElement;
-    const grid = label.closest("h3")?.parentElement as HTMLElement;
+    const grid = label.closest("h2")?.parentElement as HTMLElement;
     const rail = Number(token(grid, /^grid-cols-\[([\d.]+)rem_/)) * 16;
     expect([...grid.classList].filter((name) => name.includes(":grid-cols-"))).toEqual([]);
     const weekday = px(token(screen.getByText("Thu"), /^w-(\d+)$/));
@@ -552,7 +552,7 @@ describe("days gone by with no boats (UX review 2026-10-10, item 24)", () => {
     const { container } = board(week({}, [entry()]));
     const quiet = container.querySelectorAll("[data-week-quiet-days]");
     expect(quiet).toHaveLength(1);
-    expect(within(quiet[0] as HTMLElement).getByRole("heading", { level: 3 })).toHaveTextContent(
+    expect(within(quiet[0] as HTMLElement).getByRole("heading", { level: 2 })).toHaveTextContent(
       "Day 24 to Day 26",
     );
     expect(quiet[0]).toHaveTextContent("Mon–Wed");
@@ -561,10 +561,10 @@ describe("days gone by with no boats (UX review 2026-10-10, item 24)", () => {
     expect(within(quiet[0] as HTMLElement).queryByRole("button")).toBeNull();
     // The days that each keep a row: today, and every day still ahead.
     for (const label of ["Day 27", "Day 28", "Day 29", "Day 30"]) {
-      expect(screen.getByRole("heading", { level: 3, name: label })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 2, name: label })).toBeInTheDocument();
     }
     for (const label of ["Day 24", "Day 25", "Day 26"]) {
-      expect(screen.queryByRole("heading", { level: 3, name: label })).toBeNull();
+      expect(screen.queryByRole("heading", { level: 2, name: label })).toBeNull();
     }
   });
 
@@ -572,6 +572,6 @@ describe("days gone by with no boats (UX review 2026-10-10, item 24)", () => {
     const { container } = board(week({}, [entry({ tripId: "t0", dateIso: "2026-08-25" })]));
     // Monday alone before it, Wednesday alone after it: neither is a run.
     expect(container.querySelectorAll("[data-week-quiet-days]")).toHaveLength(0);
-    expect(screen.getByRole("heading", { level: 3, name: "Day 25" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Day 25" })).toBeInTheDocument();
   });
 });

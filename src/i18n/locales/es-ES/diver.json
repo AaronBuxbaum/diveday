@@ -9,7 +9,7 @@
     "said": "La tripulación lo dijo a las {time}."
   },
   "common": {
-    "smsConsent": "Al dar un número de móvil, aceptas recibir mensajes de texto de DiveDay sobre tus reservas: recordatorios, enlaces de exención y resúmenes del viaje, hasta cuatro por reserva. Pueden aplicarse tarifas de mensajes y datos. Responde STOP para darte de baja o HELP para pedir ayuda. <a>Política de privacidad</a>",
+    "smsConsent": "Al dar un número de celular, aceptas recibir mensajes de texto de DiveDay sobre tus reservas: recordatorios, enlaces de exención y resúmenes del viaje, hasta cuatro por reserva. Pueden aplicarse tarifas de mensajes y datos. Responde STOP para darte de baja o HELP para pedir ayuda. <a>Política de privacidad</a>",
     "backToSchedule": "Volver al calendario",
     "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
     "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
@@ -163,7 +163,7 @@
     "arrivalSites": "Sitios",
     "arrivalSiteRun": "{site}, {count, plural, =2 {dos inmersiones} =3 {tres inmersiones} one {# inmersión} other {# inmersiones}}",
     "arrivalSiteRunInList": "{site} ({count, plural, =2 {dos inmersiones} =3 {tres inmersiones} one {# inmersión} other {# inmersiones}})",
-    "arrivalParking": "Aparcamiento",
+    "arrivalParking": "Estacionamiento",
     "arrivalTransit": "Transporte",
     "arrivalLookFor": "Qué buscar",
     "arrivalFirstInteraction": "Al llegar",
@@ -206,7 +206,7 @@
       "wetsuit": "Neopreno",
       "maskFins": "Máscara y aletas",
       "weights": "Plomos",
-      "diveComputer": "Ordenador de buceo",
+      "diveComputer": "Computadora de buceo",
       "gopro": "GoPro",
       "drysuit": "Traje seco",
       "hood": "Capucha",
@@ -255,9 +255,10 @@
       "gearSetup": "Monta tu equipo",
       "briefing": "Briefing de la tripulación",
       "departure": "Salida",
+      "departureWithRide": "Salida, unos {minutes, plural, one {# minuto} other {# minutos}} hasta el sitio",
       "departureShore": "Camino a la entrada",
       "departurePool": "Al agua",
-      "boatRide": "{number, plural, =1 {Trayecto hasta el sitio} other {Trayecto al siguiente sitio}}",
+      "boatRide": "Trayecto al siguiente sitio",
       "dive": "Inmersión {number}",
       "surfaceInterval": "Intervalo de superficie",
       "return": "Regreso previsto"
@@ -664,7 +665,7 @@
     "waterTemp": "Temp. del agua",
     "photosBody": "Se quedan en tu resumen y a {shop} le encantará verlas.",
     "photoAlt": "Una foto de {trip}",
-    "photoLimitReached": "Ya has añadido el máximo de fotos que admite un resumen. ¡Buen botín!",
+    "photoLimitReached": "Ya agregaste el máximo de fotos que admite un resumen.",
     "addAPhoto": "Añadir una foto",
     "chooseDifferentPhotos": "Elegir otras fotos",
     "photoWrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
@@ -685,6 +686,7 @@
       "certified": "{shopName} registró tu {level} de esta sesión.",
       "notYetCertified": "Tu sesión de {course} está registrada. {shopName} todavía no ha registrado una certificación por ella.",
       "nextStepBy": "Siguiente paso de {name}",
+      "nextStepByInstructor": "Siguiente paso de tu instructor",
       "nextStepQuote": "“{words}”"
     },
     "crewQuote": "“{words}”",
@@ -770,12 +772,14 @@
     "title": "Paquetes de inmersiones",
     "navLabel": "Paquetes",
     "none": "Ahora mismo no hay paquetes",
+    "intro": "Pagas una vez y reservas las inmersiones cuando quieras.",
     "metaDescription": "Inmersiones prepagadas en {shopName}: pagas una vez y reservas las inmersiones cuando quieras.",
     "dives": "{count, plural, one {# inmersión} other {# inmersiones}}",
     "perDive": "{amount} por inmersión",
-    "scopeAll": "Cualquier salida",
-    "scopeFunDives": "Solo inmersiones recreativas",
+    "scopeAll": "Incluye cursos",
+    "scopeFunDives": "No incluye cursos",
     "useBy": "Úsalas antes del {date}",
+    "noExpiry": "Sin fecha de vencimiento",
     "buy": "Comprar por {amount}",
     "buying": "Abriendo el pago…",
     "invoiceLine": "{packageName}, {count, plural, one {# inmersión} other {# inmersiones}}",
@@ -815,7 +819,11 @@
     "lateLead": "¿Vas de camino pero con retraso?",
     "lateButton": "Llego tarde",
     "lateSending": "Avisando al centro…",
+    "lateConfirm": "¿Avisar al centro de que llegas tarde al muelle a las {time}?",
+    "lateConfirmPlain": "¿Avisar al centro de que llegas tarde?",
+    "lateConfirmButton": "Sí, avisar",
     "lateSaid": "A las {time} avisaste al centro de que llegas tarde.",
+    "lateUndo": "Al final llego a tiempo",
     "lateUnavailable": "El aviso no llegó al centro. Si sigues de camino, llámalos.",
     "cancelConfirm": "¿Cancelar tu plaza en {trip}? Esto no se puede deshacer.",
     "cancelConfirmButton": "Sí, cancelar mi plaza",
@@ -835,6 +843,8 @@
     "freshWaiverLink": "Conseguir un enlace nuevo",
     "payForTrip": "Pagar esta salida",
     "cancelledSeatReleased": "Tu plaza en {trip} ya no está reservada. Si te sorprende, ponte en contacto con {shop}.",
+    "cancelledSeeSchedule": "Ver las próximas salidas",
+    "cancelledNextInSeries": "Reservar la próxima fecha de {trip}: {date}",
     "tripCancelledBody": "Tu plaza queda liberada y no tienes que hacer nada.",
     "checklistDetail": {
       "setupGeneric": "Tu centro todavía está finalizando los detalles de esta salida.",
@@ -851,6 +861,7 @@
       "certificationSelfDeclared": "Le dijiste al centro tu nivel de certificación, pero aún no está verificado en tu ficha. Añade los datos de certificación abajo para que queden archivados antes de la salida.",
       "certificationInsufficient": "Esta salida requiere un nivel de certificación superior. Tu centro puede hablar contigo sobre las opciones.",
       "certificationInTraining": "Estás inscrito en un curso que termina antes de esta salida. Cuando lo completes y tu instructor te certifique, este paso queda listo.",
+      "certificationNotYet": "Le dijiste al centro que todavía no tienes certificación, así que el centro se pondrá en contacto contigo antes del día para ver tus opciones.",
       "specialtyMissing": "Esta inmersión necesita una certificación de especialidad. Comparte sus datos con el centro o ponte en contacto para que puedan añadirla.",
       "specialtyPending": "Tu certificación de especialidad está con el centro para verificación.",
       "specialtyImportUnconfirmed": "Tu certificación de especialidad llegó del sistema anterior de tu centro y está pendiente de que la confirmen.",
@@ -880,6 +891,13 @@
     "certChoose": "Elige una opción",
     "certSubmit": "Añadir mi certificación",
     "certSubmitting": "Añadiendo…",
+    "certNotYetLead": "¿Todavía no tienes tarjeta?",
+    "certNotYetButton": "Todavía no tengo certificación",
+    "certNotYetConfirm": "¿Avisar al centro de que todavía no tienes tarjeta?",
+    "certNotYetConfirmButton": "Sí, avisar",
+    "certNotYetHowToStart": "¿Sin certificación? {course} es la forma de empezar",
+    "certNotYetSaved": "Gracias por decírnoslo. El centro se pondrá en contacto contigo antes del día para ver tus opciones.",
+    "certNotYetCardOnFile": "El centro ya tiene una certificación registrada para ti, así que no cambió nada. Si no es correcto, ponte en contacto con ellos.",
     "certSaved": "Certificación añadida.",
     "certKnown": "Ese número de certificación ya está registrado aquí: no hace falta nada más.",
     "certInvalid": "Revisa la agencia, el nivel y el número de certificación, e inténtalo de nuevo.",
@@ -908,10 +926,9 @@
     "errorContact": "Ese contacto no se guardó. Inténtalo de nuevo.",
     "lastDivedHeading": "¿Cuándo fue tu última inmersión?",
     "lastDivedChoose": "Elige",
-    "saveLastDived": "Guardar",
-    "savingLastDived": "Guardando…",
-    "lastDivedSaved": "Gracias. La tripulación lo verá.",
-    "lastDivedUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día.",
+    "dayOfSave": "Guardar los detalles del día",
+    "dayOfSaved": "Guardado. El equipo verá tus respuestas ese día.",
+    "dayOfUnavailable": "No se guardó. Inténtalo de nuevo o díselo al equipo ese día.",
     "diveRecency": {
       "thisSeason": "Esta temporada",
       "withinAYear": "En el último año",
@@ -920,9 +937,6 @@
       "never": "Todavía no he buceado"
     },
     "certMinimumLevel": "Esta salida es para {level} en adelante.",
-    "saveNote": "Guardar nota",
-    "noteSaved": "Guardado. La tripulación lo verá.",
-    "noteUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día.",
     "hotelPickupHeaderLine": "Recogida a las {time} en {location}",
     "hotelPickupLocationNotSet": "tu hotel",
     "hotelPickupLabel": "¿Quieres recogida por la mañana?",
@@ -930,17 +944,12 @@
     "hotelPickupPlaceholder": "Nombre del hotel, habitación o punto de referencia",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Recogida a las {time}",
-    "saveHotelPickup": "Guardar ubicación",
     "helpHeading": "Necesito un poco de ayuda",
     "helpBody": "Elige una cosa pequeña con la que la tripulación pueda ayudarte el día de la inmersión. Puedes cambiarla hasta que termine la salida.",
     "helpCarryGear": "Que me ayuden con el equipo",
     "helpFirstTimer": "Ayuda para orientarme como principiante",
     "helpFindGroup": "Ayuda para encontrar a mi grupo",
     "helpNone": "Ahora no necesito nada",
-    "helpSubmit": "Guardar solicitud",
-    "helpSaving": "Guardando…",
-    "helpRequestSent": "La tripulación ya tiene tu solicitud.",
-    "helpRequestUnavailable": "No se pudo guardar la solicitud. Inténtalo otra vez.",
     "helpRequestHandled": "La tripulación ya ha atendido esa solicitud.",
     "helpAcknowledged": "La tripulación la ha visto y te encontrará en el muelle.",
     "helpHandled": "La tripulación ha atendido esta solicitud.",
@@ -951,19 +960,10 @@
     "welcomeFirstTripQuestion": "¿Le decimos a la tripulación que es tu primera vez con nosotros?",
     "welcomeReturningQuestion": "¿Le decimos a la tripulación que vuelves tras {years, plural, one {# año} other {# años}}?",
     "welcomeAudience": "Solo la tripulación de este barco, solo hoy, y puedes quitarlo cuando quieras.",
-    "welcomeShare": "Díselo",
-    "welcomeWithdraw": "Quitarlo",
+    "welcomeShareLabel": "Sí, avísale a la tripulación",
     "welcomeShared": "Tu tripulación lo sabrá.",
-    "welcomeUnavailable": "No se pudo guardar. Inténtalo otra vez.",
     "intentHeading": "¿Para qué es esta inmersión?",
     "intentChoose": "Prefiero no decirlo",
-    "saveIntent": "Guardar",
-    "saveReEntry": "Guardar",
-    "intentSaved": "Gracias. La tripulación sabrá a qué vienes.",
-    "intentUnavailable": "No se pudo guardar. Inténtalo de nuevo o díselo a la tripulación el mismo día.",
-    "reEntrySaved": "Gracias. La tripulación estará pendiente de ti.",
-    "reEntryUnavailable": "No se pudo guardar. Inténtalo de nuevo o díselo a la tripulación el mismo día.",
-    "savingIntent": "Guardando…",
     "signCourseForms": "Firmar formularios del curso",
     "savedCourseForms": "Formularios del curso firmados."
   },
@@ -983,6 +983,7 @@
       "nitrox": "Siguiente: agrega tu tarjeta de nitrox.",
       "certificationMultiple": "Siguiente: agrega las tarjetas que pide esta inmersión.",
       "certificationInTraining": "Siguiente: termina tu curso.",
+      "certificationNotYet": "Siguiente: nada de tu parte. El centro se pondrá en contacto contigo antes del día.",
       "cardWithShop": "Siguiente: nada de tu parte. El centro está revisando tu tarjeta.",
       "pay": "Siguiente: paga esta salida.",
       "gear": "Siguiente: tu equipo, ¿lo alquilas o traes el tuyo?",
@@ -1058,7 +1059,7 @@
     "questionsAnsweredOne": "{answered} de {total} respondida",
     "questionsAnsweredOther": "{answered} de {total} respondidas",
     "progressSaved": "Tu progreso está guardado. Termina cuando quieras.",
-    "emergencyContactDescription": "Alguien a quien podamos contactar por ti ese día. Opcional, pero es lo que tiene el equipo si pasa algo en el agua. Nombre y teléfono, o ninguno de los dos.",
+    "emergencyContactDescription": "Alguien a quien podamos contactar por ti ese día. Opcional, pero es lo que tiene el equipo si pasa algo en el agua.",
     "agreementCheckbox": "He leído esta exención, la entiendo y estoy de acuerdo con ella.",
     "signatureNote": "Tu nombre escrito, tu conformidad y la hora de finalización se guardan con esta versión exacta de la exención.",
     "saveForLater": "Guardar y terminar después",
@@ -1195,7 +1196,7 @@
       "boots": "Botines",
       "maskFins": "Máscara y aletas",
       "weights": "Lastre",
-      "diveComputer": "Ordenador de buceo",
+      "diveComputer": "Computadora de buceo",
       "gopro": "GoPro",
       "drysuit": "Traje seco",
       "hood": "Capucha",
@@ -1226,6 +1227,8 @@
     "didYouMeanEmail": "¿Quisiste decir {email}?",
     "rememberedChip": "Reservando como <strong>{name}</strong> · <button>¿No eres tú?</button>",
     "useMainContactEmail": "Usar el correo del contacto principal para este buceador",
+    "under18": "Menor de 18 años",
+    "under18Hint": "Un padre, madre o tutor legal también firma la exención.",
     "bigGroupContactEmail": "¿Vienen más de {count}? <a>Contacta con el centro: {contact}</a>",
     "bigGroupContactPhone": "¿Vienen más de {count}? <a>Contacta con el centro: {contact}</a>",
     "bigGroupContactGeneric": "¿Sois más de {count}? Contacta con el centro."
@@ -2322,7 +2325,7 @@
         },
         "phone": {
           "column": "Teléfono",
-          "detail": "Móvil o fijo, como lo tengas escrito."
+          "detail": "Celular o fijo, como lo tengas escrito."
         },
         "dateOfBirth": {
           "column": "Fecha de nacimiento",
@@ -2475,7 +2478,7 @@
     },
     "today": "Hoy",
     "todayStart": "7:30",
-    "todayUntil": "hasta las 11:00",
+    "todayEnds": "– 11:00",
     "phaseCheckin": "Check-in",
     "readyCount": "Listos: 7 de 9",
     "blockedCount": "2 bloqueados",
@@ -2582,7 +2585,7 @@
       "boots": "Botines",
       "mask": "Máscara",
       "fins": "Aletas",
-      "diveComputer": "Ordenador de buceo",
+      "diveComputer": "Computadora de buceo",
       "tank": "Tanque",
       "serviceDue": "Mantenimiento ({count})",
       "onWall": "En la pared · {count}",
@@ -3561,7 +3564,7 @@
         "trailsTerm": "Historiales operativos",
         "trailsBody": "quién movió una reserva, quién marcó a un buceador a bordo, si llegó una confirmación. Filas breves de quién-hizo-qué-cuándo, en el espacio del propio centro.",
         "textsTerm": "Mensajes de texto",
-        "textsBody": "el número de móvil que se da con una reserva se usa solo para escribir a ese buceador sobre sus reservas, desde el número propio de DiveDay. Los números de móvil y el consentimiento para escribirles nunca se comparten ni se venden a nadie para su propio marketing. Responder STOP a cualquier mensaje los detiene, y el número queda en una lista de bajas para no volver a escribirle hasta que responda START.",
+        "textsBody": "el número de celular que se da con una reserva se usa solo para escribir a ese buceador sobre sus reservas, desde el número propio de DiveDay. Los números de celular y el consentimiento para escribirles nunca se comparten ni se venden a nadie para su propio marketing. Responder STOP a cualquier mensaje los detiene, y el número queda en una lista de bajas para no volver a escribirle hasta que responda START.",
         "devicesTerm": "La copia en un teléfono del barco",
         "devicesBody": "Para que el pase de lista siga funcionando sin señal, un teléfono de la tripulación guarda su propia copia de los manifiestos de los próximos dos días. De cada buceador guarda su nombre y su contacto de emergencia; sus tallas de equipo de alquiler y si pidió nitrox; con quién forma pareja de buceo; si hizo el check-in o si el mostrador marcó que no vino; si puede embarcar y, si no, por qué, lo que puede ser una retención médica; y cada marca del pase de lista, con el nombre de quien la hizo en la tripulación y cualquier nota que haya escrito. Se guarda cifrada en ese teléfono, con una clave que el navegador no devuelve, así que no se puede leer desde el almacenamiento del dispositivo. Quien tenga el teléfono desbloqueado puede abrirla, igual que con el manifiesto en papel al que sustituye. Se elimina cuando otro centro inicia sesión en ese teléfono, y se borra sola a los catorce días de haberse guardado o a los siete días del fin de la salida, lo que ocurra antes."
       },
@@ -3780,7 +3783,7 @@
         "faq1Q": "¿Y si un buceador llega sin firmar?",
         "faq1A": "Vuelve a enviarle el enlace desde su fila, o registra una exención que firmó en papel, después de verificar que ninguna de sus respuestas médicas requiere un médico.",
         "faq2Q": "¿Cómo firman los menores?",
-        "faq2A": "Cuando la fecha de nacimiento del buceador está en su ficha, la exención de un menor de 18 años pide también la firma de su madre, padre o tutor, y el embarque espera a las dos. DiveDay no le pide la fecha de nacimiento al buceador, así que sin ella lo trata como adulto.",
+        "faq2A": "La exención de un menor de 18 años pide también la firma de su madre, padre o tutor, y el embarque espera a las dos. Un buceador cuenta como menor cuando la fecha de nacimiento de su ficha lo dice o, sin fecha, cuando quien hizo la reserva marcó “Menor de 18 años”.",
         "faq3Q": "¿Y las exenciones que los buceadores ya firmaron con mi sistema anterior?",
         "faq3A": "Si la exportación de tu sistema anterior marca la exención de un buceador como aceptada, el importador la trae con su fecha, marcada como importada, y confía en la autorización médica que registró tu sistema anterior. No se le pide firmar de nuevo mientras siga vigente.",
         "closeTitle": "Mira el editor de la exención y cada copia firmada.",
@@ -4066,7 +4069,7 @@
     "body": "El enlace puede ser antiguo, o la página puede haberse movido. Revisa la dirección.",
     "backHome": "Volver a la página de inicio",
     "shop": {
-      "heading": "Esa página ya no está aquí",
+      "heading": "Esa página no está aquí",
       "action": "Ver las próximas salidas"
     }
   },
@@ -4249,6 +4252,13 @@
         "sailed": "{departures, plural, one {Salió # salida} other {Salieron # salidas}} con {filled} de {seats} plazas ocupadas ({percent} %).",
         "link": "Abrir Informes"
       },
+      "money": {
+        "heading": "Dinero",
+        "took": "Las salidas de la semana pasada dejaron {amount} después de impuestos.",
+        "tips": "{amount} en propinas para repartir con la tripulación.",
+        "openOrders": "{count, plural, one {# pedido sigue abierto.} other {# pedidos siguen abiertos.}}",
+        "link": "Abrir Dinero"
+      },
       "thisWeek": {
         "heading": "Esta semana, {range}",
         "board": "{departures, plural, one {# salida} other {# salidas}} en la agenda, {filled} de {seats} plazas reservadas ({percent} %).",
@@ -4359,7 +4369,8 @@
       "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}",
       "readyLink": "Tu preparación: {url}",
       "meetingPointMoved": "{shopName}: cambiamos el punto de encuentro de {tripTitle}, {date}, {time}.",
-      "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}. Antes era el {previous}."
+      "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}. Antes era el {previous}.",
+      "rescheduledSeat": "{shopName}: pasamos tu plaza a {tripTitle}, el {date}, {time}. Antes era el {previous}."
     },
     "whatsappTemplate": {
       "body": "¡Hola! Un aviso de '{{1}}': '{{2}}'",
@@ -4462,13 +4473,14 @@
     },
     "meetingPoint": {
       "landmark": "Referencia: {landmark}",
-      "parking": "Aparcamiento: {parking}"
+      "parking": "Estacionamiento: {parking}"
     },
     "tripRescheduled": {
       "subject": "Nuevo horario para {tripTitle}",
       "placeSubject": "Nuevo punto de encuentro para {tripTitle}",
       "body": "Cambiamos el horario de {tripTitle}. Este es el nuevo.",
       "placeBody": "Cambiamos el punto de encuentro de {tripTitle}. La hora no cambia.",
+      "seatBody": "Pasamos tu plaza a {tripTitle}. Este es el horario.",
       "was": "Antes era el {when}.",
       "meetingPointMoved": "También cambia el punto de encuentro.",
       "cantMakeIt": "¿No puedes a la nueva hora? Escríbenos y lo resolvemos."
@@ -4488,6 +4500,23 @@
     },
     "smsLostItem": {
       "body": "{shopName}: la tripulación encontró esto a bordo después de {tripTitle}: {item}. Lo guardamos para ti."
+    },
+    "courseCertified": {
+      "subject": "Ya tienes tu certificación: {level}",
+      "body": "Ya tienes tu certificación: {level}. {shopName} la registró el {date}.",
+      "next": "Tu siguiente curso: {course}"
+    },
+    "smsCourseCertified": {
+      "body": "{shopName}: ya tienes tu certificación {level}. Felicidades."
+    },
+    "inquiryReceived": {
+      "subject": "{shopName} recibió tu petición",
+      "course": "Gracias por preguntar por {course}. Recibimos tu petición.",
+      "dive": "Gracias por preguntar por un día de buceo. Recibimos tu petición.",
+      "dateOne": "Pediste el {date}.",
+      "datesTwo": "Pediste el {date} o el {alternate}.",
+      "reply": "Te responderemos por correo o por teléfono.",
+      "call": "Si quieres hablar antes, llama al {phone}."
     }
   },
   "brand": {

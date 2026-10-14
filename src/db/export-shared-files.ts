@@ -347,6 +347,10 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
     // made on this seat, in the same class as the two above.
     // "Running late" (J3): a statement the diver made, so it is theirs.
     { header: "running_late_at", in: "both", value: (row) => row.runningLateAt },
+    // The booker's "Under 18" on this seat (decision 2026-10-13): what
+    // asked for a guardian's co-signature on the release, so it travels
+    // with the release it explains.
+    { header: "minor_declared_at", in: "both", value: (row) => row.minorDeclaredAt },
     // The instructor's own words to this student, and who wrote them
     // (issues #1196, #1205). The student read it on their recap; a
     // shop moving its data takes the sentence with it.
@@ -1566,6 +1570,10 @@ export const COURSE_INQUIRIES_CSV = sharedFile<ShopRow<"inquiryRows">>({
     { header: "divers", in: "shop", value: (row) => row.divers },
     { header: "message", in: "both", value: (row) => row.message },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
+    // When the shop closed the request, and how: `booked` when a seat answered
+    // it, `done` when staff marked it. The shop's bookkeeping, not the diver's.
+    { header: "handled_at", in: "shop", value: (row) => row.handledAt },
+    { header: "handled_as", in: "shop", value: (row) => row.handledAs },
   ],
   shop: { rows: ({ inquiryRows }) => inquiryRows, note: EXPORT_FILE_NOTES["course_inquiries.csv"] },
   diver: {

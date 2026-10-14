@@ -106,7 +106,7 @@ test("staff can view or copy a trip's public booking page from its overview", as
   await publicPage.close();
 
   await page.getByRole("button", { name: "Copy link" }).click();
-  await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
   expect(clipboardText).toMatch(/\/s\/blue-mantis\/trips\/[a-f0-9-]+$/);
 });

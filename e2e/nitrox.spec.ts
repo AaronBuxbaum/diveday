@@ -160,7 +160,7 @@ test.describe("a shop that stops filling nitrox", () => {
     // must not silently erase the request already on file for this trip.
     //
     // A bare resave, with nothing changed: since issue 627 the free-text note
-    // is its own form with its own save (`saveNoteFromReady`), so the note is
+    // is its own form with its own save (`saveDayOfDetailsFromReady`), so the note is
     // no longer a way to make this form submit — and the submit itself is the
     // whole point here, not what was typed into it.
     await anon.goto(bookingUrl);

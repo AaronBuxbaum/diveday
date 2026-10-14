@@ -13,6 +13,7 @@ import {
   combineSiteRequirements,
   isUnsightedSelfDeclaration,
   needsCardSighting,
+  noCertificationStands,
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
@@ -1718,7 +1719,11 @@ export async function listTripsReadiness(
       owedCourseForms: courseForms
         ? outstandingCourseForms({
             ...courseForms,
-            signer: { dateOfBirth: row.person.dateOfBirth, timezone },
+            signer: {
+              dateOfBirth: row.person.dateOfBirth,
+              minorDeclared: row.booking.minorDeclaredAt !== null,
+              timezone,
+            },
           })
         : [],
       bookingWaiver: row.waiver,
@@ -1767,6 +1772,9 @@ export async function listTripsReadiness(
               now,
             )
           : [],
+        // The diver's own "I'm not certified yet", said on their link or a
+        // public form: it names why the gate is unmet, and clears nothing.
+        noCertificationDeclared: noCertificationStands(row.person),
         specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
         nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
         paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
@@ -1774,6 +1782,8 @@ export async function listTripsReadiness(
         courseMinimumAge,
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
+        // The booker's "Under 18" on this seat, for the guardian rule alone.
+        minorDeclared: row.booking.minorDeclaredAt !== null,
         // The guardian rule measures the diver's age on the shop-local day
         // they signed (src/lib/guardian.ts), so the engine needs the zone.
         timezone,

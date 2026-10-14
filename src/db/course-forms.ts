@@ -660,6 +660,8 @@ type Enrollment = {
   personId: string;
   fullName: string;
   dateOfBirth: string | null;
+  /** The seat's booker said "Under 18" (`bookings.minor_declared_at`). */
+  minorDeclared: boolean;
   identityHeld: boolean;
   tripId: string;
   tripTitle: string;
@@ -718,6 +720,7 @@ async function enrollmentFor(
       personId: people.id,
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
+      minorDeclaredAt: bookings.minorDeclaredAt,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       tripId: trips.id,
       tripTitle: trips.title,
@@ -750,6 +753,7 @@ async function enrollmentFor(
     personId: row.personId,
     fullName: row.fullName,
     dateOfBirth: row.dateOfBirth,
+    minorDeclared: row.minorDeclaredAt !== null,
     identityHeld: row.identityUnconfirmedAt !== null,
     tripId: row.tripId,
     tripTitle: row.tripTitle,
@@ -804,7 +808,11 @@ export async function getCourseFormsForBooking(
     personId: enrollment.personId,
     required,
     signatures,
-    signer: { dateOfBirth: enrollment.dateOfBirth, timezone: enrollment.timezone },
+    signer: {
+      dateOfBirth: enrollment.dateOfBirth,
+      minorDeclared: enrollment.minorDeclared,
+      timezone: enrollment.timezone,
+    },
   });
   if (owed.length === 0) return { enrollment, required, outstanding: [] };
   const bodies = await db
@@ -874,7 +882,9 @@ async function guardianOwedFor(
   form: RequiredCourseForm,
   signedOn: CalendarDate,
 ): Promise<boolean> {
-  if (guardianSignatureRequired(enrollment.dateOfBirth, signedOn)) return true;
+  if (guardianSignatureRequired(enrollment.dateOfBirth, signedOn, enrollment.minorDeclared)) {
+    return true;
+  }
   const signatures = await courseFormSignaturesForBookings(db, shopId, [enrollment.bookingId]);
   return courseFormGaps({
     shopId,
@@ -882,7 +892,11 @@ async function guardianOwedFor(
     personId: enrollment.personId,
     required: [form],
     signatures,
-    signer: { dateOfBirth: enrollment.dateOfBirth, timezone: enrollment.timezone },
+    signer: {
+      dateOfBirth: enrollment.dateOfBirth,
+      minorDeclared: enrollment.minorDeclared,
+      timezone: enrollment.timezone,
+    },
   }).some(({ gap }) => gap === "guardian_missing");
 }
 

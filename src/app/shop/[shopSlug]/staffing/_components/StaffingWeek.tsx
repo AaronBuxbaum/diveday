@@ -16,6 +16,7 @@ import {
   formatTime,
   formatTimeRange,
   formatTimeRangeTz,
+  formatWeekday,
 } from "@/lib/format";
 import {
   GAP_TONE,
@@ -120,6 +121,14 @@ export type StaffingWeekWords = {
    * the crew list names somebody, and the chip alone read as nobody.
    */
   ratingLapsed: string;
+  /**
+   * "until {time} · from {day}" — a window that began on an earlier day and
+   * ends on this one (UX review 2026-10-13, item 21). The whole range on the
+   * second day read as a second night boat.
+   */
+  continuedUntil: string;
+  /** "from {day}" — a middle day of a window that neither starts nor ends on it. */
+  continuedFrom: string;
 };
 
 export type StaffingWeekLinks = {
@@ -135,6 +144,30 @@ export type GapWords = Record<StaffGapCode, string>;
 
 function tripHref(shopSlug: string, tripId: string) {
   return `/shop/${shopSlug}/trips/${tripId}?view=details#crew`;
+}
+
+/**
+ * **What a departure's window is on this column's day.** The day it starts it
+ * is the range (or, for a gap's narrow cell, the start alone); a later day of
+ * an overnight window says when it ends and the day it began, so the 3:00 AM
+ * tail of Monday's night boat never reads as Tuesday's own 11:30 PM sailing.
+ */
+function windowOnThisDay(
+  trip: PlacedTrip,
+  words: StaffingWeekWords,
+  locale: string,
+  timeZone: string,
+  shape: "range" | "start",
+): string {
+  if (trip.continuesFrom !== null) {
+    const day = formatWeekday(trip.startsAt, locale, timeZone);
+    return trip.endsThisDay
+      ? fill(words.continuedUntil, { time: formatTime(trip.endsAt, locale, timeZone), day })
+      : fill(words.continuedFrom, { day });
+  }
+  return shape === "range"
+    ? formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)
+    : formatTime(trip.startsAt, locale, timeZone);
 }
 
 /**
@@ -352,7 +385,7 @@ function CrewChip({
     >
       <span className="sr-only">{words.crewing}: </span>
       <span className="font-semibold tabular-nums">
-        {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
+        {windowOnThisDay(trip, words, locale, timeZone, "range")}
       </span>
       <span className="line-clamp-2 font-medium">{trip.title}</span>
       {/* **One person, two hulls, these same hours** (issue #1695) — a state
@@ -457,7 +490,8 @@ function GapChip({
   // question here is which boat, not how long it is out.
   const departure = (
     <>
-      <span className="tabular-nums">{formatTime(gap.startsAt, locale, timeZone)}</span> {gap.title}
+      <span className="tabular-nums">{windowOnThisDay(gap, words, locale, timeZone, "start")}</span>{" "}
+      {gap.title}
     </>
   );
   return (
@@ -830,7 +864,7 @@ export function StaffingWeek({
                   >
                     <p className="text-sm">
                       <span className="tabular-nums">
-                        {formatTime(gap.startsAt, locale, timeZone)}
+                        {windowOnThisDay(gap, words, locale, timeZone, "start")}
                       </span>{" "}
                       <span className="font-medium">{gap.title}</span>
                     </p>
@@ -958,7 +992,7 @@ export function StaffingWeek({
                           <span>
                             <span className="sr-only">{words.crewing}: </span>
                             <span className="tabular-nums">
-                              {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
+                              {windowOnThisDay(trip, words, locale, timeZone, "range")}
                             </span>{" "}
                             {trip.title}
                             {/* Whole: the space after the dot broke, and left

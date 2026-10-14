@@ -280,15 +280,31 @@ export function SegmentedControl({
       // either side of .5 cannot move one edge with nothing else moving.
       // Snapping the width on its own flapped `reports-year-dark-vw-390` by
       // one column at the pill's right edge.
+      //
+      // **The edges snap where the page is drawn, not inside the track.** The
+      // grid antialiasing happens on is the viewport's, and the track rarely
+      // starts on it: on the prep page's "Group by" at 390px it starts at x
+      // 214.8125. Snapped as offsets from the track, the pill's right edge
+      // came to 292.8125 and was drawn at 293, while the option's own fill —
+      // what the first paint shows, before this effect has run — ends at
+      // 292.4063 and was drawn at 292. So a capture that shot before the
+      // effect and one that shot after it differed by that one column, and
+      // which one a run got was a race (`prep-assignments-need-care-dark-vw-390`).
+      // Snapped in viewport coordinates, the pill's edges are the device
+      // pixels the option's own fill is drawn on, and the race draws the
+      // same picture either way. The written offsets are what is left once
+      // the track's padding-edge origin is subtracted, fraction and all.
       const dpr = window.devicePixelRatio || 1;
       const snap = (value: number) => Math.round(value * dpr) / dpr;
-      const left = box.left - navBox.left - borderLeft;
-      const top = box.top - navBox.top - borderTop;
+      const originLeft = navBox.left + borderLeft;
+      const originTop = navBox.top + borderTop;
+      const edgeLeft = snap(box.left);
+      const edgeTop = snap(box.top);
       const next = {
-        left: snap(left),
-        top: snap(top),
-        width: snap(left + box.width) - snap(left),
-        height: snap(top + box.height) - snap(top),
+        left: edgeLeft - originLeft,
+        top: edgeTop - originTop,
+        width: snap(box.left + box.width) - edgeLeft,
+        height: snap(box.top + box.height) - edgeTop,
       };
       pill.style.opacity = "1";
       pill.style.left = `${next.left}px`;
