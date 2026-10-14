@@ -16,6 +16,7 @@ export function PartySection({
   seats,
   allSet,
   addSeatAction,
+  signWaiverAction,
   t,
 }: {
   /** The negotiated request locale, not the shop's stored default. */
@@ -25,12 +26,14 @@ export function PartySection({
   allSet: boolean;
   /** Bound to the page's token when the booking may lead a seat; null otherwise. */
   addSeatAction: ((formData: FormData) => Promise<void>) | null;
+  /** "Sign Mia's waiver" (H-116), bound to the page's token. */
+  signWaiverAction?: (formData: FormData) => Promise<void>;
   t: DiverTranslator;
 }) {
   if (seats.length === 0 && !addSeatAction) return null;
   return (
     <div id="party-seats" className="scroll-mt-8 space-y-3">
-      <PartyClaimPanel locale={locale} seats={seats} />
+      <PartyClaimPanel locale={locale} seats={seats} signWaiverAction={signWaiverAction} />
       {allSet ? (
         <p>
           <SettledCheck settled label={t("thread.partyAllSet")} className="text-sm text-muted" />

@@ -26,9 +26,12 @@ import {
   getClaimPageData,
   getClaimPageState,
   issuePartySeatClaims,
+  openMinorSeatWaiver,
 } from "./seat-claims";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
+import { getWaiverSignerOnFile } from "./waiver-signing";
 import { issueWaiverRequest } from "./waivers";
+import { getWaiverForToken } from "./waivers-completion";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -1000,5 +1003,129 @@ describe("getClaimPageState (what a dead claim link may name)", () => {
     if (!readiness) throw new Error("readiness capability setup failed");
 
     expect(await getClaimPageState(db, readiness.token)).toEqual({ kind: "unknown" });
+  });
+});
+
+/**
+ * H-116 (ADR 20261014-parent-signs-minor-release): a parent signs a child's
+ * release from their own page. Only a seat this lead booked and declared
+ * "Under 18", still unclaimed, not held and owing a release opens; everything
+ * else is one refusal.
+ */
+describe("a parent signs a minor seat's release", () => {
+  async function familyParty() {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Dana Parent",
+        email: "dana.parent@example.com",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Mia Child",
+        minorDeclared: true,
+      },
+      { actor: "public", shopId: shop.id, tripId: open.id, fullName: "Lee Friend" },
+    ]);
+    if (!outcome.ok) throw new Error(`party booking failed: ${outcome.reason}`);
+    const [lead, mia, lee] = outcome.bookings;
+    if (!lead || !mia || !lee) throw new Error("party booking incomplete");
+    return { db, shop, open, lead, mia, lee };
+  }
+
+  it("offers it on the minor's seat and not on an adult friend's", async () => {
+    const { db, shop, lead, mia, lee } = await familyParty();
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)?.signForMinor).toBe(true);
+    expect(seats.find((seat) => seat.bookingId === lee.bookingId)?.signForMinor).toBe(false);
+  });
+
+  it("opens the minor's own release, which asks for a guardian", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const opened = await openMinorSeatWaiver(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+      seatBookingId: mia.bookingId,
+    });
+    if (!opened.ok) throw new Error("expected the minor's release to open");
+    const [record] = await db
+      .select({ bookingId: waiverRecords.bookingId, status: waiverRecords.status })
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.bookingId, mia.bookingId)));
+    expect(record).toMatchObject({ bookingId: mia.bookingId, status: "pending" });
+    // The link the parent lands on is Mia's release, and it asks for a guardian.
+    const onPage = await getWaiverForToken(db, opened.token);
+    if (onPage.state !== "available")
+      throw new Error(`expected a signable link, got ${onPage.state}`);
+    expect(onPage.record.bookingId).toBe(mia.bookingId);
+    const signer = await getWaiverSignerOnFile(db, onPage.record);
+    expect(signer).toMatchObject({ fullName: "Mia Child", minorDeclared: true });
+    // The same live link on a second tap, not a pile of them.
+    const again = await openMinorSeatWaiver(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+      seatBookingId: mia.bookingId,
+    });
+    expect(again).toMatchObject({ ok: true });
+  });
+
+  it("refuses an adult's seat, another lead's seat, another shop, and the lead's own seat", async () => {
+    const { db, shop, lead, mia, lee } = await familyParty();
+    const other = await bookParty(db, shop.id, (await seededContext()).open.id);
+    const tries = [
+      { shopId: shop.id, leadBookingId: lead.bookingId, seatBookingId: lee.bookingId },
+      { shopId: shop.id, leadBookingId: other.lead.bookingId, seatBookingId: mia.bookingId },
+      {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      },
+      { shopId: shop.id, leadBookingId: lead.bookingId, seatBookingId: lead.bookingId },
+    ];
+    for (const input of tries) {
+      expect(await openMinorSeatWaiver(db, input)).toEqual({ ok: false });
+    }
+  });
+
+  it("stops once the seat is claimed: the claimant signs from their own link", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, mia.bookingId);
+    expect(
+      await claimPartySeat(db, { token, fullName: "Mia Child", email: "mia.child@example.com" }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)?.signForMinor).toBe(false);
+  });
+
+  it("tells the minor's claim page that a parent signs with them", async () => {
+    const { db, shop, lead, mia, lee } = await familyParty();
+    const miaPage = await getClaimPageData(
+      db,
+      await claimTokenFor(db, shop.id, lead.bookingId, mia.bookingId),
+    );
+    const leePage = await getClaimPageData(
+      db,
+      await claimTokenFor(db, shop.id, lead.bookingId, lee.bookingId),
+    );
+    expect(miaPage?.minorDeclared).toBe(true);
+    expect(leePage?.minorDeclared).toBe(false);
   });
 });

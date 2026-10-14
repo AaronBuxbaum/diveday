@@ -21,6 +21,7 @@ import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation } from "./query-helpers";
+import { getBookingReadiness } from "./readiness";
 import {
   bookings,
   certifications,
@@ -33,6 +34,7 @@ import {
 } from "./schema";
 import { liveTrip } from "./trips-live";
 import { issueWaiverOnJoin } from "./waiver-issue";
+import { issueWaiverRequest } from "./waivers-requests";
 
 /**
  * Seat claims (docs ADR 20260804-seat-claim-links): one organizer books a
@@ -68,6 +70,12 @@ export type ClaimPageData = {
   endsAt: Date;
   /** The name the organizer typed for this seat — the seat being claimed, never a sibling's. */
   seatName: string;
+  /**
+   * The booker said this seat is "Under 18" (`bookings.minor_declared_at`):
+   * the page says a parent or guardian signs the release with them, and that
+   * the parent who booked can sign it from their own page (H-116).
+   */
+  minorDeclared: boolean;
 };
 
 export async function getClaimPageData(
@@ -100,6 +108,7 @@ export async function getClaimPageData(
     startsAt: row.trip.startsAt,
     endsAt: row.trip.endsAt,
     seatName: seatName(row.person.fullName, row.booking),
+    minorDeclared: row.booking.minorDeclaredAt !== null,
   };
 }
 
@@ -522,6 +531,14 @@ export type PartySeatClaim = {
    */
   participantType: ParticipantType;
   /**
+   * **The lead may sign this seat's release as its parent** (H-116, ADR
+   * 20261014-parent-signs-minor-release): an unclaimed seat the booker said
+   * is "Under 18", not held, still claimable, and owing a waiver. The panel
+   * offers "Sign {name}'s waiver" exactly then; `openMinorSeatWaiver`
+   * re-derives the same answer before it opens anything.
+   */
+  signForMinor: boolean;
+  /**
    * A fresh claim capability for an unclaimed seat, or null for a claimed one
    * (nothing left to hand out) — and null when issuing failed, which the
    * panel renders as the seat's name with no link rather than an error.
@@ -598,6 +615,9 @@ export async function issuePartySeatClaims(
       claimed: row.booking.claimedAt !== null,
       waiverSigned: waiverState(row.waiver, now) === "complete",
       participantType: row.booking.participantType,
+      signForMinor:
+        minorSeatSignable(row.booking, claimable) &&
+        (await minorSeatWaiverOwed(db, input.shopId, row.booking.id)),
       claim: claimable
         ? await issueBookingCapability(db, {
             shopId: input.shopId,
@@ -609,4 +629,88 @@ export async function issuePartySeatClaims(
     });
   }
   return seats;
+}
+
+/**
+ * The seat's half of "may the lead sign this release as its parent?": unclaimed
+ * (a claimed seat is its claimant's, who signs from their own link), declared
+ * "Under 18" by the booker, not held on identity (#2125: a held seat's record
+ * may be somebody else's), and still claimable (before the boat leaves).
+ */
+function minorSeatSignable(
+  booking: Pick<
+    typeof bookings.$inferSelect,
+    "claimedAt" | "minorDeclaredAt" | "identityUnconfirmedAt"
+  >,
+  claimable: boolean,
+): boolean {
+  return (
+    claimable &&
+    booking.claimedAt === null &&
+    booking.minorDeclaredAt !== null &&
+    booking.identityUnconfirmedAt === null
+  );
+}
+
+/** The release blockers a parent's signature answers; anything else is not theirs to fix. */
+const PARENT_SIGNABLE_BLOCKERS = new Set([
+  "waiver_not_sent",
+  "waiver_pending",
+  "waiver_expired",
+  "guardian_signature_missing",
+]);
+
+/** Whether this seat still owes the signature a parent can give, by readiness' own rule. */
+async function minorSeatWaiverOwed(db: AppDb, shopId: string, bookingId: string): Promise<boolean> {
+  const readiness = await getBookingReadiness(db, shopId, bookingId);
+  return Boolean(readiness?.blockers.some((blocker) => PARENT_SIGNABLE_BLOCKERS.has(blocker.code)));
+}
+
+/**
+ * **A parent signs a child's release from their own page** (H-116, ADR
+ * 20261014-parent-signs-minor-release). The lead's verified `readiness`
+ * capability is the authority, as it is for the claim links this panel hands
+ * out; the seat must be one this lead booked, in this shop, and one the panel
+ * would offer (`minorSeatSignable` and a waiver still owed), all re-read here
+ * rather than trusted from the form.
+ *
+ * Opens the seat's own booking-scoped release: the live link when there is
+ * one (ADR 20260820-waiver-links-are-reused-not-reissued), a fresh one when
+ * not. That page asks for the guardian's card beside the diver's signature,
+ * because the seat is declared a minor, so the parent signs as the guardian
+ * on their own device. Nothing about the seat changes hands: it stays the
+ * lead's, and a later claim supersedes the release as any claim does.
+ */
+export async function openMinorSeatWaiver(
+  db: AppDb,
+  input: { shopId: string; leadBookingId: string; seatBookingId: string; now?: Date },
+): Promise<{ ok: true; token: string } | { ok: false }> {
+  const now = input.now ?? nowDate();
+  const [row] = await db
+    .select({ booking: bookings, trip: trips })
+    .from(bookings)
+    .innerJoin(
+      trips,
+      and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId), liveTrip()),
+    )
+    .where(
+      and(
+        eq(bookings.id, input.seatBookingId),
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.partyLeadBookingId, input.leadBookingId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (!row) return { ok: false };
+  if (!minorSeatSignable(row.booking, claimableNow(row.booking, row.trip, now))) {
+    return { ok: false };
+  }
+  if (!(await minorSeatWaiverOwed(db, input.shopId, row.booking.id))) return { ok: false };
+  const issued = await issueWaiverRequest(db, {
+    shopId: input.shopId,
+    bookingId: row.booking.id,
+    now,
+  });
+  return issued.ok ? { ok: true, token: issued.token } : { ok: false };
 }

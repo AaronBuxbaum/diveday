@@ -41,6 +41,9 @@ export const READY_NOTICES: Record<
   "error-seat-ask-shop": { tone: "danger", key: "seatClaim.addAskShop" },
   "error-seat-party-full": { tone: "danger", key: "seatClaim.addPartyFull" },
   "error-seat-name": { tone: "danger", key: "seatClaim.addNameMissing" },
+  // "Sign Mia's waiver" (H-116) refused: the seat was claimed, the release
+  // signed, or the boat left between the render and the tap. One answer.
+  "error-minor-waiver": { tone: "danger", key: "seatClaim.minorWaiverUnavailable" },
   // A card the diver typed in. "Added", never "verified": a staff review is
   // what makes it count, and the copy says so rather than implying the
   // checklist row has cleared.

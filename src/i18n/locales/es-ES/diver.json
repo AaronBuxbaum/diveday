@@ -1152,6 +1152,11 @@
     "waiverComplete": "Exención completada",
     "waiverNeeded": "Falta completar la exención",
     "copyReminder": "Copiar enlace de recordatorio",
+    "minorSign": "Firmar la exención de {name}",
+    "minorSignPending": "Abriendo…",
+    "minorSignBody": "{name} es menor de 18 años, así que firmas su exención como su madre, padre o tutor.",
+    "minorWaiverUnavailable": "Ahora no se puede abrir esa exención desde aquí. Contacta con el centro y te ayudarán.",
+    "minorNote": "{seatName} es menor de 18 años, así que su madre, padre o tutor también firma la exención. Si reservaste esta plaza, puedes firmarla desde tu propia página de reserva.",
     "claimedNeedsWaiver": "Pídele que termine su exención desde su propio enlace."
   },
   "rental": {

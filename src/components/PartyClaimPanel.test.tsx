@@ -80,4 +80,36 @@ describe("PartyClaimPanel", () => {
     );
     expect(summary?.querySelector("svg")).not.toBeNull();
   });
+
+  /** H-116: a parent signs a child's release from their own page. */
+  it("offers the organizer the minor's waiver, posting only the seat", () => {
+    const action = async () => {};
+    const seat = {
+      bookingId: "seat-mia",
+      seatName: "Mia",
+      claimed: false,
+      waiverSigned: false,
+      claimUrl: "/claim/seat-mia",
+      signForMinor: true,
+    };
+    const { container } = render(
+      <PartyClaimPanel locale="en-US" seats={[seat]} signWaiverAction={action} />,
+    );
+    expect(
+      screen.getByText(
+        "Mia is under 18, so you sign their release with them, as their parent or guardian.",
+      ),
+    ).toBeTruthy();
+    const button = screen.getByRole("button", { name: "Sign Mia’s waiver" });
+    const fields = [...(button.closest("form")?.querySelectorAll("input") ?? [])].map((input) => [
+      input.name,
+      input.value,
+    ]);
+    expect(fields).toEqual([["bookingId", "seat-mia"]]);
+    cleanup();
+    // Without the action (the booking confirmation's panel), no seat offers to.
+    render(<PartyClaimPanel locale="en-US" seats={[seat]} />);
+    expect(screen.queryByRole("button", { name: "Sign Mia’s waiver" })).toBeNull();
+    expect(container).toBeTruthy();
+  });
 });

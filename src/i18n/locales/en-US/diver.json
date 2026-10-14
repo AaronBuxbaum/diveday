@@ -1152,6 +1152,11 @@
     "waiverComplete": "Waiver complete",
     "waiverNeeded": "Waiver still needed",
     "copyReminder": "Copy reminder link",
+    "minorSign": "Sign {name}’s waiver",
+    "minorSignPending": "Opening…",
+    "minorSignBody": "{name} is under 18, so you sign their release with them, as their parent or guardian.",
+    "minorWaiverUnavailable": "That waiver can’t be opened from here now. Contact the shop and they can help.",
+    "minorNote": "{seatName} is under 18, so a parent or guardian signs the release with them. If you booked this seat, you can sign it from your own booking page.",
     "claimedNeedsWaiver": "Ask them to finish their waiver from their own link."
   },
   "rental": {
