@@ -278,7 +278,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
         {
           name: "The coral mounds",
           kind: "reefFormation",
-          note: "Clusters of star and brain coral that give the reef its name, some several metres tall.",
+          note: "Clusters of star and brain coral that give the reef its name, some several meters tall.",
         },
       ],
       creatureSlugs: [

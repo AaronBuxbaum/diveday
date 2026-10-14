@@ -43,7 +43,7 @@
     "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/SPRINGS/MapServer/1"
   ],
   "counted": "2026-10-14",
-  "promised": false,
+  "promised": true,
   "sites": [
     {
       "name": "Devil's Den (Williston; private, Open Water cert or above, dive buddy required)",

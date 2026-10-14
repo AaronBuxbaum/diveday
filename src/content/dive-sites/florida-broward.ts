@@ -131,7 +131,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       depthRange: "4–9 m (12–30 ft)",
       maxDepthMeters: 9,
       currentNote:
-        "Usually little or no current and shallow enough for snorkellers, so it is a common training and second dive. Tow a dive flag, which Florida law requires, and stay close to it: the reef is close to shore and boat traffic over it is steady.",
+        "Usually little or no current and shallow enough for snorkelers, so it is a common training and second dive. Tow a dive flag, which Florida law requires, and stay close to it: the reef is close to shore and boat traffic over it is steady.",
       divePlan:
         "Drop on any buoy and follow the eastern ledge north or south, then cut west over the holes and staghorn patches on the way back.",
       fitTone: "welcoming",
@@ -409,7 +409,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.3007,
       forecastLongitude: -80.0683,
       description:
-        "A sheer ledge on the middle reef north of Hillsboro Inlet, about two metres high and riddled with holes. Shallow enough for a long, easy drift and a favourite during lobster mini-season.",
+        "A sheer ledge on the middle reef north of Hillsboro Inlet, about two meters high and riddled with holes. Shallow enough for a long, easy drift and a favorite during lobster mini-season.",
       marineLife: "Yellowhead jawfish · tobaccofish · spiny lobster · snook · tropical reef fish",
       marineLifeDescription:
         "The rubble and sand behind the ledge hold jawfish and tobaccofish; snook sometimes hang around the rock islands at the north end.",
@@ -490,7 +490,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.271,
       forecastLongitude: -80.0642,
       description:
-        "A stretch of the outer reef just north of Hillsboro Inlet, named for the historic lighthouse on shore. Its west-facing main ledge is among the most colourful in Broward, with big soft corals on the northern hook.",
+        "A stretch of the outer reef just north of Hillsboro Inlet, named for the historic lighthouse on shore. Its west-facing main ledge is among the most colorful in Broward, with big soft corals on the northern hook.",
       marineLife: "Sea fans and sea plumes · angelfish · tropical reef fish · sea turtles",
       marineLifeDescription:
         "Thousands of small reef fish over a ledge thick with soft coral; a turtle is a regular bonus.",
@@ -764,7 +764,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
         "A German-built coastal freighter seized for drug running and sunk off Pompano Beach in 1992, recorded by the state as Mariner 1. She lies on her port side in two pieces, one of a cluster of wrecks just south of Hillsboro Inlet.",
       marineLife: "Jacks · barracuda · snapper · schooling baitfish",
       marineLifeDescription:
-        "Big schools move between this wreck and its neighbours, and larger predators follow them.",
+        "Big schools move between this wreck and its neighbors, and larger predators follow them.",
       difficultyLevel: "advanced",
       depthRange: "24–33 m (80–108 ft)",
       maxDepthMeters: 33,
@@ -891,7 +891,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.231,
       forecastLongitude: -80.0671,
       description:
-        "A 26 m riveted schooner sunk in 1988 on the outer edge of Pompano's third reef, a few metres north of the Jay Dorman. Storms have flattened her, so she is now low wreckage that fish and divers move across on the way north.",
+        "A 26 m riveted schooner sunk in 1988 on the outer edge of Pompano's third reef, a few meters north of the Jay Dorman. Storms have flattened her, so she is now low wreckage that fish and divers move across on the way north.",
       marineLife: "Grouper · hogfish · snapper · grunts · sharks",
       difficultyLevel: "intermediate",
       depthRange: "17–24 m (55–80 ft)",
@@ -973,7 +973,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       currentNote:
         "A short swim from the Ancient Mariner with the right current, and usually part of the Deerfield wreck drift. Florida law requires a divers-down flag; tie it off rather than let it tangle on the tug.",
       fitTone: "welcoming",
-      fitNote: "A good wreck to practise navigation from the Ancient Mariner.",
+      fitNote: "A good wreck to practice navigation from the Ancient Mariner.",
       creatureSlugs: [
         "spiny-lobster",
         "french-grunt",
@@ -1062,7 +1062,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.1587,
       forecastLongitude: -80.0793,
       description:
-        "A Dutch-built Aruba harbour tug, seized on a smuggling run and sunk off Fort Lauderdale in 1986. She sits upright, bow north, so heavily grown over with sponges, hydroids and soft corals that her propeller blades now only fit fish.",
+        "A Dutch-built Aruba harbor tug, seized on a smuggling run and sunk off Fort Lauderdale in 1986. She sits upright, bow north, so heavily grown over with sponges, hydroids and soft corals that her propeller blades now only fit fish.",
       marineLife: "Parrotfish · snapper · grunts · stingrays · horse conch",
       marineLifeDescription:
         "The growth feeds grazing parrotfish, and stingrays sometimes lie half buried in the sand by the stern.",
@@ -1196,7 +1196,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
         {
           name: "Cable to the Wendy Rossheim",
           kind: "navigationMark",
-          note: "Leads from the stern to the neighbouring yacht wreck.",
+          note: "Leads from the stern to the neighboring yacht wreck.",
         },
       ],
       creatureSlugs: ["gray-snapper", "french-grunt", "graysby", "gray-angelfish", "lionfish"],
@@ -1218,7 +1218,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.1692,
       forecastLongitude: -80.0786,
       description:
-        "A 26 m New York harbour tug from the McAllister Towing fleet, sunk off Fort Lauderdale in 1998. Built heavy, she has held her shape well and sits upright with a slight list to starboard.",
+        "A 26 m New York harbor tug from the McAllister Towing fleet, sunk off Fort Lauderdale in 1998. Built heavy, she has held her shape well and sits upright with a slight list to starboard.",
       marineLife: "Snapper · grunts · jacks · tropical reef fish",
       difficultyLevel: "intermediate",
       depthRange: "15–23 m (50–75 ft)",
@@ -1301,9 +1301,9 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       currentNote:
         "Deep, and exposed to the Gulf Stream's northbound current; most dives stay on the masts and the deck around the wheelhouse at about 29 m. The sand lies at about 40–41 m, and the state record still lists her original 34 m resting depth from before Andrew moved her. Florida law requires a divers-down flag.",
       divePlan:
-        "Down the masts to the main deck, along the starboard side to the wheelhouse, and back up the masts on the ascent. Bring a light for the colour.",
+        "Down the masts to the main deck, along the starboard side to the wheelhouse, and back up the masts on the ascent. Bring a light for the color.",
       fitTone: "demanding",
-      fitNote: "For a confident deep diver; the colour on the upper structure is the reward.",
+      fitNote: "For a confident deep diver; the color on the upper structure is the reward.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       landmarks: [
@@ -1436,13 +1436,13 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.1113,
       forecastLongitude: -80.0619,
       description:
-        "A 21 m steel houseboat, the Duzaway, one of Broward's older artificial reefs, sunk in deeper water off Fort Lauderdale with other small vessels. Soft coral and baitfish make her colourful for her size.",
+        "A 21 m steel houseboat, the Duzaway, one of Broward's older artificial reefs, sunk in deeper water off Fort Lauderdale with other small vessels. Soft coral and baitfish make her colorful for her size.",
       marineLife: "Barracuda · baitfish · soft corals · reef fish",
       difficultyLevel: "advanced",
       depthRange: "23–29 m (75–95 ft)",
       maxDepthMeters: 29,
       currentNote:
-        "Deeper than the inshore wrecks and open to the Gulf Stream's drift. The Port Everglades entrance channel lies a couple of kilometres south, so expect ship and boat traffic; Florida law requires a divers-down flag.",
+        "Deeper than the inshore wrecks and open to the Gulf Stream's drift. The Port Everglades entrance channel lies a couple of kilometers south, so expect ship and boat traffic; Florida law requires a divers-down flag.",
       fitTone: "demanding",
       // The sand is at 29 m and the site sits in the Gulf Stream's drift: Advanced Open Water, short of a deep specialty.
       minimumCertificationLevel: "advanced_open_water",
@@ -1466,7 +1466,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.0091,
       forecastLongitude: -80.0928,
       description:
-        "A 31 m New York harbour tug from the McAllister Towing fleet, sunk in June 1998 in Broward's southern reef sites. She sits upright and in good shape, rising about 8 m off the sand beside some reef rubble.",
+        "A 31 m New York harbor tug from the McAllister Towing fleet, sunk in June 1998 in Broward's southern reef sites. She sits upright and in good shape, rising about 8 m off the sand beside some reef rubble.",
       marineLife: "Lobster · snapper · grunts · tropical reef fish",
       difficultyLevel: "intermediate",
       depthRange: "14–23 m (45–75 ft)",
@@ -1531,7 +1531,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.0066,
       forecastLongitude: -80.0932,
       description:
-        "A small freighter sunk in May 2002 among Broward's southern wrecks. She lies intact, bow to the south and listing hard to starboard, and is a favourite for small things.",
+        "A small freighter sunk in May 2002 among Broward's southern wrecks. She lies intact, bow to the south and listing hard to starboard, and is a favorite for small things.",
       marineLife: "Macro life · shrimp · crabs · reef fish",
       marineLifeDescription: "Bring a camera and look closely; the small stuff is the point here.",
       difficultyLevel: "beginner",

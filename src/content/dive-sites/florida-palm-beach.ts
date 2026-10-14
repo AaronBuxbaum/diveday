@@ -265,7 +265,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       currentNote:
         "A Gulf Stream drift like every Jupiter reef. The ledge zigzags, so follow the guide rather than a compass heading, and carry your own SMB.",
       conservationNote:
-        "Spiny lobster may be taken only in season (6 August to 31 March) with a Florida saltwater fishing licence and lobster permit, by hand or tickle stick, and brought up whole.",
+        "Spiny lobster may be taken only in season (6 August to 31 March) with a Florida saltwater fishing license and lobster permit, by hand or tickle stick, and brought up whole.",
       fitNote:
         "Relaxed by Jupiter standards, good for long bottom times and for photographers who like small things.",
       creatureSlugs: [
@@ -577,7 +577,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "An outer reef off Palm Beach and Lake Worth, named for Paul Lazeau Sr., one of the county's early divers. Its shape is unlike the straight ledges nearby: an amphitheatre at the south end, a collapsed ring of ledges on top, and a main ledge to the west.",
       marineLife: "Midnight parrotfish · barrel sponges · stingrays · moray eels · spiny lobster",
       marineLifeDescription:
-        "Big sponges and sea fans everywhere, with the odd guitarfish on the sand. A favourite with photographers.",
+        "Big sponges and sea fans everywhere, with the odd guitarfish on the sand. A favorite with photographers.",
       difficultyLevel: "intermediate",
       depthRange: "13–17 m (42–56 ft)",
       maxDepthMeters: 17,
@@ -597,7 +597,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         {
           name: "The collapsed feature",
           kind: "reefFormation",
-          note: "On top of the reef: ledges in a complete circle around a sunken centre.",
+          note: "On top of the reef: ledges in a complete circle around a sunken center.",
         },
       ],
       creatureSlugs: [
@@ -716,7 +716,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       forecastLatitude: 26.837,
       forecastLongitude: -80.0182,
       description:
-        "A natural reef that starts as a gentle slope and builds into a ledge about 4 m tall, worn into very deep undercuts. Local guides often call it their favourite dive.",
+        "A natural reef that starts as a gentle slope and builds into a ledge about 4 m tall, worn into very deep undercuts. Local guides often call it their favorite dive.",
       marineLife: "Sea turtles · moray eels · stingrays · angelfish",
       marineLifeDescription: "The undercuts hold turtles and morays; tropicals crowd the top.",
       difficultyLevel: "advanced",
@@ -1064,7 +1064,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       currentNote:
         "Gulf Stream current is common, so plan a negative entry and an SMB ascent. Close to the inlet's boat traffic; surface under your dive flag or SMB, and stay outside the hull.",
       fitTone: "demanding",
-      fitNote: "Small enough to see whole in one dive, and a local favourite.",
+      fitNote: "Small enough to see whole in one dive, and a local favorite.",
       creatureSlugs: [
         "goliath-grouper",
         "gray-angelfish",
@@ -1100,7 +1100,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       currentNote:
         "Usually a drift in the Gulf Stream, so group up fast after a negative entry and carry an SMB. Boats run in and out of the inlet nearby; surface under your dive flag or SMB.",
       fitTone: "welcoming",
-      fitNote: "Shallower than the other wrecks off the inlet, and a favourite with photographers.",
+      fitNote: "Shallower than the other wrecks off the inlet, and a favorite with photographers.",
       creatureSlugs: [
         "hawksbill-turtle",
         "loggerhead-turtle",
@@ -1190,7 +1190,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         {
           name: "The Jump",
           kind: "reefFormation",
-          note: "A gap in the reef towards the north-east end, with ledges running east and west.",
+          note: "A gap in the reef toward the north-east end, with ledges running east and west.",
         },
         {
           name: "Castle Rocks",
@@ -1317,7 +1317,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         {
           name: "Clubhouse",
           kind: "reefFormation",
-          note: "A favourite drop spot at the south end of the main ledge.",
+          note: "A favorite drop spot at the south end of the main ledge.",
         },
         {
           name: "Grouper Hole",
@@ -1430,7 +1430,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       forecastLatitude: 26.4788,
       forecastLongitude: -80.0371,
       description:
-        "A 79 m Dutch-built freighter seized by US Customs in 1999 with more than four tonnes of cocaine in her sugar sacks, and sunk off Boynton Beach in December 2001. Hurricanes have broken her up, but orange cup corals and sponges make her one of the most colourful wrecks on this coast.",
+        "A 79 m Dutch-built freighter seized by US Customs in 1999 with more than four tons of cocaine in her sugar sacks, and sunk off Boynton Beach in December 2001. Hurricanes have broken her up, but orange cup corals and sponges make her one of the most colorful wrecks on this coast.",
       marineLife: "Goliath grouper · jacks · barracuda · bait schools",
       marineLifeDescription:
         "Goliaths live here all year, and from late July their spawning gathering can reach a hundred fish, with clouds of scad and the jacks and barracuda that hunt them.",
@@ -1497,7 +1497,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         {
           name: "The propeller",
           kind: "wreckFeature",
-          note: "Still easy to recognise, like her engine room and galley.",
+          note: "Still easy to recognize, like her engine room and galley.",
         },
         {
           name: "Rubble trail to the Captain Tony",
@@ -1668,7 +1668,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       divePlan:
         "Explore the barge and the culvert piles to its east, then follow the line of limestone boulders south-east to the United Caribbean if the current allows.",
       fitTone: "welcoming",
-      fitNote: "Big animals at a friendly depth, and a photographer's favourite.",
+      fitNote: "Big animals at a friendly depth, and a photographer's favorite.",
       landmarks: [
         {
           name: "The culvert piles",
@@ -1748,7 +1748,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       forecastLatitude: 26.3213,
       forecastLongitude: -80.0575,
       description:
-        "A 35 m Danish freighter built in 1939, seized in a drug case and sunk by the Palm Beach and Broward reef programmes. Hurricane Andrew broke off her bow and flattened her cargo hold, and a small smugglers' submarine now lies in the wreckage.",
+        "A 35 m Danish freighter built in 1939, seized in a drug case and sunk by the Palm Beach and Broward reef programs. Hurricane Andrew broke off her bow and flattened her cargo hold, and a small smugglers' submarine now lies in the wreckage.",
       marineLife: "Filefish · barracuda · tropical fish",
       difficultyLevel: "intermediate",
       depthRange: "17–24 m (55–78 ft)",
@@ -1976,15 +1976,16 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Spadefish at the bend, morays in the cracks, and turtles and nurse sharks resting at the foot of the ledge.",
       difficultyLevel: "intermediate",
-      depthRange: "18–24 m (60–80 ft)",
+      depthRange: "18–26 m (60–85 ft)",
       maxDepthMeters: 26,
+      // Below 30 m, but a 26 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
         "Always a Gulf Stream drift, usually running north, and the boat follows your bubbles. Shoot your own SMB before you leave the bottom: boats run in and out of Jupiter Inlet all day, and Florida law asks them to keep 300 ft (90 m) from a dive flag.",
       divePlan:
         "Negative entry onto the ledge, then pick a depth: the sand at the foot for turtles and grouper, or the top edge and its bowls to stay shallower. Ascend together on the SMB.",
-      fitTone: "welcoming",
       fitNote:
-        "An easy ledge to follow that can be dived no deeper than about 23 m. The skill is the drift.",
+        "The skill is the drift: a negative entry, staying with the group, and an SMB. Still past Open Water depth.",
       landmarks: [
         {
           name: "The arch",
@@ -1993,6 +1994,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         },
       ],
       creatureSlugs: [
+        "nurse-shark",
         "atlantic-spadefish",
         "caribbean-reef-shark",
         "goliath-grouper",
@@ -2071,13 +2073,14 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       depthRange: "20–26 m (65–85 ft)",
       maxDepthMeters: 26,
+      // Below 30 m, but a 26 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
         "A Gulf Stream drift, moderate to strong and usually north. Carry your own SMB and shoot it before you leave the bottom; Jupiter Inlet boats run past all day.",
       divePlan:
         "Negative entry onto the ledge. Newer drift divers stay on top over the bowls; the rest can drop to the foot and look underneath.",
-      fitTone: "welcoming",
       fitNote:
-        "Easy to follow and a little shallower than Area 51, so a good drift for newer divers who stay on top.",
+        "Easy to follow and a little shallower than Area 51, but still past Open Water depth.",
       creatureSlugs: [
         "green-moray",
         "loggerhead-turtle",
@@ -2106,20 +2109,22 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       forecastLatitude: 26.9458,
       forecastLongitude: -80.0312,
       description:
-        "A ledge just south of Jupiter Inlet with short natural swim-throughs cut through it, and big animals nearly every dive. It ends at the Donut Hole, a hollow in the reef where reef sharks rest.",
+        "A ledge off Jupiter Inlet with short natural swim-throughs cut through it, and big animals nearly every dive. It ends at the Donut Hole, a hollow in the reef where reef sharks rest.",
       marineLife: "Reef sharks · goliath grouper · Atlantic spadefish · southern stingrays · cobia",
       marineLifeDescription:
         "Reef sharks meet the group at the first tunnel, goliaths hang under the big undercut, and cobia shadow the stingrays in the sand.",
-      difficultyLevel: "intermediate",
-      depthRange: "20–23 m (65–75 ft)",
-      maxDepthMeters: 26,
+      difficultyLevel: "advanced",
+      depthRange: "20–27 m (65–90 ft)",
+      maxDepthMeters: 27,
+      // Below 30 m, but a 26 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
+      minimumCertificationLevel: "advanced_open_water",
       currentNote:
         "A Gulf Stream drift, moderate to strong and usually north; only a strong current or nitrox gets you to the Donut Hole. Shoot your own SMB before the ascent, because the site sits off Jupiter Inlet and its boat traffic.",
       divePlan:
-        "Drop a few minutes south of the first swim-through and go slowly: the sharks and goliaths are at the start. About 25 minutes in, look into the big undercut with a light, then carry on north as far as gas and no-stop time allow.",
-      fitTone: "welcoming",
+        "Drop a few minutes south of the first swim-through and go slowly: the sharks and goliaths are at the start. When you reach the big undercut, look in with a light, then carry on north as far as gas and no-stop time allow.",
+      fitTone: "demanding",
       fitNote:
-        "Go slow and look east and west as well as at the ledge. Skip the swim-throughs if you are not comfortable under a roof.",
+        "Go slow and look east and west as well as at the ledge. Skip the swim-throughs if you are not comfortable under a roof. Still past Open Water depth.",
       landmarks: [
         {
           name: "The first tunnel",

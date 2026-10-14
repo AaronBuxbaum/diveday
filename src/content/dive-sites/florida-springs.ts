@@ -294,7 +294,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         {
           name: "Little Devil",
           kind: "pointOfInterest",
-          note: "A fissure barely more than a metre wide and nearly 15 m deep. From the bottom you look up at the sky.",
+          note: "A fissure barely more than a meter wide and nearly 15 m deep. From the bottom you look up at the sky.",
         },
         {
           name: "Devil's Ear",

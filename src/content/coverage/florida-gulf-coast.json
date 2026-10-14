@@ -15,7 +15,7 @@
     "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
   ],
   "counted": "2026-10-14",
-  "promised": false,
+  "promised": true,
   "sites": [
     {
       "name": "Sheridan (Pinellas #2)",

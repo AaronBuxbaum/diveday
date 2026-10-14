@@ -271,7 +271,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         {
           name: "Starfish Reef modules",
           kind: "reefFormation",
-          note: "Concrete reef pyramids dropped around the tug in 2004, a few hundred metres off.",
+          note: "Concrete reef pyramids dropped around the tug in 2004, a few hundred meters off.",
         },
       ],
       creatureSlugs: [
@@ -336,7 +336,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.1468,
       forecastLongitude: -86.7179,
       description:
-        "A 28 m tug sunk in 2003 at the centre of the Sand Dollar reef complex, a ring of six concrete reefs around her. She sits upright, was shifted by Hurricane Ivan the year after, and is one of the deepest wrecks on the Panhandle Shipwreck Trail.",
+        "A 28 m tug sunk in 2003 at the center of the Sand Dollar reef complex, a ring of six concrete reefs around her. She sits upright, was shifted by Hurricane Ivan the year after, and is one of the deepest wrecks on the Panhandle Shipwreck Trail.",
       marineLife: "Amberjack · goliath grouper · bait schools · sand dollars",
       difficultyLevel: "advanced",
       depthRange: "30–38 m (98–125 ft)",
@@ -781,7 +781,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.074,
       forecastLongitude: -86.3081,
       description:
-        "A 23 m steel catamaran with an aluminium superstructure, sunk in 2025 as one of the two Ted Forsgren reefs southeast of Destin. Her sister, the Nekton Rorqual, lies about 2 km to the west.",
+        "A 23 m steel catamaran with an aluminum superstructure, sunk in 2025 as one of the two Ted Forsgren reefs southeast of Destin. Her sister, the Nekton Rorqual, lies about 2 km to the west.",
       marineLife: "Amberjack · snapper · bait schools",
       difficultyLevel: "advanced",
       depthRange: "27–40 m (90–130 ft)",
@@ -810,7 +810,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.0718,
       forecastLongitude: -86.3307,
       description:
-        "A 24 m steel catamaran with an aluminium superstructure, sunk in 2025 as one of the two Ted Forsgren reefs southeast of Destin. Her sister, the Nekton Pilot, lies about 2 km to the east.",
+        "A 24 m steel catamaran with an aluminum superstructure, sunk in 2025 as one of the two Ted Forsgren reefs southeast of Destin. Her sister, the Nekton Pilot, lies about 2 km to the east.",
       marineLife: "Amberjack · snapper · bait schools",
       difficultyLevel: "advanced",
       depthRange: "28–40 m (92–130 ft)",
@@ -875,7 +875,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.127,
       forecastLongitude: -86.3919,
       description:
-        "A 20 m experimental military fast-response catamaran sunk in 2021 at the Boat Yard, a few metres from the sailboat Dylan and 23 m from the tug Miss Joann. Her aft superstructure has collapsed onto the sand, but she still stands about 4 m tall.",
+        "A 20 m experimental military fast-response catamaran sunk in 2021 at the Boat Yard, a few meters from the sailboat Dylan and 23 m from the tug Miss Joann. Her aft superstructure has collapsed onto the sand, but she still stands about 4 m tall.",
       marineLife: "Red snapper · sea urchins · bait schools",
       difficultyLevel: "advanced",
       depthRange: "32–36 m (105–119 ft)",
@@ -889,7 +889,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         {
           name: "S/V Dylan",
           kind: "pointOfInterest",
-          note: "A steel sailboat lying on her side a few metres away.",
+          note: "A steel sailboat lying on her side a few meters away.",
         },
         {
           name: "M/V Miss Joann",
@@ -930,7 +930,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         {
           name: "M/V Brannon",
           kind: "pointOfInterest",
-          note: "A military catamaran a few metres away.",
+          note: "A military catamaran a few meters away.",
         },
         {
           name: "M/V Miss Joann",
@@ -1758,9 +1758,9 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       ],
     },
   },
-  // Grey Ghost
+  // Gray Ghost
   {
-    slug: "grey-ghost-tug",
+    slug: "gray-ghost-tug",
     version: 1,
     area: "florida-panhandle",
     sources: [
@@ -1768,7 +1768,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Grey%20Ghost%20Ship%27&outFields=Name,Depth,Relief,Lat_DD,Long_DD,DeployDate&returnGeometry=false&f=json",
     ],
     briefing: {
-      name: "Grey Ghost",
+      name: "Gray Ghost",
       locationName: "off western Panama City Beach, Florida",
       forecastLatitude: 30.0471,
       forecastLongitude: -86.0926,
@@ -2214,10 +2214,10 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.2969,
       forecastLongitude: -87.3115,
       description:
-        "One of the Navy's first battleships, commissioned in 1896 and scuttled just outside Pensacola Pass in 1921, where Army guns at Fort Pickens used her for target practice. She is now one of Florida's Underwater Archaeological Preserves, a big armoured hull in water shallow enough that her turrets break the surface.",
+        "One of the Navy's first battleships, commissioned in 1896 and scuttled just outside Pensacola Pass in 1921, where Army guns at Fort Pickens used her for target practice. She is now one of Florida's Underwater Archaeological Preserves, a big armored hull in water shallow enough that her turrets break the surface.",
       marineLife: "Barracuda · spadefish · jacks · grunts · moray eels",
       marineLifeDescription:
-        "Pass water brings a bit of everything: schooling spadefish over the hull, barracuda that shadow divers, and morays tucked into the armour plate.",
+        "Pass water brings a bit of everything: schooling spadefish over the hull, barracuda that shadow divers, and morays tucked into the armor plate.",
       difficultyLevel: "intermediate",
       depthRange: "3–9 m (10–30 ft)",
       maxDepthMeters: 9,
@@ -2639,7 +2639,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 29.9728,
       forecastLongitude: -87.2101,
       description:
-        "A 75 m clamshell dredge built in 1943 and sunk as a reef in May 1991. Her hull has since cracked across the beam into two sections a couple of metres apart, and her height makes her a magnet for big fish.",
+        "A 75 m clamshell dredge built in 1943 and sunk as a reef in May 1991. Her hull has since cracked across the beam into two sections a couple of meters apart, and her height makes her a magnet for big fish.",
       marineLife: "Red snapper · cobia · triggerfish · African pompano",
       difficultyLevel: "advanced",
       depthRange: "21–36 m (70–117 ft)",
@@ -2842,7 +2842,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.1869,
       forecastLongitude: -87.2344,
       description:
-        "A 34 m steel barge whose deck now stands a couple of metres off the sand on its hollowed-out frame, with two sets of radio tower sections lying on either side. Easy to navigate and busy with fish around the towers.",
+        "A 34 m steel barge whose deck now stands a couple of meters off the sand on its hollowed-out frame, with two sets of radio tower sections lying on either side. Easy to navigate and busy with fish around the towers.",
       marineLife: "Snapper · spadefish · reef fish · lionfish",
       difficultyLevel: "intermediate",
       depthRange: "21–25 m (70–82 ft)",
@@ -3012,7 +3012,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
     slug: "fort-pickens-jetty",
     version: 1,
     area: "florida-panhandle",
-    // Position: Fort Pickens' published point (Wikipedia); the jetty runs off the fort's northwest seawall within a few hundred metres. A shop should move the pin to its entry stairs.
+    // Position: Fort Pickens' published point (Wikipedia); the jetty runs off the fort's northwest seawall within a few hundred meters. A shop should move the pin to its entry stairs.
     sources: [
       "https://www.nps.gov/guis/planyourvisit/diving.htm",
       "https://niuhidivecharters.com/ft-pickens-jetty",

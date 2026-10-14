@@ -182,7 +182,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
         "Down the line to the bow, a slow lap of the deck at a planned depth, and back to the line with gas to spare. A natural nitrox dive.",
       fitTone: "demanding",
       fitNote: "Deep enough that the bottom time goes quickly. For divers comfortable near 30 m.",
-      // Below 30 m only by a metre: the sand is at about 30 m and Key West operators ask for an
+      // Below 30 m only by a meter: the sand is at about 30 m and Key West operators ask for an
       // advanced card or recent deep experience before taking divers here.
       minimumCertificationLevel: "advanced_open_water",
       landmarks: [
@@ -426,7 +426,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       forecastLatitude: 24.4721,
       forecastLongitude: -81.7642,
       description:
-        "A shallow reef south of Key West named for the marker stake that once stood on it. Easy, clear and close to town, it is a common first dive and a favourite with photographers.",
+        "A shallow reef south of Key West named for the marker stake that once stood on it. Easy, clear and close to town, it is a common first dive and a favorite with photographers.",
       marineLife: "Green morays · parrotfish · grunts · snapper",
       difficultyLevel: "beginner",
       depthRange: "2–9 m (6–30 ft)",

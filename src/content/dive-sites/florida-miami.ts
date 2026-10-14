@@ -212,7 +212,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.9355,
       forecastLongitude: -80.1107,
       description:
-        "A long stretch of plate reef north of Haulover Inlet where a section broke and dropped a metre or so, leaving a ledge with small hollows underneath. It runs for several hundred metres, so there is more here than one dive covers.",
+        "A long stretch of plate reef north of Haulover Inlet where a section broke and dropped a meter or so, leaving a ledge with small hollows underneath. It runs for several hundred meters, so there is more here than one dive covers.",
       marineLife: "Nurse sharks · lobster · porkfish · grunts · hogfish",
       marineLifeDescription:
         "Nurse sharks often rest under the ledge, so bring a light and look in without crowding them.",
@@ -428,7 +428,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "Start at the radio tower pyramids and drift north to the Patricia and Miss Karline, or begin at the Army Tanks and Matthew Lawrence and work across. Rebar stakes on the sand link some of the sites.",
       fitTone: "welcoming",
       fitNote:
-        "Easy depths and lots to see. A favourite for new divers and for navigation practice.",
+        "Easy depths and lots to see. A favorite for new divers and for navigation practice.",
       landmarks: [
         {
           name: "Radio tower pyramids",
@@ -516,7 +516,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthRange: "11–15 m (35–50 ft)",
       maxDepthMeters: 15,
       currentNote:
-        "In the Anchorage reef site, with freighters at anchor nearby and a current that usually sets north. Rebar stakes on the sand lead toward the neighbouring sites. Stay outside the structure.",
+        "In the Anchorage reef site, with freighters at anchor nearby and a current that usually sets north. Rebar stakes on the sand lead toward the neighboring sites. Stay outside the structure.",
       fitTone: "welcoming",
       fitNote: "A good first wreck: shallow, compact and easy to find again.",
       landmarks: [
@@ -560,7 +560,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       currentNote:
         "Part of the Key Biscayne reef site, about three miles out, where the current usually sets north and can be strong enough to run as a drift. Fishing boats work these wrecks, so watch for line, carry a surface marker and fly a dive flag. Stay outside the hull.",
       divePlan:
-        "Look over the barge, then follow the rebar markers on the sand to Belzona One and Two or to the Parker and Schurger's barges; Belzona Three is deeper and gated on its own. The neighbouring wrecks sit deeper, so plan gas for the trek, not for the barge alone.",
+        "Look over the barge, then follow the rebar markers on the sand to Belzona One and Two or to the Parker and Schurger's barges; Belzona Three is deeper and gated on its own. The neighboring wrecks sit deeper, so plan gas for the trek, not for the barge alone.",
       fitTone: "welcoming",
       fitNote: "Shallow for a Miami wreck, and the start of the area's most popular wreck trek.",
       landmarks: [
@@ -1237,7 +1237,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.704,
       forecastLongitude: -80.0882,
       description:
-        "A 100-foot inter-island freighter seized by the Coast Guard for people smuggling and sunk in July 1987. Hurricane Andrew threw her onto the neighbouring Biscayne wreck, and what is left is a low spread of plates and debris, usually visited on the same dive.",
+        "A 100-foot inter-island freighter seized by the Coast Guard for people smuggling and sunk in July 1987. Hurricane Andrew threw her onto the neighboring Biscayne wreck, and what is left is a low spread of plates and debris, usually visited on the same dive.",
       marineLife: "Grunts · snapper · lionfish · stingrays",
       difficultyLevel: "intermediate",
       depthRange: "17–20 m (55–65 ft)",
@@ -1429,7 +1429,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.4129,
       forecastLongitude: -80.1191,
       description:
-        "An 85-foot steel barge sunk in October 1975 in deep water south of Miami, a few hundred metres from the Almirante. Not to be confused with the shallow Belcher Barge off Key Biscayne.",
+        "An 85-foot steel barge sunk in October 1975 in deep water south of Miami, a few hundred meters from the Almirante. Not to be confused with the shallow Belcher Barge off Key Biscayne.",
       marineLife: "Jacks · snapper · lionfish",
       difficultyLevel: "advanced",
       depthRange: "34–37 m (110–120 ft)",
@@ -1511,7 +1511,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       currentNote:
-        "The top deck is at about 110 ft and the sand at 135 ft (41 m), past recreational limits, so plan on the deck. Fairly strong current is the norm, the wreck is a favourite of spearfishers and carries a lot of monofilament, and silt stirs easily: carry a cutter. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
+        "The top deck is at about 110 ft and the sand at 135 ft (41 m), past recreational limits, so plan on the deck. Fairly strong current is the norm, the wreck is a favorite of spearfishers and carries a lot of monofilament, and silt stirs easily: carry a cutter. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
       fitTone: "demanding",
       fitNote:
         "For experienced deep divers only; operators recommend it to advanced divers because of the current, line and silt.",
@@ -1547,7 +1547,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.822,
       forecastLongitude: -80.085,
       description:
-        "A 120-foot freighter sunk in February 1997 in the Pflueger reef site, between the Tortuga and the Betek Ar Pen. She carries less growth than her neighbours and is usually visited as part of a dive on the group.",
+        "A 120-foot freighter sunk in February 1997 in the Pflueger reef site, between the Tortuga and the Betek Ar Pen. She carries less growth than her neighbors and is usually visited as part of a dive on the group.",
       marineLife: "Snapper · jacks · lionfish",
       difficultyLevel: "advanced",
       depthRange: "28–35 m (92–113 ft)",
@@ -1575,7 +1575,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.8226,
       forecastLongitude: -80.0852,
       description:
-        "A 70-foot former dive boat sunk in June 1997 in the Pflueger reef site, just north of the St. Henry Express. Small enough to circle in a few minutes, so it is usually one stop on a dive across the neighbouring wrecks.",
+        "A 70-foot former dive boat sunk in June 1997 in the Pflueger reef site, just north of the St. Henry Express. Small enough to circle in a few minutes, so it is usually one stop on a dive across the neighboring wrecks.",
       marineLife: "Snapper · jacks · lionfish",
       difficultyLevel: "advanced",
       depthRange: "29–34 m (95–110 ft)",
@@ -1699,7 +1699,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.9087,
       forecastLongitude: -80.0901,
       description:
-        "A former Navy tug bought by the county and sunk in November 1990 off Haulover Inlet; the tug towing her to Miami sank on the way, and its crew was rescued. She lies intact with a 45 degree list, at the centre of the Sunny Isles reef site.",
+        "A former Navy tug bought by the county and sunk in November 1990 off Haulover Inlet; the tug towing her to Miami sank on the way, and its crew was rescued. She lies intact with a 45 degree list, at the center of the Sunny Isles reef site.",
       marineLife: "Grunts · snapper · goliath grouper · reef fish",
       difficultyLevel: "intermediate",
       depthRange: "12–25 m (40–82 ft)",
@@ -1845,7 +1845,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.8937,
       forecastLongitude: -80.0854,
       description:
-        "A 1926 yacht built for ocean research expeditions, later a wartime patrol boat and a freighter, seized for smuggling and sunk in December 1985. Hurricane Andrew broke her into three sections, and her twin propellers, two stacks and wheelhouse make her a favourite with photographers.",
+        "A 1926 yacht built for ocean research expeditions, later a wartime patrol boat and a freighter, seized for smuggling and sunk in December 1985. Hurricane Andrew broke her into three sections, and her twin propellers, two stacks and wheelhouse make her a favorite with photographers.",
       marineLife: "Snapper · jacks · barracuda · reef fish",
       difficultyLevel: "advanced",
       depthRange: "19–32 m (62–104 ft)",

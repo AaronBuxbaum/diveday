@@ -499,7 +499,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       forecastLatitude: 25.1299,
       forecastLongitude: -80.2937,
       description:
-        "A small, shallow reef just north of Key Largo Dry Rocks, with everything its famous neighbour has except the statue and the crowd. Its best-known corner is Minnow Cave, a coral undercut that fills with glassy baitfish.",
+        "A small, shallow reef just north of Key Largo Dry Rocks, with everything its famous neighbor has except the statue and the crowd. Its best-known corner is Minnow Cave, a coral undercut that fills with glassy baitfish.",
       marineLife: "Glass minnows · great barracuda · grouper · spiny lobster",
       marineLifeDescription:
         "Baitfish hang in the mouth of the undercut, and the barracuda that hunt them are rarely far away.",
@@ -555,7 +555,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       currentNote:
         "Closer to the Gulf Stream than most Key Largo reefs: clearer water, and more current in exchange, so it is often run as a drift. A Sanctuary Preservation Area, so no fishing or collecting, and boats use the mooring buoys.",
       divePlan:
-        "Follow a spur from the mooring toward the deeper edge, turn with the current, and come back up a neighbouring groove. Wreck pieces turn up on most of the moorings near the tower.",
+        "Follow a spur from the mooring toward the deeper edge, turn with the current, and come back up a neighboring groove. Wreck pieces turn up on most of the moorings near the tower.",
       fitTone: "demanding",
       fitNote: "Easy depths, but the current deserves respect. Comfortable in a drift is the bar.",
       landmarks: [
@@ -567,7 +567,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
         {
           name: "The Civil War wreck",
           kind: "reefHistory",
-          note: "Wooden beams and iron fastenings just north of the tower, a favourite with photographers.",
+          note: "Wooden beams and iron fastenings just north of the tower, a favorite with photographers.",
         },
         {
           name: "Mike’s Wreck",
@@ -666,7 +666,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
         "Down the line to the port rail, a short swim along the side she lies on, and back to the line with gas to spare. Plan nitrox and a short bottom time.",
       fitTone: "demanding",
       fitNote:
-        "Deep from the first metre of steel, often current-swept. For divers already at home on the Duane.",
+        "Deep from the first meter of steel, often current-swept. For divers already at home on the Duane.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       landmarks: [
@@ -712,7 +712,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       divePlan:
         "Follow the ledge from the mooring with it on one shoulder, look under it for sharks and eels, and turn back along the top.",
       fitTone: "welcoming",
-      fitNote: "Shallow, easy and full of fish. A favourite second tank.",
+      fitNote: "Shallow, easy and full of fish. A favorite second tank.",
       landmarks: [
         {
           name: "The ledge",
