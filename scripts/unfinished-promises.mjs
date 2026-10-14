@@ -25,8 +25,10 @@
  *      here is what happens next", which is exactly right.
  *
  * Both together, and it blocks — feeding the reason back so the session either
- * does the work, files it as a `needs-triage` GitHub issue, or says plainly that it
- * is handing it over. Any of those three is a good ending. Silence is not.
+ * does the work, records it, or ends on a question. Any of those is a good ending.
+ * Silence is not. A block re-prompts the session at its full context, so the
+ * reason is two lines that quote the promise and name the next step, and a
+ * question anywhere in the closing paragraph is a handoff (`isHandoff`).
  *
  * **It fails open, always.** A hook that blocks a turn because it could not
  * parse a transcript would be worse than the problem it prevents, so every
@@ -87,8 +89,50 @@ export function promisesUnfinishedWork(text, dirty) {
  * ends on a question is a fine ending whatever the tree or the branch looks like.
  */
 export function isHandoff(text) {
-  const closing = (text ?? "").slice(-700);
+  const closing = (text ?? "").slice(-700).trim();
+  // A message whose last sentence promises work never hands over, whatever it asked before:
+  // "- open question: does B matter?\n- next I'll do C" is a stall with a question inside it
+  // (security review of #2584).
+  if (PROMISES.some((pattern) => pattern.test(lastSentence(closing)))) return false;
+  // A question hands the turn back only when it is the last sentence; markdown or a closing
+  // quote after the `?` still counts.
+  if (/\?[\s"'”’)*_`]*$/.test(closing)) return true;
   return HANDOFFS.some((pattern) => pattern.test(closing));
+}
+
+/** The final sentence of a message: its last non-empty line, split on sentence ends. */
+function lastSentence(text) {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const last = lines.at(-1) ?? "";
+  return last.split(/(?<=[.!?])\s+/).at(-1) ?? "";
+}
+
+/** The sentence in the closing paragraphs that made the promise, for the reason; or "". */
+export function promisedSentence(text) {
+  const closing = (text ?? "").slice(-700);
+  const sentences = closing.split(/(?<=[.!?:])\s+|\n+/).map((s) => s.trim());
+  for (let index = sentences.length - 1; index >= 0; index -= 1) {
+    if (PROMISES.some((pattern) => pattern.test(sentences[index]))) return sentences[index];
+  }
+  return "";
+}
+
+/**
+ * The block's reason. A block costs one more turn at the session's full context (the
+ * 2026-10-14 token review measured $0.10 to $0.30 on a 300k thread), so it is short and names
+ * the promise and the one thing to do: the extra turn should be one tool call or one sentence.
+ */
+export function reasonFor({ promise, uncommitted }) {
+  const paths = Number.isFinite(uncommitted)
+    ? `${uncommitted} uncommitted path${uncommitted === 1 ? "" : "s"}`
+    : "a dirty tree";
+  return [
+    `This turn ended on ${promise ? `"${promise}"` : "a promise of more work"} with ${paths}.`,
+    "Do it now, or record it with TaskCreate (a needs-triage issue if it is a bug, safety gap or decision for later), or end on a question. One of those, then stop.",
+  ].join("\n");
 }
 
 export function lastAssistantText(transcriptPath) {
@@ -114,16 +158,14 @@ export function lastAssistantText(transcriptPath) {
   return "";
 }
 
-function workingTreeIsDirty() {
-  // Through `readBounded` like every other subprocess call in this directory: a
-  // `Stop` hook that can hang is the precise failure `scripts/subprocess.mjs`
-  // was written to end, and this one runs on every turn.
+/** Uncommitted paths in the working tree, through `readBounded` (a `Stop` hook must not hang). */
+function uncommittedCount() {
   const status = readBounded("git", ["status", "--porcelain"], {
     cwd: process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
     encoding: "utf8",
     timeoutMs: SUBPROCESS_TIMEOUTS.git,
   });
-  return status.trim().length > 0;
+  return status.split("\n").filter((line) => line.trim()).length;
 }
 
 function readHookInput() {
@@ -146,30 +188,13 @@ function main() {
   // The git call is last: it is the only expensive half, and most turns are
   // filtered out by the message alone.
   if (!promisesUnfinishedWork(text, true)) return 0;
-  if (!workingTreeIsDirty()) return 0;
+  const uncommitted = uncommittedCount();
+  if (uncommitted === 0) return 0;
 
   recordRefusal("unfinished-promises", "closing message promised work on a dirty tree", {
     session: input.session_id,
   });
-  process.stderr.write(
-    [
-      "This turn ends by promising work it did not do, and the working tree is dirty.",
-      "",
-      "A queue written in a closing message is not a queue: the message is sent, the",
-      "turn ends, and nothing starts it again. On 2026-08-15 that pattern cost a user",
-      "three turns of silence before they asked whether anything was still running.",
-      "",
-      "Pick one, then finish the turn:",
-      "  - DO IT NOW. If it is the next thing, it belongs in this turn.",
-      "  - FILE IT. A GitHub issue labelled needs-triage (see docs/agents/issue-tracker.md's",
-      "    Filing a follow-up section), so a cold reader can run it.",
-      "  - HAND IT OVER explicitly. Ask the question, or say plainly that you are",
-      "    stopping and what you need — a turn that ends on a question is fine.",
-      "",
-      "If several things are queued, track them with TaskCreate/TaskUpdate rather than",
-      "in prose, so nothing depends on the next turn remembering a sentence.",
-    ].join("\n"),
-  );
+  process.stderr.write(`${reasonFor({ promise: promisedSentence(text), uncommitted })}\n`);
   return 2;
 }
 

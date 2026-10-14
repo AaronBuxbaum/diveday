@@ -1,6 +1,6 @@
 # DiveDay certification check (browser extension)
 
-Checks a diver's certification on the agency's own lookup page, from the staffer's own browser, when they press "Check with SSI" on the diver's record, a departure's Divers tab or Today. A PADI card is checked on DiveChek, on the PADI Pros' Site the staffer is signed in to. It also checks a course student's PADI eLearning on the PADI Pros' Site when a staffer presses "Check eLearning with PADI" on a course roster. Decisions: H-105, H-106, H-114. Design: [ADR 20261008-cert-check-extension](../docs/architecture/decisions/20261008-cert-check-extension.md).
+Checks a diver's certification on the agency's own lookup page, from the staffer's own browser, when they press "Check with SSI" on the diver's record, a departure's Divers tab or Today. A PADI card is checked on DiveChek, on the PADI Pros' Site the staffer is signed in to. It also checks a course student's PADI eLearning on the PADI Pros' Site when a staffer presses "Check eLearning with PADI" on a course roster. Decisions: H-105, H-106, H-118. Design: [ADR 20261008-cert-check-extension](../docs/architecture/decisions/20261008-cert-check-extension.md).
 
 The extension decides nothing. It fills in the agency's form, waits for the answer, and hands the page's text to DiveDay, where `src/lib/agency-check.ts` decides whether the card is certified.
 
@@ -35,7 +35,7 @@ The PADI page is a best guess (#2259). To test it for real:
 
 ## Test DiveChek against the real page
 
-The DiveChek page is a best guess, like the eLearning page (#2259), and the same sitting should try both. Before relying on it, someone should also read the PADI Pros' Site terms (H-114).
+The DiveChek page is a best guess, like the eLearning page (#2259), and the same sitting should try both. Before relying on it, someone should also read the PADI Pros' Site terms (H-118).
 
 1. Load the extension as above. Do not sign in to PADI yet.
 2. Open a diver's record with a pending PADI level card and a birth date, and press "Check with PADI". It should answer "Sign in to the PADI Pros’ Site first, then check again." If it says "Couldn't read PADI's page" instead, note the address PADI sent the tab to (open DiveChek yourself while signed out) and add its path to `SIGN_IN_PATH` in `protocol.js`, the one copy both `background.js` and `fill.js` read.

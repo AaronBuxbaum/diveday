@@ -1,0 +1,1526 @@
+{
+  "photos": {
+    "dive-sites/Acropora palmata Alligator Reef 20230711.jpg": {
+      "subject": "site:alligator-reef",
+      "source": "File:Acropora palmata Alligator Reef 20230711.jpg",
+      "licence": "CC0",
+      "artist": "Jstuby",
+      "sourceSize": [5184, 3888],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/AtlanticGoliathGrouper.jpg": {
+      "subject": "seed:AtlanticGoliathGrouper",
+      "source": "File:AtlanticGoliathGrouper.jpg",
+      "licence": "Public domain",
+      "artist": "Brett Seymour",
+      "sourceSize": [1285, 884],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Benwood-28.jpg": {
+      "subject": "site:benwood-wreck",
+      "source": "File:Benwood-28.JPG",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Elkman",
+      "sourceSize": [3072, 2304],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg": {
+      "subject": "site:molasses-reef",
+      "source": "File:Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Matt Kieffer from London, United Kingdom",
+      "sourceSize": [2578, 1934],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/BORSTAR divers conduct operations in Miami, Florida (55328941248).jpg": {
+      "subject": "site:blue-heron-bridge",
+      "source": "File:BORSTAR divers conduct operations in Miami, Florida (55328941248).jpg",
+      "licence": "Public domain",
+      "artist": "CBP Photography",
+      "sourceSize": [5616, 3534],
+      "crop": "cropped to 0,0.2,1,0.8 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/BORSTAR divers training in Panama City, Fla. (29842460786).jpg": {
+      "subject": "site:morrison-springs",
+      "source": "File:BORSTAR divers training in Panama City, Fla. (29842460786).jpg",
+      "licence": "Public domain",
+      "artist": "U.S. Customs and Border Protection",
+      "sourceSize": [5760, 3240],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Brain coral 2 Molasses Reef 20080309.jpg": {
+      "subject": "seed:Brain coral 2 Molasses Reef 20080309",
+      "source": "File:Brain coral 2 Molasses Reef 20080309.jpg",
+      "licence": "CC0",
+      "artist": "Jstuby",
+      "sourceSize": [2816, 2112],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Christ of the Abyss, Key Largo, FL - panoramio.jpg": {
+      "subject": "site:christ-of-the-abyss",
+      "source": "File:Christ of the Abyss, Key Largo, FL - panoramio.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Sebastian Carlosena",
+      "sourceSize": [3840, 2880],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/City Of Washington (38741160925).jpg": {
+      "subject": "seed:City Of Washington (38741160925)",
+      "source": "File:City Of Washington (38741160925).jpg",
+      "licence": "Public domain",
+      "artist": "National Marine Sanctuaries",
+      "sourceSize": [3744, 5616],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Crow's nest of the USCGC Duane (2007).jpg": {
+      "subject": "seed:Crow's nest of the USCGC Duane (2007)",
+      "source": "File:Crow's nest of the USCGC Duane (2007).jpg",
+      "licence": "Public domain",
+      "artist": "",
+      "sourceSize": [2816, 2112],
+      "crop": "cropped above the camera's date stamp",
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Dasyatis americana NOAA.jpg": {
+      "subject": "seed:Dasyatis americana NOAA",
+      "source": "File:Dasyatis americana NOAA.jpg",
+      "licence": "Public domain",
+      "artist": "SEFSC Pascagoula Laboratory; Collection of Brandi Noble, NOAA/NMFS/SEFSC",
+      "sourceSize": [2896, 1944],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Deck of the USCGC Duane, Key Largo (15275033440).jpg": {
+      "subject": "site:uscgc-duane",
+      "source": "File:Deck of the USCGC Duane, Key Largo (15275033440).jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Matt Kieffer from London, United Kingdom",
+      "sourceSize": [3648, 2736],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Diver at USNS General Hoyt S. Vandenberg (T-AGM-10) wreck off Key West in January 2015.jpg": {
+      "subject": "site:usns-vandenberg",
+      "source": "File:Diver at USNS General Hoyt S. Vandenberg (T-AGM-10) wreck off Key West in January 2015.JPG",
+      "licence": "Public domain",
+      "artist": "U.S. Navy photo by Mass Communication Specialist 2nd Class Nicholas S. Tenorio",
+      "sourceSize": [3000, 1997],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Elkhorn coral 8 Molasses Reef 20080309.jpg": {
+      "subject": "seed:Elkhorn coral 8 Molasses Reef 20080309",
+      "source": "File:Elkhorn coral 8 Molasses Reef 20080309.jpg",
+      "licence": "Public domain",
+      "artist": "Jim Stuby (talk)",
+      "sourceSize": [2816, 2112],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Elkhorn coral Carysfort North August 2023.jpg": {
+      "subject": "site:carysfort-reef",
+      "source": "File:Elkhorn coral Carysfort North August 2023.png",
+      "licence": "Public domain",
+      "artist": "Ben Edmonds/NOAA",
+      "sourceSize": [1375, 685],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/FGBNMS - nurse shark (27551309652).jpg": {
+      "subject": "seed:FGBNMS - nurse shark (27551309652)",
+      "source": "File:FGBNMS - nurse shark (27551309652).jpg",
+      "licence": "Public domain",
+      "artist": "National Marine Sanctuaries",
+      "sourceSize": [3200, 2400],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/FKNMS - Goliath Grouper With Remora (27094933605).jpg": {
+      "subject": "seed:FKNMS - Goliath Grouper With Remora (27094933605)",
+      "source": "File:FKNMS - Goliath Grouper With Remora (27094933605).jpg",
+      "licence": "Public domain",
+      "artist": "National Marine Sanctuaries",
+      "sourceSize": [1500, 1500],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Florida Manatee FWS 4.jpg": {
+      "subject": "site:three-sisters-springs",
+      "source": "File:Florida Manatee FWS 4.jpg",
+      "licence": "Public domain",
+      "artist": "Steve Hillebrand / USFWS",
+      "sourceSize": [3504, 2336],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/French Angelfish Molasses Reef 20080309.jpg": {
+      "subject": "seed:French Angelfish Molasses Reef 20080309",
+      "source": "File:French Angelfish Molasses Reef 20080309.jpg",
+      "licence": "CC0",
+      "artist": "Jstuby",
+      "sourceSize": [1418, 588],
+      "crop": "cropped to the right-hand of the original's two frames, which printed as a hard seam across a trip's cover photo",
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/French Angelfish Pickles Reef 20230713.jpg": {
+      "subject": "seed:French Angelfish Pickles Reef 20230713",
+      "source": "File:French Angelfish Pickles Reef 20230713.jpg",
+      "licence": "CC0",
+      "artist": "Jstuby",
+      "sourceSize": [3200, 2400],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Ginnie Springs-2.jpg": {
+      "subject": "site:ginnie-springs",
+      "source": "File:Ginnie Springs-2.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "(WT-de) Mistoffeles",
+      "sourceSize": [2048, 1536],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Neptune Reef.jpg": {
+      "subject": "site:neptune-memorial-reef",
+      "source": "File:Neptune Reef.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Elkman",
+      "sourceSize": [3072, 2304],
+      "crop": "cropped to 0.03,0.03,0.94,0.92 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg": {
+      "subject": "site:looe-key-reef",
+      "source": "File:Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
+      "licence": "Public domain",
+      "artist": "Lauren Toth, USGS. Sound Waves Newsletter",
+      "sourceSize": [4000, 3000],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Sand Key Light 2005.jpg": {
+      "subject": "site:sand-key-reef",
+      "source": "File:Sand Key Light 2005.jpg",
+      "licence": "Public domain",
+      "artist": "United States Navy, James Brooks",
+      "sourceSize": [1500, 2100],
+      "crop": "cropped to 0.52,0.22,0.48,0.56 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg": {
+      "subject": "site:pickles-reef",
+      "source": "File:School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Matt Kieffer from London, United Kingdom",
+      "sourceSize": [2736, 3648],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Sombrero Key 20191128.jpg": {
+      "subject": "site:sombrero-reef",
+      "source": "File:Sombrero Key 20191128.jpg",
+      "licence": "Public domain",
+      "artist": "USGS",
+      "sourceSize": [2000, 2000],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Sponge 06 Molasses Reef 20230714.jpg": {
+      "subject": "seed:Sponge 06 Molasses Reef 20230714",
+      "source": "File:Sponge 06 Molasses Reef 20230714.jpg",
+      "licence": "CC0",
+      "artist": "Jstuby",
+      "sourceSize": [2592, 1944],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/Stingray on French Reef, Key Largo (15274940277).jpg": {
+      "subject": "site:french-reef",
+      "source": "File:Stingray on French Reef, Key Largo (15274940277).jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Matt Kieffer from London, United Kingdom",
+      "sourceSize": [3648, 2736],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg": {
+      "subject": "site:spiegel-grove",
+      "source": "File:US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg",
+      "licence": "Public domain",
+      "artist": "Nicholas Munn; The original uploader was Peripatet at English Wikipedia.. Later version(s) were uploaded by Cobatfor at en.wikipedia, 2007-03-22 (first version); 2015-02-11 (last version).",
+      "sourceSize": [2816, 2112],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/USS Oriskany Ship Wreck Artificial Reef Dive Underwater.jpg": {
+      "subject": "site:uss-oriskany",
+      "source": "File:USS Oriskany Ship Wreck Artificial Reef Dive Underwater.jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Greg Grimes",
+      "sourceSize": [4344, 3258],
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/USS Spiegel Grove (LSD-32) flight deck 1984.jpg": {
+      "subject": "seed:USS Spiegel Grove (LSD-32) flight deck 1984",
+      "source": "File:LCAC approaches USS Spiegel Grove (LSD-32) during trials in 1984.jpeg",
+      "licence": "Public domain",
+      "artist": "USN",
+      "sourceSize": [2358, 2980],
+      "crop": "cropped to the cranes and flight deck",
+      "reviewed": "2026-10-14"
+    },
+    "dive-sites/USS Spiegel Grove (LSD-32) well deck 1984.jpg": {
+      "subject": "seed:USS Spiegel Grove (LSD-32) well deck 1984",
+      "source": "File:LCAC approaches USS Spiegel Grove (LSD-32) during trials in 1984.jpeg",
+      "licence": "Public domain",
+      "artist": "USN",
+      "sourceSize": [2358, 2980],
+      "crop": "cropped to the open stern dock",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/arrow-crab.jpg": {
+      "subject": "species:arrow-crab",
+      "source": "File:Cangrejo araña (Stenorhynchus seticornis), franja marina Teno-Rasca, Tenerife, España, 2022-01-05, DD 94.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Diego Delso",
+      "sourceSize": [3075, 2050],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/atlantic-spadefish.jpg": {
+      "subject": "species:atlantic-spadefish",
+      "source": "File:Atlantic Spadefish PLW edit.jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Matthew Hoelscher (original photograph), Kaldari (crop), Papa Lima Whiskey (white balance adjustments)",
+      "sourceSize": [1920, 1920],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/azure-vase-sponge.jpg": {
+      "subject": "species:azure-vase-sponge",
+      "source": "File:Callyspongia plicifera - azure vase sponge - Bay of Pigs - Cuba.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Tisquesusa",
+      "sourceSize": [4288, 3216],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/balloonfish.jpg": {
+      "subject": "species:balloonfish",
+      "source": "File:Pez erizo de espinas largas (Diodon holocanthus), islas Ad Dimaniyat, Omán, 2024-08-13, DD 45.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Diego Delso",
+      "sourceSize": [6476, 4317],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/banded-butterflyfish.jpg": {
+      "subject": "species:banded-butterflyfish",
+      "source": "File:Chaetodon striatus Brasil.jpg",
+      "licence": "CC BY 2.5",
+      "artist": "Bernard E. Picton",
+      "sourceSize": [1024, 768],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/banded-coral-shrimp.jpg": {
+      "subject": "species:banded-coral-shrimp",
+      "source": "File:Stenopus hispidus (MNHN-IU-2013-2654) (cropped).jpeg",
+      "licence": "CC BY 4.0",
+      "artist": "Corbari L.",
+      "sourceSize": [2675, 2237],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/bandtail-puffer.jpg": {
+      "subject": "species:bandtail-puffer",
+      "source": "File:Bandtail puffer.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Rex shock Richard A. Ingebrigtsen",
+      "sourceSize": [1800, 1019],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/bar-jack.jpg": {
+      "subject": "species:bar-jack",
+      "source": "File:Caranx ruber 243924968.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Jay Brasher",
+      "sourceSize": [1800, 1350],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/barred-hamlet.jpg": {
+      "subject": "species:barred-hamlet",
+      "source": "File:Hypoplectrus puella.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "laszlo-photo",
+      "sourceSize": [1200, 800],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/black-coral.jpg": {
+      "subject": "species:black-coral",
+      "source": "File:Antipathes dichotoma1.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Anders Poulsen, Deep Blue (http://www.colours.dk/)",
+      "sourceSize": [480, 640],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/black-durgon.jpg": {
+      "subject": "species:black-durgon",
+      "source": "File:Melichthys niger (black durgon) (San Salvador Island, Bahamas) 2 (15983428930).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "James St. John",
+      "sourceSize": [1856, 1324],
+      "crop": "cropped to 0.08,0.12,0.84,0.76 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/black-grouper.jpg": {
+      "subject": "species:black-grouper",
+      "source": "File:Mycteroperca bonaci.jpg",
+      "licence": "CC BY 3.0",
+      "artist": "Brian.gratwicke",
+      "sourceSize": [1024, 683],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/blackbar-soldierfish.jpg": {
+      "subject": "species:blackbar-soldierfish",
+      "source": "File:Myripristis jacobus 8zz.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Photo by David J. Stang",
+      "sourceSize": [1000, 665],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/blue-chromis.jpg": {
+      "subject": "species:blue-chromis",
+      "source": "File:Chromis cyanea (46585332415).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES from Cleveland, Ohio, USA",
+      "sourceSize": [3204, 2135],
+      "crop": "cropped to 0.05,0.10,0.80,0.80 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/blue-tang.jpg": {
+      "subject": "species:blue-tang",
+      "source": "File:A. coeruleus.jpg",
+      "licence": "Public domain",
+      "artist": "Dr. Dwayne Meadows, NOAA",
+      "sourceSize": [3376, 2285],
+      "crop": "cropped to 0.10,0.05,0.75,0.80 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/bluehead-wrasse.jpg": {
+      "subject": "species:bluehead-wrasse",
+      "source": "File:Blue-Headed Wrasse (4387352722).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Tony Hisgett from Birmingham, UK",
+      "sourceSize": [2862, 1680],
+      "crop": "cropped to 0.05,0.10,0.90,0.75 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/bluestriped-grunt.jpg": {
+      "subject": "species:bluestriped-grunt",
+      "source": "File:Haemulon sciurus.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [1200, 800],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/bottlenose-dolphin.jpg": {
+      "subject": "species:bottlenose-dolphin",
+      "source": "File:Tursiops truncatus 01.jpg",
+      "licence": "Public domain",
+      "artist": "NASA",
+      "sourceSize": [3000, 1995],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/boulder-star-coral.jpg": {
+      "subject": "species:boulder-star-coral",
+      "source": "File:Orbicella annularis (Montastraea annularis) 1.jpg",
+      "licence": "Public domain",
+      "artist": "NOAA",
+      "sourceSize": [1711, 1256],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/branching-vase-sponge.jpg": {
+      "subject": "species:branching-vase-sponge",
+      "source": "File:Callyspongia vaginalis (Branching Vase Sponge - pink variation).jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood (talk) Nick Hobgood",
+      "sourceSize": [2434, 3240],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/brown-chromis.jpg": {
+      "subject": "species:brown-chromis",
+      "source": "File:Azurina multilineata 345286514.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Dan Schofield",
+      "sourceSize": [2048, 1537],
+      "crop": "cropped to 0.15,0.15,0.75,0.7 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/caribbean-reef-octopus.jpg": {
+      "subject": "species:caribbean-reef-octopus",
+      "source": "File:Night Moves (48885233693).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES from Cleveland, Ohio, USA",
+      "sourceSize": [3814, 2542],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/caribbean-reef-shark.jpg": {
+      "subject": "species:caribbean-reef-shark",
+      "source": "File:Caribbean reef shark.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Albert kok",
+      "sourceSize": [1968, 1228],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/caribbean-reef-squid.jpg": {
+      "subject": "species:caribbean-reef-squid",
+      "source": "File:Caribbean reef squid.jpg",
+      "licence": "Public domain",
+      "artist": "",
+      "sourceSize": [793, 600],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/chain-moray.jpg": {
+      "subject": "species:chain-moray",
+      "source": "File:Chain moray eel.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Atsme (Betty Wills)",
+      "sourceSize": [3370, 4200],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/channel-clinging-crab.jpg": {
+      "subject": "species:channel-clinging-crab",
+      "source": "File:Mithrax spinosissimus (Channel Clinging Crab - female).jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood (talk) Nick Hobgood",
+      "sourceSize": [2121, 1593],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/christmas-tree-worm.jpg": {
+      "subject": "species:christmas-tree-worm",
+      "source": "File:Christmas tree worm (Spirobranchus giganteus).jpg",
+      "licence": "Public domain",
+      "artist": "James Guttuso.",
+      "sourceSize": [1788, 1188],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/cobia.jpg": {
+      "subject": "species:cobia",
+      "source": "https://www.inaturalist.org/photos/59256179",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Matteo Cassella",
+      "sourceSize": [2048, 1388],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/common-sea-fan.jpg": {
+      "subject": "species:common-sea-fan",
+      "source": "File:Seafanpurp.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Betty Wills",
+      "sourceSize": [3264, 2448],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/coney.jpg": {
+      "subject": "species:coney",
+      "source": "File:Cephalopholis fulva.jpg",
+      "licence": "Public domain",
+      "artist": "NOAA",
+      "sourceSize": [1412, 776],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/corkscrew-anemone.jpg": {
+      "subject": "species:corkscrew-anemone",
+      "source": "https://www.inaturalist.org/photos/709687103",
+      "licence": "CC BY 4.0",
+      "artist": "Matteo Bellucci",
+      "sourceSize": [2048, 1536],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/creole-wrasse.jpg": {
+      "subject": "species:creole-wrasse",
+      "source": "File:Reef1614 - Flickr - NOAA Photo Library.jpg",
+      "licence": "Public domain",
+      "artist": "Dr. Dwayne Meadows, NOAA/NMFS/OPR.",
+      "sourceSize": [3150, 2090],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/cubera-snapper.jpg": {
+      "subject": "species:cubera-snapper",
+      "source": "File:Lutjanus cyanopterus.jpg",
+      "licence": "CC0",
+      "artist": "Henrya",
+      "sourceSize": [2048, 1536],
+      "crop": "cropped to 0.00,0.25,0.75,0.65 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/cushion-sea-star.jpg": {
+      "subject": "species:cushion-sea-star",
+      "source": "File:Oreaster reticulatus (Cushion Sea Star).jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood Nick Hobgood",
+      "sourceSize": [2400, 1800],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/dog-snapper.jpg": {
+      "subject": "species:dog-snapper",
+      "source": "File:Lutjanus jocu Belize.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "erichabisch",
+      "sourceSize": [2048, 1152],
+      "crop": "cropped to 0.12,0.02,0.78,0.78 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/donkey-dung-sea-cucumber.jpg": {
+      "subject": "species:donkey-dung-sea-cucumber",
+      "source": "File:Reef1075 - Flickr - NOAA Photo Library.jpg",
+      "licence": "Public domain",
+      "artist": "Becky A. Dayhuff, Environmental Educator.",
+      "sourceSize": [1892, 1417],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/elkhorn-coral.jpg": {
+      "subject": "species:elkhorn-coral",
+      "source": "File:Elkhorn coral.jpg",
+      "licence": "Public domain",
+      "artist": "",
+      "sourceSize": [700, 459],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/feather-duster-worm.jpg": {
+      "subject": "species:feather-duster-worm",
+      "source": "File:Sabellastarte magnifica (Magnificent feather duster worm).jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood Nick Hobgood",
+      "sourceSize": [800, 600],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/finger-coral.jpg": {
+      "subject": "species:finger-coral",
+      "source": "File:Porites porites porites (clubbed finger coral) (San Salvador Island, Bahamas) 5 (16066417536).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "James St. John",
+      "sourceSize": [4000, 3000],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/fire-coral.jpg": {
+      "subject": "species:fire-coral",
+      "source": "File:Millepora alcicornis 338801632.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Pauline Walsh Jacobson",
+      "sourceSize": [960, 720],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/flamingo-tongue.jpg": {
+      "subject": "species:flamingo-tongue",
+      "source": "File:Cyphoma gibbosum (living) 2.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [1200, 900],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/foureye-butterflyfish.jpg": {
+      "subject": "species:foureye-butterflyfish",
+      "source": "File:Chaetodon capistratus1.jpg",
+      "licence": "Public domain",
+      "artist": "Photographer: Chris Huss Credit: Florida Keys National Marine Sanctuary",
+      "sourceSize": [1764, 1176],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/french-angelfish.jpg": {
+      "subject": "species:french-angelfish",
+      "source": "File:Pomacanthus paru.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [1138, 765],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/french-grunt.jpg": {
+      "subject": "species:french-grunt",
+      "source": "File:Haemulon flavolineatum French grunt.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Brian Gratwicke",
+      "sourceSize": [3456, 2304],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/garden-eel.jpg": {
+      "subject": "species:garden-eel",
+      "source": "File:Brown Garden Eel - Heteroconger longissimus.jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Francois Libert",
+      "sourceSize": [617, 800],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/giant-anemone.jpg": {
+      "subject": "species:giant-anemone",
+      "source": "File:Condylactis gigantea (Giant Anemone) red base.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood Nick Hobgood",
+      "sourceSize": [3200, 2400],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/giant-barrel-sponge.jpg": {
+      "subject": "species:giant-barrel-sponge",
+      "source": "File:Shooting Fish in a Barrel (48885969722).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES from Cleveland, Ohio, USA",
+      "sourceSize": [4238, 2825],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/giant-basket-star.jpg": {
+      "subject": "species:giant-basket-star",
+      "source": "File:Astrophyton muricatum FLMNH.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "François Michonneau",
+      "sourceSize": [4928, 3264],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/glasseye-snapper.jpg": {
+      "subject": "species:glasseye-snapper",
+      "source": "File:Priacanthus cruentatus.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [1200, 800],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/glassy-sweeper.jpg": {
+      "subject": "species:glassy-sweeper",
+      "source": "File:Glassy sweepers.jpg",
+      "licence": "Public domain",
+      "artist": "NOAA",
+      "sourceSize": [700, 509],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/goldentail-moray.jpg": {
+      "subject": "species:goldentail-moray",
+      "source": "File:Gymnothorax miliaris (goldentail moray eel) (San Salvador Island, Bahamas) 1 (15983831850).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "James St. John",
+      "sourceSize": [2696, 1756],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/goliath-grouper.jpg": {
+      "subject": "species:goliath-grouper",
+      "source": "File:Itajara.JPG",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Albert kok",
+      "sourceSize": [2322, 1650],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/gray-angelfish.jpg": {
+      "subject": "species:gray-angelfish",
+      "source": "File:Pomacanthus arcuatus 109580400.jpg",
+      "licence": "CC0",
+      "artist": "Zygy",
+      "sourceSize": [1680, 1260],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/gray-snapper.jpg": {
+      "subject": "species:gray-snapper",
+      "source": "File:Grey snapper - Lutjanus griseus.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Clinton & Charles Robertson from Del Rio, Texas & San Marcos, TX, USA",
+      "sourceSize": [800, 497],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/graysby.jpg": {
+      "subject": "species:graysby",
+      "source": "File:Cephalopholis cruentata (33623928198).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES from Cleveland, Ohio, USA",
+      "sourceSize": [3732, 2487],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/great-barracuda.jpg": {
+      "subject": "species:great-barracuda",
+      "source": "File:Barracuda laban.jpg",
+      "licence": "Public domain",
+      "artist": "",
+      "sourceSize": [999, 750],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/great-star-coral.jpg": {
+      "subject": "species:great-star-coral",
+      "source": "File:Montastraea cavernosa.jpg",
+      "licence": "Public domain",
+      "artist": "",
+      "sourceSize": [3072, 2304],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/green-moray.jpg": {
+      "subject": "species:green-moray",
+      "source": "File:Green Moray (Gymnothorax funebris) - Sponge Forest Reef, Curaçao N.A.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES from Cleveland, Ohio, USA",
+      "sourceSize": [2912, 1941],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/green-sea-turtle.jpg": {
+      "subject": "species:green-sea-turtle",
+      "source": "File:Swimming with Turtles.JPG",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Cbrookes81",
+      "sourceSize": [4000, 3000],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/grooved-brain-coral.jpg": {
+      "subject": "species:grooved-brain-coral",
+      "source": "File:Brain coral.jpg",
+      "licence": "Public domain",
+      "artist": "",
+      "sourceSize": [940, 1000],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/hawksbill-turtle.jpg": {
+      "subject": "species:hawksbill-turtle",
+      "source": "File:Tortuga carey (Eretmochelys imbricata), parque nacional Ras Muhammad, Egipto, 2022-03-28, DD 56.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Diego Delso",
+      "sourceSize": [3492, 2328],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/hogfish.jpg": {
+      "subject": "species:hogfish",
+      "source": "File:Lachnolaimus maximus juvenile.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [1200, 800],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/honeycomb-cowfish.jpg": {
+      "subject": "species:honeycomb-cowfish",
+      "source": "File:Lactophrys polygonia.jpg",
+      "licence": "Public domain",
+      "artist": "Jan Derk",
+      "sourceSize": [800, 564],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/horse-eye-jack.jpg": {
+      "subject": "species:horse-eye-jack",
+      "source": "File:Paardmakreel.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Albert kok",
+      "sourceSize": [1090, 502],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/indigo-hamlet.jpg": {
+      "subject": "species:indigo-hamlet",
+      "source": "File:Indigo Hamlet.JPG",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Tomh009",
+      "sourceSize": [1200, 800],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/lemon-shark.jpg": {
+      "subject": "species:lemon-shark",
+      "source": "File:Lemonshark.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Albert kok",
+      "sourceSize": [2700, 1780],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/lettuce-coral.jpg": {
+      "subject": "species:lettuce-coral",
+      "source": "File:Agarica agaricites (Scaled Lettuce Coral) closeup.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood Nick Hobgood",
+      "sourceSize": [1800, 2400],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/lettuce-sea-slug.jpg": {
+      "subject": "species:lettuce-sea-slug",
+      "source": "File:Elysia crispata (Lettuce Sea Slug).jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood (talk) Nick Hobgood",
+      "sourceSize": [2323, 1746],
+      "crop": "cropped to 0.17,0.24,0.6,0.6 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/lionfish.jpg": {
+      "subject": "species:lionfish",
+      "source": "File:Pterois volitans (Lionfish - Caribbean invasive).jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood (talk) Nick Hobgood",
+      "sourceSize": [2400, 1803],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/loggerhead-turtle.jpg": {
+      "subject": "species:loggerhead-turtle",
+      "source": "File:Loggerhead turtle off the coast of San Pedro Belize.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "MarAlliance2018",
+      "sourceSize": [5184, 3456],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/long-spined-urchin.jpg": {
+      "subject": "species:long-spined-urchin",
+      "source": "File:Diadema antillarum in Bahamas.jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Greg Grimes",
+      "sourceSize": [4344, 3258],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/longlure-frogfish.jpg": {
+      "subject": "species:longlure-frogfish",
+      "source": "File:Longlure frogfish (Antennarius multiocellatus) twitching lure.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Betty Wills",
+      "sourceSize": [3000, 2400],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/longsnout-butterflyfish.jpg": {
+      "subject": "species:longsnout-butterflyfish",
+      "source": "File:Prognathodes aculeatus 179115082.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Dan Schofield",
+      "sourceSize": [2048, 1537],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/longsnout-seahorse.jpg": {
+      "subject": "species:longsnout-seahorse",
+      "source": "File:Hippocampus reidi 239712002.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Pauline Walsh Jacobson",
+      "sourceSize": [960, 720],
+      "crop": "cropped to 0,0,1,0.92 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/mahogany-snapper.jpg": {
+      "subject": "species:mahogany-snapper",
+      "source": "File:Mahogany snapper Lutjanus mahogoni (3458475349).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Paul Asman and Jill Lenoble",
+      "sourceSize": [1436, 957],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/manatee.jpg": {
+      "subject": "species:manatee",
+      "source": "File:Manatee photo.jpg",
+      "licence": "Public domain",
+      "artist": "NASA",
+      "sourceSize": [1050, 750],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/maze-coral.jpg": {
+      "subject": "species:maze-coral",
+      "source": "File:Meandrina meandrites (Maze Coral).jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood Nick Hobgood",
+      "sourceSize": [2400, 1800],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/midnight-parrotfish.jpg": {
+      "subject": "species:midnight-parrotfish",
+      "source": "File:Midnight parrotfish.jpg",
+      "licence": "Public domain",
+      "artist": "",
+      "sourceSize": [1152, 928],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/moon-jelly.jpg": {
+      "subject": "species:moon-jelly",
+      "source": "File:160514-N-WX059-102 (28603110823).jpg",
+      "licence": "Public domain",
+      "artist": "National Museum of the U.S. Navy",
+      "sourceSize": [3000, 2811],
+      "crop": "cropped to 0.38,0,0.62,0.62 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/mountainous-star-coral.jpg": {
+      "subject": "species:mountainous-star-coral",
+      "source": "File:Orbicella faveolata (Montastraea faveolata), pólipos abiertos.jpg",
+      "licence": "Public domain",
+      "artist": "NOAA",
+      "sourceSize": [1800, 1350],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/mustard-hill-coral.jpg": {
+      "subject": "species:mustard-hill-coral",
+      "source": "File:Porites astreoides (mustard hill coral) (San Salvador Island, Bahamas) 11 (15478473983).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "James St. John",
+      "sourceSize": [1904, 1500],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/mutton-snapper.jpg": {
+      "subject": "species:mutton-snapper",
+      "source": "File:Pargo criollo (Lutjanus analis), Cozumel, México, 2025-12-20, DD 139.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Diego Delso",
+      "sourceSize": [5792, 3861],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/nassau-grouper.jpg": {
+      "subject": "species:nassau-grouper",
+      "source": "File:Nassaubaars.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Albert Kok at Dutch Wikipedia (Original text: albert kok)",
+      "sourceSize": [2456, 1640],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/nurse-shark.jpg": {
+      "subject": "species:nurse-shark",
+      "source": "File:Nurse shark.jpg",
+      "licence": "Public domain",
+      "artist": "",
+      "sourceSize": [1796, 1180],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/ocean-triggerfish.jpg": {
+      "subject": "species:ocean-triggerfish",
+      "source": "File:Canthidermis sufflamen (ocean triggerfish) (San Salvador Island, Bahamas) 1 (15965263309).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "James St. John",
+      "sourceSize": [2960, 2016],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/orange-elephant-ear-sponge.jpg": {
+      "subject": "species:orange-elephant-ear-sponge",
+      "source": "File:Agelas clathrodes 256774245.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Jay Brasher",
+      "sourceSize": [1800, 1350],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/peacock-flounder.jpg": {
+      "subject": "species:peacock-flounder",
+      "source": "File:Bothus lunatus.jpg",
+      "licence": "Public domain",
+      "artist": "Becky A. Dayhuff, Environmental Educator",
+      "sourceSize": [2272, 1704],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/pederson-cleaner-shrimp.jpg": {
+      "subject": "species:pederson-cleaner-shrimp",
+      "source": "File:Ancylomenes pedersoni 402186205.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Pauline Walsh Jacobson",
+      "sourceSize": [960, 720],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/permit-fish.jpg": {
+      "subject": "species:permit-fish",
+      "source": "File:Trachinotus falcatus.jpg",
+      "licence": "CC BY 3.0",
+      "artist": "Brian.gratwicke",
+      "sourceSize": [1024, 724],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/pillar-coral.jpg": {
+      "subject": "species:pillar-coral",
+      "source": "File:Dendrogyra cylindrus, Culebra.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Thomas Shahan",
+      "sourceSize": [1600, 1024],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/porcupinefish.jpg": {
+      "subject": "species:porcupinefish",
+      "source": "File:Der Gepunktete oder Gewöhnliche Igelfisch (Diodon hystrix) DSCF3721BE.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Kora27",
+      "sourceSize": [3373, 2267],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/porkfish.jpg": {
+      "subject": "species:porkfish",
+      "source": "File:Anisotremus virginicus photo.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "cralize",
+      "sourceSize": [1184, 996],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/princess-parrotfish.jpg": {
+      "subject": "species:princess-parrotfish",
+      "source": "File:Scarus taeniopterus.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [1200, 900],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/queen-angelfish.jpg": {
+      "subject": "species:queen-angelfish",
+      "source": "File:Holacanthus cilliaris.jpg",
+      "licence": "Public domain",
+      "artist": "Haplochromis at German Wikipedia",
+      "sourceSize": [700, 467],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/queen-conch.jpg": {
+      "subject": "species:queen-conch",
+      "source": "File:Lobatus gigas 2.jpg",
+      "licence": "Public domain",
+      "artist": "NOAA",
+      "sourceSize": [1132, 748],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/queen-parrotfish.jpg": {
+      "subject": "species:queen-parrotfish",
+      "source": "File:Queen parrotfish Scarus vetula (4658271432).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Paul Asman and Jill Lenoble",
+      "sourceSize": [1510, 1007],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/queen-triggerfish.jpg": {
+      "subject": "species:queen-triggerfish",
+      "source": "File:Balistes vetula (queen triggerfish) (San Salvador Island, Bahamas) 4 (16151145845).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "James St. John",
+      "sourceSize": [3000, 2400],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/rainbow-parrotfish.jpg": {
+      "subject": "species:rainbow-parrotfish",
+      "source": "File:Rainbow parrotfish.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Paul Asman and Jill Lenoble",
+      "sourceSize": [1595, 1063],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/red-grouper.jpg": {
+      "subject": "species:red-grouper",
+      "source": "File:Epinephelus morio in Madagascar Reef.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Simões, N.; Zarco Perello, S.; Moreno Mendoza, R.",
+      "sourceSize": [1024, 536],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/red-rope-sponge.jpg": {
+      "subject": "species:red-rope-sponge",
+      "source": "File:Haliclona rubens.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "James St. John",
+      "sourceSize": [3248, 2596],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/redband-parrotfish.jpg": {
+      "subject": "species:redband-parrotfish",
+      "source": "File:Sparisoma aurofrenatum.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [840, 1260],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/redlip-blenny.jpg": {
+      "subject": "species:redlip-blenny",
+      "source": "File:Ophioblennius macclurei (Redlip Blenny).jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood Nick Hobgood",
+      "sourceSize": [1800, 2400],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/reef-butterflyfish.jpg": {
+      "subject": "species:reef-butterflyfish",
+      "source": "File:Chaetodon sedentarius Brasil.jpg",
+      "licence": "CC BY 2.5",
+      "artist": "Bernard E. Picton",
+      "sourceSize": [1024, 768],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/remora.jpg": {
+      "subject": "species:remora",
+      "source": "File:Echeneis naucrates - Reef1980.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "NOAA Photo Library",
+      "sourceSize": [2048, 1536],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/rock-beauty.jpg": {
+      "subject": "species:rock-beauty",
+      "source": "File:Holacanthus tricolor 1.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Laszlo Ilyes (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [1200, 900],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/rock-hind.jpg": {
+      "subject": "species:rock-hind",
+      "source": "File:Rock hind Epinephelus adscensionis (2413645734).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Paul Asman and Jill Lenoble",
+      "sourceSize": [1467, 978],
+      "crop": "cropped to 0.1,0.35,0.7,0.6 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/royal-gramma.jpg": {
+      "subject": "species:royal-gramma",
+      "source": "File:Gramma loreto 257593008.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Dan Schofield",
+      "sourceSize": [2048, 1536],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/sand-diver.jpg": {
+      "subject": "species:sand-diver",
+      "source": "File:Synodus intermedius.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [1200, 800],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/schoolmaster-snapper.jpg": {
+      "subject": "species:schoolmaster-snapper",
+      "source": "File:Lutjanus.JPG",
+      "licence": "CC BY-SA 3.0",
+      "artist": "albert kok",
+      "sourceSize": [1648, 1040],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/scrawled-filefish.jpg": {
+      "subject": "species:scrawled-filefish",
+      "source": "File:Pez lija pintado (Aluterus scriptus), mar Rojo, Egipto, 2023-04-19, DD 47.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Diego Delso",
+      "sourceSize": [5405, 3603],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/sea-plume.jpg": {
+      "subject": "species:sea-plume",
+      "source": "File:Pseudopterogorgia sp.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "James St. John",
+      "sourceSize": [4000, 3000],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/sergeant-major.jpg": {
+      "subject": "species:sergeant-major",
+      "source": "File:Abudefduf saxatilis.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "cralize",
+      "sourceSize": [838, 722],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/sharknose-goby.jpg": {
+      "subject": "species:sharknose-goby",
+      "source": "File:Elacatinus evelynae.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [1800, 1123],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/sharpnose-puffer.jpg": {
+      "subject": "species:sharpnose-puffer",
+      "source": "File:Canthigaster rostrata (47475835002).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES from Cleveland, Ohio, USA",
+      "sourceSize": [3231, 2154],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/sharptail-eel.jpg": {
+      "subject": "species:sharptail-eel",
+      "source": "File:Myrichthys breviceps 2.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Barry Peters`",
+      "sourceSize": [2048, 1536],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/slipper-lobster.jpg": {
+      "subject": "species:slipper-lobster",
+      "source": "File:Slipper lobster.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Betty Wills",
+      "sourceSize": [2300, 1840],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/smooth-trunkfish.jpg": {
+      "subject": "species:smooth-trunkfish",
+      "source": "File:Lactophrys triqueter 1.jpg",
+      "licence": "Public domain",
+      "artist": "Becky A. Dayhuff, Environmental Educator",
+      "sourceSize": [1599, 1199],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/southern-stingray.jpg": {
+      "subject": "species:southern-stingray",
+      "source": "File:Dasyatis americana.jpg",
+      "licence": "Public domain",
+      "artist": "Becky A. Dayhuff, Environmental Educator",
+      "sourceSize": [1704, 1278],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/spanish-hogfish.jpg": {
+      "subject": "species:spanish-hogfish",
+      "source": "File:Bodianus rufus.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Ventura from Brasil",
+      "sourceSize": [2592, 1944],
+      "crop": "cropped to 0.03,0.25,0.85,0.65 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/spiny-lobster.jpg": {
+      "subject": "species:spiny-lobster",
+      "source": "File:Caribbean Spiny Lobster 1 - Blackbird Caye - Belize 2016 (24239777714).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Adam",
+      "sourceSize": [2445, 1958],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/splendid-toadfish.jpg": {
+      "subject": "species:splendid-toadfish",
+      "source": "File:Splendid toadfish.jpg",
+      "licence": "Public domain",
+      "artist": "Randall McNeely",
+      "sourceSize": [2047, 1363],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/spotfin-butterflyfish.jpg": {
+      "subject": "species:spotfin-butterflyfish",
+      "source": "File:Chaetodon ocellatus.jpg",
+      "licence": "Public domain",
+      "artist": "",
+      "sourceSize": [1056, 800],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/spotted-cleaner-shrimp.jpg": {
+      "subject": "species:spotted-cleaner-shrimp",
+      "source": "File:Spotted cleaner shrimp (Periclimenes yucatanicus) - Harry's Hole Reef, Soto, Curaçao Netherland Antilles.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES from Cleveland, Ohio, USA",
+      "sourceSize": [2912, 4368],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/spotted-drum.jpg": {
+      "subject": "species:spotted-drum",
+      "source": "File:Equetus punctatus juvenile.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA",
+      "sourceSize": [1050, 675],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/spotted-eagle-ray.jpg": {
+      "subject": "species:spotted-eagle-ray",
+      "source": "File:Spotted Eagle Ray (Aetobatus narinari)2.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "john norton",
+      "sourceSize": [2848, 2136],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/spotted-moray.jpg": {
+      "subject": "species:spotted-moray",
+      "source": "File:Murène (Gymnothorax moringa).jpg",
+      "licence": "CC BY 3.0",
+      "artist": "Stéphanie De Nadaï",
+      "sourceSize": [1024, 768],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/spotted-scorpionfish.jpg": {
+      "subject": "species:spotted-scorpionfish",
+      "source": "File:Scorpaena plumieri 8zz.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Photo by David J. Stang",
+      "sourceSize": [1000, 667],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/spotted-trunkfish.jpg": {
+      "subject": "species:spotted-trunkfish",
+      "source": "File:Lactophrys bicaudalis.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "LASZLO ILYES from Cleveland, Ohio, USA",
+      "sourceSize": [1000, 1000],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/squirrelfish.jpg": {
+      "subject": "species:squirrelfish",
+      "source": "File:Squirrelfish Holocentrus ascensionis.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Brian Gratwicke",
+      "sourceSize": [2862, 1791],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/staghorn-coral.jpg": {
+      "subject": "species:staghorn-coral",
+      "source": "File:Healthy Staghorn.jpg",
+      "licence": "CC BY 2.5",
+      "artist": "Joeschmitty at English Wikipedia",
+      "sourceSize": [2592, 1944],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/stoplight-parrotfish.jpg": {
+      "subject": "species:stoplight-parrotfish",
+      "source": "File:Sparisoma viride 1.jpg",
+      "licence": "Public domain",
+      "artist": "Florida Keys National Marine Sanctuary Staff",
+      "sourceSize": [1804, 1188],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/stovepipe-sponge.jpg": {
+      "subject": "species:stovepipe-sponge",
+      "source": "File:Aplysina archeri (Stove-pipe Sponge-pink variation).jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Nhobgood (talk) Nick Hobgood",
+      "sourceSize": [1903, 2544],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/symmetrical-brain-coral.jpg": {
+      "subject": "species:symmetrical-brain-coral",
+      "source": "File:Diploria strigosa y Colpophyllia natans.jpg",
+      "licence": "Public domain",
+      "artist": "NOAA - Frank and Joyce Burek",
+      "sourceSize": [1309, 658],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/tarpon.jpg": {
+      "subject": "species:tarpon",
+      "source": "File:Atlantic tarpon.jpg",
+      "licence": "Public domain",
+      "artist": "",
+      "sourceSize": [679, 439],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/threespot-damselfish.jpg": {
+      "subject": "species:threespot-damselfish",
+      "source": "File:Threespot Damselfish (Stegastes planifrons) Juvenile.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Andy Blackledge",
+      "sourceSize": [1995, 1496],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/tiger-grouper.jpg": {
+      "subject": "species:tiger-grouper",
+      "source": "File:Tiger grouper.JPG",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Albert kok",
+      "sourceSize": [1973, 1164],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/trumpetfish.jpg": {
+      "subject": "species:trumpetfish",
+      "source": "File:Aulostomus maculatus b.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Colling-architektur",
+      "sourceSize": [4050, 1475],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/turtle-grass.jpg": {
+      "subject": "species:turtle-grass",
+      "source": "File:Seagrass Grahams Harbour.jpg",
+      "licence": "Public domain",
+      "artist": "Jstuby at English Wikipedia",
+      "sourceSize": [888, 584],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/upside-down-jellyfish.jpg": {
+      "subject": "species:upside-down-jellyfish",
+      "source": "File:Cassiopea xamachana (xndr).JPG",
+      "licence": "CC BY-SA 3.0",
+      "artist": "No machine-readable author provided. Svdmolen assumed (based on copyright claims).",
+      "sourceSize": [2592, 1944],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/whale-shark.jpg": {
+      "subject": "species:whale-shark",
+      "source": "File:Snorkeling whale shark 1.JPG",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Jaontiveros",
+      "sourceSize": [640, 480],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/white-grunt.jpg": {
+      "subject": "species:white-grunt",
+      "source": "File:White Grunt (5658507044).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Andy Blackledge",
+      "sourceSize": [2560, 1920],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/yellow-stingray.jpg": {
+      "subject": "species:yellow-stingray",
+      "source": "File:Urobatis jamaicensis - panoramio.jpg",
+      "licence": "CC BY 3.0",
+      "artist": "Juan Ortega",
+      "sourceSize": [1031, 603],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/yellow-tube-sponge.jpg": {
+      "subject": "species:yellow-tube-sponge",
+      "source": "File:Aplysina fistularis 261077713.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Darren Obbard",
+      "sourceSize": [2048, 1365],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/yellowfin-grouper.jpg": {
+      "subject": "species:yellowfin-grouper",
+      "source": "File:Mycteroperca venenosa Puerto Morelos.jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Kimon Berlin",
+      "sourceSize": [5472, 3648],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/yellowhead-jawfish.jpg": {
+      "subject": "species:yellowhead-jawfish",
+      "source": "File:2017, cuba, jardines aggressor, fraile I, yellowhead jawfish (23700547318).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "q phia",
+      "sourceSize": [4561, 3041],
+      "crop": "cropped to 0.15,0.2,0.65,0.7 (left, top, width, height as fractions of the original)",
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/yellowhead-wrasse.jpg": {
+      "subject": "species:yellowhead-wrasse",
+      "source": "File:Yellowhead wrasse Halichoeres garnoti (4676202122).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Paul Asman and Jill Lenoble",
+      "sourceSize": [945, 630],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/yellowtail-damselfish.jpg": {
+      "subject": "species:yellowtail-damselfish",
+      "source": "File:Microspathodon chrysurus.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Chika Watanabe",
+      "sourceSize": [800, 602],
+      "reviewed": "2026-10-14"
+    },
+    "marine-life/yellowtail-snapper.jpg": {
+      "subject": "species:yellowtail-snapper",
+      "source": "File:2006-10-06 18 - Yellowtail Snapper.JPG",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Transity",
+      "sourceSize": [1626, 1084],
+      "reviewed": "2026-10-14"
+    }
+  },
+  "unphotographed": {
+    "site:adolphus-busch": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:blue-grotto": {
+      "reason": "No Commons photograph of Blue Grotto (Williston) at 1024px or more, by name, area or category.",
+      "checked": "2026-10-14"
+    },
+    "site:breakers-reef": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:cheeca-rocks": {
+      "reason": "The only Commons photograph at the site documents the 2023 bleaching event, which is not how a diver meets the reef.",
+      "checked": "2026-10-14"
+    },
+    "site:coffins-patch": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:copenhagen-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:devils-den": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:eagle-wreck": {
+      "reason": "No Commons photograph of the Eagle wreck at 1024px or more.",
+      "checked": "2026-10-14"
+    },
+    "site:grecian-rocks": {
+      "reason": "The only Commons photograph at the site is people posing at the surface with a camera rig.",
+      "checked": "2026-10-14"
+    },
+    "site:jupiter-goliath-ledges": {
+      "reason": "The one Jupiter goliath-aggregation photograph is from Warriors Reef, a different site from the Wreck Trek this template describes.",
+      "checked": "2026-10-14"
+    },
+    "site:lady-luck-shipwreck-park": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:rainbow-river": {
+      "reason": "Commons holds only the headspring basin, where diving is not allowed; nothing of the KP Hole drift.",
+      "checked": "2026-10-14"
+    },
+    "site:thunderbolt-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:vamar-wreck": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    },
+    "site:western-dry-rocks": {
+      "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
+      "checked": "2026-10-14"
+    }
+  }
+}
