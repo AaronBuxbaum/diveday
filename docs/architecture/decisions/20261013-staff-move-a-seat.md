@@ -18,9 +18,23 @@ first.
 path; the roster row's "Move to another departure" is the one door.**
 
 - **Same row.** Everything keyed on the booking travels: order, payment, waiver, the `/ready` link,
-  notes, a package dive (released and re-settled against the new trip). Nothing is charged or
-  refunded. A paid seat that lists higher on the new departure is said back (`seat-moved-owed`),
-  the way a type change says it; a pending checkout at the old price is expired.
+  notes, a package dive (released and re-settled against the new trip), and a help request the
+  old crew has not handled yet. Nothing is charged or refunded. A paid seat that lists higher on
+  the new departure is said back (`seat-moved-owed`), the way a type change says it; a pending
+  checkout at the old price is expired.
+- **What was said about the old departure is cleared, never carried.** The conditions briefing
+  stamp, the "Anything changed?" answer, a staff pickup time and "running late" are each about the
+  old day, so the move nulls them. The briefing matters most: the notice carries the new time and
+  meeting point, not the new conditions, so the diver has read nothing about them, and `/ready`
+  must show the new conditions as unread. A help request the old crew already handled stays on
+  the old departure as its record.
+- **Money follows the invoice and the payment, which are keyed by booking.** A completed booking
+  checkout keeps the `trip_id` it was bought for: it is the record of what was sold, at that
+  departure's price, and is never re-keyed. The one revenue read that joins a checkout by its trip
+  (`src/db/report-lines.ts`) uses it only to file the money under Courses or Fun dives, and a move
+  never crosses that line (same kind only, below). The window it counts is the completion date,
+  not the departure date. Disputes, failed refunds and the paid-after-close queue name the
+  departure the charge was quoted for, which is the old one.
 - **Measured as a new staff seat.** The target row is locked (both trips in id order, then the
   seat), both capacity limits, the course ratio and a course's card and age gates (on the
   new session's date) are read under the lock, and the trip's certification gate refuses.
@@ -48,4 +62,6 @@ path; the roster row's "Move to another departure" is the one door.**
   does not get that reminder again for the new departure. The reschedule notice carries the new
   time and the `/ready` link; re-keying reminders is a follow-up.
 - A party lead cannot move with the party in one tap.
+- A report of money by departure would have to read the seat's order or payment, not its
+  checkout, to follow a moved seat. None exists today; one that is added reads it that way.
 - Revisit if shops ask to move whole parties.
