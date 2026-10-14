@@ -307,7 +307,7 @@ jobs:
 
   playwright:
     name: Playwright shard ${{ matrix.shard }}/6
-    needs: build
+    needs: [build, changes]
     # Nightly runs `real-postgres` only.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -363,9 +363,13 @@ jobs:
       # `--summary` every bin's weight to the job summary — which is where to
       # look first when one shard is slow again. An empty list is refused
       # here: `playwright test` with no file arguments runs every spec.
+      # `--skip` leaves out the path-gated pixel-probe spec when the `changes`
+      # job says nothing it tests changed; all six shards read the same output.
       - name: Run non-visual Playwright tests
+        env:
+          SKIP: ${{ needs.changes.outputs.pixel_probe == 'false' && 'e2e/pixel-probe.spec.ts' || '' }}
         run: |
-          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/6 --explain --summary="$GITHUB_STEP_SUMMARY")
+          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/6 --skip="${SKIP}" --explain --summary="$GITHUB_STEP_SUMMARY")
           if [ "${#spec_files[@]}" -eq 0 ]; then
             echo "::error::scripts/e2e-shard.mjs dealt this shard nothing; refusing to run every spec instead."
             exit 1
@@ -1055,6 +1059,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
       db: ${{ steps.filter.outputs.db }}
+      pixel_probe: ${{ steps.filter.outputs.pixel_probe }}
       runner: ${{ steps.runner.outputs.runner }}
     steps:
       - uses: actions/checkout@v7
@@ -1111,8 +1116,24 @@ jobs:
             || ! git rev-parse --verify -q "${head}^{commit}" > /dev/null 2>&1; then
             echo "db=true" >> "$GITHUB_OUTPUT"
             echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "pixel_probe=true" >> "$GITHUB_OUTPUT"
             echo "Diff range '${base}...${head}' is unresolvable — running everything." >> "$GITHUB_STEP_SUMMARY"
             exit 0
+          fi
+          # `pixel_probe` — did this change touch what e2e/pixel-probe.spec.ts
+          # tests? It drives the `scripts/pixel-probe` tool against `setContent`
+          # fixtures, and reads no page: 50 tests and 103 s of every pull
+          # request for a developer tool (test review 2026-10-14). It runs when
+          # the tool, its spec, the stylesheet it measures, the browser or this
+          # file changed, and on every push to main.
+          probe_paths=$(git diff --name-only "${base}...${head}" -- \
+            scripts/pixel-probe e2e/pixel-probe.spec.ts e2e/fixtures.ts src/app/globals.css \
+            package.json pnpm-lock.yaml .github/workflows/ci.yml)
+          if [ -z "${BASE_REF}" ] || [ -n "${probe_paths}" ]; then
+            echo "pixel_probe=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pixel_probe=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing pixel-probe tests changed — e2e/pixel-probe.spec.ts skipped." >> "$GITHUB_STEP_SUMMARY"
           fi
           # Three-dot, from the merge base: what this branch changed, not what
           # main did underneath it. Two dots would report every file main added
