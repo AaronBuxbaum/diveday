@@ -38,7 +38,7 @@ const BASE = {
 } satisfies Notification;
 
 describe("the weekly_digest notification", () => {
-  it("says what last week took, the tips and the open orders, in the shop's money", () => {
+  it("says what last week took, the tips and what is owed, in the shop's money", () => {
     const { text } = messageFor({
       ...BASE,
       sections: [
@@ -46,7 +46,7 @@ describe("the weekly_digest notification", () => {
           kind: "money",
           revenueCents: 412_000,
           tipsCents: 39_500,
-          openOrders: 2,
+          owed: { orderCents: 128_300, orderCount: 6, seatCents: 9_500, seatCount: 1 },
           currency: "usd",
           url: "https://diveday.example/shop/blue-mantis/orders",
         },
@@ -55,7 +55,8 @@ describe("the weekly_digest notification", () => {
     expect(text).toContain("Money");
     expect(text).toContain("Last week’s departures took $4,120.00 after tax.");
     expect(text).toContain("$395.00 in tips to pass on to the crew.");
-    expect(text).toContain("2 orders are still open.");
+    expect(text).toContain("Owed $1,283.00 on 6 open orders.");
+    expect(text).toContain("Owed $95.00 on 1 seat that sailed unpaid.");
     expect(text).toContain("Open Money: https://diveday.example/shop/blue-mantis/orders");
   });
 
@@ -67,15 +68,38 @@ describe("the weekly_digest notification", () => {
           kind: "money",
           revenueCents: 0,
           tipsCents: 0,
-          openOrders: 1,
+          owed: { orderCents: 4_800, orderCount: 1, seatCents: 0, seatCount: 0 },
           currency: "usd",
           url: "https://diveday.example/shop/blue-mantis/orders",
         },
       ],
     });
-    expect(text).toContain("1 order is still open.");
+    expect(text).toContain("Owed $48.00 on 1 open order.");
+    expect(text).not.toContain("sailed unpaid");
     expect(text).not.toContain("took");
     expect(text).not.toContain("tips");
+  });
+
+  it("tells the owner the safety facts and the gear due for service", () => {
+    const { text } = messageFor({
+      ...BASE,
+      sections: [
+        {
+          kind: "safety",
+          openRollCalls: 1,
+          uncrewed: 2,
+          incidents: 0,
+          url: "https://diveday.example/shop/blue-mantis",
+        },
+        { kind: "gear_service", due: 3, url: "https://diveday.example/shop/blue-mantis/gear" },
+      ],
+    });
+    expect(text).toContain(
+      "Safety\n1 roll call is still open.\n2 departures have no crew on them yet.",
+    );
+    expect(text).not.toContain("incident");
+    expect(text).toContain("3 units are due for service.");
+    expect(text).toContain("Open Gear: https://diveday.example/shop/blue-mantis/gear");
   });
 
   it("validates, and keys one email per person per week", () => {

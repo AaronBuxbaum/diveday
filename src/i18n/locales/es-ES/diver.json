@@ -648,7 +648,7 @@
     "photoAdded": "Añadida a tu resumen. ¡Gracias por compartirla!",
     "photoMissing": "Elige primero una foto y luego añádela.",
     "photoUnsupported": "Este centro todavía no tiene activada la subida de fotos, así que etiquétalas cuando publiques.",
-    "photoFailed": "Esa foto no se ha subido. Prueba con un JPEG o PNG de menos de 5\u00a0MB.",
+    "photoFailed": "Esa foto no se ha subido. Prueba con un JPEG o PNG de menos de 5 MB.",
     "photoCancelled": "Esta reserva no tiene resumen al que añadir una foto.",
     "tipCancelled": "Sin problema, no se ha cobrado la propina.",
     "tipRange": "Introduce una propina de entre 1 y 500 $.",
@@ -668,7 +668,7 @@
     "addAPhoto": "Añadir una foto",
     "chooseDifferentPhotos": "Elegir otras fotos",
     "photoWrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
-    "photoTooBigSuffix": ": supera los {maxMb}\u00a0MB. Prueba con una foto más pequeña.",
+    "photoTooBigSuffix": ": supera los {maxMb} MB. Prueba con una foto más pequeña.",
     "photoTooMany": "Elige un máximo de {max, plural, one {# foto} other {# fotos}} a la vez.",
     "addingPhoto": "Añadiendo…",
     "addToMyRecap": "Añadir a mi resumen",
@@ -1021,7 +1021,7 @@
     "emergencyContact": "Contacto de emergencia",
     "contactName": "Nombre del contacto",
     "contactPhone": "Teléfono del contacto",
-    "emergencyOnFile": "Ya registrado: {name}\u00a0·\u00a0<nowrap>{phone}</nowrap>.",
+    "emergencyOnFile": "Ya registrado: {name} · <nowrap>{phone}</nowrap>.",
     "emergencyContactChangeHint": "Cámbialo aquí si está desactualizado. Rellena los dos campos, o déjalos vacíos para mantener lo que ya está registrado. Pídele al centro que elimine el contacto de tu ficha si ya no quieres tenerlo.",
     "signature": "Tu firma",
     "typeFullName": "Escribe tu nombre completo",
@@ -2499,14 +2499,14 @@
       "needGear": "¿Necesitas alquilar equipo?",
       "bcd": "Chaleco",
       "wetsuit": "Neopreno",
-      "bcdPrice": "15,00\u00a0US$",
-      "wetsuitPrice": "12,00\u00a0US$",
-      "nitrox": "Me gustaría nitrox (12,00\u00a0US$ por inmersión)",
-      "fare": "145,00\u00a0US$ × 1 buceador",
-      "fareAmount": "145,00\u00a0US$",
-      "gearAmount": "27,00\u00a0US$",
+      "bcdPrice": "15,00 US$",
+      "wetsuitPrice": "12,00 US$",
+      "nitrox": "Me gustaría nitrox (12,00 US$ por inmersión)",
+      "fare": "145,00 US$ × 1 buceador",
+      "fareAmount": "145,00 US$",
+      "gearAmount": "27,00 US$",
       "dueNow": "A pagar ahora",
-      "total": "172,00\u00a0US$",
+      "total": "172,00 US$",
       "bookAndPay": "Reservar y pagar"
     },
     "storefront": {
@@ -2519,16 +2519,16 @@
       "nextBoat": "Próxima salida con plazas",
       "nextTime": "7:30",
       "nextWhen": "sáb, 10 oct",
-      "perDiver": "95\u00a0US$ por buceador",
+      "perDiver": "95 US$ por buceador",
       "bookThisBoat": "Reservar esta salida",
       "scheduleHeading": "Calendario",
       "weekday": "sáb",
       "month": "oct",
       "reefTime": "7:30 – 11:00",
       "reefSites": "Molasses Reef y French Reef",
-      "reefPrice": "95\u00a0US$",
+      "reefPrice": "95 US$",
       "nightTime": "19:30 – 21:30",
-      "nightPrice": "120\u00a0US$",
+      "nightPrice": "120 US$",
       "onlyLeft": "{count, plural, one {Solo queda # plaza} other {Solo quedan # plazas}}"
     },
     "waiverSigning": {
@@ -2597,7 +2597,7 @@
       "label": "Cursos",
       "eyebrow": "Curso {agency}",
       "summary": "Certifícate como PADI Open Water Diver",
-      "price": "595\u00a0US$",
+      "price": "595 US$",
       "perDiver": "por buceador",
       "duration": "Duración",
       "durationValue": "3 días · 8:00 – 17:00",
@@ -2619,15 +2619,15 @@
       "title": "Dinero",
       "newOrder": "Nuevo pedido",
       "today": "Hoy · sáb, 10 oct",
-      "dayMeta": "4 pedidos · 365,00\u00a0US$",
+      "dayMeta": "4 pedidos · 365,00 US$",
       "wreckTrip": "Pecio Spiegel Grove",
       "counterSale": "Alquiler: chaleco y regulador",
       "open": "Abierto",
       "partlyRefunded": "Reembolsado en parte",
       "refunded": "Reembolsado",
-      "amountReef": "95,00\u00a0US$",
-      "amountWreck": "145,00\u00a0US$",
-      "amountCounter": "30,00\u00a0US$"
+      "amountReef": "95,00 US$",
+      "amountWreck": "145,00 US$",
+      "amountCounter": "30,00 US$"
     },
     "scheduleWeek": {
       "label": "Agenda",
@@ -2642,9 +2642,9 @@
       "wreckTime": "8:00",
       "afternoonTrip": "Dos tanques de tarde",
       "wreckTrip": "Pecio Spiegel Grove",
-      "reefMeta": "Molasses Reef · Mantis I · 95\u00a0US$",
-      "afternoonMeta": "French Reef · Mantis I · 95\u00a0US$",
-      "wreckMeta": "Spiegel Grove · Mantis II · 145\u00a0US$",
+      "reefMeta": "Molasses Reef · Mantis I · 95 US$",
+      "afternoonMeta": "French Reef · Mantis I · 95 US$",
+      "wreckMeta": "Spiegel Grove · Mantis II · 145 US$",
       "crewLabel": "Tripulación:",
       "nobodyYet": "nadie todavía",
       "seats": "{booked} de {capacity}",
@@ -3046,7 +3046,7 @@
           },
           "waiverDocuments": {
             "what": "Documentos de exención / médicos",
-            "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5\u00a0MB."
+            "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5 MB."
           },
           "role": {
             "what": "Rol",
@@ -4255,8 +4255,9 @@
         "heading": "Dinero",
         "took": "Las salidas de la semana pasada dejaron {amount} después de impuestos.",
         "tips": "{amount} en propinas para repartir con la tripulación.",
-        "openOrders": "{count, plural, one {# pedido sigue abierto.} other {# pedidos siguen abiertos.}}",
-        "link": "Abrir Dinero"
+        "link": "Abrir Dinero",
+        "owedOrders": "Por cobrar {amount} en {count, plural, one {# pedido abierto} other {# pedidos abiertos}}.",
+        "owedSeats": "Por cobrar {amount} en {count, plural, one {# plaza que zarpó sin pagar} other {# plazas que zarparon sin pagar}}."
       },
       "thisWeek": {
         "heading": "Esta semana, {range}",
@@ -4288,7 +4289,19 @@
       "why": "Recibes esto cada lunes como parte del equipo de {shopName}.",
       "settings": "Ajustes de correo",
       "turnOff": "Dejar de recibir estos correos",
-      "quietWeek": "La semana pasada no hubo actividad y esta semana no hay nada en la agenda, así que este lunes no se envía ningún correo."
+      "quietWeek": "La semana pasada no hubo actividad y esta semana no hay nada en la agenda, así que este lunes no se envía ningún correo.",
+      "safety": {
+        "heading": "Seguridad",
+        "rollCalls": "{count, plural, one {# pase de lista sigue abierto.} other {# pases de lista siguen abiertos.}}",
+        "uncrewed": "{count, plural, one {# salida aún no tiene tripulación.} other {# salidas aún no tienen tripulación.}}",
+        "incidents": "{count, plural, one {Se presentó # informe de incidente la semana pasada.} other {Se presentaron # informes de incidente la semana pasada.}}",
+        "link": "Abrir Hoy"
+      },
+      "gearService": {
+        "heading": "Equipo",
+        "body": "{count, plural, one {# equipo necesita mantenimiento.} other {# equipos necesitan mantenimiento.}}",
+        "link": "Abrir Equipo"
+      }
     },
     "staffInvite": {
       "subject": "{inviterName} te ha invitado a {shopName} en DiveDay",

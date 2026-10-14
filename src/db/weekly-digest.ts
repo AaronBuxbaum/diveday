@@ -13,11 +13,13 @@ import {
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { shopPath } from "@/lib/staff-notices";
+import type { TodayActionKind } from "@/lib/today";
 import {
   type DigestWeeks,
   digestWeeks,
   isWeeklyDigestDue,
   NO_LAST_WEEK,
+  NO_SAFETY,
   noMoney,
   overdueTodayActions,
   WEEKLY_DIGEST_SECTION_PATHS,
@@ -30,12 +32,13 @@ import {
 import { inHorizonReadiness } from "./blockers";
 import type { AppDb, DbExecutor } from "./client";
 import { sendNotification } from "./notifications";
+import { readOwed } from "./owed";
 import { getMonthlyReport } from "./reporting";
 import { readReviewsAwaitingModeration } from "./reviews";
 import {
   bookings,
   courseInquiries,
-  orders,
+  incidentReports,
   people,
   personRoles,
   shops,
@@ -184,11 +187,11 @@ async function countReviewsReceived(
 }
 
 /**
- * Date requests still waiting on a boat: every one asking for a day from
- * today on, plus the ones that named no day and came in since last Monday.
- * A request has no "answered" state (the staff list is the whole shop's,
- * unfiltered), so a named day that has passed is the only honest sign one is
- * no longer waiting, and an undated one is news for a week.
+ * Date requests still waiting on a boat: every one not marked done
+ * (`handledAt`, the stamp every staff reader of requests filters on; fourth UX
+ * review, item 24) that asks for a day from today on, plus the undated ones
+ * that came in since last Monday. A named day that has passed is no longer
+ * waiting either, and an undated one is news for a week.
  */
 async function countDateRequestsWaiting(
   db: DbExecutor,
@@ -202,6 +205,7 @@ async function countDateRequestsWaiting(
     .where(
       and(
         eq(courseInquiries.shopId, shopId),
+        isNull(courseInquiries.handledAt),
         or(
           sql`greatest(${courseInquiries.preferredDate}, ${courseInquiries.alternateDate}) >= ${today}`,
           and(
@@ -215,18 +219,40 @@ async function countDateRequestsWaiting(
   return row?.n ?? 0;
 }
 
-/**
- * Orders still open at this shop, whatever they were raised for: the
- * invoices a shop is waiting on, as the Orders ledger's "Open" filter shows
- * them.
- */
-async function countOpenOrders(db: DbExecutor, shopId: string): Promise<number> {
+/** Incident reports filed in the window: the safety line's third fact (item 24). */
+async function countIncidentsFiled(
+  db: DbExecutor,
+  shopId: string,
+  from: Date,
+  to: Date,
+): Promise<number> {
   const [row] = await db
     .select({ n: count() })
-    .from(orders)
-    .where(and(eq(orders.shopId, shopId), eq(orders.status, "open")));
+    .from(incidentReports)
+    .where(
+      and(
+        eq(incidentReports.shopId, shopId),
+        eq(incidentReports.status, "filed"),
+        gte(incidentReports.filedAt, from),
+        lt(incidentReports.filedAt, to),
+      ),
+    );
   return row?.n ?? 0;
 }
+
+/** The Today rows the safety line counts: a roll call still open, a boat with no crew. */
+const ROLL_CALL_KINDS: ReadonlySet<TodayActionKind> = new Set<TodayActionKind>([
+  "roll_call_missing_diver",
+  "roll_call_missing_crew",
+  "roll_call_unfinished",
+  "roll_call_crew_unfinished",
+  "roll_call_departure_open",
+  "roll_call_not_started",
+]);
+const UNCREWED_KINDS: ReadonlySet<TodayActionKind> = new Set<TodayActionKind>([
+  "uncrewed_departure",
+  "uncrewed_course",
+]);
 
 /**
  * Everything the email could say about this shop at `now`, in both grades
@@ -283,14 +309,18 @@ export async function readWeeklyDigestFacts(
     );
   const [reportsToday, staffToday] = await Promise.all([todayQueue(true), todayQueue(false)]);
 
-  const [bookingsMade, reviewsReceived, awaiting, dateRequestsWaiting, openOrders] =
+  const [bookingsMade, reviewsReceived, awaiting, dateRequestsWaiting, owed, incidents] =
     await Promise.all([
       countBookingsMade(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
       countReviewsReceived(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
       readReviewsAwaitingModeration(db, shop.id),
       countDateRequestsWaiting(db, shop.id, weeks, weeks.weekOf),
-      countOpenOrders(db, shop.id),
+      readOwed(db, shop, now),
+      countIncidentsFiled(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
     ]);
+  // Today's own rows, counted rather than detected twice (item 24).
+  const countKinds = (kinds: ReadonlySet<TodayActionKind>) =>
+    reportsToday.actions.filter((action) => kinds.has(action.kind)).length;
 
   const shared = {
     thisWeek: {
@@ -319,8 +349,19 @@ export async function readWeeklyDigestFacts(
         money: {
           revenueCents: lastWeekReport.revenueCents,
           tipsCents: lastWeekReport.tipsCents,
-          openOrders,
+          owed: {
+            orderCents: owed.orders.cents,
+            orderCount: owed.orders.count,
+            seatCents: owed.seats.cents,
+            seatCount: owed.seats.count,
+          },
           currency: shop.currency,
+        },
+        gearServiceDue: countKinds(new Set<TodayActionKind>(["gear_service_due"])),
+        safety: {
+          openRollCalls: countKinds(ROLL_CALL_KINDS),
+          uncrewed: countKinds(UNCREWED_KINDS),
+          incidents,
         },
       },
       staff: {
@@ -328,6 +369,8 @@ export async function readWeeklyDigestFacts(
         lastWeek: NO_LAST_WEEK,
         overdueTodayItems: overdueTodayActions(staffToday.actions, now),
         money: noMoney(shop.currency),
+        gearServiceDue: 0,
+        safety: NO_SAFETY,
       },
     },
   };

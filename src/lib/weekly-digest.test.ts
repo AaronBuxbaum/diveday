@@ -3,6 +3,7 @@ import {
   digestWeeks,
   isWeeklyDigestDue,
   mondayOnOrBefore,
+  NO_SAFETY,
   noMoney,
   overdueTodayActions,
   seatFillPercent,
@@ -21,7 +22,14 @@ const QUIET: WeeklyDigestFacts = {
   reviews: { received: 0, awaitingModeration: 0 },
   dateRequestsWaiting: 0,
   overdueTodayItems: 0,
-  money: { revenueCents: 0, tipsCents: 0, openOrders: 0, currency: "usd" },
+  money: {
+    revenueCents: 0,
+    tipsCents: 0,
+    owed: { orderCents: 0, orderCount: 0, seatCents: 0, seatCount: 0 },
+    currency: "usd",
+  },
+  gearServiceDue: 0,
+  safety: NO_SAFETY,
 };
 
 describe("mondayOnOrBefore", () => {
@@ -254,16 +262,25 @@ describe("weeklyDigestSections", () => {
       reviews: { received: 2, awaitingModeration: 0 },
       dateRequestsWaiting: 2,
       overdueTodayItems: 5,
-      money: { revenueCents: 412_000, tipsCents: 39_500, openOrders: 2, currency: "usd" },
+      money: {
+        revenueCents: 412_000,
+        tipsCents: 39_500,
+        owed: { orderCents: 128_300, orderCount: 2, seatCents: 0, seatCount: 0 },
+        currency: "usd",
+      },
+      gearServiceDue: 2,
+      safety: { openRollCalls: 1, uncrewed: 0, incidents: 0 },
     });
     expect(sections.map((section) => section.kind)).toEqual([
       "last_week",
       "money",
       "this_week",
       "waivers",
+      "safety",
       "reviews",
       "date_requests",
       "overdue",
+      "gear_service",
     ]);
   });
 });
@@ -275,26 +292,54 @@ describe("weeklyDigestSections", () => {
  * staff grade's are zero, so a crew member's email never has it.
  */
 describe("the money section", () => {
-  it("says what last week took, the tips to pass on and the orders still open", () => {
-    const sections = weeklyDigestSections({
-      ...QUIET,
-      money: { revenueCents: 412_000, tipsCents: 39_500, openOrders: 2, currency: "usd" },
-    });
-    expect(sections).toEqual([
-      { kind: "money", revenueCents: 412_000, tipsCents: 39_500, openOrders: 2, currency: "usd" },
-    ]);
+  it("says what last week took, the tips to pass on and what the shop is owed", () => {
+    const money = {
+      revenueCents: 412_000,
+      tipsCents: 39_500,
+      owed: { orderCents: 128_300, orderCount: 2, seatCents: 0, seatCount: 0 },
+      currency: "usd",
+    };
+    const sections = weeklyDigestSections({ ...QUIET, money });
+    expect(sections).toEqual([{ kind: "money", ...money }]);
   });
 
-  it("is built from open orders alone in a week nothing sailed", () => {
+  it("is built from what is owed alone in a week nothing sailed", () => {
     const sections = weeklyDigestSections({
       ...QUIET,
-      money: { revenueCents: 0, tipsCents: 0, openOrders: 1, currency: "usd" },
+      money: {
+        revenueCents: 0,
+        tipsCents: 0,
+        owed: { orderCents: 0, orderCount: 0, seatCents: 9_500, seatCount: 1 },
+        currency: "usd",
+      },
     });
     expect(sections.map((section) => section.kind)).toEqual(["money"]);
   });
 
   it("is never built from the staff grade's money", () => {
     expect(weeklyDigestSections({ ...QUIET, money: noMoney("usd") })).toEqual([]);
+  });
+});
+
+/**
+ * **The owner's gear line and safety sentence** (fourth UX review, item 24):
+ * each only when it has something to say, and never from the staff grade,
+ * whose facts are zero.
+ */
+describe("the gear and safety sections", () => {
+  it("says how many units are due for service", () => {
+    expect(weeklyDigestSections({ ...QUIET, gearServiceDue: 2 })).toEqual([
+      { kind: "gear_service", due: 2 },
+    ]);
+  });
+
+  it("carries roll calls left open, boats with no crew and incidents filed", () => {
+    const safety = { openRollCalls: 0, uncrewed: 2, incidents: 1 };
+    expect(weeklyDigestSections({ ...QUIET, safety })).toEqual([{ kind: "safety", ...safety }]);
+  });
+
+  it("says nothing when the week was safe and the gear is in date", () => {
+    expect(weeklyDigestSections({ ...QUIET, safety: NO_SAFETY, gearServiceDue: 0 })).toEqual([]);
   });
 });
 
