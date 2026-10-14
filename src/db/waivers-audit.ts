@@ -25,6 +25,12 @@ export const WAIVER_INTEGRITY_PAGE_SIZE = PAGE_SIZE.list;
 type WaiverAuditJoinRow = {
   /** Sealed columns only: never the bearer token or an unsigned draft. */
   record: WaiverSealedFields;
+  /**
+   * The physician's answer, if one was recorded: the shop's later act on the
+   * row, so outside the seal and selected beside it (`AUDIT_CLEARANCE_COLUMNS`).
+   */
+  medicalClearedAt: Date | null;
+  medicalClearanceDeclinedAt: Date | null;
   personName: string;
   tripId: string | null;
   tripTitle: string | null;
@@ -32,11 +38,22 @@ type WaiverAuditJoinRow = {
 };
 
 /**
+ * Where a medical hold stands. A clearance leaves the record `medical_review`
+ * (`isCleanCompletion`), so without these the log could not tell a cleared
+ * diver from one nobody has heard back about.
+ */
+const AUDIT_CLEARANCE_COLUMNS = {
+  medicalClearedAt: waiverRecords.medicalClearedAt,
+  medicalClearanceDeclinedAt: waiverRecords.medicalClearanceDeclinedAt,
+};
+
+/**
  * Shared row shaping for the signature log: never the bearer token, never
- * the raw medical questionnaire — a medical hold surfaces only as
- * `flaggedPrompts`, the "answered yes" prompts a reviewer must check, the
- * same summary `flaggedMedicalPrompts` already gives the trip roster
- * (`RosterSection.tsx`).
+ * the raw medical questionnaire. A medical hold is the `status` and where it
+ * stands is the two clearance stamps; `flaggedPrompts` is only the "answered
+ * yes" prompts a reviewer must check, the same summary `flaggedMedicalPrompts`
+ * gives the trip roster (`RosterSection.tsx`), and is empty on a paper or
+ * status-only hold that stores no answers.
  */
 function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
   return {
@@ -58,6 +75,8 @@ function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
     /** Who co-signed a minor's release, or null (ADR 20260907-guardian-co-signature). */
     guardian: guardianSignatureOf(row.record),
     integrity: verifyWaiverIntegrity(row.record),
+    medicalClearedAt: row.medicalClearedAt,
+    medicalClearanceDeclinedAt: row.medicalClearanceDeclinedAt,
     flaggedPrompts:
       row.record.status === "medical_review" && row.record.medicalAnswers
         ? flaggedMedicalPrompts(row.record.medicalAnswers)
@@ -71,8 +90,10 @@ export type SignedWaiverEntry = ReturnType<typeof toSignedWaiverEntry>;
  * The signed-record views the Waivers page offers beside "All": records whose
  * seal cannot be checked (`verifyWaiverIntegrity` → `unsealed`: no hash or no
  * seal version, which is every imported record and anything signed before
- * sealing), and every record on a medical hold (`medical_review`: a physician
- * referral nobody has answered, or one the physician did not clear). The hold
+ * sealing), and every record that went to a physician (`medical_review`): a
+ * referral nobody has answered, one the physician did not clear, and one they
+ * cleared, which keeps its status and stays in the diver's medical history.
+ * Each row carries which of the three it is, and the log says so. The hold
  * is the status, not the answers: a paper or status-only hold stores none and
  * still refuses boarding (`src/lib/readiness.ts`), so the view must not need
  * them.
@@ -151,6 +172,7 @@ export async function listWaiverIntegrityAudit(
       db
         .select({
           record: WAIVER_SEALED_COLUMNS,
+          ...AUDIT_CLEARANCE_COLUMNS,
           personName: people.fullName,
           tripId: trips.id,
           tripTitle: trips.title,
@@ -198,6 +220,7 @@ export async function getSignedWaiverRecordForShop(
   const [row] = await db
     .select({
       record: WAIVER_SEALED_COLUMNS,
+      ...AUDIT_CLEARANCE_COLUMNS,
       personName: people.fullName,
       tripId: trips.id,
       tripTitle: trips.title,
