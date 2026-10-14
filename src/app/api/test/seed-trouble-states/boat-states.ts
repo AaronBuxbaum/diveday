@@ -149,7 +149,7 @@ async function leaveASeatUncounted(
   const [counted] = await db
     .select({ recorderId: rollCallEvents.recordedByPersonId })
     .from(rollCallEvents)
-    .where(eq(rollCallEvents.tripId, trip.id))
+    .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, trip.id)))
     .limit(1);
   if (turnedAway && counted) {
     const [refused] = await db.insert(bookings).values(seat(turnedAway.id)).returning();
