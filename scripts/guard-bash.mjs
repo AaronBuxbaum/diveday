@@ -102,7 +102,12 @@ function actionsRun(repoPath, id) {
     const out = readBounded(
       "gh",
       ["api", `${repoPath}/actions/runs/${id}`, "--jq", '.event + " " + .head_branch'],
-      { cwd: ROOT, encoding: "utf8", timeoutMs: 5_000, stdio: ["ignore", "pipe", "ignore"] },
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        timeoutMs: SUBPROCESS_TIMEOUTS.ghHookRead,
+        stdio: ["ignore", "pipe", "ignore"],
+      },
     );
     const [event, branch] = String(out).trim().split(" ");
     return event && branch ? { event, branch } : null;

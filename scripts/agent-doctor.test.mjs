@@ -18,6 +18,8 @@ const healthy = {
   strays: 0,
   stack: "stack: layer 2 of 3, top origin/claude/x-3",
   refusals: "",
+  hooksCheckout: { dir: "/home/claude/diveday", detached: true, behind: 0 },
+  mergeDriver: "node scripts/merge-drivers.mjs ratchets %O %A %B %P",
 };
 
 describe("the doctor's checks", () => {
@@ -78,7 +80,12 @@ describe("the doctor's checks", () => {
 
   it("reads origin/main as current after the session's own fetch, and leaves a failed one to the block", () => {
     const readers = {
-      git: (args) => (args.join(" ") === "log -1 --format=%cs origin/main" ? "2026-10-10" : null),
+      git: (args) =>
+        ({
+          "log -1 --format=%cs origin/main": "2026-10-10",
+          "config --get merge.diveday-ratchets.driver": "node scripts/merge-drivers.mjs",
+        })[args.join(" ")] ?? null,
+      hooksCheckout: () => ({ dir: "/repo", detached: true, behind: 0 }),
       pinnedMajor: () => 24,
       commandWorks: () => true,
       fetchAge: () => null,
@@ -136,6 +143,65 @@ describe("the doctor's checks", () => {
     const row = checks(facts).find((r) => r.name === "remote branches");
     expect(row).toMatchObject({ status: "info" });
     expect(row.detail).toBe("1 remote branches with no open PR (claude/merged-1)");
+  });
+});
+
+describe("the checkout the hooks load from, and the merge drivers", () => {
+  // 2026-10-13: every session's hooks came from a checkout 704 commits behind main.
+  it("warns when the hooks' checkout is detached behind main, with the command that moves it", () => {
+    const facts = {
+      ...healthy,
+      hooksCheckout: { dir: "/home/claude/diveday", detached: true, behind: 704 },
+    };
+    const row = checks(facts).find((r) => r.name === "hooks checkout");
+    expect(row).toMatchObject({ status: "warn" });
+    expect(row.detail).toBe("hooks run from /home/claude/diveday, 704 commits behind origin/main");
+    expect(row.fix).toContain("git -C /home/claude/diveday checkout --detach origin/main");
+    expect(summaryLines(facts)[0]).toContain("704 commits behind origin/main");
+  });
+
+  it("is quiet when that checkout is current, and only informs when it is on a branch", () => {
+    expect(checks(healthy).find((r) => r.name === "hooks checkout").status).toBe("ok");
+    const branch = {
+      ...healthy,
+      hooksCheckout: { dir: "/repo", detached: false, behind: 12 },
+    };
+    expect(checks(branch).find((r) => r.name === "hooks checkout").status).toBe("info");
+    expect(
+      checks({ ...healthy, hooksCheckout: null }).find((r) => r.name === "hooks checkout"),
+    ).toMatchObject({ status: "unknown" });
+  });
+
+  // 2026-10-13: the drivers were defined in no clone config and merges stopped on ratchets.json.
+  it("warns when the ratchet merge driver is not installed in this clone", () => {
+    const facts = { ...healthy, mergeDriver: null };
+    const row = checks(facts).find((r) => r.name === "merge drivers");
+    expect(row).toMatchObject({ status: "warn" });
+    expect(row.fix).toBe("node scripts/merge-drivers.mjs install");
+    expect(summaryLines(facts)[0]).toContain("merge drivers are not installed");
+    // Session start says a failed install itself; the summary does not say it twice.
+    expect(summaryLines({ ...facts, mergeDriversInstall: "not installed" })[0]).toBe(
+      "Doctor: nothing to warn about.",
+    );
+  });
+
+  it("reads both through injectable readers", () => {
+    const facts = gatherFacts("/repo", {
+      strays: false,
+      readers: {
+        git: (args) =>
+          args.join(" ") === "config --get merge.diveday-ratchets.driver" ? "node x" : null,
+        pinnedMajor: () => 24,
+        commandWorks: () => true,
+        fetchAge: () => 5_000,
+        installNeed: () => null,
+        readStack: () => null,
+        readLog: () => [],
+        hooksCheckout: () => ({ dir: "/p", detached: true, behind: 3 }),
+      },
+    });
+    expect(facts.mergeDriver).toBe("node x");
+    expect(facts.hooksCheckout).toEqual({ dir: "/p", detached: true, behind: 3 });
   });
 });
 

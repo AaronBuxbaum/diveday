@@ -98,6 +98,20 @@ function remoteHeads(root) {
     .filter(Boolean);
 }
 
+/**
+ * Where the checkout every session's hooks, settings and AGENTS.md load from stands against
+ * `origin/main`: `$CLAUDE_PROJECT_DIR`, which in the cloud containers is the shared clone the
+ * `wt-*` worktrees hang off. On 2026-10-13 it sat detached 704 commits behind, so three days of
+ * hooks ran nowhere (fourth review, row 1). Null when git could not answer.
+ */
+export function hooksCheckoutLag(dir) {
+  const git = gitReader(dir);
+  const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  const behind = Number(git(["rev-list", "--count", "HEAD..origin/main"]));
+  if (!branch || !Number.isInteger(behind)) return null;
+  return { dir, detached: branch === "HEAD", behind };
+}
+
 function openPullHeads() {
   try {
     return tracker()
@@ -122,7 +136,15 @@ function scheduledRuns(root, git) {
  */
 export function gatherFacts(
   root = ROOT,
-  { strays = true, remote = false, scheduled = false, readers = {}, fetched = null } = {},
+  {
+    strays = true,
+    remote = false,
+    scheduled = false,
+    readers = {},
+    fetched = null,
+    mergeDriversInstall = null,
+    projectDir = process.env.CLAUDE_PROJECT_DIR ?? root,
+  } = {},
 ) {
   const git = readers.git ?? gitReader(root);
   const facts = {
@@ -130,6 +152,9 @@ export function gatherFacts(
     // that just succeeded is current whatever FETCH_HEAD's path says; one that failed is
     // already said by the session block, so the summary does not say it twice.
     fetched,
+    // SessionStart's own driver install, when it ran just before this: its failure is the
+    // session block's line already.
+    mergeDriversInstall,
     nodeMajor: Number(process.versions.node.split(".")[0]),
     pinnedMajor: (readers.pinnedMajor ?? pinnedNodeMajor)(root),
     gh: (readers.commandWorks ?? commandWorks)("gh", ["--version"]),
@@ -138,6 +163,9 @@ export function gatherFacts(
     nodeModules: (readers.installNeed ?? installNeed)(root),
     strays: strays ? (readers.strayCount ?? strayCount)(root) : undefined,
     stack: stackSummary((readers.readStack ?? readStack)(git)),
+    hooksCheckout: (readers.hooksCheckout ?? hooksCheckoutLag)(projectDir),
+    // Git runs a driver `.gitattributes` names only when the clone's config defines it.
+    mergeDriver: git(["config", "--get", "merge.diveday-ratchets.driver"]),
     refusals: refusalLine(lastSessionRefusals((readers.readLog ?? readLog)({ root }), null)),
     // One cached network read: the session start asks for it (a red nightly is something a
     // session can fix and nobody else is reading), the tests do not.
@@ -189,6 +217,31 @@ export function checks(facts) {
     fix: stale
       ? "git fetch origin main — `verify:push` (off a stack), `check:closing-keywords` and the migration guard measure from it."
       : "",
+  });
+  const hooks = facts.hooksCheckout;
+  const behind = hooks ? `${hooks.behind} commit${hooks.behind === 1 ? "" : "s"}` : "";
+  rows.push({
+    name: "hooks checkout",
+    status: !hooks ? "unknown" : hooks.behind === 0 ? "ok" : hooks.detached ? "warn" : "info",
+    detail: !hooks
+      ? "could not read the checkout the hooks load from"
+      : hooks.behind === 0
+        ? `hooks run from ${hooks.dir}, current with origin/main`
+        : `hooks run from ${hooks.dir}, ${behind} behind origin/main`,
+    fix:
+      hooks && hooks.behind > 0
+        ? hooks.detached
+          ? `Session start fast-forwards it when it is clean; it was not, so move or commit what is there, then \`git -C ${hooks.dir} checkout --detach origin/main\`. Its hooks, settings and AGENTS.md take effect from the next session.`
+          : `It is on a branch, so its hooks are that branch's; session start moves only a detached one.`
+        : "",
+  });
+  rows.push({
+    name: "merge drivers",
+    status: facts.mergeDriver ? "ok" : "warn",
+    detail: facts.mergeDriver
+      ? "merge drivers are installed"
+      : "merge drivers are not installed, so a merge stops on scripts/ratchets.json and the other generated files",
+    fix: facts.mergeDriver ? "" : "node scripts/merge-drivers.mjs install",
   });
   rows.push({
     name: "node_modules",
@@ -266,7 +319,8 @@ export function summaryLines(facts) {
       row.status === "warn" &&
       row.name !== "hook refusals" &&
       // A failed session fetch is the session block's first line already.
-      !(row.name === "origin/main" && facts.fetched === "failed"),
+      !(row.name === "origin/main" && facts.fetched === "failed") &&
+      !(row.name === "merge drivers" && facts.mergeDriversInstall === "not installed"),
   );
   const first =
     warned.length === 0
