@@ -636,7 +636,11 @@ export type AgencyCheckResult =
       verdict: "level_unconfirmed";
       evidence: string;
     }
-  | { ok: true; verdict: "no_record" | "unreadable" }
+  | {
+      ok: true;
+      /** Nobody found; a page that reads as no result; or PADI listing several divers. */
+      verdict: "no_record" | "unreadable" | "several_records";
+    }
   | { ok: false; reason: "invalid" | "not-undoable" };
 
 /**

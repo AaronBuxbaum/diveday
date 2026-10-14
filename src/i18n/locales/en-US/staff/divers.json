@@ -70,7 +70,9 @@
       "matched": "{agency} shows this certification. Marked certified.",
       "levelUnconfirmed": "{agency} found this diver, but not at this level.",
       "noRecord": "{agency} has no match for this name.",
-      "unreadable": "Couldn’t read {agency}’s page."
+      "severalRecords": "{agency} lists more than one diver by this name.",
+      "unreadable": "Couldn’t read {agency}’s page.",
+      "signedOut": "Sign in to {agency} first, then check again."
     },
     "sightCard": "Verify certification record",
     "sightCardHint": "The diver told us this level. Enter the agency and number from the certification record you verified.",

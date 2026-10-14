@@ -68,13 +68,13 @@ export function AgencyCheckRow({
       // page that could not be read keeps the button, for another try.
       const answered =
         settled?.result?.ok === true &&
-        (settled.result.verdict === "level_unconfirmed" || settled.result.verdict === "no_record");
+        (settled.result.verdict === "level_unconfirmed" ||
+          settled.result.verdict === "no_record" ||
+          settled.result.verdict === "several_records");
       const showButton =
         host.hasExtension && pendingIds.has(card.certificationId) && !matched && !answered && copy;
       const outcome =
-        settled && copy
-          ? agencyCheckOutcomeText(settled.result, settled.transportFailed, copy)
-          : null;
+        settled && copy ? agencyCheckOutcomeText(settled.result, settled.failure, copy) : null;
       const evidence =
         settled?.result?.ok === true && settled.result.verdict === "level_unconfirmed"
           ? settled.result.evidence
@@ -112,7 +112,7 @@ export function AgencyCheckRow({
                   rel="noopener noreferrer"
                   className={`${LINK_BUTTON} print:hidden`}
                 >
-                  {copy.check}
+                  {copy.link}
                 </a>
               ) : null}
             </div>

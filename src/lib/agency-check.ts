@@ -39,7 +39,11 @@ type CertificationLevel =
  * - A higher rating's wording contains the lower one's ("Advanced Scuba
  *   Diver" contains "Scuba Diver"), so it matches the lower claim. A lower
  *   rating never matches a higher claim.
-
+ * - **PADI DiveChek** (signed in, layer 2 of the extension's second round)
+ *   is narrower still: the page must hold exactly one record naming the
+ *   diver, and must not say it found several divers. A results list is a
+ *   staffer's to read, never a match, even when one row would have been.
+ *
  * Everything short of a match leaves the card exactly as it was. "No record"
  * is never a failed check: CMAS says a missing result does not mean an invalid
  * card, and SDI says records from 2009 or earlier may be missing.
@@ -56,6 +60,9 @@ export const AGENCY_CHECKS = {
   gue: { needs: "card_number" },
   // A CMAS code, or names and birth date.
   cmas: { needs: "card_number_or_birth_date" },
+  // DiveChek, on the PADI Pros' Site behind the shop's own sign-in: first
+  // name, last name, birth date. A best guess until #2259's real-page test.
+  padi: { needs: "birth_date" },
 } as const satisfies Partial<
   Record<CertificationAgency, { needs: "card_number" | "birth_date" | "card_number_or_birth_date" }>
 >;
@@ -138,7 +145,23 @@ const LEVEL_WORDING: Record<
     open_water: ["One Star Diver", "1 Star Diver", "1-Star Diver"],
     advanced_open_water: ["Two Star Diver", "2 Star Diver", "2-Star Diver"],
   },
+  // "Scuba Diver" alone is PADI's lesser rating, never Open Water.
+  padi: {
+    open_water: ["Open Water Diver"],
+    advanced_open_water: ["Advanced Open Water Diver"],
+    rescue: ["Rescue Diver"],
+  },
 };
+
+/**
+ * Agencies whose page must show exactly one record for the diver. PADI's
+ * DiveChek is searched with the shop's own sign-in, and its result shape is a
+ * guess (#2259): a list of divers is read by a person, not by this.
+ */
+const ONE_RECORD_ONLY: ReadonlySet<CheckableAgency> = new Set(["padi"]);
+
+/** A page saying it found more than one: "2 divers found", "Showing 3 results". */
+const SEVERAL_FOUND = /(^| )([2-9]|[1-9]\d+) (results?|divers?|records?|matches)( |$)/;
 
 /** Words that make a line a limited or unfinished rating, never a match. */
 const LIMITING_WORDS = [
@@ -226,6 +249,8 @@ export type AgencyCheckVerdict =
   | { verdict: "level_unconfirmed"; evidence: string }
   /** The agency says it found nobody. The card stays as it was. */
   | { verdict: "no_record" }
+  /** The page lists several divers by this name (PADI): a staffer reads it. */
+  | { verdict: "several_records" }
   /** The page did not read as a result either way. The card stays as it was. */
   | { verdict: "unreadable" };
 
@@ -310,7 +335,7 @@ export function judgeAgencyPage(input: {
   // First and last on one line, in order, with any middle names between.
   const nameLine = new RegExp(`(^| )${escapeRegExp(first)}( \\S+)* ${escapeRegExp(last)}( |$)`);
 
-  let foundDiver: string | null = null;
+  const records: { from: number; to: number }[] = [];
   for (let index = 0; index < lines.length; index += 1) {
     if (!nameLine.test(lines[index] as string)) continue;
     let to = index + 1;
@@ -322,10 +347,22 @@ export function judgeAgencyPage(input: {
     ) {
       to += 1;
     }
-    const record = lines.slice(index, to);
     // A page that echoes the search ("Results for Jane Smith") above its own
     // "no results" has not found her.
-    if (record.some(saysNoRecord) || saysNoRecord(lines[to] ?? "")) continue;
+    if (lines.slice(index, to).some(saysNoRecord) || saysNoRecord(lines[to] ?? "")) continue;
+    records.push({ from: index, to });
+  }
+  if (
+    ONE_RECORD_ONLY.has(input.agency) &&
+    records.length > 0 &&
+    (records.length > 1 || lines.some((line) => SEVERAL_FOUND.test(line)))
+  ) {
+    return { verdict: "several_records" };
+  }
+
+  let foundDiver: string | null = null;
+  for (const { from: index, to } of records) {
+    const record = lines.slice(index, to);
     const recordEvidence = evidence(rawLines.slice(index, to));
     foundDiver ??= recordEvidence;
     if (!namesThisDiver(record, input)) continue;

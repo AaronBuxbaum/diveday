@@ -25,7 +25,7 @@ const { requestAgencyPage } = await import("@/components/useCertCheckExtension")
 const t = staffTranslator("en-US");
 const copies = agencyCheckCopies(t);
 
-function card(n: number, agency: "ssi" | "naui" = "ssi"): AgencyCheckableCard {
+function card(n: number, agency: "ssi" | "naui" | "padi" = "ssi"): AgencyCheckableCard {
   const [firstName, lastName] = ["Diver", `Number${n}`];
   return {
     certificationId: `card-${n}`,
@@ -176,6 +176,67 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
     expect(await screen.findByText(/^Stopped at Diver Number1/)).toBeInTheDocument();
     expect(action).not.toHaveBeenCalled();
     expect(vi.mocked(requestAgencyPage)).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers PADI as a real check, in its own words, with the member sign-in link kept for after", async () => {
+    withExtension();
+    vi.mocked(requestAgencyPage).mockResolvedValue({ ok: true, pageText: "page" });
+    renderDeparture([card(1, "padi")], () => ({ ok: true, verdict: "several_records" }));
+
+    await act(async () => {
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with PADI" }));
+    });
+
+    expect(
+      await row("person-1").findByText("PADI lists more than one diver by this name."),
+    ).toBeVisible();
+    expect(
+      row("person-1").getByRole("link", { name: "Check with PADI (member sign-in)" }),
+    ).toBeVisible();
+    expect(row("person-1").queryByRole("button", { name: "Check with PADI" })).toBeNull();
+  });
+
+  it("tells a staffer signed out of PADI to sign in, and keeps the button for after", async () => {
+    withExtension();
+    vi.mocked(requestAgencyPage).mockResolvedValue({ ok: false, reason: "signed_out" });
+    const action = renderDeparture([card(1, "padi")], () => ({ ok: true, verdict: "match" }));
+
+    await act(async () => {
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with PADI" }));
+    });
+
+    expect(
+      await row("person-1").findByText("Sign in to PADI first, then check again."),
+    ).toBeVisible();
+    expect(row("person-1").queryByText("Couldn’t read PADI’s page.")).toBeNull();
+    expect(row("person-1").getByRole("button", { name: "Check with PADI" })).toBeEnabled();
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it("stops Check all at the first PADI card when signed out of PADI, and says why", async () => {
+    withExtension();
+    vi.mocked(requestAgencyPage).mockImplementation(async (query) =>
+      query.agency === "padi"
+        ? { ok: false, reason: "signed_out" }
+        : { ok: true, pageText: "No results found" },
+    );
+    const action = renderDeparture([card(1), card(2, "padi"), card(3, "padi")], () => ({
+      ok: true,
+      verdict: "no_record",
+    }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Check all 3 with their agencies" }));
+    });
+
+    expect(
+      await screen.findByText(
+        "Stopped at Diver Number2: sign in to PADI first. The rest are left for you.",
+      ),
+    ).toBeInTheDocument();
+    expect(vi.mocked(requestAgencyPage)).toHaveBeenCalledTimes(2);
+    expect(action.mock.calls.map(([personId]) => personId)).toEqual(["person-1"]);
+    expect(row("person-3").getByRole("button", { name: "Check with PADI" })).toBeEnabled();
   });
 
   it("answers a single row's match with the diver record's toast and its Undo", async () => {

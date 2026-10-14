@@ -5,9 +5,11 @@ import {
   CHECK_REQUEST_TYPE,
   CHECK_RESULT_TYPE,
   ELEARNING_REQUEST_TYPE,
+  EXTENSION_FAILURE_REASONS,
   EXTENSION_MARKER_ATTRIBUTE,
   EXTENSION_MESSAGE_SOURCE,
   EXTENSION_READY_EVENT,
+  extensionFailureReason,
   PAGE_MESSAGE_SOURCE,
 } from "./cert-check-extension";
 import { ELEARNING_AGENCIES } from "./elearning-check";
@@ -44,10 +46,27 @@ describe("the extension's copy of the protocol", () => {
   it("reports the manifest's version", () => {
     expect(extension.VERSION).toBe(manifest.version);
   });
+
+  it("gives only reasons the app knows, so a signed-out PADI page says so", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const worker = await readFile(
+      new URL("../../extension/background.js", import.meta.url),
+      "utf8",
+    );
+    const reasons = new Set([...worker.matchAll(/reason: "([a-z_]+)"/g)].map((m) => m[1]));
+    expect(reasons).toContain("signed_out");
+    for (const reason of reasons) expect(EXTENSION_FAILURE_REASONS).toContain(reason);
+  });
+
+  it("reads anything else the extension says as a form it could not fill", () => {
+    expect(extensionFailureReason("signed_out")).toBe("signed_out");
+    expect(extensionFailureReason("Sign in, then <b>click here</b>")).toBe("fill_failed");
+    expect(extensionFailureReason(undefined)).toBe("fill_failed");
+  });
 });
 
 describe("the extension's agencies", () => {
-  const agencies = extension.AGENCIES as Record<string, { url: string }>;
+  const agencies = extension.AGENCIES as Record<string, { url: string; signIn?: boolean }>;
 
   it("checks exactly the agencies the app offers a check for", () => {
     expect(Object.keys(agencies).sort()).toEqual(Object.keys(AGENCY_CHECKS).sort());
@@ -56,7 +75,9 @@ describe("the extension's agencies", () => {
   it("opens the same page the app links to, and may read nothing else", () => {
     for (const [agency, spec] of Object.entries(agencies)) {
       const page = AGENCY_VERIFICATION_PAGES[agency as keyof typeof AGENCY_VERIFICATION_PAGES];
-      expect(spec.url).toBe(page?.url);
+      expect(spec.url).toBe(page?.checkUrl ?? page?.url);
+      expect(new URL(spec.url).protocol).toBe("https:");
+      expect(new URL(spec.url).search).toBe("");
       const origin = new URL(spec.url).origin;
       expect(manifest.host_permissions).toContain(`${origin}/*`);
     }
@@ -78,6 +99,23 @@ describe("the extension's agencies", () => {
     for (const spec of Object.values(elearning)) {
       expect(manifest.host_permissions).toContain(`${new URL(spec.url).origin}/*`);
     }
+  });
+
+  it("holds every lookup behind a member sign-in to the signed-in rules, and only those", () => {
+    for (const [agency, spec] of Object.entries(agencies)) {
+      const page = AGENCY_VERIFICATION_PAGES[agency as keyof typeof AGENCY_VERIFICATION_PAGES];
+      expect(spec.signIn === true, agency).toBe(page?.kind === "member_sign_in");
+    }
+    for (const spec of Object.values(extension.ELEARNING as Record<string, { signIn?: boolean }>)) {
+      expect(spec.signIn).toBe(true);
+    }
+  });
+
+  it("checks PADI's DiveChek on the Pros' Site the eLearning check reads", () => {
+    const elearning = extension.ELEARNING as Record<string, { url: string }>;
+    expect(new URL(agencies.padi?.url ?? "").origin).toBe(
+      new URL(elearning.padi?.url ?? "").origin,
+    );
   });
 
   it("talks only to DiveDay's own staff pages", () => {

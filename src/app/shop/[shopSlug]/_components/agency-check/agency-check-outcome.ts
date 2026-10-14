@@ -1,18 +1,33 @@
 import type { AgencyCheckResult } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
 import type { AgencyCheckOutcome } from "@/lib/agency-check-queue";
+import type { ExtensionFailureReason } from "@/lib/cert-check-extension";
 import type { AgencyCheckCopy } from "./agency-check-copy";
 
 /**
+ * Why the extension came back with no page to judge, or null when it did:
+ * - `transport`: it did not answer, or could not fill the agency's form. The
+ *   staffer is told the page could not be read, as for a captcha.
+ * - `signed_out`: a lookup behind the shop's own sign-in (PADI) met a sign-in
+ *   page. The staffer is told to sign in first.
+ *
+ * Either way nothing was sent to the server and nothing was written.
+ */
+export type AgencyCheckFailure = "transport" | "signed_out" | null;
+
+/** The extension's failure reason, as this check reads it. */
+export function agencyCheckFailure(reason: ExtensionFailureReason): AgencyCheckFailure {
+  return reason === "signed_out" ? "signed_out" : "transport";
+}
+
+/**
  * **What one card's check came to**, read the same way wherever it was
- * pressed (H-105). `transportFailed` is the extension not answering, or
- * answering that it could not fill the agency's form: the staffer is told the
- * page could not be read, as for a captcha, and nothing was written.
+ * pressed (H-105).
  */
 export function agencyCheckOutcome(
   result: AgencyCheckResult,
-  transportFailed: boolean,
+  failure: AgencyCheckFailure,
 ): AgencyCheckOutcome | null {
-  if (transportFailed) return "transport";
+  if (failure) return failure;
   if (!result) return null;
   if (!result.ok) return "refused";
   if (result.verdict === "undone") return null;
@@ -26,10 +41,11 @@ export function agencyCheckOutcome(
  */
 export function agencyCheckOutcomeText(
   result: AgencyCheckResult,
-  transportFailed: boolean,
+  failure: AgencyCheckFailure,
   copy: AgencyCheckCopy,
 ): string | null {
-  if (transportFailed) return copy.unreadable;
+  if (failure === "signed_out") return copy.signedOut;
+  if (failure) return copy.unreadable;
   if (!result) return null;
   if (!result.ok) return result.reason === "not-undoable" ? copy.undoFailed : copy.invalid;
   switch (result.verdict) {
@@ -37,6 +53,8 @@ export function agencyCheckOutcomeText(
       return copy.levelUnconfirmed;
     case "no_record":
       return copy.noRecord;
+    case "several_records":
+      return copy.severalRecords;
     case "unreadable":
       return copy.unreadable;
     default:

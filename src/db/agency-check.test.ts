@@ -77,8 +77,8 @@ describe("listAgencyCheckableCards", () => {
         status: "verified",
         reviewedAt: new Date("2026-10-01T00:00:00Z"),
       }),
-      // An agency the extension does not check (PADI comes later).
-      await card(db, shop.id, personId, { agency: "padi", identifier: "P-1" }),
+      // An agency the extension does not check (TDI's recreational cards are SDI's).
+      await card(db, shop.id, personId, { agency: "tdi", identifier: "T-1" }),
       // Deleted.
       await card(db, shop.id, personId, { deletedAt: new Date("2026-10-01T00:00:00Z") }),
     ];
@@ -111,6 +111,42 @@ describe("listAgencyCheckableCards", () => {
         }),
       ).toBeNull();
     }
+  });
+
+  it("offers a pending PADI card for DiveChek only when the diver's birth date is on file", async () => {
+    const { db, shop } = ctx;
+    const dated = await diver(db, shop.id, "Lena Ortiz");
+    const padi = await card(db, shop.id, dated, { agency: "padi", identifier: "1506AB1234" });
+    const [undated] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Iris Dale" })
+      .returning();
+    if (!undated) throw new Error("failed to insert a diver");
+    const undatedCard = await card(db, shop.id, undated.id, {
+      agency: "padi",
+      identifier: "1506AB9999",
+    });
+
+    const byPerson = await listAgencyCheckableCards(db, {
+      shopId: shop.id,
+      personIds: [dated, undated.id],
+    });
+
+    expect(byPerson.get(dated)?.map((c) => c.certificationId)).toEqual([padi.id]);
+    expect(byPerson.get(dated)?.[0]?.query).toMatchObject({
+      agency: "padi",
+      firstName: "Lena",
+      lastName: "Ortiz",
+      birthDate: "1990-04-12",
+    });
+    expect(byPerson.has(undated.id)).toBe(false);
+    expect(
+      await certificationForAgencyCheck(db, {
+        shopId: shop.id,
+        personId: undated.id,
+        certificationId: undatedCard.id,
+      }),
+    ).toBeNull();
   });
 
   it("offers an imported card still waiting for its confirm", async () => {
@@ -174,12 +210,12 @@ describe("withAgencyChecks", () => {
     const { db, shop } = ctx;
     const checkable = await diver(db, shop.id, "Noa Peleke");
     const pending = await card(db, shop.id, checkable);
-    const padiOnly = await diver(db, shop.id, "Tomas Reyes");
-    await card(db, shop.id, padiOnly, { agency: "padi", identifier: "P-9" });
+    const tdiOnly = await diver(db, shop.id, "Tomas Reyes");
+    await card(db, shop.id, tdiOnly, { agency: "tdi", identifier: "T-9" });
 
     const [withCards, withNone, untouched] = await withAgencyChecks(db, shop.id, [
       row(checkable, "a"),
-      row(padiOnly, "b"),
+      row(tdiOnly, "b"),
       row(null, "c"),
     ]);
 

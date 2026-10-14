@@ -120,11 +120,20 @@ describe("runAgencyCheckQueue", () => {
 });
 
 describe("stopsAgencyCheckQueue", () => {
-  it("stops only on an unreadable page or a transport failure", () => {
+  it("stops only on an unreadable page, a transport failure or a signed-out agency", () => {
     const stops = (
-      ["match", "level_unconfirmed", "no_record", "unreadable", "transport", "refused"] as const
+      [
+        "match",
+        "level_unconfirmed",
+        "no_record",
+        "several_records",
+        "unreadable",
+        "signed_out",
+        "transport",
+        "refused",
+      ] as const
     ).filter(stopsAgencyCheckQueue);
-    expect(stops).toEqual(["unreadable", "transport"]);
+    expect(stops).toEqual(["unreadable", "signed_out", "transport"]);
   });
 });
 

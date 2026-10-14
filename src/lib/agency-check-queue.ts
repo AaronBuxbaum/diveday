@@ -41,8 +41,12 @@ export type AgencyCheckOutcome =
   | "level_unconfirmed"
   /** The agency found nobody under this name: left for the staffer. */
   | "no_record"
+  /** The agency listed several divers by this name (PADI): left for the staffer. */
+  | "several_records"
   /** The page did not read as a result (a captcha, a redesign): stops the queue. */
   | "unreadable"
+  /** A lookup behind the shop's own sign-in (PADI) met a sign-in page: stops the queue. */
+  | "signed_out"
   /** The extension or DiveDay's server did not answer: stops the queue. */
   | "transport"
   /** DiveDay refused this one card (already certified meanwhile, gone): the queue goes on. */
@@ -53,7 +57,7 @@ export const AGENCY_CHECK_QUEUE_PAUSE_MS = 2_000;
 
 /** Whether this outcome ends the run: the next agency page would most likely fail the same way. */
 export function stopsAgencyCheckQueue(outcome: AgencyCheckOutcome): boolean {
-  return outcome === "unreadable" || outcome === "transport";
+  return outcome === "unreadable" || outcome === "transport" || outcome === "signed_out";
 }
 
 /**

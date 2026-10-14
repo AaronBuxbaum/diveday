@@ -43,7 +43,13 @@
   was typed with, and states the claimed level in the agency's own words, with nothing limiting it.
   It stamps `agency_checked_at`, with those words as the review note, and names the staffer whose
   browser ran it. Anything else writes nothing and leaves the link. Level cards only, for SSI, NAUI,
-  SDI, GUE and CMAS; an unsighted self-declaration still needs its sighting.
+  SDI, GUE, CMAS and PADI; an unsighted self-declaration still needs its sighting.
+- **DiveChek check** — the **Agency check** for a PADI card, on PADI's DiveChek in the staffer's own
+  browser, signed in to the PADI Pros' Site (H-114). Searched by name and birth date, so a diver
+  with no birth date on file keeps the link. Narrower than a public page: one record only, so a page
+  listing several divers by the name certifies nothing ("PADI lists more than one diver by this
+  name"), and a signed-out browser says "Sign in to PADI first" and stops a "Check all". A best
+  guess of PADI's page until a staffer tries it (#2259).
 - **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
   Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
   20261008-cert-check-extension). The server ticks **Materials done** only when one record names

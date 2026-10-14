@@ -9,8 +9,13 @@
 
 /**
  * Fill the agency's form with one diver and submit it.
+ *
+ * A page behind the shop's own sign-in (`spec.signIn`, PADI's Pros' Site) is
+ * held tighter than a public lookup: nothing is typed on a sign-in, sign-up or
+ * account address, every box filled must be one that searches, and the only
+ * button pressed is that search's own.
  * @param {{firstName: string, lastName: string, birthDate?: string|null, cardNumber?: string|null, email?: string}} query
- * @param {{fields: string[], dateFormat: string, either?: boolean}} spec
+ * @param {{fields: string[], dateFormat: string, either?: boolean, signIn?: boolean}} spec
  * @returns {{ok: true} | {ok: false, missing: string[]}}
  */
 function fillAgencyForm(query, spec) {
@@ -50,10 +55,13 @@ function fillAgencyForm(query, spec) {
     return style.display !== "none" && style.visibility !== "hidden";
   }
 
+  const signedInPage = spec.signIn === true;
   const controls = Array.from(document.querySelectorAll("input, select")).filter(
     (element) =>
       visible(element) &&
-      !/^(submit|button|checkbox|radio|file|image|reset|password|email)$/i.test(element.type),
+      !/^(submit|button|checkbox|radio|file|image|reset|password|email)$/i.test(element.type) &&
+      // Behind a sign-in, a diver's details go only into a search.
+      (!signedInPage || searches(element)),
   );
   // An email box is only ever filled with the student's email, never a name.
   const emailBoxes = Array.from(document.querySelectorAll("input")).filter(
@@ -107,7 +115,10 @@ function fillAgencyForm(query, spec) {
   // A student's email goes only into a search, never a page that signs in,
   // signs up or manages an account, whose first box may also ask for an email.
   const typesEmail = Array.isArray(spec.fields) && spec.fields.includes("email");
-  if (typesEmail && /log-?in|sign-?in|sign-?up|register|account|auth/i.test(location.pathname)) {
+  if (
+    (typesEmail || signedInPage) &&
+    /log-?in|sign-?in|sign-?up|register|account|auth|profile/i.test(location.pathname)
+  ) {
     return { ok: false, missing: ["signedIn"] };
   }
 
@@ -223,6 +234,27 @@ function fillAgencyForm(query, spec) {
   if (missing.length > 0 || used.length === 0) return { ok: false, missing };
 
   const form = used[0].form;
+  if (signedInPage) {
+    // Only the search's own button, or its form's own submit: never another
+    // of the signed-in page's buttons, whatever it says.
+    const own = form
+      ? Array.from(form.querySelectorAll('button, input[type="submit"]')).find((element) =>
+          /search|find|look ?up|buscar/i.test(element.textContent || element.value || ""),
+        )
+      : Array.from(
+          (used[0].closest('[role="search"]') || document.createElement("div")).querySelectorAll(
+            'button, input[type="submit"]',
+          ),
+        )[0];
+    if (own) {
+      own.click();
+    } else if (form) {
+      form.requestSubmit();
+    } else {
+      return { ok: false, missing: ["submit"] };
+    }
+    return { ok: true };
+  }
   const button =
     (form &&
       Array.from(form.querySelectorAll('button, input[type="submit"]')).find(
@@ -270,8 +302,49 @@ function excerptAround(text, email) {
   return lines.filter((_, index) => keep.has(index)).join("\n");
 }
 
+/**
+ * Only the part of a signed-in lookup page about the diver searched for: each
+ * line naming them (first and last name, accents and case aside) and the few
+ * lines under it, plus any line saying how many divers were found, which says
+ * nothing about anyone. When no line names them, the page's first lines, to
+ * say "No results" or "Sign in". Read with the shop's own PADI sign-in, the
+ * rest of the page is not DiveDay's to take.
+ * @param {string} text
+ * @param {string} firstName
+ * @param {string} lastName
+ */
+function excerptAroundName(text, firstName, lastName) {
+  const AFTER = 6;
+  const fold = (value) =>
+    ` ${value
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim()} `;
+  const first = fold(firstName);
+  const last = fold(lastName);
+  const lines = text.split(/\r?\n/);
+  const keep = new Set();
+  lines.forEach((line, index) => {
+    const folded = fold(line);
+    if (folded.length < 60 && / \d+ (results?|divers?|records?|matches) /.test(folded)) {
+      keep.add(index);
+    }
+    if (!folded.includes(first) || !folded.includes(last)) return;
+    for (let at = index; at <= Math.min(lines.length - 1, index + AFTER); at += 1) keep.add(at);
+  });
+  const named = lines.some((line) => {
+    const folded = fold(line);
+    return folded.includes(first) && folded.includes(last);
+  });
+  if (!named) return lines.slice(0, 40).join("\n");
+  return lines.filter((_, index) => keep.has(index)).join("\n");
+}
+
 globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
   fillAgencyForm,
   readAgencyPage,
   excerptAround,
+  excerptAroundName,
 });

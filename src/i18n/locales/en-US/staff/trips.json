@@ -475,7 +475,8 @@
       "start": "{count, plural, one {Check # with its agency} other {Check all # with their agencies}}",
       "progress": "Checking {done} of {total}…",
       "finished": "Checked {checked}. Certified: {certified}.",
-      "stopped": "Stopped at {name}: couldn’t read {agency}’s page. The rest are left for you."
+      "stopped": "Stopped at {name}: couldn’t read {agency}’s page. The rest are left for you.",
+      "stoppedSignedOut": "Stopped at {name}: sign in to {agency} first. The rest are left for you."
     },
     "certifyConfirm": "Confirm certification",
     "certifyDiver": "Certify",

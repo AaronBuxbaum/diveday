@@ -38,7 +38,7 @@ export function AgencyCheckAll({
     queue.phase === "running"
       ? fill(copy.progress, { done: queue.done, total: queue.total })
       : queue.phase === "ended" && queue.stopped
-        ? fill(copy.stopped, {
+        ? fill(queue.stopped.outcome === "signed_out" ? copy.stoppedSignedOut : copy.stopped, {
             name: queue.stopped.card.fullName,
             agency: host.copies[queue.stopped.card.agency]?.agency ?? "",
           })

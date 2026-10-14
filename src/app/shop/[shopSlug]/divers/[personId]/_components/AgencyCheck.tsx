@@ -4,6 +4,8 @@
 import { useActionState, useState, useTransition } from "react";
 import type { AgencyCheckCopy } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
 import {
+  type AgencyCheckFailure,
+  agencyCheckFailure,
   agencyCheckForm,
   agencyCheckOutcomeText,
 } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-outcome";
@@ -55,18 +57,18 @@ export function AgencyCheck({
   const hasExtension = useCertCheckExtension();
   const [result, formAction, judging] = useActionState(action, null);
   const [asking, setAsking] = useState(false);
-  const [extensionFailed, setExtensionFailed] = useState(false);
+  const [failure, setFailure] = useState<AgencyCheckFailure>(null);
   const [, startTransition] = useTransition();
   const busy = asking || judging;
 
   async function check() {
     if (!query) return;
     setAsking(true);
-    setExtensionFailed(false);
+    setFailure(null);
     const reply = await requestAgencyPage(query);
     setAsking(false);
     if (!reply.ok) {
-      setExtensionFailed(true);
+      setFailure(agencyCheckFailure(reply.reason));
       return;
     }
     const formData = agencyCheckForm(certificationId, reply.pageText);
@@ -75,11 +77,11 @@ export function AgencyCheck({
 
   const link = (
     <a href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
-      {copy.check}
+      {copy.link}
     </a>
   );
   const undo = result?.ok && result.verdict === "match" ? result.undo : undefined;
-  const outcome = agencyCheckOutcomeText(result, extensionFailed, copy);
+  const outcome = agencyCheckOutcomeText(result, failure, copy);
 
   return (
     <>

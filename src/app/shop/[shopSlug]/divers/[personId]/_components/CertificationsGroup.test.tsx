@@ -519,7 +519,7 @@ describe("the agency check, with the extension", () => {
     });
   });
 
-  it("keeps the link for PADI's member sign-in and for a diver's unsighted claim", () => {
+  it("keeps the link for a PADI card with no birth date to search DiveChek by, and for a diver's unsighted claim", () => {
     withExtension(() => {
       renderGroup(
         diver({
@@ -530,6 +530,23 @@ describe("the agency check, with the extension", () => {
         } as unknown as Partial<DiverProfile>),
       );
       expect(screen.queryByRole("button", { name: /Check with/ })).toBeNull();
+      expect(
+        screen.getByRole("link", { name: "Check with PADI (member sign-in)" }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("checks a PADI card with DiveChek when the diver's birth date is on file", () => {
+    withExtension(() => {
+      const profile = diver({
+        certifications: [pending("padi")],
+      } as unknown as Partial<DiverProfile>);
+      renderGroup({
+        ...profile,
+        person: { ...profile.person, dateOfBirth: "1990-04-12" },
+      } as unknown as DiverProfile);
+      expect(screen.getByRole("button", { name: "Check with PADI" })).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /Check with PADI/ })).toBeNull();
     });
   });
 

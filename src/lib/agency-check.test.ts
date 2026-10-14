@@ -41,23 +41,14 @@ describe("agencyCheckQuery", () => {
     });
   });
 
-  it("checks nothing for PADI's member sign-in, for TDI, whose recreational cards are SDI's, or for an agency with no lookup", () => {
-    for (const agency of [
-      "padi",
-      "tdi",
-      "raid",
-      "bsac",
-      "iantd",
-      "nss_cds",
-      "nacd",
-      "other",
-    ] as const) {
+  it("checks nothing for TDI, whose recreational cards are SDI's, or for an agency with no lookup", () => {
+    for (const agency of ["tdi", "raid", "bsac", "iantd", "nss_cds", "nacd", "other"] as const) {
       expect(agencyCheckQuery({ ...base, agency })).toBeNull();
     }
   });
 
   it("needs a birth date where the form asks for one", () => {
-    for (const agency of ["naui", "sdi"] as const) {
+    for (const agency of ["naui", "sdi", "padi"] as const) {
       expect(agencyCheckQuery({ ...base, agency, dateOfBirth: null })).toBeNull();
     }
   });
@@ -91,9 +82,18 @@ describe("agencyCheckQuery", () => {
     for (const agency of Object.keys(AGENCY_CHECKS)) {
       expect(isCheckableAgency(agency)).toBe(true);
       const page = AGENCY_VERIFICATION_PAGES[agency as keyof typeof AGENCY_VERIFICATION_PAGES];
-      expect(page?.kind).not.toBe("member_sign_in");
       expect(page).toBeDefined();
     }
+  });
+
+  it("types PADI's DiveChek the diver's name and birth date", () => {
+    expect(agencyCheckQuery({ ...base, agency: "padi", identifier: null })).toEqual({
+      agency: "padi",
+      firstName: "Lena",
+      lastName: "Ortiz",
+      birthDate: "1990-04-12",
+      cardNumber: null,
+    });
   });
 });
 
@@ -307,5 +307,98 @@ describe("judgeAgencyPage", () => {
   it("reads no further than the page-text ceiling", () => {
     const padding = `${"filler line\n".repeat(5000)}`;
     expect(judge(`${padding}Lena Ortiz\n1990-04-12\nScuba Diver`).verdict).toBe("unreadable");
+  });
+});
+
+/**
+ * **PADI DiveChek** (layer 2 of the cert-check extension's second round). The
+ * page sits behind the shop's own PADI Pro sign-in and nobody has seen it yet
+ * (#2259), so these stand-ins are a best guess at its shape. What they pin is
+ * the rule, which is the same as every agency's and narrower: name, birth date
+ * and PADI's own words for the level in one record, and only one record.
+ */
+describe("judgeAgencyPage on PADI DiveChek", () => {
+  const padi = (pageText: string, overrides: Partial<Parameters<typeof judgeAgencyPage>[0]> = {}) =>
+    judge(pageText, { agency: "padi", cardNumber: null, ...overrides });
+  const DIVECHEK = [
+    "DiveChek",
+    "1 diver found",
+    "Lena Ortiz",
+    "Date of Birth: 12 Apr 1990",
+    "Open Water Diver 15 Jun 2015 1506AB1234",
+  ].join("\n");
+
+  it("certifies the one diver with this name and birth date at the claimed level", () => {
+    expect(padi(DIVECHEK)).toEqual({
+      verdict: "match",
+      evidence: "Lena Ortiz · Date of Birth: 12 Apr 1990 · Open Water Diver 15 Jun 2015 1506AB1234",
+    });
+  });
+
+  it("never certifies a namesake with another birth date", () => {
+    expect(padi(DIVECHEK.replace("12 Apr 1990", "3 Sep 1987")).verdict).toBe("level_unconfirmed");
+  });
+
+  it("never certifies from a page listing several divers by this name, even when one is right", () => {
+    const page = [
+      "DiveChek",
+      "Lena Ortiz",
+      "Date of Birth: 12 Apr 1990",
+      "Open Water Diver 15 Jun 2015",
+      "Lena Ortiz",
+      "Date of Birth: 3 Sep 1987",
+      "Advanced Open Water Diver 2 Feb 2020",
+    ].join("\n");
+    expect(padi(page)).toEqual({ verdict: "several_records" });
+    expect(padi(page, { level: "advanced_open_water" })).toEqual({ verdict: "several_records" });
+  });
+
+  it("never certifies from a page that says it found several divers", () => {
+    const page = [
+      "DiveChek",
+      "2 divers found",
+      "Lena Ortiz 12 Apr 1990",
+      "Open Water Diver",
+      "Mark Lee 3 May 1985",
+      "Advanced Open Water Diver",
+    ].join("\n");
+    expect(padi(page)).toEqual({ verdict: "several_records" });
+    expect(padi(page.replace("2 divers found", "Showing 2 results")).verdict).toBe(
+      "several_records",
+    );
+  });
+
+  it("never reads another level as the one claimed", () => {
+    expect(padi(DIVECHEK, { level: "advanced_open_water" }).verdict).toBe("level_unconfirmed");
+    expect(padi(DIVECHEK, { level: "rescue" }).verdict).toBe("level_unconfirmed");
+    expect(padi(DIVECHEK.replace("Open Water Diver", "Scuba Diver")).verdict).toBe(
+      "level_unconfirmed",
+    );
+    expect(padi(DIVECHEK.replace("Open Water Diver", "Junior Open Water Diver")).verdict).toBe(
+      "level_unconfirmed",
+    );
+  });
+
+  it("takes PADI's higher rating for the lower claim, never the other way", () => {
+    const advanced = DIVECHEK.replace("Open Water Diver", "Advanced Open Water Diver");
+    expect(padi(advanced).verdict).toBe("match");
+    expect(padi(advanced, { level: "advanced_open_water" }).verdict).toBe("match");
+    expect(
+      padi(DIVECHEK.replace("Open Water Diver", "Rescue Diver"), { level: "rescue" }).verdict,
+    ).toBe("match");
+  });
+
+  it("never certifies a professional rating", () => {
+    expect(padi(DIVECHEK, { level: "divemaster" }).verdict).toBe("level_unconfirmed");
+  });
+
+  it("reads a sign-in page as unreadable, never as a result", () => {
+    expect(padi("PADI Pros’ Site\nSign in\nEmail\nPassword\nForgot your password?").verdict).toBe(
+      "unreadable",
+    );
+  });
+
+  it("reads DiveChek's 'no results' as no record", () => {
+    expect(padi("DiveChek\nNo results found for Lena Ortiz").verdict).toBe("no_record");
   });
 });

@@ -276,15 +276,16 @@ describe("agencyCheckAction", () => {
   it("refuses a card already certified, and an agency it does not check", async () => {
     const { db, shop, personId } = await context();
     const done = await pendingCard(db, shop.id, personId, { status: "verified" });
-    const padi = await pendingCard(db, shop.id, personId, { agency: "padi", identifier: "P-1" });
+    // TDI's recreational ratings are SDI's: the extension never checks a TDI card.
+    const tdi = await pendingCard(db, shop.id, personId, { agency: "tdi", identifier: "T-1" });
 
-    for (const id of [done.id, padi.id]) {
+    for (const id of [done.id, tdi.id]) {
       expect(await agencyCheckAction(shop.slug, personId, null, check(id, NAUI_PAGE))).toEqual({
         ok: false,
         reason: "invalid",
       });
     }
-    expect((await cardRow(db, padi.id))?.status).toBe("pending");
+    expect((await cardRow(db, tdi.id))?.status).toBe("pending");
   });
 
   it("refuses a post with no page text", async () => {
@@ -293,6 +294,114 @@ describe("agencyCheckAction", () => {
     expect(await agencyCheckAction(shop.slug, personId, null, check(card.id, null))).toEqual({
       ok: false,
       reason: "invalid",
+    });
+  });
+
+  /**
+   * PADI DiveChek, read from the staffer's own signed-in PADI Pros' Site. The
+   * page is a best guess (#2259); the rule is the same as every agency's, and
+   * one record only.
+   */
+  describe("with PADI DiveChek", () => {
+    const DIVECHEK = [
+      "DiveChek",
+      "Lena Ortiz",
+      "Date of Birth: 12 Apr 1990",
+      "Open Water Diver 15 Jun 2015 1506AB1234",
+    ].join("\n");
+
+    async function padiCard() {
+      const { db, shop, owner, personId } = await context();
+      const card = await pendingCard(db, shop.id, personId, {
+        agency: "padi",
+        level: "open_water",
+        identifier: "1506AB1234",
+      });
+      return { db, shop, owner, personId, card };
+    }
+
+    it("certifies a PADI card when DiveChek shows this diver, born that day, at that level", async () => {
+      const { db, shop, owner, personId, card } = await padiCard();
+
+      const result = await agencyCheckAction(shop.slug, personId, null, check(card.id, DIVECHEK));
+
+      expect(result).toEqual({ ok: true, verdict: "match", undo: { certificationId: card.id } });
+      const row = await cardRow(db, card.id);
+      expect(row?.status).toBe("verified");
+      expect(row?.agencyCheckedAt).toBeInstanceOf(Date);
+      expect(row?.reviewedByPersonId).toBe(owner);
+      expect(row?.reviewNote).toContain("Open Water Diver");
+    });
+
+    it("writes nothing for a namesake born on another day", async () => {
+      const { db, shop, personId, card } = await padiCard();
+
+      const result = await agencyCheckAction(
+        shop.slug,
+        personId,
+        null,
+        check(card.id, DIVECHEK.replace("12 Apr 1990", "3 Sep 1987")),
+      );
+
+      expect(result).toMatchObject({ ok: true, verdict: "level_unconfirmed" });
+      expect((await cardRow(db, card.id))?.status).toBe("pending");
+    });
+
+    it("writes nothing when DiveChek lists several divers", async () => {
+      const { db, shop, personId, card } = await padiCard();
+      const several = `${DIVECHEK}\nLena Ortiz\nDate of Birth: 3 Sep 1987\nRescue Diver`;
+
+      const result = await agencyCheckAction(shop.slug, personId, null, check(card.id, several));
+
+      expect(result).toEqual({ ok: true, verdict: "several_records" });
+      expect((await cardRow(db, card.id))?.status).toBe("pending");
+    });
+
+    it("writes nothing when DiveChek shows another level", async () => {
+      const { db, shop, personId } = await context();
+      const card = await pendingCard(db, shop.id, personId, {
+        agency: "padi",
+        level: "advanced_open_water",
+        identifier: "1506AB1234",
+      });
+
+      const result = await agencyCheckAction(shop.slug, personId, null, check(card.id, DIVECHEK));
+
+      expect(result).toMatchObject({ ok: true, verdict: "level_unconfirmed" });
+      expect((await cardRow(db, card.id))?.status).toBe("pending");
+    });
+
+    it("reads PADI's sign-in page as unreadable and writes nothing", async () => {
+      const { db, shop, personId, card } = await padiCard();
+
+      const result = await agencyCheckAction(
+        shop.slug,
+        personId,
+        null,
+        check(card.id, "PADI Pros’ Site\nSign in\nEmail\nPassword"),
+      );
+
+      expect(result).toEqual({ ok: true, verdict: "unreadable" });
+      expect((await cardRow(db, card.id))?.status).toBe("pending");
+    });
+
+    it("refuses a PADI card on a diver with no birth date, which DiveChek cannot be searched without", async () => {
+      const { db, shop } = await context();
+      const [undated] = await db
+        .insert(people)
+        .values({ shopId: shop.id, fullName: "Lena Ortiz" })
+        .returning();
+      if (!undated) throw new Error("failed to insert a diver");
+      const card = await pendingCard(db, shop.id, undated.id, {
+        agency: "padi",
+        level: "open_water",
+        identifier: "1506AB1234",
+      });
+
+      expect(
+        await agencyCheckAction(shop.slug, undated.id, null, check(card.id, DIVECHEK)),
+      ).toEqual({ ok: false, reason: "invalid" });
+      expect((await cardRow(db, card.id))?.status).toBe("pending");
     });
   });
 });

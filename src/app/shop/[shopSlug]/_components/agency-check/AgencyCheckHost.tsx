@@ -23,7 +23,12 @@ import {
   runAgencyCheckQueue,
 } from "@/lib/agency-check-queue";
 import type { AgencyCheckAgencyCopy } from "./agency-check-copy";
-import { agencyCheckForm, agencyCheckOutcome } from "./agency-check-outcome";
+import {
+  type AgencyCheckFailure,
+  agencyCheckFailure,
+  agencyCheckForm,
+  agencyCheckOutcome,
+} from "./agency-check-outcome";
 
 /** `agencyCheckAction`, bound to the shop on the server; the diver is the card's. */
 export type AgencyCheckHostAction = (
@@ -38,7 +43,8 @@ export type AgencyCheckCardState =
   | {
       phase: "settled";
       result: AgencyCheckResult;
-      transportFailed: boolean;
+      /** The extension came back with no page: nothing was judged or written. */
+      failure: AgencyCheckFailure;
       /** Pressed on its own row ("one"), or one card of a departure's "Check all". */
       via: "one" | "all";
     };
@@ -129,17 +135,20 @@ export function AgencyCheckHost({
     async (card: AgencyCheckableCard, via: "one" | "all"): Promise<AgencyCheckOutcome> => {
       setCards((previous) => ({ ...previous, [card.certificationId]: card }));
       setStates((previous) => ({ ...previous, [card.certificationId]: { phase: "checking" } }));
-      const settle = (result: AgencyCheckResult, transportFailed: boolean) => {
+      const settle = (result: AgencyCheckResult, failure: AgencyCheckFailure) => {
         if (!alive.current) return;
         setStates((previous) => ({
           ...previous,
-          [card.certificationId]: { phase: "settled", result, transportFailed, via },
+          [card.certificationId]: { phase: "settled", result, failure, via },
         }));
       };
       const reply = await requestAgencyPage(card.query);
       if (!reply.ok) {
-        settle(null, true);
-        return "transport";
+        // Signed out of PADI stops a "Check all" as an unreadable page does,
+        // and says why: every PADI card after it would meet the same sign-in.
+        const failure = agencyCheckFailure(reply.reason);
+        settle(null, failure);
+        return failure ?? "transport";
       }
       let result: AgencyCheckResult;
       try {
@@ -151,11 +160,11 @@ export function AgencyCheckHost({
       } catch {
         // DiveDay's own server did not answer: nothing was written that the
         // staffer was told about, and the run stops as for the extension.
-        settle(null, true);
+        settle(null, "transport");
         return "transport";
       }
-      settle(result, false);
-      return agencyCheckOutcome(result, false) ?? "refused";
+      settle(result, null);
+      return agencyCheckOutcome(result, null) ?? "refused";
     },
     [action],
   );
@@ -222,7 +231,7 @@ export function AgencyCheckHost({
         const via = before?.phase === "settled" ? before.via : "one";
         return {
           ...previous,
-          [card.certificationId]: { phase: "settled", result, transportFailed: false, via },
+          [card.certificationId]: { phase: "settled", result, failure: null, via },
         };
       });
     },

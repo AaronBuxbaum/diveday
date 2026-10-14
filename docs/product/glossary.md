@@ -29,6 +29,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Depth ceiling
 - Depth marker
 - Depth unit
+- DiveChek check
 - DSD (Discover Scuba Diving)
 - eLearning check
 - Entry-level in-water ratio

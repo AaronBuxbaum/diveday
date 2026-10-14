@@ -70,7 +70,9 @@
       "matched": "{agency} muestra esta certificación. Marcado como certificado.",
       "levelUnconfirmed": "{agency} encontró a este buceador, pero no con este nivel.",
       "noRecord": "{agency} no tiene ningún resultado con este nombre.",
-      "unreadable": "No se pudo leer la página de {agency}."
+      "severalRecords": "{agency} muestra más de un buceador con este nombre.",
+      "unreadable": "No se pudo leer la página de {agency}.",
+      "signedOut": "Inicia sesión en {agency} primero y vuelve a verificar."
     },
     "sightCard": "Verificar registro de certificación",
     "sightCardHint": "El buceador nos indicó este nivel. Introduce la agencia y el número del registro de certificación que verificaste.",
