@@ -334,6 +334,15 @@ export const shops = pgTable(
     bottomTimeMinutes: integer("bottom_time_minutes").notNull().default(45),
     surfaceIntervalMinutes: integer("surface_interval_minutes").notNull().default(60),
     /**
+     * The shortest gap the shop wants between one departure due back and the
+     * next leaving on the same hull, or with a crew member who leaves from a
+     * different meeting point — the time to unload, rinse, refill, refuel and
+     * board the next group (issue #2141, Aaron's decision (b), 2026-10-13).
+     * The schedule builder's Move panel names a closer departure as advice; it
+     * never refuses a move and never changes H-80's clash. Zero turns it off.
+     */
+    minTurnaroundMinutes: integer("min_turnaround_minutes").notNull().default(30),
+    /**
      * Where the shop's season starts — the denominator behind the home's one
      * fact of scale (ADR 20260904-reef-all-the-way-down, decision 2, Budget
      * rule 3). "Your 400th diver of the season" is a claim about a count from
@@ -486,6 +495,10 @@ export const shops = pgTable(
     check("shops_boat_ride_minutes_nonnegative", sql`${table.boatRideMinutes} >= 0`),
     check("shops_bottom_time_minutes_positive", sql`${table.bottomTimeMinutes} > 0`),
     check("shops_surface_interval_minutes_nonnegative", sql`${table.surfaceIntervalMinutes} >= 0`),
+    check(
+      "shops_min_turnaround_minutes_range",
+      sql`${table.minTurnaroundMinutes} >= 0 and ${table.minTurnaroundMinutes} <= 240`,
+    ),
     // Bounded at both ends, matching `parseDiversPerDivemaster` in the settings
     // action. A DB constraint looser than the action it backs lets any other
     // caller persist a number the surfaces will not honour (`coderabbitai`);

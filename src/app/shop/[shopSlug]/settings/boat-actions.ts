@@ -14,12 +14,14 @@ import {
   setShopDivingOptions,
   setShopDockDayRhythm,
   setShopEmergencyReference,
+  setShopMinTurnaround,
 } from "@/db/shops";
 import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
 import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
 import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
+import { parseMinTurnaroundMinutes } from "@/lib/move-preflight";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -34,6 +36,9 @@ const dockDayForm = z.object(
     ReturnType<typeof formValue>
   >,
 );
+
+/** The minimum turnaround as posted; `parseMinTurnaroundMinutes` holds the bounds. */
+const turnaroundForm = z.object({ minTurnaroundMinutes: text() });
 
 /** The reference's fixed lines, plus a numbered label and phone per contact on the catch-all. */
 const emergencyForm = z
@@ -78,6 +83,25 @@ export async function saveDockDayRhythmAction(formData: FormData) {
   }
   await setShopDockDayRhythm(await getDb(), session.user.shopId, rhythm);
   revalidateAndRedirect(page, noticeUrl(page, "dock-saved"));
+}
+
+/**
+ * **The shortest turnaround the shop wants between departures** (issue #2141):
+ * on the same hull, or for crew leaving from a different meeting point. The
+ * schedule builder's Move panel names a closer departure as advice; nothing
+ * refuses a move on it. Zero turns the line off.
+ */
+export async function saveTurnaroundAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const page = shopPath(session.user.shopSlug, "settings", "dock-day");
+  await settingsBlock(session);
+  const { minTurnaroundMinutes } = readForm(turnaroundForm, formData);
+  const minutes = parseMinTurnaroundMinutes(minTurnaroundMinutes);
+  if (minutes === null) {
+    redirect(noticeUrl(page, "turnaround-invalid"));
+  }
+  await setShopMinTurnaround(await getDb(), session.user.shopId, minutes);
+  revalidateAndRedirect(page, noticeUrl(page, "turnaround-saved"));
 }
 
 /**

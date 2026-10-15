@@ -218,6 +218,13 @@
   has sailed, since nothing on a hull that has left is left to move; the side still on the dock
   keeps the warning until it sails or its boat changes, because its divers are the ones with no
   boat.
+- **Tight turnaround** — the near miss beside a clash (issue #2141): a move that leaves less than the
+  shop's **minimum turnaround** (`shops.min_turnaround_minutes`, default 30, set on the dock-day
+  settings page; 0 turns it off) between one departure due back and the next leaving, on the same
+  hull or for a crew member leaving from a different meeting point. Said on the Move panel only, as
+  one muted line naming the other departure and the minutes, under any clash line
+  (`moveTurnarounds` in `src/db/move-preflight.ts`). Advice, never a refusal; nose to tail stays no
+  clash under H-80's predicate, and a crew hand-off on the same dock stays quiet.
 - **Crew news** — what a crew member is told when their boats change: put on a departure, taken off
   one, given a different role on one, the departure called off, or an answer to their own request.
   Recorded as `crew_notices` rows by the crew write path, never for the staffer who made the change,
@@ -1137,7 +1144,8 @@
   Only a **physician clearance** ends it, or a clean later release standing over it (below). A
   cleared record keeps its status, so the signed records' **Medical holds** view lists every
   referral, and each row says where it stands: Waiting on physician, Cleared by physician, or Not
-  cleared.
+  cleared. A diver a captain boarded over the hold keeps it named on their manifest row after a
+  dive: in the row's capsule, or in the person panel when a louder fact takes the capsule.
 - **Physician clearance** — the shop recording that a physician evaluated a diver the medical
   questionnaire had **referred**, and cleared them to dive. It is the only thing that clears that
   `medical_review` record itself (a clean later release can stand over it, below), and it is a

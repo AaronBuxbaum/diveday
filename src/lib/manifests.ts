@@ -22,6 +22,7 @@ import type { WelcomeCue } from "./welcome-cue";
  * fails the build.
  */
 export type {
+  MedicalHoldCode,
   RollCallCheckpoint,
   RollCallRecord,
   RollCallState,
@@ -41,6 +42,7 @@ export {
   carryForwardNotBoarded,
   isNotBackAboard,
   isRollCallCheckpoint,
+  medicalHoldAfterDive,
   RETRACTION_SUPERSEDED,
   ROLL_CALL_NOTE_MAX,
   rollCallCheckpointOrdinal,

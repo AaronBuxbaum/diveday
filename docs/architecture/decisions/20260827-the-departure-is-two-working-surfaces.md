@@ -123,6 +123,15 @@ This is the one genuinely new rule, and it generalises: **an alarm is earned by 
 by the absence of one.** A surface that shouts about a state nobody has asserted teaches its readers
 to ignore it.
 
+**Amended 2026-10-14 (issue #2380, Aaron's decision (b)): a medical block is not paperwork.** After
+a dive a diver boarded over a readiness block still loses the danger "Blocked" (`blockedAtRail`,
+unchanged). When that block is `medical_not_cleared` or `medical_review`, the row instead keeps a
+warning-toned medical capsule at every after-dive checkpoint, ranked where a rider's riding-only
+chip sits: below a split team after a dive and the not-back alarm, above minor, depth and birthday.
+It is a recorded fact (a physician's answer), never red, and it gates nothing: the after-dive mark
+stays a head count. The live roll call and the offline copy read one predicate,
+`medicalHoldAfterDive` in `src/lib/roll-call.ts`.
+
 ### 5. Status is drawn, never typed as emoji
 
 Every mark is inline SVG on the 16/20/24px grid, and every colour-carried state also carries a word

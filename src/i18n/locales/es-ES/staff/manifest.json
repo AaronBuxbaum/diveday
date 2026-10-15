@@ -123,6 +123,8 @@
   "medicalEarlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior)",
   "medicalEarlierRefusalChip": "Rechazo médico previo",
   "medicalReferralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada",
+  "medicalHoldNotClearedChip": "Sin autorización médica",
+  "medicalHoldReviewChip": "Revisión médica abierta",
   "medicalReferralUnresolvedChip": "Derivación aún abierta",
   "medicalRidingOnlyNotClearedChip": "Solo a bordo: no apto",
   "medicalRidingOnlyReferralChip": "Solo a bordo: derivado",

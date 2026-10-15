@@ -329,6 +329,21 @@ export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: Do
 }
 
 /**
+ * Sets the shop's minimum turnaround between departures, in minutes (issue
+ * #2141). Advice for the schedule builder's Move panel only; the route narrows
+ * the value through `parseMinTurnaroundMinutes`, and the table's CHECK holds
+ * the same bounds.
+ */
+export async function setShopMinTurnaround(db: AppDb, shopId: string, minutes: number) {
+  const [shop] = await db
+    .update(shops)
+    .set({ minTurnaroundMinutes: minutes })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
  * Sets the currency the shop displays and charges in. Unlike the depth unit
  * below, this is **not** lossless: every stored `*_cents` amount is an integer
  * count of the old currency's minor unit and no conversion happens here, so a
