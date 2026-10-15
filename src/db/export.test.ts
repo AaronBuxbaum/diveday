@@ -467,6 +467,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
     "identity_unconfirmed_at", // H-13 review state, not a shop record
     "identity_booked_as", // H-13 review state: the name the held booking was made under
+    "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
+    "reschedule_missed_place", // the same: whether the meeting point moved too
     "identity_matched_by", // H-13 review state: why the booking was matched
     "paid_rental_kinds", // held-seat prep state: the order lines already carry what was paid for
     // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another

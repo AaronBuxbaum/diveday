@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
@@ -333,6 +333,18 @@ export async function sendRescheduleNotices(
   for (const { booking, person } of seats) {
     if (booking.identityUnconfirmedAt) {
       outcome.identityHeld += 1;
+      // Nothing re-sends this when staff confirm who the diver is unless the
+      // skip is remembered (#2445): the earliest start the seat last knew, and
+      // whether the place moved.
+      await db
+        .update(bookings)
+        .set({
+          rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${previousStartsAt.toISOString()}::timestamptz)`,
+          rescheduleMissedPlace: payload.meetingPointMoved
+            ? true
+            : sql`${bookings.rescheduleMissedPlace}`,
+        })
+        .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shopId)));
       continue;
     }
     const told = await tellSeat(db, {
@@ -590,5 +602,82 @@ export async function sendSeatMoveNotice(
     channels: await seatChannels(db, input.shopId, options),
     now,
     seatMovedAt: input.movedAt,
+  });
+}
+
+/**
+ * **The notice a held seat missed, sent once staff confirm the diver** (#2445).
+ *
+ * `sendRescheduleNotices` skips a seat whose identity is held, and leaves the
+ * start the seat last knew on the booking (`reschedule_missed_from`). When the
+ * hold clears (`confirmBookingIdentity`, or a split that gives the seat its own
+ * record) this sends the same notice that seat would have had, to the address
+ * on the person it now belongs to.
+ *
+ * **Exactly once.** The columns are claimed and cleared in one statement before
+ * anything is sent, so a second confirm, a retry or a race finds nothing owed.
+ * A seat still held, no longer on the boat, on a departure that has left or is
+ * a rehearsal, or back at the start it knew with the place unmoved, sends
+ * nothing; the claim is cleared in each case because nothing is owed.
+ */
+export async function sendMissedRescheduleNotice(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+  options: SendRescheduleNoticesOptions = {},
+): Promise<"told" | "failed" | "nothing"> {
+  const now = options.now ?? nowDate();
+  const owed = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ from: bookings.rescheduleMissedFrom, place: bookings.rescheduleMissedPlace })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.rescheduleMissedFrom),
+          isNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!row?.from) return null;
+    await tx
+      .update(bookings)
+      .set({ rescheduleMissedFrom: null, rescheduleMissedPlace: false })
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+    return { from: row.from, place: row.place };
+  });
+  if (!owed) return "nothing";
+
+  const [row] = await db
+    .select({ trip: trips, shop: shops, booking: bookings, person: people })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId)))
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        inArray(bookings.status, [...TOLD_STATUSES]),
+        isNull(people.deletedAt),
+        liveTrip(),
+        notRehearsal(),
+      ),
+    )
+    .limit(1);
+  if (row?.trip.status !== "scheduled") return "nothing";
+  const timeMoved = owed.from.getTime() !== row.trip.startsAt.getTime();
+  // Moved and moved back while the seat was held, with the place unmoved.
+  if (!timeMoved && !owed.place) return "nothing";
+  if (!(await stillAhead(db, row.trip, now))) return "nothing";
+  return tellSeat(db, {
+    ...row,
+    previousStartsAt: owed.from,
+    meetingPoint: owed.place
+      ? meetingPointForMessage(meetingPointOfRows(row.shop, row.trip))
+      : undefined,
+    channels: await seatChannels(db, input.shopId, options),
+    now,
   });
 }

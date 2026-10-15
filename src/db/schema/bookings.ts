@@ -292,6 +292,17 @@ export const bookings = pgTable(
     /** Why the flag was raised — see {@link identityMatchKind}. Set and cleared with it. */
     identityMatchedBy: identityMatchKind("identity_matched_by"),
     /**
+     * **A reschedule notice this seat was skipped for** (#2445). While
+     * `identity_unconfirmed_at` is set the reschedule notice does not go (the
+     * address may be somebody else's), and nothing re-sends it when staff
+     * confirm. So the skip leaves this behind: the start the seat last knew,
+     * kept as the earliest of any skipped moves, and whether the meeting point
+     * moved too. Confirming the diver sends the one catch-up notice and clears
+     * both; null and false on every seat that missed nothing.
+     */
+    rescheduleMissedFrom: timestamp("reschedule_missed_from", { withTimezone: true }),
+    rescheduleMissedPlace: boolean("reschedule_missed_place").notNull().default(false),
+    /**
      * **Whoever booked this seat said its diver is under 18** (the "Under 18"
      * box on the public party form; H-21 follow-up, decision of 2026-10-13).
      * The guardian co-signature rule reads it beside the date of birth
