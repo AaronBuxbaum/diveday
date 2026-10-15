@@ -5,7 +5,13 @@ import { sortStationRows } from "@/lib/today";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import { recordRollCall } from "./manifests";
-import { listTripReadiness } from "./readiness";
+import {
+  createCertification,
+  listTripReadiness,
+  reviewCertification,
+  unreviewCertification,
+  upsertTripRequirements,
+} from "./readiness";
 import {
   bookings as bookingsTable,
   rollCallEvents as rollCallEventsTable,
@@ -785,5 +791,70 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
       expect(first?.id).toBe(`roll-call:${trip.id}:after_dive_uncounted:after_dive_1`);
       expect(first?.href.startsWith(`/shop/${shop.slug}/`)).toBe(true);
     });
+  });
+});
+
+/**
+ * **An undone card review reaches a diver already on the boat** (dive-domain
+ * review of the test-suite layer 1). A staffer verified the card, the diver
+ * boarded on it, and the staffer then taps Undo: the diver is aboard with a
+ * certification nobody has checked, and Today has to say so while the boat is
+ * out, not only on their next departure.
+ */
+describe("a card review undone after the diver boarded", () => {
+  it("raises a blocked_aboard certification row while the boat is out", async () => {
+    const { db, shop } = ctx;
+    const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+      endedHoursAgo: -2.5,
+      divers: 1,
+      title: "Undone Review — Molasses",
+    });
+    const [bookingId] = bookingIds;
+    if (!bookingId) throw new Error("fixture booking missing");
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      requiresWaiver: false,
+      minimumCertificationLevel: "rescue",
+      requiredSpecialties: [],
+      requiresNitrox: false,
+      requiresPayment: false,
+    });
+    const [seat] = await db
+      .select({ personId: bookingsTable.personId })
+      .from(bookingsTable)
+      .where(eq(bookingsTable.id, bookingId));
+    if (!seat) throw new Error("fixture seat missing");
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: seat.personId,
+      agency: "padi",
+      level: "rescue",
+      identifier: "PADI-RESCUE-ABOARD",
+    });
+    if (!card) throw new Error("expected certification to insert");
+    await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+    });
+    await boardAtDeparture(
+      db,
+      { shopId: shop.id, tripId: trip.id, staffId, bookingIds },
+      new Date(trip.startsAt.getTime() + 5 * 60 * 1000),
+    );
+    const aboardRows = async () =>
+      (await getTodayWork(db, shop.id, shop.slug, shop.timezone)).actions.filter(
+        (action) => action.departure?.tripId === trip.id && action.kind === "blocked_aboard",
+      );
+    // Cleared on the card: nothing to say about them aboard.
+    expect(await aboardRows()).toEqual([]);
+
+    expect(await unreviewCertification(db, { shopId: shop.id, certificationId: card.id })).toEqual({
+      ok: true,
+    });
+
+    const rows = await aboardRows();
+    expect(rows.map((row) => row.id)).toEqual([`blocker:${bookingId}:certification_pending`]);
   });
 });

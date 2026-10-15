@@ -256,6 +256,16 @@ describe("what a green run says it did not run", () => {
     ]);
   });
 
+  it("counts a spec a smoke pick ran by line as run", () => {
+    const lines = notRunHere({
+      docsOnly: false,
+      testsOnly: false,
+      specs: ["e2e/a.spec.ts:12", "e2e/b.spec.ts"],
+      allSpecs,
+    });
+    expect(lines).toHaveLength(2);
+  });
+
   it("says why no spec ran when only tests changed, and leaves out units for a docs diff", () => {
     expect(notRunHere({ docsOnly: false, testsOnly: true, specs: [], allSpecs })[1]).toBe(
       "all 2 Playwright specs (no page code changed)",

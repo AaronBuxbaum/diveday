@@ -1,22 +1,15 @@
 // @vitest-environment jsdom
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { sourceFiles } from "@/test/source";
 import { EmbedCredit } from "./EmbedCredit";
 
 afterEach(cleanup);
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
-
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(full);
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
-  });
-}
 
 /**
  * **"Powered by DiveDay" at the foot of a frame is a 44px target** (pixel-craft

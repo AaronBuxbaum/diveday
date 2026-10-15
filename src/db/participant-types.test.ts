@@ -325,7 +325,80 @@ describe("the gates a non-diver is not asked to clear", () => {
       (candidate) => candidate.booking.id === rider.bookingId,
     );
     expect(row?.readiness.status).toBe("blocked");
-    expect(row?.readiness.blockers.map((b) => b.code)).toContain("waiver_not_sent");
+    // Named as a release that lapsed, not one nobody sent, and the fresh link
+    // it asks for is one the shop can actually issue.
+    expect(row?.readiness.blockers.map((b) => b.code)).toContain("waiver_lapsed");
+    const fresh = await issueWaiverRequest(db, { shopId: shop.id, bookingId: rider.bookingId });
+    expect(fresh).toMatchObject({ ok: true });
+  });
+
+  it("keeps a referral nobody cleared holding the diver's other seats after the rider's seat takes a fresh link (H-104)", async () => {
+    const { db, shop, trip } = await benwood();
+    await limits(db, trip.id, 8, null);
+    const rider = await seat(db, shop.id, trip.id, "rider");
+    if (!rider.ok) throw new Error("setup failed");
+    // Trip A: a referral parked thirteen months ago that no physician answered.
+    await heldRelease(db, shop.id, rider.bookingId, "referral");
+    const longAgo = new Date(nowDate().getTime() - 400 * 24 * 60 * 60 * 1000);
+    await db
+      .update(waiverRecords)
+      .set({ signedAt: longAgo, completedAt: longAgo, consentedAt: longAgo })
+      .where(eq(waiverRecords.bookingId, rider.bookingId));
+    const [referral] = await db
+      .select({ id: waiverRecords.id, personId: waiverRecords.personId })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, rider.bookingId));
+    if (!referral) throw new Error("referral missing");
+
+    // Trip B: the same person, diving.
+    const other = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (row) => row.id !== trip.id && !row.conditionsHold && row.courseId === null,
+    );
+    if (!other) throw new Error("a second demo trip is missing");
+    await limits(db, other.id, 40, null);
+    const diving = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: other.id,
+      participantType: "diver",
+      personId: referral.personId,
+    });
+    if (!diving.ok) throw new Error(`trip B seat failed: ${diving.reason}`);
+    const rowOnB = async () =>
+      (await listTripReadiness(db, shop.id, other.id)).find(
+        (row) => row.booking.id === diving.bookingId,
+      );
+    const codesOnB = async () => (await rowOnB())?.readiness.blockers.map((b) => b.code) ?? [];
+    expect(await codesOnB()).toContain("medical_review");
+
+    // Staff send the rider a fresh link on trip A. The old record is
+    // superseded so the seat can carry it; the referral is still unanswered.
+    const fresh = await issueWaiverRequest(db, { shopId: shop.id, bookingId: rider.bookingId });
+    expect(fresh).toMatchObject({ ok: true });
+    expect(await codesOnB()).toContain("medical_review");
+    expect(await codesOnB()).not.toContain("waiver_lapsed");
+
+    // The rider signs the fresh link clean. A later clean release stands over
+    // the referral by decision (#2195), and the seat warns about it.
+    const now = nowDate();
+    await db
+      .update(waiverRecords)
+      .set({
+        status: "completed",
+        signedName: "Guest",
+        signedAt: now,
+        completedAt: now,
+        consentedAt: now,
+      })
+      .where(and(eq(waiverRecords.bookingId, rider.bookingId), isNull(waiverRecords.supersededAt)));
+    const after = await rowOnB();
+    const blockers = after?.readiness.blockers.map((b) => b.code) ?? [];
+    expect(blockers).not.toContain("medical_review");
+    expect(blockers.filter((code) => code.startsWith("waiver_"))).toEqual([]);
+    expect(after?.overriddenReferral).toMatchObject({
+      recordId: referral.id,
+      personId: referral.personId,
+    });
   });
 
   it("refuses a snorkeler or a rider on a course session", async () => {
@@ -525,8 +598,8 @@ describe("setBookingParticipantType", () => {
   it("will not change a seat named against another departure's URL", async () => {
     const { db, shop, trip, roster, staff } = await benwood();
     const first = roster[0];
-    const other = (await upcomingTripsWithCounts(db, shop.id, new Date(0))).find(
-      (row) => row.id !== trip.id,
+    const other = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (row) => row.id !== trip.id && !row.conditionsHold && row.courseId === null,
     );
     if (!first || !other) throw new Error("setup failed");
     expect(

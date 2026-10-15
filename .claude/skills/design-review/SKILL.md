@@ -45,5 +45,6 @@ Each step's commands and reasoning: [procedure.md](procedure.md). Read it before
 
 A findings list ordered by severity: what fails which principle, where (file:line or
 screenshot), and the concrete fix — with the pixel pass's verdicts beside it, one per flag.
-Fix findings before marking the work done; note any you deliberately defer and why. Attach the
+Fix findings before marking the work done; note any you deliberately defer and why. A geometry
+fix is proven by its capture's PNG, not by a class assertion in a unit test. Attach the
 screenshots when reporting to the user.

@@ -47,7 +47,10 @@
 //   - **a capture photographs a route** when the last path literal before its
 //     `capture(page, …)` call, inside the same `test(`, resolves to it;
 //   - **a spec scans a route** (`a11y`) when it covers the route and calls
-//     `expectNoA11yViolations`.
+//     `expectNoA11yViolations`;
+//   - `e2e/visual.spec.ts` is never a route's spec: a capture photographs a page
+//     and does not drive it. Three routes once passed "has a spec" on a
+//     photograph alone (test review 2026-10-14).
 //
 // What no string shows is a route reached by clicks: `e2e/waivers.spec.ts`
 // reaches `/waivers/[token]` by pressing "Send waiver" and following a toast.
@@ -303,6 +306,8 @@ export function deriveCoverage({ routes, specSources = new Map() }) {
     routes.map((route) => [route, { e2e: new Set(), visual: new Set(), a11y: new Set() }]),
   );
   for (const [spec, source] of specSources) {
+    // A capture photographs a route; it does not drive it. Its paths credit `visual` below.
+    if (spec === path.basename(VISUAL_SPEC)) continue;
     const scans = A11Y_SCAN.test(source);
     for (const { path: shape } of pathLiterals(source)) {
       for (const route of routesForPath(routes, shape)) {

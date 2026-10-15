@@ -89,11 +89,15 @@ common git dir too, so a push from any worktree finds it):
    nothing the build reads has changed (the tree minus tests, `e2e/` and docs, so a commit that
    only fixes a spec reuses it). *Strong*: specs the diff edits or whose helper it edits, specs
    quoting text the diff removed (a locale value, JSX text, a seed literal), and specs visiting a
-   route whose own directory the diff edits. *Reach*: specs visiting a route whose page imports an
-   edited module, or a hub route (one more than ten specs visit), run narrowest first. Every
-   selected spec runs, in steps of 25: until 2026-10-15 a time budget left the rest to CI, and
-   on #2619 that was 30 of 129, one of which went red there. A diff of only unit tests runs no
-   spec and builds nothing.
+   route whose own directory the diff edits. *Smoke*: five tests (`SMOKE`: booking, a waiver,
+   check-in, roll call offline, sign-in), run as `file:line` whenever the app changed. *Reach*:
+   specs visiting a route the diff's changed names reach (`scripts/symbol-reach.mjs`, name by
+   name rather than file by file), or a hub route (one more than ten specs visit), ranked by how
+   much of the diff's vocabulary a spec names, then narrowest first. Every selected spec runs, in
+   steps of 25: until 2026-10-15 a time budget left the rest to CI, and on #2619 that was 30 of
+   129, one of which went red there. A diff of only unit tests runs no spec and builds nothing.
+   `--commit <sha>` replays one commit; over 104 commits the median reach fell from 65 specs to
+   19 with the name walk.
 
 A green run ends with **"Not run here"**, also recorded as `notRunHere` in the stamp: unit tests
 that neither read source nor import the changed code, the Playwright specs the diff neither names

@@ -294,7 +294,7 @@ describe("the day rail (K-326, K-327, K-328)", () => {
       expect(firstLineCentre(time, at)).toBe(rail);
       for (const none of empty) expect(firstLineCentre(none, at)).toBe(rail);
     }
-    // The skeleton draws an empty day from the same string (loading.test.tsx).
+    // The skeleton draws an empty day from the same string.
     for (const none of empty) expect(none.className).toBe(WEEK_EMPTY_DAY_CLASS);
   });
 

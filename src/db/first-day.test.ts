@@ -1,10 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { FIRST_BOAT_CAPACITY } from "@/lib/first-day";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { listBoats } from "./boats";
 import { createFirstDay, type FirstDayShop } from "./first-day";
 import { boats, trips } from "./schema";
+
+const ctx = fileScopedShopContext();
 
 /** The shape `tripDetailsPatch` reads, off a real seeded shop row. */
 function asFirstDayShop(shop: {
@@ -27,7 +29,7 @@ function asFirstDayShop(shop: {
 
 describe("createFirstDay", () => {
   it("writes the boat and one departure on tomorrow, at the typed time in the shop's zone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // 9 PM on the 1st in UTC is 5 PM on the 1st in Key Largo, so tomorrow is
     // the 2nd there and the boat leaves at 07:30 local — 11:30 UTC.
     const now = new Date("2026-09-01T21:00:00Z");
@@ -57,7 +59,7 @@ describe("createFirstDay", () => {
   });
 
   it("puts the departure on the shop's tomorrow, not the server's", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // 03:00 UTC on the 2nd is still 11 PM on the 1st in Key Largo.
     const created = await createFirstDay(db, asFirstDayShop(shop), {
       boatName: "Night Owl",
@@ -70,7 +72,7 @@ describe("createFirstDay", () => {
   });
 
   it("keeps a late boat inside its own day rather than refusing it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const created = await createFirstDay(db, asFirstDayShop(shop), {
       boatName: "Last Light",
       departure: "22:00",
@@ -83,7 +85,7 @@ describe("createFirstDay", () => {
   });
 
   it("writes neither a departure nor a boat at the very end of the day", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await listBoats(db, shop.id);
 
     // 23:59 leaves no room for a departure that ends after it starts, and a
@@ -107,7 +109,7 @@ describe("createFirstDay", () => {
   });
 
   it("refuses a time it cannot read, and writes no boat for it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await listBoats(db, shop.id);
 
     expect(

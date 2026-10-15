@@ -221,7 +221,9 @@ export function notRunHere({ docsOnly, testsOnly, specs, allSpecs }) {
     );
   }
   const visual = (spec) => /(?:^|\/)visual[^/]*\.spec\.ts$/.test(spec);
-  const skipped = allSpecs.filter((spec) => !visual(spec) && !specs.includes(spec));
+  // A smoke pick is `file:line`; its file counts as run, though only that test of it ran.
+  const ran = new Set(specs.map((spec) => spec.replace(/:\d+$/, "")));
+  const skipped = allSpecs.filter((spec) => !visual(spec) && !ran.has(spec));
   if (skipped.length > 0) {
     lines.push(
       testsOnly || docsOnly

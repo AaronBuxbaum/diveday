@@ -11,8 +11,7 @@ import { describe, expect, it } from "vitest";
  * 12). Each boat drew Delete in a form of its own after the edit form,
  * because `InlineConfirm` submits the form it sits in and forms cannot nest,
  * which put Delete on a line under Save. `InlineConfirm`'s `formAction` lets
- * the confirm post to the delete from inside the edit form. Trip tags' rows
- * are pinned beside their own page, in `trip-tags/page.control-rows.test.ts`.
+ * the confirm post to the delete from inside the edit form.
  */
 const PAGES = [{ page: "boats", update: "updateBoatAction", remove: "deleteBoatAction" }] as const;
 
