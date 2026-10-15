@@ -129,6 +129,30 @@ describe("the late-arrival buffer", () => {
   });
 });
 
+/**
+ * **The buffer is an hour of real time, on the two days the wall clock skips
+ * or repeats one** (A§4 item 11). `America/New_York`: on 2026-11-01 01:30
+ * happens twice, and on 2026-03-08 02:00 never happens. A departure is gone a
+ * measured hour after it left, whatever the clock on the dock wall says.
+ */
+describe("hasSailed across a clock change", () => {
+  it("does not let the repeated hour on 2026-11-01 hold a boat ashore", () => {
+    const firstOneThirty = new Date("2026-11-01T05:30:00.000Z"); // 01:30 EDT
+    // 01:45 EST on the wall, which reads as fifteen minutes after 01:30 but is
+    // seventy-five real ones.
+    expect(hasSailed(firstOneThirty, new Date("2026-11-01T06:45:00.000Z"))).toBe(true);
+    // 02:15 EDT never happens; 01:15 EST is forty-five real minutes in.
+    expect(hasSailed(firstOneThirty, new Date("2026-11-01T06:15:00.000Z"))).toBe(false);
+  });
+
+  it("does not let the skipped hour on 2026-03-08 sail a boat early", () => {
+    const oneThirty = new Date("2026-03-08T06:30:00.000Z"); // 01:30 EST
+    // 03:15 EDT on the wall, an hour and three quarters on, is forty-five real minutes.
+    expect(hasSailed(oneThirty, new Date("2026-03-08T07:15:00.000Z"))).toBe(false);
+    expect(hasSailed(oneThirty, new Date("2026-03-08T07:30:00.000Z"))).toBe(true);
+  });
+});
+
 describe("acceptsNewDivers", () => {
   const SAILS = new Date("2026-08-27T11:00:00.000Z");
   const open = { status: "scheduled", conditionsHold: false, startsAt: SAILS };

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { bookings, people } from "./schema";
 import { createTrip, getTripRoster } from "./trips";
 import { listTripWaiverStatuses } from "./waivers-trip-status";
+
+const ctx = fileScopedShopContext();
 
 describe("listTripWaiverStatuses row order (issue #1753)", () => {
   /**
@@ -22,7 +24,7 @@ describe("listTripWaiverStatuses row order (issue #1753)", () => {
    * opposite every time rather than half the time.
    */
   it("breaks a shared-instant tie on the diver's name, and agrees with getTripRoster", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Waiver Order Reef",

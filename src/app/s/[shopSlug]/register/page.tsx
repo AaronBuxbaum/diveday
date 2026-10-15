@@ -61,7 +61,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ shopS
         description={t("register.intro")}
       />
       {/* Without a provider above it the whole page degrades to a blank
-          client-only 200 (src/i18n/provider-coverage.test.ts). */}
+          client-only 200 (scripts/check-intl-providers.mjs). */}
       <DiverIntlProvider
         locale={locale}
         timeZone={shop.timezone}

@@ -1,12 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { SEND_HOLD_MS } from "@/lib/held-sends";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { claimDueHeldSends, claimHeldSend, holdSend, undoHeldSend } from "./held-sends";
 import { bookings, heldSends, people, personRoles, trips } from "./schema";
 
+const ctx = fileScopedShopContext();
+
 async function fixture() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [seat] = await db
     .select({ bookingId: bookings.id, tripId: trips.id })
     .from(bookings)

@@ -5,7 +5,9 @@ description: Write stable Playwright E2E specs and visual-regression captures. U
 
 # E2E flows and visual regression
 
-Every important user flow gets a functional Playwright spec under `e2e/`. Every important user surface gets a visual screenshot in `e2e/visual.spec.ts` using `page.screenshot()`. Diffs and reference comparisons are handled by `reg-suit` against baselines stored in S3. Keep the two concerns separate: functional specs prove behavior; visual specs capture rendered surfaces.
+Every important user flow gets a functional Playwright spec under `e2e/`. Every important user surface gets a visual screenshot in `e2e/visual.spec.ts` using `page.screenshot()`. Diffs and reference comparisons are handled by `reg-suit` against baselines stored in S3. Keep three concerns separate: functional specs prove behavior; request-level tests (the `request` fixture) prove an HTTP contract; visual specs capture rendered surfaces. Which of them a change needs is [testing.md](../../../docs/engineering/testing.md#how-a-change-decides-its-tests)'s six-step list.
+
+**A geometry fix is proven by a capture**: the overlap, clip or misalignment is gone in the PNG. A class-name assertion beside the component proves nothing a render shows; a rule over source is a `check:repo` guard.
 
 ## Visual workflow
 
@@ -18,6 +20,22 @@ Every important user flow gets a functional Playwright spec under `e2e/`. Every 
 4. If there are diffs, `reg-suit` will compare against the reference commit images on S3. Run `pnpm visual:report` to pull the reference, actual, and diff PNGs down locally with a markdown summary — the printed HTML report link is a client-rendered SPA (an empty `<div id="app">` until JS runs) and isn't fetchable as a static page, so agents should use the script instead of trying to open that link. See the **visual-triage** skill.
 
 The normal matrix is light/dark × phone/desktop (390x844 and 1280x800) using the `capture()` helper. Print surfaces use the `capturePrint()` helper.
+
+## What a diff runs
+
+- **Specs**: `pnpm e2e:affected` names the strong specs (edited, quoting removed text, on an edited
+  route), the five smoke tests, and the reach specs ranked by how much of the diff they name;
+  `verify:push` runs them. `--commit <sha>` replays one commit. It never names `visual.spec.ts`.
+- **Captures**: a pull request photographs what `scripts/visual-affected.mjs` selects. The same
+  selection, light only, locally:
+  ```bash
+  mkdir -p test-results
+  pnpm exec playwright test e2e/visual.spec.ts --list --reporter=json > test-results/list.json
+  node scripts/visual-affected.mjs --list test-results/list.json --out test-results/picked.json --grep test-results/grep.txt
+  pnpm e2e:run e2e/visual.spec.ts --grep "$(cat test-results/grep.txt)" --reporter=line
+  ```
+  A surface you expected to move that reads as passed means the selection missed it: the
+  `visual-all` label captures everything, and the miss is filed.
 
 ## Fast iteration
 

@@ -2,12 +2,14 @@ import { eq } from "drizzle-orm";
 import { unzipSync } from "fflate";
 import { describe, expect, it, vi } from "vitest";
 import { shops } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   listShopsForPlatformBackup,
   platformBackupConfigFromEnvironment,
   runPlatformBackup,
 } from "./platform-backup";
+
+const ctx = fileScopedShopContext();
 
 const NOW = new Date("2026-08-12T05:00:00Z");
 
@@ -50,7 +52,7 @@ function runInput(overrides: Record<string, unknown> = {}) {
 
 describe("runPlatformBackup", () => {
   it("stores the export bundle under exports/<date>/<slug>.zip", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { fetchImpl, calls } = capturingFetch();
 
     const result = await runPlatformBackup(db, runInput({ shopId: shop.id, fetchImpl }) as never);
@@ -68,7 +70,7 @@ describe("runPlatformBackup", () => {
   });
 
   it("addresses AWS virtual-hosted style, never the deprecated path style", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { fetchImpl, calls } = capturingFetch();
 
     await runPlatformBackup(db, runInput({ shopId: shop.id, fetchImpl }) as never);
@@ -83,7 +85,7 @@ describe("runPlatformBackup", () => {
   });
 
   it("uploads the same artifact the shop-owned backup does, trips.ics included", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { fetchImpl, calls } = capturingFetch();
 
     await runPlatformBackup(db, runInput({ shopId: shop.id, fetchImpl }) as never);
@@ -95,7 +97,7 @@ describe("runPlatformBackup", () => {
   });
 
   it("reports the upload's own refusal code rather than throwing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { fetchImpl } = capturingFetch(403);
 
     const result = await runPlatformBackup(db, runInput({ shopId: shop.id, fetchImpl }) as never);
@@ -104,7 +106,7 @@ describe("runPlatformBackup", () => {
   });
 
   it("fails with a code when the shop row is gone", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const { fetchImpl } = capturingFetch();
 
     const result = await runPlatformBackup(
@@ -116,7 +118,7 @@ describe("runPlatformBackup", () => {
   });
 
   it("never uploads when the bundle could not be built", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const { fetchImpl, calls } = capturingFetch();
 
     await runPlatformBackup(
@@ -128,7 +130,7 @@ describe("runPlatformBackup", () => {
   });
 
   it("is idempotent by key: a re-run targets the same object", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { fetchImpl, calls } = capturingFetch();
 
     const first = await runPlatformBackup(db, runInput({ shopId: shop.id, fetchImpl }) as never);
@@ -149,7 +151,7 @@ describe("listShopsForPlatformBackup", () => {
   // e2e/visual fleet's shop, kept out of the sitemap for the same reason), so
   // these drive the flag explicitly rather than trusting the seed's value.
   it("excludes demo shops, which exist only to be discarded", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
     const included = await listShopsForPlatformBackup(db);
@@ -161,7 +163,7 @@ describe("listShopsForPlatformBackup", () => {
   });
 
   it("carries each shop's own locale, so trips.ics speaks the shop's language", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
 
     const listed = await listShopsForPlatformBackup(db);

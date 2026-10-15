@@ -32,6 +32,11 @@ red run. Each rule names what enforces it; the reasoning and the incidents are i
 - **A test's budget is one call with its measured reason**: `test.slow()` or `test.setTimeout()`,
   never both (the later one replaces the first). Each CI shard's summary lists the tests over half
   their own budget (`scripts/e2e-budget-report.mjs`, #1906).
+- **An HTTP contract takes the `request` fixture**, not a page: a redirect read with
+  `maxRedirects: 0`, a feed, a probe (`e2e/seo.spec.ts`).
+- **A geometry fix is proven by a capture**, not a class assertion; a rule read from source is a
+  `check:repo` guard or a `guards` test, never a unit test beside the component
+  ([testing.md](../../docs/engineering/testing.md#what-each-layer-is-for)).
 - **Bound the page, not the capture**: a huge screenshot means the page needs a pager, never a
   `?filter=` in the spec.
 - **A trouble state is photographed through `src/app/api/test/seed-trouble-states/route.ts`**,

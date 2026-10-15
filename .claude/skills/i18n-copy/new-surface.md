@@ -25,7 +25,7 @@ sentence plainly in English first and the Spanish follows the same shape.
 Writing an `error.tsx`? It is a file convention with a fixed `{error, reset}` signature, so no
 Server Component can hand it a `copy` prop. Its words come from the segment's own `layout.tsx`
 mounting `DiverIntlProvider` with `namespaces={["errorBoundary"]}` — four strings, not the bundle.
-`src/i18n/provider-coverage.test.ts` fails if you forget.
+`scripts/check-intl-providers.mjs` fails if you forget.
 
 **Server Component (the default for staff):**
 

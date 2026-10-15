@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { createBooking } from "./bookings";
 import { recordCourseInquiry } from "./course-inquiries";
@@ -30,8 +30,14 @@ import {
 import { getTripRoster, getTripWithBooked, upcomingTripsWithCounts } from "./trips";
 import { createTrip } from "./trips-create";
 
-async function invitationContext() {
-  const { db, shop } = await seededShopContext();
+// One database for the file, a rolled-back transaction per test. The one race
+// below ("two taps that land together") takes its own: inside one transaction
+// its two writers are savepoints on one connection and the race proves nothing
+// (src/test/db.ts, "When NOT to use this").
+const fileCtx = fileScopedShopContext();
+
+async function invitationContext({ fresh = false } = {}) {
+  const { db, shop } = fresh ? await seededShopContext() : fileCtx;
   const course = await getCourseBySlug(db, shop.id, "open-water-diver");
   if (!course) throw new Error("expected seeded course missing");
   const [author] = await db
@@ -238,8 +244,8 @@ describe("trip invitations", () => {
    * key. Mail that went out under an hour ago answers "already sent".
    */
   describe("a second tap on Email them this date", () => {
-    async function offerInput() {
-      const { db, shop, author, firstTrip } = await invitationContext();
+    async function offerInput({ fresh = false } = {}) {
+      const { db, shop, author, firstTrip } = await invitationContext({ fresh });
       const [candidate] = await listBookableDivers(db, shop.id, firstTrip.id, {
         query: "mail.example",
       });
@@ -265,7 +271,7 @@ describe("trip invitations", () => {
     });
 
     it("sends one email for two taps that land together", async () => {
-      const { db, input } = await offerInput();
+      const { db, input } = await offerInput({ fresh: true });
       const mail = fakeEmail();
       const outcomes = await Promise.all([
         offerDepartureToDiver(db, input, mail.provider),

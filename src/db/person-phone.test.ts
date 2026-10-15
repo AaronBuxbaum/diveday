@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { prepareContactImport } from "@/lib/import";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { createDiver, updateDiver } from "./divers";
@@ -13,6 +13,8 @@ import { storedPhone } from "./person-phone";
 import { people, shops, userAccounts } from "./schema";
 import { registerDiverAtShop } from "./self-registration";
 import { upcomingTripsWithCounts } from "./trips";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **Every writer of `people.phone` normalises, and this file is the list.**
@@ -37,7 +39,7 @@ describe("people.phone is E.164 on write", () => {
   const e164 = "+13055550140";
 
   it("storedPhone reads the shop's own country, and keeps a number it cannot read", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(await storedPhone(db, shop.id, bare)).toBe(e164);
     // Already international: the shop's country is not consulted at all, which
     // is what makes a normalised column immune to the setting changing.
@@ -52,7 +54,7 @@ describe("people.phone is E.164 on write", () => {
   });
 
   it("createDiver and updateDiver", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const created = await createDiver(db, {
       shopId: shop.id,
       fullName: "Nadia Okonkwo",
@@ -73,7 +75,7 @@ describe("people.phone is E.164 on write", () => {
   });
 
   it("findOrCreatePerson — the chokepoint every public door shares", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const email = `nora-${randomUUID()}@example.com`;
     const { person, created } = await findOrCreatePerson(db, {
       shopId: shop.id,
@@ -86,7 +88,7 @@ describe("people.phone is E.164 on write", () => {
   });
 
   it("the no-email booking insert — a counter walk-in with only a number", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("seeded trip missing");
     const outcome = await createBooking(db, {
@@ -105,7 +107,7 @@ describe("people.phone is E.164 on write", () => {
   });
 
   it("self-registration — the counter QR, where the diver types their own number", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // Phone-only: no email to match on, so this is the branch that inserts
     // directly rather than going through findOrCreatePerson.
     const walkIn = await registerDiverAtShop(db, {
@@ -134,7 +136,7 @@ describe("people.phone is E.164 on write", () => {
   });
 
   it("the contact importer — where the numbers are another system's export", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [account] = await db
       .select({ personId: userAccounts.personId })
       .from(userAccounts)

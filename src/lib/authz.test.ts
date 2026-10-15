@@ -6,6 +6,7 @@ import {
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
+  canErasePersonalData,
   canExportIncidentRecord,
   canExportShopData,
   canImportShopData,
@@ -18,6 +19,7 @@ import {
   canOverrideCertBlock,
   canOverrideGearRequest,
   canReadEveryIncidentReport,
+  canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
   canRefund,
@@ -64,6 +66,9 @@ describe("accountable-role gates (export/import/reports)", () => {
     // bulk — gating one letter tighter than the questionnaires beneath it would
     // move the door without moving the wall.
     ["canReadMedicalClearanceDocument", canReadMedicalClearanceDocument],
+    // Every answer and the physician's name on a signed record. Same wall as the
+    // bulk export; every other staff role sees only the flagged prompts.
+    ["canReadMedicalAnswers", canReadMedicalAnswers],
     // #1410: what a diver privately asked the shop to fix. Same boundary as the
     // physician's letter above, and promised to the diver in as many words —
     // the roster below holds the promise to the role set.
@@ -182,6 +187,26 @@ describe("canExportIncidentRecord (owner only)", () => {
   it("rejects empty and undefined roles", () => {
     expect(canExportIncidentRecord([])).toBe(false);
     expect(canExportIncidentRecord(undefined)).toBe(false);
+  });
+});
+
+describe("canErasePersonalData (owner only)", () => {
+  it("admits only the owner: erasure is one-way, removal is the manager's tool", () => {
+    expect(canErasePersonalData(["owner"])).toBe(true);
+    for (const role of ALL_ROLES.filter((r) => r !== "owner")) {
+      expect(canErasePersonalData([role])).toBe(false);
+    }
+    // Narrower than removal, which a manager may do.
+    expect(canDeleteDiver(["manager"])).toBe(true);
+  });
+
+  it("admits an owner who also holds an operating role", () => {
+    expect(canErasePersonalData(["captain", "owner"])).toBe(true);
+  });
+
+  it("rejects empty and undefined roles", () => {
+    expect(canErasePersonalData([])).toBe(false);
+    expect(canErasePersonalData(undefined)).toBe(false);
   });
 });
 

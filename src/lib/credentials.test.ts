@@ -3,8 +3,10 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { userAccounts } from "@/db/schema";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { verifyCredentials } from "./credentials";
+
+const ctx = fileScopedShopContext();
 
 // Spies on the real implementation rather than replacing it, so every
 // behavioural assertion below still exercises genuine bcrypt.
@@ -25,7 +27,7 @@ afterEach(() => {
 
 describe("verifyCredentials (in-memory PGlite)", () => {
   it("signs in seeded staff with the right password and returns roles", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email, password } = DEV_STAFF_LOGINS.owner;
 
     const user = await verifyCredentials(db, email, password);
@@ -35,20 +37,20 @@ describe("verifyCredentials (in-memory PGlite)", () => {
   });
 
   it("is case-insensitive on email", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email, password } = DEV_STAFF_LOGINS.captain;
     const user = await verifyCredentials(db, email.toUpperCase(), password);
     expect(user?.name).toBe("Sal Moretti");
   });
 
   it("rejects a wrong password", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email } = DEV_STAFF_LOGINS.owner;
     expect(await verifyCredentials(db, email, "not-the-password")).toBeNull();
   });
 
   it("rejects unknown emails", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     expect(await verifyCredentials(db, "nobody@example.com", "whatever")).toBeNull();
   });
 
@@ -57,7 +59,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
     // list, which soft-deletes the person row. Sign-in must not admit them and
     // leave `authz.ts` to bounce the session afterwards. The seed has no
     // dual-role person, so the captain is given the diver role here.
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email, password } = DEV_STAFF_LOGINS.captain;
     const { personRoles, people } = await import("@/db/schema");
     const { deleteDiver } = await import("@/db/divers");
@@ -80,7 +82,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
   });
 
   it("rejects a disabled account even with the right password", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email, password } = DEV_STAFF_LOGINS.instructor;
     await db.update(userAccounts).set({ status: "disabled" }).where(eq(userAccounts.email, email));
     expect(await verifyCredentials(db, email, password)).toBeNull();
@@ -92,7 +94,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
     // writes a null today, and the insert type no longer requires the column,
     // so this is what keeps `verifyCredentials`' decoy fallback honest if one
     // ever does.
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email } = DEV_STAFF_LOGINS.instructor;
     const { shops } = await import("@/db/schema");
     // The seeded shop is a demo shop and every dev login's password *is* the
@@ -112,7 +114,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
   });
 
   it("admits the bypass token if the shop is a demo shop", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email } = DEV_STAFF_LOGINS.instructor;
 
     const user = await verifyCredentials(db, email, "password");
@@ -121,7 +123,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
   });
 
   it("rejects the bypass token if the shop is NOT a demo shop", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email } = DEV_STAFF_LOGINS.instructor;
 
     // Toggle demo flag off for the shop
@@ -133,7 +135,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
   });
 
   it("rejects the bypass token when the runtime is unrecognized, even on a demo shop", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email } = DEV_STAFF_LOGINS.instructor;
     vi.stubEnv("NODE_ENV", "staging");
 
@@ -141,7 +143,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
   });
 
   it("rejects the bypass token when an operator killed the switch", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email } = DEV_STAFF_LOGINS.instructor;
     vi.stubEnv("DIVEDAY_DEMO_BYPASS", "off");
 
@@ -149,7 +151,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
   });
 
   it("rejects the bypass token for an account outside the reserved demo namespace", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email } = DEV_STAFF_LOGINS.instructor;
     // The shop stays `isDemo`; only the account's address moves out of
     // `*.demo.invalid`. A real tenant's staff addresses are always routable
@@ -165,7 +167,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
 
 describe("verifyCredentials timing side-channel", () => {
   it("runs a bcrypt compare on the missing-account path, so it cannot answer faster than a wrong password", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
 
     expect(await verifyCredentials(db, "nobody@example.com", "whatever")).toBeNull();
 
@@ -177,7 +179,7 @@ describe("verifyCredentials timing side-channel", () => {
   });
 
   it("runs exactly one compare on every path, matched or not", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email, password } = DEV_STAFF_LOGINS.owner;
 
     await verifyCredentials(db, email, password);
@@ -193,7 +195,7 @@ describe("verifyCredentials timing side-channel", () => {
   });
 
   it("compares against the decoy for a disabled account too, so status is not an oracle either", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const { email, password } = DEV_STAFF_LOGINS.instructor;
     await db.update(userAccounts).set({ status: "disabled" }).where(eq(userAccounts.email, email));
 
@@ -202,7 +204,7 @@ describe("verifyCredentials timing side-channel", () => {
   });
 
   it("never lets the decoy authenticate anything", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     // Whatever the decoy's plaintext is, nobody holds it: the bytes are
     // discarded at generation. Any submitted password must still be rejected.
     for (const attempt of ["", "password", "decoy", " "]) {

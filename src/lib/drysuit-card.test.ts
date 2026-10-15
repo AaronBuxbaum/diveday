@@ -54,6 +54,7 @@ describe("checkDrysuitCard", () => {
     // that wants the suit gated requires the `drysuit` specialty on the site or
     // the trip; nothing here may do it for them.
     const readiness = calculateReadiness({
+      timezone: "UTC",
       requirement: {
         requiresWaiver: true,
         minimumCertificationLevel: null,

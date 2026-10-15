@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { orders, paymentDisputes, people } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
@@ -9,9 +9,11 @@ import {
 } from "@/test/staff-session";
 import { loadOrderHeader } from "./order-header";
 
+const ctx = fileScopedShopContext();
+
 /** A seeded paid order with an undecided dispute on it. */
 async function disputedOrder() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
   if (!person) throw new Error("seeded person missing");
   const [order] = await db

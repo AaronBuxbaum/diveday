@@ -109,6 +109,9 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // nothing on this end for them to tap — a dead end for a link that ages out
   // in a week on a booking made months ahead.
   waiver_expired: "action",
+  // "action", like `waiver_expired`: the diver signed once and the readiness
+  // page mints the fresh link they sign again on.
+  waiver_lapsed: "action",
   medical_review: "waiting",
   // "waiting", like the hold it settles: there has never been anything here for
   // the diver to do, and a refusal is the one state where that is most
@@ -275,6 +278,9 @@ export function buildDiverChecklist(
 export const REMINDER_ACTION_CODES = [
   "waiver_pending",
   "waiver_expired",
+  // As `waiver_expired`: the reminder links the readiness page, never a
+  // waiver token, and that page mints the fresh link.
+  "waiver_lapsed",
   // Signed on the readiness page the reminder links to; no token of its own
   // ever rides in the message (ADR 20261008-course-forms).
   "course_form_unsigned",

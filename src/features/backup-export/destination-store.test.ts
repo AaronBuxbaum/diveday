@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { shopBackupDestinations, shops } from "@/db/schema";
 import { openSecret } from "@/lib/secret-box";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   backupEndpointRefusal,
   disconnectShopBackupDestination,
@@ -12,6 +12,8 @@ import {
   openBackupCredentials,
   saveShopBackupDestination,
 } from "./destination-store";
+
+const ctx = fileScopedShopContext();
 
 const KEY = randomBytes(32);
 
@@ -26,7 +28,7 @@ const DESTINATION = {
 
 /** A shop with no seeded backup rows, so first-save semantics are testable. */
 async function bareShopContext() {
-  const { db } = await seededShopContext();
+  const { db } = ctx;
   const [shop] = await db
     .insert(shops)
     .values({ name: "Bare Shop", slug: "bare-shop-backup-test", timezone: "UTC" })

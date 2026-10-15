@@ -288,6 +288,18 @@ test("a tampered readiness token reveals nothing, and still leaves a door", asyn
   await expect(page.getByRole("link", { name: "Go to DiveDay" })).toHaveAttribute("href", "/");
 });
 
+// The course-forms page signs a student's paperwork on the prep link's own
+// capability (course-forms.spec.ts signs a real one). A forged link opens no
+// form: it falls back to the prep link, which says the link is not available.
+test("a tampered course-forms link opens no form and falls back to the prep link", async ({
+  page,
+}) => {
+  await page.goto("/ready/not-a-real-token/forms");
+  await expect(page).toHaveURL(/\/ready\/not-a-real-token$/);
+  await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sign/ })).toHaveCount(0);
+});
+
 /**
  * The readiness page carries the day itself, not just what is left to do.
  *

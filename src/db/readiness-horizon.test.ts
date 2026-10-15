@@ -6,10 +6,12 @@ import {
   type OperationalWindow,
   operationalWindow,
 } from "@/lib/operational-window";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { inHorizonReadiness } from "./blockers";
 import { listCheckInQueue } from "./check-in";
 import { countBlockedDiversNextBoatDay, getTodayWork } from "./today";
+
+const ctx = fileScopedShopContext();
 
 const withinWindow = (window: OperationalWindow, at: Date): boolean =>
   at.getTime() >= window.from.getTime() && at.getTime() <= window.to.getTime();
@@ -42,7 +44,7 @@ async function blockedByTrip(
 
 describe("one operational window across the readiness surfaces", () => {
   it("a station's blocked count is the shared readiness pass's own answer", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [work, blocked] = await Promise.all([
       getTodayWork(db, shop.id, shop.slug, shop.timezone, NOW),
       blockedByTrip(db, shop.id),
@@ -63,7 +65,7 @@ describe("one operational window across the readiness surfaces", () => {
   });
 
   it("the nav badge is the sum of the next boat day's cards plus the divers aboard, exactly", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [work, badge] = await Promise.all([
       getTodayWork(db, shop.id, shop.slug, shop.timezone, NOW),
       countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, NOW),
@@ -79,7 +81,7 @@ describe("one operational window across the readiness surfaces", () => {
   });
 
   it("keeps every counter arrival inside its own window, and every future one inside the horizon", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const arrivals = arrivalsWindow(NOW);
     const horizon = operationalWindow(NOW);
     const queue = await listCheckInQueue(db, shop.id, { now: NOW });
@@ -94,7 +96,7 @@ describe("one operational window across the readiness surfaces", () => {
   });
 
   it("shows no blocked diver at the counter the shared pass has already cleared", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [counter, blocked] = await Promise.all([
       listCheckInQueue(db, shop.id, { now: NOW }),
       blockedByTrip(db, shop.id),

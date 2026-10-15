@@ -237,6 +237,7 @@ const CERTIFICATION_FIX: Record<
     requirements_not_configured: null,
     identity_unconfirmed: null,
     waiver_not_sent: null,
+    waiver_lapsed: null,
     waiver_pending: null,
     waiver_expired: null,
     medical_review: null,

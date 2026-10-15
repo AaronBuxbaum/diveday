@@ -2,7 +2,9 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications/kinds";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const fileCtx = fileScopedShopContext();
 
 /**
  * **Which invitation is commercial** (Aaron, 2026-10-06, issue #1953). A
@@ -40,7 +42,7 @@ const {
 const { upcomingTripsWithCounts } = await import("./trips");
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   const [author] = await db
     .select({ id: people.id })
     .from(people)

@@ -535,6 +535,8 @@ describe("derived coverage", () => {
     });
     expect([...derived.get("/s/[shopSlug]").visual]).toEqual(["storefront"]);
     expect([...derived.get("/").visual]).toEqual([]);
+    // A photograph is not a spec: the capture's visit credits `visual`, never `e2e`.
+    expect([...derived.get("/s/[shopSlug]").e2e]).toEqual([]);
   });
 
   it("counts an axe scan only from a spec that runs one", () => {
@@ -562,7 +564,7 @@ describe("derived coverage", () => {
     const world = await collectWorld(root);
     expect(auditLedger(world).violations).toEqual([]);
     expect(effectiveLedger(world)["/s/[shopSlug]"]).toEqual({
-      e2e: ["booking.spec.ts", "visual.spec.ts"],
+      e2e: ["booking.spec.ts"],
       visual: ["storefront"],
     });
   });

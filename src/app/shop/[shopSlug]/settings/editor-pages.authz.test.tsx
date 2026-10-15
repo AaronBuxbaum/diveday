@@ -3,13 +3,15 @@ import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **The five editors that left the hub keep the hub's gates** (#1854). Each
@@ -68,7 +70,7 @@ afterEach(() => {
 });
 
 async function signedIn(email: string): Promise<void> {
-  const db: AppDb = await seededTestDb();
+  const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
   const personId = await seededStaffPersonId(db, shop.id, email);

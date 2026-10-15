@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { demoEntries } from "@/db/schema";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { QUIET_DEMO_COOKIE, quietDemoToken } from "@/lib/quiet-demo-device";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **The demo half of the marketing funnel: the event, and the founder's alert**
@@ -106,7 +108,7 @@ function demoForm(fields: Record<string, string>): FormData {
  * beside the other database-heavy specs.
  */
 async function useDb(): Promise<void> {
-  vi.mocked(getDb).mockResolvedValue(await seededTestDb());
+  vi.mocked(getDb).mockResolvedValue(ctx.db);
 }
 
 beforeEach(() => {
