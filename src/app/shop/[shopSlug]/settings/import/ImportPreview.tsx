@@ -202,12 +202,12 @@ export function ImportPreview({
               <Td>
                 {row.fullName || <span className="text-danger">{copy.table.noName}</span>}
                 {row.action === "skip" ? (
-                  <span className="ml-2 rounded bg-danger-tint px-1.5 py-0.5 text-xs text-danger">
+                  <span className="ms-2 rounded bg-danger-tint px-1.5 py-0.5 text-xs text-danger">
                     {copy.table.skippedBadge}
                   </span>
                 ) : null}
                 {row.action === "merge" ? (
-                  <span className="ml-2 rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-muted">
+                  <span className="ms-2 rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-muted">
                     {fill(copy.table.mergedBadge, { row: row.mergedIntoRow ?? "" })}
                   </span>
                 ) : null}

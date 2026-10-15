@@ -5,21 +5,22 @@ import {
 } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
 import type { AppDb } from "@/db/client";
 import {
+  confirmDiverIdentityAction,
+  saveRosterEmergencyContactAction,
+  splitDiverIdentityAction,
+} from "../roster-identity-actions";
+import { markPaymentAction } from "../roster-payment-actions";
+import {
   addToWaitlistAction,
   carryWaitlistAction,
-  confirmDiverIdentityAction,
   createDirectTripInvitationAction,
-  markPaymentAction,
-  markRosterWaiverInPersonAction,
   recordTripInvitationAction,
   removeBookingAction,
-  saveRosterEmergencyContactAction,
-  sendNewWaiverAction,
   setParticipantTypeAction,
-  splitDiverIdentityAction,
   undoRemoveBookingAction,
   updateBookingPickupAction,
-} from "../actions";
+} from "../roster-seating-actions";
+import { markRosterWaiverInPersonAction, sendNewWaiverAction } from "../roster-waiver-actions";
 import { courseRosterActions } from "./course-roster-actions";
 import { noteRosterActions } from "./note-roster-actions";
 import { seatMoveFor } from "./seat-move";
