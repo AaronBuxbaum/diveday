@@ -19,6 +19,8 @@
   },
   "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
   "seat": "Booked on {trip}, {when}",
+  "move": "Move to another departure",
+  "moveFor": "Move {name}’s seat on {trip} to another departure",
   "late": {
     "action": "Mark running late",
     "actionFor": "Mark {name} running late for {trip}",

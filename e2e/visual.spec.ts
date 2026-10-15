@@ -7420,7 +7420,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
         await page
           .getByRole("region", { name: "Conversation" })
-          .getByText(/afternoon boat/)
+          .getByText(/today.s reef boat/)
           .waitFor();
         await capture(page, "staff-diver-conversation", scheme);
       });

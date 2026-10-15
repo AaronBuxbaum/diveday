@@ -1,9 +1,11 @@
+import Link from "next/link";
+import { Fragment, type ReactNode } from "react";
 import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
 import { LedgerRow } from "@/components/ui/ledger";
 import { menuRowClass } from "@/components/ui/menu";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
-import type { MessageSeat } from "@/db/running-late";
+import type { InboxSeat } from "@/db/inbox-seats";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatTime, formatWeekdayTime } from "@/lib/format";
 import { type InboundChannel, inboxMessageAnchor } from "@/lib/inbox";
@@ -91,6 +93,14 @@ function excerpt(body: string): string {
  * never read as a command (ADR 20260909-reply-keywords), so a person decides;
  * once the seat carries the mark, by any door, the row says so instead.
  *
+ * **The seat is a door, and moving it is one tap away** (fourth UX review,
+ * item 32). Outside the late window the row names the seat the sender already
+ * held when they wrote (`inboxSeats`), so "Could I switch to the afternoon
+ * boat?" names the boat it is about. "Booked on …" opens that seat on its
+ * roster, and the "⋯" offers **Move to another departure**, which opens the
+ * same row with its move already open: the roster's one move path decides,
+ * and nothing here moves a seat.
+ *
  * **The door lands on the message, not the top of the conversation.** Each
  * inbound message on the record carries `id="message-<id>"`, and the record's
  * disclosure opens whichever group holds the fragment and scrolls it in.
@@ -115,8 +125,8 @@ export function InboxRow({
   deleteAction: (formData: FormData) => Promise<void>;
   /** Marks the message done (`done=true`) or puts it back (`done=false`). */
   doneAction: (formData: FormData) => Promise<void>;
-  /** The open seat this message could be about, or null. */
-  seat?: MessageSeat | null;
+  /** The open seat this message is about, or null. */
+  seat?: InboxSeat | null;
   /** Puts the running-late mark on `seat`; required whenever `seat` is passed. */
   lateAction?: (formData: FormData) => Promise<void>;
 }) {
@@ -139,25 +149,44 @@ export function InboxRow({
   // either: three lines held the seeded message only where its column was
   // wide. The 140-character excerpt is what bounds the row.
   const wordsCut = message.personId ? "truncate" : "wrap-anywhere";
-  const facts = [
+  // The seat's own roster row, by the anchor that opens it (`RosterRow`), and
+  // the same row with its move open (`SeatFootActions`).
+  const seatHref = seat ? shopPath(shopSlug, "trips", seat.tripId) : null;
+  const facts: { key: string; node: ReactNode }[] = [
     // The address is on the stranger's row only: for a diver on file the name
     // above already says who this is, and their address is on their record.
-    message.personId ? null : message.fromAddress,
+    message.personId ? null : { key: "from", node: message.fromAddress },
     // A LATE reply already marked the seat; the seat's own fact says so.
     message.keywordIntent && !(message.keywordIntent === "late" && seat?.runningLateAt)
-      ? t(KEYWORD_KEYS[message.keywordIntent])
+      ? { key: "keyword", node: t(KEYWORD_KEYS[message.keywordIntent]) }
       : null,
-    seat
-      ? t("inbox.seat", {
-          trip: seat.title,
-          when: formatWeekdayTime(seat.startsAt, locale, timezone),
-        })
+    seat && seatHref
+      ? {
+          key: "seat",
+          node: (
+            // Above the row's stretched door (`z-0`), so it takes its own tap.
+            <Link
+              href={`${seatHref}#booking-${seat.bookingId}`}
+              className="relative z-10 font-medium text-primary hover:underline"
+            >
+              {t("inbox.seat", {
+                trip: seat.title,
+                when: formatWeekdayTime(seat.startsAt, locale, timezone),
+              })}
+            </Link>
+          ),
+        }
       : null,
     seat?.runningLateAt
-      ? t("inbox.late.marked", { time: formatTime(seat.runningLateAt, locale, timezone) })
+      ? {
+          key: "late",
+          node: t("inbox.late.marked", { time: formatTime(seat.runningLateAt, locale, timezone) }),
+        }
       : null,
-    message.mediaCount > 0 ? t("inbox.attachments", { count: message.mediaCount }) : null,
-  ].filter((fact): fact is string => Boolean(fact));
+    message.mediaCount > 0
+      ? { key: "media", node: t("inbox.attachments", { count: message.mediaCount }) }
+      : null,
+  ].filter((fact): fact is { key: string; node: ReactNode } => fact !== null);
 
   return (
     <LedgerRow
@@ -174,7 +203,7 @@ export function InboxRow({
             {formatDateTimeTz(message.receivedAt, locale, timezone)}
           </span>
           <RowMenu label={t("inbox.menu.label", { name })}>
-            {seat && !seat.runningLateAt && lateAction ? (
+            {seat?.lateWindow && !seat.runningLateAt && lateAction ? (
               <form action={lateAction}>
                 <input type="hidden" name="messageId" value={message.id} />
                 <SubmitButton
@@ -185,6 +214,15 @@ export function InboxRow({
                   {t("inbox.late.action")}
                 </SubmitButton>
               </form>
+            ) : null}
+            {seat && seatHref ? (
+              <Link
+                href={`${seatHref}#move-booking-${seat.bookingId}`}
+                className={MENU_ROW_CLASS}
+                aria-label={t("inbox.moveFor", { name, trip: seat.title })}
+              >
+                {t("inbox.move")}
+              </Link>
             ) : null}
             <form action={doneAction}>
               <input type="hidden" name="messageId" value={message.id} />
@@ -232,7 +270,14 @@ export function InboxRow({
               640 it ran 96px out of a 72px column (K-461). Cut, it would lose
               half of what the row is for, so it breaks inside the column. */}
           {facts.length > 0 ? (
-            <p className="mt-0.5 wrap-anywhere text-sm text-muted">{facts.join(" · ")}</p>
+            <p className="mt-0.5 wrap-anywhere text-sm text-muted">
+              {facts.map((fact, index) => (
+                <Fragment key={fact.key}>
+                  {index > 0 ? " · " : null}
+                  {fact.node}
+                </Fragment>
+              ))}
+            </p>
           ) : null}
         </div>
       </div>

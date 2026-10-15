@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
-import type { MessageSeat } from "@/db/running-late";
+import type { InboxSeat } from "@/db/inbox-seats";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { InboxRow } from "./InboxRow";
@@ -36,7 +36,7 @@ const MESSAGE: InboxMessageRow["message"] = {
 function renderRow(
   overrides: Partial<InboxMessageRow["message"]> = {},
   personName: string | null = "Priya Sharma",
-  seat: MessageSeat | null = null,
+  seat: InboxSeat | null = null,
 ) {
   const { container } = render(
     <ul>
@@ -280,13 +280,14 @@ describe("what arrived with it", () => {
  * nothing. The row names the seat, and its "⋯" puts the mark on it.
  */
 describe("a message from somebody with a boat to catch", () => {
-  const SEAT: MessageSeat = {
+  const SEAT: InboxSeat = {
     bookingId: "bf000000-1111-4222-8333-444444444444",
     tripId: "cf000000-1111-4222-8333-444444444444",
     title: "Night Dive",
     // 11:30 PM Tuesday in Cancún.
     startsAt: new Date("2026-07-22T04:30:00.000Z"),
     runningLateAt: null,
+    lateWindow: true,
   };
   const LATE = { channel: "whatsapp" as const, subject: null, body: "Running about 15 min late" };
 
@@ -324,5 +325,54 @@ describe("a message from somebody with a boat to catch", () => {
   it("names nothing when there is no seat the message could be about", () => {
     const container = renderRow(LATE, "Diego Alvarez", null);
     expect(container.textContent).not.toMatch(/Booked on/);
+  });
+});
+
+/**
+ * Fourth UX review, item 32: Priya asks to switch boats three days out. The
+ * row names the seat she holds, opens it on its roster, and its "⋯" offers the
+ * roster's move; the late mark stays with the window.
+ */
+describe("a message asking to move a seat", () => {
+  const SEAT: InboxSeat = {
+    bookingId: "bf000000-1111-4222-8333-555555555555",
+    tripId: "cf000000-1111-4222-8333-555555555555",
+    title: "Two-Tank Reef",
+    // 8:00 AM Saturday in Cancún.
+    startsAt: new Date("2026-07-25T13:00:00.000Z"),
+    runningLateAt: null,
+    lateWindow: false,
+  };
+
+  it("names the seat as a link that opens it on its roster", () => {
+    renderRow({}, "Priya Sharma", SEAT);
+    expect(
+      screen.getByRole("link", { name: /Booked on Two-Tank Reef, Saturday\s8:00\sAM/ }),
+    ).toHaveAttribute("href", `/shop/blue-mantis/trips/${SEAT.tripId}#booking-${SEAT.bookingId}`);
+  });
+
+  it("offers the move in the row menu, landing on the seat's move, and no late mark", async () => {
+    renderRow({}, "Priya Sharma", SEAT);
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
+    const move = screen.getByRole("link", {
+      name: "Move Priya Sharma’s seat on Two-Tank Reef to another departure",
+    });
+    expect(move).toHaveTextContent("Move to another departure");
+    expect(move).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/trips/${SEAT.tripId}#move-booking-${SEAT.bookingId}`,
+    );
+    expect(screen.queryByRole("button", { name: /running late/i })).toBeNull();
+  });
+
+  it("offers no move without a seat", async () => {
+    renderRow({}, "Priya Sharma", null);
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
+    expect(screen.queryByRole("link", { name: /another departure/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Mark done" })).toBeInTheDocument();
   });
 });
