@@ -651,8 +651,8 @@ export type EveningClose = {
   allHome: boolean;
   /**
    * **Tomorrow from tonight** (fifth-loop ideas, item 2): tomorrow's tanks and
-   * rental pieces across its departures, said under the takings while the day
-   * is closing. Null while a boat is out, or for a tomorrow with no departure.
+   * rental pieces across its departures, said once `loadOutDue`. Null before
+   * today's last scheduled return, or for a tomorrow with no departure.
    */
   tomorrow: DayLoadOut | null;
 };
@@ -670,7 +670,7 @@ export type EveningClose = {
 export function assembleEveningClose(
   departures: readonly CloseoutDeparture[],
   now: Date = nowDate(),
-  /** `DayCloseoutState.tomorrow`; said only while the day is closing. */
+  /** `DayCloseoutState.tomorrow`; said once `loadOutDue`. */
   tomorrow: DayLoadOut | null = null,
 ): EveningClose {
   const stations: StationClose[] = departures
@@ -742,8 +742,19 @@ export function assembleEveningClose(
     divers,
     crew,
     allHome,
-    tomorrow: closing ? tomorrow : null,
+    tomorrow: loadOutDue(departures, now) ? tomorrow : null,
   };
+}
+
+/**
+ * **When tomorrow's load-out is worth saying** (dive-domain review FIX 3):
+ * once the clock is past the last scheduled return of today's boats, or on a
+ * day with none. Not "every boat settled", the takings' rule: a Monday with no
+ * boats before a full Tuesday is the evening the fill station most needs the
+ * count, and a night boat's roll call is no reason to wait for it.
+ */
+export function loadOutDue(departures: readonly { endsAt: Date }[], now: Date): boolean {
+  return departures.every((departure) => now.getTime() >= departure.endsAt.getTime());
 }
 
 /**

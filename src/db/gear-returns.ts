@@ -12,7 +12,7 @@ import {
   sizedRentalKindOfGearKind,
 } from "@/lib/rentals";
 import type { AppDb } from "./client";
-import type { GearReservationActionOutcome } from "./gear-reservations";
+import { type GearSetReturnOutcome, pullReturnedUnitsForService } from "./gear-reservations";
 import { liveGearItem, openGearReservation, optional, reservationHolder } from "./gear-shared";
 import { bookings, gearItems, gearReservations, people, rentalFitProfiles, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -329,7 +329,11 @@ export type TripUnitReturnOutcome = (typeof TRIP_UNIT_RETURN_OUTCOMES)[number];
  * **One unit back from the boat** (fifth-loop ideas, item 5): "Back", or "Back
  * with a problem" and the words, which is a `service_concern` return, the
  * flag `serviceConcernStillOpen` keeps on the unit until a technician answers
- * it. It pulls nothing to the bench: that stays the set pane's opt-in tick.
+ * it. With the problem, the unit moves to Needs service in the same
+ * transaction when its "Pull for service" box is ticked
+ * (`pullReturnedUnitsForService`; the box starts ticked for a regulator, BCD
+ * or cylinder, `pullStartsTicked`), so it is off tomorrow's picker as well as
+ * flagged.
  *
  * Scoped by the departure as well as the shop: the reservation must hold a
  * seat on `tripId` and have gone out, so a replayed or forged id from another
@@ -343,28 +347,40 @@ export async function returnTripGearUnit(
     reservationId: string;
     outcome: TripUnitReturnOutcome;
     note?: string;
+    /** The ticked "Pull for service" box: this unit's gear item id, or nothing. */
+    pullGearItemIds?: readonly string[];
   },
-): Promise<GearReservationActionOutcome> {
+): Promise<GearSetReturnOutcome> {
   const note = optional(input.note);
   if (input.outcome === "service_concern" && !note) {
     return { ok: false, reason: "concern_needs_words" };
   }
-  const onThisDeparture = db
-    .select({ id: bookings.id })
-    .from(bookings)
-    .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
-  const [returned] = await db
-    .update(gearReservations)
-    .set({ returnedAt: nowDate(), returnNote: note, returnOutcome: input.outcome })
-    .where(
-      and(
-        eq(gearReservations.id, input.reservationId),
-        eq(gearReservations.shopId, input.shopId),
-        inArray(gearReservations.bookingId, onThisDeparture),
-        isNotNull(gearReservations.checkedOutAt),
-        openGearReservation(),
-      ),
-    )
-    .returning({ id: gearReservations.id });
-  return returned ? { ok: true } : { ok: false, reason: "not_found" };
+  return db.transaction(async (tx): Promise<GearSetReturnOutcome> => {
+    const onThisDeparture = tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
+    const [returned] = await tx
+      .update(gearReservations)
+      .set({ returnedAt: nowDate(), returnNote: note, returnOutcome: input.outcome })
+      .where(
+        and(
+          eq(gearReservations.id, input.reservationId),
+          eq(gearReservations.shopId, input.shopId),
+          inArray(gearReservations.bookingId, onThisDeparture),
+          isNotNull(gearReservations.checkedOutAt),
+          openGearReservation(),
+        ),
+      )
+      .returning({ id: gearReservations.id, gearItemId: gearReservations.gearItemId });
+    if (!returned) return { ok: false, reason: "not_found" };
+    const pulled = await pullReturnedUnitsForService(tx, {
+      shopId: input.shopId,
+      outcome: input.outcome,
+      note,
+      returnedGearItemIds: [returned.gearItemId],
+      pullGearItemIds: input.pullGearItemIds,
+    });
+    return { ok: true, pulled };
+  });
 }

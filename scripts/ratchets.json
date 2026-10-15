@@ -433,7 +433,7 @@
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
     "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": 301,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 372,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 351,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 366,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 345,
     "src/db/checkouts.ts#startBookingCheckout": 303,
@@ -521,9 +521,9 @@
     "src/app/shop/[shopSlug]/settings/integrations/page.tsx": 489,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 789,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 704,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 492,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 525
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 680,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 491,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 524
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

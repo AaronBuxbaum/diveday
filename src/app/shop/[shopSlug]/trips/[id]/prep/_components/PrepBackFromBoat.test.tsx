@@ -64,4 +64,26 @@ describe("PrepBackFromBoat", () => {
     );
     expect(container.firstElementChild).toBeNull();
   });
+
+  it("offers to pull the one unit to the bench, ticked for life support and not otherwise", () => {
+    const fins: TripUnitToCheckIn = {
+      reservationId: "r3",
+      gearItemId: "g3",
+      kind: "fins",
+      label: "Fins #3",
+      size: "M",
+      bookingId: "b1",
+      personName: "Nadia Osei",
+    };
+    render(<PrepBackFromBoat units={[...UNITS, fins]} tripId="t1" t={t} idPrefix={undefined} />);
+    for (const button of screen.getAllByRole("button", { name: "Back with a problem" })) {
+      fireEvent.click(button);
+    }
+    const boxes = screen.getAllByRole<HTMLInputElement>("checkbox");
+    expect(boxes.map((box) => [box.value, box.name, box.checked])).toEqual([
+      ["g1", "pull", true],
+      ["g2", "pull", true],
+      ["g3", "pull", false],
+    ]);
+  });
 });

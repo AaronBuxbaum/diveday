@@ -4,7 +4,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { gearShopContext } from "./gear-test-fixtures";
-import { REBOOK_WINDOW_MS, sailedRebooking } from "./sailed-rebooking";
+import { REBOOK_WINDOW_MS, type SailedRollCall, sailedRebooking } from "./sailed-rebooking";
 import { createTrip } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -12,6 +12,12 @@ const ctx = fileScopedShopContext();
 
 const DAWN = new Date("2026-09-01T11:00:00Z");
 const HOME = new Date(DAWN.getTime() + 4 * HOUR_MS);
+
+/** No roll call taken and no Home tap: the clock alone speaks. */
+const SILENT: { rollCall: SailedRollCall; homeAt: null } = {
+  rollCall: { dock: new Map(), afterDive: new Map() },
+  homeAt: null,
+};
 
 async function departure(db: AppDb, shopId: string, title: string, startsAt: Date, capacity = 8) {
   const trip = await createTrip(db, {
@@ -64,6 +70,7 @@ describe("sailedRebooking (in-memory PGlite)", () => {
       shopId: shop.id,
       tripId: dawn.id,
       now: new Date(HOME.getTime() + HOUR_MS),
+      ...SILENT,
     });
     expect(lines.get(theo.bookingId)?.next).toMatchObject({ kind: "booked", tripId: saturday.id });
     expect(lines.get(nadia.bookingId)).toMatchObject({ personName: "Nadia Osei" });
@@ -86,6 +93,7 @@ describe("sailedRebooking (in-memory PGlite)", () => {
       shopId: shop.id,
       tripId: dawn.id,
       now: new Date(HOME.getTime() + HOUR_MS),
+      ...SILENT,
     });
     expect(lines.has(nadia.bookingId)).toBe(false);
   });
@@ -95,9 +103,84 @@ describe("sailedRebooking (in-memory PGlite)", () => {
     const dawn = await departure(db, shop.id, "Dawn two-tank", DAWN);
     await departure(db, shop.id, "Thursday reef", new Date("2026-09-03T11:00:00Z"));
     await seat(db, shop.id, dawn.id, "Nadia Osei");
-    const at = (now: Date) => sailedRebooking(db, { shopId: shop.id, tripId: dawn.id, now });
+    const at = (now: Date) =>
+      sailedRebooking(db, { shopId: shop.id, tripId: dawn.id, now, ...SILENT });
     expect((await at(new Date(HOME.getTime() - HOUR_MS))).size).toBe(0);
     expect((await at(new Date(HOME.getTime() + REBOOK_WINDOW_MS + HOUR_MS))).size).toBe(0);
     expect((await at(new Date(HOME.getTime() + HOUR_MS))).size).toBe(1);
+  });
+
+  it("says nothing beside a diver the crew did not count back aboard, or one left ashore", async () => {
+    const { db, shop } = await gearShopContext(ctx);
+    const dawn = await departure(db, shop.id, "Dawn two-tank", DAWN);
+    await departure(db, shop.id, "Thursday reef", new Date("2026-09-03T11:00:00Z"));
+    const missing = await seat(db, shop.id, dawn.id, "Nadia Osei");
+    const ashore = await seat(db, shop.id, dawn.id, "Theo Park");
+    const back = await seat(db, shop.id, dawn.id, "Ana Ruiz");
+    const lines = await sailedRebooking(db, {
+      shopId: shop.id,
+      tripId: dawn.id,
+      now: new Date(HOME.getTime() + HOUR_MS),
+      homeAt: null,
+      rollCall: {
+        dock: new Map([
+          [missing.bookingId, "boarded"],
+          [ashore.bookingId, "not_boarded"],
+          [back.bookingId, "boarded"],
+        ]),
+        // A later "boarded" outranks a miss (listAfterDiveRollCallByTrip); a
+        // standing miss is a diver nobody has counted back yet.
+        afterDive: new Map([
+          [missing.bookingId, "missing_after_dive"],
+          [back.bookingId, "boarded"],
+        ]),
+      },
+    });
+    expect(lines.has(missing.bookingId)).toBe(false);
+    expect(lines.has(ashore.bookingId)).toBe(false);
+    expect(lines.has(back.bookingId)).toBe(true);
+  });
+
+  it("opens at the Home tap when the boat ties up early, and closes a day after it", async () => {
+    const { db, shop } = await gearShopContext(ctx);
+    const dawn = await departure(db, shop.id, "Dawn two-tank", DAWN);
+    await departure(db, shop.id, "Thursday reef", new Date("2026-09-03T11:00:00Z"));
+    await seat(db, shop.id, dawn.id, "Nadia Osei");
+    const homeAt = new Date(HOME.getTime() - HOUR_MS);
+    const at = (now: Date) =>
+      sailedRebooking(db, {
+        shopId: shop.id,
+        tripId: dawn.id,
+        now,
+        homeAt,
+        rollCall: SILENT.rollCall,
+      });
+    // Before the tap: still out.
+    expect((await at(new Date(homeAt.getTime() - 1))).size).toBe(0);
+    // Tied up early: the window opens at the tap, not the scheduled end.
+    expect((await at(homeAt)).size).toBe(1);
+    expect((await at(new Date(HOME.getTime() - 1))).size).toBe(1);
+    // And closes a day after the tap, not a day after the scheduled end.
+    expect((await at(new Date(homeAt.getTime() + REBOOK_WINDOW_MS))).size).toBe(1);
+    expect((await at(new Date(homeAt.getTime() + REBOOK_WINDOW_MS + 1))).size).toBe(0);
+  });
+
+  it("opens at the scheduled end when a Home tap comes later", async () => {
+    const { db, shop } = await gearShopContext(ctx);
+    const dawn = await departure(db, shop.id, "Dawn two-tank", DAWN);
+    await departure(db, shop.id, "Thursday reef", new Date("2026-09-03T11:00:00Z"));
+    await seat(db, shop.id, dawn.id, "Nadia Osei");
+    const homeAt = new Date(HOME.getTime() + 2 * HOUR_MS);
+    const at = (now: Date) =>
+      sailedRebooking(db, {
+        shopId: shop.id,
+        tripId: dawn.id,
+        now,
+        homeAt,
+        rollCall: SILENT.rollCall,
+      });
+    expect((await at(new Date(HOME.getTime() - 1))).size).toBe(0);
+    expect((await at(HOME)).size).toBe(1);
+    expect((await at(new Date(HOME.getTime() + REBOOK_WINDOW_MS + 1))).size).toBe(0);
   });
 });

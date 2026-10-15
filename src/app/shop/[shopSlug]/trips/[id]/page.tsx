@@ -234,7 +234,6 @@ export default async function ManageTripPage({
     stage: stageReading,
     cancelled,
   });
-  // The desk while arrivals are open, or a finished departure's record.
   const { desk, record } = await diversTabState({
     db,
     shopId: shop.id,
@@ -246,7 +245,7 @@ export default async function ManageTripPage({
     timeZone: shop.timezone,
     t,
     onDivers: !showDetails,
-    finished,
+    finished: finished ? { homeAt: shown?.stage === "home" ? shown.recordedAt : null } : null,
   });
 
   const tabsCopy = tripTabsCopy(t, checkInOpen ? { trip, shop, locale } : undefined);

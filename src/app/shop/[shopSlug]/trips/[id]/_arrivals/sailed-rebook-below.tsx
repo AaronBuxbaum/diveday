@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { AppDb } from "@/db/client";
-import { sailedRebooking } from "@/db/sailed-rebooking";
+import { type SailedRollCall, sailedRebooking } from "@/db/sailed-rebooking";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatWeekdayTime } from "@/lib/format";
 import { offerAnotherDayAction } from "./actions";
@@ -21,12 +21,16 @@ export async function sailedRebookBelow(input: {
   locale: string;
   timeZone: string;
   t: StaffTranslator;
+  rollCall: SailedRollCall;
+  homeAt: Date | null;
 }): Promise<Map<string, ReactNode>> {
   const { shopSlug, tripId, locale, timeZone, t } = input;
   const rows = await sailedRebooking(input.db, {
     shopId: input.shopId,
     tripId,
     now: input.now,
+    rollCall: input.rollCall,
+    homeAt: input.homeAt,
   });
   const offerAction = offerAnotherDayAction.bind(null, shopSlug, tripId);
   const below = new Map<string, ReactNode>();

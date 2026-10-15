@@ -9,6 +9,7 @@ import {
   type IncidentTimelineEventInput,
 } from "@/lib/incident-export";
 import { canPersonExportIncidentRecord } from "./authz";
+import { snagsOpenWhenSailed } from "./boat-snags";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { listExecutedDives } from "./executed-dives";
@@ -195,12 +196,14 @@ export async function getIncidentExport(
   // manifest drops them: this document states the pairing as it stood for the
   // people who were aboard, and the trail below is where a cancelled member's
   // membership survives.
-  const [teamRows, teamEventRows, checklistItems, checklistChecks] = await Promise.all([
-    listTripBuddyTeams(db, shopId, tripId),
-    listTripBuddyTeamEvents(db, shopId, tripId),
-    listChecklistItemsForTrip(db, shopId, tripId),
-    latestPreDepartureChecksForTrip(db, shopId, tripId),
-  ]);
+  const [teamRows, teamEventRows, checklistItems, checklistChecks, sailedWithSnags] =
+    await Promise.all([
+      listTripBuddyTeams(db, shopId, tripId),
+      listTripBuddyTeamEvents(db, shopId, tripId),
+      listChecklistItemsForTrip(db, shopId, tripId),
+      latestPreDepartureChecksForTrip(db, shopId, tripId),
+      snagsOpenWhenSailed(db, shopId, tripId),
+    ]);
   const buddyTeams: IncidentBuddyTeamInput[] = teamRows.map((team) => ({
     teamId: team.teamId,
     members: team.members.flatMap((member): IncidentBuddyTeamInput["members"][number][] =>
@@ -287,6 +290,7 @@ export async function getIncidentExport(
           : undefined,
       };
     }),
+    sailedWithSnags,
     generatedAt,
     generatedByName,
   });

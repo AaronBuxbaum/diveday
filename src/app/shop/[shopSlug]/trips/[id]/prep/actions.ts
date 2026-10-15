@@ -343,24 +343,34 @@ export async function returnTripGearUnitAction(formData: FormData) {
   }
   const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
   const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
+  // The one unit's "Pull for service" box, read as the set return reads its
+  // ticks; the writer pulls only the unit this return closes.
+  const pullGearItemIds = formData
+    .getAll("pull")
+    .filter((value): value is string => typeof value === "string")
+    .filter((value) => z.uuid().safeParse(value).success);
   const outcome = await returnTripGearUnit(await getDb(), {
     shopId: session.user.shopId,
     tripId: parsed.data.tripId,
     reservationId: parsed.data.reservationId,
     outcome: parsed.data.outcome,
     note: parsed.data.note,
+    pullGearItemIds,
   });
   revalidateAndRedirect(
     departure,
     noticeUrl(
       landing,
       outcome.ok
-        ? parsed.data.outcome === "service_concern"
-          ? "gear-returned-flagged"
-          : "gear-returned-set"
+        ? outcome.pulled > 0
+          ? "gear-returned-set-pulled"
+          : parsed.data.outcome === "service_concern"
+            ? "gear-returned-flagged"
+            : "gear-returned-set"
         : outcome.reason === "not_found"
           ? "gear-already-returned"
           : RESERVATION_ACTION_NOTICE[outcome.reason],
+      { count: outcome.ok && outcome.pulled > 0 ? outcome.pulled : undefined },
     ),
   );
 }

@@ -40,8 +40,9 @@ import { ChoiceFieldset, ChoiceRow, controlClass, Field } from "@/components/ui/
  * posted with whichever answer is tapped.
  *
  * **`bench` offers to pull units to Needs service with the concern** (issue
- * #2205): one checkbox per unit in the set, every one unticked, and only once
- * the concern is open. Never automatic — a scratched mask and a free-flowing
+ * #2205): one checkbox per unit in the set, unticked unless the caller says
+ * otherwise (one unit off the boat starts a regulator, BCD or cylinder ticked,
+ * `pullStartsTicked`), and only once the concern is open. Never automatic — a scratched mask and a free-flowing
  * regulator are both concerns, and auto-pulling every one would turn the flag
  * into a pager nobody trusts. Absent, the pane asks nothing extra.
  *
@@ -60,7 +61,7 @@ export function GearReturnPane({
 }: {
   fields: Record<string, string>;
   children?: ReactNode;
-  bench?: { legend: string; units: { id: string; label: string }[] };
+  bench?: { legend: string; units: { id: string; label: string; defaultChecked?: boolean }[] };
   action: (formData: FormData) => Promise<void>;
   labels: {
     allGood: string;
@@ -150,6 +151,7 @@ export function GearReturnPane({
                   type="checkbox"
                   name="pull"
                   value={unit.id}
+                  defaultChecked={unit.defaultChecked ?? false}
                   className="text-sm"
                 >
                   {unit.label}

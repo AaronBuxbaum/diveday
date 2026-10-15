@@ -321,7 +321,7 @@ async function TodayBody({
       arrivalQuery ? true : hasArrivals(db, shop.id, now),
     ]),
     // **The day's closing state** (ADR 20260827-clearwater-surface-language, decision 4): how each
-    // of today's boats settled, for the evening stations; tomorrow's load-out once all are.
+    // of today's boats settled, for the evening stations; tomorrow's load-out once they are due back.
     getDayCloseout(db, shop.id, shop.timezone, now, shop),
     // Whether this shop has ever had a departure: the first-run checklist's gate and the
     // first-bookable moment's count, below. A demo shop sits out of both, so it is never asked.

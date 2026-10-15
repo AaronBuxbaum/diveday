@@ -65,13 +65,16 @@ fails while it is stale. Grep the domain files for a term; this index says which
 [glossary/day-of-the-dive.md](glossary/day-of-the-dive.md)
 
 - Arrival card
+- Back from the boat
 - Blow-out
 - Change ledger
 - Conditions hold
+- Day load-out
 - Day-of help request
 - Departure note
 - Dock line
 - Dock rider
+- Last time line
 - Lost item
 - Saved trip-prep copy
 - Snag

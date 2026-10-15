@@ -704,6 +704,7 @@
     "confirmClear": "Presiona otra vez para quitar la marca",
     "uncheckedLabel": "Sin verificar — presiona para marcarlo",
     "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}",
+    "summaryWithSnags": "{summary}\u00a0· {count, plural, one {# problema abierto} other {# problemas abiertos}}",
     "snagsHeading": "Pendiente en este barco",
     "snagLine": "{item}: {note}",
     "snagNotedBy": "Anotado por {name}, {date}",

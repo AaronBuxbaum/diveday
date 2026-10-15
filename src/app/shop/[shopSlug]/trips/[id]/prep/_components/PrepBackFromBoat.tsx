@@ -3,6 +3,7 @@ import type { TripUnitToCheckIn } from "@/db/gear";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { scopedId } from "@/lib/element-id";
+import { pullStartsTicked } from "@/lib/gear";
 import { returnTripGearUnitAction } from "../actions";
 import { GearReturnPane } from "./GearReturnPane";
 
@@ -16,7 +17,8 @@ import { GearReturnPane } from "./GearReturnPane";
  * what is wrong before it saves and closes the unit as a service concern, the
  * flag a technician answers on the unit's page. One unit at a time because the
  * problem is one unit's ("inflator sticks"); the per-diver set pane it replaces
- * after Home asked once for an armful. Nothing here pulls a unit to the bench.
+ * after Home asked once for an armful. A problem offers that one unit's "Pull
+ * for service" box, ticked from the start for a regulator, BCD or cylinder.
  *
  * Not on paper: it is a list to work, not a record.
  */
@@ -63,6 +65,16 @@ export function PrepBackFromBoat({
                 cancelConcern: t("gear.prep.returnCancelConcern"),
                 noteLabel: t("gear.prep.backNoteLabel"),
                 notePlaceholder: t("gear.prep.backNotePlaceholder"),
+              }}
+              bench={{
+                legend: t("gear.prep.returnPullToBench"),
+                units: [
+                  {
+                    id: unit.gearItemId,
+                    label: unit.label,
+                    defaultChecked: pullStartsTicked(unit.kind),
+                  },
+                ],
               }}
             />
           </li>

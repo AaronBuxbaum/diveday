@@ -18,6 +18,8 @@ const snag = {
   notedAt: new Date(NOW.getTime() - 6 * 3_600_000),
   departuresSince: 2,
   notedOnTripId: "t-noted",
+  notedOnLive: true,
+  boatId: "b-mantis",
 };
 
 describe("pushBoatSnagRows", () => {
@@ -50,5 +52,10 @@ describe("pushBoatSnagRows", () => {
       dueAt: null,
     });
     expect(row?.detail).toBe("Radio check: VHF crackles on 16. Noted by Sal Moretti.");
+  });
+
+  it("opens the fleet at the boat when the departure it was written on is gone", () => {
+    const [row] = rows([{ ...snag, departuresSince: 0, next: null, notedOnLive: false }]);
+    expect(row?.href).toBe("/shop/blue-mantis/settings/boats#boat-b-mantis");
   });
 });

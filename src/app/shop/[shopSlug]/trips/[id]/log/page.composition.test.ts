@@ -169,7 +169,7 @@ describe("the log's messages", () => {
         ),
       ) as Record<string, string>;
       const joined = Object.entries(bundle).filter(([, message]) => message.includes("·"));
-      expect(joined.length, "the bundle's joins are where this test looks").toBe(5);
+      expect(joined.length, "the bundle's joins are where this test looks").toBe(6);
       for (const [key, message] of joined) expect(message, key).not.toMatch(/[^\u00a0]·/);
     });
   }
@@ -184,7 +184,9 @@ describe("the pre-departure check", () => {
    * for the roll-call tables, whose column count grows with the dives.
    */
   it("lets its two columns share a phone's width rather than scroll", () => {
-    const tables = section("incident-checklist-heading").match(/<Table\b[^>]*>/g) ?? [];
+    expect(section("incident-checklist-heading")).toContain("<PreDepartureRecord");
+    const record = readFileSync(join(__dirname, "_components/PreDepartureRecord.tsx"), "utf8");
+    const tables = record.match(/<Table\b[^>]*>/g) ?? [];
     expect(tables).toHaveLength(1);
     expect(tables[0]).not.toContain("minWidth");
   });

@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNull, lte, ne } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, lt, lte, ne, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -40,18 +40,23 @@ async function activeStaff(tx: DbExecutor, shopId: string, personId: string): Pr
   return Boolean(roles && isStaff(roles));
 }
 
-/** The live departure and its boat, or why there is nothing to hang a snag on. */
+/**
+ * The live departure and its boat, or why there is nothing to hang a snag on.
+ * A writer passes `forWrite`: a canceled departure never sails, so it neither
+ * writes a snag nor answers one.
+ */
 async function tripBoat(
   tx: DbExecutor,
   shopId: string,
   tripId: string,
+  forWrite = false,
 ): Promise<{ boatId: string; startsAt: Date } | "trip_unavailable" | "no_boat"> {
   const [trip] = await tx
-    .select({ boatId: trips.boatId, startsAt: trips.startsAt })
+    .select({ boatId: trips.boatId, startsAt: trips.startsAt, status: trips.status })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
-  if (!trip) return "trip_unavailable";
+  if (!trip || (forWrite && trip.status === "cancelled")) return "trip_unavailable";
   return trip.boatId ? { boatId: trip.boatId, startsAt: trip.startsAt } : "no_boat";
 }
 
@@ -77,7 +82,7 @@ export async function noteSnag(
     if (!(await activeStaff(tx, input.shopId, input.personId))) {
       return { ok: false, reason: "staff_not_found" };
     }
-    const boat = await tripBoat(tx, input.shopId, input.tripId);
+    const boat = await tripBoat(tx, input.shopId, input.tripId, true);
     if (typeof boat === "string") return { ok: false, reason: boat };
     const [item] = await tx
       .select({ id: preDepartureChecklistItems.id })
@@ -110,11 +115,16 @@ export async function noteSnag(
   return outcome;
 }
 
+const stillThereBy = alias(people, "still_there_by");
+const notedOn = alias(trips, "noted_on");
+
 /**
  * The next crew's answer: **Fixed** closes the snag for good, **Still there**
  * keeps it open and says who looked last. Only an open snag on this
- * departure's own boat can be answered from it, so a stale page or a forged id
- * cannot close another hull's problem.
+ * departure's own boat can be answered from it, and only from a departure
+ * that wears it (written on or before this one sails, as `openSnagsForTrip`
+ * reads it), so a stale page or a forged id cannot close another hull's
+ * problem or stamp a fix on a departure that sailed before the snag existed.
  */
 export async function answerSnag(
   db: AppDb,
@@ -130,9 +140,14 @@ export async function answerSnag(
     if (!(await activeStaff(tx, input.shopId, input.personId))) {
       return { ok: false, reason: "staff_not_found" };
     }
-    const boat = await tripBoat(tx, input.shopId, input.tripId);
+    const boat = await tripBoat(tx, input.shopId, input.tripId, true);
     if (typeof boat === "string") return { ok: false, reason: boat };
     const now = nowDate();
+    // diveday:allow-deleted-trips: the departure a snag was written on dates it; the boat's problem outlives a deleted departure.
+    const wornHere = tx
+      .select({ id: notedOn.id })
+      .from(notedOn)
+      .where(and(eq(notedOn.shopId, input.shopId), lte(notedOn.startsAt, boat.startsAt)));
     const [row] = await tx
       .update(boatSnags)
       .set(
@@ -156,6 +171,7 @@ export async function answerSnag(
           eq(boatSnags.shopId, input.shopId),
           eq(boatSnags.boatId, boat.boatId),
           isNull(boatSnags.fixedAt),
+          inArray(boatSnags.notedOnTripId, wornHere),
         ),
       )
       .returning({ id: boatSnags.id });
@@ -177,9 +193,6 @@ export type OpenSnag = {
   /** The newest crew who looked and found it still there. */
   stillThere: { byName: string; at: Date } | null;
 };
-
-const stillThereBy = alias(people, "still_there_by");
-const notedOn = alias(trips, "noted_on");
 
 /**
  * The snags still open on this departure's boat, oldest first: the ones its
@@ -207,14 +220,22 @@ export async function openSnagsForTrip(
       stillThereAt: boatSnags.stillThereAt,
     })
     .from(boatSnags)
+    // Every join carries the shop as well (src/db/gear-returns.ts), so a
+    // future mismatched row never renders another tenant's words.
     .innerJoin(
       preDepartureChecklistItems,
-      eq(preDepartureChecklistItems.id, boatSnags.checklistItemId),
+      and(
+        eq(preDepartureChecklistItems.id, boatSnags.checklistItemId),
+        eq(preDepartureChecklistItems.shopId, shopId),
+      ),
     )
-    .innerJoin(people, eq(people.id, boatSnags.notedByPersonId))
-    .leftJoin(stillThereBy, eq(stillThereBy.id, boatSnags.stillThereByPersonId))
+    .innerJoin(people, and(eq(people.id, boatSnags.notedByPersonId), eq(people.shopId, shopId)))
+    .leftJoin(
+      stillThereBy,
+      and(eq(stillThereBy.id, boatSnags.stillThereByPersonId), eq(stillThereBy.shopId, shopId)),
+    )
     // diveday:allow-deleted-trips: the departure a snag was written on dates it; the boat's problem outlives a deleted departure.
-    .innerJoin(notedOn, eq(notedOn.id, boatSnags.notedOnTripId))
+    .innerJoin(notedOn, and(eq(notedOn.id, boatSnags.notedOnTripId), eq(notedOn.shopId, shopId)))
     .where(
       and(
         eq(boatSnags.shopId, shopId),
@@ -241,6 +262,7 @@ export async function openSnagsForTrip(
 
 export type ShopOpenSnag = {
   id: string;
+  boatId: string;
   boatName: string;
   itemLabel: string;
   note: string;
@@ -252,6 +274,8 @@ export type ShopOpenSnag = {
   next: { tripId: string; startsAt: Date } | null;
   /** Where the snag was written, the door when the boat has nothing ahead. */
   notedOnTripId: string;
+  /** Whether that departure is still on the board; deleted, the door is the fleet. */
+  notedOnLive: boolean;
 };
 
 /**
@@ -276,16 +300,23 @@ export async function openSnagsForShop(
       notedAt: boatSnags.notedAt,
       notedOnTripId: boatSnags.notedOnTripId,
       notedOnStartsAt: notedOn.startsAt,
+      notedOnDeletedAt: notedOn.deletedAt,
     })
     .from(boatSnags)
-    .innerJoin(boats, and(eq(boats.id, boatSnags.boatId), isNull(boats.deletedAt)))
+    .innerJoin(
+      boats,
+      and(eq(boats.id, boatSnags.boatId), eq(boats.shopId, shopId), isNull(boats.deletedAt)),
+    )
     .innerJoin(
       preDepartureChecklistItems,
-      eq(preDepartureChecklistItems.id, boatSnags.checklistItemId),
+      and(
+        eq(preDepartureChecklistItems.id, boatSnags.checklistItemId),
+        eq(preDepartureChecklistItems.shopId, shopId),
+      ),
     )
-    .innerJoin(people, eq(people.id, boatSnags.notedByPersonId))
+    .innerJoin(people, and(eq(people.id, boatSnags.notedByPersonId), eq(people.shopId, shopId)))
     // diveday:allow-deleted-trips: the departure a snag was written on dates it; the boat's problem outlives a deleted departure.
-    .innerJoin(notedOn, eq(notedOn.id, boatSnags.notedOnTripId))
+    .innerJoin(notedOn, and(eq(notedOn.id, boatSnags.notedOnTripId), eq(notedOn.shopId, shopId)))
     .where(and(eq(boatSnags.shopId, shopId), isNull(boatSnags.fixedAt)))
     .orderBy(
       asc(boatSnags.notedAt),
@@ -322,6 +353,7 @@ export async function openSnagsForShop(
     const next = own.find((trip) => trip.startsAt > now) ?? null;
     return {
       id: row.id,
+      boatId: row.boatId,
       boatName: row.boatName,
       itemLabel: row.itemLabel,
       note: row.note,
@@ -330,6 +362,58 @@ export async function openSnagsForShop(
       departuresSince: own.filter((trip) => trip.startsAt <= now).length,
       next: next ? { tripId: next.id, startsAt: next.startsAt } : null,
       notedOnTripId: row.notedOnTripId,
+      notedOnLive: row.notedOnDeletedAt === null,
     };
   });
+}
+
+export type SailedWithSnag = {
+  id: string;
+  itemLabel: string;
+  note: string;
+  notedByName: string;
+  notedAt: Date;
+};
+
+/**
+ * **What the crew knew when the boat left** (dive-domain review FIX 5): the
+ * boat's snags written before the departure's scheduled start and not fixed
+ * before it, for the departure log and the incident printout. A read over
+ * stamps the snag already carries, never a new write; "VHF crackles on 16" is
+ * written down so the record says the crew sailed knowing it. Oldest first;
+ * empty for a departure with no boat.
+ */
+export async function snagsOpenWhenSailed(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<SailedWithSnag[]> {
+  const boat = await tripBoat(db, shopId, tripId);
+  if (typeof boat === "string") return [];
+  return db
+    .select({
+      id: boatSnags.id,
+      itemLabel: preDepartureChecklistItems.label,
+      note: boatSnags.note,
+      notedByName: people.fullName,
+      notedAt: boatSnags.notedAt,
+    })
+    .from(boatSnags)
+    .innerJoin(
+      preDepartureChecklistItems,
+      and(
+        eq(preDepartureChecklistItems.id, boatSnags.checklistItemId),
+        eq(preDepartureChecklistItems.shopId, shopId),
+      ),
+    )
+    .innerJoin(people, and(eq(people.id, boatSnags.notedByPersonId), eq(people.shopId, shopId)))
+    .where(
+      and(
+        eq(boatSnags.shopId, shopId),
+        eq(boatSnags.boatId, boat.boatId),
+        lt(boatSnags.notedAt, boat.startsAt),
+        or(isNull(boatSnags.fixedAt), gte(boatSnags.fixedAt, boat.startsAt)),
+      ),
+    )
+    .orderBy(asc(boatSnags.notedAt), asc(preDepartureChecklistItems.label), asc(boatSnags.id));
 }

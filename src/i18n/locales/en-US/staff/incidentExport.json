@@ -94,5 +94,7 @@
   "waiverMedicalReview": "Medical review flagged as required. Status only; the questionnaire’s answers are not part of this document.",
   "waiverNotSigned": "No current signed waiver on record.",
   "waiverPaperMarkedBy": "Recorded by {name} from an in-person signature.",
-  "waiverPending": "A waiver link was issued and has not been signed."
+  "waiverPending": "A waiver link was issued and has not been signed.",
+  "sailedWithSnag": "{item}: {note}. Noted by {name}\u00a0· {date}",
+  "sailedWithSnagsHeading": "Open on the boat when it sailed"
 }

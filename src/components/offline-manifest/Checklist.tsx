@@ -6,6 +6,36 @@ import type { OfflineTripControls } from "./controls";
 import type { OfflineTripView } from "./trip-view";
 
 /**
+ * The boat's open snags as saved (fifth-loop ideas, item 1), read-only: an
+ * answer is a write the server must check, so it waits for the dock. Renders
+ * nothing for a copy that carries none.
+ */
+export function OfflineSnags({ view }: { view: OfflineTripView }) {
+  const snags = view.envelope.snapshot.snags;
+  if (!snags || snags.items.length === 0) return null;
+  return (
+    <section
+      // The live check's warning tint (`CarriedSnags`), so the two copies look alike.
+      className="mt-6 rounded-panel border border-border bg-warning/10 p-4"
+      aria-labelledby="boat-snags-heading"
+    >
+      <h2 id="boat-snags-heading" className="text-base font-semibold text-ink">
+        {snags.heading}
+      </h2>
+      <ul className="mt-3 flex flex-col gap-3">
+        {snags.items.map((snag) => (
+          <li key={`${snag.line}|${snag.notedBy}`} className="text-sm">
+            <p className="font-medium text-ink">{snag.line}</p>
+            <p className="text-muted">{snag.notedBy}</p>
+            {snag.stillThere ? <p className="text-muted">{snag.stillThere}</p> : null}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
  * The pre-departure checklist as saved, checkable with no signal. Renders
  * nothing for a shop with no checklist items.
  */

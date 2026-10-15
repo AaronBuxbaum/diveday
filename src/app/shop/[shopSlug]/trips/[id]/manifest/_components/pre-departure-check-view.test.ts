@@ -59,4 +59,36 @@ describe("preDepartureCheckView", () => {
     expect(view.items[1]?.snags.map((here) => here.note)).toEqual(["Spare cylinder low"]);
     expect(view.snagActions).toBe(snagActions);
   });
+
+  it("keeps this crew's own open snag on the folded summary line", () => {
+    const base = {
+      checklistItems: [{ id: "radio", label: "Radio check" }] as never,
+      checklistChecks: new Map([
+        [
+          "radio",
+          { recordedByName: "Keiko Tanaka", occurredAt: new Date("2026-09-11T11:40:00.000Z") },
+        ],
+      ]) as never,
+      locale: "en-US",
+      timeZone: "America/New_York",
+      t,
+    };
+    const snag = (id: string, notedHere: boolean) => ({
+      id,
+      checklistItemId: "radio",
+      itemLabel: "Radio check",
+      note: "VHF crackles on 16",
+      notedByName: "Sal Moretti",
+      notedAt: new Date("2026-09-11T09:16:00.000Z"),
+      notedHere,
+      stillThere: null,
+    });
+    expect(preDepartureCheckView({ ...base, snags: [snag("s1", true)] }).copy.summary).toBe(
+      "Before you leave the dock: 1 of 1 checked\u00a0· 1 open snag",
+    );
+    // A carried snag stands outside the fold, so the summary need not repeat it.
+    expect(preDepartureCheckView({ ...base, snags: [snag("s2", false)] }).copy.summary).toBe(
+      "Before you leave the dock: 1 of 1 checked",
+    );
+  });
 });

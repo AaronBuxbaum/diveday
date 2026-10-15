@@ -10,11 +10,12 @@ import { DayTakings } from "./DayTakings";
 
 /**
  * **Tomorrow from tonight** (fifth-loop ideas, item 2): once today's boats are
- * settled, what tomorrow needs from the fill station and the gear room
- * tonight, added across every departure, and the printed day for tomorrow.
+ * due back, or on a day with none (`loadOutDue`), what tomorrow needs from the
+ * fill station and the gear room tonight, added across every departure, and
+ * the printed day for tomorrow.
  *
- * Under the same `closing` condition as the takings beside it: while a boat is
- * out, the evening is not here yet. A count, never a fill log (H-11); each
+ * Earlier than the takings beside it, which wait for every boat to settle: the
+ * fill station does not wait for a night boat's roll call. A count, never a fill log (H-11); each
  * cylinder is still analyzed and signed for at the fill station, which the
  * printed fill list says once.
  */
@@ -50,9 +51,10 @@ export function TomorrowFromTonight({
 }
 
 /**
- * **The evening's two readings, once the day is closing**: what today made
- * (`DayTakings`, for a reader who may read money) and what tomorrow needs from
- * tonight. Fragments, so each stays a section of the spine's own column.
+ * **The evening's two readings**: what today made (`DayTakings`, for a reader
+ * who may read money, once every boat has settled) and what tomorrow needs
+ * from tonight (once today's boats are due back, `loadOutDue`). Fragments, so
+ * each stays a section of the spine's own column.
  */
 export function EveningReadings({
   evening,
@@ -70,10 +72,10 @@ export function EveningReadings({
   shopSlug: string;
   t: StaffTranslator;
 }) {
-  if (!evening?.close.closing) return null;
+  if (!evening) return null;
   return (
     <>
-      {evening.takings ? (
+      {evening.close.closing && evening.takings ? (
         <DayTakings
           takings={evening.takings}
           currency={currency}

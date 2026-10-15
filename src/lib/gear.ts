@@ -287,6 +287,20 @@ export function gearKindIsLifeSupport(kind: GearItemKind): boolean {
   return LIFE_SUPPORT_KINDS.has(kind);
 }
 
+const PULL_STARTS_TICKED_KINDS: ReadonlySet<GearItemKind> = new Set(["regulator", "bcd", "tank"]);
+
+/**
+ * Whether "Pull for service" starts ticked when one unit comes off the boat
+ * with a problem (dive-domain review of fifth-loop item 5): on for what a
+ * diver breathes from or floats by (regulator, BCD, cylinder), so a short rack
+ * at 7 AM does not hand out the regulator somebody wrote "inflator sticks"
+ * against; off for the rest, where a scratched mask is no reason to empty the
+ * wall. The set pane's armful keeps every box unticked.
+ */
+export function pullStartsTicked(kind: GearItemKind): boolean {
+  return PULL_STARTS_TICKED_KINDS.has(kind);
+}
+
 /**
  * One clock's latest reading: when it last ran, when it next runs out, and —
  * for the units a shop dual-clocks — how many dives it has left.

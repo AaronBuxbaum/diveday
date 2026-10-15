@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { rollCallCheckpoints } from "@/lib/manifests";
-import { OfflineChecklist } from "./Checklist";
+import { OfflineChecklist, OfflineSnags } from "./Checklist";
 import { OfflineCounter } from "./Counter";
 import type { OfflineTripControls } from "./controls";
 import { OfflineRollCallSection } from "./RollCallSection";
@@ -85,6 +85,9 @@ export function OfflineTripScreen({
         {envelope.snapshot.boatSafety ? (
           <BoatSafetyNotices className="mt-6" {...envelope.snapshot.boatSafety} />
         ) : null}
+        {/* What the last crew said about this hull, above the check it was
+          written against, as the live page carries it. */}
+        <OfflineSnags view={view} />
         <OfflineChecklist view={view} controls={controls} />
 
         {/* **The desk, with no signal** (ADR

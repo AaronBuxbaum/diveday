@@ -443,13 +443,11 @@ export default async function TripManifestPage({
             20260827-the-departure-is-two-working-surfaces puts device settings in
             the "ashore, not here" tier.
 
-            The disclosure belongs to `OfflineManifestManager` rather than to a
-            wrapper here, and that is load-bearing: the summary line keeps the
-            connectivity chip and the freshness pill on screen, because a stale
-            copy that looks current is the failure mode this whole mechanism
-            exists to prevent — and the component that computes that state is the
-            only thing that can render it. The rest of the group rides in as its
-            children. */}
+            The disclosure belongs to `OfflineManifestManager` rather than to a wrapper here, and
+            that is load-bearing: the summary line keeps the connectivity chip and the freshness
+            pill on screen, because a stale copy that looks current is the failure mode this whole
+            mechanism exists to prevent — and the component that computes that state is the only
+            thing that can render it. The rest of the group rides in as its children. */}
         <OfflineManifestManager
           idPrefix={idPrefix}
           locale={locale}
@@ -459,6 +457,7 @@ export default async function TripManifestPage({
             shopSlug,
             ...boatCheck,
             boatSafety,
+            locale,
             t,
           })}
           copy={offlineManifestManagerCopy(t)}

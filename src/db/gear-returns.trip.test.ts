@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { createGearItem } from "./gear-items";
@@ -11,7 +11,7 @@ import {
   SETUP_PICK,
   shopBooking,
 } from "./gear-test-fixtures";
-import { gearReservations } from "./schema";
+import { gearItems, gearReservations } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -60,7 +60,7 @@ describe("units back from the boat", () => {
         reservationId: bcd,
         outcome: "all_good",
       }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, pulled: 0 });
     expect(
       await returnTripGearUnit(db, {
         shopId: shop.id,
@@ -69,7 +69,7 @@ describe("units back from the boat", () => {
         outcome: "service_concern",
         note: "Inflator sticks",
       }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, pulled: 0 });
     const rows = await db
       .select({
         id: gearReservations.id,
@@ -109,5 +109,51 @@ describe("units back from the boat", () => {
       }),
     ).toEqual({ ok: false, reason: "not_found" });
     expect(await listTripUnitsToCheckIn(db, shop.id, other.trip.id)).toEqual([]);
+  });
+
+  it("pulls the one unit to the bench with its problem, in the same act, only when ticked", async () => {
+    const { db, shop } = await gearShopContext(ctx);
+    const out = await aSetOut(db, shop.id);
+    const rows = await db
+      .select({ id: gearReservations.id, gearItemId: gearReservations.gearItemId })
+      .from(gearReservations)
+      .where(inArray(gearReservations.id, out.reservationIds));
+    const [first, second] = rows;
+    if (!first || !second) throw new Error("set missing");
+    const status = async (gearItemId: string) =>
+      (
+        await db
+          .select({ status: gearItems.status, note: gearItems.serviceNote })
+          .from(gearItems)
+          .where(eq(gearItems.id, gearItemId))
+      )[0];
+
+    // A tick naming another unit of the set pulls nothing: only the unit this return closes.
+    expect(
+      await returnTripGearUnit(db, {
+        shopId: shop.id,
+        tripId: out.tripId,
+        reservationId: first.id,
+        outcome: "service_concern",
+        note: "Inflator sticks",
+        pullGearItemIds: [second.gearItemId],
+      }),
+    ).toEqual({ ok: true, pulled: 0 });
+    expect(await status(second.gearItemId)).toMatchObject({ status: "in_service" });
+
+    expect(
+      await returnTripGearUnit(db, {
+        shopId: shop.id,
+        tripId: out.tripId,
+        reservationId: second.id,
+        outcome: "service_concern",
+        note: "Free-flows at depth",
+        pullGearItemIds: [second.gearItemId],
+      }),
+    ).toEqual({ ok: true, pulled: 1 });
+    expect(await status(second.gearItemId)).toMatchObject({
+      status: "needs_service",
+      note: "Free-flows at depth",
+    });
   });
 });

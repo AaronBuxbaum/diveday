@@ -2,10 +2,10 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "dri
 import { nowDate } from "@/lib/clock";
 import {
   assembleDayCloseout,
-  assembleEveningClose,
   type DayCloseoutState,
   type DayLoadOut,
   dayLoadOut,
+  loadOutDue,
   seatSailed,
   tomorrowNoon,
 } from "@/lib/closeout";
@@ -391,9 +391,9 @@ export async function getDayCloseout(
     listRollCallGaps(db, shopId, now),
   ]);
   const state = assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
-  // Only once the evening is closing: a dozen prep reads for a day still sailing would
+  // Only once it is due (`loadOutDue`): a dozen prep reads for a day still sailing would
   // be spent on a block nobody is shown.
-  if (!loadOutShop || !assembleEveningClose(state.departures, now).closing) return state;
+  if (!loadOutShop || !loadOutDue(state.departures, now)) return state;
   return {
     ...state,
     tomorrow: await readDayLoadOut(db, loadOutShop, tomorrowNoon(now, timeZone), now),

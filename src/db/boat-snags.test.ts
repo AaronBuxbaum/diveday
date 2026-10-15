@@ -3,9 +3,15 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import { fileScopedShopContext } from "@/test/db";
-import { answerSnag, noteSnag, openSnagsForShop, openSnagsForTrip } from "./boat-snags";
+import {
+  answerSnag,
+  noteSnag,
+  openSnagsForShop,
+  openSnagsForTrip,
+  snagsOpenWhenSailed,
+} from "./boat-snags";
 import { listChecklistItems } from "./pre-departure-check";
-import { boats, trips } from "./schema";
+import { boatSnags, boats, trips } from "./schema";
 import { listStaff } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -137,6 +143,61 @@ describe("boat snags (in-memory PGlite)", () => {
     expect(await openSnagsForTrip(db, shop.id, first.id)).toHaveLength(1);
   });
 
+  it("refuses an earlier departure of the same boat answering it", async () => {
+    const { db, shop, first, second, item, captain } = await snagContext();
+    const noted = await noteSnag(db, {
+      shopId: shop.id,
+      tripId: second.id,
+      checklistItemId: item.id,
+      personId: captain.id,
+      note: "Ladder bolt loose",
+    });
+    if (!noted.ok) throw new Error("note refused");
+    // The earlier departure never shows the snag, so it cannot close it.
+    expect(
+      await answerSnag(db, {
+        shopId: shop.id,
+        tripId: first.id,
+        snagId: noted.snagId,
+        personId: captain.id,
+        answer: "fixed",
+      }),
+    ).toEqual({ ok: false, reason: "snag_unavailable" });
+    expect(await openSnagsForTrip(db, shop.id, second.id)).toHaveLength(1);
+  });
+
+  it("refuses a canceled departure noting or answering one", async () => {
+    const { db, shop, first, second, item, captain } = await snagContext();
+    const noted = await noteSnag(db, {
+      shopId: shop.id,
+      tripId: first.id,
+      checklistItemId: item.id,
+      personId: captain.id,
+      note: "Bilge alarm chirps",
+    });
+    if (!noted.ok) throw new Error("note refused");
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, second.id));
+    expect(
+      await answerSnag(db, {
+        shopId: shop.id,
+        tripId: second.id,
+        snagId: noted.snagId,
+        personId: captain.id,
+        answer: "fixed",
+      }),
+    ).toEqual({ ok: false, reason: "trip_unavailable" });
+    expect(
+      await noteSnag(db, {
+        shopId: shop.id,
+        tripId: second.id,
+        checklistItemId: item.id,
+        personId: captain.id,
+        note: "VHF",
+      }),
+    ).toEqual({ ok: false, reason: "trip_unavailable" });
+    expect(await openSnagsForTrip(db, shop.id, first.id)).toHaveLength(1);
+  });
+
   it("refuses an empty or overlong note, a boatless departure and another shop's item", async () => {
     const { db, shop, first, item, captain } = await snagContext();
     const base = {
@@ -182,5 +243,53 @@ describe("boat snags (in-memory PGlite)", () => {
         next: { tripId: second.id },
       },
     ]);
+  });
+
+  it("names, for the record, the snags open when the boat sailed and no others", async () => {
+    const { db, shop, first, second, third, item, captain } = await snagContext();
+    const note = async (words: string) => {
+      const noted = await noteSnag(db, {
+        shopId: shop.id,
+        tripId: first.id,
+        checklistItemId: item.id,
+        personId: captain.id,
+        note: words,
+      });
+      if (!noted.ok) throw new Error("note refused");
+      return noted.snagId;
+    };
+    const carried = await note("VHF crackles on 16");
+    const fixedBetween = await note("Ladder bolt loose");
+    const fixedBefore = await note("Bilge alarm chirps");
+    const writtenAfter = await note("Swim step cracked");
+    // Written at the dock two hours before the first boat left, all but one.
+    await db
+      .update(boatSnags)
+      .set({ notedAt: new Date(first.startsAt.getTime() - 2 * 60 * 60_000) })
+      .where(eq(boatSnags.shopId, shop.id));
+    const between = new Date((first.startsAt.getTime() + second.startsAt.getTime()) / 2);
+    await db
+      .update(boatSnags)
+      .set({ fixedAt: between, fixedByPersonId: captain.id, fixedOnTripId: second.id })
+      .where(eq(boatSnags.id, fixedBetween));
+    await db
+      .update(boatSnags)
+      .set({
+        fixedAt: new Date(first.startsAt.getTime() - 60_000),
+        fixedByPersonId: captain.id,
+        fixedOnTripId: first.id,
+      })
+      .where(eq(boatSnags.id, fixedBefore));
+    await db.update(boatSnags).set({ notedAt: between }).where(eq(boatSnags.id, writtenAfter));
+
+    const atFirst = await snagsOpenWhenSailed(db, shop.id, first.id);
+    expect(atFirst.map((snag) => snag.note).sort()).toEqual([
+      "Ladder bolt loose",
+      "VHF crackles on 16",
+    ]);
+    expect(atFirst[0]).toMatchObject({ itemLabel: item.label, notedByName: captain.fullName });
+    const atSecond = await snagsOpenWhenSailed(db, shop.id, second.id);
+    expect(atSecond.map((snag) => snag.id).sort()).toEqual([carried, writtenAfter].sort());
+    expect(await snagsOpenWhenSailed(db, shop.id, third.id)).toEqual([]);
   });
 });
