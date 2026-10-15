@@ -198,9 +198,7 @@
           "src/app/shop/[shopSlug]/settings/team/actions.ts": "0 -> 2"
         }
       }
-    ],
-    "src/app/actions/waiver-send-types.ts": 1,
-    "src/app/shop/[shopSlug]/settings/team/actions.ts": 2
+    ]
   },
   "domain-strings": {
     "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs."

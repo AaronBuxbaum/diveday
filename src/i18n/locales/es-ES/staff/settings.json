@@ -538,6 +538,7 @@
   },
   "team": {
     "title": "Equipo",
+    "unnamedInviter": "Un compañero",
     "notice": {
       "invited": "Invitación enviada.",
       "inviteResent": "Invitación reenviada.",

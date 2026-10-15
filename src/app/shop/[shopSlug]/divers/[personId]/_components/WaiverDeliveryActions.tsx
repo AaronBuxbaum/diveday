@@ -259,7 +259,7 @@ export function WaiverDeliveryActions({
           hold={holdSendAction}
           undo={undoHeldSendAction}
           release={releaseHeldSendAction}
-          onOutcome={(outcome) => setState(waiverSendStateFromOutcome(outcome))}
+          onOutcome={(outcome) => setState(waiverSendStateFromOutcome(outcome, sendCopy.unnamedDiver))}
           copy={sendCopy.hold}
         >
           <input type="hidden" name="holdKind" value="waiver_send" />

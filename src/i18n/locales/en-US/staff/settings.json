@@ -538,6 +538,7 @@
   },
   "team": {
     "title": "Team",
+    "unnamedInviter": "A teammate",
     "notice": {
       "invited": "Invite sent.",
       "inviteResent": "Invite resent.",
