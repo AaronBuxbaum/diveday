@@ -84,8 +84,10 @@ test("the emergency reference saves on its own page, and the save lands back on 
 
 /**
  * H-118: the shore contact's alert address saves with the box that records
- * their consent, comes back ticked with when it was recorded, and clearing the
- * address clears both.
+ * their consent, comes back ticked with when and by whom it was recorded, and
+ * clearing the address clears both and says so. The minted shop is a demo
+ * shop, so the save says no confirmation link went (demo shops send nothing);
+ * a real shop's link is `shore-alert-actions.test.ts`'s.
  */
 test("a shore contact's alert address saves with its consent, and clears with it", async ({
   page,
@@ -100,14 +102,16 @@ test("a shore contact's alert address saves with its consent, and clears with it
   await consent.check();
   await page.getByRole("button", { name: "Save emergency reference" }).click();
 
-  await expect(page.getByText("Emergency reference saved.")).toBeVisible();
+  await expect(page.getByText("Saved. Demo shops send nothing, so no link went.")).toBeVisible();
   await expect(address).toHaveValue("shore@example.com");
   await expect(consent).toBeChecked();
-  await expect(page.getByText(/^Recorded /)).toBeVisible();
+  await expect(page.getByText(/^Recorded .+ by /)).toBeVisible();
 
   await address.fill("");
   await page.getByRole("button", { name: "Save emergency reference" }).click();
-  await expect(page.getByText("Emergency reference saved.")).toBeVisible();
+  await expect(
+    page.getByText("Shore contact’s email removed. It gets no more roll-call alerts."),
+  ).toBeVisible();
   await expect(address).toHaveValue("");
   await expect(consent).not.toBeChecked();
 });
