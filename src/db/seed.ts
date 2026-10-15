@@ -132,6 +132,7 @@ import { seedCertGates } from "./seed-cert-gates";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, demoTodayShifts } from "./seed-clock";
 import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCounterRental } from "./seed-counter-rental";
+import { seedCourseFormWording } from "./seed-course-form-wording";
 import { seedCourseInquiries } from "./seed-course-inquiries";
 import { seedCourseMaterials } from "./seed-course-materials";
 import { seedCoursePhotos } from "./seed-course-photos";
@@ -1234,6 +1235,15 @@ export async function seedDemoSchedule(
       roster: bookingRows,
       actorPersonId: instructor.id,
     });
+  }
+
+  // Late, after every scenario that books a course session: the shop's own
+  // words on its course forms, and a paper signature for every student
+  // already booked, so no seeded seat changes readiness
+  // (src/db/seed-course-form-wording.ts, fourth review, item 53). Rides the
+  // history flag, so the lean template keeps its forms empty.
+  if (opts.history !== false) {
+    await seedCourseFormWording(db, shopId, { recordedByPersonId: instructor.id });
   }
 
   // Adds-only and late, after every scenario that crews a departure, so each

@@ -1065,7 +1065,12 @@ export async function writeCourseForm(page: Page, title: string, body: string): 
   await expect(page.locator("#course-forms summary", { hasText: title })).toBeVisible();
 }
 
-/** Choose a written course form on a course's page and wait for the save. */
+/**
+ * Make a written course form the course's only one, on its page, and wait for
+ * the save. Only: the demo's courses already ask for the shop's worded agency
+ * forms (src/db/seed-course-form-wording.ts), and a spec about one form signs
+ * that one.
+ */
 export async function requireCourseForm(
   page: Page,
   courseSlug: string,
@@ -1075,6 +1080,9 @@ export async function requireCourseForm(
   const forms = page.locator("form", {
     has: page.getByRole("button", { name: "Save forms" }),
   });
+  for (const box of await forms.getByRole("checkbox").all()) {
+    if (await box.isChecked()) await box.uncheck();
+  }
   await forms.getByRole("checkbox", { name: title, exact: true }).check();
   await forms.getByRole("button", { name: "Save forms" }).click();
   await expect(
