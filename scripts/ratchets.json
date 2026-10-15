@@ -607,8 +607,23 @@
         "files": {
           "src/content/dive-sites/florida-panhandle.ts": "0 -> 1"
         }
+      },
+      {
+        "why": "Harbour Island and Harbour Reef are the places' own names, as the Bahamas and Aruba spell them",
+        "files": {
+          "src/content/dive-areas.ts": "0 -> 1",
+          "src/content/dive-sites/aruba.ts": "0 -> 1"
+        }
+      },
+      {
+        "why": "Harbour Island is the island's own name",
+        "files": {
+          "src/content/dive-sites/bahamas-eleuthera.ts": "0 -> 1"
+        }
       }
     ],
+    "src/content/dive-areas.ts": 1,
+    "src/content/dive-sites/aruba.ts": 1,
     "src/content/dive-sites/florida-panhandle.ts": 1
   }
 }
