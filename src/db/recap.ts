@@ -392,7 +392,7 @@ async function readRecapRow(db: AppDb, bookingId: string) {
       shopId: bookings.shopId,
       tripId: bookings.tripId,
       personId: bookings.personId,
-      bookedAs: bookings.bookedAs,
+      participantType: bookings.participantType,
       status: bookings.status,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       tripStatus: trips.status,
@@ -842,7 +842,7 @@ async function loadRecapPageData(
   // A rider never entered the water and a snorkeler breathes no gas: neither
   // is told when they may fly (issue #2383). Silence, as for a decompression
   // departure.
-  const flySafe = isDiver(row.bookedAs)
+  const flySafe = isDiver(row.participantType)
     ? flySafeFrom({
         executedDives: livedDives.map(({ executed }) => ({
           diveNumber: executed.diveNumber,
@@ -1586,7 +1586,7 @@ async function sendRecaps(
         flySafeByBooking.set(
           r.booking.id,
           // Same silence as the page for a rider or a snorkeler (issue #2383).
-          isDiver(r.booking.bookedAs)
+          isDiver(r.booking.participantType)
             ? flySafeFrom({
                 executedDives: executed,
                 plannedDives: first.trip.plannedDives,
