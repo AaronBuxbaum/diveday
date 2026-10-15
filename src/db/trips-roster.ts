@@ -114,19 +114,29 @@ export async function getTripRoster(db: AppDb, shopId: string, tripId: string) {
     .select({ booking: bookings, person: people })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookings.tripId, tripId),
-        eq(bookings.shopId, shopId),
-        // The person's own shop too, not only the booking's: a held seat
-        // prints the matched person's email and phone, so a booking whose
-        // person_id ever pointed across tenants must not carry them here.
-        eq(people.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
-    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
+    .where(tripRosterWhere(shopId, tripId))
+    .orderBy(...tripRosterOrder);
 }
+
+/**
+ * Which seats a roster holds, for a reader that widens `getTripRoster`'s one
+ * statement rather than sending a second (`getTripRosterWithPaymentMarks`).
+ * Joins `people` on the booking's person, as the roster does.
+ */
+export function tripRosterWhere(shopId: string, tripId: string) {
+  return and(
+    eq(bookings.tripId, tripId),
+    eq(bookings.shopId, shopId),
+    // The person's own shop too, not only the booking's: a held seat
+    // prints the matched person's email and phone, so a booking whose
+    // person_id ever pointed across tenants must not carry them here.
+    eq(people.shopId, shopId),
+    ne(bookings.status, "cancelled"),
+  );
+}
+
+/** The roster's order, stated in full above `getTripRoster` (issue #1753). */
+export const tripRosterOrder = [asc(bookings.createdAt), asc(people.fullName), asc(bookings.id)];
 
 /**
  * Wait-list entries stay outside the roster because they have not booked a
