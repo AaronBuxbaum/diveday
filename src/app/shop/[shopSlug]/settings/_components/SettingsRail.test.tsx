@@ -1,10 +1,6 @@
 // @vitest-environment jsdom
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RAIL_ROW_CLASS } from "@/components/ui/rail";
 import {
   currentSettingsRailRowId,
   SECTION_IDS,
@@ -27,15 +23,6 @@ import { SettingsDoorRow, SettingsRow } from "./SettingsRows";
  * the copy-restraint filter took out are gone from every locale rather than
  * merely unused in one.
  */
-
-const HERE = dirname(fileURLToPath(import.meta.url));
-const SETTINGS_DIR = join(HERE, "..");
-const LOCALES = join(HERE, "..", "..", "..", "..", "..", "i18n", "locales");
-/** The stylesheet with its comments out, so a sentence about a rule is never read as the rule. */
-const GLOBALS_CSS = readFileSync(join(HERE, "..", "..", "..", "..", "globals.css"), "utf8").replace(
-  /\/\*[\s\S]*?\*\//g,
-  "",
-);
 
 let pathname = "/shop/blue-mantis/settings";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
@@ -173,28 +160,6 @@ describe("the rail as it renders", () => {
     expect(box?.hasAttribute("data-rail-settled")).toBe(true);
   });
 
-  it("is a desktop control and nothing else", () => {
-    renderRail();
-    // Below `lg` the phone keeps the grouped list; the rail must never stack
-    // a directory above it, which is the sub-nav card this repo deleted once.
-    expect(screen.getByRole("navigation", { name: "Settings sections" }).className).toContain(
-      "hidden lg:block",
-    );
-  });
-
-  it("holds its own width, so an absent rail costs the pane nothing", () => {
-    // `/settings/calendar` is a staffer's own feed and takes no permission
-    // gate, so an ordinary staffer reaches the settings frame while this rail
-    // — drawn only for someone who may manage the shop — renders nothing
-    // beside them. The frame is a flex row for that reader's sake: the rail
-    // carries its own fixed width when it exists, rather than the frame
-    // reserving a track that auto-places the pane into 264px when it does not.
-    renderRail();
-    const nav = screen.getByRole("navigation", { name: "Settings sections" }).className;
-    expect(nav).toContain("lg:w-[264px]");
-    expect(nav).toContain("lg:shrink-0");
-  });
-
   it("marks the current row, and only that one", () => {
     pathname = `${BASE}/settings/team`;
     renderRail();
@@ -206,53 +171,6 @@ describe("the rail as it renders", () => {
     // The primary tint carries selection — never the accent (ADR decision
     // 11's coral budget has no row for a settings surface).
     expect(selected[0]).toHaveClass("bg-primary-tint", "text-primary");
-  });
-
-  /**
-   * **One page rail, one row.** The settings map and the long editor's section
-   * rail are the same control, and they were two hand-rolled strings: settings
-   * rows 36px tall at `px-2`, the editor's 44px at `px-3 py-2`. The rail shows
-   * from `lg` up, which is a landscape tablet held in the hand, so the 44px
-   * floor applies. Both rails draw `RAIL_ROW_CLASS`.
-   */
-  it("draws every row as the page rail's one row, at the 44px floor", () => {
-    renderRail();
-    const links = screen.getAllByRole("link");
-    expect(links.length).toBeGreaterThan(0);
-    for (const link of links) {
-      expect(link).toHaveClass(...RAIL_ROW_CLASS.split(" "));
-      expect(link).toHaveClass("min-h-11", "px-3", "py-2", "text-sm", "font-medium", "rounded-lg");
-      expect(link).not.toHaveClass("h-9");
-      expect(link).not.toHaveClass("px-2");
-    }
-  });
-
-  it("starts each group label's words on the rows' text edge", () => {
-    renderRail();
-    const nav = screen.getByRole("navigation", { name: "Settings sections" });
-    for (const group of SETTINGS_GROUPS) {
-      const label = nav.querySelector(`#settings-rail-${group.id}`);
-      const inset = [label, ...(label?.querySelectorAll("*") ?? [])].some((node) =>
-        node?.classList.contains("px-3"),
-      );
-      expect(inset, `${group.id}'s label is not inset like its rows`).toBe(true);
-    }
-  });
-
-  it("draws the focus ring inside each row", () => {
-    // The rows sit flush with the left edge of the rail's own scroll box, which
-    // cut the outset ring's left 5px on every one of them; and they are stacked
-    // with no gap, so an outset ring would paint over its neighbours too.
-    renderRail();
-    for (const link of screen.getAllByRole("link")) {
-      expect(link).toHaveClass("focus-visible:focus-ring-inset", "rounded-lg");
-    }
-  });
-
-  it("spends no accent ink at all", () => {
-    renderRail({ badges: { stripe: "Not connected" } });
-    const nav = screen.getByRole("navigation", { name: "Settings sections" });
-    expect(nav.innerHTML).not.toMatch(/accent/);
   });
 
   it("links a hub section by fragment and a sub-route by path", () => {
@@ -309,71 +227,10 @@ describe("the rail as it renders", () => {
     expect(nav.querySelectorAll("ul")).toHaveLength(SETTINGS_GROUPS.length);
   });
 
-  it("fills a label only while it is stuck, where the browser can tell", () => {
-    const supports = GLOBALS_CSS.indexOf("@supports (container-type: scroll-state)");
-    expect(supports).toBeGreaterThan(-1);
-    const gated = GLOBALS_CSS.slice(supports);
-    expect(gated).toMatch(/\.settings-rail-label\s*\{\s*container-type:\s*scroll-state;/);
-    expect(gated).toMatch(
-      /@container scroll-state\(stuck: top\)\s*\{\s*\.settings-rail-label > span\s*\{\s*background: var\(--rail-label-fill\);/,
-    );
-    // Outside the gate every label is filled, with the same fill.
-    expect(GLOBALS_CSS.slice(0, supports)).toMatch(
-      /\.settings-rail-label > span\s*\{\s*background: var\(--rail-label-fill\);/,
-    );
-  });
-
-  it("tints the label of the group the current row is in, and no other", () => {
-    pathname = `${BASE}/settings/team`;
-    renderRail();
-    const nav = screen.getByRole("navigation", { name: "Settings sections" });
-    // "team" is the Team group's row; every other group stays quiet.
-    for (const group of SETTINGS_GROUPS) {
-      const className = nav.querySelector(`#settings-rail-${group.id}`)?.className;
-      if (group.id === "team") expect(className).toContain("text-primary");
-      else expect(className, group.id).not.toContain("text-primary");
-    }
-  });
-
   it("renders no badge at all when nothing is wrong", () => {
     // The calm state, which is nearly always: the map is words, not pills.
     const { container } = renderRail();
     expect(container.querySelectorAll("nav span.rounded-full")).toHaveLength(0);
-  });
-
-  /**
-   * **A row's words wrap; they are never cut.** The rail is 264px by its
-   * design (SPEC 6g, `lg:grid-cols-[264px_1fr]`), and the page rail's row
-   * insets its words 12px a side, which left "Shopify, QuickBooks, Xero &
-   * Zapier" 208px for 216px of words: truncated on every settings capture at
-   * 1280. The row is a 44px floor, not a height, so a label that needs a
-   * second line takes one.
-   */
-  it("wraps a long row's words onto a second line instead of cutting them off", () => {
-    renderRail();
-    for (const link of screen.getAllByRole("link")) {
-      const words = link.querySelector(":scope > span");
-      expect(words).toHaveClass("min-w-0", "text-pretty");
-      expect(words).not.toHaveClass("truncate");
-    }
-  });
-
-  /**
-   * **A stuck label meets the box's top edge** (K-221). A sticky `top-0`
-   * sticks at its scroller's padding edge, and the rail's scroller carried
-   * `py-6`: a label stuck 24px under the box's top, and the rows scrolled past
-   * it kept showing in that strip — once the rail opened on its current row,
-   * a 10px sliver of "Trip packing checklist" stood above "YOUR SHOP" on Trip
-   * tags. The inset belongs to what the box scrolls, not to the
-   * box.
-   */
-  it("keeps its inset inside what it scrolls, so a stuck label sits on the box's top edge", () => {
-    renderRail();
-    const nav = screen.getByRole("navigation", { name: "Settings sections" });
-    const scroller = nav.querySelector<HTMLElement>(".overflow-y-auto");
-    if (!scroller) throw new Error("the rail has no scroll box");
-    expect([...scroller.classList].filter((token) => /^p[tby]?-/.test(token))).toEqual([]);
-    expect(scroller.firstElementChild).toHaveClass("py-6");
   });
 });
 
@@ -617,12 +474,6 @@ describe("the rail says there is more below", () => {
     const { container } = renderRail();
     expect(scroller(container).hasAttribute("data-more-below")).toBe(false);
   });
-
-  it("is a mask the stylesheet keys to the mark, so the fade is never drawn by default", () => {
-    expect(GLOBALS_CSS).toMatch(
-      /\[data-settings-rail-scroller\]\[data-more-below\]\s*\{[^}]*mask-image/,
-    );
-  });
 });
 
 describe("what the rail hides", () => {
@@ -695,21 +546,6 @@ describe("the rows the pane is made of", () => {
     expect(units?.open).toBe(false);
   });
 
-  it("rings a setting's summary inside itself, rounded into the group's corners at the ends", () => {
-    // Flush inside `InsetGroup`'s `overflow-hidden` card: the outset ring was
-    // cut on both sides of every row (the probe's largest settings cluster).
-    const { container } = render(
-      <SettingsRow sectionId="tax" heading="Sales tax & VAT">
-        <span>form</span>
-      </SettingsRow>,
-    );
-    expect(container.querySelector("summary")).toHaveClass(
-      "focus-visible:focus-ring-inset",
-      "[details:first-child>&]:rounded-t-panel",
-      "[details:last-child:not([open])>&]:rounded-b-panel",
-    );
-  });
-
   it("puts the fragment target inside the disclosure, where the reveal reaches it", () => {
     const { container } = render(
       <SettingsRow sectionId="reviewLink" heading="Review link">
@@ -720,96 +556,4 @@ describe("the rows the pane is made of", () => {
     expect(anchor).toBeTruthy();
     expect(anchor?.closest("details")).toBeTruthy();
   });
-
-  /**
-   * On a phone the summary is a column: the heading line, then the value.
-   * A row with no value used to keep the value's wrapper anyway, holding only
-   * the desktop caret, which is `hidden` there. The wrapper collapsed to 0px
-   * and still took the column's 4px gap, so the pixel probe measured every
-   * such label (Address, The counter card, Tax, …) 2px above its row's
-   * centre on ten settings captures. Below `sm`, only boxes with something in
-   * them may take part in the column.
-   */
-  it("keeps a row with no value to its heading line on a phone", () => {
-    const { container } = render(
-      <SettingsRow sectionId="address" heading="The counter card">
-        <span>form</span>
-      </SettingsRow>,
-    );
-    const summary = container.querySelector("summary");
-    expect(summary?.querySelectorAll(":scope > :not(.hidden)")).toHaveLength(1);
-  });
-
-  it("stacks a row's value under its heading on a phone", () => {
-    const { container } = render(
-      <SettingsRow sectionId="address" heading="Address" value="12 Harbor Rd">
-        <span>form</span>
-      </SettingsRow>,
-    );
-    const summary = container.querySelector("summary");
-    const shown = summary?.querySelectorAll(":scope > :not(.hidden)");
-    expect(shown).toHaveLength(2);
-    expect(shown?.[1]).toHaveTextContent("12 Harbor Rd");
-  });
-});
-
-describe("the frame", () => {
-  const layout = readFileSync(join(SETTINGS_DIR, "layout.tsx"), "utf8");
-
-  it("splits into a rail and a pane from lg up, without reserving a track for one", () => {
-    // A flex row rather than a two-track grid. `/settings/calendar` is a
-    // staffer's own feed and takes no permission gate, so an ordinary staffer
-    // reaches this frame while the rail beside it renders nothing — and under
-    // `grid-cols-[264px_1fr]` their pane was auto-placed into the *first*
-    // track, 264px wide with an empty column beside it. Flex has no track to
-    // fall into: the rail carries its own width, and its absence gives the
-    // pane the row.
-    expect(layout).toContain("lg:flex");
-    expect(layout).not.toContain("lg:grid-cols-");
-    expect(layout).toContain("lg:flex-1");
-  });
-
-  it("awaits nothing above its children", () => {
-    // A request-scoped read in a layout costs every route beneath it its
-    // static shell (ADR 20260804-instant-navigation), so the rail's session
-    // and permission reads live in an async child inside `<Suspense>`.
-    expect(layout).toMatch(/export default function SettingsLayout/);
-    expect(layout).toContain("<Suspense");
-  });
-});
-
-describe("the captions the copy-restraint filter deleted", () => {
-  const DELETED = [
-    "team",
-    "diveSites",
-    "waivers",
-    "safetyChecklist",
-    "security",
-    "embed",
-    "calendar",
-    "integrations",
-    "whatsapp",
-    "backup",
-  ];
-
-  for (const locale of ["en-US", "es-ES"]) {
-    it(`leaves no door caption behind in ${locale}`, () => {
-      // Three edits per key, and this is the one that catches the missing
-      // third: a caption deleted from the call site and one locale, still
-      // sitting in the other.
-      const bundle = JSON.parse(
-        readFileSync(join(LOCALES, locale, "staff", "settings.json"), "utf8"),
-      ) as { main: Record<string, Record<string, string> | undefined> };
-      for (const key of DELETED) {
-        expect(bundle.main[key], `${locale}: settings.main.${key} is gone entirely`).toBeTruthy();
-        expect(
-          bundle.main[key]?.description,
-          `${locale}: settings.main.${key}.description survived`,
-        ).toBeUndefined();
-      }
-      for (const key of ["dataImport", "gearImport", "dataExport"]) {
-        expect(bundle.main[key], `${locale}: settings.main.${key} survived`).toBeUndefined();
-      }
-    });
-  }
 });

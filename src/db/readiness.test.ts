@@ -22,6 +22,8 @@ import {
   reviewCertification,
   reviewSpecialtyCertification,
   tripRequirementSummaries,
+  unreviewCertification,
+  unreviewSpecialtyCertification,
   upsertTripRequirements,
 } from "./readiness";
 import type { DiveSpecialty } from "./schema";
@@ -736,6 +738,176 @@ describe("trip readiness (in-memory PGlite)", () => {
       await deleteSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
     ).toBe(true);
     expect(await activeSpecialtyCertificationIds(db, shop.id)).not.toContain(card.id);
+  });
+});
+
+/**
+ * **Undoing a card review** puts the gate back. A staffer who verified the
+ * wrong card taps "Undo"; the diver's next departure must read blocked again
+ * at once, not keep the clearance the mistaken tap gave them.
+ */
+describe("undoing a card review (unreviewCertification / unreviewSpecialtyCertification)", () => {
+  async function gateOnly(
+    db: ReturnType<typeof fileScopedShopContext>["db"],
+    shopId: string,
+    tripId: string,
+    gate: { level?: "rescue"; specialty?: DiveSpecialty },
+  ) {
+    await upsertTripRequirements(db, {
+      shopId,
+      tripId,
+      requiresWaiver: false,
+      minimumCertificationLevel: gate.level ?? null,
+      requiredSpecialties: gate.specialty ? [gate.specialty] : [],
+      requiresNitrox: false,
+      requiresPayment: false,
+    });
+  }
+
+  it("blocks the diver's next trip again once a level card's review is undone", async () => {
+    const { db, shop, reef, rosterEntry } = await readinessContext();
+    await gateOnly(db, shop.id, reef.id, { level: "rescue" });
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "PADI-RESCUE-UNDO",
+    });
+    if (!card) throw new Error("expected certification to insert");
+    await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+    });
+    expect((await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.status).toBe("ready");
+
+    expect(await unreviewCertification(db, { shopId: shop.id, certificationId: card.id })).toEqual({
+      ok: true,
+    });
+
+    const after = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
+    expect(after?.status).toBe("blocked");
+    expect(after?.blockers).toContainEqual(
+      expect.objectContaining({ code: "certification_pending" }),
+    );
+  });
+
+  it("blocks the diver's next trip again once a specialty card's review is undone", async () => {
+    const { db, shop, reef, rosterEntry } = await readinessContext();
+    await gateOnly(db, shop.id, reef.id, { specialty: "cavern" });
+    const before = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
+    expect(before?.blockers).toContainEqual(expect.objectContaining({ code: "specialty_missing" }));
+    const card = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      specialty: "cavern",
+      identifier: "PADI-CAVERN-UNDO",
+    });
+    if (!card) throw new Error("expected specialty card to insert");
+    await reviewSpecialtyCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+    });
+    expect((await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.status).toBe("ready");
+
+    expect(
+      await unreviewSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
+    ).toEqual({ ok: true });
+
+    const after = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
+    expect(after?.status).toBe("blocked");
+    expect(after?.blockers).toContainEqual(expect.objectContaining({ code: "specialty_pending" }));
+  });
+
+  it("answers not_found through another shop's id and leaves the review standing", async () => {
+    const { db, shop, reef, rosterEntry } = await readinessContext();
+    await gateOnly(db, shop.id, reef.id, { level: "rescue" });
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "PADI-RESCUE-TENANT",
+    });
+    const specialty = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      specialty: "cavern",
+      identifier: "PADI-CAVERN-TENANT",
+    });
+    if (!card || !specialty) throw new Error("expected cards to insert");
+    await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+    });
+    await reviewSpecialtyCertification(db, {
+      shopId: shop.id,
+      certificationId: specialty.id,
+      status: "verified",
+    });
+    const [rival] = await db
+      .insert(shops)
+      .values({ name: "Rival Reef", slug: "rival-reef-unreview", timezone: "UTC" })
+      .returning();
+    if (!rival) throw new Error("rival shop insert failed");
+
+    expect(await unreviewCertification(db, { shopId: rival.id, certificationId: card.id })).toEqual(
+      { ok: false, reason: "not_found" },
+    );
+    expect(
+      await unreviewSpecialtyCertification(db, {
+        shopId: rival.id,
+        certificationId: specialty.id,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+
+    const [level] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    expect(level).toMatchObject({ status: "verified" });
+    expect(level?.reviewedAt).not.toBeNull();
+    expect((await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.status).toBe("ready");
+  });
+
+  it("refuses to undo a card staff issued or sighted, and one nobody reviewed", async () => {
+    const { db, shop, rosterEntry } = await readinessContext();
+    const issued = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "PADI-RESCUE-ISSUED",
+    });
+    const fresh = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "advanced_open_water",
+      identifier: "PADI-AOW-FRESH",
+    });
+    if (!issued || !fresh) throw new Error("expected cards to insert");
+    await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: issued.id,
+      status: "verified",
+    });
+    await db
+      .update(certifications)
+      .set({ issuedByShopAt: nowDate() })
+      .where(eq(certifications.id, issued.id));
+
+    expect(
+      await unreviewCertification(db, { shopId: shop.id, certificationId: issued.id }),
+    ).toEqual({ ok: false, reason: "sighted_card" });
+    const [still] = await db.select().from(certifications).where(eq(certifications.id, issued.id));
+    expect(still?.reviewedAt).not.toBeNull();
+
+    expect(await unreviewCertification(db, { shopId: shop.id, certificationId: fresh.id })).toEqual(
+      { ok: false, reason: "not_reviewed" },
+    );
   });
 });
 

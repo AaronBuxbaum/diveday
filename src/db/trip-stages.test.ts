@@ -2,7 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
   bookings,
@@ -19,6 +19,8 @@ import {
 import { latestTripStage, latestTripStagesByTrip, recordTripStage } from "./trip-stages";
 import { createTrip } from "./trips";
 
+const ctx = fileScopedShopContext();
+
 /**
  * **A control on a safety surface** — ADR 20260904-reef-all-the-way-down,
  * Budget rule 4. The failure paths come first, because the writer's whole job
@@ -29,7 +31,7 @@ const ZONE = "America/New_York";
 const NOW = new Date("2026-07-21T13:30:00.000Z");
 
 async function freshShop(slug: string) {
-  const db = await seededTestDb();
+  const db = ctx.db;
   const [shop] = await db
     .insert(shops)
     .values({ name: `Shop ${slug}`, slug, timezone: ZONE })

@@ -1128,13 +1128,23 @@
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and
   within a year of signing. A medical-review record carries only once a **physician clearance** is
-  recorded against it — until then it never does — and a stale or old-version signature falls back to
-  "send a fresh link." See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
+  recorded against it — until then it never does. A signature that stops being current has
+  **lapsed**: aged past its year (or a physician clearance's own year), or signed against terms the
+  shop has since changed. The seat is blocked as surely as one with no release, under its own code,
+  `waiver_lapsed` ("Signed waiver lapsed"), never `waiver_not_sent` ("Not sent yet") or
+  `waiver_expired` (a link that expired unsigned), and the fix is a fresh link the diver signs again
+  (`releaseLapsedForBooking`). See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
 - **Medical hold** — a signed release the medical questionnaire **referred** to a physician and no
   physician has cleared: an open referral, or one the physician refused. It is the record's status
   (`medical_review`), never the stored answers, because a paper or status-only hold stores none and
   still refuses boarding (`isUnresolvedMedicalHold`, `isStandingRefusal` in `src/lib/waivers.ts`).
-  Only a **physician clearance** ends it, or a clean later release standing over it (below). A
+  Only a **physician clearance** ends it, or a clean later release standing over it (below).
+  **Superseding never ends a hold**: a fresh link on its seat, a seat claim or retiring a refusal
+  moves the hold off that seat and answers nothing, so it still outranks every signature older than
+  it on every seat the diver has. `isUnresolvedMedicalHold` asks of a seat's own live record;
+  `isUnclearedReferral` asks of the diver's evidence, superseded or not. The one record that does
+  not count is one given on a seat that has since passed to somebody else (a split or a claim):
+  those answers were never the record's person's, and the seat's new holder signs their own. A
   cleared record keeps its status, so the signed records' **Medical holds** view lists every
   referral, and each row says where it stands: Waiting on physician, Cleared by physician, or Not
   cleared.
@@ -1174,8 +1184,11 @@
   that flagged every question the refused one did, ordered by when each physician answered.
   A clean later release also stands over a referral no physician has answered (H-98 amended,
   #2195). The diver record, the Divers tab and the live manifest warn with a link to the referral
-  (`overriddenReferral`); the offline copy and paper show the date only. A booking whose own
-  release is the open referral still waits for a physician.
+  (`overriddenReferral`); the offline copy and paper show the date only. That warning ends, as
+  the refusal's does, once a physician has cleared a record flagging every question the referral
+  did, evaluated no earlier than the day it was signed. A booking whose own release is the open
+  referral still waits for a physician, and a referral a seat's fresh link superseded can still be
+  cleared: superseding moves a hold off a seat and answers nothing.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded

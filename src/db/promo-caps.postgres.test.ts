@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fakePromotions } from "@/test/fakes";
@@ -6,55 +6,75 @@ import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } fro
 import { raceShop } from "@/test/postgres-shop";
 import { startPaymentOperation } from "./payment-operations";
 import { reserveDiscountUse } from "./promo-caps";
+import { paymentOperationIntents } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 
 /**
- * The last use of a capped discount code, taken by two checkouts at once
- * (fourth review, row 33). `reserveDiscountUse` counts and tags under a
- * transaction-scoped advisory lock keyed on the code; PGlite cannot hold two
- * transactions, so this is the first test where two attempts meet. Without the
- * lock both count zero uses, both tag their intent, and both reach Stripe with
- * a code that had one use left.
+ * A "first diver only" code under genuine contention (A§4 item 6).
+ *
+ * `reserveDiscountUse` takes a transaction-scoped advisory lock keyed on the
+ * discount, re-counts the code's uses under it, and tags the winner's
+ * payment-operation intent before letting go. PGlite is one connection, so
+ * every other test of it runs the attempts one after another and stays green
+ * with the lock deleted. Here five checkouts, each on its own connection, are
+ * parked behind a gate holding that same advisory lock, and released together.
+ *
+ * **The outcome is the assertion**: exactly one attempt reserved the single
+ * use and exactly one intent carries the code. The gate establishes only that
+ * the five were in flight at once (docs/engineering/testing.md, "Reading a race
+ * test correctly"). With the lock removed from `reserveDiscountUse` nothing
+ * parks on the gate, so `waitForLockWaiters` times out instead: the run still
+ * fails, on the wait rather than on the count.
  */
 
+const promoCapLock = (promoId: string) =>
+  sql`select pg_advisory_xact_lock(hashtext('promo_cap'), hashtext(${promoId}::text))`;
+
 describePostgres("reserveDiscountUse under real concurrency", () => {
-  it("gives the last use of a capped code to exactly one of two checkouts", async () => {
+  it("gives a one-use code to exactly one of five simultaneous checkouts", async () => {
     const pg = await postgresTestDb();
-    const shop = await raceShop(pg.db, "Promo Reef");
-    await upsertShopStripeAccount(pg.db, shop.id, "acct_race");
-    await setShopStripeAccountStatus(pg.db, "acct_race", {
+    const shop = await raceShop(pg.db, "Caps Reef");
+    const account = `acct_${shop.slug}`;
+    await upsertShopStripeAccount(pg.db, shop.id, account);
+    await setShopStripeAccountStatus(pg.db, account, {
       chargesEnabled: true,
       payoutsEnabled: true,
       detailsSubmitted: true,
     });
     const created = await createShopPromoCode(
       pg.db,
-      { shopId: shop.id, code: "LAST1", discountPercent: 10, scope: "all", maxRedemptions: 1 },
+      { shopId: shop.id, code: "FIRSTONE", discountPercent: 10, scope: "all", maxRedemptions: 1 },
       fakePromotions(),
     );
-    if (!created.ok) throw new Error(`promo refused: ${created.reason}`);
-    const ref = {
-      shopId: shop.id,
-      source: "shop" as const,
-      promoId: created.promo.id,
-      now: nowDate(),
-    };
-    const intents = [
-      await startPaymentOperation(pg.db, { shopId: shop.id, kind: "checkout_session" }),
-      await startPaymentOperation(pg.db, { shopId: shop.id, kind: "checkout_session" }),
-    ];
-
-    const gate = await holdRowLock(
-      pg,
-      sql`select pg_advisory_xact_lock(hashtext('promo_cap'), hashtext(${created.promo.id}::text))`,
+    if (!created.ok) throw new Error(`promo creation failed: ${created.reason}`);
+    const promoId = created.promo.id;
+    const intents = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        startPaymentOperation(pg.db, { shopId: shop.id, kind: "checkout_session" }),
+      ),
     );
+
+    const gate = await holdRowLock(pg, promoCapLock(promoId));
     const attempts = intents.map((intent) =>
-      reserveDiscountUse(pg.connect(), { ...ref, intentId: intent.id }),
+      reserveDiscountUse(pg.connect(), {
+        shopId: shop.id,
+        source: "shop",
+        promoId,
+        intentId: intent.id,
+        now: nowDate(),
+      }),
     );
-    await waitForLockWaiters(pg.db, attempts.length);
+    await waitForLockWaiters(pg.db, intents.length);
     await gate.release();
+    const outcomes = await Promise.all(attempts);
 
-    expect((await Promise.all(attempts)).sort()).toEqual(["reserved", "used_up"]);
+    expect(outcomes.filter((outcome) => outcome === "reserved")).toHaveLength(1);
+    expect(outcomes.filter((outcome) => outcome === "used_up")).toHaveLength(4);
+    const tagged = await pg.db
+      .select({ id: paymentOperationIntents.id })
+      .from(paymentOperationIntents)
+      .where(eq(paymentOperationIntents.promoCodeId, promoId));
+    expect(tagged).toHaveLength(1);
   });
 });

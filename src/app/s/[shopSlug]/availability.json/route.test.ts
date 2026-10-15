@@ -2,7 +2,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { setShopSearchListing } from "@/db/shops";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const fileCtx = fileScopedShopContext();
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -26,7 +28,7 @@ describe("GET /s/[shopSlug]/availability.json", () => {
   let shopId: string;
 
   beforeEach(async () => {
-    const ctx = await seededShopContext();
+    const ctx = fileCtx;
     db = ctx.db;
     shopId = ctx.shop.id;
     vi.mocked(getDb).mockResolvedValue(db);

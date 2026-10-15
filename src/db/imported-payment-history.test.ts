@@ -1,9 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { listImportedPaymentHistory } from "./imported-payment-history";
 import { importedPaymentHistory, people, shops } from "./schema";
+
+const ctx = fileScopedShopContext();
 
 let sequence = 0;
 
@@ -50,7 +52,7 @@ async function addHistory(
 
 describe("listImportedPaymentHistory", () => {
   it("is tenant-scoped and keeps source evidence attached to the correct diver", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const firstPerson = await makePerson(db, shop.id, "Rosa Receipt");
     await addHistory(db, { shopId: shop.id, personId: firstPerson, occurredOn: "2024-05-11" });
 
@@ -90,7 +92,7 @@ describe("listImportedPaymentHistory", () => {
   });
 
   it("filters a source-history page by diver query and inclusive calendar-date bounds", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const rosa = await makePerson(db, shop.id, "Rosa Receipt");
     const dan = await makePerson(db, shop.id, "Dan Diver");
     await addHistory(db, {
@@ -122,7 +124,7 @@ describe("listImportedPaymentHistory", () => {
   });
 
   it("paginates oldest source history without losing a deterministic date order", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await makePerson(db, shop.id, "Paged Parker");
     await addHistory(db, {
       shopId: shop.id,

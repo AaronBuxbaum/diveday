@@ -1085,7 +1085,7 @@ ADR rather than letting this become an unbounded second backlog.
    (`check-architecture.mjs` now sees bare side-effect imports, holds `src/i18n`/`src/components`
    to the layer direction, and ratchets pre-existing debt in `scripts/architecture-baseline.json`),
    I18N-4 (`pnpm check:tokens` fails raw hex and palette-scale classes, ratcheted in
-   `scripts/tokens-baseline.json`), and the I18N-2 residue (`src/i18n/provider-coverage.test.ts`
+   `scripts/tokens-baseline.json`), and the I18N-2 residue (`scripts/check-intl-providers.mjs`
    had closed both documented failure modes for `src/app` on 2026-08-03; it now also traces
    `useTranslations()` consumers under `src/components` through their importing pages). Still
    open: a scheduled check watching Next 16.3 GA, drizzle 1.0 stable and next-auth v5

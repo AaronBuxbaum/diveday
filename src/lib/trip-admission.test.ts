@@ -5,6 +5,7 @@ import type {
   NitroxCertification,
   SpecialtyCertification,
   TripRequirement,
+  WaiverRecord,
 } from "@/db/schema";
 import {
   type CertificationLevel,
@@ -20,6 +21,7 @@ import {
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "./trip-admission";
+import { effectiveWaiverForBooking, releaseLapsedForBooking } from "./waivers";
 
 function certification(overrides: Partial<Certification> = {}): Certification {
   return {
@@ -824,6 +826,7 @@ describe("admission is monotone with respect to readiness", () => {
               // alone are enough to block, not that some unrelated blocker
               // happens to be raised too.
               const readiness = calculateReadiness({
+                timezone: "UTC",
                 requirement: {
                   ...source,
                   requiresWaiver: false,
@@ -874,6 +877,7 @@ describe("admission is monotone with respect to readiness", () => {
     ).toEqual({ admitted: true });
 
     const readiness = calculateReadiness({
+      timezone: "UTC",
       requirement: { ...source, requiresWaiver: false, requiresPayment: false } as TripRequirement,
       siteRequirement: null,
       waiver: null,
@@ -914,5 +918,67 @@ describe("decideTripAdmission — participant types (ADR 20261007-participant-ty
         participantType: "diver",
       }).admitted,
     ).toBe(false);
+  });
+});
+
+/**
+ * **A release that lapses before the departure is never a reason to refuse
+ * the sale.** Admission takes no release at all: whether a diver's waiver
+ * stands is something they can fix before the boat leaves, so it is
+ * readiness's question. Here the seat sells three weeks out to a diver whose
+ * release readiness clears today and would block on the morning of the dive:
+ * admission must admit at both instants, or it refuses someone readiness
+ * clears.
+ */
+describe("decideTripAdmission — a release that lapses before the departure", () => {
+  it("admits the seat while readiness clears it today and blocks it on the day", () => {
+    const today = new Date("2026-07-18T12:00:00.000Z");
+    const departure = new Date("2026-08-08T09:00:00.000Z");
+    const lapsesOn = new Date("2026-08-01T12:00:00.000Z");
+    const signedAt = new Date(lapsesOn.getTime() - 365 * 24 * 60 * 60 * 1000);
+    const card = certification({ level: "advanced_open_water" });
+    const source = requirement({ minimumCertificationLevel: "advanced_open_water" });
+
+    expect(
+      decideTripAdmission({
+        requirement: source,
+        siteRequirement: null,
+        evidence: evidence({ certifications: [card] }),
+      }),
+    ).toEqual({ admitted: true });
+
+    const release = {
+      status: "completed",
+      signedAt,
+      completedAt: signedAt,
+      expiresAt: signedAt,
+      supersededAt: null,
+    } as WaiverRecord;
+    const readinessAt = (now: Date) => {
+      const resolution = {
+        bookingWaiver: release,
+        personSignedWaivers: [release],
+        currentTemplateVersion: null,
+        now,
+      };
+      return calculateReadiness({
+        timezone: "UTC",
+        requirement: { ...source, requiresWaiver: true, requiresPayment: false } as TripRequirement,
+        siteRequirement: null,
+        waiver: effectiveWaiverForBooking(resolution),
+        releaseLapsed: releaseLapsedForBooking(resolution),
+        certifications: [card],
+        now,
+      });
+    };
+    expect(readinessAt(today).status).toBe("ready");
+    // On the day the release has lapsed: blocked, and named as a signature
+    // that ran out rather than one nobody ever sent.
+    const onTheDay = readinessAt(departure);
+    expect(onTheDay.status).toBe("blocked");
+    expect(onTheDay.blockers).toContainEqual(expect.objectContaining({ code: "waiver_lapsed" }));
+    expect(onTheDay.blockers).not.toContainEqual(
+      expect.objectContaining({ code: "waiver_not_sent" }),
+    );
   });
 });
