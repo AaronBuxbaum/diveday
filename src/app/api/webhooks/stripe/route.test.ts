@@ -19,7 +19,7 @@ vi.mock("@/db/tips", () => ({
   recordTipStripeCustomer: vi.fn(),
 }));
 vi.mock("@/db/orders", () => ({
-  markOrderPaidByInvoiceId: vi.fn(),
+  applyInvoicePaid: vi.fn(),
   markOrderVoidedByInvoiceId: vi.fn(),
   recordOrderPaymentIntent: vi.fn(),
 }));
@@ -52,8 +52,9 @@ const {
 const { markTipPaidBySessionId, markTipExpiredBySessionId, recordTipStripeCustomer } = await import(
   "@/db/tips"
 );
-const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } =
-  await import("@/db/orders");
+const { applyInvoicePaid, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } = await import(
+  "@/db/orders"
+);
 const { recordStripeChargeRefund } = await import("@/db/refunds");
 const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
@@ -108,7 +109,7 @@ beforeEach(() => {
   vi.mocked(markCheckoutPaymentFailedBySessionId)
     .mockReset()
     .mockResolvedValue(FAKE_CHECKOUT as never);
-  vi.mocked(markOrderPaidByInvoiceId).mockReset();
+  vi.mocked(applyInvoicePaid).mockReset().mockResolvedValue({ status: "not_found" });
   vi.mocked(markOrderVoidedByInvoiceId).mockReset();
   vi.mocked(setShopStripeAccountStatus).mockReset();
   vi.mocked(disconnectShopStripeAccount).mockReset();
@@ -136,7 +137,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
       webhookRequest(payload, signedHeader(payload, Math.floor(nowMs() / 1000))),
     );
     expect(response.status).toBe(503);
-    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+    expect(applyInvoicePaid).not.toHaveBeenCalled();
   });
 
   it("returns 400 with a missing signature header", async () => {
@@ -150,7 +151,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const badHeader = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_wrong");
     const response = await POST(webhookRequest(payload, badHeader));
     expect(response.status).toBe(400);
-    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+    expect(applyInvoicePaid).not.toHaveBeenCalled();
   });
 
   it("never reaches event handling before signature verification, no matter the event type", async () => {
@@ -177,7 +178,12 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, null);
+    expect(applyInvoicePaid).toHaveBeenCalledWith(FAKE_DB, {
+      stripeInvoiceId: "in_123",
+      amountPaidCents: 4500,
+      expectedAccountId: undefined,
+      taxCents: null,
+    });
   });
 
   // With a live secret configured the deployment takes real money, so a
@@ -196,7 +202,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+    expect(applyInvoicePaid).not.toHaveBeenCalled();
   });
 
   it("ignores (200, no state change) a checkout.session.completed signed by the live secret but claiming livemode:false", async () => {
@@ -259,7 +265,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_wrong");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(400);
-    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+    expect(applyInvoicePaid).not.toHaveBeenCalled();
   });
 });
 
@@ -279,7 +285,12 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, 450);
+    expect(applyInvoicePaid).toHaveBeenCalledWith(FAKE_DB, {
+      stripeInvoiceId: "in_123",
+      amountPaidCents: 4500,
+      expectedAccountId: undefined,
+      taxCents: 450,
+    });
   });
 
   it("invoice.paid defaults amount to 0 when Stripe omits it", async () => {
@@ -289,7 +300,12 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 0, undefined, null);
+    expect(applyInvoicePaid).toHaveBeenCalledWith(FAKE_DB, {
+      stripeInvoiceId: "in_123",
+      amountPaidCents: 0,
+      expectedAccountId: undefined,
+      taxCents: null,
+    });
   });
 
   it("invoice.voided marks the order void, on the event's own account", async () => {
@@ -323,13 +339,12 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123", amount_paid: 4500 } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(
-      FAKE_DB,
-      "in_123",
-      4500,
-      "acct_123",
-      null,
-    );
+    expect(applyInvoicePaid).toHaveBeenCalledWith(FAKE_DB, {
+      stripeInvoiceId: "in_123",
+      amountPaidCents: 4500,
+      expectedAccountId: "acct_123",
+      taxCents: null,
+    });
   });
 
   it("checkout.session.completed with payment_status paid marks the checkout paid", async () => {
@@ -954,8 +969,51 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       expect(Sentry.captureException).not.toHaveBeenCalled();
     });
 
+    it("hands no PaymentIntent to an order paid at the counter, and passes the out-of-band flag", async () => {
+      vi.mocked(applyInvoicePaid).mockResolvedValue({
+        status: "counter",
+        order: { id: "order_1" },
+      } as never);
+      const response = await post({
+        id: "evt_pi_counter",
+        type: "invoice.paid",
+        account: "acct_1",
+        data: {
+          object: {
+            id: "in_1",
+            amount_paid: 100,
+            paid_out_of_band: true,
+            payments: { data: [{ is_default: false, payment: { payment_intent: "pi_declined" } }] },
+          },
+        },
+      });
+      expect(response.status).toBe(200);
+      expect(applyInvoicePaid).toHaveBeenCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ stripeInvoiceId: "in_1", paidOutOfBand: true }),
+      );
+      expect(recordOrderPaymentIntent).not.toHaveBeenCalled();
+    });
+
+    it("waits, without paging anyone, while a counter claim on the invoice is in flight", async () => {
+      vi.mocked(applyInvoicePaid).mockResolvedValue({ status: "deferred" });
+      const response = await post({
+        id: "evt_inv_defer",
+        type: "invoice.paid",
+        account: "acct_1",
+        data: { object: { id: "in_1", amount_paid: 100 } },
+      });
+      expect(response.status).toBe(503);
+      expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, "evt_inv_defer");
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(recordOrderPaymentIntent).not.toHaveBeenCalled();
+    });
+
     it("records the PaymentIntent a settling session and a paid invoice name", async () => {
-      vi.mocked(markOrderPaidByInvoiceId).mockResolvedValue({ id: "order_1" } as never);
+      vi.mocked(applyInvoicePaid).mockResolvedValue({
+        status: "settled",
+        order: { id: "order_1" },
+      } as never);
       await post({
         id: "evt_pi_invoice",
         type: "invoice.paid",
@@ -995,7 +1053,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+    expect(applyInvoicePaid).not.toHaveBeenCalled();
     expect(markOrderVoidedByInvoiceId).not.toHaveBeenCalled();
   });
 
@@ -1006,7 +1064,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { amount_paid: "not-a-number-and-no-id" } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+    expect(applyInvoicePaid).not.toHaveBeenCalled();
   });
 });
 
@@ -1032,7 +1090,7 @@ describe("POST /api/webhooks/stripe — event ledger", () => {
       account: "acct_123",
       occurredAt: new Date(1_700_000_000 * 1000),
     });
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalled();
+    expect(applyInvoicePaid).toHaveBeenCalled();
   });
 
   // The ledger's whole job: a redelivered event (Stripe is at-least-once)
@@ -1362,7 +1420,7 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     {
       name: "invoice.paid",
       event: { id: "evt_fail_paid", type: "invoice.paid", data: { object: { id: "in_1" } } },
-      arrange: () => vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(boom),
+      arrange: () => vi.mocked(applyInvoicePaid).mockRejectedValue(boom),
     },
     {
       name: "invoice.voided",
@@ -1549,7 +1607,7 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
   // tag, never the original message and never the original as `cause`.
   it("sends Sentry a scrubbed error, never the handler's own message", async () => {
     const leaky = new TypeError('duplicate key: (email)=(nora@example.com) for "Nora Diaz"');
-    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(leaky);
+    vi.mocked(applyInvoicePaid).mockRejectedValue(leaky);
 
     const response = await post({
       id: "evt_leaky",
@@ -1592,11 +1650,9 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
       data: { object: { id: "in_retry", amount_paid: 4500 } },
     };
     // First delivery: the order write throws.
-    vi.mocked(markOrderPaidByInvoiceId)
+    vi.mocked(applyInvoicePaid)
       .mockRejectedValueOnce(boom)
-      .mockResolvedValue({
-        id: "order_1",
-      } as never);
+      .mockResolvedValue({ status: "settled", order: { id: "order_1" } } as never);
     const failed = await post(event);
     expect(failed.status).toBe(500);
     expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, "evt_retry_1");
@@ -1606,14 +1662,13 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     // release the retry reads as a duplicate and the order never goes paid.
     const retried = await post(event);
     expect(retried.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledTimes(2);
-    expect(markOrderPaidByInvoiceId).toHaveBeenLastCalledWith(
-      FAKE_DB,
-      "in_retry",
-      4500,
-      undefined,
-      null,
-    );
+    expect(applyInvoicePaid).toHaveBeenCalledTimes(2);
+    expect(applyInvoicePaid).toHaveBeenLastCalledWith(FAKE_DB, {
+      stripeInvoiceId: "in_retry",
+      amountPaidCents: 4500,
+      expectedAccountId: undefined,
+      taxCents: null,
+    });
   });
 
   it("still does not re-run a handler on the redelivery after a success", async () => {
@@ -1640,7 +1695,7 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
       name: "PostgresError",
       code: "23505",
     });
-    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(
+    vi.mocked(applyInvoicePaid).mockRejectedValue(
       new Error("Failed query: update orders params: nora@example.com", { cause }),
     );
     const releaseCause = Object.assign(new Error("terminating connection"), { code: "57P01" });
@@ -1694,7 +1749,7 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
 
   it("a release that itself fails never masks the original error", async () => {
     const releaseBoom = new Error("release failed too");
-    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(boom);
+    vi.mocked(applyInvoicePaid).mockRejectedValue(boom);
     vi.mocked(releaseStripeWebhookEventClaim).mockRejectedValue(releaseBoom);
 
     const response = await post({
@@ -1720,7 +1775,7 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
 
   it("never releases a claim it never took (a duplicate is not a failure)", async () => {
     vi.mocked(claimStripeWebhookEvent).mockResolvedValue(false);
-    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(boom);
+    vi.mocked(applyInvoicePaid).mockRejectedValue(boom);
 
     const response = await post({
       id: "evt_dup_no_release",
@@ -1729,7 +1784,7 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     });
 
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+    expect(applyInvoicePaid).not.toHaveBeenCalled();
     expect(releaseStripeWebhookEventClaim).not.toHaveBeenCalled();
   });
 });

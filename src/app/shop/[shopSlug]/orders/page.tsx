@@ -500,7 +500,7 @@ export default async function OrdersIndexPage({
       />
 
       <PayoutLines payouts={payouts} locale={locale} timeZone={shop.timezone} t={t} />
-      <OwedLine db={db} shop={shop} now={nowDate()} shopSlug={shopSlug} locale={locale} t={t} />
+      {canExportOrders ? <OwedLine db={db} shop={shop} locale={locale} t={t} /> : null}
 
       {showToolbar ? (
         <OrdersToolbar

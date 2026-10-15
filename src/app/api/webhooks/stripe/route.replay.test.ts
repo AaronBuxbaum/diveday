@@ -44,7 +44,7 @@ vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { createBookingParty } = await import("@/db/bookings");
 const { markCheckoutExpiredBySessionId, startBookingCheckout } = await import("@/db/checkouts");
-const { createOrder, refundOrder } = await import("@/db/orders");
+const { createOrder, recordPaymentOnOpenOrder, refundOrder } = await import("@/db/orders");
 const { getBookingPayment, listBookingPaymentEvents, setBookingPayment } = await import(
   "@/db/payments"
 );
@@ -610,6 +610,45 @@ describe("invoice.* hostile sequences (real handlers, real db)", () => {
     // decision on the booking is final against a machine writer.
     expect(terminal.orderStatus).toBe("paid");
     expect(terminal.paymentStatus).toBe("waived");
+  });
+
+  it("the echo of a counter settle never hands a PaymentIntent to the cash order", async () => {
+    // The diver's card declined on the hosted invoice (Stripe keeps that
+    // attempt's PaymentIntent), then they paid cash and a captain recorded it.
+    const { db, shop, bookingId, order } = await orderScenario();
+    const staff = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const settled = await recordPaymentOnOpenOrder(
+      db,
+      { shopId: shop.id, orderId: order.id, actorPersonId: staff, collection: "cash" },
+      invoicing(),
+    );
+    expect(settled.ok).toBe(true);
+    const event = invoicePaid("evt_oob1", "in_1", 22_000);
+    const echo = {
+      ...event,
+      data: {
+        object: {
+          ...event.data.object,
+          paid_out_of_band: true,
+          payment_intent: "pi_declined",
+          payments: {
+            data: [
+              { is_default: false, status: "failed", payment: { payment_intent: "pi_declined" } },
+            ],
+          },
+        },
+      },
+    };
+    expect((await deliver(echo)).status).toBe(200);
+    expect((await deliver({ ...echo, id: "evt_oob2" })).status).toBe(200);
+    const [row] = await db.select().from(orders).where(eq(orders.id, order.id));
+    expect(row).toMatchObject({
+      status: "paid",
+      collection: "cash",
+      amountPaidCents: 22_000,
+      stripePaymentIntentId: null,
+    });
+    expect((await orderTerminal(db, shop.id, order.id, bookingId)).paymentStatus).toBe("paid");
   });
 
   it("an invoice.paid for an invoice the app never raised is acknowledged and changes nothing", async () => {

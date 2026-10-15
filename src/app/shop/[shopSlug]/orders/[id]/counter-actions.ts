@@ -2,6 +2,7 @@
 
 import { getDb } from "@/db/client";
 import { recordPaymentOnOpenOrder, voidCounterOrder } from "@/db/orders";
+import { counterPaymentActivity, recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -46,7 +47,8 @@ export async function voidCounterAction(formData: FormData) {
  * review, item 19). Any active staff member, as any counter money is; behind
  * the money step-up, as Void is. `recordPaymentOnOpenOrder` re-checks staff,
  * the shop, the method and that the order is still an open invoice, and tells
- * Stripe first so the diver is not asked for the money again.
+ * Stripe so the diver is not asked for the money again; the activity log
+ * names who recorded it.
  *
  * Refused on a demo shop before any Stripe call: its invoices are made up, the
  * same reason Refresh and Void are (`actions.ts`).
@@ -73,7 +75,15 @@ export async function recordPaymentAction(formData: FormData) {
           collection,
         })
       : null;
-  if (outcome?.ok) dispatchIntegrationsAfterResponse();
+  if (outcome?.ok && collection) {
+    // Stripe stops collecting this invoice for good: the log names who did it.
+    await recordShopActivity(db, {
+      shopId: session.user.shopId,
+      actorPersonId: session.user.personId,
+      write: counterPaymentActivity(outcome.order.id, collection),
+    });
+    dispatchIntegrationsAfterResponse();
+  }
   const notice = outcome?.ok
     ? "payment-recorded"
     : outcome?.reason === "stripe_refused"

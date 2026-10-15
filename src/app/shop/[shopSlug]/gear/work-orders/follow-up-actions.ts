@@ -5,6 +5,7 @@ import { z } from "zod";
 import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
 import type { WorkOrderLine } from "@/db/schema";
+import { counterPaymentActivity, recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import {
   billWorkOrder,
@@ -215,6 +216,11 @@ export async function recordBenchPaymentAction(formData: FormData) {
     }[outcome.reason];
     revalidateAndRedirect(landing, noticeUrl(landing, code));
   }
+  await recordShopActivity(db, {
+    shopId: shop.id,
+    actorPersonId: session.user.personId,
+    write: counterPaymentActivity(outcome.orderId, parsed.data.collection),
+  });
   dispatchIntegrationsAfterResponse();
   revalidateAndRedirect(landing, noticeUrl(landing, "bill-paid-counter"));
 }

@@ -28,7 +28,8 @@ Stripe-settled order does.
   the gear out (H-06). Billing a diver by invoice stays owner/manager (H-14, `createOrder`).
 - **Correcting a mistake is local and owner/manager.** `voidCounterOrder` sets `void`, stamps
   `voided_at` and zeroes `amount_paid_cents`, so Reports drops it. Only a `paid` counter order
-  qualifies; a counter order is never refunded, since no processor holds the money.
+  qualifies (not a counter-settled invoice; see the 2026-10-14 amendment); a counter order is never
+  refunded, since no processor holds the money.
 - **Every Stripe operation refuses a counter order** through `stripeInvoiceOf(order)`, which returns
   the ids only for a `stripe_invoice` row: refund (`not_invoiced`), void, resend, refresh. Webhook
   lookups by invoice id are unchanged; a counter order has no id to match. Erasure queues no
@@ -58,17 +59,34 @@ Stripe-settled order does.
 Fourth UX review, items 18 and 19. Two gaps in "money the shop took":
 
 - **Record payment on an open order.** A diver invoiced $340 walks in and pays cash. The order was
-  a Stripe invoice and stayed Open forever. `recordPaymentOnOpenOrder` (`src/db/orders.ts`) marks
-  the invoice paid out of band at Stripe first (`markInvoicePaidOutOfBand`, so Stripe stops asking
-  and a diver who paid online a moment earlier makes Stripe refuse), then, under the row's lock and
-  only while it is still an open `stripe_invoice`, makes it a paid counter order: `collection` is
-  the method, `amount_paid_cents` its total, `paid_at` now, and the booking it was raised for is
-  marked paid. **The three Stripe ids stay**, so diver erasure still files the Stripe customer's
-  deletion request. `orders_stripe_ids_match_collection` now allows a non-Stripe collection to
-  carry either none of the ids or all three, never a PaymentIntent (migration
-  `20261014220545_counter-settled-invoice`). `stripeInvoiceOf` still refuses every Stripe operation
-  on it, and the `invoice.paid` echo changes nothing. Any active staff member may record it, behind
-  the money step-up, as any counter money.
+  a Stripe invoice and stayed Open forever. `recordPaymentOnOpenOrder` (`src/db/orders.ts`)
+  **claims the row first**: under its lock, an open `stripe_invoice` takes the counter method as
+  its `collection` while it stays `open`, and that commits. Then it marks the invoice paid out of
+  band at Stripe (`markInvoicePaidOutOfBand`, so Stripe stops asking; a diver who paid online a
+  moment earlier makes Stripe refuse, and the claim is given back). Then, under the lock again, it
+  finishes the claim: `amount_paid_cents` its total, `paid_at` now, and the booking it was raised
+  for marked paid. **The three Stripe ids stay**, so diver erasure still files the Stripe
+  customer's deletion request. `orders_stripe_ids_match_collection` now allows a non-Stripe
+  collection to carry either none of the ids or all three, never a PaymentIntent (migration
+  `20261014220545_counter-settled-invoice`), and `recordOrderPaymentIntent` only ever writes to a
+  `stripe_invoice` row. `stripeInvoiceOf` still refuses every Stripe operation on it. Any active
+  staff member may record it, behind the money step-up, as any counter money, and the shop's
+  activity log names who did (`order_paid_cash` / `order_paid_card_machine`).
+- **Why the claim comes before Stripe** (security review of layer r4-3). The mark sends back an
+  `invoice.paid` that can arrive before the mark's own call returns. Marked first and written
+  second, that echo found an open `stripe_invoice` and booked the cash as a Stripe payment.
+  Claimed first, the echo (`paid_out_of_band: true`) finds the claim and finishes the counter
+  settlement itself (`applyInvoicePaid`); any other `invoice.paid` for a claimed row is the diver's
+  own online payment in the same moment and is deferred (non-2xx, no page) until the claim is given
+  back. The claim is the order row itself, not a `payment_operation_intents` row: it lasts one
+  round trip, and one older than `STALE_AFTER_MS` belonged to a call that died and may be taken
+  again, by a second tap or by the next `invoice.paid`.
+- **A counter-settled invoice is never voided.** Stripe holds it paid out of band and has no way to
+  un-pay an invoice, so a local void would leave the books disagreeing with Stripe and the diver's
+  hosted invoice reading paid with no Stripe path left to collect through. `voidCounterOrder`
+  refuses any counter order that carries Stripe ids (`isVoidableCounterOrder`), and the order page
+  does not offer Void on one. Money taken back over the counter after such a settle is not
+  recordable yet.
 - **A bench ticket paid at pickup.** `recordWorkOrderCounterPayment`
   (`src/db/work-order-follow-up.ts`) records the ticket's lines through `recordCounterOrder` and
   links the order as the ticket's bill. One bill per ticket is re-checked under the ticket's lock;

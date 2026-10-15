@@ -26,7 +26,7 @@ import {
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
 import { canPersonManageOrders, loadActiveStaffRoles } from "./authz";
-import type { AppDb, DbExecutor } from "./client";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
@@ -643,22 +643,31 @@ export type RecordPaymentOnOrderOutcome =
  * Stripe invoice, and nothing could record that the money came over the
  * counter.
  *
- * **Stripe first, then the row.** The invoice is marked paid out of band, so
- * Stripe stops asking the diver for it and the hosted invoice reads paid; a
- * diver who paid online a minute earlier makes Stripe refuse, and nothing here
- * records the same money twice. Then, under the row's lock and only while it
- * is still an open invoice, the order becomes a paid counter order: its
- * `collection` says how the money came, `amount_paid_cents` is its total and
- * `paid_at` is now. The Stripe ids stay, so diver erasure still files the
- * Stripe customer's deletion request; every Stripe operation refuses the order
- * from here on (`stripeInvoiceOf`), as it does any counter order, and the
- * `invoice.paid` the out-of-band mark sends back changes nothing
- * (`markOrderPaidByInvoiceId`).
+ * **Claim, then Stripe, then the row** (the shape `claimOrderRefund` gives a
+ * refund). Under the row's lock, an open invoice is *claimed*: its
+ * `collection` becomes the counter method while it stays `open`, and that
+ * commits before Stripe is called. Then the invoice is marked paid out of
+ * band, so Stripe stops asking the diver for it. Then, under the lock again,
+ * the claim is finished: `amount_paid_cents` is the total and `paid_at` is
+ * now. If Stripe refuses (most often because the diver paid online a moment
+ * earlier) the claim is given back and nothing is recorded.
  *
- * The booking the order was raised for is marked paid, as a settled invoice
- * marks it, with the method as the seat's provider so the roster says it was
- * paid at the counter. **Any active staff member may record one**, like any
- * counter money (H-06); the caller asks for the money step-up.
+ * The claim is what makes Stripe's own echo safe. The `invoice.paid` the mark
+ * sends back can arrive before the mark's HTTP call returns; it finds the row
+ * claimed and finishes the counter settlement itself rather than booking the
+ * cash as a Stripe payment (`applyInvoicePaid`), and this call then reads the
+ * row it finished. A diver's own online payment arriving during the claim
+ * waits instead (Stripe delivers it again), because Stripe is about to refuse
+ * the mark. A claim older than `STALE_AFTER_MS` belonged to a call that died
+ * and may be taken again.
+ *
+ * The Stripe ids stay, so diver erasure still files the Stripe customer's
+ * deletion request; every Stripe operation refuses the order from here on
+ * (`stripeInvoiceOf`), as it does any counter order. The booking the order was
+ * raised for is marked paid, as a settled invoice marks it, with the method as
+ * the seat's provider so the roster says it was paid at the counter. **Any
+ * active staff member may record one**, like any counter money (H-06); the
+ * caller asks for the money step-up and writes the activity line.
  */
 export async function recordPaymentOnOpenOrder(
   db: AppDb,
@@ -674,75 +683,164 @@ export async function recordPaymentOnOpenOrder(
   if (!COUNTER_COLLECTIONS.has(input.collection)) return invalid;
   const roles = await loadActiveStaffRoles(db, input.shopId, input.actorPersonId);
   if (!roles || !isStaff(roles)) return invalid;
-  const [order] = await db
-    .select()
-    .from(orders)
-    .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
-    .limit(1);
-  const invoice = order ? stripeInvoiceOf(order) : null;
-  if (order?.status !== "open" || !invoice) return invalid;
-
-  const marked = await invoicing.markInvoicePaidOutOfBand(
-    invoice.stripeAccountId,
-    invoice.stripeInvoiceId,
-  );
-  if (marked.status === "not_configured") return { ok: false, reason: "not_configured" };
-  if (marked.status !== "paid") return { ok: false, reason: "stripe_refused" };
 
   const now = nowDate();
-  const settled = await db.transaction(async (tx) => {
-    const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).for("update");
-    if (current?.status !== "open" || current.collection !== "stripe_invoice") return null;
-    const [updated] = await tx
+  const claimed = await db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
+      .for("update");
+    if (current?.status !== "open" || current.stripePaymentIntentId !== null) return null;
+    const open = current.collection === "stripe_invoice" || isStaleCounterClaim(current, now);
+    if (!open) return null;
+    const [row] = await tx
       .update(orders)
-      .set({
-        status: "paid",
-        collection: input.collection,
-        amountPaidCents: current.totalCents,
-        paidAt: now,
-        updatedAt: now,
-      })
+      .set({ collection: input.collection, updatedAt: now })
       .where(eq(orders.id, current.id))
       .returning();
-    if (!updated) return null;
-    if (updated.bookingId) {
-      await setBookingPaymentIfNotFinal(tx, {
-        shopId: updated.shopId,
-        bookingId: updated.bookingId,
-        status: "paid",
-        amountCents: updated.totalCents,
-        currency: updated.currency,
-        provider: input.collection,
-        // The invoice id, as a settled invoice writes it: Reports matches a
-        // seat's payment to the order that paid it by this reference.
-        providerRef: updated.stripeInvoiceId,
-        operation: "order_settled",
-      });
-    }
-    await grantPackageEntitlementsForPaidOrder(tx, {
-      shopId: updated.shopId,
-      orderId: updated.id,
-      purchasedAt: now,
-    });
-    await enqueueOrderIntegrationEvent(tx, {
-      shopId: updated.shopId,
-      orderId: updated.id,
-      eventType: "order.paid",
-      idempotencyKey: `order:${updated.id}:paid`,
-      status: updated.status,
-      amountPaidCents: updated.amountPaidCents,
-      refundedCents: updated.refundedCents,
-    });
-    return updated;
+    return row ?? null;
+  });
+  // A claim keeps the Stripe ids, so they are still there to tell Stripe with.
+  if (!claimed?.stripeAccountId || !claimed.stripeInvoiceId) return invalid;
+
+  let marked: Awaited<ReturnType<InvoicingProvider["markInvoicePaidOutOfBand"]>>;
+  try {
+    marked = await invoicing.markInvoicePaidOutOfBand(
+      claimed.stripeAccountId,
+      claimed.stripeInvoiceId,
+    );
+  } catch (error) {
+    await releaseCounterClaim(db, claimed);
+    throw error;
+  }
+  if (marked.status !== "paid") {
+    await releaseCounterClaim(db, claimed);
+    return {
+      ok: false,
+      reason: marked.status === "not_configured" ? "not_configured" : "stripe_refused",
+    };
+  }
+
+  const settled = await db.transaction(async (tx) => {
+    const [current] = await tx.select().from(orders).where(eq(orders.id, claimed.id)).for("update");
+    if (!current || current.collection !== input.collection) return null;
+    // Stripe's echo got here first and finished the claim.
+    if (current.status === "paid") return current;
+    if (current.status !== "open") return null;
+    return settleCounterClaim(tx, current, input.collection);
   });
   if (!settled) {
-    // Stripe holds the invoice paid and the row moved on without us: a
-    // webhook settled it, or a second tap won the lock. Logged, never thrown;
-    // the page reads the order as it now stands.
-    log("order.counter_settle_lost_race", "warn", { orderId: order.id, shopId: order.shopId });
+    // Stripe holds the invoice paid and the row moved on without us. Logged,
+    // never thrown; the page reads the order as it now stands.
+    log("order.counter_settle_lost_race", "warn", { orderId: claimed.id, shopId: claimed.shopId });
     return invalid;
   }
   return { ok: true, order: settled };
+}
+
+/**
+ * True for an `open` order claimed for counter money (`recordPaymentOnOpenOrder`)
+ * whose claim is older than the refund claim's horizon: the call that made it
+ * died between the claim and Stripe's answer.
+ */
+function isStaleCounterClaim(order: Order, now: Date): boolean {
+  return (
+    order.status === "open" &&
+    COUNTER_COLLECTIONS.has(order.collection) &&
+    order.stripeInvoiceId !== null &&
+    order.updatedAt.getTime() < now.getTime() - STALE_AFTER_MS
+  );
+}
+
+/**
+ * Give a counter claim back to Stripe collection: Stripe refused the mark, the
+ * call to it threw, or the claim went stale. Only that claim (its method and
+ * its stamp), and only while it is still open; a row that moved on, or was
+ * claimed again, is left as it is.
+ */
+async function releaseCounterClaim(db: DbExecutor, claimed: Order): Promise<void> {
+  await db
+    .update(orders)
+    .set({ collection: "stripe_invoice", updatedAt: nowDate() })
+    .where(
+      and(
+        eq(orders.id, claimed.id),
+        eq(orders.status, "open"),
+        eq(orders.collection, claimed.collection),
+        eq(orders.updatedAt, claimed.updatedAt),
+      ),
+    );
+}
+
+/**
+ * Finish a counter claim on a locked, `open` row: paid in full, now, by the
+ * claimed method, with the seat and package entitlements following and
+ * `order.paid` queued. One path for both finishers: `recordPaymentOnOpenOrder`
+ * and Stripe's out-of-band echo (`applyInvoicePaid`).
+ */
+async function settleCounterClaim(
+  tx: AppTransaction,
+  current: Order,
+  collection: OrderCollection,
+): Promise<Order | null> {
+  const now = nowDate();
+  const [updated] = await tx
+    .update(orders)
+    .set({
+      status: "paid",
+      amountPaidCents: current.totalCents,
+      paidAt: now,
+      updatedAt: now,
+    })
+    .where(and(eq(orders.id, current.id), eq(orders.collection, collection)))
+    .returning();
+  if (!updated) return null;
+  if (updated.bookingId) {
+    await setBookingPaymentIfNotFinal(tx, {
+      shopId: updated.shopId,
+      bookingId: updated.bookingId,
+      status: "paid",
+      amountCents: updated.totalCents,
+      currency: updated.currency,
+      provider: collection,
+      // The invoice id, as a settled invoice writes it: Reports matches a
+      // seat's payment to the order that paid it by this reference.
+      providerRef: updated.stripeInvoiceId,
+      operation: "order_settled",
+    });
+  }
+  await grantPackageEntitlementsForPaidOrder(tx, {
+    shopId: updated.shopId,
+    orderId: updated.id,
+    purchasedAt: now,
+  });
+  await enqueueOrderIntegrationEvent(tx, {
+    shopId: updated.shopId,
+    orderId: updated.id,
+    eventType: "order.paid",
+    idempotencyKey: `order:${updated.id}:paid`,
+    status: updated.status,
+    amountPaidCents: updated.amountPaidCents,
+    refundedCents: updated.refundedCents,
+  });
+  return updated;
+}
+
+/**
+ * A paid counter order that never reached Stripe: the only kind
+ * `voidCounterOrder` takes back, and the only kind the order page offers Void
+ * on. A counter-settled invoice keeps its Stripe ids, and Stripe cannot un-pay
+ * it (ADR 20261009-counter-payments).
+ */
+export function isVoidableCounterOrder(
+  order: Pick<Order, "collection" | "status" | "stripeInvoiceId">,
+): boolean {
+  return (
+    order.collection !== "stripe_invoice" &&
+    order.status === "paid" &&
+    order.stripeInvoiceId === null
+  );
 }
 
 export type VoidCounterOrderOutcome =
@@ -759,6 +857,13 @@ export type VoidCounterOrderOutcome =
  * column, drops it. Only a `paid` counter order qualifies; a Stripe invoice is
  * voided through Stripe (`voidOrder`) and refunded through Stripe
  * (`refundOrder`).
+ *
+ * **Not an invoice settled at the counter** (`recordPaymentOnOpenOrder`): that
+ * one did reach Stripe, which holds the invoice paid out of band and has no
+ * way to un-pay it. Voiding it here would leave the books disagreeing with
+ * Stripe and the diver's hosted invoice reading paid, with no Stripe path
+ * left to collect through. `isVoidableCounterOrder` is the rule the page reads
+ * too, so the button is never offered on one.
  */
 export async function voidCounterOrder(
   db: AppDb,
@@ -788,9 +893,7 @@ export async function voidPaidCounterOrder(
       .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
       .for("update");
     if (!current) return { ok: false, reason: "not_found" };
-    if (current.collection === "stripe_invoice" || current.status !== "paid") {
-      return { ok: false, reason: "not_voidable" };
-    }
+    if (!isVoidableCounterOrder(current)) return { ok: false, reason: "not_voidable" };
     const now = nowDate();
     const [updated] = await tx
       .update(orders)
@@ -1744,6 +1847,11 @@ async function applyOrderUpdate(
     refundOperation?: PaymentEventOperation;
     hostedInvoiceUrl?: string | null;
     invoicePdfUrl?: string | null;
+    /**
+     * Write nothing unless the locked row is still a Stripe invoice: a counter
+     * claim (`recordPaymentOnOpenOrder`) taken since the caller read it wins.
+     */
+    onlyStripeInvoice?: boolean;
   },
   /** Set `noop` when this call wrote nothing: no new refund to record, or a refused transition. */
   noop?: { noop: boolean },
@@ -1751,6 +1859,10 @@ async function applyOrderUpdate(
   return db.transaction(async (tx) => {
     const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).for("update");
     if (!current) return null;
+    if (patch.onlyStripeInvoice && current.collection !== "stripe_invoice") {
+      if (noop) noop.noop = true;
+      return current;
+    }
 
     // Resolved against `current`, inside the lock. Clamped so a provider
     // reporting more than the order still holds cannot drive
@@ -1946,7 +2058,96 @@ function accountMatches(
   return expectedAccountId === undefined || expectedAccountId === rowAccountId;
 }
 
+/**
+ * What an `invoice.paid` did to the order that owns the invoice.
+ *
+ * - `settled` — Stripe collected it: the order is paid (or already was).
+ * - `counter` — the money came over the counter (`recordPaymentOnOpenOrder`).
+ *   Nothing on the event applies to it, a PaymentIntent least of all; when the
+ *   event is the out-of-band echo of a claim still in flight, this finished it.
+ * - `deferred` — a counter claim is in flight and this is not its echo: the
+ *   diver paid online in the same moment. Stripe is about to refuse the mark
+ *   and the claim will be given back, so the event waits to be delivered again.
+ * - `not_found` — no order here holds this invoice, or the event's account is
+ *   not the order's.
+ */
+export type InvoicePaidOutcome =
+  | { status: "settled"; order: Order }
+  | { status: "counter"; order: Order }
+  | { status: "deferred" }
+  | { status: "not_found" };
+
 /** Called from the Stripe webhook: marks the order that owns this invoice paid and cascades to its booking. */
+export async function applyInvoicePaid(
+  db: AppDb,
+  input: {
+    stripeInvoiceId: string;
+    amountPaidCents: number;
+    expectedAccountId?: string;
+    taxCents?: number | null;
+    /** The invoice's `paid_out_of_band`: true on the echo of a counter mark. */
+    paidOutOfBand?: boolean;
+  },
+  /** Set on the one re-read after a claim changed hands under this call. */
+  reread = false,
+): Promise<InvoicePaidOutcome> {
+  const [found] = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.stripeInvoiceId, input.stripeInvoiceId))
+    .limit(1);
+  if (!found) return { status: "not_found" };
+  if (!accountMatches(input.expectedAccountId, found.stripeAccountId)) {
+    log("order.paid_account_mismatch", "error", {
+      orderId: found.id,
+      shopId: found.shopId,
+      expectedAccountId: input.expectedAccountId,
+      orderAccountId: found.stripeAccountId,
+    });
+    return { status: "not_found" };
+  }
+  let order = found;
+  if (order.collection === "stripe_invoice") {
+    const paid = await applyOrderUpdate(db, order, {
+      status: "paid",
+      amountPaidCents: input.amountPaidCents,
+      onlyStripeInvoice: true,
+      ...(input.taxCents === null || input.taxCents === undefined
+        ? {}
+        : { taxCents: input.taxCents }),
+    });
+    if (!paid) return { status: "not_found" };
+    if (paid.collection === "stripe_invoice") return { status: "settled", order: paid };
+    // Claimed for counter money since the read above.
+    order = paid;
+  }
+  if (order.status !== "open") return { status: "counter", order };
+  if (!input.paidOutOfBand) {
+    if (reread || !isStaleCounterClaim(order, nowDate())) return { status: "deferred" };
+    // The call that claimed it died before Stripe answered; Stripe says the
+    // diver paid. Give the claim back and book what Stripe collected.
+    await releaseCounterClaim(db, order);
+    return applyInvoicePaid(db, input, true);
+  }
+  const finished = await db.transaction(async (tx) => {
+    const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).for("update");
+    if (!current) return null;
+    if (current.status !== "open" || current.collection === "stripe_invoice") return current;
+    return settleCounterClaim(tx, current, current.collection);
+  });
+  if (!finished) return { status: "not_found" };
+  if (finished.collection === "stripe_invoice") {
+    // Given back in between; read once more, as Stripe money.
+    return reread ? { status: "deferred" } : applyInvoicePaid(db, input, true);
+  }
+  return { status: "counter", order: finished };
+}
+
+/**
+ * {@link applyInvoicePaid} for a caller that wants the order: the row as it
+ * now stands, or null when no order here holds the invoice or the event must
+ * wait.
+ */
 export async function markOrderPaidByInvoiceId(
   db: AppDb,
   stripeInvoiceId: string,
@@ -1954,30 +2155,13 @@ export async function markOrderPaidByInvoiceId(
   expectedAccountId?: string,
   taxCents?: number | null,
 ): Promise<Order | null> {
-  const [order] = await db
-    .select()
-    .from(orders)
-    .where(eq(orders.stripeInvoiceId, stripeInvoiceId))
-    .limit(1);
-  if (!order) return null;
-  // Settled at the counter (`recordPaymentOnOpenOrder`): marking the invoice
-  // paid out of band sends this event back, and Stripe's `amount_paid` on it
-  // is not the money the shop took. The row already says what happened.
-  if (order.collection !== "stripe_invoice") return order;
-  if (!accountMatches(expectedAccountId, order.stripeAccountId)) {
-    log("order.paid_account_mismatch", "error", {
-      orderId: order.id,
-      shopId: order.shopId,
-      expectedAccountId,
-      orderAccountId: order.stripeAccountId,
-    });
-    return null;
-  }
-  return applyOrderUpdate(db, order, {
-    status: "paid",
+  const outcome = await applyInvoicePaid(db, {
+    stripeInvoiceId,
     amountPaidCents,
-    ...(taxCents === null || taxCents === undefined ? {} : { taxCents }),
+    expectedAccountId,
+    taxCents,
   });
+  return outcome.status === "settled" || outcome.status === "counter" ? outcome.order : null;
 }
 
 /**
@@ -1996,6 +2180,9 @@ export async function recordOrderPaymentIntent(
     .where(
       and(
         eq(orders.stripeInvoiceId, input.stripeInvoiceId),
+        // Never a counter order, whatever the caller read: the money did not
+        // come through Stripe, and the row's constraint forbids it anyway.
+        eq(orders.collection, "stripe_invoice"),
         isNull(orders.stripePaymentIntentId),
         ...(input.expectedAccountId === undefined
           ? []

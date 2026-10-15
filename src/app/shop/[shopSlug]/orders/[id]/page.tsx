@@ -12,7 +12,7 @@ import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonManageOrders, canPersonRefund } from "@/db/authz";
 import { getOrderBookingContext } from "@/db/order-booking";
-import { getOrder } from "@/db/orders";
+import { getOrder, isVoidableCounterOrder } from "@/db/orders";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -80,12 +80,13 @@ export default async function OrderDetailPage({
   ]);
   // Money taken at the counter, in cash or on the shop's own card machine (ADR
   // 20261009-counter-payments). It has no Stripe invoice, so none of the
-  // Stripe controls below apply; an owner or manager can void it instead.
+  // Stripe controls below apply; an owner or manager can void it instead,
+  // unless it was an invoice settled at the counter, which Stripe holds paid
+  // and cannot un-pay.
   const counterCollection =
     order.order.collection === "stripe_invoice" ? null : order.order.collection;
   const canVoidCounter =
-    counterCollection !== null &&
-    order.order.status === "paid" &&
+    isVoidableCounterOrder(order.order) &&
     (await canPersonManageOrders(db, shop.id, session.user.personId));
   // What is left to give back, as a number a person types. Read off the order
   // rather than its total, so a second partial refund offers the remainder

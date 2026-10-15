@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { DbExecutor } from "@/db/client";
 import { owesAnything, readOwed } from "@/db/owed";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { FACT_SEPARATOR } from "./notice-rows";
 
@@ -14,23 +15,23 @@ import { FACT_SEPARATOR } from "./notice-rows";
  *
  * Renders nothing when nothing is owed: a calm ledger has no line about
  * money nobody is waiting on.
+ *
+ * The page mounts it for a Reports-grade reader only, the gate the Monday
+ * email gives the same figure: its seats half is an aggregate no other crew
+ * surface states (security review of layer r4-3).
  */
 export async function OwedLine({
   db,
   shop,
-  now,
-  shopSlug,
   locale,
   t,
 }: {
   db: DbExecutor;
-  shop: { id: string; currency: string; timezone: string };
-  now: Date;
-  shopSlug: string;
+  shop: { id: string; slug: string; currency: string; timezone: string };
   locale: string;
   t: StaffTranslator;
 }) {
-  const owed = await readOwed(db, shop, now);
+  const owed = await readOwed(db, shop, nowDate());
   if (!owesAnything(owed)) return null;
   const money = (cents: number) => formatMoneyCents(cents, owed.currency, locale);
   return (
@@ -38,7 +39,7 @@ export async function OwedLine({
       <span className="font-medium">{t("orders.index.owed.label")}</span>{" "}
       {owed.orders.cents > 0 ? (
         <Link
-          href={`/shop/${shopSlug}/orders?status=open&range=all`}
+          href={`/shop/${shop.slug}/orders?status=open&range=all`}
           className="inline-flex min-h-11 items-center underline underline-offset-2"
         >
           {t("orders.index.owed.orders", {

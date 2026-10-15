@@ -33,7 +33,7 @@ async function dived(
   shopId: string,
   personId: string,
   startsAt: Date,
-  status: "booked" | "cancelled" = "booked",
+  status: "booked" | "checked_in" | "cancelled" | "no_show" = "booked",
 ) {
   const [trip] = await db
     .insert(trips)
@@ -58,8 +58,10 @@ async function roster(db: AppDb, shopId: string) {
   const never = await diver(db, shopId, "Al Never");
   await dived(db, shopId, recent, new Date("2031-09-01T13:00:00Z"));
   await dived(db, shopId, lapsed, new Date("2029-05-01T13:00:00Z"));
-  // A cancelled seat is no dive day, and a boat that has not left is not a dive.
+  // A cancelled seat and a no-show are no dive day (`diveDay`, the one rule),
+  // and a boat that has not left is not a dive.
   await dived(db, shopId, lapsed, new Date("2031-08-01T13:00:00Z"), "cancelled");
+  await dived(db, shopId, lapsed, new Date("2031-07-01T13:00:00Z"), "no_show");
   await dived(db, shopId, never, new Date("2031-11-01T13:00:00Z"));
   await db.insert(priorVisits).values({
     shopId,
