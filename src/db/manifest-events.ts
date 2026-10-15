@@ -405,6 +405,7 @@ export async function publishManifestEventsForPerson(
           gte(trips.startsAt, new Date(now.getTime() - DAY_MS)),
         ),
       )
+      // diveday:allow-time-id-order: a capped list of ids to republish to, never shown to anyone.
       .orderBy(asc(trips.startsAt), asc(trips.id))
       .limit(MAX_DEPARTURES_PER_PERSON_CHANGE);
     departures = rows.filter((row) => !hasSailed(row.startsAt, now)).map((row) => row.id);

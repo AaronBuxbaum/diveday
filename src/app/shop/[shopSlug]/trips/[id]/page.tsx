@@ -28,7 +28,7 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { diversTabState, readDepartureStage } from "./_arrivals/departure-record";
+import { diversTabState } from "./_arrivals/departure-record";
 import { DESK_NOTICES } from "./_arrivals/notices";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
@@ -225,22 +225,10 @@ export default async function ManageTripPage({
 
   const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const { shown, finished, checkInOpen, unaccounted } = await readDepartureStage(
-    db,
-    shop.id,
-    tripId,
-    {
-      startsAt: trip.startsAt,
-      endsAt: trip.endsAt,
-      now,
-      timeZone: shop.timezone,
-      stage: stageReading,
-      cancelled,
-      meetingWindows: scheduleDays.map((day) => ({ startsAt: day.startsAt, endsAt: day.endsAt })),
-    },
-  );
-  // The desk while arrivals are open, or a finished departure's record.
-  const { desk, record } = await diversTabState({
+  // The desk while arrivals are open, or a finished departure's record; the
+  // stage is read with it, since a diver counted out and not back keeps the
+  // departure open (`readDepartureStage`).
+  const { shown, finished, checkInOpen, desk, record } = await diversTabState({
     db,
     shopId: shop.id,
     shopSlug,
@@ -251,8 +239,9 @@ export default async function ManageTripPage({
     timeZone: shop.timezone,
     t,
     onDivers: !showDetails,
-    finished,
-    unaccounted,
+    stage: stageReading,
+    cancelled,
+    meetingWindows: scheduleDays,
   });
 
   const tabsCopy = tripTabsCopy(t, checkInOpen ? { trip, shop, locale } : undefined);

@@ -6,7 +6,7 @@ import {
 import type { CertificationAgency } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckQuery, AgencyListedKind } from "@/lib/agency-check";
-import type { AgencyCheckResult, AgencyListedAddResult } from "../card-actions";
+import type { AgencyCheckResult, AgencyListedAddResult } from "../agency-check-actions";
 import { AgencyCheck } from "./AgencyCheck";
 
 /**

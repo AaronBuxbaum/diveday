@@ -21,7 +21,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { FormStatus } from "@/components/ui/form";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
-import type { AgencyCheckResult, AgencyListedAddResult } from "../card-actions";
+import type { AgencyCheckResult, AgencyListedAddResult } from "../agency-check-actions";
 
 export type { AgencyCheckCopy };
 

@@ -453,7 +453,6 @@
     "adding": "Añadiendo…",
     "ageYears": "{age} años",
     "allClear": "Todos listos para bucear",
-    "bookedOfCapacity": "{booked} de {capacity, plural, one {# reservado} other {# reservados}}",
     "nextStepSummary": "Siguiente paso",
     "nextStepLabel": "Qué hace a continuación este alumno",
     "nextStepDescription": "El alumno lo lee en su resumen.",

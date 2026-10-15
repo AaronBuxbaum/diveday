@@ -1,4 +1,4 @@
-import type { AgencyCheckResult } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+import type { AgencyCheckResult } from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import { fill } from "@/i18n/fill";
 import type { AgencyCheckOutcome } from "@/lib/agency-check-queue";
 import type { ExtensionFailureReason } from "@/lib/cert-check-extension";

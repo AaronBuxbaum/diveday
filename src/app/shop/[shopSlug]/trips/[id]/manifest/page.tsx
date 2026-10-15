@@ -4,7 +4,6 @@ import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { SkipLink } from "@/components/SkipLink";
-import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -131,7 +130,7 @@ export default async function TripManifestPage({
     liveDiveSites,
     catchUp,
     diveIntents,
-    stage,
+    stageStrip,
     meetingPoint,
     fieldGuides,
     loggedSightings,
@@ -277,8 +276,7 @@ export default async function TripManifestPage({
         {...stageStripProps(t, {
           manifests: completeManifests,
           shopSlug,
-          stage,
-          meetingWindows: (await meetingWindowsByTrip(db, [departureManifest.trip])).get(tripId),
+          ...stageStrip,
           now: nowDate(),
           timeZone: shop.timezone,
           locale,
@@ -367,7 +365,7 @@ export default async function TripManifestPage({
           tripId={tripId}
           isDeparture={isDeparture}
           startsAt={departureManifest.trip.startsAt}
-          stage={stage}
+          stage={stageStrip.stage}
           cancelled={departureManifest.trip.cancelled === true}
           seats={manifest.divers}
         />

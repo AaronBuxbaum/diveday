@@ -7,7 +7,7 @@ import {
   listUnaccountedForByTrip,
 } from "@/db/manifests";
 import type { latestTripStage } from "@/db/trip-stages";
-import { departureStage } from "@/lib/trip-phase";
+import { departureStage, type MeetingWindow } from "@/lib/trip-phase";
 import type { RosterRecord } from "../_components/roster-model";
 import { buildArrivalDesk } from "./arrival-desk";
 
@@ -20,23 +20,35 @@ import { buildArrivalDesk } from "./arrival-desk";
  */
 export async function diversTabState(
   input: Parameters<typeof buildArrivalDesk>[0] & {
+    trip: { endsAt: Date };
     onDivers: boolean;
-    finished: boolean;
-    /** The seats said missing and not counted back (`readDepartureStage`). */
-    unaccounted: ReadonlySet<string>;
+    /** The crew's latest tap, whatever its age (`latestTripStage`). */
+    stage: StageReading;
+    cancelled: boolean;
+    meetingWindows?: readonly MeetingWindow[];
   },
-): Promise<{
-  desk: Awaited<ReturnType<typeof buildArrivalDesk>>;
-  record: RosterRecord | undefined;
-}> {
-  const { onDivers, finished, unaccounted, ...deskInput } = input;
-  if (!onDivers) return { desk: null, record: undefined };
-  if (finished)
-    return {
-      desk: null,
-      record: await departureRecord(input.db, input.shopId, input.tripId, unaccounted),
-    };
-  return { desk: await buildArrivalDesk(deskInput), record: undefined };
+): Promise<
+  Awaited<ReturnType<typeof readDepartureStage>> & {
+    desk: Awaited<ReturnType<typeof buildArrivalDesk>>;
+    record: RosterRecord | undefined;
+  }
+> {
+  const { onDivers, stage, cancelled, meetingWindows, ...deskInput } = input;
+  const reading = await readDepartureStage(input.db, input.shopId, input.tripId, {
+    startsAt: input.trip.startsAt,
+    endsAt: input.trip.endsAt,
+    now: input.now,
+    timeZone: input.timeZone,
+    stage,
+    cancelled,
+    meetingWindows,
+  });
+  if (!onDivers) return { ...reading, desk: null, record: undefined };
+  if (reading.finished) {
+    const record = await departureRecord(input.db, input.shopId, input.tripId, reading.unaccounted);
+    return { ...reading, desk: null, record };
+  }
+  return { ...reading, desk: await buildArrivalDesk(deskInput), record: undefined };
 }
 
 /**

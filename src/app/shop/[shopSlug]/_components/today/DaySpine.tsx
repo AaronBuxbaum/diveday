@@ -10,7 +10,7 @@ import { agencyCheckCopies } from "@/app/shop/[shopSlug]/_components/agency-chec
 import {
   addAgencyListedCardsAction,
   agencyCheckAction,
-} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+} from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import {
   WaitlistInvite,
   type WaitlistInviteCopy,

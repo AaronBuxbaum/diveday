@@ -17,7 +17,7 @@ import type {
   AgencyCheckOffer,
   AgencyCheckResult,
   AgencyListedAddResult,
-} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+} from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import { UndoToast } from "@/components/UndoToast";
 import { proseLinkClass } from "@/components/ui/button";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";

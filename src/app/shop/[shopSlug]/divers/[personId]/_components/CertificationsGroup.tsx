@@ -8,7 +8,6 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { InsetGroup } from "@/components/ui/ledger";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { type AgencyListedKind, agencyCheckOffered, agencyCheckQuery } from "@/lib/agency-check";
 import {
   type CertificationCardKind,
   certificationCardRowState,
@@ -20,9 +19,7 @@ import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration, needsCardSighting } from "@/lib/readiness";
 import {
-  addAgencyListedCardsAction,
   addCardAction,
-  agencyCheckAction,
   clearNoCertificationAction,
   deleteCertificationAction,
   deleteSpecialtyAction,
@@ -32,6 +29,7 @@ import {
 } from "../card-actions";
 import { AgencyCheckLink } from "./AgencyCheckLink";
 import { CardSightingForm } from "./CardSightingForm";
+import { agencyCheckActions, levelCardCheck, listedChecks } from "./card-checks";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { fileGap } from "./file-gap";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
@@ -126,84 +124,13 @@ function CardRow({
   );
 }
 
-/** The agency check's two actions, bound to this diver: the check, and filing the page's other cards. */
-function agencyCheckActions(shopSlug: string, personId: string) {
-  return {
-    action: agencyCheckAction.bind(null, shopSlug, personId),
-    addListed: addAgencyListedCardsAction.bind(null, shopSlug, personId),
-  };
-}
-
-/**
- * The lookup the extension would type for this card, or null when there is
- * none to offer. PADI's waits for the shop's own switch (H-121); off, the card
- * keeps its "(member sign-in)" link.
- */
-function offeredCheckQuery(
-  card: CheckedCard,
-  person: { fullName: string; dateOfBirth: string | null },
-  shop: Shop,
-) {
-  if (!agencyCheckOffered(card.agency, shop)) return null;
-  return agencyCheckQuery({
-    agency: card.agency,
-    fullName: person.fullName,
-    dateOfBirth: person.dateOfBirth,
-    identifier: card.identifier,
-  });
-}
-
-/**
- * A level card's check: the lookup, or null for a self-declared card or one
- * with none to offer, and whether the shop's switch is what keeps it off.
- */
-type CheckedCard = {
-  agency: Parameters<typeof agencyCheckQuery>[0]["agency"];
-  identifier: string | null;
-};
-
-function levelCardCheck(
-  card: CheckedCard,
-  person: { fullName: string; dateOfBirth: string | null },
-  shop: Shop,
-  selfDeclared: boolean,
-) {
-  return {
-    query: selfDeclared ? null : offeredCheckQuery(card, person, shop),
-    switchedOff: !selfDeclared && !agencyCheckOffered(card.agency, shop),
-  };
-}
-
-/**
- * A nitrox or specialty card's check (issue #2592): the lookup, or null for a
- * card that is confirmed through a card sighting instead (a diver's own tick,
- * a card the shop issued, a listed card with no number), where the page does
- * not stand in for the card in a staffer's hand. The same rule the action
- * judges by (`checkableListedQuery`, src/db/agency-check.ts).
- */
-function listedCardCheck(
-  card: CheckedCard & {
-    status: "pending" | "verified";
-    selfDeclaredAt: Date | null;
-    issuedByShopAt: Date | null;
-    listedFromCertificationId: string | null;
-    importedAt: Date | null;
-    reviewedAt: Date | null;
-  },
-  person: { fullName: string; dateOfBirth: string | null },
-  shop: Shop,
-  kind: { id: string; type: "nitrox" | "specialty"; kind: AgencyListedKind },
-  actions: ReturnType<typeof agencyCheckActions>,
-) {
-  const sightedFirst = needsCardSighting(card) || !card.identifier?.trim();
-  return {
-    certificationId: kind.id,
-    card: { type: kind.type, kind: kind.kind },
-    awaiting: card.status === "pending" || needsImportConfirm(card),
-    query: sightedFirst ? null : offeredCheckQuery(card, person, shop),
-    switchedOff: !sightedFirst && !agencyCheckOffered(card.agency, shop),
-    ...actions,
-  };
+/** What a card's mark-certified control shows: the import to confirm, the card waiting, or settled. */
+function markState(card: {
+  status: "pending" | "verified";
+  importedAt: Date | null;
+  reviewedAt: Date | null;
+}) {
+  return needsImportConfirm(card) ? "confirm" : card.status === "pending" ? "pending" : "settled";
 }
 
 /**
@@ -439,6 +366,7 @@ export function CertificationsGroup({
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
   const agencyCheck = agencyCheckActions(shopSlug, personId);
+  const listed = listedChecks(diver.person, shop, agencyCheck);
   const deleteLevel = deleteCertificationAction.bind(null, shopSlug, personId);
   const deleteSpecialty = deleteSpecialtyAction.bind(null, shopSlug, personId);
   // The diver's own "I hold no card", still standing: set, never cleared by
@@ -586,13 +514,7 @@ export function CertificationsGroup({
                 action={markCertify}
                 certificationId={card.id}
                 cardType="level"
-                state={
-                  needsImportConfirm(card)
-                    ? "confirm"
-                    : card.status === "pending"
-                      ? "pending"
-                      : "settled"
-                }
+                state={markState(card)}
                 copy={markCertified}
               />
             )}
@@ -626,13 +548,7 @@ export function CertificationsGroup({
               t={t}
               card={card}
               awaiting={awaiting}
-              check={listedCardCheck(
-                card,
-                diver.person,
-                shop,
-                { id: card.id, type: "specialty", kind: card.specialty },
-                agencyCheck,
-              )}
+              check={listed(card, { id: card.id, type: "specialty", kind: card.specialty })}
             />
           </>
         }
@@ -650,13 +566,7 @@ export function CertificationsGroup({
                 action={markCertify}
                 certificationId={card.id}
                 cardType="specialty"
-                state={
-                  needsImportConfirm(card)
-                    ? "confirm"
-                    : card.status === "pending"
-                      ? "pending"
-                      : "settled"
-                }
+                state={markState(card)}
                 copy={markCertified}
               />
             )}
@@ -697,13 +607,7 @@ export function CertificationsGroup({
               check={
                 selfDeclared
                   ? undefined
-                  : listedCardCheck(
-                      card,
-                      diver.person,
-                      shop,
-                      { id: card.id, type: "nitrox", kind: "nitrox" },
-                      agencyCheck,
-                    )
+                  : listed(card, { id: card.id, type: "nitrox", kind: "nitrox" })
               }
             />
           </>
@@ -723,13 +627,7 @@ export function CertificationsGroup({
                 action={markCertify}
                 certificationId={card.id}
                 cardType="nitrox"
-                state={
-                  needsImportConfirm(card)
-                    ? "confirm"
-                    : card.status === "pending"
-                      ? "pending"
-                      : "settled"
-                }
+                state={markState(card)}
                 copy={markCertified}
               />
             )}

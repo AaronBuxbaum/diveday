@@ -16,6 +16,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Adventure Diver
 - Agency
 - Agency check
+- Agency check of a card
 - Agency-listed certification
 - Assistant Instructor (AI)
 - Bundled nitrox
