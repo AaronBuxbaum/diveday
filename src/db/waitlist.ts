@@ -172,7 +172,7 @@ export type WaitlistOutcome =
 export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise<WaitlistOutcome> {
   const email = req.email.trim().toLowerCase();
   const fullName = req.fullName.trim();
-  const partySize = Math.min(
+  const askedParty = Math.min(
     MAX_PUBLIC_PARTY_SIZE,
     Math.max(1, Math.trunc(req.partySize ?? 1) || 1),
   );
@@ -193,6 +193,9 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
     if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
       return { ok: false, reason: "trip_unavailable" };
     }
+    // The form offers "up to the boat's seats"; the server keeps that promise,
+    // so a hand-posted party cannot claim more demand than the boat holds.
+    const partySize = Math.max(1, Math.min(askedParty, trip.capacity));
 
     // `heldSeatCounts`, the same counts `createBookingRecord` reads — this
     // decision has to be the one the booking door would make, or the two
@@ -274,7 +277,12 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
         await tx
           .update(tripWaitlistEntries)
           .set({ partySize })
-          .where(eq(tripWaitlistEntries.id, existing.id));
+          .where(
+            and(
+              eq(tripWaitlistEntries.id, existing.id),
+              eq(tripWaitlistEntries.shopId, req.shopId),
+            ),
+          );
       }
       return {
         ok: false,

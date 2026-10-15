@@ -5,7 +5,7 @@ import { type MessageSeat, messageSeats } from "./running-late";
 import { bookings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
-/** The seat an Inbox row names, and whether the late mark may be offered on it. */
+/** A seat an Inbox row names, and whether the late mark may be offered on it. */
 export type InboxSeat = MessageSeat & {
   /** Inside the running-late window when they wrote (`messageSeats`). */
   lateWindow: boolean;
@@ -14,23 +14,24 @@ export type InboxSeat = MessageSeat & {
 type Message = { id: string; personId: string | null; receivedAt: Date };
 
 /**
- * **The seat each Inbox message is about** (fourth UX review, item 32). Inside
- * the running-late window it is `messageSeats`' answer, and the row may offer
- * "Mark running late". Outside it, the sender's soonest open seat that they
- * already held when they wrote: "Could I switch to the afternoon boat?" sent
- * three days out is about a seat, and naming it is what lets the desk open it
- * and move it. A seat booked after the message, a canceled one and one whose
- * boat has sailed are never named, and a stranger has none.
+ * **The seats each Inbox message is about** (fourth UX review, item 32). Inside
+ * the running-late window it is `messageSeats`' one answer, and the row may
+ * offer "Mark running late". Outside it, every open seat the sender already
+ * held when they wrote, soonest first: "Could I switch Saturday to next week?"
+ * from a diver who also holds Wednesday is about one of the two, and only the
+ * desk can tell which, so the row names both rather than guessing the soonest
+ * (dive-domain review r4-4, F1). A seat booked after the message, a canceled
+ * one and one whose boat has sailed are never named, and a stranger has none.
  */
 export async function inboxSeats(
   db: AppDb,
   shopId: string,
   messages: readonly Message[],
   now: Date,
-): Promise<Map<string, InboxSeat>> {
-  const found = new Map<string, InboxSeat>();
+): Promise<Map<string, InboxSeat[]>> {
+  const found = new Map<string, InboxSeat[]>();
   const late = await messageSeats(db, shopId, messages, now);
-  for (const [id, seat] of late) found.set(id, { ...seat, lateWindow: true });
+  for (const [id, seat] of late) found.set(id, [{ ...seat, lateWindow: true }]);
   const rest = messages.filter(
     (message): message is Message & { personId: string } =>
       message.personId !== null && !found.has(message.id),
@@ -62,12 +63,17 @@ export async function inboxSeats(
     )
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(bookings.id));
   for (const message of rest) {
-    const seat = held.find(
-      (row) => row.personId === message.personId && row.bookedAt <= message.receivedAt,
-    );
-    if (!seat) continue;
-    const { bookingId, tripId, title, startsAt, runningLateAt } = seat;
-    found.set(message.id, { bookingId, tripId, title, startsAt, runningLateAt, lateWindow: false });
+    const seats = held
+      .filter((row) => row.personId === message.personId && row.bookedAt <= message.receivedAt)
+      .map(({ bookingId, tripId, title, startsAt, runningLateAt }) => ({
+        bookingId,
+        tripId,
+        title,
+        startsAt,
+        runningLateAt,
+        lateWindow: false,
+      }));
+    if (seats.length > 0) found.set(message.id, seats);
   }
   return found;
 }

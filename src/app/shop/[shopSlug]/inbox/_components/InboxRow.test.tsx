@@ -36,7 +36,7 @@ const MESSAGE: InboxMessageRow["message"] = {
 function renderRow(
   overrides: Partial<InboxMessageRow["message"]> = {},
   personName: string | null = "Priya Sharma",
-  seat: InboxSeat | null = null,
+  seats: readonly InboxSeat[] = [],
 ) {
   const { container } = render(
     <ul>
@@ -48,7 +48,7 @@ function renderRow(
         t={t}
         deleteAction={vi.fn()}
         doneAction={vi.fn()}
-        seat={seat}
+        seats={seats}
         lateAction={vi.fn()}
       />
     </ul>,
@@ -292,7 +292,7 @@ describe("a message from somebody with a boat to catch", () => {
   const LATE = { channel: "whatsapp" as const, subject: null, body: "Running about 15 min late" };
 
   it("names the departure, and offers to mark the sender running late on it", async () => {
-    renderRow(LATE, "Diego Alvarez", SEAT);
+    renderRow(LATE, "Diego Alvarez", [SEAT]);
     expect(screen.getByText(/Booked on Night Dive, Tuesday 11:30\sPM/)).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Diego Alvarez" }),
@@ -309,10 +309,9 @@ describe("a message from somebody with a boat to catch", () => {
   });
 
   it("says the mark is on the manifest once it is, and offers it no more", async () => {
-    renderRow({ ...LATE, keywordIntent: "late" }, "Diego Alvarez", {
-      ...SEAT,
-      runningLateAt: new Date("2026-07-22T02:30:00.000Z"),
-    });
+    renderRow({ ...LATE, keywordIntent: "late" }, "Diego Alvarez", [
+      { ...SEAT, runningLateAt: new Date("2026-07-22T02:30:00.000Z") },
+    ]);
     expect(screen.getByText(/On the manifest: running late, said 9:30\sPM/)).toBeInTheDocument();
     // The keyword's own "Running late" would say the same thing twice.
     expect(screen.queryByText(/^Running late ·|· Running late$/)).toBeNull();
@@ -323,7 +322,7 @@ describe("a message from somebody with a boat to catch", () => {
   });
 
   it("names nothing when there is no seat the message could be about", () => {
-    const container = renderRow(LATE, "Diego Alvarez", null);
+    const container = renderRow(LATE, "Diego Alvarez", []);
     expect(container.textContent).not.toMatch(/Booked on/);
   });
 });
@@ -345,14 +344,14 @@ describe("a message asking to move a seat", () => {
   };
 
   it("names the seat as a link that opens it on its roster", () => {
-    renderRow({}, "Priya Sharma", SEAT);
+    renderRow({}, "Priya Sharma", [SEAT]);
     expect(
       screen.getByRole("link", { name: /Booked on Two-Tank Reef, Saturday\s8:00\sAM/ }),
     ).toHaveAttribute("href", `/shop/blue-mantis/trips/${SEAT.tripId}#booking-${SEAT.bookingId}`);
   });
 
   it("offers the move in the row menu, landing on the seat's move, and no late mark", async () => {
-    renderRow({}, "Priya Sharma", SEAT);
+    renderRow({}, "Priya Sharma", [SEAT]);
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
     );
@@ -367,8 +366,51 @@ describe("a message asking to move a seat", () => {
     expect(screen.queryByRole("button", { name: /running late/i })).toBeNull();
   });
 
+  /**
+   * dive-domain review r4-4, F1: Priya also holds Wednesday's wreck boat. The
+   * row cannot know which seat "switch Saturday" means, so it names both and
+   * each gets its own move, rather than Wednesday's alone.
+   */
+  it("names every seat she holds, each with its own move", async () => {
+    const WEDNESDAY: InboxSeat = {
+      ...SEAT,
+      bookingId: "bf000000-1111-4222-8333-666666666666",
+      tripId: "cf000000-1111-4222-8333-666666666666",
+      title: "Wreck Dive",
+      // 8:00 AM Wednesday in Cancún.
+      startsAt: new Date("2026-07-22T13:00:00.000Z"),
+    };
+    renderRow({}, "Priya Sharma", [WEDNESDAY, SEAT]);
+    expect(screen.getByRole("link", { name: /Booked on Wreck Dive, Wednesday/ })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/trips/${WEDNESDAY.tripId}#booking-${WEDNESDAY.bookingId}`,
+    );
+    expect(screen.getByRole("link", { name: /Booked on Two-Tank Reef, Saturday/ })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/trips/${SEAT.tripId}#booking-${SEAT.bookingId}`,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
+    const wednesday = screen.getByRole("link", {
+      name: /^Move Priya Sharma’s seat on Wreck Dive, Wednesday\s8:00\sAM, to another departure$/,
+    });
+    expect(wednesday).toHaveTextContent(/^Move Wreck Dive, Wednesday\s8:00\sAM$/);
+    expect(wednesday).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/trips/${WEDNESDAY.tripId}#move-booking-${WEDNESDAY.bookingId}`,
+    );
+    expect(
+      screen.getByRole("link", { name: /^Move Priya Sharma’s seat on Two-Tank Reef, Saturday/ }),
+    ).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/trips/${SEAT.tripId}#move-booking-${SEAT.bookingId}`,
+    );
+    expect(screen.queryByRole("link", { name: /^Move to another departure$/ })).toBeNull();
+  });
+
   it("offers no move without a seat", async () => {
-    renderRow({}, "Priya Sharma", null);
+    renderRow({}, "Priya Sharma", []);
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
     );

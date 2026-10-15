@@ -133,7 +133,7 @@ export default async function InboxPage({
                     t={t}
                     deleteAction={deleteInboxMessageAction}
                     doneAction={setInboxMessageDoneAction}
-                    seat={seats.get(row.message.id) ?? null}
+                    seats={seats.get(row.message.id) ?? []}
                     lateAction={markInboxSenderLateAction}
                   />
                 ))}
@@ -154,7 +154,7 @@ export default async function InboxPage({
                     t={t}
                     deleteAction={deleteInboxMessageAction}
                     doneAction={setInboxMessageDoneAction}
-                    seat={seats.get(row.message.id) ?? null}
+                    seats={seats.get(row.message.id) ?? []}
                     lateAction={markInboxSenderLateAction}
                   />
                 ))}

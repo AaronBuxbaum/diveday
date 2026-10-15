@@ -171,6 +171,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Imported payment history
 - Imported waiver acceptance
 - In-water certified assistant
+- Inbox seat
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver

@@ -43,7 +43,7 @@ describe("diverCrewWithAway", () => {
     const day = calendarDateInTimezone(trip.startsAt, shop.timezone);
     await away(first.personId, day, day);
 
-    const marked = await diverCrewWithAway(db, shop.id, trip.id, shop.timezone);
+    const marked = await diverCrewWithAway(db, shop.id, trip, shop.timezone);
     expect(marked.find((member) => member.personId === first.personId)?.away).toBe(true);
     for (const member of marked.filter((member) => member.personId !== first.personId)) {
       expect(member.away).toBe(false);
@@ -57,7 +57,7 @@ describe("diverCrewWithAway", () => {
     const [first] = crew;
     if (!first) throw new Error("expected a named crew member");
     await away(first.personId, "2099-01-01", "2099-01-02");
-    const marked = await diverCrewWithAway(db, shop.id, trip.id, shop.timezone);
+    const marked = await diverCrewWithAway(db, shop.id, trip, shop.timezone);
     expect(marked.every((member) => member.away === false)).toBe(true);
     expect(marked.map((member) => member.personId)).toEqual(crew.map((member) => member.personId));
   });
@@ -65,6 +65,6 @@ describe("diverCrewWithAway", () => {
   it("names nobody for another shop's departure", async () => {
     const { db, shop, trip } = await aCrewedDeparture();
     const otherShop = "00000000-0000-4000-8000-000000000000";
-    expect(await diverCrewWithAway(db, otherShop, trip.id, shop.timezone)).toEqual([]);
+    expect(await diverCrewWithAway(db, otherShop, trip, shop.timezone)).toEqual([]);
   });
 });

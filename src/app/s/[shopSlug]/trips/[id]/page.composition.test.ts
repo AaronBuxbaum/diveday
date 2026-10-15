@@ -385,6 +385,19 @@ describe("the trip page's order", () => {
  * reaches the page's own render. Pinned at the source, like the order above,
  * because what is being pinned is which *inputs* a server page consults.
  */
+/**
+ * **One crew line on both diver doors** (r4-4 reviews: security N2, dive-domain
+ * N5): the page a diver booked from and their own /ready say the same thing
+ * about a crew member who is away, "Instructor · to be confirmed", so neither
+ * names a person the other hides.
+ */
+describe("the crew a diver is told about", () => {
+  it("is read with the away mark, as /ready reads it", () => {
+    expect(READS_SOURCE).toContain("diverCrewWithAway(db, shop.id, found, shop.timezone)");
+    expect(READS_SOURCE).not.toContain("tripPublicCrew(");
+  });
+});
+
 describe("the known diver's facts", () => {
   const SECTIONS = component("BookingSections.tsx");
 

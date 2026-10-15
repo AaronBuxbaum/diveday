@@ -60,12 +60,14 @@ describe("inboxSeats", () => {
     const receivedAt = new Date(bookedAt.getTime() + MINUTE_MS);
     const now = new Date(trip.startsAt.getTime() - 3 * 24 * HOUR_MS);
     const seats = await inboxSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
-    expect(seats.get(MESSAGE_ID)).toMatchObject({
-      bookingId,
-      tripId: trip.id,
-      title: trip.title,
-      lateWindow: false,
-    });
+    expect(seats.get(MESSAGE_ID)).toEqual([
+      expect.objectContaining({
+        bookingId,
+        tripId: trip.id,
+        title: trip.title,
+        lateWindow: false,
+      }),
+    ]);
   });
 
   it("offers the late mark inside the window, as the running-late reader does", async () => {
@@ -73,7 +75,9 @@ describe("inboxSeats", () => {
     const now = new Date(trip.startsAt.getTime() - 30 * MINUTE_MS);
     const receivedAt = new Date(now.getTime() - 5 * MINUTE_MS);
     const seats = await inboxSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
-    expect(seats.get(MESSAGE_ID)).toMatchObject({ bookingId, lateWindow: true });
+    expect(seats.get(MESSAGE_ID)).toEqual([
+      expect.objectContaining({ bookingId, lateWindow: true }),
+    ]);
   });
 
   it("names nothing for words written before the seat was booked", async () => {
@@ -99,6 +103,39 @@ describe("inboxSeats", () => {
     expect(
       (await inboxSeats(db, otherShop, [{ id: MESSAGE_ID, personId, receivedAt }], now)).size,
     ).toBe(0);
+  });
+
+  /**
+   * dive-domain review r4-4, F1: a regular with Wednesday's reef boat and
+   * Saturday's wreck boat writes "can I switch Saturday?". Naming only the
+   * soonest seat put Wednesday's move one tap from the desk; the row names
+   * every seat they held when they wrote, soonest first, each with its own move.
+   */
+  it("names every open seat the sender held when they wrote, soonest first", async () => {
+    const { db, shop, trip, bookingId, personId, bookedAt } = await context();
+    const later = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (other) =>
+        other.id !== trip.id &&
+        other.courseId === null &&
+        other.startsAt > trip.startsAt &&
+        other.booked < other.capacity,
+    );
+    if (!later) throw new Error("expected a later open trip");
+    const second = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: later.id,
+      ...DIVER,
+    });
+    if (!second.ok) throw new Error(`second booking failed: ${second.reason}`);
+    // Both seats were booked moments ago; the message came an hour after.
+    const receivedAt = new Date(bookedAt.getTime() + HOUR_MS);
+    const now = new Date(trip.startsAt.getTime() - 3 * 24 * HOUR_MS);
+    const seats = await inboxSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
+    expect(seats.get(MESSAGE_ID)?.map((seat) => seat.bookingId)).toEqual([
+      bookingId,
+      second.bookingId,
+    ]);
   });
 
   it("never names a canceled seat", async () => {

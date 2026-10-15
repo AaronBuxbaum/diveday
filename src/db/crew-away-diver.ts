@@ -1,10 +1,7 @@
-import { and, eq } from "drizzle-orm";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { overlappingBlocks } from "@/lib/crew-requests";
 import type { AppDb } from "./client";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
-import { trips } from "./schema";
-import { liveTrip } from "./trips-live";
 import { listTripScheduleDays, type PublicCrewMember, tripPublicCrew } from "./trips-record";
 
 /**
@@ -20,26 +17,26 @@ import { listTripScheduleDays, type PublicCrewMember, tripPublicCrew } from "./t
 export async function diverCrewWithAway(
   db: AppDb,
   shopId: string,
-  tripId: string,
+  trip: { id: string; startsAt: Date; endsAt: Date },
   timeZone: string,
 ): Promise<(PublicCrewMember & { away: boolean })[]> {
-  const crew = await tripPublicCrew(db, shopId, tripId);
+  // One round trip: the caller already holds the departure's window, and a
+  // schedule day never falls outside it, so the days away are read for that
+  // window beside the crew and the days rather than after them (the diver
+  // pages' phase budgets, `staff-render-cost.test.ts`).
+  const [crew, days, blocks] = await Promise.all([
+    tripPublicCrew(db, shopId, trip.id),
+    listTripScheduleDays(db, shopId, trip.id),
+    listCrewAvailabilityBlocks(db, shopId, {
+      from: calendarDateInTimezone(trip.startsAt, timeZone),
+      to: calendarDateInTimezone(trip.endsAt, timeZone),
+    }),
+  ]);
   if (crew.length === 0) return [];
-  const [trip] = await db
-    .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
-    .from(trips)
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-    .limit(1);
-  if (!trip) return [];
-  const days = await listTripScheduleDays(db, shopId, tripId);
   const meetings =
     days.length > 0
       ? days.map((day) => ({ startsAt: day.startsAt, endsAt: day.endsAt }))
       : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
-  const blocks = await listCrewAvailabilityBlocks(db, shopId, {
-    from: calendarDateInTimezone(meetings[0]?.startsAt ?? trip.startsAt, timeZone),
-    to: calendarDateInTimezone(meetings.at(-1)?.endsAt ?? trip.endsAt, timeZone),
-  });
   return crew.map((member) => ({
     ...member,
     away: overlappingBlocks(blocks, member.personId, meetings, timeZone).length > 0,

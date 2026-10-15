@@ -342,7 +342,7 @@ async function DiverReadinessPage({
       listTripChangeEvents(db, shop.id, data.trip.id),
       // The crew who agreed to be named (issue #1181, D21), the same filter as
       // the public page, each marked away on this departure's days (item 12).
-      diverCrewWithAway(db, shop.id, data.trip.id, detail.shop.timezone),
+      diverCrewWithAway(db, shop.id, detail.trip, detail.shop.timezone),
       // Where the crew last said this boat was (ADR
       // 20260904-reef-all-the-way-down, Budget rule 4). Read whatever its age;
       // `liveStageOf` below decides whether it still speaks, so a stage nobody

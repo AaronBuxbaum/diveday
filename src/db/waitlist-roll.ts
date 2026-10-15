@@ -239,6 +239,8 @@ export async function rollSailedSeriesWaitlists(
         and(
           liveTrip(),
           takesSeats(row.shopId),
+          // The invite links the public page: a private date is never the next one.
+          eq(trips.isPrivate, false),
           eq(trips.seriesId, row.seriesId),
           gt(trips.startsAt, now),
         ),

@@ -190,15 +190,30 @@ describe("joinTripWaitlist for a party", () => {
     expect((await entry(first.entryId))?.partySize).toBe(3);
   });
 
-  it("keeps a party inside the form's bounds", async () => {
+  /**
+   * The form says "up to the boat's seats", and the server holds it there: a
+   * hand-posted party of twenty on a smaller boat would otherwise count twenty
+   * seats of demand on the staff roster (security review r4-4, F1).
+   */
+  it("holds a party larger than the boat to the boat's seats", async () => {
     const { db, shop, fullTrip } = await seededContext();
+    expect(fullTrip.capacity).toBeLessThan(20);
     const outcome = await joinTripWaitlist(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      ...visitor,
+      partySize: fullTrip.capacity + 5,
+    });
+    expect(outcome).toMatchObject({ ok: true });
+    expect((await entry(outcome.entryId))?.partySize).toBe(fullTrip.capacity);
+
+    await joinTripWaitlist(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       ...visitor,
       partySize: 99,
     });
-    expect((await entry(outcome.entryId))?.partySize).toBe(20);
+    expect((await entry(outcome.entryId))?.partySize).toBe(fullTrip.capacity);
   });
 });
 

@@ -168,6 +168,19 @@ describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measur
     expect((await waiting(db, third.id)).map((row) => row.personId)).toEqual([ana.id]);
   });
 
+  // A lead asked on the public page; the invite links the public page, so a
+  // date made private is never where it lands (security review r4-4, N4).
+  it("skips a private next date for the one after it", async () => {
+    const { db, shop, first, second, now } = await saturdays();
+    const third = await nextAfter(db, shop.id, second);
+    await db.update(trips).set({ isPrivate: true }).where(eq(trips.id, second.id));
+    const ana = await lead(db, shop.id, first.id, "Ana Private");
+
+    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 1 });
+    expect(await waiting(db, second.id)).toEqual([]);
+    expect((await waiting(db, third.id)).map((row) => row.personId)).toEqual([ana.id]);
+  });
+
   it("invites nobody when the divers-only limit is reached, though the boat has room", async () => {
     const { db, shop, first, second, now } = await saturdays();
     await db.update(trips).set({ diverCapacity: 1 }).where(eq(trips.id, second.id));
