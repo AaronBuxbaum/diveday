@@ -82,6 +82,36 @@ test("the emergency reference saves on its own page, and the save lands back on 
   );
 });
 
+/**
+ * H-118: the shore contact's alert address saves with the box that records
+ * their consent, comes back ticked with when it was recorded, and clearing the
+ * address clears both.
+ */
+test("a shore contact's alert address saves with its consent, and clears with it", async ({
+  page,
+  privateShop,
+}) => {
+  test.setTimeout(60_000);
+  const SHOP = privateShop.slug;
+  await page.goto(`/shop/${SHOP}/settings/emergency-reference`);
+  const address = page.getByLabel("Shore contact’s email for roll-call alerts");
+  const consent = page.getByRole("checkbox", { name: /They agreed to get these alerts/ });
+  await address.fill("shore@example.com");
+  await consent.check();
+  await page.getByRole("button", { name: "Save emergency reference" }).click();
+
+  await expect(page.getByText("Emergency reference saved.")).toBeVisible();
+  await expect(address).toHaveValue("shore@example.com");
+  await expect(consent).toBeChecked();
+  await expect(page.getByText(/^Recorded /)).toBeVisible();
+
+  await address.fill("");
+  await page.getByRole("button", { name: "Save emergency reference" }).click();
+  await expect(page.getByText("Emergency reference saved.")).toBeVisible();
+  await expect(address).toHaveValue("");
+  await expect(consent).not.toBeChecked();
+});
+
 test("a hull is added on its own page, and the save lands back on it", async ({
   page,
   privateShop,

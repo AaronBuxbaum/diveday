@@ -9063,6 +9063,27 @@ for (const scheme of ["light", "dark"] as const) {
     });
 
     /**
+     * **The shore contact's address, refused without its consent** (H-118).
+     * An address DiveDay sends to saves only with the box that records the
+     * shore contact agreed; this is the refusal a staff member meets when
+     * they type one and leave the box clear, on the page they were editing.
+     * A shop of its own, because a saved address would follow the worker.
+     */
+    test(`the emergency reference refuses a shore address without consent (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      test.setTimeout(FLOW_TIMEOUT_MS);
+      await page.goto(`/shop/${privateShop.slug}/settings/emergency-reference`);
+      await page.getByLabel("Shore contact’s email for roll-call alerts").fill("shore@example.com");
+      await page.getByRole("button", { name: "Save emergency reference" }).click();
+      await page
+        .getByText("Tick that the shore contact agreed to get roll-call alerts", { exact: false })
+        .waitFor();
+      await capture(page, "settings-emergency-shore-consent-missing", scheme);
+    });
+
+    /**
      * **The one state on this page where an absence *is* the information**
      * (issue #1363), photographed on both surfaces that render it.
      *
