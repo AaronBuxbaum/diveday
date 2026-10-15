@@ -135,6 +135,7 @@ export default async function TripManifestPage({
     meetingPoint,
     vessel,
     kitRecord,
+    snags,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
@@ -175,6 +176,8 @@ export default async function TripManifestPage({
   const checklist = preDepartureCheckView({
     checklistItems,
     checklistChecks,
+    snags,
+    canNoteSnags: vessel !== null,
     locale,
     timeZone: shop.timezone,
     t,
@@ -316,6 +319,12 @@ export default async function TripManifestPage({
           items={checklist.items}
           atDeparture={isDeparture}
           copy={checklist.copy}
+          carried={checklist.carried}
+          snagActions={
+            checklist.canNoteSnags
+              ? { note: actions.noteSnag, answer: actions.answerSnag }
+              : undefined
+          }
         />
         {/* The page's job, as high as it can go: the divers, immediately under
             the panel that counts them. It used to be the *last* section, below

@@ -102,6 +102,7 @@ export type TodayActionKind =
   | "boat_safety_kit"
   | "boat_papers_due"
   | "boat_safety_expired"
+  | "boat_snag"
   | "work_order_late"
   | "work_order_uncollected"
   | "staff_credential_due"
@@ -270,6 +271,10 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // because a dead AED pad is the boat's, not a rental's.
   boat_safety_expired: 31,
   boat_papers_due: 31.5,
+  // **A snag the crew wrote against a boat's checklist** (fifth-loop ideas,
+  // item 1): the radio that crackles, the ladder bolt. The owner's errand
+  // beside the boat's papers; the crew read it on the boat check itself.
+  boat_snag: 31.6,
   // The bench's two rows (ADR 20261008-work-order-follow-up). Below the
   // register's own chase list: a customer's regulator a day past its promise
   // is a phone call to make, not a unit missing from the racks, and a ticket
@@ -532,6 +537,8 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   // facts on the departure's own pre-departure check.
   boat_papers_due: ["owner", "manager"],
   boat_safety_expired: ["owner", "manager"],
+  // The owner's and the captain's: one gets it fixed, the other skippers it.
+  boat_snag: ["owner", "manager", "captain"],
   gear_service_due: [
     "owner",
     "manager",
@@ -686,6 +693,8 @@ export const ACTION_KIND_META = {
   // or once kit the boat is meant to carry has.
   boat_papers_due: { tone: "neutral" },
   boat_safety_expired: { tone: "warning" },
+  // Warning: something on the boat is wrong, and it informs, never gates.
+  boat_snag: { tone: "warning" },
   // Warning: the shop gave its word on a day and the day has gone. Ready and
   // not collected is the customer's errand, not the shop's failure.
   work_order_late: { tone: "warning" },

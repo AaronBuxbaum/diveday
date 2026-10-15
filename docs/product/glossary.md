@@ -74,6 +74,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Dock rider
 - Lost item
 - Saved trip-prep copy
+- Snag
 - Staff note
 
 ## Modeling notes

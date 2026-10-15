@@ -97,3 +97,11 @@
   `src/i18n/welcome-cue-labels.ts`). **Nitrox is never on it**: a greeting is not a fill
   clearance, and enriched air is the fill station's question. It informs and gates nothing; the
   boarding gate is readiness.
+- **Snag** — a problem a crew member wrote against one pre-departure checklist line on one boat
+  ("VHF crackles on 16"), carried to that boat's next departures above their checklist until a
+  crew says **Fixed**; **Still there** keeps it open and names who looked last. The owner's Today
+  holds one row per open snag. A snag belongs to the boat, not the departure: a departure with no
+  boat cannot hold one, and a fixed snag is never reopened (a recurring problem is a new note).
+  Informs, never gates, like the checklist it hangs from (ADR
+  [20260824-pre-departure-safety-check](../../architecture/decisions/20260824-pre-departure-safety-check.md)).
+  Stored in `boat_snags`, never on the append-only `pre_departure_check_events`.

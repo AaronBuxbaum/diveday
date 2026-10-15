@@ -98,6 +98,7 @@
     "boatSafetyKit": "Safety kit",
     "boatPapersDue": "Papers due",
     "boatSafetyExpired": "Safety expired",
+    "boatSnag": "Boat snag",
     "workOrderLate": "Late repair",
     "workOrderUncollected": "Repair not collected",
     "staffCredentialDue": "Credential",
@@ -192,7 +193,8 @@
     "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open, no last-minute deal sent.",
     "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} open, {waiting} on the wait list.",
     "crewAway": "{name} is away {dates}.",
-    "rollCallAlerted": "Owners alerted: {time}."
+    "rollCallAlerted": "Owners alerted: {time}.",
+    "boatSnag": "{item}: {note}. Noted by {name}{count, plural, =0 {.} one {, # departure ago.} other {, # departures ago.}}"
   },
   "actionLabel": {
     "openRollCall": "Open roll call",

@@ -703,7 +703,19 @@
     "checkedLabel": "Verificado — presiona dos veces para quitar la marca",
     "confirmClear": "Presiona otra vez para quitar la marca",
     "uncheckedLabel": "Sin verificar — presiona para marcarlo",
-    "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
+    "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}",
+    "snagsHeading": "Pendiente en este barco",
+    "snagLine": "{item}: {note}",
+    "snagNotedBy": "Anotado por {name}, {date}",
+    "snagStillThereBy": "{name} vio que sigue igual, {date}",
+    "snagFixed": "Arreglado",
+    "snagStillThere": "Sigue igual",
+    "snagSaving": "Guardando…",
+    "noteProblem": "Anotar un problema",
+    "noteLabel": "¿Qué pasa?",
+    "noteSave": "Guardar nota",
+    "noteRefused": "Escribe qué pasa, hasta 280 caracteres.",
+    "printSnag": "Pendiente: {item}: {note} ({noted})"
   },
   "rehearsal": {
     "label": "Ensayo",

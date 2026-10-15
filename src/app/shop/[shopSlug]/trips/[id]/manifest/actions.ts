@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { RollCallResult } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
+import { answerSnag, noteSnag } from "@/db/boat-snags";
 import {
   addBuddyTeamMember,
   type BuddyTeamMemberInput,
@@ -34,6 +35,7 @@ import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { PLAN_CHANGE_NOTE_MAX, PLAN_CHANGE_REASONS } from "@/lib/plan-change";
+import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { TRIP_STAGES } from "@/lib/trip-stages";
@@ -557,6 +559,78 @@ export async function preDepartureCheckAction(
       checklistItemId: parsed.data.checklistItemId,
       recordedByPersonId: staff.user.personId,
       status: parsed.data.status,
+    });
+    if (!outcome.ok) return { ok: false, reason: "error" };
+  } catch {
+    return { ok: false, reason: "error" };
+  }
+  revalidatePath(manifestPath(ctx));
+  return { ok: true };
+}
+
+const noteSnagSchema = z.object({
+  checklistItemId: z.string().uuid(),
+  note: z.string().trim().min(1).max(SNAG_NOTE_MAX),
+});
+
+/**
+ * A snag's answer: saved, a note the crew can fix (empty or too long), or
+ * "try again" for everything the crew at the rail cannot act on.
+ */
+export type SnagResult = { ok: true } | { ok: false; reason: "error" | "note_invalid" } | null;
+
+/**
+ * **Note a problem** against one checklist line (fifth-loop ideas, item 1):
+ * written on this departure's boat for its next crew to read. Informs, never
+ * gates, like the tap beside it.
+ */
+export async function noteSnagAction(
+  ctx: ManifestTripContext,
+  _prev: SnagResult,
+  formData: FormData,
+): Promise<SnagResult> {
+  const staff = await manifestStaff(ctx);
+  const parsed = noteSnagSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, reason: "note_invalid" };
+  try {
+    const outcome = await noteSnag(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId: ctx.tripId,
+      checklistItemId: parsed.data.checklistItemId,
+      personId: staff.user.personId,
+      note: parsed.data.note,
+    });
+    if (!outcome.ok) {
+      return { ok: false, reason: outcome.reason === "note_invalid" ? "note_invalid" : "error" };
+    }
+  } catch {
+    return { ok: false, reason: "error" };
+  }
+  revalidatePath(manifestPath(ctx));
+  return { ok: true };
+}
+
+const answerSnagSchema = z.object({
+  snagId: z.string().uuid(),
+  answer: z.enum(["fixed", "still_there"]),
+});
+
+/** The next crew's **Fixed** or **Still there** on a snag this boat carries. */
+export async function answerSnagAction(
+  ctx: ManifestTripContext,
+  _prev: SnagResult,
+  formData: FormData,
+): Promise<SnagResult> {
+  const staff = await manifestStaff(ctx);
+  const parsed = answerSnagSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, reason: "error" };
+  try {
+    const outcome = await answerSnag(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId: ctx.tripId,
+      snagId: parsed.data.snagId,
+      personId: staff.user.personId,
+      answer: parsed.data.answer,
     });
     if (!outcome.ok) return { ok: false, reason: "error" };
   } catch {

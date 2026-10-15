@@ -1,4 +1,5 @@
 import { departureKitRecord } from "@/db/boat-safety";
+import { openSnagsForTrip } from "@/db/boat-snags";
 import { departureVessels } from "@/db/boats";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import type { AppDb } from "@/db/client";
@@ -45,6 +46,7 @@ export async function readManifestPage(
     meetingPoint,
     vessels,
     kitRecord,
+    snags,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -83,6 +85,9 @@ export async function readManifestPage(
     // The oxygen and first aid kit the register holds aboard that boat, for
     // the printed kit lines (fourth review, item 17).
     departureKitRecord(db, shopId, tripId),
+    // What earlier crews on this boat said is wrong with it, and what this
+    // crew wrote (fifth-loop ideas, item 1).
+    openSnagsForTrip(db, shopId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -117,6 +122,7 @@ export async function readManifestPage(
     meetingPoint,
     vessel: vessels.get(tripId) ?? null,
     kitRecord,
+    snags,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,

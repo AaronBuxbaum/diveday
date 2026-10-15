@@ -538,6 +538,8 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const checklistEventRows = await readScoped(tx, "preDepartureCheckEvents", scope);
 
+  const boatSnagRows = await readScoped(tx, "boatSnags", scope);
+
   const priorVisitRows = await readScoped(tx, "priorVisits", scope);
 
   const importedPaymentHistoryRows = await readScoped(tx, "importedPaymentHistory", scope);
@@ -707,6 +709,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     checklistItemRows,
     checklistItemLabel,
     checklistEventRows,
+    boatSnagRows,
     priorVisitRows,
     importedPaymentHistoryRows,
     boatRows,
@@ -1277,6 +1280,7 @@ export async function loadShopExportCounts(
       shopId,
     ),
     "pre_departure_check_events.csv": await countShopScoped(db, "preDepartureCheckEvents", shopId),
+    "boat_snags.csv": await countShopScoped(db, "boatSnags", shopId),
     "prior_visits.csv": await countShopScoped(db, "priorVisits", shopId),
     "imported_payment_history.csv": await countShopScoped(db, "importedPaymentHistory", shopId),
     "orders.csv": await countShopScoped(db, "orders", shopId),

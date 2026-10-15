@@ -22,6 +22,7 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  boatSnags,
   boats,
   bookingArrivalEvents,
   bookingCapabilities,
@@ -1308,6 +1309,8 @@ export async function resetDemoSchedule(
   // The shop's own checklist *items* are settings, not schedule — kept, like
   // boats and dive_packages below (RESET_KEEPS). Only the per-departure taps
   // against them are schedule-scoped operational history.
+  // Snags name the departures they were written and answered on.
+  await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   await deleteHeldSendsAndDeskRows(db, shopId);

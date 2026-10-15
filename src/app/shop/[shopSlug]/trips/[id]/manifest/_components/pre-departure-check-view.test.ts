@@ -26,4 +26,36 @@ describe("preDepartureCheckView", () => {
     );
     expect(view.copy.summary).toBe(t("trips.preDepartureCheck.summary", { checked: 1, total: 2 }));
   });
+
+  it("hands an earlier crew's snag on above the list and keeps this crew's under its line", () => {
+    const snag = (id: string, notedHere: boolean, checklistItemId: string) => ({
+      id,
+      checklistItemId,
+      itemLabel: checklistItemId === "radio" ? "Radio check" : "Oxygen kit",
+      note: notedHere ? "Spare cylinder low" : "VHF crackles on 16",
+      notedByName: "Sal Moretti",
+      notedAt: new Date("2026-09-11T09:16:00.000Z"),
+      notedHere,
+      stillThere: null,
+    });
+    const view = preDepartureCheckView({
+      checklistItems: [
+        { id: "radio", label: "Radio check" },
+        { id: "o2", label: "Oxygen kit" },
+      ] as never,
+      checklistChecks: new Map() as never,
+      snags: [snag("a", false, "radio"), snag("b", true, "o2")],
+      canNoteSnags: true,
+      locale: "en-US",
+      timeZone: "America/New_York",
+      t,
+    });
+    expect(view.carried.map((carried) => carried.line)).toEqual([
+      t("trips.preDepartureCheck.snagLine", { item: "Radio check", note: "VHF crackles on 16" }),
+    ]);
+    expect(view.carried[0]?.notedBy).toContain("Sal Moretti");
+    expect(view.items[0]?.snags).toEqual([]);
+    expect(view.items[1]?.snags.map((here) => here.note)).toEqual(["Spare cylinder low"]);
+    expect(view.canNoteSnags).toBe(true);
+  });
 });
