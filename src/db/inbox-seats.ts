@@ -47,7 +47,7 @@ export async function inboxSeats(
   }
   const rest = messages.filter(
     (message): message is Message & { personId: string } =>
-      message.personId !== null && !found.has(message.id),
+      message.personId !== null && !message.bookingId && !found.has(message.id),
   );
   if (rest.length === 0) return found;
   const held = await db

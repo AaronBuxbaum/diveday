@@ -170,6 +170,19 @@ describe("inboxSeats", () => {
     ]);
   });
 
+  it("names nothing for an Ask to move whose booking is not this shop's", async () => {
+    const { db, shop, trip, personId, bookedAt } = await context();
+    const receivedAt = new Date(bookedAt.getTime() + MINUTE_MS);
+    const now = new Date(trip.startsAt.getTime() - 3 * 24 * HOUR_MS);
+    const seats = await inboxSeats(
+      db,
+      shop.id,
+      [{ id: MESSAGE_ID, personId, receivedAt, bookingId: crypto.randomUUID() }],
+      now,
+    );
+    expect(seats.size).toBe(0);
+  });
+
   it("never names a canceled seat", async () => {
     const { db, shop, trip, bookingId, personId, bookedAt } = await context();
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
