@@ -17,6 +17,7 @@ import { sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { listStaff } from "./trips-crew";
 import { getTripOverview } from "./trips-overview";
+import { setWelcomeConsent } from "./welcome-cues";
 
 const emptyWave = {
   boatWork: new Map(),
@@ -360,5 +361,34 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     ]);
     expect(today.actions.some((action) => action.id === ordersRow)).toBe(false);
     expect(overview?.pulse.work.openOrders).toBe(0);
+  });
+});
+
+/**
+ * **Saying hello is a line on the card, not a job** (fifth loop, item 10). A
+ * diver who shared that this is their first trip is named on today's
+ * departure, and nothing in the queue (or its count) asks anyone to greet them.
+ */
+describe("the welcome cue on Today", () => {
+  it("rides on the departure and never becomes a Needs you row", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const departure = before.departures.find((row) => row.booked > 0);
+    if (!departure) throw new Error("demo needs a booked departure today");
+    const roster = await getTripRoster(db, shop.id, departure.tripId);
+    const seat = roster[0];
+    if (!seat) throw new Error("departure has no roster");
+    await setWelcomeConsent(db, {
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      shared: true,
+      now,
+    });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const card = work.departures.find((row) => row.tripId === departure.tripId);
+    expect(card?.welcome?.map((entry) => entry.name)).toContain(seat.person.fullName);
+    expect(work.actions.map((action) => action.kind as string)).not.toContain("say_hello");
   });
 });

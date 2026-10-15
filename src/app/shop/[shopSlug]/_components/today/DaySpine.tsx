@@ -31,12 +31,14 @@ import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import type { StaffDestinationId } from "@/lib/staff-destinations";
+import { shopPath } from "@/lib/staff-notices";
 import {
   ACTION_KIND_META,
   type DaySpine as DaySpineData,
   type DayStation as DayStationData,
   type FactOfScale,
   getSeasonalBriefing,
+  groupByDeparture,
   type NeedsYouReading,
   readNeedsYou,
   sortStationRows,
@@ -276,7 +278,6 @@ const QUIET_ROW_ICON: Record<QuietKind, RowIconName> = {
   boat_papers_due: "boat",
   work_order_uncollected: "workOrders",
   units_unconfirmed: "settings",
-  say_hello: "divers",
   rental_fit_confirm: "gear",
 };
 
@@ -387,11 +388,14 @@ function StationRow({
   action,
   controls,
   closed = true,
+  grouped = false,
 }: {
   action: TodayAction;
   controls: RowControls;
   /** `false` inside a station's panel, whose own edge closes the list. */
   closed?: boolean;
+  /** Under its boat's own heading (`NeedsYouGroups`), so the row does not say the boat again. */
+  grouped?: boolean;
 }) {
   const { t } = controls;
   const performs = Boolean(
@@ -427,7 +431,7 @@ function StationRow({
       {action.detail ? (
         <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
       ) : null}
-      {action.departure ? (
+      {action.departure && !grouped ? (
         <span className="block text-sm text-muted">{action.departure.label}</span>
       ) : null}
     </>
@@ -542,6 +546,66 @@ function StationRows({ rows, controls }: { rows: readonly TodayAction[]; control
         <StationRow key={rowKey(action)} action={action} controls={controls} closed={false} />
       ))}
     </ul>
+  );
+}
+
+/**
+ * **Needs you, one heading per boat** (fifth loop, item 11): the boat's time
+ * and name once, linked to the departure, with its rows under it saying only
+ * their own sentence; then the desk's rows, the reader's drafts and the
+ * payments row under "The desk". `groupByDeparture` keeps the ranked order.
+ */
+function NeedsYouGroups({
+  rows,
+  controls,
+  shopSlug,
+  desk,
+}: {
+  rows: readonly TodayAction[];
+  controls: RowControls;
+  shopSlug: string;
+  /** Rows that belong to the desk but are not queue rows (drafts, payments). */
+  desk?: React.ReactNode;
+}) {
+  const { t } = controls;
+  const groups = groupByDeparture(rows);
+  if (desk && !groups.some((group) => group.departure === null)) {
+    groups.push({ departure: null, rows: [] });
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      {groups.map((group) =>
+        group.departure ? (
+          <LedgerGroup
+            key={group.departure.tripId}
+            as="h3"
+            label={
+              <Link
+                href={shopPath(shopSlug, "trips", group.departure.tripId)}
+                className="hover:underline"
+              >
+                {group.departure.label}
+              </Link>
+            }
+          >
+            <ul>
+              {group.rows.map((action) => (
+                <StationRow key={rowKey(action)} action={action} controls={controls} grouped />
+              ))}
+            </ul>
+          </LedgerGroup>
+        ) : (
+          <LedgerGroup key="desk" as="h3" label={t("shopHome.spine.deskGroupLabel")}>
+            <ul>
+              {group.rows.map((action) => (
+                <StationRow key={rowKey(action)} action={action} controls={controls} />
+              ))}
+              {desk}
+            </ul>
+          </LedgerGroup>
+        ),
+      )}
+    </div>
   );
 }
 
@@ -1143,25 +1207,31 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           label={t("shopHome.spine.needsYouLabel")}
           meta={needsYouMeta(t, needsYouReading, locale, timeZone)}
         >
-          <ul>
-            {lead.map((action) => (
-              <StationRow key={rowKey(action)} action={action} controls={controls} />
-            ))}
-            {/* What the reader started and did not finish — a draft is theirs
-                alone, so the row is too. Renders nothing when there is none. */}
-            {drafts.map((draft) => (
-              <SpineRow
-                key={`draft:${draft.form}`}
-                tone="neutral"
-                icon="activity"
-                kind={t("today.unfinished.label")}
-                door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
-              >
-                <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
-              </SpineRow>
-            ))}
-            {deskFold ? null : paymentsRow}
-          </ul>
+          <NeedsYouGroups
+            rows={lead}
+            controls={controls}
+            shopSlug={shopSlug}
+            desk={
+              drafts.length > 0 || (!deskFold && paymentsRow) ? (
+                <>
+                  {/* What the reader started and did not finish — a draft is
+                      theirs alone, so the row is too. */}
+                  {drafts.map((draft) => (
+                    <SpineRow
+                      key={`draft:${draft.form}`}
+                      tone="neutral"
+                      icon="activity"
+                      kind={t("today.unfinished.label")}
+                      door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
+                    >
+                      <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
+                    </SpineRow>
+                  ))}
+                  {deskFold ? null : paymentsRow}
+                </>
+              ) : undefined
+            }
+          />
           {/* **The desk's rows, folded, for a reader who crews a boat** (UX
               audit 2026-10-07, item 7). A captain's "what now" is the boats
               they are on; the front desk's twenty jobs are one line they can
@@ -1173,12 +1243,12 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
               className="mt-4"
               label={t("shopHome.spine.deskFoldLabel", { count: deskFold.length + paymentsRows })}
             >
-              <ul>
-                {deskFold.map((action) => (
-                  <StationRow key={rowKey(action)} action={action} controls={controls} />
-                ))}
-                {paymentsRow}
-              </ul>
+              <NeedsYouGroups
+                rows={deskFold}
+                controls={controls}
+                shopSlug={shopSlug}
+                desk={paymentsRow ?? undefined}
+              />
             </LedgerGroup>
           ) : null}
         </LedgerGroup>

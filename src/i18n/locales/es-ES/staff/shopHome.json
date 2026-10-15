@@ -144,6 +144,7 @@
     "crewing": "Formas parte de la tripulación",
     "openBoat": "Abrir el barco",
     "crewRollCallOpen": "Todos los buceadores están a bordo y falta pasar lista a la tripulación.",
+    "sayHello": "Saluda",
     "allHome": "Todos los barcos están en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBoatHome": "Tu primer barco está en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBooking": "Tu primera reserva",
@@ -181,6 +182,7 @@
     "needsYouCountBeforeNext": "{count, plural, one {# cosa} other {# cosas}} · {before, plural, =0 {ninguna antes de la de las {time}} other {# antes de la de las {time}}}",
     "deskFoldLabel": "{count, plural, one {# más para otras salidas y el mostrador} other {# más para otras salidas y el mostrador}}",
     "needsYouLabel": "Pendiente",
+    "deskGroupLabel": "El mostrador",
     "crewTips": "Tus barcos ganaron {amount} en propinas esta semana."
   },
   "quietAddDeparture": "Añadir una salida",

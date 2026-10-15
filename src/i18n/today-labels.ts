@@ -58,7 +58,6 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   work_order_uncollected: "today.actionKind.workOrderUncollected",
   staff_credential_due: "today.actionKind.staffCredentialDue",
   units_unconfirmed: "today.actionKind.unitsUnconfirmed",
-  say_hello: "today.actionKind.sayHello",
   rental_fit_confirm: "today.actionKind.rentalFit",
 };
 
@@ -839,11 +838,6 @@ export function helpRequestActionText(
 
 export function openTripActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openTrip");
-}
-
-/** The Say hello row's door — the departure's Guests tab (issue #1182). */
-export function openGuestsActionText(t: StaffTranslator): string {
-  return t("today.actionLabel.openGuests");
 }
 
 /**

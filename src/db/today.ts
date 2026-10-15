@@ -38,6 +38,7 @@ import {
 import { boatStageOf, tripPhaseOf } from "@/lib/trip-phase";
 import type { TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
+import { type WelcomeCue, welcomeCueFor } from "@/lib/welcome-cue";
 import { shopDayBounds } from "@/lib/zoned";
 import { listAgencyCheckableCards } from "./agency-check";
 import {
@@ -250,7 +251,8 @@ export type DepartureSummary = {
    *
    * Read for the whole day in one query below, never one per station.
    */
-  intents: DiveIntentCount[];
+  intents: DiveIntentCount[] /** Today's divers to greet (`SpineDeparture.welcome`); absent on tomorrow's cards. */;
+  welcome?: { name: string; cue: WelcomeCue }[];
 };
 
 export type CrewedSessionSummary = {
@@ -2011,6 +2013,9 @@ export async function getTodayWork(
 
   pushEquipmentRows(actions, rows);
 
+  // **Who to say hello to** rides on the card (fifth loop, item 10): one line
+  // per departure, gone an hour after the boat is home because
+  // `welcomeCueFor` stops returning a cue there.
   const departures = summarizeDepartures(
     todayTrips,
     {
@@ -2024,7 +2029,18 @@ export async function getTodayWork(
     },
     now,
     timeZone,
-  );
+  ).map((departure) => ({
+    ...departure,
+    welcome: (wave.sharedWelcomeSeats.get(departure.tripId) ?? []).flatMap((seat) => {
+      const cue = welcomeCueFor({
+        sharedAt: seat.sharedAt,
+        lastDivedAt: seat.lastDivedAt,
+        tripEndsAt: departure.endsAt,
+        now,
+      });
+      return cue ? [{ name: seat.personName, cue }] : [];
+    }),
+  }));
 
   const next = todayTrips.length === 0 ? upcoming[0] : null;
 

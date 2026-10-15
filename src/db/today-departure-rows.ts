@@ -7,7 +7,6 @@ import {
   lastMinuteFillDetailText,
   missingContactNamedDetailText,
   missingFitNamedDetailText,
-  openGuestsActionText,
   openLastMinuteDealActionText,
   openOrdersActionText,
   openPrepListActionText,
@@ -15,7 +14,6 @@ import {
   ungatedNitroxNamedDetailText,
   waitlistSeatDetailText,
 } from "@/i18n/today-labels";
-import { sayHelloSentences } from "@/i18n/welcome-cue-labels";
 import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
@@ -27,7 +25,6 @@ import {
   type TodayAction,
   urgencyFor,
 } from "@/lib/today";
-import { welcomeCueFor } from "@/lib/welcome-cue";
 import { type BoatWork, type BoatWorkDiver, boatWorkFor } from "./boat-work";
 import { pushCrewGapRows } from "./today-crew-gap-rows";
 import type { TodayRowsContext } from "./today-rows-context";
@@ -45,7 +42,6 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
     neverSentLastMinuteDeal,
     lastMinuteWindows,
     boardedAnywhere,
-    sharedWelcomeSeats,
   } = ctx.wave;
   for (const trip of inWindow) {
     const tripHref = `/shop/${shopSlug}/trips/${trip.id}`;
@@ -87,37 +83,6 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         aboard: boardedAnywhere.get(trip.id)?.has(row.booking.id) === true,
       }));
     actions.push(...collapseDiverActions(blockedDivers, shopSlug, now, t));
-
-    // **Say hello** (issue #1182, delight report D22). One row per departure,
-    // never one per diver: the row is about the boat's roster, and five rows
-    // saying "greet this person" would be a queue of pleasantries above the
-    // work. It disappears on its own an hour after the boat is home, because
-    // `welcomeCueFor` stops returning a cue there — nothing here has to
-    // remember to stop.
-    const welcomeCues = (sharedWelcomeSeats.get(trip.id) ?? []).flatMap((seat) => {
-      const cue = welcomeCueFor({
-        sharedAt: seat.sharedAt,
-        lastDivedAt: seat.lastDivedAt,
-        tripEndsAt: trip.endsAt,
-        now,
-      });
-      return cue ? [{ name: seat.personName, cue }] : [];
-    });
-    if (welcomeCues.length > 0) {
-      actions.push({
-        id: `say-hello:${trip.id}`,
-        kind: "say_hello",
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: trip.title,
-        context: when,
-        departure,
-        aboutDeparture: true,
-        detail: sayHelloSentences(t, locale, welcomeCues).join(" "),
-        actionLabel: openGuestsActionText(t),
-        href: tripHref,
-        dueAt: trip.startsAt,
-      });
-    }
 
     // **The boat's work** (third review, item 4): sizes, nitrox, contacts and
     // open orders, decided by `boatWorkItems` from the one reader the trip's
