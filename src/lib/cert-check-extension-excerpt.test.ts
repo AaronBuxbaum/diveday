@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { RECORD_LINES } from "./agency-check";
+import { judgeAgencyPage, RECORD_LINES } from "./agency-check";
 import { judgeElearningPage } from "./elearning-check";
 
 /**
@@ -307,6 +307,124 @@ describe("excerptAroundName", () => {
   it("never takes a longer name for the diver's", () => {
     const page = ["Welcome", ...Array(50).fill("row"), "Lenara Ortizzi", "Open Water Diver"];
     expect(excerptAroundName(page.join("\n"), "Lena", "Ortiz")).not.toContain("Lenara");
+  });
+
+  /**
+   * The judge reads a split name with middle names or particles, and refuses
+   * a pair with a stray labelled line beside it: the excerpt judges as the
+   * whole page does on both.
+   */
+  it.each([
+    [
+      "a namesake whose split name carries a middle name",
+      [
+        "DiveChek",
+        "Lena Ortiz",
+        "Date of Birth: 12 Apr 1990",
+        "Open Water Diver 15 Jun 2015 1506AB1234",
+        "First name: Lena Maria",
+        "Last name: Ortiz",
+        "Date of Birth: 3 Sep 1987",
+        "Open Water Diver 1 Jan 2012 1201CD5678",
+      ],
+    ],
+    [
+      "a namesake whose split last name carries a particle",
+      [
+        "DiveChek",
+        "Lena Ortiz",
+        "Date of Birth: 12 Apr 1990",
+        "Open Water Diver 15 Jun 2015 1506AB1234",
+        "Nombre: Lena",
+        "Apellidos: de la Ortiz",
+        "Date of Birth: 3 Sep 1987",
+        "Open Water Diver 1 Jan 2012 1201CD5678",
+      ],
+    ],
+    [
+      "the diver's pair under a stray labelled line",
+      [
+        "DiveChek",
+        "First name: Mark",
+        "First name: Lena",
+        "Last name: Ortiz",
+        "Date of Birth: 12 Apr 1990",
+        "Open Water Diver 15 Jun 2015 1506AB1234",
+      ],
+    ],
+    [
+      "the diver's pair over a stray labelled line",
+      [
+        "DiveChek",
+        "First name: Lena",
+        "Last name: Ortiz",
+        "Last name: Chen",
+        "Date of Birth: 12 Apr 1990",
+        "Open Water Diver 15 Jun 2015 1506AB1234",
+      ],
+    ],
+    [
+      "a namesake whose labelled lines stand a blank line apart",
+      [
+        "DiveChek",
+        "Lena Ortiz",
+        "Date of Birth: 12 Apr 1990",
+        "Open Water Diver 15 Jun 2015 1506AB1234",
+        "",
+        "First name: Lena",
+        "   ",
+        "Last name: Ortiz",
+        "Date of Birth: 3 Sep 1987",
+        "Open Water Diver 1 Jan 2012 1201CD5678",
+      ],
+    ],
+    [
+      "a namesake under another diver's pair cut at the record's end",
+      [
+        "DiveChek",
+        "Lena Ortiz",
+        "Date of Birth: 12 Apr 1990",
+        "Open Water Diver 15 Jun 2015 1506AB1234",
+        "Advanced Open Water Diver 1 Jan 2016",
+        "First name: Mark",
+        "Last name: Chen",
+        "Date of Birth: 1 Feb 1980",
+        "First name: Lena",
+        "Last name: Ortiz",
+        "Date of Birth: 3 Sep 1987",
+        "Open Water Diver 1 Jan 2012 1201CD5678",
+      ],
+    ],
+  ])("judges as the whole page does: %s", (_, lines) => {
+    const page = lines.join("\n");
+    const judge = (pageText: string) =>
+      judgeAgencyPage({
+        agency: "padi",
+        level: "open_water",
+        firstName: "Lena",
+        lastName: "Ortiz",
+        birthDate: "1990-04-12",
+        cardNumber: null,
+        today: "2026-10-15",
+        pageText,
+      }).verdict;
+    expect(judge(page)).not.toBe("match");
+    expect(judge(excerptAroundName(page, "Lena", "Ortiz"))).toBe(judge(page));
+  });
+
+  it("marks lines that were not neighbors on the page, so no record runs across them", () => {
+    const page = ["Lena Ortiz", "a", "b", "c", "d", "e", "f", "Lena Ortiz", "g", "", "h"];
+    expect(excerptAroundName(page.join("\n"), "Lena", "Ortiz").split("\n")).toEqual([
+      "Lena Ortiz",
+      "a",
+      "b",
+      "c",
+      "d",
+      "…",
+      "Lena Ortiz",
+      "g",
+      "h",
+    ]);
   });
 
   /** Security review S4: a page without the diver hands back only why. */

@@ -287,8 +287,6 @@ type Case = {
   };
   namesakes: { birthDate: string; number: string }[];
   otherNames: string[];
-  /** Whether any block names anyone over two labelled lines. */
-  splitName: boolean;
 };
 
 function generate(agency: CheckableAgency, seed: number): Case {
@@ -339,7 +337,6 @@ function generate(agency: CheckableAgency, seed: number): Case {
     });
   }
   const namesakes: Case["namesakes"] = [];
-  let splitName = present && shape === "split";
   for (let i = r.chance(0.3) ? 1 + r.int(2) : 0; i > 0; i -= 1) {
     const namesake = {
       birthDate: randomDate(r, birthDate),
@@ -347,7 +344,6 @@ function generate(agency: CheckableAgency, seed: number): Case {
     };
     namesakes.push(namesake);
     const namesakeShape = r.pick(SHAPES);
-    splitName ||= namesakeShape === "split";
     blocks.push({
       kind: "namesake",
       lines: block({
@@ -372,7 +368,6 @@ function generate(agency: CheckableAgency, seed: number): Case {
     // A neighbour's name and level on one line is the ADR's known gap, so
     // only a split candidate carries the birth date searched by.
     const shape = r.pick(["lines", "inline", "split", "split"] as const);
-    splitName ||= shape === "split";
     blocks.push({
       kind: "other",
       lines: block({
@@ -417,7 +412,6 @@ function generate(agency: CheckableAgency, seed: number): Case {
     target: { present, shape, withBirthDate, identified, levelHolds, limited },
     namesakes,
     otherNames,
-    splitName,
   };
 }
 
@@ -489,12 +483,9 @@ function check(c: Case, r: Random): void {
   expect(judge(`${page}\n${noise.join("\n")}`), `noise appended: ${why}`).toEqual(verdict);
 
   // The extension hands the server only the lines naming the diver on
-  // DiveChek, and this copy of `excerptAroundName` does not know a split name:
-  // it drops those lines, which fails closed for the diver's own record but
-  // would hide a second diver laid out that way. Fuzzed where no block is
-  // split. fill.js's excerptAroundName gains split labels in the other
-  // worker's commit; remove this skip once that is merged.
-  if (c.agency === "padi" && !c.splitName) {
+  // DiveChek, a name split over labelled lines included: the excerpt must
+  // judge as the whole page does.
+  if (c.agency === "padi") {
     const excerpt = excerptAroundName(page, c.query.firstName, c.query.lastName);
     expect(judge(excerpt).verdict === "match", `excerpt: ${why}\nexcerpt:\n${excerpt}`).toBe(
       verdict.verdict === "match",

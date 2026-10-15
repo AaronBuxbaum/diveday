@@ -25,7 +25,7 @@ Checks a diver's certification on their agency's own lookup page, from DiveDay, 
 
 For dive shops that run on DiveDay. When a staff member presses a card's check button in DiveDay ("Check with SSI", "Check with NAUI", "Check with SDI", "Check with GUE", "Search the CMAS portal" or "Check with PADI (member sign-in)"), this extension opens that agency's own certification lookup page in a background tab, fills in what that agency's form asks for (SSI: the name and card number; NAUI, SDI and PADI: the name and birth date; GUE: the card number only, no name; CMAS: the CMAS code, or the name and birth date), reads the answer and hands it back to DiveDay, which decides whether the card is certified. The staff member sees the answer beside the card, with an Undo.
 
-When a check fails because the agency's page has changed, the extension may send DiveDay the page's structure (its labels, button words and headings, never anything typed into it or anyone's details) so DiveDay can fix the reader.
+When a check cannot read the agency's answer (its form is not where it was, the answer never comes, or a captcha on the form asks for a person), the extension may send DiveDay the page's structure (its labels, button words and headings, never anything typed into it or anyone's details) so DiveDay can fix the reader.
 
 It does nothing on its own: it runs only when a staff member presses a check button on DiveDay's staff pages, and it reads only the agencies' lookup pages listed in its permissions. PADI's DiveChek and eLearning checks use the shop's own signed-in PADI Pros' Site in the staff member's browser; DiveDay never holds a PADI sign-in, and a shop turns those checks on for itself.
 

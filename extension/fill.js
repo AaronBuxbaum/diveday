@@ -598,6 +598,11 @@ function excerptAround(text, email, firstName, lastName) {
  * no line names them, only the lines saying why: no result, several divers, or
  * a sign-in, at most `WHY_LINES`. Read with the shop's own PADI sign-in, the
  * rest of the page is not DiveDay's to take.
+ *
+ * The excerpt must judge as the whole page does, so it reads lines as the
+ * judge does (spaces collapsed, blank lines gone), and a `GAP` line stands
+ * between lines that were not neighbors on the page: the judge ends a record
+ * there, and never pairs labelled name lines across it.
  * @param {string} text
  * @param {string} firstName
  * @param {string} lastName
@@ -605,67 +610,95 @@ function excerptAround(text, email, firstName, lastName) {
 function excerptAroundName(text, firstName, lastName) {
   const AFTER = 4;
   const WHY_LINES = 10;
+  const GAP = "…";
   const COUNT = /(^| )\d+ divers?( found)?( |$)/;
   const WHY =
-    /(^| )(no results?|no records?|no matching|no diver|not found|could not find|unable to find|0 results|sign ?in|log ?in|password|session (has )?expired)( |$)/;
+    /(^| )(no results?|no records?|no matching|no diver|not found|no certifications? found|could not find|unable to find|0 results|sign ?in|log ?in|password|session (has )?expired)( |$)/;
+  const NO_RECORD =
+    /(^| )(no results?|no records?|no matching|no diver|not found|no certifications? found|could not find|unable to find|0 results)( |$)/;
+  // foldText in src/lib/agency-check.ts, wrapped in spaces.
   const fold = (value) =>
-    ` ${value
+    ` ${String(value || "")
       .normalize("NFD")
       .replace(/\p{M}/gu, "")
       .toLowerCase()
-      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replace(/[^\p{L}\p{N}&]+/gu, " ")
       .trim()} `;
   const first = fold(firstName);
   const last = fold(lastName);
-  const lines = text.split(/\r?\n/);
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
   const folded = lines.map(fold);
-  const names = (line) => line.includes(first) && line.includes(last);
+  const names = (line) => {
+    const plain = line.replace(/&/g, " ").replace(/ +/g, " ");
+    return (
+      first.trim() !== "" && last.trim() !== "" && plain.includes(first) && plain.includes(last)
+    );
+  };
   // A name split over two adjacent labelled lines ("First name: Lena" over
-  // "Last name: Ortiz", either order, Spanish labels too), each line the
-  // label and exactly that one name: the judge reads the pair as the name
-  // line (src/lib/agency-check.ts), so the pair, and the record under it, is
-  // kept like one.
-  const FIRST_LABEL = "(first name|given name|forename|nombre)";
-  const LAST_LABEL = "(last name|family name|surname|apellidos?)";
-  const labelled = (label, name) => new RegExp(`^ ${label}${name.replace(/ +$/, "")} $`);
-  const firstLine = labelled(FIRST_LABEL, first);
-  const lastLine = labelled(LAST_LABEL, last);
-  // Labelled name lines pair top to bottom, each line in one pair at most,
-  // as the judge pairs them: one record's last name never pairs with the
-  // next record's first ("Last name: Ortiz" over "First name: Lena" after
-  // "First name: Mark" is Mark Ortiz's, not Lena's).
-  const FIRST_PART = new RegExp(`^ ${FIRST_LABEL} \\S`);
-  const LAST_PART = new RegExp(`^ ${LAST_LABEL} \\S`);
-  const part = (line) => (FIRST_PART.test(line) ? "first" : LAST_PART.test(line) ? "last" : null);
-  const pairStarts = new Set();
-  for (let index = 0; index + 1 < folded.length; ) {
-    const a = part(folded[index]);
-    const b = part(folded[index + 1]);
-    if (a && b && a !== b) {
-      pairStarts.add(index);
+  // "Last name: Ortiz", either order, Spanish labels too), read exactly as the
+  // judge reads it (`splitNamesOf` in src/lib/agency-check.ts): each line one
+  // label and the name after it, paired top to bottom once, a pair with a
+  // stray labelled line beside it refused, the given line starting with the
+  // first name and the family line ending with the last, a few more words at
+  // most. The pair, and the record under it, is kept like one name line.
+  const LABELS = {
+    given: ["first name", "given name", "forename", "nombre"],
+    family: ["last name", "family name", "surname", "apellido", "apellidos"],
+  };
+  const EXTRA_WORDS = 3;
+  const partOf = (index) => {
+    const line = folded[index].trim();
+    for (const part of ["given", "family"]) {
+      for (const label of LABELS[part]) {
+        if (!line.startsWith(`${label} `)) continue;
+        const labelWords = label.split(" ").length;
+        const tokens = lines[index].split(" ").filter(Boolean);
+        let consumed = 0;
+        let at = 0;
+        while (at < tokens.length && consumed < labelWords) {
+          consumed += fold(tokens[at]).trim().split(" ").filter(Boolean).length;
+          at += 1;
+        }
+        if (consumed !== labelWords) return null;
+        return { part, words: line.slice(label.length + 1).split(" ") };
+      }
+    }
+    return null;
+  };
+  const parts = lines.map((_, index) => partOf(index));
+  const partner = new Map();
+  for (let index = 0; index + 1 < parts.length; ) {
+    const a = parts[index];
+    const b = parts[index + 1];
+    if (a && b && a.part !== b.part) {
+      partner.set(index, index + 1);
+      partner.set(index + 1, index);
       index += 2;
     } else {
       index += 1;
     }
   }
-  const splitAt = (index) =>
-    pairStarts.has(index) &&
-    ((firstLine.test(folded[index]) && lastLine.test(folded[index + 1])) ||
-      (lastLine.test(folded[index]) && firstLine.test(folded[index + 1])));
-  const kept = new Map();
-  folded.forEach((line, index) => {
-    // The count's own words, never the rest of the line around them, which
-    // may name the shop.
-    const count = line.match(COUNT);
-    if (count && !kept.has(index)) kept.set(index, count[0].trim());
-    const split = splitAt(index);
-    if (!names(line) && !split) return;
-    const end = index + AFTER + (split ? 1 : 0);
-    for (let at = index; at <= Math.min(lines.length - 1, end); at += 1) {
-      kept.set(at, lines[at]);
-    }
-  });
-  if (!folded.some((line, index) => names(line) || splitAt(index))) {
+  const stray = (index) => parts[index] != null && !partner.has(index);
+  const firstWords = first.trim().split(" ");
+  const lastWords = last.trim().split(" ");
+  const splitAt = (index) => {
+    if (partner.get(index) !== index + 1 || stray(index - 1) || stray(index + 2)) return false;
+    const a = parts[index];
+    const b = parts[index + 1];
+    const given = a.part === "given" ? a : b;
+    const family = a.part === "given" ? b : a;
+    return (
+      given.words.slice(0, firstWords.length).join(" ") === firstWords.join(" ") &&
+      family.words.slice(-lastWords.length).join(" ") === lastWords.join(" ") &&
+      given.words.length <= firstWords.length + EXTRA_WORDS &&
+      family.words.length <= lastWords.length + EXTRA_WORDS
+    );
+  };
+  const named = folded.map((line, index) => names(line) || splitAt(index));
+  if (!named.some(Boolean)) {
     return lines
       .map((line, index) => {
         if (WHY.test(folded[index])) return line;
@@ -676,10 +709,37 @@ function excerptAroundName(text, firstName, lastName) {
       .slice(0, WHY_LINES)
       .join("\n");
   }
-  return [...kept.keys()]
-    .sort((a, b) => a - b)
-    .map((index) => kept.get(index))
-    .join("\n");
+  const kept = new Map();
+  folded.forEach((line, index) => {
+    // The count's own words, never the rest of the line around them, which
+    // may name the shop.
+    const count = line.match(COUNT);
+    if (count && !kept.has(index)) kept.set(index, count[0].trim());
+    if (!named[index]) return;
+    let end = Math.min(lines.length - 1, index + AFTER + (splitAt(index) ? 1 : 0));
+    // A "no results" line straight under the record unsays it for the judge.
+    if (end + 1 < lines.length && NO_RECORD.test(folded[end + 1])) end += 1;
+    for (let at = index; at <= end; at += 1) kept.set(at, lines[at]);
+  });
+  // Labelled name lines keep their page pairing: a kept line's partner, and a
+  // stray labelled line beside a kept pair, are kept with it.
+  for (const index of [...kept.keys()]) {
+    const other = partner.get(index);
+    if (other === undefined) continue;
+    kept.set(other, lines[other]);
+    const above = Math.min(index, other) - 1;
+    const below = Math.max(index, other) + 1;
+    if (stray(above)) kept.set(above, lines[above]);
+    if (stray(below)) kept.set(below, lines[below]);
+  }
+  const out = [];
+  let previous = null;
+  for (const index of [...kept.keys()].sort((a, b) => a - b)) {
+    if (previous !== null && index !== previous + 1) out.push(GAP);
+    out.push(kept.get(index));
+    previous = index;
+  }
+  return out.join("\n");
 }
 
 globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {

@@ -25,7 +25,7 @@ Each row is a claim and what holds it. All of them run in CI.
 | The manifest asks only for the agencies' lookup hosts, and its content script runs only on `https://dive.day/shop/*` | `src/lib/cert-check-extension.test.ts` |
 | The filler finds each agency's boxes by what they say about themselves, types nothing until every box and the search's own button are found, and presses only that button | `src/lib/cert-check-extension-fill.test.ts` |
 | On a signed-in page it refuses a sign-in, sign-up or account address, a password box, an email box that does not search, another host; it answers `signed_out` | `src/lib/cert-check-extension-fill.test.ts`, `e2e/agency-check-extension.spec.ts` (the real extension in a real Chromium, against stand-in agency pages on the agencies' own host names) |
-| On DiveChek it hands back only the lines naming the diver, on one line or over two labeled lines, and the four under each | `excerptAroundName` in `src/lib/cert-check-extension-fill.test.ts` |
+| On DiveChek it hands back only the lines naming the diver, on one line or over two labeled lines (paired as the judge pairs them), and the four under each, with a gap line between lines that were not neighbors | `excerptAroundName` in `src/lib/cert-check-extension-excerpt.test.ts` |
 | The judge's rules: name, birth date or number, the agency's own level words, limiting words, one diver on DiveChek, namesakes, transposed dates | `src/lib/agency-check.test.ts`, `src/lib/agency-check-shapes.test.ts` (split names paired top to bottom, a search echoed back, page furniture and search controls, "Jr." as a name suffix, the evidence cut to the record's own words) |
 | No match without this diver's record, never beside a second DiveChek diver, no other diver's words or namesake's birth date in the evidence (candidates sharing the first or last name, laid out over labeled lines included), unrelated rows and trailing noise change nothing, the excerpt judges as the page does | `src/lib/agency-check.fuzz.test.ts` (seeded; a failure prints its seed) |
 | NAUI, SDI, CMAS and GUE's own page furniture (menus naming levels, notes, footers) never decides a verdict | `src/lib/agency-check.fixtures.test.ts`, fixtures in `src/lib/__fixtures__/agency-pages.ts` |
@@ -62,10 +62,13 @@ Needs nobody else and no sign-in. Aaron can run it today.
    **PADI Pros’ Site** and **Session report**, each say "Passed", "Failed" or "Not in this copy".
    The sample lookups fill the extension's own sample page for each agency with a made-up diver.
    Here, not signed in to PADI, the PADI Pros’ Site step says "Signed out" or "No PADI tab open".
+   Each step also asks Chrome whether the extension may go on the agency's own site: a step that
+   fails with "Chrome keeps the extension off NAUI’s site…" (or "Not allowed on PADI’s site") means
+   site access was withheld in the extension's Details; turn it back on and run again.
 3. In the demo shop, on a made-up diver with a pending card at NAUI, SDI, GUE and CMAS in turn,
    press the card's check button ("Check with NAUI", "Search the CMAS portal"). Expected: "no
-   record" on each. A page that has moved says "NAUI’s page has changed, and DiveDay has been told.
-   Check on its page.": its shape is logged as `agency_check.page_shape`.
+   record" on each. A page that has moved says "NAUI’s page has changed. Check on its page.": its
+   shape is logged as `agency_check.page_shape`, at most 30 a staffer and 120 a shop an hour.
 4. Press **Copy report** and paste it into #2259. The report carries versions and each step's
    outcome and reason; the test subject's name, birth date and number are replaced by placeholders
    before it is built.
@@ -118,8 +121,9 @@ Thanks for testing DiveDay’s PADI check with us. It takes about 30 minutes in 
 | `fill_failed`, boxes named | A box the lookup needs was not found by its label, name or placeholder | `PATTERNS` in `extension/fill.js`; `cert-check-extension-fill.test.ts` |
 | `fill_failed`, no button | The search's own button says something else | `BUTTON_SEARCH` in `extension/fill.js` |
 | `signed_out` while signed in | PADI sent the tab to a host or path the extension treats as a sign-in | `PADI_ORIGINS` in `extension/agencies.js`, `SIGN_IN_PATH` in `extension/protocol.js` |
-| `captcha`: "SSI is asking if you’re human. Check on its page." | The agency asks for a person | Nothing to fix: the link stays beside the card |
-| `page_changed`: "SDI’s page has changed, and DiveDay has been told. Check on its page." | The page's boxes are not where they were | The `agency_check.page_shape` log line's shape against the agency's entry in `extension/agencies.js` |
+| `captcha`: "SSI is asking if you’re human. Check on its page." | The agency asks for a person on its lookup's own form (a captcha elsewhere on the page stops nothing) | Nothing to fix: the link stays beside the card |
+| `page_changed`: "SDI’s page has changed. Check on its page." | The page's boxes are not where they were | The `agency_check.page_shape` log line's shape against the agency's entry in `extension/agencies.js`; past 30 a staffer or 120 a shop an hour a report is dropped unread, so a quiet log is not proof |
+| Try the checks: "Chrome keeps the extension off SDI’s site…", or "Not allowed on PADI’s site" | Site access for the agency's host was withheld in the extension's Details | Nothing to fix: turn site access back on |
 | `unreadable` on a page that said no | Its no-result words are new | `NO_RECORD_WORDS` in `src/lib/agency-check.ts`, a fixture in `src/lib/__fixtures__/agency-pages.ts` |
 | `level_unconfirmed` on a card the page shows | The agency's words for the level differ | `LEVEL_WORDING` in `src/lib/agency-check.ts` |
 | `no_record` or `namesake` for a diver the agency holds, after a search with the right name | The birth date was typed in the order the form does not take | `dateFormat` for that agency in `extension/agencies.js` |

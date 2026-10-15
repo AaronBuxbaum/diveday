@@ -925,6 +925,10 @@ function labelledNamePart(raw: string, folded: string): NamePart | null {
  * (hyphenated names read as they do on one line), a few middle names or
  * particles at most, no digit, and no word a rating, limit or trainer's title
  * could be.
+ *
+ * `excerptAroundName` in `extension/fill.js` reads pairs the same way, so the
+ * DiveChek excerpt judges as the whole page does: a change here is a change
+ * there, held by `agency-check.fuzz.test.ts`.
  */
 function splitNamesOf(
   rawLines: readonly string[],
