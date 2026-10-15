@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, makeActivitySafe, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
@@ -1328,12 +1328,19 @@ test("a course's learning materials reach the student's thread, and staff tick t
  * review 2026-10-10, item 16). The course editor draws its Forms section only
  * for someone who may configure courses, so a divemaster reading the roster is
  * told the wording is missing and is offered no link into an editor with no
- * Forms in it.
+ * Forms in it. The demo's forms carry the shop's words (fourth review, item
+ * 53), so each test first adds one the shop has named and not yet written.
  */
+async function addUnwordedForm(request: APIRequestContext) {
+  const seeded = await request.post("/api/test/seed-unworded-course-form");
+  expect(seeded.ok(), await seeded.text()).toBe(true);
+}
+
 test.describe("the agency-wording notice on the course roster", () => {
   test.describe("for an owner", () => {
     signedInAsOwner();
-    test("says what is missing and opens the first course's Forms", async ({ page }) => {
+    test("says what is missing and opens the first course's Forms", async ({ page, request }) => {
+      await addUnwordedForm(request);
       await page.goto("/shop/blue-mantis/courses");
       const notice = page.getByText(/needs? (its|their) agency form wording/);
       await expect(notice).toBeVisible();
@@ -1348,7 +1355,9 @@ test.describe("the agency-wording notice on the course roster", () => {
     signedInAs("divemaster");
     test("says what is missing and offers no door into a Forms section they cannot see", async ({
       page,
+      request,
     }) => {
+      await addUnwordedForm(request);
       await page.goto("/shop/blue-mantis/courses");
       await expect(page.getByText(/needs? (its|their) agency form wording/)).toBeVisible();
       await expect(page.getByRole("link", { name: /^Start with / })).toHaveCount(0);
