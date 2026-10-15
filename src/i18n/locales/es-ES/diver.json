@@ -587,7 +587,8 @@
       "noCoursesHeading": "Todavía no hay cursos publicados",
       "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida.",
       "requires": "Requiere {level} o superior",
-      "groupStart": "Empieza aquí"
+      "groupStart": "Empieza aquí",
+      "askForADate": "Pide una fecha"
     },
     "shelf": {
       "allCourses": "Todos los cursos",

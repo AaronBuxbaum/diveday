@@ -11,6 +11,7 @@ import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { activeCourseAgencies, listActiveCourses } from "@/db/courses";
 import { shopBySlugCached } from "@/db/shops-cached";
+import { nextSessionStartByCourse } from "@/db/trips";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
@@ -20,6 +21,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicCoursesPath } from "@/lib/public-routes";
 import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
+import { courseRowDate } from "./course-row-date";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -113,6 +115,15 @@ export default async function PublicCoursesPage({
       ...(selectedAgency ? { agency: selectedAgency } : {}),
     })
   ).map((course) => resolveCourseContentDepths(course, depthFormat));
+  // When each course next runs, the shelf's own read (fourth review, item 33).
+  const nextStarts = await nextSessionStartByCourse(
+    db,
+    shop.id,
+    courseList.map((course) => course.id),
+    "storefront",
+  );
+  // The course page's date request stands only with a shop email behind it.
+  const canAsk = Boolean(shop.contactEmail);
   const currency = toShopCurrency(shop.currency);
   // The shop's first agency keeps the bare URL canonical, so the page a diver
   // lands on and the page a search engine indexes are the same one.
@@ -168,10 +179,19 @@ export default async function PublicCoursesPage({
             <ul className="-mx-2 mt-2 divide-y divide-border border-y border-border">
               {courses.map((course) => {
                 const totalCents = courseTotalCents(course);
+                const when = courseRowDate({
+                  nextStart: nextStarts.get(course.id) ?? null,
+                  canAsk,
+                  locale,
+                  timeZone: shop.timezone,
+                  t,
+                });
+                const coursePath = publicCoursePath(shopSlug, course.slug);
                 return (
                   <li key={course.id}>
                     <Link
-                      href={publicCoursePath(shopSlug, course.slug)}
+                      // "Ask for a date" lands on the course's own request form.
+                      href={when?.kind === "ask" ? `${coursePath}#get-in-touch` : coursePath}
                       className="group flex gap-4 px-2 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
                     >
                       {/* The course's own face, decorative (`alt=""` — the
@@ -200,8 +220,22 @@ export default async function PublicCoursesPage({
                           {course.summary ? (
                             <p className="mt-1 max-w-xl text-sm text-muted">{course.summary}</p>
                           ) : null}
-                          {course.durationText ? (
-                            <p className="mt-2 text-sm text-muted">{course.durationText}</p>
+                          {course.durationText || when ? (
+                            <p className="mt-2 text-sm text-muted">
+                              {course.durationText}
+                              {course.durationText && when ? " · " : null}
+                              {when ? (
+                                <span
+                                  className={
+                                    when.kind === "next"
+                                      ? "font-medium text-foreground"
+                                      : "font-medium text-primary"
+                                  }
+                                >
+                                  {when.text}
+                                </span>
+                              ) : null}
+                            </p>
                           ) : null}
                         </div>
                         {totalCents !== null ? (

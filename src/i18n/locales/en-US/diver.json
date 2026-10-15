@@ -587,7 +587,8 @@
       "noCoursesHeading": "No courses listed yet",
       "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point.",
       "requires": "Requires {level} or higher",
-      "groupStart": "Start here"
+      "groupStart": "Start here",
+      "askForADate": "Ask for a date"
     },
     "shelf": {
       "allCourses": "All courses",
