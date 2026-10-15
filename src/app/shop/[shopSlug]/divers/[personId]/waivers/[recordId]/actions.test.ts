@@ -1,9 +1,10 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { activityEvents, bookings, waiverRecords } from "@/db/schema";
+import { activityEvents, bookings, personRoles, waiverRecords } from "@/db/schema";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 import {
+  demoteOwnerToManager,
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
@@ -22,11 +23,17 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
+// The real writer, wrapped so one test can make the trail refuse the line.
+vi.mock("@/db/operations", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/operations")>();
+  return { ...actual, recordDiverActivity: vi.fn(actual.recordDiverActivity) };
+});
 vi.mock("@/lib/session", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
+const { recordDiverActivity } = await import("@/db/operations");
 const { showMedicalAnswersAction } = await import("./actions");
 
 const ctx = fileScopedShopContext();
@@ -106,6 +113,38 @@ describe("showMedicalAnswersAction", () => {
     await showMedicalAnswersAction(shop.slug, record.personId, record.id);
 
     expect(await readLines(db, record.personId)).toHaveLength(2);
+  });
+
+  it("hands the answers to a manager who is not the owner", async () => {
+    const { db, shop, record, owner } = await context();
+    await demoteOwnerToManager(db, owner);
+    try {
+      signIn(shop, owner);
+
+      const result = await showMedicalAnswersAction(shop.slug, record.personId, record.id);
+
+      expect(result.ok).toBe(true);
+      expect(await readLines(db, record.personId)).toContainEqual({ actor: owner });
+    } finally {
+      await db.insert(personRoles).values({ personId: owner, role: "owner" });
+    }
+  });
+
+  /**
+   * The line is not swallowed: when the trail cannot take it (the reader was
+   * removed between the role check and the write, say), no answer is shown.
+   */
+  it("shows nothing when the read cannot be put on the trail", async () => {
+    const { db, shop, record, owner } = await context();
+    signIn(shop, owner);
+    const before = await readLines(db, record.personId);
+    vi.mocked(recordDiverActivity).mockResolvedValueOnce(false);
+
+    await expect(showMedicalAnswersAction(shop.slug, record.personId, record.id)).resolves.toEqual({
+      ok: false,
+    });
+    expect(recordDiverActivity).toHaveBeenCalled();
+    expect(await readLines(db, record.personId)).toEqual(before);
   });
 
   it("refuses a role below manager and writes nothing", async () => {
