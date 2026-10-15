@@ -5458,6 +5458,12 @@ for (const scheme of ["light", "dark"] as const) {
             );
           });
         });
+        // The match lands with its Undo toast, pinned over the foot of the
+        // screen where the offer's Add button sits, and gone only after its
+        // 12s countdown (`UndoToast`). This capture is the offer, so the clock
+        // is installed (it still runs in real time) and then jumped past the
+        // countdown, rather than the shot racing a timer.
+        await page.clock.install();
         await openDiverProfile(page, "Mateo", "Mateo Duarte");
         const group = await openDiverFileGroup(page, "Certification records");
         await group.getByRole("button", { name: "Check with SSI" }).click();
@@ -5466,7 +5472,11 @@ for (const scheme of ["light", "dark"] as const) {
             name: "SSI also shows these certifications. Add them? Each waits for Mark certified.",
           })
           .waitFor();
+        const toast = page.getByRole("status").filter({ hasText: "SSI shows this certification." });
+        await toast.waitFor();
         await page.mouse.move(0, 0);
+        await page.clock.fastForward(13_000);
+        await toast.waitFor({ state: "detached" });
         await capture(page, "diver-profile-agency-listed", scheme);
       });
 
