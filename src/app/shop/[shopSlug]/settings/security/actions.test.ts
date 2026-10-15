@@ -8,9 +8,9 @@ import {
 } from "@/db/account-security";
 import type { AppDb } from "@/db/client";
 import { accountSessions, accountStepUps, people, personRoles, userAccounts } from "@/db/schema";
-import { nowDate } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { totpCode } from "@/lib/totp";
+import { TOTP_STEP_SECONDS, totpCode } from "@/lib/totp";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { redirectedTo, staffSession } from "@/test/staff-session";
@@ -106,6 +106,14 @@ function form(entries: Record<string, string>): FormData {
 
 const securityPage = (slug: string) => shopPath(slug, "settings", "security");
 
+/**
+ * The code for the next time step. Every accepted code spends its step
+ * (`verifyAccountSecondFactor`), and `enrolledOwner` has just spent the
+ * current one turning two-factor on; the checker's one step of drift takes
+ * the next one now, as it would from a phone a few seconds ahead.
+ */
+const nextCode = (secret: string) => totpCode(secret, nowMs() + TOTP_STEP_SECONDS * 1000);
+
 describe("disableTotpAction", () => {
   it("refuses with no code or a wrong one, and two-factor stays on", async () => {
     const { db, shop } = ctx;
@@ -131,7 +139,7 @@ describe("disableTotpAction", () => {
       expect(to).toBe(noticeUrl(securityPage(shop.slug), "code-invalid"));
     }
     const to = await redirectedTo(() =>
-      disableTotpAction(shop.slug, form({ code: totpCode(owner.secret) })),
+      disableTotpAction(shop.slug, form({ code: nextCode(owner.secret) })),
     );
 
     expect(to).toBe(noticeUrl(securityPage(shop.slug), "too-many-attempts"));
@@ -144,7 +152,7 @@ describe("disableTotpAction", () => {
     signIn(owner.personId, owner.sessionId);
 
     const to = await redirectedTo(() =>
-      disableTotpAction(shop.slug, form({ code: totpCode(owner.secret) })),
+      disableTotpAction(shop.slug, form({ code: nextCode(owner.secret) })),
     );
 
     expect(to).toBe(noticeUrl(securityPage(shop.slug), "two-factor-disabled"));
@@ -169,7 +177,7 @@ describe("verifyStepUpAction", () => {
     const to = await redirectedTo(() =>
       verifyStepUpAction(
         shop.slug,
-        form({ purpose: "money", returnTo: returnTo(shop.slug), code: totpCode(owner.secret) }),
+        form({ purpose: "money", returnTo: returnTo(shop.slug), code: nextCode(owner.secret) }),
       ),
     );
 
@@ -190,7 +198,7 @@ describe("verifyStepUpAction", () => {
     const to = await redirectedTo(() =>
       verifyStepUpAction(
         shop.slug,
-        form({ purpose: "money", returnTo: target, code: totpCode(owner.secret) }),
+        form({ purpose: "money", returnTo: target, code: nextCode(owner.secret) }),
       ),
     );
 
@@ -206,7 +214,7 @@ describe("verifyStepUpAction", () => {
     const to = await redirectedTo(() =>
       verifyStepUpAction(
         shop.slug,
-        form({ purpose: "erase", returnTo: returnTo(shop.slug), code: totpCode(owner.secret) }),
+        form({ purpose: "erase", returnTo: returnTo(shop.slug), code: nextCode(owner.secret) }),
       ),
     );
 
@@ -224,7 +232,7 @@ describe("verifyStepUpAction", () => {
     const to = await redirectedTo(() =>
       verifyStepUpAction(
         shop.slug,
-        form({ purpose: "export", returnTo: returnTo(shop.slug), code: totpCode(owner.secret) }),
+        form({ purpose: "export", returnTo: returnTo(shop.slug), code: nextCode(owner.secret) }),
       ),
     );
 
@@ -234,28 +242,40 @@ describe("verifyStepUpAction", () => {
   });
 
   /**
-   * A decision, pinned: a step-up does **not** spend the TOTP time step
-   * (`consumeTotpStep: false`), so a staffer who has just signed in is not
-   * locked out of the next challenge for the rest of the window. The cost is
-   * that the code stays good for that window. Changing this is a security
-   * call, not a refactor.
+   * The anti-replay control, pinned: a step-up spends the TOTP time step like
+   * sign-in and turning two-factor off do, so the code typed here cannot be
+   * presented again inside its window, to any door. The cost is that a
+   * staffer who has just signed in waits for the next code before a
+   * challenge. Changing this is a security call, not a refactor.
    */
-  it("leaves the code's time step unspent", async () => {
+  it("spends the code's time step, so the same code is refused again", async () => {
     const { db, shop } = ctx;
     const owner = await enrolledOwner(db, shop);
     signIn(owner.personId, owner.sessionId);
-    const code = totpCode(owner.secret);
+    const code = nextCode(owner.secret);
 
-    await redirectedTo(() =>
+    const to = await redirectedTo(() =>
       verifyStepUpAction(
         shop.slug,
         form({ purpose: "backup", returnTo: returnTo(shop.slug), code }),
       ),
     );
 
-    expect((await getAccountSecurity(db, owner.accountId))?.lastTotpStep).toBeNull();
-    // Sign-in, which does spend it, still takes the same code once.
-    expect(await verifyAccountSecondFactor(db, owner.accountId, code)).toBe(true);
+    expect(to).toBe(returnTo(shop.slug));
+    expect((await getAccountSecurity(db, owner.accountId))?.lastTotpStep).not.toBeNull();
+    const again = await redirectedTo(() =>
+      verifyStepUpAction(
+        shop.slug,
+        form({ purpose: "export", returnTo: returnTo(shop.slug), code }),
+      ),
+    );
+    expect(again).toBe(
+      noticeUrl(securityPage(shop.slug), "code-invalid", {
+        purpose: "export",
+        returnTo: returnTo(shop.slug),
+      }),
+    );
+    // Sign-in's checker refuses the spent code too.
     expect(await verifyAccountSecondFactor(db, owner.accountId, code)).toBe(false);
   });
 });
