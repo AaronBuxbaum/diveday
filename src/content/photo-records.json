@@ -97,6 +97,14 @@
       "sourceSize": [2816, 2112],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/Carvel Rock, BVI - 2.jpg": {
+      "subject": "site:carvel-rock-bvi",
+      "source": "File:Carvel Rock, BVI - 2.jpg",
+      "licence": "Public domain",
+      "artist": "Legis at English Wikipedia",
+      "sourceSize": [1280, 960],
+      "reviewed": "2026-10-15"
+    },
     "dive-sites/Casa Cenote in Mexico (42877772324).jpg": {
       "subject": "site:casa-cenote",
       "source": "File:Casa Cenote in Mexico (42877772324).jpg",
@@ -161,6 +169,14 @@
       "sourceSize": [3744, 5616],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/Crash Boat 01.jpg": {
+      "subject": "site:crash-boat-aguadilla",
+      "source": "File:Crash Boat 01.jpg",
+      "licence": "Public domain",
+      "artist": "Tom Vazquez",
+      "sourceSize": [2272, 1704],
+      "reviewed": "2026-10-15"
+    },
     "dive-sites/Crow's nest of the USCGC Duane (2007).jpg": {
       "subject": "seed:Crow's nest of the USCGC Duane (2007)",
       "source": "File:Crow's nest of the USCGC Duane (2007).jpg",
@@ -178,6 +194,14 @@
       "sourceSize": [2896, 1944],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/Dean Blue Hole Long Island Bahamas 20110210.jpg": {
+      "subject": "site:deans-blue-hole",
+      "source": "File:Dean Blue Hole Long Island Bahamas 20110210.JPG",
+      "licence": "CC BY-SA 3.0 nl",
+      "artist": "Ton Engwirda",
+      "sourceSize": [3648, 2736],
+      "reviewed": "2026-10-15"
+    },
     "dive-sites/Deck of the USCGC Duane, Key Largo (15275033440).jpg": {
       "subject": "site:uscgc-duane",
       "source": "File:Deck of the USCGC Duane, Key Largo (15275033440).jpg",
@@ -185,6 +209,14 @@
       "artist": "Matt Kieffer from London, United Kingdom",
       "sourceSize": [3648, 2736],
       "reviewed": "2026-10-14"
+    },
+    "dive-sites/Desecheo FWS.jpg": {
+      "subject": "site:desecheo-island",
+      "source": "File:Desecheo FWS.jpg",
+      "licence": "Public domain",
+      "artist": "US Fish & Wildlife Service",
+      "sourceSize": [2257, 1293],
+      "reviewed": "2026-10-15"
     },
     "dive-sites/Director's Bay Curacao (34750561502).jpg": {
       "subject": "site:directors-bay-curacao",
@@ -257,6 +289,14 @@
       "artist": "Steve Hillebrand / USFWS",
       "sourceSize": [3504, 2336],
       "reviewed": "2026-10-14"
+    },
+    "dive-sites/Frederiksted Pier (22910031253).jpg": {
+      "subject": "site:frederiksted-pier-st-croix",
+      "source": "File:Frederiksted Pier (22910031253).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Prayitno / Thank you for (12 millions +) view from Los Angeles, USA",
+      "sourceSize": [5184, 2809],
+      "reviewed": "2026-10-15"
     },
     "dive-sites/French Angelfish Molasses Reef 20080309.jpg": {
       "subject": "seed:French Angelfish Molasses Reef 20080309",
@@ -460,6 +500,14 @@
       "sourceSize": [4000, 3000],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/RMS Rhone 2003 10.jpg": {
+      "subject": "site:rms-rhone-salt-island",
+      "source": "File:RMS Rhone 2003 10.jpg",
+      "licence": "CC BY 3.0",
+      "artist": "Gareth Richards",
+      "sourceSize": [2048, 1536],
+      "reviewed": "2026-10-15"
+    },
     "dive-sites/Sand Key Light 2005.jpg": {
       "subject": "site:sand-key-reef",
       "source": "File:Sand Key Light 2005.jpg",
@@ -509,6 +557,14 @@
       "sourceSize": [2592, 1944],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/SS Sapona starboard.jpg": {
+      "subject": "site:sapona-wreck-bimini",
+      "source": "File:SS Sapona starboard.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "ForrestVoight",
+      "sourceSize": [5890, 1947],
+      "reviewed": "2026-10-15"
+    },
     "dive-sites/Stingray City, Grand Cayman - 54289481965.jpg": {
       "subject": "site:stingray-city-grand-cayman",
       "source": "File:Stingray City, Grand Cayman - 54289481965.jpg",
@@ -524,6 +580,14 @@
       "artist": "Matt Kieffer from London, United Kingdom",
       "sourceSize": [3648, 2736],
       "reviewed": "2026-10-14"
+    },
+    "dive-sites/The Indians, BVI.jpg": {
+      "subject": "site:the-indians-norman-island",
+      "source": "File:The Indians, BVI.JPG",
+      "licence": "Public domain",
+      "artist": "--Legis (talk - contribs)",
+      "sourceSize": [1280, 960],
+      "reviewed": "2026-10-15"
     },
     "dive-sites/The Pit - Profundo - Cenote (4317117052).jpg": {
       "subject": "site:el-pit-cenote",
@@ -3521,6 +3585,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:airport-wall-sosua": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:ajs-blackbeard-flying-eagle": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3533,6 +3601,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:alice-in-wonderland-ginger-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:almirante-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3540,6 +3612,14 @@
     "site:alpha-wreck-pompano": {
       "reason": "The only Commons candidate is an unrelated photo (2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:amphitheatre-grand-turk": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
+    "site:amphitheatre-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
     },
     "site:ana-cecilia-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -3581,6 +3661,10 @@
       "reason": "Commons has no photograph identified as angel-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
+    "site:angelfish-reef-norman-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:anglin-pier-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3597,13 +3681,29 @@
       "reason": "Commons has no photo of this site; a name search returns only unrelated books, art and places",
       "checked": "2026-10-15"
     },
+    "site:aquarium-west-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:aquarius-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:arches-and-tunnels-thatch-cay": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
       "checked": "2026-10-15"
     },
     "site:area-51-jupiter": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:astron-wreck-punta-cana": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:atlantic-princess-wreck-bayahibe": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
     },
     "site:atlantis-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -3669,6 +3769,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:bay-of-pigs-wall": {
+      "reason": "Playa Giron hits are beaches and a cenote cave, none shows the Bay of Pigs wall dive.",
+      "checked": "2026-10-15"
+    },
     "site:beacon-point-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -3729,6 +3833,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:bimini-road": {
+      "reason": "The only Commons hit is an aerial of Bimini island, not the Bimini Road stones; nothing shows the formation.",
+      "checked": "2026-10-15"
+    },
     "site:biscayne-wreck": {
       "reason": "Commons candidates show Key Biscayne, not the wreck (2026-10-14).",
       "checked": "2026-10-14"
@@ -3747,6 +3855,10 @@
     },
     "site:black-coral-wall-utila": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:black-forest-grand-turk": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
       "checked": "2026-10-15"
     },
     "site:black-hills-utila": {
@@ -3775,6 +3887,10 @@
     },
     "site:blacktip-boulevard-little-cayman": {
       "reason": "Commons has no photograph identified as blacktip-boulevard-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
+      "checked": "2026-10-15"
+    },
+    "site:blonde-rock-bvi": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
     "site:bloodlet-bonaire": {
@@ -3845,9 +3961,17 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:brewers-bay-pinnacles-tortola": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:briny-breezes-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:bronco-billy-george-dog": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
     },
     "site:bud-bar-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -3863,6 +3987,14 @@
     },
     "site:butchers-bank-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:butler-bay-deep-wrecks-st-croix": {
+      "reason": "Commons holds no vetted frame recognisably showing this named St Croix dive site; searches by name returned only inland ruins, scans or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:butler-bay-shallow-wrecks-st-croix": {
+      "reason": "Commons holds no vetted frame recognisably showing this named St Croix dive site; searches by name returned only inland ruins, scans or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:c-53-wreck-cozumel": {
@@ -3889,6 +4021,10 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:cane-bay-wall-st-croix": {
+      "reason": "Commons holds no vetted frame recognisably showing this named St Croix dive site; searches by name returned only inland ruins, scans or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:cantarel-eagle-ray-wall-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
@@ -3903,6 +4039,10 @@
     },
     "site:canyon-reef-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:canyon-sosua": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:captain-dan-wreck": {
@@ -3941,6 +4081,22 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:carnarvon-wreck-eleuthera": {
+      "reason": "No Commons photo of the Carnarvon wreck off Eleuthera.",
+      "checked": "2026-10-15"
+    },
+    "site:carrot-shoal-peter-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:cartanser-sr-buck-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
+    "site:carval-rock-st-thomas": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
     "site:cascades-little-cayman": {
       "reason": "Commons has no photograph identified as cascades-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
@@ -3948,6 +4104,18 @@
     "site:casino-beach-snorkel-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:catalina-aquarium": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:catalina-wall": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:cathedral-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
     },
     "site:cayman-salvager": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -4049,6 +4217,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:cistern-point-cooper-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:city-of-washington": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4069,12 +4241,20 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:coki-beach-st-thomas": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
     "site:colombia-deep-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
     "site:colombia-shallows-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:conception-island-wall": {
+      "reason": "Commons hits for Conception Island were satellite views and a bird, not the wall dive site.",
       "checked": "2026-10-15"
     },
     "site:conception-wreck": {
@@ -4085,6 +4265,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:congo-cay-st-thomas": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
     "site:convento-providencia": {
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
@@ -4093,8 +4277,36 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:coral-beach-varadero": {
+      "reason": "Varadero hits are hotel beaches, town and aerials; none shows the coral snorkel site.",
+      "checked": "2026-10-15"
+    },
+    "site:coral-canyon-grand-turk": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
+    "site:coral-gables-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:coral-garden-laughing-bird-caye": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:coral-garden-punta-cana": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:coral-gardens-sharkplaneo-great-dog": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:coral-gardens-sosua": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:coral-nursery-bayahibe": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:cornelius-bay-curacao": {
@@ -4113,6 +4325,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:cow-and-calf-rocks-st-thomas": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
     "site:crocker-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4125,8 +4341,16 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:cuevitas-punta-cana": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:cumbers-caves-little-cayman": {
       "reason": "Commons has no photograph identified as cumbers-caves-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
+      "checked": "2026-10-15"
+    },
+    "site:current-cut-eleuthera": {
+      "reason": "No Commons photo of Current Cut; results were unrelated or an aerial of Long Island tidal flats.",
       "checked": "2026-10-15"
     },
     "site:cypress-canyons": {
@@ -4173,6 +4397,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:devils-backbone-eleuthera": {
+      "reason": "No Commons photo of the Devil's Backbone reef off Eleuthera.",
+      "checked": "2026-10-15"
+    },
     "site:devils-den": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4189,6 +4417,14 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:diamond-reef-great-camanoe": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:dive-flag-rock-buck-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
     "site:divers-leap-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -4199,6 +4435,10 @@
     },
     "site:doc-poulson": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:dominicus-reef-bayahibe": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:don-quickset": {
@@ -4217,6 +4457,10 @@
       "reason": "Commons has no photograph identified as donnas-delight-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
     },
+    "site:double-d-french-cay": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:double-reef-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -4227,6 +4471,14 @@
     },
     "site:dragons-lair": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:driveway-west-caicos": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
+    "site:dry-rocks-east-cooper-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
     "site:duanes-release-curacao": {
@@ -4297,6 +4549,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:eel-garden-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:eel-valley-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -4325,12 +4581,20 @@
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
+    "site:el-penon-bayahibe": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:el-planchon-providencia": {
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:el-velerito-san-andres": {
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:elephant-ear-canyon-west-caicos": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
       "checked": "2026-10-15"
     },
     "site:elmos-wall": {
@@ -4365,8 +4629,16 @@
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
+    "site:finbars-reef-grand-turk": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:fish-den-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:fish-stick-buck-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
       "checked": "2026-10-15"
     },
     "site:fish-tank-grand-cayman": {
@@ -4395,6 +4667,10 @@
     },
     "site:front-porch-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:g-spot-french-cay": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
       "checked": "2026-10-15"
     },
     "site:gails-mountain": {
@@ -4429,6 +4705,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:ginger-steps-ginger-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:gladden-spit": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -4437,13 +4717,25 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:goulding-cay-nassau": {
+      "reason": "No Commons photo of Goulding Cay; the only hits were unrelated scans and a San Salvador shot.",
+      "checked": "2026-10-15"
+    },
     "site:governors-riverwalk-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:graceland-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:graceland-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:grass-cay-st-thomas": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
     },
     "site:great-blue-hole": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
@@ -4473,12 +4765,20 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:grouper-hole-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:grundys-gardens-little-cayman": {
       "reason": "Commons has no photograph identified as grundys-gardens-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
     },
     "site:grunt-valley-cayman-brac": {
       "reason": "Commons has no photograph identified as grunt-valley-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
+      "checked": "2026-10-15"
+    },
+    "site:guaraguao-bayahibe": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:gulfstream-ledge": {
@@ -4488,6 +4788,10 @@
     "site:guy-harvey-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:half-mile-reef-french-cay": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
     },
     "site:half-moon-bay-wall-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
@@ -4549,6 +4853,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:highway-to-heaven-west-caicos": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:hillsboro-ledge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4565,8 +4873,16 @@
       "reason": "Commons has no photo of this site; searches return unrelated archive illustrations",
       "checked": "2026-10-15"
     },
+    "site:hole-in-the-wall-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:hole-in-the-wall-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:hole-in-the-wall-san-salvador": {
+      "reason": "Commons hits were San Salvador land caves, not the Hole in the Wall dive site.",
       "checked": "2026-10-15"
     },
     "site:horseshoe-reef-boynton": {
@@ -4623,6 +4939,10 @@
     },
     "site:jado-trader-guanaja": {
       "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
+    },
+    "site:james-bond-wrecks-nassau": {
+      "reason": "Searches for the Bond film wrecks (Vulcan bomber, Tears of Allah) and Nassau wreck diving return no Commons photo of the site.",
       "checked": "2026-10-15"
     },
     "site:jan-thiel-bay-curacao": {
@@ -4688,6 +5008,14 @@
     "site:joe-patti-barge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:joes-cave-west-dog": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:joes-jam-coral-bowl-st-thomas": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
     },
     "site:joes-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -4809,8 +5137,20 @@
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
+    "site:la-parguera-wall": {
+      "reason": "Commons hits for La Parguera were mangroves, houses and salt works, no wall dive photo.",
+      "checked": "2026-10-15"
+    },
+    "site:la-playita-bayahibe": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:la-poza-xcalak": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:la-puntilla-sosua": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:la-rocosa-san-andres": {
@@ -4828,6 +5168,10 @@
     "site:lady-luck-shipwreck-park": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:larimar-sosua": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
     },
     "site:larrys-lair-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4851,6 +5195,14 @@
     },
     "site:lea-leas-lookout-little-cayman": {
       "reason": "Commons has no photograph identified as lea-leas-lookout-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
+      "checked": "2026-10-15"
+    },
+    "site:ledges-dolphin-rocks-george-dog": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:ledges-of-little-st-james": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
       "checked": "2026-10-15"
     },
     "site:leonoras-reef-bonaire": {
@@ -5005,6 +5357,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:markoe-point-cooper-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:marys-place-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -5015,6 +5371,10 @@
     },
     "site:mccurleys-wall": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:mcdonalds-grand-turk": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
       "checked": "2026-10-15"
     },
     "site:mercedes-i-wreck": {
@@ -5053,6 +5413,10 @@
       "reason": "Commons has no photograph identified as mikes-mountain-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
     },
+    "site:mingo-cay-st-thomas": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
     "site:miracles-express": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5064,6 +5428,10 @@
     "site:miss-louise-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:miss-opportunity-st-thomas": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
     },
     "site:mizpah-corridor": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -5085,6 +5453,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:monica-wreck-punta-cana": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:montes-divi-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -5093,9 +5465,21 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:moray-alley-bimini": {
+      "reason": "No Commons photo of Moray Alley off Bimini.",
+      "checked": "2026-10-15"
+    },
     "site:moray-bend": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:mosquito-pier-vieques": {
+      "reason": "Hits were a navy ship at the pier, a sea star and a panorama; none shows the pier as a dive site.",
+      "checked": "2026-10-15"
+    },
+    "site:mountain-point-virgin-gorda": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
     },
     "site:mr-bud-wreck-roatan": {
       "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
@@ -5221,6 +5605,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:northstar-st-croix": {
+      "reason": "Commons holds no vetted frame recognisably showing this named St Croix dive site; searches by name returned only inland ruins, scans or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:northwest-double-ledges": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5289,6 +5677,14 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:packet-rock-st-thomas": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
+    "site:painted-walls-dead-chest": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:palancar-bricks-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
@@ -5336,6 +5732,10 @@
     "site:park-east-snorkel-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:park-reef-punta-cana": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
     },
     "site:park-west-quarles-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -5389,6 +5789,10 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:piedra-bonita-cabo-cabron": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:pillar-coral-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -5399,6 +5803,10 @@
     },
     "site:pink-beach-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:pinnacles-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
       "checked": "2026-10-15"
     },
     "site:pirates-point-reef-little-cayman": {
@@ -5509,6 +5917,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:ray-point-sosua": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:rebel-wreck": {
       "reason": "Commons candidates show streets, cars and other ships (2026-10-14).",
       "checked": "2026-10-14"
@@ -5569,6 +5981,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:rock-and-roll-french-cay": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:rock-key": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5597,6 +6013,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:rondana-punta-cana": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:rosellas-garden": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -5608,6 +6028,10 @@
     "site:rsb-1-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:runway-10-san-salvador": {
+      "reason": "No Commons photo of Runway 10 San Salvador.",
+      "checked": "2026-10-15"
     },
     "site:rv-dolphin": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -5621,12 +6045,24 @@
       "reason": "Commons has no photo of this site; the only hits are the Tugboat Beach wreck, already used for the Tugboat site",
       "checked": "2026-10-15"
     },
+    "site:saint-george-wreck-bayahibe": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:salt-city-bonaire": {
       "reason": "Commons has no photo of this site; the nearest are the Pekelmeer salt pans and slave huts, which are above-water landmarks nearby, not the dive site",
       "checked": "2026-10-15"
     },
     "site:salt-pier-bonaire": {
       "reason": "Commons has no photo of this site; the nearest are the Pekelmeer salt pans and slave huts, which are above-water landmarks nearby, not the dive site",
+      "checked": "2026-10-15"
+    },
+    "site:salt-river-canyon-east-wall-st-croix": {
+      "reason": "Commons holds no vetted frame recognisably showing this named St Croix dive site; searches by name returned only inland ruins, scans or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:salt-river-canyon-west-wall-st-croix": {
+      "reason": "Commons holds no vetted frame recognisably showing this named St Croix dive site; searches by name returned only inland ruins, scans or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:sampler-bonaire": {
@@ -5665,6 +6101,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:santa-monica-rock-norman-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:santa-rosa-shallows-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
@@ -5701,6 +6141,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:seal-dog-rocks-bvi": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:seaquest-deep-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -5721,8 +6165,16 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:shark-hotel-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:shark-point-playa-del-carmen": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:shark-reef-stella-maris": {
+      "reason": "No Commons photo of Shark Reef at Stella Maris; hits were 1989 Long Island land scenes.",
       "checked": "2026-10-15"
     },
     "site:sharons-serenity-bonaire": {
@@ -5849,6 +6301,10 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:stragglers-st-thomas": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
     "site:sunset-house-reef": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -5901,6 +6357,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:telephone-pole-san-salvador": {
+      "reason": "No Commons photo of the Telephone Pole wall; hits were generic San Salvador species close-ups, not the site.",
+      "checked": "2026-10-15"
+    },
     "site:tenneco-rig": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5925,12 +6385,24 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:the-anchor-grand-turk": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
+    "site:the-anchors-salt-river-st-croix": {
+      "reason": "Commons holds no vetted frame recognisably showing this named St Croix dive site; searches by name returned only inland ruins, scans or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:the-aquarium-glovers-reef": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:the-aquarium-lighthouse-reef": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:the-aquarium-virgin-gorda": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
     "site:the-arch-grand-cayman": {
@@ -5945,6 +6417,14 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:the-chimney-great-dog": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:the-crack-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:the-elbow": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5957,8 +6437,24 @@
       "reason": "Commons has no photo of this site; searches return unrelated illustrations and rings",
       "checked": "2026-10-15"
     },
+    "site:the-flintstones-west-dog": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:the-gully-west-caicos": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
+    "site:the-invisibles-virgin-gorda": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:the-lake-bonaire": {
       "reason": "Commons has no photo of this site; the nearest are generic Lac Bay snorkelling shots, not this reef",
+      "checked": "2026-10-15"
+    },
+    "site:the-library-grand-turk": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
       "checked": "2026-10-15"
     },
     "site:the-maze-grand-cayman": {
@@ -5989,9 +6485,21 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:the-strip-bimini": {
+      "reason": "No Commons photo of the Strip reef off Bimini.",
+      "checked": "2026-10-15"
+    },
     "site:the-trench-moray-alley": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:the-visibles-cockroach-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:theos-wreck": {
+      "reason": "Commons has only a photograph of the ship afloat before she was sunk, not the wreck as a diver meets it.",
+      "checked": "2026-10-15"
     },
     "site:thomas-heyward-liberty-ship": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -6005,6 +6513,10 @@
       "reason": "Commons has no photograph identified as three-fathom-wall-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
     },
+    "site:three-rocks-sosua": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:three-sisters-grand-cayman": {
       "reason": "Commons has no photo of this site; a name search returns only unrelated books, art and places",
       "checked": "2026-10-15"
@@ -6012,6 +6524,14 @@
     "site:thunderbolt-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:thunderdome-providenciales": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
+    "site:tibisi-cabo-cabron": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
     },
     "site:timothy-allen-reed-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -6181,6 +6701,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:vanishing-rock-bvi": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
     "site:vertigo-guanaja": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -6189,12 +6713,28 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:vickys-reef-san-salvador": {
+      "reason": "No Commons photo of Vicky's Reef San Salvador.",
+      "checked": "2026-10-15"
+    },
+    "site:victory-reef-bimini": {
+      "reason": "No Commons photo of Victory Reef; Bimini shipwreck hits show the Sapona and other wrecks, not this site.",
+      "checked": "2026-10-15"
+    },
     "site:villa-blanca-wall-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
     "site:vista-blue-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:viva-shallow-bayahibe": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:wall-to-wall-west-dog": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
     "site:webers-joy-bonaire": {
@@ -6215,6 +6755,10 @@
     },
     "site:west-point-san-andres": {
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:west-wall-sosua": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:western-dry-rocks": {
@@ -6245,12 +6789,24 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:whiteface-west-caicos": {
+      "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
     "site:wilderness-wall-cayman-brac": {
       "reason": "Commons has no photograph identified as wilderness-wall-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
     "site:wildlife-reef-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:willaurie-wreck": {
+      "reason": "No Commons photo of the Willaurie wreck off Nassau under any name searched.",
+      "checked": "2026-10-15"
+    },
+    "site:willy-t-wreck-peter-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
     "site:windjammer-wreck": {
@@ -6269,6 +6825,14 @@
       "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
       "checked": "2026-10-15"
     },
+    "site:wreck-alley-cooper-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:wye-reef-buck-island": {
+      "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
     "site:ydt-14": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -6279,6 +6843,10 @@
     },
     "site:yucab-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:zingara-wreck-sosua": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     }
   }
