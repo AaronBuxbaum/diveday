@@ -34,6 +34,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     signedToday,
     offersCreateOrder,
     record,
+    recordBelow,
   } = context;
   const {
     shopSlug,
@@ -248,7 +249,9 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   // happened and not where to act on it.
   const namesakeRefused = namesakeRefusedBookingId === booking.id;
   const arrivalControl = arrival?.controls.get(booking.id);
-  const arrivalBelow = arrival?.below.get(booking.id);
+  // A finished departure has no desk; its record carries the rebooking line
+  // (fifth-loop ideas, item 4).
+  const arrivalBelow = arrival?.below.get(booking.id) ?? recordBelow?.get(booking.id);
   const holdOpen =
     keepOpenBookingId === booking.id ||
     namesakeRefused ||

@@ -1,3 +1,4 @@
+import type { SailedRebooking } from "@/db/sailed-rebooking";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { SalvageOffer } from "@/lib/no-show";
 import type { NoShowSalvageCopy } from "./NoShowScript";
@@ -84,4 +85,58 @@ export function noShowSalvageCopy(input: {
     };
   }
   return { line: t("checkIn.noShow.nothing"), links: [], money };
+}
+
+/** The sailed list's rebooking line, worded (`SailedRebookLine`). */
+export type SailedRebookCopy = {
+  line: string;
+  /** Present for an open day: seat them, or email them the day. */
+  add?: { href: string; label: string; ariaLabel: string };
+  offer?: {
+    tripId: string;
+    personId: string;
+    label: string;
+    ariaLabel: string;
+    pending: string;
+    sendFailed: string;
+  };
+};
+
+/**
+ * **When the boat is home, the sailed list becomes the rebooking list**
+ * (fifth-loop ideas, item 4): "Booked Sat 11:30 AM" for a diver already coming
+ * back, which ends there, or "Nothing else booked · Thu 7:00 AM has 3 seats"
+ * with the no-show salvage's two doors: the seating door with the diver
+ * searched, and the same day emailed (`offerAnotherDayAction`).
+ */
+export function sailedRebookCopy(input: {
+  t: StaffTranslator;
+  next: SailedRebooking;
+  shopSlug: string;
+  diver: { id: string; name: string };
+  formatWhen: (startsAt: Date) => string;
+}): SailedRebookCopy {
+  const { t, next, shopSlug, diver } = input;
+  const when = input.formatWhen(next.startsAt);
+  if (next.kind === "booked") return { line: t("checkIn.sailedRebook.booked", { when }) };
+  return {
+    line: t("checkIn.sailedRebook.open", { when, seats: next.seatsLeft }),
+    add: {
+      href: `/shop/${shopSlug}/bookings/new/${next.tripId}?diverq=${encodeURIComponent(diver.name)}`,
+      label: t("checkIn.sailedRebook.add"),
+      ariaLabel: t("checkIn.sailedRebook.addAriaLabel", {
+        name: diver.name,
+        title: next.title,
+        when,
+      }),
+    },
+    offer: {
+      tripId: next.tripId,
+      personId: diver.id,
+      label: t("checkIn.noShow.offerSend"),
+      ariaLabel: t("checkIn.noShow.offerAriaLabel", { name: diver.name, title: next.title, when }),
+      pending: t("checkIn.noShow.offerSending"),
+      sendFailed: t("checkIn.sendFailedButton"),
+    },
+  };
 }

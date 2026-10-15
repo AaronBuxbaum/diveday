@@ -105,6 +105,7 @@ export function RosterSection({
     actions,
     arrival,
     record: Boolean(record),
+    recordBelow: record?.below,
     sharedAdvisoryTexts: groups.sharedAdvisoryTexts,
     waiverControls: controls,
     paymentStatusCopy: rosterPaymentStatusCopy(t),

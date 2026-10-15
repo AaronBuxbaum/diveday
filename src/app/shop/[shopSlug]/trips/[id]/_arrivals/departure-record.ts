@@ -6,6 +6,7 @@ import {
 } from "@/db/manifests";
 import type { RosterRecord } from "../_components/roster-model";
 import { buildArrivalDesk } from "./arrival-desk";
+import { sailedRebookBelow } from "./sailed-rebook-below";
 
 /**
  * **What the Divers tab draws above and into its ledger**: the desk while
@@ -22,8 +23,15 @@ export async function diversTabState(
 }> {
   const { onDivers, finished, ...deskInput } = input;
   if (!onDivers) return { desk: null, record: undefined };
-  if (finished)
-    return { desk: null, record: await departureRecord(input.db, input.shopId, input.tripId) };
+  if (finished) {
+    // The record, and under each seat what that diver could do next while the
+    // boat is freshly home (fifth-loop ideas, item 4).
+    const [record, below] = await Promise.all([
+      departureRecord(input.db, input.shopId, input.tripId),
+      sailedRebookBelow(input),
+    ]);
+    return { desk: null, record: { ...record, below } };
+  }
   return { desk: await buildArrivalDesk(deskInput), record: undefined };
 }
 

@@ -278,6 +278,12 @@ export type RosterRecord = {
    * later cancelled, never reads "No roll call taken".
    */
   rollCallTaken: boolean;
+  /**
+   * Under a seat, what that diver could do next ("Booked Sat 11:30 AM", or an
+   * open day with Add them and Email them this date), keyed by booking id
+   * (fifth-loop ideas, item 4). Absent says nothing.
+   */
+  below?: ReadonlyMap<string, ReactNode>;
 };
 
 /** What the page slots into the ledger beneath the seats. */

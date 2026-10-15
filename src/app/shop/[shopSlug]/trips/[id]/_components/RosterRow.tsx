@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -34,6 +35,8 @@ export type RosterRowContext = {
    * 2026-10-10, item 10): the row says who, never what is left to do.
    */
   record: boolean;
+  /** Under a seat on that record, the diver's next dive (fifth-loop ideas, item 4). */
+  recordBelow?: ReadonlyMap<string, ReactNode>;
   /** Depth sentences much of the boat shares, said once in the group band. */
   sharedAdvisoryTexts: ReadonlySet<string>;
   waiverControls: WaiverControls;

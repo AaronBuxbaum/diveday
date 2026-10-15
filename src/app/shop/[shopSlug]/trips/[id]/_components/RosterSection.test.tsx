@@ -174,6 +174,19 @@ describe("the guests ledger (slice 5d)", () => {
     expect(screen.queryByText("No certification is on file for this trip.")).toBeNull();
   });
 
+  it("says the sailed diver's next dive under their row (fifth-loop ideas, item 4)", () => {
+    renderRoster({
+      ...fixtures,
+      record: {
+        dock: new Map([[ready.booking.id, "boarded"]]),
+        afterDive: new Set(),
+        rollCallTaken: true,
+        below: new Map([[ready.booking.id, <p key="next">Booked Sat 11:30 AM</p>]]),
+      },
+    });
+    expect(screen.getByText("Booked Sat 11:30 AM")).toBeVisible();
+  });
+
   it("files a seat nobody counted at the dock under its own band, never as Didn't sail", () => {
     renderRoster({
       ...fixtures,
