@@ -6,7 +6,7 @@ import {
 } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
 import { type WaiverRecord, waiverRecords } from "./schema";
-import { at } from "./seed-clock";
+import { at, withinDeskHours } from "./seed-clock";
 
 /**
  * What the shop's signed evidence actually looks like — the Signatures tab's
@@ -87,6 +87,11 @@ function signedAtFor(index: number): Date {
   return new Date(at(-daysBack, hour, minute).getTime() + (index % 1_000));
 }
 
+/** Recorded by a staffer from a signature made in front of them. */
+function staffRecorded(record: WaiverRecord): boolean {
+  return record.signatureMethod === "in_person" || record.signatureMethod === "in_person_attested";
+}
+
 export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promise<void> {
   // Ordered so the spread below is a pure function of the seed, not of whatever
   // order the heap hands rows back in. `createdAt` is unique per row by
@@ -116,7 +121,9 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
   const updates: { id: string; next: WaiverRecord }[] = [];
   for (const record of records) {
     const stampedNow = (record.signedAt?.getTime() ?? 0) >= todayStart;
-    const signedAt = stampedNow ? signedAtFor(spreadIndex) : record.signedAt;
+    const spread = stampedNow ? signedAtFor(spreadIndex) : record.signedAt;
+    const signedAt =
+      spread && stampedNow && staffRecorded(record) ? withinDeskHours(spread) : spread;
     if (stampedNow) spreadIndex += 1;
     const sealed = (signedAt?.getTime() ?? 0) >= sealFrom;
     if (!stampedNow && !sealed) continue;

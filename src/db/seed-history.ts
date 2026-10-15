@@ -20,7 +20,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
-import { at, nextCreatedAt } from "./seed-clock";
+import { at, nextCreatedAt, withinDeskHours } from "./seed-clock";
 import { reviewedBy } from "./seed-review";
 import { getCurrentWaiverTemplate } from "./waivers";
 
@@ -736,7 +736,8 @@ export async function seedHistory(
       const booking = bookingRows[i];
       if (!booking || !plan.waiver) return null;
       waiverToken++;
-      const signedAt = new Date(plan.createdAt.getTime() - 12 * 60 * 60 * 1000);
+      // On paper at the desk, so while it was open (`withinDeskHours`).
+      const signedAt = withinDeskHours(new Date(plan.createdAt.getTime() - 12 * 60 * 60 * 1000));
       return {
         shopId,
         bookingId: booking.id,
