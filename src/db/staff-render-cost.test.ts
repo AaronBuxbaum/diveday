@@ -1,5 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inHorizonReadiness } from "@/db/blockers";
@@ -15,7 +15,7 @@ import { getBookingPayment } from "@/db/payments";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getReadyPageData } from "@/db/ready";
 import { getShopReviewAggregate } from "@/db/reviews";
-import { bookings, people, personRoles, trips } from "@/db/schema";
+import { bookings, people, personRoles, trips, tripWaitlistEntries } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
@@ -434,6 +434,74 @@ describe("what a diver's page sends", () => {
   });
 });
 
+/**
+ * **The trip page on a departure that wakes every trailing read** (#2487): a
+ * course session (materials, next steps), a held seat (the identity reads) and
+ * a wait-listed diver (the last-minute and waitlist reads). On the plain seed
+ * four of `getTripGuests`' five trailing reads skip themselves, so the ceiling
+ * above never saw the wave they make.
+ */
+describe("the trip page on a course departure with a held seat and a waitlist", () => {
+  it("reads overview and guests in a bounded number of phases", async () => {
+    const { plain, shop, ownerId } = await timedSeededShop();
+    const [trip] = await plain
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          liveTrip(),
+          isNotNull(trips.courseId),
+          gt(trips.startsAt, nowDate()),
+        ),
+      )
+      .orderBy(asc(trips.startsAt))
+      .limit(1);
+    if (!trip) throw new Error("the seeded shop has no upcoming course departure");
+    const [seat] = await plain
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, trip.id), eq(bookings.status, "booked")))
+      .limit(1);
+    if (!seat) throw new Error("the course departure has no booked seat");
+    await plain
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Someone Else" })
+      .where(eq(bookings.id, seat.id));
+    const [waiting] = await plain
+      .select({ id: people.id })
+      .from(people)
+      .where(
+        and(
+          eq(people.shopId, shop.id),
+          notInArray(
+            people.id,
+            plain
+              .select({ id: bookings.personId })
+              .from(bookings)
+              .where(eq(bookings.tripId, trip.id)),
+          ),
+        ),
+      )
+      .limit(1);
+    if (!waiting) throw new Error("no diver is free to wait-list");
+    await plain.insert(tripWaitlistEntries).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: waiting.id,
+    });
+    const { db, phases } = phaseCountingDb(plain.$client as PGlite);
+    const shared = loadTripSharedReads(db, shop.id, trip.id);
+    await Promise.all([
+      getTripOverview(db, shop, trip.id, ownerId, undefined, shared),
+      getTripGuests(db, shop, trip.id, {}, shared),
+    ]);
+    expect(report("trip phases, held seat + waitlist + course", phases())).toBeLessThanOrEqual(
+      TRIP_WIDE_PHASE_CEILING,
+    );
+  });
+});
+
 describe("how many round trips a diver's page waits for, one after another", () => {
   it("reads the public booking page in a bounded number of phases", async () => {
     const { plain, shop } = await timedSeededShop();
@@ -545,7 +613,15 @@ const TODAY_PHASE_CEILING = 5;
 // and evidence go out in one wave (item 13), and `getTripGuests`' five trailing
 // reads are one wave too (item 12); on the departure measured here four of
 // those skip themselves (no held seat, wait list or course).
-const TRIP_PHASE_CEILING = 6;
+// 6 → 5 (#2487): the departure row went out beside the four reads that never
+// waited on it (`loadTripSharedReads`).
+const TRIP_PHASE_CEILING = 5;
+// The same page on a course departure with a held seat and a waitlist: the
+// shared wave (2), then the longest chain after it: the permission read (3
+// here, one request-cached statement chain in a real render) and the
+// off-cadence list that waits on it, or `getTripGuests`' fan-out and trailing
+// wave.
+const TRIP_WIDE_PHASE_CEILING = 6;
 
 /**
  * The diver pages, measured 2026-10-12 before their reads were grouped (code
