@@ -252,6 +252,10 @@ const EXCLUDED_TABLES = [
   // not a column on an existing one.
   "inbound_messages",
   "staff_replies",
+  // The shop's saved answers (fifth loop, item 15): reply templates the
+  // composer offers as chips. Out with the inbox they serve, for the same
+  // reason: the bundle has no file for correspondence yet.
+  "inbox_saved_answers",
   // Which way each waiver link was handed over and what happened on that
   // channel. The outcome another system could act on is already on
   // waiver_records.csv (`delivery_status` and the provider columns beside it);

@@ -623,6 +623,34 @@ export const staffReplies = pgTable(
 );
 
 /**
+ * **A saved answer** (fifth loop, item 15): words the desk sends often enough
+ * to keep, like where to park or whether the shop rents 5mm in a women's
+ * medium. The composer offers each as a chip above the reply box, and "Save
+ * this answer" after a sent reply writes one, so the list grows from real
+ * replies rather than from a settings page nobody opens.
+ *
+ * The shop's own words, like a template: a short title for the chip and the
+ * body, with `{name}` and `{trip}` markers the composer fills from the diver's
+ * record. **No person column, on purpose**: a saved answer is about no diver,
+ * and one saved from a sent reply has that diver's first name swapped for the
+ * marker before it is written. Deleting is soft, like every delete.
+ */
+export const inboxSavedAnswers = pgTable(
+  "inbox_saved_answers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("inbox_saved_answers_shop_idx").on(table.shopId, table.createdAt)],
+);
+
+/**
  * A shop's own WhatsApp Business sender, connected through Meta's Cloud API
  * (docs ADR 20260802-whatsapp-cloud-api-per-shop). The courtesy text that rides
  * with a trip reminder or recap goes out from *this* number when a row exists,

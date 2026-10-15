@@ -44,6 +44,7 @@ import {
   gearServiceEvents,
   importedPaymentHistory,
   inboundMessages,
+  inboxSavedAnswers,
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
@@ -235,6 +236,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // The inbox: replies before the messages and people they name.
   await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
+  await db.delete(inboxSavedAnswers).where(eq(inboxSavedAnswers.shopId, shopId));
   // Course forms, children first (records → requirements → versions → forms).
   await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
   await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));

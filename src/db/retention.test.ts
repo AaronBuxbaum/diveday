@@ -983,6 +983,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "gear_items",
   "trip_series",
   "trip_series_crew",
+  // The shop's saved answers (fifth loop, item 15): reply templates it keeps
+  // until a staffer deletes one, like its waiver templates.
+  "inbox_saved_answers",
   "trip_series_skips",
   "trip_schedule_days",
   // DiveDay's own shared catalogue, and a shop asking for an addition to it.

@@ -1,6 +1,6 @@
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import { inboundMessages, type people, staffReplies } from "./schema";
+import { inboundMessages, inboxSavedAnswers, type people, staffReplies } from "./schema";
 import { hoursFromNow } from "./seed-clock";
 
 /**
@@ -103,6 +103,25 @@ export async function seedInbox(
       body: "Hello, do you run night dives in October? Two of us, both Advanced. Thanks, Marta",
       receivedAt: hoursFromNow(-26),
       providerMessageId: `seed-inbox-${shopId}-marta`,
+    },
+  ]);
+
+  // Two saved answers, so the composer's chips have something to offer in a
+  // demo and a capture (fifth loop, item 15). The second carries both markers.
+  await db.insert(inboxSavedAnswers).values([
+    {
+      shopId,
+      // i18n-exempt: fixture text, the shop's own saved words
+      title: "Parking",
+      // i18n-exempt: fixture text, the shop's own saved words
+      body: "Hi {name}, park behind the shop by the tank racks. The gate opens at 7:15.",
+    },
+    {
+      shopId,
+      // i18n-exempt: fixture text, the shop's own saved words
+      title: "Wetsuit sizes",
+      // i18n-exempt: fixture text, the shop's own saved words
+      body: "We rent 5mm wetsuits in every size, women's cuts too. I'll put one aside for {trip}.",
     },
   ]);
 }
