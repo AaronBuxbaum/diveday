@@ -322,6 +322,14 @@ export type ReadyPageData = {
    */
   canAddSeat: boolean;
   /**
+   * **"Pay for this seat"** (issue #2474): this booking leads a party and the
+   * page could open a checkout for a seat it added. A fact about the lead and
+   * the shop only (a live seat on a departure still ahead, a connected
+   * account, a held identity that is not); which seats are owed is
+   * `PartySeatClaim.payable`.
+   */
+  canPayPartySeats: boolean;
+  /**
    * **"Running late"** (J3). `open` is `canSayRunningLate` for this seat now —
    * booked, not checked in, from the night-before brief until a scheduled
    * departure has sailed — and `saidAt` is when the diver already said
@@ -567,6 +575,14 @@ export async function getReadyPageData(
   const canAddSeat =
     canCancelBooking && !identityHeld && row.partyLeadBookingId === null && (settled || !canPay);
 
+  const canPayPartySeats =
+    canCancelBooking &&
+    !identityHeld &&
+    row.partyLeadBookingId === null &&
+    canAcceptPayments(stripeAccount) &&
+    Boolean(publicAppUrl()) &&
+    Boolean(row.personEmail);
+
   return {
     detail,
     shop: {
@@ -632,6 +648,7 @@ export async function getReadyPageData(
     cancelPreview,
     canCancelBooking,
     canAddSeat,
+    canPayPartySeats,
     runningLate: {
       open: canSayRunningLate({
         bookingStatus: row.status,

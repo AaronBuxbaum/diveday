@@ -189,6 +189,48 @@ describe("selfRegistrationReleaseDelivery", () => {
     ]);
   });
 
+  /**
+   * Issue #2289: inside a non-NANP home country, a premium or landline range
+   * still counted as home, so the shop paid premium rates or texted a phone
+   * that cannot read one. Only a mobile line is texted.
+   */
+  it("texts only a mobile line at home: never a premium, shared-cost or landline range", async () => {
+    const store = inMemoryRateLimitStore();
+    const gbShop = { ...usShop, id: "shop-gb", addressCountry: "GB" };
+    const esShop = { ...usShop, id: "shop-es", addressCountry: "ES" };
+    const deliver = (shop: typeof usShop, phone: string) =>
+      selfRegistrationReleaseDelivery(shop, { email: null, phone }, { now, store });
+
+    expect(await deliver(gbShop, "07911 123456")).toBe("send");
+    expect(await deliver(esShop, "612 345 678")).toBe("send");
+    for (const phone of ["0909 879 0000", "0800 111 1111", "020 7123 4567"]) {
+      expect(await deliver(gbShop, phone), phone).toBe("not_mobile");
+    }
+    for (const phone of ["803 000 000", "901 000 000", "905 000 000", "912 345 678"]) {
+      expect(await deliver(esShop, phone), phone).toBe("not_mobile");
+    }
+  });
+
+  it("never spends a shop's daily text on a landline it refused", async () => {
+    const store = inMemoryRateLimitStore();
+    const gbShop = { ...usShop, id: "shop-gb", addressCountry: "GB" };
+    const cap = RATE_LIMITS.selfRegisterTextByShop.capacity;
+    for (let i = 0; i < cap + 5; i++) {
+      await selfRegistrationReleaseDelivery(
+        gbShop,
+        { email: null, phone: `020 7123 ${String(1000 + i)}` },
+        { now, store },
+      );
+    }
+    expect(
+      await selfRegistrationReleaseDelivery(
+        gbShop,
+        { email: null, phone: "07911 123456" },
+        { now, store },
+      ),
+    ).toBe("send");
+  });
+
   it("says why a text was not sent", async () => {
     const store = inMemoryRateLimitStore();
     expect(

@@ -596,6 +596,12 @@ export const tripInvitations = pgTable(
       .references(() => people.id),
     /** The staff outreach attempt; null means the invitation is still pending. */
     invitedAt: timestamp("invited_at", { withTimezone: true }),
+    /**
+     * A cold (`direct`) invitation's last email, sent or still sending; null
+     * when none went. Set by the send's claim and rolled back when the mail
+     * does not go, so only mail that went holds the 24-hour window (#2133).
+     */
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

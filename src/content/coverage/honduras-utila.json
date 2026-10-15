@@ -1,0 +1,252 @@
+{
+  "area": "honduras-utila",
+  "method": "Utila and its cays plus the offshore Black Hills seamount. Official list: the Bay Islands Conservation Association's 'Utila Dive Buoys' map (90 numbered moorings, November 2009, linked from utilaguide.com's dive-site-maps page and read as KML), counted as one list; positions are its buoy positions rounded to 5 decimals, the first buoy where a site has several. The Roatán Marine Park mooring map, which also carries Black Hills, supplied that seamount's position and is treated as part of the same official vote, not an extra list. Operator lists, one each: Utila Dive Center's best-diving and itinerary articles; Alton's Dive Center's resort-diving, advanced and wreck pages; Utila Cays Diving's dive-site page (the domain now serves spam, so it was read from its October 2025 Wayback copy). Utila Lodge / Bay Islands College of Diving's dive map renders no readable list, Deep Blue Resort's site list is on a hijacked domain with no archive, and Captain Morgan's, Underwater Vision, Coral View and Parrots publish no named sites; magazine and aggregator guides were leads only. A site is counted when it is named on at least two independent lists and is a recreational scuba dive; one-list buoy names are kept as grouped excluded rows. The buoy map is old and operators name few south-side sites online, so well-known sites such as Pretty Bush and Airport Caves fall out for want of a second current list. Counted 2026-10-14.",
+  "sources": [
+    "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+    "https://utiladivecenter.com/news/best-diving-spot-in-caribbean",
+    "https://utiladivecenter.com/news/utila-diving-itinerary",
+    "https://diveinutila.com/fun-diving/resort-diving/",
+    "https://diveinutila.com/advanced-open-water/",
+    "https://diveinutila.com/wreck/",
+    "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/",
+    "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "West End",
+      "template": "west-end-utila",
+      "position": [16.08663, -86.9989],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Raggedy Cay",
+      "template": "raggedy-cay-utila",
+      "position": [16.08722, -86.99735],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://diveinutila.com/fun-diving/resort-diving/",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Paraiso",
+      "template": null,
+      "position": [16.08995, -86.99433],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Spotted Bay",
+      "template": "spotted-bay-utila",
+      "position": [16.0948, -86.98858],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://diveinutila.com/fun-diving/resort-diving/",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Don Quickset",
+      "template": "don-quickset",
+      "position": [16.10253, -86.97818],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "CJ's Drop-Off",
+      "template": "cjs-drop-off-utila",
+      "position": [16.1104, -86.95528],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://utiladivecenter.com/news/utila-diving-itinerary",
+        "https://diveinutila.com/fun-diving/resort-diving/",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "The Maze",
+      "template": "the-maze-utila",
+      "position": [16.1118, -86.94998],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "The Pinnacle (Pinnacles)",
+      "template": "the-pinnacle-utila",
+      "position": [16.11275, -86.94853],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://utiladivecenter.com/news/utila-diving-itinerary",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Duppy Waters",
+      "template": "duppy-waters",
+      "position": [16.11595, -86.94507],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://diveinutila.com/fun-diving/resort-diving/",
+        "https://diveinutila.com/advanced-open-water/",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Blackish Point",
+      "template": null,
+      "position": [16.12352, -86.93532],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://diveinutila.com/fun-diving/resort-diving/"
+      ]
+    },
+    {
+      "name": "Carrie's Bay; Old House; Willy's Hole; Fish Bowl; Great West Wall; Great Wall; Joshua's Swash; Rock Harbour; Jack's Bight; Iron Bound; Black Bird Point",
+      "template": null,
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0"
+      ],
+      "excluded": "each on the 2009 BICA buoy map only; no operator list read names it"
+    },
+    {
+      "name": "Diamond Cay",
+      "template": "diamond-cay-utila",
+      "position": [16.0614, -86.98862],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Stingray Point",
+      "template": "stingray-point-utila",
+      "position": [16.06797, -86.95535],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Cabanas; Madelines; Big Rock Beach",
+      "template": null,
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0"
+      ],
+      "excluded": "each on the 2009 BICA buoy map only; no operator list read names it"
+    },
+    {
+      "name": "Big Rock",
+      "template": "big-rock-utila",
+      "position": [16.07505, -86.94198],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Jack Neil Beach",
+      "template": "jack-neil-beach-utila",
+      "position": [16.07527, -86.93808],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://utiladivecenter.com/news/best-diving-spot-in-caribbean",
+        "https://utiladivecenter.com/news/utila-diving-itinerary",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Jack Neil Point; Mitchel's Point; Little Little Bight; Little Bight Point; Green House; Kenny's Reef; Pretty Bush; Labyrinth; Silver Garden; Laguna Beach; Blue Bayou; Sturch Bank; Oliver's Wreck",
+      "template": null,
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0"
+      ],
+      "excluded": "each on the 2009 BICA buoy map only; no operator list read names it"
+    },
+    {
+      "name": "Little Bight",
+      "template": "little-bight-utila",
+      "position": [16.07862, -86.93023],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Black Coral Wall",
+      "template": "black-coral-wall-utila",
+      "position": [16.08237, -86.91758],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://utiladivecenter.com/news/best-diving-spot-in-caribbean",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Lighthouse Reef",
+      "template": null,
+      "position": [16.08613, -86.8987],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://utiladivecenter.com/news/utila-diving-itinerary"
+      ]
+    },
+    {
+      "name": "Halliburton (Haliburton)",
+      "template": "halliburton-wreck-utila",
+      "position": [16.0834, -86.89657],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://diveinutila.com/advanced-open-water/",
+        "https://diveinutila.com/wreck/",
+        "https://web.archive.org/web/20251028065847/https://utilacaysdiving.com/dive-with-us/dive-sites/"
+      ]
+    },
+    {
+      "name": "Ron's Wreck; Eagle Ray Alley; Airport Caves; Airport Wreck; Rocky Point; Red Cliff; Ship's Stern; Big Bight; Linda's Wall; Aquarium",
+      "template": null,
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0"
+      ],
+      "excluded": "each on the 2009 BICA buoy map only; no operator list read names it"
+    },
+    {
+      "name": "Moon Hole",
+      "template": null,
+      "position": [16.08415, -86.89323],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://utiladivecenter.com/news/best-diving-spot-in-caribbean"
+      ]
+    },
+    {
+      "name": "Ted's Point",
+      "template": null,
+      "position": [16.08517, -86.88767],
+      "listedBy": [
+        "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+        "https://utiladivecenter.com/news/best-diving-spot-in-caribbean"
+      ]
+    },
+    {
+      "name": "Black Hills",
+      "template": "black-hills-utila",
+      "position": [16.09468, -86.86926],
+      "listedBy": [
+        "https://utiladivecenter.com/news/utila-diving-itinerary",
+        "https://diveinutila.com/advanced-open-water/",
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA"
+      ]
+    }
+  ]
+}

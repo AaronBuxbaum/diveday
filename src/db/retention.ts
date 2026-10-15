@@ -30,6 +30,7 @@ import {
   pushSubscriptions,
   setupRequests,
   shopContactEmailConfirmationTokens,
+  shopShoreAlertTokens,
   staffReplies,
   stripeWebhookEvents,
   tripDeskEvents,
@@ -220,6 +221,13 @@ export const PRUNE_ARMS = {
     from: shopContactEmailConfirmationTokens,
     id: shopContactEmailConfirmationTokens.id,
     clock: shopContactEmailConfirmationTokens.expiresAt,
+  },
+  // The shore contact's links (H-118): from `created_at`, since a stop link
+  // has no `expires_at` of its own.
+  shop_shore_alert_tokens: {
+    from: shopShoreAlertTokens,
+    id: shopShoreAlertTokens.id,
+    clock: shopShoreAlertTokens.createdAt,
   },
   // Booking links (H-82, issue #1726), on the same clock as the two token
   // arms above. `expires_at` only, never `revoked_at`: a revoked link can still

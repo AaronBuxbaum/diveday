@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { diverBlockerText } from "./DiverFacts";
 import { DiverRowPanel } from "./DiverRowPanel";
 import {
   dangerToned,
@@ -187,6 +188,37 @@ describe("DiverRowPanel, drawn on its own", () => {
       "href",
       `/shop/blue-mantis/trips/00000000-0000-4000-8000-0000000000ff#booking-${blocked.bookingId}`,
     );
+  });
+
+  /**
+   * **A medical hold the capsule lost still has a home** (#2380 review). After a
+   * dive a split team outranks the hold, the dock's blocker list is gone, and the
+   * waiver fact is empty for a referred or refused record — so the panel says it.
+   */
+  it("names a medical hold that a split team took the capsule from", () => {
+    const boardedOver = diver({
+      boardedEarlier: true,
+      readiness: { status: "blocked", blockers: [{ code: "medical_not_cleared" }] },
+      buddyAlert: "separated_after_dive",
+      buddyTeam: { teamId: "t-1", others: [] },
+    });
+    const state = diverRowState(boardedOver, "after_dive_1", false, "America/New_York");
+    expect(state.capsuleKind).toBe("buddy");
+    const { container } = render(
+      <DiverRowPanel
+        context={diverContext({ divers: [boardedOver] })}
+        diver={boardedOver}
+        state={state}
+        sharedAdvisoryTexts={new Set()}
+        bookingNotes={[]}
+      />,
+    );
+    expect(container).toHaveTextContent(
+      diverBlockerText(t, boardedOver, { code: "medical_not_cleared" }),
+    );
+    // Warning, never the dock's red: after a dive readiness gates nothing.
+    expect(dangerToned(container)).toHaveLength(0);
+    expect(screen.queryByRole("link", { name: t("manifest.resolveBlockersLink") })).toBeNull();
   });
 
   it("offers the way back aboard only to a diver recorded not back", () => {

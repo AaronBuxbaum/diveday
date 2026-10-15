@@ -20,7 +20,7 @@ const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 
 const secret = "cron-test-secret";
-const rollCall = { checked: 1, alerted: 1, emails: 1, pushes: 2, released: 0 };
+const rollCall = { checked: 1, alerted: 1, emails: 1, shoreEmails: 0, pushes: 2, released: 0 };
 
 function cronRequest(authorization?: string) {
   const headers: Record<string, string> = {};

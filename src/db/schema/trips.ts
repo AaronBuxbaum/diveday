@@ -573,6 +573,13 @@ export const trips = pgTable(
      * Null until then, and for ever on a departure whose count closed in time.
      */
     rollCallAlertedAt: timestamp("roll_call_alerted_at", { withTimezone: true }),
+    /**
+     * **When the shop's shore contact was told** (H-118): the same alert's
+     * shore copy, claimed on its own so a failed shore send is tried again on
+     * the next pass and a delivery ashore never reads as "Owners alerted".
+     * Null until then, and for ever on a shop with no confirmed shore contact.
+     */
+    rollCallShoreAlertedAt: timestamp("roll_call_shore_alerted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

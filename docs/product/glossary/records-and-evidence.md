@@ -8,6 +8,15 @@
   however, evidence — `buildIncidentExport` renders it into a SHA-256-sealed document for an
   investigator or a treating physician, which is why a dive nobody logged must read as *not
   recorded* rather than being interpolated from its neighbours.
+- **Dispute sheet** — a seat's printable attendance record for a card dispute
+  (`/shop/<slug>/orders/<id>/print/dispute`, issue #2390): the order, the diver's signed waiver (title,
+  version, signed-at, typed name), the check-in, one roll-call row per planned checkpoint (aboard, not
+  aboard or not recorded, with time and recorder) and what staff did, drawn from a closed allowlist of
+  activity codes. Owner and manager only (`canExportDisputeSheet`). Built as a **closed list, not a
+  filter**: it selects named columns and never the waiver's status or medical answers, so a physician
+  referral cannot be inferred from it. It shows the newest release signed *before departure*, because
+  one signed after the boat left proves nothing about the morning. Not the **incident export**, which
+  is the sealed record for an investigator or physician.
 - **Marine-life catalog** — DiveDay's own list of wider-Caribbean species
   (`src/db/marine-life-catalog.ts`): a slug, a Latin binomial, a category and a photo, and no prose
   at all. Every word a person reads about one is DiveDay's, written once in every language and

@@ -98,6 +98,12 @@
     "discounted": "Discount codes took {amount} off",
     "fees": "Stripe fees {amount}, on this month’s payouts"
   },
+  "emptySeats": {
+    "heading": "Departures that left with empty seats",
+    "summary": "{departures, plural, one {# departure} other {# departures}} left with {seats, plural, one {# seat} other {# seats}} unsold",
+    "row": "{title}, {date}",
+    "seats": "{count, plural, one {# seat} other {# seats}}"
+  },
   "payouts": {
     "heading": "Paid to your bank"
   }

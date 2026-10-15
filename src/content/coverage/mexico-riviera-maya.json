@@ -1,0 +1,964 @@
+{
+  "area": "mexico-riviera-maya",
+  "method": "Ocean sites from Isla Mujeres and Cancún south through Puerto Morelos, Playa del Carmen, Puerto Aventuras, Akumal and Tulum's reef; Cozumel, cenotes and snorkel-only whale-shark trips are out. Official lists: CONANP's 2016 management programme for Parque Nacional Costa Occidental de Isla Mujeres, Punta Cancún y Punta Nizuc (reef units, the C-55/C-58 wrecks, MUSA galleries and the zoning that closes some units or limits them to snorkelling) and CONANP's 2000 programme for Parque Nacional Arrecife de Puerto Morelos (Regla 73 reef units); each counts once. The Mexican Caribbean tourism board's Cancún, Isla Mujeres and Puerto Morelos diving pages (read through the Wayback Machine because the live pages now redirect to generic city pages) count together as one list. Operator lists: Pocna, Mundaca Divers, Squalo Adventures, Cancún Scuba Center (its Google My Maps layer, which gives the positions used here), Solo Buceo, Aquaworld, Scuba Total, Wet Set, Koox, Pro Dive International (Playa del Carmen and Puerto Aventuras pages), Dressel Divers, Scuba Playa, Tank-Ha, Deep Mexico, Akumal Dive Shop and Akumal Dive Center; each operator counts once however many of its pages were read. A site counts when named, scuba-divable and on two independent lists; sites the park programmes close (preservation or recovery subzones) or limit to snorkelling are excluded even when an operator names them. Not counted: DivePlannerPro's generated 'reachable sites' pages, Taste of Isla's reprint of Sea Hawk's tours, the unnamed 'Isla Mujeres Trips' storefront, PADI Travel listings and blogs; Phocea Mexico's domain served a defacement page; Scuba Cancún, Mexidivers and Yucatek Divers name no ocean sites, so Tulum's reef has no named site on any counted list. Manchones 1/2 and Grande/Chico are kept as one row because no source maps one pair onto the other. Counted 2026-10-14.",
+  "sources": [
+    "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+    "https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf",
+    "https://web.archive.org/web/20241005035901/https://mexicancaribbean.travel/cancun/things-to-do/nature-and-adventure/diving.html",
+    "https://web.archive.org/web/20241005035227/https://mexicancaribbean.travel/isla-mujeres/things-to-do/water-activities.html",
+    "https://web.archive.org/web/20241005030020/https://mexicancaribbean.travel/puerto-morelos/things-to-do/water-activities.html",
+    "https://www.pocnadivecenter.com/dive-sites",
+    "https://www.mundacadivers.com/dives-for-certified-divers",
+    "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/2-tank-dive-shipwreck-drift-dive/",
+    "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/2-tank-reef-dive-isla-mujeres-manchones-grande-atlantis-squalo-adventures/",
+    "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/sleeping-shark-cave-dive-isla-mujeres-2-tank-reef-tour-squalo-adventures/",
+    "https://cancunscubacenter.com/dive-sites/",
+    "https://www.google.com/maps/d/kml?mid=1PKwNU0zIRLFWcorRixr9C5Dc9bc&forcekml=1",
+    "https://solobuceo.com/cancun-diving-sites",
+    "https://aquaworld.com.mx/buceo-en-arrecifes-de-cancun/",
+    "https://aquaworld.com.mx/buceo-en-barco-hundido-y-arrecife/",
+    "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures",
+    "https://www.scubatotal.com/post/dive-into-paradise-best-9-scuba-sites-in-cancun",
+    "https://www.scubatotal.com/post/exploring-hidden-gems-unique-dive-spots-in-cancun-beyond-the-tourist-trail",
+    "https://wetset.com/dive-sites/",
+    "https://www.kooxdiving.com/actividades/buceo-en-el-mar/buceo-arrecife-puerto-morelos/",
+    "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+    "https://prodiveinternational.com/location/puerto-aventuras/",
+    "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+    "https://www.dresseldivers.com/blog/playa-carmen-reefs-scuba-diving/",
+    "https://scubaplaya.com/en/playa-del-carmen-diving/",
+    "https://tankha.com/diving/playa-del-carmen",
+    "https://tankha.com/dive-sites/barracuda-reef",
+    "https://tankha.com/diving/bull-shark-observation-dive",
+    "https://deepmexico.com/",
+    "https://akumaldiveshop.com/diving/akumal-dive-sites/",
+    "https://www.akumaldivecenter.com/post/scuba-diving-tulum-discover-the-best-reefs-and-cenotes"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Cave of the Sleeping Sharks (Cueva de los Tiburones Dormidos)",
+      "template": "sleeping-shark-cave-isla-mujeres",
+      "position": [21.2673, -86.73534],
+      "listedBy": [
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/sleeping-shark-cave-dive-isla-mujeres-2-tank-reef-tour-squalo-adventures/",
+        "https://cancunscubacenter.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Ultrafreeze (El Frío)",
+      "template": "ultrafreeze-wreck-isla-mujeres",
+      "position": [21.26762, -86.71886],
+      "listedBy": [
+        "https://web.archive.org/web/20241005035227/https://mexicancaribbean.travel/isla-mujeres/things-to-do/water-activities.html",
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/2-tank-dive-shipwreck-drift-dive/",
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://solobuceo.com/cancun-diving-sites",
+        "https://www.scubatotal.com/post/exploring-hidden-gems-unique-dive-spots-in-cancun-beyond-the-tourist-trail"
+      ]
+    },
+    {
+      "name": "La Cadenita",
+      "template": null,
+      "listedBy": ["https://faolex.fao.org/docs/pdf/mex157815.pdf"],
+      "excluded": "closed: CONANP preservation subzone, scuba and snorkelling not permitted; on no operator list"
+    },
+    {
+      "name": "El Meco",
+      "template": null,
+      "position": [21.20218, -86.79174],
+      "listedBy": ["https://cancunscubacenter.com/dive-sites/"],
+      "excluded": "on one operator list only (Cancún Scuba Center)"
+    },
+    {
+      "name": "El Farito (Sac Bajo)",
+      "template": null,
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://web.archive.org/web/20241005035227/https://mexicancaribbean.travel/isla-mujeres/things-to-do/water-activities.html"
+      ],
+      "excluded": "snorkel-only: the 2016 CONANP programme bars scuba at El Farito-Sac Bajo; on no operator list"
+    },
+    {
+      "name": "El Garrafón",
+      "template": null,
+      "listedBy": ["https://faolex.fao.org/docs/pdf/mex157815.pdf"],
+      "excluded": "snorkel-only: the 2016 CONANP programme bars scuba at El Garrafón"
+    },
+    {
+      "name": "MUSA, Manchones gallery (Underwater Museum, Casitas)",
+      "template": "musa-underwater-museum-cancun",
+      "position": [21.21194, -86.74599],
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://web.archive.org/web/20241005035227/https://mexicancaribbean.travel/isla-mujeres/things-to-do/water-activities.html",
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://solobuceo.com/cancun-diving-sites",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures",
+        "https://www.scubatotal.com/post/dive-into-paradise-best-9-scuba-sites-in-cancun",
+        "https://www.scubatotal.com/post/exploring-hidden-gems-unique-dive-spots-in-cancun-beyond-the-tourist-trail"
+      ]
+    },
+    {
+      "name": "Manchones (Manchones Grande, Manchones Chico, Manchones 1, Manchones 2)",
+      "template": "manchones-reef-isla-mujeres",
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://web.archive.org/web/20241005035227/https://mexicancaribbean.travel/isla-mujeres/things-to-do/water-activities.html",
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/2-tank-reef-dive-isla-mujeres-manchones-grande-atlantis-squalo-adventures/",
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://solobuceo.com/cancun-diving-sites",
+        "https://aquaworld.com.mx/buceo-en-arrecifes-de-cancun/",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures",
+        "https://www.scubatotal.com/post/dive-into-paradise-best-9-scuba-sites-in-cancun"
+      ]
+    },
+    {
+      "name": "Jardines (Isla Mujeres)",
+      "template": null,
+      "listedBy": [
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://www.mundacadivers.com/dives-for-certified-divers"
+      ]
+    },
+    {
+      "name": "Atlantis",
+      "template": "atlantis-reef-isla-mujeres",
+      "listedBy": [
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/2-tank-reef-dive-isla-mujeres-manchones-grande-atlantis-squalo-adventures/"
+      ]
+    },
+    {
+      "name": "Cruz de la Bahía",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20241005035227/https://mexicancaribbean.travel/isla-mujeres/things-to-do/water-activities.html",
+        "https://www.pocnadivecenter.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Media Luna",
+      "template": null,
+      "listedBy": ["https://www.mundacadivers.com/dives-for-certified-divers"],
+      "excluded": "on one operator list only (Mundaca Divers)"
+    },
+    {
+      "name": "Pailas",
+      "template": null,
+      "listedBy": [
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/sleeping-shark-cave-dive-isla-mujeres-2-tank-reef-tour-squalo-adventures/"
+      ]
+    },
+    {
+      "name": "Piedra Atravesada",
+      "template": null,
+      "listedBy": ["https://www.mundacadivers.com/dives-for-certified-divers"],
+      "excluded": "on one operator list only (Mundaca Divers)"
+    },
+    {
+      "name": "Punta Sur (Isla Mujeres)",
+      "template": "punta-sur-isla-mujeres",
+      "position": [21.19033, -86.71612],
+      "listedBy": [
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://cancunscubacenter.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "La Bandera (Banderas)",
+      "template": "la-bandera-reef-cancun",
+      "position": [21.16793, -86.72676],
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://web.archive.org/web/20241005035227/https://mexicancaribbean.travel/isla-mujeres/things-to-do/water-activities.html",
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures"
+      ]
+    },
+    {
+      "name": "Cuevones (Punta Cancún)",
+      "template": null,
+      "position": [21.16072, -86.73225],
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://cancunscubacenter.com/dive-sites/"
+      ],
+      "excluded": "closed: CONANP recovery subzone since 1998, tourism not permitted"
+    },
+    {
+      "name": "San Martín",
+      "template": null,
+      "position": [21.15432, -86.73225],
+      "listedBy": ["https://cancunscubacenter.com/dive-sites/"],
+      "excluded": "on one operator list only (Cancún Scuba Center)"
+    },
+    {
+      "name": "Santo Remedio",
+      "template": "santo-remedio-reef-cancun",
+      "position": [21.15095, -86.73912],
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://cancunscubacenter.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Chitales (Chitales Grande, Chitales Chico)",
+      "template": "chitales-reef-cancun",
+      "position": [21.14615, -86.74822],
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://web.archive.org/web/20241005035901/https://mexicancaribbean.travel/cancun/things-to-do/nature-and-adventure/diving.html",
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures",
+        "https://www.scubatotal.com/post/dive-into-paradise-best-9-scuba-sites-in-cancun"
+      ]
+    },
+    {
+      "name": "El Bajito (Punta Cancún)",
+      "template": null,
+      "position": [21.13767, -86.74427],
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://cancunscubacenter.com/dive-sites/"
+      ],
+      "excluded": "closed: CONANP preservation subzone, scuba not permitted"
+    },
+    {
+      "name": "Barbones",
+      "template": null,
+      "listedBy": ["https://faolex.fao.org/docs/pdf/mex157815.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "El Túnel (Tunnel Reef)",
+      "template": null,
+      "listedBy": [
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures",
+        "https://www.scubatotal.com/post/dive-into-paradise-best-9-scuba-sites-in-cancun"
+      ]
+    },
+    {
+      "name": "Grampín",
+      "template": null,
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://solobuceo.com/cancun-diving-sites",
+        "https://aquaworld.com.mx/buceo-en-barco-hundido-y-arrecife/",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures"
+      ]
+    },
+    {
+      "name": "Punta Negra",
+      "template": null,
+      "listedBy": [
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://aquaworld.com.mx/buceo-en-barco-hundido-y-arrecife/",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures"
+      ]
+    },
+    {
+      "name": "Las Cuevas de Afuera",
+      "template": null,
+      "position": [21.12422, -86.64042],
+      "listedBy": ["https://cancunscubacenter.com/dive-sites/"],
+      "excluded": "on one operator list only (Cancún Scuba Center)"
+    },
+    {
+      "name": "La Herradura (Cancún; Horseshoe Reef)",
+      "template": null,
+      "listedBy": [
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://solobuceo.com/cancun-diving-sites",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures"
+      ]
+    },
+    {
+      "name": "Ginas",
+      "template": null,
+      "position": [21.12069, -86.69827],
+      "listedBy": ["https://cancunscubacenter.com/dive-sites/"],
+      "excluded": "on one operator list only (Cancún Scuba Center)"
+    },
+    {
+      "name": "C-58 General Anaya",
+      "template": null,
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://web.archive.org/web/20241005035901/https://mexicancaribbean.travel/cancun/things-to-do/nature-and-adventure/diving.html",
+        "https://web.archive.org/web/20241005035227/https://mexicancaribbean.travel/isla-mujeres/things-to-do/water-activities.html",
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/2-tank-dive-shipwreck-drift-dive/",
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://solobuceo.com/cancun-diving-sites",
+        "https://aquaworld.com.mx/buceo-en-barco-hundido-y-arrecife/",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures",
+        "https://www.scubatotal.com/post/dive-into-paradise-best-9-scuba-sites-in-cancun",
+        "https://www.scubatotal.com/post/exploring-hidden-gems-unique-dive-spots-in-cancun-beyond-the-tourist-trail"
+      ]
+    },
+    {
+      "name": "C-55 Juan de la Barrera",
+      "template": null,
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://web.archive.org/web/20241005035227/https://mexicancaribbean.travel/isla-mujeres/things-to-do/water-activities.html",
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://www.mundacadivers.com/dives-for-certified-divers",
+        "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/2-tank-dive-shipwreck-drift-dive/",
+        "https://solobuceo.com/cancun-diving-sites",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures",
+        "https://www.scubatotal.com/post/dive-into-paradise-best-9-scuba-sites-in-cancun"
+      ]
+    },
+    {
+      "name": "Chairel (Casetas)",
+      "template": null,
+      "listedBy": [
+        "https://www.pocnadivecenter.com/dive-sites",
+        "https://squaloadventures.com/tours/isla-mujeres-scuba-diving/2-tank-dive-shipwreck-drift-dive/"
+      ]
+    },
+    {
+      "name": "San Toribio (No Name Reef)",
+      "template": null,
+      "listedBy": [
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures",
+        "https://www.scubatotal.com/post/dive-into-paradise-best-9-scuba-sites-in-cancun"
+      ]
+    },
+    {
+      "name": "San Miguel",
+      "template": null,
+      "listedBy": [
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures"
+      ],
+      "excluded": "on one operator list only (Scuba Total)"
+    },
+    {
+      "name": "Aristos",
+      "template": null,
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://www.scubatotal.com/post/top-8-dive-sites-in-cancun-a-diver-s-guide-to-the-caribbean-s-hidden-treasures"
+      ]
+    },
+    {
+      "name": "La Iglesia",
+      "template": null,
+      "listedBy": [
+        "https://cancunscubacenter.com/dive-sites/",
+        "https://www.scubatotal.com/post/dive-into-paradise-best-9-scuba-sites-in-cancun"
+      ]
+    },
+    {
+      "name": "Black Tip Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubatotal.com/post/dive-into-paradise-best-9-scuba-sites-in-cancun"
+      ],
+      "excluded": "on one operator list only (Scuba Total)"
+    },
+    {
+      "name": "Punta Cancún",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20241005035901/https://mexicancaribbean.travel/cancun/things-to-do/nature-and-adventure/diving.html"
+      ],
+      "excluded": "generic headland name on the tourism board list; its reefs are counted by name"
+    },
+    {
+      "name": "Manta Valley",
+      "template": null,
+      "listedBy": ["https://solobuceo.com/cancun-diving-sites"],
+      "excluded": "on one operator list only (Solo Buceo)"
+    },
+    {
+      "name": "Punta Nizuc (Segunda Barrera)",
+      "template": null,
+      "listedBy": [
+        "https://faolex.fao.org/docs/pdf/mex157815.pdf",
+        "https://web.archive.org/web/20241005035901/https://mexicancaribbean.travel/cancun/things-to-do/nature-and-adventure/diving.html"
+      ]
+    },
+    {
+      "name": "La Boya de los Locos",
+      "template": null,
+      "position": [21.01794, -86.76719],
+      "listedBy": ["https://cancunscubacenter.com/dive-sites/"],
+      "excluded": "on one operator list only (Cancún Scuba Center)"
+    },
+    {
+      "name": "Punta Nizuc Primera Barrera",
+      "template": null,
+      "listedBy": ["https://faolex.fao.org/docs/pdf/mex157815.pdf"],
+      "excluded": "snorkel-only: the 2016 CONANP programme bars scuba there"
+    },
+    {
+      "name": "Punta Nizuc Tercera Barrera",
+      "template": null,
+      "listedBy": ["https://faolex.fao.org/docs/pdf/mex157815.pdf"],
+      "excluded": "closed: CONANP preservation subzone, scuba not permitted"
+    },
+    {
+      "name": "Limones",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "Manchones (Puerto Morelos)",
+      "template": null,
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf",
+        "https://web.archive.org/web/20241005030020/https://mexicancaribbean.travel/puerto-morelos/things-to-do/water-activities.html"
+      ]
+    },
+    {
+      "name": "La Bonanza",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "El Peligro",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "La Estufa",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "La Herradura (Puerto Morelos)",
+      "template": null,
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf",
+        "https://web.archive.org/web/20241005030020/https://mexicancaribbean.travel/puerto-morelos/things-to-do/water-activities.html"
+      ]
+    },
+    {
+      "name": "El Islote",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "Petempich",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "Cuevones (Puerto Morelos)",
+      "template": null,
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf",
+        "https://web.archive.org/web/20241005030020/https://mexicancaribbean.travel/puerto-morelos/things-to-do/water-activities.html",
+        "https://www.kooxdiving.com/actividades/buceo-en-el-mar/buceo-arrecife-puerto-morelos/"
+      ]
+    },
+    {
+      "name": "Tanchacté (Tanchacté Norte, Tanchacté Sur)",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "Caracol",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "Picudas",
+      "template": null,
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf",
+        "https://www.kooxdiving.com/actividades/buceo-en-el-mar/buceo-arrecife-puerto-morelos/"
+      ]
+    },
+    {
+      "name": "La Bocana",
+      "template": null,
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf",
+        "https://www.kooxdiving.com/actividades/buceo-en-el-mar/buceo-arrecife-puerto-morelos/"
+      ]
+    },
+    {
+      "name": "La Ceiba",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "Radio Pirata",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "Ojo de Agua",
+      "template": null,
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf",
+        "https://wetset.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "El Muelle",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf"],
+      "excluded": "on the official list only"
+    },
+    {
+      "name": "Jardines (Puerto Morelos)",
+      "template": "jardines-puerto-morelos",
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf",
+        "https://web.archive.org/web/20241005030020/https://mexicancaribbean.travel/puerto-morelos/things-to-do/water-activities.html",
+        "https://wetset.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "La Pared (Puerto Morelos)",
+      "template": null,
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/83_libro_pm.pdf",
+        "https://web.archive.org/web/20241005030020/https://mexicancaribbean.travel/puerto-morelos/things-to-do/water-activities.html",
+        "https://wetset.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Rodman (Rodman's Reef)",
+      "template": "rodman-reef-puerto-morelos",
+      "listedBy": [
+        "https://web.archive.org/web/20241005030020/https://mexicancaribbean.travel/puerto-morelos/things-to-do/water-activities.html",
+        "https://wetset.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Puentes (Puente)",
+      "template": "puentes-reef-puerto-morelos",
+      "listedBy": [
+        "https://web.archive.org/web/20241005030020/https://mexicancaribbean.travel/puerto-morelos/things-to-do/water-activities.html",
+        "https://wetset.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "C-56 Juan Escutia",
+      "template": "c-56-juan-escutia-wreck-puerto-morelos",
+      "listedBy": [
+        "https://web.archive.org/web/20241005030020/https://mexicancaribbean.travel/puerto-morelos/things-to-do/water-activities.html",
+        "https://wetset.com/dive-sites/",
+        "https://www.kooxdiving.com/actividades/buceo-en-el-mar/buceo-arrecife-puerto-morelos/"
+      ]
+    },
+    {
+      "name": "Marina Reef",
+      "template": null,
+      "listedBy": ["https://wetset.com/dive-sites/"],
+      "excluded": "on one operator list only (Wet Set)"
+    },
+    {
+      "name": "Fish Market",
+      "template": null,
+      "listedBy": ["https://wetset.com/dive-sites/"],
+      "excluded": "on one operator list only (Wet Set)"
+    },
+    {
+      "name": "Paraíso (Puerto Morelos)",
+      "template": null,
+      "listedBy": ["https://wetset.com/dive-sites/"],
+      "excluded": "on one operator list only (Wet Set)"
+    },
+    {
+      "name": "Pez Quad",
+      "template": null,
+      "listedBy": ["https://wetset.com/dive-sites/"],
+      "excluded": "on one operator list only (Wet Set)"
+    },
+    {
+      "name": "Finger Reef",
+      "template": null,
+      "listedBy": ["https://wetset.com/dive-sites/"],
+      "excluded": "on one operator list only (Wet Set)"
+    },
+    {
+      "name": "Six-Toed Cat",
+      "template": null,
+      "listedBy": ["https://wetset.com/dive-sites/"],
+      "excluded": "on one operator list only (Wet Set)"
+    },
+    {
+      "name": "Aquarium",
+      "template": null,
+      "listedBy": ["https://wetset.com/dive-sites/"],
+      "excluded": "on one operator list only (Wet Set)"
+    },
+    {
+      "name": "Grouper Alley",
+      "template": null,
+      "listedBy": ["https://wetset.com/dive-sites/"],
+      "excluded": "on one operator list only (Wet Set)"
+    },
+    {
+      "name": "Cuevas",
+      "template": null,
+      "listedBy": ["https://wetset.com/dive-sites/"],
+      "excluded": "on one operator list only (Wet Set)"
+    },
+    {
+      "name": "Mesas",
+      "template": null,
+      "listedBy": ["https://wetset.com/dive-sites/"],
+      "excluded": "on one operator list only (Wet Set)"
+    },
+    {
+      "name": "Punta Maroma",
+      "template": null,
+      "listedBy": ["https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving"],
+      "excluded": "on one operator list only (Dressel Divers)"
+    },
+    {
+      "name": "Maroma Deep",
+      "template": null,
+      "listedBy": ["https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving"],
+      "excluded": "on one operator list only (Dressel Divers)"
+    },
+    {
+      "name": "Sierra",
+      "template": null,
+      "listedBy": ["https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving"],
+      "excluded": "on one operator list only (Dressel Divers)"
+    },
+    {
+      "name": "Cojinuda",
+      "template": null,
+      "listedBy": ["https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving"],
+      "excluded": "on one operator list only (Dressel Divers)"
+    },
+    {
+      "name": "Punta Piedra",
+      "template": null,
+      "listedBy": ["https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving"],
+      "excluded": "on one operator list only (Dressel Divers)"
+    },
+    {
+      "name": "Gatas",
+      "template": null,
+      "listedBy": ["https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving"],
+      "excluded": "on one operator list only (Dressel Divers)"
+    },
+    {
+      "name": "Cabezos",
+      "template": null,
+      "listedBy": ["https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving"],
+      "excluded": "on one operator list only (Dressel Divers)"
+    },
+    {
+      "name": "Paraíso Perdido",
+      "template": null,
+      "listedBy": ["https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving"],
+      "excluded": "on one operator list only (Dressel Divers)"
+    },
+    {
+      "name": "Manchones and Manchoncitos (Dressel Divers, Playa del Carmen page)",
+      "template": null,
+      "listedBy": ["https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving"],
+      "excluded": "on one operator list only (Dressel Divers), and the page may mix in its Cancún sites"
+    },
+    {
+      "name": "Los Arcos",
+      "template": "los-arcos-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/"
+      ]
+    },
+    {
+      "name": "Pared Verde (Green Wall)",
+      "template": "pared-verde-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/"
+      ]
+    },
+    {
+      "name": "Moc-Che Deep",
+      "template": "moc-che-deep-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://www.dresseldivers.com/blog/playa-carmen-reefs-scuba-diving/",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/"
+      ]
+    },
+    {
+      "name": "Moc-Che (Moc-Che Shallow)",
+      "template": "moc-che-shallow-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://www.dresseldivers.com/blog/playa-carmen-reefs-scuba-diving/",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/",
+        "https://tankha.com/diving/playa-del-carmen"
+      ]
+    },
+    {
+      "name": "Cueva del Pargo",
+      "template": "cueva-del-pargo-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving"
+      ]
+    },
+    {
+      "name": "Shangri-La",
+      "template": "shangri-la-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://www.dresseldivers.com/blog/playa-carmen-reefs-scuba-diving/",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/"
+      ]
+    },
+    {
+      "name": "Chun Zumbul (Chun-Zumbul Shallow)",
+      "template": "chun-zumbul-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/"
+      ]
+    },
+    {
+      "name": "Cerebros (Brains)",
+      "template": "cerebros-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/"
+      ]
+    },
+    {
+      "name": "Jardines (Playa del Carmen)",
+      "template": "jardines-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://www.dresseldivers.com/blog/playa-carmen-reefs-scuba-diving/",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/",
+        "https://tankha.com/diving/playa-del-carmen"
+      ]
+    },
+    {
+      "name": "Tortugas (Turtles)",
+      "template": "tortugas-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://www.dresseldivers.com/blog/playa-carmen-reefs-scuba-diving/",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/",
+        "https://tankha.com/diving/playa-del-carmen"
+      ]
+    },
+    {
+      "name": "Sabalos (Tarpon)",
+      "template": null,
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://www.dresseldivers.com/blog/playa-carmen-reefs-scuba-diving/",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/"
+      ]
+    },
+    {
+      "name": "Barracuda",
+      "template": "barracuda-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://www.dresseldivers.com/blog/playa-carmen-reefs-scuba-diving/",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/",
+        "https://tankha.com/dive-sites/barracuda-reef"
+      ]
+    },
+    {
+      "name": "Shark Point (Bull Shark Point)",
+      "template": "shark-point-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://tankha.com/diving/bull-shark-observation-dive",
+        "https://deepmexico.com/"
+      ]
+    },
+    {
+      "name": "Mama Viña",
+      "template": "mama-vina-wreck-playa-del-carmen",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://dresseldivers.com/dive/mexico/playa-del-carmen-scuba-diving",
+        "https://www.dresseldivers.com/blog/playa-carmen-reefs-scuba-diving/",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/"
+      ]
+    },
+    {
+      "name": "Punta Venado",
+      "template": null,
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://scubaplaya.com/en/playa-del-carmen-diving/"
+      ]
+    },
+    {
+      "name": "Universidad",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Escuela",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Chan Yu Yum",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "El Parque",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Grouper Canyon",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Castillo Bajo",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Cañones",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Canales",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Angelitas",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Cuevitas (Puerto Aventuras)",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Castillo Profundo",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Pedregal",
+      "template": null,
+      "listedBy": ["https://prodiveinternational.com/location/puerto-aventuras/"],
+      "excluded": "on one operator list only (Pro Dive International)"
+    },
+    {
+      "name": "Xa-Ak",
+      "template": null,
+      "listedBy": ["https://akumaldiveshop.com/diving/akumal-dive-sites/"],
+      "excluded": "on one operator list only (Akumal Dive Shop)"
+    },
+    {
+      "name": "Yal-Ku",
+      "template": null,
+      "listedBy": [
+        "https://akumaldiveshop.com/diving/akumal-dive-sites/",
+        "https://www.akumaldivecenter.com/post/scuba-diving-tulum-discover-the-best-reefs-and-cenotes"
+      ],
+      "excluded": "on one operator list only (Akumal Dive Shop); Akumal Dive Center names the Yal-Ku lagoon park, not a dive site"
+    },
+    {
+      "name": "Las Redes",
+      "template": null,
+      "listedBy": ["https://akumaldiveshop.com/diving/akumal-dive-sites/"],
+      "excluded": "on one operator list only (Akumal Dive Shop)"
+    },
+    {
+      "name": "Dick's Reef",
+      "template": null,
+      "listedBy": ["https://akumaldiveshop.com/diving/akumal-dive-sites/"],
+      "excluded": "on one operator list only (Akumal Dive Shop)"
+    },
+    {
+      "name": "Motorcycle Reef",
+      "template": null,
+      "listedBy": ["https://akumaldiveshop.com/diving/akumal-dive-sites/"],
+      "excluded": "on one operator list only (Akumal Dive Shop)"
+    },
+    {
+      "name": "Tzimin-Ha",
+      "template": null,
+      "listedBy": ["https://akumaldiveshop.com/diving/akumal-dive-sites/"],
+      "excluded": "on one operator list only (Akumal Dive Shop)"
+    },
+    {
+      "name": "Trigger Fish",
+      "template": null,
+      "listedBy": ["https://akumaldiveshop.com/diving/akumal-dive-sites/"],
+      "excluded": "on one operator list only (Akumal Dive Shop)"
+    },
+    {
+      "name": "Gonzalo's Reef",
+      "template": null,
+      "listedBy": ["https://akumaldiveshop.com/diving/akumal-dive-sites/"],
+      "excluded": "on one operator list only (Akumal Dive Shop)"
+    }
+  ]
+}

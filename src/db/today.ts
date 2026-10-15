@@ -359,6 +359,13 @@ export type OpenRollCall = {
    * that could mean either is exactly the wording that stops being read.
    */
   uncounted: number;
+  /**
+   * Of the people at that checkpoint, how many have no result yet: nobody has
+   * recorded them missing or back aboard. Beside `uncounted` because a
+   * missing row's `uncounted` is only the people recorded not back aboard,
+   * and the stale-roll-call alert says both numbers (EAP review on H-118).
+   */
+  awaiting: number;
   /** How many people that checkpoint was counting (see `inAfterDivePopulation`). */
   total: number;
   /**
@@ -378,6 +385,11 @@ export type OpenRollCall = {
    * or null. Optional so a gap assembled by hand says nothing about it.
    */
   alertedAt?: Date | null;
+  /**
+   * When the shop's shore contact was sent the same alert (H-118,
+   * `trips.roll_call_shore_alerted_at`), or null. Optional for the same reason.
+   */
+  shoreAlertedAt?: Date | null;
 };
 
 /**
@@ -492,6 +504,7 @@ export async function listRollCallGaps(
       priceCents: trips.priceCents,
       plannedDives: trips.plannedDives,
       alertedAt: trips.rollCallAlertedAt,
+      shoreAlertedAt: trips.rollCallShoreAlertedAt,
     })
     .from(trips)
     .where(
@@ -691,6 +704,7 @@ export async function listRollCallGaps(
       underway,
       stale,
       alertedAt: trip.alertedAt,
+      shoreAlertedAt: trip.shoreAlertedAt,
     };
 
     // A human said a diver did not come back. That outranks every other gap on
@@ -715,6 +729,7 @@ export async function listRollCallGaps(
         reason: "missing_diver",
         diveNumber: missingDive,
         uncounted: notBackAboard[missingDive] ?? 0,
+        awaiting: (unaccounted[missingDive] ?? 0) - (notBackAboard[missingDive] ?? 0),
         total: population[missingDive] ?? 0,
       });
     } else if (openDive >= 1) {
@@ -723,6 +738,7 @@ export async function listRollCallGaps(
         reason: "after_dive_uncounted",
         diveNumber: openDive,
         uncounted: unaccounted[openDive] ?? 0,
+        awaiting: (unaccounted[openDive] ?? 0) - (notBackAboard[openDive] ?? 0),
         total: population[openDive] ?? 0,
       });
     }
@@ -743,6 +759,8 @@ export async function listRollCallGaps(
         reason: "missing_crew",
         diveNumber: crewMissingDive,
         uncounted: crewNotBackAboard[crewMissingDive] ?? 0,
+        awaiting:
+          (crewUnaccounted[crewMissingDive] ?? 0) - (crewNotBackAboard[crewMissingDive] ?? 0),
         total: crewPopulation[crewMissingDive] ?? 0,
       });
     } else if (crewOpenDive >= 1) {
@@ -751,6 +769,7 @@ export async function listRollCallGaps(
         reason: "crew_uncounted",
         diveNumber: crewOpenDive,
         uncounted: crewUnaccounted[crewOpenDive] ?? 0,
+        awaiting: (crewUnaccounted[crewOpenDive] ?? 0) - (crewNotBackAboard[crewOpenDive] ?? 0),
         total: crewPopulation[crewOpenDive] ?? 0,
       });
     }
@@ -767,6 +786,7 @@ export async function listRollCallGaps(
           reason: "no_roll_call",
           diveNumber: 0,
           uncounted: bookingIds.length,
+          awaiting: bookingIds.length,
           total: bookingIds.length,
         });
       } else if (departureAwaiting > 0) {
@@ -775,6 +795,7 @@ export async function listRollCallGaps(
           reason: "departure_uncounted",
           diveNumber: 0,
           uncounted: departureAwaiting,
+          awaiting: departureAwaiting,
           total: bookingIds.length,
         });
       }

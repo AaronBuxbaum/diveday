@@ -1,0 +1,389 @@
+{
+  "area": "aruba",
+  "method": "Aruba, ordered from the California Lighthouse down the west coast past Oranjestad and along the south coast to San Nicolas and Baby Beach, then the north-east coast. No official site list exists: Parke Marino Aruba (Fundacion Parke Nacional Aruba) publishes no named-site or mooring list, and the Aruba Tourism Authority (aruba.com) lists operators, not sites; visitaruba.com is a private guide, read for leads only. Operator lists read, each counted as one: JADS Dive Center, Red Sail Sports, ScubaCaribe (its Aruba diving map), Aruba Watersports Center, S.E. Aruba Fly 'n Dive (its own site list as published on its aruba.com operator profile), and Aqua Windies. Aruba Bob, Native Divers and Unique Sports publish no readable site list; DivePlannerPro 'reachable from' pages, PADI/SSI directories, magazines and blogs were read for leads only. A site is counted when it is named, recreationally divable on scuba and on at least two independent lists. Malmok Reef with the Debbie II is one row because Red Sail and ScubaCaribe sell it as one dive; Harbour Reef carries its pilot-boat/tugboat wreck as an alias; Aqua Windies' 'Airplane Wreck' (a Convair 400 and a Beech 18) is credited to the Renaissance Airplanes. Topaz is excluded at technical depth; one-list names are kept as excluded rows. Red Sail's and ScubaCaribe's lists share names and order on the south coast and may descend from the same older map. Counted 2026-10-14.",
+  "sources": [
+    "https://jadsaruba.com/scuba/dive-sites/",
+    "https://redsailaruba.com/dive-sites/",
+    "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+    "https://arubawatersportscenter.com/aruba-activities/scuba-diving-in-aruba",
+    "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+    "https://www.aquawindies.com/divesites"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "California Wreck",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe); exposed north-coast wreck"
+    },
+    {
+      "name": "Arashi Reef (Arashi Airplane)",
+      "template": "arashi-reef-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://arubawatersportscenter.com/aruba-activities/scuba-diving-in-aruba",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Antilla Wreck",
+      "template": "antilla-wreck-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://arubawatersportscenter.com/aruba-activities/scuba-diving-in-aruba",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Malmok Reef and Debbie II (Blue Reef)",
+      "template": "malmok-reef-debbie-ii-aruba",
+      "listedBy": [
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Star Gerren (Star Green)",
+      "template": "star-gerren-aruba",
+      "listedBy": [
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://arubawatersportscenter.com/aruba-activities/scuba-diving-in-aruba",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Pedernales",
+      "template": "pedernales-wreck-aruba",
+      "listedBy": [
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://arubawatersportscenter.com/aruba-activities/scuba-diving-in-aruba",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Harbour Reef (Pilot Boat, Tugboat)",
+      "template": "harbor-reef-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Renaissance Airplanes (Sonesta Airplanes)",
+      "template": "renaissance-airplanes-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Masbango Reef",
+      "template": null,
+      "listedBy": ["https://jadsaruba.com/scuba/dive-sites/"],
+      "excluded": "on one list only (JADS)"
+    },
+    {
+      "name": "Sponge Reef",
+      "template": "sponge-reef-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Morning Star and Mi Dushi wrecks",
+      "template": null,
+      "listedBy": ["https://jadsaruba.com/scuba/dive-sites/"],
+      "excluded": "on one list only (JADS)"
+    },
+    {
+      "name": "Bali Barge Wreck",
+      "template": null,
+      "listedBy": ["https://jadsaruba.com/scuba/dive-sites/"],
+      "excluded": "on one list only (JADS)"
+    },
+    {
+      "name": "Topaz",
+      "template": null,
+      "listedBy": ["https://jadsaruba.com/scuba/dive-sites/"],
+      "excluded": "on one list only (JADS); technical depth (shallowest ~110 ft, deepest 140+ ft per JADS)"
+    },
+    {
+      "name": "Tire Reef",
+      "template": "tire-reef-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Barrel Gardens",
+      "template": null,
+      "listedBy": ["https://jadsaruba.com/scuba/dive-sites/"],
+      "excluded": "on one list only (JADS)"
+    },
+    {
+      "name": "Channel Reef",
+      "template": null,
+      "listedBy": ["https://jadsaruba.com/scuba/dive-sites/"],
+      "excluded": "on one list only (JADS)"
+    },
+    {
+      "name": "Barcadera Reef",
+      "template": "barcadera-reef-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Kantil Reef",
+      "template": "kantil-reef-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Skalahein (Skalaheim)",
+      "template": "skalahein-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Jane Sea Wreck (Jane C)",
+      "template": "jane-sea-wreck-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Plonco Reef (Balashi Reef)",
+      "template": "plonco-reef-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "De Palm Slope (Palm Slope)",
+      "template": "de-palm-slope-aruba",
+      "listedBy": [
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aruba.com/us/explore/searuba-fly-n-dive",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Captain's Choice",
+      "template": "captains-choice-aruba",
+      "listedBy": [
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ]
+    },
+    {
+      "name": "The Finger (Fingers Reef)",
+      "template": "the-finger-aruba",
+      "listedBy": [
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Mike's Reef",
+      "template": null,
+      "listedBy": [
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ]
+    },
+    {
+      "name": "Mangel Halto Reef",
+      "template": "mangel-halto-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Hole in the Wall (Rocky Beach, Pos Chiquito)",
+      "template": "hole-in-the-wall-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Spanish Lagoon Reef",
+      "template": null,
+      "listedBy": [
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ]
+    },
+    {
+      "name": "Santo Largo",
+      "template": "santo-largo-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Isla di Oro Reef",
+      "template": null,
+      "listedBy": [
+        "https://redsailaruba.com/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Commandeur's Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Lago Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Indian Head",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "The Cross",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Baby Beach Reef",
+      "template": "baby-beach-reef-aruba",
+      "listedBy": [
+        "https://jadsaruba.com/scuba/dive-sites/",
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf",
+        "https://www.aquawindies.com/divesites"
+      ]
+    },
+    {
+      "name": "Santana Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Six Sisters",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Cabez Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Shark Caves",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Boca Grandi",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Dos Playa",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Natural Bridge",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2020/12/ScubaCaribe-Aruba-Diving-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    }
+  ]
+}

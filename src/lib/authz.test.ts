@@ -4,10 +4,12 @@ import { DIVER_LOCALES, type DiverLocale } from "@/i18n/settings";
 import {
   ALL_ROLES,
   canAddDiver,
+  canBackfillIntegrations,
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
   canErasePersonalData,
+  canExportDisputeSheet,
   canExportIncidentRecord,
   canExportShopData,
   canImportShopData,
@@ -191,6 +193,22 @@ describe("canExportIncidentRecord (owner only)", () => {
   });
 });
 
+describe("canExportDisputeSheet (owner or manager)", () => {
+  it("admits the accountable roles and nobody who runs the water", () => {
+    expect(canExportDisputeSheet(["owner"])).toBe(true);
+    expect(canExportDisputeSheet(["manager"])).toBe(true);
+    for (const role of ["instructor", "divemaster", "captain", "crew", "diver"] as const) {
+      expect(canExportDisputeSheet([role])).toBe(false);
+    }
+  });
+
+  it("admits a manager who also holds an operating role, and refuses empty roles", () => {
+    expect(canExportDisputeSheet(["captain", "manager"])).toBe(true);
+    expect(canExportDisputeSheet([])).toBe(false);
+    expect(canExportDisputeSheet(undefined)).toBe(false);
+  });
+});
+
 describe("canErasePersonalData (owner only)", () => {
   it("admits only the owner: erasure is one-way, removal is the manager's tool", () => {
     expect(canErasePersonalData(["owner"])).toBe(true);
@@ -305,6 +323,15 @@ describe("canReadPrivateRecapPulse and the promise on the recap form", () => {
       }
     });
   }
+});
+
+describe("canBackfillIntegrations", () => {
+  it("is the owner's alone, because it posts history into the shop's books", () => {
+    expect(canBackfillIntegrations(["owner"])).toBe(true);
+    expect(canBackfillIntegrations(["manager"])).toBe(false);
+    expect(canBackfillIntegrations(["captain", "crew", "divemaster", "instructor"])).toBe(false);
+    expect(canBackfillIntegrations(undefined)).toBe(false);
+  });
 });
 
 describe("canManageBilling", () => {

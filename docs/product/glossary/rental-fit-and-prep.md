@@ -326,7 +326,13 @@
   — a known, documented, narrower residual gap rather than a full close: an attacker who already
   knows a specific person's exact name and email is not stopped. See
   [20260725-checklist-age-disclosure](../../architecture/decisions/20260725-checklist-age-disclosure.md).
-  Real age verification stays a dock-side ID check.
+  Real age verification stays a dock-side ID check. **A stored date is cleared only with the
+  18-or-older answer** (H-100, issue #2167): emptying it on the diver record is refused unless the
+  staffer ticks "They're 18 or older" in the same save, and refused outright while the diver holds
+  a seat on a course with a minimum age. When the date on file makes the diver under 18 today, the
+  box names that age. The clear writes `date_of_birth_cleared_as_adult` to the diver's activity
+  trail, naming the staffer, so a date typed later, which drops the answer, does not drop who gave
+  it.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air
   (recreationally 22–40% O₂). DiveDay models the **nitrox specialty card** separately from the
   recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified. A card

@@ -27,7 +27,12 @@ vi.mock("@/db/orders", () => ({
 vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
 vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
 vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
-vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn() }));
+vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn(), summarizeStripePayout: vi.fn() }));
+// A paid payout's summary runs after the response; the tests run what was handed over.
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: vi.fn(),
+}));
 vi.mock("@/db/stripe-restricted", () => ({
   tellOwnersPaymentsRestricted: vi.fn(),
 }));
@@ -61,7 +66,8 @@ const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPayment
 const { recordStripeChargeRefund } = await import("@/db/refunds");
 const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
-const { recordStripePayout } = await import("@/db/payouts");
+const { recordStripePayout, summarizeStripePayout } = await import("@/db/payouts");
+const { after } = await import("next/server");
 const { applyStripeAccountStatus, disconnectShopStripeAccount, stripeAccountHolder } = await import(
   "@/db/stripe-accounts"
 );
@@ -127,6 +133,8 @@ beforeEach(() => {
   vi.mocked(recordStripeChargeRefund).mockReset();
   vi.mocked(recordStripeDispute).mockReset();
   vi.mocked(recordStripePayout).mockReset();
+  vi.mocked(summarizeStripePayout).mockReset();
+  vi.mocked(after).mockReset();
   vi.mocked(recordTipStripeCustomer).mockReset().mockResolvedValue(false);
   vi.mocked(claimStripeWebhookEvent).mockReset().mockResolvedValue(true);
   vi.mocked(hasNewerAccountUpdate).mockReset().mockResolvedValue(false);
@@ -908,23 +916,19 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
         },
       });
       expect(response.status).toBe(200);
-      expect(recordStripePayout).toHaveBeenCalledWith(
-        FAKE_DB,
-        {
-          stripeAccountId: "acct_1",
-          occurredAt: new Date(created * 1000),
-          payout: {
-            id: "po_1",
-            amountCents: 184_200,
-            currency: "usd",
-            status: "paid",
-            arrivalDate: new Date((created - 3_600) * 1000),
-            automatic: true,
-            failureCode: null,
-          },
+      expect(recordStripePayout).toHaveBeenCalledWith(FAKE_DB, {
+        stripeAccountId: "acct_1",
+        occurredAt: new Date(created * 1000),
+        payout: {
+          id: "po_1",
+          amountCents: 184_200,
+          currency: "usd",
+          status: "paid",
+          arrivalDate: new Date((created - 3_600) * 1000),
+          automatic: true,
+          failureCode: null,
         },
-        expect.anything(),
-      );
+      });
     });
 
     it("a payout with no connected account, or a malformed one, changes nothing", async () => {
@@ -982,28 +986,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
         ).status,
       ).toBe(200);
       expect(recordStripePayout).not.toHaveBeenCalled();
-    });
-
-    it("a deferred payout answers 503 and gives its claim back, without paging anyone", async () => {
-      vi.mocked(recordStripePayout).mockResolvedValue({ status: "deferred" });
-      const response = await post({
-        id: "evt_po_defer",
-        type: "payout.paid",
-        account: "acct_1",
-        data: {
-          object: {
-            id: "po_1",
-            amount: 100,
-            currency: "usd",
-            arrival_date: 1_800_000_000,
-            status: "paid",
-            automatic: true,
-          },
-        },
-      });
-      expect(response.status).toBe(503);
-      expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, "evt_po_defer");
-      expect(Sentry.captureException).not.toHaveBeenCalled();
     });
 
     it("records the PaymentIntent a settling session and a paid invoice name", async () => {

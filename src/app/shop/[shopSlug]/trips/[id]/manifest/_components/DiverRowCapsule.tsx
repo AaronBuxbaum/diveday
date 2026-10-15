@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
-import { medicalWarningChips } from "@/i18n/manifest-labels";
+import { medicalHoldChip, medicalWarningChips } from "@/i18n/manifest-labels";
 import { staffParticipantTypeLabel, staffSeatTypeNote } from "@/i18n/participant-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -17,7 +17,7 @@ import type { DiverRowState } from "./diver-row-state";
  */
 export function diverCapsule(
   diver: TripManifest["divers"][number],
-  { splitAfterDive, diverStatus, capsuleKind, medicalDays }: DiverRowState,
+  { splitAfterDive, diverStatus, capsuleKind, medicalDays, medicalHold }: DiverRowState,
   t: StaffTranslator,
 ): ReactNode {
   return capsuleKind === "buddy" && diver.buddyAlert ? (
@@ -26,6 +26,8 @@ export function diverCapsule(
     </Badge>
   ) : capsuleKind === "blocked" ? (
     <Badge tone={readinessStatusTone(diverStatus)}>{readinessStatusText(t, diverStatus)}</Badge>
+  ) : capsuleKind === "medicalHold" && medicalHold ? (
+    <Badge tone="warning">{medicalHoldChip(t, medicalHold)}</Badge>
   ) : capsuleKind === "medical" ? (
     <Badge tone="warning">{medicalWarningChips(t, medicalDays)[0]}</Badge>
   ) : capsuleKind === "minor" ? (

@@ -20,9 +20,10 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { diveDay } from "./dive-days";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
+import { recordDiverActivity } from "./operations";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { listPersonBookingPayments } from "./payments";
@@ -34,6 +35,7 @@ import {
   certifications,
   courses,
   nitroxCertifications,
+  type Person,
   people,
   personRoles,
   priorVisits,
@@ -43,6 +45,7 @@ import {
   tripReviews,
   trips,
 } from "./schema";
+import { livePerson } from "./trips-live";
 import {
   getCurrentWaiverGeneration,
   getDiverWaiverChannelStates,
@@ -119,6 +122,49 @@ export async function createDiver(db: AppDb, input: NewDiver) {
   }
 }
 
+/**
+ * What a contact-details save came to. `not_found` is a record this shop
+ * cannot edit (removed, merged away, or another shop's); `email_in_use` an
+ * address another live diver holds; `age_unstated` a stored date of birth
+ * emptied without "They're 18 or older" (issue #2167); `date_of_birth_required`
+ * a stored date emptied while the diver holds a seat on a course with a
+ * minimum age, where no answer stands in for the date. `adultAnswerUnused` is
+ * a save that kept "They're 18 or older" off the record because a date of
+ * birth is on file, which the staffer is told (issue #2167).
+ */
+export type UpdateDiverResult =
+  | { ok: true; person: Person; adultAnswerUnused: boolean }
+  | {
+      ok: false;
+      reason: "not_found" | "email_in_use" | "age_unstated" | "date_of_birth_required";
+    };
+
+/**
+ * Whether this diver holds a seat on a departure, not yet over, whose course
+ * has a minimum age: the gate that reads the date of birth itself.
+ */
+async function holdsAgeGatedSeat(db: DbExecutor, shopId: string, personId: string) {
+  const [seat] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(courses, eq(courses.id, trips.courseId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.personId, personId),
+        ne(bookings.status, "cancelled"),
+        eq(trips.shopId, shopId),
+        isNull(trips.deletedAt),
+        gte(trips.endsAt, nowDate()),
+        eq(courses.shopId, shopId),
+        isNotNull(courses.minimumAge),
+      ),
+    )
+    .limit(1);
+  return Boolean(seat);
+}
+
 export async function updateDiver(
   db: AppDb,
   input: {
@@ -131,6 +177,11 @@ export async function updateDiver(
     /** Date-only "YYYY-MM-DD", or "" to clear. Undefined leaves it untouched. */
     dateOfBirth?: string;
     /**
+     * The staffer who ticked "They're 18 or older" in this save. Read only
+     * when the save empties a stored date of birth, which it must accompany.
+     */
+    adultAttestedByPersonId?: string;
+    /**
      * Staff-entered directly on the diver record (task 144 — Today used to say
      * "ask at the counter" with no field to type it into). Undefined leaves it
      * untouched; "" clears it — unlike `saveBookingEmergencyContact`'s
@@ -140,7 +191,7 @@ export async function updateDiver(
     emergencyContactName?: string;
     emergencyContactPhone?: string;
   },
-) {
+): Promise<UpdateDiverResult> {
   const email = input.email?.trim().toLowerCase() || null;
   if (email) {
     const [existing] = await db
@@ -155,50 +206,91 @@ export async function updateDiver(
         ),
       )
       .limit(1);
-    if (existing) return null;
+    if (existing) return { ok: false, reason: "email_in_use" };
   }
   const phone = await storedPhone(db, input.shopId, input.phone?.trim() || null);
+  const dateOfBirth =
+    input.dateOfBirth === undefined ? undefined : input.dateOfBirth.trim() || null;
   try {
-    const [person] = await db
-      .update(people)
-      .set({
-        fullName: input.fullName.trim(),
-        email,
-        phone,
-        ...(input.diveInsurance === undefined
-          ? {}
-          : { diveInsurance: input.diveInsurance.trim() || null }),
-        ...(input.dateOfBirth === undefined
-          ? {}
-          : { dateOfBirth: input.dateOfBirth.trim() || null }),
-        // A date answers the age question, so a staffer's earlier "18 or
-        // older" (H-100) goes: clearing the date later must not bring back an
-        // adult claim the date may have disproved (dive-domain review).
-        ...(input.dateOfBirth?.trim()
-          ? { adultAttestedAt: null, adultAttestedByPersonId: null }
-          : {}),
-        ...(input.emergencyContactName === undefined
-          ? {}
-          : { emergencyContactName: input.emergencyContactName.trim() || null }),
-        ...(input.emergencyContactPhone === undefined
-          ? {}
-          : { emergencyContactPhone: input.emergencyContactPhone.trim() || null }),
-      })
-      .where(
-        and(
-          eq(people.id, input.personId),
-          eq(people.shopId, input.shopId),
-          isNull(people.deletedAt),
-          isNull(people.mergedIntoPersonId),
-        ),
-      )
-      .returning();
-    return person ?? null;
+    return await db.transaction(async (tx): Promise<UpdateDiverResult> => {
+      const editable = and(
+        eq(people.id, input.personId),
+        eq(people.shopId, input.shopId),
+        isNull(people.mergedIntoPersonId),
+      );
+      // Locked, so the date this reads is the one the write replaces.
+      const [current] = await tx
+        .select({ dateOfBirth: people.dateOfBirth })
+        .from(people)
+        .where(and(editable, livePerson()))
+        .limit(1)
+        .for("no key update");
+      if (!current) return { ok: false, reason: "not_found" };
+      // **Emptying a date asks for an age** (Aaron, 2026-10-13, issue #2167,
+      // option a). With neither a date nor an answer, the guardian rule and
+      // the minimum-age gate fail open and read the diver as an adult, so a
+      // known minor would become one by a blanked field. The answer is filed
+      // with its staffer, as the held-seat split files it (H-100).
+      const clearing = dateOfBirth === null && current.dateOfBirth !== null;
+      if (clearing && (await holdsAgeGatedSeat(tx, input.shopId, input.personId))) {
+        // A course with a minimum age measures the date itself, which the
+        // split asks for too (H-100): no answer stands in for it there.
+        return { ok: false, reason: "date_of_birth_required" };
+      }
+      if (clearing && !input.adultAttestedByPersonId) return { ok: false, reason: "age_unstated" };
+      // The answer overrides the date it clears, which may have said the
+      // diver was a minor, so who gave it goes on the diver's trail too: a
+      // date typed later empties the answer columns below, never the trail
+      // (dive-domain review of #2167). No line, no clear: an answer from a
+      // staffer no longer on the record is not one.
+      if (
+        clearing &&
+        input.adultAttestedByPersonId &&
+        !(await recordDiverActivity(tx, {
+          shopId: input.shopId,
+          personId: input.personId,
+          actorPersonId: input.adultAttestedByPersonId,
+          code: "date_of_birth_cleared_as_adult",
+        }))
+      ) {
+        return { ok: false, reason: "age_unstated" };
+      }
+      const [person] = await tx
+        .update(people)
+        .set({
+          fullName: input.fullName.trim(),
+          email,
+          phone,
+          ...(input.diveInsurance === undefined
+            ? {}
+            : { diveInsurance: input.diveInsurance.trim() || null }),
+          ...(dateOfBirth === undefined ? {} : { dateOfBirth }),
+          // A date answers the age question, so a staffer's earlier "18 or
+          // older" (H-100) goes: clearing the date later must not bring back an
+          // adult claim the date may have disproved (dive-domain review).
+          ...(dateOfBirth ? { adultAttestedAt: null, adultAttestedByPersonId: null } : {}),
+          ...(clearing
+            ? { adultAttestedAt: nowDate(), adultAttestedByPersonId: input.adultAttestedByPersonId }
+            : {}),
+          ...(input.emergencyContactName === undefined
+            ? {}
+            : { emergencyContactName: input.emergencyContactName.trim() || null }),
+          ...(input.emergencyContactPhone === undefined
+            ? {}
+            : { emergencyContactPhone: input.emergencyContactPhone.trim() || null }),
+        })
+        .where(and(editable, livePerson()))
+        .returning();
+      if (!person) return { ok: false, reason: "not_found" };
+      const adultAnswerUnused =
+        Boolean(input.adultAttestedByPersonId) && !clearing && person.dateOfBirth !== null;
+      return { ok: true, person, adultAnswerUnused };
+    });
   } catch (error) {
     // Same race as the check above, closed instead of just narrowed
     // (people_shop_email_unique, CR-008): a concurrent write claimed this
     // email between the read and this write.
-    if (isUniqueConstraintViolation(error)) return null;
+    if (isUniqueConstraintViolation(error)) return { ok: false, reason: "email_in_use" };
     throw error;
   }
 }

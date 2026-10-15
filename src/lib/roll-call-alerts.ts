@@ -7,7 +7,9 @@ import type { RollCallGapReason } from "./today";
  *
  * Once an after-dive count is still open after the boat was due back, the
  * owner hears about it — by email, and by a push to every device following
- * that departure's manifest — once per departure, and Today's row for the
+ * that departure's manifest — and so does the shop's shore contact, by email,
+ * when the shop recorded their consent (H-118, `./shore-alert-contact.ts`),
+ * once per departure, and Today's row for the
  * count says the alert went. The pass is hourly and asks from half an hour
  * past the end; a count nobody started is only open to Today once the boat
  * is due home (the end plus the hour's return buffer, `hasReturned`), so its

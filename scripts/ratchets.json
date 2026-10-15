@@ -35,7 +35,6 @@
     "src/i18n/locales/en-US/staff/bookings.json": 1,
     "src/i18n/locales/en-US/staff/divers.json": 10,
     "src/i18n/locales/en-US/staff/diveSites.json": 6,
-    "src/i18n/locales/en-US/staff/integrations.json": 4,
     "src/i18n/locales/en-US/staff/manifest.json": 5,
     "src/i18n/locales/en-US/staff/orders.json": 1,
     "src/i18n/locales/en-US/staff/settings.json": 3,
@@ -377,12 +376,11 @@
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
     "src/app/api/test/seed-trouble-states/route.ts": 2040,
-    "src/app/api/webhooks/stripe/route.replay.test.ts": 1369,
-    "src/app/api/webhooks/stripe/route.test.ts": 1876,
-    "src/app/api/webhooks/stripe/route.ts": 932,
+    "src/app/api/webhooks/stripe/route.replay.test.ts": 1260,
+    "src/app/api/webhooks/stripe/route.test.ts": 1858,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1110,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1338,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1337,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 929,
     "src/app/shop/[shopSlug]/page.tsx": 967,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1057,
@@ -390,7 +388,7 @@
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1050,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1180,
-    "src/app/shop/[shopSlug]/trips/[id]/actions.ts": 1062,
+    "src/app/shop/[shopSlug]/trips/[id]/actions.ts": 1061,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 1016,
     "src/components/ui/button.test.ts": 971,
@@ -406,10 +404,10 @@
     "src/db/courses.test.ts": 1719,
     "src/db/dive-sites.test.ts": 1174,
     "src/db/diver-merge.test.ts": 1285,
-    "src/db/divers.test.ts": 3105,
+    "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1178,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1673,
+    "src/db/export.test.ts": 1672,
     "src/db/import.test.ts": 1077,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
@@ -429,7 +427,7 @@
     "src/db/staffing.test.ts": 946,
     "src/db/trips-crew.test.ts": 1489,
     "src/db/trips-queries.test.ts": 1143,
-    "src/db/trips-series.test.ts": 1873,
+    "src/db/trips-series.test.ts": 1785,
     "src/db/waiver-issue.test.ts": 1178,
     "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-orders.test.ts": 1408,
@@ -499,18 +497,16 @@
     "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 378,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
     "src/app/shop/[shopSlug]/gear/page.tsx#GearRegisterPage": 308,
-    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 421,
+    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 420,
     "src/app/shop/[shopSlug]/page.tsx#TodayBody": 463,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 377,
-    "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 409,
+    "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 405,
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
     "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 467,
-    "src/app/shop/[shopSlug]/settings/integrations/page.tsx#IntegrationsSettingsPage": 306,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": 301,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 424,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 359,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 356,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 345,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 338,
@@ -589,16 +585,15 @@
     "src/app/shop/[shopSlug]/orders/page.tsx": 734,
     "src/app/shop/[shopSlug]/page.tsx": 967,
     "src/app/shop/[shopSlug]/promos/page.tsx": 601,
-    "src/app/shop/[shopSlug]/reports/page.tsx": 669,
+    "src/app/shop/[shopSlug]/reports/page.tsx": 662,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 466,
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 416,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
-    "src/app/shop/[shopSlug]/settings/integrations/page.tsx": 489,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 789,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 501,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 519
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 511
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."
@@ -614,8 +609,24 @@
         "files": {
           "src/content/dive-sites/florida-panhandle.ts": "0 -> 1"
         }
+      },
+      {
+        "why": "Harbour Island and Harbour Reef are the places' own names, as the Bahamas and Aruba spell them",
+        "files": {
+          "src/content/dive-areas.ts": "0 -> 1",
+          "src/content/dive-sites/aruba.ts": "0 -> 1"
+        }
+      },
+      {
+        "why": "Harbour Island is the island's own name",
+        "files": {
+          "src/content/dive-sites/bahamas-eleuthera.ts": "0 -> 1"
+        }
       }
     ],
+    "src/content/dive-areas.ts": 1,
+    "src/content/dive-sites/aruba.ts": 1,
+    "src/content/dive-sites/bahamas-eleuthera.ts": 1,
     "src/content/dive-sites/florida-panhandle.ts": 1
   }
 }

@@ -6,6 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { resolveCourtesyEmailUnsubscribeToken } from "@/db/courtesy-email";
 import { resolveLastMinuteListUnsubscribeToken } from "@/db/last-minute-list";
+import { resolveShoreAlertStopToken } from "@/db/shore-alert-tokens";
 import { resolveWeeklyDigestUnsubscribeToken } from "@/db/weekly-digest";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -131,6 +132,29 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
         description={t("weeklyDigestUnsubscribe.description", { shopName: digest.shopName })}
         submitLabel={t("weeklyDigestUnsubscribe.submit")}
         pendingLabel={t("weeklyDigestUnsubscribe.submitting")}
+        token={token}
+      />
+    );
+  }
+
+  // The fourth kind: a shop's shore contact, from a roll-call alert (H-118).
+  const shore = await resolveShoreAlertStopToken(db, token);
+  if (shore) {
+    if (shore.alreadyStopped) {
+      return (
+        <EntryDone
+          glyph="quiet"
+          title={t("shoreAlertStop.confirmedTitle")}
+          text={t("shoreAlertStop.confirmedText", { shopName: shore.shopName })}
+        />
+      );
+    }
+    return (
+      <ConfirmUnsubscribe
+        title={t("shoreAlertStop.title", { shopName: shore.shopName })}
+        description={t("shoreAlertStop.description", { shopName: shore.shopName })}
+        submitLabel={t("shoreAlertStop.submit")}
+        pendingLabel={t("shoreAlertStop.submitting")}
         token={token}
       />
     );

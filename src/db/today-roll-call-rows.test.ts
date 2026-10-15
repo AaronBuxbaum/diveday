@@ -70,13 +70,13 @@ describe("pushRollCallRows after the stale-roll-call alert", () => {
     underway: false,
     stale: false,
   };
-  const rows = (alertedAt: Date | null) => {
+  const rows = (alertedAt: Date | null, shoreAlertedAt: Date | null = null) => {
     const actions: TodayAction[] = [];
     pushRollCallRows(
       actions,
       rowsContext({
         boatsOut: { out: [], blocked: [] },
-        rollCallGaps: [{ ...gap, alertedAt }],
+        rollCallGaps: [{ ...gap, alertedAt, shoreAlertedAt }],
         crewClashState: { departures: [], clashes: new Map(), crew: new Map(), divers: new Map() },
       }),
     );
@@ -86,6 +86,23 @@ describe("pushRollCallRows after the stale-roll-call alert", () => {
   it("names when the owners were alerted, in the shop's zone", () => {
     const [row] = rows(new Date("2026-07-21T16:40:00Z"));
     expect(row?.detail?.replace(/\s+/gu, " ")).toMatch(/Owners alerted: Jul 21, 12:40 PM EDT\.$/);
+  });
+
+  // Dive-domain re-review #7: whoever opens Today knows the shore contact
+  // heard too, so nobody rings them as if they had not.
+  it("names the shore contact beside the owners when the shore copy went too", () => {
+    const at = new Date("2026-07-21T16:40:00Z");
+    const [row] = rows(at, at);
+    expect(row?.detail?.replace(/\s+/gu, " ")).toMatch(
+      /Owners and shore contact alerted: Jul 21, 12:40 PM EDT\.$/,
+    );
+  });
+
+  it("names the shore contact alone when only the shore copy went", () => {
+    const [row] = rows(null, new Date("2026-07-21T16:40:00Z"));
+    expect(row?.detail?.replace(/\s+/gu, " ")).toMatch(
+      /Shore contact alerted: Jul 21, 12:40 PM EDT\.$/,
+    );
   });
 
   it("says nothing of an alert that has not gone", () => {

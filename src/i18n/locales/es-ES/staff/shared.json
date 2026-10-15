@@ -409,7 +409,8 @@
       },
       "checklist": {
         "heading": "Antes de salir del muelle",
-        "checkedLabel": "Verificado — presiona para quitar la marca",
+        "checkedLabel": "Verificado — presiona dos veces para quitar la marca",
+        "confirmClear": "Presiona otra vez para quitar la marca",
         "uncheckedLabel": "Sin verificar — presiona para marcarlo"
       },
       "counter": {
@@ -600,6 +601,7 @@
     "paid": "Pago de {amount} a tu banco el {date}, por lo cobrado del {from} al {to}",
     "paidOneDay": "Pago de {amount} a tu banco el {date}, por lo cobrado el {from}",
     "paidNoSpan": "Pago de {amount} a tu banco el {date}",
+    "canceled": "Se canceló un pago de {amount} previsto para el {date}.",
     "failed": "Falló un pago de {amount} previsto para el {date}. Revisa la cuenta bancaria en Stripe."
   }
 }

@@ -1,1 +1,0 @@
-ALTER TABLE "course_forms" ADD COLUMN "medical_screening" boolean DEFAULT false NOT NULL;

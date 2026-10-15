@@ -2696,6 +2696,53 @@ async function releaseSelfCancelledSeat(
 }
 
 /**
+ * **The one rule for which party seats a lead's cancel takes with it**: still
+ * `booked` and not claimed by their own diver. `cancelUnclaimedPartySeats`
+ * applies it to cancel, `previewPartyCancel` to count, and the lead's party
+ * panel (`issuePartySeatClaims`) to list, so what the SMS prompt and the email
+ * say can never differ from what the settle does.
+ */
+export function partySeatGoesWithLead(seat: {
+  status: (typeof bookings.$inferSelect)["status"];
+  claimedAt: Date | null;
+}): boolean {
+  return seat.status === "booked" && seat.claimedAt === null;
+}
+
+/**
+ * How many party seats a lead's cancel would take with it, and how many it
+ * would leave booked, read without changing anything. Zero and zero for a
+ * booking that is not a lead (a member's own cancel never reaches another
+ * seat) or that has no party. The same selection as
+ * `cancelUnclaimedPartySeats`: this shop, this lead, the lead's own departure,
+ * not already canceled.
+ */
+export async function previewPartyCancel(
+  db: DbExecutor,
+  input: { shopId: string; leadBookingId: string },
+): Promise<{ goes: number; stays: number }> {
+  const [lead] = await db
+    .select({ tripId: bookings.tripId, partyLeadBookingId: bookings.partyLeadBookingId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!lead || lead.partyLeadBookingId !== null) return { goes: 0, stays: 0 };
+  const seats = await db
+    .select({ status: bookings.status, claimedAt: bookings.claimedAt })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.partyLeadBookingId, input.leadBookingId),
+        eq(bookings.tripId, lead.tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  const goes = seats.filter(partySeatGoesWithLead).length;
+  return { goes, stays: seats.length - goes };
+}
+
+/**
  * **The lead's unclaimed seats go with the lead** (batch 6 item 10). Inside
  * the lead's own cancel transaction, so the seats and the lead are released
  * together or not at all. Only seats whose `party_lead_booking_id` is this
@@ -2743,7 +2790,7 @@ export async function cancelUnclaimedPartySeats(
   const outcome: PartyCancelOutcome = { cancelled: [], stayed: [] };
   for (const seat of seats) {
     const name = seatName(seat.fullName, seat);
-    if (seat.claimedAt !== null || seat.status !== "booked") {
+    if (!partySeatGoesWithLead(seat)) {
       outcome.stayed.push({ bookingId: seat.bookingId, seatName: name });
       continue;
     }
