@@ -2,14 +2,35 @@ import { describe, expect, it } from "vitest";
 import { siteProseInUnit } from "./site-prose-units";
 
 describe("siteProseInUnit", () => {
-  it("says a metric measure in feet for a feet shop, rounded to the whole foot", () => {
+  it("says a standard depth as the agency pair a crew says, never a conversion", () => {
     expect(siteProseInUnit("A ship's winch on the bottom in about 12 m.", "feet")).toBe(
-      "A ship's winch on the bottom in about 39 ft.",
+      "A ship's winch on the bottom in about 40 ft.",
     );
-    expect(siteProseInUnit("a 2.6 m bronze statue in about 8 m of water", "feet")).toBe(
-      "a 9 ft bronze statue in about 26 ft of water",
+    expect(siteProseInUnit("The shallowest point at about 18 m.", "feet")).toBe(
+      "The shallowest point at about 60 ft.",
     );
-    expect(siteProseInUnit("Shallow, in 5–9 m.", "feet")).toBe("Shallow, in 16–30 ft.");
+    expect(siteProseInUnit("The sand at about 40 m.", "feet")).toBe("The sand at about 130 ft.");
+    expect(siteProseInUnit("Between 21–30 m.", "feet")).toBe("Between 70–100 ft.");
+  });
+
+  it("rounds any other depth to the nearest 5 ft", () => {
+    expect(siteProseInUnit("Shallow, in 5–9 m.", "feet")).toBe("Shallow, in 15–30 ft.");
+    expect(siteProseInUnit("in about 8 m of water", "feet")).toBe("in about 25 ft of water");
+    expect(siteProseInUnit("The sand at 44 m.", "feet")).toBe("The sand at 145 ft.");
+  });
+
+  it("rounds a length to the nearest 10 ft", () => {
+    expect(siteProseInUnit("A 155 m Navy landing ship.", "feet")).toBe(
+      "A 510 ft Navy landing ship.",
+    );
+    expect(siteProseInUnit("more than 120 m long", "feet")).toBe("more than 390 ft long");
+    expect(siteProseInUnit("A 159 m missile-tracking ship.", "feet")).toBe(
+      "A 520 ft missile-tracking ship.",
+    );
+  });
+
+  it("keeps a small measure to the whole foot", () => {
+    expect(siteProseInUnit("a 2.6 m bronze statue", "feet")).toBe("a 9 ft bronze statue");
   });
 
   it("takes the authored half of a pair rather than converting it", () => {
