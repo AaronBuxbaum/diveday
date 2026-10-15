@@ -283,6 +283,7 @@
     "holdOnSummary": "La pausa por condiciones está activa, así que no se aceptan nuevas reservas",
     "publishedAt": "Publicada {date}",
     "visibilityFact": "{value} de visibilidad",
+    "waterFact": "Agua {value}",
     "automatedWater": "Agua {value}",
     "automatedSeas": "Mar {height} {direction}",
     "automatedWind": "{speed} kt {direction}{hasGusts, select, yes { (rachas {gusts} kt)} other {}}",

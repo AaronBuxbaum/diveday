@@ -283,6 +283,7 @@
     "holdOnSummary": "Conditions hold is on, so new bookings are paused",
     "publishedAt": "Published {date}",
     "visibilityFact": "{value} visibility",
+    "waterFact": "Water {value}",
     "automatedWater": "Water {value}",
     "automatedSeas": "Seas {height} {direction}",
     "automatedWind": "{speed} kt {direction}{hasGusts, select, yes { (gusts {gusts} kt)} other {}}",

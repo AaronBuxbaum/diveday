@@ -44,6 +44,16 @@ describe("tripAboutRows (in-memory PGlite)", () => {
     expect(ids.slice(-2)).toEqual(["about-crew", "series"]);
   });
 
+  it("reads the crew's conditions with the water temperature and a round visibility", async () => {
+    // Fourth review, item 54: the seeded 27 °C never showed on the line, the
+    // afternoon boat read "A calm morning", and 18 m read as an odd 59 ft.
+    const rows = await rowsFor();
+    const conditions = String(rows.find((row) => row.id === "conditions")?.value);
+    expect(conditions).toContain("Water 81 °F");
+    expect(conditions).toContain("60 ft visibility");
+    expect(conditions).not.toContain("morning");
+  });
+
   it("summarises the plan by its sites and says who can book", async () => {
     const rows = await rowsFor();
     const plan = rows.find((row) => row.id === "details");

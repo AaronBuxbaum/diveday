@@ -19,7 +19,7 @@ import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
 import type { requireShopSurface } from "@/lib/session";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
-import { temperatureUnitFor } from "@/lib/temperature-units";
+import { temperatureInUnit, temperatureUnitFor } from "@/lib/temperature-units";
 import { laterMeetingDates } from "@/lib/trip-days";
 import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
 import { updateTripCrewAction } from "../crew-actions";
@@ -145,9 +145,20 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         ]
           .filter((part): part is string => Boolean(part))
           .join(" · ") || t("trips.requirements.summaryNoneRequired");
+  const temperatureUnit = temperatureUnitFor(shop);
   const conditionParts = [
     trip.conditionsSummary,
     trip.surfaceConditions,
+    // The water is half of what a diver dresses for (fourth review, item 54).
+    trip.waterTemperatureC !== null
+      ? t("trips.conditions.waterFact", {
+          value: `${temperatureInUnit(trip.waterTemperatureC, temperatureUnit)} ${t(
+            temperatureUnit === "fahrenheit"
+              ? "shared.temperature.fahrenheit"
+              : "shared.temperature.celsius",
+          )}`,
+        })
+      : null,
     trip.visibilityMeters !== null
       ? t("trips.conditions.visibilityFact", {
           value: `${depthInUnit(trip.visibilityMeters, shop.depthUnit)} ${t(
@@ -291,13 +302,13 @@ export function tripAboutRows(context: TripAboutRowsContext) {
           trip={trip}
           locale={locale}
           timezone={shop.timezone}
-          temperatureUnit={temperatureUnitFor(shop)}
+          temperatureUnit={temperatureUnit}
           depthUnit={shop.depthUnit}
           outlook={
             <ConditionsOutlookSlot
               locale={locale}
               timezone={shop.timezone}
-              temperatureUnit={temperatureUnitFor(shop)}
+              temperatureUnit={temperatureUnit}
               depthUnit={shop.depthUnit}
               automatedForecast={automatedForecast}
               tideLines={tideLines}
