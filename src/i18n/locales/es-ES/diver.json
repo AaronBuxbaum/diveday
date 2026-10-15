@@ -743,7 +743,7 @@
   },
   "register": {
     "title": "Regístrate con {shop}",
-    "intro": "Rellena esto una vez y queda archivado. Te enviaremos la exención para que la firmes; trae tu tarjeta de certificación el día de la inmersión.",
+    "intro": "Rellena esto una vez y queda archivado. Te enviaremos la exención para que la firmes.",
     "nameLabel": "Tu nombre",
     "emailLabel": "Correo electrónico",
     "phoneLabel": "Teléfono",
@@ -2961,8 +2961,7 @@
     "yourEmail": "Tu correo",
     "yourPhone": "Tu teléfono",
     "howManyDivers": "Cuántos buceadores",
-    "orPhone": "(o teléfono)",
-    "orEmail": "(o correo)",
+    "contactHint": "Uno de los dos, para poder responderte.",
     "dateOptionsHeading": "¿Cuándo te gustaría bucear?",
     "whenSuits": "Fechas flexibles",
     "moreDetails": "Más detalles",
@@ -5058,13 +5057,13 @@
       "courtesyUnsubscribe": "Dejar de recibir correos opcionales de {shopName}"
     },
     "tripConditionsHold": {
-      "subject": "Salida en espera por condiciones — {tripTitle}",
+      "subject": "Salida en espera por condiciones: {tripTitle}",
       "body": "Pusimos {tripTitle} en espera por condiciones para el {date}. Tu plaza sigue reservada mientras el equipo toma la decisión final sobre el tiempo.",
       "crewNoteLabel": "Nota del equipo:",
       "seeUpdate": "Consulta la actualización en directo de la salida"
     },
     "tripMinimumNotMet": {
-      "subject": "Salida cancelada — {tripTitle}",
+      "subject": "Salida cancelada: {tripTitle}",
       "body": "Realizamos {tripTitle} el {date} con un mínimo de {minimum, plural, one {# buceador} other {# buceadores}}, y tenía {booked, plural, one {# reserva} other {# reservas}} cuando dijimos que lo decidiríamos, así que se cancela. Tu plaza queda liberada y no tienes que hacer nada.",
       "moneyRefunded": "Te hemos reembolsado el importe completo: el dinero va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
       "moneyRefundOwed": "Te corresponde el reembolso completo, y nos pondremos en contacto contigo para devolvértelo.",
@@ -5080,7 +5079,7 @@
       "findAnother": "Ver qué más hay programado"
     },
     "tripBlowout": {
-      "subject": "Salida cancelada — {tripTitle}",
+      "subject": "Salida cancelada: {tripTitle}",
       "body": "Tuvimos que cancelar {tripTitle} del {date} por el mal tiempo. Tu plaza queda liberada y no necesitas hacer nada.",
       "bodyRunEnded": "Hemos dejado de ofrecer {tripTitle} por ahora, así que la salida del {date} queda cancelada. Tu plaza queda liberada y no necesitas hacer nada.",
       "moneyNone": "No se te ha cobrado nada por esta salida.",
@@ -5094,7 +5093,7 @@
       "seeSchedule": "Ver el calendario completo"
     },
     "bookingConfirmation": {
-      "subject": "Estás a bordo — {tripTitle}",
+      "subject": "Estás a bordo: {tripTitle}",
       "confirmed": "Tu plaza en {tripTitle} está confirmada.",
       "dockNote": "Preséntate en el muelle {dock} antes. Nosotros nos encargamos del resto.",
       "waiverStep": "Primero, firma tu exención. {shopName} la necesita antes de que subas a bordo.",
@@ -5136,12 +5135,12 @@
       "finishPaying": "Terminar de pagar"
     },
     "tripReminder": {
-      "weekSubject": "Sales esta semana — {tripTitle}",
+      "weekSubject": "Sales esta semana: {tripTitle}",
       "weekBody": "Un recordatorio rápido de que {tripTitle} sale esta semana.",
       "weekSubjectCourse": "Tu curso empieza esta semana: {tripTitle}",
       "weekBodyCourse": "Un recordatorio rápido de que {tripTitle} empieza esta semana.",
       "dockNote": "Preséntate en el muelle {dock} antes.",
-      "daySubject": "Sales mañana — {tripTitle}",
+      "daySubject": "Sales mañana: {tripTitle}",
       "dayOpenerFirstTimer": "Mañana buceas con nosotros. Abajo tienes todo lo que necesitas para el día.",
       "dayOpenerReturning": "Un recordatorio rápido de que {tripTitle} sale mañana.",
       "arrival": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
@@ -5156,7 +5155,7 @@
       "day": "Día {number}: {date}, {time}"
     },
     "tripRecap": {
-      "subject": "Tu inmersión con {shopName} — {tripTitle}",
+      "subject": "Tu inmersión con {shopName}: {tripTitle}",
       "thanks": "Gracias por bucear {tripTitle} con nosotros el {date}.",
       "dived": "Buceaste en {sites}.",
       "flySafeAfterDive": "Te pedimos esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
@@ -5464,8 +5463,8 @@
     },
     "inquiryReceived": {
       "subject": "{shopName} recibió tu petición",
-      "course": "Gracias por preguntar por {course}. Recibimos tu petición.",
-      "dive": "Gracias por preguntar por un día de buceo. Recibimos tu petición.",
+      "course": "Gracias por preguntar por {course}. Todavía no hay nada reservado.",
+      "dive": "Gracias por preguntar por un día de buceo. Todavía no hay nada reservado.",
       "dateOne": "Pediste el {date}.",
       "datesTwo": "Pediste el {date} o el {alternate}.",
       "reply": "Te responderemos por correo o por teléfono.",

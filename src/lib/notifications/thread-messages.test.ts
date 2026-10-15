@@ -82,6 +82,10 @@ describe("courseInquiryReceivedEmail", () => {
     });
     expect(email.subject).toBe("Blue Mantis Divers has your request");
     expect(email.text).toContain("Thanks for asking about Advanced Open Water Diver.");
+    // The body adds what the subject does not: nothing is held yet (fourth
+    // review, item 49). Never a second "we have your request".
+    expect(email.text).toContain("Nothing is booked or held yet.");
+    expect(email.text).not.toMatch(/have your request/i);
     expect(email.text).toMatch(/You asked for Oct\s25, 2026, or Nov\s1, 2026\./);
     expect(email.text).toContain("To talk sooner, call +1 305 555 0100.");
     expect(email.text).toMatch(/Desk open 7:00\sAM to 5:00\sPM/);

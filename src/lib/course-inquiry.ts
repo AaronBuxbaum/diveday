@@ -74,8 +74,8 @@ export interface DateRequestCopy {
   yourPhone: string;
   phonePlaceholder: string;
   howManyDivers: string;
-  orPhone: string;
-  orEmail: string;
+  /** One hint for the email and phone pair: either one is enough. */
+  contactHint: string;
   dateOptionsHeading: string;
   preferredDate: string;
   alternateDate: string;

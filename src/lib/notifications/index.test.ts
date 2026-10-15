@@ -83,7 +83,7 @@ describe("notify", () => {
       Destination: { ToAddresses: ["delivered+booking@dive.day"] },
       Content: {
         Simple: {
-          Subject: { Data: "You’re on the boat — Two-Tank Reef", Charset: "UTF-8" },
+          Subject: { Data: "You’re on the boat: Two-Tank Reef", Charset: "UTF-8" },
         },
       },
     });
@@ -391,7 +391,7 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
       Destination: { ToAddresses: ["delivered+booking@dive.day"] },
       Content: {
         Simple: {
-          Subject: { Data: "You’re on the boat — Two-Tank Reef", Charset: "UTF-8" },
+          Subject: { Data: "You’re on the boat: Two-Tank Reef", Charset: "UTF-8" },
         },
       },
     });

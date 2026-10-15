@@ -279,13 +279,14 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          {/* The only two hints left on the form, and they are not
-              "(optional)": neither box is required on its own, but the pair is,
-              and "(or phone)" / "(or email)" is the only way a caption can say
-              that. The refusal below says it in words when both are blank. */}
+          {/* One hint for the pair, the register form's own: neither box is
+              required on its own, but one of the two is. `description`, not
+              `hint`: a sentence in the caption slot knocks this box out of line
+              with the phone beside it. The refusal below says it again when
+              both are blank. */}
           <Field
             label={copy.yourEmail}
-            hint={copy.orPhone}
+            description={copy.contactHint}
             error={contactMissing ? t("inquiry.errors.contactRequired") : null}
           >
             <input
@@ -303,7 +304,7 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          <Field label={copy.yourPhone} hint={copy.orEmail}>
+          <Field label={copy.yourPhone}>
             <input
               name="phone"
               type="tel"
