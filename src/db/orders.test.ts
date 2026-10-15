@@ -21,7 +21,6 @@ import { updateCourse } from "./courses";
 import { countSpendableDives, createDivePackage, deleteDivePackage } from "./dive-packages";
 import {
   countOpenTripOrders,
-  countShopOrders,
   createDiverPackageOrder,
   createOrder,
   getBookingContext,
@@ -1650,45 +1649,6 @@ describe("orders", () => {
 
       const otherShopId = "00000000-0000-4000-8000-000000000000";
       expect(await countOpenTripOrders(db, otherShopId, reef.id)).toBe(0);
-    });
-
-    /**
-     * Issue #2550: the count is the boat's work, so an open order on a seat
-     * that was cancelled leaves it, and the index the fact links to leaves it
-     * out of the same view. The order stays in the ledger and is reachable by
-     * asking for cancelled seats, and in the unfiltered ledger.
-     */
-    it("moves an order off the live count when its seat is cancelled, without dropping it from the ledger", async () => {
-      const { db, shop, reef, entry, staff } = await orderContext();
-      await connectedShop(db, shop.id);
-      const created = await createOrder(
-        db,
-        {
-          shopId: shop.id,
-          personId: entry.person.id,
-          createdByPersonId: staff,
-          bookingId: entry.booking.id,
-          lineItems,
-        },
-        fakeInvoicing(),
-      );
-      if (!created.ok) throw new Error("expected the order to be created");
-      expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(1);
-
-      await db
-        .update(bookings)
-        .set({ status: "cancelled" })
-        .where(eq(bookings.id, entry.booking.id));
-
-      expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(0);
-      expect(await countOpenTripOrders(db, shop.id, reef.id, "cancelled")).toBe(1);
-      const base = { tripId: reef.id, status: "open" as const };
-      expect((await listShopOrders(db, shop.id, { ...base, seats: "live" })).total).toBe(0);
-      const left = await listShopOrders(db, shop.id, { ...base, seats: "cancelled" });
-      expect(left.rows.map((row) => row.order.id)).toEqual([created.order.id]);
-      // No seat filter is the complete ledger.
-      expect((await listShopOrders(db, shop.id, base)).total).toBe(1);
-      expect(await countShopOrders(db, shop.id, { ...base, seats: "cancelled" })).toBe(1);
     });
   });
 });

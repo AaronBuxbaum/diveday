@@ -24,6 +24,7 @@ import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { HeldRefundsCard } from "./_components/HeldRefundsCard";
 import { callBlowoutAction, releaseBlowoutRefundsAction, resumeBlowoutAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -238,12 +239,6 @@ export default async function BlowoutPage({
       diver.messageStatus === "sending",
   );
 
-  // Seats still holding a payment on a canceled departure: the money a call-off
-  // by someone without the refund right left for an owner or manager (H-123).
-  const heldPayments = divers.filter((diver) =>
-    isCapturedPaymentStatus(diver.paymentStatus),
-  ).length;
-
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
@@ -251,29 +246,12 @@ export default async function BlowoutPage({
       <div className="mt-6">
         {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
       </div>
-      {heldPayments > 0 ? (
-        <SectionCard as="div" padding="lg" className="mb-6 max-w-2xl">
-          <p className="text-sm font-medium">
-            {t("blowout.record.heldHeading", { count: heldPayments })}
-          </p>
-          {mayRefund ? (
-            <form
-              action={releaseBlowoutRefundsAction.bind(null, shopSlug, tripId)}
-              className="mt-3"
-            >
-              <p className="mb-3 text-sm text-muted">{t("blowout.record.heldRelease")}</p>
-              <SubmitButton
-                pendingLabel={t("blowout.record.releasing")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("blowout.record.release")}
-              </SubmitButton>
-            </form>
-          ) : (
-            <p className="mt-1 text-sm text-muted">{t("blowout.record.heldWaiting")}</p>
-          )}
-        </SectionCard>
-      ) : null}
+      <HeldRefundsCard
+        count={divers.filter((diver) => isCapturedPaymentStatus(diver.paymentStatus)).length}
+        mayRefund={mayRefund}
+        releaseAction={releaseBlowoutRefundsAction.bind(null, shopSlug, tripId)}
+        t={t}
+      />
       <div className="grid gap-4 sm:grid-cols-3">
         <ShopStat
           label={t("blowout.record.notified")}

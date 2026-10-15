@@ -98,3 +98,55 @@ export function orderIndexFilter(params: OrderIndexParams, timeZone: string, now
   };
   return { filter, range, status, query, tripId, personId, seats };
 }
+
+/** The filters the Orders index is showing, as the links out of it keep them. */
+export type OrdersIndexView = {
+  status?: string;
+  personId?: string;
+  q?: string;
+  tripId?: string;
+  seats?: "live" | "cancelled";
+  from?: string;
+  to?: string;
+  range?: string;
+};
+
+/** What a link out of the index swaps; everything else it keeps. */
+export type OrdersHrefOverrides = {
+  page?: number;
+  importedPage?: number;
+  range?: string | null;
+  seats?: "live" | "cancelled";
+};
+
+/**
+ * This page's URL with the filters kept and only the given params swapped, for
+ * the pager, the download and the "other seats" line (issue #2550).
+ */
+export function ordersIndexHref(
+  shopSlug: string,
+  view: OrdersIndexView,
+  overrides: OrdersHrefOverrides,
+  path = "orders",
+): string {
+  const query = new URLSearchParams();
+  if (view.status) query.set("status", view.status);
+  if (view.personId) query.set("personId", view.personId);
+  if (view.q) query.set("q", view.q);
+  if (view.tripId) query.set("tripId", view.tripId);
+  if ((overrides.seats ?? view.seats) === "cancelled") query.set("seats", "cancelled");
+  if (view.from) query.set("from", view.from);
+  if (view.to) query.set("to", view.to);
+  // Only the three ranges the page names are kept; anything else is no range.
+  const kept = view.range === "all" || view.range === "recent" || view.range === "custom";
+  const nextRange = overrides.range === undefined ? (kept ? view.range : null) : overrides.range;
+  if (nextRange) query.set("range", nextRange);
+  if (overrides.page !== undefined && overrides.page > 1) {
+    query.set("page", String(overrides.page));
+  }
+  if (overrides.importedPage !== undefined && overrides.importedPage > 1) {
+    query.set("importedPage", String(overrides.importedPage));
+  }
+  const search = query.toString();
+  return search ? `/shop/${shopSlug}/${path}?${search}` : `/shop/${shopSlug}/${path}`;
+}
