@@ -294,12 +294,12 @@ export default async function NewDiverPage({
                 restore={noticeIsError}
                 copy={{
                   add: t("divers.page.party.add"),
-                  person: t("divers.page.party.person"),
+                  person: t.raw("divers.page.party.person"),
                   name: t("divers.page.fullNameLabel"),
                   under18: t("divers.page.party.under18"),
                   under18Hint: t("divers.page.party.under18Hint"),
                   remove: t("divers.page.party.remove"),
-                  removeFor: t("divers.page.party.removeFor"),
+                  removeFor: t.raw("divers.page.party.removeFor"),
                 }}
               />
             </>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { applyFormFields } from "@/components/apply-form-fields";
 import { readKeptTyped } from "@/components/KeepTypedOnRefusal";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { choiceClass, controlClass, legendClass } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
 import { WALK_IN_PARTY_FORM, WALK_IN_PARTY_MAX, walkInMemberField } from "@/lib/walk-in-party";
 
@@ -85,7 +85,7 @@ export function WalkInPartyRows({
           key={number}
           className="grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-[1fr_auto] sm:items-end"
         >
-          <legend className="px-1 text-sm font-medium">
+          <legend className={`${legendClass} text-sm font-medium`}>
             {fill(copy.person, { n: String(index + 2) })}
           </legend>
           <label className="grid gap-1 text-sm">
@@ -104,7 +104,7 @@ export function WalkInPartyRows({
                 type="checkbox"
                 name={walkInMemberField(number, "minor")}
                 value="true"
-                className="size-4"
+                className={choiceClass}
               />
               <span>
                 {copy.under18}

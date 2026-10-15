@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import { arrivalCardFacts, siteRunsLine, TripArrivalCard } from "./TripArrivalCard";
 
@@ -192,6 +192,19 @@ describe("the dock-call line", () => {
  * "did I find it?" better than a street map does.
  */
 describe("the map", () => {
+  // The map host answers at once: these tests are about where the card draws
+  // the frame, and `ArrivalMap.test.tsx` is about the probe that gates it.
+  class AnsweringImage {
+    referrerPolicy = "";
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    set src(_value: string) {
+      this.onload?.();
+    }
+  }
+  beforeEach(() => vi.stubGlobal("Image", AnsweringImage));
+  afterEach(() => vi.unstubAllGlobals());
+
   function mapFrame() {
     return document.querySelector("iframe");
   }

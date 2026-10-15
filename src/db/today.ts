@@ -15,6 +15,7 @@ import type { AvailabilityBlock } from "@/lib/crew-requests";
 import { effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import type { DiveIntentCount } from "@/lib/dive-intent";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
+import { emergencyCardHasNumbers } from "@/lib/emergency-reference";
 import {
   type CrewIncompleteReason,
   rollCallCheckpoints,
@@ -63,6 +64,7 @@ import {
 import { listTodayHelpRequests } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
+import { countOpenLostItems } from "./lost-items";
 import {
   listBoardedAtAnyCheckpointByTrip,
   listDepartureCrewRollCallByTrip,
@@ -96,7 +98,7 @@ import {
 } from "./stripe-accounts";
 import { pushCrewAwayRows } from "./today-crew-away-rows";
 import { pushDepartureRows } from "./today-departure-rows";
-import { pushDeskRows, readDeskFacts } from "./today-desk-rows";
+import { pushDeskRows } from "./today-desk-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { pushRollCallRows } from "./today-roll-call-rows";
 import type { TodayRowsContext } from "./today-rows-context";
@@ -1714,6 +1716,8 @@ async function readTodayWave(
         unitsConfirmedAt: shops.unitsConfirmedAt,
         currency: shops.currency,
         depthUnit: shops.depthUnit,
+        // The blank-card desk row (fifth loop, item 3) rides this read.
+        emergencyReference: shops.emergencyReference,
       })
       .from(shops)
       .where(eq(shops.id, shopId))
@@ -1904,7 +1908,7 @@ export async function getTodayWork(
   // after the queue is built so they cost no phase of their own: every diver
   // the evidence blocks on a pending card is asked about, a superset of the
   // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
-  const [wave, agencyCheckCards, deskFacts] = await Promise.all([
+  const [wave, agencyCheckCards, lostItemsWaiting] = await Promise.all([
     readTodayWave(db, shopId, {
       now,
       horizon,
@@ -1923,9 +1927,8 @@ export async function getTodayWork(
       shopId,
       personIds: agencyCheckCandidates(readinessByTrip),
     }),
-    // The blank emergency card and the found items waiting (fifth loop, items
-    // 3 and 7), beside the wave rather than in it.
-    readDeskFacts(db, shopId),
+    // The found items waiting (fifth loop, item 7), beside the wave.
+    countOpenLostItems(db, shopId),
   ]);
   const {
     departureRollCall,
@@ -2038,7 +2041,13 @@ export async function getTodayWork(
 
   pushEquipmentRows(actions, rows);
 
-  pushDeskRows(actions, rows, deskFacts);
+  pushDeskRows(actions, rows, {
+    // A shop row that is not there has no card to warn about.
+    emergencyCardHasNumbers: shopUnits
+      ? emergencyCardHasNumbers(shopUnits.emergencyReference)
+      : true,
+    lostItemsWaiting,
+  });
 
   // **Who to say hello to** rides on the card (fifth loop, item 10): one line
   // per departure, gone an hour after the boat is home because

@@ -448,10 +448,10 @@ const CHROME_CEILING = 20;
 // 66 → 69: measured on the fifth loop's desk layer base (1f431d2e0) before it
 // changed anything; the fourth review's safety layer reads crew away notes and
 // the booking layer its own rows, and neither moved this line.
-// 69 → 71 (fifth loop, items 3 and 7): the shop's emergency card and the count
-// of found items waiting to go home, two statements beside the wave rather
-// than after it, so the phase count below does not move.
-const TODAY_CEILING = 71;
+// 69 → 70 (fifth loop, items 3 and 7): the count of found items waiting to go
+// home, one statement beside the wave rather than after it, so the phase count
+// below does not move. The emergency card rides the shop row the wave reads.
+const TODAY_CEILING = 70;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
