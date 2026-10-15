@@ -1,10 +1,11 @@
 import {
+  type AgencyCheckCopy,
   agencyCheckCopy,
   agencyLinkLabel,
 } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
 import type { CertificationAgency } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { AgencyCheckQuery } from "@/lib/agency-check";
+import type { AgencyCheckQuery, AgencyListedKind } from "@/lib/agency-check";
 import type { AgencyCheckResult, AgencyListedAddResult } from "../card-actions";
 import { AgencyCheck } from "./AgencyCheck";
 
@@ -30,6 +31,8 @@ export function AgencyCheckLink({
   t: StaffTranslator;
   check?: {
     certificationId: string;
+    /** A nitrox or specialty card (issue #2592), with its kind: it posts its table and words its button by kind. */
+    card?: { type: "nitrox" | "specialty"; kind: AgencyListedKind };
     awaiting: boolean;
     query: AgencyCheckQuery | null;
     /** The shop's switch keeps this agency's check off (H-121): say so beside the link. */
@@ -61,11 +64,20 @@ export function AgencyCheckLink({
       href={link.href}
       query={check.query}
       certificationId={check.certificationId}
+      cardType={check.card?.type}
       awaiting={check.awaiting}
       action={check.action}
       addListed={check.addListed}
-      copy={agencyCheckCopy(t, agency, link.label)}
+      copy={withCardButton(agencyCheckCopy(t, agency, link.label), check.card?.kind)}
       offNote={check.switchedOff ? t("shared.padiChecksOff") : undefined}
     />
   );
+}
+
+/** The copy with the button worded for a nitrox or specialty card's kind: "Check Nitrox with SSI". */
+function withCardButton(
+  copy: AgencyCheckCopy,
+  kind: AgencyListedKind | undefined,
+): AgencyCheckCopy {
+  return kind ? { ...copy, check: copy.checkKind[kind] } : copy;
 }

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { CertificationCardRow } from "@/components/person/rows";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -8,7 +8,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { InsetGroup } from "@/components/ui/ledger";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { agencyCheckOffered, agencyCheckQuery } from "@/lib/agency-check";
+import { type AgencyListedKind, agencyCheckOffered, agencyCheckQuery } from "@/lib/agency-check";
 import {
   type CertificationCardKind,
   certificationCardRowState,
@@ -175,6 +175,38 @@ function levelCardCheck(
 }
 
 /**
+ * A nitrox or specialty card's check (issue #2592): the lookup, or null for a
+ * card that is confirmed through a card sighting instead (a diver's own tick,
+ * a card the shop issued, a listed card with no number), where the page does
+ * not stand in for the card in a staffer's hand. The same rule the action
+ * judges by (`checkableListedQuery`, src/db/agency-check.ts).
+ */
+function listedCardCheck(
+  card: CheckedCard & {
+    status: "pending" | "verified";
+    selfDeclaredAt: Date | null;
+    issuedByShopAt: Date | null;
+    listedFromCertificationId: string | null;
+    importedAt: Date | null;
+    reviewedAt: Date | null;
+  },
+  person: { fullName: string; dateOfBirth: string | null },
+  shop: Shop,
+  kind: { id: string; type: "nitrox" | "specialty"; kind: AgencyListedKind },
+  actions: ReturnType<typeof agencyCheckActions>,
+) {
+  const sightedFirst = needsCardSighting(card) || !card.identifier?.trim();
+  return {
+    certificationId: kind.id,
+    card: { type: kind.type, kind: kind.kind },
+    awaiting: card.status === "pending" || needsImportConfirm(card),
+    query: sightedFirst ? null : offeredCheckQuery(card, person, shop),
+    switchedOff: !sightedFirst && !agencyCheckOffered(card.agency, shop),
+    ...actions,
+  };
+}
+
+/**
  * Under a nitrox or specialty card: the agency's link while it waits
  * (`awaiting`), and the agency's own words when it has any. A card an agency
  * check filed from the page's list (layer 3) carries them, and says where they
@@ -185,6 +217,7 @@ function PendingCardFoot({
   t,
   card,
   awaiting,
+  check,
 }: {
   t: StaffTranslator;
   card: {
@@ -193,10 +226,20 @@ function PendingCardFoot({
     agency: keyof typeof AGENCY_KEYS;
   };
   awaiting: boolean;
+  /**
+   * The agency check, for a card the extension may check (issue #2592): the
+   * link becomes a button when the extension is here. Rendered for a settled
+   * card too, so a check that just certified it keeps its Undo toast.
+   */
+  check?: ComponentProps<typeof AgencyCheckLink>["check"];
 }) {
   return (
     <>
-      {awaiting ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+      {check ? (
+        <AgencyCheckLink agency={card.agency} t={t} check={check} />
+      ) : awaiting ? (
+        <AgencyCheckLink agency={card.agency} t={t} />
+      ) : null}
       {card.listedFromCertificationId ? (
         <span className="block">
           {t("divers.certifications.listedByAgency", { agency: t(AGENCY_KEYS[card.agency]) })}
@@ -579,7 +622,18 @@ export function CertificationsGroup({
         detail={
           <>
             {card.identifier}
-            <PendingCardFoot t={t} card={card} awaiting={awaiting} />
+            <PendingCardFoot
+              t={t}
+              card={card}
+              awaiting={awaiting}
+              check={listedCardCheck(
+                card,
+                diver.person,
+                shop,
+                { id: card.id, type: "specialty", kind: card.specialty },
+                agencyCheck,
+              )}
+            />
           </>
         }
         actions={
@@ -636,7 +690,22 @@ export function CertificationsGroup({
                 sighted: its agency is often the "other" placeholder and its
                 title drops the agency, so a lookup link would send the staffer
                 to an agency nobody named. The sighted claim gets one. */}
-            <PendingCardFoot t={t} card={card} awaiting={awaiting && !selfDeclared} />
+            <PendingCardFoot
+              t={t}
+              card={card}
+              awaiting={awaiting && !selfDeclared}
+              check={
+                selfDeclared
+                  ? undefined
+                  : listedCardCheck(
+                      card,
+                      diver.person,
+                      shop,
+                      { id: card.id, type: "nitrox", kind: "nitrox" },
+                      agencyCheck,
+                    )
+              }
+            />
           </>
         }
         actions={

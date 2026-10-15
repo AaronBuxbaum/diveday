@@ -1,0 +1,2 @@
+ALTER TABLE "nitrox_certifications" ADD COLUMN "agency_checked_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "specialty_certifications" ADD COLUMN "agency_checked_at" timestamp with time zone;

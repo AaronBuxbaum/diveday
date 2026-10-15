@@ -199,6 +199,9 @@ export const SPECIALTY_CERTIFICATIONS_CSV = sharedFile<ShopRow<"specialtyRows">>
         row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
     },
     { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
+    // The agency's own page, read through the DiveDay browser extension
+    // (H-105, as certifications.csv above): review_note then holds its words.
+    { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
     // The level card whose agency check listed this one (layer 3 of ADR
     // 20261008-cert-check-extension): review_note then holds the agency's
     // words, not a staffer's. Another provenance stamp, and it travels for
@@ -244,6 +247,9 @@ export const NITROX_CERTIFICATIONS_CSV = sharedFile<ShopRow<"nitroxRows">>({
         row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
     },
     { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
+    // The agency's own page, read through the DiveDay browser extension
+    // (H-105, as certifications.csv above): review_note then holds its words.
+    { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
     { header: "imported_at", in: "both", value: (row) => row.importedAt },
     { header: "imported_from_label", in: "both", value: (row) => row.importedFromLabel },
     // Same reason as the level card's — see certifications.csv above.

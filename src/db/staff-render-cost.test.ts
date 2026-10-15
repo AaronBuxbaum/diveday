@@ -456,7 +456,9 @@ const TODAY_CEILING = 66;
 // shared prep list's fit check, and the open-orders count is the one it sent.
 // 51 → 52: the roster's agency check (H-105) reads the seated divers' checkable
 // cards (`listAgencyCheckableCards`), one statement in `getTripGuests`' fan-out.
-const TRIP_CEILING = 52;
+// 52 → 54: the same read also asks for the divers' pending nitrox and specialty
+// cards (issue #2592), one statement each, in the same wave as the level read.
+const TRIP_CEILING = 54;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never

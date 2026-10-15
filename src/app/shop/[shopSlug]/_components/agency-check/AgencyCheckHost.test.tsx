@@ -637,3 +637,51 @@ describe("the other cards a match's page lists", () => {
     expect(row("person-1").getByRole("group")).toBeVisible();
   });
 });
+
+/**
+ * **A diver's nitrox and specialty cards on the same row** (issue #2592): each
+ * wears its own kind's words, posts the table it is in, and keeps its own
+ * Undo, so two cards at one agency can never be taken for one another.
+ */
+describe("AgencyCheckRow with a nitrox card beside a level card", () => {
+  const level = card(1);
+  const nitrox: AgencyCheckableCard = {
+    ...card(1),
+    certificationId: "card-nitrox",
+    cardType: "nitrox",
+    kind: "nitrox",
+  };
+
+  it("words each button by its card, and posts the table with the check and the Undo", async () => {
+    withExtension();
+    vi.mocked(requestAgencyPage).mockResolvedValue({ ok: true, pageText: "page" });
+    const action = vi.fn(
+      async (): Promise<AgencyCheckResult> => ({
+        ok: true,
+        verdict: "match",
+        effect: "certified",
+        undo: { certificationId: "card-nitrox" },
+      }),
+    );
+    render(
+      <AgencyCheckHost action={action} copies={copies} pauseMs={0}>
+        <AgencyCheckRow personId="person-1" cards={[level, nitrox]} />
+      </AgencyCheckHost>,
+    );
+    expect(screen.getByRole("button", { name: "Check with SSI" })).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Check Nitrox with SSI" }));
+    });
+    const [, , posted] = action.mock.calls[0] as unknown as [string, unknown, FormData];
+    expect(posted.get("certificationId")).toBe("card-nitrox");
+    expect(posted.get("cardType")).toBe("nitrox");
+
+    // The level card's check posts no table at all.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Check with SSI" }));
+    });
+    const [, , levelPosted] = action.mock.calls[1] as unknown as [string, unknown, FormData];
+    expect(levelPosted.has("cardType")).toBe(false);
+  });
+});

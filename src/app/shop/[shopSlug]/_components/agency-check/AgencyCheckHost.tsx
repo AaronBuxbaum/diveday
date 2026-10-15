@@ -258,7 +258,10 @@ export function AgencyCheckHost({
           card.personId,
           null,
           // A run repaints the page once, at its end (`runAll`).
-          agencyCheckForm(card.certificationId, reply.pageText, { refreshLater: via === "all" }),
+          agencyCheckForm(card.certificationId, reply.pageText, {
+            refreshLater: via === "all",
+            cardType: card.cardType,
+          }),
         );
       } catch {
         // DiveDay's own server did not answer: the card may or may not have
@@ -329,6 +332,7 @@ export function AgencyCheckHost({
     async (card: AgencyCheckableCard) => {
       const formData = new FormData();
       formData.set("certificationId", card.certificationId);
+      if (card.cardType) formData.set("cardType", card.cardType);
       formData.set("intent", "undo");
       let result: AgencyCheckResult;
       try {

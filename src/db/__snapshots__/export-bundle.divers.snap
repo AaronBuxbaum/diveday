@@ -1,8 +1,8 @@
 diver Winnie Achebe (11 seats) at blue-mantis America/New_York
 profile.csv 1 rows 4165aed88f14c829 [id,full_name,email,phone,date_of_birth,dive_insurance,emergency_contact_name,emergency_contact_phone,courtesy_email_opt_out_at,no_certification_declared_at,no_certification_cleared_at,adult_attested_at,deleted_at,created_at]
 certifications.csv 1 rows 305e00f5b87a5c6b [id,agency,level,identifier,declared_identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
-specialty_certifications.csv 0 rows 9856a0fdbbc6cba2 [id,agency,specialty,identifier,status,review_note,reviewed_at,reviewed_by_name,deleted_at,created_at]
-nitrox_certifications.csv 0 rows b3721d2bbf818f39 [id,agency,identifier,status,review_note,reviewed_at,reviewed_by_name,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
+specialty_certifications.csv 0 rows 7cdb6cfe30f776d9 [id,agency,specialty,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,deleted_at,created_at]
+nitrox_certifications.csv 0 rows e1aff044597aa680 [id,agency,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
 bookings.csv 11 rows e2a2328449db171f [id,trip_title,trip_starts_at,status,participant_type,booked_as,wants_nitrox,conditions_briefed_at,dive_intent,re_entry_ask,last_dived_band,claimed_at,running_late_at,minor_declared_at,payment_status,payment_amount_cents,payment_currency,payment_provider,created_at]
 waitlist_entries.csv 0 rows 6e297bd17e6e30e0 [id,trip_title,trip_starts_at,invited_at,created_at]
 trip_invitations.csv 0 rows fc5e6cd463c87a0d [id,trip_title,trip_starts_at,source,invited_at,created_at]
@@ -38,8 +38,8 @@ photos: 0 e3b0c44298fc1c14
 diver Camila Rojas (10 seats) at blue-mantis America/New_York
 profile.csv 1 rows 23461bcdd7f728a8 [id,full_name,email,phone,date_of_birth,dive_insurance,emergency_contact_name,emergency_contact_phone,courtesy_email_opt_out_at,no_certification_declared_at,no_certification_cleared_at,adult_attested_at,deleted_at,created_at]
 certifications.csv 1 rows 332d259f4f5a9332 [id,agency,level,identifier,declared_identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
-specialty_certifications.csv 0 rows 9856a0fdbbc6cba2 [id,agency,specialty,identifier,status,review_note,reviewed_at,reviewed_by_name,deleted_at,created_at]
-nitrox_certifications.csv 0 rows b3721d2bbf818f39 [id,agency,identifier,status,review_note,reviewed_at,reviewed_by_name,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
+specialty_certifications.csv 0 rows 7cdb6cfe30f776d9 [id,agency,specialty,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,deleted_at,created_at]
+nitrox_certifications.csv 0 rows e1aff044597aa680 [id,agency,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
 bookings.csv 10 rows 79f4c6c59d7adfa0 [id,trip_title,trip_starts_at,status,participant_type,booked_as,wants_nitrox,conditions_briefed_at,dive_intent,re_entry_ask,last_dived_band,claimed_at,running_late_at,minor_declared_at,payment_status,payment_amount_cents,payment_currency,payment_provider,created_at]
 waitlist_entries.csv 0 rows 6e297bd17e6e30e0 [id,trip_title,trip_starts_at,invited_at,created_at]
 trip_invitations.csv 0 rows fc5e6cd463c87a0d [id,trip_title,trip_starts_at,source,invited_at,created_at]
@@ -75,8 +75,8 @@ photos: 0 e3b0c44298fc1c14
 diver Cosima Weber (10 seats) at blue-mantis America/New_York
 profile.csv 1 rows 21d51cd7fe347c02 [id,full_name,email,phone,date_of_birth,dive_insurance,emergency_contact_name,emergency_contact_phone,courtesy_email_opt_out_at,no_certification_declared_at,no_certification_cleared_at,adult_attested_at,deleted_at,created_at]
 certifications.csv 1 rows 3c4d4fd42d292a9f [id,agency,level,identifier,declared_identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
-specialty_certifications.csv 0 rows 9856a0fdbbc6cba2 [id,agency,specialty,identifier,status,review_note,reviewed_at,reviewed_by_name,deleted_at,created_at]
-nitrox_certifications.csv 0 rows b3721d2bbf818f39 [id,agency,identifier,status,review_note,reviewed_at,reviewed_by_name,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
+specialty_certifications.csv 0 rows 7cdb6cfe30f776d9 [id,agency,specialty,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,deleted_at,created_at]
+nitrox_certifications.csv 0 rows e1aff044597aa680 [id,agency,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
 bookings.csv 10 rows f42b391498bd629f [id,trip_title,trip_starts_at,status,participant_type,booked_as,wants_nitrox,conditions_briefed_at,dive_intent,re_entry_ask,last_dived_band,claimed_at,running_late_at,minor_declared_at,payment_status,payment_amount_cents,payment_currency,payment_provider,created_at]
 waitlist_entries.csv 0 rows 6e297bd17e6e30e0 [id,trip_title,trip_starts_at,invited_at,created_at]
 trip_invitations.csv 0 rows fc5e6cd463c87a0d [id,trip_title,trip_starts_at,source,invited_at,created_at]

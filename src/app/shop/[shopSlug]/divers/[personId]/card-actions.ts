@@ -8,6 +8,7 @@ import {
   agencyListedKindsHeld,
   certificationForAgencyCheck,
   certificationForAgencyOffer,
+  listedCardForAgencyCheck,
   undoAgencyCheck,
 } from "@/db/agency-check";
 import type { AppDb } from "@/db/client";
@@ -39,6 +40,7 @@ import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import {
   type AgencyListedKind,
   agencyListedCards,
+  judgeAgencyListedCard,
   judgeAgencyPage,
   PAGE_TEXT_MAX_LENGTH,
 } from "@/lib/agency-check";
@@ -681,6 +683,11 @@ export type AgencyCheckResult =
        */
       verdict: "level_unconfirmed" | "limited_card" | "junior_under_15";
       evidence: string;
+      /**
+       * Set when the card checked is a nitrox or specialty card (issue #2592):
+       * "not at this level" is then "not this certification".
+       */
+      listedCard?: true;
     }
   | {
       ok: true;
@@ -731,6 +738,13 @@ export async function agencyCheckAction(
   const certificationId = cardIdFromForm(formData);
   if (!certificationId) return { ok: false, reason: "invalid" };
   const shopId = staff.user.shopId;
+  // The table the card is in: the level ladder unless the form names a nitrox
+  // or specialty card (issue #2592). Anything else is a hand-built post.
+  const checkedKind = z
+    .enum(["level", "nitrox", "specialty"])
+    .safeParse(fields.cardType ?? "level");
+  if (!checkedKind.success) return { ok: false, reason: "invalid" };
+  const cardType = checkedKind.data === "level" ? undefined : checkedKind.data;
 
   if (fields.intent === "undo") {
     // Only the review a check made, on this diver: never a sighting or a
@@ -741,6 +755,7 @@ export async function agencyCheckAction(
       personId,
       certificationId,
       undoneByPersonId: staff.user.personId,
+      cardType,
     });
     revalidatePath(base);
     refresh();
@@ -749,6 +764,14 @@ export async function agencyCheckAction(
 
   const pageText = fields.pageText;
   if (typeof pageText !== "string") return { ok: false, reason: "invalid" };
+  if (cardType) {
+    return agencyCheckListedCard(context, {
+      cardType,
+      certificationId,
+      pageText,
+      refresh: fields.refresh !== "later",
+    });
+  }
   const card = await certificationForAgencyCheck(db, { shopId, personId, certificationId });
   if (!card) return { ok: false, reason: "invalid" };
   const judged = judgeAgencyPage({
@@ -800,6 +823,75 @@ export async function agencyCheckAction(
     effect: outcome.certification.importedAt ? "confirmed" : "certified",
     undo: { certificationId },
     ...(offers.length > 0 ? { offers } : {}),
+  };
+}
+
+/**
+ * **The agency check of one nitrox or specialty card** (issue #2592): the
+ * level check's rule on the other two card tables. The card and diver are read
+ * again from the database (`listedCardForAgencyCheck`), the page is judged by
+ * the closed per-agency wording for this kind (`judgeAgencyListedCard`), and
+ * only a page that lists the card for this diver under the card's number
+ * certifies it, through the ordinary review stamped `agencyCheckedAt`. A
+ * match offers nothing further and files nothing: the page's other cards are
+ * a level card's to offer.
+ */
+async function agencyCheckListedCard(
+  context: Awaited<ReturnType<typeof requireDiverActionContext>>,
+  input: {
+    cardType: "nitrox" | "specialty";
+    certificationId: string;
+    pageText: string;
+    refresh: boolean;
+  },
+): Promise<AgencyCheckResult> {
+  const { base, db, staff, personId } = context;
+  const shopId = staff.user.shopId;
+  const card = await listedCardForAgencyCheck(db, {
+    shopId,
+    personId,
+    certificationId: input.certificationId,
+    cardType: input.cardType,
+  });
+  if (!card) return { ok: false, reason: "invalid" };
+  const judged = judgeAgencyListedCard({
+    ...card.query,
+    ...card.identity,
+    kind: card.kind,
+    today: calendarDateInTimezone(nowDate(), "Etc/GMT+12"),
+    pageText: input.pageText.slice(0, PAGE_TEXT_MAX_LENGTH),
+  });
+  if (
+    judged.verdict === "level_unconfirmed" ||
+    judged.verdict === "limited_card" ||
+    judged.verdict === "junior_under_15"
+  ) {
+    return { ok: true, verdict: judged.verdict, evidence: judged.evidence, listedCard: true };
+  }
+  if (judged.verdict !== "match") return { ok: true, verdict: judged.verdict };
+
+  const reviewed = {
+    shopId,
+    certificationId: input.certificationId,
+    status: "verified",
+    reviewedByPersonId: staff.user.personId,
+    reviewNote: judged.evidence,
+    agencyChecked: true,
+  } as const;
+  const outcome =
+    input.cardType === "nitrox"
+      ? await reviewNitroxCertification(db, reviewed)
+      : await reviewSpecialtyCertification(db, reviewed);
+  revalidatePath(base);
+  if (input.refresh) refresh();
+  if (!outcome.ok) return { ok: false, reason: "invalid" };
+  return {
+    ok: true,
+    verdict: "match",
+    // An imported card was already `verified` on arrival: the agency's page
+    // confirmed it rather than certifying it.
+    effect: outcome.certification.importedAt ? "confirmed" : "certified",
+    undo: { certificationId: input.certificationId },
   };
 }
 

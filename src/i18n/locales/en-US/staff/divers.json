@@ -68,9 +68,11 @@
     "listedByAgency": "Listed on {agency}’s page.",
     "agencyCheck": {
       "checking": "Checking with {agency}…",
+      "checkCard": "Check {card} with {agency}",
       "matched": "{agency} shows this certification. Marked certified.",
       "matchedConfirmed": "{agency} shows this certification. Confirmed.",
       "levelUnconfirmed": "{agency} found this diver, but not at this level.",
+      "cardUnconfirmed": "{agency} found this diver, but not this certification.",
       "limitedCard": "{agency} shows a Junior or limited card.",
       "juniorUnder15": "{agency} shows a Junior card. Under 15, record it by hand.",
       "namesake": "{agency} shows a diver by this name, but not with this {identity, select, card_number {card number} birth_date {birth date} other {birth date or card number}}.",

@@ -800,11 +800,32 @@ export async function unreviewSpecialtyCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string; reviewedAt: Date },
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+  const undone = await reverseSpecialtyReview(db, input);
+  if (!undone.ok) return undone;
+  await publishManifestEventsForPerson(db, input.shopId, undone.personId);
+  return { ok: true };
+}
+
+/**
+ * The write behind {@link unreviewSpecialtyCertification}, with no manifest
+ * event, for a caller inside a transaction (`undoAgencyCheck`). See
+ * {@link reverseCertificationReview}, whose guards it keeps.
+ */
+export async function reverseSpecialtyReview(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    certificationId: string;
+    reviewedAt: Date;
+    reversingAgencyCheck?: boolean;
+  },
+): Promise<{ ok: true; personId: string } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
       personId: specialtyCertifications.personId,
       status: specialtyCertifications.status,
       reviewedAt: specialtyCertifications.reviewedAt,
+      agencyCheckedAt: specialtyCertifications.agencyCheckedAt,
       selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
       issuedByShopAt: specialtyCertifications.issuedByShopAt,
       importedAt: specialtyCertifications.importedAt,
@@ -825,9 +846,15 @@ export async function unreviewSpecialtyCertification(
     )
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
-  const target = unreviewedCardState(existing);
+  // See `reverseNitroxReview`: an agency check never certifies a card that
+  // needed a sighting, so its Undo puts back the number it was checked by.
+  const target = unreviewedCardState(
+    input.reversingAgencyCheck ? { ...existing, listedFromCertificationId: null } : existing,
+  );
   if (!target.ok) return target;
-  const refusal = cardUndoRefusal(existing, input.reviewedAt);
+  const refusal = cardUndoRefusal(existing, input.reviewedAt, {
+    reversingAgencyCheck: input.reversingAgencyCheck,
+  });
   if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
     .update(specialtyCertifications)
@@ -836,6 +863,7 @@ export async function unreviewSpecialtyCertification(
       reviewNote: existing.listedFromCertificationId ? existing.reviewNote : null,
       reviewedAt: null,
       reviewedByPersonId: null,
+      agencyCheckedAt: null,
     })
     .where(
       and(
@@ -846,9 +874,7 @@ export async function unreviewSpecialtyCertification(
       ),
     )
     .returning({ id: specialtyCertifications.id });
-  if (!row) return { ok: false, reason: "stale" };
-  await publishManifestEventsForPerson(db, input.shopId, existing.personId);
-  return { ok: true };
+  return row ? { ok: true, personId: existing.personId } : { ok: false, reason: "stale" };
 }
 
 /**
@@ -1226,6 +1252,13 @@ export async function reviewSpecialtyCertification(
      * depth gate past 18 m, and a diver's typing is not a card sighting.
      */
     sighting?: CardSighting;
+    /**
+     * The review is the agency's own lookup page listing this specialty for
+     * this diver (H-105, issue #2592), read by `judgeAgencyListedCard`. Stamps
+     * `agencyCheckedAt`; a card that needs a sighting is never certified this
+     * way, as for the level and nitrox reviews.
+     */
+    agencyChecked?: boolean;
   },
 ): Promise<
   | { ok: true; certification: typeof specialtyCertifications.$inferSelect }
@@ -1272,7 +1305,7 @@ export async function reviewSpecialtyCertification(
   // review beside it, and for a stronger reason: this one opens a depth gate
   // past 18 m.
   const sighting = needsCardSighting(existing) ? input.sighting : undefined;
-  if (needsCardSighting(existing) && !sighting?.identifier.trim()) {
+  if (needsCardSighting(existing) && (input.agencyChecked || !sighting?.identifier.trim())) {
     return { ok: false, reason: "card_sighting_required" };
   }
 
@@ -1282,6 +1315,7 @@ export async function reviewSpecialtyCertification(
       status: input.status,
       reviewNote: reviewNoteFor(input.reviewNote) ?? existing.reviewNote,
       reviewedAt: nowDate(),
+      agencyCheckedAt: input.agencyChecked ? nowDate() : null,
       ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
       ...(sighting
         ? { agency: sighting.agency, identifier: sighting.identifier.trim() }

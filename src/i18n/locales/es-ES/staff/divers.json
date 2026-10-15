@@ -68,9 +68,11 @@
     "listedByAgency": "Aparece en la página de {agency}.",
     "agencyCheck": {
       "checking": "Verificando con {agency}…",
+      "checkCard": "Verificar {card} con {agency}",
       "matched": "{agency} muestra esta certificación. Marcado como certificado.",
       "matchedConfirmed": "{agency} muestra esta certificación. Confirmada.",
       "levelUnconfirmed": "{agency} encontró a este buceador, pero no con este nivel.",
+      "cardUnconfirmed": "{agency} encontró a este buceador, pero no esta certificación.",
       "limitedCard": "{agency} muestra una certificación Junior o limitada.",
       "juniorUnder15": "{agency} muestra una certificación Junior. Con menos de 15 años, regístrala a mano.",
       "namesake": "{agency} muestra un buceador con este nombre, pero no con {identity, select, card_number {este número de certificación} birth_date {esta fecha de nacimiento} other {esta fecha de nacimiento ni este número de certificación}}.",
