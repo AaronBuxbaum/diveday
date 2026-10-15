@@ -2,7 +2,7 @@
  * Waivers: issuing a signing request — minting the bearer link for a booking
  * or a person. Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type GuardianSigner, guardianSignatureMissing } from "@/lib/guardian";
 import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
@@ -13,8 +13,8 @@ import {
   WAIVER_LINK_TTL_MS,
 } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
-import { bookings, people, trips, waiverRecords, waiverTemplates } from "./schema";
-import { shopTimezone } from "./waivers-templates";
+import { bookings, people, trips, waiverRecords } from "./schema";
+import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
 export type IssueWaiverOutcome =
   | {
@@ -138,12 +138,7 @@ export async function issueWaiverRequest(
       timezone: await shopTimezone(tx, input.shopId),
     };
 
-    const [template] = await tx
-      .select()
-      .from(waiverTemplates)
-      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.deletedAt)))
-      .orderBy(desc(waiverTemplates.createdAt))
-      .limit(1);
+    const template = await getCurrentWaiverTemplate(tx, input.shopId);
     if (!template) return { ok: false, reason: "template_not_found" };
 
     const current = await tx

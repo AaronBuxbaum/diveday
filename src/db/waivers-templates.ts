@@ -50,9 +50,11 @@ export async function getCurrentWaiverTemplate(db: DbExecutor, shopId: string) {
     .select()
     .from(waiverTemplates)
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
-    // Two saves inside one clock tick tie on `createdAt`; the higher version
-    // is the later save (`saveWaiverTemplate` numbers them under a lock).
-    .orderBy(desc(waiverTemplates.createdAt), desc(waiverTemplates.version))
+    // `version`, never `createdAt`: versions are numbered under the shop's
+    // lock in `saveWaiverTemplate`, while `createdAt` is transaction time,
+    // taken before the lock, so two overlapping saves can stamp the lower
+    // version later. `createdAt` is for display only.
+    .orderBy(desc(waiverTemplates.version))
     .limit(1);
   return template ?? null;
 }
@@ -72,9 +74,11 @@ export async function getCurrentWaiverGeneration(
     .select({ materialGeneration: waiverTemplates.materialGeneration })
     .from(waiverTemplates)
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
-    // Two saves inside one clock tick tie on `createdAt`; the higher version
-    // is the later save (`saveWaiverTemplate` numbers them under a lock).
-    .orderBy(desc(waiverTemplates.createdAt), desc(waiverTemplates.version))
+    // `version`, never `createdAt`: versions are numbered under the shop's
+    // lock in `saveWaiverTemplate`, while `createdAt` is transaction time,
+    // taken before the lock, so two overlapping saves can stamp the lower
+    // version later. `createdAt` is for display only.
+    .orderBy(desc(waiverTemplates.version))
     .limit(1);
   return template ?? null;
 }

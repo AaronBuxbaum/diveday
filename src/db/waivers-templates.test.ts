@@ -6,12 +6,21 @@ import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { DEFAULT_WAIVER_TITLE, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { waiverTemplateHistory } from "@/test/waiver-history";
-import { bookings, people, trips, waiverMaterialityDecisions, waiverRecords } from "./schema";
+import {
+  bookings,
+  people,
+  trips,
+  waiverMaterialityDecisions,
+  waiverRecords,
+  waiverTemplates,
+} from "./schema";
 import { createTrip, listStaff } from "./trips";
 import { setTripCrew } from "./trips-crew";
 import { completeWaiver } from "./waivers-completion";
+import { recordInPersonWaiver } from "./waivers-in-person";
 import { issueWaiverRequest } from "./waivers-requests";
 import {
+  getCurrentWaiverGeneration,
   getCurrentWaiverTemplate,
   saveWaiverTemplate,
   standingWaiverExposure,
@@ -85,6 +94,47 @@ describe("waiver records (in-memory PGlite)", () => {
     expect(history.map((row) => row.version)).toEqual(
       Array.from({ length: seeded + 3 }, (_, index) => seeded + 3 - index),
     );
+  });
+
+  it("snapshots the highest version on a new link and a paper signature, whatever the clock says", async () => {
+    const { db, shop, booking, template } = await waiverContext();
+    const older = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      title: template.title,
+      body: "An interim release whose save started second but committed first, long enough to publish.",
+    });
+    const newer = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      title: template.title,
+      body: "The release that took the lock last and must be what every new signature reads.",
+    });
+    await db
+      .update(waiverTemplates)
+      .set({ createdAt: new Date(newer.template.createdAt.getTime() + 60_000) })
+      .where(eq(waiverTemplates.id, older.template.id));
+
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    const [linked] = await db
+      .select({ templateId: waiverRecords.templateId })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    expect(linked?.templateId).toBe(newer.template.id);
+
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+    await recordInPersonWaiver(db, {
+      shopId: shop.id,
+      subject: { bookingId: booking.id },
+      recordedByPersonId: staff.person.id,
+      medicalAttested: true,
+      now,
+    });
+    const [paper] = await db
+      .select({ templateId: waiverRecords.templateId })
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "completed")));
+    expect(paper?.templateId).toBe(newer.template.id);
   });
 
   it("keeps a completed record faithful to the version it was signed against", async () => {
@@ -264,6 +314,37 @@ describe("saving the waiver template", () => {
       actorPersonId: staff.person.id,
     });
     expect(result.template.materialGeneration).toBe(template.materialGeneration + 1);
+    expect((await standingWaiverExposure(db, shop.id, now)).divers).toBe(0);
+  });
+
+  it("reads the highest version as current even when an older save committed with a later clock", async () => {
+    // Two overlapping saves: `createdAt` is transaction time, taken before the
+    // lock, so the lower version can carry the later stamp. Every reader of
+    // "which release is current" must still pick the higher version.
+    const { db, shop, template, staff } = await signedContext();
+    const older = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      title: template.title,
+      body: "An interim release whose save started second but committed first, long enough to publish.",
+    });
+    const newer = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      title: template.title,
+      body: "A materially revised release that took the lock last and must be current, long enough to publish.",
+      material: true,
+      actorPersonId: staff.person.id,
+    });
+    expect(newer.template.version).toBe(older.template.version + 1);
+    await db
+      .update(waiverTemplates)
+      .set({ createdAt: new Date(newer.template.createdAt.getTime() + 60_000) })
+      .where(eq(waiverTemplates.id, older.template.id));
+
+    expect((await getCurrentWaiverTemplate(db, shop.id))?.id).toBe(newer.template.id);
+    expect(await getCurrentWaiverGeneration(db, shop.id)).toEqual({
+      materialGeneration: newer.template.materialGeneration,
+    });
+    // The exposure count agrees: the material version put every signature back.
     expect((await standingWaiverExposure(db, shop.id, now)).divers).toBe(0);
   });
 
