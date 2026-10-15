@@ -286,6 +286,8 @@ export default async function TripDetailPage({
   const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale);
 
   const inPast = hasSailed(trip.startsAt, now);
+  // The recap's log entry, promised until the boat has sailed; shown behind the pitch's door.
+  const logEntry = inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course };
   // Where this departure stands against the head count it needs, if it named
   // one. A departure that already sailed has nothing conditional left to
   // promise; a cancelled one returned far above this line, at the `status`
@@ -370,11 +372,10 @@ export default async function TripDetailPage({
             {/* Its run closes itself, unless a pitch opens on its rule (pixel-craft class 6). */}
             <TripDayPlan
               briefings={diveBriefings}
-              nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
+              nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, Boolean(logEntry))}
               sightings={briefing.seen}
               shop={shop}
               locale={locale}
-              logEntry={inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course }}
               profile={{
                 rhythm: shop,
                 depthUnit: shop.depthUnit,
@@ -394,11 +395,19 @@ export default async function TripDetailPage({
                 close rather than a second rule a gap below it; with no door the
                 two stand a section apart. An empty block takes no room: its
                 margins collapse through it. */}
-            <div className={pitchHasDoor(diveBriefings, publicCrew) ? undefined : "space-y-10"}>
+            <div
+              className={
+                pitchHasDoor(diveBriefings, publicCrew, Boolean(logEntry))
+                  ? undefined
+                  : "space-y-10"
+              }
+            >
               <TripPitch
                 briefings={diveBriefings}
                 crew={publicCrew}
                 locale={locale}
+                timeZone={shop.timezone}
+                logEntry={logEntry}
                 embed={isEmbed}
               />
               <ConditionsLine
