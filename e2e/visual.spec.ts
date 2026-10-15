@@ -3989,10 +3989,12 @@ for (const scheme of ["light", "dark"] as const) {
        * this surface saw the *ashore* row, and the one a crew reads at the rail
        * with the gate already behind somebody was never looked at.
        *
-       * Priya Sharma is the seeded blocked diver (waiver not sent), so boarding
-       * her is the shortest honest route into the state. The reset restores the
-       * schedule before the next test, which is what makes it safe to board her
-       * here.
+       * `?blockedAboard=1` boards the first diver the gate clears, by name
+       * (Diego Alvarez in the seed), then supersedes the release he signed, so
+       * the row reads "Signed waiver lapsed." — a signature that no longer
+       * stands, never "not sent yet" (`waiver_lapsed`, which renamed it). The
+       * reset restores the schedule before the next test, which is what makes
+       * it safe to board him here.
        */
       test(`a station names a blocker aboard (${scheme})`, async ({ page, request }) => {
         // **Through the trouble-states route, because it cannot be clicked.**
@@ -4008,7 +4010,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .getByRole("listitem")
           .filter({ hasText: "Aboard" })
-          .filter({ hasText: "Waiver not signed, not sent yet." })
+          .filter({ hasText: "Signed waiver lapsed." })
           .first()
           .waitFor();
         await capture(page, "today-blocked-aboard", scheme);
