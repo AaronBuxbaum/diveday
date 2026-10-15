@@ -135,6 +135,37 @@ const seatMoneySchema = z.discriminatedUnion("due", [
   }),
 ]);
 
+/**
+ * The longest trip title a notification carries. `trips.title` is unbounded, so
+ * a long stored title is clipped to this with {@link notificationTripTitle}
+ * before it is measured: a long title must shorten the subject, never fail the
+ * send (security review 20261014, issue #2603).
+ */
+export const NOTIFICATION_TRIP_TITLE_MAX = 200;
+
+/**
+ * A trip title that fits {@link NOTIFICATION_TRIP_TITLE_MAX} as zod measures
+ * it (UTF-16 units), ending in "…" when cut, and never splitting a surrogate
+ * pair (an emoji in a title stays whole or goes). A title that already fits
+ * comes back unchanged apart from the trim.
+ */
+export function notificationTripTitle(title: string): string {
+  const trimmed = title.trim();
+  if (trimmed.length <= NOTIFICATION_TRIP_TITLE_MAX) return trimmed;
+  let cut = trimmed.slice(0, NOTIFICATION_TRIP_TITLE_MAX - 1);
+  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}…`;
+}
+
+/**
+ * **The one `tripTitle` every kind shares.** It shortens rather than rejects,
+ * so no writer has to remember to clip a stored title first, and a trip with a
+ * long name (a multi-site charter) still sends its mail, its reminder and its
+ * roll-call alert. `notificationSchema.parse` is the one door a notification
+ * passes before it is sent or queued, so the shortened value is what is sent.
+ */
+const tripTitleSchema = z.string().trim().min(1).transform(notificationTripTitle);
+
 const bookingConfirmationSchema = z.object({
   kind: z.literal("booking_confirmation"),
   bookingId: z.uuid(),
@@ -143,7 +174,7 @@ const bookingConfirmationSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -205,7 +236,7 @@ const waiverRequestSchema = z.object({
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   /** Present when the link was requested from a departure; omitted otherwise. */
-  tripTitle: z.string().trim().min(1).max(200).optional(),
+  tripTitle: tripTitleSchema.optional(),
   completionUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -297,7 +328,7 @@ const bookingHandoffSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   bookingUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -311,7 +342,7 @@ const readinessLinkSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   readinessUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -332,7 +363,7 @@ const waitlistInviteSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -357,7 +388,7 @@ const tripInvitationSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -392,7 +423,7 @@ const lastMinuteDealSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -426,7 +457,7 @@ const checkoutRecoverySchema = z.object({
   to: emailAddressSchema,
   locale: localeSchema,
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -441,7 +472,7 @@ const tripReminderFields = {
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -517,7 +548,7 @@ const tripRescheduledSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   previousStartsAt: z.date(),
   startsAt: z.date(),
   endsAt: z.date(),
@@ -542,7 +573,7 @@ const tripRecapSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   sites: z.array(z.string().trim().min(1).max(120)).max(10).optional(),
@@ -577,7 +608,7 @@ const tripConditionsHoldSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   conditionsSummary: z.string().trim().max(600).nullish(),
@@ -607,7 +638,7 @@ const tripMinimumNotMetSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   /** What the departure needed, and what it had when the call was made. */
@@ -639,7 +670,7 @@ const tripBlowoutSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   /**
@@ -704,7 +735,7 @@ const bookingCancelledSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   cancelledBy: z.enum(["diver", "shop"]),
@@ -1210,7 +1241,7 @@ const departureNoteSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   body: z
@@ -1235,7 +1266,7 @@ const lostItemFoundSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   description: z.string().trim().min(1).max(120),
@@ -1358,7 +1389,7 @@ const crewScheduleChangeSchema = z.object({
       z.object({
         change: z.enum(CREW_NOTICE_CHANGES),
         role: z.enum(CREW_TRIP_ROLES).nullable().optional(),
-        tripTitle: z.string().trim().min(1).max(200),
+        tripTitle: tripTitleSchema,
         startsAt: z.date(),
         /** On `time_moved`: when it left before the move (#2283). */
         previousStartsAt: z.date().optional(),
@@ -1432,27 +1463,6 @@ const stripePaymentsRestrictedSchema = z.object({
  * Not queued (`notificationIsQueueable`): an alert that arrives hours late,
  * after the count closed, says something false.
  */
-/**
- * The longest trip title a notification carries. `trips.title` is unbounded,
- * so a writer that hands a stored title to a kind capped here clips it first
- * with {@link notificationTripTitle}: a long title must shorten the subject,
- * never fail the send (security review 20261014).
- */
-export const NOTIFICATION_TRIP_TITLE_MAX = 200;
-
-/**
- * A trip title that fits {@link NOTIFICATION_TRIP_TITLE_MAX} as zod measures
- * it (UTF-16 units), ending in "…" when cut, and never splitting a surrogate
- * pair (an emoji in a title stays whole or goes).
- */
-export function notificationTripTitle(title: string): string {
-  const trimmed = title.trim();
-  if (trimmed.length <= NOTIFICATION_TRIP_TITLE_MAX) return trimmed;
-  let cut = trimmed.slice(0, NOTIFICATION_TRIP_TITLE_MAX - 1);
-  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
-  return `${cut.trimEnd()}…`;
-}
-
 const rollCallStaleSchema = z.object({
   kind: z.literal("roll_call_stale"),
   shopId: z.uuid(),
@@ -1462,7 +1472,7 @@ const rollCallStaleSchema = z.object({
   locale: localeSchema,
   recipientName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(NOTIFICATION_TRIP_TITLE_MAX),
+  tripTitle: tripTitleSchema,
   /** The after-dive checkpoint that is open: 1–4. */
   diveNumber: z.number().int().min(1).max(4),
   /** People not accounted for there, or recorded not back aboard when `missing`. */
