@@ -246,7 +246,7 @@ describe("Tell them", () => {
   });
 });
 
-describe("Tell them and the meeting point (#2446)", () => {
+describe("Tell them and the meeting point", () => {
   async function undoneMove(meetingPointMoved: boolean) {
     const ctx = await context();
     signIn(ctx.shop, ctx.owner);

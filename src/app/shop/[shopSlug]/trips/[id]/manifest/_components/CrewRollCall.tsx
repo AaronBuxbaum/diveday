@@ -409,7 +409,9 @@ export function CrewRollCall({
                       {teamLabel ? (
                         <Badge tone="neutral">
                           {teamLabel}
-                          {member.buddyAlert ? ` · ${buddyAlertText(t, member.buddyAlert, member.buddyMissing)}` : ""}
+                          {member.buddyAlert
+                            ? ` · ${buddyAlertText(t, member.buddyAlert, member.buddyMissing)}`
+                            : ""}
                         </Badge>
                       ) : null}
                     </p>

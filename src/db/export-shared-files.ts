@@ -356,6 +356,9 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
     // as `last_dived_band` above — and a shop that moved its data would
     // otherwise be asking every one of them again.
     { header: "welcome_shared_at", in: "shop", value: (row) => row.welcomeSharedAt },
+    // What the same diver chose to add to the hello (issue #2425): a code,
+    // present only while the consent above is.
+    { header: "welcome_hello", in: "shop", value: (row) => row.welcomeHello },
     // The diver answering "nothing has changed" about the sizes, gas
     // and emergency contact the shop already holds (ADR
     // 20260904-reef-all-the-way-down, D15). Same class as the two

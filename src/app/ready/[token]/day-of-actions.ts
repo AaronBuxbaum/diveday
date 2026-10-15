@@ -18,6 +18,7 @@ import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isDiver } from "@/lib/participant-types";
 import { RE_ENTRY_ASKS, reEntryOffersFor } from "@/lib/re-entry";
+import { WELCOME_HELLOS } from "@/lib/welcome-cue";
 import { base, bounceTarget, contextFor } from "./action-helpers";
 
 /**
@@ -57,6 +58,7 @@ const dayOfSchema = z.object({
   kind: z.enum(["carry_gear", "first_timer", "find_group", "none"]).optional(),
   welcomeAsked: z.literal("1").optional(),
   welcomeShare: z.literal("on").optional(),
+  welcomeHello: z.union([z.enum(WELCOME_HELLOS), z.literal("")]).optional(),
 });
 
 export async function saveDayOfDetailsFromReady(token: string, formData: FormData) {
@@ -106,9 +108,15 @@ export async function saveDayOfDetailsFromReady(token: string, formData: FormDat
     }
     if (answers.welcomeAsked && data.welcomeOffer) {
       const shared = answers.welcomeShare === "on";
-      if (shared !== data.welcomeShared) {
+      // The word that goes with the yes (#2425): asked of a first trip only,
+      // and kept only with the yes. An unticked box clears it in the write.
+      const hello =
+        shared && data.welcomeOffer.kind === "first_trip" ? answers.welcomeHello || null : null;
+      if (shared !== data.welcomeShared || (shared && hello !== data.welcomeHello)) {
         writes.push(
-          setWelcomeConsent(ctx.db, { shopId, bookingId, shared }).then((result) => result.ok),
+          setWelcomeConsent(ctx.db, { shopId, bookingId, shared, hello }).then(
+            (result) => result.ok,
+          ),
         );
       }
     }

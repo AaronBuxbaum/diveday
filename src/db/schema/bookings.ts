@@ -111,6 +111,17 @@ export const diveIntent = pgEnum("dive_intent", [
 ]);
 
 /**
+ * **What a first-timer chose to tell the crew** (issue #2425, delight report
+ * D22), asked on `/ready` beside the `welcome_shared_at` consent and nowhere
+ * else. A fixed choice, never free text: a free-text channel to the crew can
+ * carry medical details onto a roster, and three true things give the crew
+ * something to say hello with. Not a safety signal and not a gate — a diver who
+ * is nervous is told hello to, and any real concern goes through the medical
+ * path.
+ */
+export const welcomeHello = pgEnum("welcome_hello", ["first_ocean_dive", "celebrating", "nervous"]);
+
+/**
  * **The one support a diver easing back asked for** (ADR
  * 20260904-reef-all-the-way-down, D18/#1178). Offered only to a diver who has
  * just said they are getting comfortable again, and only when the departure is
@@ -384,6 +395,13 @@ export const bookings = pgTable(
      * every shop surface forever, which is the badge D22 exists to refuse.
      */
     welcomeSharedAt: timestamp("welcome_shared_at", { withTimezone: true }),
+    /**
+     * What the diver chose to add to the hello (issue #2425). **Only ever
+     * non-null while `welcome_shared_at` is**: withdrawing the consent clears
+     * it in the same write, and the staff readers return it only for a
+     * consented seat. Cleared on erasure with the stamp it hangs from.
+     */
+    welcomeHello: welcomeHello("welcome_hello"),
     /**
      * **What the instructor told this student to do next** (issues #1196 and
      * #1205), written from the course session's own roster and read back by

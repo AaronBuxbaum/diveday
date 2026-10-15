@@ -35,7 +35,7 @@ import {
 } from "@/lib/reminders";
 import { maySendNow } from "@/lib/send-window";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { issueBookingCapabilities, revokeIssuedCapabilities } from "./booking-capabilities";
+import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import {
@@ -44,6 +44,7 @@ import {
   sendNotificationBatch,
 } from "./notifications";
 import { listTripsReadiness } from "./readiness";
+import { type ReminderLink, ReminderLinks } from "./reminder-links";
 import {
   bookings,
   courses,
@@ -317,10 +318,10 @@ async function mintReminderLinks(
     };
   }>,
   now: Date,
-  whatsAppShopIds: ReadonlySet<string>,
-): Promise<Map<string, ReminderLink>> {
+  whatsAppShopIds: ReadonlyMap<string, unknown>,
+): Promise<ReminderLinks> {
   const links = new Map<string, ReminderLink>();
-  if (!origin) return links;
+  if (!origin) return new ReminderLinks(links);
   // A phone-only diver on the STOP list, at a shop with no WhatsApp of its own,
   // is refused by the SMS wrapper: no link is minted for a text that cannot go
   // (#2451). One read for the pass.
@@ -357,11 +358,8 @@ async function mintReminderLinks(
       });
     }
   }
-  return links;
+  return new ReminderLinks(links);
 }
-
-/** A readiness link minted for one reminder: the URL it carries and the token behind it. */
-type ReminderLink = { shopId: string; token: string; url: string };
 
 /**
  * Send every pre-trip reminder that has come due since the last run, across all
@@ -623,19 +621,7 @@ export async function sendDueReminders(
     sending.push({ row, cadence, checklist, materialsDue });
   }
 
-  const links = await mintReminderLinks(
-    db,
-    origin,
-    sending,
-    now,
-    new Set(whatsAppProviders.keys()),
-  );
-  // Links whose reminder did not go: revoked once the sends are known (#2451).
-  const unsent: ReminderLink[] = [];
-  const settleLink = (bookingId: string, sent: boolean) => {
-    const link = links.get(bookingId);
-    if (link && !sent) unsent.push(link);
-  };
+  const links = await mintReminderLinks(db, origin, sending, now, whatsAppProviders);
 
   for (const {
     row: { booking, person, trip, shop },
@@ -654,7 +640,7 @@ export async function sendDueReminders(
     // different languages.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
-    const readinessUrl = links.get(booking.id)?.url;
+    const readinessUrl = links.urlFor(booking.id);
     const phone = smsRecipient(person.phone);
     // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
     const meetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));
@@ -813,9 +799,7 @@ export async function sendDueReminders(
       kind: work.kind,
       delivery,
     });
-    settleLink(work.bookingId, delivery.status === "sent");
-    if (delivery.status === "sent") summary.sent += 1;
-    else summary.failed += 1;
+    links.settle(summary, work.bookingId, delivery);
   }
 
   for (const work of smsWork) {
@@ -838,20 +822,10 @@ export async function sendDueReminders(
       kind: work.kind,
       delivery,
     });
-    settleLink(work.bookingId, delivery.status === "sent");
-    if (delivery.status === "sent") summary.sent += 1;
-    else summary.failed += 1;
+    links.settle(summary, work.bookingId, delivery);
   }
 
-  // Nobody holds a link from a reminder that did not go; take them back, per
-  // shop, by token so an earlier delivered link stays live.
-  const unsentByShop = new Map<string, string[]>();
-  for (const { shopId, token } of unsent) {
-    unsentByShop.set(shopId, [...(unsentByShop.get(shopId) ?? []), token]);
-  }
-  for (const [shopId, tokens] of unsentByShop) {
-    await revokeIssuedCapabilities(db, { shopId, tokens, now });
-  }
+  await links.revokeUnsent(db, now);
 
   return summary;
 }

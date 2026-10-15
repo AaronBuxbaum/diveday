@@ -94,4 +94,7 @@
   warning tone the certification phrase wears everywhere (`welcomeDockLineUnchecked`,
   `src/i18n/welcome-cue-labels.ts`). **Nitrox is never on it**: a greeting is not a fill
   clearance, and enriched air is the fill station's question. It informs and gates nothing; the
-  boarding gate is readiness.
+  boarding gate is readiness. It may end with the diver's own **hello choice** (`welcome_hello`:
+  first ocean dive, celebrating something, a little nervous), asked on `/ready` under the same
+  yes as the cue, a fixed choice and never free text, cleared when the yes is taken back. A
+  booking's free text never reaches the line.

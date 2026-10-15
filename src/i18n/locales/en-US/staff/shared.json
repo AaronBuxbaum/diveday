@@ -527,7 +527,12 @@
     "returning": "back after {years, plural, one {# year} other {# years}}",
     "dockLine": "Say hello to {name}: {card}.",
     "dockLineNoCard": "Say hello to {name}.",
-    "dockLineSays": "Say hello to {name}: says {level}."
+    "dockLineSays": "Say hello to {name}: says {level}.",
+    "hello": {
+      "firstOceanDive": "First ocean dive.",
+      "celebrating": "Celebrating something.",
+      "nervous": "A little nervous."
+    }
   },
   "diveIntent": {
     "onTheList": "On the list today: {list}",

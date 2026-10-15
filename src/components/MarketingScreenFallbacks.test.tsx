@@ -335,7 +335,7 @@ describe("MarketingScreenFallbacks", () => {
   });
 });
 
-describe("FrontDeskReadinessFallback stage chip (#2402)", () => {
+describe("FrontDeskReadinessFallback stage chip", () => {
   it.each(["en-US", "es-ES"] as const)("shows the staff boarding word in %s", (locale) => {
     render(<FrontDeskReadinessFallback locale={locale} />);
     expect(screen.getByText(staffTranslator(locale)(STAGE_WORD_KEYS.boarding))).toBeVisible();

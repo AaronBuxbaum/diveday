@@ -1096,6 +1096,7 @@ async function scrubBookingRows(
         lastDivedBand: null,
         reEntryAsk: null,
         welcomeSharedAt: null,
+        welcomeHello: null,
         // "Running late" (J3) is the diver's own statement on the seat.
         runningLateAt: null,
         // The booker's "Under 18" is an age fact about this person, cleared

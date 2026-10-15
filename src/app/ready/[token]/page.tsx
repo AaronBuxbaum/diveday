@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
@@ -58,7 +57,6 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { threadNextKey } from "@/i18n/thread-labels";
-import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -79,6 +77,7 @@ import { readAfterTheDive } from "./_components/after-dive-reads";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
 import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
 import { saveEmergencyContactFromReady } from "./paperwork-actions";
+import { terminalCardIn } from "./terminal-card";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
@@ -194,25 +193,12 @@ async function DiverReadinessPage({
   anonT: DiverTranslator;
   underBookedHeader: boolean;
 }) {
-  /**
-   * **A terminal card never nests inside the booked shell** (#2429). Every
-   * card below (unavailable, cancelled, the after-dive states) renders its own
-   * `<main>` and frame; under the booked header that would stack two mains,
-   * "You've got a seat" above "Your booking was cancelled". Reached only by a
-   * race with a staff cancel or a boat coming home, so the stream leaves for the
-   * plain URL, whose fast path declines and which owns these cards.
-   */
-  const leaveForPlainPage = () => redirect(readinessLinkPath(token));
-  const terminal = <Card,>(card: Card) => (underBookedHeader ? leaveForPlainPage() : card);
+  const alone = terminalCardIn(underBookedHeader, token);
   const data = await getReadyPageData(db, bookingId);
-  if (!data) {
-    // `ready.unavailableBody`, not the waiver subtree's identical sentence,
-    // which this read until issue #1334. The two say the same words today, so
-    // nothing on screen moves — but `/waivers` and `/ready` are different
-    // surfaces with different rescues, and a reword of one should not be able
-    // to reach the other by accident.
-    return terminal(<UnavailableReadyLink t={anonT} />);
-  }
+  // `ready.unavailableBody`, not the waiver subtree's identical sentence
+  // (issue #1334): `/waivers` and `/ready` have different rescues, and a
+  // reword of one should not reach the other by accident.
+  if (!data) return alone(<UnavailableReadyLink t={anonT} />);
 
   const { detail, shop, person } = data;
   const locale = await requestLocale(shop.defaultLocale);
@@ -220,13 +206,10 @@ async function DiverReadinessPage({
 
   if (detail.cancelled) {
     // The shop took this seat off the boat and this diver still holds a live
-    // link to it. Staff cancellation revokes the booking's capabilities too, so
-    // reaching here means the read above won the race against that revoke —
-    // rare, and the one path on which a diver learns from this page rather than
-    // from the shop. What it says about their money is read from the payment
-    // row, never from anything on the URL.
-    if (underBookedHeader) return leaveForPlainPage();
-    return cancelledNoticeForReady(db, data, bookingId, locale, t);
+    // link: the read above won a race against the capability revoke. Rare, and
+    // the one path a diver learns from this page, not the shop. Money is read
+    // from the payment row. `alone(null)` is the exit under the booked header.
+    return alone(null) ?? cancelledNoticeForReady(db, data, bookingId, locale, t);
   }
 
   /**
@@ -272,12 +255,11 @@ async function DiverReadinessPage({
     identityHeld: data.identityHeld,
   });
   if (afterDive.afterTheDive) {
-    if (data.identityHeld) return terminal(<HeldAfterDiveCard shop={shopContact} t={t} />);
+    if (data.identityHeld) return alone(<HeldAfterDiveCard shop={shopContact} t={t} />);
     const recapState = await afterDive.recap();
-    if (recapState.kind === "waiting")
-      return terminal(<RecapWaitingCard shop={shopContact} t={t} />);
+    if (recapState.kind === "waiting") return alone(<RecapWaitingCard shop={shopContact} t={t} />);
     const recap = recapState.kind === "recap" ? recapState.data : null;
-    if (!recap) return terminal(<NoShowCard shop={shopContact} t={t} />);
+    if (!recap) return alone(<NoShowCard shop={shopContact} t={t} />);
     const recapToken = signRecapToken(bookingId);
     const after = await buildAfterStateProps({
       db,
@@ -296,7 +278,7 @@ async function DiverReadinessPage({
         submitPulse: submitRecapPulseAction.bind(null, recapToken),
       },
     });
-    return terminal(
+    return alone(
       <DiverIntlProvider
         locale={locale}
         timeZone={detail.shop.timezone}

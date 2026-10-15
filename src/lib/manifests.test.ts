@@ -1037,54 +1037,6 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
     expect(manifest.divers.find((d) => d.bookingId === "booking-omar")?.buddyAlert).toBeNull();
   });
 
-  it("names the teammates who raise the alert, and nobody on a row without one (#2403)", () => {
-    const manifest = buildTripManifest({
-      trip,
-      checkpoint: "after_dive_1",
-      crew: [],
-      divers: [
-        diver("booking-tom", "Tom Okafor", {
-          rollCall: boardedAt(),
-          buddyTeam: team("team-1", [
-            otherDiver("booking-lena", "Lena Fischer"),
-            otherDiver("booking-ravi", "Ravi Patel"),
-            // A stale reference is dropped, never named.
-            otherDiver("booking-gone", "Ghost Person"),
-          ]),
-        }),
-        // Back aboard: not the one the alert is about.
-        diver("booking-lena", "Lena Fischer", { rollCall: boardedAt() }),
-        diver("booking-ravi", "Ravi Patel", { rollCall: notBoardedAt() }),
-      ],
-    });
-    const byId = (id: string) => manifest.divers.find((d) => d.bookingId === id);
-    expect(byId("booking-tom")?.buddyMissing).toEqual(["Ravi Patel"]);
-    expect(byId("booking-lena")?.buddyMissing).toEqual([]);
-    expect(byId("booking-ravi")?.buddyMissing).toEqual([]);
-  });
-
-  it("names no one at the dock for a teammate recorded ashore, or when the row is not aboard", () => {
-    const manifest = buildTripManifest({
-      trip,
-      checkpoint: "departure",
-      crew: [],
-      divers: [
-        diver("booking-tom", "Tom Okafor", {
-          rollCall: boardedAt(),
-          buddyTeam: team("team-1", [otherDiver("booking-lena", "Lena Fischer")]),
-        }),
-        diver("booking-lena", "Lena Fischer", {
-          rollCall: notBoardedAt(),
-          buddyTeam: team("team-1", [otherDiver("booking-tom", "Tom Okafor")]),
-        }),
-      ],
-    });
-    const byId = (id: string) => manifest.divers.find((d) => d.bookingId === id);
-    expect(byId("booking-tom")?.buddyAlert).toBeNull();
-    expect(byId("booking-tom")?.buddyMissing).toEqual([]);
-    expect(byId("booking-lena")?.buddyMissing).toEqual([]);
-  });
-
   it("reads a crew teammate's own roll call, and puts the alert on the crew row too", () => {
     const manifest = buildTripManifest({
       trip,

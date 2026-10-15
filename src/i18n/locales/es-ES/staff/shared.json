@@ -527,7 +527,12 @@
     "returning": "de vuelta tras {years, plural, one {# año} other {# años}}",
     "dockLine": "Saluda a {name}: {card}.",
     "dockLineNoCard": "Saluda a {name}.",
-    "dockLineSays": "Saluda a {name}: dice {level}."
+    "dockLineSays": "Saluda a {name}: dice {level}.",
+    "hello": {
+      "firstOceanDive": "Su primera inmersión en mar abierto.",
+      "celebrating": "Celebra algo.",
+      "nervous": "Con algo de nervios."
+    }
   },
   "diveIntent": {
     "onTheList": "En la lista de hoy: {list}",
