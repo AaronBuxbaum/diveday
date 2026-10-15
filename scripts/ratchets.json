@@ -222,7 +222,7 @@
         }
       }
     ],
-    "src/app/api/webhooks/stripe/route.ts#POST": 457,
+    "src/app/api/webhooks/stripe/route.ts#POST": 431,
     "src/app/ready/[token]/page.tsx#DiverReadinessPage": 494,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 670,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,
@@ -247,7 +247,7 @@
     "src/db/reminders.ts#sendDueReminders": 448,
     "src/db/reporting.ts#getMonthlyReport": 510,
     "src/db/seed-dive-sites.ts#seedDiveSites": 525,
-    "src/db/seed-history.ts#seedHistory": 854,
+    "src/db/seed-history.ts#seedHistory": 848,
     "src/db/seed-more-trips.ts#seedMoreTrips": 739,
     "src/db/seed-trips.ts#seedTrips": 582,
     "src/db/seed.ts#resetDemoSchedule": 449,

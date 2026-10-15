@@ -85,6 +85,33 @@ function bareRating(index: number): number {
 }
 
 /**
+ * How recent a sailed departure's boarded deposit seat must be for its balance
+ * to still be owed in the demo: the Owed line then reads a couple of seats
+ * from the last week, not a year of them.
+ */
+const HISTORY_BALANCE_CHASE_DAYS = 7;
+
+/**
+ * What the back-fill's booking `k` paid. **Anyone who boarded paid**, the way
+ * a shop takes the balance at the dock, except a deposit seat on the last
+ * week's boats, whose balance is still being chased. A year of boarded seats
+ * left owing read on the Orders page's Owed line as "$10,636 on 97 seats that
+ * sailed unpaid", a shop in trouble rather than a shop at work. A no-show keeps
+ * its plan: a deposit the shop kept, nothing paid, or paid in full.
+ */
+function historyPayment(
+  k: number,
+  seat: { cancelled: boolean; noShow: boolean; daysAgo: number },
+): "paid" | "deposit_paid" | "refunded" | "unpaid" {
+  if (seat.cancelled) return "refunded";
+  const asked = k % 13 === 0 ? "unpaid" : k % 5 === 0 ? "deposit_paid" : "paid";
+  if (seat.noShow) return asked;
+  return asked === "deposit_paid" && seat.daysAgo <= HISTORY_BALANCE_CHASE_DAYS
+    ? "deposit_paid"
+    : "paid";
+}
+
+/**
  * The months behind today. Owner reporting ("how's your month") is hollow over a
  * shop that opened yesterday, so this back-fills a realistic trailing quarter:
  * past regulars plus a cohort of divers who only ever appear in history, booked
@@ -628,13 +655,7 @@ export async function seedHistory(
       const cancelled = k % 23 === 7;
       const noShow = !cancelled && k % 17 === 5;
       const status = cancelled ? "cancelled" : noShow ? "no_show" : "checked_in";
-      const payment: BookingPlan["payment"] = cancelled
-        ? "refunded"
-        : k % 13 === 0
-          ? "unpaid"
-          : k % 5 === 0
-            ? "deposit_paid"
-            : "paid";
+      const payment = historyPayment(k, { cancelled, noShow, daysAgo: plan.daysAgo });
       plans.push({
         shopId,
         tripId: trip.id,
