@@ -63,7 +63,7 @@ describe("saveAnswerFromReply", () => {
     expect((await saveAnswerFromReply(ctx.db, { shopId: ctx.shop.id, replyId: first })).ok).toBe(
       true,
     );
-    expect(await saveAnswerFromReply(ctx.db, { shopId: ctx.shop.id, replyId: second })).toEqual({
+    expect(await saveAnswerFromReply(ctx.db, { shopId: ctx.shop.id, replyId: second })).toMatchObject({
       ok: false,
       reason: "duplicate",
     });
@@ -89,7 +89,7 @@ describe("saveAnswerFromReply", () => {
     }));
     if (rows.length > 0) await ctx.db.insert(inboxSavedAnswers).values(rows);
     const replyId = await sentReply("One more answer.");
-    expect(await saveAnswerFromReply(ctx.db, { shopId: ctx.shop.id, replyId })).toEqual({
+    expect(await saveAnswerFromReply(ctx.db, { shopId: ctx.shop.id, replyId })).toMatchObject({
       ok: false,
       reason: "full",
     });

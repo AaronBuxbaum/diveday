@@ -49,9 +49,11 @@ async function liveCount(db: DbExecutor, shopId: string): Promise<number> {
   return row?.value ?? 0;
 }
 
+/** `personId` is the diver the reply went to, read from the row, for the way back to their record. */
 export type SaveAnswerOutcome =
-  | { ok: true; id: string }
-  | { ok: false; reason: "not_found" | "duplicate" | "full" };
+  | { ok: true; id: string; personId: string }
+  | { ok: false; reason: "duplicate" | "full"; personId: string }
+  | { ok: false; reason: "not_found" };
 
 /**
  * **"Save this answer"**, from a reply the shop already sent. Only the reply's
@@ -64,7 +66,7 @@ export async function saveAnswerFromReply(
   input: { shopId: string; replyId: string },
 ): Promise<SaveAnswerOutcome> {
   const [reply] = await db
-    .select({ body: staffReplies.body, fullName: people.fullName })
+    .select({ body: staffReplies.body, fullName: people.fullName, personId: people.id })
     .from(staffReplies)
     .innerJoin(people, eq(people.id, staffReplies.personId))
     .where(
@@ -91,15 +93,18 @@ export async function saveAnswerFromReply(
         ),
       )
       .limit(1);
-    if (same) return { ok: false, reason: "duplicate" } as const;
+    const { personId } = reply;
+    if (same) return { ok: false, reason: "duplicate", personId } as const;
     if ((await liveCount(tx, input.shopId)) >= SAVED_ANSWERS_MAX) {
-      return { ok: false, reason: "full" } as const;
+      return { ok: false, reason: "full", personId } as const;
     }
     const [row] = await tx
       .insert(inboxSavedAnswers)
       .values({ shopId: input.shopId, title: savedAnswerTitle(body), body })
       .returning({ id: inboxSavedAnswers.id });
-    return row ? ({ ok: true, id: row.id } as const) : ({ ok: false, reason: "not_found" } as const);
+    return row
+      ? ({ ok: true, id: row.id, personId } as const)
+      : ({ ok: false, reason: "not_found" } as const);
   });
 }
 

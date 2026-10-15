@@ -17,6 +17,7 @@ import { getDiverProfile } from "@/db/divers";
 import { canPersonExportShopData } from "@/db/export";
 import { listGuardianEmails } from "@/db/guardian-erasure";
 import { personThread } from "@/db/inbound-messages";
+import { listSavedAnswers } from "@/db/inbox-saved-answers";
 import { openLostItemsByPerson } from "@/db/lost-items";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -27,6 +28,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { resolveDiverNotice } from "@/lib/diver-notices";
 import { bookingIsAhead, splitDiverStatus } from "@/lib/diver-status";
+import { formatShortDate, formatTime } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -46,6 +48,7 @@ import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { WaiverGroup } from "./_components/WaiverGroup";
 import { WorkOrdersGroup } from "./_components/WorkOrdersGroup";
+import { saveAnswerFromReplyAction } from "../../inbox/actions";
 import { loadDiverGear } from "./_lib/gear-load";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
 import { diverStatusRows } from "./_lib/status-load";
@@ -226,7 +229,7 @@ export default async function DiverDetailPage({
   // Three reads that need the two gates above, so they could not ride the
   // `Promise.all` that produced them — concurrent with each other instead of
   // the serial pair they used to be.
-  const [mergeCandidates, status, { trips: scannedTrips }, guardianEmails, found] =
+  const [mergeCandidates, status, { trips: scannedTrips }, guardianEmails, found, savedAnswers] =
     await Promise.all([
       canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
       // The readiness of the departure this diver is next on, read through the
@@ -240,6 +243,9 @@ export default async function DiverDetailPage({
       // Something the crew found against their seat, still waiting (fifth loop,
       // item 7): said under the header so the desk hands it over on this visit.
       openLostItemsByPerson(db, shop.id, [personId]),
+      // The shop's saved answers, as chips above the reply box (fifth loop,
+      // item 15); only read when there is a conversation to answer.
+      thread.length > 0 && !removed ? listSavedAnswers(db, shop.id) : [],
     ]);
   const foundItems = found.get(personId) ?? [];
   const upcoming = scannedTrips.filter(
@@ -288,6 +294,21 @@ export default async function DiverDetailPage({
   // Times out with this shop: a seat that has sailed plus the visits the
   // importer brought across. Shares `bookingIsAhead`'s late-arrival buffer, so
   // the boat somebody is still boarding is not counted as a visit yet.
+  // What a saved answer's `{name}` and `{trip}` become on this record: the
+  // first name, and the departure this diver is next booked on.
+  const nextBooked = diver.bookings
+    .filter((entry) => entry.booking.status === "booked" && bookingIsAhead(entry, now))
+    .sort((a, b) => a.trip.startsAt.getTime() - b.trip.startsAt.getTime())[0];
+  const answerFill = {
+    name: diver.person.fullName.trim().split(/\s+/)[0] || null,
+    trip: nextBooked
+      ? t("inbox.savedAnswers.tripFill", {
+          title: nextBooked.trip.title,
+          date: formatShortDate(nextBooked.trip.startsAt, locale, shop.timezone),
+          time: formatTime(nextBooked.trip.startsAt, locale, shop.timezone),
+        })
+      : null,
+  };
   const visits =
     diver.bookings.filter(
       (entry) => entry.booking.status !== "cancelled" && !bookingIsAhead(entry, now),
@@ -446,6 +467,9 @@ export default async function DiverDetailPage({
             removed={removed}
             t={t}
             status={noticeForForm(diverNotice, "reply")}
+            savedAnswers={savedAnswers}
+            fill={answerFill}
+            saveAnswerAction={saveAnswerFromReplyAction}
           />
           <GearAndSizes
             diver={diver}
