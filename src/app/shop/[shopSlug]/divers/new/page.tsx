@@ -5,6 +5,7 @@ import { seatExistingDiverAction } from "@/app/actions/seat-diver";
 import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
 import { FormDraft } from "@/components/FormDraft";
+import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
 import { formDraftCopy } from "@/components/form-draft-copy";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -22,6 +23,8 @@ import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { diverSearchPrefill } from "@/lib/person-fields";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { WALK_IN_PARTY_FORM } from "@/lib/walk-in-party";
+import { WalkInPartyRows } from "./_components/WalkInPartyRows";
 import { createDiverFormAction } from "./actions";
 
 export const instant = true;
@@ -42,6 +45,10 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "diver-trip-prerequisite": { tone: "danger", key: "trips.notices.diverTripPrerequisite" },
   "diver-unavailable": { tone: "danger", key: "trips.notices.diverUnavailable" },
   "diver-invalid": { tone: "danger", key: "divers.page.noticeInvalid" },
+  "seat-busy": { tone: "danger", key: "seatDiver.busy" },
+  // A walk-in party with a name that reads like somebody on file (fifth
+  // loop, item 9): seat that person from the search, or say they are all new.
+  "party-on-file": { tone: "danger", key: "divers.page.partyOnFile" },
 };
 
 export default async function NewDiverPage({
@@ -143,6 +150,7 @@ export default async function NewDiverPage({
   const banner = noticeFromParam(notice, NOTICES);
   const noticeText = banner ? t(banner.key) : null;
   const noticeIsError = banner?.tone === "danger";
+  const walkInParty = surface === "walk-in" && tripId !== null;
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -277,12 +285,41 @@ export default async function NewDiverPage({
           <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
           <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
           <input type="hidden" name="request" value={requestParam ?? ""} />
+          {/* **The rest of a walk-in family** (fifth loop, item 9): only at
+              the counter, where the party is standing at the desk. */}
+          {walkInParty ? (
+            <>
+              <KeepTypedOnRefusal form={WALK_IN_PARTY_FORM} restore={noticeIsError} />
+              <WalkInPartyRows
+                restore={noticeIsError}
+                copy={{
+                  add: t("divers.page.party.add"),
+                  person: t("divers.page.party.person"),
+                  name: t("divers.page.fullNameLabel"),
+                  under18: t("divers.page.party.under18"),
+                  under18Hint: t("divers.page.party.under18Hint"),
+                  remove: t("divers.page.party.remove"),
+                  removeFor: t("divers.page.party.removeFor"),
+                }}
+              />
+            </>
+          ) : null}
           {/* No margin: the trio's grid gap is the one field gap every form
               stands its action row under (K-182). */}
           <FieldActions>
             <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>
               {submitLabel}
             </SubmitButton>
+            {walkInParty && notice === "party-on-file" ? (
+              <SubmitButton
+                name="force"
+                value="true"
+                pendingLabel={t("divers.page.adding")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("divers.page.party.allNew")}
+              </SubmitButton>
+            ) : null}
             <Link href={backLink.href} className={buttonClass({ variant: "secondary" })}>
               {t("divers.page.cancel")}
             </Link>

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { seatNewDiverAction } from "@/app/actions/seat-diver";
+import { seatNewDiverAction, seatWalkInPartyAction } from "@/app/actions/seat-diver";
 import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
 import { getDb } from "@/db/client";
@@ -17,6 +17,7 @@ import {
 } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
+import { readWalkInPartyRows } from "@/lib/walk-in-party";
 
 const newDiverContextForm = z.object({
   surface: z.string().optional(),
@@ -71,6 +72,17 @@ export async function createDiverFormAction(formData: FormData) {
     if (activeTripId) search.tripId = activeTripId;
     if (activeWaitlist) search.waitlist = "true";
     redirect(buildNewDiverUrl(search));
+  }
+
+  // **A walk-in family** (fifth loop, item 9): party rows send the whole form
+  // to the party seating, which runs its own on-file check over every name.
+  if (
+    activeSurface === "walk-in" &&
+    activeTripId &&
+    readWalkInPartyRows(formData.entries()).length > 0
+  ) {
+    await seatWalkInPartyAction(staff.user.shopSlug, formData);
+    return;
   }
 
   if (!force) {

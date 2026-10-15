@@ -9,6 +9,7 @@ import { hasSailed } from "@/lib/trips";
 import {
   type BookingOutcome,
   createBooking,
+  createBookingParty,
   type FreshPersonDetails,
   type MoveBookingOutcome,
   moveBooking,
@@ -272,6 +273,96 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
   }
   await trackEvent({ name: "booking_completed", source: "staff", partySize: 1 });
 
+  return seatConsequences(db, input, outcome);
+}
+
+/** One person typed on the walk-in form's party rows (fifth loop, item 9). */
+export type SeatPartyMember = {
+  fullName: string;
+  email?: string;
+  phone?: string;
+  /** The row's "Under 18" tick: a parent or guardian co-signs this seat's release. */
+  minor: boolean;
+};
+
+export type SeatPartyResult =
+  | { ok: true; seats: Extract<SeatDiverResult, { ok: true }>[] }
+  | (Extract<SeatDiverResult, { ok: false }> & {
+      /** Which member the party was refused on, so the form can point at that row. */
+      failedIndex: number;
+    });
+
+/**
+ * **A walk-in family on the boat in one pass** (fifth loop, item 9). Every
+ * member is booked in one all-or-nothing transaction (`createBookingParty`):
+ * the counter never leaves two of four seated and the other two refused, and
+ * capacity is checked for the whole party at once. Each seat past the first
+ * leads back to the first, which is how a party is a party everywhere else.
+ *
+ * An "Under 18" tick is the seat's `minor_declared_at`, the same fact the
+ * public party form writes, so the release asks a parent or guardian to sign
+ * with them and boarding waits for both (`guardianSignatureRequired`). It
+ * gates nothing at the counter. After the commit each seat is owed exactly
+ * what one walk-in is (`seatConsequences`), and the manifest refreshes once.
+ */
+export async function seatParty(
+  db: AppDb,
+  input: Omit<SeatDiverInput, "diver"> & { members: readonly SeatPartyMember[] },
+): Promise<SeatPartyResult> {
+  const outcome = await createBookingParty(
+    db,
+    input.members.map((member) => ({
+      actor: "staff" as const,
+      shopId: input.shopId,
+      tripId: input.tripId,
+      participantType: input.participantType ?? "diver",
+      fullName: member.fullName,
+      email: member.email,
+      phone: member.phone,
+      minorDeclared: member.minor || undefined,
+    })),
+  );
+  if (!outcome.ok) {
+    await trackEvent({ name: "booking_blocked", source: "staff", reason: outcome.reason });
+    const reason = collapse(outcome.reason, input.refusals);
+    return outcome.reason === "trip_prerequisite" && reason === "trip_prerequisite"
+      ? { ok: false, reason, refusal: outcome.refusal, failedIndex: outcome.failedIndex }
+      : { ok: false, reason, failedIndex: outcome.failedIndex };
+  }
+  await trackEvent({
+    name: "booking_completed",
+    source: "staff",
+    partySize: outcome.bookings.length,
+  });
+  const seats: Extract<SeatDiverResult, { ok: true }>[] = [];
+  for (const booking of outcome.bookings) {
+    seats.push(await seatConsequences(db, input, booking, { publish: false }));
+  }
+  await publishManifestEvent(db, input.shopId, input.tripId);
+  return { ok: true, seats };
+}
+
+/** What a booking that just committed hands its consequences: who sits where. */
+type SeatedBooking = {
+  bookingId: string;
+  personId: string;
+  personName: string;
+  identityUnconfirmed: boolean;
+};
+
+/**
+ * **Every consequence a staff seating owes, after the seat commits**: the
+ * confirmation or the waiver, the course materials, the trail, the desk event
+ * and the manifest refresh. One path for one diver (`seatDiver`) and for each
+ * member of a party (`seatParty`), so a family seated together is owed exactly
+ * what four walk-ins were.
+ */
+async function seatConsequences(
+  db: AppDb,
+  input: Omit<SeatDiverInput, "diver" | "refusals">,
+  outcome: SeatedBooking,
+  options: { publish?: boolean } = {},
+): Promise<Extract<SeatDiverResult, { ok: true }>> {
   let waiver: SeatDiverWaiver = "not_needed";
   let waiverPath: string | undefined;
   let confirmation: SeatDiverConfirmation = "not_needed";
@@ -380,7 +471,7 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
   // (ADR 20260804-manifest-web-push). Best-effort and never thrown, like every
   // other call to it, and deliberately after the booking and its side effects
   // rather than inside them.
-  await publishManifestEvent(db, input.shopId, input.tripId);
+  if (options.publish !== false) await publishManifestEvent(db, input.shopId, input.tripId);
 
   return {
     ok: true,

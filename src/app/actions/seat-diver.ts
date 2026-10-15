@@ -5,17 +5,18 @@ import { getDb } from "@/db/client";
 import { setDateRequestOutcome } from "@/db/course-inquiries";
 import { findSimilarDivers } from "@/db/divers";
 import { busyOnLockWait } from "@/db/lock-bounds";
-import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
+import { type SeatDiverPerson, type SeatDiverRefusal, seatDiver, seatParty } from "@/db/seat-diver";
 import { nowDate } from "@/lib/clock";
 import { blankAsAbsent, formValue, parseForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireShopSurface } from "@/lib/session";
-import { noticeUrl } from "@/lib/staff-notices";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
+import { readWalkInPartyRows } from "@/lib/walk-in-party";
 import {
   SEAT_BUSY_NOTICE,
   SEAT_SURFACES,
@@ -324,4 +325,95 @@ export async function seatNewDiverAction(
     parsed.data.participantType,
     answeredRequestId(formData),
   );
+}
+
+/**
+ * The new-diver form's own code for each refusal, so a refused party lands
+ * back on the form it was typed on (with its rows, `KeepTypedOnRefusal`)
+ * rather than on the walk-in search, which would show none of them.
+ */
+const PARTY_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
+  trip_full: "diver-full",
+  divers_full: "diver-divers-full",
+  participant_type_unavailable: "diver-type-unavailable",
+  already_booked: "diver-already",
+  course_unstaffed: "diver-course-unstaffed",
+  course_prerequisite: "diver-course-prerequisite",
+  course_ratio_full: "diver-course-ratio-full",
+  course_min_age: "diver-course-min-age",
+  trip_prerequisite: "diver-trip-prerequisite",
+  trip_unavailable: "diver-unavailable",
+  person_not_found: "diver-unavailable",
+  unavailable: "diver-unavailable",
+};
+
+/**
+ * **A walk-in family, seated in one pass** (fifth loop, item 9): the form's
+ * own fields are the first person and each party row one more, booked
+ * together on the departure or not at all (`seatParty`).
+ *
+ * **Nobody here is seated on a guess.** A party row is a name and a tick,
+ * with nothing to tell a returning diver from a namesake, so when any name in
+ * the party reads like somebody already on file the whole form comes back
+ * (`party-on-file`, rows kept) and that person is seated from the search,
+ * where the record is picked rather than guessed (H-13, issue #1556). `force`
+ * is the staffer's "these are all new people".
+ */
+export async function seatWalkInPartyAction(shopSlug: string, formData: FormData) {
+  const surface = surfaceFor("walk-in");
+  const session = (await requireShopSurface(shopSlug)).session;
+  const parsed = parseForm(newDiverSchema, formData);
+  const raw = rawLanding(formData);
+  const tripId = parsed.ok ? parsed.data.tripId : String(raw.tripId ?? "");
+  const formPath = `${shopPath(shopSlug, "divers", "new")}?${new URLSearchParams({
+    surface: "walk-in",
+    tripId,
+  }).toString()}`;
+  function back(notice: string): never {
+    return revalidateAndRedirect(formPath, noticeUrl(formPath, notice));
+  }
+  if (!parsed.ok || !uuidParam(tripId)) back("diver-invalid");
+
+  const rows = readWalkInPartyRows(formData.entries());
+  if (rows.some((row) => !diverNameSchema.safeParse(row.fullName).success)) back("diver-invalid");
+  const members = [
+    {
+      fullName: parsed.data.fullName,
+      email: parsed.data.email || undefined,
+      phone: parsed.data.phone,
+      minor: false,
+    },
+    ...rows.map((row) => ({ fullName: row.fullName, minor: row.minor })),
+  ];
+
+  const db = await getDb();
+  if (raw.force !== "true") {
+    const matched = await Promise.all(
+      members.map((member) => findSimilarDivers(db, session.user.shopId, member.fullName)),
+    );
+    if (matched.some((matches) => matches.length > 0)) back("party-on-file");
+  }
+
+  const outcome = await seatParty(db, {
+    shopId: session.user.shopId,
+    tripId,
+    actorPersonId: session.user.personId,
+    members,
+    entry: surface.entry,
+    refusals: surface.refusals,
+    participantType: parsed.data.participantType,
+  }).catch(busyOnLockWait);
+  if (outcome === "busy") back(SEAT_BUSY_NOTICE);
+  if (!outcome.ok) back(PARTY_REFUSAL_NOTICE[outcome.reason]);
+
+  const path = surface.seatedPath({ shopSlug, tripId, personId: "" });
+  const seats = outcome.seats;
+  // The same precedence one walk-in's notice keeps (`seat` above): a held
+  // seat first, then a release nobody was sent, then the plain "added".
+  const notice = seats.some((seat) => seat.identityUnconfirmed)
+    ? surface.seatedIdentityUnconfirmedNotice
+    : seats.some((seat) => seat.waiver === "not_delivered" || seat.waiver === "failed")
+      ? "walkin-party-added-waiver-undelivered"
+      : "walkin-party-added";
+  revalidateAndRedirect(path, noticeUrl(path, notice));
 }

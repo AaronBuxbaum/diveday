@@ -85,7 +85,9 @@
     "noShowWindowClosed": "Esa salida queda demasiado atrás para marcar que alguien no vino. Cambia la reserva desde su fila.",
     "noShowNotMarked": "Ese buceador no está marcado como que no vino.",
     "noShowTripFull": "La plaza liberada ya se ocupó, así que ese buceador no puede volver a esta salida.",
-    "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero."
+    "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero.",
+    "walkinPartyAdded": "Todo el grupo está en la lista de este barco. Regístralos en sus filas.",
+    "walkinPartyAddedWaiverUndelivered": "Todo el grupo está en la lista de este barco, pero no se enviaron sus exenciones por correo. Envíalas o comparte los enlaces desde sus filas de abajo. Un padre, madre o tutor firma con cada menor de 18 años."
   },
   "walkIn": {
     "title": "Walk-in",

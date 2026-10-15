@@ -85,7 +85,9 @@
     "noShowWindowClosed": "That departure is too far past to mark anyone not here. Change the booking from their row instead.",
     "noShowNotMarked": "That diver is not marked not here.",
     "noShowTripFull": "The freed seat has already been taken, so that diver cannot go back on this boat.",
-    "noShowCourseRatioFull": "That session is at its instructor-to-student ratio, so that diver can’t go back on it. Assign another instructor first."
+    "noShowCourseRatioFull": "That session is at its instructor-to-student ratio, so that diver can’t go back on it. Assign another instructor first.",
+    "walkinPartyAdded": "Everyone is on this boat’s list, together. Check them in on their rows.",
+    "walkinPartyAddedWaiverUndelivered": "Everyone is on this boat’s list, together, but their releases weren’t emailed. Send them or share the links from their rows below. A parent signs with anyone under 18."
   },
   "walkIn": {
     "title": "Walk-in",

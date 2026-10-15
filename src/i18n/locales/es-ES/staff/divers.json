@@ -140,7 +140,17 @@
     "confirmMatchesLastDive": "Último día de buceo aquí: {date}",
     "confirmMatchesNoDiveDay": "Ningún día de buceo aquí todavía",
     "confirmMatchesBorn": "Fecha de nacimiento: {date}",
-    "confirmMatchesSubmit": "Crear nuevo buceador de todos modos"
+    "confirmMatchesSubmit": "Crear nuevo buceador de todos modos",
+    "partyOnFile": "Puede que alguien de este grupo ya tenga ficha. Añádelo desde la búsqueda para usar su ficha, o registra a todos como nuevos.",
+    "party": {
+      "add": "Añadir otra persona",
+      "person": "Persona {n}",
+      "under18": "Menor de 18 años",
+      "under18Hint": "Un padre, madre o tutor legal firma la exención con esta persona.",
+      "remove": "Quitar",
+      "removeFor": "Quitar a la persona {n}",
+      "allNew": "Registrar a todos como nuevos"
+    }
   },
   "list": {
     "addDiverAction": "Añadir buceador",
