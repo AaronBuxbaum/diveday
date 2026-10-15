@@ -83,6 +83,8 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `black-tunicate.jpg` — [iNaturalist photo 256268133](https://www.inaturalist.org/photos/256268133) · CC0 · no rights reserved
 - `blackbar-soldierfish.jpg` — [Myripristis jacobus 8zz.jpg](https://commons.wikimedia.org/wiki/File:Myripristis_jacobus_8zz.jpg) · CC BY-SA 4.0 · Photo by David J. Stang
 - `blackcap-basslet.jpg` — [iNaturalist photo 249499332](https://www.inaturalist.org/photos/249499332) · CC BY 4.0 · Pauline Walsh Jacobson · cropped to 0,0.08,1,0.92 (left, top, width, height as fractions of the original)
+- `blacknose-shark.jpg` — [iNaturalist photo 624178912](https://www.inaturalist.org/photos/624178912) · CC BY 4.0 · Luke Padon · cropped to 0.05,0.2,0.9,0.6 (left, top, width, height as fractions of the original)
+- `blacktip-shark.jpg` — [Carcharhinus limbatus - Caraibische zwartpunthaai.jpg](https://commons.wikimedia.org/wiki/File:Carcharhinus_limbatus_-_Caraibische_zwartpunthaai.jpg) · Public domain · Albert Kok at Dutch Wikipedia Later versions were uploaded by Siebrand at nl.wikipedia.
 - `blade-fire-coral.jpg` — [iNaturalist photo 128232273](https://www.inaturalist.org/photos/128232273) · CC0 · no rights reserved
 - `blue-angelfish.jpg` — [iNaturalist photo 161522638](https://www.inaturalist.org/photos/161522638) · CC BY 4.0 · Pauline Walsh Jacobson
 - `blue-chromis.jpg` — [Chromis cyanea (46585332415).jpg](https://commons.wikimedia.org/wiki/File:Chromis_cyanea_(46585332415).jpg) · CC BY 2.0 · LASZLO ILYES from Cleveland, Ohio, USA · cropped to 0.05,0.10,0.80,0.80 (left, top, width, height as fractions of the original)
@@ -94,7 +96,9 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `bluehead-wrasse.jpg` — [Blue-Headed Wrasse (4387352722).jpg](https://commons.wikimedia.org/wiki/File:Blue-Headed_Wrasse_(4387352722).jpg) · CC BY 2.0 · Tony Hisgett from Birmingham, UK · cropped to 0.05,0.10,0.90,0.75 (left, top, width, height as fractions of the original)
 - `bluelip-parrotfish.jpg` — [iNaturalist photo 325258503](https://www.inaturalist.org/photos/325258503) · CC BY 4.0 · Pauline Walsh Jacobson · cropped to 0,0.08,1,0.92 (left, top, width, height as fractions of the original)
 - `bluestriped-grunt.jpg` — [Haemulon sciurus.jpg](https://commons.wikimedia.org/wiki/File:Haemulon_sciurus.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
+- `bluethroat-pikeblenny.jpg` — [iNaturalist photo 173000173](https://www.inaturalist.org/photos/173000173) · CC BY 4.0 · Pauline Walsh Jacobson
 - `boga.jpg` — [Boga (Haemulon vittatum) at cleaning station.jpg](https://commons.wikimedia.org/wiki/File:Boga_(Haemulon_vittatum)_at_cleaning_station.jpg) · CC BY-SA 4.0 · Mrh507
+- `bonefish.jpg` — [iNaturalist photo 249806835](https://www.inaturalist.org/photos/249806835) · CC BY 4.0 · Mario Bassini
 - `bottlenose-dolphin.jpg` — [Tursiops truncatus 01.jpg](https://commons.wikimedia.org/wiki/File:Tursiops_truncatus_01.jpg) · Public domain · NASA
 - `boulder-brain-coral.jpg` — [iNaturalist photo 369396222](https://www.inaturalist.org/photos/369396222) · CC BY 4.0 · Alex Doyle
 - `boulder-star-coral.jpg` — [Orbicella annularis (Montastraea annularis) 1.jpg](https://commons.wikimedia.org/wiki/File:Orbicella_annularis_(Montastraea_annularis)_1.jpg) · Public domain · NOAA
@@ -107,6 +111,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `brown-chromis.jpg` — [Azurina multilineata 345286514.jpg](https://commons.wikimedia.org/wiki/File:Azurina_multilineata_345286514.jpg) · CC BY 4.0 · Dan Schofield · cropped to 0.15,0.15,0.75,0.7 (left, top, width, height as fractions of the original)
 - `brown-encrusting-octopus-sponge.jpg` — [iNaturalist photo 423624827](https://www.inaturalist.org/photos/423624827) · CC BY 4.0 · Alberto Alcalá
 - `brown-tube-sponge.jpg` — [iNaturalist photo 255180481](https://www.inaturalist.org/photos/255180481) · CC BY 4.0 · Robin White
+- `bull-shark.jpg` — [iNaturalist photo 168237268](https://www.inaturalist.org/photos/168237268) · CC BY-SA 4.0 · Ewout Knoester
 - `butter-hamlet.jpg` — [iNaturalist photo 233278091](https://www.inaturalist.org/photos/233278091) · CC BY 4.0 · Dan Schofield
 - `caesar-grunt.jpg` — [iNaturalist photo 413658909](https://www.inaturalist.org/photos/413658909) · CC BY 4.0 · Jay Brasher
 - `cannonball-jelly.jpg` — [iNaturalist photo 453167442](https://www.inaturalist.org/photos/453167442) · CC BY 4.0 · Karen Szafrajda · cropped to 0.3,0,0.65,0.85 (left, top, width, height as fractions of the original)
@@ -149,12 +154,14 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `encrusting-gorgonian.jpg` — [iNaturalist photo 384010807](https://www.inaturalist.org/photos/384010807) · CC BY 4.0 · Robin White
 - `feather-duster-worm.jpg` — [Sabellastarte magnifica (Magnificent feather duster worm).jpg](https://commons.wikimedia.org/wiki/File:Sabellastarte_magnifica_(Magnificent_feather_duster_worm).jpg) · CC BY-SA 3.0 · Nhobgood Nick Hobgood
 - `finger-coral.jpg` — [Porites porites porites (clubbed finger coral) (San Salvador Island, Bahamas) 5 (16066417536).jpg](https://commons.wikimedia.org/wiki/File:Porites_porites_porites_(clubbed_finger_coral)_(San_Salvador_Island,_Bahamas)_5_(16066417536).jpg) · CC BY 2.0 · James St. John
+- `fingerprint-cyphoma.jpg` — [iNaturalist photo 164444712](https://www.inaturalist.org/photos/164444712) · CC BY 4.0 · Dan Schofield
 - `fire-coral.jpg` — [Millepora alcicornis 338801632.jpg](https://commons.wikimedia.org/wiki/File:Millepora_alcicornis_338801632.jpg) · CC BY 4.0 · Pauline Walsh Jacobson
 - `flagfin-mojarra.jpg` — [Eucinostomus melanopterus 325784184.jpg](https://commons.wikimedia.org/wiki/File:Eucinostomus_melanopterus_325784184.jpg) · CC0 · Adrian Torres B.
 - `flame-box-crab.jpg` — [iNaturalist photo 327890453](https://www.inaturalist.org/photos/327890453) · CC BY 4.0 · Pauline Walsh Jacobson · cropped to 0,0.08,1,0.92 (left, top, width, height as fractions of the original)
 - `flamefish.jpg` — [iNaturalist photo 244066201](https://www.inaturalist.org/photos/244066201) · CC BY 4.0 · Pauline Walsh Jacobson
 - `flamingo-tongue.jpg` — [Cyphoma gibbosum (living) 2.jpg](https://commons.wikimedia.org/wiki/File:Cyphoma_gibbosum_(living)_2.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `florida-horse-conch.jpg` — [Pleuroploca gigantea.jpg](https://commons.wikimedia.org/wiki/File:Pleuroploca_gigantea.jpg) · Public domain · Heather Dine - Florida Keys NMS
+- `flying-gurnard.jpg` — [iNaturalist photo 24932449](https://www.inaturalist.org/photos/24932449) · CC BY 4.0 · Chris Taklis
 - `foureye-butterflyfish.jpg` — [Chaetodon capistratus1.jpg](https://commons.wikimedia.org/wiki/File:Chaetodon_capistratus1.jpg) · Public domain · Photographer: Chris Huss Credit: Florida Keys National Marine Sanctuary
 - `french-angelfish.jpg` — [Pomacanthus paru.jpg](https://commons.wikimedia.org/wiki/File:Pomacanthus_paru.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `french-grunt.jpg` — [Haemulon flavolineatum French grunt.jpg](https://commons.wikimedia.org/wiki/File:Haemulon_flavolineatum_French_grunt.jpg) · CC BY 2.0 · Brian Gratwicke
@@ -164,18 +171,21 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `giant-barrel-sponge.jpg` — [Shooting Fish in a Barrel (48885969722).jpg](https://commons.wikimedia.org/wiki/File:Shooting_Fish_in_a_Barrel_(48885969722).jpg) · CC BY 2.0 · LASZLO ILYES from Cleveland, Ohio, USA
 - `giant-basket-star.jpg` — [Astrophyton muricatum FLMNH.jpg](https://commons.wikimedia.org/wiki/File:Astrophyton_muricatum_FLMNH.jpg) · CC BY-SA 4.0 · François Michonneau
 - `giant-hermit-crab.jpg` — [iNaturalist photo 218067986](https://www.inaturalist.org/photos/218067986) · CC BY 4.0 · Susan Aide
+- `giant-manta-ray.jpg` — [Manta birostris-Thailand.jpg](https://commons.wikimedia.org/wiki/File:Manta_birostris-Thailand.jpg) · CC BY-SA 2.0 · jon hanson from london, UK
 - `glasseye-snapper.jpg` — [Priacanthus cruentatus.jpg](https://commons.wikimedia.org/wiki/File:Priacanthus_cruentatus.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `glassy-sweeper.jpg` — [Glassy sweepers.jpg](https://commons.wikimedia.org/wiki/File:Glassy_sweepers.jpg) · Public domain · NOAA
 - `golden-coral-shrimp.jpg` — [iNaturalist photo 168246356](https://www.inaturalist.org/photos/168246356) · CC BY 4.0 · Pauline Walsh Jacobson · cropped to 0,0,1,0.9 (left, top, width, height as fractions of the original)
 - `golden-crinoid.jpg` — [iNaturalist photo 205998198](https://www.inaturalist.org/photos/205998198) · CC BY 4.0 · Donald Davesne
 - `goldentail-moray.jpg` — [Gymnothorax miliaris (goldentail moray eel) (San Salvador Island, Bahamas) 1 (15983831850).jpg](https://commons.wikimedia.org/wiki/File:Gymnothorax_miliaris_(goldentail_moray_eel)_(San_Salvador_Island,_Bahamas)_1_(15983831850).jpg) · CC BY 2.0 · James St. John
 - `goldspot-goby.jpg` — [iNaturalist photo 455313586](https://www.inaturalist.org/photos/455313586) · CC BY 4.0 · Donald Davesne · cropped to 0.1,0.2,0.75,0.65 (left, top, width, height as fractions of the original)
+- `goldspotted-eel.jpg` — [iNaturalist photo 686220942](https://www.inaturalist.org/photos/686220942) · CC BY 4.0 · Tom Kennedy
 - `goliath-grouper.jpg` — [Itajara.JPG](https://commons.wikimedia.org/wiki/File:Itajara.JPG) · CC BY-SA 3.0 · Albert kok
 - `gray-angelfish.jpg` — [Pomacanthus arcuatus 109580400.jpg](https://commons.wikimedia.org/wiki/File:Pomacanthus_arcuatus_109580400.jpg) · CC0 · Zygy
 - `gray-snapper.jpg` — [Grey snapper - Lutjanus griseus.jpg](https://commons.wikimedia.org/wiki/File:Grey_snapper_-_Lutjanus_griseus.jpg) · CC BY 2.0 · Clinton & Charles Robertson from Del Rio, Texas & San Marcos, TX, USA
 - `gray-triggerfish.jpg` — [iNaturalist photo 423368130](https://www.inaturalist.org/photos/423368130) · CC BY 4.0 · Ben Jobson
 - `graysby.jpg` — [Cephalopholis cruentata (33623928198).jpg](https://commons.wikimedia.org/wiki/File:Cephalopholis_cruentata_(33623928198).jpg) · CC BY 2.0 · LASZLO ILYES from Cleveland, Ohio, USA
 - `great-barracuda.jpg` — [Barracuda laban.jpg](https://commons.wikimedia.org/wiki/File:Barracuda_laban.jpg) · Public domain
+- `great-hammerhead.jpg` — [iNaturalist photo 471864941](https://www.inaturalist.org/photos/471864941) · CC BY 4.0 · Dan Schofield
 - `great-star-coral.jpg` — [Montastraea cavernosa.jpg](https://commons.wikimedia.org/wiki/File:Montastraea_cavernosa.jpg) · Public domain
 - `greater-amberjack.jpg` — [iNaturalist photo 56596097](https://www.inaturalist.org/photos/56596097) · CC BY-SA 4.0 · Robert Webster
 - `greater-soapfish.jpg` — [iNaturalist photo 695770340](https://www.inaturalist.org/photos/695770340) · CC BY 4.0 · Jay Brasher
@@ -186,6 +196,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `green-sea-turtle.jpg` — [Swimming with Turtles.JPG](https://commons.wikimedia.org/wiki/File:Swimming_with_Turtles.JPG) · CC BY-SA 4.0 · Cbrookes81
 - `grooved-brain-coral.jpg` — [Brain coral.jpg](https://commons.wikimedia.org/wiki/File:Brain_coral.jpg) · Public domain
 - `hairy-blenny.jpg` — [iNaturalist photo 76249175](https://www.inaturalist.org/photos/76249175) · CC BY 4.0 · Eridan Xharahi
+- `hardhead-silverside.jpg` — [iNaturalist photo 154594513](https://www.inaturalist.org/photos/154594513) · CC BY 4.0 · Julia Beach
 - `harlequin-bass.jpg` — [iNaturalist photo 288167779](https://www.inaturalist.org/photos/288167779) · CC BY 4.0 · Pauline Walsh Jacobson
 - `hawksbill-turtle.jpg` — [Tortuga carey (Eretmochelys imbricata), parque nacional Ras Muhammad, Egipto, 2022-03-28, DD 56.jpg](https://commons.wikimedia.org/wiki/File:Tortuga_carey_(Eretmochelys_imbricata),_parque_nacional_Ras_Muhammad,_Egipto,_2022-03-28,_DD_56.jpg) · CC BY-SA 4.0 · Diego Delso
 - `highhat.jpg` — [iNaturalist photo 323849964](https://www.inaturalist.org/photos/323849964) · CC BY 4.0 · Pauline Walsh Jacobson
@@ -195,8 +206,10 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `hovering-dartfish.jpg` — [iNaturalist photo 346694375](https://www.inaturalist.org/photos/346694375) · CC BY 4.0 · Pauline Walsh Jacobson · cropped to 0,0,1,0.88 (left, top, width, height as fractions of the original)
 - `humpback-whale.jpg` — [iNaturalist photo 344677883](https://www.inaturalist.org/photos/344677883) · CC BY 4.0 · Juan Cruzado Cortés
 - `indigo-hamlet.jpg` — [Indigo Hamlet.JPG](https://commons.wikimedia.org/wiki/File:Indigo_Hamlet.JPG) · CC BY-SA 3.0 · Tomh009
+- `jackknife-fish.jpg` — [iNaturalist photo 59083059](https://www.inaturalist.org/photos/59083059) · CC BY-SA 4.0 · Matteo Cassella
 - `knobby-brain-coral.jpg` — [iNaturalist photo 710420947](https://www.inaturalist.org/photos/710420947) · CC BY 4.0 · Michael Cantillo
 - `lamarcks-sheet-coral.jpg` — [iNaturalist photo 262206822](https://www.inaturalist.org/photos/262206822) · CC BY 4.0 · Roger Rittmaster
+- `lancer-dragonet.jpg` — [iNaturalist photo 160685038](https://www.inaturalist.org/photos/160685038) · CC BY 4.0 · Pauline Walsh Jacobson
 - `lane-snapper.jpg` — [iNaturalist photo 308148027](https://www.inaturalist.org/photos/308148027) · CC BY 4.0 · Pauline Walsh Jacobson
 - `lantern-bass.jpg` — [iNaturalist photo 110845871](https://www.inaturalist.org/photos/110845871) · CC BY 4.0 · Bernard Picton
 - `lavender-rope-sponge.jpg` — [iNaturalist photo 241788274](https://www.inaturalist.org/photos/241788274) · CC BY 4.0 · Robin White
@@ -211,6 +224,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `longfin-damselfish.jpg` — [iNaturalist photo 123691422](https://www.inaturalist.org/photos/123691422) · CC0 · no rights reserved
 - `longjaw-squirrelfish.jpg` — [iNaturalist photo 334195096](https://www.inaturalist.org/photos/334195096) · CC BY 4.0 · Dan Schofield
 - `longlure-frogfish.jpg` — [Longlure frogfish (Antennarius multiocellatus) twitching lure.jpg](https://commons.wikimedia.org/wiki/File:Longlure_frogfish_(Antennarius_multiocellatus)_twitching_lure.jpg) · CC BY-SA 4.0 · Betty Wills
+- `longnose-batfish.jpg` — [iNaturalist photo 237936778](https://www.inaturalist.org/photos/237936778) · CC BY 4.0 · Pauline Walsh Jacobson
 - `longsnout-butterflyfish.jpg` — [Prognathodes aculeatus 179115082.jpg](https://commons.wikimedia.org/wiki/File:Prognathodes_aculeatus_179115082.jpg) · CC BY 4.0 · Dan Schofield
 - `longsnout-seahorse.jpg` — [Hippocampus reidi 239712002.jpg](https://commons.wikimedia.org/wiki/File:Hippocampus_reidi_239712002.jpg) · CC BY 4.0 · Pauline Walsh Jacobson · cropped to 0,0,1,0.92 (left, top, width, height as fractions of the original)
 - `longspine-squirrelfish.jpg` — [iNaturalist photo 487226222](https://www.inaturalist.org/photos/487226222) · CC BY 4.0 · Dan Schofield
@@ -234,9 +248,11 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `nurse-shark.jpg` — [Nurse shark.jpg](https://commons.wikimedia.org/wiki/File:Nurse_shark.jpg) · Public domain
 - `ocean-surgeonfish.jpg` — [iNaturalist photo 415505249](https://www.inaturalist.org/photos/415505249) · CC BY 4.0 · Pauline Walsh Jacobson
 - `ocean-triggerfish.jpg` — [Canthidermis sufflamen (ocean triggerfish) (San Salvador Island, Bahamas) 1 (15965263309).jpg](https://commons.wikimedia.org/wiki/File:Canthidermis_sufflamen_(ocean_triggerfish)_(San_Salvador_Island,_Bahamas)_1_(15965263309).jpg) · CC BY 2.0 · James St. John
+- `oceanic-whitetip-shark.jpg` — [Oceanic whitetip shark at Elphinstone Reef.jpg](https://commons.wikimedia.org/wiki/File:Oceanic_whitetip_shark_at_Elphinstone_Reef.jpg) · CC BY-SA 4.0 · Alexander Vasenin
 - `orange-cup-coral.jpg` — [iNaturalist photo 701831099](https://www.inaturalist.org/photos/701831099) · CC BY 4.0 · Slunky
 - `orange-elephant-ear-sponge.jpg` — [Agelas clathrodes 256774245.jpg](https://commons.wikimedia.org/wiki/File:Agelas_clathrodes_256774245.jpg) · CC BY 4.0 · Jay Brasher
 - `orangeclaw-hermit-crab.jpg` — [iNaturalist photo 624254299](https://www.inaturalist.org/photos/624254299) · CC BY 4.0 · Dan Schofield
+- `orangesided-goby.jpg` — [iNaturalist photo 312867714](https://www.inaturalist.org/photos/312867714) · CC BY 4.0 · Dan Schofield
 - `orangespotted-filefish.jpg` — [iNaturalist photo 706538609](https://www.inaturalist.org/photos/706538609) · CC BY 4.0 · Donald Davesne · cropped to 0.3,0.25,0.5,0.5 (left, top, width, height as fractions of the original)
 - `pallid-goby.jpg` — [iNaturalist photo 356852003](https://www.inaturalist.org/photos/356852003) · CC BY 4.0 · desertnaturalist
 - `peacock-flounder.jpg` — [Bothus lunatus.jpg](https://commons.wikimedia.org/wiki/File:Bothus_lunatus.jpg) · Public domain · Becky A. Dayhuff, Environmental Educator
@@ -259,6 +275,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `queen-triggerfish.jpg` — [Balistes vetula (queen triggerfish) (San Salvador Island, Bahamas) 4 (16151145845).jpg](https://commons.wikimedia.org/wiki/File:Balistes_vetula_(queen_triggerfish)_(San_Salvador_Island,_Bahamas)_4_(16151145845).jpg) · CC BY 2.0 · James St. John
 - `ragged-sea-hare.jpg` — [iNaturalist photo 354913755](https://www.inaturalist.org/photos/354913755) · CC BY 4.0 · libby hepburn
 - `rainbow-parrotfish.jpg` — [Rainbow parrotfish.jpg](https://commons.wikimedia.org/wiki/File:Rainbow_parrotfish.jpg) · CC BY 2.0 · Paul Asman and Jill Lenoble
+- `rainbow-runner.jpg` — [iNaturalist photo 474998339](https://www.inaturalist.org/photos/474998339) · CC BY 4.0 · Darren Obbard
 - `red-boring-sponge.jpg` — [iNaturalist photo 59198794](https://www.inaturalist.org/photos/59198794) · CC BY-SA 4.0 · Matteo Cassella
 - `red-grouper.jpg` — [Epinephelus morio in Madagascar Reef.jpg](https://commons.wikimedia.org/wiki/File:Epinephelus_morio_in_Madagascar_Reef.jpg) · CC BY 4.0 · Simões, N.; Zarco Perello, S.; Moreno Mendoza, R.
 - `red-hind.jpg` — [iNaturalist photo 684967475](https://www.inaturalist.org/photos/684967475) · CC0 · no rights reserved
@@ -277,6 +294,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `rose-coral.jpg` — [iNaturalist photo 382114898](https://www.inaturalist.org/photos/382114898) · CC BY 4.0 · Robin White
 - `rosy-razorfish.jpg` — [iNaturalist photo 253547859](https://www.inaturalist.org/photos/253547859) · CC BY 4.0 · Dan Schofield
 - `roughhead-blenny.jpg` — [iNaturalist photo 228615436](https://www.inaturalist.org/photos/228615436) · CC BY 4.0 · Dan Schofield · cropped to 0.15,0,0.85,0.85 (left, top, width, height as fractions of the original)
+- `roughtail-stingray.jpg` — [Roughtail stingray tenerife.jpg](https://commons.wikimedia.org/wiki/File:Roughtail_stingray_tenerife.jpg) · CC BY 2.0 · Philippe Guillaume
 - `round-scad.jpg` — [iNaturalist photo 260443228](https://www.inaturalist.org/photos/260443228) · CC0 · no rights reserved
 - `row-pore-rope-sponge.jpg` — [iNaturalist photo 457034472](https://www.inaturalist.org/photos/457034472) · CC BY 4.0 · Jay Brasher
 - `royal-gramma.jpg` — [Gramma loreto 257593008.jpg](https://commons.wikimedia.org/wiki/File:Gramma_loreto_257593008.jpg) · CC BY 4.0 · Dan Schofield
@@ -288,6 +306,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `sand-tilefish.jpg` — [iNaturalist photo 170356304](https://www.inaturalist.org/photos/170356304) · CC BY 4.0 · Pauline Walsh Jacobson
 - `sargassum-triggerfish.jpg` — [iNaturalist photo 40023392](https://www.inaturalist.org/photos/40023392) · CC BY 4.0 · Christine Loew
 - `saucereye-porgy.jpg` — [Saucereye porgy.jpg](https://commons.wikimedia.org/wiki/File:Saucereye_porgy.jpg) · CC BY-SA 3.0 · Daphnis De Pooter
+- `scalloped-hammerhead.jpg` — [Scalloped hammerhead cocos.jpg](https://commons.wikimedia.org/wiki/File:Scalloped_hammerhead_cocos.jpg) · CC BY 2.0 · Barry Peters
 - `scamp.jpg` — [iNaturalist photo 354799718](https://www.inaturalist.org/photos/354799718) · CC BY 4.0 · Pauline Walsh Jacobson
 - `scattered-pore-rope-sponge.jpg` — [iNaturalist photo 475686065](https://www.inaturalist.org/photos/475686065) · CC BY 4.0 · Josiah Londerée
 - `schoolmaster-snapper.jpg` — [Lutjanus.JPG](https://commons.wikimedia.org/wiki/File:Lutjanus.JPG) · CC BY-SA 3.0 · albert kok
@@ -303,6 +322,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `sheepshead.jpg` — [iNaturalist photo 386017792](https://www.inaturalist.org/photos/386017792) · CC BY 4.0 · Jacob Weston
 - `shortstripe-goby.jpg` — [iNaturalist photo 466154277](https://www.inaturalist.org/photos/466154277) · CC BY 4.0 · Pauline Walsh Jacobson · cropped to 0,0.08,1,0.92 (left, top, width, height as fractions of the original)
 - `shy-hamlet.jpg` — [iNaturalist photo 619596807](https://www.inaturalist.org/photos/619596807) · CC BY 4.0 · Dan Schofield
+- `silky-shark.jpg` — [iNaturalist photo 606440062](https://www.inaturalist.org/photos/606440062) · CC BY 4.0 · Rui Ribeiro
 - `silver-porgy.jpg` — [iNaturalist photo 340119719](https://www.inaturalist.org/photos/340119719) · CC BY 4.0 · Pauline Walsh Jacobson
 - `slate-pencil-urchin.jpg` — [iNaturalist photo 452304665](https://www.inaturalist.org/photos/452304665) · CC BY 4.0 · Dan Schofield
 - `slipper-lobster.jpg` — [Slipper lobster.jpg](https://commons.wikimedia.org/wiki/File:Slipper_lobster.jpg) · CC BY-SA 4.0 · Betty Wills
@@ -311,6 +331,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `smooth-flower-coral.jpg` — [iNaturalist photo 143041917](https://www.inaturalist.org/photos/143041917) · CC BY 4.0 · Robin White
 - `smooth-trunkfish.jpg` — [Lactophrys triqueter 1.jpg](https://commons.wikimedia.org/wiki/File:Lactophrys_triqueter_1.jpg) · Public domain · Becky A. Dayhuff, Environmental Educator
 - `social-feather-duster.jpg` — [iNaturalist photo 246182027](https://www.inaturalist.org/photos/246182027) · CC BY 4.0 · Dan Schofield
+- `southern-sennet.jpg` — [iNaturalist photo 58992522](https://www.inaturalist.org/photos/58992522) · CC BY-SA 4.0 · Matteo Cassella
 - `southern-stingray.jpg` — [Dasyatis americana.jpg](https://commons.wikimedia.org/wiki/File:Dasyatis_americana.jpg) · Public domain · Becky A. Dayhuff, Environmental Educator
 - `spanish-grunt.jpg` — [iNaturalist photo 82784834](https://www.inaturalist.org/photos/82784834) · CC BY-SA 4.0 · Cos
 - `spanish-hogfish.jpg` — [Bodianus rufus.jpg](https://commons.wikimedia.org/wiki/File:Bodianus_rufus.jpg) · CC BY 2.0 · Ventura from Brasil · cropped to 0.03,0.25,0.85,0.65 (left, top, width, height as fractions of the original)
@@ -330,6 +351,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `spotted-moray.jpg` — [Murène (Gymnothorax moringa).jpg](https://commons.wikimedia.org/wiki/File:Mur%C3%A8ne_(Gymnothorax_moringa).jpg) · CC BY 3.0 · Stéphanie De Nadaï
 - `spotted-scorpionfish.jpg` — [Scorpaena plumieri 8zz.jpg](https://commons.wikimedia.org/wiki/File:Scorpaena_plumieri_8zz.jpg) · CC BY-SA 4.0 · Photo by David J. Stang
 - `spotted-sea-hare.jpg` — [iNaturalist photo 462955227](https://www.inaturalist.org/photos/462955227) · CC BY 4.0 · Donald Davesne
+- `spotted-snake-eel.jpg` — [iNaturalist photo 40007406](https://www.inaturalist.org/photos/40007406) · CC BY 4.0 · Christine Loew
 - `spotted-spiny-lobster.jpg` — [iNaturalist photo 250743011](https://www.inaturalist.org/photos/250743011) · CC BY 4.0 · Dan Schofield
 - `spotted-trunkfish.jpg` — [Lactophrys bicaudalis.jpg](https://commons.wikimedia.org/wiki/File:Lactophrys_bicaudalis.jpg) · CC BY 2.0 · LASZLO ILYES from Cleveland, Ohio, USA
 - `squirrelfish.jpg` — [Squirrelfish Holocentrus ascensionis.jpg](https://commons.wikimedia.org/wiki/File:Squirrelfish_Holocentrus_ascensionis.jpg) · CC BY 2.0 · Brian Gratwicke
@@ -347,6 +369,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `three-rowed-sea-cucumber.jpg` — [iNaturalist photo 686220546](https://www.inaturalist.org/photos/686220546) · CC BY 4.0 · Tom Kennedy · cropped to 0.1,0.15,0.75,0.75 (left, top, width, height as fractions of the original)
 - `threespot-damselfish.jpg` — [Threespot Damselfish (Stegastes planifrons) Juvenile.jpg](https://commons.wikimedia.org/wiki/File:Threespot_Damselfish_(Stegastes_planifrons)_Juvenile.jpg) · CC BY 2.0 · Andy Blackledge
 - `tiger-grouper.jpg` — [Tiger grouper.JPG](https://commons.wikimedia.org/wiki/File:Tiger_grouper.JPG) · CC BY-SA 3.0 · Albert kok
+- `tiger-shark.jpg` — [iNaturalist photo 702369923](https://www.inaturalist.org/photos/702369923) · CC BY 4.0 · cello caruso-turiello
 - `tobaccofish.jpg` — [iNaturalist photo 454872163](https://www.inaturalist.org/photos/454872163) · CC BY 4.0 · Andrew McKinlay
 - `tomtate.jpg` — [iNaturalist photo 321676079](https://www.inaturalist.org/photos/321676079) · CC BY 4.0 · Robin White
 - `true-tulip.jpg` — [iNaturalist photo 701042045](https://www.inaturalist.org/photos/701042045) · CC BY 4.0 · Cricket Raspet
@@ -357,6 +380,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `variegated-sea-urchin.jpg` — [iNaturalist photo 699250549](https://www.inaturalist.org/photos/699250549) · CC BY 4.0 · Donald Davesne
 - `vase-sponge.jpg` — [iNaturalist photo 247000303](https://www.inaturalist.org/photos/247000303) · CC BY 4.0 · Jay Brasher
 - `vermilion-snapper.jpg` — [Rhomboplites aurorubens - Sanc2430.jpg](https://commons.wikimedia.org/wiki/File:Rhomboplites_aurorubens_-_Sanc2430.jpg) · CC BY 2.0 · NOAA Photo Library
+- `wahoo.jpg` — [iNaturalist photo 447962171](https://www.inaturalist.org/photos/447962171) · CC BY 4.0 · Michael Bommerer
 - `west-indian-sea-egg.jpg` — [iNaturalist photo 363217534](https://www.inaturalist.org/photos/363217534) · CC BY 4.0 · Charlotte Kirchner
 - `whale-shark.jpg` — [Snorkeling whale shark 1.JPG](https://commons.wikimedia.org/wiki/File:Snorkeling_whale_shark_1.JPG) · CC BY-SA 4.0 · Jaontiveros
 - `white-encrusting-zoanthid.jpg` — [iNaturalist photo 358075979](https://www.inaturalist.org/photos/358075979) · CC BY 4.0 · Robin White

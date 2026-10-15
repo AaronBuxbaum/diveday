@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DIVE_AREAS } from "@/content/dive-areas";
 import { catalogAreasForShop } from "./curated-defaults";
 
 /** UX review 2026-10-11, item 15; issue #2477: the catalog is offered by area, matched on the address. */
@@ -55,5 +56,28 @@ describe("catalogAreasForShop", () => {
     );
     expect(near({ timezone: "America/Cayman" })).toEqual(["cayman"]);
     expect(near({ timezone: "America/Curacao" })).toEqual([]);
+  });
+  it("offers a Caribbean shop the areas its own address names, and no others", () => {
+    const real = (shop: Parameters<typeof catalogAreasForShop>[0]) =>
+      catalogAreasForShop(shop, DIVE_AREAS).map((area) => area.code);
+    expect(
+      real({ timezone: "America/Cancun", addressCountry: "MX", addressRegion: "ROO" }),
+    ).toEqual(["mexico-cozumel", "mexico-riviera-maya", "mexico-cenotes", "mexico-costa-maya"]);
+    expect(
+      real({ timezone: "America/Merida", addressCountry: "MX", addressRegion: "Yucatán" }),
+    ).toEqual(["mexico-cenotes"]);
+    expect(
+      real({ timezone: "America/Mazatlan", addressCountry: "MX", addressRegion: "BCS" }),
+    ).toEqual([]);
+    expect(
+      real({ timezone: "America/Kralendijk", addressCountry: "BQ", addressRegion: "Saba" }),
+    ).toEqual(["saba"]);
+    expect(
+      real({ timezone: "America/Tegucigalpa", addressCountry: "HN", addressRegion: "IB" }),
+    ).toEqual(["honduras-roatan", "honduras-utila", "honduras-guanaja"]);
+    expect(
+      real({ timezone: "America/Tegucigalpa", addressCountry: "HN", addressRegion: "FM" }),
+    ).toEqual([]);
+    expect(real({ timezone: "America/Lower_Princes" })).toEqual(["sint-maarten"]);
   });
 });
