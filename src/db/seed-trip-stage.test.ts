@@ -1,9 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { MINUTE_MS } from "@/lib/clock";
+import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { people, tripAssignments, tripStageEvents } from "./schema";
+import { people, tripAssignments, tripStageEvents, trips } from "./schema";
+import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { demoStageTaps } from "./seed-trip-stage";
+import { listRollCallGaps } from "./today";
 
 /**
  * **The demo's taps sit where a crew would have made them, relative to the
@@ -131,5 +133,29 @@ describe("seedTripStage", () => {
         `trip ${tap.tripId}`,
       ).toContain(tap.by);
     }
+  });
+
+  /**
+   * **The dawn boat's evening reads calm** (issue #2501). It is back, its stage
+   * says Home, and every diver and crew member was counted at every checkpoint
+   * by the seed (`seedCompletedRollCall`), so Today raises no "No roll call
+   * recorded" row for it. `listRollCallGaps` is not what changed.
+   */
+  it("leaves no roll call gap on the dawn boat once it is home", async () => {
+    const { db, shop } = await seededShopContext();
+    const [dawn] = await db
+      .select({ id: trips.id, endsAt: trips.endsAt })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, DEMO_COMPLETED_TRIP_TITLE)));
+    expect(dawn).toBeDefined();
+    const home = await db
+      .select({ stage: tripStageEvents.stage })
+      .from(tripStageEvents)
+      .where(and(eq(tripStageEvents.tripId, dawn?.id ?? ""), eq(tripStageEvents.stage, "home")));
+    expect(home).toHaveLength(1);
+
+    const evening = new Date((dawn?.endsAt.getTime() ?? 0) + 2 * HOUR_MS);
+    const gaps = await listRollCallGaps(db, shop.id, evening);
+    expect(gaps.filter((gap) => gap.tripId === dawn?.id)).toEqual([]);
   });
 });
