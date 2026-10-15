@@ -136,9 +136,13 @@ test.describe("weather blow-out cascade", () => {
     // landed (ADR 20260806-one-trip-create-form).
     await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
 
+    // Straight to the confirm page: the first test in this file walks the
+    // board → departure → More path to it, and this test's subject is the
+    // empty cascade, not the way in.
     await openTripFromBoard(page, title);
-    await openTripMore(page);
-    await page.getByRole("link", { name: "Weather blow-out…" }).click();
+    const tripId = page.url().match(/\/trips\/([^/?#]+)/)?.[1];
+    expect(tripId).toBeTruthy();
+    await page.goto(`/shop/${SHOP}/schedule/blowout/${tripId}`);
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
     await expect(page.getByText("Nobody is booked on this departure.")).toBeVisible();
 
