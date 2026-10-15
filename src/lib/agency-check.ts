@@ -108,7 +108,8 @@ export function isCheckableAgency(agency: string): agency is CheckableAgency {
  * keeps its "(member sign-in)" link and nothing offers or accepts a check.
  */
 export function agencyCheckOffered(agency: string, shop: { padiChecksEnabled: boolean }): boolean {
-  return agency !== "padi" || shop.padiChecksEnabled;
+  // A course's agency is free text: "PADI" and " padi " are PADI.
+  return foldText(agency) !== "padi" || shop.padiChecksEnabled;
 }
 
 /**
@@ -353,8 +354,9 @@ const SEVERAL_DIVERS = /(^| )([2-9]|[1-9]\d+) divers?( |$)/;
 
 /** Words that make a line a limited or unfinished rating, never a match. */
 const LIMITING_WORDS = [
-  // Limited, unfinished or lapsed ratings.
+  // Limited, unfinished or lapsed ratings. "Jr" is PADI's short Junior.
   "junior",
+  "jr",
   "referral",
   "student",
   "trainee",
@@ -695,14 +697,16 @@ function readAgencyPage(input: AgencyPageInput): {
       ? lines.slice(record.birthDateLine ?? record.to, record.to)
       : recordLines;
     const juniorLevel = (line: string) =>
-      everyLevelWording.some((phrase) => hasWords(line, `junior ${phrase}`));
+      everyLevelWording.some(
+        (phrase) => hasWords(line, `junior ${phrase}`) || hasWords(line, `jr ${phrase}`),
+      );
     // A card's own name is not a limit: SSI's "Night & Limited Visibility
     // Diving" says nothing limited about the diver's card.
     const limited = recordLines.some((line) =>
       limiting.some(
         (word) =>
           hasWords(withoutCardNames(line), word) &&
-          !(oneDiver && word === "junior" && juniorLevel(line)),
+          !(oneDiver && (word === "junior" || word === "jr") && juniorLevel(line)),
       ),
     );
     if (limited) return "limited_card";
@@ -978,6 +982,10 @@ export function agencyListedCards(
   const found = new Map<AgencyListedKind, AgencyListedCard>();
   for (const record of read.diverRecords) {
     if (record.verdict !== "match" && record.verdict !== "level_unconfirmed") continue;
+    // DiveChek: a record under the same name and birth date that carries
+    // another PADI number than the card checked may be another diver's, so
+    // nothing on it is offered.
+    if (oneDiver && input.cardNumber && !hasCardNumber(record.folded, input.cardNumber)) continue;
     const onRecord: { kind: AgencyListedKind; word: string; cardNumber: string | null }[] = [];
     let end = record.folded.length;
     for (let index = 0; index < record.folded.length; index += 1) {

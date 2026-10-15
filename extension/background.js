@@ -13,8 +13,8 @@ const {
   ELEARNING_REQUEST_TYPE,
   SIGN_IN_PATH: SIGN_IN_PATH_SOURCE,
 } = globalThis.DiveDayCertCheck;
-// fill.js's functions (fillAgencyForm, readAgencyPage, excerptAround,
-// excerptAroundName) are this worker's own globals: importScripts ran fill.js
+// fill.js's functions (fillAgencyForm, readAgencyPage, pageAsksToSignIn,
+// excerptAround, excerptAroundName) are this worker's own globals: importScripts ran fill.js
 // in this one scope. Never name them again here: a top-level `const` of the
 // same name makes that import throw, and the worker never listens.
 
@@ -45,6 +45,65 @@ async function landedOnSignIn(tabId, spec) {
   } catch {
     return true;
   }
+}
+
+/** The hosts a lookup may be on: its own, or every host in `spec.origins`. */
+function siteOf(spec) {
+  return Array.isArray(spec.origins) ? spec.origins : [new URL(spec.url).origin];
+}
+
+/** Every host behind a shop's own sign-in, whichever lookup opened it. */
+const SIGNED_IN_ORIGINS = new Set(
+  [...Object.values(AGENCIES), ...Object.values(ELEARNING)]
+    .filter((spec) => spec.signIn)
+    .flatMap(siteOf),
+);
+
+/** The tab's address, or null when it has none this extension may read. */
+async function tabAddress(tabId) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    return tab.url ? new URL(tab.url) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether any lookup's tab is somewhere other than its own site: a public
+ * lookup sent to PADI's signed-in Pros' Site is never filled there, and
+ * nothing of that page comes back.
+ */
+async function leftSite(tabId, spec) {
+  const at = await tabAddress(tabId);
+  return at === null || !siteOf(spec).includes(at.origin);
+}
+
+/**
+ * Whether a searched page behind the shop's own sign-in now asks the staffer
+ * to sign in: it was sent to a sign-in, or it shows a password box or a
+ * sign-in address itself (fill.js). A page that cannot be read says so too.
+ */
+async function signedOutAfterSearch(tabId, spec) {
+  if (!spec.signIn) return false;
+  if (await landedOnSignIn(tabId, spec)) return true;
+  try {
+    return (await run(tabId, pageAsksToSignIn, [SIGN_IN_PATH_SOURCE])) !== false;
+  } catch {
+    return true;
+  }
+}
+
+/** What a settled page hands back, once it is known to be the lookup's own answer. */
+async function settledReply(tabId, spec, text) {
+  if (await signedOutAfterSearch(tabId, spec)) return { ok: false, reason: "signed_out" };
+  if (await leftSite(tabId, spec)) return { ok: false, reason: "fill_failed" };
+  const at = await tabAddress(tabId);
+  return {
+    ok: true,
+    pageText: text.slice(0, PAGE_TEXT_MAX_LENGTH),
+    signedInSite: at !== null && SIGNED_IN_ORIGINS.has(at.origin),
+  };
 }
 
 /** How long a lookup may take, end to end. The page gives up at 45 seconds. */
@@ -96,6 +155,7 @@ async function check(query, pages) {
   try {
     if (!(await tabLoaded(tab.id, deadline))) return { ok: false, reason: "timeout" };
     if (await landedOnSignIn(tab.id, spec)) return { ok: false, reason: "signed_out" };
+    if (await leftSite(tab.id, spec)) return { ok: false, reason: "fill_failed" };
     // A page that draws its form after load gets a moment to do it.
     let filled;
     let before = "";
@@ -113,9 +173,11 @@ async function check(query, pages) {
         : { ok: false, reason: "fill_failed" };
     }
 
-    // The answer has settled when two reads a second apart agree and differ
-    // from the form as it was, whether the page navigated or redrew itself.
+    // The answer has settled when three reads a second apart agree and
+    // differ from the form as it was, whether the page navigated or redrew
+    // itself; a page that draws its result row by row gets the extra second.
     let previous = null;
+    let same = 0;
     while (Date.now() < deadline) {
       await sleep(POLL_MS);
       let text;
@@ -125,14 +187,11 @@ async function check(query, pages) {
         continue; // Mid-navigation: read again.
       }
       if (typeof text !== "string") continue;
-      if (text === previous && text !== before) {
-        return { ok: true, pageText: text.slice(0, PAGE_TEXT_MAX_LENGTH) };
-      }
+      same = text === previous ? same + 1 : 0;
       previous = text;
+      if (same >= 2 && text !== before) return await settledReply(tab.id, spec, text);
     }
-    if (previous && previous !== before) {
-      return { ok: true, pageText: previous.slice(0, PAGE_TEXT_MAX_LENGTH) };
-    }
+    if (previous && previous !== before) return await settledReply(tab.id, spec, previous);
     // The search sent the tab to a sign-in it may not read: a lapsed session.
     return (await landedOnSignIn(tab.id, spec))
       ? { ok: false, reason: "signed_out" }
@@ -216,15 +275,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   };
   const spec = Object.hasOwn(AGENCIES, query.agency) ? AGENCIES[query.agency] : null;
   check(query, AGENCIES)
-    .then((reply) =>
-      // A signed-in page hands back only this diver's lines (fill.js).
-      reply.ok && spec?.signIn
+    .then((reply) => {
+      if (!reply.ok) return reply;
+      // A page behind a shop's sign-in, whichever lookup reached it, hands
+      // back only this diver's lines (fill.js).
+      return spec?.signIn || reply.signedInSite
         ? {
             ok: true,
             pageText: excerptAroundName(reply.pageText, query.firstName, query.lastName),
           }
-        : reply,
-    )
+        : { ok: true, pageText: reply.pageText };
+    })
     .then(sendResponse);
   return true;
 });

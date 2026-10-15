@@ -122,6 +122,138 @@ describe("the extension's copy of the protocol", () => {
     }
   });
 
+  /**
+   * The service worker's whole check, on a stand-in Chrome: the tab's address
+   * at each step, and what each script run in it answers.
+   */
+  async function workerCheck(options: {
+    agency: string;
+    /** The tab's address before the form is filled, and after. */
+    before: string;
+    after: string;
+    /** What the page asks once searched: a sign-in, or nothing. */
+    asksToSignInAfter?: boolean;
+    elearning?: boolean;
+  }) {
+    const { readFileSync } = await import("node:fs");
+    const vm = await import("node:vm");
+    const source = (file: string) =>
+      readFileSync(new URL(`../../extension/${file}`, import.meta.url), "utf8");
+    let filled = false;
+    const ran: string[] = [];
+    const worker: Record<string, unknown> = {
+      chrome: {
+        runtime: { id: "test", onMessage: { addListener: () => {} } },
+        tabs: {
+          create: async () => ({ id: 1 }),
+          get: async () => ({ url: filled ? options.after : options.before, status: "complete" }),
+          remove: async () => {},
+          onUpdated: { addListener: () => {}, removeListener: () => {} },
+        },
+        scripting: {
+          executeScript: async ({ func }: { func: { name: string } }) => {
+            ran.push(func.name);
+            if (func.name === "fillAgencyForm") {
+              filled = true;
+              return [{ result: { ok: true } }];
+            }
+            if (func.name === "pageAsksToSignIn") {
+              return [{ result: filled && options.asksToSignInAfter === true }];
+            }
+            return [{ result: filled ? "Lena Ortiz\nOpen Water Diver" : "Search form" }];
+          },
+        },
+      },
+      URL,
+      setTimeout: (fn: () => void) => setImmediate(fn),
+      clearTimeout: () => {},
+      importScripts: (...files: string[]) => {
+        for (const file of files) vm.runInContext(source(file), worker, { filename: file });
+      },
+    };
+    vm.createContext(worker);
+    vm.runInContext(source("background.js"), worker, { filename: "background.js" });
+    const pages = (
+      worker.DiveDayCertCheck as {
+        AGENCIES: Record<string, unknown>;
+        ELEARNING: Record<string, unknown>;
+      }
+    )[options.elearning ? "ELEARNING" : "AGENCIES"];
+    const check = worker.check as (
+      query: unknown,
+      pages: unknown,
+    ) => Promise<{ ok: boolean; reason?: string; pageText?: string }>;
+    const reply = await check(
+      {
+        agency: options.agency,
+        firstName: "Lena",
+        lastName: "Ortiz",
+        birthDate: "1990-04-12",
+        cardNumber: "123",
+      },
+      pages,
+    );
+    return { reply, ran };
+  }
+
+  /** Security review R4-2: a public lookup sent to PADI's signed-in site is never read. */
+  it("never fills or reads a public lookup's tab once it is on another site", async () => {
+    const { reply, ran } = await workerCheck({
+      agency: "ssi",
+      before: "https://pro.padi.com/me/dashboard",
+      after: "https://pro.padi.com/me/dashboard",
+    });
+    expect(reply).toEqual({ ok: false, reason: "fill_failed" });
+    expect(ran).not.toContain("fillAgencyForm");
+  });
+
+  it("hands back nothing from a public lookup sent to another site by its search", async () => {
+    const { reply } = await workerCheck({
+      agency: "ssi",
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://pro.padi.com/me/dashboard",
+    });
+    expect(reply).toEqual({ ok: false, reason: "fill_failed" });
+  });
+
+  it("hands back a public lookup's page when it stays on the agency's site", async () => {
+    const { reply } = await workerCheck({
+      agency: "ssi",
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://my.divessi.com/online_diver_check?diver_name=Lena",
+    });
+    expect(reply).toMatchObject({ ok: true, pageText: "Lena Ortiz\nOpen Water Diver" });
+  });
+
+  /** Domain review R4 (adversarial) 5: a search answered with a sign-in is a lapsed session. */
+  it("reads DiveChek answering its search with a sign-in as signed out, never a result", async () => {
+    const { reply } = await workerCheck({
+      agency: "padi",
+      before: "https://pros.padi.com/divechek",
+      after: "https://pros.padi.com/divechek?first_name=Lena",
+      asksToSignInAfter: true,
+    });
+    expect(reply).toEqual({ ok: false, reason: "signed_out" });
+  });
+
+  it("reads DiveChek's search sent to a sign-in address as signed out", async () => {
+    const { reply } = await workerCheck({
+      agency: "padi",
+      before: "https://pro.padi.com/divechek",
+      after: "https://pros.padi.com/sign-in?return=%2Fdivechek",
+    });
+    expect(reply).toEqual({ ok: false, reason: "signed_out" });
+  });
+
+  it("hands back DiveChek's result when the staffer stays signed in", async () => {
+    const { reply } = await workerCheck({
+      agency: "padi",
+      before: "https://pro.padi.com/divechek",
+      after: "https://pros.padi.com/divechek?first_name=Lena",
+    });
+    expect(reply).toMatchObject({ ok: true, pageText: "Lena Ortiz\nOpen Water Diver" });
+  });
+
   it("reads anything else the extension says as a form it could not fill", () => {
     expect(extensionFailureReason("signed_out")).toBe("signed_out");
     expect(extensionFailureReason("Sign in, then <b>click here</b>")).toBe("fill_failed");

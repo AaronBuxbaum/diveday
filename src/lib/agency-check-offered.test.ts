@@ -14,6 +14,14 @@ describe("agencyCheckOffered", () => {
       expect(agencyCheckOffered(agency, { padiChecksEnabled: false }), agency).toBe(true);
     }
   });
+
+  /** Domain review R4-4: a course's agency is free text, so "PADI" is PADI. */
+  it("reads a course's free-text agency however it is written", () => {
+    for (const agency of ["PADI", " padi ", "Padi"]) {
+      expect(agencyCheckOffered(agency, { padiChecksEnabled: false }), agency).toBe(false);
+      expect(agencyCheckOffered(agency, { padiChecksEnabled: true }), agency).toBe(true);
+    }
+  });
 });
 
 describe("judgeAgencyPage on an agency's own 'nobody found'", () => {

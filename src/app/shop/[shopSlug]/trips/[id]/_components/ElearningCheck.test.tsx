@@ -88,7 +88,38 @@ describe("ElearningCheck", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Check eLearning with PADI" }));
     });
-    expect(await screen.findByText(copy.unreadable)).toBeInTheDocument();
+    expect(await screen.findByText("Couldn’t read PADI’s page.")).toBeInTheDocument();
     expect(action).not.toHaveBeenCalled();
+  });
+
+  /** Domain review R4 (adversarial) nit: signed out is said as such, as DiveChek's check says it. */
+  it("tells a staffer signed out of PADI to sign in first, and sends the server nothing", async () => {
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+    vi.mocked(requestElearningPage).mockResolvedValue({ ok: false, reason: "signed_out" });
+    const action = renderCheck();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Check eLearning with PADI" }));
+    });
+    expect(
+      await screen.findByText("Sign in to the PADI Pros’ Site first, then check again."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Couldn’t read PADI’s page.")).toBeNull();
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  /** Domain review R4-5: with the extension here and PADI's checks off, say who can turn them on. */
+  it("says the shop's PADI checks are off, with the extension here and nothing to check", () => {
+    const off =
+      "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings & waivers.";
+    renderCheck({ query: null, offNote: off });
+    expect(screen.queryByText(off)).toBeNull();
+    cleanup();
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+    renderCheck({ query: null, offNote: off });
+    expect(screen.getByText(off)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check eLearning with PADI" })).toBeNull();
+    cleanup();
+    renderCheck({ query: null, offNote: off, materialsDone: true });
+    expect(screen.queryByText(off)).toBeNull();
   });
 });

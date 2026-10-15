@@ -472,7 +472,8 @@
       "complete": "PADI shows the eLearning finished. Materials marked done.",
       "notComplete": "PADI doesn’t show this course’s eLearning finished yet.",
       "noRecord": "PADI found no eLearning under this student’s email.",
-      "unreadable": "Couldn’t read PADI’s page. Sign in to the PADI Pros’ Site, then check again.",
+      "unreadable": "Couldn’t read PADI’s page.",
+      "signedOut": "Sign in to the PADI Pros’ Site first, then check again.",
       "failed": "That didn’t save. Try again."
     },
     "agencyCheckAll": {

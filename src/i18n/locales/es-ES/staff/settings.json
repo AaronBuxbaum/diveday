@@ -363,7 +363,7 @@
     },
     "certCheck": {
       "heading": "Verificación de certificaciones",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE, CMAS y PADI (con sesión iniciada en el PADI Pros’ Site en el mismo navegador), en Chrome o Edge en una computadora.",
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Reservas y exenciones, en Chrome o Edge en una computadora.",
       "added": "Añadida a este navegador",
       "notAdded": "Sin añadir",
       "install": "Añadir a Chrome"
@@ -431,8 +431,8 @@
       },
       "padiChecks": {
         "heading": "Verificación con PADI (beta)",
-        "label": "Verificar tarjetas y eLearning de PADI",
-        "description": "Se hace con tu propia membresía PADI, en un navegador con sesión iniciada en el PADI Pros’ Site."
+        "label": "Verificar certificaciones y eLearning de PADI",
+        "description": "Beta: nadie lo ha probado todavía en la página real de DiveChek de PADI, y PADI no ha dicho si acepta que una extensión la rellene. Funciona en un navegador donde uno de tus profesionales PADI tiene la sesión iniciada en el PADI Pros’ Site, con la afiliación de ese profesional. Desactivado, el enlace al PADI Pros’ Site se mantiene. Un propietario o un gerente puede activarlo."
       }
     },
     "crewSchedule": {

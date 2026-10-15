@@ -121,6 +121,8 @@ export function agencyCheckCopy(
 ): AgencyCheckCopy {
   const name = t(AGENCY_KEYS[agency]);
   const signIn = agencyVerificationPage(agency)?.kind === "member_sign_in";
+  // What the agency was searched by, for "found this name, not this" and "found nobody".
+  const identity = isCheckableAgency(agency) ? AGENCY_CHECKS[agency].needs : "birth_date";
   return {
     check: signIn ? t("divers.certifications.checkWithAgency", { agency: name }) : link,
     link,
@@ -130,11 +132,13 @@ export function agencyCheckCopy(
     levelUnconfirmed: t("divers.certifications.agencyCheck.levelUnconfirmed", { agency: name }),
     limitedCard: t("divers.certifications.agencyCheck.limitedCard", { agency: name }),
     juniorUnder15: t("divers.certifications.agencyCheck.juniorUnder15", { agency: name }),
-    namesake: t("divers.certifications.agencyCheck.namesake", {
-      agency: name,
-      identity: isCheckableAgency(agency) ? AGENCY_CHECKS[agency].needs : "birth_date",
-    }),
-    noRecord: t("divers.certifications.agencyCheck.noRecord", { agency: name }),
+    namesake: t("divers.certifications.agencyCheck.namesake", { agency: name, identity }),
+    // The CMAS portal is filled in federation by federation: a gap there is
+    // not a sign the card is wrong.
+    noRecord:
+      agency === "cmas"
+        ? t("divers.certifications.agencyCheck.noRecordCmas")
+        : t("divers.certifications.agencyCheck.noRecord", { agency: name, identity }),
     severalRecords: t("divers.certifications.agencyCheck.severalRecords", { agency: name }),
     unreadable: t("divers.certifications.agencyCheck.unreadable", { agency: name }),
     // The agency now, the diver in the browser: one host holds many divers.

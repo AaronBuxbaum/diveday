@@ -50,9 +50,10 @@ type AgencyPages = {
    * DiveChek, on pro.padi.com. Signed out: it shows its sign-in form, or sends
    * the tab to PADI's sign-in host. Signed in: it sends the tab on to the same
    * page on pros.padi.com, PADI's other Pros' Site host, which answers with
-   * DiveChek's form and its "Run Report" button.
+   * DiveChek's form and its "Run Report" button. Expiring on search: the form
+   * shows, and the search is answered with the sign-in form.
    */
-  padi: "sign-in-form" | "sign-in-redirect" | "signed-in-on-pros";
+  padi: "sign-in-form" | "sign-in-redirect" | "signed-in-on-pros" | "expires-on-search";
   /** The card number DiveChek's result row shows. */
   padiCardNumber: string;
   /** Every request a fake agency page received, as `METHOD url`. */
@@ -148,18 +149,26 @@ function divechekPage(url: URL, cardNumber: string): string {
   );
 }
 
-/** Every host the extension may open or be sent to (`extension/agencies.js`), and PADI's sign-in host. */
+/** The published manifest, read once: what the extension may open is what these pages answer for. */
+const publishedManifest = JSON.parse(
+  fs.readFileSync(path.resolve(__filename, "..", "..", "extension", "manifest.json"), "utf8"),
+) as { version: string; host_permissions: string[] };
+/** Every host the extension may open or be sent to (its manifest), and PADI's sign-in host. */
 const AGENCY_HOSTS = [
+  ...publishedManifest.host_permissions.map((pattern) => new URL(pattern.replace(/\*$/, "")).host),
+  "login.padi.com",
+];
+const PADI_HOSTS = ["pro.padi.com", "pros.padi.com"];
+/** The hosts the fake pages below answer; every permitted host must be one, or a test reaches an agency. */
+const ANSWERED_HOSTS = new Set([
   "my.divessi.com",
   "www.naui.org",
   "www.tdisdi.com",
   "www.gue.com",
   "portal.cmas.org",
-  "pro.padi.com",
-  "pros.padi.com",
+  ...PADI_HOSTS,
   "login.padi.com",
-];
-const PADI_HOSTS = ["pro.padi.com", "pros.padi.com"];
+]);
 
 /**
  * The agencies' pages, served over HTTPS on a loopback port that Chromium is
@@ -207,7 +216,7 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
         return send(204);
       }
       if (url.hostname === "pro.padi.com" && url.pathname === "/divechek") {
-        if (pages.padi === "signed-in-on-pros") {
+        if (pages.padi === "signed-in-on-pros" || pages.padi === "expires-on-search") {
           return send(302, "", { location: "https://pros.padi.com/divechek" });
         }
         return pages.padi === "sign-in-redirect"
@@ -215,6 +224,11 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
           : send(200, PADI_SIGN_IN);
       }
       if (url.hostname === "pros.padi.com" && url.pathname === "/divechek") {
+        if (pages.padi === "expires-on-search") {
+          return url.search === ""
+            ? send(200, divechekPage(url, pages.padiCardNumber))
+            : send(200, PADI_SIGN_IN);
+        }
         return pages.padi === "signed-in-on-pros"
           ? send(200, divechekPage(url, pages.padiCardNumber))
           : send(200, PADI_SIGN_IN);
@@ -274,6 +288,8 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
       path.resolve(testInfo.project.testDir, "..", "extension"),
       testInfo.outputPath("extension"),
     );
+    // A permitted host these pages do not answer would send the test to the real agency.
+    for (const host of AGENCY_HOSTS) expect(ANSWERED_HOSTS, host).toContain(host);
     const executablePath = extensionCapableChromium();
     const agencies = await serveAgencyPages(agencyPages, testInfo.outputPath("agency-tls"));
     const { port } = agencies.address() as AddressInfo;
@@ -323,11 +339,7 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
   },
 });
 
-const extensionVersion = (
-  JSON.parse(
-    fs.readFileSync(path.resolve(__filename, "..", "..", "extension", "manifest.json"), "utf8"),
-  ) as { version: string }
-).version;
+const extensionVersion = publishedManifest.version;
 
 /** A new diver with a pending SSI card, made on the diver pages; the page is on their record after. */
 async function diverWithPendingSsiCard(page: Page, prefix: string) {
@@ -495,6 +507,29 @@ test("signed in to PADI, DiveChek sent on to pros.padi.com is read, its Run Repo
 
   await toast.getByRole("button", { name: "Undo" }).click();
   await expect(cards.getByRole("button", { name: "Check with PADI" })).toBeVisible();
+});
+
+test("signed out of PADI between the form and its answer, the check says to sign in and certifies nothing", async ({
+  page,
+  extensionId,
+  agencyPages,
+}) => {
+  test.setTimeout(90_000);
+  void extensionId;
+  agencyPages.padi = "expires-on-search";
+  const { cardNumber, cards } = await diverWithPendingPadiCard(page);
+  agencyPages.padiCardNumber = cardNumber;
+
+  await cards.getByRole("button", { name: "Check with PADI" }).click();
+
+  await expect(
+    cards.getByText("Sign in to the PADI Pros’ Site first, then check again."),
+  ).toBeVisible({ timeout: 20_000 });
+  // The search was sent, and answered with PADI's sign-in, which nothing was typed into.
+  expect(agencyPages.requests.some((request) => request.includes("first_name="))).toBe(true);
+  expect(agencyPages.typedIntoSignIn).toEqual([]);
+  await expect(page.getByText("PADI shows this certification. Marked certified.")).toHaveCount(0);
+  await expect(cards.getByText(/^Checked with PADI by /)).toHaveCount(0);
 });
 
 test("Check all on a departure settles its rows one at a time through the extension", async ({

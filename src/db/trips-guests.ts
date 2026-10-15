@@ -350,6 +350,11 @@ export async function getTripGuests(
      * page for, per seat, where it can (H-106): a PADI course with materials.
      */
     elearningQueryByBooking: elearningQueries(trip.course ?? null, roster, shop),
+    /** The same course, where the shop's switch keeps PADI's eLearning check off (H-121). */
+    elearningChecksOff:
+      Boolean(trip.course) &&
+      readLearningMaterials(trip.course?.learningMaterials).length > 0 &&
+      !agencyCheckOffered(trip.course?.agency ?? "", shop),
     /**
      * Per diver, the cards the DiveDay browser extension could check with
      * their agencies from this tab (H-105). Held seats are never in it.

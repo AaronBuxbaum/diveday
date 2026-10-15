@@ -50,6 +50,7 @@ export function AgencyCheck({
   action,
   addListed,
   copy,
+  offNote,
 }: {
   href: string;
   /** The lookup the extension types, or null when this card cannot be checked. */
@@ -65,6 +66,12 @@ export function AgencyCheck({
     formData: FormData,
   ) => Promise<AgencyListedAddResult>;
   copy: AgencyCheckCopy;
+  /**
+   * "PADI checks are off for this shop…": said under the link when the
+   * extension is here but the shop's switch keeps this agency's check off
+   * (H-121), so a staffer with the extension knows why there is no button.
+   */
+  offNote?: string;
 }) {
   const hasExtension = useCertCheckExtension();
   const [result, formAction, judging] = useActionState(action, null);
@@ -125,6 +132,9 @@ export function AgencyCheck({
       ) : (
         link
       )}
+      {awaiting && hasExtension && !query && offNote ? (
+        <span className="mt-1 block text-sm text-muted print:hidden">{offNote}</span>
+      ) : null}
       {awaiting && outcome ? (
         <span className="mt-1 block">
           <FormStatus tone={result && !result.ok ? "danger" : "warning"}>{outcome}</FormStatus>

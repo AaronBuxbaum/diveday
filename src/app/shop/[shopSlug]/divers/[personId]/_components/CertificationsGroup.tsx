@@ -140,7 +140,7 @@ function agencyCheckActions(shopSlug: string, personId: string) {
  * keeps its "(member sign-in)" link.
  */
 function offeredCheckQuery(
-  card: { agency: Parameters<typeof agencyCheckQuery>[0]["agency"]; identifier: string | null },
+  card: CheckedCard,
   person: { fullName: string; dateOfBirth: string | null },
   shop: Shop,
 ) {
@@ -151,6 +151,27 @@ function offeredCheckQuery(
     dateOfBirth: person.dateOfBirth,
     identifier: card.identifier,
   });
+}
+
+/**
+ * A level card's check: the lookup, or null for a self-declared card or one
+ * with none to offer, and whether the shop's switch is what keeps it off.
+ */
+type CheckedCard = {
+  agency: Parameters<typeof agencyCheckQuery>[0]["agency"];
+  identifier: string | null;
+};
+
+function levelCardCheck(
+  card: CheckedCard,
+  person: { fullName: string; dateOfBirth: string | null },
+  shop: Shop,
+  selfDeclared: boolean,
+) {
+  return {
+    query: selfDeclared ? null : offeredCheckQuery(card, person, shop),
+    switchedOff: !selfDeclared && !agencyCheckOffered(card.agency, shop),
+  };
 }
 
 /**
@@ -483,7 +504,7 @@ export function CertificationsGroup({
               check={{
                 certificationId: card.id,
                 awaiting: awaiting || needsImportConfirm(card),
-                query: selfDeclared ? null : offeredCheckQuery(card, diver.person, shop),
+                ...levelCardCheck(card, diver.person, shop, selfDeclared),
                 ...agencyCheck,
               }}
             />

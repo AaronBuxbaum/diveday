@@ -363,7 +363,7 @@
     },
     "certCheck": {
       "heading": "Certification checks",
-      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and marks the certification certified when the agency shows it. It checks SSI, NAUI, SDI, GUE, CMAS and PADI (signed in to the PADI Pros’ Site in the same browser), in Chrome or Edge on a computer.",
+      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and marks the certification certified when the agency shows it. It checks SSI, NAUI, SDI, GUE and CMAS, and PADI once “PADI checks (beta)” in Bookings & waivers is on, in Chrome or Edge on a computer.",
       "added": "Added to this browser",
       "notAdded": "Not added",
       "install": "Add to Chrome"
@@ -431,8 +431,8 @@
       },
       "padiChecks": {
         "heading": "PADI checks (beta)",
-        "label": "Check PADI cards and eLearning",
-        "description": "Runs under your own PADI membership, in a browser signed in to the PADI Pros’ Site."
+        "label": "Check PADI certifications and eLearning with the extension",
+        "description": "Beta: nobody has tried this on PADI’s real DiveChek page yet, and PADI hasn’t said yes or no to an extension filling it in. It runs in a browser where one of your PADI Pros is signed in to the Pros’ Site, under that Pro’s membership. Off, the link to the Pros’ Site stays. An owner or manager can turn it on."
       }
     },
     "crewSchedule": {

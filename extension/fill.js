@@ -17,8 +17,11 @@
  * A page behind the shop's own sign-in (`spec.signIn`, PADI's Pros' Site) is
  * held tighter than a public lookup: nothing is typed on a sign-in, sign-up or
  * account address (`signInPath`, from protocol.js) or a page asking for a
- * password or, outside any search, an email; every box filled must search;
- * and the only button pressed is that search's own.
+ * password or, outside any search, an email; nothing is typed anywhere but the
+ * page the lookup opened, when its address names one (DiveChek's
+ * `/divechek`); every box filled must search, in a form with no other box;
+ * a student's email goes only into a box that says it searches or is the
+ * student's; and the only button pressed is that search's own.
  * @param {{firstName: string, lastName: string, birthDate?: string|null, cardNumber?: string|null, email?: string}} query
  * @param {{fields: string[], dateFormat: string, either?: boolean, signIn?: boolean}} spec
  * @param {string} [signInPath] the source of `SIGN_IN_PATH` (protocol.js)
@@ -43,6 +46,9 @@ function fillAgencyForm(query, spec, signInPath) {
   const BUTTON_SEARCH =
     /\b(search|find|look ?up|check|chek|divechek|verify|run ?report|buscar|verificar)\b/i;
   const SUBMITS = 'button, input[type="submit"]';
+  // A signed-in email box that searches only because its form's button says
+  // so must also say whose email it wants: "Email a copy to" is not a search.
+  const STUDENT = /\b(student|alumno|estudiante|diver|buceador)\b/i;
 
   /** Words as a person reads them: "searchFirstName" and "search_first" are two words each. */
   function words(text) {
@@ -75,8 +81,22 @@ function fillAgencyForm(query, spec, signInPath) {
 
   function visible(element) {
     if (element.type === "hidden" || element.disabled || element.readOnly) return false;
-    const style = window.getComputedStyle(element);
-    return style.display !== "none" && style.visibility !== "hidden";
+    // On the page as a person sees it: a block hidden around the element
+    // hides it too.
+    if (typeof element.checkVisibility === "function") {
+      return element.checkVisibility({ checkVisibilityCSS: true, visibilityProperty: true });
+    }
+    for (let at = element; at; at = at.parentElement) {
+      const style = window.getComputedStyle(at);
+      if (style.display === "none") return false;
+      if (at === element && style.visibility === "hidden") return false;
+    }
+    return window.getComputedStyle(element).visibility !== "hidden";
+  }
+
+  /** A button a lookup may press: on the page, and never a reset. */
+  function pressable(element) {
+    return visible(element) && element.type !== "reset";
   }
 
   /** A box a lookup could type into: not a button, a tick, a file, a password or an email. */
@@ -100,12 +120,15 @@ function fillAgencyForm(query, spec, signInPath) {
   }
 
   // A form's button speaks for its boxes only when the form is small: its one
-  // submit control says search ("one"), or it says search among others and
-  // every box in the form is one this lookup fills ("all", checked once the
-  // boxes are found). A profile form with a Search beside its Save is neither.
+  // submit control says search ("one"), or it says search among others
+  // ("all"); either way every box in the form must be one this lookup fills,
+  // checked once the boxes are found. A profile form with a Search beside its
+  // Save, or a Verify under a Phone box, is neither. A reset is never one.
   function formSearches(form) {
     if (!form) return null;
-    const submits = Array.from(form.querySelectorAll(SUBMITS)).filter(visible);
+    const submits = Array.from(form.querySelectorAll(SUBMITS)).filter(
+      (button) => visible(button) && button.type !== "reset",
+    );
     const searching = submits.filter((button) => BUTTON_SEARCH.test(buttonWords(button)));
     if (searching.length === 0) return null;
     return submits.length === 1 ? "one" : "all";
@@ -175,6 +198,20 @@ function fillAgencyForm(query, spec, signInPath) {
     }
     if (new RegExp(signInPath, "i").test(location.pathname)) {
       return { ok: false, missing: ["signedIn"] };
+    }
+  }
+  // A signed-in lookup that opens a page of its own (DiveChek) is filled on
+  // that page only, never on another of the site's pages it was sent to.
+  if (signedInPage) {
+    const trim = (path) => path.replace(/\/+$/, "").toLowerCase();
+    let wanted = "";
+    try {
+      wanted = trim(new URL(spec.url).pathname);
+    } catch {
+      return { ok: false, missing: ["page"] };
+    }
+    if (wanted !== "" && trim(location.pathname) !== wanted) {
+      return { ok: false, missing: ["page"] };
     }
   }
   // A sign-in that asks for the email first and the password on the next
@@ -270,7 +307,12 @@ function fillAgencyForm(query, spec, signInPath) {
 
   function planEmail() {
     if (!query.email) return false;
-    const box = emailBoxes.find((element) => !used().includes(element) && searches(element));
+    const box = emailBoxes.find(
+      (element) =>
+        !used().includes(element) &&
+        searches(element) &&
+        (!signedInPage || boxSearches(element) || STUDENT.test(words(describe(element)))),
+    );
     if (!box) return false;
     plan.push({ box, value: query.email });
     return true;
@@ -301,7 +343,7 @@ function fillAgencyForm(query, spec, signInPath) {
     // Every box in one search. A box that searches only because its form's
     // button says so is in a form whose every box this lookup fills.
     if (boxes.some((box) => box.form !== form)) return { ok: false, missing: ["submit"] };
-    if (!boxes.every(boxSearches) && formSearches(form) === "all") {
+    if (!boxes.every(boxSearches) && formSearches(form) !== null) {
       const others = Array.from(form.querySelectorAll("input, select")).filter(
         (element) => typable(element) && !boxes.includes(element),
       );
@@ -311,7 +353,10 @@ function fillAgencyForm(query, spec, signInPath) {
     // buttons, whatever it says, and never a bare submit of the form.
     button = form
       ? Array.from(form.querySelectorAll(SUBMITS)).find(
-          (element) => visible(element) && BUTTON_SEARCH.test(buttonWords(element)),
+          (element) =>
+            visible(element) &&
+            element.type !== "reset" &&
+            BUTTON_SEARCH.test(buttonWords(element)),
         ) || null
       : Array.from(
           (boxes[0].closest('[role="search"]') || document.createElement("div")).querySelectorAll(
@@ -322,26 +367,32 @@ function fillAgencyForm(query, spec, signInPath) {
   } else if (spec.either) {
     // CMAS: one page, two searches, each with its own button ("Search by code"
     // under the code, "Manual Search" under the names and birth date), in one
-    // form or none. The search performed is the button after its last box.
+    // form or none. The search performed is the first search button after its
+    // last box, in the nearest block around that box that has one.
     const last = boxes[boxes.length - 1];
-    button =
-      Array.from(document.querySelectorAll(SUBMITS)).find(
-        (element) =>
-          visible(element) &&
-          element.type !== "reset" &&
-          Boolean(last.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING),
-      ) || null;
+    for (let around = last.parentElement; around && !button; around = around.parentElement) {
+      button =
+        Array.from(around.querySelectorAll(SUBMITS)).find(
+          (element) =>
+            pressable(element) &&
+            BUTTON_SEARCH.test(buttonWords(element)) &&
+            Boolean(last.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING),
+        ) || null;
+    }
     if (!button) return { ok: false, missing: ["submit"] };
   } else {
+    // The form's search-worded button first, else its first submit; never a
+    // reset, and never a wordless type="button" (a date picker's toggle).
+    const formButtons = form ? Array.from(form.querySelectorAll(SUBMITS)).filter(pressable) : [];
     button =
-      (form &&
-        Array.from(form.querySelectorAll(SUBMITS)).find(
-          (element) => element.type === "submit" || element.tagName === "BUTTON",
-        )) ||
-      Array.from(document.querySelectorAll(SUBMITS)).find((element) =>
-        /search|find|verify|check|submit|buscar|verificar/i.test(
-          element.textContent || element.value || "",
-        ),
+      formButtons.find((element) => BUTTON_SEARCH.test(buttonWords(element))) ||
+      formButtons.find((element) => element.type === "submit") ||
+      Array.from(document.querySelectorAll(SUBMITS)).find(
+        (element) =>
+          pressable(element) &&
+          /search|find|verify|check|submit|buscar|verificar/i.test(
+            element.textContent || element.value || "",
+          ),
       ) ||
       null;
     if (!button && !form) return { ok: false, missing: ["submit"] };
@@ -354,6 +405,28 @@ function fillAgencyForm(query, spec, signInPath) {
     form.requestSubmit();
   }
   return { ok: true };
+}
+
+/**
+ * Whether the page asks to sign in: a password box on it, or an address that
+ * signs in, signs up or manages an account (`signInPath`, from protocol.js).
+ * A searched page behind the shop's sign-in that does is a lapsed session,
+ * never a result.
+ * @param {string} signInPath
+ */
+function pageAsksToSignIn(signInPath) {
+  if (typeof signInPath !== "string" || signInPath.length === 0) return true;
+  if (new RegExp(signInPath, "i").test(location.pathname)) return true;
+  return Array.from(document.querySelectorAll('input[type="password"]')).some((box) => {
+    if (box.disabled) return false;
+    if (typeof box.checkVisibility === "function") {
+      return box.checkVisibility({ checkVisibilityCSS: true, visibilityProperty: true });
+    }
+    for (let at = box; at; at = at.parentElement) {
+      if (window.getComputedStyle(at).display === "none") return false;
+    }
+    return window.getComputedStyle(box).visibility !== "hidden";
+  });
 }
 
 /** The page's text as a person would read it, one block per line. */
@@ -441,6 +514,7 @@ function excerptAroundName(text, firstName, lastName) {
 globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
   fillAgencyForm,
   readAgencyPage,
+  pageAsksToSignIn,
   excerptAround,
   excerptAroundName,
 });

@@ -8,6 +8,8 @@ const SEEDED_DIVER = "Tyler Brooks";
 const DEPARTURE = /Two-Tank Reef — French Reef/;
 
 type Mode = "match" | "several" | "signed_out";
+const PADI_CHECKS_OFF =
+  "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings & waivers.";
 
 /**
  * **"Check with PADI", on PADI's DiveChek** (layer 2 of the cert-check
@@ -235,6 +237,8 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
     checks: false,
   });
   await expect(cards.getByRole("button", { name: "Check with PADI" })).toHaveCount(0);
+  // With the extension here, the record says why there is no button, and who can change it.
+  await expect(cards.getByText(PADI_CHECKS_OFF)).toBeVisible();
 
   // The departure's Divers tab offers the SSI card beside it, never the PADI one.
   const trip = await findTripOnBoard(page, privateShop.slug, DEPARTURE);
@@ -266,9 +270,7 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
   await expect(row.locator("summary")).toContainText("Off");
   await row.locator("summary").click();
   await expect(
-    row.getByText(
-      "Runs under your own PADI membership, in a browser signed in to the PADI Pros’ Site.",
-    ),
+    row.getByText(/^Beta: nobody has tried this on PADI’s real DiveChek page yet/),
   ).toBeVisible();
   await row.getByRole("checkbox").check();
   await row.getByRole("button", { name: "Save" }).click();
@@ -278,4 +280,5 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
   await page.goto(record);
   const after = await openDiverFileGroup(page, "Certification records");
   await expect(after.getByRole("button", { name: "Check with PADI" })).toBeVisible();
+  await expect(after.getByText(PADI_CHECKS_OFF)).toHaveCount(0);
 });
