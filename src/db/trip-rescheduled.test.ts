@@ -15,6 +15,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { recordSmsKeyword } from "./sms-opt-outs";
 import { holdRescheduleNotice, sendRescheduleNotices } from "./trip-rescheduled";
 import { createTrip, moveTrip, upcomingTripsWithCounts } from "./trips";
 
@@ -602,5 +603,66 @@ describe("holdRescheduleNotice", () => {
       }),
     ).toBeNull();
     expect(await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toHaveLength(0);
+  });
+});
+
+/**
+ * Issue #2451: the link is minted ahead of the send, so a notice that does not
+ * go must not leave a live capability behind.
+ */
+describe("the trip-prep link on a notice that does not go", () => {
+  async function send() {
+    const moved = await movedTrip();
+    const { options } = providers();
+    return { moved, options };
+  }
+
+  const payload = (moved: Awaited<ReturnType<typeof movedTrip>>) => ({
+    kind: "trip_rescheduled" as const,
+    tripId: moved.reef.id,
+    previousStartsAt: moved.previousStartsAt.toISOString(),
+    meetingPointMoved: false,
+  });
+
+  it("mints nothing for a phone-only seat on the STOP list", async () => {
+    const { moved, options } = await send();
+    const { db, shop, kid, now } = moved;
+    const [kidRow] = await db.select().from(bookings).where(eq(bookings.id, kid));
+    await db.update(people).set({ phone: "+13055550143" }).where(eq(people.id, kidRow.personId));
+    await recordSmsKeyword(db, { phone: "+13055550143", optedOut: true, keywordAt: now });
+    await sendRescheduleNotices(db, shop.id, payload(moved), { ...options, now });
+    expect(
+      await db.select().from(bookingCapabilities).where(eq(bookingCapabilities.bookingId, kid)),
+    ).toEqual([]);
+  });
+
+  it("revokes the link when the email bounces", async () => {
+    const { moved } = await send();
+    const { db, shop, priya, now } = moved;
+    await sendRescheduleNotices(db, shop.id, payload(moved), {
+      emailProvider: fakeEmail({ status: "failed", retryable: false, errorCode: "rejected" })
+        .provider,
+      smsProvider: fakeSms().provider,
+      whatsAppProviders: new Map(),
+      appOrigin: ORIGIN,
+      now,
+    });
+    const rows = await db
+      .select()
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, priya));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => row.revokedAt !== null)).toBe(true);
+  });
+
+  it("keeps the link live when the email goes", async () => {
+    const { moved, options } = await send();
+    const { db, shop, priya, now } = moved;
+    await sendRescheduleNotices(db, shop.id, payload(moved), { ...options, now });
+    const rows = await db
+      .select()
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, priya));
+    expect(rows.filter((row) => row.revokedAt === null)).toHaveLength(1);
   });
 });

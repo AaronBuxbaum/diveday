@@ -20,6 +20,7 @@ import {
   type IssuedCapability,
   issueBookingCapabilities,
   issueBookingCapability,
+  revokeIssuedCapabilities,
 } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { lastDayStartsAt } from "./departure-notes";
@@ -30,7 +31,7 @@ import {
   sendAndRecordNotification,
 } from "./notifications";
 import { bookings, heldSends, people, shops, trips } from "./schema";
-import { stopListedSmsProvider } from "./sms-opt-outs";
+import { isSmsOptedOut, optedOutPhones, stopListedSmsProvider } from "./sms-opt-outs";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
@@ -305,14 +306,25 @@ export async function sendRescheduleNotices(
   // review 2026-10-13b, item 36): this loop minted one per seat, three
   // statements each, the shape `sendDepartureNote` left (item 35). The same
   // seats as before: not a held one, not one with nowhere to send it.
+  // A phone-only seat on the STOP list, at a shop with no WhatsApp of its own,
+  // gets a refused text: no link is minted for it (#2451).
+  const stopped = await optedOutPhones(
+    db,
+    seats.flatMap(({ person }) => {
+      const phone = person.email ? null : smsRecipient(person.phone);
+      return phone ? [phone] : [];
+    }),
+  );
   const links = channels.origin
     ? await issueBookingCapabilities(db, {
         shopId: shop.id,
         bookingIds: seats
-          .filter(
-            ({ booking, person }) =>
-              !booking.identityUnconfirmedAt && (person.email || smsRecipient(person.phone)),
-          )
+          .filter(({ booking, person }) => {
+            if (booking.identityUnconfirmedAt) return false;
+            if (person.email) return true;
+            const phone = smsRecipient(person.phone);
+            return Boolean(phone) && !(stopped.has(phone as string) && !channels.whatsApp);
+          })
           .map(({ booking }) => booking.id),
         purpose: "readiness",
         now,
@@ -411,10 +423,14 @@ async function tellSeat(
   }
   const locale = recipientLocale(person.locale, shop.defaultLocale);
   const t = diverTranslator(locale);
+  // A STOP-listed phone-only seat mints nothing (#2451); the one-seat path
+  // checks here what the whole-departure path checks in a batch.
+  const refusedText =
+    !person.email && Boolean(phone) && !channels.whatsApp && (await isSmsOptedOut(db, phone ?? ""));
   const capability =
     input.capability !== undefined
       ? input.capability
-      : channels.origin
+      : channels.origin && !refusedText
         ? await issueBookingCapability(db, {
             shopId: shop.id,
             bookingId: booking.id,
@@ -422,6 +438,14 @@ async function tellSeat(
             now,
           })
         : null;
+  // The link was minted ahead of the send; when the send did not go nobody
+  // holds it, so it is taken back (#2451).
+  const settle = async (told: "told" | "failed"): Promise<"told" | "failed"> => {
+    if (told === "failed" && capability) {
+      await revokeIssuedCapabilities(db, { shopId: shop.id, tokens: [capability.token], now });
+    }
+    return told;
+  };
   const readinessUrl = capability
     ? new URL(readinessLinkPath(capability.token), `${channels.origin}/`).toString()
     : undefined;
@@ -494,7 +518,7 @@ async function tellSeat(
         whatsapp: channels.whatsApp,
       });
     }
-    return delivery.status === "sent" ? "told" : "failed";
+    return settle(delivery.status === "sent" ? "told" : "failed");
   } else if (courtesy) {
     const { delivery } = await sendCourtesyMessage(courtesy, {
       sms: channels.smsProvider,
@@ -506,9 +530,9 @@ async function tellSeat(
       kind: "trip_rescheduled",
       delivery,
     });
-    return delivery.status === "sent" ? "told" : "failed";
+    return settle(delivery.status === "sent" ? "told" : "failed");
   }
-  return "failed";
+  return settle("failed");
 }
 
 /**

@@ -35,7 +35,7 @@ import {
 } from "@/lib/reminders";
 import { maySendNow } from "@/lib/send-window";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { issueBookingCapabilities } from "./booking-capabilities";
+import { issueBookingCapabilities, revokeIssuedCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import {
@@ -53,7 +53,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
-import { stopListedSmsProvider } from "./sms-opt-outs";
+import { optedOutPhones, stopListedSmsProvider } from "./sms-opt-outs";
 import { notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
@@ -317,16 +317,29 @@ async function mintReminderLinks(
     };
   }>,
   now: Date,
-): Promise<Map<string, string>> {
-  const links = new Map<string, string>();
+  whatsAppShopIds: ReadonlySet<string>,
+): Promise<Map<string, ReminderLink>> {
+  const links = new Map<string, ReminderLink>();
   if (!origin) return links;
+  // A phone-only diver on the STOP list, at a shop with no WhatsApp of its own,
+  // is refused by the SMS wrapper: no link is minted for a text that cannot go
+  // (#2451). One read for the pass.
+  const stopped = await optedOutPhones(
+    db,
+    seats.flatMap(({ row: { person } }) => {
+      const phone = person.email ? null : smsRecipient(person.phone);
+      return phone ? [phone] : [];
+    }),
+  );
   const byShop = new Map<string, string[]>();
   for (const {
     row: { shop, booking, person },
   } of seats) {
     // Only a seat the send loop can reach: a diver with no email and no
     // textable phone gets a `not_configured` row, not a live token.
-    if (!person.email && !smsRecipient(person.phone)) continue;
+    const phone = smsRecipient(person.phone);
+    if (!person.email && !phone) continue;
+    if (!person.email && phone && stopped.has(phone) && !whatsAppShopIds.has(shop.id)) continue;
     byShop.set(shop.id, [...(byShop.get(shop.id) ?? []), booking.id]);
   }
   for (const [shopId, bookingIds] of byShop) {
@@ -337,11 +350,18 @@ async function mintReminderLinks(
       now,
     });
     for (const [bookingId, { token }] of issued) {
-      links.set(bookingId, new URL(readinessLinkPath(token), `${origin}/`).toString());
+      links.set(bookingId, {
+        shopId,
+        token,
+        url: new URL(readinessLinkPath(token), `${origin}/`).toString(),
+      });
     }
   }
   return links;
 }
+
+/** A readiness link minted for one reminder: the URL it carries and the token behind it. */
+type ReminderLink = { shopId: string; token: string; url: string };
 
 /**
  * Send every pre-trip reminder that has come due since the last run, across all
@@ -603,7 +623,19 @@ export async function sendDueReminders(
     sending.push({ row, cadence, checklist, materialsDue });
   }
 
-  const links = await mintReminderLinks(db, origin, sending, now);
+  const links = await mintReminderLinks(
+    db,
+    origin,
+    sending,
+    now,
+    new Set(whatsAppProviders.keys()),
+  );
+  // Links whose reminder did not go: revoked once the sends are known (#2451).
+  const unsent: ReminderLink[] = [];
+  const settleLink = (bookingId: string, sent: boolean) => {
+    const link = links.get(bookingId);
+    if (link && !sent) unsent.push(link);
+  };
 
   for (const {
     row: { booking, person, trip, shop },
@@ -622,7 +654,7 @@ export async function sendDueReminders(
     // different languages.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
-    const readinessUrl = links.get(booking.id);
+    const readinessUrl = links.get(booking.id)?.url;
     const phone = smsRecipient(person.phone);
     // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
     const meetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));
@@ -781,6 +813,7 @@ export async function sendDueReminders(
       kind: work.kind,
       delivery,
     });
+    settleLink(work.bookingId, delivery.status === "sent");
     if (delivery.status === "sent") summary.sent += 1;
     else summary.failed += 1;
   }
@@ -805,8 +838,19 @@ export async function sendDueReminders(
       kind: work.kind,
       delivery,
     });
+    settleLink(work.bookingId, delivery.status === "sent");
     if (delivery.status === "sent") summary.sent += 1;
     else summary.failed += 1;
+  }
+
+  // Nobody holds a link from a reminder that did not go; take them back, per
+  // shop, by token so an earlier delivered link stays live.
+  const unsentByShop = new Map<string, string[]>();
+  for (const { shopId, token } of unsent) {
+    unsentByShop.set(shopId, [...(unsentByShop.get(shopId) ?? []), token]);
+  }
+  for (const [shopId, tokens] of unsentByShop) {
+    await revokeIssuedCapabilities(db, { shopId, tokens, now });
   }
 
   return summary;
