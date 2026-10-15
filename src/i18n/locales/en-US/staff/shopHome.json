@@ -196,6 +196,10 @@
     "placeholder": "Name, phone, email, or booking ID",
     "none": "Nobody arriving matches “{query}”.",
     "resultsFor": "Arriving divers matching “{query}”",
-    "open": "Open {trip} check-in for {name}"
+    "open": "Open {trip} check-in for {name}",
+    "notToday": "Not arriving today.",
+    "bookedOn": "{name} is booked {date} · {time}.",
+    "nothingBooked": "{name} has nothing booked.",
+    "openRecord": "Open {name}’s record"
   }
 }

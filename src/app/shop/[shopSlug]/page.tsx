@@ -27,6 +27,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
+import { arrivalElsewhere } from "@/db/arrival-elsewhere";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { daySummaryBlocked, sharedInHorizonReadiness } from "@/db/blockers";
 import { hasArrivals, listCheckInQueue } from "@/db/check-in";
@@ -309,7 +310,7 @@ async function TodayBody({
     freshDrafts,
     canReadShopMoney,
     evidence,
-    [arrivalRows, counterOpen],
+    [arrivalRows, counterOpen, arrivalElsewhereRows],
     closeout,
     shopTripCount,
     stripeAccount,
@@ -342,6 +343,9 @@ async function TodayBody({
     Promise.all([
       arrivalQuery ? listCheckInQueue(db, shop.id, { query: arrivalQuery, now }) : [],
       arrivalQuery ? true : hasArrivals(db, shop.id, now),
+      // The shop-wide answer for a name nobody arriving matches (fifth loop,
+      // item 12); read beside the queue so a miss costs no second round trip.
+      arrivalQuery ? arrivalElsewhere(db, shop.id, arrivalQuery, now) : [],
     ]),
     // **The day's closing state** (ADR 20260827-clearwater-surface-language, decision 4): how each
     // of today's boats settled, for the evening stations.
@@ -814,6 +818,7 @@ async function TodayBody({
         <ArrivalLookup
           query={arrivalQuery}
           rows={arrivalRows}
+          elsewhere={arrivalElsewhereRows}
           shopSlug={shopSlug}
           locale={locale}
           timeZone={shop.timezone}
