@@ -13,6 +13,7 @@
     "applyConfirm": "Sí, aplicar a todas las fechas",
     "applyDescription": "Copia el título, la descripción, la capacidad, los precios y el plan de inmersión de esta fecha a todas las próximas. Cada fecha conserva su hora, tripulación, listado y condiciones.",
     "applyDescriptionWithCrew": "Copia el título, la descripción, la capacidad, los precios y el plan de inmersión de esta fecha a todas las próximas. Cada fecha conserva su hora, listado y condiciones.",
+    "standingCrewLine": "{names} {count, plural, one {tripula} other {tripulan}} todas las fechas.",
     "standingCrew": "Asignar a {names} a todas las próximas fechas, y a cada fecha nueva cuando se abra",
     "saving": "Guardando…",
     "stopRepeating": "Dejar de repetir",
