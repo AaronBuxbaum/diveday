@@ -1,4 +1,7 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
+
+const staff = staffTranslator("en-US");
 
 /**
  * **The settings editors that outgrew a hub row.**
@@ -102,16 +105,14 @@ test("a shore contact's alert address saves with its consent, and clears with it
   await consent.check();
   await page.getByRole("button", { name: "Save emergency reference" }).click();
 
-  await expect(page.getByText("Saved. Demo shops send nothing, so no link went.")).toBeVisible();
+  await expect(page.getByText(staff("settings.main.notice.shoreAlertSavedDemo"))).toBeVisible();
   await expect(address).toHaveValue("shore@example.com");
   await expect(consent).toBeChecked();
   await expect(page.getByText(/^Recorded .+ by /)).toBeVisible();
 
   await address.fill("");
   await page.getByRole("button", { name: "Save emergency reference" }).click();
-  await expect(
-    page.getByText("Shore contact’s email removed. It gets no more roll-call alerts."),
-  ).toBeVisible();
+  await expect(page.getByText(staff("settings.main.notice.shoreAlertCleared"))).toBeVisible();
   await expect(address).toHaveValue("");
   await expect(consent).not.toBeChecked();
 });

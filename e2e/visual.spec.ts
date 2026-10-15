@@ -3,6 +3,7 @@ import type { Browser, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
@@ -47,6 +48,8 @@ import {
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
+
+const staffCopy = staffTranslator("en-US");
 
 /**
  * Visual regression coverage. Two hundred and ninety-seven `capture()` calls,
@@ -6802,9 +6805,7 @@ for (const scheme of ["light", "dark"] as const) {
         // H-118 review: blue-mantis is a demo shop, so the shore contact's
         // alert address says demo shops send nothing, beside the free-text
         // shore contact's line saying DiveDay never messages it.
-        await page
-          .getByText("Demo shops send nothing: no link and no alerts.", { exact: false })
-          .waitFor();
+        await page.getByText(staffCopy("settings.main.emergency.shoreAlertDemo")).waitFor();
         await capture(page, "settings-emergency", scheme);
       });
 
@@ -9185,9 +9186,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto(`/shop/${privateShop.slug}/settings/emergency-reference`);
       await page.getByLabel("Shore contact’s email for roll-call alerts").fill("shore@example.com");
       await page.getByRole("button", { name: "Save emergency reference" }).click();
-      await page
-        .getByText("Tick that the shore contact agreed to get roll-call alerts", { exact: false })
-        .waitFor();
+      await page.getByText(staffCopy("settings.main.notice.shoreAlertConsentMissing")).waitFor();
       await capture(page, "settings-emergency-shore-consent-missing", scheme);
     });
 
