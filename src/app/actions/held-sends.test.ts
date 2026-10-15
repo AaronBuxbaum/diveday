@@ -197,12 +197,16 @@ async function movableTrip(db: AppDb, shopId: string) {
   throw new Error("fixture needs a movable departure with a booked seat");
 }
 
-function tellThemForm(tripId: string, previousStartsAt?: string): FormData {
+function tellThemForm(
+  tripId: string,
+  previousStartsAt?: string,
+  meetingPointMoved = "false",
+): FormData {
   const form = new FormData();
   form.set("holdKind", "trip_rescheduled");
   form.set("tripId", tripId);
   if (previousStartsAt) form.set("previousStartsAt", previousStartsAt);
-  form.set("meetingPointMoved", "false");
+  form.set("meetingPointMoved", meetingPointMoved);
   return form;
 }
 
@@ -239,6 +243,38 @@ describe("Tell them", () => {
     await holdSendAction(tellThemForm(tripId, "2020-01-01T06:00:00.000Z"));
     const [row] = await heldRows(db, shop.id);
     expect(row?.payload).toMatchObject({ previousStartsAt: toldStartsAt.toISOString() });
+  });
+});
+
+describe("Tell them and the meeting point (#2446)", () => {
+  async function undoneMove(meetingPointMoved: boolean) {
+    const ctx = await context();
+    signIn(ctx.shop, ctx.owner);
+    const { tripId, toldStartsAt } = await movableTrip(ctx.db, ctx.shop.id);
+    const moveHeld = await holdRescheduleNotice(ctx.db, {
+      shopId: ctx.shop.id,
+      tripId,
+      movedFrom: toldStartsAt,
+      meetingPointMoved,
+      actorPersonId: ctx.owner.personId,
+    });
+    if (!moveHeld) throw new Error("the move should hold a notice");
+    expect(await undoHeldSendAction(moveHeld.id)).toBe(true);
+    return { ...ctx, tripId };
+  }
+
+  it("ignores a posted meetingPointMoved when the meeting point never moved", async () => {
+    const { db, shop, tripId } = await undoneMove(false);
+    await holdSendAction(tellThemForm(tripId, undefined, "true"));
+    const [row] = await heldRows(db, shop.id);
+    expect(row?.payload).toMatchObject({ meetingPointMoved: false });
+  });
+
+  it("says the meeting point moved from the record, whatever is posted", async () => {
+    const { db, shop, tripId } = await undoneMove(true);
+    await holdSendAction(tellThemForm(tripId, undefined, "false"));
+    const [row] = await heldRows(db, shop.id);
+    expect(row?.payload).toMatchObject({ meetingPointMoved: true });
   });
 });
 

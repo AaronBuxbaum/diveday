@@ -591,6 +591,58 @@ describe("holdRescheduleNotice", () => {
     ).toBeNull();
   });
 
+  it("records that the meeting point moved beside the time, ORs later moves in, and clears it on send (#2446)", async () => {
+    const { db, shop, reef, previousStartsAt, now } = await movedTrip();
+    const read = async () =>
+      (await db.select().from(trips).where(eq(trips.id, reef.id)))[0]?.diversToldMeetingPoint;
+    expect(await read()).toBe(false);
+
+    const first = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: previousStartsAt,
+      meetingPointMoved: true,
+      actorPersonId: null,
+      now,
+    });
+    expect(await read()).toBe(true);
+
+    // Undo, then Tell them with nothing posted: the record says the place moved.
+    await db.delete(heldSends).where(eq(heldSends.id, first?.id ?? ""));
+    const tell = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      actorPersonId: null,
+      now,
+    });
+    const [held] = await db
+      .select()
+      .from(heldSends)
+      .where(eq(heldSends.id, tell?.id ?? ""));
+    expect(held.payload).toMatchObject({ meetingPointMoved: true });
+
+    // A later move that did not touch the place keeps the earlier one's word.
+    const again = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: previousStartsAt,
+      meetingPointMoved: false,
+      actorPersonId: null,
+      now,
+    });
+    expect(await read()).toBe(true);
+    expect(again).not.toBeNull();
+
+    // Sent: the divers know both.
+    await sendRescheduleNotices(
+      db,
+      shop.id,
+      held.payload as Parameters<typeof sendRescheduleNotices>[2],
+      { ...providers().options, now },
+    );
+    expect(await read()).toBe(false);
+  });
+
   it("holds nothing for Tell them when no move was ever recorded", async () => {
     const { db, shop, reef, now } = await movedTrip();
     expect(

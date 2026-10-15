@@ -131,7 +131,7 @@ async function stillAhead(
 async function clearDiversTold(db: AppDb, shopId: string, tripId: string) {
   await db
     .update(trips)
-    .set({ diversToldStartsAt: null })
+    .set({ diversToldStartsAt: null, diversToldMeetingPoint: false })
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
 }
 
@@ -157,7 +157,12 @@ export async function holdRescheduleNotice(
     tripId: string;
     /** The start a server-side move just replaced. Absent for "Tell them". */
     movedFrom?: Date;
-    meetingPointMoved: boolean;
+    /**
+     * Whether this move moved the meeting point. Absent for "Tell them", which
+     * reads what was recorded (`trips.divers_told_meeting_point`) and never a
+     * form (#2446).
+     */
+    meetingPointMoved?: boolean;
     actorPersonId: string | null;
     now?: Date;
   },
@@ -168,6 +173,7 @@ export async function holdRescheduleNotice(
       startsAt: trips.startsAt,
       status: trips.status,
       diversToldStartsAt: trips.diversToldStartsAt,
+      diversToldMeetingPoint: trips.diversToldMeetingPoint,
     })
     .from(trips)
     // A rehearsal tells nobody anything (ADR 20261012-rehearsal-departures):
@@ -181,6 +187,8 @@ export async function holdRescheduleNotice(
   // is on its way rather than "Telling 11 divers".
   if (!(await stillAhead(db, trip, input.now ?? nowDate()))) return null;
   const toldStartsAt = trip.diversToldStartsAt ?? input.movedFrom ?? null;
+  // The place has moved if an earlier move said so or this one does.
+  const placeMoved = trip.diversToldMeetingPoint || (input.meetingPointMoved ?? false);
 
   const pendingRows = await db
     .select({ id: heldSends.id, payload: heldSends.payload })
@@ -200,7 +208,7 @@ export async function holdRescheduleNotice(
           kind: "trip_rescheduled",
           tripId: input.tripId,
           previousStartsAt: toldStartsAt.toISOString(),
-          meetingPointMoved: input.meetingPointMoved,
+          meetingPointMoved: placeMoved,
         },
         trip.startsAt,
       )
@@ -219,21 +227,25 @@ export async function holdRescheduleNotice(
     );
   }
   // Back where the divers were told (or never moved): they know the time.
+  const hasRecord = Boolean(trip.diversToldStartsAt) || trip.diversToldMeetingPoint;
   if (!merged) {
-    if (trip.diversToldStartsAt) await clearDiversTold(db, input.shopId, input.tripId);
+    if (hasRecord) await clearDiversTold(db, input.shopId, input.tripId);
     return null;
   }
 
   const told = await rescheduleAudienceCount(db, input.shopId, input.tripId);
   // Nobody on the boat holds the old time; whoever books next sees the new one.
   if (told === 0) {
-    if (trip.diversToldStartsAt) await clearDiversTold(db, input.shopId, input.tripId);
+    if (hasRecord) await clearDiversTold(db, input.shopId, input.tripId);
     return null;
   }
-  if (trip.diversToldStartsAt?.getTime() !== toldStartsAt?.getTime()) {
+  if (
+    trip.diversToldStartsAt?.getTime() !== toldStartsAt?.getTime() ||
+    trip.diversToldMeetingPoint !== merged.meetingPointMoved
+  ) {
     await db
       .update(trips)
-      .set({ diversToldStartsAt: toldStartsAt })
+      .set({ diversToldStartsAt: toldStartsAt, diversToldMeetingPoint: merged.meetingPointMoved })
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)));
   }
   const held = await holdSend(db, {

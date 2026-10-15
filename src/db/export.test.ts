@@ -449,6 +449,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // notice: in-flight messaging state on this installation, cleared by the
     // send, and a re-imported departure has no divers who were told anything.
     "divers_told_starts_at",
+    "divers_told_meeting_point",
     // A rehearsal never reaches the bundle at all (ADR
     // 20261012-rehearsal-departures): every exported departure is a real one,
     // so this column would read false on every row it could appear on.

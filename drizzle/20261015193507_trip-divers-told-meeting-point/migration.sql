@@ -1,0 +1,1 @@
+ALTER TABLE "trips" ADD COLUMN "divers_told_meeting_point" boolean DEFAULT false NOT NULL;
