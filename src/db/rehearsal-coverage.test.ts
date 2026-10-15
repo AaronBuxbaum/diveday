@@ -278,6 +278,7 @@ const SENDERS: Record<string, string> = {
     "its departure read carries `notRehearsal()`, so a practice run certifies nobody and tells nobody",
   "src/db/desk-pings.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/stripe-restricted.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/db/shore-alert-tokens.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/staff-reply.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/weekly-digest.ts": "its counts carry `notRehearsal()`",
   "src/db/work-order-follow-up.ts": NOT_ABOUT_A_DEPARTURE,
