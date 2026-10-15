@@ -1,9 +1,15 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { certificationForAgencyCheck, isAgencyCheckedCard } from "@/db/agency-check";
+import {
+  addAgencyListedCards,
+  agencyListedKindsHeld,
+  certificationForAgencyCheck,
+  certificationForAgencyOffer,
+  undoAgencyCheck,
+} from "@/db/agency-check";
 import type { AppDb } from "@/db/client";
 import {
   createNitroxCertification,
@@ -30,10 +36,18 @@ import {
 } from "@/db/readiness";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
-import { judgeAgencyPage, PAGE_TEXT_MAX_LENGTH } from "@/lib/agency-check";
+import {
+  type AgencyListedKind,
+  agencyListedCards,
+  judgeAgencyPage,
+  PAGE_TEXT_MAX_LENGTH,
+} from "@/lib/agency-check";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
+import { nowDate } from "@/lib/clock";
 import { formValue, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { unreviewedCardState } from "@/lib/readiness";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { backTo, requireDiverActionContext, successUrl } from "./action-helpers";
@@ -99,6 +113,7 @@ const cardForm = z.object({
   identifier: formValue(),
   intent: formValue(),
   pageText: formValue(),
+  refresh: formValue(),
   sightedAgency: formValue(),
   sightedIdentifier: formValue(),
   sightedLevel: formValue(),
@@ -610,10 +625,9 @@ export async function markCertifiedAction(
     // An imported card was already `verified` on arrival; this tap confirmed
     // it rather than certifying it, and the two must not claim the same thing.
     effect: card.importedAt ? "confirmed" : "certified",
-    undo:
-      card.selfDeclaredAt || card.issuedByShopAt
-        ? undefined
-        : { certificationId, cardType: cardType.data },
+    // Only a review its Undo can take back: never a sighting, nor a card an
+    // agency check listed where the agency numbers each card.
+    undo: unreviewedCardState(card).ok ? { certificationId, cardType: cardType.data } : undefined,
   };
 }
 
@@ -627,17 +641,43 @@ export type AgencyCheckResult =
       ok: true;
       /** The agency's page named this diver at this level, and the card is certified. */
       verdict: "match";
+      /**
+       * `certified` promoted a pending card; `confirmed` cleared an imported
+       * card's gate. The words say which, as {@link MarkCertifiedResult}'s do.
+       */
+      effect: "certified" | "confirmed";
       undo?: { certificationId: string };
+      /**
+       * The diver's other cards the same page lists and the shop does not
+       * hold, in the agency's words (`agencyListedCards`): offered, never
+       * filed, until the staffer ticks them (`addAgencyListedCardsAction`).
+       */
+      offers?: readonly AgencyCheckOffer[];
     }
   | { ok: true; verdict: "undone" }
   | {
       ok: true;
-      /** The diver is on the page, this level is not: the staffer reads it. */
-      verdict: "level_unconfirmed";
+      /**
+       * The diver is on the page, short of a match: this level is not
+       * (`level_unconfirmed`), the card is junior, limited or unfinished
+       * (`limited_card`), or PADI shows a junior rating for a diver under 15
+       * (`junior_under_15`). The staffer reads it, with the diver's own lines.
+       */
+      verdict: "level_unconfirmed" | "limited_card" | "junior_under_15";
       evidence: string;
     }
-  | { ok: true; verdict: "no_record" | "unreadable" }
+  | {
+      ok: true;
+      /**
+       * Nobody found; a page that reads as no result; PADI listing several
+       * divers; or someone by this name, never with this birth date or number.
+       */
+      verdict: "no_record" | "unreadable" | "several_records" | "namesake";
+    }
   | { ok: false; reason: "invalid" | "not-undoable" };
+
+/** One card the agency's page lists for this diver, as the staffer is offered it. */
+export type AgencyCheckOffer = { kind: AgencyListedKind; words: string };
 
 /**
  * **Certify a card from the agency's own page** (H-105).
@@ -651,6 +691,16 @@ export type AgencyCheckResult =
  * nothing. A match certifies through the ordinary review, stamped
  * `agencyCheckedAt` with the agency's matching words as the note, and is
  * undone the way a one-tap review is.
+ *
+ * **One action wherever the check is pressed**: the diver record, a row on a
+ * departure's Divers tab, a "certification pending" row on Today, and each
+ * card of a departure's "Check all" (which is only this, one card at a time,
+ * from the browser). So a write ends in `refresh()` as well as revalidating
+ * the record: the page the staffer pressed it on is the one that has to
+ * settle, and only the browser knows which page that is. A "Check all" posts
+ * `refresh=later` on each card and refreshes the page once when the run ends,
+ * so a departure is not re-rendered after every card it certifies. That field
+ * changes only when the page repaints, never what is written.
  */
 export async function agencyCheckAction(
   shopSlug: string,
@@ -668,12 +718,16 @@ export async function agencyCheckAction(
 
   if (fields.intent === "undo") {
     // Only the review a check made, on this diver: never a sighting or a
-    // one-tap review, which have their own Undo.
-    if (!(await isAgencyCheckedCard(db, { shopId, personId, certificationId }))) {
-      return { ok: false, reason: "not-undoable" };
-    }
-    const undone = await unreviewCertification(db, { shopId, certificationId });
+    // one-tap review, which have their own Undo. The cards its page listed
+    // that still wait for Mark certified go with it (layer 3).
+    const undone = await undoAgencyCheck(db, {
+      shopId,
+      personId,
+      certificationId,
+      undoneByPersonId: staff.user.personId,
+    });
     revalidatePath(base);
+    refresh();
     return undone.ok ? { ok: true, verdict: "undone" } : { ok: false, reason: "not-undoable" };
   }
 
@@ -683,11 +737,19 @@ export async function agencyCheckAction(
   if (!card) return { ok: false, reason: "invalid" };
   const judged = judgeAgencyPage({
     ...card.query,
+    ...card.identity,
     level: card.level,
+    // A junior rating's age is read on the earliest calendar day anywhere,
+    // so a diver is never taken for 15 a day early.
+    today: calendarDateInTimezone(nowDate(), "Etc/GMT+12"),
     pageText: pageText.slice(0, PAGE_TEXT_MAX_LENGTH),
   });
-  if (judged.verdict === "level_unconfirmed") {
-    return { ok: true, verdict: "level_unconfirmed", evidence: judged.evidence };
+  if (
+    judged.verdict === "level_unconfirmed" ||
+    judged.verdict === "limited_card" ||
+    judged.verdict === "junior_under_15"
+  ) {
+    return { ok: true, verdict: judged.verdict, evidence: judged.evidence };
   }
   if (judged.verdict !== "match") return { ok: true, verdict: judged.verdict };
 
@@ -700,6 +762,93 @@ export async function agencyCheckAction(
     agencyChecked: true,
   });
   revalidatePath(base);
+  if (fields.refresh !== "later") refresh();
   if (!outcome.ok) return { ok: false, reason: "invalid" };
-  return { ok: true, verdict: "match", undo: { certificationId } };
+  // The page's other cards for this diver, offered and never filed here. A
+  // card with no number on file has none to lend them, so it offers nothing.
+  const offers = card.identity.cardNumber
+    ? agencyListedCards({
+        ...card.query,
+        ...card.identity,
+        level: card.level,
+        today: calendarDateInTimezone(nowDate(), "Etc/GMT+12"),
+        pageText: pageText.slice(0, PAGE_TEXT_MAX_LENGTH),
+        held: await agencyListedKindsHeld(db, { shopId, personId }),
+      }).map(({ kind, words }) => ({ kind, words }))
+    : [];
+  return {
+    ok: true,
+    verdict: "match",
+    // An imported card was already `verified` on arrival: the agency's page
+    // confirmed it rather than certifying it.
+    effect: outcome.certification.importedAt ? "confirmed" : "certified",
+    undo: { certificationId },
+    ...(offers.length > 0 ? { offers } : {}),
+  };
+}
+
+const agencyListedKindSchema = z.enum(["nitrox", ...diveSpecialty.enumValues]);
+
+/** What filing the page's other cards did, for the panel that asked. */
+export type AgencyListedAddResult = null | { ok: true; added: AgencyListedKind[] } | { ok: false };
+
+/**
+ * **File the other cards the agency's page lists, as pending** (layer 3 of
+ * the agency check, ADR 20261008-cert-check-extension).
+ *
+ * After a match the staffer is offered the diver's nitrox and specialty cards
+ * the same page shows, and ticks the ones to keep. Nothing the browser sends
+ * is believed but the page's text and the ticks: the card the check matched
+ * is read again from the database (this shop, this diver, certified by an
+ * agency check), the page is judged again and must still match, and the offer
+ * is derived again from it. Every tick must name a kind that offer holds, or
+ * nothing is filed, so a forged or replayed tick cannot make a card the page
+ * did not show, or a second copy of one the diver holds.
+ *
+ * The cards land `pending` with the agency's words as their review note, for
+ * a staffer's one-tap confirm: a nitrox card authorizes a fill and a
+ * specialty opens a site, so the page alone never certifies them.
+ */
+export async function addAgencyListedCardsAction(
+  shopSlug: string,
+  personId: string,
+  _previous: AgencyListedAddResult,
+  formData: FormData,
+): Promise<AgencyListedAddResult> {
+  const fields = readForm(cardForm, formData);
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const certificationId = cardIdFromForm(formData);
+  const pageText = fields.pageText;
+  const kinds = z.array(agencyListedKindSchema).min(1).safeParse(formData.getAll("kind"));
+  if (!certificationId || typeof pageText !== "string" || !kinds.success) return { ok: false };
+  const ticked = new Set(kinds.data);
+  if (ticked.size !== kinds.data.length) return { ok: false };
+  const shopId = staff.user.shopId;
+
+  const card = await certificationForAgencyOffer(db, { shopId, personId, certificationId });
+  if (!card) return { ok: false };
+  const offered = agencyListedCards({
+    ...card.query,
+    ...card.identity,
+    level: card.level,
+    today: calendarDateInTimezone(nowDate(), "Etc/GMT+12"),
+    pageText: pageText.slice(0, PAGE_TEXT_MAX_LENGTH),
+    held: card.held,
+  });
+  const chosen = offered.filter((offer) => ticked.has(offer.kind));
+  if (chosen.length !== ticked.size) return { ok: false };
+
+  const added = await addAgencyListedCards(db, {
+    shopId,
+    personId,
+    certificationId,
+    filedByPersonId: staff.user.personId,
+    cards: chosen,
+  });
+  if (!added.ok) return { ok: false };
+  revalidatePath(base);
+  refresh();
+  return { ok: true, added: added.added };
 }

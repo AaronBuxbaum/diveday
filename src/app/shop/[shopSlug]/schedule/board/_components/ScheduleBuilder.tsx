@@ -7,7 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import { DateField, Field, FieldGrid } from "@/components/ui/form";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import type { MovePreflight, MovePreflightSection } from "@/lib/move-preflight";

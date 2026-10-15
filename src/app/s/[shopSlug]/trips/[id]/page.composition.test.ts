@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeSource } from "@/test/route-source";
 
 /**
  * **Which inputs the public trip page consults, pinned as rules.** Its layout
@@ -14,9 +13,9 @@ import { describe, expect, it } from "vitest";
  * `scripts/check-intl-providers.mjs`, and for the same reason.
  */
 
-const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const SOURCE = component("page.tsx");
 /** The page's one wave of reads, lifted beside it so the route stays a renderer (#2353). */
-const READS_SOURCE = readFileSync(join(__dirname, "_lib/page-reads.ts"), "utf8");
+const READS_SOURCE = component("_lib/page-reads.ts");
 
 /**
  * The source of a file the page composes, read by name: under the route's
@@ -24,11 +23,7 @@ const READS_SOURCE = readFileSync(join(__dirname, "_lib/page-reads.ts"), "utf8")
  * page moves its pins with it by changing only the name passed here.
  */
 function component(file: string): string {
-  try {
-    return readFileSync(join(__dirname, "_components", file), "utf8");
-  } catch {
-    return readFileSync(join(__dirname, "..", "..", "..", "..", "..", "components", file), "utf8");
-  }
+  return routeSource(import.meta.dirname, file);
 }
 
 describe("the trip page's gates", () => {

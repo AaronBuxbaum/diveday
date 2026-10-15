@@ -11,6 +11,7 @@ import {
   EXTENSION_MESSAGE_SOURCE,
   EXTENSION_READY_EVENT,
   type ExtensionCheckReply,
+  extensionFailureReason,
   extensionVersion,
   PAGE_MESSAGE_SOURCE,
 } from "@/lib/cert-check-extension";
@@ -78,7 +79,9 @@ function requestPage(type: string, query: object): Promise<ExtensionCheckReply> 
       if (data.ok === true && typeof data.pageText === "string") {
         finish({ ok: true, pageText: data.pageText });
       } else {
-        finish({ ok: false, reason: "fill_failed" });
+        // A fixed code, never the page's words: "signed_out" is how a page
+        // behind the shop's own sign-in says to sign in first.
+        finish({ ok: false, reason: extensionFailureReason(data.reason) });
       }
     }
     window.addEventListener("message", onMessage);

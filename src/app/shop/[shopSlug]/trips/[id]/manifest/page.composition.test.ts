@@ -1,14 +1,12 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeSource } from "@/test/route-source";
 
 /**
  * The manifest is a Server Component over the roll call's reads, so these read
  * its source rather than render it. Only the two wiring invariants stay here;
  * the page's layout is the visual suite's to photograph.
  */
-const HERE = import.meta.dirname;
-const SOURCE = readFileSync(join(HERE, "page.tsx"), "utf8");
+const SOURCE = routeSource(import.meta.dirname, "page.tsx");
 
 /**
  * **A held seat's particulars stay withheld on every reader** (`held-seat.ts`,

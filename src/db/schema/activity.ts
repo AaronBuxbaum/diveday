@@ -148,6 +148,12 @@ export const activityEvents = pgTable(
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("activity_events_subject_person_id_idx").on(table.subjectPersonId),
+    index("activity_events_actor_person_id_idx").on(table.actorPersonId),
     index("activity_events_shop_trip_idx").on(table.shopId, table.tripId, table.occurredAt),
     index("activity_events_shop_subject_idx").on(
       table.shopId,
@@ -189,6 +195,11 @@ export const tripChangeEvents = pgTable(
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("trip_change_events_actor_person_id_idx").on(table.actorPersonId),
     index("trip_change_events_shop_trip_idx").on(
       table.shopId,
       table.tripId,
@@ -402,6 +413,12 @@ export const tripDeskEvents = pgTable(
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("trip_desk_events_subject_person_id_idx").on(table.subjectPersonId),
+    index("trip_desk_events_actor_person_id_idx").on(table.actorPersonId),
     index("trip_desk_events_shop_trip_idx").on(table.shopId, table.tripId, table.seq),
     index("trip_desk_events_occurred_idx").on(table.occurredAt),
   ],

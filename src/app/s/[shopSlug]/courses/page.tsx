@@ -6,7 +6,7 @@ import { AgencyTabs } from "@/components/AgencyTabs";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { activeCourseAgencies, listActiveCourses } from "@/db/courses";

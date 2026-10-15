@@ -107,6 +107,11 @@ export const rollCallEvents = pgTable(
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("roll_call_events_recorded_by_person_id_idx").on(table.recordedByPersonId),
     index("roll_call_events_shop_trip_checkpoint_booking_occurred_idx").on(
       table.shopId,
       table.tripId,
@@ -215,6 +220,11 @@ export const rollCallCrewEvents = pgTable(
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("roll_call_crew_events_person_id_idx").on(table.personId),
     index("roll_call_crew_events_shop_trip_checkpoint_person_occurred_idx").on(
       table.shopId,
       table.tripId,

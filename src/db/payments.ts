@@ -2,6 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { AppTransaction, DbExecutor } from "./client";
+import { boundLockWaits } from "./lock-bounds";
 import type {
   BookingPayment,
   ManualPaymentMethod,
@@ -34,6 +35,7 @@ async function withBookingPaymentLock<T>(
   ) => Promise<T | null>,
 ): Promise<T | null> {
   return db.transaction(async (tx) => {
+    await boundLockWaits(tx);
     const [booking] = await tx
       .select({ id: bookings.id, status: bookings.status })
       .from(bookings)

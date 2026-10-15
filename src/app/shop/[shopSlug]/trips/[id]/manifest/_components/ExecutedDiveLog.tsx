@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
@@ -448,9 +449,9 @@ function ExecutedDiveForm({
         {labels.notRecordedDepth}
       </ChoiceRow>
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button type="submit" className={buttonClass({ size: "sm" })}>
+        <SubmitButton pendingLabel={labels.save} className={buttonClass({ size: "sm" })}>
           {labels.save}
-        </button>
+        </SubmitButton>
         {result?.status === "error" ? (
           <FormStatus>{labels.refusals[result.reason]}</FormStatus>
         ) : result?.status === "ok" ? (

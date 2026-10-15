@@ -110,8 +110,40 @@ layer below is a new commit and needs a new run, which is the typecheck row. The
 reason written in front of the command, `DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`, for the
 two cases the verify skill allows. Each one is logged with its reason and the sha to
 `.claude/.hook-log` (`recordOverride` in `scripts/hook-log.mjs`), and the next session's opening
-line counts them, so an escape hatch used every day shows up as a number. A spec that is red on the base too is still named: run it on
-the base, say so in the PR, and push with the reason.
+line counts them, so an escape hatch used every day shows up as a number.
+
+### A red base
+
+The gate as first built had one hole, and on 2026-10-14 it was the whole of what went red. Main
+went red at d5014c5f1, a dependency bump pushed straight to `main` with no PR (lint, and PGlite
+0.5.10 hanging in `close()` on two unit shards). Every layer that merged main inherited it, and
+the override's commonest reason became "red on main, not mine": #2594 pushed that way, and #2608
+pushed past a worktree stamp the guard could not yet see. A push on a red base is certain to be
+red, on that layer and on every layer above it, and each of those layers then pushes again to
+merge the fix. Since 19:49 that day, eight CI runs started across six open PRs, most of them
+merges from below.
+
+So `verify:push` reads the layer below's latest CI before anything else (`scripts/base-ci.mjs`):
+
+- **Green**: one line, and on.
+- **Still running**: a note. If it goes red, this layer is red with it; read it again before
+  merging it a second time.
+- **Red**: Lint, Typecheck and Repository safeguards are answered by the gate's own steps, so a
+  green run here is the fix carried. A red unit or Playwright job adds the test files its
+  annotations name to this run (the unit shards annotate each failed file through
+  `src/test/failed-files-reporter.ts`; Playwright annotates each failed spec), and the stamp
+  means they passed here. A red job that names no file is refused until the author reads its log
+  and names the files: `pnpm verify:push --base-red <file…>`, which then run here too. Visual
+  capture and reg-suit are left out: a push approves those (**visual-triage**).
+- **Unreadable** (no `gh`, no network): a line saying so, and on. The gate fails open; CI still
+  answers.
+
+The stamp records what it found (`baseCi`). The fix for a red base goes where the break is when
+that layer is still open (its owner, through the coordinator), or rides in this layer when it
+cannot wait; either way, nothing is pushed red on purpose. `scripts/guard-push.mjs` refuses an
+override whose reason says the red came from elsewhere ("red on main", "not mine", "inherited",
+"flake", "pre-existing"), and names the base check instead. The override is left for its two
+cases: work saved before the container is reclaimed, and a question only CI can answer.
 
 The PR body rows are a separate gate: `scripts/guard-pr-body.mjs` runs `check-pr-body.mjs`
 before the GitHub MCP creates or edits a pull request.

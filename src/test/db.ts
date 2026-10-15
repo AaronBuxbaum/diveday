@@ -23,7 +23,6 @@ import { type TemplateVariant, templateBytes } from "./db-template";
  */
 function closeWhenTestFinishes(client: PGlite): void {
   onTestFinished(async () => {
-    await client.waitReady.catch(() => undefined);
     await client.close();
   });
 }

@@ -29,10 +29,12 @@
   nothing more, and a Full Cave diver blocks on a Cavern gate until staff record a Cavern card. Levels live in `certifications`; specialties live in
   `specialty_certifications`, both captured pending and usable only once verified — except a card
   brought in by the importer, which lands `verified` but (for a specialty only) still holds its gate
-  until a staff confirm (see **Imported certification**). A diver's agency number identifies the
-  *diver*, not the card, so their Deep and Wreck cards carry the same number; the specialty table is
-  keyed on `(shop, agency, specialty, lower(identifier))` so one number can hold each of a diver's
-  specialties. **Nitrox** is not in this set — it gates the per-booking mix request, not a site.
+  until a staff confirm (see **Imported certification**). At most agencies (PADI, SSI, NAUI, GUE) the
+  number identifies the *diver*, not the card, so their Deep and Wreck cards carry the same number;
+  the specialty table is keyed on `(shop, agency, specialty, lower(identifier))` so one number can
+  hold each of a diver's specialties. SDI and CMAS number each card instead
+  (`AGENCY_CHECKS[agency].numbersTheDiver`), which is why an **Agency-listed certification** there
+  never borrows the checked card's number. **Nitrox** is not in this set — it gates the per-booking mix request, not a site.
 - Bookings, waivers, certs, rental fit, and manifests all hang off the same trip/session spine —
   the manifest is a *view* of checked-in bookings plus staff, not a separate data entry task.
 - **Identity match key** — self-service paths (booking, wait-list, CSV import) treat a shop's

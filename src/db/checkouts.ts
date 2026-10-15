@@ -12,6 +12,7 @@ import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/pro
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
 import { enqueueCheckoutIntegrationEvent } from "./integration-events";
+import { boundLockWaits } from "./lock-bounds";
 import {
   claimBookingsForCheckout,
   idempotencyKeyFor,
@@ -1108,6 +1109,7 @@ export async function lockCheckoutSeatsBySessionId(
 /** `SELECT … FOR UPDATE` over these bookings, in id order. */
 export async function lockSeatsInOrder(tx: AppTransaction, bookingIds: string[]): Promise<void> {
   if (bookingIds.length === 0) return;
+  await boundLockWaits(tx);
   await tx
     .select({ id: bookings.id })
     .from(bookings)

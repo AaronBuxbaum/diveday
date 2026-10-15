@@ -375,6 +375,12 @@ named, and all picked up by that glob rather than by a list anyone has to rememb
 | `refunds.postgres.test.ts` | Two — and five — simultaneous taps of Refund on one paid order reach Stripe exactly once; the losers are refused locally with `in_progress` rather than by Stripe's over-refund rejection (PAY-L3) |
 | `roll-call.postgres.test.ts` | The counter marking a diver not here and the crew boarding them at the rail serialise on the booking row, so a standing `boarded` result and a released seat never both stand — the rail overrules the desk, and never refuses |
 | `seat-lock-order.postgres.test.ts` | Seat writers meeting on one departure (an undo of a no-show, a counter check-in, a participant-type change, the rail boarding) take the trip and then the booking, so none of the pairs deadlocks (#2324) |
+| `seat-locks.postgres.test.ts` | `lockSeatDeparture` parks a second counter action on the departure before it holds the seat, leaves a roll-call insert's `KEY SHARE` alone, and gives up a wait on a stuck departure in five seconds (`55P03`, `boundLockWaits`) |
+| `work-orders.postgres.test.ts`, `waivers-templates.postgres.test.ts` | Two simultaneous tickets, or two saves of a release, get consecutive numbers; and neither waits behind an insert elsewhere in the shop, because the shop row is locked `for no key update` |
+| `course-forms.postgres.test.ts` | Two course syncs in one shop, each holding its course insert's `KEY SHARE`, both finish with one form per title; with the shop locked `for update` Postgres kills one with `40P01` |
+| `promo-caps.postgres.test.ts` | The last use of a capped code goes to exactly one of two checkouts |
+| `waitlist.postgres.test.ts` | One diver joining a full departure's wait list twice at once leaves one person and one entry |
+| `tips.postgres.test.ts` | One booking tipping twice at once asks Stripe for one session |
 | `postgres-harness.postgres.test.ts` | The harness itself: finishing a test never terminates a connection that is still alive, and an unreleased `holdRowLock` gate does not hang teardown |
 
 A new suite needs no wiring beyond the name: write `src/db/<thing>.postgres.test.ts` against

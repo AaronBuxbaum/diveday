@@ -1,12 +1,11 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeSource } from "@/test/route-source";
 
 /**
  * The public schedule is a server page that needs a live shop to render, so
  * this reads its source. Its layout is the visual suite's to photograph.
  */
-const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const SOURCE = routeSource(import.meta.dirname, "page.tsx");
 
 function positionOf(marker: string): number {
   return SOURCE.indexOf(marker);

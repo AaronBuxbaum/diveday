@@ -130,6 +130,15 @@ function fetchAtStart(cwd, git, source) {
  * - HEAD has no commit that is not already on `origin/main`, so the move is a fast-forward.
  *
  * Anything else, or any git question that fails, leaves the checkout alone and prints nothing.
+ *
+ * It runs on every prompt too (`source: "prompt"`), without a fetch of its own: the clone's
+ * `origin/main` moves whenever any session in it fetches. Startup alone was not enough. A
+ * coordinator or a long thread never restarts, and the push guard every session runs is
+ * `$CLAUDE_PROJECT_DIR/scripts/guard-push.mjs`, read from this checkout on each call. On
+ * 2026-10-14 the checkout sat at 81245edd0, before #2584, for hours after #2584 merged, so
+ * threads whose own branch had the fixed guard were still refused and asked Aaron to say
+ * "push it".
+ *
  * `DIVEDAY_SESSION_FASTFORWARD=0` opts out. `git` and `exists` are injectable for the tests.
  */
 const IN_PROGRESS = [
@@ -145,7 +154,7 @@ const FASTFORWARD_TIMEOUT_MS = 60_000;
 export function fastForwardPlan(git, { source, env = process.env, exists = existsSync } = {}) {
   try {
     if (env.DIVEDAY_SESSION_FASTFORWARD === "0") return null;
-    if (source !== "startup" && source !== "resume") return null;
+    if (source !== "startup" && source !== "resume" && source !== "prompt") return null;
     const gitDir = git(["rev-parse", "--absolute-git-dir"]);
     const common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
     if (!gitDir || !common || path.resolve(gitDir) !== path.resolve(common)) return null;
@@ -616,6 +625,12 @@ function main() {
     const papercut = noted ? "" : papercutLine(unwrittenPapercut(repeatedRefusal(log), cwd));
     if (summary || papercut) {
       appendEntry({ session, hook: "session-context", kind: "noted" }, { root: cwd });
+    }
+    const moved = fastForwardShared(cwd, { source: "prompt", git });
+    if (moved) {
+      process.stdout.write(
+        `Fast-forwarded the shared checkout ${moved.behind} commit${moved.behind === 1 ? "" : "s"} to origin/main (${moved.from.slice(0, 9)} → ${moved.to.slice(0, 9)}), so its hooks match main.\n`,
+      );
     }
     const common = git(["rev-parse", "--git-common-dir"]);
     const line = promptLine(checkoutState(git), {

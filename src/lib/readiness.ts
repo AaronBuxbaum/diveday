@@ -7,6 +7,7 @@ import type {
   TripRequirement,
 } from "@/db/schema";
 import { checkMinimumAge } from "./age";
+import { AGENCY_CHECKS, isCheckableAgency } from "./agency-check";
 import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import {
@@ -627,10 +628,44 @@ export function isUnsightedSelfDeclaration(card: {
 export function needsCardSighting(card: {
   selfDeclaredAt?: Date | string | null;
   issuedByShopAt?: Date | string | null;
+  /** With `identifier`: a card an agency check listed with no number of its own (below). */
+  listedFromCertificationId?: string | null;
+  identifier?: string | null;
   status: "pending" | "verified";
 }): boolean {
   return (
-    card.status === "pending" && (Boolean(card.selfDeclaredAt) || Boolean(card.issuedByShopAt))
+    card.status === "pending" &&
+    (Boolean(card.selfDeclaredAt) || Boolean(card.issuedByShopAt) || listedWithoutANumber(card))
+  );
+}
+
+/**
+ * **A third numberless kind**: a card an agency check listed (layer 3 of ADR
+ * 20261008-cert-check-extension) at an agency that numbers each card, whose
+ * page showed no number for it. The page is good evidence of the card and none
+ * of its number, so its confirm asks for the card as the other two do.
+ */
+function listedWithoutANumber(card: {
+  listedFromCertificationId?: string | null;
+  identifier?: string | null;
+}): boolean {
+  return Boolean(card.listedFromCertificationId) && !card.identifier?.trim();
+}
+
+/**
+ * A card an agency check listed at an agency that numbers each card: its
+ * number may be the page's or a staffer's sighting, and a revert cannot tell
+ * which, so it is treated as sighted.
+ */
+function listedAtACardNumberingAgency(card: {
+  listedFromCertificationId?: string | null;
+  agency?: string;
+}): boolean {
+  return (
+    Boolean(card.listedFromCertificationId) &&
+    card.agency !== undefined &&
+    isCheckableAgency(card.agency) &&
+    !AGENCY_CHECKS[card.agency].numbersTheDiver
   );
 }
 
@@ -669,8 +704,13 @@ export function unreviewedCardState(card: {
   selfDeclaredAt?: Date | string | null;
   issuedByShopAt?: Date | string | null;
   importedAt?: Date | string | null;
+  /** With `agency`: a listed card at an agency that numbers each card (`listedAtACardNumberingAgency`). */
+  listedFromCertificationId?: string | null;
+  agency?: string;
 }): { ok: true; status: "pending" | "verified" } | { ok: false; reason: CardUnreviewRefusal } {
-  if (card.selfDeclaredAt || card.issuedByShopAt) return { ok: false, reason: "sighted_card" };
+  if (card.selfDeclaredAt || card.issuedByShopAt || listedAtACardNumberingAgency(card)) {
+    return { ok: false, reason: "sighted_card" };
+  }
   if (!card.reviewedAt) return { ok: false, reason: "not_reviewed" };
   return { ok: true, status: card.importedAt ? "verified" : "pending" };
 }

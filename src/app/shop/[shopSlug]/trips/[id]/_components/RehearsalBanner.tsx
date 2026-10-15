@@ -1,5 +1,5 @@
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { isRehearsalTrip, rehearsalsWithEvidence } from "@/db/rehearsals";

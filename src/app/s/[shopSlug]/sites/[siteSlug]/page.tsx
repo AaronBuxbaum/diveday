@@ -15,7 +15,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 import { getDb } from "@/db/client";
 import {
   getDiveSiteBySlug,

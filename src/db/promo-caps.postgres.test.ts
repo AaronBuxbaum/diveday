@@ -1,12 +1,12 @@
-import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fakePromotions } from "@/test/fakes";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { raceShop } from "@/test/postgres-shop";
 import { startPaymentOperation } from "./payment-operations";
 import { reserveDiscountUse } from "./promo-caps";
-import { paymentOperationIntents, shops } from "./schema";
+import { paymentOperationIntents } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 
@@ -34,13 +34,8 @@ const promoCapLock = (promoId: string) =>
 describePostgres("reserveDiscountUse under real concurrency", () => {
   it("gives a one-use code to exactly one of five simultaneous checkouts", async () => {
     const pg = await postgresTestDb();
-    const suffix = randomBytes(4).toString("hex");
-    const [shop] = await pg.db
-      .insert(shops)
-      .values({ name: `Caps ${suffix}`, slug: `caps-${suffix}`, timezone: "America/New_York" })
-      .returning();
-    if (!shop) throw new Error("shop insert returned no row");
-    const account = `acct_caps_${suffix}`;
+    const shop = await raceShop(pg.db, "Caps Reef");
+    const account = `acct_${shop.slug}`;
     await upsertShopStripeAccount(pg.db, shop.id, account);
     await setShopStripeAccountStatus(pg.db, account, {
       chargesEnabled: true,

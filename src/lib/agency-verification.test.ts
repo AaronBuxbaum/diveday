@@ -14,7 +14,7 @@ const AGENCY_HOSTS: Record<string, string> = {
   tdi: "www.tdisdi.com",
   cmas: "portal.cmas.org",
   gue: "www.gue.com",
-  padi: "pro.padi.com",
+  padi: "pros.padi.com",
 };
 
 describe("agency verification pages", () => {

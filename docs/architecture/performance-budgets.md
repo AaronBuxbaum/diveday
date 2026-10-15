@@ -10,7 +10,17 @@ budgets make that regression a failed check instead of a field complaint.
 measured **gzipped**, since that is what crosses the wire. Taken as the intersection of
 `firstLoadChunkPaths` across every entry in `.next/diagnostics/route-bundle-stats.json`.
 
-- **Budget: ≤ 242 KB gzip.** Current: 237.8 KB.
+- **Budget: ≤ 170 KB gzip.** Current: 163.7 KB (10 chunks shared by all 107 routes, 2026-10-13).
+- **And no staff shell or Sentry SDK on it, whatever it weighs.** A floor chunk carrying the
+  palette's `aria-keyshortcuts`, the row menu's `data-row-menu-open` or the SDK's `__SENTRY__` fails
+  the guard (`FLOOR_MARKERS`). The staff palette rode the root 404 into every route at 13.8 KB while
+  the total sat under its ceiling; a byte budget alone could not see it.
+
+**2026-10-13: 228.8 to 163.7 KB** (code review 2026-10-13b, items 7 and 34). The root
+`not-found.tsx` loads the staff palette through `next/dynamic` (`LazyCommandPalette`), the group
+label moved to a leaf (`ui/group-label.tsx`) so the language picker no longer brings the ledger's
+row menu, together 7.7 KB; and the browser Sentry SDK loads on idle (`deferSentry`), 57.4 KB. The
+budget came down from 242 KB with it.
 
 **This number moved on 2026-09-04 without the bundle moving**, because until then it measured
 something else. The guard read `rootMainFiles` + `polyfillFiles` out of `build-manifest.json`, an
@@ -26,7 +36,7 @@ chunks at all, so when zod reached all 75 routes through `web-vitals-client.tsx`
 removed either. It sat at ~261 KB against a 262 KB budget throughout, and was read as evidence that
 the floor was under control. A budget that cannot see the regression it is named after is worse
 than no budget.
-- **Target: trend toward ≤ 150 KB (excluding Sentry where possible).** The budget is a ceiling that fails CI; the target is where we
+- **Target: trend toward ≤ 150 KB.** The budget is a ceiling that fails CI; the target is where we
   want the number heading. Lower the budget when the number drops, rather than letting slack
   accumulate. We raised the budget to 260 KB to accommodate the static inclusion of the Sentry browser SDK (which is statically bundled on every route for error monitoring). We briefly raised it to 262 KB (2026-08-01) when enabling `cacheComponents` added React's `<Activity>`-based
   state-preservation runtime to the shared client bundle, then dropped it back to 260 KB the same
@@ -49,8 +59,9 @@ budgets are a choice not to spend, no longer a thing that cannot be done.)
 
 ## How it runs
 
-`pnpm perf:budget` (`scripts/perf-budget.mjs`) reads `.next/build-manifest.json` after a production
-build, gzips the shared chunks, and fails if the total exceeds the budget. CI runs it in the
+`pnpm perf:budget` (`scripts/perf-budget.mjs`) reads `.next/diagnostics/route-bundle-stats.json`
+after a production build, gzips the shared chunks, and fails if the total exceeds the budget or a
+shared chunk carries one of the floor markers. CI runs it in the
 `checks` job right after `pnpm build`. Run without a build it prints how to produce one and exits
 zero, so it never fails a checkout that simply hasn't built.
 
@@ -74,6 +85,32 @@ fixed 2026-07-30:
 When you add a query inside a `.map()` over rows, ask for the batched form instead. `src/db` already
 carries several (`listTripsReadiness`, `tripScheduleDayCounts`, `tripCrewByTrip`,
 `listDiveSiteBriefingExtras`); adding one more is cheaper than the round trips.
+
+## Runtime caches: measured before they are trusted
+
+The first `"use cache"` under `/s` is "Our year" (`publicShopYear`,
+`src/app/s/[shopSlug]/_components/OurYear.tsx`), behind a `<Suspense>` so it is read at request
+time. It runs on Next's default handler, an in-memory LRU per server instance; Next's own docs say
+that on serverless such entries "typically don't persist across requests"
+(`node_modules/next/dist/docs/01-app/03-api-reference/01-directives/use-cache.md`, "Runtime caching
+considerations").
+
+**Decision (2026-10-13, code review 2026-10-13b item 19): measure, do not switch yet.**
+`"use cache: remote"` is not the fix by itself: with no `cacheHandlers` in `next.config.ts`, Next
+backs `remote` with the same in-memory LRU (`cacheHandlers.md`), and where a platform does supply a
+shared handler it adds a network lookup and a storage bill to every read. Whether that buys
+anything depends on a hit rate nobody has seen. So the cached scope stamps when it computed its
+value (`cacheStamp()`) and each read logs one line, `{"event":"cache.read","cache":"our_year","outcome":"hit"|"miss","ageS":…}`
+(`reportCacheRead`, `src/lib/observability/runtime-cache.ts`). Read a week of it:
+
+```
+fields outcome | filter event = "cache.read" and cache = "our_year" | stats count(*) by outcome
+```
+
+If misses dominate, the in-memory cache is doing nothing: set a `remote` handler the platform
+provides (or none, and drop the directive) and switch the scope to `"use cache: remote"`; if hits
+dominate, keep it and remove the logging. Either way, record the outcome here. **The next cache
+under `/s` starts the same way**: a stamp and a `reportCacheRead`, or a reason here why not.
 
 ## When the budget fails
 

@@ -413,6 +413,7 @@
       "pay": "We couldn’t open the payment page just now. Your spot is safe. Try again in a moment, or pay at the shop.",
       "checkFields": "Check the highlighted fields and try again.",
       "diversFull": "The diver spots on this trip are taken, so we couldn’t book a diver.",
+      "busy": "Lots of divers are booking this trip right now. Give it another try.",
       "typeUnavailable": "That option isn’t offered on this trip. Pick another and try again."
     },
     "fieldErrors": {
