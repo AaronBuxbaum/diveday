@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
@@ -57,6 +58,7 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { threadNextKey } from "@/i18n/thread-labels";
+import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -192,6 +194,16 @@ async function DiverReadinessPage({
   anonT: DiverTranslator;
   underBookedHeader: boolean;
 }) {
+  /**
+   * **A terminal card never nests inside the booked shell** (#2429). Every
+   * card below (unavailable, cancelled, the after-dive states) renders its own
+   * `<main>` and frame; under the booked header that would stack two mains,
+   * "You've got a seat" above "Your booking was cancelled". Reached only by a
+   * race with a staff cancel or a boat coming home, so the stream leaves for the
+   * plain URL, whose fast path declines and which owns these cards.
+   */
+  const leaveForPlainPage = () => redirect(readinessLinkPath(token));
+  const terminal = <Card,>(card: Card) => (underBookedHeader ? leaveForPlainPage() : card);
   const data = await getReadyPageData(db, bookingId);
   if (!data) {
     // `ready.unavailableBody`, not the waiver subtree's identical sentence,
@@ -199,7 +211,7 @@ async function DiverReadinessPage({
     // nothing on screen moves — but `/waivers` and `/ready` are different
     // surfaces with different rescues, and a reword of one should not be able
     // to reach the other by accident.
-    return <UnavailableReadyLink t={anonT} />;
+    return terminal(<UnavailableReadyLink t={anonT} />);
   }
 
   const { detail, shop, person } = data;
@@ -213,6 +225,7 @@ async function DiverReadinessPage({
     // rare, and the one path on which a diver learns from this page rather than
     // from the shop. What it says about their money is read from the payment
     // row, never from anything on the URL.
+    if (underBookedHeader) return leaveForPlainPage();
     return cancelledNoticeForReady(db, data, bookingId, locale, t);
   }
 
@@ -259,11 +272,12 @@ async function DiverReadinessPage({
     identityHeld: data.identityHeld,
   });
   if (afterDive.afterTheDive) {
-    if (data.identityHeld) return <HeldAfterDiveCard shop={shopContact} t={t} />;
+    if (data.identityHeld) return terminal(<HeldAfterDiveCard shop={shopContact} t={t} />);
     const recapState = await afterDive.recap();
-    if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
+    if (recapState.kind === "waiting")
+      return terminal(<RecapWaitingCard shop={shopContact} t={t} />);
     const recap = recapState.kind === "recap" ? recapState.data : null;
-    if (!recap) return <NoShowCard shop={shopContact} t={t} />;
+    if (!recap) return terminal(<NoShowCard shop={shopContact} t={t} />);
     const recapToken = signRecapToken(bookingId);
     const after = await buildAfterStateProps({
       db,
@@ -282,14 +296,14 @@ async function DiverReadinessPage({
         submitPulse: submitRecapPulseAction.bind(null, recapToken),
       },
     });
-    return (
+    return terminal(
       <DiverIntlProvider
         locale={locale}
         timeZone={detail.shop.timezone}
         namespaces={["recap", "common", "booking", "reviews", "trip"]}
       >
         <AfterState context={after} />
-      </DiverIntlProvider>
+      </DiverIntlProvider>,
     );
   }
 

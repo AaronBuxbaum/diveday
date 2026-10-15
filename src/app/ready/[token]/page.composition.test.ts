@@ -80,6 +80,44 @@ describe("the confirmation paints before the thread", () => {
 });
 
 /**
+ * **No terminal card nests inside the booked shell** (#2429). Under the booked
+ * header the stream may only render what sits under it; a terminal card (it
+ * paints its own `<main>`) would stack a second main beneath "You've got a
+ * seat". Every such return must go through `terminal(...)`, or the cancelled
+ * branch's explicit exit, both of which leave for the plain URL when
+ * `underBookedHeader` is set.
+ */
+describe("a terminal card under the booked header", () => {
+  const body = SOURCE.slice(positionOf("async function DiverReadinessPage("));
+  const beforeThread = body.slice(0, body.indexOf("const notice = noticeFromParam("));
+
+  it("leaves for the plain /ready URL instead of rendering its own main", () => {
+    expect(beforeThread).toContain("redirect(readinessLinkPath(token))");
+    expect(beforeThread).toContain("underBookedHeader ? leaveForPlainPage() : card");
+  });
+
+  it("returns none of the terminal cards bare", () => {
+    for (const card of [
+      "<UnavailableReadyLink",
+      "<HeldAfterDiveCard",
+      "<RecapWaitingCard",
+      "<NoShowCard",
+      "<DiverIntlProvider",
+    ]) {
+      const bare = beforeThread.split(`return ${card}`).length - 1;
+      expect(bare, card).toBe(0);
+    }
+    // The cancelled notice is only reached after the explicit exit.
+    const cancelled = beforeThread.indexOf("return cancelledNoticeForReady(");
+    expect(
+      beforeThread.lastIndexOf("if (underBookedHeader) return leaveForPlainPage();", cancelled),
+    ).toBeGreaterThan(-1);
+    // And the after-dive state is wrapped.
+    expect(beforeThread).toContain("return terminal(\n      <DiverIntlProvider");
+  });
+});
+
+/**
  * **"Anything changed?"** — ADR 20260904-reef-all-the-way-down, D15 with D19
  * folded in, and Budget rule 5 for the provenance chip.
  *
@@ -251,7 +289,7 @@ describe("a held seat's greeting", () => {
     // The booked card greets `getBookedCard`'s name, which applies the held
     // rule itself (src/db/ready.test.ts holds it to the full loader's).
     expect(MASTHEAD).toContain("greetingName={card.greetingName}");
-    expect(MASTHEAD).toContain('greetingName.split(" ")[0]');
+    expect(MASTHEAD).toContain("firstNameOf(greetingName,");
     expect(SOURCE).toContain("justBooked && person.email && !data.identityHeld ? (");
     expect(countOf("detail.person.fullName")).toBe(1);
   });
@@ -266,7 +304,7 @@ describe("a held seat's greeting", () => {
  */
 describe("a held seat after the dive", () => {
   it("answers with its own card before the recap is read", () => {
-    const held = positionOf("if (data.identityHeld) return <HeldAfterDiveCard");
+    const held = positionOf("if (data.identityHeld) return terminal(<HeldAfterDiveCard");
     expect(held).toBeGreaterThan(-1);
     expect(held).toBeLessThan(positionOf("await afterDive.recap()"));
     // The recap starts early beside the roll call (code review 2026-10-13,
