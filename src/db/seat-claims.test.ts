@@ -29,6 +29,7 @@ import {
   issuePartySeatClaims,
   openMinorSeatWaiver,
   partyLeadReturnToken,
+  partySeatsKeptAfterLeadCancel,
 } from "./seat-claims";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
 import { getWaiverSignerOnFile } from "./waiver-signing";
@@ -151,6 +152,48 @@ describe("party linkage (createBookingParty)", () => {
 });
 
 describe("issuePartySeatClaims", () => {
+  it("marks which seats a lead's cancel would take: unclaimed, booked, on the lead's departure (batch 6 item 10)", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne, memberTwo } = await bookParty(db, shop.id, open.id);
+    await db
+      .update(bookings)
+      .set({ claimedAt: new Date(nowMs()) })
+      .where(eq(bookings.id, memberTwo.bookingId));
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    const goes = new Map(seats.map((seat) => [seat.bookingId, seat.cancelsWithLead]));
+    expect(goes.get(memberOne.bookingId)).toBe(true);
+    expect(goes.get(memberTwo.bookingId)).toBe(false);
+
+    const kept = await partySeatsKeptAfterLeadCancel(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(kept).toEqual(expect.arrayContaining(["Milo Member", "Pia Member"]));
+  });
+
+  it("names as kept only the seats on the lead's own departure (batch 6 layer 2 review)", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne, memberTwo } = await bookParty(db, shop.id, open.id);
+    const other = (await upcomingTripsWithCounts(db, shop.id)).find((t) => t.id !== open.id);
+    if (!other) throw new Error("expected a second seeded trip");
+    // Pia was moved to another departure: she keeps her seat, but not "on" the
+    // lead's trip, which is what the cancelled page's sentence names.
+    await db.update(bookings).set({ tripId: other.id }).where(eq(bookings.id, memberTwo.bookingId));
+    await db
+      .update(bookings)
+      .set({ claimedAt: new Date(nowMs()) })
+      .where(eq(bookings.id, memberOne.bookingId));
+
+    const kept = await partySeatsKeptAfterLeadCancel(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(kept).toEqual(["Milo Member"]);
+  });
+
   /**
    * **A held seat goes by the name it was booked under** (security review of
    * issue #2125). A party seat typed with somebody else's email is matched to

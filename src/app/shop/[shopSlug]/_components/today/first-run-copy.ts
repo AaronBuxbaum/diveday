@@ -1,20 +1,25 @@
 import type { FirstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
+import { DIVE_AREAS } from "@/content/dive-areas";
 import { DIVE_SITE_TEMPLATES } from "@/content/dive-site-templates";
 import type { Shop } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { siteCatalogIsLocal } from "@/lib/curated-defaults";
+import { catalogAreasForShop } from "@/lib/curated-defaults";
 import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 
 /**
  * Every sentence the first-run checklist shows, in this reader's language.
- * The dive-site step's body names the starter catalogue's size only where the
- * catalogue is local to the shop's waters; elsewhere it asks for the shop's own.
+ * The dive-site step's body names how many catalog sites lie in the shop's own
+ * dive areas, and asks for the shop's own first site where none do.
  */
 export function firstRunChecklistCopy(
   t: StaffTranslator,
   shop: Shop,
   counts: { diveSiteCount: number; doneCount: number },
 ): FirstRunChecklistCopy {
+  const localAreas = new Set(catalogAreasForShop(shop, DIVE_AREAS).map((area) => area.code));
+  const localTemplateCount = DIVE_SITE_TEMPLATES.filter((template) =>
+    localAreas.has(template.area),
+  ).length;
   return {
     groupLabel: t("shopHome.firstRun.groupLabel"),
     subtitle: t("shopHome.firstRun.subtitle"),
@@ -45,9 +50,10 @@ export function firstRunChecklistCopy(
     unitsAction: t("shopHome.firstRun.unitsAction"),
     unitsDone: t("shopHome.firstRun.unitsDone"),
     siteTitle: t("shopHome.firstRun.siteTitle"),
-    siteBody: siteCatalogIsLocal(shop)
-      ? t("shopHome.firstRun.siteBody", { count: DIVE_SITE_TEMPLATES.length })
-      : t("shopHome.firstRun.siteBodyOwn"),
+    siteBody:
+      localTemplateCount > 0
+        ? t("shopHome.firstRun.siteBody", { count: localTemplateCount })
+        : t("shopHome.firstRun.siteBodyOwn"),
     siteAction: t("shopHome.firstRun.siteAction"),
     siteDone: t("shopHome.firstRun.siteDone", { count: counts.diveSiteCount }),
     releaseTitle: t("shopHome.firstRun.releaseTitle"),

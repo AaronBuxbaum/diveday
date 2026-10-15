@@ -37,10 +37,31 @@ export const CHECK_TIMEOUT_MS = 45_000;
  */
 export const EXTENSION_STORE_URL: string | null = null;
 
+/**
+ * Why the extension came back without a page. `signed_out` is a lookup behind
+ * the shop's own sign-in (PADI) that landed on a sign-in page instead: the
+ * staffer is told to sign in, not that the page could not be read.
+ */
+export const EXTENSION_FAILURE_REASONS = [
+  "unsupported",
+  "fill_failed",
+  "timeout",
+  "tab_failed",
+  "signed_out",
+] as const;
+export type ExtensionFailureReason = (typeof EXTENSION_FAILURE_REASONS)[number];
+
 /** What the extension hands back for one request. */
 export type ExtensionCheckReply =
   | { ok: true; pageText: string }
-  | { ok: false; reason: "unsupported" | "fill_failed" | "timeout" | "tab_failed" };
+  | { ok: false; reason: ExtensionFailureReason };
+
+/** The extension's reason, or `fill_failed` for anything it did not say plainly. */
+export function extensionFailureReason(reason: unknown): ExtensionFailureReason {
+  return (EXTENSION_FAILURE_REASONS as readonly unknown[]).includes(reason)
+    ? (reason as ExtensionFailureReason)
+    : "fill_failed";
+}
 
 export function extensionVersion(): string | null {
   if (typeof document === "undefined") return null;

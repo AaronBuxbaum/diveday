@@ -1,0 +1,102 @@
+import { describe, expect, it } from "vitest";
+import { isMarineLifeSlug } from "@/db/marine-life-catalog";
+import { DIVE_AREA_BY_CODE } from "./dive-areas";
+import { DIVE_SITE_TEMPLATES } from "./dive-site-templates";
+
+/**
+ * The catalog's facts, checked as facts. Every template is real starting
+ * content a shop may publish under its own name, so a number that contradicts
+ * itself, an uncited site or a field-guide slug the import would silently drop
+ * is caught here rather than on a diver's briefing.
+ */
+describe("the dive-site catalog", () => {
+  it("gives every template a unique slug in a known area", () => {
+    const slugs = DIVE_SITE_TEMPLATES.map((template) => template.slug);
+    expect(slugs.filter((slug, index) => slugs.indexOf(slug) !== index)).toEqual([]);
+    expect(
+      DIVE_SITE_TEMPLATES.filter((template) => !DIVE_AREA_BY_CODE.has(template.area)).map(
+        (template) => template.slug,
+      ),
+    ).toEqual([]);
+  });
+
+  it("cites at least two independent public sources for every template", () => {
+    const thin = DIVE_SITE_TEMPLATES.filter((template) => {
+      const hosts = new Set(
+        template.sources.map((source) => {
+          const url = new URL(source);
+          if (url.protocol !== "https:") return "insecure";
+          return url.hostname.replace(/^www\./, "");
+        }),
+      );
+      return hosts.has("insecure") || hosts.size < 2;
+    }).map((template) => template.slug);
+    expect(thin).toEqual([]);
+  });
+
+  it("places every site and states a depth that agrees with itself", () => {
+    const problems = DIVE_SITE_TEMPLATES.flatMap(({ slug, briefing }) => {
+      const found: string[] = [];
+      if (briefing.forecastLatitude == null || briefing.forecastLongitude == null) {
+        found.push(`${slug}: no position`);
+      }
+      if (briefing.maxDepthMeters == null || !briefing.depthRange) {
+        found.push(`${slug}: no depth`);
+        return found;
+      }
+      // "6–12 m (20–40 ft)": the deepest metre figure, and the deepest foot figure.
+      const metres = briefing.depthRange.match(/(\d+)(?:–(\d+))? m\b/);
+      const feet = briefing.depthRange.match(/(\d+)(?:–(\d+))? ft\b/);
+      const deepestMetres = Number(metres?.[2] ?? metres?.[1]);
+      const deepestFeet = Number(feet?.[2] ?? feet?.[1]);
+      if (!metres || !feet)
+        found.push(`${slug}: depth range “${briefing.depthRange}” lacks m and ft`);
+      else {
+        if (
+          briefing.maxDepthMeters < deepestMetres ||
+          briefing.maxDepthMeters > deepestMetres + 3
+        ) {
+          found.push(
+            `${slug}: maxDepthMeters ${briefing.maxDepthMeters} vs range ${deepestMetres} m`,
+          );
+        }
+        if (Math.abs(deepestFeet / 3.281 - deepestMetres) > Math.max(2, deepestMetres * 0.12)) {
+          found.push(`${slug}: ${deepestFeet} ft is not ${deepestMetres} m`);
+        }
+      }
+      return found;
+    });
+    expect(problems).toEqual([]);
+  });
+
+  /**
+   * The catalog's own convention (`./dive-site-templates.ts`): a site whose
+   * `maxDepthMeters` is past 30 m carries Advanced Open Water and the Deep
+   * specialty, because that is what its depth demands of a diver in open
+   * water. A reef that slopes past 18 m is still run as an Open Water dive
+   * that stays shallow, so it is not gated by its depth alone.
+   */
+  it("gates every site at least as strictly as its depth demands", () => {
+    const under = DIVE_SITE_TEMPLATES.flatMap(({ slug, briefing }) => {
+      const depth = briefing.maxDepthMeters ?? 0;
+      const level = briefing.minimumCertificationLevel;
+      const deep = briefing.requiredSpecialties?.includes("deep") ?? false;
+      const problems: string[] = [];
+      if (depth > 30 && (!level || level === "open_water")) {
+        problems.push(`${slug}: ${depth} m needs Advanced Open Water`);
+      }
+      if (depth > 30 && !deep) problems.push(`${slug}: ${depth} m needs the Deep specialty`);
+      return problems;
+    });
+    expect(under).toEqual([]);
+  });
+
+  it("names only catalog species in its field guides, which the import would otherwise drop", () => {
+    const unknown = DIVE_SITE_TEMPLATES.flatMap(({ slug, briefing }) =>
+      (briefing.creatureSlugs ?? [])
+        .filter((creature) => !isMarineLifeSlug(creature))
+        .map((creature) => `${slug}: ${creature}`),
+    );
+    expect(unknown).toEqual([]);
+  });
+});

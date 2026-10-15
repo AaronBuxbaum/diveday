@@ -5,6 +5,7 @@ import * as ce from "aws-cdk-lib/aws-ce";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
+import * as cloudtrail from "aws-cdk-lib/aws-cloudtrail";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as cloudwatchActions from "aws-cdk-lib/aws-cloudwatch-actions";
 import * as codebuild from "aws-cdk-lib/aws-codebuild";
@@ -255,6 +256,14 @@ const EXPORT_PREFIX = "exports/";
  * how long the file actually exists.
  */
 const DUMP_RETENTION_DAYS = 35;
+
+/**
+ * How long the account's CloudTrail log is kept (S23). A year covers the
+ * question an audit log answers -- "who changed this, and when?" -- asked
+ * after an incident or before a customer's security questionnaire, and keeps
+ * the bucket's bytes at cents a month. Unversioned, so 365 means 365.
+ */
+const AUDIT_TRAIL_RETENTION_DAYS = 365;
 
 /**
  * The direct (non-pooled) connection string, in its own secret because the dump
@@ -2625,12 +2634,12 @@ exports.handler = async (event) => {
       },
       {
         id: "backup-bucket-readoption",
-        title: "Re-adopt the retained backup buckets",
+        title: "Re-adopt the retained backup and audit buckets",
         category: "AWS account",
         when: "only after a cdk destroy, and only if you then redeploy",
-        why: "Both backup buckets (infra-stack.ts S11 -- the export bundles' and the database dumps') carry RemovalPolicy.RETAIN so production backups survive a destroyed stack. CloudFormation then tries to create buckets whose names are already taken and the deploy fails.",
+        why: "Both backup buckets (infra-stack.ts S11 -- the export bundles' and the database dumps') carry RemovalPolicy.RETAIN so production backups survive a destroyed stack, and so does the audit trail's bucket (S23) so the record of the destroy survives it. CloudFormation then tries to create buckets whose names are already taken and the deploy fails.",
         run: [
-          "Import the existing buckets into the stack, or deploy with --context backupBucketName=<a new name> --context dumpBucketName=<a new name>.",
+          "Import the existing buckets into the stack, or deploy with --context backupBucketName=<a new name> --context dumpBucketName=<a new name> --context auditTrailBucketName=<a new name>.",
         ],
         produces:
           "A deploy that gets past the BucketAlreadyOwnedByYou failure without losing the bundles or the dumps.",
@@ -2645,7 +2654,7 @@ exports.handler = async (event) => {
         title: "Empty and delete the old region's global-named resources",
         category: "AWS account",
         when: "only when PRIMARY_REGION changes, before the first deploy into the new one",
-        why: "S3 bucket names and IAM user names are global. A stack in the new region asks CloudFormation to create diveday-media, diveday-backups, diveday-database-dumps, diveday-vrt, diveday-inbound-mail and six IAM users that the old region's stack still owns, and every one of them fails -- BucketAlreadyOwnedByYou and EntityAlreadyExists -- part-way through a deploy. Deleting the old stack is not enough on its own: three of those buckets carry RemovalPolicy.RETAIN, so CloudFormation deliberately leaves them behind for a human to decide about.",
+        why: "S3 bucket names and IAM user names are global. A stack in the new region asks CloudFormation to create diveday-media, diveday-backups, diveday-database-dumps, diveday-vrt, diveday-inbound-mail, diveday-audit-trail and six IAM users that the old region's stack still owns, and every one of them fails -- BucketAlreadyOwnedByYou and EntityAlreadyExists -- part-way through a deploy. Deleting the old stack is not enough on its own: several of those buckets carry RemovalPolicy.RETAIN, so CloudFormation deliberately leaves them behind for a human to decide about.",
         run: [
           "Read docs/engineering/region-migration.md first: it is the ordered version of this, and it is the document that says which buckets hold something worth keeping.",
           "aws cloudformation delete-stack --stack-name diveday-infra --region <old region>, and wait for it.",
@@ -2658,6 +2667,22 @@ exports.handler = async (event) => {
           "aws iam get-user --user-name diveday-ses-sender -- NoSuchEntity means the name is free.",
         ],
         note: "This is destructive and it is meant to be: it is the step that makes a region move a teardown rather than a cutover. It is cheap only while the estate is pre-pilot (H-49). Once a shop has photos in diveday-media or a bundle in diveday-backups, this step is a data migration and this action is the wrong instruction.",
+      },
+      {
+        id: "root-access-key-removal",
+        title: "Delete the root user's access keys",
+        category: "AWS account",
+        when: "once per account, and again if AWS Trusted Advisor's Root User Access Key check turns red",
+        why: "Only the root user can delete its own access keys, and this stack must never hold a root credential (see the cdk-bootstrap note). A root key is a password to the whole account with no MFA in front of it; nothing in DiveDay uses one.",
+        run: [
+          "Sign in to the AWS console as the root user (email and password, then MFA).",
+          "Account menu > Security credentials > Access keys: Deactivate each key, then Delete it.",
+        ],
+        verify: [
+          "aws iam get-account-summary --query SummaryMap.AccountAccessKeysPresent -- 0 means no root key exists.",
+        ],
+        onFailure:
+          "If something breaks after deactivating, that thing was using root: give it its own IAM identity before deleting the key, rather than reactivating it.",
       },
       {
         id: "verify-webhook-subscriptions",
@@ -2757,6 +2782,11 @@ exports.handler = async (event) => {
         // CLI here can create a Stripe product, a portal configuration or the
         // legal entity behind them (ADR 20261007-subscription-billing).
         "stripe-billing-setup",
+        // Only the root user can delete its own keys, and nothing in this
+        // repo may hold a root credential to do it with. A live root key is
+        // the one credential that outranks every guard in this stack
+        // (Trusted Advisor, 2026-10-14).
+        "root-access-key-removal",
       ]).has(id),
     );
 
@@ -3789,6 +3819,51 @@ exports.handler = async () => {
     // HealthCheckStatus there and nowhere else, and this stack's region is a
     // constant that is meant to be able to move (config/aws-regions.mjs,
     // docs/engineering/region-migration.md).
+
+    // 23. The account's audit trail -- see ADR 20261014-account-audit-trail.
+    // Until this existed the account recorded nothing about who created a
+    // key, opened a bucket or changed a policy (AWS Trusted Advisor, 2026-10-14:
+    // CloudTrail off in all 17 regions). One multi-region trail of management
+    // events, read and write, is the copy AWS does not charge for; the only
+    // cost is the bucket's bytes.
+    //
+    // Not versioned, for the reason the dump bucket is not (S11): a lifecycle
+    // expiry on a versioned bucket keeps the bytes. RETAIN, because an audit
+    // log that a `cdk destroy` deletes is the one log a destroy should leave
+    // behind. Integrity comes from CloudTrail's own digest files
+    // (`enableFileValidation`), not from versioning. No CloudWatch Logs copy:
+    // nobody reads it as a stream, and ingestion is the part that costs.
+    const auditTrailBucket = new s3.Bucket(this, "AuditTrailBucket", {
+      bucketName: this.node.tryGetContext("auditTrailBucketName") || "diveday-audit-trail",
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      versioned: false,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lifecycleRules: [
+        {
+          id: "expire-audit-trail",
+          enabled: true,
+          expiration: cdk.Duration.days(AUDIT_TRAIL_RETENTION_DAYS),
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
+        },
+      ],
+    });
+
+    new cloudtrail.Trail(this, "AuditTrail", {
+      trailName: "diveday-audit-trail",
+      bucket: auditTrailBucket,
+      isMultiRegionTrail: true,
+      includeGlobalServiceEvents: true,
+      enableFileValidation: true,
+      managementEvents: cloudtrail.ReadWriteType.ALL,
+      sendToCloudWatchLogs: false,
+    });
+
+    new cdk.CfnOutput(this, "AuditTrailBucketName", {
+      value: auditTrailBucket.bucketName,
+      description: `Where the account's CloudTrail (diveday-audit-trail) writes management events from every region. Objects expire after ${AUDIT_TRAIL_RETENTION_DAYS} days. Search recent events with: aws cloudtrail lookup-events --max-results 20`,
+    });
   }
 
   /**

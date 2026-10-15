@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { getDbPoolConfig, isPgBouncerUrl } from "./db-pool-config";
+import { EventEmitter } from "node:events";
+import { describe, expect, it, vi } from "vitest";
+import { getDbPoolConfig, isPgBouncerUrl, listenForPoolErrors } from "./db-pool-config";
 
 describe("getDbPoolConfig", () => {
   it("defaults to a small pool sized for many concurrent serverless instances", () => {
@@ -54,5 +55,32 @@ describe("getDbPoolConfig", () => {
     // A database *named* like a pooler is not a pooler host.
     expect(isPgBouncerUrl("postgresql://u:p@db.internal/ep-x-pooler")).toBe(false);
     expect(isPgBouncerUrl(undefined)).toBe(false);
+  });
+});
+
+describe("listenForPoolErrors", () => {
+  it("turns an idle client's error into a warn line instead of an uncaught exception", () => {
+    const pool = new EventEmitter();
+    // Without a listener, Node throws an emitted "error" out of emit().
+    expect(() => pool.emit("error", new Error("boom"))).toThrow("boom");
+
+    listenForPoolErrors(pool);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const terminated = Object.assign(
+      new Error("terminating connection due to administrator command: SELECT secret"),
+      { code: "57P01" },
+    );
+    expect(() => pool.emit("error", terminated)).not.toThrow();
+    const line = JSON.parse(String(warn.mock.calls[0]?.[0]));
+    warn.mockRestore();
+
+    expect(line).toMatchObject({
+      level: "warn",
+      event: "db_pool.idle_client_error",
+      name: "Error",
+      code: "57P01",
+    });
+    // Codes only: a pg message can quote the statement it was running.
+    expect(JSON.stringify(line)).not.toContain("SELECT secret");
   });
 });

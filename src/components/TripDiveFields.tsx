@@ -52,6 +52,7 @@ export function TripDiveFields({
   onFirstDiveSiteChange,
   firstDiveSiteDescription,
   frameClassName,
+  id,
 }: {
   diveSites: DiveOption[];
   initialCount?: number;
@@ -85,6 +86,8 @@ export function TripDiveFields({
    * inside the builder's 12px add panel (pixel-craft K-95).
    */
   frameClassName: string;
+  /** An anchor for a link straight to the dive count (the manifest's "Change the plan"). */
+  id?: string;
 }) {
   const [count, setCount] = useState(Math.min(4, Math.max(1, initialCount)));
 
@@ -94,6 +97,7 @@ export function TripDiveFields({
       // state of an unmounted subtree, and these are a staff member's typed
       // dive plans.
       hidden={disabled}
+      id={id}
       className={frameClassName}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

@@ -91,7 +91,12 @@ test.describe("refunds", () => {
     // The payment control is one of the row's fixes, behind its fold; the
     // save holds the row open on the way back.
     await openRosterDetails(noraRow);
-    await noraRow.getByRole("combobox").selectOption("paid");
+    await noraRow.getByRole("combobox", { name: "Payment status" }).selectOption("paid");
+    // The Paid mark asks how much and how (batch 6 item 1). The amount opens
+    // holding what the seat owes, so a staffer taking the usual fare only says
+    // how it came in.
+    await expect(noraRow.getByLabel("Amount taken")).toHaveValue(/\d/);
+    await noraRow.getByRole("radio", { name: "Cash" }).check();
     await noraRow.getByRole("button", { name: "Update" }).click();
     await expect(page.getByRole("status")).toContainText("Payment status updated");
     await expect(noraRow.getByText("Payment: Paid")).toBeVisible();

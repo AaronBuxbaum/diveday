@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RequestAdvice } from "@/lib/request-advisor";
 

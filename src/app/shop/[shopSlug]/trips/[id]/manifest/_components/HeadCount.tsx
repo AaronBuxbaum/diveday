@@ -45,6 +45,7 @@ export function HeadCount({
   blockedAboard = 0,
   t,
   people = false,
+  overCertificate = null,
   className = "",
 }: {
   /** Divers with an *aboard* result at this checkpoint. */
@@ -66,6 +67,14 @@ export function HeadCount({
    * The figure is the same either way: everyone aboard is counted.
    */
   people?: boolean;
+  /**
+   * More passengers counted aboard than the boat's certificate allows
+   * (`passengersAboveCertificateAboard`, src/lib/boat-safety.ts). The sale is
+   * refused above it (H-107); the rail never is, so the count says it: the
+   * figure goes danger and a line names the limit. Crew are not passengers and
+   * are never in it.
+   */
+  overCertificate?: { limit: number } | null;
   className?: string;
 }) {
   // Bounded for the pixels only: an empty glass stands at zero rather than
@@ -84,7 +93,9 @@ export function HeadCount({
             ? t("participants.headCount.aboardOfTotalPeople", { aboard, total: out })
             : t("manifest.aboardOfTotal", { aboard, total: out })
         }
-        className="relative size-20 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken"
+        className={`relative size-20 shrink-0 overflow-hidden rounded-full bg-surface-sunken ${
+          overCertificate ? "border-2 border-danger" : "border border-border"
+        }`}
       >
         <div
           aria-hidden="true"
@@ -94,7 +105,11 @@ export function HeadCount({
         />
         {/* The figure sits over the water, not in it: the number is the fact
             and the water is its shape (principle 9). */}
-        <span className={`absolute inset-0 flex items-center justify-center ${FIGURE_DIAL_CLASS}`}>
+        <span
+          className={`absolute inset-0 flex items-center justify-center ${FIGURE_DIAL_CLASS}${
+            overCertificate ? " text-danger" : ""
+          }`}
+        >
           {aboard}
         </span>
       </div>
@@ -119,6 +134,11 @@ export function HeadCount({
             ? t("participants.headCount.ofTotalAboardPeople", { total: out })
             : t("manifest.ofTotalAboard", { total: out })}
         </p>
+        {overCertificate ? (
+          <p className="font-bold text-danger">
+            {t("manifest.headCountOverCertificate", { limit: overCertificate.limit })}
+          </p>
+        ) : null}
         {blockedAboard > 0 ? (
           <p className="font-bold text-danger">
             {t("manifest.headCountBlockedAboard", { count: blockedAboard })}

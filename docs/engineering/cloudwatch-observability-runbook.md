@@ -58,7 +58,7 @@ sent to the alert address. Until then every alarm transitions correctly and noti
 
 ## What is counted, and what to do when it fires
 
-Eleven signals. Eight are alarmed; three are counters only, declared once in
+Twelve signals. Nine are alarmed; three are counters only, declared once in
 `infra/lib/observability.ts` and still available as dashboard series. Every other event code the app emits stays queryable — see
 the saved queries below — it just does not have a metric. Two more alarms watch numbers AWS
 publishes rather than lines the app writes: SES's account bounce and complaint rates, at the bottom
@@ -74,6 +74,8 @@ and the only one whose missing data is treated as breaching rather than as quiet
 | `diveday-money-path-refusals` | 1 in 15 min | A payment arrived the booking record cannot accept: mismatched Connect account, disqualified checkout, settled total over the asked amount, a paid-for cancelled seat. | Find the checkout or order id in the line and reconcile against the Stripe dashboard by hand, before the shop notices. A disqualified checkout is already on the shop's Orders index as money owed back, with a Refund. |
 | `diveday-notification-send-failures` | 1 in 1 h | Waiver links, reminders, password resets or staff invites are not leaving. Invisible from inside DiveDay — the booking still looks fine, and no staff screen lists a lost account email. | Read the event code: a provider's `*_send_failed` goes to its runbook (SES / SMS / WhatsApp); the retry queue's own codes are in [When a notification is given up](#when-a-notification-is-given-up). |
 | `diveday-cron-pass-failures` | 1 in 24 h | A scheduled pass ran and did not do its work. Distinct from Sentry's cron monitors, which answer "did it run at all". | The line names the scan. Every pass is idempotent, so re-running the route by hand is safe. |
+| `diveday-webhook-unconfigured` | 1 in 1 h | A webhook (Stripe, billing, SES, SMS, WhatsApp, inbound email) has no secret or topic ARN in the deployment, so every delivery is refused with a 503. Payments stop turning orders paid and nothing inside DiveDay looks wrong. | The line's `webhook` names the endpoint. Put the secret or ARN back, then replay the refused deliveries from the provider's dashboard. |
+| `diveday-webhook-refusals` | 10 in 1 h | Deliveries refused for a signature that does not verify (or a stale or wrong-topic message), in ten separate minutes. The app writes one `webhook.refused` line per webhook and reason a minute per instance, with `swallowed` carrying the real count, so a few unsigned posts from a stranger never page. | `invalid_signature` from one provider, sustained: the secret was rotated on their side; copy the new one in and replay the refused deliveries. Scattered reasons is a scanner and needs nothing. |
 | `diveday-database-unavailable` | 1 in 5 min | The health check could not reach Postgres. | Neon console first — an exhausted free-tier compute allowance suspends the endpoint, which looks exactly like this. Then [incident-response-runbook.md](incident-response-runbook.md). |
 | `diveday-rate-limit-store-failures` | 5 in 1 h | Rate limiting is failing open. It is *designed* to, but that trade is only safe while someone is told. | Every guarded public write boundary is currently unguarded — see [rate-limiting-runbook.md](rate-limiting-runbook.md). |
 | `diveday-manifest-streams-refused` | 1 in 1 h | Manifest streams turned away at the subscriber ceiling; a captain's roll-call screen is stale rather than live. | [realtime-manifest-events-runbook.md](realtime-manifest-events-runbook.md) — check the ceiling against boats out. |
@@ -252,8 +254,8 @@ does not depend on the account's age or plan. What that covers, and what this st
 
 | Always free, per month | Used | Billed |
 | --- | --- | --- |
-| 10 custom metrics | 20 (11 signals + 5 web vitals + mutation duration + 3 render cost) | 10 × $0.30 = **$3.00** |
-| 10 standard-resolution alarms | 14 (8 alarmed signals + 3 alarmed vitals + 2 SES reputation rates + the external uptime alarm) | 4 × $0.10 = **$0.40** |
+| 10 custom metrics | 21 (12 signals + 5 web vitals + mutation duration + 3 render cost) | 11 × $0.30 = **$3.30** |
+| 10 standard-resolution alarms | 15 (9 alarmed signals + 3 alarmed vitals + 2 SES reputation rates + the external uptime alarm) | 5 × $0.10 = **$0.50** |
 | 3 dashboards | 1 | **$0.00** (a 4th would be $3.00) |
 | 5 GB log ingestion + archive + Insights scan | well under | $0.50/GB ingested, $0.12/GB scanned beyond |
 | 1 Contributor Insights rule | 0 | — |
@@ -264,7 +266,7 @@ One cost in this stack is not CloudWatch's: the Route 53 health check the uptime
 matching. It is the only signal that survives a total outage, and the reasoning is in ADR
 [20260907-external-uptime-monitor](../architecture/decisions/20260907-external-uptime-monitor.md).
 
-So the fixed monthly cost of everything in this runbook is about **$3.40**, plus that check. A counter-only signal
+So the fixed monthly cost of everything in this runbook is about **$3.80**, plus that check. A counter-only signal
 added to the registry costs **$0.30**; an alarmed signal costs **$0.40** — $0.30 for the metric plus
 $0.10 for the alarm.
 

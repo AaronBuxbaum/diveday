@@ -307,6 +307,7 @@ const NOTICE_KEYS: Record<
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },
+  "seat-busy": { form: "add-diver", tone: "danger", key: "seatDiver.busy" },
   "diver-full": { form: "add-diver", tone: "danger", key: "trips.notices.diverFull" },
   "diver-divers-full": {
     form: "add-diver",
@@ -507,6 +508,10 @@ const NOTICE_KEYS: Record<
     countKey: "trips.notices.requirementsBlockingCount",
   },
   payment: { form: "roster", tone: "success", key: "trips.notices.payment" },
+  "payment-amount": { form: "roster", tone: "danger", key: "trips.notices.paymentAmount" },
+  "payment-method": { form: "roster", tone: "danger", key: "trips.notices.paymentMethod" },
+  "payment-short": { form: "roster", tone: "danger", key: "trips.notices.paymentShort" },
+  "payment-online": { form: "roster", tone: "danger", key: "trips.notices.paymentOnline" },
   conditions: { form: "conditions", tone: "success", key: "trips.notices.conditions" },
   "conditions-cleared": {
     form: "conditions",

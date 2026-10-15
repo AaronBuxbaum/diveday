@@ -367,7 +367,12 @@
   Claiming re-points the seat's existing booking at the claimant's own person record and starts
   their own waiver and trip prep; the organizer's surfaces show which seats are claimed. It never
   creates or frees a seat, never moves money, and is never required — an unclaimed seat boards
-  under the organizer's party exactly as before claiming existed.
+  under the organizer's party exactly as before claiming existed. When the organizer cancels their
+  own seat from `/ready` or with a reply confirm code, their unclaimed `booked` seats on the same
+  departure are cancelled with it and refunded under the same policy; a claimed seat (or one
+  already checked in) stays, and the `/ready` confirm lists both before the tap. A cancelled seat
+  with an address of its own gets its own cancellation notice (`cancelUnclaimedPartySeats`,
+  `settleReleasedPartySeats`, batch 6 item 10).
 - **Seat held** — the booking statuses that count against a departure's capacity: `booked` and
   `checked_in`, and nothing else (`SEAT_HELD_STATUSES` and `seatIsHeld`, `src/lib/no-show.ts`,
   spelled once as a `where` clause in `seatHeld`, `src/db/trips-queries.ts`). `cancelled` never held
@@ -756,6 +761,20 @@
   narrative beside it. Kept seven years from the incident; erasing a diver removes their identity
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
+- **Incident kind** / **incident severity** — the two closed answers an **incident report** files
+  with: its kind (injury or illness, near miss, equipment, missing diver, fatality, other) and how
+  serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety tab;
+  read by nothing that gates. A severity is the crew's judgment, never a medical classification
+  ([20261014-incident-kind-severity](../../architecture/decisions/20261014-incident-kind-severity.md)).
+- **Stale roll call** — an after-dive roll call still open after its departure was due back. The
+  hourly crew-notices pass asks from 30 minutes past the end; a count nobody started is open only
+  once the boat is due home (the end plus the one-hour return buffer), so it alerts at the first
+  hourly pass after that, while a started count or a person recorded not back aboard can alert at
+  the first pass past the half hour. Once per departure the owners are emailed ("after the boat was
+  due back at 4:00 PM EDT") and every device following the manifest is pushed
+  (`sendStaleRollCallAlerts`), and the Today row says when; the
+  shore contact is free text and is not messaged (H-118). It informs and never closes or changes
+  the count.
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking

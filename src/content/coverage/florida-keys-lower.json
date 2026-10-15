@@ -1,0 +1,68 @@
+{
+  "area": "florida-keys-lower",
+  "method": "Lower Keys, Bahia Honda to Saddlebunch: NOAA FKNMS 2025 mooring buoys, Monroe County TDC's Reef Explorer guide (Big Pine Key and the Lower Keys page) and shipwrecks page, and FWC artificial reefs, checked against Captain Hook's Big Pine Key pages, the only Lower Keys operator with a published site list found. Counting rule: named, recreational scuba (not snorkel-only, technical-depth, closed or permit-only), and on at least two independent lists. NOAA FKNMS's mooring-buoy list and its Shipwreck Trail are one publisher and count once; Monroe County TDC's Reef Explorer guide and its shipwrecks page count once; FWC's artificial-reef dataset counts once and only for a named vessel an operator also advertises; each dive operator's own published site list counts once (Captain Hook's and its Dive Key West shop are one operator). Lodging guides, magazines and hobby sites were read but never counted. Counted 2026-10-14.",
+  "sources": [
+    "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+    "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0",
+    "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+    "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/shipwrecks",
+    "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+    "https://captainhooks.com/big-pine/scuba-diving/",
+    "https://captainhooks.com/watersports-activities/wreck-diving/"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Looe Key Reef (Looe Key Sanctuary Preservation Area, incl. Looe Key deep reef)",
+      "template": "looe-key-reef",
+      "position": [24.54566, -81.40971],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://captainhooks.com/big-pine/scuba-diving/"
+      ]
+    },
+    {
+      "name": "Adolphus Busch Sr.",
+      "template": "adolphus-busch",
+      "position": [24.53017, -81.46155],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Adolphus%20Busch%20Sr%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json",
+        "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/shipwrecks",
+        "https://captainhooks.com/watersports-activities/wreck-diving/"
+      ]
+    },
+    {
+      "name": "Newfound Harbor",
+      "template": null,
+      "position": [24.61576, -81.39293],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "On one list only (NOAA SPA buoys); a shallow patch reef run for snorkelers."
+    },
+    {
+      "name": "American Shoals (American Shoal Light)",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf"
+      ],
+      "excluded": "On one qualifying list only (TDC Reef Explorer); the FWC 'American Shoal Reef' entries are concrete modules, not this site."
+    },
+    {
+      "name": "Pelican Shoal",
+      "template": null,
+      "position": [24.50053, -81.63045],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "On one list only (NOAA buoys); a wildlife management area closed near the shoal April to August."
+    },
+    {
+      "name": "Outer Reef (Lower Keys)",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf"
+      ],
+      "excluded": "TDC Reef Explorer only, and not a specific site."
+    }
+  ]
+}

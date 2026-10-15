@@ -145,6 +145,25 @@ describe("ThreadSections", () => {
     expect(seats[0].claimUrl).toContain("claim-token");
   });
 
+  it("lists which party seats go with the lead and which stay, inside the confirm (batch 6 item 10)", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(
+      <ThreadSections
+        context={context({
+          partySeatClaims: [
+            { bookingId: "b2", seatName: "Milo", claimed: false, cancelsWithLead: true },
+            { bookingId: "b3", seatName: "Pia", claimed: true, cancelsWithLead: false },
+          ] as unknown as ReadyThreadSectionsContext["partySeatClaims"],
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: t("ready.cancelSpot") }));
+    const plan = screen.getByTestId("party-cancel-plan");
+    expect(plan.textContent).toContain(t("ready.cancelPartyGoes", { names: "Milo" }));
+    expect(plan.textContent).toContain(t("ready.cancelPartyStays", { count: 1, names: "Pia" }));
+    expect(screen.getByText(t("ready.cancelConfirmParty", { trip: "Two-Tank Reef" }))).toBeTruthy();
+  });
+
   it("offers no cancel door the booking would refuse, and nothing without the trip on record", () => {
     const closed = context({ fullShop: undefined, fullTrip: null });
     (closed.data as unknown as { canCancelBooking: boolean }).canCancelBooking = false;

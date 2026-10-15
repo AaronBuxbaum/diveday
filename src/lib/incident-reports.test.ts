@@ -14,6 +14,8 @@ const blank: IncidentDraftFields = {
   diveSiteId: null,
   locationText: null,
   whatHappened: null,
+  kind: null,
+  severity: null,
   firstAidGiven: null,
   oxygenGiven: null,
   oxygenMinutes: null,
@@ -30,6 +32,8 @@ const emptyForm = {
   diveSiteId: "",
   locationText: "",
   whatHappened: "",
+  kind: "",
+  severity: "",
   firstAidGiven: "",
   oxygenGiven: "",
   oxygenMinutes: "",
@@ -104,6 +108,8 @@ describe("incidentFilingGaps", () => {
       "occurred_at",
       "location",
       "what_happened",
+      "kind",
+      "severity",
       "first_aid",
       "oxygen",
       "emergency_services",
@@ -117,6 +123,8 @@ describe("incidentFilingGaps", () => {
         occurredAt: new Date("2026-10-01T10:00:00Z"),
         locationText: "Boat deck",
         whatHappened: "Diver surfaced coughing.",
+        kind: "near_miss",
+        severity: "minor",
         firstAidGiven: false,
         oxygenGiven: false,
         emergencyServicesCalled: false,
@@ -134,6 +142,8 @@ describe("incidentFilingGaps", () => {
       occurredAt: new Date("2026-10-01T10:00:00Z"),
       locationText: "Boat deck",
       whatHappened: "Diver surfaced coughing.",
+      kind: "injury" as const,
+      severity: "moderate" as const,
       firstAidGiven: true,
       oxygenGiven: false,
       emergencyServicesCalled: true,
@@ -147,6 +157,14 @@ describe("incidentFilingGaps", () => {
     expect(
       incidentFilingGaps({ ...answered, emergencyServicesCalled: false, oxygenGiven: false }),
     ).toEqual([]);
+  });
+
+  it("asks what kind of incident it was and how serious, each on its own", () => {
+    // Batch 6, item 7. Neither is assumed: a report with no kind is not a
+    // report of "other".
+    expect(incidentFilingGaps({ ...blank, kind: "missing_diver" })).not.toContain("kind");
+    expect(incidentFilingGaps({ ...blank, kind: "missing_diver" })).toContain("severity");
+    expect(incidentFilingGaps({ ...blank, severity: "serious" })).toContain("kind");
   });
 
   it("does not count whitespace as an account of what happened", () => {
@@ -242,6 +260,15 @@ describe("parseIncidentDraft", () => {
       ok: true,
       fields: { handoverKind: "none" },
     });
+  });
+
+  it("reads a kind and a severity it knows, and drops any other", () => {
+    expect(
+      parseIncidentDraft({ ...emptyForm, kind: "missing_diver", severity: "serious" }, utc),
+    ).toMatchObject({ ok: true, fields: { kind: "missing_diver", severity: "serious" } });
+    expect(
+      parseIncidentDraft({ ...emptyForm, kind: "shark", severity: "catastrophic" }, utc),
+    ).toMatchObject({ ok: true, fields: { kind: null, severity: null } });
   });
 
   it("drops a handover code it does not know", () => {

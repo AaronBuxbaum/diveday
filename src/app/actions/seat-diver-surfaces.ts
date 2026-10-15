@@ -18,6 +18,14 @@ import type { TripAdmissionGateScope } from "@/lib/trip-admission-gate";
  * `?notice=` map against the staff bundle.
  */
 
+/**
+ * The one notice every door shares: the seat transaction waited its five
+ * seconds for a held departure and gave up (`isLockWaitRefusal`). Shared
+ * because the words are the same everywhere ("busy, tap again"), so each
+ * landing page maps this one code to `seatDiver.busy`.
+ */
+export const SEAT_BUSY_NOTICE = "seat-busy";
+
 export type SeatSurfaceId = "trip-guests" | "walk-in" | "diver-record" | "new-booking";
 
 /** Everything a settle path can be built from. */

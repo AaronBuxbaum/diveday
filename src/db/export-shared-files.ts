@@ -199,6 +199,15 @@ export const SPECIALTY_CERTIFICATIONS_CSV = sharedFile<ShopRow<"specialtyRows">>
         row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
     },
     { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
+    // The level card whose agency check listed this one (layer 3 of ADR
+    // 20261008-cert-check-extension): review_note then holds the agency's
+    // words, not a staffer's. Another provenance stamp, and it travels for
+    // the same reason as the others.
+    {
+      header: "listed_from_certification_id",
+      in: "shop",
+      value: (row) => row.listedFromCertificationId,
+    },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
@@ -239,6 +248,15 @@ export const NITROX_CERTIFICATIONS_CSV = sharedFile<ShopRow<"nitroxRows">>({
     { header: "imported_from_label", in: "both", value: (row) => row.importedFromLabel },
     // Same reason as the level card's — see certifications.csv above.
     { header: "self_declared_at", in: "both", value: (row) => row.selfDeclaredAt },
+    // The level card whose agency check listed this one (layer 3 of ADR
+    // 20261008-cert-check-extension): review_note then holds the agency's
+    // words, not a staffer's. Another provenance stamp, and it travels for
+    // the same reason as the others.
+    {
+      header: "listed_from_certification_id",
+      in: "shop",
+      value: (row) => row.listedFromCertificationId,
+    },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
@@ -549,6 +567,7 @@ export const BOOKING_PAYMENT_EVENTS_CSV = sharedFile<ShopRow<"paymentEventRows">
     { header: "provider", in: "both", value: (row) => row.provider },
     { header: "provider_ref", in: "shop", value: (row) => row.providerRef },
     { header: "operation", in: "both", value: (row) => row.operation },
+    { header: "method", in: "both", value: (row) => row.method },
     { header: "note", in: "shop", value: (row) => row.note },
     { header: "occurred_at", in: "both", value: (row) => row.occurredAt },
   ],

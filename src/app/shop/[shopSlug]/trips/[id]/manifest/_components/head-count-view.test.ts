@@ -29,4 +29,32 @@ describe("headCountView", () => {
     expect(view.separatedTeams).toBe(0);
     expect(view.notBackAboardDivers).toEqual([]);
   });
+
+  it("holds the passengers counted aboard against the boat's certificate", () => {
+    const over = tripManifest({
+      trip: { ...tripManifest().trip, certifiedPassengers: 12 },
+      summary: { ...tripManifest().summary, totalDivers: 13, boarded: 13 },
+    });
+    expect(
+      headCountView({ manifest: over, checkpoint: "departure", isDeparture: true }).overCertificate,
+    ).toEqual({ aboard: 13, limit: 12 });
+
+    const within = tripManifest({
+      trip: { ...tripManifest().trip, certifiedPassengers: 12 },
+      summary: { ...tripManifest().summary, totalDivers: 14, boarded: 12 },
+    });
+    // Booked past it is the Boat tab's line; the count speaks of bodies aboard.
+    expect(
+      headCountView({ manifest: within, checkpoint: "departure", isDeparture: true })
+        .overCertificate,
+    ).toBeNull();
+
+    const noCertificate = tripManifest({
+      summary: { ...tripManifest().summary, totalDivers: 40, boarded: 40 },
+    });
+    expect(
+      headCountView({ manifest: noCertificate, checkpoint: "departure", isDeparture: true })
+        .overCertificate,
+    ).toBeNull();
+  });
 });

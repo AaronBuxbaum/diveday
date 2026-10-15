@@ -43,6 +43,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   failed_photo_deletion: "today.actionKind.failedPhotoDeletion",
   owed_refund: "today.actionKind.owedRefund",
   payment_dispute: "today.actionKind.paymentDispute",
+  payments_restricted: "today.actionKind.paymentsRestricted",
   reviews_pending: "today.actionKind.reviewsPending",
   unanswered_messages: "today.actionKind.unansweredMessages",
   gear_overdue: "today.actionKind.gearOverdue",
@@ -753,6 +754,20 @@ export function paymentDisputeDetailText(
 /** A dispute's subject when no diver can be named for it. */
 export function paymentDisputeSubjectText(t: StaffTranslator): string {
   return t("today.opsAlert.disputeSubject");
+}
+
+/** Stripe turned card payments off (batch 6 item 8): the row's subject. */
+export function paymentsRestrictedSubjectText(t: StaffTranslator): string {
+  return t("today.opsAlert.restrictedSubject");
+}
+
+/** Since when, and what divers do meanwhile; Stripe's reason stays in Stripe. */
+export function paymentsRestrictedDetailText(t: StaffTranslator, when: string): string {
+  return t("today.opsAlert.restrictedDetail", { when });
+}
+
+export function openPaymentSettingsActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openPaymentSettings");
 }
 
 /**

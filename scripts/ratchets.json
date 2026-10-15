@@ -45,10 +45,10 @@
   "context-budget": {
     "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
     "budgets": {
-      "CLAUDE.md": 64,
-      "AGENTS.md": 2493,
+      "CLAUDE.md": 54,
+      "AGENTS.md": 1206,
       ".claude/rules/*.md (without paths: frontmatter)": 0,
-      ".claude/skills/*/SKILL.md (description lines)": 783,
+      ".claude/skills/*/SKILL.md (description lines)": 805,
       ".claude/agents/*.md (description lines)": 130
     },
     "raises": [
@@ -179,6 +179,12 @@
         "files": {
           "AGENTS.md": "4271 -> 4299"
         }
+      },
+      {
+        "why": "a new skill, expand-content: the one follow-up command Aaron asked for to cover a further dive area (ADR 20261014-starting-content-is-measured-and-vetted); its description is 20 words",
+        "files": {
+          ".claude/skills/*/SKILL.md (description lines)": "783 -> 805"
+        }
       }
     ]
   },
@@ -199,8 +205,153 @@
   "domain-strings": {
     "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs."
   },
+  "file-length": {
+    "//": "Line counts of the files under src/app, src/components and the test files under src still over 900 lines, the size scripts/guard-read.mjs refuses to read whole. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
+    "//absorbed": [
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
+          "src/app/api/test/seed-trouble-states/route.ts": "2030 -> 2040",
+          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1103 -> 1110",
+          "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": "1267 -> 1281",
+          "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1046 -> 1057",
+          "src/app/shop/[shopSlug]/schedule/board/actions.ts": "925 -> 948",
+          "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": "1003 -> 1040",
+          "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": "1021 -> 1050",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.ts": "0 -> 990",
+          "src/components/ui/ledger.test.tsx": "1231 -> 1232",
+          "src/db/anonymize.test.ts": "1686 -> 1693",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/closeout.test.ts": "0 -> 903",
+          "src/db/courses.test.ts": "1659 -> 1719",
+          "src/db/executed-dives.test.ts": "1082 -> 1085",
+          "src/db/manifests.test.ts": "3678 -> 3725",
+          "src/db/no-show.test.ts": "1100 -> 1165",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/db/recap.test.ts": "2114 -> 2138",
+          "src/db/refunds.test.ts": "1102 -> 1154",
+          "src/db/reminders.test.ts": "0 -> 1078",
+          "src/db/retention.test.ts": "1250 -> 1262",
+          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
+          "src/db/trips-series.test.ts": "1774 -> 1824",
+          "src/i18n/label-maps.test.ts": "1296 -> 1313",
+          "src/lib/notifications/email.test.ts": "1437 -> 1480",
+          "src/lib/readiness.test.ts": "1482 -> 1585",
+          "src/lib/staffing-week.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205",
+          "src/proxy.test.ts": "1204 -> 1241"
+        }
+      },
+      {
+        "why": "merge of origin/main (Fix deploy script, #2590, #2591) into the code review runtime layer: dive-sites.test.ts grew two lines on main",
+        "files": {
+          "src/db/dive-sites.test.ts": "1172 -> 1174"
+        }
+      },
+      {
+        "why": "merge of opportunities batch 6 (#2596, #2597) into the code review runtime layer: the Stripe webhook route and its test, the trip actions authz test and DetailsSection grew on that side",
+        "files": {
+          "src/app/api/webhooks/stripe/route.test.ts": "1824 -> 1876",
+          "src/app/api/webhooks/stripe/route.ts": "0 -> 932",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "971 -> 1180",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.ts": "990 -> 1062",
+          "src/db/bookings.test.ts": "3418 -> 3540",
+          "src/db/checkouts.test.ts": "2912 -> 2972",
+          "src/db/export.test.ts": "1666 -> 1670",
+          "src/db/seat-claims.test.ts": "1004 -> 1047",
+          "src/db/trips-series.test.ts": "1824 -> 1873",
+          "src/i18n/label-maps.test.ts": "1313 -> 1331"
+        }
+      },
+      {
+        "why": "merge of #2610, whose stricter length ratchet postdates the cert-check extension's Today diver link and agency-check tests",
+        "files": {
+          "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": "1281 -> 1338",
+          "src/lib/agency-check.test.ts": "0 -> 930",
+          "src/lib/readiness.test.ts": "1585 -> 1614",
+          "src/lib/today.test.ts": "1614 -> 1651"
+        }
+      }
+    ],
+    "src/app/api/offline-manifests/sync/route.test.ts": 955,
+    "src/app/api/test/seed-trouble-states/route.ts": 2040,
+    "src/app/api/webhooks/stripe/route.replay.test.ts": 1369,
+    "src/app/api/webhooks/stripe/route.test.ts": 1876,
+    "src/app/api/webhooks/stripe/route.ts": 932,
+    "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
+    "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1110,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1338,
+    "src/app/shop/[shopSlug]/orders/page.test.tsx": 927,
+    "src/app/shop/[shopSlug]/page.tsx": 967,
+    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1057,
+    "src/app/shop/[shopSlug]/schedule/board/actions.ts": 948,
+    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
+    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1050,
+    "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1180,
+    "src/app/shop/[shopSlug]/trips/[id]/actions.ts": 1062,
+    "src/components/MarketingFeatureScreens.tsx": 1064,
+    "src/components/search/CommandPalette.tsx": 1016,
+    "src/components/ui/button.test.ts": 971,
+    "src/components/ui/form.test.tsx": 1943,
+    "src/components/ui/form.tsx": 1206,
+    "src/components/ui/ledger.test.tsx": 1232,
+    "src/db/anonymize.test.ts": 1693,
+    "src/db/bookings.test.ts": 3540,
+    "src/db/buddy-pairs.test.ts": 990,
+    "src/db/check-in.test.ts": 1212,
+    "src/db/checkouts.test.ts": 2972,
+    "src/db/closeout.test.ts": 903,
+    "src/db/course-forms.test.ts": 1274,
+    "src/db/courses.test.ts": 1719,
+    "src/db/dive-sites.test.ts": 1174,
+    "src/db/diver-merge.test.ts": 1285,
+    "src/db/divers.test.ts": 3105,
+    "src/db/erasure-coverage.test.ts": 1176,
+    "src/db/executed-dives.test.ts": 1085,
+    "src/db/export.test.ts": 1670,
+    "src/db/import.test.ts": 1077,
+    "src/db/manifests.test.ts": 3725,
+    "src/db/no-show.test.ts": 1165,
+    "src/db/notifications.test.ts": 2007,
+    "src/db/orders.test.ts": 3163,
+    "src/db/participant-types.test.ts": 1143,
+    "src/db/readiness.test.ts": 1519,
+    "src/db/recap.test.ts": 2138,
+    "src/db/refunds.test.ts": 1154,
+    "src/db/reminders.test.ts": 1078,
+    "src/db/rental-fit.test.ts": 1227,
+    "src/db/reporting.test.ts": 1594,
+    "src/db/retention.test.ts": 1262,
+    "src/db/reviews.test.ts": 1004,
+    "src/db/seat-claims.test.ts": 1047,
+    "src/db/self-declared-cards.test.ts": 1864,
+    "src/db/staffing.test.ts": 946,
+    "src/db/trips-crew.test.ts": 1489,
+    "src/db/trips-queries.test.ts": 1143,
+    "src/db/trips-series.test.ts": 1873,
+    "src/db/waiver-issue.test.ts": 1051,
+    "src/db/work-orders.test.ts": 1408,
+    "src/i18n/label-maps.test.ts": 1331,
+    "src/lib/agency-check.test.ts": 930,
+    "src/lib/dive-prep.test.ts": 1983,
+    "src/lib/import.test.ts": 1459,
+    "src/lib/incident-export.test.ts": 1187,
+    "src/lib/manifests.test.ts": 1320,
+    "src/lib/notifications/email.test.ts": 1480,
+    "src/lib/offline-manifest-store.test.ts": 1018,
+    "src/lib/offline-manifests.test.ts": 2179,
+    "src/lib/readiness.test.ts": 1614,
+    "src/lib/staffing-week.test.ts": 1115,
+    "src/lib/today.test.ts": 1651,
+    "src/lib/trip-admission.test.ts": 918,
+    "src/lib/waivers.test.ts": 1205,
+    "src/proxy.test.ts": 1241
+  },
   "function-length": {
-    "//": "Line counts of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 400 lines, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
+    "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "//absorbed": [
       {
         "why": "merge of layer 4 (speed layer grew getTodayWork and ManageTripPage; the erasure split shrank scrub)",
@@ -220,38 +371,57 @@
         "files": {
           "src/db/seed-more-trips.ts#seedMoreTrips": "735 -> 739"
         }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": "0 -> 301"
+        }
+      },
+      {
+        "why": "merge of opportunities batch 6 (#2596, #2597) into the code review runtime layer: the Stripe webhook route and its test, the trip actions authz test and DetailsSection grew on that side",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": "328 -> 329"
+        }
+      },
+      {
+        "why": "merge of #2610, whose stricter length ratchet postdates the cert-check extension's Today diver link and agency-check tests",
+        "files": {
+          "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": "0 -> 304"
+        }
       }
     ],
-    "src/app/api/webhooks/stripe/route.ts#POST": 457,
     "src/app/ready/[token]/page.tsx#DiverReadinessPage": 493,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 666,
-    "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,
-    "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 568,
-    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 661,
-    "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 488,
-    "src/app/shop/[shopSlug]/divers/[personId]/page.tsx#DiverDetailPage": 404,
-    "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 402,
-    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 578,
-    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 682,
-    "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 453,
-    "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 565,
-    "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 553,
-    "src/app/shop/[shopSlug]/staffing/page.tsx#StaffingPage": 419,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 405,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 441,
-    "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
-    "src/db/bookings.ts#createBookingRecord": 463,
-    "src/db/checkouts.ts#startBookingCheckout": 443,
-    "src/db/export.ts#loadShopExportContext": 495,
-    "src/db/reminders.ts#sendDueReminders": 448,
-    "src/db/reporting.ts#getMonthlyReport": 510,
-    "src/db/seed-dive-sites.ts#seedDiveSites": 525,
-    "src/db/seed-history.ts#seedHistory": 854,
-    "src/db/seed-more-trips.ts#seedMoreTrips": 739,
-    "src/db/seed-trips.ts#seedTrips": 582,
-    "src/db/seed.ts#resetDemoSchedule": 449,
-    "src/lib/import.ts#prepareContactImport": 638
+    "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 383,
+    "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
+    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 519,
+    "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 388,
+    "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
+    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 421,
+    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 463,
+    "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 377,
+    "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 409,
+    "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 467,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 424,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 366,
+    "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 345,
+    "src/db/checkouts.ts#startBookingCheckout": 303,
+    "src/db/export.ts#loadShopExportContext": 338,
+    "src/db/reminders.ts#sendDueReminders": 340,
+    "src/db/reporting.ts#getMonthlyReport": 338,
+    "src/db/seed-dive-sites.ts#seedDiveSites": 467,
+    "src/db/seed-history.ts#seedHistory": 742,
+    "src/db/seed-more-trips.ts#seedMoreTrips": 642,
+    "src/db/seed-trips.ts#seedTrips": 431,
+    "src/lib/import.ts#prepareContactImport": 508,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 304,
+    "src/app/shop/[shopSlug]/gear/page.tsx#GearRegisterPage": 308,
+    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
+    "src/app/shop/[shopSlug]/settings/integrations/page.tsx#IntegrationsSettingsPage": 306,
+    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": 301
   },
   "live-people": {
     "//": "Reads of `people` written before scripts/check-live-people.mjs that carry no `livePerson()`, per file. Most are right (a by-id read in a transaction, a name for an activity line); a count may only fall. Written by `node scripts/check-live-people.mjs --write`.",
@@ -310,11 +480,11 @@
     "src/app/pricing/page.tsx": 468,
     "src/app/ready/[token]/page.tsx": 672,
     "src/app/s/[shopSlug]/page.tsx": 879,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 530,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 529,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 727,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,
-    "src/app/shop/[shopSlug]/dive-sites/page.tsx": 621,
+    "src/app/shop/[shopSlug]/dive-sites/page.tsx": 618,
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 506,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 479,
@@ -339,6 +509,15 @@
     "//": "Bare heading spellings still typed at a call site, per file. Written by `node scripts/check-type-ramp.mjs --write`. This number may only go down — see scripts/check-type-ramp.mjs."
   },
   "voice": {
-    "//": "Voice tells — a machine-written mannerism, or a straight apostrophe or double quote where the house ’ and “ ” belong — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs."
+    "//": "Voice tells — a machine-written mannerism, or a straight apostrophe or double quote where the house ’ and “ ” belong — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs.",
+    "//absorbed": [
+      {
+        "why": "Grey Ghost is the wreck's name as FWC and the dive trail list her",
+        "files": {
+          "src/content/dive-sites/florida-panhandle.ts": "0 -> 1"
+        }
+      }
+    ],
+    "src/content/dive-sites/florida-panhandle.ts": 1
   }
 }

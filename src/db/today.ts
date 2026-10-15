@@ -7,6 +7,7 @@ import {
   unitsUnconfirmedDetailText,
   unitsUnconfirmedSubjectText,
 } from "@/i18n/today-labels";
+import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -37,6 +38,7 @@ import { boatStageOf, tripPhaseOf } from "@/lib/trip-phase";
 import type { TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
 import { shopDayBounds } from "@/lib/zoned";
+import { listAgencyCheckableCards } from "./agency-check";
 import {
   blockedOnNextBoatDay,
   type HorizonReadinessEvidence,
@@ -84,7 +86,11 @@ import {
   tripWaitlistEntries,
 } from "./schema";
 import { listStaffCredentials } from "./staff-credentials";
-import { canAcceptPayments, shopStripeAccountForRender } from "./stripe-accounts";
+import {
+  canAcceptPayments,
+  paymentsRestrictedSince,
+  shopStripeAccountForRender,
+} from "./stripe-accounts";
 import { pushDepartureRows } from "./today-departure-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { pushRollCallRows } from "./today-roll-call-rows";
@@ -365,6 +371,12 @@ export type OpenRollCall = {
   underway: boolean;
   /** Older than the dock-work window — kept as residue rather than vanishing. */
   stale: boolean;
+  /**
+   * When the owners were alerted that this departure's count was still open
+   * after the boat was due back (batch 6, item 6; src/db/roll-call-alerts.ts),
+   * or null. Optional so a gap assembled by hand says nothing about it.
+   */
+  alertedAt?: Date | null;
 };
 
 /**
@@ -478,6 +490,7 @@ export async function listRollCallGaps(
       capacity: trips.capacity,
       priceCents: trips.priceCents,
       plannedDives: trips.plannedDives,
+      alertedAt: trips.rollCallAlertedAt,
     })
     .from(trips)
     .where(
@@ -672,6 +685,7 @@ export async function listRollCallGaps(
       rosterSize: bookingIds.length,
       underway,
       stale,
+      alertedAt: trip.alertedAt,
     };
 
     // A human said a diver did not come back. That outranks every other gap on
@@ -1524,6 +1538,15 @@ async function readTodayWave(
     owingBookingIds,
     noOpenOrders,
   } = input;
+  // The shop's Stripe account, read at most once in this wave whoever asks
+  // first: the owner's restricted-payments row and the payment rows' invoice
+  // controls both read it. In a render it is also the page's own read
+  // (`shopStripeAccountForRender`'s `cache()`).
+  let accountRead: ReturnType<typeof shopStripeAccountForRender> | undefined;
+  const stripeAccount = () => {
+    accountRead ??= shopStripeAccountForRender(db, shopId);
+    return accountRead;
+  };
   const [
     departureRollCall,
     departureCrewRollCall,
@@ -1647,6 +1670,7 @@ async function readTodayWave(
             olderThan: new Date(now.getTime() - OWED_REFUND_STALE_AFTER_MS),
           }),
           listOpenPaymentDisputes(db, shopId),
+          stripeAccount().then(paymentsRestrictedSince),
         ])
       : null,
     readReviewsAwaitingModeration(db, shopId),
@@ -1704,7 +1728,7 @@ async function readTodayWave(
     // render (`shopStripeAccountForRender`).
     owingBookingIds.length === 0
       ? noOpenOrders
-      : shopStripeAccountForRender(db, shopId).then((account) =>
+      : stripeAccount().then((account) =>
           canAcceptPayments(account)
             ? openOrdersForBookings(db, shopId, owingBookingIds)
             : noOpenOrders,
@@ -1839,21 +1863,31 @@ export async function getTodayWork(
   });
 
   // **One wave** (`readTodayWave`): every read takes only the shop, the
-  // window and the clock, so none waits on another.
-  const wave = await readTodayWave(db, shopId, {
-    now,
-    horizon,
-    timeZone,
-    inWindow,
-    todayTrips,
-    todayTripIds,
-    todayLocal,
-    bookingIdsByTrip,
-    includeOpsAlerts,
-    personId,
-    owingBookingIds,
-    noOpenOrders,
-  });
+  // window and the clock, so none waits on another. Beside it, the cards a
+  // "certification pending" row could check (H-105), read now rather than
+  // after the queue is built so they cost no phase of their own: every diver
+  // the evidence blocks on a pending card is asked about, a superset of the
+  // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
+  const [wave, agencyCheckCards] = await Promise.all([
+    readTodayWave(db, shopId, {
+      now,
+      horizon,
+      timeZone,
+      inWindow,
+      todayTrips,
+      todayTripIds,
+      todayLocal,
+      bookingIdsByTrip,
+      includeOpsAlerts,
+      personId,
+      owingBookingIds,
+      noOpenOrders,
+    }),
+    listAgencyCheckableCards(db, {
+      shopId,
+      personIds: agencyCheckCandidates(readinessByTrip),
+    }),
+  ]);
   const {
     departureRollCall,
     departureCrewRollCall,
@@ -2000,7 +2034,10 @@ export async function getTodayWork(
       });
   }
 
-  const visibleActions = filterActionsForRoles(actions, roles);
+  const visibleActions = attachAgencyChecks(
+    filterActionsForRoles(actions, roles),
+    agencyCheckCards,
+  );
 
   return {
     departures,
@@ -2023,4 +2060,58 @@ export async function getTodayWork(
     crewedSessions,
     availableStaff,
   };
+}
+
+/**
+ * **The cards a "certification pending" row can check from Today** (H-105).
+ * The queue names the diver (`diverBlockerAction`); this reads which of their
+ * cards the DiveDay browser extension could look up, by the same rule as the
+ * action that judges the check (`listAgencyCheckableCards`), and drops the
+ * offer from a row whose diver holds none.
+ */
+export async function withAgencyChecks(
+  db: AppDb,
+  shopId: string,
+  actions: TodayAction[],
+): Promise<TodayAction[]> {
+  const personIds = actions.flatMap((action) =>
+    action.agencyCheck ? [action.agencyCheck.personId] : [],
+  );
+  if (personIds.length === 0) return actions;
+  return attachAgencyChecks(actions, await listAgencyCheckableCards(db, { shopId, personIds }));
+}
+
+/**
+ * Who on the window's seats a "certification pending" row could name: blocked
+ * on a pending card, and not a held seat (`diverBlockerAction` offers no check
+ * to one until a staffer confirms who is standing there).
+ */
+function agencyCheckCandidates(
+  readinessByTrip: HorizonReadinessEvidence["readinessByTrip"],
+): string[] {
+  const personIds: string[] = [];
+  for (const rows of readinessByTrip.values()) {
+    for (const row of rows) {
+      const codes = row.readiness.blockers.map((blocker) => blocker.code);
+      if (codes.includes("certification_pending") && !codes.includes("identity_unconfirmed")) {
+        personIds.push(row.person.id);
+      }
+    }
+  }
+  return personIds;
+}
+
+/** Fills each row's offer from the cards read, and drops it where the diver holds none. */
+function attachAgencyChecks(
+  actions: TodayAction[],
+  cards: ReadonlyMap<string, AgencyCheckableCard[]>,
+): TodayAction[] {
+  return actions.map((action) => {
+    if (!action.agencyCheck) return action;
+    const { agencyCheck, ...rest } = action;
+    const found = cards.get(agencyCheck.personId);
+    return found
+      ? { ...rest, agencyCheck: { personId: agencyCheck.personId, cards: found } }
+      : rest;
+  });
 }

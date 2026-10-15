@@ -16,7 +16,11 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
-import { issueBookingCapability } from "./booking-capabilities";
+import {
+  type IssuedCapability,
+  issueBookingCapabilities,
+  issueBookingCapability,
+} from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { lastDayStartsAt } from "./departure-notes";
 import { holdSend } from "./held-sends";
@@ -297,6 +301,23 @@ export async function sendRescheduleNotices(
     ? meetingPointForMessage(meetingPointOfRows(shop, trip))
     : undefined;
   const channels = await seatChannels(db, shop.id, options);
+  // **Every reachable seat's link in one insert, before the sends** (code
+  // review 2026-10-13b, item 36): this loop minted one per seat, three
+  // statements each, the shape `sendDepartureNote` left (item 35). The same
+  // seats as before: not a held one, not one with nowhere to send it.
+  const links = channels.origin
+    ? await issueBookingCapabilities(db, {
+        shopId: shop.id,
+        bookingIds: seats
+          .filter(
+            ({ booking, person }) =>
+              !booking.identityUnconfirmedAt && (person.email || smsRecipient(person.phone)),
+          )
+          .map(({ booking }) => booking.id),
+        purpose: "readiness",
+        now,
+      })
+    : new Map<string, IssuedCapability>();
   for (const { booking, person } of seats) {
     if (booking.identityUnconfirmedAt) {
       outcome.identityHeld += 1;
@@ -311,6 +332,7 @@ export async function sendRescheduleNotices(
       meetingPoint,
       channels,
       now,
+      capability: links.get(booking.id) ?? null,
     });
     outcome[told] += 1;
   }
@@ -345,7 +367,9 @@ async function seatChannels(
  * Tell one seat its new time, by its usual channel: the email on the seat's own
  * person record with the courtesy text riding a delivered email, or the
  * courtesy text alone when there is no email. `seatMovedAt` marks a seat that
- * moved to another departure rather than a departure that moved.
+ * moved to another departure rather than a departure that moved. `capability`
+ * is the seat's readiness link when the caller minted it ahead (a whole
+ * departure's, in one insert); left out, one is minted here.
  */
 async function tellSeat(
   db: AppDb,
@@ -359,6 +383,7 @@ async function tellSeat(
     channels: SeatChannels;
     now: Date;
     seatMovedAt?: Date;
+    capability?: IssuedCapability | null;
   },
 ): Promise<"told" | "failed"> {
   const {
@@ -386,14 +411,17 @@ async function tellSeat(
   }
   const locale = recipientLocale(person.locale, shop.defaultLocale);
   const t = diverTranslator(locale);
-  const capability = channels.origin
-    ? await issueBookingCapability(db, {
-        shopId: shop.id,
-        bookingId: booking.id,
-        purpose: "readiness",
-        now,
-      })
-    : null;
+  const capability =
+    input.capability !== undefined
+      ? input.capability
+      : channels.origin
+        ? await issueBookingCapability(db, {
+            shopId: shop.id,
+            bookingId: booking.id,
+            purpose: "readiness",
+            now,
+          })
+        : null;
   const readinessUrl = capability
     ? new URL(readinessLinkPath(capability.token), `${channels.origin}/`).toString()
     : undefined;

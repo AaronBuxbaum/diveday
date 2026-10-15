@@ -8,7 +8,7 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageShopSettings } from "@/db/authz";
-import { countTripLensDepartures, listTripLenses } from "@/db/trip-lenses";
+import { countDeparturesByTripLens, listTripLenses } from "@/db/trip-lenses";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
@@ -64,13 +64,11 @@ export default async function TripTagsSettingsPage({
   });
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const shopLenses = await listTripLenses(db, session.user.shopId);
-  // The same count as the fleet's, one word at a time: a shop's vocabulary is a
-  // handful of rows and there is nothing to win by fanning out.
-  const lensDepartures = new Map<string, number>();
-  for (const lens of shopLenses) {
-    lensDepartures.set(lens.id, await countTripLensDepartures(db, session.user.shopId, lens.id));
-  }
+  // The same count as the fleet's: one grouped read beside the words.
+  const [shopLenses, lensDepartures] = await Promise.all([
+    listTripLenses(db, session.user.shopId),
+    countDeparturesByTripLens(db, session.user.shopId),
+  ]);
   const banner = noticeFromParam(notice, lensNoticeMessages(t));
 
   return (

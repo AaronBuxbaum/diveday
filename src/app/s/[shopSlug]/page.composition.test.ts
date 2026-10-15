@@ -1,6 +1,10 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeSource } from "@/test/route-source";
+
+/** The route's source, wherever a split put it (`src/test/route-source.ts`). */
+function component(file: string): string {
+  return routeSource(import.meta.dirname, file);
+}
 
 /**
  * The public schedule's identity band has one next-departure surface. The
@@ -8,7 +12,7 @@ import { describe, expect, it } from "vitest";
  * a live shop and schedule, while the regression is the JSX order and the
  * accidental reintroduction of the old two-column card slot.
  */
-const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const SOURCE = component("page.tsx");
 
 function positionOf(marker: string): number {
   return SOURCE.indexOf(marker);
@@ -65,7 +69,7 @@ describe("the schedule's pager row", () => {
     expect(SOURCE).toMatch(/\{showsWeekLedger \? \(\s*<WeekLedger\b/);
     const pager = SOURCE.slice(positionOf("(nextCursor || after || explicitMonth) ? ("));
     expect(pager).toMatch(/^[^<]*<SchedulePagerRow\s[^>]*followsWeekLedger=\{showsWeekLedger\}/);
-    const row = readFileSync(join(__dirname, "_components/SchedulePagerRow.tsx"), "utf8");
+    const row = component("SchedulePagerRow.tsx");
     expect(row).toMatch(
       /<div\s+className=\{`flex flex-wrap items-center gap-3 \$\{followsWeekLedger \? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"\}`\}/,
     );
@@ -82,7 +86,7 @@ describe("the off-season ask's heading", () => {
   it("is handed the rung the page's other section heads use", () => {
     // The promoted ask lives in its own component (`PromotedDateAsk`), which
     // draws the page's one open `DateRequestForm`.
-    const ask = readFileSync(join(__dirname, "_components", "PromotedDateAsk.tsx"), "utf8");
+    const ask = component("PromotedDateAsk.tsx");
     const start = ask.indexOf("<DateRequestForm");
     const call = ask.slice(start, ask.indexOf("/>", start));
     expect(call).toContain("headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}");
@@ -124,7 +128,7 @@ describe("the lens rail's place", () => {
     // the widget has literally zero navigation landmarks.
     expect(SOURCE).toContain("hasUpcoming && !isEmbed && lenses.length > 0");
     // The page's reads live in `readSchedulePage`, which the page calls once.
-    const reads = readFileSync(join(__dirname, "_components/schedule-reads.ts"), "utf8");
+    const reads = component("schedule-reads.ts");
     expect(countOf("await readSchedulePage(")).toBe(1);
     expect(reads).toContain("isEmbed ? Promise.resolve([]) : listTripLenses(");
   });
@@ -156,7 +160,7 @@ describe("the storefront's section rhythm", () => {
   });
 
   it("opens the skeleton's week at the same gap", () => {
-    const skeleton = readFileSync(join(__dirname, "loading.tsx"), "utf8");
+    const skeleton = component("loading.tsx");
     expect(skeleton).not.toMatch(/\bmt-10\b/);
     expect(skeleton).toMatch(/className="mt-12 animate-pulse"/);
   });
@@ -171,7 +175,7 @@ describe("the storefront's section rhythm", () => {
  */
 describe("the boats grid", () => {
   it("takes the course shelf's columns and gutter", () => {
-    const shelf = readFileSync(join(__dirname, "_components/CoursesShelf.tsx"), "utf8");
+    const shelf = component("CoursesShelf.tsx");
     const shelfGrid = shelf.match(/<ul className="(mt-4 grid [^"]*)"/)?.[1];
     const boats = SOURCE.slice(positionOf('aria-labelledby="boats-heading"'));
     const boatsGrid = boats.match(/<ul className="([^"]*)"/)?.[1];

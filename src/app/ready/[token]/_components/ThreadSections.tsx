@@ -22,6 +22,7 @@ import { signMinorWaiverAction } from "../party-actions";
 import { CourseMaterials } from "./CourseMaterials";
 import { CANCEL_PREVIEW_KEY } from "./cancel-notices";
 import { MoveAsk } from "./MoveAsk";
+import { PartyCancelPlan, partyCancelSeats } from "./PartyCancelPlan";
 import { PartySection } from "./PartySection";
 import { RunningLate } from "./RunningLate";
 
@@ -86,6 +87,10 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
   const legTravelTimes = tripDives.map(({ dive }) => dive.travelMinutes);
 
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
+  // A lead's cancel takes their unclaimed seats with it; the confirm says
+  // which go and which stay before the tap (batch 6 item 10).
+  const partyCancel = partyCancelSeats(partySeatClaims);
+  const hasParty = partyCancel.goes.length + partyCancel.stays.length > 0;
 
   return (
     <>
@@ -214,11 +219,23 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
                 triggerLabel={t("ready.cancelSpot")}
                 triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
                 message={[
-                  t("ready.cancelConfirm", { trip: detail.trip.title }),
-                  cancelPreviewKey ? t(cancelPreviewKey) : null,
+                  t(hasParty ? "ready.cancelConfirmParty" : "ready.cancelConfirm", {
+                    trip: detail.trip.title,
+                  }),
+                  hasParty ? null : cancelPreviewKey ? t(cancelPreviewKey) : null,
                 ]
                   .filter(Boolean)
                   .join(" ")}
+                extra={
+                  hasParty ? (
+                    <PartyCancelPlan
+                      seats={partyCancel}
+                      preview={cancelPreviewKey ? t(cancelPreviewKey) : null}
+                      locale={locale}
+                      t={t}
+                    />
+                  ) : undefined
+                }
                 confirmLabel={t("ready.cancelConfirmButton")}
                 cancelLabel={t("ready.neverMind")}
                 pendingLabel={t("ready.cancelling")}

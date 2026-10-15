@@ -7,7 +7,8 @@
     "tapHeadingIn": "De regreso",
     "tapHome": "En puerto",
     "recordedLine": "{name} · {time}",
-    "errorRefusal": "No se guardó. Revisa tu conexión y vuelve a tocar."
+    "errorRefusal": "No se guardó. Revisa tu conexión y vuelve a tocar.",
+    "openRollCall": "Abrir pase de lista"
   },
   "skipToRollCall": "Ir al pase de lista",
   "stillToBoardHeading": "Pendientes de embarcar ({count})",
@@ -35,6 +36,7 @@
   "aboardOfTotal": "{aboard} de {total, plural, one {# buceador} other {# buceadores}} a bordo",
   "headCountBlocked": "{count, plural, one {# bloqueado} other {# bloqueados}}",
   "headCountBlockedAboard": "{count, plural, one {# persona bloqueada a bordo} other {# personas bloqueadas a bordo}}",
+  "headCountOverCertificate": "{limit, plural, one {El certificado permite # pasajero} other {El certificado permite # pasajeros}}",
   "progressAriaLabel": "Progreso del pase de lista",
   "ofTotalAboard": "de {total, plural, one {# buceador} other {# buceadores}} a bordo",
   "allAccountedFor": "Todos contabilizados, buceadores y tripulación. Listo para el siguiente control.",
@@ -251,5 +253,18 @@
       "snorkeler": "Bucea, reservó como snorkel",
       "rider": "Bucea, reservó como acompañante"
     }
+  },
+  "checkpointGap": {
+    "lineDivers": "{divers, plural, one {# buceador sin marcar} other {# buceadores sin marcar}} después de la inmersión {dive}.",
+    "lineCrew": "{crew, plural, one {# tripulante sin marcar} other {# tripulantes sin marcar}} después de la inmersión {dive}.",
+    "lineBoth": "{divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}} sin marcar después de la inmersión {dive}.",
+    "notCounted": "La inmersión {dive} no se ha contado. Si se canceló, deja el plan en {plan, plural, one {# inmersión} other {# inmersiones}}.",
+    "setPlan": "Cambiar el plan",
+    "openAnyway": "Abrir igualmente",
+    "back": "Volver a la inmersión {dive}"
+  },
+  "staleRollCall": {
+    "pushTitle": "Pase de lista aún abierto",
+    "pushBody": "{title}: {count, plural, one {# persona sin marcar} other {# personas sin marcar}} después de la inmersión {dive}."
   }
 }

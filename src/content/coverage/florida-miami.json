@@ -1,0 +1,749 @@
+{
+  "area": "florida-miami",
+  "method": "Miami-Dade, Sunny Isles to Biscayne National Park. Operator lists: Diver's Paradise, Dive Miami Beach, Ace Diving, Squalo Divers; Biscayne NP's Maritime Heritage Trail. Tenneco Towers is placed here because FWC records it in Miami-Dade. Sites are counted when named on at least two independent lists; an official list (FWC artificial reefs, the 2024 FDEP Southeast Florida mooring-buoy brochure, a county reef layer, Florida's underwater archaeological preserves, NPS) counts as one, each operator or tourism-board site list as another. FWC deployments count only when an operator names them; technical-depth wrecks (operator- or FWC-stated depth beyond ~135 ft) and one-list names are recorded as excluded. Multi-wreck dives sold as one dive are one row, with the wrecks as aliases. Counted 2026-10-14 from pages fetched that day.",
+  "sources": [
+    "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+    "https://diversparadise.miami/divesites/",
+    "https://www.divemiamibeach.com/dive-sites",
+    "https://www.ace-diving.com/dive-sites",
+    "https://www.scubadivinginmiami.com/dive-sites/page/3/",
+    "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+    "https://museumsinthesea.com/",
+    "https://www.scubadivinginmiami.com/dive-sites/",
+    "https://www.scubadivinginmiami.com/dive-sites/page/2/",
+    "https://www.scubadivinginmiami.com/dive-sites/page/4/",
+    "https://www.nps.gov/bisc/learn/historyculture/maritime-heritage-trail.htm",
+    "https://seaxp.com/south-florida-wrecks/"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Neptune Memorial Reef",
+      "template": "neptune-memorial-reef",
+      "position": [25.70058, -80.08997],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/3/"
+      ]
+    },
+    {
+      "name": "Emerald Reef",
+      "template": "emerald-reef",
+      "position": [25.67735, -80.09738],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Rainbow Reef",
+      "template": "rainbow-reef-miami",
+      "position": [25.69198, -80.09717],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/3/"
+      ]
+    },
+    {
+      "name": "Flamingo Reef",
+      "template": "flamingo-reef",
+      "position": [25.7039, -80.0997],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://diversparadise.miami/divesites/"
+      ]
+    },
+    {
+      "name": "RJ's Ledge",
+      "template": "rjs-ledge",
+      "position": [25.72242, -80.0992],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Graceland Reef",
+      "template": "graceland-reef",
+      "position": [25.93547, -80.11072],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://diversparadise.miami/divesites/"
+      ]
+    },
+    {
+      "name": "The Pillars",
+      "template": "the-pillars-miami",
+      "position": [25.86033, -80.09963],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://diversparadise.miami/divesites/"
+      ]
+    },
+    {
+      "name": "Jose Cuervo (underwater bar)",
+      "template": "jose-cuervo-underwater-bar",
+      "position": [25.7689, -80.12823],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://diversparadise.miami/divesites/"
+      ]
+    },
+    {
+      "name": "Half Moon",
+      "template": "half-moon-preserve",
+      "position": [25.72757, -80.13448],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://museumsinthesea.com/",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Anchorage Wreck Trek (Miami Wreck Trek, Radio Tower Wreck Trek: Patricia, Miss Karline, Radio Towers, Billy's Barge, Koppin, Larsen Barge)",
+      "template": "anchorage-wreck-trek",
+      "position": [25.8115, -80.0907],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/3/"
+      ]
+    },
+    {
+      "name": "Army Tanks",
+      "template": "miami-army-tanks",
+      "position": [25.81133, -80.09133],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Matthew Lawrence",
+      "template": "matthew-lawrence",
+      "position": [25.81143, -80.09008],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/2/"
+      ]
+    },
+    {
+      "name": "Deep Trench",
+      "template": null,
+      "listedBy": [
+        "https://diversparadise.miami/divesites/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/2/"
+      ]
+    },
+    {
+      "name": "The Pipes",
+      "template": null,
+      "listedBy": [
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "Fish Hole",
+      "template": null,
+      "listedBy": [
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "The Cascades",
+      "template": null,
+      "listedBy": [
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Mandalay",
+      "template": "mandalay-wreck",
+      "listedBy": [
+        "https://www.nps.gov/bisc/learn/historyculture/maritime-heritage-trail.htm",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Belcher Barge",
+      "template": "belcher-barge",
+      "position": [25.69683, -80.088],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Belzona Barge",
+      "template": "belzona-barge",
+      "position": [25.7011, -80.08916],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Belzona One",
+      "template": "belzona-one",
+      "position": [25.69583, -80.087],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Belzona Two (Belzona II)",
+      "template": "belzona-two",
+      "position": [25.69596, -80.08766],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Belzona Three",
+      "template": "belzona-three",
+      "position": [25.69583, -80.08733],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "HAV Parker III Barge",
+      "template": "hav-parker-iii-barge",
+      "position": [25.697, -80.08721],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Schurger's Barge",
+      "template": "schurgers-barge",
+      "listedBy": [
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Lady Frei (Lady Free Schooner)",
+      "template": null,
+      "position": [25.69083, -80.07883],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/"
+      ]
+    },
+    {
+      "name": "Biscayne (Banana Freighter)",
+      "template": "biscayne-wreck",
+      "position": [25.70438, -80.08836],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Proteus",
+      "template": "proteus-miami",
+      "position": [25.70546, -80.08733],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Rio Miami",
+      "template": "rio-miami",
+      "position": [25.70276, -80.0872],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "DEMA Trader",
+      "template": "dema-trader",
+      "position": [25.70363, -80.08691],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/2/"
+      ]
+    },
+    {
+      "name": "Princess Britney",
+      "template": "princess-britney",
+      "position": [25.70048, -80.08683],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/3/"
+      ]
+    },
+    {
+      "name": "Paraiso",
+      "template": "paraiso-wreck",
+      "position": [25.70153, -80.0873],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Spirit of Miami (727)",
+      "template": "miami-river-barge-zt-202",
+      "position": [25.698, -80.087],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Sheri-Lyn",
+      "template": "sheri-lyn-wreck",
+      "position": [25.70232, -80.08605],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "Tacoma",
+      "template": "tacoma-wreck",
+      "position": [25.70016, -80.08445],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Ophelia Brian",
+      "template": "ophelia-brian-wreck",
+      "position": [25.70576, -80.0858],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/3/"
+      ]
+    },
+    {
+      "name": "Miami River Barge (ZT 202)",
+      "template": null,
+      "position": [25.70243, -80.08503],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Orion",
+      "template": "orion-tug",
+      "position": [25.691, -80.08633],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Arida",
+      "template": null,
+      "position": [25.68051, -80.07081],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "South Seas",
+      "template": "south-seas-wreck",
+      "position": [25.66506, -80.07028],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Miracles Express",
+      "template": "miracles-express",
+      "position": [25.6699, -80.07263],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Ultra Freeze",
+      "template": "ultra-freeze-wreck",
+      "position": [25.62901, -80.08691],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Tarpoon",
+      "template": "tarpoon-wreck",
+      "position": [25.62193, -80.091],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "St. Anne d'Auray",
+      "template": "st-anne-dauray",
+      "position": [25.6177, -80.09051],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "Blue Fire",
+      "template": "blue-fire-wreck",
+      "position": [25.56662, -80.09052],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Almirante",
+      "template": "almirante-wreck",
+      "position": [25.416, -80.118],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Belcher Barge II (deep)",
+      "template": "belcher-barge-ii",
+      "position": [25.41291, -80.1191],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Tortuga",
+      "template": "tortuga-wreck",
+      "position": [25.8209, -80.08476],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "Deep Freeze",
+      "template": "deep-freeze-wreck",
+      "position": [25.82171, -80.08253],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "St Henry Express",
+      "template": "st-henry-express",
+      "position": [25.82201, -80.08498],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Betek AR Pen Ship",
+      "template": "betek-ar-pen",
+      "position": [25.82255, -80.08521],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Gimrock / Atlas Recycling Barge",
+      "template": "gimrock-atlas-recycling-barge",
+      "position": [25.82041, -80.08441],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Pimelious",
+      "template": "pimelious-wreck",
+      "position": [25.83597, -80.08206],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Shamrock",
+      "template": "shamrock-wreck",
+      "position": [25.77343, -80.07338],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "C-One",
+      "template": "c-one-tug",
+      "position": [25.90871, -80.0901],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Carmen",
+      "template": "lady-carmen-tug",
+      "position": [25.90888, -80.09061],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Conception",
+      "template": "conception-wreck",
+      "position": [25.90936, -80.08995],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "White Coast tug",
+      "template": "white-coast-tug",
+      "position": [25.90877, -80.0901],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Timothy Allen Reed Reef",
+      "template": "timothy-allen-reed-reef",
+      "position": [25.9084, -80.09046],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Andro",
+      "template": "andro-wreck",
+      "position": [25.8937, -80.08543],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Narwal",
+      "template": "narwal-wreck",
+      "position": [25.91066, -80.08416],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Tenneco Towers (shallow towers)",
+      "template": "tenneco-towers",
+      "position": [25.98253, -80.085],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "Royal Reef",
+      "template": null,
+      "position": [25.7283, -80.0999],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf"
+      ],
+      "excluded": "buoy list only; no operator list found"
+    },
+    {
+      "name": "Paradise Reef",
+      "template": null,
+      "position": [25.6601, -80.0974],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf"
+      ],
+      "excluded": "buoy list only; no operator list found"
+    },
+    {
+      "name": "North Canyon",
+      "template": null,
+      "position": [25.93008, -80.10588],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf"
+      ],
+      "excluded": "buoy list only; no operator list found"
+    },
+    {
+      "name": "South Canyon",
+      "template": null,
+      "position": [25.86045, -80.10842],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf"
+      ],
+      "excluded": "buoy list only; no operator list found"
+    },
+    {
+      "name": "Golden Beach Boulders",
+      "template": null,
+      "position": [25.9628, -80.0981],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf"
+      ],
+      "excluded": "buoy list only; no operator list found"
+    },
+    {
+      "name": "Brewster Reef / Car Frame Reef / Cuban Freighter Reef / Darrel's Ledge / Patty's Patch / Sugar Bear / Keith's Kanyon / Mike's Terrace / Jake's Jungle / Pete's Reef / Rock Pile / North Pipe / The Aquarium / RJ's Groove / South Deep Trench",
+      "template": null,
+      "listedBy": ["https://diversparadise.miami/divesites/"],
+      "excluded": "each on one operator list only (Diver's Paradise)"
+    },
+    {
+      "name": "Starfish Reef",
+      "template": null,
+      "listedBy": ["https://www.ace-diving.com/dive-sites"],
+      "excluded": "on one operator list only (Ace Diving)"
+    },
+    {
+      "name": "Doc de Milly",
+      "template": null,
+      "position": [25.36772, -80.13135],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ],
+      "excluded": "beyond recreational depth (FWC bottom 140 ft; Diver's Paradise dives it only on special occasions)"
+    },
+    {
+      "name": "Lakeland",
+      "template": null,
+      "position": [25.66778, -80.0835],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ],
+      "excluded": "beyond recreational depth (142-150 ft per operators; Diver's Paradise calls it just beyond sport limits)"
+    },
+    {
+      "name": "Etoile de Mer / Brandywine / Miguana (Operation Riverwalk trek)",
+      "template": null,
+      "position": [25.6995, -80.08316],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.divemiamibeach.com/dive-sites",
+        "https://www.ace-diving.com/dive-sites"
+      ],
+      "excluded": "beyond recreational depth (135-150 ft per operators); sold as a technical trek"
+    },
+    {
+      "name": "Water Tower Reef / Star Trek / Mystic Isle / Jupiter Star / Tenneco Towers (deep)",
+      "template": null,
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://diversparadise.miami/divesites/",
+        "https://www.ace-diving.com/dive-sites"
+      ],
+      "excluded": "technical depth (155-210 ft)"
+    },
+    {
+      "name": "Erl King / Alicia / Lugano / Arratoon Apcar / Fowey Rocks Lighthouse / unknown 19th-century vessel",
+      "template": null,
+      "listedBy": ["https://www.nps.gov/bisc/learn/historyculture/maritime-heritage-trail.htm"],
+      "excluded": "Biscayne NP Maritime Heritage Trail only; no operator lists them by name (Ace's park page restates the NPS trail)"
+    }
+  ]
+}

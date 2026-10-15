@@ -16,6 +16,7 @@ import {
   type GearServiceKind,
 } from "@/lib/gear";
 import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
+import { INCIDENT_KINDS, INCIDENT_SEVERITIES } from "@/lib/incident-reports";
 import type { BuddyAlert, RollCallLabel } from "@/lib/manifests";
 import { CARDINAL_DIRECTIONS, SEA_STATES, WIND_STATES } from "@/lib/marine-forecast";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
@@ -69,6 +70,7 @@ import {
   guardianRelationshipText,
   staffGuardianRelationshipOptions,
 } from "./guardian-labels";
+import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "./incident-labels";
 import { rollCallLabelText } from "./manifest-labels";
 import { diverTranslator } from "./messages";
 import {
@@ -646,6 +648,22 @@ const CASES: readonly LabelMapCase[] = [
     map: "DIVER_FACT_SOURCE_KEYS",
     rows: codeRows(keysOf(DIVER_FACT_SOURCE_KEYS), (locale, source) =>
       diverTranslator(locale)(DIVER_FACT_SOURCE_KEYS[source]),
+    ),
+  },
+  {
+    module: "incident-labels.ts",
+    map: "INCIDENT_KIND_KEYS",
+    // `injury` reads "Injury or illness", and `fatality` is its own kind
+    // (dive-domain review 20261014).
+    rows: codeRows(INCIDENT_KINDS, (locale, kind) =>
+      staffTranslator(locale)(INCIDENT_KIND_KEYS[kind]),
+    ),
+  },
+  {
+    module: "incident-labels.ts",
+    map: "INCIDENT_SEVERITY_KEYS",
+    rows: codeRows(INCIDENT_SEVERITIES, (locale, severity) =>
+      staffTranslator(locale)(INCIDENT_SEVERITY_KEYS[severity]),
     ),
   },
   {

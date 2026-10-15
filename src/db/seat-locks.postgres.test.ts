@@ -1,0 +1,181 @@
+import { eq, sql } from "drizzle-orm";
+import { expect, it } from "vitest";
+import { HOUR_MS } from "@/lib/clock";
+import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { createBookingParty } from "./bookings";
+import type { AppDb } from "./client";
+import { isLockWaitRefusal } from "./lock-bounds";
+import { bookings, shops } from "./schema";
+import { lockSeatDeparture } from "./seat-locks";
+import { createTrip } from "./trips";
+
+/**
+ * `lockSeatDeparture` on a real server: the departure, then the seat, and a
+ * departure lock that leaves a foreign key's `KEY SHARE` alone.
+ *
+ * These two lived in `seat-locks.test.ts` until 2026-10-13, inside a
+ * `describePostgres` block in a file the `real-postgres` CI job never selects
+ * (it runs `src/db/*.postgres.test.ts`), so they skipped everywhere. The
+ * `db-concurrency` guard now refuses `describePostgres` and `postgresTestDb`
+ * in any file not named `*.postgres.test.ts`.
+ */
+
+async function seatOn(db: AppDb, shopId: string) {
+  const startsAt = new Date(Date.UTC(2031, 4, 12, 13));
+  const trip = await createTrip(db, {
+    shopId,
+    title: "Seat lock",
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
+    capacity: 6,
+  });
+  if (!trip) throw new Error("trip not created");
+  const party = await createBookingParty(db, [
+    { actor: "staff" as const, shopId, tripId: trip.id, fullName: "Lock Diver" },
+  ]);
+  if (!party.ok) throw new Error(`seat refused: ${party.reason}`);
+  return { tripId: trip.id, bookingId: party.bookings[0].bookingId };
+}
+
+/**
+ * The statements parked on a lock. A row-lock waiter waits on the holder's
+ * transaction id, not on a relation, so the statement is what names the row.
+ */
+async function waitingStatements(db: AppDb): Promise<string[]> {
+  const result = await db.execute(sql`
+    select query
+      from pg_stat_activity
+     where datname = current_database()
+       and wait_event_type = 'Lock'
+  `);
+  const rows = Array.isArray(result) ? result : (result as { rows: unknown[] }).rows;
+  return (rows as { query: string }[]).map((row) => row.query);
+}
+
+describePostgres("lockSeatDeparture on a real server", () => {
+  async function fixture() {
+    const pg = await postgresTestDb();
+    const [shop] = await pg.db
+      .insert(shops)
+      .values({ name: "Lock Reef", slug: "lock-reef", timezone: "UTC" })
+      .returning();
+    if (!shop) throw new Error("shop insert failed");
+    return { pg, shopId: shop.id, ...(await seatOn(pg.db, shop.id)) };
+  }
+
+  it("serializes two counter actions on one seat at the departure, before either holds the seat", async () => {
+    const { pg, shopId, bookingId } = await fixture();
+    const order: string[] = [];
+    let releaseFirst!: () => void;
+    const firstHolds = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let firstLocked!: () => void;
+    const locked = new Promise<void>((resolve) => {
+      firstLocked = resolve;
+    });
+    const counterAction = (name: string, hold?: Promise<void>) =>
+      pg.connect().transaction(async (tx) => {
+        await lockSeatDeparture(tx, shopId, bookingId);
+        order.push(`${name}: departure`);
+        await tx.select().from(bookings).where(eq(bookings.id, bookingId)).for("update");
+        order.push(`${name}: seat`);
+        if (hold) {
+          firstLocked();
+          await hold;
+        }
+      });
+
+    const first = counterAction("first", firstHolds);
+    await locked;
+    const second = counterAction("second");
+    try {
+      await waitForLockWaiters(pg.db, 1);
+      // The second action is parked on the departure, not the seat: it holds
+      // nothing the first could ever need, so the two cannot deadlock.
+      const parked = await waitingStatements(pg.db);
+      expect(parked).toHaveLength(1);
+      expect(parked[0]).toMatch(/from "trips".*for no key update/s);
+      expect(order).toEqual(["first: departure", "first: seat"]);
+    } finally {
+      releaseFirst();
+      await Promise.all([first, second]);
+    }
+    expect(order).toEqual(["first: departure", "first: seat", "second: departure", "second: seat"]);
+  });
+
+  it("does not block the KEY SHARE a roll-call insert takes on the departure", async () => {
+    const { pg, shopId, tripId, bookingId } = await fixture();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let acquired!: () => void;
+    const locked = new Promise<void>((resolve) => {
+      acquired = resolve;
+    });
+    const holder = pg.connect().transaction(async (tx) => {
+      await lockSeatDeparture(tx, shopId, bookingId);
+      acquired();
+      await held;
+    });
+    await locked;
+    // The foreign-key check of an insert referencing the trip, as a statement.
+    const shared = await pg
+      .connect()
+      .execute(sql`select id from trips where id = ${tripId} for key share nowait`);
+    const rows = Array.isArray(shared) ? shared : (shared as { rows: unknown[] }).rows;
+    expect(rows).toHaveLength(1);
+    release();
+    await holder;
+  });
+
+  it("gives up a wait on a stuck departure after five seconds rather than with its function", async () => {
+    const { pg, shopId, tripId, bookingId } = await fixture();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let acquired!: () => void;
+    const locked = new Promise<void>((resolve) => {
+      acquired = resolve;
+    });
+    // A holder that never lets go in time: the shape of a transaction waiting on Stripe.
+    const holder = pg.connect().transaction(async (tx) => {
+      await tx.execute(sql`select id from trips where id = ${tripId} for update`);
+      acquired();
+      await held;
+    });
+    await locked;
+    const started = performance.now();
+    try {
+      const waiter = pg.connect().transaction(async (tx) => {
+        await lockSeatDeparture(tx, shopId, bookingId);
+      });
+      const failure = await waiter.then(
+        () => null,
+        (error: unknown) => error,
+      );
+      const elapsed = performance.now() - started;
+      expect(sqlState(failure)).toBe("55P03");
+      // What the seat and booking actions catch to say "busy, tap again".
+      expect(isLockWaitRefusal(failure)).toBe(true);
+      expect(elapsed).toBeGreaterThanOrEqual(4_500);
+      expect(elapsed).toBeLessThan(9_000);
+    } finally {
+      release();
+      await holder;
+    }
+  });
+});
+
+/** The SQLSTATE under drizzle's wrapper. */
+function sqlState(error: unknown): string | undefined {
+  let current: unknown = error;
+  for (let hop = 0; hop < 5 && current; hop += 1) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === "string") return code;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return undefined;
+}

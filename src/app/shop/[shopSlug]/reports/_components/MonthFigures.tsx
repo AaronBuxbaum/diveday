@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { tapTargetLinkClass } from "@/components/ui/button";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
 /**

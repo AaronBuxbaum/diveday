@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, lt } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, or, type SQL } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import type { PaymentOperationIntent, PaymentOperationKind } from "./schema";
@@ -66,6 +66,43 @@ export async function recordPaymentOperationStripeObject(
     .update(paymentOperationIntents)
     .set({ stripeObjectId })
     .where(eq(paymentOperationIntents.id, intentId));
+}
+
+/**
+ * The mark an intent carries when its Stripe call went out and no answer came
+ * back: a timeout, a reset connection, a body that never arrived. Stripe may
+ * have done the thing, so the intent is **not** resolved `failed`: it stays
+ * `started` with this as its `errorMessage`, which `listStuckPaymentOperations`
+ * shows a human once it ages, and which every refund claim refuses on
+ * ({@link awaitingStripeReconciliation}). Resolving it `failed` was what let a
+ * second Refund press mint a fresh idempotency key and reverse the money a
+ * second time (fifth review, row 17).
+ */
+export const UNANSWERED_BY_STRIPE = "unanswered";
+
+/** Leave the intent `started`, marked {@link UNANSWERED_BY_STRIPE}. */
+export async function markPaymentOperationUnanswered(
+  db: DbExecutor,
+  intentId: string,
+): Promise<void> {
+  await db
+    .update(paymentOperationIntents)
+    .set({ errorMessage: UNANSWERED_BY_STRIPE })
+    .where(eq(paymentOperationIntents.id, intentId));
+}
+
+/**
+ * The `started` intents a refund claim must refuse on rather than retry past,
+ * stale or not: one Stripe confirmed (`stripeObjectId` written) and one Stripe
+ * never answered. Either may be money that already moved, and a new attempt is
+ * a new idempotency key Stripe would honour. Combine with the claim's own
+ * `status = 'started'` and scope conditions.
+ */
+export function awaitingStripeReconciliation(): SQL {
+  return or(
+    isNotNull(paymentOperationIntents.stripeObjectId),
+    eq(paymentOperationIntents.errorMessage, UNANSWERED_BY_STRIPE),
+  ) as SQL;
 }
 
 export type ResolvePaymentOperationInput = {
