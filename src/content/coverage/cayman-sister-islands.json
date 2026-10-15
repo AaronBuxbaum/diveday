@@ -1,0 +1,1349 @@
+{
+  "area": "cayman-sister-islands",
+  "method": "Little Cayman and Cayman Brac, all coasts, as one area. The official list is the Cayman Islands Department of Environment public-mooring spreadsheets for each island (January 2023 update, linked from doe.ky/resources/public-moorings): 65 Little Cayman and 68 Cayman Brac named moorings with depth and WGS84 coordinates, counted as one list; a site moored more than once (the Captain Keith Tibbetts' three moorings, Tailor Wall east and west, Great Wall east and west) is one row at its first mooring. Operator site lists, each one list: Reef Divers (the dive-site maps it publishes for Little Cayman Beach Resort and Cayman Brac Beach Resort, one owner, so one list), Southern Cross Club (its Little Cayman dive-site map), Little Cayman Divers (its site highlights; Bloody Bay Scuba School is the same shop) and Brac Scuba Shack (its wall, wreck and dive-site pages). Pirates Point publishes no site names; magazines, review sites and dive-log apps were read for leads only. A site is counted when it is on two lists; Bloody Bay Wall is the stretch of named moorings, not a site of its own. Operator names are matched to moorings by name and map position, and variant spellings stay in the row name (Gillembo, Plymouth Rock, Bluff Wall, Cayman Mariner). Excluded: names on the mooring list or one operator list only, the sites the operator maps mark as snorkel stops and the DoE does not moor, Blacktip Tunnels (inside the 2021 no-diving overlay zone, permit only), and the Brac yacht mooring. Every mooring lies at 87 ft or shallower, and the Tibbetts wreck is sold as a recreational dive. Counted 2026-10-14.",
+  "sources": [
+    "https://doe.ky/resources/public-moorings/",
+    "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+    "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+    "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+    "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf",
+    "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/",
+    "https://www.littlecaymandivers.com/little-cayman-dive-sites-and-map",
+    "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+    "https://www.bracscubashack.com/scuba-diving/dive-sites/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Ron's Rock",
+      "template": null,
+      "position": [19.66295, -80.11182],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Martha's Finyard",
+      "template": null,
+      "position": [19.66487, -80.11118],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Sand Castle",
+      "template": null,
+      "position": [19.6685, -80.10782],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf"
+      ]
+    },
+    {
+      "name": "Bush Gardens",
+      "template": null,
+      "position": [19.6663, -80.10682],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Fisheye Fantasy",
+      "template": null,
+      "position": [19.67003, -80.10608],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf"
+      ]
+    },
+    {
+      "name": "Jigsaw Puzzle",
+      "template": null,
+      "position": [19.67148, -80.10338],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Paradise Plunge",
+      "template": null,
+      "position": [19.67247, -80.10338],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Tibbett's Top",
+      "template": null,
+      "position": [19.67375, -80.10078],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "McCoy's Wall",
+      "template": null,
+      "position": [19.67655, -80.0983],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Dot's Hot Spot",
+      "template": null,
+      "position": [19.67713, -80.09548],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Joy's Joy",
+      "template": "joys-joy-little-cayman",
+      "position": [19.67877, -80.09298],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Barracuda Bight",
+      "template": "barracuda-bight-little-cayman",
+      "position": [19.67977, -80.0915],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.littlecaymandivers.com/little-cayman-dive-sites-and-map",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Coconut Wall",
+      "template": "coconut-wall-little-cayman",
+      "position": [19.68077, -80.08983],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Lea Lea's Lookout",
+      "template": "lea-leas-lookout-little-cayman",
+      "position": [19.68137, -80.0886],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.littlecaymandivers.com/little-cayman-dive-sites-and-map",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Shear Wall",
+      "template": null,
+      "position": [19.68193, -80.08648],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Great Wall",
+      "template": "great-wall-little-cayman",
+      "position": [19.68233, -80.08547],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Randy's Gazebo",
+      "template": "randys-gazebo-little-cayman",
+      "position": [19.68378, -80.08297],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.littlecaymandivers.com/little-cayman-dive-sites-and-map",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Donna's Delight",
+      "template": "donnas-delight-little-cayman",
+      "position": [19.6844, -80.0806],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Marilyn's Cut",
+      "template": "marilyns-cut-little-cayman",
+      "position": [19.68473, -80.07907],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Three Fathom Wall",
+      "template": "three-fathom-wall-little-cayman",
+      "position": [19.68492, -80.078],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Sailfin Miniwall",
+      "template": null,
+      "position": [19.68527, -80.07567],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Mixing Bowl",
+      "template": null,
+      "listedBy": [
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/",
+        "https://www.littlecaymandivers.com/little-cayman-dive-sites-and-map"
+      ],
+      "excluded": "same site as Three Fathom Wall (Little Cayman Beach Resort lists it as \"Mixing Bowl (3 Fathom Wall)\")"
+    },
+    {
+      "name": "Blacktip Blvd.",
+      "template": "blacktip-boulevard-little-cayman",
+      "position": [19.68632, -80.07492],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Ringer's Wall",
+      "template": null,
+      "listedBy": [
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ],
+      "excluded": "on one operator list only (Southern Cross Club); no DoE mooring by that name"
+    },
+    {
+      "name": "Sarah's Set",
+      "template": "sarahs-set-little-cayman",
+      "position": [19.68737, -80.07257],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Bus Stop",
+      "template": "bus-stop-little-cayman",
+      "position": [19.68885, -80.07082],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Cumber's Caves",
+      "template": "cumbers-caves-little-cayman",
+      "position": [19.68955, -80.06995],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Paul's Anchor",
+      "template": "pauls-anchor-little-cayman",
+      "position": [19.69443, -80.06943],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Jackson Reef & Wall",
+      "template": "jackson-reef-and-wall-little-cayman",
+      "position": [19.69073, -80.06942],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Nancy's Cup of Tea",
+      "template": null,
+      "listedBy": [
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/",
+        "https://www.littlecaymandivers.com/little-cayman-dive-sites-and-map"
+      ],
+      "excluded": "snorkel site on the operator maps, with no DoE dive mooring"
+    },
+    {
+      "name": "Jackson Point",
+      "template": null,
+      "listedBy": [
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ],
+      "excluded": "snorkel site on the operator maps, with no DoE dive mooring"
+    },
+    {
+      "name": "Eagleray Roundup",
+      "template": "eagle-ray-roundup-little-cayman",
+      "position": [19.6912, -80.06927],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.littlecaymandivers.com/little-cayman-dive-sites-and-map",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Magic Roundabout",
+      "template": null,
+      "position": [19.69358, -80.0692],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Mike's Mountain",
+      "template": "mikes-mountain-little-cayman",
+      "position": [19.6928, -80.06907],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Cascades",
+      "template": "cascades-little-cayman",
+      "position": [19.6964, -80.06865],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "The Meadows",
+      "template": "the-meadows-little-cayman",
+      "position": [19.69257, -80.06853],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Rock Bottom Wall",
+      "template": null,
+      "position": [19.70242, -80.05687],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Snap Shot",
+      "template": null,
+      "position": [19.70088, -80.05683],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Crystal Palace Wall",
+      "template": null,
+      "position": [19.70283, -80.05085],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "The Bluff",
+      "template": null,
+      "position": [19.70448, -80.03965],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf"
+      ]
+    },
+    {
+      "name": "Booby Pass",
+      "template": null,
+      "position": [19.70803, -80.01338],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Sailfin Reef",
+      "template": null,
+      "position": [19.70683, -80.0122],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Penguin's Leap",
+      "template": null,
+      "position": [19.7096, -80.0079],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Blacktip Tunnels",
+      "template": null,
+      "listedBy": [
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ],
+      "excluded": "in the no-diving overlay zone at Little Cayman's east end (National Conservation (Marine Parks) Regulations 2021); diving needs a National Conservation Council permit and the DoE lists no public mooring"
+    },
+    {
+      "name": "Point O' Sand",
+      "template": null,
+      "listedBy": [
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ],
+      "excluded": "snorkel site on the operator maps, with no DoE dive mooring"
+    },
+    {
+      "name": "Coral City",
+      "template": null,
+      "position": [19.68075, -80.0233],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Disneyland",
+      "template": null,
+      "position": [19.67903, -80.02338],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Splitsville",
+      "template": null,
+      "position": [19.67468, -80.03443],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Rockhouse Wall",
+      "template": null,
+      "position": [19.66737, -80.04217],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Owen Island",
+      "template": null,
+      "listedBy": [
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ],
+      "excluded": "snorkel site on the operator maps, with no DoE dive mooring"
+    },
+    {
+      "name": "Luca's Ledges",
+      "template": null,
+      "position": [19.66883, -80.04243],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Lappy's Leap",
+      "template": null,
+      "position": [19.65842, -80.06193],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Ann's Attic",
+      "template": null,
+      "listedBy": [
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ],
+      "excluded": "on one operator list only (Southern Cross Club); no DoE mooring by that name"
+    },
+    {
+      "name": "Pete's Plunge",
+      "template": null,
+      "position": [19.65615, -80.06778],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "The Edge",
+      "template": null,
+      "position": [19.653, -80.08088],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Soto Trader (wreck)",
+      "template": null,
+      "position": [19.65538, -80.08245],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Harold's Hole",
+      "template": null,
+      "position": [19.65388, -80.0825],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Diver's Delight",
+      "template": null,
+      "position": [19.65437, -80.0838],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Thompson's Reef",
+      "template": null,
+      "position": [19.65523, -80.08437],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Wahoo Reef",
+      "template": null,
+      "position": [19.65688, -80.08847],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Grundy's Gardens",
+      "template": "grundys-gardens-little-cayman",
+      "position": [19.65733, -80.08955],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Uncle Lucky's",
+      "template": null,
+      "position": [19.65603, -80.0898],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Windsock Reef",
+      "template": "windsock-reef-little-cayman",
+      "position": [19.6573, -80.0919],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.littlecaymandivers.com/little-cayman-dive-sites-and-map",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Black Hole",
+      "template": null,
+      "position": [19.656, -80.09207],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Charlie's Chimney",
+      "template": "charlies-chimney-little-cayman",
+      "position": [19.65583, -80.0937],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Gay's Reef",
+      "template": null,
+      "position": [19.65737, -80.09402],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.littlecaymandivers.com/little-cayman-dive-sites-and-map",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Dynamite Drop-off",
+      "template": null,
+      "position": [19.65535, -80.09565],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Richard's Reef",
+      "template": null,
+      "position": [19.6566, -80.09698],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Patty's Place",
+      "template": null,
+      "position": [19.65507, -80.09745],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf"
+      ]
+    },
+    {
+      "name": "Pirate's Point Reef",
+      "template": "pirates-point-reef-little-cayman",
+      "position": [19.65658, -80.0978],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Lighthouse Wall",
+      "template": null,
+      "position": [19.65323, -80.10138],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "West Point",
+      "template": null,
+      "position": [19.65497, -80.1036],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/LITTLE-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ]
+    },
+    {
+      "name": "Preston Bay",
+      "template": null,
+      "listedBy": [
+        "https://littlecayman.com/wp-content/uploads/2023/12/Dive-Site-Map_Little_Cayman.pdf",
+        "https://www.southerncrossclub.com/activities/cayman-islands-diving-resort/dive-sites/"
+      ],
+      "excluded": "snorkel site on the operator maps, with no DoE dive mooring"
+    },
+    {
+      "name": "Lighthouse Shallows",
+      "template": null,
+      "listedBy": ["https://www.littlecaymandivers.com/little-cayman-dive-sites-and-map"],
+      "excluded": "on one operator list only (Little Cayman Divers); no DoE mooring by that name"
+    },
+    {
+      "name": "Double Wall",
+      "template": "double-wall-cayman-brac",
+      "position": [19.6907, -79.89615],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Fisheries Reef",
+      "template": "fisheries-reef-cayman-brac",
+      "position": [19.68692, -79.89538],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Airport Wall",
+      "template": null,
+      "position": [19.6913, -79.89465],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "End of Island",
+      "template": null,
+      "position": [19.68785, -79.89408],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "West Chute",
+      "template": "west-chute-cayman-brac",
+      "position": [19.69192, -79.89342],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Middle Chute",
+      "template": "middle-chute-cayman-brac",
+      "position": [19.69272, -79.8914],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "East Chute (Cayman Mariner)",
+      "template": "east-chute-cayman-brac",
+      "position": [19.69317, -79.89013],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Knuckles Wall",
+      "template": null,
+      "position": [19.6935, -79.88843],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Preacher's Barge",
+      "template": null,
+      "position": [19.6917, -79.8863],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Capt. Keith Tibbetts (MV Captain Keith Tibbetts)",
+      "template": "mv-captain-keith-tibbetts",
+      "position": [19.69528, -79.885],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/dive-sites/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Buccaneer Reef",
+      "template": null,
+      "position": [19.69335, -79.88338],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Leslyn's Palace",
+      "template": null,
+      "position": [19.69652, -79.88247],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Tombstone",
+      "template": "tombstone-cayman-brac",
+      "position": [19.69462, -79.88175],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Garden Eel Wall",
+      "template": null,
+      "position": [19.69695, -79.88118],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Strawberry Sponge Wall",
+      "template": null,
+      "position": [19.69745, -79.88032],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Kissimmee (wreck)",
+      "template": "kissimmee-wreck-cayman-brac",
+      "position": [19.6959, -79.88018],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Cemetery Wall",
+      "template": "cemetery-wall-cayman-brac",
+      "position": [19.69848, -79.87798],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Charlie's Reef",
+      "template": "charlies-reef-cayman-brac",
+      "position": [19.69732, -79.87767],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Piper's Wall",
+      "template": null,
+      "position": [19.6994, -79.87715],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Patch Reef",
+      "template": null,
+      "position": [19.69892, -79.87565],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Grunt Valley",
+      "template": "grunt-valley-cayman-brac",
+      "position": [19.7002, -79.87427],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Schoolhouse Wall",
+      "template": null,
+      "position": [19.70745, -79.86508],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Snapper Reef",
+      "template": null,
+      "position": [19.7064, -79.85415],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Treehouse Reef",
+      "template": "treehouse-reef-cayman-brac",
+      "position": [19.7101, -79.8437],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Duppies",
+      "template": null,
+      "position": [19.71268, -79.83885],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Lynn's Reef",
+      "template": "lynns-reef-cayman-brac",
+      "position": [19.7138, -79.83663],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Atlantis",
+      "template": null,
+      "position": [19.71563, -79.83608],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Radar Reef",
+      "template": "radar-reef-cayman-brac",
+      "position": [19.7159, -79.83393],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Plymouth Reef (Plymouth Rock)",
+      "template": null,
+      "position": [19.71738, -79.83215],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Hoyt's Wall",
+      "template": null,
+      "position": [19.72048, -79.83043],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Greenhouse Wall",
+      "template": null,
+      "listedBy": ["https://www.bracscubashack.com/scuba-diving/wall-diving/"],
+      "excluded": "on one operator list only (Brac Scuba Shack); no DoE mooring by that name"
+    },
+    {
+      "name": "Greenhouse Reef",
+      "template": "greenhouse-reef-cayman-brac",
+      "position": [19.72025, -79.82833],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Jan's Drop-off",
+      "template": null,
+      "position": [19.72345, -79.82762],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Jan's Reef",
+      "template": null,
+      "position": [19.72253, -79.82652],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Handcuff Reef",
+      "template": null,
+      "listedBy": [
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ],
+      "excluded": "snorkel site on the operator maps, with no DoE dive mooring"
+    },
+    {
+      "name": "Shark Hole",
+      "template": null,
+      "position": [19.7238, -79.82495],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Yacht mooring (Cayman Brac)",
+      "template": null,
+      "position": [19.74455, -79.77008],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "yacht mooring, not a dive site"
+    },
+    {
+      "name": "Tailor Wall",
+      "template": null,
+      "position": [19.75338, -79.76257],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Bert Brothers Boulders",
+      "template": "bert-brothers-boulders-cayman-brac",
+      "position": [19.75818, -79.74095],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Tina's Reef",
+      "template": null,
+      "position": [19.72752, -79.74137],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Ken's Mountain (Bluff Wall)",
+      "template": "kens-mountain-cayman-brac",
+      "position": [19.71422, -79.76847],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Son of Rock Monster",
+      "template": "son-of-rock-monster-cayman-brac",
+      "position": [19.71393, -79.77063],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Rock Monster Chimney",
+      "template": "rock-monster-chimney-cayman-brac",
+      "position": [19.7136, -79.7741],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Foster's Wall",
+      "template": null,
+      "position": [19.71295, -79.77585],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Prince Frederick (wreck)",
+      "template": null,
+      "position": [19.71123, -79.78772],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Norbert's Reef",
+      "template": null,
+      "position": [19.70992, -79.79308],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Wilderness Wall",
+      "template": "wilderness-wall-cayman-brac",
+      "position": [19.70415, -79.80778],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Gilimbo Wall (Gillembo)",
+      "template": "gilimbo-wall-cayman-brac",
+      "position": [19.70252, -79.81008],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Walbert's Playground",
+      "template": null,
+      "position": [19.69342, -79.83225],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Eden Wall",
+      "template": null,
+      "position": [19.68948, -79.84187],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Inside Out",
+      "template": "inside-out-cayman-brac",
+      "position": [19.68868, -79.8442],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Public Beach Reef",
+      "template": "public-beach-reef-cayman-brac",
+      "position": [19.69023, -79.84498],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Manta Canyon",
+      "template": null,
+      "position": [19.6882, -79.84585],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Hedy's Reef",
+      "template": null,
+      "position": [19.6864, -79.85483],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Cayman Keys",
+      "template": null,
+      "position": [19.68628, -79.85562],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Pillar Coral Reef",
+      "template": null,
+      "position": [19.68257, -79.8659],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Elkhorn Forest",
+      "template": null,
+      "position": [19.68203, -79.86987],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Crab Alley",
+      "template": null,
+      "position": [19.67973, -79.8731],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Angel Reef",
+      "template": "angel-reef-cayman-brac",
+      "position": [19.68145, -79.87447],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Seafeather Wall",
+      "template": null,
+      "position": [19.6793, -79.87488],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Butterfly Reef",
+      "template": null,
+      "position": [19.6814, -79.87603],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Orange Canyon",
+      "template": null,
+      "position": [19.67848, -79.88083],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Sgt. Major Reef",
+      "template": null,
+      "position": [19.68073, -79.88282],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Anchor Wall",
+      "template": "anchor-wall-cayman-brac",
+      "position": [19.67802, -79.8837],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.bracscubashack.com/scuba-diving/wall-diving/",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Lighthouse Reef",
+      "template": "lighthouse-reef-cayman-brac",
+      "position": [19.67987, -79.88748],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Tarpon Reef",
+      "template": "tarpon-reef-cayman-brac",
+      "position": [19.67985, -79.88912],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    },
+    {
+      "name": "Snapper Point",
+      "template": "snapper-point-cayman-brac",
+      "position": [19.68103, -79.8972],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/CAYMAN-BRAC-PUBLIC-MOORINGS-2023.xlsx",
+        "https://caymanbracbeachresort.com/wp-content/uploads/2023/11/Dive-Site-Map_CaymanBrac.pdf"
+      ]
+    }
+  ]
+}

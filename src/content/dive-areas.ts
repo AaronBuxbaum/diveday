@@ -49,6 +49,25 @@ const FLORIDA: DiveAreaRegion = {
   timeZones: ["America/New_York"],
 };
 
+const country = (code: string, ...timeZones: string[]): DiveAreaRegion => ({
+  country: code,
+  ...(timeZones.length ? { timeZones } : {}),
+});
+const CAYMAN = country("KY", "America/Cayman");
+const QUINTANA_ROO: DiveAreaRegion = {
+  country: "MX",
+  subdivisions: ["ROO", "QUINTANA ROO"],
+  timeZones: ["America/Cancun"],
+};
+const BELIZE = country("BZ", "America/Belize");
+const BAY_ISLANDS: DiveAreaRegion = {
+  country: "HN",
+  subdivisions: ["IB", "ISLAS DE LA BAHIA", "ISLAS DE LA BAHÍA", "BAY ISLANDS"],
+};
+const BAHAMAS = country("BS", "America/Nassau");
+const TURKS_AND_CAICOS = country("TC", "America/Grand_Turk");
+const USVI = country("VI", "America/St_Thomas");
+
 export const DIVE_AREAS = [
   { code: "florida-keys-upper", label: "Upper Keys (Key Largo)", region: FLORIDA },
   { code: "florida-keys-islamorada", label: "Islamorada", region: FLORIDA },
@@ -65,6 +84,131 @@ export const DIVE_AREAS = [
   { code: "florida-panhandle", label: "Florida Panhandle", region: FLORIDA },
   { code: "florida-gulf-coast", label: "Florida Gulf coast", region: FLORIDA },
   { code: "florida-springs", label: "Florida springs", region: FLORIDA },
+  {
+    code: "bonaire",
+    label: "Bonaire and Klein Bonaire",
+    region: { country: "BQ", subdivisions: ["BO", "BONAIRE"], timeZones: ["America/Kralendijk"] },
+  },
+  { code: "curacao", label: "Curaçao", region: country("CW", "America/Curacao") },
+  { code: "aruba", label: "Aruba", region: country("AW", "America/Aruba") },
+  { code: "cayman-grand-cayman", label: "Grand Cayman", region: CAYMAN },
+  { code: "cayman-sister-islands", label: "Cayman Brac and Little Cayman", region: CAYMAN },
+  { code: "mexico-cozumel", label: "Cozumel", region: QUINTANA_ROO },
+  {
+    code: "mexico-riviera-maya",
+    label: "Cancún, Isla Mujeres and the Riviera Maya",
+    region: QUINTANA_ROO,
+  },
+  {
+    code: "mexico-cenotes",
+    label: "Yucatán cenotes",
+    region: {
+      country: "MX",
+      subdivisions: ["ROO", "QUINTANA ROO", "YUC", "YUCATAN", "YUCATÁN"],
+      timeZones: ["America/Cancun", "America/Merida"],
+    },
+  },
+  {
+    code: "mexico-costa-maya",
+    label: "Costa Maya and Banco Chinchorro",
+    region: QUINTANA_ROO,
+  },
+  { code: "belize-north", label: "Ambergris Caye and Caye Caulker", region: BELIZE },
+  { code: "belize-atolls", label: "Belize atolls", region: BELIZE },
+  { code: "belize-south", label: "Southern Belize", region: BELIZE },
+  { code: "honduras-roatan", label: "Roatán and Cayos Cochinos", region: BAY_ISLANDS },
+  { code: "honduras-utila", label: "Utila", region: BAY_ISLANDS },
+  { code: "honduras-guanaja", label: "Guanaja", region: BAY_ISLANDS },
+  {
+    code: "colombia-san-andres",
+    label: "San Andrés and Providencia",
+    region: {
+      country: "CO",
+      subdivisions: [
+        "SAP",
+        "SAN ANDRES",
+        "SAN ANDRÉS",
+        "SAN ANDRES Y PROVIDENCIA",
+        "SAN ANDRÉS Y PROVIDENCIA",
+        "SAN ANDRES, PROVIDENCIA Y SANTA CATALINA",
+        "SAN ANDRÉS, PROVIDENCIA Y SANTA CATALINA",
+      ],
+    },
+  },
+  { code: "bahamas-new-providence", label: "Nassau and New Providence", region: BAHAMAS },
+  { code: "bahamas-grand-bahama", label: "Grand Bahama", region: BAHAMAS },
+  { code: "bahamas-abaco", label: "The Abacos", region: BAHAMAS },
+  { code: "bahamas-eleuthera", label: "Eleuthera and Harbour Island", region: BAHAMAS },
+  { code: "bahamas-exuma", label: "The Exumas", region: BAHAMAS },
+  { code: "bahamas-andros", label: "Andros", region: BAHAMAS },
+  { code: "bahamas-bimini", label: "Bimini", region: BAHAMAS },
+  {
+    code: "bahamas-out-islands",
+    label: "Long Island, San Salvador, Cat Island and the southern Bahamas",
+    region: BAHAMAS,
+  },
+  {
+    code: "turks-caicos-providenciales",
+    label: "Providenciales, West Caicos and French Cay",
+    region: TURKS_AND_CAICOS,
+  },
+  {
+    code: "turks-caicos-grand-turk",
+    label: "Grand Turk, Salt Cay and South Caicos",
+    region: TURKS_AND_CAICOS,
+  },
+  { code: "puerto-rico", label: "Puerto Rico", region: country("PR", "America/Puerto_Rico") },
+  { code: "usvi-st-thomas-st-john", label: "St Thomas and St John", region: USVI },
+  { code: "usvi-st-croix", label: "St Croix", region: USVI },
+  { code: "bvi", label: "British Virgin Islands", region: country("VG", "America/Tortola") },
+  {
+    code: "dominican-republic",
+    label: "Dominican Republic",
+    region: country("DO", "America/Santo_Domingo"),
+  },
+  { code: "jamaica", label: "Jamaica", region: country("JM", "America/Jamaica") },
+  { code: "cuba", label: "Cuba", region: country("CU", "America/Havana") },
+  { code: "anguilla", label: "Anguilla", region: country("AI", "America/Anguilla") },
+  { code: "sint-maarten", label: "Sint Maarten", region: country("SX", "America/Lower_Princes") },
+  { code: "saint-martin", label: "Saint-Martin", region: country("MF", "America/Marigot") },
+  {
+    code: "saint-barthelemy",
+    label: "Saint-Barthélemy",
+    region: country("BL", "America/St_Barthelemy"),
+  },
+  { code: "saba", label: "Saba", region: { country: "BQ", subdivisions: ["SA", "SABA"] } },
+  {
+    code: "sint-eustatius",
+    label: "Sint Eustatius (Statia)",
+    region: { country: "BQ", subdivisions: ["SE", "SINT EUSTATIUS", "STATIA"] },
+  },
+  {
+    code: "st-kitts-nevis",
+    label: "St Kitts and Nevis",
+    region: country("KN", "America/St_Kitts"),
+  },
+  {
+    code: "antigua-barbuda",
+    label: "Antigua and Barbuda",
+    region: country("AG", "America/Antigua"),
+  },
+  { code: "montserrat", label: "Montserrat", region: country("MS", "America/Montserrat") },
+  { code: "guadeloupe", label: "Guadeloupe", region: country("GP", "America/Guadeloupe") },
+  { code: "dominica", label: "Dominica", region: country("DM", "America/Dominica") },
+  { code: "martinique", label: "Martinique", region: country("MQ", "America/Martinique") },
+  { code: "saint-lucia", label: "Saint Lucia", region: country("LC", "America/St_Lucia") },
+  {
+    code: "st-vincent-grenadines",
+    label: "St Vincent and the Grenadines",
+    region: country("VC", "America/St_Vincent"),
+  },
+  { code: "grenada", label: "Grenada and Carriacou", region: country("GD", "America/Grenada") },
+  { code: "barbados", label: "Barbados", region: country("BB", "America/Barbados") },
+  {
+    code: "trinidad-tobago",
+    label: "Tobago and Trinidad",
+    region: country("TT", "America/Port_of_Spain"),
+  },
 ] as const satisfies readonly DiveArea[];
 
 export type DiveAreaCode = (typeof DIVE_AREAS)[number]["code"];

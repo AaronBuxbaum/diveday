@@ -1,0 +1,188 @@
+{
+  "area": "bahamas-abaco",
+  "method": "The Abacos: Walker's Cay south to Hope Town, Marsh Harbour, Guana Cay, Man-O-War and Green Turtle Cay, including the Fowl Cay and Pelican Cays preserves. No official site list exists: the Bahamas National Trust pages for Fowl Cay and Pelican Cays Land and Sea Park name no dive sites, only day moorings. Lists used: the tourism list (Bahamas Ministry of Tourism dive page together with the My Out Islands Abaco diving page, counted as one list); Brendal's Dive Center's own dive-sites page (Green Turtle Cay); and Dive Abaco's own About page (Marsh Harbour), which names its sites in a reprinted feature. Dive Guana, Froggies (froggiesabaco.com is now an unrelated blog and its 2013 archive names no sites), Abaco Scuba Center (no readable page) and Walker's Cay (dive operations suspended during redevelopment) publish no site list; aggregators such as diveplannerpro.com and abacoescape.com were read for leads only. A site counts when named, recreationally divable on scuba and on at least two of those lists. Mermaid Reef is excluded as snorkel-only, marine preserves as areas rather than sites, and everything on one list only is kept with its reason. Grouper Alley carries different depths on the two lists (50 feet versus 90 feet) and is counted once. Counted 2026-10-14.",
+  "sources": [
+    "https://www.myoutislands.com/bahamas-islands/abaco/diving",
+    "https://www.bahamas.com/plan-your-trip/diving",
+    "https://www.bahamas.com/diving/abaco",
+    "https://www.brendal.com/dive_sites.html",
+    "https://www.diveabaco.com/about.htm",
+    "https://bnt.bs/parks/pelican-cays-land-and-sea-park/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Shark Rodeo (Spiral Cavern), Walker's Cay",
+      "template": null,
+      "excluded": "on one list only (tourism list); Walker's Cay dive operations suspended"
+    },
+    {
+      "name": "Original Tarpon Dive",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "Coral Caverns",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/abaco/diving",
+        "https://www.brendal.com/dive_sites.html"
+      ]
+    },
+    {
+      "name": "Coral Condos",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "San Jacinto (wreck)",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/abaco/diving",
+        "https://www.brendal.com/dive_sites.html"
+      ]
+    },
+    {
+      "name": "The Catacombs",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/abaco/diving",
+        "https://www.brendal.com/dive_sites.html"
+      ]
+    },
+    {
+      "name": "Horse Shoe Reef",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "Elkhorn Coral Reef (Green Turtle Cay)",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "Valley of the Sponges",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "Grouper Alley",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/abaco/diving",
+        "https://www.brendal.com/dive_sites.html"
+      ]
+    },
+    {
+      "name": "The Ledge",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/abaco/diving",
+        "https://www.brendal.com/dive_sites.html"
+      ]
+    },
+    {
+      "name": "Hole in the Wall (Green Turtle Cay)",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "The Craters",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "Coral Canyons",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "Sea Gypsy Reef",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "The Coral Gardens",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "Violet Mitchell (wreck)",
+      "template": null,
+      "excluded": "on one list only (Brendal's)"
+    },
+    {
+      "name": "The Pillars",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/abaco/diving",
+        "https://www.brendal.com/dive_sites.html"
+      ]
+    },
+    {
+      "name": "Tarpon Reef",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Maxi-Caves",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Pelican Cays Land and Sea Park",
+      "template": null,
+      "excluded": "marine park, not a single named site; on the tourism list only"
+    },
+    {
+      "name": "Fowl Cay Preserve",
+      "template": null,
+      "excluded": "marine preserve, not a single named site; Dive Abaco dives it by site name"
+    },
+    {
+      "name": "Mermaid Reef",
+      "template": null,
+      "excluded": "snorkel-only"
+    },
+    {
+      "name": "The Edge",
+      "template": null,
+      "excluded": "on one list only (Dive Abaco)"
+    },
+    {
+      "name": "Shark Dive (Fowl Cay)",
+      "template": null,
+      "excluded": "on one list only (Dive Abaco)"
+    },
+    {
+      "name": "Easy Diver",
+      "template": null,
+      "excluded": "on one list only (Dive Abaco)"
+    },
+    {
+      "name": "The Towers",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/abaco/diving",
+        "https://www.diveabaco.com/about.htm"
+      ]
+    },
+    {
+      "name": "Wayne's World",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/abaco/diving",
+        "https://www.diveabaco.com/about.htm"
+      ]
+    },
+    {
+      "name": "The Cathedral",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/abaco/diving",
+        "https://www.diveabaco.com/about.htm"
+      ]
+    }
+  ]
+}

@@ -190,6 +190,19 @@ describe("import-vercel-env", () => {
     expect(added).toEqual(["PUBLIC"]);
   });
 
+  it("trusts a non-plain listed value it cannot read back (config, encrypted)", () => {
+    const { added } = runImport(["RUM=abc", "ENC=def"], {
+      checkpointDocument: `RUM=${fingerprint("abc")}\nENC=${fingerprint("def")}\n`,
+      vercelListing: {
+        envs: [
+          { key: "RUM", type: "config", value: "not-the-sent-value", target: ["production"] },
+          { key: "ENC", type: "encrypted", value: "eyJ2IjoiY2lwaGVy", target: ["production"] },
+        ],
+      },
+    });
+    expect(added).toEqual([]);
+  });
+
   it("ignores a key that exists only in another environment", () => {
     const { added } = runImport(["A=1"], {
       checkpointDocument: `A=${fingerprint("1")}\n`,

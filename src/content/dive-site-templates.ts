@@ -38,6 +38,30 @@
  */
 export type { DiveSiteTemplate } from "./dive-sites/types";
 
+import { ANGUILLA } from "./dive-sites/anguilla";
+import { ANTIGUA_BARBUDA } from "./dive-sites/antigua-barbuda";
+import { ARUBA } from "./dive-sites/aruba";
+import { BAHAMAS_ABACO } from "./dive-sites/bahamas-abaco";
+import { BAHAMAS_ANDROS } from "./dive-sites/bahamas-andros";
+import { BAHAMAS_BIMINI } from "./dive-sites/bahamas-bimini";
+import { BAHAMAS_ELEUTHERA } from "./dive-sites/bahamas-eleuthera";
+import { BAHAMAS_EXUMA } from "./dive-sites/bahamas-exuma";
+import { BAHAMAS_GRAND_BAHAMA } from "./dive-sites/bahamas-grand-bahama";
+import { BAHAMAS_NEW_PROVIDENCE } from "./dive-sites/bahamas-new-providence";
+import { BAHAMAS_OUT_ISLANDS } from "./dive-sites/bahamas-out-islands";
+import { BARBADOS } from "./dive-sites/barbados";
+import { BELIZE_ATOLLS } from "./dive-sites/belize-atolls";
+import { BELIZE_NORTH } from "./dive-sites/belize-north";
+import { BELIZE_SOUTH } from "./dive-sites/belize-south";
+import { BONAIRE } from "./dive-sites/bonaire";
+import { BVI } from "./dive-sites/bvi";
+import { CAYMAN_GRAND_CAYMAN } from "./dive-sites/cayman-grand-cayman";
+import { CAYMAN_SISTER_ISLANDS } from "./dive-sites/cayman-sister-islands";
+import { COLOMBIA_SAN_ANDRES } from "./dive-sites/colombia-san-andres";
+import { CUBA } from "./dive-sites/cuba";
+import { CURACAO } from "./dive-sites/curacao";
+import { DOMINICA } from "./dive-sites/dominica";
+import { DOMINICAN_REPUBLIC } from "./dive-sites/dominican-republic";
 import { FLORIDA_BROWARD } from "./dive-sites/florida-broward";
 import { FLORIDA_GULF_COAST } from "./dive-sites/florida-gulf-coast";
 import { FLORIDA_KEYS_ISLAMORADA } from "./dive-sites/florida-keys-islamorada";
@@ -49,7 +73,33 @@ import { FLORIDA_MIAMI } from "./dive-sites/florida-miami";
 import { FLORIDA_PALM_BEACH } from "./dive-sites/florida-palm-beach";
 import { FLORIDA_PANHANDLE } from "./dive-sites/florida-panhandle";
 import { FLORIDA_SPRINGS } from "./dive-sites/florida-springs";
+import { GRENADA } from "./dive-sites/grenada";
+import { GUADELOUPE } from "./dive-sites/guadeloupe";
+import { HONDURAS_GUANAJA } from "./dive-sites/honduras-guanaja";
+import { HONDURAS_ROATAN } from "./dive-sites/honduras-roatan";
+import { HONDURAS_UTILA } from "./dive-sites/honduras-utila";
+import { JAMAICA } from "./dive-sites/jamaica";
+import { MARTINIQUE } from "./dive-sites/martinique";
+import { MEXICO_CENOTES } from "./dive-sites/mexico-cenotes";
+import { MEXICO_COSTA_MAYA } from "./dive-sites/mexico-costa-maya";
+import { MEXICO_COZUMEL } from "./dive-sites/mexico-cozumel";
+import { MEXICO_RIVIERA_MAYA } from "./dive-sites/mexico-riviera-maya";
+import { MONTSERRAT } from "./dive-sites/montserrat";
+import { PUERTO_RICO } from "./dive-sites/puerto-rico";
+import { SABA } from "./dive-sites/saba";
+import { SAINT_BARTHELEMY } from "./dive-sites/saint-barthelemy";
+import { SAINT_LUCIA } from "./dive-sites/saint-lucia";
+import { SAINT_MARTIN } from "./dive-sites/saint-martin";
+import { SINT_EUSTATIUS } from "./dive-sites/sint-eustatius";
+import { SINT_MAARTEN } from "./dive-sites/sint-maarten";
+import { ST_KITTS_NEVIS } from "./dive-sites/st-kitts-nevis";
+import { ST_VINCENT_GRENADINES } from "./dive-sites/st-vincent-grenadines";
+import { TRINIDAD_TOBAGO } from "./dive-sites/trinidad-tobago";
+import { TURKS_CAICOS_GRAND_TURK } from "./dive-sites/turks-caicos-grand-turk";
+import { TURKS_CAICOS_PROVIDENCIALES } from "./dive-sites/turks-caicos-providenciales";
 import type { DiveSiteTemplate } from "./dive-sites/types";
+import { USVI_ST_CROIX } from "./dive-sites/usvi-st-croix";
+import { USVI_ST_THOMAS_ST_JOHN } from "./dive-sites/usvi-st-thomas-st-john";
 import ledger from "./photo-records.json";
 
 /**
@@ -89,4 +139,54 @@ export const DIVE_SITE_TEMPLATES: readonly DiveSiteTemplate[] = [
   ...FLORIDA_PANHANDLE,
   ...FLORIDA_GULF_COAST,
   ...FLORIDA_SPRINGS,
+  ...BONAIRE,
+  ...CURACAO,
+  ...ARUBA,
+  ...CAYMAN_GRAND_CAYMAN,
+  ...CAYMAN_SISTER_ISLANDS,
+  ...MEXICO_COZUMEL,
+  ...MEXICO_RIVIERA_MAYA,
+  ...MEXICO_CENOTES,
+  ...MEXICO_COSTA_MAYA,
+  ...BELIZE_NORTH,
+  ...BELIZE_ATOLLS,
+  ...BELIZE_SOUTH,
+  ...HONDURAS_ROATAN,
+  ...HONDURAS_UTILA,
+  ...HONDURAS_GUANAJA,
+  ...COLOMBIA_SAN_ANDRES,
+  ...BAHAMAS_NEW_PROVIDENCE,
+  ...BAHAMAS_GRAND_BAHAMA,
+  ...BAHAMAS_ABACO,
+  ...BAHAMAS_ELEUTHERA,
+  ...BAHAMAS_EXUMA,
+  ...BAHAMAS_ANDROS,
+  ...BAHAMAS_BIMINI,
+  ...BAHAMAS_OUT_ISLANDS,
+  ...TURKS_CAICOS_PROVIDENCIALES,
+  ...TURKS_CAICOS_GRAND_TURK,
+  ...PUERTO_RICO,
+  ...USVI_ST_THOMAS_ST_JOHN,
+  ...USVI_ST_CROIX,
+  ...BVI,
+  ...DOMINICAN_REPUBLIC,
+  ...JAMAICA,
+  ...CUBA,
+  ...ANGUILLA,
+  ...SINT_MAARTEN,
+  ...SAINT_MARTIN,
+  ...SAINT_BARTHELEMY,
+  ...SABA,
+  ...SINT_EUSTATIUS,
+  ...ST_KITTS_NEVIS,
+  ...ANTIGUA_BARBUDA,
+  ...MONTSERRAT,
+  ...GUADELOUPE,
+  ...DOMINICA,
+  ...MARTINIQUE,
+  ...SAINT_LUCIA,
+  ...ST_VINCENT_GRENADINES,
+  ...GRENADA,
+  ...BARBADOS,
+  ...TRINIDAD_TOBAGO,
 ].map(withCover);

@@ -1,0 +1,682 @@
+{
+  "area": "mexico-cozumel",
+  "method": "Cozumel island: the Parque Nacional Arrecifes de Cozumel on the west and south coasts plus the north-end sites outside it (Barracuda, San Juan, Cantarel, Villa Blanca); the east side has no named site on any list read. Official list: the CONANP/INE Programa de Manejo del Parque Marino Nacional Arrecifes de Cozumel (SIMEC 30_libro_pm.pdf), whose zoning units name the reefs (El Islote, Punta Celarain, Maracaibo, Chunchaka'ab, Punta Sur, Colombia profundo and bajo; Paso del Cedral, La Francesa, Dalila, Palancar Cuevones, Jardines, La Herradura and Ladrillos; Paraíso, Dzul Ha, Las Palmas, Chankana'ab, Playa Corona, Tormentos, Yucab, Tunich, Cardona, San Francisco, Santa Rosa); it counts as one list. Operator lists, one each: Deep Blue Cozumel, Scuba Du, Dive Paradise, Blue Note Scuba, Agua Clara Diving, Maple Leaf Scuba, The Reef Dive Shop (Playa del Carmen, sells Cozumel boat trips), Dressel Divers, Scuba XOC, ScubaTony (whose site map gives the coordinates used here) and Cozumel Divers. Blue XT-Sea's reef-map page now serves spam, Aldora Divers and Liquid Blue publish no site list, and Scuba Mau names none, so none of those counted; the Reefs of Cozumel guidebook site was read for leads only. A site is counted when named on two independent lists and divable on recreational scuba; Palancar and Colombia sections are separate rows because the park programme and most operators name them separately, and a list naming only the umbrella ('Palancar Reef', 'Colombia reef') counted toward no section. Devil's Throat (to ~130 ft) and Maracaibo are counted as advanced recreational dives because operators sell them as such. Excluded: one-list names, park-only names no operator uses, and El Cielo (snorkel-only). Maple Leaf Scuba and The Reef Dive Shop print near-identical lists in the same order as the Reefs of Cozumel guidebook; they are counted as separate operators but add no name the other lists lack. Counted 2026-10-14.",
+  "sources": [
+    "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+    "https://deepbluecozumel.com/cozumel-dive-sites/",
+    "https://www.scubadu.com/dive-sites",
+    "https://diveparadise.com/scuba-diving/the-reefs/",
+    "https://www.bluenotescuba.com/cozumel-dive-sites",
+    "https://www.aguaclaradivingcozumel.com/dive-sites",
+    "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+    "https://thereefdiveshop.com/index.php/cozumel/",
+    "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+    "https://www.scubaxoc.com/?section=diveSites",
+    "https://divesites.scubatony.com/map.aspx",
+    "https://cozumeldivers.com/",
+    "https://liquidbluedivers.com/el-cielo-tours/"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Barracuda (Barracuda Wall)",
+      "template": "barracuda-wall-cozumel",
+      "position": [20.56883, -86.91542],
+      "listedBy": [
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Punta Norte",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Puerto de Abrigo",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Tiburones",
+      "template": null,
+      "listedBy": ["https://www.bluenotescuba.com/cozumel-dive-sites"],
+      "excluded": "on one operator list only (Blue Note Scuba, 'special trip')"
+    },
+    {
+      "name": "San Juan",
+      "template": "san-juan-cozumel",
+      "position": [20.54766, -86.93406],
+      "listedBy": [
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Cantarel (Cantarell, Eagle Ray Wall)",
+      "template": "cantarel-eagle-ray-wall-cozumel",
+      "listedBy": [
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites"
+      ]
+    },
+    {
+      "name": "Antares",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Las Brisas",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Coral Princess",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Castillo Real",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Cañones (El Galeón)",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Janan",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Sukha",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Bloques de Concreto de Casitas",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "P-74 Laguna de Mandinga",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "PC-321 Lago de Pátzcuaro",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Virgin Wall",
+      "template": null,
+      "listedBy": ["https://diveparadise.com/scuba-diving/the-reefs/"],
+      "excluded": "on one operator list only (Dive Paradise)"
+    },
+    {
+      "name": "Villa Blanca Wall (Villablanca)",
+      "template": "villa-blanca-wall-cozumel",
+      "position": [20.48618, -86.97361],
+      "listedBy": [
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Paradise (Paraíso)",
+      "template": "paradise-reef-cozumel",
+      "position": [20.4696, -86.98219],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.aguaclaradivingcozumel.com/dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Dzul Ha",
+      "template": null,
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://www.scubaxoc.com/?section=diveSites"
+      ]
+    },
+    {
+      "name": "Las Palmas",
+      "template": "las-palmas-cozumel",
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/"
+      ]
+    },
+    {
+      "name": "C-53 Wreck (Felipe Xicoténcatl)",
+      "template": "c-53-wreck-cozumel",
+      "position": [20.4427, -86.99833],
+      "listedBy": [
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.aguaclaradivingcozumel.com/dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Chankanaab (Chankanaab Shallows)",
+      "template": "chankanaab-reef-cozumel",
+      "position": [20.43948, -87.00472],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx",
+        "https://cozumeldivers.com/"
+      ]
+    },
+    {
+      "name": "Chankanaab Bolones (Balones)",
+      "template": "chankanaab-bolones-cozumel",
+      "listedBy": [
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://diveparadise.com/scuba-diving/the-reefs/"
+      ]
+    },
+    {
+      "name": "Playa Corona",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf"],
+      "excluded": "on the CONANP management programme only; no operator list names it"
+    },
+    {
+      "name": "Tormentos",
+      "template": "tormentos-cozumel",
+      "position": [20.42359, -87.01464],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx",
+        "https://cozumeldivers.com/"
+      ]
+    },
+    {
+      "name": "Yucab",
+      "template": "yucab-cozumel",
+      "position": [20.4164, -87.0182],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx",
+        "https://cozumeldivers.com/"
+      ]
+    },
+    {
+      "name": "San Clemente",
+      "template": "san-clemente-cozumel",
+      "position": [20.40956, -87.02236],
+      "listedBy": [
+        "https://www.scubadu.com/dive-sites",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Punta Tunich (Tunich)",
+      "template": "punta-tunich-cozumel",
+      "position": [20.41402, -87.02133],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Cardona",
+      "template": null,
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://www.scubaxoc.com/?section=diveSites"
+      ]
+    },
+    {
+      "name": "San Francisco (San Francisco Wall)",
+      "template": "san-francisco-wall-cozumel",
+      "position": [20.39713, -87.02592],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Santa María (Pared de Santa María)",
+      "template": null,
+      "listedBy": [
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.scubaxoc.com/?section=diveSites"
+      ]
+    },
+    {
+      "name": "Santa Rosa Wall (Santa Rosa)",
+      "template": "santa-rosa-wall-cozumel",
+      "position": [20.38056, -87.0291],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.aguaclaradivingcozumel.com/dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://divesites.scubatony.com/map.aspx",
+        "https://cozumeldivers.com/"
+      ]
+    },
+    {
+      "name": "Santa Rosa Shallows",
+      "template": "santa-rosa-shallows-cozumel",
+      "listedBy": [
+        "https://www.scubadu.com/dive-sites",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/"
+      ]
+    },
+    {
+      "name": "Santa Rosa Reef",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/"],
+      "excluded": "on one operator list only (Dressel Divers, listed beside its Santa Rosa Wall and Santa Rosa Shallows)"
+    },
+    {
+      "name": "Paso del Cedral (Cedral Pass)",
+      "template": "paso-del-cedral-cozumel",
+      "position": [20.37315, -87.0291],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.aguaclaradivingcozumel.com/dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Cedral Wall (Paso del Cedral Wall)",
+      "template": "cedral-wall-cozumel",
+      "listedBy": [
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/"
+      ]
+    },
+    {
+      "name": "Casa Blanca (Jurassic Park)",
+      "template": null,
+      "listedBy": [
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://www.scubaxoc.com/?section=diveSites"
+      ]
+    },
+    {
+      "name": "Punta Dalila (Dalila)",
+      "template": "punta-dalila-cozumel",
+      "position": [20.36108, -87.02897],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "La Francesa (Punta Francesa)",
+      "template": "la-francesa-cozumel",
+      "position": [20.34479, -87.02786],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Shallow Palancar",
+      "template": null,
+      "listedBy": ["https://diveparadise.com/scuba-diving/the-reefs/"],
+      "excluded": "on one operator list only (Dive Paradise)"
+    },
+    {
+      "name": "Palancar Gardens (Jardines)",
+      "template": "palancar-gardens-cozumel",
+      "position": [20.33936, -87.02756],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://divesites.scubatony.com/map.aspx",
+        "https://cozumeldivers.com/"
+      ]
+    },
+    {
+      "name": "Palancar Horseshoe (La Herradura, Big Horseshoe)",
+      "template": "palancar-horseshoe-cozumel",
+      "position": [20.33296, -87.02725],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://divesites.scubatony.com/map.aspx",
+        "https://cozumeldivers.com/"
+      ]
+    },
+    {
+      "name": "Broken Reef (Little Horseshoe)",
+      "template": null,
+      "listedBy": ["https://diveparadise.com/scuba-diving/the-reefs/"],
+      "excluded": "on one operator list only (Dive Paradise)"
+    },
+    {
+      "name": "The Little Caves",
+      "template": null,
+      "listedBy": ["https://diveparadise.com/scuba-diving/the-reefs/"],
+      "excluded": "on one operator list only (Dive Paradise)"
+    },
+    {
+      "name": "Palancar Caves (Cuevones)",
+      "template": "palancar-caves-cozumel",
+      "position": [20.32402, -87.02708],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/",
+        "https://divesites.scubatony.com/map.aspx",
+        "https://cozumeldivers.com/"
+      ]
+    },
+    {
+      "name": "Palancar Bricks (Ladrillos)",
+      "template": "palancar-bricks-cozumel",
+      "position": [20.31984, -87.02648],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Deep Palancar",
+      "template": null,
+      "listedBy": ["https://diveparadise.com/scuba-diving/the-reefs/"],
+      "excluded": "on one operator list only (Dive Paradise)"
+    },
+    {
+      "name": "Colombia Shallows (Colombia bajo)",
+      "template": "colombia-shallows-cozumel",
+      "position": [20.31288, -87.02249],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Colombia Deep (Colombia profundo)",
+      "template": "colombia-deep-cozumel",
+      "position": [20.31251, -87.02502],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Colombia Cordillera",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/"],
+      "excluded": "on one operator list only (Dressel Divers)"
+    },
+    {
+      "name": "Colombia Ladrillo",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/blog/cozumel-dive-sites-spots/"],
+      "excluded": "on one operator list only (Dressel Divers)"
+    },
+    {
+      "name": "El Cielo",
+      "template": null,
+      "listedBy": ["https://liquidbluedivers.com/el-cielo-tours/"],
+      "excluded": "snorkel-only (shallow sand flat sold as snorkel and boat tours); on no dive-site list"
+    },
+    {
+      "name": "Punta Sur (Cathedral, Catedral)",
+      "template": "punta-sur-cathedral-cozumel",
+      "position": [20.30708, -87.02429],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.aguaclaradivingcozumel.com/dive-sites",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "Devil's Throat (Garganta del Diablo, Punta Sur II)",
+      "template": null,
+      "listedBy": [
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://www.scubadu.com/dive-sites",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/"
+      ]
+    },
+    {
+      "name": "Chunchakaab (Chun Chacaab)",
+      "template": "chunchakaab-cozumel",
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites"
+      ]
+    },
+    {
+      "name": "Punta Celarain",
+      "template": null,
+      "listedBy": ["https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf"],
+      "excluded": "on the CONANP management programme only; operators list no dive by this name"
+    },
+    {
+      "name": "Maracaibo",
+      "template": "maracaibo-cozumel",
+      "position": [20.2721, -87.00116],
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://deepbluecozumel.com/cozumel-dive-sites/",
+        "https://diveparadise.com/scuba-diving/the-reefs/",
+        "https://www.bluenotescuba.com/cozumel-dive-sites",
+        "https://www.mapleleafscuba.com/services/cozumels-dive-sites/",
+        "https://thereefdiveshop.com/index.php/cozumel/",
+        "https://www.scubaxoc.com/?section=diveSites",
+        "https://divesites.scubatony.com/map.aspx"
+      ]
+    },
+    {
+      "name": "El Islote",
+      "template": null,
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/30_libro_pm.pdf",
+        "https://www.scubaxoc.com/?section=diveSites"
+      ]
+    },
+    {
+      "name": "Arrecife sin Nombre (No-Name Reef)",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Caracolillo (El Gallo)",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Atolones",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Cueva de los Tiburones Dormidos (Sleeping Shark Cave)",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Escochin",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Goliath",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Ledges",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    },
+    {
+      "name": "Puente",
+      "template": null,
+      "listedBy": ["https://www.scubaxoc.com/?section=diveSites"],
+      "excluded": "on one operator list only (Scuba XOC)"
+    }
+  ]
+}

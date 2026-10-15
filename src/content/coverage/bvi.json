@@ -1,0 +1,453 @@
+{
+  "area": "bvi",
+  "method": "British Virgin Islands: Tortola and its outer cays, Peter, Norman, Salt, Cooper and Ginger Islands, the Dog Islands, Virgin Gorda, Scrub Island, Great Camanoe and Guana Island, and the offshore Chikuzen; Anegada is included in scope but no resident operator publishes Anegada sites, so none is counted. Lists used: five independent operator lists (Dive BVI, whose Willy T page is read with its site list; Sail Caribbean Divers; Blue Water Divers; Sunchaser Scuba; and the Cuan Law liveaboard's list of 'a small selection of the 100 plus sites'). The BVI National Parks Trust runs the Halas mooring buoy system (white buoys are dive-only) but publishes no named mooring list; its marine page and an archived mooring page were read and name no sites, and the Rhone is a National Park marine site by Trust description only. The BVI Tourist Board diving page and bvi-dive-map.com (a web agency's directory) name no sites and are not counted. A site is counted when named on at least two independent lists and recreationally divable. Dive BVI's combined 'Coral Gardens / Sharkplaneo' and 'Visibles / POS' are one row each, as are the two Brewers Bay pinnacle dives; same-named sites on different islands (Shark Point off Scrub Island versus off Peter Island) are separate rows. The Indians, Baths and Caves snorkel entries on Sail Caribbean's list are snorkel-only and kept as excluded except The Indians, which Blue Water and Cuan Law also list as a scuba site. No list gives coordinates. Counted 2026-10-14.",
+  "sources": [
+    "https://divebvi.com/dive-sites/",
+    "https://divebvi.com/dive-the-willy-t-wreck/",
+    "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+    "https://bluewaterdiversbvi.com/dive-sites/",
+    "https://www.sunchaserscuba.com/diving",
+    "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html",
+    "https://www.bvinationalparkstrust.org/marine-conservation-programme",
+    "https://web.archive.org/web/20140323170330/http://www.bvinationalparkstrust.org:80/index.php/parks-programs/extensions1282393572/mooring-buoy-system",
+    "https://www.bvitourism.com/diving",
+    "https://bvi-dive-map.com/"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Monkey Point (Guana Island)",
+      "template": null,
+      "listedBy": ["https://divebvi.com/dive-sites/"],
+      "excluded": "snorkel-only"
+    },
+    {
+      "name": "Grand Central Station (Guana Island)",
+      "template": null,
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Diamond Reef (Great Camanoe)",
+      "template": "diamond-reef-great-camanoe",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Lee Bay (Great Camanoe)",
+      "template": null,
+      "listedBy": ["https://divebvi.com/dive-sites/"],
+      "excluded": "on one operator list only (Dive BVI)"
+    },
+    {
+      "name": "Towing Point (Great Camanoe)",
+      "template": null,
+      "listedBy": ["https://divebvi.com/dive-sites/"],
+      "excluded": "on one operator list only (Dive BVI)"
+    },
+    {
+      "name": "Dip 'N' Scrub (Scrub Island)",
+      "template": null,
+      "listedBy": ["https://divebvi.com/dive-sites/"],
+      "excluded": "on one operator list only (Dive BVI)"
+    },
+    {
+      "name": "Shark Point (Scrub Island)",
+      "template": null,
+      "listedBy": ["https://divebvi.com/dive-sites/"],
+      "excluded": "on one operator list only (Dive BVI); not the Peter Island site of the same name"
+    },
+    {
+      "name": "Brewers Bay Pinnacles (Brewers Bay East and West)",
+      "template": "brewers-bay-pinnacles-tortola",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "The Chikuzen",
+      "template": null,
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "The Kodiak Queen (The Kracken)",
+      "template": null,
+      "listedBy": ["https://divebvi.com/dive-sites/", "https://www.sunchaserscuba.com/diving"]
+    },
+    {
+      "name": "Mountain Point (Cow's Mouth)",
+      "template": "mountain-point-virgin-gorda",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "The Aquarium (Virgin Gorda)",
+      "template": "the-aquarium-virgin-gorda",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "The Invisibles",
+      "template": "the-invisibles-virgin-gorda",
+      "listedBy": ["https://divebvi.com/dive-sites/", "https://www.sunchaserscuba.com/diving"]
+    },
+    {
+      "name": "Little Grotto and Big Grotto",
+      "template": null,
+      "listedBy": ["https://www.sunchaserscuba.com/diving"],
+      "excluded": "on one operator list only (Sunchaser Scuba)"
+    },
+    {
+      "name": "Spyglass Wall",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "Round Rock Drift",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "The Blinders",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "The Chimney (Great Dog)",
+      "template": "the-chimney-great-dog",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Coral Gardens / Sharkplaneo (Great Dog)",
+      "template": "coral-gardens-sharkplaneo-great-dog",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "The Visibles / POS (Cockroach Island)",
+      "template": "the-visibles-cockroach-island",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Bronco Billy (George Dog)",
+      "template": "bronco-billy-george-dog",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Seal Dog Rocks",
+      "template": "seal-dog-rocks-bvi",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Ledges / Dolphin Rocks (George Dog)",
+      "template": "ledges-dolphin-rocks-george-dog",
+      "listedBy": ["https://divebvi.com/dive-sites/", "https://www.sunchaserscuba.com/diving"]
+    },
+    {
+      "name": "Wall to Wall (West Dog)",
+      "template": "wall-to-wall-west-dog",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Joe's Cave (West Dog)",
+      "template": "joes-cave-west-dog",
+      "listedBy": ["https://divebvi.com/dive-sites/", "https://www.sunchaserscuba.com/diving"]
+    },
+    {
+      "name": "The Flintstones (West Dog)",
+      "template": "the-flintstones-west-dog",
+      "listedBy": ["https://divebvi.com/dive-sites/", "https://www.sunchaserscuba.com/diving"]
+    },
+    {
+      "name": "Playground",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "Brown Pants",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "Times Square",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "The Drop Off",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "Twin Towers (Little Jost Van Dyke)",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "Ginger Steps",
+      "template": "ginger-steps-ginger-island",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Alice in Wonderland (Ginger Island)",
+      "template": "alice-in-wonderland-ginger-island",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Alice's Backside / Ginger Patches",
+      "template": null,
+      "listedBy": ["https://divebvi.com/dive-sites/"],
+      "excluded": "on one operator list only (Dive BVI)"
+    },
+    {
+      "name": "Carvel Rock (Ginger Island)",
+      "template": "carvel-rock-bvi",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Dry Rocks East (Cooper Island)",
+      "template": "dry-rocks-east-cooper-island",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Devil's Kitchen (Cooper Island)",
+      "template": null,
+      "listedBy": ["https://divebvi.com/dive-sites/"],
+      "excluded": "on one operator list only (Dive BVI)"
+    },
+    {
+      "name": "Markoe Point (Cooper Island)",
+      "template": "markoe-point-cooper-island",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Thumb Rock (Cooper Island, Red Bluff Point)",
+      "template": null,
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://bluewaterdiversbvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Wreck Alley (Marie L, Pat, Beata, Island Seal)",
+      "template": "wreck-alley-cooper-island",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://bluewaterdiversbvi.com/dive-sites/",
+        "https://www.sunchaserscuba.com/diving"
+      ]
+    },
+    {
+      "name": "Chromis Reef",
+      "template": null,
+      "listedBy": ["https://www.sunchaserscuba.com/diving"],
+      "excluded": "on one operator list only (Sunchaser Scuba)"
+    },
+    {
+      "name": "Cistern Point (Salt Island)",
+      "template": "cistern-point-cooper-island",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Vanishing Rock / Dry Rocks West",
+      "template": "vanishing-rock-bvi",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "The Wreck of the RMS Rhone",
+      "template": "rms-rhone-salt-island",
+      "listedBy": [
+        "https://divebvi.com/dive-sites/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://bluewaterdiversbvi.com/dive-sites/",
+        "https://www.sunchaserscuba.com/diving",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Blonde Rock",
+      "template": "blonde-rock-bvi",
+      "listedBy": [
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://bluewaterdiversbvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Painted Walls (Dead Chest)",
+      "template": "painted-walls-dead-chest",
+      "listedBy": [
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://bluewaterdiversbvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Deadchest North and Deadchest West",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "Santa Monica Rock (Norman Island)",
+      "template": "santa-monica-rock-norman-island",
+      "listedBy": [
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://bluewaterdiversbvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "The Indians (Norman Island)",
+      "template": "the-indians-norman-island",
+      "listedBy": [
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://bluewaterdiversbvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Angelfish Reef (Norman Island)",
+      "template": "angelfish-reef-norman-island",
+      "listedBy": [
+        "https://bluewaterdiversbvi.com/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Rainbow Canyons (Pelican Island)",
+      "template": null,
+      "listedBy": ["https://bluewaterdiversbvi.com/dive-sites/"],
+      "excluded": "on one operator list only (Blue Water Divers)"
+    },
+    {
+      "name": "The Caves (Norman Island)",
+      "template": null,
+      "listedBy": ["https://www.sailcaribbeandivers.com/more-info/dive-sites/"],
+      "excluded": "snorkel-only"
+    },
+    {
+      "name": "Ringdove Rock",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "Carrot Shoal (South Peter Island)",
+      "template": "carrot-shoal-peter-island",
+      "listedBy": [
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/",
+        "https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"
+      ]
+    },
+    {
+      "name": "Shark Point (Peter Island)",
+      "template": null,
+      "listedBy": ["https://www.sailcaribbeandivers.com/more-info/dive-sites/"],
+      "excluded": "on one operator list only (Sail Caribbean Divers); not the Scrub Island site of the same name"
+    },
+    {
+      "name": "The Willy T (William Thornton)",
+      "template": "willy-t-wreck-peter-island",
+      "listedBy": [
+        "https://divebvi.com/dive-the-willy-t-wreck/",
+        "https://www.sailcaribbeandivers.com/more-info/dive-sites/"
+      ]
+    },
+    {
+      "name": "Wreck of the Inganess Bay",
+      "template": null,
+      "listedBy": ["https://www.bvidiving.com/scuba-diving-in-the-british-virgin-islands.html"],
+      "excluded": "on one operator list only (Cuan Law)"
+    },
+    {
+      "name": "The Baths (Virgin Gorda)",
+      "template": null,
+      "listedBy": ["https://www.sailcaribbeandivers.com/more-info/dive-sites/"],
+      "excluded": "snorkel-only"
+    }
+  ]
+}
