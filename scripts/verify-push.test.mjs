@@ -7,8 +7,9 @@ import { describe, expect, it } from "vitest";
 import {
   appTreeKey,
   browserSpecs,
+  CORES_PER_E2E_WORKER,
   E2E_CHUNK,
-  E2E_WORKERS,
+  e2eWorkers,
   excerpt,
   notRunHere,
   plan,
@@ -229,11 +230,36 @@ describe("a large browser selection", () => {
     );
   });
 
-  it("runs each step on one worker, so CI's per-test ceiling stays the bar", () => {
+  it("marks each browser step to take its worker count when it starts", () => {
     const steps = plan({ ...base, changed: ["src/lib/x.ts"], specs: ["e2e/a.spec.ts"] });
-    const run = steps.find((step) => step.name === "e2e specs");
-    expect(E2E_WORKERS).toBe(1);
-    expect(run.env).toEqual({ E2E_WORKERS: "1" });
+    expect(steps.find((step) => step.name === "e2e specs").workers).toBe(true);
+  });
+});
+
+describe("how many Playwright workers a local run uses", () => {
+  it("runs one on an idle four-core box, where two missed CI's ceiling", () => {
+    expect(CORES_PER_E2E_WORKER).toBe(3);
+    expect(e2eWorkers({ cores: 4, load: 0 }).workers).toBe(1);
+  });
+
+  it("runs as many as free cores allow, never more than CI's cores/2", () => {
+    expect(e2eWorkers({ cores: 8, load: 0 }).workers).toBe(2);
+    expect(e2eWorkers({ cores: 16, load: 0 }).workers).toBe(5);
+    expect(e2eWorkers({ cores: 4, load: 0, override: undefined }).formula).toBe(
+      "max(1, min(floor((4 cores - 0.0 load) / 3), 4/2))",
+    );
+  });
+
+  it("gives up workers to load, such as another thread's gate, but keeps one", () => {
+    expect(e2eWorkers({ cores: 16, load: 7.5 }).workers).toBe(2);
+    expect(e2eWorkers({ cores: 4, load: 9 }).workers).toBe(1);
+  });
+
+  it("lets an operator's E2E_WORKERS win", () => {
+    expect(e2eWorkers({ cores: 4, load: 0, override: "2" })).toEqual({
+      workers: 2,
+      formula: "E2E_WORKERS=2 set by the operator",
+    });
   });
 });
 

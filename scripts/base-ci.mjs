@@ -27,13 +27,17 @@ import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 /** Red jobs the gate's own steps answer for: green here is the fix carried. */
 export const COVERED_LOCALLY = /^(?:Lint|Typecheck|Repository safeguards)$/;
 
-/**
- * Jobs that are not a test verdict on the commit: approved by a push rather than passed, or (the
- * follow-ups job) run on a schedule against the live issue tracker, so a malformed issue turns it
- * red on every commit and no change of code can turn it green.
- */
+/** Jobs that are not a test verdict, or are approved by a push rather than passed. */
 export const NOT_A_VERDICT =
-  /^(?:Visual capture|reg-suit|Plan the visual|Deploy a preview|Resolve the head|Detect what changed|cdk |Every needs-triage issue is actionable cold)/;
+  /^(?:Visual capture|reg-suit|Plan the visual|Deploy a preview|Resolve the head|Detect what changed|cdk )/;
+
+/**
+ * The events a pull request's own CI runs on. A run the base got any other way (a schedule, a
+ * Run workflow button: CodeQL, Simulate a day, Follow-ups) never runs on a PR, so its red is
+ * not a verdict this layer inherits: a malformed issue or a repository setting turned main red
+ * on 2026-10-15 with nothing a commit could fix.
+ */
+export const PR_EVENTS = new Set(["push", "pull_request"]);
 
 const UNIT_FILE = /\.test\.(?:ts|tsx|mts|mjs|js)$/;
 const SPEC_FILE = /^e2e\/.+\.spec\.ts$/;
@@ -122,8 +126,17 @@ export function readBaseVerdict(sha, { repo, gh = ghJson } = {}) {
   }
   try {
     const listed = gh([`repos/${repo}/commits/${sha}/check-runs?per_page=100`]);
-    const runs = listed.check_runs ?? [];
-    if (runs.length === 0) return { unknown: `GitHub has no CI run for ${sha.slice(0, 9)} yet` };
+    const all = listed.check_runs ?? [];
+    if (all.length === 0) return { unknown: `GitHub has no CI run for ${sha.slice(0, 9)} yet` };
+    // The runs endpoint matches only a full sha; the check runs carry it.
+    const full = all[0].head_sha ?? sha;
+    const workflows = gh([`repos/${repo}/actions/runs?head_sha=${full}&per_page=100`]);
+    const offPr = new Set(
+      (workflows.workflow_runs ?? [])
+        .filter((workflow) => !PR_EVENTS.has(workflow.event))
+        .map((workflow) => workflow.check_suite_id),
+    );
+    const runs = all.filter((run) => !offPr.has(run.check_suite?.id));
     return baseVerdict(runs, (run) => gh([`repos/${repo}/check-runs/${run.id}/annotations`]));
   } catch (error) {
     return {
