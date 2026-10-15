@@ -39,9 +39,14 @@
 - **Agency check** — the DiveDay browser extension doing the "Check with SSI" lookup from the
   staffer's own browser (H-105, ADR 20261008-cert-check-extension). The extension types the diver
   into the agency's own lookup page and hands back the page's text; the server certifies the card
-  only when one record on that page names the diver ("Lena Ortiz" or "Ortiz, Lena"), carries the
-  birth date or card number the lookup was typed with, and states the claimed level in the agency's
-  own words, with nothing limiting it. A birth date written all in numbers whose day and month could
+  only when one record on that page names the diver ("Lena Ortiz" or "Ortiz, Lena", or a labeled pair
+  of adjacent lines, "First name: Lena" over "Last name: Ortiz", paired top to bottom so one record's
+  family name never completes the next one's given name), carries the birth date or card number the
+  lookup was typed with, and states the claimed level in the agency's own words, with nothing
+  limiting it. A record ends at the agency's own page furniture (SDI's "Request Certification", a
+  search control such as "Manual Search" on its own line); a labeled pair's record holds only a
+  record's kinds of lines and dates or numbers its rating, so the search form echoed back is not a
+  result. "Jr." straight after the diver's last name is part of their name. A birth date written all in numbers whose day and month could
   swap is read in that agency's own order only, so a transposed date is another diver's. Short of a
   match the staffer is told which: someone by this name but not with this birth date or number (a
   namesake, whose words are never shown), a Junior or limited card, or the diver at another level.
@@ -91,8 +96,8 @@
   the typed birth date are one diver's cards, and two birth dates under the name, or a page saying
   it found two divers or more, certify nothing ("PADI lists more than one diver by this name"). A
   record ends at the first line that could be someone else's (another name, or a name and another
-  birth date), its birth date comes before its level, and it carries the card's number when the card
-  has one. An instructor named on the row is the trainer, not a limit. A **Junior certification**
+  birth date) or at the page's own furniture, its birth date comes before its level, and it carries
+  the card's number when the card has one. An instructor named on the row is the trainer, not a limit. A **Junior certification**
   reads as its level for a diver 15 or older on the day of the check; under 15 it says "PADI shows a
   Junior card. Under 15, record it by hand." A signed-out browser says "Sign in to the PADI Pros'
   Site first" and stops a "Check all". A best guess of PADI's page until a staffer tries it (#2259).

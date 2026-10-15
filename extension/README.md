@@ -39,19 +39,10 @@ The PADI page is a best guess (#2259). To test it for real:
 
 ## Test DiveChek against the real page
 
-The DiveChek page is a best guess, like the eLearning page (#2259), and the same sitting should try both. Before relying on it, someone should also read the PADI Pros' Site terms (H-121). Turn on "PADI checks (beta)" in the shop's Settings first.
-
-1. Load the extension as above. Do not sign in to PADI yet.
-2. Open a diver's record with a pending PADI level card and a birth date, and press "Check with PADI". It should answer "Sign in to the PADI Pros’ Site first, then check again." If it says "Couldn't read PADI's page" instead, note the address PADI sent the tab to (open DiveChek yourself while signed out) and add its path to `SIGN_IN_PATH` in `protocol.js`, the one copy both `background.js` and `fill.js` read.
-3. Sign in to the PADI Pros' Site in the same browser. Find DiveChek yourself and note its address and its search boxes. Note the host at each step too: the link a staffer sees and the check both open `pro.padi.com` (`AGENCY_VERIFICATION_PAGES.padi` and `AGENCIES.padi`), and the extension also reads `pros.padi.com` (`origins`). If PADI sends the tab to a third host, add it to `PADI_ORIGINS` in `agencies.js` and to the manifest's host permissions.
-4. Press "Check with PADI" on a diver whose PADI card you know. If it answers "Couldn't read PADI's page", correct `AGENCIES.padi.url` in `agencies.js` and `checkUrl` in `src/lib/agency-verification.ts` (the two must match, and a test holds them together). If the boxes are not found, check that their labels name first name, last name and birth date and that the search's own button says Search, Find, Check, Verify or Run Report, and adjust `PATTERNS` or `BUTTON_SEARCH` in `fill.js`. If the birth date lands in the wrong order, change `dateFormat`; if DiveChek *shows* birth dates day first, change `dates` for `padi` in `AGENCY_CHECKS` (`src/lib/agency-check.ts`).
-5. If it reads the page but gets the answer wrong, copy the page's text (only the diver's lines) into a new case in the "judgeAgencyPage on PADI DiveChek" block of `src/lib/agency-check.test.ts` and fix `LEVEL_WORDING.padi` or the rule. Check what a diver with several certifications looks like (one row per card, or one name over several), whether the card number shows on each row, and whether a Junior card shows as "Junior Open Water Diver" or "Jr. Open Water Diver".
-6. Try a diver with a common name: a page listing several divers must answer "PADI lists more than one diver by this name." and certify nothing.
+Moved to the [cert-check extension runbook](../docs/engineering/cert-check-extension-runbook.md): the session anyone with Chrome runs against the public lookups, the PADI session with the first pilot shop's Pro, how to read what they send back, and the exits from "beta".
 
 ## Publish
 
-1. Bump `version` in `manifest.json` and `VERSION` in `protocol.js` together. A test holds them equal. When the fix must reach every browser before it checks again, raise `MIN_EXTENSION_VERSION` in `src/lib/cert-check-extension.ts` to it, and the stand-in versions the e2e specs announce.
-2. Zip this folder's contents, leaving out this README.
-3. Upload to the Chrome Web Store developer dashboard. The listing needs a privacy policy URL and a reason for each host permission: "Fills in this agency's public certification lookup form when the user asks, and reads the answer."
-4. Edge Add-ons accepts the same zip.
-5. Put the listing's address in `EXTENSION_STORE_URL` (`src/lib/cert-check-extension.ts`). Settings then shows "Add to Chrome".
+Bump `version` in `manifest.json` and `VERSION` in `protocol.js` together; a test holds them equal. When the fix must reach every browser before it checks again, raise `MIN_EXTENSION_VERSION` in `src/lib/cert-check-extension.ts` to it, and the stand-in versions the e2e specs announce.
+
+`node scripts/pack-extension.mjs` writes the zip, leaving out this README and `store/`, and refuses a localhost match or a `manifest.json` version that `protocol.js` does not announce. The listing text is [store/listing.md](store/listing.md); the steps are the runbook's [Publishing](../docs/engineering/cert-check-extension-runbook.md#publishing). Once the listing exists, put its address in `EXTENSION_STORE_URL` (`src/lib/cert-check-extension.ts`), and Settings shows "Add to Chrome".
