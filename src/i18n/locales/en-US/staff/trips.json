@@ -473,7 +473,8 @@
       "complete": "PADI shows the eLearning finished. Materials marked done.",
       "notComplete": "PADI doesn’t show this course’s eLearning finished yet.",
       "noRecord": "PADI found no eLearning under this student’s email.",
-      "unreadable": "Couldn’t read PADI’s page. Sign in to the PADI Pros’ Site, then check again.",
+      "unreadable": "Couldn’t read PADI’s page.",
+      "signedOut": "Sign in to the PADI Pros’ Site first, then check again.",
       "failed": "That didn’t save. Try again."
     },
     "agencyCheckAll": {
@@ -485,7 +486,8 @@
       "cancelled": "Stopped. Checked {checked}. Certified: {certified}.",
       "stopped": "Stopped at {name}: couldn’t read {agency}’s page. The rest are left for you.",
       "stoppedTransport": "Stopped at {name}: DiveDay didn’t answer. Reload to see where each certification stands.",
-      "stoppedSignedOut": "Stopped at {name}: sign in to the PADI Pros’ Site first. The rest are left for you."
+      "stoppedSignedOut": "Stopped at {name}: sign in to the PADI Pros’ Site first. The rest are left for you.",
+      "left": "Left {agency}’s other certifications for you: check them on its page."
     },
     "certifyConfirm": "Confirm certification",
     "certifyDiver": "Certify",

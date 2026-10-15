@@ -2,13 +2,15 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { diveSites } from "@/db/schema";
 import { shopPath } from "@/lib/staff-notices";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The new-site form's action. It was an inline closure in `page.tsx` that no
@@ -36,7 +38,7 @@ const { requireStaffSession } = await import("@/lib/session");
 const { createDiveSiteAction } = await import("./actions");
 
 async function signedIn() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const personId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   vi.mocked(requireStaffSession).mockResolvedValue(

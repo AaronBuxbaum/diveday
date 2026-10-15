@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getShopBackupDestination } from "@/features/backup-export";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -9,6 +9,8 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The backup destination receives the whole shop every week — waiver evidence
@@ -39,7 +41,7 @@ const { saveBackupDestinationAction, testBackupAction, disconnectBackupAction } 
 );
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   return {
     db,

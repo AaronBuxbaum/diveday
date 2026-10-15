@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "./boats";
+import { shops } from "./schema";
 import { createTripLens } from "./trip-lenses";
 import { createTrip } from "./trips-create";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **A departure may only sail on a hull its own shop owns** (issue #679).
@@ -19,9 +22,14 @@ import { createTrip } from "./trips-create";
  */
 describe("a departure's assigned hull", () => {
   it("is refused when the boat belongs to another shop", async () => {
-    const { db, shop } = await seededShopContext();
-    const other = await seededShopContext();
-    const theirBoat = await createBoat(other.db, other.shop.id, "Their Reef Runner", 6);
+    const { db, shop } = ctx;
+    // A second shop in the same database, so the boat id is real and only its
+    // owner is wrong.
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-hull", timezone: "America/New_York" })
+      .returning({ id: shops.id });
+    const theirBoat = await createBoat(db, other.id, "Their Reef Runner", 6);
 
     const trip = await createTrip(db, {
       shopId: shop.id,
@@ -40,7 +48,7 @@ describe("a departure's assigned hull", () => {
   });
 
   it("accepts the shop's own hull", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const ours = await createBoat(db, shop.id, "Our Reef Runner", 6);
 
     const trip = await createTrip(db, {
@@ -60,7 +68,7 @@ describe("a departure's assigned hull", () => {
   it("is unaffected when no hull is named", async () => {
     // Most departures. A shore dive and an unassigned boat departure both
     // arrive here as no id, and neither has anything to validate.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Shore Dive",
@@ -81,7 +89,7 @@ describe("the trip tag a new departure starts with", () => {
   const morning = (day: string) => new Date(`${day}T13:00:00.000Z`);
 
   it("writes the tag the shop chose", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const own = await createTripLens(db, shop.id, "Easygoing reef");
     if (!own) throw new Error("lens not created");
     const trip = await createTrip(db, {
@@ -96,7 +104,7 @@ describe("the trip tag a new departure starts with", () => {
   });
 
   it("leaves the tag blank when the shop chose none", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Reef morning",

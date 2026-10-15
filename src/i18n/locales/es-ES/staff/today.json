@@ -311,6 +311,7 @@
     "waiverNotSent": "{count, plural, one {Exención sin firmar, aún sin enviar.} other {# exenciones sin firmar, aún sin enviar.}}",
     "waiverPending": "{count, plural, one {Exención sin firmar, enlace enviado.} other {# exenciones sin firmar, enlaces enviados.}}",
     "waiverExpired": "{count, plural, one {El enlace de la exención caducó.} other {# enlaces de exención caducados.}}",
+    "waiverLapsed": "{count, plural, one {Exención firmada caducada.} other {# exenciones firmadas caducadas.}}",
     "medicalReview": "{count, plural, one {Una respuesta médica necesita el visto bueno de un médico.} other {# respuestas médicas necesitan el visto bueno de un médico.}}",
     "medicalNotCleared": "{count, plural, one {Un médico no lo autorizó a bucear.} other {# buceadores sin autorización médica para bucear.}}",
     "guardianSignatureMissing": "{count, plural, one {La exención necesita la firma de un tutor.} other {# exenciones necesitan la firma de un tutor.}}",

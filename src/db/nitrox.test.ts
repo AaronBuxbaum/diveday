@@ -9,6 +9,7 @@ import {
   restoreNitroxCertification,
   reviewNitroxCertification,
   setBookingNitrox,
+  unreviewNitroxCertification,
   verifiedNitroxPersonIds,
 } from "./nitrox";
 import { bookings, nitroxCertifications, people } from "./schema";
@@ -329,5 +330,135 @@ describe("setBookingNitrox", () => {
       wantsNitrox: true,
     });
     expect(outcome).toEqual({ ok: true, wantsNitrox: true, certified: true });
+  });
+});
+
+/**
+ * **Undoing a nitrox card's review** (`unreviewNitroxCertification`). The
+ * fill gate reads the card live, so an undo has to take the diver back out of
+ * it: a request already on the booking stays recorded and reads as flagged
+ * again, exactly as it did before anyone looked at the card.
+ */
+describe("unreviewNitroxCertification", () => {
+  async function card(db: AppDb, id: string) {
+    const [row] = await db
+      .select()
+      .from(nitroxCertifications)
+      .where(eq(nitroxCertifications.id, id));
+    if (!row) throw new Error("card vanished");
+    return row;
+  }
+
+  it("takes the diver out of the fill gate and flags their standing request again", async () => {
+    const ctx = await context();
+    const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
+    const before = await setBookingNitrox(ctx.db, {
+      shopId: ctx.shopId,
+      bookingId: ctx.bookingId,
+      wantsNitrox: true,
+    });
+    expect(before).toMatchObject({ ok: true, certified: true });
+
+    expect(
+      await unreviewNitroxCertification(ctx.db, {
+        shopId: ctx.shopId,
+        certificationId: cert.id,
+      }),
+    ).toEqual({ ok: true });
+
+    expect(await card(ctx.db, cert.id)).toMatchObject({
+      status: "pending",
+      reviewedAt: null,
+      reviewedByPersonId: null,
+    });
+    expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).not.toContain(ctx.personId);
+    // The request is still on the booking, and now reads as uncertified.
+    expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(true);
+    const after = await setBookingNitrox(ctx.db, {
+      shopId: ctx.shopId,
+      bookingId: ctx.bookingId,
+      wantsNitrox: true,
+    });
+    expect(after).toMatchObject({ ok: true, wantsNitrox: true, certified: false });
+  });
+
+  it("returns an imported card to imported-and-unconfirmed, which authorizes no fill", async () => {
+    const ctx = await context();
+    const [imported] = await ctx.db
+      .insert(nitroxCertifications)
+      .values({
+        shopId: ctx.shopId,
+        personId: ctx.personId,
+        agency: "padi",
+        identifier: "NX-IMPORTED-UNDO",
+        status: "verified",
+        importedAt: new Date("2026-07-01T00:00:00Z"),
+        importedFromLabel: "Reef Runners",
+      })
+      .returning();
+    if (!imported) throw new Error("card insert failed");
+    await reviewNitroxCertification(ctx.db, {
+      shopId: ctx.shopId,
+      certificationId: imported.id,
+      status: "verified",
+    });
+    expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).toContain(ctx.personId);
+
+    expect(
+      await unreviewNitroxCertification(ctx.db, {
+        shopId: ctx.shopId,
+        certificationId: imported.id,
+      }),
+    ).toEqual({ ok: true });
+
+    expect(await card(ctx.db, imported.id)).toMatchObject({ status: "verified", reviewedAt: null });
+    expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).not.toContain(ctx.personId);
+  });
+
+  it("answers not_found through another shop's id, and the card keeps its review", async () => {
+    const ctx = await context();
+    const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
+
+    expect(
+      await unreviewNitroxCertification(ctx.db, {
+        shopId: crypto.randomUUID(),
+        certificationId: cert.id,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+
+    const row = await card(ctx.db, cert.id);
+    expect(row.status).toBe("verified");
+    expect(row.reviewedAt).not.toBeNull();
+    expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).toContain(ctx.personId);
+  });
+
+  it("refuses a card staff sighted at the counter, and a card nobody reviewed", async () => {
+    const ctx = await context();
+    const sighted = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
+    await ctx.db
+      .update(nitroxCertifications)
+      .set({ selfDeclaredAt: new Date("2026-07-01T00:00:00Z") })
+      .where(eq(nitroxCertifications.id, sighted.id));
+    expect(
+      await unreviewNitroxCertification(ctx.db, {
+        shopId: ctx.shopId,
+        certificationId: sighted.id,
+      }),
+    ).toEqual({ ok: false, reason: "sighted_card" });
+    expect((await card(ctx.db, sighted.id)).reviewedAt).not.toBeNull();
+
+    const unreviewed = await createNitroxCertification(ctx.db, {
+      shopId: ctx.shopId,
+      personId: ctx.personId,
+      agency: "ssi",
+      identifier: "NX-NEW",
+    });
+    if (!unreviewed) throw new Error("cert insert failed");
+    expect(
+      await unreviewNitroxCertification(ctx.db, {
+        shopId: ctx.shopId,
+        certificationId: unreviewed.id,
+      }),
+    ).toEqual({ ok: false, reason: "not_reviewed" });
   });
 });

@@ -4,13 +4,15 @@ import type { AppDb } from "@/db/client";
 import { activityEvents, bookings, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **A departure moved from its own details form is a move** (issue #2313).
@@ -62,7 +64,7 @@ async function emptyFutureTrip(db: AppDb, shopId: string) {
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   vi.mocked(requireShopSurface).mockResolvedValue({

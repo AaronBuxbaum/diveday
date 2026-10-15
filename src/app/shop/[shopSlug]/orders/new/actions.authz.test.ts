@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 import { orders, shops } from "@/db/schema";
 import { setShopTaxEnabled } from "@/db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -12,6 +12,8 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * Raising an invoice bills a real person on the shop's own connected Stripe
@@ -51,7 +53,7 @@ async function orderCount(db: AppDb, shopId: string) {
 
 /** Seeded shop with a payable Stripe account, plus both actors. */
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   // Marks the shop connected in the database only — no Stripe call. Without it
   // every submission would stop at `not_connected` and the role gate would

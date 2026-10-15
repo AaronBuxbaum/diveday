@@ -1,6 +1,6 @@
 import { eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { bookings, courses, people, trips } from "@/db/schema";
+import { bookings, courses, people, shops, trips } from "@/db/schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "@/db/trips";
 import { fileScopedShopContext } from "@/test/db";
 import { staffSession } from "@/test/staff-session";
@@ -93,6 +93,16 @@ async function tick(db: Awaited<ReturnType<typeof context>>["db"], bookingId: st
 }
 
 describe("elearningCheckAction", () => {
+  it("refuses, whatever PADI's page says, at a shop that has not turned PADI checks on", async () => {
+    const { db, shop, tripId, bookingId } = await context();
+    await db.update(shops).set({ padiChecksEnabled: false }).where(eq(shops.id, shop.id));
+
+    const result = await elearningCheckAction(shop.slug, tripId, null, check(bookingId, PAGE));
+
+    expect(result).toEqual({ ok: false, reason: "invalid" });
+    expect((await tick(db, bookingId))?.at).toBeNull();
+  });
+
   it("ticks the materials, stamped with this staffer, when PADI shows the course finished", async () => {
     const { db, shop, staffId, tripId, bookingId } = await context();
 
@@ -249,5 +259,21 @@ describe("elearningCheckAction", () => {
       ok: false,
       reason: "invalid",
     });
+  });
+});
+
+describe("the course roster's eLearning check", () => {
+  it("is offered only at a shop that turned PADI checks on", async () => {
+    const { db, shop, tripId, bookingId } = await context();
+    const { getTripGuests } = await import("@/db/trips-guests");
+
+    const on = await getTripGuests(db, { ...shop, padiChecksEnabled: true }, tripId);
+    const off = await getTripGuests(db, { ...shop, padiChecksEnabled: false }, tripId);
+
+    expect(on?.elearningQueryByBooking.get(bookingId)).toMatchObject({
+      agency: "padi",
+      email: EMAIL,
+    });
+    expect(off?.elearningQueryByBooking.size).toBe(0);
   });
 });

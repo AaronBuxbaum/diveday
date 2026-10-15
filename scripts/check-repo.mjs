@@ -11,8 +11,11 @@
 // Does not modify any of the underlying check-*.mjs scripts; it only spawns them.
 
 import { spawn } from "node:child_process";
+import { appendFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { checkRepoRecord, checkRepoSummary } from "./repo-check-report.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -82,6 +85,12 @@ const checks = [
   ["node-version", "check-node-version.mjs"],
   ["closing-keywords", "check-closing-keywords.mjs"],
   ["sentry-imports", "check-sentry-imports.mjs"],
+  ["tenant-gates", "check-tenant-gates.mjs"],
+  ["instant", "check-instant.mjs"],
+  ["shop-reads", "check-shop-reads.mjs"],
+  ["redirect-slugs", "check-redirect-slugs.mjs"],
+  ["capability-refusals", "check-capability-refusals.mjs"],
+  ["intl-providers", "check-intl-providers.mjs"],
 ];
 
 function runCheck(label, scriptFile) {
@@ -142,6 +151,19 @@ for (const result of results) {
     if (result.stdout) console.error(result.stdout);
     if (result.stderr) console.error(result.stderr);
   }
+}
+
+// On CI: the failing guards by name in the job summary, and every guard's result as JSON for
+// the `check-repo-results` artifact (`scripts/repo-check-report.mjs`).
+if (process.env.GITHUB_STEP_SUMMARY) {
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY, checkRepoSummary(results));
+}
+if (process.env.CHECK_REPO_RESULTS) {
+  const record = checkRepoRecord(results, {
+    sha: process.env.GITHUB_SHA ?? "",
+    ref: process.env.GITHUB_REF ?? "",
+  });
+  writeFileSync(process.env.CHECK_REPO_RESULTS, `${JSON.stringify(record, null, 2)}\n`);
 }
 
 if (anyFailed) {

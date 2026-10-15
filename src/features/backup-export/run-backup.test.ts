@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { unzipSync } from "fflate";
 import { describe, expect, it, vi } from "vitest";
 import { shopBackupDeliveries } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { listBackupDeliveries } from "./delivery-store";
 import {
   disconnectShopBackupDestination,
@@ -11,6 +11,8 @@ import {
   saveShopBackupDestination,
 } from "./destination-store";
 import { runShopBackup } from "./run-backup";
+
+const ctx = fileScopedShopContext();
 
 const KEY = randomBytes(32);
 const NOW = new Date("2026-08-04T06:00:00Z");
@@ -38,7 +40,7 @@ const LABELS = {
  * in, which is exactly the week these idempotency tests reason about.
  */
 async function backupContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   await disconnectShopBackupDestination(db, shop.id);
   await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shop.id));
   const saved = await saveShopBackupDestination(
@@ -149,7 +151,7 @@ describe("runShopBackup", () => {
   });
 
   it("answers no_destination without writing any delivery row", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await disconnectShopBackupDestination(db, shop.id);
     const before = (await listBackupDeliveries(db, shop.id, { pageSize: 50 })).total;
 

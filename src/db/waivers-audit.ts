@@ -3,7 +3,7 @@
  * record for staff, a diver's own copy, and every signed release a person
  * holds. Imported through the `./waivers` barrel.
  */
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { guardianSignatureOf } from "@/lib/guardian";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
@@ -352,8 +352,8 @@ export type SignedWaiverForDiver = NonNullable<Awaited<ReturnType<typeof getSign
 /**
  * Every *signed* release on file for a set of divers at a shop, grouped by
  * person — the evidence the sign-once rule draws on. Includes both `completed`
- * and `medical_review` records (superseded ones excluded, but for a retired
- * refusal — see the query): the caller needs the
+ * and `medical_review` records (a superseded one only when it was given on
+ * the signer's own seat — see the query): the caller needs the
  * medical holds too, so a stale clean signature can never carry a diver past a
  * newer, unresolved medical review. Currency (template version, age) is decided
  * per booking by `effectiveWaiverForBooking`.
@@ -377,16 +377,23 @@ export async function listSignedWaiversByPerson(
         eq(waiverRecords.shopId, shopId),
         inArray(waiverRecords.personId, personIds),
         inArray(waiverRecords.status, ["completed", "medical_review"]),
-        // A retired refusal stays in the evidence: superseded so its seat can
-        // carry a fresh release, it still outranks every signature older than
-        // it (`isStandingRefusal`), or sign-once would fall back past it.
+        // A superseded record stays in the evidence when it was given on the
+        // signer's own seat (or no seat). A referral no physician cleared — a
+        // retired refusal, or a rider's lapsed hold its seat sent a fresh link
+        // past — because superseding moves a hold off a seat and answers
+        // nothing, so it still outranks every signature older than it
+        // (`isUnclearedReferral`), or sign-once would fall back past it. A
+        // clean signature, so the diver record reads "lapsed" rather than
+        // "nothing on file" while the link is out; every currency check
+        // refuses a superseded record, so it never stands.
+        //
+        // Never one given on a seat that now belongs to somebody else, hold
+        // or not: a split or claimed seat's records are superseded under the
+        // matched diver's name but were someone else's answers
+        // (`splitBookingIdentity`, the seat claim).
         or(
           isNull(waiverRecords.supersededAt),
-          and(
-            eq(waiverRecords.status, "medical_review"),
-            isNotNull(waiverRecords.medicalClearanceDeclinedAt),
-            isNull(waiverRecords.medicalClearedAt),
-          ),
+          or(isNull(waiverRecords.bookingId), eq(bookings.personId, waiverRecords.personId)),
         ),
         // **A clean release signed on a held seat does not carry** (#2082).
         // Until staff confirm who took the seat, whoever held its link may

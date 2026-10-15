@@ -3,6 +3,7 @@ import {
   AGENCY_CHECKS,
   type AgencyCheckQuery,
   type AgencyListedKind,
+  agencyCheckOffered,
   agencyCheckQuery,
   isAgencyCheckableLevel,
   isCheckableAgency,
@@ -14,7 +15,13 @@ import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import type { AppDb, DbExecutor } from "./client";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { unreviewCertification } from "./readiness";
-import { certifications, nitroxCertifications, people, specialtyCertifications } from "./schema";
+import {
+  certifications,
+  nitroxCertifications,
+  people,
+  shops,
+  specialtyCertifications,
+} from "./schema";
 
 /**
  * One level card the DiveDay browser extension may check with its agency
@@ -49,9 +56,11 @@ export async function certificationForAgencyCheck(
       reviewedAt: certifications.reviewedAt,
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
+      padiChecksEnabled: shops.padiChecksEnabled,
     })
     .from(certifications)
     .innerJoin(people, eq(people.id, certifications.personId))
+    .innerJoin(shops, eq(shops.id, certifications.shopId))
     .where(
       and(
         eq(certifications.id, input.certificationId),
@@ -94,7 +103,10 @@ function checkableQuery(row: {
   reviewedAt: Date | null;
   fullName: string;
   dateOfBirth: string | null;
+  padiChecksEnabled: boolean;
 }): AgencyCheckQuery | null {
+  // PADI waits for the shop's own switch (H-121).
+  if (!agencyCheckOffered(row.agency, row)) return null;
   if (isUnsightedSelfDeclaration(row)) return null;
   // A pending divemaster or instructor card keeps its link: a pro rating is
   // checked on the agency's professional tool.
@@ -130,9 +142,11 @@ export async function listAgencyCheckableCards(
       reviewedAt: certifications.reviewedAt,
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
+      padiChecksEnabled: shops.padiChecksEnabled,
     })
     .from(certifications)
     .innerJoin(people, eq(people.id, certifications.personId))
+    .innerJoin(shops, eq(shops.id, certifications.shopId))
     .where(
       and(
         eq(certifications.shopId, input.shopId),
@@ -265,9 +279,11 @@ export async function certificationForAgencyOffer(
       identifier: certifications.identifier,
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
+      padiChecksEnabled: shops.padiChecksEnabled,
     })
     .from(certifications)
     .innerJoin(people, eq(people.id, certifications.personId))
+    .innerJoin(shops, eq(shops.id, certifications.shopId))
     .where(
       and(
         eq(certifications.id, input.certificationId),
@@ -284,6 +300,7 @@ export async function certificationForAgencyOffer(
     .limit(1);
   const identifier = row?.identifier?.trim();
   if (!row || !identifier || !isAgencyCheckableLevel(row.level)) return null;
+  if (!agencyCheckOffered(row.agency, row)) return null;
   const query = agencyCheckQuery(row);
   if (!query) return null;
   return {

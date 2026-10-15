@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 /**
  * Buying a dive package is an anonymous endpoint that raises a Stripe invoice
@@ -41,7 +43,7 @@ beforeEach(() => {
 });
 
 async function shopWithPackage(validUntil: string | null = null) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const pkg = await createDivePackage(db, {
     shopId: shop.id,

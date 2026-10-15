@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **`switchDemoRoleAction` takes a role string from an unauthenticated caller.**
@@ -67,7 +69,7 @@ function signedInAt(atShopId: string) {
 }
 
 beforeEach(async () => {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   shopId = shop.id;
   vi.mocked(getDb).mockResolvedValue(db);
   hoisted.signInDiveDayCredentials.mockReset().mockResolvedValue({});

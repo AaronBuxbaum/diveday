@@ -52,7 +52,7 @@ Three things about the shape, each load-bearing:
   install — the blank-page failure described in `src/i18n/DiverIntlProvider.tsx`.
 - **The provider element is written out in each layout rather than hidden behind a shared wrapper.**
   Seven near-identical files is the Next file-convention tax; a wrapper would hide from a reader —
-  and from `src/i18n/provider-coverage.test.ts` — exactly which namespaces cross to the client.
+  and from `scripts/check-intl-providers.mjs` — exactly which namespaces cross to the client.
 
 **Staff boundaries stay English, by decision rather than deferral.** `/shop/[shopSlug]/error.tsx`
 and `/shop/[shopSlug]/trips/[id]/error.tsx` cannot use this mechanism: there is no
@@ -69,7 +69,7 @@ reason: its layout already resolves `locale` and the shop's timezone, so finishi
 `global-error.tsx` is permanently exempt and unchanged: it *replaces* the root layout, so by
 construction nothing can render above it.
 
-Guarding it: `src/i18n/provider-coverage.test.ts` walks `src/app` and fails when a Client Component
+Guarding it: `scripts/check-intl-providers.mjs` walks `src/app` and fails when a Client Component
 calls `useTranslations()` with no `DiverIntlProvider` in an ancestor segment, or when the provider's
 `namespaces` list omits one the component asks for. That is the footgun in
 `DiverIntlProvider.tsx`'s doc comment — a missing provider throws during the *server* render and

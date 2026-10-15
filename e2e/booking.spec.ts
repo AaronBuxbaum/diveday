@@ -1,5 +1,6 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
+  bookASeatAndOpenThread,
   choosePartySize,
   createTrip,
   daysFromNow,
@@ -11,6 +12,7 @@ import {
   openTripActivity,
   openTripFromBoard,
   openTripMore,
+  payCheckoutThroughWebhook,
   rosterRow,
   saveDiveIntent,
   signInAsOwner,
@@ -682,4 +684,57 @@ test("a mistyped page under a shop keeps the diver at that shop", async ({ page 
     "href",
     "/s/blue-mantis",
   );
+});
+
+/**
+ * **A card payment at booking settles the seat** (ADR
+ * 20260721-checkout-at-booking). The booking form opens a Stripe Checkout and
+ * the seat is paid only when Stripe says so: a `checkout.session.completed`
+ * with `payment_status: "paid"` on the real webhook. This fleet has no Stripe
+ * key, so the form falls back to pay-later and `seed-booking-checkout` opens
+ * the checkout the form would have; the signed event does the rest.
+ *
+ * A shop of its own (ADR 20260815-per-test-private-shops): connecting a
+ * Stripe account is shop configuration.
+ */
+test("a diver's card payment at booking settles their Pay step", async ({
+  page,
+  request,
+  privateShop,
+}) => {
+  test.setTimeout(90_000);
+  const SHOP = privateShop.slug;
+  const email = "carla.card@example.com";
+
+  await page.goto(`/s/${SHOP}`);
+  await page.locator(`a[href^="/s/${SHOP}/trips/"]`).first().click();
+  await bookASeatAndOpenThread(page, "Carla Card", email);
+  const thread = page.url();
+  const pay = page.locator("li[data-thread-step='pay']");
+  // This departure does not gate on payment, so an unpaid seat shows no Pay
+  // step at all; money that settles earns one, done.
+  const settled = page.locator("li[data-thread-step='pay'][data-step-state='done']");
+  await expect(threadStatus(page)).toBeVisible();
+  await expect(settled).toHaveCount(0);
+
+  const connected = await request.post(
+    `/api/test/seed-stripe-account?slug=${encodeURIComponent(SHOP)}`,
+  );
+  expect(connected.ok()).toBe(true);
+  const opened = await request.post(
+    `/api/test/seed-booking-checkout?slug=${encodeURIComponent(SHOP)}&email=${encodeURIComponent(email)}`,
+  );
+  expect(opened.ok()).toBe(true);
+  const checkout = await opened.json();
+  expect(checkout.amountCents).toBeGreaterThan(0);
+
+  // Still unpaid: an open checkout is not a payment.
+  await page.goto(thread);
+  await expect(threadStatus(page)).toBeVisible();
+  await expect(settled).toHaveCount(0);
+
+  await payCheckoutThroughWebhook(request, checkout);
+
+  await page.goto(thread);
+  await expect(pay).toHaveAttribute("data-step-state", "done");
 });

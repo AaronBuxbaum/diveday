@@ -8,10 +8,10 @@ import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { agencyListedOffers, useAgencyCheckHost } from "./AgencyCheckHost";
 import { AgencyListedOffer } from "./AgencyListedOffer";
 import {
-  agencyCheckAnswered,
   agencyCheckEvidence,
   agencyCheckMatchedText,
   agencyCheckOutcomeText,
+  agencyCheckSendsToAgency,
 } from "./agency-check-outcome";
 
 const LINK_BUTTON = buttonClass({
@@ -71,11 +71,12 @@ export function AgencyCheckRow({
         settled?.result?.ok === true && settled.result.verdict === "match" ? settled.result : null;
       const matched = match !== null;
       // The agency's page answered, short of a match (or came back without
-      // this diver on it): the next step is the staffer reading it on the
-      // agency's own page, so the link takes the button's place rather than
-      // standing under it with the same words. A check that came back with no
-      // page keeps the button, for another try.
-      const answered = settled ? agencyCheckAnswered(settled.result) : false;
+      // this diver on it), asked whether the staffer is human, or has
+      // changed: the next step is the staffer on the agency's own page, so
+      // the link takes the button's place rather than standing under it with
+      // the same words. A check that came back with no page keeps the button,
+      // for another try.
+      const answered = settled ? agencyCheckSendsToAgency(settled.result, settled.failure) : false;
       const showButton =
         host.hasExtension && pendingIds.has(card.certificationId) && !matched && !answered && copy;
       const outcome =

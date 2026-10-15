@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { and, eq, getTableName, isNull } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
@@ -14,6 +14,8 @@ import {
   personRoles,
   processorErasureTarget,
 } from "./schema";
+
+const ctx = fileScopedShopContext({ history: true });
 
 /**
  * The structural guard on the erasure path (`src/db/anonymize.ts`, ADR
@@ -980,7 +982,7 @@ describe("erasure coverage", () => {
    * fixture never fires every branch, which is why the sweep above is static.
    */
   it("writes no table the sweep above cannot see", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = ctx;
     const [owner] = await db
       .select({ id: people.id })
       .from(people)

@@ -289,6 +289,29 @@
           "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1057 -> 1072",
           "src/db/staffing.test.ts": "946 -> 952"
         }
+      },
+      {
+        "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-104, S2, admission/readiness adversarial tests) grew these before it landed",
+        "files": {
+          "src/app/shop/[shopSlug]/orders/page.test.tsx": "927 -> 929",
+          "src/db/anonymize.test.ts": "1693 -> 1695",
+          "src/db/erasure-coverage.test.ts": "1176 -> 1178",
+          "src/db/participant-types.test.ts": "1143 -> 1216",
+          "src/db/readiness.test.ts": "1519 -> 1691",
+          "src/db/seat-claims.test.ts": "1047 -> 1094",
+          "src/db/self-declared-cards.test.ts": "1864 -> 1865",
+          "src/db/waiver-issue.test.ts": "1051 -> 1178",
+          "src/db/waivers-medical.test.ts": "0 -> 1004",
+          "src/lib/readiness.test.ts": "1614 -> 1752",
+          "src/lib/trip-admission.test.ts": "918 -> 984",
+          "src/lib/waivers.test.ts": "1205 -> 1402"
+        }
+      },
+      {
+        "why": "merge of main into fourth-review layer r4-1: both sides added to seat-claims.test.ts",
+        "files": {
+          "src/db/seat-claims.test.ts": "1478 -> 1525"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -299,7 +322,7 @@
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1118,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1338,
-    "src/app/shop/[shopSlug]/orders/page.test.tsx": 927,
+    "src/app/shop/[shopSlug]/orders/page.test.tsx": 929,
     "src/app/shop/[shopSlug]/page.tsx": 966,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1072,
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 948,
@@ -312,8 +335,7 @@
     "src/components/ui/button.test.ts": 971,
     "src/components/ui/form.test.tsx": 1943,
     "src/components/ui/form.tsx": 1206,
-    "src/components/ui/ledger.test.tsx": 1232,
-    "src/db/anonymize.test.ts": 1693,
+    "src/db/anonymize.test.ts": 1695,
     "src/db/bookings.test.ts": 3540,
     "src/db/buddy-pairs.test.ts": 990,
     "src/db/check-in.test.ts": 1212,
@@ -324,7 +346,7 @@
     "src/db/dive-sites.test.ts": 1174,
     "src/db/diver-merge.test.ts": 1285,
     "src/db/divers.test.ts": 3105,
-    "src/db/erasure-coverage.test.ts": 1176,
+    "src/db/erasure-coverage.test.ts": 1178,
     "src/db/executed-dives.test.ts": 1085,
     "src/db/export.test.ts": 1670,
     "src/db/import.test.ts": 1077,
@@ -332,8 +354,8 @@
     "src/db/no-show.test.ts": 1165,
     "src/db/notifications.test.ts": 2007,
     "src/db/orders.test.ts": 3163,
-    "src/db/participant-types.test.ts": 1143,
-    "src/db/readiness.test.ts": 1519,
+    "src/db/participant-types.test.ts": 1216,
+    "src/db/readiness.test.ts": 1691,
     "src/db/recap.test.ts": 2138,
     "src/db/refunds.test.ts": 1154,
     "src/db/reminders.test.ts": 1078,
@@ -341,15 +363,15 @@
     "src/db/reporting.test.ts": 1594,
     "src/db/retention.test.ts": 1262,
     "src/db/reviews.test.ts": 1004,
-    "src/db/seat-claims.test.ts": 1478,
-    "src/db/self-declared-cards.test.ts": 1864,
+    "src/db/seat-claims.test.ts": 1525,
+    "src/db/self-declared-cards.test.ts": 1865,
     "src/db/staffing.test.ts": 952,
     "src/db/trips-crew.test.ts": 1489,
     "src/db/trips-queries.test.ts": 1143,
     "src/db/trips-series.test.ts": 1873,
-    "src/db/waiver-issue.test.ts": 1051,
+    "src/db/waiver-issue.test.ts": 1178,
     "src/db/work-orders.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1331,
+    "src/i18n/label-maps.test.ts": 1327,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,
@@ -358,12 +380,13 @@
     "src/lib/notifications/email.test.ts": 1494,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
-    "src/lib/readiness.test.ts": 1614,
+    "src/lib/readiness.test.ts": 1752,
     "src/lib/staffing-week.test.ts": 1115,
     "src/lib/today.test.ts": 1651,
-    "src/lib/trip-admission.test.ts": 918,
-    "src/lib/waivers.test.ts": 1205,
-    "src/proxy.test.ts": 1241
+    "src/lib/trip-admission.test.ts": 984,
+    "src/lib/waivers.test.ts": 1402,
+    "src/proxy.test.ts": 1241,
+    "src/db/waivers-medical.test.ts": 1004
   },
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
@@ -412,7 +435,7 @@
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 304,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 519,
-    "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 388,
+    "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 381,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
     "src/app/shop/[shopSlug]/gear/page.tsx#GearRegisterPage": 308,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 421,
@@ -479,7 +502,6 @@
     "src/components/SkipLink.tsx": 1,
     "src/components/ui/form.tsx": 1,
     "src/components/ui/InfoHint.tsx": 1,
-    "src/components/ui/table.test.tsx": 3,
     "src/components/ui/table.tsx": 3
   },
   "page-length": {

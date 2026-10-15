@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 import { activityEvents, bookings, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -12,6 +12,8 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **Who changed the board** (D5). The schedule builder's acts wrote no actor
@@ -40,7 +42,7 @@ const { auth } = await import("@/lib/auth");
 const { moveDepartureAction, removeDepartureAction } = await import("./actions");
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   return {
     db,
