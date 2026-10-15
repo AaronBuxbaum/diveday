@@ -14,14 +14,17 @@ import {
   setShopDivingOptions,
   setShopDockDayRhythm,
   setShopEmergencyReference,
+  setShopShoreAlertContact,
 } from "@/db/shops";
 import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
 import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
 import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { nextShoreAlertContact } from "@/lib/shore-alert-contact";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { settingsBlock } from "./action-helpers";
@@ -35,9 +38,19 @@ const dockDayForm = z.object(
   >,
 );
 
-/** The reference's fixed lines, plus a numbered label and phone per contact on the catch-all. */
+/**
+ * The reference's fixed lines, the shore contact's alert address and its
+ * consent box (H-118), plus a numbered label and phone per contact on the
+ * catch-all.
+ */
 const emergencyForm = z
-  .object({ emergencyVessel: text(), emergencyShoreContact: text(), emergencyPlan: text() })
+  .object({
+    emergencyVessel: text(),
+    emergencyShoreContact: text(),
+    emergencyPlan: text(),
+    shoreAlertEmail: text(),
+    shoreAlertConsent: checkbox(),
+  })
   .catchall(text());
 
 const divingOptionsForm = z.object({
@@ -88,12 +101,38 @@ export async function saveDockDayRhythmAction(formData: FormData) {
  * dial. The nearest chamber differs by dock and the hotline differs by country,
  * so any shape this imposed would be wrong somewhere — and a wrong number on
  * the one screen a crew reads offshore is worse than an empty one.
+ *
+ * The one exception is the shore contact's alert address (H-118), which
+ * DiveDay sends to: it must be an address, and it saves only with the box
+ * that records the shore contact agreed to hear. Either refusal saves
+ * nothing, so the reference and the address never half-land.
  */
 export async function saveEmergencyReferenceAction(formData: FormData) {
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "emergency-reference");
   await settingsBlock(session);
   const form = readForm(emergencyForm, formData);
+  const db = await getDb();
+  const current = await getShopById(db, session.user.shopId);
+  const shore = nextShoreAlertContact({
+    current: {
+      email: current?.shoreAlertEmail ?? null,
+      consentAt: current?.shoreAlertConsentAt ?? null,
+      consentByPersonId: current?.shoreAlertConsentByPersonId ?? null,
+    },
+    email: form.shoreAlertEmail,
+    consented: form.shoreAlertConsent,
+    actorPersonId: session.user.personId,
+    now: nowDate(),
+  });
+  if (!shore.ok) {
+    redirect(
+      noticeUrl(
+        page,
+        shore.reason === "invalid_email" ? "shore-alert-invalid" : "shore-alert-consent-missing",
+      ),
+    );
+  }
   const reference = normalizeEmergencyReference({
     lines: Array.from({ length: MAX_EMERGENCY_LINES }, (_, index) => ({
       label: (form[`emergencyLabel-${index}`] ?? "").slice(0, 80),
@@ -103,7 +142,8 @@ export async function saveEmergencyReferenceAction(formData: FormData) {
     shoreContact: form.emergencyShoreContact.slice(0, 160),
     plan: form.emergencyPlan.slice(0, 2000),
   });
-  await setShopEmergencyReference(await getDb(), session.user.shopId, reference);
+  await setShopEmergencyReference(db, session.user.shopId, reference);
+  await setShopShoreAlertContact(db, session.user.shopId, shore.value);
   revalidateAndRedirect(page, noticeUrl(page, "emergency-saved"));
 }
 

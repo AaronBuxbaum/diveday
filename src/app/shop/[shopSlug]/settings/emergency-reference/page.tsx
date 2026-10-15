@@ -48,7 +48,7 @@ export default async function EmergencyReferenceSettingsPage({
       description={t("settings.main.emergency.intro")}
       banner={noticeFromParam(notice, emergencyReferenceNoticeMessages(t))}
     >
-      <EmergencyReferenceForm shop={shop} t={t} />
+      <EmergencyReferenceForm shop={shop} t={t} locale={locale} />
     </SettingsEditorPage>
   );
 }

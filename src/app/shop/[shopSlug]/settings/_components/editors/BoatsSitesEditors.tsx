@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import {
+  ChoiceRow,
   controlClass,
   Field,
   FieldActions,
@@ -17,6 +18,7 @@ import {
   dockDayOffsets,
 } from "@/lib/diver-planning";
 import { EMERGENCY_LINE_SLOTS } from "@/lib/emergency-reference";
+import { formatDateTimeTz } from "@/lib/format";
 import { saveDockDayRhythmAction, saveEmergencyReferenceAction } from "../../boat-actions";
 import type { SettingsShop } from "../groups/kit";
 
@@ -83,16 +85,24 @@ const DOCK_DAY_FIELD_KEYS: Record<
   },
 };
 
-/** The numbers a crew dials during, and the plan (issue #688). */
+/**
+ * The numbers a crew dials during, and the plan (issue #688), with the shore
+ * contact's alert address and its consent beside the free-text shore contact
+ * (H-118).
+ */
 export function EmergencyReferenceForm({
   shop,
   t,
+  locale,
   className = "",
 }: {
   shop: SettingsShop;
   t: StaffTranslator;
+  /** The request's locale, for the date the consent was recorded. */
+  locale: string;
   className?: string;
 }) {
+  const consentAt = shop.shoreAlertConsentAt;
   return (
     <form
       action={saveEmergencyReferenceAction}
@@ -145,6 +155,38 @@ export function EmergencyReferenceForm({
             className={controlClass}
           />
         </Field>
+      </FieldGrid>
+      {/* An address DiveDay sends to, unlike the line above it: it saves
+          only with the box ticked (`nextShoreAlertContact`). */}
+      <FieldGrid columns={1}>
+        <Field
+          label={t("settings.main.emergency.shoreAlertEmailLabel")}
+          description={t("settings.main.emergency.shoreAlertEmailDescription")}
+        >
+          <input
+            name="shoreAlertEmail"
+            type="email"
+            autoComplete="off"
+            maxLength={320}
+            defaultValue={shop.shoreAlertEmail ?? ""}
+            className={controlClass}
+          />
+        </Field>
+        <ChoiceRow
+          name="shoreAlertConsent"
+          type="checkbox"
+          defaultChecked={consentAt !== null}
+          className="text-sm"
+        >
+          <span className="block">{t("settings.main.emergency.shoreAlertConsent")}</span>
+          {consentAt ? (
+            <span className="block text-xs text-muted">
+              {t("settings.main.emergency.shoreAlertConsentRecorded", {
+                when: formatDateTimeTz(consentAt, locale, shop.timezone),
+              })}
+            </span>
+          ) : null}
+        </ChoiceRow>
       </FieldGrid>
       <Field label={t("settings.main.emergency.planLabel")}>
         <textarea

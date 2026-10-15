@@ -49,6 +49,8 @@
       "reopensInvalid": "Esa fecha no existe en el calendario. Elige una en el campo.",
       "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
       "emergencySaved": "Referencia de emergencia guardada.",
+      "shoreAlertInvalid": "Ese correo del contacto en tierra no es una dirección válida. No se guardó nada.",
+      "shoreAlertConsentMissing": "Marca que el contacto en tierra aceptó recibir los avisos del pase de lista, o borra la dirección. No se guardó nada.",
       "packageSaved": "Paquete añadido.",
       "packageDeleted": "Paquete eliminado.",
       "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar."
@@ -508,6 +510,10 @@
       "phoneLabel": "Número {n}",
       "vesselLabel": "Embarcación",
       "shoreContactLabel": "Contacto en tierra",
+      "shoreAlertEmailLabel": "Correo del contacto en tierra para avisos del pase de lista",
+      "shoreAlertEmailDescription": "Si un pase de lista sigue abierto pasada la hora de regreso del barco, esta dirección recibe un aviso, con la salida y cuántas personas no tienen resultado. Sin nombres ni enlaces.",
+      "shoreAlertConsent": "Aceptó recibir estos avisos",
+      "shoreAlertConsentRecorded": "Registrado: {when}",
       "planLabel": "Si algo sale mal",
       "submit": "Guardar referencia de emergencia",
       "saving": "Guardando…"

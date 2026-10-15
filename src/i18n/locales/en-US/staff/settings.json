@@ -49,6 +49,8 @@
       "reopensInvalid": "That isn’t a date on the calendar. Pick one from the box.",
       "timezoneInvalid": "That isn’t a timezone we recognize. Pick one from the list.",
       "emergencySaved": "Emergency reference saved.",
+      "shoreAlertInvalid": "That shore contact email isn’t an address. Nothing was saved.",
+      "shoreAlertConsentMissing": "Tick that the shore contact agreed to get roll-call alerts, or clear the address. Nothing was saved.",
       "packageSaved": "Package added.",
       "packageDeleted": "Package deleted.",
       "packageInvalid": "That didn’t save. Check the number of dives, the price, and how long it stays usable."
@@ -508,6 +510,10 @@
       "phoneLabel": "Number {n}",
       "vesselLabel": "Vessel",
       "shoreContactLabel": "Shore contact",
+      "shoreAlertEmailLabel": "Shore contact’s email for roll-call alerts",
+      "shoreAlertEmailDescription": "If a roll call is still open after the boat was due back, this address hears once, with the departure and how many people have no result. No names, no link.",
+      "shoreAlertConsent": "They agreed to get these alerts",
+      "shoreAlertConsentRecorded": "Recorded {when}",
       "planLabel": "If something goes wrong",
       "submit": "Save emergency reference",
       "saving": "Saving…"

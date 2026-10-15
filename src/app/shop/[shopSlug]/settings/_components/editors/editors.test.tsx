@@ -193,7 +193,7 @@ describe("the emergency reference editor", () => {
 
   async function emergencyForm() {
     const { shop } = await demoShop();
-    return EmergencyReferenceForm({ shop, t });
+    return EmergencyReferenceForm({ shop, t, locale: "en-US" });
   }
 
   it("leaves what it is for to the page's description", async () => {
@@ -229,6 +229,38 @@ describe("the emergency reference editor", () => {
       EMERGENCY.lineExamples,
       ...lines.slice(1).map(() => undefined),
     ]);
+  });
+
+  /** H-118: the shore contact's alert address, and the box that records their consent. */
+  it("asks for the shore contact's alert address beside an unticked consent box", async () => {
+    const form = await emergencyForm();
+    expect(inputNamesIn(form)).toEqual(
+      expect.arrayContaining(["shoreAlertEmail", "shoreAlertConsent"]),
+    );
+    const [consent] = findElements<{ name?: string; defaultChecked?: boolean }>(
+      form,
+      ChoiceRow,
+    ).filter((row) => row.props.name === "shoreAlertConsent");
+    expect(consent?.props.defaultChecked).toBe(false);
+  });
+
+  it("keeps the box ticked, and says when, once a consent is on file", async () => {
+    const { shop } = await demoShop(async (db, shopId) => {
+      await db
+        .update(shops)
+        .set({
+          shoreAlertEmail: "shore@example.com",
+          shoreAlertConsentAt: new Date("2026-10-15T14:30:00Z"),
+          shoreAlertConsentByPersonId: shopId,
+        })
+        .where(eq(shops.id, shopId));
+    });
+    const html = renderToStaticMarkup(EmergencyReferenceForm({ shop, t, locale: "en-US" }));
+    expect(html).toContain('value="shore@example.com"');
+    expect(html).toMatch(
+      /name="shoreAlertConsent"[^>]*checked=""|checked=""[^>]*name="shoreAlertConsent"/,
+    );
+    expect(html).toContain("Recorded Oct");
   });
 });
 

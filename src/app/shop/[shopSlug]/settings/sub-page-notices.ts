@@ -51,6 +51,11 @@ export function rentalPricingNoticeMessages(t: StaffTranslator): NoticeMessages 
 export function emergencyReferenceNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "emergency-saved": { tone: "success", text: t("settings.main.notice.emergencySaved") },
+    "shore-alert-invalid": { tone: "danger", text: t("settings.main.notice.shoreAlertInvalid") },
+    "shore-alert-consent-missing": {
+      tone: "danger",
+      text: t("settings.main.notice.shoreAlertConsentMissing"),
+    },
   };
 }
 

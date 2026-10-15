@@ -438,6 +438,68 @@ describe("every settings mutation refuses the daily crew", () => {
   });
 
   /**
+   * H-118: the shore contact's alert address saves only with the box that
+   * records their consent, keeps who and when, and clearing it clears both.
+   */
+  it("saves a shore contact's alert address only with its consent", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const page = `/shop/${shop.slug}/settings/emergency-reference?notice=`;
+    const form = (email: string, consent: boolean) => {
+      const data = new FormData();
+      data.set("emergencyVessel", "Blue Mantis II");
+      data.set("shoreAlertEmail", email);
+      if (consent) data.set("shoreAlertConsent", "on");
+      return data;
+    };
+    const stored = async () => {
+      const row = await getShopById(db, shop.id);
+      return {
+        email: row?.shoreAlertEmail,
+        consentAt: row?.shoreAlertConsentAt,
+        by: row?.shoreAlertConsentByPersonId,
+        vessel: row?.emergencyReference.vessel,
+      };
+    };
+    const before = await stored();
+
+    expect(
+      await redirectedTo(() => saveEmergencyReferenceAction(form("shore@example.com", false))),
+    ).toBe(`${page}shore-alert-consent-missing`);
+    expect(await redirectedTo(() => saveEmergencyReferenceAction(form("VHF 16", true)))).toBe(
+      `${page}shore-alert-invalid`,
+    );
+    // A refusal saves nothing, the reference included.
+    expect(await stored()).toEqual(before);
+
+    expect(
+      await redirectedTo(() => saveEmergencyReferenceAction(form("shore@example.com", true))),
+    ).toBe(`${page}emergency-saved`);
+    const saved = await stored();
+    expect(saved).toMatchObject({
+      email: "shore@example.com",
+      by: owner,
+      vessel: "Blue Mantis II",
+    });
+    expect(saved.consentAt).toBeInstanceOf(Date);
+
+    expect(await redirectedTo(() => saveEmergencyReferenceAction(form("", false)))).toBe(
+      `${page}emergency-saved`,
+    );
+    expect(await stored()).toMatchObject({ email: null, consentAt: null, by: null });
+  });
+
+  it("refuses a captain's shore contact address like the rest of the reference", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const data = new FormData();
+    data.set("shoreAlertEmail", "mine@example.com");
+    data.set("shoreAlertConsent", "on");
+    await redirectedTo(() => saveEmergencyReferenceAction(data));
+    expect((await getShopById(db, shop.id))?.shoreAlertEmail).toBeNull();
+  });
+
+  /**
    * The five editors that left the hub for pages of their own (#1854) answer
    * on those pages, with a plain `?notice=` and no `saved=` row to reopen:
    * a notice that sent the owner back to the hub would land them on a door,
