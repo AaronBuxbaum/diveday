@@ -13,7 +13,14 @@ import { staffTranslator } from "./staff-messages";
  * column can be `text` rather than an enum (issue #1655).
  */
 describe("activity lines", () => {
-  const NAMES = { actor: "Marisol Vega", diver: "Priya Sharma", crew: "Diego Marín" };
+  const NAMES = {
+    actor: "Marisol Vega",
+    diver: "Priya Sharma",
+    crew: "Diego Marín",
+    provider: "zapier",
+    count: "12",
+    since: "2026-09-01",
+  };
 
   it.each(["en-US", "es-ES"])("words every code in %s", (locale) => {
     const t = staffTranslator(locale);

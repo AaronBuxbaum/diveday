@@ -45,12 +45,28 @@ import { notRehearsal } from "./trips-live";
  *
  * A refund is one event at the checkout's running refunded total, the key the
  * live path would have written for the last refund, so a shop whose last
- * refund already went out is not sent it again.
+ * refund already went out is not sent it again; and a checkout this provider
+ * already has any refund event for is not sent another (a second refund the
+ * live path missed is not replayed out of order).
+ *
+ * A run reaches back {@link BACKFILL_FLOOR_DAYS} days at most.
  */
 
 /** One run sends at most this many events; the owner runs it again for the rest. */
 export const BACKFILL_MAX_PER_RUN = 500;
 const CHUNK = 100;
+/**
+ * How far back a run may reach. A typed date is the owner's, but a year-zero
+ * start would walk every checkout the shop has ever taken; two years is past
+ * any books a connected ledger is being caught up for.
+ */
+export const BACKFILL_FLOOR_DAYS = 730;
+
+/** `since`, raised to the floor when it reaches further back. */
+export function backfillFloor(since: Date): Date {
+  const floor = new Date(nowDate().getTime() - BACKFILL_FLOOR_DAYS * 86_400_000);
+  return since < floor ? floor : since;
+}
 
 export type BackfillCounts = { checkouts: number; tips: number; refunds: number };
 
@@ -84,7 +100,12 @@ async function chosenIntegration(db: DbExecutor, shopId: string, integrationId: 
   return row ?? null;
 }
 
-async function candidatesSince(db: DbExecutor, shopId: string, since: Date): Promise<Candidate[]> {
+async function candidatesSince(
+  db: DbExecutor,
+  shopId: string,
+  requestedSince: Date,
+): Promise<Candidate[]> {
+  const since = backfillFloor(requestedSince);
   const checkouts = await db
     .select({
       id: bookingCheckouts.id,
@@ -178,7 +199,41 @@ async function unsentFor(
       );
     for (const row of rows) handed.add(row.key);
   }
-  return wanted.filter((candidate) => !handed.has(eventKey(candidate)));
+  // A refund event is keyed by the running total, so a second refund (or a
+  // refund the live path wrote under a total since passed) has a key this
+  // provider was never handed. Sending it now would land out of order behind
+  // the refund it follows, so a checkout whose refund the provider has any
+  // event for is left to the live path.
+  const refundedIds = wanted.filter((c) => c.kind === "refund").map((c) => c.id);
+  const refundHandled = new Set<string>();
+  for (let i = 0; i < refundedIds.length; i += 500) {
+    const rows = await db
+      .selectDistinct({ checkoutId: integrationEvents.entityId })
+      .from(integrationEvents)
+      .innerJoin(integrationDeliveries, eq(integrationDeliveries.eventId, integrationEvents.id))
+      .innerJoin(
+        shopIntegrations,
+        and(
+          eq(shopIntegrations.id, integrationDeliveries.integrationId),
+          eq(shopIntegrations.shopId, shopId),
+          eq(shopIntegrations.provider, integration.provider),
+        ),
+      )
+      .where(
+        and(
+          eq(integrationEvents.shopId, shopId),
+          eq(integrationEvents.entityType, "checkout"),
+          eq(integrationEvents.eventType, "order.refunded"),
+          inArray(integrationEvents.entityId, refundedIds.slice(i, i + 500)),
+        ),
+      );
+    for (const row of rows) refundHandled.add(row.checkoutId);
+  }
+  return wanted.filter(
+    (candidate) =>
+      !handed.has(eventKey(candidate)) &&
+      !(candidate.kind === "refund" && refundHandled.has(candidate.id)),
+  );
 }
 
 function countOf(candidates: Candidate[]): BackfillCounts {
@@ -210,7 +265,7 @@ export async function previewIntegrationBackfill(
 }
 
 export type BackfillResult =
-  | { ok: true; sent: BackfillCounts; remaining: number }
+  | { ok: true; provider: string; sent: BackfillCounts; remaining: number }
   | { ok: false; reason: "integration_unavailable" };
 
 /**
@@ -262,5 +317,10 @@ export async function runIntegrationBackfill(
       }
     });
   }
-  return { ok: true, sent: countOf(sent), remaining: pending.length - batch.length };
+  return {
+    ok: true,
+    provider: integration.provider,
+    sent: countOf(sent),
+    remaining: pending.length - batch.length,
+  };
 }

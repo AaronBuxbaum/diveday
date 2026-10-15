@@ -38,6 +38,7 @@
     "party_seat_self_refunded": "{actor} canceled {diver}’s seat with their own, from their trip link, and it was refunded by card",
     "medical_clearance_opened": "{actor} opened the physician’s evaluation for {diver}",
     "record_exported": "{actor} downloaded a copy of {diver}’s record",
+    "integration_backfill_sent": "{actor} sent earlier checkouts to {provider}, from {since} (queued: {count})",
     "running_late_from_message": "{actor} marked {diver} running late from their message",
     "order_refunded": "{actor} refunded an order",
     "paid_after_close_refunded": "{actor} refunded a card paid after its checkout closed",

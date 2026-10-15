@@ -184,6 +184,12 @@ type ActivityParamShapes = {
   party_seat_self_refunded: { actor: string; diver: string };
   /** A staffer opened a diver's physician's evaluation. */
   medical_clearance_opened: { actor: string; diver: string };
+  /**
+   * The owner queued a connected ledger's earlier checkouts (#2606). Names the
+   * provider, how many events went into the queue and the start day; no ids,
+   * no diver.
+   */
+  integration_backfill_sent: { actor: string; provider: string; count: string; since: string };
   /** A staffer downloaded a diver's own record. */
   record_exported: { actor: string; diver: string };
   /**
@@ -349,6 +355,7 @@ export const ACTIVITY_CODES = [
   "party_seat_self_refunded",
   "medical_clearance_opened",
   "record_exported",
+  "integration_backfill_sent",
   "running_late_from_message",
   "order_refunded",
   "paid_after_close_refunded",

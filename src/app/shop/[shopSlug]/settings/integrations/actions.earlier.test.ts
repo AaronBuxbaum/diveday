@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  activityEvents,
   bookingCheckouts,
   bookings,
   integrationDeliveries,
@@ -111,6 +112,26 @@ describe("sendEarlierCheckoutsAction", () => {
     );
     expect(to).toBe(`${PATH}?notice=earlier-sent&count=1`);
     expect(await deliveries()).toHaveLength(1);
+  });
+
+  it("writes one activity line naming the provider, the count and the day, and no ids", async () => {
+    const { owner, signIn, integration } = await context();
+    signIn(owner);
+    const since = WEEK_AGO();
+    const data = () => form({ integrationId: integration.id, since });
+    await redirectedTo(() => sendEarlierCheckoutsAction(data()));
+    await redirectedTo(() => sendEarlierCheckoutsAction(data()));
+    const lines = await fileCtx.db
+      .select()
+      .from(activityEvents)
+      .where(eq(activityEvents.code, "integration_backfill_sent"));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      actorPersonId: owner,
+      bookingId: null,
+      params: expect.objectContaining({ provider: "zapier", count: "1", since }),
+    });
+    expect(JSON.stringify(lines[0]?.params)).not.toContain(integration.id);
   });
 
   it("sends nothing the second time", async () => {

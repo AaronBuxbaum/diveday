@@ -5,6 +5,7 @@ import { z } from "zod";
 import { canPersonBackfillIntegrations, canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { runIntegrationBackfill } from "@/db/integration-backfill";
+import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import {
   createIntegrationOAuthState,
@@ -296,6 +297,20 @@ export async function sendEarlierCheckoutsAction(formData: FormData): Promise<vo
   });
   if (!result.ok) done(path, "earlier-invalid");
   const sent = result.sent.checkouts + result.sent.tips + result.sent.refunds;
+  // Provider, how many, from which day: no ids and no diver. Skipped when the
+  // run sent nothing, so a re-run is not a line.
+  if (sent > 0) {
+    await recordShopActivity(db, {
+      shopId: session.user.shopId,
+      actorPersonId: session.user.personId,
+      write: {
+        code: "integration_backfill_sent",
+        provider: result.provider,
+        count: sent,
+        since: String(parsed.data.since),
+      },
+    });
+  }
   if (result.remaining > 0) done(path, "earlier-partial", { count: result.remaining });
   done(path, sent === 0 ? "earlier-none" : "earlier-sent", { count: sent });
 }

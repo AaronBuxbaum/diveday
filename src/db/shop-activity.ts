@@ -322,6 +322,13 @@ export type ShopActivityWrite =
   | {
       code: "review_replied" | "review_reply_edited" | "review_reply_deleted";
       reviewId: string;
+    }
+  | {
+      /** Provider name, event count and the start day: nothing that names a diver or a checkout. */
+      code: "integration_backfill_sent";
+      provider: string;
+      count: number;
+      since: string;
     };
 
 /**
@@ -441,6 +448,22 @@ async function writeShopActivity(
       orderId: null,
       subjectPersonId: null,
       entry: { code: write.code, params: { actor: actor.name, diver: seat.diver } },
+    };
+  } else if (write.code === "integration_backfill_sent") {
+    values = {
+      tripId: null,
+      bookingId: null,
+      orderId: null,
+      subjectPersonId: null,
+      entry: {
+        code: write.code,
+        params: {
+          actor: actor.name,
+          provider: write.provider,
+          count: String(write.count),
+          since: write.since,
+        },
+      },
     };
   } else if ("reviewId" in write) {
     if (!isUuid(write.reviewId)) return false;

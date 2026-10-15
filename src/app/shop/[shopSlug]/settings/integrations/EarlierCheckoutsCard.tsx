@@ -4,7 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import type { AppDb } from "@/db/client";
-import { previewIntegrationBackfill } from "@/db/integration-backfill";
+import { backfillFloor, previewIntegrationBackfill } from "@/db/integration-backfill";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
@@ -63,6 +63,7 @@ export async function EarlierCheckoutsCard({
     t(`integrations.${provider as (typeof BACKFILL_PROVIDERS)[number]}.name`);
   const banner = earlierBanner(notice, Number(count) || 0, t);
   const today = toDateInputValue(utcToWallTime(nowDate(), timezone));
+  const floor = toDateInputValue(utcToWallTime(backfillFloor(new Date(0)), timezone));
 
   return (
     <SectionCard
@@ -90,6 +91,7 @@ export async function EarlierCheckoutsCard({
               type="date"
               name="since"
               required
+              min={floor}
               max={today}
               className={controlClass}
               defaultValue={from ? (since ?? "") : ""}

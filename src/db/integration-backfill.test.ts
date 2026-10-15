@@ -5,7 +5,12 @@ import { fileScopedShopContext } from "@/test/db";
 import { recordingCheckout } from "@/test/fakes";
 import { createBooking } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
-import { previewIntegrationBackfill, runIntegrationBackfill } from "./integration-backfill";
+import {
+  BACKFILL_FLOOR_DAYS,
+  previewIntegrationBackfill,
+  runIntegrationBackfill,
+} from "./integration-backfill";
+import { enqueueCheckoutIntegrationEvent } from "./integration-events";
 import {
   bookingCheckouts,
   integrationDeliveries,
@@ -170,6 +175,7 @@ describe("integration backfill (issue #2606)", () => {
     });
     expect(run).toEqual({
       ok: true,
+      provider: "zapier",
       sent: { checkouts: 2, tips: 1, refunds: 1 },
       remaining: 0,
     });
@@ -191,6 +197,7 @@ describe("integration backfill (issue #2606)", () => {
     });
     expect(again).toEqual({
       ok: true,
+      provider: "zapier",
       sent: { checkouts: 0, tips: 0, refunds: 0 },
       remaining: 0,
     });
@@ -265,6 +272,53 @@ describe("integration backfill (issue #2606)", () => {
     expect(preview).toMatchObject({ ok: true, counts: { checkouts: 0 } });
   });
 
+  it("sends no refund for a checkout whose earlier refund the provider already has, through a second refund and a reconnect", async () => {
+    const f = await priced();
+    const zap = await connect(f.shop.id, "zapier");
+    const sale = await completedCheckout(f, 2, 1_000);
+    // The live path delivered the first refund at its running total of 1,000.
+    await enqueueCheckoutIntegrationEvent(f.db, {
+      shopId: f.shop.id,
+      checkoutId: sale.checkoutId,
+      eventType: "order.refunded",
+      idempotencyKey: `checkout:${sale.checkoutId}:refund:1000`,
+      refundCents: 1_000,
+    });
+    // A second refund brought the total to 1,500; its event never went out.
+    await f.db
+      .update(bookingCheckouts)
+      .set({ refundedCents: 1_500 })
+      .where(eq(bookingCheckouts.id, sale.checkoutId));
+    await f.db
+      .update(shopIntegrations)
+      .set({ deletedAt: nowDate() })
+      .where(eq(shopIntegrations.id, zap.id));
+    const reconnected = await connect(f.shop.id, "zapier");
+    // The first connection's deliveries are the provider's; the reconnect is new.
+    const preview = await previewIntegrationBackfill(f.db, {
+      shopId: f.shop.id,
+      integrationId: reconnected.id,
+      since: since(30),
+    });
+    expect(preview).toMatchObject({ ok: true, counts: { checkouts: 0, refunds: 0 } });
+  });
+
+  it("reads no further back than the floor, however early the owner types", async () => {
+    const f = await priced();
+    const old = await completedCheckout(f, BACKFILL_FLOOR_DAYS + 30);
+    const recent = await completedCheckout(f, 10);
+    const zap = await connect(f.shop.id, "zapier");
+    await runIntegrationBackfill(f.db, {
+      shopId: f.shop.id,
+      integrationId: zap.id,
+      since: new Date(0),
+    });
+    // (The demo's own checkouts sit 400 days back, inside the floor.)
+    const keys = (await deliveriesOf(zap.id)).map((row) => row.key);
+    expect(keys).toContain(`checkout:${recent.checkoutId}:paid`);
+    expect(keys).not.toContain(`checkout:${old.checkoutId}:paid`);
+  });
+
   it("respects the events the integration subscribed to", async () => {
     const f = await priced();
     await completedCheckout(f, 2, 3_000);
@@ -327,7 +381,12 @@ describe("integration backfill (issue #2606)", () => {
         integrationId: theirs.id,
         since: since(30),
       }),
-    ).toEqual({ ok: true, sent: { checkouts: 0, tips: 0, refunds: 0 }, remaining: 0 });
+    ).toEqual({
+      ok: true,
+      provider: "zapier",
+      sent: { checkouts: 0, tips: 0, refunds: 0 },
+      remaining: 0,
+    });
     expect(await deliveriesOf(theirs.id)).toHaveLength(0);
     expect(await deliveriesOf(mine.id)).toHaveLength(0);
   });
