@@ -1,3 +1,7 @@
+import { mkdtempSync, readFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,6 +11,7 @@ import {
   excerpt,
   notRunHere,
   plan,
+  runStep,
   UNIT_SHARDS,
   writeStamps,
 } from "./verify-push.mjs";
@@ -255,5 +260,45 @@ describe("what a green run says it did not run", () => {
       "all 2 Playwright specs (no page code changed)",
     );
     expect(notRunHere({ docsOnly: true, testsOnly: false, specs: [], allSpecs })).toHaveLength(2);
+  });
+});
+
+describe("a step that hits its ceiling", () => {
+  // A killed process whose parent is gone waits as a zombie until PID 1 reaps it, which in a
+  // container may be never; a zombie runs nothing and holds no port, so it counts as gone.
+  const alive = (pid) => {
+    try {
+      return readFileSync(`/proc/${pid}/stat`, "utf8").split(" ")[2] !== "Z";
+    } catch {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  };
+
+  it("leaves no grandchild running, as an e2e server would", async () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "verify-step-"));
+    const pidFile = path.join(dir, "grandchild.pid");
+    const result = runStep("sh", ["-c", `sleep 30 & echo $! > ${pidFile}; wait`], {
+      stdio: "ignore",
+      timeoutMs: 1000,
+    });
+    expect(result.error?.code).toBe("ETIMEDOUT");
+    const grandchild = Number(readFileSync(pidFile, "utf8"));
+    expect(grandchild).toBeGreaterThan(0);
+    await expect.poll(() => alive(grandchild), { timeout: 2000 }).toBe(false);
+  });
+
+  it("kills the step's whole group, by its leader's pid, after a clean exit too", () => {
+    const killed = [];
+    runStep("true", [], {
+      timeoutMs: 1000,
+      run: () => ({ pid: 4321, status: 0 }),
+      kill: (pid, signal) => killed.push([pid, signal]),
+    });
+    expect(killed).toEqual([[-4321, "SIGKILL"]]);
   });
 });

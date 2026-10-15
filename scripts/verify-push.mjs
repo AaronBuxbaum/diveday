@@ -251,6 +251,23 @@ function tail(file) {
   }
 }
 
+/**
+ * Runs one step in a process group of its own and kills the whole group when it returns.
+ * `runBounded` kills only the child it spawned at the ceiling, so an `e2e:run` that hit it left
+ * Playwright and both e2e servers running (issue #2623: about 70 minutes on 2026-10-15, holding
+ * the checkout's ports so the next run in it timed out across dozens of specs). After a clean
+ * exit the group is already empty and the kill finds nothing.
+ */
+export function runStep(command, args, { run = runBounded, kill = process.kill, ...options }) {
+  const result = run(command, args, { ...options, detached: true });
+  if (result.pid) {
+    try {
+      kill(-result.pid, "SIGKILL");
+    } catch {}
+  }
+  return result;
+}
+
 /** Every Playwright spec in the repository, as `e2e/<name>.spec.ts`. */
 function allSpecFiles() {
   return readdirSync(path.join(ROOT, "e2e"), { recursive: true })
@@ -360,7 +377,7 @@ function main() {
     const fd = openSync(log, "w");
     const started = Date.now();
     process.stdout.write(`… ${step.name}\n`);
-    const result = runBounded(step.command, step.args, {
+    const result = runStep(step.command, step.args, {
       cwd: ROOT,
       stdio: ["ignore", fd, fd],
       timeoutMs: SUBPROCESS_TIMEOUTS.verifyPushStep,
