@@ -11,15 +11,7 @@ import {
   COURSE_FORM_BODY_MIN,
   COURSE_FORM_TITLE_MAX,
 } from "@/lib/course-forms";
-import {
-  blankAsAbsent,
-  checkbox,
-  formValue,
-  parseForm,
-  readForm,
-  single,
-  text,
-} from "@/lib/form-parse";
+import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -105,8 +97,21 @@ const courseFormSchema = z.object({
   formId: blankAsAbsent(z.uuid()),
   title: single(z.string().trim().min(2).max(COURSE_FORM_TITLE_MAX), ""),
   body: single(z.string().trim().min(COURSE_FORM_BODY_MIN).max(COURSE_FORM_BODY_MAX), ""),
-  /** A medical questionnaire: keeps blocking boarding whatever the switch says (#2337). */
-  medicalScreening: checkbox(),
+  /**
+   * A medical statement: keeps blocking boarding whatever the switch says
+   * (#2337). The form posts a hidden `unmarked` beside its box, so a ticked box
+   * reads `on`, an unticked one `unmarked`, and a post naming neither leaves
+   * the mark as it is, never clearing it by omission.
+   */
+  medicalScreening: z
+    .unknown()
+    .optional()
+    .transform((value): boolean | undefined => {
+      const entries = Array.isArray(value) ? value : [value];
+      if (entries.includes("on")) return true;
+      if (entries.includes("unmarked")) return false;
+      return undefined;
+    }),
 });
 
 /** The posted form id as typed, for a refusal to land beside the form it was about. */

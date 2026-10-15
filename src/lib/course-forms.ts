@@ -42,7 +42,7 @@ export type RequiredCourseForm = {
   title: string;
   position: number;
   /**
-   * A medical questionnaire: blocks boarding whatever
+   * A medical statement: blocks boarding whatever
    * `COURSE_FORMS_BLOCK_BOARDING` says (#2337).
    */
   medicalScreening?: boolean;

@@ -129,11 +129,11 @@ An unsigned required form then adds the `course_form_unsigned` blocker (or
 on the roster as a warning line, but no student turns Blocked. `trip-admission.ts` never reads the
 switch.
 
-**A medical questionnaire blocks whatever the switch says** (issue #2337, decided by the owner,
+**A medical statement blocks whatever the switch says** (issue #2337, decided by the owner,
 2026-10-13). `course_forms.medical_screening` marks a form as one; an owner or manager ticks it on
 the form beside its words. The marker belongs to the form's identity, so ticking it writes no new
-version and asks no student to sign again. Readiness raises `course_form_unsigned` for such a form
-even with the switch at `false`, because the dive medical always blocks and a questionnaire pasted
+version and asks no student to sign again. It is a *statement* (signature only, no answers screened), never the glossary's **Medical questionnaire**. A save that names no marker leaves it as it is, the form posts an explicit `unmarked` when the box is clear, and every flip writes a `course_form_medical_changed` activity line naming the staffer. Readiness raises `course_form_unsigned` for such a form
+even with the switch at `false`, because the dive medical always blocks and a medical statement pasted
 into a course form must not quietly become a warning. The roster's warning line leaves a marked
 form out, since its blocker line already names it. No standard template is marked: the shipped
 forms are releases and safe-practices statements, and DiveDay ships no medical wording.

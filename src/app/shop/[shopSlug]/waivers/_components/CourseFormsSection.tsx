@@ -241,7 +241,14 @@ function CourseFormFields({
         />
       </Field>
       <div className="flex flex-col gap-1">
-        <ChoiceRow type="checkbox" name="medicalScreening" defaultChecked={medicalScreening}>
+        {/* Posted beside the box, so an unticked box reads as "off" and a post without the field leaves the mark alone (#2337). */}
+        <input type="hidden" name="medicalScreening" value="unmarked" />
+        <ChoiceRow
+          type="checkbox"
+          name="medicalScreening"
+          value="on"
+          defaultChecked={medicalScreening}
+        >
           {t("waiversStaff.courseForms.medicalScreeningLabel")}
         </ChoiceRow>
         <p className="text-sm text-muted">{t("waiversStaff.courseForms.medicalScreeningHint")}</p>

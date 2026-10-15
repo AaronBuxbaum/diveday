@@ -36,6 +36,7 @@ import { loadActiveStaffRoles } from "./authz";
 import { verifyBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import {
+  activityEvents,
   bookings,
   courseFormRecords,
   courseFormRequirements,
@@ -69,7 +70,7 @@ export type CourseFormSummary = {
   version: number;
   versionId: string;
   updatedAt: Date;
-  /** A medical questionnaire: keeps blocking boarding whatever the switch says (#2337). */
+  /** A medical statement: keeps blocking boarding whatever the switch says (#2337). */
   medicalScreening: boolean;
 };
 
@@ -218,6 +219,24 @@ export async function saveCourseFormVersion(
         .update(courseForms)
         .set({ medicalScreening: input.medicalScreening })
         .where(and(eq(courseForms.id, form.id), eq(courseForms.shopId, input.shopId)));
+      // Not a version, so this line is the mark's whole history: who flipped a
+      // gate the boarding rail reads, and which way (issue #2337).
+      const [actor] = await tx
+        .select({ name: people.fullName })
+        .from(people)
+        .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+        .limit(1);
+      await tx.insert(activityEvents).values({
+        shopId: input.shopId,
+        actorPersonId: input.actorPersonId,
+        code: "course_form_medical_changed",
+        params: {
+          actor: actor?.name ?? "",
+          form: next.title,
+          marked: input.medicalScreening ? "yes" : "no",
+        },
+        occurredAt: nowDate(),
+      });
     }
     if (current && !courseFormTextChanged(current, next)) {
       return { ok: true, versioned: false, marked } as const;

@@ -1131,7 +1131,8 @@
   it (ADR 20261008-course-forms). A course template names its agency's **standard forms** by title.
   Creating or syncing the course sets them up empty, and a form with no text is asked of nobody
   until the shop pastes the agency's wording in. A form the shop ticks as a **medical
-  questionnaire** keeps blocking even with that switch at warn-only.
+  statement** (signature only; no answers are screened, unlike the **Medical questionnaire**
+  below) keeps blocking even with that switch at warn-only.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and

@@ -9,7 +9,7 @@ import {
   saveCourseFormVersion,
   setCourseFormRequirements,
 } from "./course-forms";
-import { bookings, courseFormVersions, people, shops, trips } from "./schema";
+import { activityEvents, bookings, courseFormVersions, people, shops, trips } from "./schema";
 import { listStaff } from "./trips";
 
 const fileCtx = fileScopedShopContext();
@@ -129,6 +129,44 @@ describe("course forms — the medical-screening marker (#2337)", () => {
       { marked: true },
     );
     expect((await requiredFor(ctx))[0]?.medicalScreening).toBeUndefined();
+  });
+
+  it("writes an activity line naming the staffer on every flip, and none when nothing flipped", async () => {
+    const ctx = await courseContext();
+    const form = await formOn(ctx, false);
+    const base = {
+      shopId: ctx.shop.id,
+      formId: form.id,
+      title: "Health questionnaire",
+      body: BODY,
+      actorPersonId: ctx.staff.id,
+    };
+    const lines = async () =>
+      (
+        await ctx.db
+          .select({
+            code: activityEvents.code,
+            actorPersonId: activityEvents.actorPersonId,
+            params: activityEvents.params,
+          })
+          .from(activityEvents)
+          .where(
+            and(
+              eq(activityEvents.shopId, ctx.shop.id),
+              eq(activityEvents.code, "course_form_medical_changed"),
+            ),
+          )
+      ).filter((line) => line.params.form === "Health questionnaire");
+    await saveCourseFormVersion(ctx.db, { ...base, medicalScreening: false });
+    await saveCourseFormVersion(ctx.db, base);
+    expect(await lines()).toHaveLength(0);
+    await saveCourseFormVersion(ctx.db, { ...base, medicalScreening: true });
+    await saveCourseFormVersion(ctx.db, { ...base, medicalScreening: false });
+    const written = await lines();
+    expect(written).toHaveLength(2);
+    expect(written.map((line) => line.params.marked).sort()).toEqual(["no", "yes"]);
+    expect(written.every((line) => line.actorPersonId === ctx.staff.id)).toBe(true);
+    expect(written.every((line) => line.params.actor === ctx.staff.fullName)).toBe(true);
   });
 
   it("will not mark another shop's form", async () => {

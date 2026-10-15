@@ -43,7 +43,7 @@ export const courseForms = pgTable(
       .notNull()
       .references(() => shops.id),
     /**
-     * The form is a medical questionnaire. Such a form keeps blocking boarding
+     * The form is a medical statement (signature only; no answers are screened). Such a form keeps blocking boarding
      * whatever `COURSE_FORMS_BLOCK_BOARDING` says (ADR 20261008-course-forms,
      * issue #2337): the dive medical always blocks, so a questionnaire a shop
      * pasted into a course form must not become a warning when the switch is
