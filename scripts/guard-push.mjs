@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url";
 
 import { recordOverride, recordRefusal } from "./hook-log.mjs";
 import { gitReader } from "./stack-map.mjs";
-import { tracker } from "./tracker.mjs";
+import { branchLabel, tracker } from "./tracker.mjs";
 
 export const OVERRIDE = "DIVEDAY_PUSH_UNVERIFIED";
 
@@ -204,12 +204,18 @@ export function forkRefusal({ branch, parent, pulls }) {
     seen.add(top);
   }
   const topPull = pulls.find((pull) => pull.headRefName === top);
-  const named = topPull ? `#${topPull.number} (\`${top}\`)` : `\`${top}\``;
+  const topSafe = topPull ? branchLabel(top, topPull.number) : branchLabel(top, "?");
+  const named = topPull ? `#${topPull.number} (${topSafe})` : topSafe;
+  // A branch name that is not plainly one is not printed into a command to paste.
+  const rebase =
+    /^[A-Za-z0-9._/-]+$/.test(top) && /^[A-Za-z0-9._/-]+$/.test(parent)
+      ? `\`git fetch origin && git rebase --onto origin/${top} origin/${parent} ${branch}\``
+      : `a \`git rebase --onto\` from ${branchLabel(parent, siblings[0].number)} onto ${topSafe}`;
   return (
     `\`${branch}\` grew from \`${parent}\`, which ${siblings.map((pull) => `#${pull.number}`).join(", ")} ` +
     `already stack on, so a push would fork the chain and \`stack.yml\` would leave every layer ` +
     `above the fork unstacked. The current top is ${named}. Rebase onto it: ` +
-    `\`git fetch origin && git rebase --onto origin/${top} origin/${parent} ${branch}\`, then push ` +
+    `${rebase}, then push ` +
     "(.claude/skills/stacked-prs/pipeline.md#registration-which-is-not-yours-to-do). " +
     "If this is meant to be a separate stack, base it on main."
   );

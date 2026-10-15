@@ -81,6 +81,27 @@ describe("reading issues", () => {
     expect(pulls[0]).toMatchObject({ number: 2367, headRefName: "claude/project-thread-vidbfn-5" });
   });
 
+  it("leaves out pull requests whose head is in another repository", () => {
+    const own = {
+      number: 1,
+      head: { ref: "a", repo: { full_name: "o/r" } },
+      base: { ref: "main", repo: { full_name: "o/r" } },
+    };
+    const fork = {
+      number: 2,
+      head: { ref: "b", repo: { full_name: "x/r" } },
+      base: { ref: "main", repo: { full_name: "o/r" } },
+    };
+    const gone = {
+      number: 3,
+      head: { ref: "c", repo: null },
+      base: { ref: "main", repo: { full_name: "o/r" } },
+    };
+    const { run } = fakeGh({ [`${BASE}/pulls?`]: [own, fork, gone] });
+    const pulls = createTracker({ repo: REPO, run }).listPulls();
+    expect(pulls.map((pull) => pull.number)).toEqual([1]);
+  });
+
   it("finds when a label was last added from the issue's events", () => {
     expect(lastLabelledAt(RECORDED.events, "in-progress")).toBe("2026-10-10T09:46:09Z");
     expect(lastLabelledAt(RECORDED.events, "wontfix")).toBeNull();

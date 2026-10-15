@@ -73,6 +73,27 @@ export function toComment(raw) {
   return { body: raw.body ?? "", createdAt: raw.created_at ?? "" };
 }
 
+/** A branch name safe to print into a shell command or a comment. */
+const SAFE_BRANCH = /^[A-Za-z0-9._/-]+$/;
+
+/**
+ * How a pull request's branch reads in a message: the name when it is plainly a branch name, else
+ * the pull request's number. A fork's branch name is the fork author's text, and the messages
+ * these scripts print are copied into a shell and posted as comments.
+ */
+export function branchLabel(branch, number) {
+  return typeof branch === "string" && SAFE_BRANCH.test(branch) ? `\`${branch}\`` : `#${number}`;
+}
+
+/** Whether a REST pull request's head lives in another repository (or one since deleted). */
+export function isForkPull(raw) {
+  const head = raw.head;
+  if (!head || !("repo" in head)) return false;
+  if (head.repo === null) return true;
+  const base = raw.base?.repo?.full_name;
+  return Boolean(base) && head.repo?.full_name !== base;
+}
+
 /** One REST pull request, reduced to what the scripts read. */
 export function toPull(raw) {
   return {
@@ -187,7 +208,9 @@ export function createTracker({ repo = repoSlug(), run = ghApi, log = console.lo
     },
 
     listPulls({ state = "open", limit = 500 } = {}) {
-      return getAll(`${base}/pulls?state=${encodeURIComponent(state)}`, limit).map(toPull);
+      return getAll(`${base}/pulls?state=${encodeURIComponent(state)}`, limit)
+        .filter((raw) => !isForkPull(raw))
+        .map(toPull);
     },
 
     /** Files an issue; returns `{ number, url }` (null under a dry run). */

@@ -1338,6 +1338,19 @@ describe("what the retry queue is allowed to hold", () => {
     expect(row?.lastError).not.toContain("Ola Roe");
   });
 
+  it("records an error whose name carries free text as unknown_error", async () => {
+    const { db, shop } = ctx;
+    const named = new Error("boom");
+    named.name = "Failed for front-desk@example.invalid (Ola Roe)";
+    const delivery = await sendNotification(db, linkBearing(shop.id, "staff_invite"), {
+      async send() {
+        throw named;
+      },
+    });
+    expect(delivery).toMatchObject({ status: "failed", detail: "unknown_error" });
+    expect(JSON.stringify(delivery)).not.toContain("Ola Roe");
+  });
+
   it("keeps a batch send's thrown message out of every result", async () => {
     const { db, shop } = ctx;
     const [delivery] = await sendNotificationBatch(

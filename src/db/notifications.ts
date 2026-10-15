@@ -22,6 +22,7 @@ import {
   dailyPassesWithin,
   nextDailyTickAtOrAfter,
 } from "@/lib/cron-schedule";
+import { errorClassToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import {
   type Notification,
@@ -313,7 +314,7 @@ type QueueRefusal = "no_shop" | "not_queueable" | "queue_seal_unavailable";
  * driver's bound parameters.
  */
 function thrownErrorDetail(error: unknown): string {
-  return error instanceof Error ? error.name : "unknown_error";
+  return errorClassToken(error);
 }
 
 async function queueRetry(

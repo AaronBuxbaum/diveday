@@ -247,6 +247,18 @@ describe("a push that would fork a stack (#2587)", () => {
     expect(reason).toContain("git rebase --onto origin/tw origin/s9 tw8");
   });
 
+  it("prints a number, not a branch name, when the name is not plainly one", () => {
+    const hostile = [
+      pull(2581, "s9", "main"),
+      pull(2582, "dn", "s9"),
+      pull(2585, "x$(touch /tmp/pwn)", "dn"),
+    ];
+    const reason = forkRefusal({ branch: "tw8", parent: "s9", pulls: hostile });
+    expect(reason).not.toContain("touch");
+    expect(reason).toContain("current top is #2585 (#2585)");
+    expect(reason).not.toContain("git fetch origin && git rebase");
+  });
+
   it("leaves a branch alone when its parent has no other layer on it", () => {
     expect(forkRefusal({ branch: "next", parent: "tw", pulls: open })).toBeNull();
   });

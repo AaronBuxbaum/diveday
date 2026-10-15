@@ -215,6 +215,27 @@ suite("run", () => {
     expect(posts[0].body.body).toContain(FORK_MARKER);
   });
 
+  it("posts a number, not a branch name, when the name is not plainly one", async () => {
+    const forked = [...chain3, pr(4, "l4$(id)", "l2")];
+    const { call, calls } = fake({ pulls: forked });
+    await run({ ...env, STACK_PULL_REQUEST: "4" }, call);
+    const body = calls.find((c) => c.method === "POST").body.body;
+    expect(body).toContain("#3 (`l3`) and #4 (#4)");
+    expect(body).not.toContain("$(id)");
+  });
+
+  it("leaves a fork's pull request out of the chain", async () => {
+    const fromFork = {
+      ...pr(4, "l4", "l2"),
+      head: { ref: "l4", repo: { full_name: "someone/else" } },
+      base: { ref: "l2", repo: { full_name: "owner/repo" } },
+    };
+    const { call } = fake({ pulls: [...chain3, fromFork] });
+    expect(await run({ ...env, STACK_PULL_REQUEST: "4" }, call)).toMatch(
+      /not an open pull request/,
+    );
+  });
+
   it("does not comment twice on the same layer", async () => {
     const forked = [...chain3, pr(4, "l4", "l2")];
     const calls = [];

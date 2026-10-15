@@ -147,8 +147,8 @@ export function chainThrough(pulls, start, defaultBranch) {
     const children = childrenOf.get(pull.head.ref) ?? [];
     if (children.length > 1) {
       return {
-        fork: { base: pull.head.ref, children },
-        error: `\`${pull.head.ref}\` is the base of ${children.length} open pull requests (${children.map((child) => `#${child.number}`).join(", ")}), so the chain forks and is not a stack`,
+        fork: { base: pull.head.ref, baseLabel: branchLabel(pull.head.ref, pull.number), children },
+        error: `${branchLabel(pull.head.ref, pull.number)} is the base of ${children.length} open pull requests (${children.map((child) => `#${child.number}`).join(", ")}), so the chain forks and is not a stack`,
       };
     }
   }
@@ -265,19 +265,35 @@ async function commentFork(repo, token, call, start, fork) {
   });
   if (comments.some((comment) => String(comment.body ?? "").includes(FORK_MARKER))) return;
   const tips = fork.children
-    .map((child) => `#${child.number} (\`${child.head.ref}\`)`)
+    .map((child) => `#${child.number} (${branchLabel(child.head.ref, child.number)})`)
     .join(" and ");
   const body = [
     FORK_MARKER,
-    `Not stacked: \`${fork.base}\` is the base of ${tips}, so the chain forks and the registrar leaves every layer above the fork alone.`,
+    `Not stacked: ${fork.baseLabel} is the base of ${tips}, so the chain forks and the registrar leaves every layer above the fork alone.`,
     "",
-    `Pick one tip to stay on \`${fork.base}\`, and rebase the other onto the top of that chain: \`git rebase --onto origin/<top> origin/${fork.base} <branch>\`, then retarget its pull request. See .claude/skills/stacked-prs/pipeline.md.`,
+    `Pick one tip to stay on ${fork.baseLabel}, and rebase the other onto the top of that chain (\`git rebase --onto origin/<top> origin/<base> <branch>\`), then retarget its pull request. See .claude/skills/stacked-prs/pipeline.md.`,
   ].join("\n");
   await call(`/repos/${repo}/issues/${start.number}/comments`, {
     token,
     method: "POST",
     body: { body },
   });
+}
+
+/** A branch name safe to post in a comment, else the pull request's number. */
+function branchLabel(branch, number) {
+  return typeof branch === "string" && /^[A-Za-z0-9._/-]+$/.test(branch)
+    ? `\`${branch}\``
+    : `#${number}`;
+}
+
+/** Whether a pull request's head lives in another repository (or one since deleted). */
+function isForkPull(raw) {
+  const head = raw.head;
+  if (!head || !("repo" in head)) return false;
+  if (head.repo === null) return true;
+  const base = raw.base?.repo?.full_name;
+  return Boolean(base) && head.repo?.full_name !== base;
 }
 
 /** Every open pull request, following `Link` pagination the simple way. */
@@ -287,7 +303,7 @@ async function openPulls(repo, token, call = request) {
     const batch = await call(`/repos/${repo}/pulls?state=open&per_page=100&page=${page}`, {
       token,
     });
-    pulls.push(...batch);
+    pulls.push(...batch.filter((raw) => !isForkPull(raw)));
     if (batch.length < 100) break;
   }
   return pulls;
