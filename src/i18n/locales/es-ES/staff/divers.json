@@ -561,7 +561,7 @@
   },
   "waiver": {
     "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",
-    "viewRefusedRecord": "Ver registro firmado",
+    "viewRefusedRecord": "Ver la decisión del médico",
     "referralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada. Regístrala o pregunta.",
     "viewReferralRecord": "Ver la derivación",
     "openClearanceDocument": "Abrir la evaluación médica",

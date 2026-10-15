@@ -561,7 +561,7 @@
   },
   "waiver": {
     "earlierRefusal": "A physician did not clear this person on {date} (earlier waiver).",
-    "viewRefusedRecord": "View signed record",
+    "viewRefusedRecord": "View the physician’s decision",
     "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file. Record one, or ask.",
     "viewReferralRecord": "View the referral",
     "openClearanceDocument": "Open the physician’s evaluation",

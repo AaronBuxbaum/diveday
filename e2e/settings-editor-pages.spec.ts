@@ -36,7 +36,7 @@ test("the hub's list editors are doors, and each opens its own page", async ({
     ["Boats", "boats"],
     ["Trip tags", "trip-tags"],
     // Forms of six to a dozen fields, pages of their own since #1854.
-    ["What we rent", "rentals"],
+    ["Rentals", "rentals"],
     ["Rental prices", "rental-prices"],
     ["Emergency reference", "emergency-reference"],
     ["Dock-day rhythm", "dock-day"],

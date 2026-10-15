@@ -129,7 +129,7 @@
   "medicalRidingOnlyNotCleared": "Un médico no autorizó a esta persona el {date}: solo a bordo, sin entrar al agua",
   "medicalRidingOnlyReferral": "Derivación médica del {date} sin respuesta registrada: solo a bordo, sin entrar al agua",
   "medicalReferralLink": "Ver la derivación",
-  "medicalRefusalLink": "Ver el rechazo",
+  "medicalRefusalLink": "Ver la decisión del médico",
   "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
   "addNoteSummary": "Añadir una nota",
   "rollCallRecordedByPlain": "{label} {date} por {name}",

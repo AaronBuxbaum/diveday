@@ -294,7 +294,7 @@
       "notice": "El catálogo de alquiler, sus precios y la conexión con Stripe están limitados a propietarios y gerentes. Los ajustes de arriba están abiertos a todo el equipo."
     },
     "rentals": {
-      "heading": "Qué alquilamos",
+      "heading": "Alquiler",
       "detail": "Marca lo que alquilas. Lo que no marques sale del formulario de equipo, y los ajustes de alquiler que ya lo piden siguen en la lista de preparación, marcados.",
       "legend": "Equipo y servicios de alquiler",
       "submit": "Guardar catálogo de alquiler",

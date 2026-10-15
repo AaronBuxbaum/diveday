@@ -596,6 +596,7 @@
     "signedPaper": "Firmado el {date} · registrado a partir de una copia en papel",
     "signedPlain": "Firmado el {date}",
     "viewSignedRecord": "Ver registro firmado",
+    "viewPhysicianDecision": "Ver la decisión del médico",
     "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",
     "referralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada.",
     "viewReferral": "Ver la derivación",

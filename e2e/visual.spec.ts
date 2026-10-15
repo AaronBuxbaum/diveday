@@ -6688,7 +6688,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the rental pages render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/rentals");
-        await page.getByRole("heading", { level: 1, name: "What we rent" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Rentals" }).waitFor();
         await page.getByRole("button", { name: "Save rental catalog" }).waitFor();
         await capture(page, "settings-rentals", scheme);
         await page.goto("/shop/blue-mantis/settings/rental-prices");
