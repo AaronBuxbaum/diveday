@@ -1,4 +1,4 @@
-import { EditorRailSkeleton } from "@/components/editor/EditorRail";
+import { EditorFoldedSectionsSkeleton, EditorRailSkeleton } from "@/components/editor/EditorRail";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 
 /**
@@ -32,14 +32,19 @@ export default function EditCourseLoading() {
         <div className="mt-6 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
           {/* The rail, from `lg` up; a phone has none. */}
           <EditorRailSkeleton count={COURSE_EDITOR_SECTIONS} />
-          <div className="divide-y divide-border">
+          <div className="flex flex-col">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="py-8 first:pt-0">
+              // Below `lg` one section stands open and the rest fold to headers.
+              <div
+                key={i}
+                className={i === 0 ? "pb-8" : "border-t border-border py-8 max-lg:hidden"}
+              >
                 <div className="h-3 w-28 rounded bg-surface-sunken" />
                 <div className="mt-4 h-12 rounded-lg bg-surface-sunken" />
                 <div className="mt-5 h-24 rounded-lg bg-surface-sunken" />
               </div>
             ))}
+            <EditorFoldedSectionsSkeleton count={COURSE_EDITOR_SECTIONS} />
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { EditorRailSkeleton } from "@/components/editor/EditorRail";
+import { EditorFoldedSectionsSkeleton, EditorRailSkeleton } from "@/components/editor/EditorRail";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { SITE_FORM_SECTION_ORDER } from "../_components/site-form-sections";
 
@@ -36,7 +36,11 @@ export default function NewDiveSiteLoading() {
 
           <div className="flex min-w-0 flex-col gap-6">
             {[0, 1, 2].map((section) => (
-              <div key={section} className={section === 0 ? "" : "border-t border-border pt-6"}>
+              // Below `lg` the loaded editor opens one section and folds the rest.
+              <div
+                key={section}
+                className={section === 0 ? "" : "border-t border-border pt-6 max-lg:hidden"}
+              >
                 <div className="h-3 w-32 rounded bg-surface-sunken" />
                 <div className="mt-4 flex flex-col gap-5">
                   {[0, 1].map((field) => (
@@ -48,6 +52,7 @@ export default function NewDiveSiteLoading() {
                 </div>
               </div>
             ))}
+            <EditorFoldedSectionsSkeleton count={SITE_FORM_SECTION_ORDER.length} />
             {/* The one Save, in its sticky row. */}
             <div className="border-t border-border pt-3">
               <div className="h-11 w-40 rounded-lg bg-surface-sunken" />
