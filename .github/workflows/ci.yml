@@ -195,7 +195,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: node_modules/.cache/diveday
-          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/content/**', '!src/content/**/*.test.ts', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
       # Not `pnpm test -- ...`: pnpm/npm insert a literal `--` before forwarded
       # args when the target script is itself a bare command (`vitest run`),
       # so the underlying CLI sees `vitest run -- --reporter=dot --shard=…`
@@ -308,7 +308,7 @@ jobs:
       - uses: actions/cache/restore@v6
         with:
           path: node_modules/.cache/diveday
-          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/content/**', '!src/content/**/*.test.ts', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
       - name: Run the unit files that read a document
         run: |
           mapfile -t files < <(git grep -lE "[\"'\`](\./)?(docs/|\.claude/|AGENTS\.md|CLAUDE\.md|README)|[\"'\`](docs|\.claude)[\"'\`]|\.md[\"'\`]" -- \

@@ -97,6 +97,14 @@
       "sourceSize": [2816, 2112],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/Casa Cenote in Mexico (42877772324).jpg": {
+      "subject": "site:casa-cenote",
+      "source": "File:Casa Cenote in Mexico (42877772324).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "dronepicr",
+      "sourceSize": [5306, 3537],
+      "reviewed": "2026-10-15"
+    },
     "dive-sites/Catfish Hotel Sink from left, Manatee Springs State Park.jpg": {
       "subject": "site:catfish-hotel",
       "source": "File:Catfish Hotel Sink from left, Manatee Springs State Park.JPG",
@@ -104,6 +112,30 @@
       "artist": "Michael Rivera",
       "sourceSize": [5184, 3456],
       "reviewed": "2026-10-14"
+    },
+    "dive-sites/Cenote Calavera.jpg": {
+      "subject": "site:calavera-cenote",
+      "source": "File:Cenote Calavera.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Offthebeatonpath",
+      "sourceSize": [3872, 2592],
+      "reviewed": "2026-10-15"
+    },
+    "dive-sites/Cenote Chac Mool.jpg": {
+      "subject": "site:chac-mool-cenote",
+      "source": "File:Cenote Chac Mool.jpg",
+      "licence": "CC BY-SA 3.0",
+      "artist": "Waielbi",
+      "sourceSize": [4000, 3000],
+      "reviewed": "2026-10-15"
+    },
+    "dive-sites/Cenotes Dos Ojos in Yucatan, Mexico (42882089264).jpg": {
+      "subject": "site:dos-ojos-cenote",
+      "source": "File:Cenotes Dos Ojos in Yucatan, Mexico (42882089264).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "dronepicr",
+      "sourceSize": [2925, 2194],
+      "reviewed": "2026-10-15"
     },
     "dive-sites/Cherokee Sink from end of boardwalk.jpg": {
       "subject": "site:cherokee-sink",
@@ -251,6 +283,14 @@
       "sourceSize": [2048, 1536],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/GranCenote-27527-3.jpg": {
+      "subject": "site:gran-cenote",
+      "source": "File:GranCenote-27527-3.jpg",
+      "licence": "Public domain",
+      "artist": "Ken Thomas",
+      "sourceSize": [1600, 1200],
+      "reviewed": "2026-10-15"
+    },
     "dive-sites/Grote Knip Curacao (34800917861).jpg": {
       "subject": "site:grote-knip-curacao",
       "source": "File:Grote Knip Curacao (34800917861).jpg",
@@ -329,6 +369,14 @@
       "licence": "CC BY-SA 3.0",
       "artist": "DANIEL ALFARO C.",
       "sourceSize": [2592, 1944],
+      "reviewed": "2026-10-15"
+    },
+    "dive-sites/Mexico cenotes Angelita Tom Sladek.jpg": {
+      "subject": "site:angelita-cenote",
+      "source": "File:Mexico cenotes Angelita Tom Sladek.jpg",
+      "licence": "CC BY 4.0",
+      "artist": "Michaela Yos Niki Loxa",
+      "sourceSize": [3200, 2400],
       "reviewed": "2026-10-15"
     },
     "dive-sites/Neptune Reef.jpg": {
@@ -477,6 +525,14 @@
       "sourceSize": [3648, 2736],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/The Pit - Profundo - Cenote (4317117052).jpg": {
+      "subject": "site:el-pit-cenote",
+      "source": "File:The Pit - Profundo - Cenote (4317117052).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Serge Melki from Indianapolis, USA",
+      "sourceSize": [2816, 2112],
+      "reviewed": "2026-10-15"
+    },
     "dive-sites/Troy Springs SP springs pano01.jpg": {
       "subject": "site:troy-spring",
       "source": "File:Troy Springs SP springs pano01.jpg",
@@ -491,6 +547,14 @@
       "licence": "CC BY 2.0",
       "artist": "Serge Melki from Indianapolis, USA",
       "sourceSize": [2100, 1500],
+      "reviewed": "2026-10-15"
+    },
+    "dive-sites/Underwater Vegetation - Carwash Cenote QR.jpg": {
+      "subject": "site:carwash-cenote",
+      "source": "File:Underwater Vegetation - Carwash Cenote QR.jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Bernard DUPONT",
+      "sourceSize": [4416, 3312],
       "reviewed": "2026-10-15"
     },
     "dive-sites/US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg": {
@@ -541,6 +605,14 @@
       "licence": "CC BY 4.0",
       "artist": "Alessio Rovere",
       "sourceSize": [4000, 2250],
+      "reviewed": "2026-10-15"
+    },
+    "dive-sites/West View (8333604966).jpg": {
+      "subject": "site:west-view-san-andres",
+      "source": "File:West View (8333604966).jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Joao Carlos Medau from Campinas, Brazil",
+      "sourceSize": [3827, 2552],
       "reviewed": "2026-10-15"
     },
     "dive-sites/White slave home.jpg": {
@@ -3513,6 +3585,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:ankas-place-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:antares-freighter": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3533,6 +3609,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:atlantis-reef-isla-mujeres": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:avocet-dredge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3543,6 +3623,10 @@
     },
     "site:babylon-grand-cayman": {
       "reason": "Commons has no photo of this site; a name search returns only unrelated books, art and places",
+      "checked": "2026-10-15"
+    },
+    "site:bajo-bonito-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:balboa": {
@@ -3565,6 +3649,10 @@
       "reason": "Commons has no photograph identified as barracuda-bight-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
     },
+    "site:barracuda-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:barracuda-point-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -3573,12 +3661,20 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:barracuda-wall-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
     "site:barrel-sponge-wall-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
     "site:beacon-point-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:bears-den-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:belcher-barge": {
@@ -3625,6 +3721,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:big-rock-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:big-tunnels-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -3645,6 +3745,14 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:black-coral-wall-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:black-hills-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:black-rock-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -3655,6 +3763,10 @@
     },
     "site:black-rock-reef": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:black-rock-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:black-sand-beach-curacao": {
@@ -3673,6 +3785,14 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:blue-channel-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:blue-diamond-wreck-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:blue-fire-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3683,6 +3803,10 @@
     },
     "site:blue-room-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:blue-wall-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:boca-artificial-reef": {
@@ -3737,6 +3861,18 @@
       "reason": "Commons has no photograph identified as bus-stop-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
     },
+    "site:butchers-bank-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:c-53-wreck-cozumel": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
+    },
+    "site:c-56-juan-escutia-wreck-puerto-morelos": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
+    },
     "site:c-one-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3747,6 +3883,26 @@
     },
     "site:calabas-reef-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:calvins-crack-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:cantarel-eagle-ray-wall-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:cantil-bajo-bonito-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:cantil-de-santa-catalina-providencia": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:canyon-reef-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:captain-dan-wreck": {
@@ -3773,6 +3929,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:carib-point-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:caribbean-club-sand-chute": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -3793,16 +3953,36 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:cedral-wall-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
     "site:cemetery-wall-cayman-brac": {
       "reason": "Commons has no underwater photograph of Cemetery Wall; the only search hit is a topside view of the Bluff, not the dive site",
+      "checked": "2026-10-15"
+    },
+    "site:cemetery-wall-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:century-barge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:cerebros-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:chain-reef-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:chankanaab-bolones-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:chankanaab-reef-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
     "site:charlies-chimney-little-cayman": {
@@ -3833,8 +4013,36 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:chiefs-quarters-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:chikin-ha-cenote": {
+      "reason": "No Commons photo that recognisably shows this cenote cleared the rules; searches by name and alternatives found only the access path or unrelated frames.",
+      "checked": "2026-10-15"
+    },
+    "site:chinchorrito": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:chitales-reef-cancun": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:chromis-providencia": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:chub-hole-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:chun-zumbul-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:chunchakaab-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
     "site:cinderellas-castle": {
@@ -3844,6 +4052,10 @@
     "site:city-of-washington": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:cjs-drop-off-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:cliff-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -3857,6 +4069,14 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:colombia-deep-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:colombia-shallows-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
     "site:conception-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3865,9 +4085,17 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:convento-providencia": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:copenhagen-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:coral-garden-laughing-bird-caye": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:cornelius-bay-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -3893,8 +4121,16 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:cueva-del-pargo-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:cumbers-caves-little-cayman": {
       "reason": "Commons has no photograph identified as cumbers-caves-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
+      "checked": "2026-10-15"
+    },
+    "site:cypress-canyons": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:dan-barge": {
@@ -3949,12 +4185,28 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:diamond-cay-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:divers-leap-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:dixies-place-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:doc-poulson": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:don-quickset": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:dona-nica": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:donald-g-mcallister-wreck": {
@@ -3992,6 +4244,10 @@
     "site:dupont-bridge-span-3": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:duppy-waters": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:eagle-ray-pass": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4057,9 +4313,25 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:el-aguila-roatan": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
+    },
     "site:el-dorado-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:el-faro-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:el-planchon-providencia": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:el-velerito-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
     },
     "site:elmos-wall": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4068,6 +4340,14 @@
     "site:empire-mica": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:escalones": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:esmeralda-canyons": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:fami-tugs": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -4079,6 +4359,14 @@
     },
     "site:fantasea-land": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:felipes-place-providencia": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:fish-den-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:fish-tank-grand-cayman": {
@@ -4125,6 +4413,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:gibson-bight-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:gigglin-marlin-legacy": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -4137,6 +4429,14 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:gladden-spit": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:gold-chain-reef-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:governors-riverwalk-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4145,6 +4445,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:great-blue-hole": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:great-wall-little-cayman": {
       "reason": "Commons has no photograph identified as great-wall-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
@@ -4152,6 +4456,10 @@
     "site:grecian-rocks": {
       "reason": "The only Commons photograph at the site is people posing at the surface with a camera rig.",
       "checked": "2026-10-14"
+    },
+    "site:green-outhouse-wall-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:greenhouse-reef-cayman-brac": {
       "reason": "Commons has no photograph identified as greenhouse-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
@@ -4181,6 +4489,14 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:half-moon-bay-wall-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:half-moon-caye-wall": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:half-moon-preserve": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4188,6 +4504,10 @@
     "site:hall-of-fame-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:halliburton-wreck-utila": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
     },
     "site:hands-off-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4237,8 +4557,16 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:hol-chan-marine-reserve": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:hole-in-the-wall-aruba": {
       "reason": "Commons has no photo of this site; searches return unrelated archive illustrations",
+      "checked": "2026-10-15"
+    },
+    "site:hole-in-the-wall-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:horseshoe-reef-boynton": {
@@ -4265,6 +4593,14 @@
       "reason": "Commons has no photograph identified as inside-out-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
+    "site:inside-outside-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:insidious-reef-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:invisibles-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -4277,8 +4613,16 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:jack-neil-beach-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:jackson-reef-and-wall-little-cayman": {
       "reason": "Commons has no photograph identified as jackson-reef-and-wall-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
+      "checked": "2026-10-15"
+    },
+    "site:jado-trader-guanaja": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
       "checked": "2026-10-15"
     },
     "site:jan-thiel-bay-curacao": {
@@ -4291,6 +4635,18 @@
     },
     "site:japanese-gardens-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:jardin-del-eden-cenote": {
+      "reason": "No Commons photo that recognisably shows this cenote cleared the rules; searches by name and alternatives found only the access path or unrelated frames.",
+      "checked": "2026-10-15"
+    },
+    "site:jardines-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:jardines-puerto-morelos": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:jay-dorman-wreck": {
@@ -4321,6 +4677,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:jims-silverlode-guanaja": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:joannes-sunchi-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -4332,6 +4692,10 @@
     "site:joes-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:johns-spot-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:jolly-jacks-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -4421,8 +4785,16 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:la-bandera-reef-cancun": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:la-danias-leap-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:la-francesa-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
     "site:la-machaca-bonaire": {
@@ -4431,6 +4803,18 @@
     },
     "site:la-mesa-grand-cayman": {
       "reason": "Commons has no photo of this site; a name search returns only unrelated books, art and places",
+      "checked": "2026-10-15"
+    },
+    "site:la-montanita-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:la-poza-xcalak": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:la-rocosa-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:labonte-reef": {
@@ -4447,6 +4831,14 @@
     },
     "site:larrys-lair-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:las-palmas-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:laughing-bird-south": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:lauras-reef": {
@@ -4481,8 +4873,16 @@
       "reason": "Commons has no photograph identified as lighthouse-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
+    "site:lighthouse-reef-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:lighthouse-wall-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:little-bight-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:little-bluff-reef": {
@@ -4511,6 +4911,18 @@
     },
     "site:long-beach-piscadera-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:long-caye-wall-glovers-reef": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:long-reef-south-water-caye": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:los-arcos-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:loss-pontoon": {
@@ -4553,9 +4965,33 @@
       "reason": "Commons has no photo of Malmok reef or the Debbie II wreck",
       "checked": "2026-10-15"
     },
+    "site:mama-vina-wreck-playa-del-carmen": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
+    },
+    "site:manchones-reef-isla-mujeres": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:mandalay-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:mandys-eel-garden-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:manta-wall-glovers-reef": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:mantas-city-providencia": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:maracaibo-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
     },
     "site:margate-bay-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4568,6 +5004,10 @@
     "site:mariner-ii-barge-and-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:marys-place-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:matthew-lawrence": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -4629,6 +5069,14 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:moc-che-deep-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:moc-che-shallow-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:mohawk-chief-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4641,9 +5089,21 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:moonlight-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:moray-bend": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:mr-bud-wreck-roatan": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
+    },
+    "site:musa-underwater-museum-cancun": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:mushroom-forest-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4721,13 +5181,25 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:newmans-wall-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:newport-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:nicks-place-providencia": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:nine-foot-stake": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:nirvana-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
     },
     "site:no-name-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4736,6 +5208,10 @@
     "site:north-dry-rocks": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:north-wall-silk-cayes": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:north-west-point": {
       "reason": "Commons has no photo of this site; the only hits are close-ups of fish from an iNaturalist import",
@@ -4760,6 +5236,10 @@
     "site:oakland-ridges": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:odyssey-wreck-roatan": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
     },
     "site:oil-slick-leap-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4801,8 +5281,40 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:overheat-reef-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:pablos-place-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:palancar-bricks-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:palancar-caves-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:palancar-gardens-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:palancar-horseshoe-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:paradise-canyons-ambergris": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:paradise-curacao": {
       "reason": "Commons has no photo of this site; searches return unrelated places",
+      "checked": "2026-10-15"
+    },
+    "site:paradise-reef-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
     "site:paradise-reef-grand-cayman": {
@@ -4817,6 +5329,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:pared-verde-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:park-east-snorkel-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4824,6 +5340,10 @@
     "site:park-west-quarles-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:paso-del-cedral-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
     },
     "site:pats-wall": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4865,6 +5385,14 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:peters-place-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:pillar-coral-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:pimelious-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4901,6 +5429,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:prince-albert-wreck-roatan": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
+    },
     "site:princess-anne-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4921,8 +5453,28 @@
       "reason": "Commons has no photograph identified as public-beach-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
+    "site:puentes-reef-puerto-morelos": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:punt-vierkant-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:punta-dalila-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:punta-sur-cathedral-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:punta-sur-isla-mujeres": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:punta-tunich-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
     "site:qualman-barge-deerfield": {
@@ -4931,6 +5483,10 @@
     },
     "site:radar-reef-cayman-brac": {
       "reason": "Commons has no photograph identified as radar-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
+      "checked": "2026-10-15"
+    },
+    "site:raggedy-cay-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:rainbow-reef-miami": {
@@ -4971,6 +5527,10 @@
     },
     "site:reef-scientifico-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:reggae-nest-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:regina-wreck": {
@@ -5029,8 +5589,16 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:rodman-reef-puerto-morelos": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:rogers-reef": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:rosellas-garden": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:round-rock-grand-cayman": {
@@ -5065,6 +5633,18 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:san-clemente-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:san-francisco-wall-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:san-juan-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
     "site:san-pablo-russian-freighter": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5083,6 +5663,18 @@
     },
     "site:sandys-plateau-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:santa-rosa-shallows-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:santa-rosa-wall-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:santo-remedio-reef-cancun": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:sarahs-set-little-cayman": {
@@ -5109,6 +5701,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:seaquest-deep-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:seldom-reef-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -5116,6 +5712,18 @@
     "site:shamrock-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:shangri-la-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:shark-dive-cara-a-cara-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:shark-point-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:sharons-serenity-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -5131,6 +5739,10 @@
     },
     "site:skalahein-aruba": {
       "reason": "Commons has no photo of this site; no search result mentions it",
+      "checked": "2026-10-15"
+    },
+    "site:sleeping-shark-cave-isla-mujeres": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:small-wall-bonaire": {
@@ -5205,6 +5817,14 @@
       "reason": "Commons has no photo of this site; no search result mentions it",
       "checked": "2026-10-15"
     },
+    "site:spooky-channel-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:spotted-bay-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:ss-tarpon": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5223,6 +5843,10 @@
     },
     "site:star-gerren-aruba": {
       "reason": "Commons has no photo of this site; no search result mentions it",
+      "checked": "2026-10-15"
+    },
+    "site:stingray-point-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:sunset-house-reef": {
@@ -5253,9 +5877,17 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:tackle-box-canyons": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:tacoma-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:tajma-ha-cenote": {
+      "reason": "No Commons photo that recognisably shows this cenote cleared the rules; searches by name and alternatives found only the access path or unrelated frames.",
+      "checked": "2026-10-15"
     },
     "site:tarpon-reef-cayman-brac": {
       "reason": "Commons has no photograph identified as tarpon-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
@@ -5277,12 +5909,36 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:tetes-place-providencia": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
+    },
     "site:tex-edwards-barge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:texas-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:the-abyss-south-water-caye": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:the-aquarium-glovers-reef": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:the-aquarium-lighthouse-reef": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:the-arch-grand-cayman": {
       "reason": "Commons has no photo of this site; a name search returns only unrelated books, art and places",
+      "checked": "2026-10-15"
+    },
+    "site:the-cave-providencia": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:the-caves-fort-lauderdale": {
@@ -5292,6 +5948,10 @@
     "site:the-elbow": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:the-elbow-turneffe": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:the-finger-aruba": {
       "reason": "Commons has no photo of this site; searches return unrelated illustrations and rings",
@@ -5305,6 +5965,10 @@
       "reason": "Commons has no photo of this site; a name search returns only unrelated books, art and places",
       "checked": "2026-10-15"
     },
+    "site:the-maze-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:the-meadows-little-cayman": {
       "reason": "Commons has no photograph identified as the-meadows-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
@@ -5312,6 +5976,18 @@
     "site:the-pillars-miami": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:the-pinnacle-guanaja": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:the-pinnacle-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:the-pinnacles-glovers-reef": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:the-trench-moray-alley": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -5353,6 +6029,10 @@
       "reason": "Commons has no photograph identified as tombstone-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
+    "site:too-tall-too-small-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:top-secret-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -5365,13 +6045,25 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:tormentos-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
     "site:tortuga-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:tortugas-playa-del-carmen": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:tracy-ken-vitale-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:trampa-tortuga-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
+      "checked": "2026-10-15"
     },
     "site:treehouse-reef-cayman-brac": {
       "reason": "Commons has no photograph identified as treehouse-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
@@ -5401,6 +6093,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:turtle-canyons-silk-cayes": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:turtle-pass-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -5412,6 +6108,10 @@
     "site:ultra-freeze-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:ultrafreeze-wreck-isla-mujeres": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
     },
     "site:underwater-museum-of-art-grayton": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -5481,9 +6181,17 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:vertigo-guanaja": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
     "site:veterans-reef-circle-of-heroes": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:villa-blanca-wall-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
     },
     "site:vista-blue-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -5495,6 +6203,18 @@
     },
     "site:west-chute-cayman-brac": {
       "reason": "Commons has no photograph identified as west-chute-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
+      "checked": "2026-10-15"
+    },
+    "site:west-end-utila": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:west-end-wall-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:west-point-san-andres": {
+      "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
     },
     "site:western-dry-rocks": {
@@ -5512,6 +6232,14 @@
     "site:white-coast-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:white-hole-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:white-hole-silk-cayes": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
     },
     "site:white-stroke-canyon": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -5537,6 +6265,10 @@
       "reason": "Commons has no photograph identified as windsock-reef-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
     },
+    "site:witconcrete-wreck": {
+      "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
+    },
     "site:ydt-14": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5544,6 +6276,10 @@
     "site:ydt-15": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:yucab-cozumel": {
+      "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
     }
   }
 }
