@@ -50,7 +50,9 @@ export async function getCurrentWaiverTemplate(db: DbExecutor, shopId: string) {
     .select()
     .from(waiverTemplates)
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
-    .orderBy(desc(waiverTemplates.createdAt))
+    // Two saves inside one clock tick tie on `createdAt`; the higher version
+    // is the later save (`saveWaiverTemplate` numbers them under a lock).
+    .orderBy(desc(waiverTemplates.createdAt), desc(waiverTemplates.version))
     .limit(1);
   return template ?? null;
 }
@@ -70,7 +72,9 @@ export async function getCurrentWaiverGeneration(
     .select({ materialGeneration: waiverTemplates.materialGeneration })
     .from(waiverTemplates)
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
-    .orderBy(desc(waiverTemplates.createdAt))
+    // Two saves inside one clock tick tie on `createdAt`; the higher version
+    // is the later save (`saveWaiverTemplate` numbers them under a lock).
+    .orderBy(desc(waiverTemplates.createdAt), desc(waiverTemplates.version))
     .limit(1);
   return template ?? null;
 }
