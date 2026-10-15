@@ -10,7 +10,7 @@ const DIVES = [
   { diveNumber: 2, line: "Dive 2 · French Reef" },
 ];
 
-function plan(dives = DIVES) {
+function plan(dives: readonly { diveNumber: number; line: string; lastTime?: string }[] = DIVES) {
   return render(<TripPlanSection heading="The plan" dives={dives} />);
 }
 
@@ -19,6 +19,19 @@ describe("TripPlanSection", () => {
     const { container } = plan();
     const lines = [...container.querySelectorAll("li")].map((node) => node.textContent);
     expect(lines).toEqual(["Dive 1 · Molasses Reef", "Dive 2 · French Reef"]);
+  });
+
+  it("says the site's last visit under its dive, and nothing for one never dived", () => {
+    // Fifth-loop ideas, item 6: the captain's memory of the reef, on the plan.
+    const { container } = plan([
+      { ...DIVES[0], lastTime: "Molasses Reef: moved to French Reef last time (Mon, Oct 12)." },
+      DIVES[1],
+    ]);
+    const lines = [...container.querySelectorAll("li")].map((node) => node.textContent);
+    expect(lines).toEqual([
+      "Dive 1 · Molasses ReefMolasses Reef: moved to French Reef last time (Mon, Oct 12).",
+      "Dive 2 · French Reef",
+    ]);
   });
 
   it("renders nothing at all when the day has no planned dives", () => {

@@ -33,7 +33,7 @@ import { diversTabState } from "./_arrivals/departure-record";
 import { DESK_NOTICES } from "./_arrivals/notices";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
-import { openSeatsDetailsRows } from "./_components/details-rows";
+import { openSeatsDetailsRows, siteHistoryLines } from "./_components/details-rows";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
@@ -214,6 +214,16 @@ export default async function ManageTripPage({
   const showDetails =
     view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
   const openSeatsRows = openSeatsDetailsRows({ db, shop, tripId, t, locale, shown: showDetails });
+  const siteHistory = siteHistoryLines({
+    db,
+    shop,
+    trip,
+    sites: overview.diveSites.sites,
+    t,
+    locale,
+    now,
+    shown: showDetails,
+  });
   const { automatedForecast, tideLines } = departureConditionReads({
     showDetails,
     trip,
@@ -411,6 +421,7 @@ export default async function ManageTripPage({
                   tideLines,
                   held: notice === "saved" ? held : undefined,
                   tell,
+                  siteHistory: await siteHistory,
                 }),
                 ...(await openSeatsRows),
               ]}

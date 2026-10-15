@@ -10,9 +10,11 @@ import { listExecutedDives } from "@/db/executed-dives";
 import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
+import { lastAtSites } from "@/db/site-history";
 import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
+import type { SiteHistory } from "@/lib/site-history";
 
 /**
  * **Everything the boat manifest reads, in the waves the page awaits them**:
@@ -102,9 +104,20 @@ export async function readManifestPage(
   // picked anywhere — the two rungs under a site's own field guide in
   // `seenChipSlugs`. Both are shop-wide reads with no dependency on which
   // checkpoint is open, so they resolve together beside the guides.
-  const [loggedSightings, shopPickedSpecies] = await Promise.all([
+  // What each planned site was like the last time a boat went (fifth-loop
+  // ideas, item 6), keyed by the plan's own site ids and this departure's start.
+  const departureStartsAt = completeManifests?.[0]?.trip.startsAt;
+  const [loggedSightings, shopPickedSpecies, siteHistory] = await Promise.all([
     listTripSightings(db, shopId, tripId),
     listShopPickedSpecies(db, shopId),
+    departureStartsAt
+      ? lastAtSites(db, {
+          shopId,
+          siteIds: plannedDives.flatMap(({ diveSite }) => (diveSite ? [diveSite.id] : [])),
+          before: departureStartsAt,
+          excludeTripId: tripId,
+        })
+      : new Map<string, SiteHistory>(),
   ]);
   return {
     completeManifests,
@@ -123,6 +136,7 @@ export async function readManifestPage(
     vessel: vessels.get(tripId) ?? null,
     kitRecord,
     snags,
+    siteHistory,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,

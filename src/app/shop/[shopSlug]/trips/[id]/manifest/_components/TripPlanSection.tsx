@@ -37,8 +37,12 @@ export function TripPlanSection({
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
   heading: string;
-  /** One line per planned dive, already worded — "Dive 1 · Molasses Reef". */
-  dives: readonly { diveNumber: number; line: string }[];
+  /**
+   * One line per planned dive, already worded — "Dive 1 · Molasses Reef" —
+   * and the site's last visit under it when a boat has been (fifth-loop
+   * ideas, item 6).
+   */
+  dives: readonly { diveNumber: number; line: string; lastTime?: string }[];
   /**
    * **Where the boat meets** (UX review 2026-10-13, item 18), its word and the
    * place, already worded. First, because it is where the day starts: the
@@ -61,8 +65,12 @@ export function TripPlanSection({
           </li>
         ) : null}
         {dives.map((dive) => (
-          <li key={dive.diveNumber} className="flex min-h-13 items-center py-3 text-base">
-            {dive.line}
+          <li
+            key={dive.diveNumber}
+            className="flex min-h-13 flex-col justify-center py-3 text-base"
+          >
+            <span>{dive.line}</span>
+            {dive.lastTime ? <span className="text-sm text-muted">{dive.lastTime}</span> : null}
           </li>
         ))}
       </ul>

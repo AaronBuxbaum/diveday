@@ -136,6 +136,7 @@ export default async function TripManifestPage({
     vessel,
     kitRecord,
     snags,
+    siteHistory,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
@@ -391,7 +392,12 @@ export default async function TripManifestPage({
           <TripPlanSection
             idPrefix={idPrefix}
             heading={t("manifest.planChange.heading")}
-            {...tripPlanRows(t, shop, plannedDives, meetingPoint)}
+            {...tripPlanRows(t, shop, plannedDives, meetingPoint, {
+              history: siteHistory,
+              locale,
+              timeZone: shop.timezone,
+              now: nowDate(),
+            })}
           />
         ) : null}
 

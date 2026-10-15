@@ -58,6 +58,8 @@ export type TripAboutRowsContext = {
   /** A retime's held reschedule notice, on the save that set it going. */
   held?: string;
   tell?: string;
+  /** Each planned site's last visit, worded (`siteHistoryLines`); empty when none was dived. */
+  siteHistory?: readonly string[];
 };
 
 /** The names of the staff assigned to this departure, in the shop's staff order. */
@@ -91,6 +93,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
     tideLines,
     held,
     tell,
+    siteHistory = [],
   } = context;
   const {
     trip,
@@ -118,7 +121,22 @@ export function tripAboutRows(context: TripAboutRowsContext) {
   const requirementsStatus = noticeForForm(tripNotice, "requirements");
   const seriesStatus = noticeForForm(tripNotice, "series");
   const siteNames = diveSites.sites.map((site) => site.name);
-  const planSummary = siteNames.length > 0 ? siteNames.join(" + ") : t("trips.about.noneSet");
+  const siteList = siteNames.length > 0 ? siteNames.join(" + ") : t("trips.about.noneSet");
+  // What each site was like last time rides under the sites it is about
+  // (fifth-loop ideas, item 6): the captain's memory, written down.
+  const planSummary =
+    siteHistory.length > 0 ? (
+      <>
+        {siteList}
+        {siteHistory.map((line) => (
+          <span key={line} className="mt-0.5 block text-sm text-muted">
+            {line}
+          </span>
+        ))}
+      </>
+    ) : (
+      siteList
+    );
   const requirementsSummary =
     requirement === null
       ? t("trips.about.noRequirements")

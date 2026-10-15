@@ -1,6 +1,8 @@
 import type { AppDb } from "@/db/client";
 import { getTripOpenSeatsDebrief } from "@/db/open-seats";
+import { lastAtSites } from "@/db/site-history";
 import { openSeatsDebriefText } from "@/i18n/open-seats-labels";
+import { siteHistoryText } from "@/i18n/site-history-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { formatShortDate } from "@/lib/format";
@@ -74,4 +76,52 @@ export async function openSeatsDetailsRows({
     : "";
   const value = openSeatsDebriefText(t, locale, debrief, { comparableDate });
   return value ? [{ id: "open-seats", label: t("trips.openSeats.label"), value }] : [];
+}
+
+/**
+ * **What each planned site was like last time** (fifth-loop ideas, item 6):
+ * one sentence per site the plan names that an earlier departure dived, or
+ * left for another site, said under the plan on Details. Quiet for a site
+ * never dived. Read only when the Details tab is drawn.
+ */
+export async function siteHistoryLines({
+  db,
+  shop,
+  trip,
+  sites,
+  t,
+  locale,
+  now,
+  shown,
+}: {
+  db: AppDb;
+  shop: { id: string; timezone: string };
+  trip: { id: string; startsAt: Date };
+  sites: readonly { id: string; name: string }[];
+  t: StaffTranslator;
+  locale: string;
+  now: Date;
+  shown: boolean;
+}): Promise<string[]> {
+  if (!shown || sites.length === 0) return [];
+  const history = await lastAtSites(db, {
+    shopId: shop.id,
+    siteIds: sites.map((site) => site.id),
+    before: trip.startsAt,
+    excludeTripId: trip.id,
+  });
+  return sites.flatMap((site) => {
+    const last = history.get(site.id);
+    return last
+      ? [
+          siteHistoryText(t, {
+            site: site.name,
+            history: last,
+            locale,
+            timeZone: shop.timezone,
+            now,
+          }),
+        ]
+      : [];
+  });
 }

@@ -722,5 +722,15 @@
     "title": "Practice departure for training day",
     "body": "Nothing about it is sent, charged, shown publicly or counted in reports. It is deleted {days, plural, one {# day} other {# days}} after it comes home, once no later boat counts its dives toward the wait before flying.",
     "kept": "This rehearsal has a roll call, a logged dive or an incident report, so it is not deleted on its own."
+  },
+  "siteHistory": {
+    "dived": "{site}: last dived {date} ({name}).",
+    "divedNoName": "{site}: last dived {date}.",
+    "divedWith": "{site}: last dived {date} ({name}): {conditions}.",
+    "divedWithNoName": "{site}: last dived {date}: {conditions}.",
+    "moved": "{site}: moved to {actual} last time ({date}).",
+    "both": "visibility {visibility}, current {current}",
+    "visibility": "visibility {visibility}",
+    "current": "current {current}"
   }
 }
