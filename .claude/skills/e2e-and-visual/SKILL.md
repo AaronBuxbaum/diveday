@@ -19,7 +19,7 @@ Every important user flow gets a functional Playwright spec under `e2e/`. Every 
    ```
 4. If there are diffs, `reg-suit` will compare against the reference commit images on S3. Run `pnpm visual:report` to pull the reference, actual, and diff PNGs down locally with a markdown summary — the printed HTML report link is a client-rendered SPA (an empty `<div id="app">` until JS runs) and isn't fetchable as a static page, so agents should use the script instead of trying to open that link. See the **visual-triage** skill.
 
-The normal matrix is light/dark × phone/desktop (390x844 and 1280x800) using the `capture()` helper. Print surfaces use the `capturePrint()` helper.
+The normal matrix, from the `capture()` helper: light at phone and desktop (390x844 and 1280x800), dark at desktop only (`DARK_VIEWPORTS`); a `TABLET_SURFACES` name adds 820x1180 in light. One `capture()` call is three images, four for a tablet surface. A dark-only bug at phone width is not photographed: check it by eye when a change is colour work that only shows narrow. Print surfaces use the `capturePrint()` helper.
 
 ## What a diff runs
 
