@@ -29,6 +29,13 @@
  * never the depth a typical dive runs to. A wreck whose sand is deeper says so in
  * its prose.
  *
+ * **Prose measures are written in metres and land in the shop's unit.** "About
+ * 12 m" in a landmark arrives in a feet shop's copy as "about 39 ft", and an
+ * authored pair, "18–40 m (60–130 ft)", as the shop's half
+ * (`briefingInUnit`, src/lib/site-prose-units.ts, at import and in the
+ * template-update merge). Write a measure as a number and its symbol; a pair
+ * when the published sources give both.
+ *
  * **Certification gates are the conservative reading.** A wreck below 30 m
  * carries Advanced Open Water and the Deep specialty because that is what its
  * depth demands of a diver in open water — never because penetration is

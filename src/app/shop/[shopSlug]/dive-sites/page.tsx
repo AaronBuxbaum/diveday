@@ -35,10 +35,12 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import type { DepthUnit } from "@/lib/depth-units";
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { joinFacts } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { briefingInUnit, siteProseInUnit } from "@/lib/site-prose-units";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
@@ -334,6 +336,7 @@ async function CatalogView({
     return (
       <TemplatePreview
         template={preview}
+        unit={shop.depthUnit}
         backHref={catalogHref}
         importAction={importDiveSiteTemplateAction}
         t={t}
@@ -396,7 +399,9 @@ async function CatalogView({
                   among thirty-four reefs it has never dived has nothing else to
                   choose on, which is the opposite of its own library. */}
               {version.briefing.description ? (
-                <p className="mt-1 text-sm text-muted">{version.briefing.description}</p>
+                <p className="mt-1 text-sm text-muted">
+                  {siteProseInUnit(version.briefing.description, shop.depthUnit)}
+                </p>
               ) : null}
             </div>
           </LedgerRow>
@@ -423,12 +428,15 @@ async function CatalogView({
  */
 function TemplatePreview({
   template,
+  unit,
   backHref,
   importAction,
   t,
   diverT,
 }: {
   template: GlobalDiveSiteTemplateRow;
+  /** The shop's depth unit: the preview reads as the import will land. */
+  unit: DepthUnit;
   backHref: string;
   // i18n-exempt: type annotation, not copy.
   importAction: (formData: FormData) => void | Promise<void>;
@@ -436,7 +444,7 @@ function TemplatePreview({
   /** The field guide is diver copy; the preview shows it as a diver will read it. */
   diverT: DiverTranslator;
 }) {
-  const briefing = template.version.briefing;
+  const briefing = briefingInUnit(template.version.briefing, unit);
   // Resolved for the reader, exactly as the imported site's own briefing will
   // render it -- the preview's whole job is showing what you are about to take.
   const templateDifficulty = diveSiteDifficultyLabel(
