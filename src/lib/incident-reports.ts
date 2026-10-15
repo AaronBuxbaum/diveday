@@ -101,7 +101,7 @@ export function mayWriteIncidentReport(
  * manager's.
  */
 export function mayDecideIncidentRecord(viewer: IncidentViewer): boolean {
-  return viewer.roles !== null && viewer.roles.includes("owner");
+  return viewer.roles?.includes("owner") === true;
 }
 
 /** The fields a draft holds, as the database stores them. */

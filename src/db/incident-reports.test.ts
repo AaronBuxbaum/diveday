@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import type { IncidentDraftFields } from "@/lib/incident-reports";
 import { fileScopedShopContext } from "@/test/db";
 import { demoteOwnerToManager } from "@/test/staff-session";
@@ -686,7 +687,7 @@ describe("discarding a draft", () => {
       d.db.transaction(async (tx) => {
         await tx
           .update(incidentReports)
-          .set({ deletedAt: new Date() })
+          .set({ deletedAt: nowDate() })
           .where(eq(incidentReports.id, d.started.reportId));
       }),
     ).rejects.toThrow();
