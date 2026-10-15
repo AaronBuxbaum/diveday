@@ -16,7 +16,11 @@ import {
   trips,
 } from "./schema";
 import { recordSmsKeyword } from "./sms-opt-outs";
-import { holdRescheduleNotice, sendRescheduleNotices } from "./trip-rescheduled";
+import {
+  holdRescheduleNotice,
+  sendMissedRescheduleNotice,
+  sendRescheduleNotices,
+} from "./trip-rescheduled";
 import { createTrip, listStaff, moveTrip, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -775,6 +779,33 @@ describe("a held seat's missed reschedule notice", () => {
       { ...options, now },
     );
     expect(priyaMail(email)).toHaveLength(1);
+  });
+
+  it("keeps the notice owed when the send fails, and sends it on the next confirm", async () => {
+    const held = await heldSeat();
+    const { db, shop, priya, now, actorPersonId } = held;
+    const { email, options } = providers();
+    await sendRescheduleNotices(db, shop.id, payload(held), { ...options, now });
+
+    const failing = {
+      ...options,
+      emailProvider: fakeEmail({ status: "failed", retryable: false, errorCode: "rejected" })
+        .provider,
+      now,
+    };
+    await confirmBookingIdentity(db, { shopId: shop.id, bookingId: priya, actorPersonId }, failing);
+    // The notice never went, so it is still owed (#2445).
+    expect((await seatRow(db, priya))?.rescheduleMissedFrom).toEqual(held.previousStartsAt);
+    expect(priyaMail(email)).toHaveLength(0);
+
+    const retried = await sendMissedRescheduleNotice(
+      db,
+      { shopId: shop.id, bookingId: priya },
+      { ...options, now },
+    );
+    expect(retried).toBe("told");
+    expect(priyaMail(email)).toHaveLength(1);
+    expect((await seatRow(db, priya))?.rescheduleMissedFrom).toBeNull();
   });
 
   it("sends nothing on confirm when the trip never moved", async () => {

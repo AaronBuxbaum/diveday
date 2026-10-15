@@ -626,8 +626,9 @@ export async function sendSeatMoveNotice(
  * record) this sends the same notice that seat would have had, to the address
  * on the person it now belongs to.
  *
- * **Exactly once.** The columns are claimed and cleared in one statement before
- * anything is sent, so a second confirm, a retry or a race finds nothing owed.
+ * **Exactly once, and not lost.** The columns are claimed and cleared in one statement before
+ * anything is sent, so a second confirm, a retry or a race finds nothing owed. A send that
+ * does not go puts the claim back, so the next confirm tries again.
  * A seat still held, no longer on the boat, on a departure that has left or is
  * a rehearsal, or back at the start it knew with the place unmoved, sends
  * nothing; the claim is cleared in each case because nothing is owed.
@@ -683,13 +684,31 @@ export async function sendMissedRescheduleNotice(
   // Moved and moved back while the seat was held, with the place unmoved.
   if (!timeMoved && !owed.place) return "nothing";
   if (!(await stillAhead(db, row.trip, now))) return "nothing";
-  return tellSeat(db, {
-    ...row,
-    previousStartsAt: owed.from,
-    meetingPoint: owed.place
-      ? meetingPointForMessage(meetingPointOfRows(row.shop, row.trip))
-      : undefined,
-    channels: await seatChannels(db, input.shopId, options),
-    now,
-  });
+  // A notice that did not go, by a refusal or a throw, is still owed: put the
+  // claim back, keeping any earlier start a later skip has recorded since (#2445).
+  const putBack = () =>
+    db
+      .update(bookings)
+      .set({
+        rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${owed.from.toISOString()}::timestamptz)`,
+        rescheduleMissedPlace: owed.place ? true : sql`${bookings.rescheduleMissedPlace}`,
+      })
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+  let told: "told" | "failed";
+  try {
+    told = await tellSeat(db, {
+      ...row,
+      previousStartsAt: owed.from,
+      meetingPoint: owed.place
+        ? meetingPointForMessage(meetingPointOfRows(row.shop, row.trip))
+        : undefined,
+      channels: await seatChannels(db, input.shopId, options),
+      now,
+    });
+  } catch (error) {
+    await putBack();
+    throw error;
+  }
+  if (told === "failed") await putBack();
+  return told;
 }
