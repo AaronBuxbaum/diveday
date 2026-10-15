@@ -33,7 +33,16 @@ export type PayoutSummary =
   | { status: "failed" };
 
 export interface PayoutSummaryLookup {
-  summarize(stripeAccountId: string, payoutId: string): Promise<PayoutSummary>;
+  /**
+   * `automatic` is the payout's own flag. Stripe itemizes only an automatic
+   * payout's balance transactions, so a manual or instant one is read for its
+   * own fee alone and carries no span.
+   */
+  summarize(
+    stripeAccountId: string,
+    payoutId: string,
+    options: { automatic: boolean },
+  ): Promise<PayoutSummary>;
 }
 
 type Fetch = typeof fetch;
@@ -99,8 +108,43 @@ export function stripePayoutSummaryLookup(
       },
     });
 
+  /**
+   * A manual or instant payout: Stripe refuses `payout=` for it, but the
+   * payout's own balance transaction (`source=po_…`) carries what Stripe
+   * charged to send it (an instant payout's fee; zero for a manual standard
+   * one). The money inside is not itemized, so there is no span: "covering"
+   * stays off the line rather than guess.
+   */
+  async function summarizeOwnFee(
+    stripeAccountId: string,
+    payoutId: string,
+  ): Promise<PayoutSummary> {
+    try {
+      const response = await get(
+        stripeAccountId,
+        new URLSearchParams({ source: payoutId, limit: String(PAGE_LIMIT) }),
+      );
+      if (!response.ok) {
+        if (response.status === 429 || response.status >= 500) return { status: "failed" };
+        log("stripe_payout_summary.refused", "warn", { httpStatus: response.status });
+        return { status: "unavailable" };
+      }
+      const parsed = balanceTransactionPageSchema.safeParse(await response.json());
+      if (!parsed.success) return { status: "failed" };
+      // A payout has one balance transaction; a list that says there is more
+      // is not the shape this reads, so it records no fee rather than a part.
+      if (parsed.data.has_more || parsed.data.data.length === 0) return { status: "unavailable" };
+      const feeCents = parsed.data.data.reduce((sum, transaction) => sum + transaction.fee, 0);
+      return { status: "summarized", coveredFrom: null, coveredTo: null, feeCents };
+    } catch (error) {
+      logStripeRequestThrew("summarize_payout", error);
+      return { status: "failed" };
+    }
+  }
+
   return {
-    async summarize(stripeAccountId, payoutId) {
+    async summarize(stripeAccountId, payoutId, { automatic }) {
+      if (!automatic) return summarizeOwnFee(stripeAccountId, payoutId);
       const span: Span = { earliest: null, latest: null, feeCents: 0 };
       let startingAfter: string | null = null;
       try {

@@ -76,7 +76,7 @@ describe("recordStripePayout", () => {
         feeCents: 5_430,
       },
     });
-    expect(summarize).toHaveBeenCalledWith(ACCOUNT, "po_1");
+    expect(summarize).toHaveBeenCalledWith(ACCOUNT, "po_1", { automatic: true });
   });
 
   it("is not the business of a shop that does not hold the account", async () => {
@@ -130,10 +130,38 @@ describe("recordStripePayout", () => {
     expect(await db.select().from(stripePayouts)).toHaveLength(0);
   });
 
-  it("records a manual payout without asking Stripe to itemize it", async () => {
+  it("records a manual payout with its own fee and no span", async () => {
     const { db } = ctx;
     await connected(db);
-    const { lookup, summarize } = lookupAnswering(SUMMARIZED);
+    const { lookup, summarize } = lookupAnswering({
+      status: "summarized",
+      coveredFrom: null,
+      coveredTo: null,
+      feeCents: 150,
+    });
+    const outcome = await recordStripePayout(
+      db,
+      payoutEvent({ automatic: false, at: "2026-10-03T01:00:00Z" }),
+      lookup,
+    );
+    expect(outcome).toMatchObject({
+      status: "recorded",
+      payout: { feeCents: 150, coveredFrom: null, coveredTo: null },
+    });
+    expect(summarize).toHaveBeenCalledWith(ACCOUNT, "po_1", { automatic: false });
+    // A zero fee is an answer: a replay does not ask again.
+    await recordStripePayout(
+      db,
+      payoutEvent({ automatic: false, at: "2026-10-03T02:00:00Z" }),
+      lookup,
+    );
+    expect(summarize).toHaveBeenCalledTimes(1);
+  });
+
+  it("records a manual payout Stripe will not describe with no fee", async () => {
+    const { db } = ctx;
+    await connected(db);
+    const { lookup } = lookupAnswering({ status: "unavailable" });
     const outcome = await recordStripePayout(
       db,
       payoutEvent({ automatic: false, at: "2026-10-03T01:00:00Z" }),
@@ -143,7 +171,6 @@ describe("recordStripePayout", () => {
       status: "recorded",
       payout: { feeCents: null, coveredFrom: null },
     });
-    expect(summarize).not.toHaveBeenCalled();
   });
 
   it("a failure after paid wins, and a late paid never undoes it", async () => {

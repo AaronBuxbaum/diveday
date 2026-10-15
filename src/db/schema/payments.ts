@@ -1145,8 +1145,9 @@ export const paymentDisputes = pgTable(
  * are Stripe's own, verbatim off the event. `covered_from`/`covered_to` and
  * `fee_cents` are a summary of the payout's balance transactions, asked of
  * Stripe once when the payout is paid and never at render; null means Stripe
- * did not say (a manual payout, which Stripe will not itemize, or a read that
- * was refused), never zero.
+ * did not say (a read that was refused), never zero. A manual or instant
+ * payout, which Stripe will not itemize, has a fee from its own balance
+ * transaction and no span.
  *
  * Informs, never moves money. A failed payout is Stripe's to retry and the
  * shop's to fix in its own Stripe account; DiveDay only says so.

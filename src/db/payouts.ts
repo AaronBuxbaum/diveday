@@ -19,7 +19,7 @@ export type PayoutEvent = {
     currency: string;
     status: "paid" | "failed" | "canceled";
     arrivalDate: Date;
-    /** Stripe itemizes only an automatic payout's balance transactions. */
+    /** Stripe itemizes only an automatic payout's balance transactions; a manual one is read for its own fee. */
     automatic: boolean;
     failureCode: string | null;
   };
@@ -83,18 +83,16 @@ export async function recordStripePayout(
   if (existing && existing.lastEventAt > event.occurredAt) return { status: "stale" };
 
   const failed = event.payout.status === FAILED;
-  const needsSummary =
-    !neverArrives &&
-    event.payout.automatic &&
-    existing?.feeCents == null &&
-    existing?.coveredFrom == null;
+  const needsSummary = !neverArrives && existing?.feeCents == null && existing?.coveredFrom == null;
   let summary: { coveredFrom: Date | null; coveredTo: Date | null; feeCents: number | null } = {
     coveredFrom: existing?.coveredFrom ?? null,
     coveredTo: existing?.coveredTo ?? null,
     feeCents: existing?.feeCents ?? null,
   };
   if (needsSummary) {
-    const answer = await lookup.summarize(event.stripeAccountId, event.payout.id);
+    const answer = await lookup.summarize(event.stripeAccountId, event.payout.id, {
+      automatic: event.payout.automatic,
+    });
     if (answer.status === "failed") return { status: "deferred" };
     if (answer.status === "summarized") {
       summary = {

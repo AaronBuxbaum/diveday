@@ -27,13 +27,15 @@ account's `payouts_enabled` flag. Stripe's fees were nowhere at all. (UX review 
   automatic payout is itemized with `GET /v1/balance_transactions?payout=…` on the connected
   account (`src/lib/payments/payout-summary.ts`, read-only, the platform key of the event's own
   mode). The earliest and latest `created` of the money it carries become "covering Sep 27 to
-  Oct 1", and the sum of `fee` becomes Stripe's fees on it. A list longer than twenty pages, a
-  manual payout (which Stripe will not itemize), a 4xx or a key of the other mode records the
+  Oct 1", and the sum of `fee` becomes Stripe's fees on it. A list longer than twenty pages, a 4xx or a key of the other mode records the
   payout without either, which pages read as "Stripe did not say". The network, a 429 or a 5xx
   defers the event (503, claim released) so Stripe delivers it again.
 - **Pages read the stored row.** Reports lists the month's payouts by arrival day and adds the
   month's Stripe fees, summed from those payouts; the Orders index shows the newest paid payout and
   a warning when one failed after it. Both are owner and manager reads.
+- **A manual or instant payout** is read for its own balance transaction
+  (`balance_transactions?source=po_…`), because Stripe will not itemize it: its fee counts toward
+  Reports' fee line and its line has no "covering" clause, since the span cannot be known.
 
 ## Alternatives considered
 
