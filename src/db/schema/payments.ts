@@ -1144,7 +1144,7 @@ export const paymentDisputes = pgTable(
  * on Oct 3, covering Sep 27 to Oct 1". The amount, currency and arrival date
  * are Stripe's own, verbatim off the event. `covered_from`/`covered_to` and
  * `fee_cents` are a summary of the payout's balance transactions, asked of
- * Stripe once when the payout is paid and never at render; null means Stripe
+ * Stripe once, after the paid webhook has answered, and never at render; null means Stripe
  * did not say (a read that was refused), never zero. A manual or instant
  * payout, which Stripe will not itemize, has a fee from its own balance
  * transaction and no span.

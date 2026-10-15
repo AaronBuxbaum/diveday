@@ -26,13 +26,12 @@ export type PayoutEvent = {
 };
 
 export type PayoutOutcome =
-  | { status: "recorded"; payout: StripePayout }
+  /** `needsSummary`: paid, and Stripe has not yet been asked what it carried. */
+  | { status: "recorded"; payout: StripePayout; needsSummary: boolean }
   /** An older event than one already applied, or a paid event after a failure — nothing written. */
   | { status: "stale" }
   /** No shop holds this connected account, or the one that did has disconnected it. */
-  | { status: "not_found" }
-  /** Stripe could not be asked what the payout carried; deliver the event again. */
-  | { status: "deferred" };
+  | { status: "not_found" };
 
 function isNeverArrived(status: string): boolean {
   return (NEVER_ARRIVED as readonly string[]).includes(status);
@@ -49,16 +48,12 @@ function isNeverArrived(status: string): boolean {
  * a replay changes nothing and a late `paid` never overwrites a `failed` or
  * `canceled` (Stripe can fail a payout after calling it paid, never the other way round).
  *
- * A paid automatic payout is itemized once, the first time it is seen paid;
- * a row that already has its summary is never asked about again. Stripe being
- * unreachable defers the whole event rather than recording a payout that will
- * never be summarized.
+ * Writes the row and answers at once. What a paid payout carried is asked of
+ * Stripe afterwards, by {@link summarizeStripePayout} from `after()`, so the
+ * webhook never holds Stripe's delivery open on a page walk; `needsSummary`
+ * is true until a summary has been stored.
  */
-export async function recordStripePayout(
-  db: AppDb,
-  event: PayoutEvent,
-  lookup: PayoutSummaryLookup,
-): Promise<PayoutOutcome> {
+export async function recordStripePayout(db: AppDb, event: PayoutEvent): Promise<PayoutOutcome> {
   const [holder] = await db
     .select({ shopId: shopStripeAccounts.shopId })
     .from(shopStripeAccounts)
@@ -83,26 +78,6 @@ export async function recordStripePayout(
   if (existing && existing.lastEventAt > event.occurredAt) return { status: "stale" };
 
   const failed = event.payout.status === FAILED;
-  const needsSummary = !neverArrives && existing?.feeCents == null && existing?.coveredFrom == null;
-  let summary: { coveredFrom: Date | null; coveredTo: Date | null; feeCents: number | null } = {
-    coveredFrom: existing?.coveredFrom ?? null,
-    coveredTo: existing?.coveredTo ?? null,
-    feeCents: existing?.feeCents ?? null,
-  };
-  if (needsSummary) {
-    const answer = await lookup.summarize(event.stripeAccountId, event.payout.id, {
-      automatic: event.payout.automatic,
-    });
-    if (answer.status === "failed") return { status: "deferred" };
-    if (answer.status === "summarized") {
-      summary = {
-        coveredFrom: answer.coveredFrom,
-        coveredTo: answer.coveredTo,
-        feeCents: answer.feeCents,
-      };
-    }
-  }
-
   const row = {
     shopId: holder.shopId,
     stripeAccountId: event.stripeAccountId,
@@ -112,7 +87,6 @@ export async function recordStripePayout(
     status: event.payout.status,
     arrivalDate: event.payout.arrivalDate,
     failureCode: failed ? event.payout.failureCode : null,
-    ...summary,
     lastEventAt: event.occurredAt,
     updatedAt: event.occurredAt,
   };
@@ -121,15 +95,13 @@ export async function recordStripePayout(
     .values(row)
     .onConflictDoUpdate({
       target: stripePayouts.stripePayoutId,
+      // The summary columns are not in this set: a replay never clears them.
       set: {
         amountCents: row.amountCents,
         currency: row.currency,
         status: row.status,
         arrivalDate: row.arrivalDate,
         failureCode: row.failureCode,
-        coveredFrom: sql`coalesce(${stripePayouts.coveredFrom}, ${row.coveredFrom})`,
-        coveredTo: sql`coalesce(${stripePayouts.coveredTo}, ${row.coveredTo})`,
-        feeCents: sql`coalesce(${stripePayouts.feeCents}, ${row.feeCents})`,
         lastEventAt: row.lastEventAt,
         updatedAt: row.updatedAt,
       },
@@ -148,7 +120,61 @@ export async function recordStripePayout(
       ),
     })
     .returning();
-  return written ? { status: "recorded", payout: written } : { status: "stale" };
+  if (!written) return { status: "stale" };
+  const needsSummary = !neverArrives && written.feeCents === null && written.coveredFrom === null;
+  return { status: "recorded", payout: written, needsSummary };
+}
+
+/** How long to wait before each further try when Stripe cannot be reached. */
+export const PAYOUT_SUMMARY_RETRY_DELAYS_MS: readonly number[] = [2_000, 8_000];
+
+export type PayoutSummaryRun = "summarized" | "unavailable" | "failed";
+
+/**
+ * **Ask Stripe once what a paid payout carried and store the answer** (ADR
+ * 20261012-payouts-reach-diveday), run after the webhook has answered.
+ *
+ * The write is conditional on the row still having no summary and still being
+ * paid, so a duplicate run, a replay or a payout that failed meanwhile never
+ * overwrites anything: asked once, kept once. Stripe being unreachable retries
+ * on {@link PAYOUT_SUMMARY_RETRY_DELAYS_MS}; past those the payout stays
+ * recorded without a span or fee, which pages read as "Stripe did not say",
+ * and the caller reports it.
+ */
+export async function summarizeStripePayout(
+  db: AppDb,
+  lookup: PayoutSummaryLookup,
+  payout: { stripeAccountId: string; payoutId: string; automatic: boolean },
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<PayoutSummaryRun> {
+  let answer = await lookup.summarize(payout.stripeAccountId, payout.payoutId, {
+    automatic: payout.automatic,
+  });
+  for (const delay of PAYOUT_SUMMARY_RETRY_DELAYS_MS) {
+    if (answer.status !== "failed") break;
+    await sleep(delay);
+    answer = await lookup.summarize(payout.stripeAccountId, payout.payoutId, {
+      automatic: payout.automatic,
+    });
+  }
+  if (answer.status !== "summarized") return answer.status;
+  await db
+    .update(stripePayouts)
+    .set({
+      coveredFrom: answer.coveredFrom,
+      coveredTo: answer.coveredTo,
+      feeCents: answer.feeCents,
+    })
+    .where(
+      and(
+        eq(stripePayouts.stripePayoutId, payout.payoutId),
+        eq(stripePayouts.stripeAccountId, payout.stripeAccountId),
+        eq(stripePayouts.status, "paid"),
+        isNull(stripePayouts.feeCents),
+        isNull(stripePayouts.coveredFrom),
+      ),
+    );
+  return "summarized";
 }
 
 /** One payout as Reports and the Orders index print it. */

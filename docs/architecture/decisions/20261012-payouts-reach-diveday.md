@@ -23,13 +23,21 @@ account's `payouts_enabled` flag. Stripe's fees were nowhere at all. (UX review 
   delivered after either (late or stamped later) changes nothing. A canceled payout is shown on
   Reports as canceled and never on the Orders index's paid or failed lines; `payout.updated` is
   not subscribed (nothing it carries is shown).
-- **What a payout carried is asked of Stripe once, at webhook time, never at render.** A paid
-  automatic payout is itemized with `GET /v1/balance_transactions?payout=…` on the connected
-  account (`src/lib/payments/payout-summary.ts`, read-only, the platform key of the event's own
-  mode). The earliest and latest `created` of the money it carries become "covering Sep 27 to
-  Oct 1", and the sum of `fee` becomes Stripe's fees on it. A list longer than twenty pages, a 4xx or a key of the other mode records the
-  payout without either, which pages read as "Stripe did not say". The network, a 429 or a 5xx
-  defers the event (503, claim released) so Stripe delivers it again.
+- **What a payout carried is asked of Stripe once, after the webhook has answered, never at
+  render** (amended 2026-10-15, issue #2464). `recordStripePayout` writes the row and the route
+  answers 200; `summarizeStripePayout` then runs from Next `after()`. A paid automatic payout is
+  itemized with `GET /v1/balance_transactions?payout=…` on the connected account
+  (`src/lib/payments/payout-summary.ts`, read-only, the platform key of the event's own mode). The
+  earliest and latest `created` of the money it carries become "covering Sep 27 to Oct 1", and the
+  sum of `fee` becomes Stripe's fees on it. The write is conditional on the row still being paid
+  and unsummarized, so a duplicate run or a replay asks and writes nothing twice. The page cap
+  (`MAX_PAYOUT_SUMMARY_PAGES`) stays: it now bounds a background job, not Stripe's delivery. A
+  list longer than twenty pages, a 4xx or a key of the other mode records the payout without
+  either, which pages read as "Stripe did not say". The network, a 429 or a 5xx retries in the same
+  background run after 2 s and 8 s; past that the payout stays without a span or fee and the run is
+  logged as an error. Stripe's own resend of the event (or the dashboard's) summarizes it then.
+  The earlier design held the delivery open on up to twenty outbound GETs and answered 503 to
+  retry; a payout over the cap or a Stripe outage cost the webhook, not just the figure.
 - **Pages read the stored row.** Reports lists the month's payouts by arrival day and adds the
   month's Stripe fees, summed from those payouts; the Orders index shows the newest paid payout and
   a warning when one failed after it. Both are owner and manager reads.

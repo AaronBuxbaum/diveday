@@ -49,7 +49,12 @@ vi.mock("@/db/orders", () => ({
 vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
 vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
 vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
-vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn() }));
+vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn(), summarizeStripePayout: vi.fn() }));
+// The summary runs after the response; these cases only read what was recorded.
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: vi.fn(),
+}));
 vi.mock("@/db/stripe-restricted", () => ({
   tellOwnersPaymentsRestricted: vi.fn(),
 }));
@@ -353,23 +358,19 @@ describe("money reversed outside DiveDay (ADR 20261009-stripe-reversals-reach-di
 describe("payouts (ADR 20261012-payouts-reach-diveday)", () => {
   it("payout.paid reads the amount, arrival day and automatic flag off a real Payout", async () => {
     expect((await deliver("payout.paid")).status).toBe(200);
-    expect(recordStripePayout).toHaveBeenCalledWith(
-      FAKE_DB,
-      {
-        stripeAccountId: ACCOUNT,
-        occurredAt: new Date(1785060000 * 1000),
-        payout: {
-          id: "po_1QsAVmLkdIwHu7ixPayoutA",
-          amountCents: 184_200,
-          currency: "usd",
-          status: "paid",
-          arrivalDate: new Date(1785024000 * 1000),
-          automatic: true,
-          failureCode: null,
-        },
+    expect(recordStripePayout).toHaveBeenCalledWith(FAKE_DB, {
+      stripeAccountId: ACCOUNT,
+      occurredAt: new Date(1785060000 * 1000),
+      payout: {
+        id: "po_1QsAVmLkdIwHu7ixPayoutA",
+        amountCents: 184_200,
+        currency: "usd",
+        status: "paid",
+        arrivalDate: new Date(1785024000 * 1000),
+        automatic: true,
+        failureCode: null,
       },
-      expect.anything(),
-    );
+    });
   });
 
   it("payout.failed carries Stripe's failure code", async () => {
@@ -379,7 +380,6 @@ describe("payouts (ADR 20261012-payouts-reach-diveday)", () => {
       expect.objectContaining({
         payout: expect.objectContaining({ status: "failed", failureCode: "account_closed" }),
       }),
-      expect.anything(),
     );
   });
 });
@@ -392,7 +392,6 @@ describe("payout.canceled", () => {
       expect.objectContaining({
         payout: expect.objectContaining({ status: "canceled", failureCode: null }),
       }),
-      expect.anything(),
     );
   });
 });

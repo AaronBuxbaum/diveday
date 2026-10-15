@@ -37,6 +37,20 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
+// A paid payout's summary runs after the response; `settleAfter` is Next finishing it.
+const deferredWork = vi.hoisted(() => ({ pending: [] as Promise<unknown>[] }));
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: (task: (() => unknown) | Promise<unknown>) => {
+    deferredWork.pending.push(
+      Promise.resolve().then(() => (typeof task === "function" ? task() : task)),
+    );
+  },
+}));
+async function settleAfter() {
+  const work = deferredWork.pending.splice(0);
+  await Promise.all(work);
+}
 // The routes report only where a DSN is configured; the suite runs without one.
 vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
@@ -1307,7 +1321,9 @@ describe("payout.* hostile sequences (real handlers, real db)", () => {
     ]);
     try {
       expect((await deliver(payoutEvent("evt_p1", "payout.paid"))).status).toBe(200);
+      await settleAfter();
       expect((await deliver(payoutEvent("evt_p1", "payout.paid"))).status).toBe(200);
+      await settleAfter();
       expect(fetchImpl).toHaveBeenCalledTimes(1);
       const latest = await latestShopPayouts(db, shop.id);
       expect(latest.paid).toMatchObject({
@@ -1321,6 +1337,7 @@ describe("payout.* hostile sequences (real handlers, real db)", () => {
       // Stripe fails it after paying it; the earlier paid event, redelivered, never undoes that.
       await deliver(payoutEvent("evt_p2", "payout.failed"));
       await deliver(payoutEvent("evt_p3", "payout.paid", { ageSeconds: 600 }));
+      await settleAfter();
       const [row] = await db
         .select()
         .from(stripePayouts)
@@ -1348,20 +1365,29 @@ describe("payout.* hostile sequences (real handlers, real db)", () => {
     }
   });
 
-  it("Stripe unreachable defers the event and records nothing until it answers", async () => {
+  it("answers before Stripe is asked, and a Stripe that stays down leaves the payout without a fee", async () => {
     const { db, shop } = await connectedShop();
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_replay");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response("{}", { status: 503 })),
-    );
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    const fetchImpl = vi.fn(async () => new Response("{}", { status: 503 }));
+    vi.stubGlobal("fetch", fetchImpl);
     try {
-      expect((await deliver(payoutEvent("evt_pd", "payout.paid"))).status).toBe(503);
-      expect(await db.select().from(stripePayouts)).toEqual([]);
-      stripeServing([{ type: "charge", created: Math.floor(nowMs() / 1000), fee: 99 }]);
       expect((await deliver(payoutEvent("evt_pd", "payout.paid"))).status).toBe(200);
+      // Recorded already, with Stripe not yet asked.
+      expect((await latestShopPayouts(db, shop.id)).paid).toMatchObject({ feeCents: null });
+      const settled = settleAfter();
+      await vi.runAllTimersAsync();
+      await settled;
+      expect(fetchImpl).toHaveBeenCalledTimes(3);
+      expect((await latestShopPayouts(db, shop.id)).paid).toMatchObject({ feeCents: null });
+      // Stripe resends the event once it is back up: now it is summarized.
+      vi.useRealTimers();
+      stripeServing([{ type: "charge", created: Math.floor(nowMs() / 1000), fee: 99 }]);
+      expect((await deliver(payoutEvent("evt_pd2", "payout.paid"))).status).toBe(200);
+      await settleAfter();
       expect((await latestShopPayouts(db, shop.id)).paid?.feeCents).toBe(99);
     } finally {
+      vi.useRealTimers();
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();
     }

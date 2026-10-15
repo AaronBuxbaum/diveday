@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import {
   markCheckoutExpiredBySessionId,
@@ -14,7 +15,7 @@ import {
   recordOrderPaymentIntent,
 } from "@/db/orders";
 import { recordStripeDispute } from "@/db/payment-disputes";
-import { recordStripePayout } from "@/db/payouts";
+import { recordStripePayout, summarizeStripePayout } from "@/db/payouts";
 import { recordStripeRefundFailure } from "@/db/refund-failures";
 import { recordStripeChargeRefund } from "@/db/refunds";
 import {
@@ -42,7 +43,10 @@ import { type LogContext, log } from "@/lib/log";
 import { reportScrubbedError } from "@/lib/observability/sentry";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
-import { payoutSummaryLookupFromEnvironment } from "@/lib/payments/payout-summary";
+import {
+  type PayoutSummaryLookup,
+  payoutSummaryLookupFromEnvironment,
+} from "@/lib/payments/payout-summary";
 import { refundFailureReasonOf } from "@/lib/payments/refund-failure-reason";
 import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
 import { type StripeWebhookEvent, verifyStripeWebhook } from "@/lib/payments/webhook";
@@ -333,10 +337,27 @@ async function applyDisputeEvent(
 }
 
 /**
+ * The after-response half of a paid payout: never able to fail the delivery it
+ * follows. A payout Stripe could not be asked about stays recorded without a
+ * span or fee and is reported by class and code, never message.
+ */
+async function summarizePayoutSafely(
+  db: AppDb,
+  lookup: PayoutSummaryLookup,
+  payout: { stripeAccountId: string; payoutId: string; automatic: boolean },
+): Promise<void> {
+  try {
+    const run = await summarizeStripePayout(db, lookup, payout);
+    if (run === "failed") log("stripe_webhook.payout_summary_failed", "error", {});
+  } catch (error) {
+    log("stripe_webhook.payout_summary_failed", "error", { errorCode: errorClassToken(error) });
+  }
+}
+
+/**
  * A `payout.paid`, `payout.failed` or `payout.canceled` event (ADR 20261012-payouts-reach-diveday).
  * Whose payout it is comes from the event's own `account` alone, the same way
- * every reversal is scoped. Returns the outcome to log, or `"deferred"` when
- * Stripe could not be asked what the payout carried.
+ * every reversal is scoped. Returns the outcome to log.
  */
 async function applyPayoutEvent(
   db: AppDb,
@@ -347,25 +368,35 @@ async function applyPayoutEvent(
   const payout = payoutObjectSchema.safeParse(event.data.object);
   if (!payout.success) return "malformed_payload";
   if (!event.account) return "missing_account";
-  const outcome = await recordStripePayout(
-    db,
-    {
-      stripeAccountId: event.account,
-      occurredAt,
-      payout: {
-        id: payout.data.id,
-        amountCents: payout.data.amount,
-        currency: payout.data.currency,
-        status: payout.data.status,
-        arrivalDate: new Date(payout.data.arrival_date * 1000),
-        automatic: payout.data.automatic ?? false,
-        failureCode: payout.data.failure_code ?? null,
-      },
+  const automatic = payout.data.automatic ?? false;
+  const outcome = await recordStripePayout(db, {
+    stripeAccountId: event.account,
+    occurredAt,
+    payout: {
+      id: payout.data.id,
+      amountCents: payout.data.amount,
+      currency: payout.data.currency,
+      status: payout.data.status,
+      arrivalDate: new Date(payout.data.arrival_date * 1000),
+      automatic,
+      failureCode: payout.data.failure_code ?? null,
     },
-    payoutSummaryLookupFromEnvironment(process.env, fetch, { livemode }),
-  );
-  if (outcome.status === "deferred") return "deferred";
-  if (outcome.status === "recorded") return "payout_recorded";
+  });
+  if (outcome.status === "recorded") {
+    // What the payout carried is asked of Stripe after this answers (issue
+    // #2464): a page walk of up to twenty GETs never holds the delivery open.
+    if (outcome.needsSummary) {
+      const stripeAccountId = event.account;
+      after(() =>
+        summarizePayoutSafely(
+          db,
+          payoutSummaryLookupFromEnvironment(process.env, fetch, { livemode }),
+          { stripeAccountId, payoutId: payout.data.id, automatic },
+        ),
+      );
+    }
+    return "payout_recorded";
+  }
   return outcome.status === "stale" ? "stale_payout_event" : "payout_account_not_found";
 }
 
@@ -811,9 +842,7 @@ export async function POST(request: Request) {
       case "payout.canceled": {
         // Money Stripe moved to the shop's bank, or tried to (ADR
         // 20261012-payouts-reach-diveday).
-        const outcome = await applyPayoutEvent(db, event, occurredAt, expectedLivemode);
-        if (outcome === "deferred") deferred = true;
-        else logOutcome(outcome);
+        logOutcome(await applyPayoutEvent(db, event, occurredAt, expectedLivemode));
         break;
       }
       default:
