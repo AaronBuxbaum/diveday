@@ -1,6 +1,6 @@
 import { and, asc, count, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { type SafetyMonth, summarizeSafetyMonth } from "@/lib/safety-report";
+import { type SafetyCrewMember, type SafetyMonth, summarizeSafetyMonth } from "@/lib/safety-report";
 import { hasReturned } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
@@ -8,6 +8,7 @@ import {
   activityEvents,
   bookings,
   people,
+  personRoles,
   rollCallCrewEvents,
   rollCallEvents,
   staffCredentials,
@@ -101,7 +102,11 @@ export async function getSafetyMonth(
         ),
     () =>
       db
-        .select({ tripId: tripAssignments.tripId, personId: tripAssignments.personId })
+        .select({
+          tripId: tripAssignments.tripId,
+          personId: tripAssignments.personId,
+          tripRole: tripAssignments.tripRole,
+        })
         .from(tripAssignments)
         .innerJoin(people, eq(people.id, tripAssignments.personId))
         .where(and(inArray(tripAssignments.tripId, tripIds), eq(people.shopId, shopId))),
@@ -146,7 +151,7 @@ export async function getSafetyMonth(
   ]);
 
   const crewIds = [...new Set(crew.map((row) => row.personId))];
-  const [credentials, names] = crewIds.length
+  const [credentials, names, shopRoleRows] = crewIds.length
     ? await queryAll(db, [
         () =>
           db
@@ -169,8 +174,15 @@ export async function getSafetyMonth(
             .from(people)
             // diveday:allow-deleted-people: names for crew already on these trips; removed or not, they were aboard.
             .where(and(eq(people.shopId, shopId), inArray(people.id, crewIds))),
+        // The standing roles, which name the job when the roster does not.
+        () =>
+          db
+            .select({ personId: personRoles.personId, role: personRoles.role })
+            .from(personRoles)
+            .innerJoin(people, eq(people.id, personRoles.personId))
+            .where(and(eq(people.shopId, shopId), inArray(personRoles.personId, crewIds))),
       ])
-    : [[], []];
+    : [[], [], []];
 
   const bookingsByTrip = new Map<string, string[]>();
   for (const row of roster) {
@@ -178,10 +190,20 @@ export async function getSafetyMonth(
     list.push(row.bookingId);
     bookingsByTrip.set(row.tripId, list);
   }
-  const crewByTrip = new Map<string, string[]>();
+  const shopRolesByPerson = new Map<string, string[]>();
+  for (const row of shopRoleRows) {
+    const list = shopRolesByPerson.get(row.personId) ?? [];
+    list.push(row.role);
+    shopRolesByPerson.set(row.personId, list);
+  }
+  const crewByTrip = new Map<string, SafetyCrewMember[]>();
   for (const row of crew) {
     const list = crewByTrip.get(row.tripId) ?? [];
-    list.push(row.personId);
+    list.push({
+      personId: row.personId,
+      tripRole: row.tripRole,
+      shopRoles: shopRolesByPerson.get(row.personId) ?? [],
+    });
     crewByTrip.set(row.tripId, list);
   }
 
@@ -194,7 +216,7 @@ export async function getSafetyMonth(
       endsAt: trip.endsAt,
       plannedDives: trip.plannedDives,
       bookingIds: bookingsByTrip.get(trip.id) ?? [],
-      crewIds: crewByTrip.get(trip.id) ?? [],
+      crew: crewByTrip.get(trip.id) ?? [],
     })),
     diverEvents,
     crewEvents,
