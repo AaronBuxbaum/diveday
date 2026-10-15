@@ -387,7 +387,9 @@ export default async function OrdersIndexPage({
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
-      {!paymentsConnected && canReconcilePayments ? (
+      {/* Never on the demo, as Billing never bills it: a shop shown running
+          with paid orders does not open on a setup ask (fourth review, 53). */}
+      {!paymentsConnected && canReconcilePayments && !shop.isDemo ? (
         <PaymentsSetupCard
           shopSlug={shopSlug}
           title={t("orders.index.setupCard.title")}

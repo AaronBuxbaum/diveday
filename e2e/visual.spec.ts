@@ -7574,10 +7574,9 @@ for (const scheme of ["light", "dark"] as const) {
       // (slice 9g of ADR 20260827-the-shops-shelves; codes themselves are ADR
       // 20260729-shop-promo-codes). The seed holds a live code and an expired
       // one, so two shelves render and the windows and redemption counts sit on
-      // the rows. The seeded shop has no Stripe account, so what stands above
-      // the ledger is the one-line notice and *not* the seven-field composer —
-      // a form that cannot submit does not stand open, and with an account
-      // behind it the composer is a "New code" door rather than a standing card.
+      // the rows. The demo has no Stripe account and never connects one, so
+      // nothing stands above the ledger: no Connect ask and no "New code" door
+      // that would open only on one (fourth review, item 53).
       test(`the discount codes page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/promos");
         await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();

@@ -315,17 +315,17 @@ test.describe("demo billing history", () => {
 test.describe("no connected payment account", () => {
   signedInAsOwner();
 
-  test("the orders index offers connecting payments instead of a dead New order", {
+  test("the orders index offers neither a dead New order nor a setup ask on the demo", {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
 
     await expect(page.getByRole("link", { name: "New order" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Connect payments" }).first()).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/settings#money",
-    );
+    // A shop shown running with paid orders does not open on "Take payments
+    // with DiveDay" (fourth review, item 53); a real shop with no account
+    // still gets the card (orders/page.test.tsx).
+    await expect(page.getByText("Take payments with DiveDay")).toHaveCount(0);
   });
 
   test("reaching orders/new anyway lands back on Orders with a reason", { tag: READ_ONLY }, async ({

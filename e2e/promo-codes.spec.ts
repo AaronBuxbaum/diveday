@@ -90,23 +90,20 @@ test.describe("as owner", () => {
     await expect(page.getByText("Not live right now")).toHaveCount(0);
   });
 
-  test("an unconnected shop with codes says Connect inside New code, not over the live list", async ({
+  test("the demo's codes stand without a Connect ask or a door that opens only on one", async ({
     page,
   }) => {
-    // Third review #36: "Connect your Stripe account in Settings before
-    // creating a code." stood over a live, redeemed REEF10. The seed's shop has
-    // codes and no Stripe account, so the warning belongs to creating: behind
-    // the "New code" door, which opens onto it rather than onto seven fields
-    // that could not submit.
+    // Third review #36 moved "Connect your Stripe account in Settings before
+    // creating a code." off the live list and behind "New code"; fourth
+    // review #53 takes it off the demo altogether, which never connects
+    // payments (Billing never bills it either). A real shop with codes and no
+    // account keeps the door with the ask inside it.
     await page.goto("/shop/blue-mantis/promos");
-    const warning = page.getByText(/before creating a code/);
     await expect(
       page.locator("li").filter({ hasText: "REEF10" }).filter({ visible: true }),
     ).toHaveCount(1);
-    await expect(warning).toBeHidden();
-    await openNewCodeForm(page);
-    await expect(warning).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create code" })).toHaveCount(0);
+    await expect(page.getByText(/before creating a code/)).toHaveCount(0);
+    await expect(page.locator("summary").filter({ hasText: "New code" })).toHaveCount(0);
   });
 
   test("a code Stripe never minted is kept as failed evidence, and cannot be switched on", async ({
