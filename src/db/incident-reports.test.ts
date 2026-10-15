@@ -569,6 +569,53 @@ describe("erasing a diver named in a report", () => {
   });
 });
 
+describe("erasing a diver named in a report under a legal hold", () => {
+  /** Erasure wins over the hold on personal fields; the hold keeps the report itself (#2391). */
+  it("scrubs the diver's name and still keeps the report", async () => {
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    const name = f.seat.person.fullName;
+    const started = await startIncidentReport(db, {
+      shopId: shop.id,
+      tripId: f.trip.id,
+      actorPersonId: f.crew.id,
+    });
+    if (!started.ok) throw new Error("expected a draft");
+    const base = {
+      shopId: shop.id,
+      reportId: started.reportId,
+      tripId: f.trip.id,
+      actorPersonId: f.crew.id,
+    };
+    await saveIncidentDraft(db, {
+      ...base,
+      fields: { ...complete, whatHappened: `${name} surfaced coughing.` },
+    });
+    await fileIncidentReport(db, base);
+    expect(
+      await setIncidentLegalHold(db, { ...base, actorPersonId: f.owner.id, held: true }),
+    ).toEqual({ ok: true });
+
+    expect(
+      await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: f.seat.person.id,
+        actorPersonId: f.owner.id,
+      }),
+    ).toMatchObject({ ok: true });
+
+    const view = await getIncidentReport(db, shop.id, started.reportId, f.owner.id);
+    expect(view?.status).toBe("filed");
+    expect(view?.fields.whatHappened).toBe("[redacted] surfaced coughing.");
+    const [row] = await db
+      .select({ heldAt: incidentReports.legalHoldAt, deletedAt: incidentReports.deletedAt })
+      .from(incidentReports)
+      .where(eq(incidentReports.id, started.reportId));
+    expect(row?.heldAt).not.toBeNull();
+    expect(row?.deletedAt).toBeNull();
+  });
+});
+
 describe("retention", () => {
   it("prunes a report seven years after the incident, with its people and addenda", async () => {
     const { db, shop } = ctx;

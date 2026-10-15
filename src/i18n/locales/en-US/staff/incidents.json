@@ -191,7 +191,7 @@
     "confirm": "Yes, delete the draft",
     "cancel": "Never mind",
     "pending": "Deleting…",
-    "message": "Delete this draft? A filed report can never be deleted."
+    "message": "Delete this draft? It leaves the screen, and its words are kept for seven years. A filed report can never be deleted."
   },
   "hold": {
     "title": "Legal hold",
