@@ -21,6 +21,7 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
+import { isDiver } from "@/lib/participant-types";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { mergeShopHistory, priorVisitStanding } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
@@ -391,6 +392,7 @@ async function readRecapRow(db: AppDb, bookingId: string) {
       shopId: bookings.shopId,
       tripId: bookings.tripId,
       personId: bookings.personId,
+      bookedAs: bookings.bookedAs,
       status: bookings.status,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       tripStatus: trips.status,
@@ -837,19 +839,24 @@ async function loadRecapPageData(
     })),
   );
 
-  const flySafe = flySafeFrom({
-    executedDives: livedDives.map(({ executed }) => ({
-      diveNumber: executed.diveNumber,
-      exitedAt: executed.exitedAt,
-    })),
-    plannedDives: trip.plannedDives,
-    endsAt: trip.endsAt,
-    divedRecently: divedRecentlyIds.dived.has(row.personId),
-    exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
-    decompressionRecently: divedRecentlyIds.decompression.has(row.personId),
-    now: nowDate(),
-    hours: DEFAULT_FLY_SAFE_HOURS,
-  });
+  // A rider never entered the water and a snorkeler breathes no gas: neither
+  // is told when they may fly (issue #2383). Silence, as for a decompression
+  // departure.
+  const flySafe = isDiver(row.bookedAs)
+    ? flySafeFrom({
+        executedDives: livedDives.map(({ executed }) => ({
+          diveNumber: executed.diveNumber,
+          exitedAt: executed.exitedAt,
+        })),
+        plannedDives: trip.plannedDives,
+        endsAt: trip.endsAt,
+        divedRecently: divedRecentlyIds.dived.has(row.personId),
+        exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
+        decompressionRecently: divedRecentlyIds.decompression.has(row.personId),
+        now: nowDate(),
+        hours: DEFAULT_FLY_SAFE_HOURS,
+      })
+    : null;
 
   const tripLocalDay = calendarDateInTimezone(trip.startsAt, row.timezone);
   const effectivePriorVisits = priorVisitRows.filter(
@@ -1578,16 +1585,19 @@ async function sendRecaps(
       for (const r of tripRows) {
         flySafeByBooking.set(
           r.booking.id,
-          flySafeFrom({
-            executedDives: executed,
-            plannedDives: first.trip.plannedDives,
-            endsAt: first.trip.endsAt,
-            divedRecently: divedRecentlyIds.dived.has(r.booking.personId),
-            exceedsNoDecoLimits: first.trip.exceedsNoDecoLimits,
-            decompressionRecently: divedRecentlyIds.decompression.has(r.booking.personId),
-            now,
-            hours: DEFAULT_FLY_SAFE_HOURS,
-          }),
+          // Same silence as the page for a rider or a snorkeler (issue #2383).
+          isDiver(r.booking.bookedAs)
+            ? flySafeFrom({
+                executedDives: executed,
+                plannedDives: first.trip.plannedDives,
+                endsAt: first.trip.endsAt,
+                divedRecently: divedRecentlyIds.dived.has(r.booking.personId),
+                exceedsNoDecoLimits: first.trip.exceedsNoDecoLimits,
+                decompressionRecently: divedRecentlyIds.decompression.has(r.booking.personId),
+                now,
+                hours: DEFAULT_FLY_SAFE_HOURS,
+              })
+            : null,
         );
       }
     }),
