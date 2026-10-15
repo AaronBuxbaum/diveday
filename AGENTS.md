@@ -33,7 +33,7 @@ cheap subagent (`Explore`); a worker hands back a file path plus at most ten lin
 | --- | --- |
 | `pnpm dev` | dev server; wait for **`dev: serving … — warmed in Ns`**, one per checkout (the **run** skill) |
 | `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push` | the checklist is the **verify** skill |
-| `pnpm check:repo` | 60 static guards; each names itself and the offending line ([repo-checks.md](docs/agents/repo-checks.md)) |
+| `pnpm check:repo` | 61 static guards; each names itself and the offending line ([repo-checks.md](docs/agents/repo-checks.md)) |
 | `pnpm agent:doctor`, `node scripts/stack-map.mjs` | what this environment will trip you on; your stack's layers and top |
 
 Every other command: [working-rules.md](docs/agents/working-rules.md#commands). Pass args to a
@@ -95,8 +95,8 @@ Other sessions share this checkout ([working-rules.md](docs/agents/working-rules
   never report unverified work as done.
 - **File only a bug, safety gap or decision** as a `needs-triage` issue, ten a run at most; the
   rest is one "Notes" PR comment.
-- **A failing or flaky test is part of the work**, even when unrelated: never skipped, never a
-  wider timeout; search open PRs for a fix in flight first.
+- **A failing or flaky test is part of the work**, even when unrelated: fixed, or quarantined
+  with an issue and a 7-day expiry; never skipped or given a wider timeout; search open PRs first.
 - **A pushed PR is not done until its visual diffs are explained** (**visual-triage**) **and every
   review thread is fixed, declined with a reason, or filed**.
 - **New runtime dependency → ADR; new domain concept → glossary; invalidated doc → fixed in the
@@ -105,8 +105,8 @@ Other sessions share this checkout ([working-rules.md](docs/agents/working-rules
   nitrox, erasure): boring code, adversarial tests, two differently framed `dive-domain-expert`
   runs; **security-sensitive changes**: a `security-reviewer` review; the PR body names both.
 - **`app → features → lib/db`, one way; routes stay thin.**
-- **Tests travel with behavior**: a bug fix starts with a failing regression test; every
-  important flow gets an `e2e/` spec, every important surface a capture in `e2e/visual.spec.ts`.
+- **Tests travel with behavior**: a bug fix starts with a failing regression test; layers and
+  critical journeys: [testing.md](docs/engineering/testing.md).
 - **Copy from a bundle; every sentence earns its place; deletes are soft and say "Delete"; a date
   names its zone, no hard-coded locale; time comes from the clock; a new page ships a
   `loading.tsx`.**
