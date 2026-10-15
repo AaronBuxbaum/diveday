@@ -12,6 +12,6 @@
   },
   "afterHours": {
     "heading": "Mensajes fuera de horario",
-    "description": "Un correo cuando los buceadores escriben fuera del horario de atención, de {opens} a {closes} {zone}. Como mucho, uno cada media hora."
+    "description": "Un correo cuando los buceadores escriben fuera del horario de atención, de {opens} a {closes} {zone}. Como mucho, uno cada media hora. Uno que no salió a tiempo puede llegar dentro de la hora."
   }
 }
