@@ -13,6 +13,21 @@ import { refundBookingOnCancellation } from "./refunds";
 type NoticeOptions = { provider?: NotificationProvider; now?: Date };
 
 /**
+ * What a party lead's cancel did to the seats they booked, as the email says
+ * it: how many went with them and how many stayed booked. Counts only, read
+ * off the same {@link PartyCancelOutcome} the settle acted on, and absent for a
+ * lead with no party seats so their email reads exactly as it always did.
+ */
+export function partyCounts(
+  party: PartyCancelOutcome | undefined,
+): { cancelled: number; stayed: number } | undefined {
+  if (!party) return undefined;
+  const cancelled = party.cancelled.length;
+  const stayed = party.stayed.length;
+  return cancelled + stayed > 0 ? { cancelled, stayed } : undefined;
+}
+
+/**
  * **The refund, the trail line and the cancellation email for one seat a
  * diver's own cancel released** (`/ready` and the reply keyword alike).
  *
@@ -31,6 +46,8 @@ export async function settleSelfCancelledSeat(
     bookingId: string;
     notify: boolean;
     party?: { leadBookingId: string; seatName: string };
+    /** A lead's own cancel: what happened to the party seats, told in their email. */
+    partyOutcome?: PartyCancelOutcome;
   },
   options: NoticeOptions = {},
 ): Promise<CancellationRefundSeen> {
@@ -78,6 +95,7 @@ export async function settleSelfCancelledSeat(
       // `selfCancelBooking` only ever cancels a booked seat.
       from: "booked",
       refund,
+      party: partyCounts(input.partyOutcome),
     },
     options,
   );

@@ -91,8 +91,10 @@ describe("cancelMyBookingAction with a party", () => {
       party: { leadBookingId: LEAD, seatName: "Milo Ortiz" },
     });
     expect(sendBookingCancelledNotice).toHaveBeenCalledTimes(1);
+    // The lead's email says how many seats went with them and how many stayed (#2604).
     expect(vi.mocked(sendBookingCancelledNotice).mock.calls[0]?.[1]).toMatchObject({
       bookingId: LEAD,
+      party: { cancelled: 1, stayed: 1 },
     });
   });
 

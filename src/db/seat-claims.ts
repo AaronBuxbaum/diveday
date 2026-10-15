@@ -15,7 +15,7 @@ import {
   staleBookingCapabilityForToken,
   verifyBookingCapability,
 } from "./booking-capabilities";
-import { tripAdmissionFor } from "./bookings";
+import { partySeatGoesWithLead, tripAdmissionFor } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
@@ -634,10 +634,7 @@ export async function issuePartySeatClaims(
             now,
           )
         : false,
-      cancelsWithLead:
-        row.booking.status === "booked" &&
-        row.booking.claimedAt === null &&
-        row.booking.tripId === row.leadTripId,
+      cancelsWithLead: partySeatGoesWithLead(row.booking) && row.booking.tripId === row.leadTripId,
       claim: claimable
         ? await issueBookingCapability(db, {
             shopId: input.shopId,

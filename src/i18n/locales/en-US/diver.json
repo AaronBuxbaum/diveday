@@ -5027,6 +5027,7 @@
     "replyKeyword": {
       "offer": "Reply C to cancel your seat, or M to ask about moving it.",
       "confirmCancel": "{tripTitle}, {date} at {time}. Reply {code} in the next half hour to give up your seat. Nothing has changed yet.",
+      "confirmCancelParty": "{tripTitle}, {date} at {time}. Reply {code} in the next half hour to give up your seat. This also cancels {count, plural, one {# party seat} other {# party seats}}. Nothing has changed yet.",
       "cancelled": "Your seat on {tripTitle}, {date}, is canceled.",
       "refundOnItsWay": "Your refund is on its way.",
       "cancelRefused": "That seat could not be released. We’ll pick this up.",
@@ -5069,6 +5070,8 @@
       "moneyRefunded": "{amount} is on its way back to the card you paid with, and can take a few days to land.",
       "moneyForfeit": "It was canceled after our free-cancellation window closed, so under our policy nothing is refunded.",
       "moneyFollowUp": "We’ll be in touch about what you paid.",
+      "partyCancelled": "{count, plural, one {The # party seat you booked is canceled with yours.} other {The # party seats you booked are canceled with yours.}}",
+      "partyStayed": "{count, plural, one {# party seat stays booked: its diver has already claimed it or checked in.} other {# party seats stay booked: their divers have already claimed them or checked in.}}",
       "findAnother": "See what else is running"
     },
     "tripBlowout": {

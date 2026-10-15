@@ -751,6 +751,17 @@ const bookingCancelledSchema = z.object({
       currency: z.string().trim().length(3),
     }),
   ]),
+  /**
+   * A party lead's cancel: how many of the seats they booked went with it and
+   * how many stayed booked (already claimed, or checked in). Counts only; the
+   * lead's own page names the seats. Absent when there was no party.
+   */
+  party: z
+    .object({
+      cancelled: z.number().int().min(0).max(1_000),
+      stayed: z.number().int().min(0).max(1_000),
+    })
+    .optional(),
   /** Back to the shop's own schedule, to find another day. */
   scheduleUrl: z.url().max(2_000),
 });

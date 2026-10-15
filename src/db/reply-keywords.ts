@@ -18,13 +18,13 @@ import {
   type CancellationRefundSeen,
   sendBookingCancelledNotice,
 } from "./booking-cancelled-notice";
-import { selfCancelBooking } from "./bookings";
+import { previewPartyCancel, selfCancelBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { getInboundMessage } from "./inbound-messages";
 import { refundBookingOnCancellation } from "./refunds";
 import { markPersonRunningLate } from "./running-late";
 import { bookings, inboundMessages, notificationDeliveries, people, shops, trips } from "./schema";
-import { settleReleasedPartySeats } from "./self-cancel-settle";
+import { partyCounts, settleReleasedPartySeats } from "./self-cancel-settle";
 import { sendStaffReply } from "./staff-reply";
 import { liveTrip } from "./trips-live";
 
@@ -467,6 +467,7 @@ export async function handleInboundReplyKeyword(
       // `selfCancelBooking` only ever cancels a booked seat.
       from: "booked",
       refund,
+      party: partyCounts(cancelled.party),
     },
     { provider: input.provider, now },
   );
@@ -577,8 +578,19 @@ async function handleCancelRequest(
   // Stamped before the answer goes out, so the pending state exists no matter
   // what the send does. A code nobody received cancels nothing on its own.
   await stampIntent(db, shopId, message.id, "cancel");
+  // A lead's unclaimed party seats go with them, so a lead answering by text
+  // is told so before they confirm. The count is the one `selfCancelBooking`
+  // will act on (`previewPartyCancel` reads what `cancelUnclaimedPartySeats`
+  // decides), so the prompt cannot promise what the settle does not do.
+  const party = await previewPartyCancel(db, { shopId, leadBookingId: subject.bookingId });
   await answer(
-    t("notifications.replyKeyword.confirmCancel", { ...departure(subject), code }),
+    party.goes > 0
+      ? t("notifications.replyKeyword.confirmCancelParty", {
+          ...departure(subject),
+          code,
+          count: party.goes,
+        })
+      : t("notifications.replyKeyword.confirmCancel", { ...departure(subject), code }),
     true,
   );
   return "awaiting_confirmation";

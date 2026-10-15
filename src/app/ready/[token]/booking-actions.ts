@@ -98,7 +98,12 @@ export async function cancelMyBookingAction(token: string) {
   // the booking's own current payment status — an edited or replayed query
   // string cannot be used to claim a refund that did not happen, or hide one
   // that did.
-  await settleSelfCancelledSeat(ctx.db, { shopId, bookingId: ctx.bookingId, notify: true });
+  await settleSelfCancelledSeat(ctx.db, {
+    shopId,
+    bookingId: ctx.bookingId,
+    notify: true,
+    partyOutcome: cancelled.party,
+  });
   await settleReleasedPartySeats(ctx.db, {
     shopId,
     leadBookingId: ctx.bookingId,

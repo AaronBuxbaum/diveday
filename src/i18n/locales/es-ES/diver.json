@@ -5027,6 +5027,7 @@
     "replyKeyword": {
       "offer": "Responde C para cancelar tu plaza o M para pedir un cambio de fecha.",
       "confirmCancel": "{tripTitle}, {date} a las {time}. Responde {code} en la próxima media hora para dejar tu plaza. Todavía no ha cambiado nada.",
+      "confirmCancelParty": "{tripTitle}, {date} a las {time}. Responde {code} en la próxima media hora para dejar tu plaza. Esto cancela también {count, plural, one {# plaza de tu grupo} other {# plazas de tu grupo}}. Todavía no ha cambiado nada.",
       "cancelled": "Tu plaza en {tripTitle}, {date}, queda cancelada.",
       "refundOnItsWay": "Tu reembolso ya va en camino.",
       "cancelRefused": "No se pudo liberar esa plaza. Nosotros nos ocupamos.",
@@ -5069,6 +5070,8 @@
       "moneyRefunded": "{amount} va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
       "moneyForfeit": "Se canceló después de que cerrara nuestro plazo de cancelación gratuita, así que según nuestra política no se reembolsa nada.",
       "moneyFollowUp": "Nos pondremos en contacto contigo sobre lo que pagaste.",
+      "partyCancelled": "{count, plural, one {La # plaza de tu grupo que reservaste se cancela con la tuya.} other {Las # plazas de tu grupo que reservaste se cancelan con la tuya.}}",
+      "partyStayed": "{count, plural, one {# plaza de tu grupo sigue reservada: su buceador ya la reclamó o ya hizo el check-in.} other {# plazas de tu grupo siguen reservadas: sus buceadores ya las reclamaron o ya hicieron el check-in.}}",
       "findAnother": "Ver qué más hay programado"
     },
     "tripBlowout": {
