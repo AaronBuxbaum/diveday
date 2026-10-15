@@ -42,7 +42,8 @@ list of files that decide boarding, permissions and money.
 - Adding a file to the list means `SAFETY_FILES`, `coverage.include` and a `--write`, together.
 - **Blocker found by the trial run:** under Vitest 5 every in-function mutant "survives" with its
   tests green (trip-admission 7.5%, all 13 kills module-level), though forcing one on by hand fails
-  16 tests. The schedule stays off and no issue is filed until a run kills an in-function mutant.
+  16 tests. The schedule stays off and no survivor issue is filed until a run kills an in-function
+  mutant; the runner fault is #2622.
 - Equivalent mutants will appear in the issues and need a human to call them; that is the cost of
   the signal.
 - Revisit if the weekly issues go unread for a month (drop the workflow and the two packages), or

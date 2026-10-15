@@ -57,6 +57,19 @@ export const ALERTS = {
     prompt:
       "The weekly durations refresh (`.github/workflows/durations-refresh.yml`) is red. Read the newest failed run linked in this issue's body and comments with `gh api repos/AaronBuxbaum/diveday/actions/runs/<id>/jobs` and its logs, and find the failing step. Read the workflow, `scripts/merge-test-durations.mjs` and `scripts/e2e-durations.mjs` first. A missing artifact is a `ci.yml` upload problem; a refused push needs the owner, so say which setting in a comment here; a script error is fixed with a failing test first. Done is a manual run of the workflow (its Run workflow button) going green, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo` on the fix. Close this issue in the PR that lands the fix.",
   },
+  "e2e-nightly": {
+    title: "Fix the nightly quarantine and flake-hunt run, which is red on main",
+    kind: "risk",
+    effort: "S",
+    touches: [".github/workflows/e2e-nightly.yml", "scripts/e2e-recent-failures.mjs"],
+    noticed:
+      "The scheduled `E2E nightly` workflow failed on main. It runs every `@quarantine` test and then each spec that failed on CI in the last 7 days five times. A red run means a quarantined test is still failing, a recent failure is a flake rather than a fixed break, or the run itself broke. Each red run after this one adds a comment with its link; the first green run closes this issue.",
+    why: "It was found by the scheduled run, not by a change anyone was making. A quarantined test failing here is expected until its own issue is fixed; a spec from the flake hunt failing one of its five repeats is the evidence a quarantine needs, and nothing else in CI collects it.",
+    proposed:
+      'Read the failed run\'s log and its `e2e-nightly-report` artifact and name the failing tests. For a quarantined test, comment on its own quarantine issue. For a flake-hunt spec, fix the flake, or quarantine it with an issue and a 7-day expiry per `docs/engineering/testing.md` "Flakes". If the run itself broke (build, `scripts/e2e-recent-failures.mjs`), fix that with a test.',
+    prompt:
+      'The nightly quarantine and flake-hunt run (`.github/workflows/e2e-nightly.yml`) is red on main. Read the newest failed run linked in this issue\'s body and comments with `gh api repos/AaronBuxbaum/diveday/actions/runs/<id>/jobs` and its logs, and download its `e2e-nightly-report` artifact. Read `docs/engineering/testing.md` "Flakes" and `scripts/e2e-recent-failures.mjs` first. A failing quarantined test belongs to its own issue: comment there. A flake-hunt spec that failed one of its five repeats is a flake: fix it (starting from the trace, never a wider timeout) or quarantine it with an open issue and an expiry. A broken run is fixed with a failing test first. Done is a manual run of the workflow (its Run workflow button) going green, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo`. Close this issue in the PR that lands the fix.',
+  },
   mutation: {
     title: "Fix the weekly mutation run, which is red on main",
     kind: "risk",

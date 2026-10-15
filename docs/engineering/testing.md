@@ -15,8 +15,10 @@ every other section stands.
 | Fetch boundary | Vitest + MSW, e.g. `offline-manifest-store.test.ts` | client code calling one of our own `/api/*` routes ([ADR 20260719](../architecture/decisions/20260719-msw-offline-sync-only.md)) | server-side providers |
 | Request-level | Playwright's `request` fixture, or a route-handler unit test | redirects, sitemap, feeds, webhooks, status probes, refusals | a browser |
 | Browser | Playwright, `e2e/*.spec.ts` | the [critical journeys](#critical-journeys) and the flows a change touches: the happy path plus the refusals that protect safety or money; found by role and message key | exact wording, layout, edge cases a rules test can carry |
-| Screenshots | reg-suit + S3, `e2e/visual.spec.ts` | a surface's populated and trouble states, per [captures.md](../../.claude/skills/e2e-and-visual/captures.md): light and dark × phone and desktop, plus print ([ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md)) | proving behavior |
+| Screenshots | reg-suit + S3, `e2e/visual.spec.ts` | a surface's populated and trouble states, per [captures.md](../../.claude/skills/e2e-and-visual/captures.md): light at phone and desktop, dark at desktop only, plus print ([ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md)) | proving behavior |
 | Repo checks | `pnpm check:repo` (`scripts/check-*.mjs`) and the Vitest `guards` project | every rule that reads source: "every X has Y", no raw colour, one way imports | a single page's markup |
+| Coverage floors | `@vitest/coverage-v8`, ci.yml's `coverage-floors` ([below](#coverage-floors)) | branch coverage of the eleven safety files never falling | a coverage target for the rest of the tree |
+| Mutation | Stryker, `mutation.yml` ([below](#mutation-testing)) | survivors in the safety rules, filed as issues | failing a run |
 | Nightly and weekly | `simulate-day.yml`, `persona-bots.yml`, ci.yml's schedule | a whole shop day, persona walks, real Postgres against what other branches merged | blocking a PR |
 
 Almost every page in `src/app/` is an `async function Page()` reading the database directly and
@@ -92,10 +94,16 @@ renamed, deleted or skipped. Renaming a journey's test renames its row in the sa
 | --- | --- |
 | Before a commit | the guard you touched, `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`; a changed flow's specs; a changed surface's captures in light (the **verify** skill) |
 | Before a push | `pnpm verify:push`: regen and a clean tree, check:repo and `guards`, every source-reading test, `vitest related`, and the specs `pnpm e2e:affected` names ([verifying.md](../agents/verifying.md#the-pre-push-gate)) |
-| Every pull request | repo checks, lint, typecheck, all unit tests (4 shards), the build, every Playwright spec (6 shards), the captures `visual-affected` selects (up to 8 shards); real Postgres when `src/db/**` or `drizzle/**` changed |
+| Every pull request | repo checks, lint, typecheck, all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the captures `visual-affected` selects (up to 8 shards); real Postgres when `src/db/**` or `drizzle/**` changed |
 | Push to `main` | all of the above with every capture: the next baseline |
 | Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL, the follow-up scan |
-| Weekly | the persona walk, the shard-duration refresh |
+| Weekly | the persona walk, the shard-duration refresh; mutation testing once its runner works (manual until then) |
+
+**A scheduled run that goes red files itself.** `simulate-day.yml`, `durations-refresh.yml`,
+`e2e-nightly.yml` and `mutation.yml` end with `node scripts/workflow-alert.mjs`: a red run on the
+default branch opens one `ci-red` + `needs-triage` issue in the follow-up format, each later red
+run comments on it, and the first green run closes it. A manual run on another branch files
+nothing.
 
 **Flakes.** Playwright runs `retries: 0` locally and in CI, so a flake fails the run that meets it.
 A failing or flaky test is part of the work that meets it, even when unrelated: fixed, after
@@ -135,6 +143,12 @@ What a diff runs is decided by reading it, at two places:
   whenever the app changed. *Reach*: specs visiting a route the changed names reach, ranked by how
   much of the diff's vocabulary they name, run while they fit the time budget. `--commit <sha>`
   replays one commit, to score the selector against what CI caught.
+
+**One `capture()` is three images** (four for a `TABLET_SURFACES` name): light at 390 and 1280
+(and 820 for a tablet surface), dark at 1280 only (`DARK_VIEWPORTS` in `e2e/visual.spec.ts`);
+`captureStickyFoot()` follows the same rule and the phone fold capture is light only. A full run is
+912 images, down from 1,218. The accepted risk is a dark-only defect that shows only at phone
+width.
 
 CI's Playwright shards run every spec but one: `e2e/pixel-probe.spec.ts` runs on `main` and when
 the probe, its spec, `e2e/fixtures.ts`, `globals.css`, a dependency or `ci.yml` changed
@@ -245,6 +259,40 @@ which offers a dry run), builds once, and uploads `persona-bots/` whether or not
 Options: `--dry-run` (shape the issues and print them, file nothing — what a session runs),
 `--judge` (the opt-in judged pass; needs `ANTHROPIC_API_KEY`, and prints `DID NOT JUDGE` and carries
 on without it), `--no-build`, `--keep`, `--out <dir>`.
+
+### Coverage floors
+
+`vitest.config.ts` measures coverage only with `--coverage.enabled`, and only on the eleven safety
+files: `src/lib/{readiness,trip-admission,waivers,roll-call,trips,authz}.ts` and
+`src/db/{bookings,checkouts,refunds,promo-caps,account-security}.ts`. CI's four unit shards run with
+`--coverage.enabled --reporter=blob`; the `coverage-floors` job merges the blobs (`vitest run
+--merge-reports --coverage.enabled`, no second test run) and runs `node scripts/coverage-floors.mjs`,
+which fails when a file's branch coverage falls below its floor in `scripts/coverage-floors.json`.
+A higher reading prints "can rise" and passes. The merged summary is the `coverage-summary`
+artifact, so a floor can be raised without a local full run. Locally: `pnpm coverage:floors` (a full
+unit run).
+
+Floors only rise: `--write <summary>` banks rises and refuses falls; `--write --absorb "<why>"`
+records a fall with its reason. The first floors (2026-10-15, branch coverage): readiness 97.07%,
+trip-admission 97.61%, lib/waivers 93.39%, roll-call 83.33%, lib/trips and lib/authz 100%, bookings
+86.41%, checkouts 87.29%, refunds 83.15%, promo-caps 75%, account-security 81.81%. ADR
+[20261015-coverage-and-mutation-testing](../architecture/decisions/20261015-coverage-and-mutation-testing.md).
+
+### Mutation testing
+
+`pnpm test:mutation --mutate <module>` runs Stryker (`@stryker-mutator/core` and `vitest-runner`
+9.6.1; 10.0.0 pulls in Babel 8, which Sentry's bundler plugin refuses as a peer) against the `lib`
+project's pure tests (`stryker.config.mjs`, `stryker.vitest.config.ts`; the threads pool, which the
+PGlite files cannot use). The report is `reports/mutation/mutation.json`.
+
+`.github/workflows/mutation.yml` runs it on `src/lib/readiness.ts` and `src/lib/trip-admission.ts`,
+by hand for now and Sundays 04:00 UTC once the runner works. `scripts/mutation-issues.mjs` files a
+module's survivors (`Survived` and `NoCoverage`) as one `mutation-survivors` + `needs-triage` issue,
+comments each later run's list on it, and closes it when none survive. Survivors never fail the run.
+
+**Not yet a real score.** Under Vitest 5 the runner never switches on a mutant inside a function, so
+every such mutant survives with its tests green (#2622 carries the trial and the debugging).
+Until that is fixed, read a survivor list as noise.
 
 ### Why `playwright-core` is pinned in devDependencies
 
