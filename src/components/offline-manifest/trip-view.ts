@@ -3,6 +3,7 @@ import { cachedFormatter } from "@/lib/intl-cache";
 import {
   boardedBefore,
   isNotBackAboard,
+  medicalHoldAfterDive,
   type RollCallCheckpoint,
   rollCallCheckpointOrdinal,
   rollCallCompleteness,
@@ -125,16 +126,31 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   const earlierCheckpoints = envelope.snapshot.manifests
     .map((entry) => entry.checkpoint)
     .filter((entry) => rollCallCheckpointOrdinal(entry) < rollCallCheckpointOrdinal(checkpoint));
+  const boardedEarlier = manifest.divers.map((diver) =>
+    boardedBefore(
+      earlierCheckpoints.map((earlier) =>
+        latestOfflineRollCall(envelope.snapshot, envelope.events, diver.bookingId, earlier),
+      ),
+    ),
+  );
   const blockedAtRail = manifest.divers.map((diver, index) =>
     rowBlockedAtRail({
       ready: diver.readiness.status === "ready",
       isDeparture: checkpoint === "departure",
-      boardedEarlier: boardedBefore(
-        earlierCheckpoints.map((earlier) =>
-          latestOfflineRollCall(envelope.snapshot, envelope.events, diver.bookingId, earlier),
-        ),
-      ),
+      boardedEarlier: boardedEarlier[index],
       notBackAboard: isNotBackAboard(checkpoint, localStates[index]),
+    }),
+  );
+  // **A medical block stays on the row between dives** (issue #2380): the live
+  // roll call's predicate, read off the same earlier boardings, so a diver
+  // boarded over a physician's "no" keeps a medical capsule after a dive on
+  // this copy too.
+  const medicalHold = manifest.divers.map((diver, index) =>
+    medicalHoldAfterDive({
+      checkpoint,
+      boardedEarlier: boardedEarlier[index],
+      notBackAboard: isNotBackAboard(checkpoint, localStates[index]),
+      blockerCodes: diver.readiness.blockers.map((blocker) => blocker.code),
     }),
   );
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
@@ -252,6 +268,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     rejected,
     localStates,
     blockedAtRail,
+    medicalHold,
     boarded,
     awaiting,
     notBackAboard,

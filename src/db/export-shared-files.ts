@@ -481,6 +481,7 @@ export const TRIP_INVITATIONS_CSV = sharedFile<ShopRow<"invitationRows">>({
       value: (row, { personName }) => personName.get(row.createdByPersonId),
     },
     { header: "invited_at", in: "both", value: (row) => row.invitedAt },
+    { header: "emailed_at", in: "both", value: (row) => row.emailedAt },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],
   shop: {

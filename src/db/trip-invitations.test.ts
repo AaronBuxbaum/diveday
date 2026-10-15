@@ -22,6 +22,7 @@ import {
 import {
   createDirectTripInvitation,
   createTripRequestInvitations,
+  deliverTripInvitation,
   listTripInvitations,
   offerDepartureToDiver,
   recordTripInvitation,
@@ -289,21 +290,54 @@ describe("trip invitations", () => {
       expect(mail.sent).toHaveLength(1);
     });
 
-    it("sends again once the hour has passed", async () => {
+    /**
+     * Issue #2133: an offer is a cold invitation, so the day's window holds it
+     * too. Mail that went in the last 24 hours, from the counter or from the
+     * guests page, answers "already sent".
+     */
+    it("answers already sent two hours on, and sends again once the day has passed", async () => {
       const { db, input } = await offerInput();
       const mail = fakeEmail();
       await expect(offerDepartureToDiver(db, input, mail.provider)).resolves.toBe("sent");
-      const earlier = new Date(nowDate().getTime() - 2 * 3_600_000);
-      await db
-        .update(tripInvitations)
-        .set({ invitedAt: earlier })
-        .where(eq(tripInvitations.tripId, input.tripId));
-      await db
-        .update(activityEvents)
-        .set({ occurredAt: earlier })
-        .where(eq(activityEvents.tripId, input.tripId));
+      const ago = async (hours: number) => {
+        const at = new Date(nowDate().getTime() - hours * 3_600_000);
+        await db
+          .update(tripInvitations)
+          .set({ invitedAt: at, emailedAt: at })
+          .where(eq(tripInvitations.tripId, input.tripId));
+        await db
+          .update(activityEvents)
+          .set({ occurredAt: at })
+          .where(eq(activityEvents.tripId, input.tripId));
+      };
+      await ago(2);
+      await expect(offerDepartureToDiver(db, input, mail.provider)).resolves.toBe("already_sent");
+      await ago(24);
       await expect(offerDepartureToDiver(db, input, mail.provider)).resolves.toBe("sent");
       expect(mail.sent).toHaveLength(2);
+    });
+
+    it("answers already sent after the guests page emailed the diver minutes ago", async () => {
+      const { db, input } = await offerInput();
+      const mail = fakeEmail();
+      await createDirectTripInvitation(db, input);
+      const [invitation] = await listTripInvitations(db, input.shopId, input.tripId);
+      if (!invitation) throw new Error("direct invitation missing");
+      await expect(
+        deliverTripInvitation(
+          db,
+          { ...input, invitationId: invitation.invitation.id },
+          mail.provider,
+        ),
+      ).resolves.toBe("sent");
+      const fiveMinutesAgo = new Date(nowDate().getTime() - 5 * 60_000);
+      await db
+        .update(tripInvitations)
+        .set({ invitedAt: fiveMinutesAgo, emailedAt: fiveMinutesAgo })
+        .where(eq(tripInvitations.id, invitation.invitation.id));
+
+      await expect(offerDepartureToDiver(db, input, mail.provider)).resolves.toBe("already_sent");
+      expect(mail.sent).toHaveLength(1);
     });
   });
 

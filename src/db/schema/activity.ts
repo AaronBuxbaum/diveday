@@ -70,8 +70,9 @@ export const activityEvents = pgTable(
     tripId: uuid("trip_id").references(() => trips.id, { onDelete: "cascade" }),
     bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "set null" }),
     /**
-     * Who did it. Null only for a line the system wrote on its own (an
-     * automatic call-off), and then {@link activityEvents.systemReason} says
+     * Who did it. Null only for a line no account wrote: the system's own (an
+     * automatic call-off) or the shore contact stopping roll-call alerts from
+     * the link in one (`shore_alert_contact_stopped`, H-118 re-review). Then {@link activityEvents.systemReason} says
      * why; the check below holds the two together (issue #2539).
      */
     actorPersonId: uuid("actor_person_id").references(() => people.id),

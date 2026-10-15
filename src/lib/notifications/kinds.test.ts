@@ -164,6 +164,9 @@ describe("every handle a notification carries is reachable by the erasure sweep"
    */
   const SHOP_OWNED_NUMBERS: Record<string, readonly string[]> = {
     course_inquiry_received: ["shopPhone"],
+    // The stale-roll-call alert's shore copy says whom to call first: the
+    // shop's own `contact_phone` (H-118). Never queued, either.
+    roll_call_stale_shore: ["shopPhone"],
   };
 
   it.each(branches())("$kind surfaces every handle it carries", ({ kind, email, phone }) => {

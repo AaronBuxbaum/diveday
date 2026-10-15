@@ -3,6 +3,7 @@ import type { Browser, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
@@ -47,6 +48,8 @@ import {
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
+
+const staffCopy = staffTranslator("en-US");
 
 /**
  * Visual regression coverage. Two hundred and ninety-seven `capture()` calls,
@@ -5308,6 +5311,25 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A cleared date of birth asks for an age** (issue #2167). Lena is
+       * the seeded thirteen-year-old; emptying her date without "They're 18
+       * or older" is refused on the date field, with the box beside it, so a
+       * known minor never reads as an adult by a blanked field. Safe to
+       * mutate: the refusal writes nothing.
+       */
+      test(`a refused date-of-birth clear renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Lena", "Lena Fischer");
+        await openDiverFileGroup(page, "Contact details");
+        await page.getByLabel("Date of birth").fill("");
+        await page.getByRole("button", { name: "Save details" }).click();
+        await page.waitForURL(/notice=date-of-birth-age-unstated/);
+        await page.getByText("To clear the date of birth").waitFor();
+        await capture(page, "diver-record-dob-clear-refused", scheme);
+      });
+
+      /**
        * **The form that ends a medical hold** (issue #1252).
        *
        * The one readiness blocker a shop cannot clear from the boat, and until
@@ -6795,6 +6817,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/emergency-reference");
         await page.getByRole("heading", { level: 1, name: "Emergency reference" }).waitFor();
         await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
+        // H-118 review: blue-mantis is a demo shop, so the shore contact's
+        // alert address says demo shops send nothing, beside the free-text
+        // shore contact's line saying DiveDay never messages it.
+        await page.getByText(staffCopy("settings.main.emergency.shoreAlertDemo")).waitFor();
         await capture(page, "settings-emergency", scheme);
       });
 
@@ -9170,6 +9196,27 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto(`/shop/${privateShop.slug}/dive-sites`);
       await page.getByText("The entry silted up after the storm").waitFor();
       await capture(page, "dive-site-planning-note", scheme);
+    });
+
+    /**
+     * **The shore contact's address, refused without its consent** (H-118).
+     * An address DiveDay sends to saves only with the box that records the
+     * shore contact agreed; this is the refusal a staff member meets when
+     * they type one and leave the box clear, on the page they were editing.
+     * A shop of its own, because a saved address would follow the worker. Its
+     * descriptions carry the review's words: confirmed by a link first, and
+     * (a minted shop being a demo shop) that demo shops send nothing.
+     */
+    test(`the emergency reference refuses a shore address without consent (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      test.setTimeout(FLOW_TIMEOUT_MS);
+      await page.goto(`/shop/${privateShop.slug}/settings/emergency-reference`);
+      await page.getByLabel("Shore contact’s email for roll-call alerts").fill("shore@example.com");
+      await page.getByRole("button", { name: "Save emergency reference" }).click();
+      await page.getByText(staffCopy("settings.main.notice.shoreAlertConsentMissing")).waitFor();
+      await capture(page, "settings-emergency-shore-consent-missing", scheme);
     });
 
     /**

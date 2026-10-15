@@ -408,7 +408,8 @@
       },
       "checklist": {
         "heading": "Before you leave the dock",
-        "checkedLabel": "Checked — press to clear",
+        "checkedLabel": "Checked — press twice to clear",
+        "confirmClear": "Tap again to clear",
         "uncheckedLabel": "Not checked — press to mark checked"
       },
       "counter": {

@@ -1,9 +1,11 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "33f229fc-23c2-4756-bf7b-4ef4c11cfddc",
+  "id": "64fe74a6-dcc0-430c-b707-a2fd15b71446",
   "prevIds": [
-    "509176c4-f2d6-4cc8-ad4c-0c463824ae90"
+    "157d4875-9d7a-44c3-a1c8-cf8d4e99c710",
+    "4bbc4b3b-de59-44b8-9afa-27d934eef05f",
+    "c37d556c-7f88-48a5-8404-2eeb8f0de8f1"
   ],
   "ddl": [
     {
@@ -2822,25 +2824,12 @@
     {
       "type": "uuid",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
       "name": "actor_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "activity_events"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "system_reason",
       "entityType": "columns",
       "schema": "public",
       "table": "activity_events"
@@ -6655,19 +6644,6 @@
       "table": "shops"
     },
     {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "false",
-      "generated": null,
-      "identity": null,
-      "name": "padi_checks_enabled",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "shops"
-    },
-    {
       "type": "text",
       "typeSchema": null,
       "notNull": false,
@@ -6949,6 +6925,19 @@
       "generated": null,
       "identity": null,
       "name": "surface_interval_minutes",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "30",
+      "generated": null,
+      "identity": null,
+      "name": "min_turnaround_minutes",
       "entityType": "columns",
       "schema": "public",
       "table": "shops"
@@ -42368,13 +42357,6 @@
       "table": "account_step_ups"
     },
     {
-      "value": "(\"actor_person_id\" is null) = (\"system_reason\" is not null)",
-      "name": "activity_events_actor_or_system_reason",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "activity_events"
-    },
-    {
       "value": "length(trim(\"code\")) > 0",
       "name": "activity_events_code_not_blank",
       "entityType": "checks",
@@ -42594,6 +42576,13 @@
     {
       "value": "\"surface_interval_minutes\" >= 0",
       "name": "shops_surface_interval_minutes_nonnegative",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "value": "\"min_turnaround_minutes\" >= 0 and \"min_turnaround_minutes\" <= 240",
+      "name": "shops_min_turnaround_minutes_range",
       "entityType": "checks",
       "schema": "public",
       "table": "shops"

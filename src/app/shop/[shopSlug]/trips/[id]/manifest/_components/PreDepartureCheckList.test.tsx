@@ -2,9 +2,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CLEAR_CONFIRM_MIN_GAP_MS, CLEAR_CONFIRM_TIMEOUT_MS } from "@/lib/pre-departure-check";
 import {
-  CLEAR_CONFIRM_MIN_GAP_MS,
-  CLEAR_CONFIRM_TIMEOUT_MS,
   type PreDepartureCheckAction,
   PreDepartureCheckList,
   type PreDepartureCheckListCopy,
@@ -253,6 +252,16 @@ describe("clearing a checked item", () => {
     await pause();
     fireEvent.keyDown(oxygen(), { key: "Escape" });
     expect(oxygen()).not.toHaveTextContent("Tap again to clear");
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it("ignores a held Enter key, so one press cannot ask and then clear", async () => {
+    const { action, oxygen } = setup();
+    // A browser repeats keydown while Enter is held, and each repeat clicks a
+    // focused button: the first asks, one past the gap would submit the clear.
+    expect(fireEvent.keyDown(oxygen(), { key: "Enter", repeat: true })).toBe(false);
+    // The first press is the browser's to turn into a click.
+    expect(fireEvent.keyDown(oxygen(), { key: "Enter" })).toBe(true);
     expect(action).not.toHaveBeenCalled();
   });
 

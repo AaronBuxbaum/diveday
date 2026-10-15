@@ -34,10 +34,12 @@
  * **Why the system, not a person, wrote a line.** Stored in
  * `activity_events.system_reason` when there is no actor. Only reasons with a
  * writer are listed: `minimum_not_met` is the hourly rule that cancels a
- * departure short of its minimum head count. (The nightly series roll only adds
+ * departure short of its minimum head count; `shore_contact_stopped` is the shore
+ * contact stopping roll-call alerts from the link in an email, with no account
+ * behind it. (The nightly series roll only adds
  * dates and cancels none, so it has no reason here.)
  */
-export const SYSTEM_REASONS = ["minimum_not_met"] as const;
+export const SYSTEM_REASONS = ["minimum_not_met", "shore_contact_stopped"] as const;
 export type SystemReason = (typeof SYSTEM_REASONS)[number];
 
 type ActivityParamShapes = {
@@ -190,6 +192,14 @@ type ActivityParamShapes = {
    * no diver.
    */
   integration_backfill_sent: { actor: string; provider: string; count: string; since: string };
+  /** An owner or manager read a diver's full medical questionnaire (issue #2157). */
+  medical_answers_read: { actor: string; diver: string };
+  /**
+   * A staffer cleared a diver's stored date of birth by answering "They're 18
+   * or older" (issue #2167). On the trail, because a date typed later drops
+   * the record's own answer columns and must not drop who said it.
+   */
+  date_of_birth_cleared_as_adult: { actor: string; diver: string };
   /** A staffer downloaded a diver's own record. */
   record_exported: { actor: string; diver: string };
   /** A staffer opened a seat's dispute sheet, which leaves the shop (#2390). */
@@ -265,6 +275,22 @@ type ActivityParamShapes = {
   review_replied: { actor: string };
   review_reply_edited: { actor: string };
   review_reply_deleted: { actor: string };
+  /**
+   * **Who set the shore contact's alert address** (H-118 security review):
+   * the address roll-call alerts go to outside the shop's accounts, added,
+   * replaced or removed. Shop-level lines; no address in them, so an erasure
+   * has nothing here to reach.
+   */
+  shore_alert_contact_set: { actor: string };
+  shore_alert_contact_changed: { actor: string };
+  shore_alert_contact_cleared: { actor: string };
+  /**
+   * **The shore contact stopped the alerts themselves**, with the link in one
+   * (H-118 re-review). No account did it, so the line names nobody: the one
+   * row in `activity_events` with no actor (the table's check allows it for
+   * this code only).
+   */
+  shore_alert_contact_stopped: Record<string, never>;
   /**
    * An erasure ran over this line.
    *
@@ -356,6 +382,8 @@ export const ACTIVITY_CODES = [
   "party_seat_self_cancelled",
   "party_seat_self_refunded",
   "medical_clearance_opened",
+  "medical_answers_read",
+  "date_of_birth_cleared_as_adult",
   "record_exported",
   "dispute_sheet_printed",
   "integration_backfill_sent",
@@ -377,6 +405,10 @@ export const ACTIVITY_CODES = [
   "review_replied",
   "review_reply_edited",
   "review_reply_deleted",
+  "shore_alert_contact_set",
+  "shore_alert_contact_changed",
+  "shore_alert_contact_cleared",
+  "shore_alert_contact_stopped",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",

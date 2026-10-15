@@ -10,10 +10,11 @@ import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
 import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
+import type { ShoreAlertContact } from "@/lib/shore-alert-contact";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { CustomerRegulatorServiceMonths } from "@/lib/work-orders";
 import type { AppDb } from "./client";
-import { courses, divePackages, orders, shops, trips } from "./schema";
+import { courses, divePackages, orders, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -213,6 +214,49 @@ export async function setShopEmergencyReference(
 }
 
 /**
+ * The shore contact's address, the consent recorded for it and whether its
+ * inbox confirmed it (H-118), as `nextShoreAlertContact` decided them. The
+ * columns move together; the table's checks refuse any other shape.
+ */
+export async function setShopShoreAlertContact(
+  db: AppDb,
+  shopId: string,
+  contact: ShoreAlertContact,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({
+      shoreAlertEmail: contact.email,
+      shoreAlertConsentAt: contact.consentAt,
+      shoreAlertConsentByPersonId: contact.consentByPersonId,
+      shoreAlertConfirmedAt: contact.confirmedAt,
+    })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Who recorded the shore contact's consent, as Settings says it ("Recorded
+ * … by Dana"): the person's name as the row holds it today, inside this shop
+ * only, removed staff included (the record stays theirs). Null when nobody is
+ * on file or the id is not this shop's.
+ */
+export async function shoreAlertConsentRecorderName(
+  db: AppDb,
+  shop: { id: string; shoreAlertConsentByPersonId: string | null },
+): Promise<string | null> {
+  if (!shop.shoreAlertConsentByPersonId) return null;
+  const [row] = await db
+    .select({ name: people.fullName })
+    .from(people)
+    // diveday:allow-deleted-people: provenance names whoever recorded it.
+    .where(and(eq(people.id, shop.shoreAlertConsentByPersonId), eq(people.shopId, shop.id)))
+    .limit(1);
+  return row?.name ?? null;
+}
+
+/**
  * Whether the shop has written a number down in its own currency yet — any
  * price it set, or a single order.
  *
@@ -325,6 +369,21 @@ export async function markShopUnitsConfirmed(db: AppDb, shopId: string, now = no
 
 export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: DockDayRhythm) {
   const [shop] = await db.update(shops).set(rhythm).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
+
+/**
+ * Sets the shop's minimum turnaround between departures, in minutes (issue
+ * #2141). Advice for the schedule builder's Move panel only; the route narrows
+ * the value through `parseMinTurnaroundMinutes`, and the table's CHECK holds
+ * the same bounds.
+ */
+export async function setShopMinTurnaround(db: AppDb, shopId: string, minutes: number) {
+  const [shop] = await db
+    .update(shops)
+    .set({ minTurnaroundMinutes: minutes })
+    .where(eq(shops.id, shopId))
+    .returning();
   return shop ?? null;
 }
 

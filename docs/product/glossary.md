@@ -247,6 +247,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Setup link
 - Shop currency
 - Shop day scan
+- Shore alert contact
 - Sign once
 - Skipped occurrence
 - SMS channel
@@ -260,6 +261,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - STOP list
 - The record
 - Tide window
+- Tight turnaround
 - Tip
 - Touch guard
 - Transactional notification

@@ -125,6 +125,7 @@
     "better-auth": "^1.7.10",
     "drizzle-orm": "1.0.0-rc.4",
     "fflate": "^0.8.3",
+    "libphonenumber-js": "1.13.14",
     "next": "^16.4.1",
     "next-intl": "^4.14.9",
     "pg": "^8.23.1",
