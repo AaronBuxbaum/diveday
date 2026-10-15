@@ -102,6 +102,8 @@
     "workOrderUncollected": "Reparación sin recoger",
     "staffCredentialDue": "Credencial",
     "unitsUnconfirmed": "Configuración",
+    "emergencyCardBlank": "Tarjeta de emergencia",
+    "lostItemsWaiting": "Objetos perdidos",
     "helpRequest": "Solicitud de ayuda",
     "rentalFit": "Equipo",
     "blockedAboard": "A bordo",
@@ -264,6 +266,15 @@
     "detail": "Confírmalos.",
     "feet": "pies",
     "meters": "metros"
+  },
+  "emergencyCard": {
+    "subject": "Tu tarjeta de emergencia no tiene números",
+    "detail": "La salida de las {time} de {day} zarpa sin un número de cámara hiperbárica ni de guardacostas.",
+    "action": "Completar la tarjeta"
+  },
+  "lostItems": {
+    "subject": "{count, plural, one {# objeto esperando a su dueño} other {# objetos esperando a sus dueños}}",
+    "action": "Abrir objetos perdidos"
   },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {debía devolverse} other {debían devolverse}} el {dueOn} y {count, plural, one {sigue fuera} other {siguen fuera}}.",

@@ -96,6 +96,7 @@ import {
 } from "./stripe-accounts";
 import { pushCrewAwayRows } from "./today-crew-away-rows";
 import { pushDepartureRows } from "./today-departure-rows";
+import { pushDeskRows, readDeskFacts } from "./today-desk-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { pushRollCallRows } from "./today-roll-call-rows";
 import type { TodayRowsContext } from "./today-rows-context";
@@ -1882,7 +1883,7 @@ export async function getTodayWork(
   // after the queue is built so they cost no phase of their own: every diver
   // the evidence blocks on a pending card is asked about, a superset of the
   // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
-  const [wave, agencyCheckCards] = await Promise.all([
+  const [wave, agencyCheckCards, deskFacts] = await Promise.all([
     readTodayWave(db, shopId, {
       now,
       horizon,
@@ -1901,6 +1902,9 @@ export async function getTodayWork(
       shopId,
       personIds: agencyCheckCandidates(readinessByTrip),
     }),
+    // The blank emergency card and the found items waiting (fifth loop, items
+    // 3 and 7), beside the wave rather than in it.
+    readDeskFacts(db, shopId),
   ]);
   const {
     departureRollCall,
@@ -2012,6 +2016,8 @@ export async function getTodayWork(
   }
 
   pushEquipmentRows(actions, rows);
+
+  pushDeskRows(actions, rows, deskFacts);
 
   // **Who to say hello to** rides on the card (fifth loop, item 10): one line
   // per departure, gone an hour after the boat is home because

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
@@ -16,9 +17,11 @@ import { getDiverProfile } from "@/db/divers";
 import { canPersonExportShopData } from "@/db/export";
 import { listGuardianEmails } from "@/db/guardian-erasure";
 import { personThread } from "@/db/inbound-messages";
+import { openLostItemsByPerson } from "@/db/lost-items";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { foundItemsText } from "@/i18n/lost-item-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -223,17 +226,22 @@ export default async function DiverDetailPage({
   // Three reads that need the two gates above, so they could not ride the
   // `Promise.all` that produced them — concurrent with each other instead of
   // the serial pair they used to be.
-  const [mergeCandidates, status, { trips: scannedTrips }, guardianEmails] = await Promise.all([
-    canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
-    // The readiness of the departure this diver is next on, read through the
-    // entry the Today queue and the manifest already use — never a second
-    // detector (`_lib/status-load.ts`).
-    diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
-    pagedUpcomingTripsWithCounts(db, shop.id, { limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT }),
-    // The co-signing guardians' addresses, for the owner's control that erases
-    // one on the guardian's request (H-103). Nobody else is shown them here.
-    canErase ? listGuardianEmails(db, shop.id, personId) : [],
-  ]);
+  const [mergeCandidates, status, { trips: scannedTrips }, guardianEmails, found] =
+    await Promise.all([
+      canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
+      // The readiness of the departure this diver is next on, read through the
+      // entry the Today queue and the manifest already use — never a second
+      // detector (`_lib/status-load.ts`).
+      diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
+      pagedUpcomingTripsWithCounts(db, shop.id, { limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT }),
+      // The co-signing guardians' addresses, for the owner's control that erases
+      // one on the guardian's request (H-103). Nobody else is shown them here.
+      canErase ? listGuardianEmails(db, shop.id, personId) : [],
+      // Something the crew found against their seat, still waiting (fifth loop,
+      // item 7): said under the header so the desk hands it over on this visit.
+      openLostItemsByPerson(db, shop.id, [personId]),
+    ]);
+  const foundItems = found.get(personId) ?? [];
   const upcoming = scannedTrips.filter(
     (trip) =>
       !diver.bookings.some(
@@ -320,6 +328,13 @@ export default async function DiverDetailPage({
           )
         }
       />
+      {foundItems.length > 0 ? (
+        <p className="-mt-4 mb-6 text-sm" data-testid="found-item-line">
+          <Link href={shopPath(shopSlug, "lost-found")} className="hover:underline">
+            {foundItemsText(t, foundItems)}
+          </Link>
+        </p>
+      ) : null}
       {removed ? (
         <RestoreDiver
           shopSlug={shopSlug}

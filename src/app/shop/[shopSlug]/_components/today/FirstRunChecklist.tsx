@@ -66,6 +66,10 @@ export type FirstRunChecklistCopy = {
   releaseBody: string;
   releaseAction: string;
   releaseDone: string;
+  emergencyTitle: string;
+  emergencyBody: string;
+  emergencyAction: string;
+  emergencyDone: string;
   tripTitle: string;
   tripBody: string;
   tripAction: string;
@@ -183,6 +187,7 @@ export function FirstRunChecklist({
   diveSiteCount,
   unitsDone,
   releaseDone,
+  emergencyDone,
   stripeDone,
   copy,
 }: {
@@ -195,6 +200,8 @@ export function FirstRunChecklist({
   unitsDone: boolean;
   /** The live release is no longer DiveDay's sample text (`isSampleRelease`). */
   releaseDone: boolean;
+  /** The emergency card carries a number to dial (`emergencyCardHasNumbers`). */
+  emergencyDone: boolean;
   stripeDone: boolean;
   copy: FirstRunChecklistCopy;
 }) {
@@ -212,7 +219,9 @@ export function FirstRunChecklist({
           ? "site"
           : !releaseDone
             ? "release"
-            : "trip";
+            : !emergencyDone
+              ? "emergency"
+              : "trip";
 
   return (
     <LedgerGroup as="h2" id="first-run-heading" label={copy.groupLabel} meta={copy.progress}>
@@ -287,6 +296,20 @@ export function FirstRunChecklist({
           href={`${shopPath(shopSlug, "waivers")}#release`}
           actionLabel={copy.releaseAction}
           primary={nextStep === "release"}
+        />
+        {/* **The numbers the crew dials at sea** (fifth loop, item 3). They ride
+            on every manifest, offline too, and DiveDay fills in none of them;
+            asked before the first departure so no boat sails with a blank
+            card. */}
+        <ChecklistStep
+          title={copy.emergencyTitle}
+          body={copy.emergencyBody}
+          done={emergencyDone}
+          doneLabel={copy.emergencyDone}
+          doneBadge={copy.doneBadge}
+          href={shopPath(shopSlug, "settings", "emergency-reference")}
+          actionLabel={copy.emergencyAction}
+          primary={nextStep === "emergency"}
         />
         <ChecklistStep
           title={copy.tripTitle}

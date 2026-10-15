@@ -276,6 +276,8 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // (batch 4, J2). Filed with the board because every item belongs to a
   // departure, and each departure's Boat tab is where it was written down.
   // Ungated: whoever is at the counter when the diver comes back hands it over.
+  // Today's "things waiting to go home" row is its door from the shop home
+  // while anything waits (fifth loop, item 7), built from this entry.
   { id: "lostFound", suffix: "/lost-found", section: "schedule", inPalette: true },
   // Everything a diver says to the shop is one section: messages, days asked
   // for, and reviews. Each is ungated — the

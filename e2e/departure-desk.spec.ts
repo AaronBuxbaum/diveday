@@ -96,7 +96,14 @@ test("the crew records something left aboard and the shop hands it back", async 
   await expect(item).toContainText(owner);
   await expect(item.getByRole("button", { name: `Tell ${owner}` })).toBeVisible();
 
-  await page.goto("/shop/blue-mantis/lost-found");
+  // **Today gives Lost and found its door** (fifth loop, item 7): one row
+  // while anything waits, counted, opening the list.
+  await page.goto("/shop/blue-mantis");
+  const waiting = page.getByRole("link", { name: "Open lost and found" });
+  await expect(waiting).toHaveAttribute("href", "/shop/blue-mantis/lost-found");
+  await expect(page.getByText(/^\d+ things? waiting to go home$/)).toBeVisible();
+  await waiting.click();
+  await page.waitForURL("**/shop/blue-mantis/lost-found");
   const row = page.getByTestId("lost-item").filter({ hasText: "Blue mask, seat 4" });
   await expect(row).toContainText(SAILED);
   await row.getByRole("button", { name: "Returned" }).click();

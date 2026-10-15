@@ -58,6 +58,8 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   work_order_uncollected: "today.actionKind.workOrderUncollected",
   staff_credential_due: "today.actionKind.staffCredentialDue",
   units_unconfirmed: "today.actionKind.unitsUnconfirmed",
+  emergency_card_blank: "today.actionKind.emergencyCardBlank",
+  lost_items_waiting: "today.actionKind.lostItemsWaiting",
   rental_fit_confirm: "today.actionKind.rentalFit",
 };
 
@@ -1097,4 +1099,30 @@ export function seasonalBriefingText(
     hasShop: shopName ? "true" : "false",
     shopName: shopName ?? "",
   });
+}
+
+/**
+ * The blank emergency card's row (fifth loop, item 3): what is missing, and the
+ * first boat that would sail without it, by its time and day.
+ */
+export function emergencyCardBlankText(
+  t: StaffTranslator,
+  input: { time: string; day: string },
+): { subject: string; detail: string; actionLabel: string } {
+  return {
+    subject: t("today.emergencyCard.subject"),
+    detail: t("today.emergencyCard.detail", input),
+    actionLabel: t("today.emergencyCard.action"),
+  };
+}
+
+/** Found items still waiting for their owners (fifth loop, item 7), as one count. */
+export function lostItemsWaitingText(
+  t: StaffTranslator,
+  count: number,
+): { subject: string; actionLabel: string } {
+  return {
+    subject: t("today.lostItems.subject", { count }),
+    actionLabel: t("today.lostItems.action"),
+  };
 }

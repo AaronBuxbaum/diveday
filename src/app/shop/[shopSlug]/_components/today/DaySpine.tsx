@@ -278,6 +278,7 @@ const QUIET_ROW_ICON: Record<QuietKind, RowIconName> = {
   boat_papers_due: "boat",
   work_order_uncollected: "workOrders",
   units_unconfirmed: "settings",
+  lost_items_waiting: "lostFound",
   rental_fit_confirm: "gear",
 };
 

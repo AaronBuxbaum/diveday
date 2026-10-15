@@ -174,3 +174,13 @@ export function hasEmergencyReference(reference: DepartureEmergencyReference): b
     reference.plan.length > 0
   );
 }
+
+/**
+ * **Whether the card carries a number a crew can dial** (fifth loop, item 3).
+ * The vessel, the shore contact and the plan are worth having, but a crew at
+ * sea reaches for a chamber or a coast guard number first; with none, the card
+ * is blank for the question Today's row and the first-run step ask.
+ */
+export function emergencyCardHasNumbers(reference: Pick<EmergencyReference, "lines">): boolean {
+  return reference.lines.some((line) => line.phone.trim().length > 0);
+}

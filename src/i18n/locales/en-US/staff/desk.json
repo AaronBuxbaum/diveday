@@ -83,6 +83,7 @@
     "tripLine": "{title}, {date}",
     "empty": "Nothing is waiting to go home.",
     "whereToAdd": "Items are recorded on each departure’s Boat tab.",
+    "waiting": "In lost and found: {items}",
     "refusals": {
       "empty": "Say what was found.",
       "tooLong": "Keep it to 120 characters.",

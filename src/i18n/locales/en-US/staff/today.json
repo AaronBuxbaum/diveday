@@ -102,6 +102,8 @@
     "workOrderUncollected": "Repair not collected",
     "staffCredentialDue": "Credential",
     "unitsUnconfirmed": "Setup",
+    "emergencyCardBlank": "Emergency card",
+    "lostItemsWaiting": "Lost and found",
     "helpRequest": "Help request",
     "rentalFit": "Gear",
     "blockedAboard": "Aboard",
@@ -264,6 +266,15 @@
     "detail": "Confirm them.",
     "feet": "feet",
     "meters": "meters"
+  },
+  "emergencyCard": {
+    "subject": "Your emergency card has no numbers",
+    "detail": "The {time} boat {day} sails without a chamber or coast guard number on it.",
+    "action": "Fill in the card"
+  },
+  "lostItems": {
+    "subject": "{count, plural, one {# thing waiting to go home} other {# things waiting to go home}}",
+    "action": "Open lost and found"
   },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {was} other {were}} due back {dueOn} and {count, plural, one {is} other {are}} still out.",
