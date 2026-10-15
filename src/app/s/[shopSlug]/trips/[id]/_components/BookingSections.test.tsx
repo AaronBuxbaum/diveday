@@ -177,7 +177,7 @@ describe("BookSpotSection — the money says itself once", () => {
     expect(screen.queryByText(/\$/)).not.toBeInTheDocument();
   });
 
-  it("still calls itself Grab a spot, because the party still defaults to one", () => {
+  it("still calls itself Grab a seat, because the party still defaults to one", () => {
     // The SPEC allows a plural heading *if and only if* the count defaults
     // above 1. It does not, so no second heading key exists — the plural was
     // never a design preference, only a consequence.
@@ -198,7 +198,7 @@ describe("BookSpotSection — the money says itself once", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "Grab a spot" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Grab a seat" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "1 diver" })).toBeChecked();
   });
 

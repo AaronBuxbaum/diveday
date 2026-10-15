@@ -7,7 +7,8 @@
     "tapHeadingIn": "Heading in",
     "tapHome": "Home",
     "recordedLine": "{name} · {time}",
-    "errorRefusal": "That didn’t save. Check your connection and tap again."
+    "errorRefusal": "That didn’t save. Check your connection and tap again.",
+    "openRollCall": "Open roll call"
   },
   "skipToRollCall": "Skip to roll call",
   "stillToBoardHeading": "Still to board ({count})",
@@ -35,6 +36,7 @@
   "aboardOfTotal": "{aboard} of {total, plural, one {# diver} other {# divers}} aboard",
   "headCountBlocked": "{count} blocked",
   "headCountBlockedAboard": "{count, plural, one {# blocked person aboard} other {# blocked people aboard}}",
+  "headCountOverCertificate": "{limit, plural, one {Certificate allows # passenger} other {Certificate allows # passengers}}",
   "progressAriaLabel": "Roll-call progress",
   "ofTotalAboard": "of {total, plural, one {# diver} other {# divers}} aboard",
   "allAccountedFor": "Everyone’s accounted for, divers and crew. Ready for the next check.",
@@ -254,5 +256,18 @@
       "snorkeler": "Diving, booked as snorkeler",
       "rider": "Diving, booked as rider"
     }
+  },
+  "checkpointGap": {
+    "lineDivers": "{divers, plural, one {# diver} other {# divers}} not marked after dive {dive}.",
+    "lineCrew": "{crew} crew not marked after dive {dive}.",
+    "lineBoth": "{divers, plural, one {# diver} other {# divers}} and {crew} crew not marked after dive {dive}.",
+    "notCounted": "Dive {dive} not counted. If it was called off, set the plan to {plan, plural, one {# dive} other {# dives}}.",
+    "setPlan": "Change the plan",
+    "openAnyway": "Open anyway",
+    "back": "Back to dive {dive}"
+  },
+  "staleRollCall": {
+    "pushTitle": "Roll call still open",
+    "pushBody": "{title}: {count, plural, one {# person} other {# people}} not marked after dive {dive}."
   }
 }

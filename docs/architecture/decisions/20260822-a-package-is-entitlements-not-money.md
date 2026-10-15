@@ -125,6 +125,15 @@ it says "bought online" rather than "by <their name>" whatever roles anyone hold
 `/ready/<token>` now says how many package dives a diver has left, on the Pay step, counted as
 `countSpendableDives` counts them.
 
+## Amendment, 2026-10-14: one dive is one tank, said where it is bought and spent
+
+[H-123](../../product/human-decisions/H-123-package-dive-is-a-tank.md) (fourth UX review, item 9)
+keeps the 2026-08-22 unit and makes it something a diver reads, not only something the ledger
+knows. The packages card says "One dive is one tank, so a two-tank trip uses two". The booking's
+money block on `/ready` says "Uses 2 of your 5 package dives, one per tank"
+(`countDivesSpentOnBooking`, `src/db/dive-packages.ts`). The demo's packages are priced as a deal
+against the single-tank fare: $200 for five, $375 for ten.
+
 ## What this decision does not settle
 
 Two questions in the originating issue are **not** engineering calls and are deliberately left open

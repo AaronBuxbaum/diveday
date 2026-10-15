@@ -7,6 +7,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
 import { cancelBooking, createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
+import { mergeDiverRecords } from "./diver-merge";
 import { createDiver } from "./divers";
 import { getBookingReadiness } from "./readiness";
 import {
@@ -26,9 +27,14 @@ import {
   getClaimPageData,
   getClaimPageState,
   issuePartySeatClaims,
+  openMinorSeatWaiver,
+  partyLeadReturnToken,
+  partySeatsKeptAfterLeadCancel,
 } from "./seat-claims";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
+import { getWaiverSignerOnFile } from "./waiver-signing";
 import { issueWaiverRequest } from "./waivers";
+import { getWaiverForToken } from "./waivers-completion";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -60,6 +66,16 @@ async function bookParty(db: AppDb, shopId: string, tripId: string) {
   const [lead, memberOne, memberTwo] = outcome.bookings;
   if (!lead || !memberOne || !memberTwo) throw new Error("party booking incomplete");
   return { lead, memberOne, memberTwo };
+}
+
+/** The person a seat is booked to. */
+async function personOfSeat(db: AppDb, bookingId: string): Promise<string> {
+  const [seat] = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId));
+  if (!seat) throw new Error("seat missing");
+  return seat.personId;
 }
 
 /** Mints one claim link for the given member seat, as the organizer surfaces do. */
@@ -136,6 +152,48 @@ describe("party linkage (createBookingParty)", () => {
 });
 
 describe("issuePartySeatClaims", () => {
+  it("marks which seats a lead's cancel would take: unclaimed, booked, on the lead's departure (batch 6 item 10)", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne, memberTwo } = await bookParty(db, shop.id, open.id);
+    await db
+      .update(bookings)
+      .set({ claimedAt: new Date(nowMs()) })
+      .where(eq(bookings.id, memberTwo.bookingId));
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    const goes = new Map(seats.map((seat) => [seat.bookingId, seat.cancelsWithLead]));
+    expect(goes.get(memberOne.bookingId)).toBe(true);
+    expect(goes.get(memberTwo.bookingId)).toBe(false);
+
+    const kept = await partySeatsKeptAfterLeadCancel(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(kept).toEqual(expect.arrayContaining(["Milo Member", "Pia Member"]));
+  });
+
+  it("names as kept only the seats on the lead's own departure (batch 6 layer 2 review)", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne, memberTwo } = await bookParty(db, shop.id, open.id);
+    const other = (await upcomingTripsWithCounts(db, shop.id)).find((t) => t.id !== open.id);
+    if (!other) throw new Error("expected a second seeded trip");
+    // Pia was moved to another departure: she keeps her seat, but not "on" the
+    // lead's trip, which is what the cancelled page's sentence names.
+    await db.update(bookings).set({ tripId: other.id }).where(eq(bookings.id, memberTwo.bookingId));
+    await db
+      .update(bookings)
+      .set({ claimedAt: new Date(nowMs()) })
+      .where(eq(bookings.id, memberOne.bookingId));
+
+    const kept = await partySeatsKeptAfterLeadCancel(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(kept).toEqual(["Milo Member"]);
+  });
+
   /**
    * **A held seat goes by the name it was booked under** (security review of
    * issue #2125). A party seat typed with somebody else's email is matched to
@@ -1000,5 +1058,421 @@ describe("getClaimPageState (what a dead claim link may name)", () => {
     if (!readiness) throw new Error("readiness capability setup failed");
 
     expect(await getClaimPageState(db, readiness.token)).toEqual({ kind: "unknown" });
+  });
+});
+
+/**
+ * H-124 (ADR 20261014-parent-signs-minor-release): a parent signs a child's
+ * release from their own page. Only a seat this lead booked and declared
+ * "Under 18", still unclaimed, not held and owing a release opens; everything
+ * else is one refusal.
+ */
+describe("a parent signs a minor seat's release", () => {
+  async function familyParty() {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Dana Parent",
+        email: "dana.parent@example.com",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Mia Child",
+        minorDeclared: true,
+      },
+      { actor: "public", shopId: shop.id, tripId: open.id, fullName: "Lee Friend" },
+    ]);
+    if (!outcome.ok) throw new Error(`party booking failed: ${outcome.reason}`);
+    const [lead, mia, lee] = outcome.bookings;
+    if (!lead || !mia || !lee) throw new Error("party booking incomplete");
+    return { db, shop, open, lead, mia, lee };
+  }
+
+  it("offers it on the minor's seat and not on an adult friend's", async () => {
+    const { db, shop, lead, mia, lee } = await familyParty();
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)?.signForMinor).toBe(true);
+    expect(seats.find((seat) => seat.bookingId === lee.bookingId)?.signForMinor).toBe(false);
+  });
+
+  it("opens the minor's own release, which asks for a guardian", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const opened = await openMinorSeatWaiver(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+      seatBookingId: mia.bookingId,
+    });
+    if (!opened.ok) throw new Error("expected the minor's release to open");
+    const [record] = await db
+      .select({ bookingId: waiverRecords.bookingId, status: waiverRecords.status })
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.bookingId, mia.bookingId)));
+    expect(record).toMatchObject({ bookingId: mia.bookingId, status: "pending" });
+    // The link the parent lands on is Mia's release, and it asks for a guardian.
+    const onPage = await getWaiverForToken(db, opened.token);
+    if (onPage.state !== "available")
+      throw new Error(`expected a signable link, got ${onPage.state}`);
+    expect(onPage.record.bookingId).toBe(mia.bookingId);
+    const signer = await getWaiverSignerOnFile(db, onPage.record);
+    expect(signer).toMatchObject({ fullName: "Mia Child", minorDeclared: true });
+    // The same live link on a second tap, not a pile of them.
+    const again = await openMinorSeatWaiver(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+      seatBookingId: mia.bookingId,
+    });
+    expect(again).toMatchObject({ ok: true });
+  });
+
+  it("refuses an adult's seat, another lead's seat, another shop, and the lead's own seat", async () => {
+    const { db, shop, lead, mia, lee } = await familyParty();
+    const other = await bookParty(db, shop.id, (await seededContext()).open.id);
+    const tries = [
+      { shopId: shop.id, leadBookingId: lead.bookingId, seatBookingId: lee.bookingId },
+      { shopId: shop.id, leadBookingId: other.lead.bookingId, seatBookingId: mia.bookingId },
+      {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      },
+      { shopId: shop.id, leadBookingId: lead.bookingId, seatBookingId: lead.bookingId },
+    ];
+    for (const input of tries) {
+      expect(await openMinorSeatWaiver(db, input)).toEqual({ ok: false });
+    }
+  });
+
+  it("stops once the seat is claimed: the claimant signs from their own link", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, mia.bookingId);
+    expect(
+      await claimPartySeat(db, { token, fullName: "Mia Child", email: "mia.child@example.com" }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)?.signForMinor).toBe(false);
+  });
+
+  it("tells the minor's claim page that a parent signs with them", async () => {
+    const { db, shop, lead, mia, lee } = await familyParty();
+    const miaPage = await getClaimPageData(
+      db,
+      await claimTokenFor(db, shop.id, lead.bookingId, mia.bookingId),
+    );
+    const leePage = await getClaimPageData(
+      db,
+      await claimTokenFor(db, shop.id, lead.bookingId, lee.bookingId),
+    );
+    expect(miaPage?.minorDeclared).toBe(true);
+    expect(leePage?.minorDeclared).toBe(false);
+  });
+
+  /**
+   * Security review of H-124: a seat typed with a known diver's own name and
+   * email lands on that diver's record, not held, because the names match. The
+   * lead must not be able to sign that person's release as their "guardian".
+   */
+  it("never opens a release for a diver the shop already knows", async () => {
+    const { db, shop, open } = await seededContext();
+    await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Vera Known",
+      email: "vera.known@example.com",
+    });
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Eve Booker",
+        email: "eve.booker@example.com",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Vera Known",
+        email: "vera.known@example.com",
+        minorDeclared: true,
+      },
+    ]);
+    if (!outcome.ok) throw new Error(`party booking failed: ${outcome.reason}`);
+    const [lead, vera] = outcome.bookings;
+    if (!lead || !vera) throw new Error("party booking incomplete");
+    // Not held: the names match, so only the email rule stands in the way.
+    expect(vera.identityUnconfirmed).toBe(false);
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === vera.bookingId)?.signForMinor).toBe(false);
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: vera.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  it("never opens one when the date of birth on file says the diver is an adult", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, mia.bookingId));
+    if (!seat) throw new Error("seat missing");
+    await db.update(people).set({ dateOfBirth: "1990-01-01" }).where(eq(people.id, seat.personId));
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  /**
+   * Security review F1: a seat whose person staff removed or erased is not a
+   * release anyone signs from the party panel, and a removed lead opens none.
+   */
+  it.each(["removed", "erased"] as const)("never opens a release on a %s record", async (state) => {
+    const { db, shop, lead, mia } = await familyParty();
+    const personId = await personOfSeat(db, mia.bookingId);
+    await db
+      .update(people)
+      .set(
+        state === "removed"
+          ? { deletedAt: new Date(nowMs()) }
+          : { deletedAt: new Date(nowMs()), anonymizedAt: new Date(nowMs()) },
+      )
+      .where(eq(people.id, personId));
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)?.signForMinor).toBe(false);
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  it("never opens one when the lead's own record is removed", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    await db
+      .update(people)
+      .set({ deletedAt: new Date(nowMs()) })
+      .where(eq(people.id, await personOfSeat(db, lead.bookingId)));
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  /**
+   * Security review F2: "a person this booking made" is about the record, not
+   * its email. A walk-in the shop already knows has no address either; once a
+   * staff merge points the seat at that record, the lead signs nothing for it.
+   */
+  it("never opens one after a merge points the seat at a known diver with no email", async () => {
+    const { db, shop, open, lead, mia } = await familyParty();
+    const otherTrip = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (trip) => trip.id !== open.id,
+    );
+    if (!otherTrip) throw new Error("expected a second seeded trip");
+    const earlier = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: otherTrip.id,
+        fullName: "Gus Guardian",
+        email: "gus.guardian@example.com",
+      },
+      { actor: "public", shopId: shop.id, tripId: otherTrip.id, fullName: "Mia Child" },
+    ]);
+    if (!earlier.ok) throw new Error(`earlier booking failed: ${earlier.reason}`);
+    const knownSeat = earlier.bookings[1];
+    if (!knownSeat) throw new Error("earlier party incomplete");
+    const known = await personOfSeat(db, knownSeat.bookingId);
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!owner) throw new Error("expected the seeded owner");
+    const merged = await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: await personOfSeat(db, mia.bookingId),
+      survivorId: known,
+      actorPersonId: owner.id,
+    });
+    expect(merged).toMatchObject({ ok: true });
+    expect(await personOfSeat(db, mia.bookingId)).toBe(known);
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)?.signForMinor).toBe(false);
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  /**
+   * Dive-domain review F4 of layer r4-1: a teen with an address of their own
+   * gets no parent's door (the security rule stands), so neither their claim
+   * page nor the lead's panel may promise one. The panel says the path that
+   * is left: send the link, and a parent or guardian signs with them.
+   */
+  it("promises the parent's door only where it exists, and says the link otherwise", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Pat Parent",
+        email: "pat.parent@example.com",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Kai Kid",
+        minorDeclared: true,
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Tess Teen",
+        email: "tess.teen@example.com",
+        minorDeclared: true,
+      },
+    ]);
+    if (!outcome.ok) throw new Error(`party booking failed: ${outcome.reason}`);
+    const [lead, kai, tess] = outcome.bookings;
+    if (!lead || !kai || !tess) throw new Error("party booking incomplete");
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === kai.bookingId)).toMatchObject({
+      signForMinor: true,
+      minorNote: null,
+    });
+    expect(seats.find((seat) => seat.bookingId === tess.bookingId)).toMatchObject({
+      signForMinor: false,
+      minorNote: "send_link",
+    });
+    const kaiPage = await getClaimPageData(
+      db,
+      await claimTokenFor(db, shop.id, lead.bookingId, kai.bookingId),
+    );
+    const tessPage = await getClaimPageData(
+      db,
+      await claimTokenFor(db, shop.id, lead.bookingId, tess.bookingId),
+    );
+    expect(kaiPage).toMatchObject({ minorDeclared: true, parentCanSign: true });
+    expect(tessPage).toMatchObject({ minorDeclared: true, parentCanSign: false });
+  });
+
+  /**
+   * Dive-domain review N7 of layer r4-1: a physician referral on the child's
+   * form closes the parent's door (it must block), and the panel says why
+   * rather than going silent.
+   */
+  it("says a physician's form is needed when the child's medical referred them", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const opened = await openMinorSeatWaiver(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+      seatBookingId: mia.bookingId,
+    });
+    expect(opened).toMatchObject({ ok: true });
+    await db
+      .update(waiverRecords)
+      .set({ status: "medical_review", signedAt: new Date(nowMs()) })
+      .where(eq(waiverRecords.bookingId, mia.bookingId));
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)).toMatchObject({
+      signForMinor: false,
+      minorNote: "physician",
+    });
+  });
+
+  /**
+   * Dive-domain review F6 of layer r4-1: a parent who signs from the party
+   * panel goes back to their own page, so the next child is one tap away.
+   * The return only ever names the lead's own readiness link, handed in by
+   * the lead's own tap, and only for a seat in that lead's party.
+   */
+  it("returns the parent to their own page, and nobody else to it", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const leadLink = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: lead.bookingId,
+      purpose: "readiness",
+    });
+    if (!leadLink) throw new Error("expected a readiness link");
+    const miaLink = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: mia.bookingId,
+      purpose: "readiness",
+    });
+    if (!miaLink) throw new Error("expected a readiness link");
+    expect(
+      await partyLeadReturnToken(db, {
+        shopId: shop.id,
+        seatBookingId: mia.bookingId,
+        leadToken: leadLink.token,
+      }),
+    ).toBe(leadLink.token);
+    // A link that is not the seat's lead, a stranger's string, or another shop: no return.
+    for (const input of [
+      { shopId: shop.id, seatBookingId: mia.bookingId, leadToken: miaLink.token },
+      { shopId: shop.id, seatBookingId: mia.bookingId, leadToken: "not-a-token" },
+      { shopId: shop.id, seatBookingId: lead.bookingId, leadToken: leadLink.token },
+      {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        seatBookingId: mia.bookingId,
+        leadToken: leadLink.token,
+      },
+    ]) {
+      expect(await partyLeadReturnToken(db, input)).toBeNull();
+    }
   });
 });

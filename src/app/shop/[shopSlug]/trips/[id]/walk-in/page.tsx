@@ -52,6 +52,7 @@ export const metadata: Metadata = {
  */
 const NOTICE_KEYS: Record<string, { tone: "danger" | "neutral"; key: StaffMessageKey }> = {
   "walkin-invalid": { tone: "danger", key: "checkIn.notice.walkinInvalid" },
+  "seat-busy": { tone: "danger", key: "seatDiver.busy" },
   "walkin-full": { tone: "danger", key: "checkIn.notice.walkinFull" },
   "walkin-divers-full": { tone: "danger", key: "participants.notices.diversFull" },
   "walkin-type-unavailable": { tone: "danger", key: "participants.notices.typeUnavailable" },

@@ -2,8 +2,8 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import {
-  countBoatDepartures,
   countBoatsWithoutRadioIdentity,
+  countDeparturesByBoat,
   createBoat,
   deleteBoat,
   departureVessels,
@@ -159,7 +159,7 @@ describe("deleting a boat", () => {
   it("counts the departures a delete would touch, so the confirm can say", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Sea Fox", 8);
-    expect(await countBoatDepartures(db, shop.id, boat.id)).toBe(0);
+    expect((await countDeparturesByBoat(db, shop.id)).get(boat.id) ?? 0).toBe(0);
 
     const rows = await db
       .select({ id: trips.id })
@@ -169,7 +169,11 @@ describe("deleting a boat", () => {
     for (const row of rows) {
       await db.update(trips).set({ boatId: boat.id }).where(eq(trips.id, row.id));
     }
-    expect(await countBoatDepartures(db, shop.id, boat.id)).toBe(rows.length);
+    // One read for the whole fleet (code review 2026-10-13b, item 36): the
+    // settings page used to count one hull at a time.
+    const counts = await countDeparturesByBoat(db, shop.id);
+    expect(counts.get(boat.id)).toBe(rows.length);
+    expect([...counts.keys()]).not.toContain(null);
   });
 
   it("refuses to delete the same hull twice, keeping the date it was retired", async () => {

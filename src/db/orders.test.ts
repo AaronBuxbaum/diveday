@@ -1862,6 +1862,38 @@ describe("orders — a partial refund", () => {
     });
   });
 
+  it("never reverses twice when Stripe left the first refund unanswered", async () => {
+    const { db, shop, order } = await paidOrder();
+    let calls = 0;
+    const invoicing = (status: "unanswered" | "refunded") =>
+      fakeInvoicing({
+        async refundInvoice(_a, _i, _k, amountCents): Promise<RefundInvoiceResult> {
+          calls += 1;
+          return status === "refunded"
+            ? { status, refundId: "re_second", amountCents }
+            : { status };
+        },
+      });
+
+    // A timeout after the refund went out: Stripe may have reversed it. A
+    // `failed` here let the second press mint a fresh idempotency key.
+    expect(
+      await refundOrder(db, shop.id, order.id, invoicing("unanswered"), { amountCents: 5_000 }),
+    ).toEqual({ status: "needs_reconciliation" });
+    expect(
+      await refundOrder(db, shop.id, order.id, invoicing("refunded"), {
+        staleBefore: await dbNowPlus(db, 1_000),
+        amountCents: 5_000,
+      }),
+    ).toEqual({ status: "needs_reconciliation" });
+    expect(calls).toBe(1);
+    const [intent] = await db
+      .select()
+      .from(paymentOperationIntents)
+      .where(eq(paymentOperationIntents.orderId, order.id));
+    expect(intent).toMatchObject({ status: "started", errorMessage: "unanswered" });
+  });
+
   it("refuses rather than reverses again when Stripe already paid out on a stalled attempt", async () => {
     const { db, shop, order } = await paidOrder();
     // An attempt that reached Stripe and died before its local write: the
@@ -2935,6 +2967,40 @@ describe("a diver buying a package online", () => {
       .from(people)
       .where(eq(people.email, "sid.stripefail@example.com"));
     expect(person).toBeDefined();
+  });
+
+  it("leaves an invoice Stripe never answered for a human, not closed as failed", async () => {
+    const { db, shop, pkg } = await packageShop();
+    const result = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pkg.id,
+        fullName: "Una Answered",
+        email: "una@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      fakeInvoicing({
+        async createInvoice(): Promise<CreateInvoiceResult> {
+          return { status: "unanswered" };
+        },
+      }),
+    );
+    expect(result).toEqual({ ok: false, reason: "stripe_failed" });
+    // The invoice may exist at Stripe: still `started`, so the stuck queue
+    // shows it once it ages.
+    const intents = await db
+      .select()
+      .from(paymentOperationIntents)
+      .where(
+        and(
+          eq(paymentOperationIntents.shopId, shop.id),
+          eq(paymentOperationIntents.kind, "invoice"),
+        ),
+      );
+    expect(intents).toEqual([
+      expect.objectContaining({ status: "started", errorMessage: "unanswered" }),
+    ]);
   });
 
   it("takes back the emailless record it made when Stripe refuses the invoice", async () => {

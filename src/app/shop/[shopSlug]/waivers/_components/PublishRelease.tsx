@@ -4,8 +4,8 @@ import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceRow } from "@/components/ui/form";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { groupLabelClass } from "@/components/ui/ledger";
 
 /**
  * **Materiality is a recorded choice, and then there is one act** (ADR

@@ -329,6 +329,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/settings.json main.timezone.zones.roatan", "place names"],
   ["diver.json notifications.whatsappTemplate.exampleShopName", "the demo shop's own name"],
   ["diver.json marineLife.species.cobia.name", "the fish's name in Spanish too"],
+  ["diver.json marineLife.species.boga.name", "the fish's name in Spanish too"],
   [
     "diver.json marketing.guides.shared.scopeTable.nitrox.what",
     "the gas, and the word Spanish diving uses for it",

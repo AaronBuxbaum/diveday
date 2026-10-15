@@ -96,13 +96,13 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   await page.getByRole("link", { name: "See it the way your divers will" }).click();
   await page.waitForURL(new RegExp(`/s/${unique}$`));
   await expect(page.getByText("Two-Tank Morning Reef").first()).toBeVisible();
-  await expect(page.getByText("12 spots left").first()).toBeVisible();
+  await expect(page.getByText("12 seats left").first()).toBeVisible();
 
   // All the way to the seat: the trip page offers a real booking form.
   await page.locator(`a[href*="/s/${unique}/trips/"]`).first().click();
   await page.waitForURL(new RegExp(`/s/${unique}/trips/`));
   await expect(
-    page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }),
+    page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }),
   ).toBeVisible();
 });
 

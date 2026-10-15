@@ -123,6 +123,43 @@ describe("diverBlockerAction", () => {
     expect(result?.waiver).toBeUndefined();
   });
 
+  /**
+   * H-105: a card still waiting for its check names its diver, so the shop
+   * home can offer "Check with SSI" from the row. The cards themselves are the
+   * read's to find (`withAgencyChecks`), and the row keeps its door.
+   */
+  it("names the diver on a pending card's row, and on no other kind", () => {
+    const pending = diverBlockerAction(
+      { ...input, blockers: [blocker("certification_pending")] },
+      "blue-reef",
+      NOW,
+    );
+    expect(pending?.agencyCheck).toEqual({ personId: "p1", cards: [] });
+    expect(pending?.href).toBe("/shop/blue-reef/divers/p1");
+
+    for (const code of ["certification_missing", "nitrox_pending", "waiver_not_sent"] as const) {
+      const other = diverBlockerAction({ ...input, blockers: [blocker(code)] }, "blue-reef", NOW);
+      expect(other?.agencyCheck).toBeUndefined();
+    }
+  });
+
+  /**
+   * A held seat (H-13): the human on this booking may not be the one whose
+   * cards are on file, so no row offers to check that person's card with an
+   * agency until a staffer confirms who it is, whichever blocker heads it.
+   */
+  it("offers no agency check on a held seat, even with a pending card", () => {
+    for (const blockers of [
+      [blocker("certification_pending"), blocker("identity_unconfirmed")],
+      [blocker("identity_unconfirmed"), blocker("certification_pending")],
+    ]) {
+      for (const aboard of [false, true]) {
+        const held = diverBlockerAction({ ...input, blockers, aboard }, "blue-reef", NOW);
+        expect(held?.agencyCheck).toBeUndefined();
+      }
+    }
+  });
+
   it("says the headline blocker in a few words, and nothing about the rest", () => {
     // The record the row opens lists every blocker in full; the row names the
     // one the tap fixes (Aaron, 2026-10-05: "reduce the amount of copy").

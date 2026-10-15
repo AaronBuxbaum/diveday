@@ -18,11 +18,16 @@
 // Steps, cheapest first; it stops at the first red one, because a later step on a broken tree
 // spends minutes saying the same thing:
 //
-//   regen → lint → typecheck → check:repo → guards → source scans → vitest related
-//         → e2e build → affected Playwright specs → stamp
+//   base CI → regen → lint → typecheck → check:repo → guards → source scans → vitest related
+//         → the base's red tests → e2e build → affected Playwright specs → stamp
 //
-//   pnpm verify:push            run it
-//   pnpm verify:push --plan     print the base, the steps and the selected specs, run nothing
+//   pnpm verify:push                      run it
+//   pnpm verify:push --plan               print the base, the steps and the selected specs, run nothing
+//   pnpm verify:push --base-red <file…>   also run these, when the base is red on a job that names none
+//
+// "Base CI" reads the layer below's latest CI (`scripts/base-ci.mjs`): a push on a red base is a
+// red run for this layer and every layer above, so the base's failing files run here too, and the
+// stamp means this layer carries their fix.
 //
 // The diff is measured against the layer below (`stackBase`), not `origin/main`: on a fifteen-
 // layer stack `vitest --changed origin/main` selects the whole suite, which is why several PR
@@ -42,8 +47,9 @@ import {
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-
+import { baseDecision, baseRedArgs, readBaseVerdict, repoSlug } from "./base-ci.mjs";
 import { affectedSpecs, durations, estimateMs, stackBase, withinBudget } from "./e2e-affected.mjs";
+import { verifiedFile } from "./guard-push.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
@@ -67,6 +73,11 @@ const NOT_BUILT = /(?:^|\/)[^/]+\.test\.(?:ts|tsx|mts|mjs|js)$|^e2e\/|^docs\/|\.
 
 /** A diff of only these changes no code: CI skips the unit and browser jobs for it too. */
 const DOCS_ONLY = /^(?:docs\/|\.claude\/|[^/]+\.md$)|\.md$/;
+
+/** Whether every changed file is one CI skips the unit and browser jobs for. */
+export function docsOnlyDiff(changed) {
+  return changed.length > 0 && changed.every((file) => DOCS_ONLY.test(file));
+}
 
 /** Files whose change can move the export-bundle snapshot; then `regen` reruns it. */
 const SNAPSHOT_INPUTS = /^src\/db\/(?:schema\/|seed|export)/;
@@ -103,8 +114,8 @@ export function sourceScanTests(root = ROOT) {
  * The steps for a diff. `changed` is the file list against the base, `specs` the Playwright
  * files to run, `scans` the source-scan tests, `existing` whether a changed path is still there.
  */
-export function plan({ changed, specs, scans, existing = () => true }) {
-  const docsOnly = changed.length > 0 && changed.every((file) => DOCS_ONLY.test(file));
+export function plan({ changed, specs, scans, baseFiles = [], existing = () => true }) {
+  const docsOnly = docsOnlyDiff(changed);
   const schema = changed.some((file) => file.startsWith("src/db/schema/"));
   const snapshot = changed.some((file) => SNAPSHOT_INPUTS.test(file));
   const steps = [
@@ -157,6 +168,15 @@ export function plan({ changed, specs, scans, existing = () => true }) {
       args: ["exec", "vitest", "related", ...code, "--run", "--passWithNoTests", "--reporter=dot"],
     });
   }
+  // The files the layer below is red on (base-ci.mjs): passing here is the fix this layer carries.
+  const baseRed = baseFiles.filter(existing);
+  if (baseRed.length > 0) {
+    steps.push({
+      name: "base red tests",
+      command: "pnpm",
+      args: ["exec", "vitest", "run", ...baseRed, "--reporter=dot"],
+    });
+  }
   if (specs.length > 0) {
     steps.push({ name: "e2e build", command: "pnpm", args: ["e2e:build"], build: true });
     steps.push({
@@ -196,6 +216,32 @@ export function appTreeKey(lsTree) {
     .split("\n")
     .filter((line) => line && !NOT_BUILT.test(line.slice(line.indexOf("\t") + 1)));
   return createHash("sha256").update(built.join("\n")).digest("hex");
+}
+
+/**
+ * Writes the stamp twice: the per-worktree file older guards read, and `<git common dir>/
+ * diveday-verified/<sha>`, which every worktree of the clone shares, so a push from any worktree
+ * (or from the shared checkout naming one) finds it (`scripts/guard-push.mjs`).
+ */
+export function writeStamps(
+  stamp,
+  {
+    git = gitReader(ROOT),
+    write = writeFileSync,
+    mkdir = (dir) => mkdirSync(dir, { recursive: true }),
+  } = {},
+) {
+  const text = `${JSON.stringify(stamp, null, 2)}\n`;
+  const own = gitPath(git, STAMP);
+  if (own) write(own, text);
+  const shared = verifiedFile(
+    git(["rev-parse", "--path-format=absolute", "--git-common-dir"]),
+    stamp.sha,
+  );
+  if (shared) {
+    mkdir(path.dirname(shared));
+    write(shared, text);
+  }
 }
 
 function gitPath(git, name) {
@@ -272,11 +318,27 @@ function main() {
     record,
   });
   const strong = specs.filter((spec) => !reachRun.includes(spec));
+  const docsOnly = docsOnlyDiff(selection.changed);
+  const verdict = readBaseVerdict(git(["rev-parse", selection.base]), {
+    repo: repoSlug(git(["remote", "get-url", "origin"])) ?? process.env.GITHUB_REPOSITORY ?? null,
+  });
+  const decision = baseDecision(verdict, { base: selection.base, extra: baseRedArgs(args) });
+  for (const line of decision.lines) console.log(line);
+  if (decision.refuse && !docsOnly) {
+    console.error(`verify:push: ${decision.refuse}`);
+    if (!args.includes("--plan")) process.exit(1);
+  }
+  const existing = (file) => existsSync(path.join(ROOT, file));
+  const baseSpecs = docsOnly
+    ? []
+    : decision.specs.filter((spec) => existing(spec) && !specs.includes(spec));
+  specs.push(...baseSpecs);
   const steps = plan({
     changed: selection.changed,
-    existing: (file) => existsSync(path.join(ROOT, file)),
+    existing,
     specs,
     scans: sourceScanTests(ROOT),
+    baseFiles: decision.files,
   });
 
   console.log(
@@ -288,6 +350,7 @@ function main() {
     console.log(`  ${spec}  — ${[...selection.strong.get(spec)].slice(0, 2).join("; ")}`);
   }
   if (reachRun.length > 0) console.log(`  reached: ${reachRun.join(" ")}`);
+  if (baseSpecs.length > 0) console.log(`  red on the base: ${baseSpecs.join(" ")}`);
   if (testsOnly) console.log("  only tests changed: no e2e build, no browser specs.");
   if (args.includes("--plan")) {
     for (const step of steps) {
@@ -350,8 +413,11 @@ function main() {
     steps: ran,
     specs,
     leftToCi: left,
+    baseCi: verdict.unknown
+      ? { unknown: verdict.unknown }
+      : { red: verdict.red, ran: [...decision.files, ...decision.specs] },
   };
-  writeFileSync(gitPath(git, STAMP), `${JSON.stringify(stamp, null, 2)}\n`);
+  writeStamps(stamp, { git });
   console.log(`verify:push: green. ${head.slice(0, 9)} may be pushed.`);
   if (left.length > 0) console.log(`Left to CI: ${left.join(" ")}`);
 }

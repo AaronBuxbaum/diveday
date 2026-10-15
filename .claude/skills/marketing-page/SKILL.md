@@ -27,28 +27,10 @@ the same PR.
    — it layers the incumbent-specific procedure (guide shapes, `IMPORT_HONESTY_TABLE`, coexist
    framing) on top of this one.
 
-## Where to edit
+## Reference
 
-| Change | File |
-| --- | --- |
-| A shipped capability line | `src/lib/marketing.ts` → `productCapabilityIndex`, under the group of the feature page a shop would look for it on |
-| The list of feature pages on `/` and `/product` | `FeatureDirectory` in `src/components/MarketingSections.tsx`, which reads the registry `src/lib/feature-pages.ts`; never a page-by-page list |
-| Price / plan / included list | `src/lib/marketing.ts` → `earlyAccessPrice` — the ONLY place the number exists |
-| Page narrative copy | `src/app/page.tsx`, `src/app/product/page.tsx`, `src/app/pricing/page.tsx`, `src/app/onboard/page.tsx` |
-| A feature page (`/product/<feature>`) | the registry `src/lib/feature-pages.ts`, the one template `src/app/product/_components/FeaturePageBody.tsx`, words in `marketing.featurePages.<page>`; its checklist is that page's group of `productCapabilityIndex` |
-| Illustrated mockup copy | `src/components/MarketingScreenFallbacks.tsx`; a feature page's screen in `src/components/MarketingFeatureScreens.tsx` |
-| Nav / footer | `src/components/MarketingNavView.tsx`, `src/components/MarketingFooter.tsx` |
-
-Layout stays inside the design system: semantic tokens only, `buttonClass()` for button-shaped
-things, `<Field>`/`<FieldGrid>` for forms — but inside those mechanics, compose for the argument
-(`docs/design/principles.md` §10–11): before building a new page or section, state its one idea in
-a sentence and sketch at least two compositions in prose, picking the one shaped by the content —
-the hero-plus-card-stack is the fallback, not the target. Surface the facts a buyer predictably
-wants (price, what's included, how leaving works) where the question arises rather than behind a
-click, and keep one primary CTA per screen — before adding a button, ask whether the layout could
-make it unnecessary. A new page's one argument and one ask go in
-[`docs/design/surfaces.md`](../../../docs/design/surfaces.md), which is where the holistic pass is
-written down.
+- [where-to-edit.md](where-to-edit.md) — which file owns each page's copy, prices, metadata and visuals — read it before the first edit.
+- [seo.md](seo.md) — the SEO checklist, for a new page or a metadata change.
 
 ## Copy checklist (apply to every changed sentence)
 
@@ -75,14 +57,6 @@ written down.
 - Price never restated outside `src/lib/marketing.ts` — prose, JSON-LD, and images included.
 - Safety-adjacent copy (readiness, manifest, medical, certs, nitrox) → launch `dive-domain-expert`
   review before commit.
-
-## SEO checklist (for new pages or metadata changes)
-
-- Read the bundled Next docs first (`node_modules/next/dist/docs/` — metadata conventions differ
-  from training data).
-- Page-level `metadata`: buyer-worded title, description, canonical, Open Graph + Twitter card.
-- New public page → add to the sitemap; tokened/private pages stay `robots: noindex`.
-- Structured data values read from `src/lib/marketing.ts`, never literals.
 
 ## Verify (the definition of done)
 

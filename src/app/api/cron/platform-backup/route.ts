@@ -48,7 +48,7 @@ const CRON_MONITOR_SLUG =
  * so a platform-killed run reads as timed-out rather than still running.
  */
 const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "0 5 * * 1" },
+  schedule: { type: "crontab", value: "7 5 * * 1" },
   checkinMargin: 240,
   maxRuntime: 10,
   timezone: "Etc/UTC",

@@ -24,13 +24,9 @@ import { publicTripPath } from "@/lib/public-routes";
  * link used to be `href="#"` whenever no capability came back, and `#` under
  * `target="_top"` is not inert — a keyboard Enter replaced the shop's own
  * page with the embed route. `bookingToken` is a string wherever this
- * renders (`confirmed` exists only downstream of verifying it), and the empty
- * case lands on the departure's public page rather than nowhere.
+ * renders (`confirmed` exists only downstream of verifying it), so the type
+ * says so: the page renders this door only under `confirmed && bookingToken`.
  */
-export function readinessDoorPath(
-  shopSlug: string,
-  tripId: string,
-  bookingToken: string | undefined,
-): string {
-  return `${publicTripPath(shopSlug, tripId)}/ready?booking=${encodeURIComponent(bookingToken ?? "")}`;
+export function readinessDoorPath(shopSlug: string, tripId: string, bookingToken: string): string {
+  return `${publicTripPath(shopSlug, tripId)}/ready?booking=${encodeURIComponent(bookingToken)}`;
 }

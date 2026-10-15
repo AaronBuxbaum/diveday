@@ -19,7 +19,7 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // Frozen-clock suffix (not Date.now()) so the shared demo People list the visual
   // suite screenshots stays pixel-stable across runs.
   await page.getByLabel("Email").fill(`rin+${e2eNow().getTime()}@example.com`);
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Rin/ })).toBeVisible();
 
   // Per-piece prices show next to the gear, and the default fit — every core

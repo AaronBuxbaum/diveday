@@ -1,0 +1,148 @@
+{
+  "area": "florida-keys-marathon",
+  "method": "Middle Keys, Long Key to the Seven Mile Bridge: NOAA FKNMS 2025 mooring buoys and Shipwreck Trail, Monroe County TDC's Reef Explorer guide (Marathon page, 10 reefs) and FWC artificial reefs, checked against Marathon operators' own pages (Captain Hook's, Tilden's Scuba Center). Marathon shops publish almost no named reef lists, so most TDC-only reefs stay excluded until an operator list is found. Counting rule: named, recreational scuba (not snorkel-only, technical-depth, closed or permit-only), and on at least two independent lists. NOAA FKNMS's mooring-buoy list and its Shipwreck Trail are one publisher and count once; Monroe County TDC's Reef Explorer guide and its shipwrecks page count once; FWC's artificial-reef dataset counts once and only for a named vessel an operator also advertises; each dive operator's own published site list counts once (Captain Hook's and its Dive Key West shop are one operator). Lodging guides, magazines and hobby sites were read but never counted. Counted 2026-10-14.",
+  "sources": [
+    "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+    "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/PubFKNMSBuoy2025/FeatureServer/0",
+    "https://floridakeys.noaa.gov/shipwrecktrail/",
+    "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+    "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/shipwrecks",
+    "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+    "https://captainhooks.com/best-places-to-dive-in-the-florida-keys/",
+    "https://captainhooks.com/watersports-activities/wreck-diving/",
+    "https://www.tildensscubacenter.com/trips",
+    "https://jrtp.com/water-sports/"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Sombrero Reef",
+      "template": "sombrero-reef",
+      "position": [24.62563, -81.11021],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://captainhooks.com/best-places-to-dive-in-the-florida-keys/",
+        "https://www.tildensscubacenter.com/trips"
+      ]
+    },
+    {
+      "name": "Coffins Patch",
+      "template": "coffins-patch",
+      "position": [24.68555, -80.96341],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://captainhooks.com/best-places-to-dive-in-the-florida-keys/",
+        "https://www.tildensscubacenter.com/trips"
+      ]
+    },
+    {
+      "name": "Thunderbolt",
+      "template": "thunderbolt-wreck",
+      "position": [24.65953, -80.96403],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/shipwrecktrail/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Thunderbolt%27&outFields=Name,MatCat,Depth,Lat_DD,Long_DD&returnGeometry=false&f=json",
+        "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/shipwrecks",
+        "https://captainhooks.com/watersports-activities/wreck-diving/",
+        "https://www.tildensscubacenter.com/trips"
+      ]
+    },
+    {
+      "name": "Delta Shoal (Delta Shoals, incl. Ivory Coast wreck)",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://jrtp.com/water-sports/"
+      ],
+      "excluded": "One qualifying list (TDC Reef Explorer); the second, Jolly Roger RV Resort's guide, is a lodging page, not an operator list."
+    },
+    {
+      "name": "Herman's Hole",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://jrtp.com/water-sports/"
+      ],
+      "excluded": "One qualifying list (TDC Reef Explorer); Jolly Roger RV Resort's guide is a lodging page, not an operator list."
+    },
+    {
+      "name": "Samantha's Reef",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf"
+      ],
+      "excluded": "On one list only (TDC Reef Explorer)."
+    },
+    {
+      "name": "Yellow Rocks",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf"
+      ],
+      "excluded": "On one list only (TDC Reef Explorer)."
+    },
+    {
+      "name": "Kissing Grunts",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf"
+      ],
+      "excluded": "On one list only (TDC Reef Explorer)."
+    },
+    {
+      "name": "Porkfish",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf"
+      ],
+      "excluded": "On one list only (TDC Reef Explorer)."
+    },
+    {
+      "name": "Horseshoe (Marathon)",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf",
+        "https://jrtp.com/water-sports/"
+      ],
+      "excluded": "One qualifying list (TDC Reef Explorer); Jolly Roger RV Resort's guide is not an operator list."
+    },
+    {
+      "name": "Old Cannon",
+      "template": null,
+      "listedBy": [
+        "https://visitfloridakeys.com/sites/default/files/2025-10/Reef-Explorer-Guide.pdf"
+      ],
+      "excluded": "On one list only (TDC Reef Explorer)."
+    },
+    {
+      "name": "Adelaide Baker",
+      "template": null,
+      "position": [24.70297, -80.89453],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://floridakeys.noaa.gov/shipwrecktrail/"
+      ],
+      "excluded": "NOAA only (buoy list and Shipwreck Trail are one publisher; TDC's shipwrecks page copies the trail); no operator list."
+    },
+    {
+      "name": "North America",
+      "template": null,
+      "position": [24.63773, -81.09338],
+      "listedBy": [
+        "https://floridakeys.noaa.gov/mbuoy/allmbuoys.html",
+        "https://floridakeys.noaa.gov/shipwrecktrail/"
+      ],
+      "excluded": "NOAA only (buoy list and Shipwreck Trail are one publisher); a shallow snorkel-depth wreck with no operator list."
+    },
+    {
+      "name": "Marker 48",
+      "template": null,
+      "position": [24.69034, -81.02562],
+      "listedBy": ["https://floridakeys.noaa.gov/mbuoy/allmbuoys.html"],
+      "excluded": "On one list only (NOAA buoys)."
+    }
+  ]
+}

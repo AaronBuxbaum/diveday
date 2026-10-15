@@ -428,6 +428,11 @@ export const waiverRecords = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("waiver_records_person_id_idx").on(table.personId),
     index("waiver_records_booking_current_idx").on(table.bookingId, table.supersededAt),
     index("waiver_records_shop_status_idx").on(table.shopId, table.status),
     // The per-person carry-forward lookup: a diver's completed releases at a shop.

@@ -21,15 +21,15 @@
  * `reportRefusedQuery` in `src/proxy.ts`. The number lives in one place; this
  * is the pointer to it.
  *
- * This registry currently declares 20 metrics (11 log signals + 5 web vitals
+ * This registry currently declares 21 metrics (12 log signals + 5 web vitals
  * + the mutation-duration metric + the three render-cost metrics, each one metric
  * *permanently* because its filter carries no dimension -- see
- * `MUTATION_DURATION_SIGNAL` and `RENDER_DB_QUERIES_SIGNAL`) and 14 alarms (8 + the 3 alarmed vitals + the
+ * `MUTATION_DURATION_SIGNAL` and `RENDER_DB_QUERIES_SIGNAL`) and 15 alarms (9 + the 3 alarmed vitals + the
  * 2 SES reputation rates, which alarm on metrics AWS publishes for free, + the
  * external uptime alarm in `UPTIME_TARGETS`, which alarms on a Route 53 metric
  * AWS publishes for the price of the health check itself), so it
- * sits 10 metrics and 4 alarms over the free allowance at about $3.40/month once
- * every metric receives data (10 x $0.30 + 4 x $0.10), plus $2.75/month for the
+ * sits 11 metrics and 5 alarms over the free allowance at about $3.80/month once
+ * every metric receives data (11 x $0.30 + 5 x $0.10), plus $2.75/month for the
  * health check the last of those watches. A counted signal without an
  * alarm costs $0.30/month; an alarmed one costs $0.40/month. Those are the real
  * numbers to weigh, not zero and not the free-tier cliff it looks like from the
@@ -171,6 +171,13 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "cron_reminders.scan_failed",
       "cron_recaps.scan_failed",
       "cron_retention.prune_failed",
+      // A table still over its window after the run's whole 45-second budget
+      // (fourth review, row 18): the pass ran and did not do its work, which is
+      // this alarm's meaning. One run rather than two running: the run is
+      // weekly and CloudWatch's period ceiling is one day, so no alarm here can
+      // span two; and after 45 seconds of batches one capped run is already a
+      // backlog growing faster than the prune.
+      "cron_retention.prune_capped",
       "cron_usage.scan_failed",
       "cron_backup_export.pass_failed",
       // Added to this signal rather than given its own: a new counted signal is
@@ -182,11 +189,54 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "cron_platform_backup.pass_failed",
       "cron_trip_series.roll_failed",
       "cron_demo_refresh.pass_failed",
+      // Every other pass's failure code. Before these were listed, a daily
+      // pass failing once reached at most AppErrors' three-in-fifteen-minutes,
+      // which one failure never does; here one is enough.
+      "cron_crew_notices.scan_failed",
+      "cron_desk_pings.scan_failed",
+      "cron_founder_metrics.failed",
+      "cron_integrations.scan_failed",
+      "cron_minimum_seats.sweep_failed",
+      "cron_platform_backup.census_failed",
+      "cron_trip_reminders.scan_failed",
+      "cron_trip_reminders.service_reminders_failed",
+      "cron_weekly_digest.scan_failed",
     ],
     threshold: 1,
     periodMinutes: 1_440,
     response:
       "The line names the scan. Every pass is idempotent, so re-running the route by hand is safe once the cause is understood.",
+  },
+  {
+    metricName: "WebhookUnconfigured",
+    title: "A webhook has no secret to verify with",
+    why:
+      "A Stripe secret or SNS topic ARN missing from the deployment refuses every payment confirmation, " +
+      "bounce or delivery receipt with a 503. Nobody outside can cause it, so one is enough: the provider " +
+      "retries, then gives up, and nothing inside DiveDay looks wrong.",
+    events: ["webhook.unconfigured"],
+    threshold: 1,
+    periodMinutes: 60,
+    response:
+      "The line's webhook field names the endpoint. Put the secret or topic ARN back in the deployment, then replay the refused deliveries from the provider's dashboard.",
+  },
+  {
+    metricName: "WebhookRefusals",
+    title: "Webhooks turned away",
+    why:
+      "A secret rotated on the provider's side refuses every delivery with a bad signature. The endpoints " +
+      "are public, so a stranger's unsigned post is refused on the same line: the app damps it to one line " +
+      "per webhook and reason a minute per instance (`swallowed` carries the real count), and this counts " +
+      "those minutes, never requests.",
+    events: ["webhook.refused"],
+    // Ten damped lines in an hour is ten separate minutes of refusals: a
+    // rotated secret on any shop taking bookings, and never three curls.
+    threshold: 10,
+    periodMinutes: 60,
+    response:
+      "The line's webhook and reason fields name the endpoint and why; swallowed says how many. " +
+      "invalid_signature from one provider, sustained: the secret was rotated on their side; copy the new one in, then replay the refused deliveries. " +
+      "Scattered reasons from many sources is a scanner and needs nothing.",
   },
   {
     metricName: "DatabaseUnavailable",

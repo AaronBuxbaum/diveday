@@ -413,7 +413,14 @@ export async function createWorkOrder(
     }
 
     // The shop's row is the lock: ticket numbers are per shop and never reused.
-    await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, input.shopId)).for("update");
+    // `no key update`, not `update`: it still serializes with itself, and it
+    // leaves alone the `KEY SHARE` every insert naming this shop takes on the
+    // row (`self-declared-cards.ts` tells the deadlock `update` causes).
+    await tx
+      .select({ id: shops.id })
+      .from(shops)
+      .where(eq(shops.id, input.shopId))
+      .for("no key update");
     const [highest] = await tx
       .select({ value: max(workOrders.number) })
       .from(workOrders)

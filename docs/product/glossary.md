@@ -16,11 +16,13 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Adventure Diver
 - Agency
 - Agency check
+- Agency-listed certification
 - Assistant Instructor (AI)
 - Bundled nitrox
 - C-card
 - Card sighting
 - Certification summary
+- Check all (agency)
 - Claimed certification
 - Clearing a declared-uncertified stamp
 - CMAS
@@ -29,6 +31,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Depth ceiling
 - Depth marker
 - Depth unit
+- DiveChek check
 - DSD (Discover Scuba Diving)
 - eLearning check
 - Entry-level in-water ratio
@@ -96,12 +99,16 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Billing standing
 - Cancellation notice
 - Card dispute
+- Checkout sale / tip sale
 - Dashboard refund
+- Dive (package unit)
 - Failed refund
 - First paid month
 - Free term
 - Paid after close
+- Paid mark
 - Pass-through fee
+- Payments restricted
 - Payout
 - Subscription (DiveDay billing)
 
@@ -168,10 +175,12 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - First-timer track
 - Held
 - Horizon
+- Hotel pickup
 - Implausible-station advisory
 - Imported payment history
 - Imported waiver acceptance
 - In-water certified assistant
+- Incident kind
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
@@ -227,6 +236,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Safety kit
 - Sailed
 - Salvage offer
+- Seat
 - Seat claim
 - Seat held
 - Seat move
@@ -243,6 +253,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Snorkeler
 - Souls on board
 - Staff invite
+- Stale roll call
 - Standing crew
 - Station acknowledgement
 - Station echo
@@ -271,7 +282,9 @@ fails while it is stale. Grep the domain files for a term; this index says which
 
 [glossary/records-and-evidence.md](glossary/records-and-evidence.md)
 
+- Coverage denominator
 - Day profile
+- Dive area
 - Earliest flight
 - Executed dive
 - Field guide

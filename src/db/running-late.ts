@@ -366,18 +366,53 @@ function seatForMessage(seats: readonly SeatRow[], personId: string, receivedAt:
 
 /**
  * The seat each Inbox message could be about, keyed by message id, for the
- * rows of one page. A message from a stranger, or from a diver with no open
- * seat it could be about, is absent.
+ * rows of one page. A message that names its booking (an "Ask to move" from
+ * the booking page, H-126) is about that seat, whenever it departs; every
+ * other message is read off the sender's open seats (`seatForMessage`). A
+ * message from a stranger, or from a diver with no open seat it could be
+ * about, is absent.
  */
 export async function messageSeats(
   db: AppDb,
   shopId: string,
-  messages: readonly { id: string; personId: string | null; receivedAt: Date }[],
+  messages: readonly {
+    id: string;
+    personId: string | null;
+    receivedAt: Date;
+    bookingId?: string | null;
+  }[],
   now: Date,
 ): Promise<Map<string, MessageSeat>> {
+  const found = new Map<string, MessageSeat>();
+  const named = messages.filter((message): message is typeof message & { bookingId: string } =>
+    Boolean(message.bookingId),
+  );
+  if (named.length > 0) {
+    const rows = await db
+      .select({
+        bookingId: bookings.id,
+        runningLateAt: bookings.runningLateAt,
+        tripId: trips.id,
+        title: trips.title,
+        startsAt: trips.startsAt,
+      })
+      .from(bookings)
+      .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(bookings.id, [...new Set(named.map((message) => message.bookingId))]),
+        ),
+      );
+    const byBooking = new Map(rows.map((row) => [row.bookingId, row]));
+    for (const message of named) {
+      const seat = byBooking.get(message.bookingId);
+      if (seat) found.set(message.id, seat);
+    }
+  }
   const attributed = messages.filter(
     (message): message is { id: string; personId: string; receivedAt: Date } =>
-      message.personId !== null,
+      message.personId !== null && !message.bookingId,
   );
   const seats = await openSeatsOf(
     db,
@@ -385,7 +420,6 @@ export async function messageSeats(
     attributed.map((message) => message.personId),
     now,
   );
-  const found = new Map<string, MessageSeat>();
   for (const message of attributed) {
     const seat = seatForMessage(seats, message.personId, message.receivedAt);
     if (seat) {

@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeSource } from "@/test/route-source";
 
 /**
  * **What the thread page is, and what it stopped being** — ADR
@@ -21,21 +20,18 @@ import { describe, expect, it } from "vitest";
  * `src/i18n/provider-coverage.test.ts`, for the same reason.
  */
 
-const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const SOURCE = component("page.tsx");
 /** The after-dive reads the page asks first (code review 2026-10-13, item 29). */
-const AFTER_DIVE_READS = readFileSync(join(__dirname, "_components/after-dive-reads.ts"), "utf8");
+const AFTER_DIVE_READS = component("after-dive-reads.ts");
 
 /**
  * The source of a file the page composes, read by name: under the route's
  * `_components/`, or under `src/components/`. A section that moves out of the
  * page moves its pins with it by changing only the name passed here.
  */
+/** The route's source, wherever a split put it (`src/test/route-source.ts`). */
 function component(file: string): string {
-  try {
-    return readFileSync(join(__dirname, "_components", file), "utf8");
-  } catch {
-    return readFileSync(join(__dirname, "..", "..", "..", "components", file), "utf8");
-  }
+  return routeSource(import.meta.dirname, file);
 }
 
 /** Where a marker first appears in the route's source, or -1. */
@@ -109,7 +105,7 @@ describe("the confirmation paints before the thread", () => {
       "issuePartySeatClaims(",
       "resolvePaymentReceipt(",
       "listTripDives(",
-      "countSpendableDives(",
+      "packageDivesForBooking(",
     ]) {
       expect(fastPath).not.toContain(read);
     }
@@ -136,7 +132,7 @@ describe("the confirmation paints before the thread", () => {
       "issuePartySeatClaims(",
       "resolvePaymentReceipt(",
       "listTripDives(",
-      "countSpendableDives(",
+      "packageDivesForBooking(",
     ]) {
       expect(SOURCE.slice(readyThread, body)).not.toContain(read);
       expect(thread).toContain(read);
@@ -662,10 +658,7 @@ describe("a held seat after the dive", () => {
     expect(held).toBeLessThan(positionOf("await afterDive.recap()"));
     // The recap starts early beside the roll call (code review 2026-10-13,
     // item 29), but never for a held seat.
-    const AFTER_DIVE_READS = readFileSync(
-      join(__dirname, "_components/after-dive-reads.ts"),
-      "utf8",
-    );
+    const AFTER_DIVE_READS = component("after-dive-reads.ts");
     expect(AFTER_DIVE_READS).toContain(
       "const speculate = boatIsHome && !input.identityHeld && isAfterTheDive({ endsAt });",
     );

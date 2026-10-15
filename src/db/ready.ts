@@ -20,6 +20,7 @@ import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
+import { hasMoveAsk } from "./inbound-messages";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
@@ -281,6 +282,14 @@ export type ReadyPageData = {
   helpRequest: HelpRequest | null;
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
+  /** The shop runs hotel pickups, so Day-of details asks about one (fourth UX review, item 8). */
+  offersHotelPickup: boolean;
+  /**
+   * This seat is priced, unpaid, and the page cannot take a card for it: the
+   * money is owed at the shop, and `/ready` says how much, the party's unclaimed
+   * seats included (fourth UX review, item 5).
+   */
+  owesAtShop: boolean;
   /**
    * What this seat is (ADR 20261007-participant-types): its price is its own,
    * and a snorkeler or a rider is not asked a diver's questions.
@@ -329,6 +338,16 @@ export type ReadyPageData = {
    * open and nothing has been said, and the said line while it is open after.
    */
   runningLate: { open: boolean; saidAt: Date | null };
+  /**
+   * **"Ask to move"** (H-126). Past the free-cancellation window, or on a
+   * trip with none, a paid cancel returns nothing right away, so the diver
+   * may ask the shop for another date instead: `open` while that ask could be
+   * made — a paid seat the diver may still release, not held, on their own
+   * booking — and `asked` while one about this departure stands
+   * (`hasMoveAsk`), so the page says so rather than offering it twice. Null
+   * everywhere else. The move itself is staff's.
+   */
+  moveAsk: "open" | "asked" | null;
   /**
    * **The departure itself was called off** — `trips.status`, not the
    * booking's.
@@ -404,6 +423,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       rentalItems: shops.rentalItems,
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
+      offersHotelPickup: shops.offersHotelPickup,
       personEmail: people.email,
       personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
@@ -563,6 +583,17 @@ export async function getReadyPageData(
   // page that takes no payment here (pay at the dock), opens the door.
   const canAddSeat =
     canCancelBooking && !identityHeld && row.partyLeadBookingId === null && (settled || !canPay);
+  // Past the free window, or with no window at all, a paid cancel returns
+  // nothing right away: the diver may ask the shop to move them instead.
+  const moveAskable =
+    canCancelBooking &&
+    !identityHeld &&
+    (cancelPreview === "forfeit" || cancelPreview === "no_policy");
+  const moveAsk: ReadyPageData["moveAsk"] = moveAskable
+    ? (await hasMoveAsk(db, row.shopId, bookingId))
+      ? "asked"
+      : "open"
+    : null;
 
   return {
     detail,
@@ -626,9 +657,12 @@ export async function getReadyPageData(
     hotelPickupLocation: row.hotelPickupLocation,
     pickupTime: row.pickupTime,
     canPay,
+    offersHotelPickup: row.offersHotelPickup,
+    owesAtShop: Boolean(perDiverPriceCents) && !settled && !canPay,
     cancelPreview,
     canCancelBooking,
     canAddSeat,
+    moveAsk,
     runningLate: {
       open: canSayRunningLate({
         bookingStatus: row.status,

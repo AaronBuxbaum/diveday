@@ -18,8 +18,9 @@ import {
 } from "@/lib/certification-cards";
 import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate } from "@/lib/format";
-import { isUnsightedSelfDeclaration } from "@/lib/readiness";
+import { isUnsightedSelfDeclaration, needsCardSighting } from "@/lib/readiness";
 import {
+  addAgencyListedCardsAction,
   addCardAction,
   agencyCheckAction,
   clearNoCertificationAction,
@@ -123,6 +124,64 @@ function CardRow({
       rowId={rowAnchor}
     />
   );
+}
+
+/** The agency check's two actions, bound to this diver: the check, and filing the page's other cards. */
+function agencyCheckActions(shopSlug: string, personId: string) {
+  return {
+    action: agencyCheckAction.bind(null, shopSlug, personId),
+    addListed: addAgencyListedCardsAction.bind(null, shopSlug, personId),
+  };
+}
+
+/**
+ * Under a nitrox or specialty card: the agency's link while it waits
+ * (`awaiting`), and the agency's own words when it has any. A card an agency
+ * check filed from the page's list (layer 3) carries them, and says where they
+ * came from by its stamp (`listedFromCertificationId`), before and after Mark
+ * certified: its note is the agency's words, never a staffer's.
+ */
+function PendingCardFoot({
+  t,
+  card,
+  awaiting,
+}: {
+  t: StaffTranslator;
+  card: {
+    reviewNote: string | null;
+    listedFromCertificationId: string | null;
+    agency: keyof typeof AGENCY_KEYS;
+  };
+  awaiting: boolean;
+}) {
+  return (
+    <>
+      {awaiting ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+      {card.listedFromCertificationId ? (
+        <span className="block">
+          {t("divers.certifications.listedByAgency", { agency: t(AGENCY_KEYS[card.agency]) })}
+        </span>
+      ) : null}
+      {card.reviewNote ? <span className="block italic">{card.reviewNote}</span> : null}
+    </>
+  );
+}
+
+/**
+ * A card an agency check listed with no number of its own (an agency that
+ * numbers each card, its page showing none): confirmed through the sighting,
+ * as an unsighted self-declaration is.
+ */
+function listedWithoutANumber(card: {
+  status: "pending" | "verified";
+  listedFromCertificationId: string | null;
+  identifier: string | null;
+}): boolean {
+  return needsCardSighting({
+    status: card.status,
+    listedFromCertificationId: card.listedFromCertificationId,
+    identifier: card.identifier,
+  });
 }
 
 /** A no-break space, by code point, because a literal one is invisible in the source. */
@@ -296,7 +355,7 @@ export function CertificationsGroup({
 
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
-  const agencyCheck = agencyCheckAction.bind(null, shopSlug, personId);
+  const agencyCheck = agencyCheckActions(shopSlug, personId);
   const deleteLevel = deleteCertificationAction.bind(null, shopSlug, personId);
   const deleteSpecialty = deleteSpecialtyAction.bind(null, shopSlug, personId);
   // The diver's own "I hold no card", still standing: set, never cleared by
@@ -413,7 +472,7 @@ export function CertificationsGroup({
                       dateOfBirth: diver.person.dateOfBirth,
                       identifier: card.identifier,
                     }),
-                action: agencyCheck,
+                ...agencyCheck,
               }}
             />
             {card.reviewNote ? <span className="block italic">{card.reviewNote}</span> : null}
@@ -487,12 +546,12 @@ export function CertificationsGroup({
         detail={
           <>
             {card.identifier}
-            {awaiting ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+            <PendingCardFoot t={t} card={card} awaiting={awaiting} />
           </>
         }
         actions={
           <>
-            {selfDeclared ? (
+            {selfDeclared || listedWithoutANumber(card) ? (
               <CardSightingForm
                 t={t}
                 action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
@@ -544,12 +603,12 @@ export function CertificationsGroup({
                 sighted: its agency is often the "other" placeholder and its
                 title drops the agency, so a lookup link would send the staffer
                 to an agency nobody named. The sighted claim gets one. */}
-            {awaiting && !selfDeclared ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+            <PendingCardFoot t={t} card={card} awaiting={awaiting && !selfDeclared} />
           </>
         }
         actions={
           <>
-            {selfDeclared ? (
+            {selfDeclared || listedWithoutANumber(card) ? (
               <CardSightingForm
                 t={t}
                 action={reviewSpecialtyAction.bind(null, shopSlug, personId)}

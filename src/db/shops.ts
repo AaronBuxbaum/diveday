@@ -329,6 +329,19 @@ export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: Do
 }
 
 /**
+ * Whether the shop runs hotel pickups (fourth UX review, item 8). Only then
+ * does `/ready` ask a diver "Want a pickup?".
+ */
+export async function setShopOffersHotelPickup(db: AppDb, shopId: string, offers: boolean) {
+  const [shop] = await db
+    .update(shops)
+    .set({ offersHotelPickup: offers })
+    .where(eq(shops.id, shopId))
+    .returning({ id: shops.id, offersHotelPickup: shops.offersHotelPickup });
+  return shop ?? null;
+}
+
+/**
  * Sets the currency the shop displays and charges in. Unlike the depth unit
  * below, this is **not** lossless: every stored `*_cents` amount is an integer
  * count of the old currency's minor unit and no conversion happens here, so a

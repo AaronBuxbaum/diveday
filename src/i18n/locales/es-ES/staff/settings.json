@@ -5,6 +5,7 @@
       "packingSaved": "Lista de equipo guardada para todas las salidas.",
       "packingInvalid": "Añade entre uno y doce artículos a la lista.",
       "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
+      "pickupSaved": "Guardado. A los buceadores solo se les pregunta por la recogida cuando esto está activado.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
       "unitsSaved": "Unidades guardadas.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
@@ -222,6 +223,12 @@
       "submitting": "Guardando…",
       "value": "{count, plural, one {# artículo} other {# artículos}}"
     },
+    "pickup": {
+      "label": "Ofrecemos recogida en el hotel",
+      "description": "Si está activado, la página de cada buceador pregunta si quiere que lo recojan y dónde se aloja.",
+      "submit": "Guardar recogida",
+      "submitting": "Guardando…"
+    },
     "dockCall": {
       "heading": "Ritmo del día de buceo",
       "description": "Todos estos números están en minutos.",
@@ -363,7 +370,7 @@
     },
     "certCheck": {
       "heading": "Verificación de certificaciones",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE y CMAS, en Chrome o Edge en una computadora.",
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE, CMAS y PADI (con sesión iniciada en el PADI Pros’ Site en el mismo navegador), en Chrome o Edge en una computadora.",
       "added": "Añadida a este navegador",
       "notAdded": "Sin añadir",
       "install": "Añadir a Chrome"

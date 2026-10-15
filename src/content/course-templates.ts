@@ -203,10 +203,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Try scuba for the first time, with an instructor at your shoulder",
       overview:
         "Discover Scuba Diving is not a certification — it is the afternoon you find out whether breathing underwater is for you. An instructor covers the few things that matter, fits your gear, and stays with you the whole time.\n\nYou will start in shallow, confined water, practice clearing your mask and recovering your regulator, and then, if you are comfortable, make a shallow open-water dive. Nobody is graded, and nobody goes deeper than they want to.\n\nIf you love it, your instructor can credit the skills you learn here toward the Open Water Diver course.",
-      heroImageUrl: bundledImage("Blue Tangs Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage(
+        "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
+      ),
       galleryPhotos: bundledGallery(
         "French Angelfish Molasses Reef 20080309.jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "Half a day · about 3 hours",
       // Instructor ratios are an agency standard a shop must actually meet, and
@@ -284,9 +286,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "The Open Water Diver certification is the one that opens the door: qualified to dive to {depth18} with a buddy, anywhere in the world, without an instructor — in conditions as good as or better than those you trained in.\n\nThe course is three parts. Knowledge development covers pressure, air, and planning — most students do this online before arriving. Confined water is where the skills become muscle memory, in shallow water with somewhere to stand. Four open-water dives put it together on the reef.\n\nNo prior experience is required. You do need to be comfortable in water: the course includes a 200-meter/yard swim (or 300 with mask, fins, and snorkel) and a 10-minute float, neither of them timed.",
       heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
-        "Blue Tang Pickles 20080310.jpg",
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
         "Brain coral 2 Molasses Reef 20080309.jpg",
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
       ),
       durationText: "3 days · 8:00am–5:00pm",
       groupSizeText: "Maximum 8 students per instructor",
@@ -400,8 +402,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Advanced Open Water Diver is not a repeat of Open Water with harder skills — it is five dives, each a first taste of a different specialty, done under instructor supervision.\n\nTwo are required: a deep dive, which extends your limit to {depth30}, or {depth21} for divers aged 12–14, and an underwater navigation dive. You choose the other three from what the site and the season offer — night, wreck, drift, buoyancy, naturalist, and others.\n\nThere is no final exam. There is a short knowledge review before each dive, and the dives themselves count as training dives.",
       heroImageUrl: bundledImage("FGBNMS - nurse shark (27551309652).jpg"),
       galleryPhotos: bundledGallery(
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
-        "Grouper 2 Molasses Reef 1999.jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
+        "Stingray on French Reef, Key Largo (15274940277).jpg",
       ),
       durationText: "2 days · 5 dives",
       groupSizeText: "Maximum 8 students per instructor",
@@ -568,7 +570,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Shake the rust off before your first dive back",
       overview:
         "If it has been a year or more since your last dive, the theory fades faster than the fun does. This is the PADI ReActivate program: a short knowledge review, then a confined-water session where you put the gear back on and find that your hands still know what to do.\n\nWe go over the skills that matter after a break — mask clearing, regulator recovery, weighting and buoyancy, sharing air, and how your computer works. Then you dive. Most divers feel normal again within the first ten minutes of the confined-water session.\n\nThis is not a new certification. It is a dated refresher noted on your certification record, and it is the right reset before you get on a boat with strangers.",
-      heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
+      heroImageUrl: bundledImage(
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
+      ),
       galleryPhotos: bundledGallery("Brain coral 2 Molasses Reef 20080309.jpg"),
       durationText: "Half a day · about 4 hours",
       groupSizeText: "A small group, with your instructor in the water with you",
@@ -638,8 +642,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "More bottom time on repetitive dives, and the planning that makes it safe",
       overview:
         "Nitrox is ordinary air with more oxygen and less nitrogen. Less nitrogen means slower nitrogen loading, which usually means longer no-decompression limits — the difference shows up most on the second and third dives of a day.\n\nThe trade is a new limit to respect. Oxygen becomes the thing you can get too much of, so every dive has a maximum operating depth set by the mix. The course teaches you to analyze your own cylinder, log the result, set your computer to the mix you actually have, and work out the depth you must not pass.\n\nThe certification covers recreational blends from 22% to 40% oxygen. There are no required training dives — this is a knowledge and practical-skills course — though we usually run two dives with it so you use the procedures for real.",
-      heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
-      galleryPhotos: bundledGallery("Grouper 2 Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage(
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
+      ),
+      galleryPhotos: bundledGallery("Stingray on French Reef, Key Largo (15274940277).jpg"),
       durationText: "1 day · knowledge and practical sessions",
       groupSizeText: "A small group, working through the analyzer and your own computer",
       minimumAge: 12,
@@ -721,7 +727,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("Brain coral 2 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
         "Sponge 06 Molasses Reef 20230714.jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "1 day · 2 dives",
       groupSizeText: "A small group, so your instructor can watch each diver hover",
@@ -886,7 +892,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("AtlanticGoliathGrouper.jpg"),
       galleryPhotos: bundledGallery(
         "AtlanticGoliathGrouper.jpg",
-        "Grouper 2 Molasses Reef 1999.jpg",
+        "Stingray on French Reef, Key Largo (15274940277).jpg",
       ),
       durationText: "2 days · 4 dives",
       groupSizeText: "A small group — deeper dives mean fewer divers per instructor",
@@ -975,7 +981,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
       galleryPhotos: bundledGallery(
         "AtlanticGoliathGrouper.jpg",
-        "Grouper 2 Molasses Reef 1999.jpg",
+        "Stingray on French Reef, Key Largo (15274940277).jpg",
       ),
       durationText: "2 days · 4 dives",
       groupSizeText: "A small group — smaller again on the penetration dive",
@@ -1071,7 +1077,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
         "Brain coral 2 Molasses Reef 20080309.jpg",
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
       ),
       durationText: "1–2 days · 3 dives",
       groupSizeText: "A small group — navigation is practiced one diver at a time",
@@ -1155,7 +1161,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Almost everyone's first underwater photos are the same: blue, soft, and taken from too far away. Nearly all of that comes from three habits, and two dives is enough to break them.\n\nYou will learn to get close and then closer, to shoot slightly upward instead of down onto the sand, and to put light back into the picture — strobe, video light, or just the sun behind you — because water takes the red out of everything within the first few body lengths. We set your camera up together before you get wet, so you are not scrolling through menus at depth.\n\nBuoyancy is the other half of this course and it is not optional. A photographer who kneels on the reef to steady a shot is a diver doing damage; every frame here is taken hovering.",
       heroImageUrl: bundledImage("French Angelfish Pickles Reef 20230713.jpg"),
       galleryPhotos: bundledGallery(
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
         "Sponge 06 Molasses Reef 20230714.jpg",
       ),
       durationText: "1 day · 2 dives",
@@ -1234,9 +1240,11 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Stop swimming against the ocean and start riding it",
       overview:
         "A drift dive is the laziest good diving there is. You go in, stop kicking, and let the water carry you past more reef than you could ever swim. What the course adds is everything around that: staying together, and staying findable.\n\nTwo dives cover the parts that go wrong. Entries have to be quick and everybody has to go at once. Buddy contact matters more when nothing is where you left it. A surface marker goes up before you do, so the boat knows where you are before your head appears. You will also learn to read a current — where it accelerates, where it eddies behind structure, and how to get out of one you would rather not be in.\n\nMost drift days here are live-boat: nothing anchors, the boat follows your bubbles and your marker, and it collects you wherever you surface.",
-      heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage(
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
+      ),
       galleryPhotos: bundledGallery(
-        "Blue Tangs Molasses Reef 1999.jpg",
+        "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
         "Elkhorn coral 8 Molasses Reef 20080309.jpg",
       ),
       durationText: "1 day · 2 dives",
@@ -1315,9 +1323,11 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Know where your gear goes, where to stand, and when to jump",
       overview:
         "Nobody is born knowing how a dive boat works. All of it is unfamiliar the first time: where your kit goes, which side you enter from, what the crew means by a live drop, why your fins go on last.\n\nTwo dives cover the routine. Setting up in the space you are given rather than the space you want. The entries a boat asks for, done without losing your mask. Tag lines and descent lines, and what they are actually for. Getting back onto a ladder in a swell without hurting yourself or the person behind you. You will pick up the vocabulary too — bow, stern, windward, and which parts of a briefing are instructions rather than scenery.\n\nSeasickness gets its own conversation, because the honest answer is that it is far easier to prevent than to cure.",
-      heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
+      heroImageUrl: bundledImage(
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
+      ),
       galleryPhotos: bundledGallery(
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
         "Brain coral 2 Molasses Reef 20080309.jpg",
       ),
       durationText: "1 day · 2 dives",
@@ -1392,7 +1402,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Things go over the side of boats. The dive that follows is usually three people swimming in circles somewhere near where they think it went in.\n\nThis is four dives of doing it properly. You run the standard patterns — expanding square, U-pattern, circular line search — on a compass and on a line, and learn which one suits the visibility, the bottom, and the size of what you are hunting. Then the recovery: rigging a lift bag, filling it in stages, and sending it up without being attached to it.\n\nThe lift bag is where people get hurt, so it gets the most attention. A bag that runs away takes a diver with it if the diver is holding the line, and a bag that spills at the surface drops its load straight back down onto whatever is underneath.",
       heroImageUrl: bundledImage("FGBNMS - nurse shark (27551309652).jpg"),
       galleryPhotos: bundledGallery(
-        "Grouper 2 Molasses Reef 1999.jpg",
+        "Stingray on French Reef, Key Largo (15274940277).jpg",
         "Sponge 06 Molasses Reef 20230714.jpg",
       ),
       durationText: "2 days · 4 dives",
@@ -1488,7 +1498,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
       galleryPhotos: bundledGallery(
         "Elkhorn coral 8 Molasses Reef 20080309.jpg",
-        "Blue Tang Pickles 20080310.jpg",
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
       ),
       durationText: "2 days · confined water plus 3 dives",
       groupSizeText: "A small group — a harness is fitted one diver at a time",
@@ -1575,10 +1585,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Learn the families first, and the reef stops being a blur",
       overview:
         "Divers who can name fish have better dives — not because naming is the point, but because you stop scanning and start looking, and the reef fills up with animals that were there the whole time.\n\nThe trick is families rather than species. There are far fewer body shapes than there are fish, so once you can tell a grunt from a snapper by outline alone, a field guide stops being a thousand photographs and becomes a short list. Two dives, a slate, and a guide are enough to make that click.\n\nWe teach the fish that actually live here, and you record what you see: what it was, how many, and where on the reef it was. Those notes are worth keeping — a good deal of what is known about reef populations was written down by divers doing exactly this.",
-      heroImageUrl: bundledImage("Blue Tangs Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage(
+        "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
+      ),
       galleryPhotos: bundledGallery(
         "French Angelfish Molasses Reef 20080309.jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "1 day · 2 dives",
       groupSizeText: "A small group, so a guide is shared between two divers rather than six",
@@ -1771,7 +1783,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("Brain coral 2 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
         "Sponge 06 Molasses Reef 20230714.jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "1–2 days · 1 confined water session + 2 dives",
       groupSizeText: "Small groups for dedicated instructor attention",
@@ -1835,7 +1847,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
         "French Angelfish Molasses Reef 20080309.jpg",
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
       ),
       durationText: "Half day (dry course, no dives)",
       groupSizeText: "Interactive small-group classroom workshops",
@@ -1890,7 +1902,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("Sponge 06 Molasses Reef 20230714.jpg"),
       galleryPhotos: bundledGallery(
         "Brain coral 2 Molasses Reef 20080309.jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "1 day (dry workshop)",
       groupSizeText: "Hands-on workbench sessions",
@@ -1939,10 +1951,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "See aquatic life through an ecological and behavioral lens",
       overview:
         "Instead of just seeing a fish or a coral head, learn to see the complex relationships that make underwater ecosystems thrive. The Underwater Naturalist course teaches you to identify groupings of marine organisms, understand symbiotic relationships, and observe behavior without disturbing aquatic life.\n\nYou will learn the major aquatic life groupings, food chains, habitats, and the role divers play in preserving fragile underwater environments.\n\nAcross two open water dives, you will observe symbiotic relationships, practice non-destructive diving techniques, and identify organisms and their habitats.",
-      heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage(
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
+      ),
       galleryPhotos: bundledGallery(
         "French Angelfish Pickles Reef 20230713.jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "1 day · 2 dives",
       groupSizeText: "Small groups focused on guided reef observation",
@@ -1997,7 +2011,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("French Angelfish Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
         "Brain coral 2 Molasses Reef 20080309.jpg",
-        "Blue Tang Pickles 20080310.jpg",
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
       ),
       durationText: "Half day (approx. 3–4 hours)",
       groupSizeText: "Direct 1:1 or small group instructor supervision",
@@ -2053,7 +2067,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "The SSI Open Water Diver program is your gateway to exploring the ocean worldwide. Through digital learning, pool training, and open water dives, you will gain the knowledge and skills necessary to dive safely to {depth18} with a certified buddy.\n\nSSI's training methodology focuses on comfort through repetition. You will master equipment assembly, mask clearing, regulator recovery, buoyancy control, and emergency procedures in confined water before completing four open water training dives.\n\nUpon graduation, your digital certification is recognized internationally with no expiration.",
       heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
         "FGBNMS - nurse shark (27551309652).jpg",
       ),
       durationText: "3–4 days · 6 confined sessions + 4 open water dives",
@@ -2143,7 +2157,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Try 5 specialty dives, increase your depth limit to {depth30}, and sharpen your skills",
       overview:
         "If you want to explore new diving styles and go deeper, the SSI Advanced Adventurer program allows you to sample five different SSI specialty dive programs without committing to the full specialty certifications.\n\nYou will complete five adventure dives, including mandatory Deep Diving (down to {depth30}) and Underwater Navigation dives, plus three elective dives such as Perfect Buoyancy, Night/Limited Visibility, or Wreck Diving.\n\nEach dive credits toward its corresponding full SSI specialty certification if you choose to pursue it later.",
-      heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
+      heroImageUrl: bundledImage(
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
+      ),
       galleryPhotos: bundledGallery(
         "French Angelfish Pickles Reef 20230713.jpg",
         "Sponge 06 Molasses Reef 20230714.jpg",
@@ -2279,10 +2295,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Refresh your knowledge, gear handling, and in-water skills before your next dive",
       overview:
         "If it has been several months or years since your last dive, the SSI Scuba Skills Update is the best way to regain your confidence and comfort in the water.\n\nWith an SSI professional, you will review dive planning, safe diving rules, and gear assembly. In a pool or calm confined water environment, you will practice fundamental skills including mask clearing, buoyancy control, and emergency procedures.\n\nAn optional open water dive can be added to put your refreshed skills into practice on the reef.",
-      heroImageUrl: bundledImage("Grouper 2 Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage("Stingray on French Reef, Key Largo (15274940277).jpg"),
       galleryPhotos: bundledGallery(
         "French Angelfish Pickles Reef 20230713.jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "Half day (approx. 3–4 hours)",
       groupSizeText: "Relaxed, supportive small-group environment",
@@ -2330,7 +2346,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Perfect your weighting, trim, and fin kicks to float weightlessly",
       overview:
         "Good buoyancy control is what separates an average diver from a great diver. The SSI Perfect Buoyancy specialty program teaches you how to optimize your weighting, balance your gear, and master specialized finning techniques.\n\nYou will learn the principles of buoyancy and trim, how to determine exact weighting requirements, and practice advanced kicks such as the frog kick and helicopter turn.\n\nWith two in-water training sessions, you will dramatically reduce your air consumption, protect delicate marine life, and prolong your dive times.",
-      heroImageUrl: bundledImage("Blue Tangs Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage(
+        "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
+      ),
       galleryPhotos: bundledGallery(
         "Brain coral 2 Molasses Reef 20080309.jpg",
         "Elkhorn coral 8 Molasses Reef 20080309.jpg",
@@ -2383,7 +2401,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("French Angelfish Pickles Reef 20230713.jpg"),
       galleryPhotos: bundledGallery(
         "FKNMS - Goliath Grouper With Remora (27094933605).jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "2 days · 3 deep training dives",
       groupSizeText: "Small student-to-instructor ratios for deep dive monitoring",
@@ -2442,8 +2460,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Underwater navigation is the skill that turns an anxious dive into a relaxed exploration. The SSI Navigation specialty teaches you how to use a compass and natural underwater references to always know where you are and how to return to the boat or shore.\n\nYou will learn to measure distance underwater through kick cycles and elapsed time, navigate complex search patterns, and compensate for currents.\n\nAcross two open water dives, you will navigate compass courses, practice square and triangle search patterns, and successfully navigate back to your starting point.",
       heroImageUrl: bundledImage("Brain coral 2 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
-        "Blue Tang Pickles 20080310.jpg",
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
       ),
       durationText: "1–2 days · 2 open water dives",
       groupSizeText: "Buddy-pair focused navigation challenges",
@@ -2494,7 +2512,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("French Angelfish Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
         "French Angelfish Pickles Reef 20230713.jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "1–2 days · 2 dives",
       groupSizeText: "Small groups with individual image critique",
@@ -2546,7 +2564,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "The oceans are home to incredible biodiversity and complex ecological systems. The SSI Marine Ecology specialty provides an in-depth look at the science of ocean life and the challenges facing marine environments today.\n\nYou will explore marine ecosystems, ocean food webs, coral reef biology, coastal habitats, and human impacts on the oceans. You will learn practical ways divers and ocean lovers can protect marine life.\n\nThis is a knowledge-based program that can be completed with or without optional open water experience dives.",
       heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
         "Brain coral 2 Molasses Reef 20080309.jpg",
       ),
       durationText: "1 day (dry seminars + optional dives)",
@@ -2594,9 +2612,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Learn essential CPR, first aid, and oxygen administration skills for emergencies",
       overview:
         "SSI React Right is an emergency response training program designed for divers and non-divers. You will gain the skills and confidence to act as a first responder in medical emergencies.\n\nThe program covers primary assessment, CPR and rescue breathing, Automated External Defibrillator (AED) operation, first aid and wound care, and Emergency Oxygen administration in diving emergencies.\n\nHands-on scenario practice ensures you are prepared to respond calmly and effectively during an accident.",
-      heroImageUrl: bundledImage("Stoplight parrotfish Pickles Reef.jpg"),
+      heroImageUrl: bundledImage("Acropora palmata Alligator Reef 20230711.jpg"),
       galleryPhotos: bundledGallery(
-        "Blue Tang Pickles 20080310.jpg",
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
         "French Angelfish Pickles Reef 20230713.jpg",
       ),
       durationText: "1 day (dry classroom & practical skills)",
@@ -2654,7 +2672,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("AtlanticGoliathGrouper.jpg"),
       galleryPhotos: bundledGallery(
         "FGBNMS - nurse shark (27551309652).jpg",
-        "Grouper 2 Molasses Reef 1999.jpg",
+        "Stingray on French Reef, Key Largo (15274940277).jpg",
       ),
       durationText: "1–2 weeks (or internship format)",
       groupSizeText: "Professional mentorship and practical guiding",
@@ -2733,10 +2751,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Find out whether breathing underwater is for you, in one afternoon",
       overview:
         "SDI Scuba Discovery is not a certification. It is the session where you find out what scuba actually feels like, with an instructor beside you the whole time and nothing to pass.\n\nYou will start in shallow, confined water: how the gear works, how to clear a mask, how to get a regulator back. When you are comfortable — and only then — you can make a shallow open-water dive on the reef.\n\nIf you love it, the skills count toward your Open Water Scuba Diver course. If you do not, you have lost an afternoon and gained an answer.",
-      heroImageUrl: bundledImage("Blue Tangs Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage(
+        "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
+      ),
       galleryPhotos: bundledGallery(
         "French Angelfish Molasses Reef 20080309.jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "Half a day · about 3 hours",
       groupSizeText: "Small groups, with an instructor in the water throughout",
@@ -2790,10 +2810,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Certify to dive with a buddy, worldwide, to {depth18}",
       overview:
         "SDI Open Water Scuba Diver is the certification that lets you rent gear, book a boat, and dive with a buddy anywhere in the world.\n\nWhat sets it apart from the other agencies' entry-level courses is the computer. SDI teaches dive planning on a personal dive computer from the start rather than on printed tables, because that is what you will actually use on every dive afterwards. You still learn how decompression works — you just learn it on the device that will be on your wrist.\n\nYou will cover the academics, practice the skills in confined water until they are dull, and then make four open-water dives on the reef with your instructor.",
-      heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage(
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
+      ),
       galleryPhotos: bundledGallery(
         "Brain coral 2 Molasses Reef 20080309.jpg",
-        "Blue Tang Pickles 20080310.jpg",
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
         "Sponge 06 Molasses Reef 20230714.jpg",
       ),
       durationText: "Three to four days · four open-water dives",
@@ -2871,7 +2893,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
       galleryPhotos: bundledGallery(
         "Elkhorn coral 8 Molasses Reef 20080309.jpg",
-        "Grouper 2 Molasses Reef 1999.jpg",
+        "Stingray on French Reef, Key Largo (15274940277).jpg",
       ),
       durationText: "Two days · five dives",
       groupSizeText: "Small groups, matched to the electives you choose",
@@ -3000,8 +3022,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "SDI Divemaster is where diving stops being a hobby and starts being work you get paid for. It is the longest course we run and the one with the most time in the water.\n\nYou will refine your own skills until they are demonstration-quality, learn to plan and supervise dives for people who are not as comfortable as you are, run briefings that people actually remember, and handle the parts of a dive day nobody sees — the boat, the paperwork, the diver who is quietly not okay.\n\nMuch of it happens alongside our real courses and charters, because there is no substitute for doing it with actual customers.",
       heroImageUrl: bundledImage("AtlanticGoliathGrouper.jpg"),
       galleryPhotos: bundledGallery(
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
-        "Grouper 2 Molasses Reef 1999.jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
+        "Stingray on French Reef, Key Largo (15274940277).jpg",
       ),
       durationText: "Four to eight weeks, depending on your schedule",
       groupSizeText: "One-to-one and small-group mentoring with our instructors",
@@ -3066,7 +3088,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("Sponge 06 Molasses Reef 20230714.jpg"),
       galleryPhotos: bundledGallery(
         "Brain coral 2 Molasses Reef 20080309.jpg",
-        "Blue Tangs Molasses Reef 1999.jpg",
+        "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
       ),
       durationText: "One to two days · at least three dives",
       groupSizeText: "Very small groups — this course is mostly one-to-one",
@@ -3113,9 +3135,11 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "More time on the reef, less time on the surface waiting",
       overview:
         "Enriched air is more oxygen and less nitrogen, which means longer no-decompression limits at the depths this coast actually dives. On a two-tank morning it is often the difference between a rushed second dive and an unhurried one.\n\nSDI teaches it the way you will dive it: on a computer set for the mix, not from a second set of printed tables. You will learn what the mix does, what the oxygen limits are and why they matter, and how to analyze and log every cylinder yourself before it goes on your back.\n\nAnalysing your own gas is not a formality. It is the one check nobody else can do for you.",
-      heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
+      heroImageUrl: bundledImage(
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
+      ),
       galleryPhotos: bundledGallery(
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
         "French Angelfish Molasses Reef 20080309.jpg",
       ),
       durationText: "One day · academics plus two optional dives",
@@ -3163,7 +3187,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "The wrecks and walls that start where the reef stops",
       overview:
         "Below {depth30} everything changes: the light goes flat, gas disappears faster than the gauge feels like it should, and narcosis arrives quietly enough that you will not notice it without having practiced noticing it.\n\nThis course is about planning for all three. Gas management with a real reserve, ascent profiles you commit to before you descend, and a frank look at how you personally behave at depth.\n\nIt is what the deeper wrecks and the outer wall require, and it is where most divers finally get honest about their air consumption.",
-      heroImageUrl: bundledImage("Grouper 2 Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage("Stingray on French Reef, Key Largo (15274940277).jpg"),
       galleryPhotos: bundledGallery(
         "AtlanticGoliathGrouper.jpg",
         "Elkhorn coral 8 Molasses Reef 20080309.jpg",
@@ -3224,7 +3248,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("Brain coral 2 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
         "Elkhorn coral 8 Molasses Reef 20080309.jpg",
-        "Blue Tang Pickles 20080310.jpg",
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
       ),
       durationText: "One day · two dives",
       groupSizeText: "Small groups, each diver running their own patterns",
@@ -3270,7 +3294,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("Sponge 06 Molasses Reef 20230714.jpg"),
       galleryPhotos: bundledGallery(
         "French Angelfish Pickles Reef 20230713.jpg",
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
       ),
       durationText: "Two evenings · two to three dives",
       groupSizeText: "Small groups — nobody dives out of torchlight",
@@ -3319,7 +3343,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
       galleryPhotos: bundledGallery(
         "AtlanticGoliathGrouper.jpg",
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
       ),
       durationText: "Two days · four dives",
       groupSizeText: "Small groups, because a wreck is easy to lose people on",
@@ -3373,10 +3397,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "The easiest diving there is, once you stop fighting the water",
       overview:
         "A drift dive is the laziest and often the best diving on this coast: you roll in, the current carries you along the reef, and the boat follows your bubbles.\n\nThe skills are all about being findable and staying together. Entries timed to the group, buoyancy that holds a line without kicking, deploying a surface marker from depth, and the discipline of ascending as a group rather than as five separate surprises for the captain.\n\nDivers who take it stop dreading current and start choosing it.",
-      heroImageUrl: bundledImage("Blue Tangs Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage(
+        "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
+      ),
       galleryPhotos: bundledGallery(
         "Dasyatis americana NOAA.jpg",
-        "Blue Tang Pickles 20080310.jpg",
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
       ),
       durationText: "One day · two dives",
       groupSizeText: "Small groups the boat can keep in one piece of water",
@@ -3422,9 +3448,11 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Entries, exits, and knowing where to put your kit",
       overview:
         "Almost every dive on this coast starts on a boat, and a boat is a small space with a schedule. The divers who make it easy are the ones who know where their gear goes, when to be ready, and how to get in and out without holding up eleven other people.\n\nYou will cover the vocabulary a briefing assumes you already know, entries and exits in a bit of swell, tag boards and roll calls, and what to do when you surface behind the boat rather than beside it.\n\nIt is not a glamorous course. It is the one that makes every charter you ever book better.",
-      heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage(
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
+      ),
       galleryPhotos: bundledGallery(
-        "Grouper 2 Molasses Reef 1999.jpg",
+        "Stingray on French Reef, Key Largo (15274940277).jpg",
         "Sponge 06 Molasses Reef 20230714.jpg",
       ),
       durationText: "One day · two dives",
@@ -3527,7 +3555,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Almost every disappointing underwater photograph has the same three causes: too far away, no light, and a photographer who was moving.\n\nThis course fixes all three. You will learn how water eats color with depth and what a strobe or video light gives back, how close you actually need to be, and — the part nobody expects — how much of underwater photography is buoyancy control.\n\nWe will shoot, review the frames together, and shoot again. Bring whatever camera you own; the principles are the same from a phone housing to a full rig.",
       heroImageUrl: bundledImage("French Angelfish Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
         "Elkhorn coral 8 Molasses Reef 20080309.jpg",
       ),
       durationText: "One to two days · two to three dives with review sessions",
@@ -3574,7 +3602,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "Stay warm on long dives — and learn the one skill a wetsuit never taught you",
       overview:
         "A dry suit keeps you warm enough to enjoy a second and third dive that a wetsuit would have ended. It also adds a second air space to manage, and that is the whole reason this course exists.\n\nYou will learn to vent on ascent, to keep gas out of your boots, and to recover from an inverted position calmly — because a suit full of air at your ankles is a runaway ascent if you have never practiced it.\n\nBy the end the suit is something you stop thinking about, which is the point.",
-      heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
+      heroImageUrl: bundledImage(
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
+      ),
       galleryPhotos: bundledGallery(
         "Brain coral 2 Molasses Reef 20080309.jpg",
         "Sponge 06 Molasses Reef 20230714.jpg",
@@ -3625,8 +3655,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "A blown o-ring, a stuck inflator, a fin strap that let go on the ladder — every one of these ends a dive for someone who cannot fix it and delays a dive by two minutes for someone who can.\n\nYou will go through the whole kit: how a regulator actually delivers gas, what a BCD's valves do, why cylinders get inspected on the schedule they do, and how to run a proper pre-dive check that catches things before the boat leaves.\n\nThis is not a repair-technician course, and it deliberately stops short of servicing anything sealed. What it gives you is the field fixes and the vocabulary to tell a technician what is actually wrong.",
       heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
-        "Grouper 2 Molasses Reef 1999.jpg",
-        "Blue Tangs Molasses Reef 1999.jpg",
+        "Stingray on French Reef, Key Largo (15274940277).jpg",
+        "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
       ),
       durationText: "One day · workshop, with an optional dive",
       groupSizeText: "Small groups around the bench",
@@ -3674,7 +3704,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Sidemount moves your cylinders from your back to your hips. Divers come to it for three reasons: a back that has had enough of walking down a jetty under a full rig, trim that is genuinely easier to hold flat, and valves you can see and reach yourself.\n\nYou will get the harness set up for your body — which takes longer than anyone expects and matters more than anything else in the course — and then dive it until the rig disappears.\n\nThis is the recreational course. It is not an overhead or technical qualification, and it does not change the depth limit your certification already carries.",
       heroImageUrl: bundledImage("Sponge 06 Molasses Reef 20230714.jpg"),
       galleryPhotos: bundledGallery(
-        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
         "French Angelfish Pickles Reef 20230713.jpg",
       ),
       durationText: "Two days · confined water plus three dives",
@@ -3731,7 +3761,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "A reef stops being scenery once you can read it. Which fish is cleaning which, why that coral is bleached and that one is not, what the sponges are doing, and which of the day's animals were only there because of the tide.\n\nThe second half is about impact, and it is blunt: a fin tip on a coral head undoes decades, sunscreen matters, and touching almost anything is worse for it than it is for you.\n\nOpen to divers and snorkelers alike — the knowledge half needs no certification at all.",
       heroImageUrl: bundledImage("French Angelfish Pickles Reef 20230713.jpg"),
       galleryPhotos: bundledGallery(
-        "Stoplight parrotfish Pickles Reef.jpg",
+        "Acropora palmata Alligator Reef 20230711.jpg",
         "Brain coral 2 Molasses Reef 20080309.jpg",
       ),
       durationText: "Half a day of academics, plus an optional dive",
@@ -3775,10 +3805,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       summary: "A patient tune-up so your first dive back is a good one",
       overview:
         "Certifications do not expire, but skills fade and confidence fades faster. If it has been a year — or ten — this is the session that gets you back without spending your first dive back working out where everything went.\n\nWe will rebuild the gear assembly and buddy check from scratch, run the skills in confined water until they feel automatic again, and go over what has changed since you last dived, which for most people is computers.\n\nNo test, no pressure, and nobody watching the clock.",
-      heroImageUrl: bundledImage("Grouper 2 Molasses Reef 1999.jpg"),
+      heroImageUrl: bundledImage("Stingray on French Reef, Key Largo (15274940277).jpg"),
       galleryPhotos: bundledGallery(
         "French Angelfish Pickles Reef 20230713.jpg",
-        "Blue Tang Pickles 20080310.jpg",
+        "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
       ),
       durationText: "Half a day · confined water, with an optional reef dive",
       groupSizeText: "Small groups, or one-to-one if you would rather",

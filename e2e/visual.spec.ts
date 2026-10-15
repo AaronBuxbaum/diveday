@@ -3273,8 +3273,8 @@ for (const scheme of ["light", "dark"] as const) {
         await bookAVisualRegressionSeat(page, scheme);
         await page.goto(new URL(page.url()).pathname);
         await threadStatus(page).waitFor();
-        await page.getByRole("button", { name: "Cancel my spot" }).click();
-        await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
+        await page.getByRole("button", { name: "Cancel my seat" }).click();
+        await page.getByRole("button", { name: "Yes, cancel my seat" }).click();
         await page.getByRole("heading", { name: "This booking was canceled" }).waitFor();
         // Without `?cancelled=1` — the bookmarked URL, or the link out of an
         // old reminder email, which is how a diver actually arrives here.
@@ -5448,6 +5448,101 @@ for (const scheme of ["light", "dark"] as const) {
         await group.getByRole("link", { name: "Check with SSI" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "diver-profile-agency-check", scheme);
+      });
+
+      /**
+       * **The other cards an agency's page lists, offered after a match**
+       * (layer 3 of ADR 20261008-cert-check-extension). The extension is
+       * stood in for at the page's one seam, as next door: SSI's page shows
+       * Mateo Duarte's Open Water card, which the check certifies, and his
+       * nitrox and Deep cards, which the panel under it offers with a tick
+       * each. Safe to mutate: each test resets the shop's cards.
+       */
+      test(`an agency check's offer of the page's other cards renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.addInitScript(() => {
+          const announce = () => {
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.2.0");
+            window.dispatchEvent(new Event("diveday-cert-check-ready"));
+          };
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", announce);
+          } else {
+            announce();
+          }
+          window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data?.source !== "diveday-page" || data.type !== "agency-check") return;
+            window.postMessage(
+              {
+                source: "diveday-cert-check",
+                type: "agency-check-result",
+                requestId: data.requestId,
+                ok: true,
+                pageText: `Online Diver Check\n${data.query.firstName} ${data.query.lastName}\nCard ${data.query.cardNumber}\nOpen Water Diver\nEnriched Air Nitrox · Deep Diving`,
+              },
+              window.location.origin,
+            );
+          });
+        });
+        await openDiverProfile(page, "Mateo", "Mateo Duarte");
+        const group = await openDiverFileGroup(page, "Certification records");
+        await group.getByRole("button", { name: "Check with SSI" }).click();
+        await group
+          .getByRole("group", {
+            name: "SSI also shows these certifications. Add them? Each waits for Mark certified.",
+          })
+          .waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-profile-agency-listed", scheme);
+      });
+
+      /**
+       * **A Divers-tab row after an agency check that came up short** (H-105).
+       * Nothing here renders without the DiveDay browser extension, so this
+       * stands in for it at the page's one seam (`e2e/agency-check-roster.spec.ts`
+       * does the same): SSI's page finds Tyler Brooks but shows him only as a
+       * Scuba Diver. The row keeps the agency's words under its reason, the
+       * link to SSI's own page, and its "Check with SSI" for another try —
+       * the state a staffer is left to read, and the densest one the row has.
+       */
+      test(`a Divers-tab row's agency check, short of a match, renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.addInitScript(() => {
+          const announce = () => {
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+            window.dispatchEvent(new Event("diveday-cert-check-ready"));
+          };
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", announce);
+          } else {
+            announce();
+          }
+          window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data?.source !== "diveday-page" || data.type !== "agency-check") return;
+            window.postMessage(
+              {
+                source: "diveday-cert-check",
+                type: "agency-check-result",
+                requestId: data.requestId,
+                ok: true,
+                pageText: `Online Diver Check\n${data.query.firstName} ${data.query.lastName}\nCard ${data.query.cardNumber}\nScuba Diver`,
+              },
+              window.location.origin,
+            );
+          });
+        });
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, "Two-Tank Reef — French Reef");
+        await openTripTab(page, "Trip");
+        const roster = page.locator("#roster");
+        await roster.getByRole("button", { name: "Check with SSI" }).click();
+        await roster.getByText("SSI found this diver, but not at this level.").waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "trip-guests-agency-check", scheme);
       });
 
       /**

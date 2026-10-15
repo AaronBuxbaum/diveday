@@ -35,7 +35,7 @@ const CRON_MONITOR_SLUG =
  * nothing a diver can see.
  */
 const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "15 3 * * *" },
+  schedule: { type: "crontab", value: "7 3 * * *" },
   checkinMargin: 240,
   maxRuntime: 5,
   timezone: "Etc/UTC",

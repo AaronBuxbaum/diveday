@@ -3,7 +3,7 @@ import {
   type CancellationTrip,
   cancellationDeadline,
   type DepositTrip,
-  seatMoneyTerms,
+  partyMoneyTerms,
 } from "@/lib/deposits";
 import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
@@ -31,6 +31,12 @@ export function confirmationExtras(input: {
     CancellationTrip & { id: string };
   course: CoursePricing | null;
   participantType: ParticipantType;
+  /**
+   * Every other seat the lead holds, by what it is (the party's unclaimed
+   * seats). The money line then says the party's figure, "3 seats: $285.00,
+   * due at the shop" (fourth UX review, item 5). Absent for a seat of one.
+   */
+  partyTypes?: readonly ParticipantType[];
   /** Whether this booking went to a card checkout (the shop takes payment online). */
   chargesOnline: boolean;
   origin: string | null;
@@ -41,7 +47,12 @@ export function confirmationExtras(input: {
   "meetingPoint" | "calendarUrl" | "money" | "partyPaid" | "freeCancellationUntil"
 > {
   const { shop, trip } = input;
-  const money = seatMoneyTerms(trip, input.course, input.participantType, input.chargesOnline);
+  const money = partyMoneyTerms(
+    trip,
+    input.course,
+    [input.participantType, ...(input.partyTypes ?? [])],
+    input.chargesOnline,
+  );
   const freeCancellationUntil = cancellationDeadline(trip);
   return {
     meetingPoint: meetingPointForMessage(meetingPointOfRows(shop, trip)),
@@ -53,7 +64,17 @@ export function confirmationExtras(input: {
           ).toString(),
         }
       : {}),
-    ...(money ? { money: { ...money, currency: toShopCurrency(shop.currency) } } : {}),
+    ...(money
+      ? {
+          money: {
+            ...money,
+            // One seat is the plain "Your seat" line; absent keeps the stored
+            // shape of every confirmation sent before parties were summed.
+            seats: money.seats > 1 ? money.seats : undefined,
+            currency: toShopCurrency(shop.currency),
+          },
+        }
+      : {}),
     ...(input.partyPaid ? { partyPaid: input.partyPaid } : {}),
     ...(freeCancellationUntil ? { freeCancellationUntil } : {}),
   };

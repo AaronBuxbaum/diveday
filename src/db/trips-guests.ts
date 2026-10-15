@@ -11,6 +11,7 @@ import {
 import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { listAgencyCheckableCards } from "./agency-check";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
@@ -19,6 +20,7 @@ import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
+import { getTripRosterWithPaymentMarks } from "./payment-marks";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
 import { listTripPrepDivers } from "./rental-fit";
 import { listCertificationSummaries } from "./self-declared-cards";
@@ -26,7 +28,7 @@ import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { listTripInvitations } from "./trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
 import { getTripWithBooked } from "./trips-record";
-import { getTripRoster, getTripWaitlist } from "./trips-roster";
+import { getTripWaitlist } from "./trips-roster";
 import type { TripSharedReads } from "./trips-shared-reads";
 
 /**
@@ -76,7 +78,7 @@ export async function getTripGuests(
   const [
     confirmMatches,
     diverCandidates,
-    roster,
+    { roster, paymentMarksByBooking },
     requirement,
     siteRequirement,
     readinessRows,
@@ -98,7 +100,10 @@ export async function getTripGuests(
     isFull(trip) || diverQuery === ""
       ? []
       : listBookableDivers(db, shop.id, tripId, { query: diverQuery }),
-    getTripRoster(db, shop.id, tripId),
+    // The roster with what each seat's Paid mark recorded and still owes
+    // (batch 6 item 1), so the amount field opens on the usual figure: one
+    // statement over the seats, not a second beside it.
+    getTripRosterWithPaymentMarks(db, shop.id, tripId),
     shared ? shared.requirement : getTripRequirements(db, shop.id, tripId),
     shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
     shared ? shared.readiness : listTripReadiness(db, shop.id, tripId),
@@ -136,6 +141,7 @@ export async function getTripGuests(
     packageDivesByPerson,
     certificationSummaries,
     courseMaterialsDone,
+    agencyCheckCardsByPerson,
   ] = await Promise.all([
     // What "Different person" on a held seat can offer to move along with it:
     // other held seats under the same name on the same matched diver, on other
@@ -187,6 +193,16 @@ export async function getTripGuests(
           around: trip.startsAt,
         })
       : new Map<string, CourseMaterialsDone>(),
+    // The cards the DiveDay browser extension could check from this tab
+    // (H-105), and the N of its "Check all N". Never a held seat's: until a
+    // staffer confirms who is standing there, the matched diver's name, birth
+    // date and card number are not this seat's to send to an agency.
+    listAgencyCheckableCards(db, {
+      shopId: shop.id,
+      personIds: roster
+        .filter(({ booking }) => !booking.identityUnconfirmedAt)
+        .map(({ person }) => person.id),
+    }),
   ]);
 
   const heldSeatLastDiveDay = new Map<string, Date | null>(
@@ -303,6 +319,8 @@ export async function getTripGuests(
      * departure; seats with none are absent (issue #1697).
      */
     packageDivesByBooking,
+    /** Per seat, the Paid mark's money and what the seat still owes (`getTripRosterWithPaymentMarks`). */
+    paymentMarksByBooking,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A
@@ -330,6 +348,11 @@ export async function getTripGuests(
      * page for, per seat, where it can (H-106): a PADI course with materials.
      */
     elearningQueryByBooking: elearningQueries(trip.course ?? null, roster),
+    /**
+     * Per diver, the cards the DiveDay browser extension could check with
+     * their agencies from this tab (H-105). Held seats are never in it.
+     */
+    agencyCheckCardsByPerson,
     /** Done, who and when, by person: the roster's capsule and done line read here. */
     courseMaterialsDoneByPerson: courseMaterialsDone,
     /**

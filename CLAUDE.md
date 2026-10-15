@@ -2,18 +2,13 @@
 
 ## Agent skills
 
-### Issue tracker
+Issue tracker (GitHub Issues, `AaronBuxbaum/diveday`), triage labels, domain docs, papercuts: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/domain.md`, `docs/agents/papercuts.md`.
 
-Issues live in GitHub Issues for `AaronBuxbaum/diveday`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+# Compact instructions
 
-### Triage labels
-
-Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: ADRs live at `docs/architecture/decisions/`; `CONTEXT.md` is created lazily by `/domain-modeling`. See `docs/agents/domain.md`.
-
-### Papercuts log
-
-Dev-friction log, one file per entry to avoid merge conflicts. See `docs/agents/papercuts.md`.
+Keep what the next turn cannot re-derive:
+- files changed; branch and stack position
+- the claimed issue
+- unpushed commits
+- the last failing test and its command
+- open review threads

@@ -1,0 +1,172 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  baseDecision,
+  baseRedArgs,
+  baseVerdict,
+  latestRuns,
+  readBaseVerdict,
+  repoSlug,
+} from "./base-ci.mjs";
+
+const run = (id, name, conclusion, status = "completed") => ({
+  id,
+  name,
+  status,
+  conclusion,
+  app: { slug: "github-actions" },
+});
+const fails = (path) => ({ path, annotation_level: "failure" });
+
+describe("the base's verdict", () => {
+  it("reads main at d5014c5f1: lint answered here, the unit shards by the files they name", () => {
+    const runs = [
+      run(1, "Lint", "failure"),
+      run(2, "Unit tests shard 2/4", "failure"),
+      run(3, "Unit tests shard 4/4", "failure"),
+      run(4, "Typecheck", "success"),
+    ];
+    const notes = {
+      2: [fails(".github"), fails("src/db/open-local-db.test.ts")],
+      3: [fails("src/db/open-local-db.test.ts"), fails("src/test/db.ts")],
+    };
+    expect(baseVerdict(runs, (r) => notes[r.id])).toEqual({
+      red: ["Lint", "Unit tests shard 2/4", "Unit tests shard 4/4"],
+      pending: [],
+      files: ["src/db/open-local-db.test.ts"],
+      specs: [],
+      unnamed: [],
+    });
+  });
+
+  it("names the spec a red Playwright shard annotates", () => {
+    const verdict = baseVerdict([run(5, "Playwright shard 5/6", "failure")], () => [
+      fails(".github"),
+      fails("e2e/booking.spec.ts"),
+    ]);
+    expect(verdict.specs).toEqual(["e2e/booking.spec.ts"]);
+    expect(verdict.unnamed).toEqual([]);
+  });
+
+  it("calls a red job that names no file unnamed, so the gate cannot pretend it re-ran it", () => {
+    const verdict = baseVerdict([run(6, "Build", "failure")], () => [fails(".github")]);
+    expect(verdict.unnamed).toEqual(["Build"]);
+  });
+
+  it("leaves out visual jobs, which a push approves, and counts what is still running", () => {
+    const verdict = baseVerdict(
+      [
+        run(7, "reg-suit visual regression", "failure"),
+        run(8, "Visual capture shard 2/8", "failure"),
+        run(9, "Playwright shard 1/6", null, "in_progress"),
+      ],
+      () => [],
+    );
+    expect(verdict.red).toEqual([]);
+    expect(verdict.pending).toEqual(["Playwright shard 1/6"]);
+  });
+
+  it("takes the newest attempt of a re-run job and ignores other apps' checks", () => {
+    const runs = [
+      run(10, "Unit tests shard 1/4", "failure"),
+      run(11, "Unit tests shard 1/4", "success"),
+      { ...run(12, "Claude Approvals", "failure"), app: { slug: "claude-approvals" } },
+    ];
+    expect(latestRuns(runs).map((r) => r.id)).toEqual([11]);
+    expect(baseVerdict(runs, () => []).red).toEqual([]);
+  });
+});
+
+describe("what the gate does about the base", () => {
+  const green = { red: [], pending: [], files: [], specs: [], unnamed: [] };
+
+  it("says nothing more than green for a green base", () => {
+    expect(baseDecision(green, { base: "origin/main" })).toEqual({
+      refuse: null,
+      files: [],
+      specs: [],
+      lines: ["base CI: origin/main is green."],
+    });
+  });
+
+  it("runs the base's red files here and stamps only if they pass", () => {
+    const decision = baseDecision(
+      { ...green, red: ["Unit tests shard 2/4"], files: ["src/db/a.test.ts"] },
+      { base: "origin/claude/below" },
+    );
+    expect(decision.refuse).toBeNull();
+    expect(decision.files).toEqual(["src/db/a.test.ts"]);
+    expect(decision.lines.join("\n")).toMatch(/red on Unit tests shard 2\/4/);
+  });
+
+  it("refuses a red job that names no file until the author names the files", () => {
+    const verdict = { ...green, red: ["Build"], unnamed: ["Build"] };
+    expect(baseDecision(verdict, { base: "origin/claude/below" }).refuse).toMatch(
+      /--base-red <file…>/,
+    );
+    const named = baseDecision(verdict, {
+      base: "origin/claude/below",
+      extra: ["src/lib/x.test.ts", "e2e/a.spec.ts"],
+    });
+    expect(named.refuse).toBeNull();
+    expect(named.files).toEqual(["src/lib/x.test.ts"]);
+    expect(named.specs).toEqual(["e2e/a.spec.ts"]);
+  });
+
+  it("fails open, saying so, when CI cannot be read", () => {
+    const decision = baseDecision({ unknown: "no gh" }, { base: "origin/main" });
+    expect(decision.refuse).toBeNull();
+    expect(decision.lines).toEqual(["base CI: unknown (no gh)."]);
+  });
+
+  it("warns, without refusing, while the base is still running", () => {
+    const decision = baseDecision({ ...green, pending: ["Build"] }, { base: "origin/main" });
+    expect(decision.refuse).toBeNull();
+    expect(decision.lines[0]).toMatch(/still running 1 job/);
+  });
+});
+
+describe("reading GitHub", () => {
+  it("asks for the base commit's check runs and each red one's annotations", () => {
+    const asked = [];
+    const gh = (args) => {
+      asked.push(args[0]);
+      return args[0].includes("/annotations")
+        ? [fails("src/db/a.test.ts")]
+        : { check_runs: [run(1, "Unit tests shard 1/4", "failure")] };
+    };
+    const verdict = readBaseVerdict("abc1234", { repo: "o/r", gh });
+    expect(verdict.files).toEqual(["src/db/a.test.ts"]);
+    expect(asked).toEqual([
+      "repos/o/r/commits/abc1234/check-runs?per_page=100",
+      "repos/o/r/check-runs/1/annotations",
+    ]);
+  });
+
+  it("is unknown, not green, when gh fails or GitHub has no run yet", () => {
+    const broken = () => {
+      throw new Error("gh: not found");
+    };
+    expect(readBaseVerdict("abc1234", { repo: "o/r", gh: broken }).unknown).toMatch(
+      /gh: not found/,
+    );
+    expect(
+      readBaseVerdict("abc1234", { repo: "o/r", gh: () => ({ check_runs: [] }) }).unknown,
+    ).toMatch(/no CI run/);
+    expect(readBaseVerdict(null, { repo: "o/r" }).unknown).toBeTruthy();
+  });
+
+  it("finds the repository in the remote URL", () => {
+    expect(repoSlug("https://github.com/AaronBuxbaum/diveday")).toBe("AaronBuxbaum/diveday");
+    expect(repoSlug("git@github.com:AaronBuxbaum/diveday.git")).toBe("AaronBuxbaum/diveday");
+    expect(repoSlug("http://127.0.0.1:1234/git/x")).toBeNull();
+  });
+
+  it("reads --base-red's files up to the next flag", () => {
+    expect(baseRedArgs(["--base-red", "a.test.ts", "e2e/b.spec.ts", "--plan"])).toEqual([
+      "a.test.ts",
+      "e2e/b.spec.ts",
+    ]);
+    expect(baseRedArgs(["--plan"])).toEqual([]);
+  });
+});

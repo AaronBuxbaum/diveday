@@ -1,4 +1,6 @@
 import { Copyable } from "@/components/Copyable";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { diverTranslator } from "@/i18n/messages";
@@ -13,6 +15,16 @@ export type PartyClaimSeat = {
   waiverSigned: boolean;
   /** A shareable claim URL for a still-unclaimed seat; null once claimed (or unmintable). */
   claimUrl: string | null;
+  /**
+   * The organizer may sign this seat's release as its parent (H-124): an
+   * unclaimed "Under 18" seat still owing one. Absent reads as no.
+   */
+  signForMinor?: boolean;
+  /**
+   * What a minor seat with no "Sign" button says instead: send the seat its
+   * link, or a physician's sign-off is needed. Absent says nothing.
+   */
+  minorNote?: "send_link" | "physician" | null;
 };
 
 /**
@@ -29,10 +41,16 @@ export type PartyClaimSeat = {
 export function PartyClaimPanel({
   locale,
   seats,
+  signWaiverAction,
 }: {
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
   seats: PartyClaimSeat[];
+  /**
+   * Opens a minor seat's release for the organizer to sign as its parent
+   * (H-124), bound to the organizer's own link. Without it no seat offers to.
+   */
+  signWaiverAction?: (formData: FormData) => Promise<void>;
 }) {
   if (seats.length === 0) return null;
   const t = diverTranslator(locale);
@@ -98,6 +116,32 @@ export function PartyClaimPanel({
                   </p>
                 </details>
               </div>
+            ) : null}
+            {/* **A parent signs a child's release** (H-124): "Sign Mia's
+                waiver" opens her release on this device, with the guardian's
+                card. Only the seat's id is posted; the server re-checks it. */}
+            {seat.signForMinor && signWaiverAction ? (
+              <form action={signWaiverAction} className="mt-3 flex flex-col items-start gap-2">
+                <p className="text-sm text-muted">
+                  {t("seatClaim.minorSignBody", { name: seat.seatName })}
+                </p>
+                <input type="hidden" name="bookingId" value={seat.bookingId} />
+                <SubmitButton
+                  pendingLabel={t("seatClaim.minorSignPending")}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("seatClaim.minorSign", { name: seat.seatName })}
+                </SubmitButton>
+              </form>
+            ) : null}
+            {seat.minorNote === "send_link" ? (
+              <p className="mt-2 text-sm text-muted">
+                {t("seatClaim.minorSendLink", { name: seat.seatName })}
+              </p>
+            ) : seat.minorNote === "physician" ? (
+              <p className="mt-2 text-sm text-muted">
+                {t("seatClaim.minorPhysician", { name: seat.seatName })}
+              </p>
             ) : null}
             {seat.claimed && !seat.waiverSigned ? (
               <p className="mt-2 text-sm text-muted">{t("seatClaim.claimedNeedsWaiver")}</p>

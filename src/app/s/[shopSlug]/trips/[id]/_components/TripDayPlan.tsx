@@ -2,8 +2,8 @@ import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { LogEntryPreview } from "@/components/LogEntryPreview";
 import { StoredPhoto } from "@/components/StoredPhoto";
+import { GroupLabel } from "@/components/ui/group-label";
 import {
-  GroupLabel,
   LedgerRow,
   ledgerKindColumnClass,
   ledgerRowBoxClass,

@@ -442,7 +442,10 @@ const CHROME_CEILING = 20;
 // (`readBoatWork`), its sizes, nitrox and contact questions one statement over
 // the seats, where Today used to send four. It also counts each boat's open
 // orders, a statement Today did not send before.
-const TODAY_CEILING = 65;
+// 65 → 66: a "certification pending" row offers the agency check (H-105), so
+// Today reads which of the blocked divers' cards the extension could look up
+// (`listAgencyCheckableCards`), one statement beside the wave, not after it.
+const TODAY_CEILING = 66;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
@@ -451,7 +454,9 @@ const TODAY_CEILING = 65;
 // reader Today reads (`readBoatWork`), so it now also names nitrox with no card
 // and missing emergency contacts. One statement over the seats replaces the
 // shared prep list's fit check, and the open-orders count is the one it sent.
-const TRIP_CEILING = 51;
+// 51 → 52: the roster's agency check (H-105) reads the seated divers' checkable
+// cards (`listAgencyCheckableCards`), one statement in `getTripGuests`' fan-out.
+const TRIP_CEILING = 52;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never

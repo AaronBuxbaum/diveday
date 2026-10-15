@@ -387,5 +387,10 @@ script again.
 | 20261012-visual-baseline-layer-below | Compare a stacked layer against… |
 | 20261013-mac-ci-runner | CI's non-browser jobs run on… |
 | 20261013-staff-move-a-seat | Move a booked seat by… |
+| 20261014-account-audit-trail | One CloudTrail trail records the… |
+| 20261014-checkouts-reach-integrations | Online checkouts, tips and their… |
+| 20261014-incident-kind-severity | An incident report files with… |
+| 20261014-parent-signs-minor-release | A parent signs a child's… |
+| 20261014-starting-content-is-measured-and-vetted | Starting content is measured by… |
 
 <!-- adr-index:end -->

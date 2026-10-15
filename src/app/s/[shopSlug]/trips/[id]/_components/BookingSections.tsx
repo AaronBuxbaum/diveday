@@ -538,13 +538,15 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         .filter(([index]) => activeGearIndexes.has(index))
         .reduce((sum, [, cents]) => sum + cents, 0)
     : 0;
+  // Sized by the party, not the boat's free seats: one diver booking reads
+  // "Book this seat", never "these spots" (fourth UX review item 7, H-122).
   const bookLabel = payAtBooking
     ? remaining === 1
-      ? t("bookAndPayLastSpot")
+      ? t("bookAndPayLastSeat")
       : t("bookAndPay")
     : remaining === 1
-      ? t("bookLastSpot")
-      : t("bookSpots");
+      ? t("bookLastSeat")
+      : t("bookSeats", { count: partySize });
   const capacityLabelValue = capacityLabel(trip);
   const capacityText =
     capacityLabelValue.kind === "full"

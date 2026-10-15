@@ -148,6 +148,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "address_postal_code",
       "address_country",
       "dock_call_minutes",
+      // Whether the shop runs hotel pickups: a restore must not start asking
+      // divers about a pickup the shop does not offer (fourth UX review, item 8).
+      "offers_hotel_pickup",
       // The rest of the shop's dock-day rhythm (ADR
       // 20260812-configurable-dock-day-rhythm). Six numbers that describe
       // how this shop runs a day — as much the shop's own record as its
@@ -238,6 +241,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.addressPostalCode,
         shop.addressCountry,
         shop.dockCallMinutes,
+        shop.offersHotelPickup,
         shop.gearSetupMinutes,
         shop.briefingMinutes,
         shop.boatRideMinutes,
@@ -1563,6 +1567,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "dive_site_id",
       "location_text",
       "what_happened",
+      "kind",
+      "severity",
       "first_aid_given",
       "oxygen_given",
       "oxygen_minutes",
@@ -1590,6 +1596,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.diveSiteId,
         row.locationText,
         row.whatHappened,
+        row.kind,
+        row.severity,
         row.firstAidGiven,
         row.oxygenGiven,
         row.oxygenMinutes,

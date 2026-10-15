@@ -8,7 +8,8 @@
   "channel": {
     "email": "Correo",
     "whatsapp": "WhatsApp",
-    "sms": "SMS"
+    "sms": "SMS",
+    "page": "Página de reserva"
   },
   "unknownSender": "Remitente desconocido",
   "keyword": {
@@ -46,6 +47,7 @@
     "heading": "Conversación",
     "summary": "{count, plural, one {# mensaje} other {# mensajes}}",
     "received": "{name} · {date}",
+    "askedToMove": "{name} pidió cambiar esta plaza desde su página de reserva · {date}",
     "sent": "{name} respondió · {date}",
     "sentAutomatically": "Enviado automáticamente · {date}",
     "sendFailed": "Este no les llegó.",

@@ -2,26 +2,26 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import {
+  AgencyListedOffer,
+  agencyListedForm,
+} from "@/app/shop/[shopSlug]/_components/agency-check/AgencyListedOffer";
+import type { AgencyCheckCopy } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
+import {
+  type AgencyCheckFailure,
+  agencyCheckEvidence,
+  agencyCheckFailure,
+  agencyCheckForm,
+  agencyCheckMatchedText,
+  agencyCheckOutcomeText,
+} from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-outcome";
 import { UndoToast } from "@/components/UndoToast";
 import { FormStatus } from "@/components/ui/form";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
-import type { AgencyCheckResult } from "../card-actions";
+import type { AgencyCheckResult, AgencyListedAddResult } from "../card-actions";
 
-/** Every word this control renders, translated on the server with the agency's name in it. */
-export type AgencyCheckCopy = {
-  /** The link's own words, which the button keeps: "Check with SSI". */
-  check: string;
-  checking: string;
-  matched: string;
-  levelUnconfirmed: string;
-  noRecord: string;
-  unreadable: string;
-  invalid: string;
-  undo: string;
-  undoPending: string;
-  undoFailed: string;
-};
+export type { AgencyCheckCopy };
 
 const LINK_CLASS =
   "mt-1 block w-fit text-sm font-semibold text-primary hover:underline print:hidden";
@@ -48,6 +48,7 @@ export function AgencyCheck({
   certificationId,
   awaiting,
   action,
+  addListed,
   copy,
 }: {
   href: string;
@@ -58,52 +59,56 @@ export function AgencyCheck({
   awaiting: boolean;
   /** `agencyCheckAction` bound to this shop and diver, on the server. */
   action: (previous: AgencyCheckResult, formData: FormData) => Promise<AgencyCheckResult>;
+  /** `addAgencyListedCardsAction` bound to this shop and diver: the page's other cards (layer 3). */
+  addListed?: (
+    previous: AgencyListedAddResult,
+    formData: FormData,
+  ) => Promise<AgencyListedAddResult>;
   copy: AgencyCheckCopy;
 }) {
   const hasExtension = useCertCheckExtension();
   const [result, formAction, judging] = useActionState(action, null);
   const [asking, setAsking] = useState(false);
-  const [extensionFailed, setExtensionFailed] = useState(false);
+  const [failure, setFailure] = useState<AgencyCheckFailure>(null);
+  // The page the server judged, kept so a ticked offer posts the same text
+  // and the server can judge it again.
+  const [pageText, setPageText] = useState("");
+  // Once the offer's cards are filed the page's text is dropped (S5); the
+  // offer stays, saying so.
+  const [listedAdded, setListedAdded] = useState(false);
   const [, startTransition] = useTransition();
   const busy = asking || judging;
 
   async function check() {
     if (!query) return;
     setAsking(true);
-    setExtensionFailed(false);
+    setFailure(null);
     const reply = await requestAgencyPage(query);
     setAsking(false);
     if (!reply.ok) {
-      setExtensionFailed(true);
+      setFailure(agencyCheckFailure(reply.reason));
       return;
     }
-    const formData = new FormData();
-    formData.set("certificationId", certificationId);
-    formData.set("pageText", reply.pageText);
+    setPageText(reply.pageText);
+    setListedAdded(false);
+    const formData = agencyCheckForm(certificationId, reply.pageText);
     startTransition(() => formAction(formData));
   }
 
   const link = (
     <a href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
-      {copy.check}
+      {copy.link}
     </a>
   );
-  const undo = result?.ok && result.verdict === "match" ? result.undo : undefined;
-  const outcome = extensionFailed
-    ? copy.unreadable
-    : !result
-      ? null
-      : !result.ok
-        ? result.reason === "not-undoable"
-          ? copy.undoFailed
-          : copy.invalid
-        : result.verdict === "level_unconfirmed"
-          ? copy.levelUnconfirmed
-          : result.verdict === "no_record"
-            ? copy.noRecord
-            : result.verdict === "unreadable"
-              ? copy.unreadable
-              : null;
+  const match = result?.ok && result.verdict === "match" ? result : null;
+  const undo = match?.undo;
+  const evidence = agencyCheckEvidence(result);
+  const outcome = agencyCheckOutcomeText(
+    result,
+    failure,
+    copy,
+    query ? `${query.firstName} ${query.lastName}` : "",
+  );
 
   return (
     <>
@@ -123,15 +128,28 @@ export function AgencyCheck({
       {awaiting && outcome ? (
         <span className="mt-1 block">
           <FormStatus tone={result && !result.ok ? "danger" : "warning"}>{outcome}</FormStatus>
-          {result?.ok && result.verdict === "level_unconfirmed" ? (
-            <span className="mt-1 block italic">{result.evidence}</span>
-          ) : null}
+          {evidence ? <span className="mt-1 block italic">{evidence}</span> : null}
           {hasExtension && query ? link : null}
         </span>
       ) : null}
+      {match?.offers && addListed && (pageText || listedAdded) ? (
+        <AgencyListedOffer
+          lead={copy.listedLead}
+          offers={match.offers}
+          copy={copy}
+          add={async (kinds) => {
+            const added = await addListed(null, agencyListedForm(certificationId, pageText, kinds));
+            if (added?.ok) {
+              setListedAdded(true);
+              setPageText("");
+            }
+            return added;
+          }}
+        />
+      ) : null}
       {undo ? (
         <UndoToast
-          message={copy.matched}
+          message={match ? agencyCheckMatchedText(match, copy) : copy.matched}
           action={formAction}
           fields={{ certificationId: undo.certificationId, intent: "undo" }}
           pendingLabel={copy.undoPending}

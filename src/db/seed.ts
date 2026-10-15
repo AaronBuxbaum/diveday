@@ -360,10 +360,10 @@ const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
   // The photo strip under the cover: four of the bundled reef frames, so the
   // storefront captures draw the strip at the width a real shop's would.
   shopfrontPhotoUrls: [
-    "Blue Tangs Molasses Reef 1999.jpg",
+    "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
     "French Angelfish Pickles Reef 20230713.jpg",
     "FGBNMS - nurse shark (27551309652).jpg",
-    "Yellowtail Snappers Molasses Reef 1999.jpg",
+    "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
   ].map((file) => `/dive-sites/${encodeURIComponent(file)}`),
 };
 
@@ -434,6 +434,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // new shop (`shops.crew_schedule_enabled`), and the demo is where every
       // crew surface is photographed and exercised.
       crewScheduleEnabled: true,
+      // A Key Largo shop picks divers up from the resorts, so `/ready` asks
+      // "Want a pickup?" here; a new shop runs none until it says so (fourth
+      // UX review, item 8).
+      offersHotelPickup: true,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: demoEmail("front.desk"),
@@ -1522,9 +1526,9 @@ export async function resetDemoSchedule(
   // reset mid-run — the same class of bug the comment above already walks.
   await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
-  await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
+  await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
 
   // Everyone except the staff seeded once at shop creation (`staffDefs`, by

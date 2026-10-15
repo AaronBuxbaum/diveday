@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gt, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -144,19 +144,22 @@ export async function getBoatForHistory(
  * does, a refusal would leave the fleet list permanently cluttered, and with a
  * soft delete nothing is lost either way. A hull that never sailed goes quietly.
  */
-export async function countBoatDepartures(
+export async function countDeparturesByBoat(
   db: AppDb,
   shopId: string,
-  boatId: string,
-): Promise<number> {
-  const [row] = await db
-    .select({ departures: count(trips.id) })
+): Promise<Map<string, number>> {
+  // One read for the fleet, grouped by hull (code review 2026-10-13b, item
+  // 36): the settings page asked one hull at a time. A hull with no departure
+  // is absent, and reads as 0.
+  const rows = await db
+    .select({ boatId: trips.boatId, departures: count(trips.id) })
     .from(trips)
     // diveday:allow-deleted-trips: a hull's history is the point — a departure
     // the shop took off the board still sailed on this boat, and the confirm is
     // telling the shop how much history the delete touches.
-    .where(and(eq(trips.shopId, shopId), eq(trips.boatId, boatId), ne(trips.status, "cancelled")));
-  return row?.departures ?? 0;
+    .where(and(eq(trips.shopId, shopId), isNotNull(trips.boatId), ne(trips.status, "cancelled")))
+    .groupBy(trips.boatId);
+  return new Map(rows.flatMap((row) => (row.boatId ? [[row.boatId, row.departures]] : [])));
 }
 
 /**
