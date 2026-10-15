@@ -218,3 +218,16 @@ describe("repoSlug", () => {
     expect(repoSlug({ GITHUB_REPOSITORY: "not a slug" })).toBe(REPO);
   });
 });
+
+describe("the gh runner", () => {
+  it("holds a full page of closed pull requests, which overflowed spawnSync's 1 MB (2026-10-15)", () => {
+    // One page of 100 closed PRs was 2.3 MB; the default buffer cut gh off with an empty stderr
+    // and the nightly expire-claims run failed with "…failed: " and nothing after it.
+    let options;
+    ghApi(["repos/o/r/pulls?state=closed&per_page=100"], undefined, (_cmd, _args, opts) => {
+      options = opts;
+      return { status: 0, stdout: "[]" };
+    });
+    expect(options.maxBuffer).toBeGreaterThanOrEqual(32 * 1024 * 1024);
+  });
+});

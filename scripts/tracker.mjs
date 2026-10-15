@@ -40,13 +40,17 @@ export function repoSlug(env = process.env) {
 /**
  * How much a `gh api` call may print. spawnSync's default is 1 MiB, and one page of 100 closed
  * pull requests was 2,279,829 bytes on 2026-10-13 (their bodies are long): the read died with
- * ENOBUFS and `expire-claims` exited 2 on an empty "failed:". Open-issue pages were 706 KB.
+ * ENOBUFS and `expire-claims` exited 2 on an empty "failed:" (seen again on the nightly run of
+ * 2026-10-15, cut off with an empty stderr). Open-issue pages were 706 KB.
  */
 export const GH_MAX_BUFFER = 64 * 1024 * 1024;
 
-/** The real runner: `gh api <args>`, bounded, with an optional JSON document on stdin. */
-export function ghApi(args, input) {
-  return runBounded("gh", ["api", ...args], {
+/**
+ * The real runner: `gh api <args>`, bounded, with an optional JSON document on stdin. `run` is
+ * injectable so a test can read the options without spawning gh.
+ */
+export function ghApi(args, input, run = runBounded) {
+  return run("gh", ["api", ...args], {
     encoding: "utf8",
     input,
     maxBuffer: GH_MAX_BUFFER,
