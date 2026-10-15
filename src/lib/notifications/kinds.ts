@@ -1475,6 +1475,30 @@ const rollCallStaleSchema = z.object({
   alertedAt: z.date(),
 });
 
+/**
+ * **The same alert, to the shop's shore contact** (H-118, decided 2026-10-15).
+ * Addressed to somebody outside the shop's accounts, so it carries less than
+ * the owners' copy: no person, no link behind a staff sign-in, and no name of
+ * anybody aboard. The shop, the departure, the dive, the count and when the
+ * boat was due back. Sent only to an address with a recorded consent
+ * (`shoreAlertRecipient`, `src/lib/shore-alert-contact.ts`).
+ */
+const rollCallStaleShoreSchema = z.object({
+  kind: z.literal("roll_call_stale_shore"),
+  shopId: z.uuid(),
+  tripId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(NOTIFICATION_TRIP_TITLE_MAX),
+  diveNumber: z.number().int().min(1).max(4),
+  unaccounted: z.number().int().min(1).max(10_000),
+  missing: z.boolean(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  alertedAt: z.date(),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -1547,6 +1571,7 @@ export const notificationSchema = z
     deskAfterHoursSchema,
     stripePaymentsRestrictedSchema,
     rollCallStaleSchema,
+    rollCallStaleShoreSchema,
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
@@ -1662,6 +1687,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "crew_schedule_change":
     case "desk_after_hours":
     case "roll_call_stale":
+    case "roll_call_stale_shore":
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
@@ -1837,5 +1863,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One alert per departure per owner; the departure's claim comes first.
     case "roll_call_stale":
       return `roll-call-stale/${notification.tripId}/${notification.personId}`;
+    // One alert per departure to the shore contact, under the same claim.
+    case "roll_call_stale_shore":
+      return `roll-call-stale-shore/${notification.tripId}`;
   }
 }

@@ -7,7 +7,7 @@ import {
   notificationTripTitle,
 } from "./kinds";
 import { messageFor } from "./render";
-import { rollCallStaleEmail } from "./roll-call-emails";
+import { rollCallStaleEmail, rollCallStaleShoreEmail } from "./roll-call-emails";
 
 const base = {
   locale: "en-US" as const,
@@ -138,5 +138,67 @@ describe("the roll_call_stale kind", () => {
     expect(messageFor(notification).subject).toBe(
       "Blue <Mantis>: roll call still open on Two-Tank Reef",
     );
+  });
+});
+
+/** H-118: the shore contact's copy, to somebody outside the shop's accounts. */
+describe("the roll_call_stale_shore kind", () => {
+  const { recipientName: _name, rollCallUrl: _url, ...shore } = base;
+  const notification = notificationSchema.parse({
+    kind: "roll_call_stale_shore",
+    shopId: "11111111-1111-4111-8111-111111111111",
+    tripId: "33333333-3333-4333-8333-333333333333",
+    to: "shore@example.com",
+    ...shore,
+    alertedAt: new Date("2026-10-14T17:00:00Z"),
+  });
+
+  it("names the shop, the departure, the dive, the count and the time", () => {
+    const email = rollCallStaleShoreEmail(shore);
+    expect(email.subject).toBe("Blue <Mantis>: roll call still open on Two-Tank Reef");
+    expect(email.text.replaceAll("\u00a0", " ")).toContain(
+      "The roll call after dive 2 on Two-Tank Reef is still open after the boat was due back at 4:00 PM EDT. 2 people are not marked aboard.",
+    );
+    expect(email.text).toContain("Blue <Mantis> lists you as its shore contact");
+    expect(email.html).toContain("Blue &lt;Mantis&gt; lists you");
+  });
+
+  it("carries no link, no greeting by name and no person", () => {
+    const email = rollCallStaleShoreEmail(shore);
+    expect(email.html).not.toContain("href");
+    expect(email.text).not.toMatch(/https?:/);
+    expect(email.text).not.toContain("Ana");
+    expect(Object.keys(notification).sort()).toEqual(
+      [
+        "alertedAt",
+        "endsAt",
+        "diveNumber",
+        "kind",
+        "locale",
+        "missing",
+        "shopId",
+        "shopName",
+        "to",
+        "tripId",
+        "timezone",
+        "tripTitle",
+        "unaccounted",
+      ].sort(),
+    );
+    expect(messageFor(notification).text).not.toContain("Ana");
+  });
+
+  it("says a stated missing person, in the shop's language", () => {
+    const email = rollCallStaleShoreEmail({ ...shore, locale: "es-ES", missing: true });
+    expect(email.subject).toBe("Blue <Mantis>: pase de lista aún abierto en Two-Tank Reef");
+    expect(email.text).toContain("constan como no de vuelta a bordo");
+    expect(email.text).toContain("contacto en tierra");
+  });
+
+  it("goes once per departure, and is never queued to arrive late", () => {
+    expect(notificationIdempotencyKey(notification)).toBe(
+      "roll-call-stale-shore/33333333-3333-4333-8333-333333333333",
+    );
+    expect(notificationIsQueueable(notification)).toBe(false);
   });
 });

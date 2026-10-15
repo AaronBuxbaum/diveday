@@ -10,6 +10,7 @@ import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
 import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
+import type { ShoreAlertContact } from "@/lib/shore-alert-contact";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { CustomerRegulatorServiceMonths } from "@/lib/work-orders";
 import type { AppDb } from "./client";
@@ -207,6 +208,28 @@ export async function setShopEmergencyReference(
   const [shop] = await db
     .update(shops)
     .set({ emergencyReference })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * The shore contact's address and the consent recorded for it (H-118), as
+ * `nextShoreAlertContact` decided them. The three columns move together; the
+ * table's `shops_shore_alert_consent` check refuses any other shape.
+ */
+export async function setShopShoreAlertContact(
+  db: AppDb,
+  shopId: string,
+  contact: ShoreAlertContact,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({
+      shoreAlertEmail: contact.email,
+      shoreAlertConsentAt: contact.consentAt,
+      shoreAlertConsentByPersonId: contact.consentByPersonId,
+    })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

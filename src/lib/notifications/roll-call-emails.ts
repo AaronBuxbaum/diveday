@@ -54,3 +54,42 @@ export function rollCallStaleEmail(input: RollCallStaleEmailInput): Notification
     html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.rollCallUrl, open)}`,
   };
 }
+
+export type RollCallStaleShoreEmailInput = {
+  locale: DiverLocale;
+  shopName: string;
+  tripTitle: string;
+  diveNumber: number;
+  unaccounted: number;
+  missing: boolean;
+  endsAt: Date;
+  timezone: string;
+};
+
+/**
+ * The shore contact's copy (H-118): the same facts as the owners', in the
+ * shop's language, with no greeting by name, no link and nobody aboard named.
+ * It says why it came, so a reader who forgot agreeing knows whom to ask.
+ */
+export function rollCallStaleShoreEmail(input: RollCallStaleShoreEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const values = {
+    count: input.unaccounted,
+    dive: input.diveNumber,
+    tripTitle: input.tripTitle,
+    time: formatTimeTz(input.endsAt, input.locale, input.timezone),
+  };
+  const body = t(
+    input.missing ? "notifications.rollCallStale.bodyMissing" : "notifications.rollCallStale.body",
+    values,
+  );
+  const why = t("notifications.rollCallStale.shoreWhy", { shopName: input.shopName });
+  return {
+    subject: t("notifications.rollCallStale.subject", {
+      shopName: input.shopName,
+      tripTitle: input.tripTitle,
+    }),
+    text: `${body}\n\n${why}\n`,
+    html: `<p>${escapeHtml(body)}</p><p>${escapeHtml(why)}</p>`,
+  };
+}

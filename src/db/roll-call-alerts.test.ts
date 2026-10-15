@@ -22,6 +22,7 @@ afterEach(() => {
 });
 
 import { bookings, people, personRoles, rollCallEvents, shops, trips } from "./schema";
+import { setShopShoreAlertContact } from "./shops";
 import { createTrip, listStaff } from "./trips";
 
 /**
@@ -36,12 +37,13 @@ const ORIGIN = "https://diveday.example";
 const NOW = new Date("2031-03-12T20:00:00Z");
 const HOUR = 60 * 60 * 1000;
 
-function recorder(status: "sent" | "failed" = "sent") {
+function recorder(status: "sent" | "failed" = "sent", onlyTo?: string) {
   const sent: Notification[] = [];
   const provider: NotificationProvider = {
     async send(notification) {
       sent.push(notification);
-      return status === "sent"
+      const delivers = onlyTo === undefined ? status === "sent" : notification.to === onlyTo;
+      return delivers
         ? { status: "sent", providerMessageId: `msg-${sent.length}` }
         : { status: "failed", retryable: false, errorCode: "test" };
     },
@@ -242,5 +244,147 @@ describe("sendStaleRollCallAlerts", () => {
       .from(trips)
       .where(eq(trips.id, trip.id));
     expect(row?.alertedAt).toBeNull();
+  });
+
+  describe("the shore contact (H-118)", () => {
+    const SHORE = "shore@example.com";
+    async function consentedShore() {
+      const [staff] = await listStaff(ctx.db, ctx.shop.id);
+      if (!staff) throw new Error("fixture staff missing");
+      await setShopShoreAlertContact(ctx.db, ctx.shop.id, {
+        email: SHORE,
+        consentAt: new Date(NOW.getTime() - 48 * HOUR),
+        consentByPersonId: staff.person.id,
+      });
+    }
+    const toShore = (sent: Notification[]) =>
+      sent.filter((notification) => notification.kind === "roll_call_stale_shore");
+
+    it("emails a consented shore contact once, with no link and nobody named", async () => {
+      await consentedShore();
+      const { db, trip } = await departure(2 * HOUR);
+      const { sent, provider } = recorder();
+      const summary = await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider });
+      expect(summary).toMatchObject({ alerted: 1, shoreEmails: 1 });
+      const shore = toShore(sent);
+      expect(shore).toHaveLength(1);
+      expect(shore[0]).toMatchObject({
+        to: SHORE,
+        tripId: trip.id,
+        diveNumber: 1,
+        unaccounted: 1,
+        missing: false,
+        shopName: ctx.shop.name,
+        locale: ctx.shop.defaultLocale,
+      });
+      const payload = JSON.stringify(shore[0]);
+      expect(payload).not.toContain("Ana Ruiz");
+      expect(payload).not.toContain(ORIGIN);
+      expect(payload).not.toContain("personId");
+      // The owners still hear, as before.
+      expect(sent.some((notification) => notification.kind === "roll_call_stale")).toBe(true);
+
+      const again = recorder();
+      await sendStaleRollCallAlerts(db, {
+        now: new Date(NOW.getTime() + HOUR),
+        origin: ORIGIN,
+        provider: again.provider,
+      });
+      expect(again.sent).toEqual([]);
+    });
+
+    it("sends nothing ashore when the shop has no shore contact", async () => {
+      const { db } = await departure(2 * HOUR);
+      const { sent, provider } = recorder();
+      expect(
+        await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider }),
+      ).toMatchObject({ alerted: 1, shoreEmails: 0 });
+      expect(toShore(sent)).toEqual([]);
+    });
+
+    it("cannot hold an address without its consent", async () => {
+      const [staff] = await listStaff(ctx.db, ctx.shop.id);
+      if (!staff) throw new Error("fixture staff missing");
+      // Each refusal in a savepoint of its own, so the next one is asked.
+      const refused = (set: Partial<typeof shops.$inferInsert>) =>
+        ctx.db.transaction((tx) => tx.update(shops).set(set).where(eq(shops.id, ctx.shop.id)));
+      await expect(refused({ shoreAlertEmail: SHORE })).rejects.toThrow();
+      await expect(
+        refused({ shoreAlertEmail: SHORE, shoreAlertConsentByPersonId: staff.person.id }),
+      ).rejects.toThrow();
+      await expect(
+        refused({ shoreAlertConsentAt: NOW, shoreAlertConsentByPersonId: staff.person.id }),
+      ).rejects.toThrow();
+    });
+
+    it("keeps the claim when only the shore contact was reached", async () => {
+      await consentedShore();
+      const { db, trip } = await departure(2 * HOUR);
+      const { sent, provider } = recorder("failed", SHORE);
+      expect(
+        await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider }),
+      ).toMatchObject({ alerted: 1, released: 0, shoreEmails: 1 });
+      expect(toShore(sent)).toHaveLength(1);
+      const [row] = await db
+        .select({ alertedAt: trips.rollCallAlertedAt })
+        .from(trips)
+        .where(eq(trips.id, trip.id));
+      expect(row?.alertedAt).toEqual(NOW);
+    });
+
+    it("gives the claim back when the shore contact was not reached either", async () => {
+      await consentedShore();
+      const { db, trip } = await departure(2 * HOUR);
+      const { sent, provider } = recorder("failed");
+      expect(
+        await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider }),
+      ).toMatchObject({ alerted: 0, released: 1 });
+      expect(toShore(sent)).toHaveLength(1);
+      const [row] = await db
+        .select({ alertedAt: trips.rollCallAlertedAt })
+        .from(trips)
+        .where(eq(trips.id, trip.id));
+      expect(row?.alertedAt).toBeNull();
+    });
+
+    it("never tells the shore contact about a rehearsal, a canceled departure or a demo", async () => {
+      await consentedShore();
+      await departure(2 * HOUR, { rehearsal: true, title: "Practice" });
+      const canceled = await departure(2 * HOUR, { title: "Blown out" });
+      await ctx.db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, canceled.trip.id));
+      const first = recorder();
+      await sendStaleRollCallAlerts(ctx.db, { now: NOW, origin: ORIGIN, provider: first.provider });
+      expect(toShore(first.sent)).toEqual([]);
+
+      await departure(2 * HOUR, { title: "Demo boat" });
+      await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
+      const second = recorder();
+      await sendStaleRollCallAlerts(ctx.db, {
+        now: NOW,
+        origin: ORIGIN,
+        provider: second.provider,
+      });
+      expect(second.sent).toEqual([]);
+    });
+
+    it("does not send a second copy to an owner who is also the shore contact", async () => {
+      const { db } = await departure(2 * HOUR);
+      const owners = await ownerEmails();
+      const [ownerId] = [...owners];
+      const probe = recorder();
+      await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider: probe.provider });
+      const ownerAddress = probe.sent.find((n) => n.kind === "roll_call_stale")?.to;
+      if (!ownerAddress || !ownerId) throw new Error("expected an owner's alert");
+      await setShopShoreAlertContact(ctx.db, ctx.shop.id, {
+        email: ownerAddress.toUpperCase(),
+        consentAt: NOW,
+        consentByPersonId: ownerId,
+      });
+      const next = await departure(2 * HOUR, { title: "Second boat" });
+      const { sent, provider } = recorder();
+      await sendStaleRollCallAlerts(next.db, { now: NOW, origin: ORIGIN, provider });
+      expect(toShore(sent)).toEqual([]);
+      expect(sent.filter((n) => n.to.toLowerCase() === ownerAddress.toLowerCase())).toHaveLength(1);
+    });
   });
 });

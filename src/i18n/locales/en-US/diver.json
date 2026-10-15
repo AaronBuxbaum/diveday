@@ -5385,7 +5385,8 @@
       "subject": "{shopName}: roll call still open on {tripTitle}",
       "body": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back at {time}. {count, plural, one {# person is} other {# people are}} not marked aboard.",
       "bodyMissing": "On {tripTitle}, {count, plural, one {# person is} other {# people are}} recorded not back aboard after dive {dive}, after the boat was due back at {time}.",
-      "open": "Open the roll call"
+      "open": "Open the roll call",
+      "shoreWhy": "You’re getting this because {shopName} lists you as its shore contact for roll-call alerts. To stop them, ask {shopName}."
     },
     "smsWorkOrder": {
       "ready": "{shopName}: your gear on ticket #{number} is ready to collect ({pieces}).",

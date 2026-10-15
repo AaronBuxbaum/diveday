@@ -9,6 +9,7 @@ import {
   STALE_ROLL_CALL_AFTER_MS,
   STALE_ROLL_CALL_LOOKBACK_MS,
 } from "@/lib/roll-call-alerts";
+import { shoreAlertRecipient } from "@/lib/shore-alert-contact";
 import { shopPath } from "@/lib/staff-notices";
 import type { AppDb, DbExecutor } from "./client";
 import { sendNotification } from "./notifications";
@@ -41,12 +42,22 @@ import { liveTrip, notRehearsal } from "./trips-live";
  *
  * Who is unaccounted for is never in the message: a count and a link to the
  * manifest, behind its sign-in. A demo shop and a rehearsal never alert.
+ *
+ * **The shore contact hears too, when the shop recorded their consent**
+ * (H-118, decided 2026-10-15): one email per departure to the address on
+ * `shops.shore_alert_email`, under the same claim, in the shop's default
+ * language. It names the shop, the departure, the dive and the count, and
+ * carries no link and no person (`roll_call_stale_shore`). An address with no
+ * consent is never sent to (`shoreAlertRecipient`). A delivery to the shore
+ * contact alone counts as reaching somebody, so it keeps the claim.
  */
 
 export type StaleRollCallSummary = {
   checked: number;
   alerted: number;
   emails: number;
+  /** Of `emails`, the ones to a shop's shore contact (H-118). */
+  shoreEmails: number;
   pushes: number;
   released: number;
 };
@@ -112,6 +123,7 @@ export async function sendStaleRollCallAlerts(
     checked: 0,
     alerted: 0,
     emails: 0,
+    shoreEmails: 0,
     pushes: 0,
     released: 0,
   };
@@ -153,12 +165,24 @@ export async function sendStaleRollCallAlerts(
         name: shops.name,
         defaultLocale: shops.defaultLocale,
         timezone: shops.timezone,
+        shoreAlertEmail: shops.shoreAlertEmail,
+        shoreAlertConsentAt: shops.shoreAlertConsentAt,
       })
       .from(shops)
       .where(eq(shops.id, shopId))
       .limit(1);
     if (!shop) continue;
     const owners = await ownerLogins(db, shopId);
+    const shoreAddress = shoreAlertRecipient({
+      email: shop.shoreAlertEmail,
+      consentAt: shop.shoreAlertConsentAt,
+    });
+    // An owner who is also the shore contact already has the owners' copy.
+    const shore =
+      shoreAddress &&
+      !owners.some((owner) => owner.email.toLowerCase() === shoreAddress.toLowerCase())
+        ? shoreAddress
+        : null;
     for (const [tripId, gap] of open) {
       if (!(await claimAlert(db, shopId, tripId, now))) continue;
       const checkpoint = `after_dive_${gap.diveNumber}`;
@@ -194,6 +218,32 @@ export async function sendStaleRollCallAlerts(
           if (delivery.status === "sent") {
             delivered += 1;
             summary.emails += 1;
+          }
+        }
+        if (shore) {
+          const delivery = await sendNotification(
+            db,
+            {
+              kind: "roll_call_stale_shore",
+              shopId,
+              tripId,
+              to: shore,
+              locale: recipientLocale(null, shop.defaultLocale),
+              shopName: shop.name,
+              tripTitle,
+              diveNumber: gap.diveNumber,
+              unaccounted: gap.uncounted,
+              missing: isMissingReason(gap.reason),
+              endsAt: gap.endsAt,
+              timezone: shop.timezone,
+              alertedAt: now,
+            },
+            input.provider,
+          );
+          if (delivery.status === "sent") {
+            delivered += 1;
+            summary.emails += 1;
+            summary.shoreEmails += 1;
           }
         }
         const pushes = await pushTripAlert(db, shopId, tripId, {

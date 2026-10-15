@@ -390,21 +390,21 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "is_demo",
     "latitude",
     "longitude",
-    // Setup-checklist progress, not a shop record: it says whether anyone has
-    // looked at the currency and depth unit onboarding derived from the
-    // timezone (issue #712). A shop restoring from a backup *should* be asked
-    // again, so carrying this over would be the wrong answer, not a loss.
+    // Setup-checklist progress, not a shop record (issue #712): a shop
+    // restoring from a backup *should* be asked about its units again.
     "units_confirmed_at",
     // Proof that the shop controls its contact address, which is what lets it
     // become the Reply-To on mail DiveDay sends (issue #1288). The proof is
     // DiveDay's own, not a fact the shop entered: a restored shop is asked to
     // confirm again, and a CSV cannot vouch for an address on its behalf.
     "contact_email_confirmed_at",
-    // The routing token in the shop's inbound reply address (ADR
-    // 20260907-two-way-inbox). A credential in all but name: whoever holds it
-    // can address mail into this shop's inbox, and a restored shop is minted a
-    // fresh one by the database rather than carrying the old one in a CSV.
+    // The inbound reply address's routing token (ADR 20260907-two-way-inbox):
+    // a credential in all but name, so a restored shop is minted a fresh one.
     "inbound_email_token",
+    // H-118: a consent to be emailed, recorded here; a CSV cannot vouch for it.
+    "shore_alert_email",
+    "shore_alert_consent_at",
+    "shore_alert_consent_by_person_id",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],

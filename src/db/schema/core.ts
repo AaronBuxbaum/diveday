@@ -310,6 +310,25 @@ export const shops = pgTable(
       .notNull()
       .default({ lines: [], vessel: "", shoreContact: "", plan: "" }),
     /**
+     * **The shore contact's address for a stale roll call** (H-118, decided
+     * 2026-10-15): the one person outside the shop's accounts who hears when an
+     * after-dive roll call is still open after the boat was due back
+     * (`sendStaleRollCallAlerts`, `src/db/roll-call-alerts.ts`). Email only.
+     *
+     * Beside `emergency_reference.shoreContact`, never instead of it: that is
+     * free text a crew reads in an emergency, and this is an address DiveDay
+     * sends to. An address is stored only with the consent the staff member
+     * recorded for it — when, and who — and the check below holds the pair
+     * together, so clearing the address clears the consent and no address
+     * without one can exist (`nextShoreAlertContact`,
+     * `src/lib/shore-alert-contact.ts`). The person id carries no foreign key,
+     * the same as `people.adult_attested_by_person_id`: it is provenance, and
+     * a `shops -> people` key would turn the demo cascade into a cycle.
+     */
+    shoreAlertEmail: text("shore_alert_email"),
+    shoreAlertConsentAt: timestamp("shore_alert_consent_at", { withTimezone: true }),
+    shoreAlertConsentByPersonId: uuid("shore_alert_consent_by_person_id"),
+    /**
      * How many minutes before departure divers are asked to be at the dock. The
      * shop's real muster time varies (gear setup, cert check, briefing), so it is
      * configurable rather than a hardcoded "30 minutes" in every confirmation and
@@ -439,6 +458,14 @@ export const shops = pgTable(
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    // H-118: an address DiveDay sends to exists only with its recorded consent.
+    check(
+      "shops_shore_alert_consent",
+      sql`(${table.shoreAlertEmail} is null and ${table.shoreAlertConsentAt} is null
+        and ${table.shoreAlertConsentByPersonId} is null)
+        or (${table.shoreAlertEmail} is not null and ${table.shoreAlertConsentAt} is not null
+        and ${table.shoreAlertConsentByPersonId} is not null)`,
+    ),
     check(
       "shops_customer_regulator_service_months_choice",
       sql`${table.customerRegulatorServiceMonths} in (12, 24)`,
