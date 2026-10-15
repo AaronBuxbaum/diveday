@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inHorizonReadiness } from "@/db/blockers";
 import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
+import { createBookingParty } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { hasActiveCourses } from "@/db/courses";
@@ -28,6 +29,7 @@ import { listTripChangeEvents } from "@/db/trip-change-events";
 import { siteSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import {
+  createTrip,
   getTripWithBooked,
   listTripDives,
   listTripScheduleDays,
@@ -304,6 +306,45 @@ async function readinessLinkForUpcomingSeat(plain: AppDb, shopId: string) {
 }
 
 /**
+ * A readiness link on the lead of a party of `size` booked on the next
+ * departure, every other seat unclaimed — the shape `/ready` mints a claim
+ * link for per seat (#2488).
+ */
+async function readinessLinkForParty(plain: AppDb, shopId: string, size: number) {
+  // A departure of its own with room for the whole party.
+  const startsAt = new Date(nowDate().getTime() + 2 * 24 * 3_600_000);
+  const trip = await createTrip(plain, {
+    shopId,
+    title: "Party departure",
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+    capacity: 12,
+  });
+  if (!trip) throw new Error("trip not created");
+  const tripId = trip.id;
+  const stamp = `${nowDate().getTime()}`;
+  const party = await createBookingParty(
+    plain,
+    Array.from({ length: size }, (_, index) => ({
+      actor: "staff" as const,
+      shopId,
+      tripId,
+      fullName: `Party Seat ${index + 1}`,
+      email: `party-seat-${index + 1}-${stamp}@example.com`,
+    })),
+  );
+  const lead = party.ok ? party.bookings[0] : undefined;
+  if (!lead) throw new Error(`the party was not booked: ${JSON.stringify(party)}`);
+  const issued = await issueBookingCapability(plain, {
+    shopId,
+    bookingId: lead.bookingId,
+    purpose: "readiness",
+  });
+  if (!issued) throw new Error("no readiness link for the party lead");
+  return issued.token;
+}
+
+/**
  * The public booking page's reads, as the page awaits them: the shop, the
  * fan-out, then one wave of everything else (code review 2026-10-11, item 2).
  */
@@ -409,6 +450,29 @@ describe("how many round trips a diver's page waits for, one after another", () 
     await readyPageReads(db, token);
     expect(report("ready phases", phases())).toBeLessThanOrEqual(READY_PHASE_CEILING);
   });
+
+  // The party panel mints a claim link per unclaimed seat: in one statement
+  // for the whole party, so three seats wait no longer than one (#2488).
+  it("reads /ready for a party of three in a bounded number of phases", async () => {
+    const { plain, shop } = await timedSeededShop();
+    const { db, phases } = phaseCountingDb(plain.$client as PGlite);
+    const token = await readinessLinkForParty(plain, shop.id, 3);
+    await readyPageReads(db, token);
+    expect(report("ready phases, party of three", phases())).toBeLessThanOrEqual(
+      READY_PARTY_PHASE_CEILING,
+    );
+  });
+
+  it("sends no more statements for a party of six than for a party of three", async () => {
+    const small = await timedSeededShop();
+    const smallToken = await readinessLinkForParty(small.plain, small.shop.id, 3);
+    const threeSeats = await withQueryStats(() => readyPageReads(small.db, smallToken));
+    const large = await timedSeededShop();
+    const largeToken = await readinessLinkForParty(large.plain, large.shop.id, 6);
+    const sixSeats = await withQueryStats(() => readyPageReads(large.db, largeToken));
+    expect(report("ready, party of six", sixSeats.stats.queries)).toBe(threeSeats.stats.queries);
+    expect(threeSeats.stats.queries).toBeLessThanOrEqual(READY_PARTY_CEILING);
+  });
 });
 
 /** What each render sends today: lower one when a change saves a statement, never raise it quietly. */
@@ -502,3 +566,13 @@ const PUBLIC_TRIP_PHASE_CEILING = 3;
 // row and its fan-out (`getReadyPageData`); the readiness pass's one wave; and
 // the thread's one wave.
 const READY_PHASE_CEILING = 5;
+// 11 → 7 (#2488): a party of three. The claim panel minted one link per seat,
+// one after another, each its own read, retire and insert; now the party's
+// links are one read of the seats (which carries each departure's end), one
+// read of the links already live, and one insert, whatever the party's size.
+// The two above them are the capability and the readiness detail, as for one
+// seat.
+const READY_PARTY_PHASE_CEILING = 7;
+// A party of three or six: the single seat's 36, plus the party panel's
+// own reads and one claim-link mint for every unclaimed seat together.
+const READY_PARTY_CEILING = 38;

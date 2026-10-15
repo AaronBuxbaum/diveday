@@ -10,7 +10,7 @@ import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import {
   type IssuedCapability,
-  issueBookingCapability,
+  mintBookingCapabilities,
   revokeBookingCapabilities,
   staleBookingCapabilityForToken,
   verifyBookingCapability,
@@ -615,9 +615,19 @@ export async function issuePartySeatClaims(
       ),
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
+  // Every unclaimed seat's link in a fixed number of statements, not one
+  // round trip per seat (#2488): a party of six costs the same as a party of one.
+  const claimable = rows.filter((row) => claimableNow(row.booking, row.trip, now));
+  // The rows above are this lead's party in this shop and not cancelled, read
+  // in this request, so the departure's end is already in hand.
+  const claims = await mintBookingCapabilities(db, {
+    shopId: input.shopId,
+    seats: claimable.map((row) => ({ bookingId: row.booking.id, tripEndsAt: row.trip.endsAt })),
+    purpose: "claim",
+    now,
+  });
   const seats: PartySeatClaim[] = [];
   for (const row of rows) {
-    const claimable = claimableNow(row.booking, row.trip, now);
     seats.push({
       bookingId: row.booking.id,
       // A held seat goes by the name it was booked under: the matched
@@ -638,14 +648,7 @@ export async function issuePartySeatClaims(
         row.booking.status === "booked" &&
         row.booking.claimedAt === null &&
         row.booking.tripId === row.leadTripId,
-      claim: claimable
-        ? await issueBookingCapability(db, {
-            shopId: input.shopId,
-            bookingId: row.booking.id,
-            purpose: "claim",
-            now,
-          })
-        : null,
+      claim: claims.get(row.booking.id) ?? null,
     });
   }
   return seats;
