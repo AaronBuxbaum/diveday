@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
+import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripPrep } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -102,6 +103,7 @@ export default async function TripPrepPage({
     timeZone: shop.timezone,
     stage: stageReading,
     cancelled: trip.status === "cancelled",
+    meetingWindows: (await meetingWindowsByTrip(db, [trip])).get(tripId),
   });
 
   return (

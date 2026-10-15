@@ -236,6 +236,7 @@ export default async function ManageTripPage({
       timeZone: shop.timezone,
       stage: stageReading,
       cancelled,
+      meetingWindows: scheduleDays.map((day) => ({ startsAt: day.startsAt, endsAt: day.endsAt })),
     },
   );
   // The desk while arrivals are open, or a finished departure's record.

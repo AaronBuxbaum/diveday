@@ -468,3 +468,99 @@ describe("a two-day course", () => {
     expect(boatStageOf(at("2026-07-22T20:45:00.000Z", "home", home))?.stage).toBe("home");
   });
 });
+
+/**
+ * **A multi-day run whose nightly window crosses midnight** (issue #2406): 22:00
+ * to 02:00 local for three nights. `trips.starts_at`/`ends_at` bound the whole
+ * run, and `trip_schedule_days` holds the three real windows.
+ */
+describe("a three-night 22:00 to 02:00 run", () => {
+  // EDT is UTC-4: night one is Jul 21 22:00 to Jul 22 02:00 local.
+  const night = (n: number) => ({
+    startsAt: new Date(Date.UTC(2026, 6, 21 + n, 2, 0)),
+    endsAt: new Date(Date.UTC(2026, 6, 21 + n, 6, 0)),
+  });
+  const windows = [night(1), night(2), night(3)];
+  const run = {
+    startsAt: windows[0].startsAt,
+    endsAt: windows[2].endsAt,
+    timeZone: ZONE,
+    cancelled: false,
+  };
+  const boardingNightOne: { stage: TripStage; recordedAt: Date } = {
+    stage: "boarding" as const,
+    recordedAt: new Date("2026-07-22T03:30:00.000Z"),
+  };
+  const read = (now: string, stage: typeof boardingNightOne | null, withWindows = true) =>
+    boatStageOf({
+      ...run,
+      now: new Date(now),
+      stage,
+      meetingWindows: withWindows ? windows : undefined,
+    });
+
+  it("still speaks a night's Boarding tap at 01:00, after local midnight", () => {
+    expect(read("2026-07-22T05:00:00.000Z", boardingNightOne)?.stage).toBe("boarding");
+  });
+
+  it("lets the word go once its own window is over", () => {
+    expect(read("2026-07-22T06:30:00.000Z", boardingNightOne)).toBeNull();
+  });
+
+  it("keeps the shop-day rule when no windows are on file", () => {
+    expect(read("2026-07-22T05:00:00.000Z", boardingNightOne, false)).toBeNull();
+  });
+
+  it("keeps the phase Aboard through the window, and a night-three word speaks past midnight", () => {
+    const nightThree = {
+      stage: "underway" as const,
+      recordedAt: new Date("2026-07-24T03:30:00.000Z"),
+    };
+    expect(read("2026-07-24T05:00:00.000Z", nightThree)?.stage).toBe("underway");
+    expect(
+      tripPhaseOf({
+        ...run,
+        now: new Date("2026-07-24T05:00:00.000Z"),
+        stage: nightThree,
+        meetingWindows: windows,
+      }),
+    ).toBe("aboard");
+  });
+
+  it("finishes the run on a Home tap in the last window, before midnight", () => {
+    const home = { stage: "home" as const, recordedAt: new Date("2026-07-24T03:30:00.000Z") };
+    expect(
+      tripPhaseOf({
+        ...run,
+        now: new Date("2026-07-24T03:45:00.000Z"),
+        stage: home,
+        meetingWindows: windows,
+      }),
+    ).toBe("back");
+  });
+
+  it("does not finish the run on a night-one Home tap", () => {
+    const home = { stage: "home" as const, recordedAt: new Date("2026-07-22T05:30:00.000Z") };
+    expect(
+      tripPhaseOf({
+        ...run,
+        now: new Date("2026-07-22T05:45:00.000Z"),
+        stage: home,
+        meetingWindows: windows,
+      }),
+    ).toBe("aboard");
+  });
+
+  it("reads a single sailing exactly as before, windows or not", () => {
+    const one = {
+      startsAt,
+      endsAt,
+      now: new Date("2026-07-21T15:00:00.000Z"),
+      timeZone: ZONE,
+      cancelled: false,
+    };
+    const tap = { stage: "underway" as const, recordedAt: new Date("2026-07-21T14:30:00.000Z") };
+    expect(boatStageOf({ ...one, stage: tap, meetingWindows: [{ startsAt, endsAt }] })).toBe(tap);
+    expect(boatStageOf({ ...one, stage: tap })).toBe(tap);
+  });
+});
