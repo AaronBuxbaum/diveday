@@ -255,6 +255,16 @@ describe("clearing a checked item", () => {
     expect(action).not.toHaveBeenCalled();
   });
 
+  it("ignores a held Enter key, so one press cannot ask and then clear", async () => {
+    const { action, oxygen } = setup();
+    // A browser repeats keydown while Enter is held, and each repeat clicks a
+    // focused button: the first asks, one past the gap would submit the clear.
+    expect(fireEvent.keyDown(oxygen(), { key: "Enter", repeat: true })).toBe(false);
+    // The first press is the browser's to turn into a click.
+    expect(fireEvent.keyDown(oxygen(), { key: "Enter" })).toBe(true);
+    expect(action).not.toHaveBeenCalled();
+  });
+
   it("stands down by itself if left asking", async () => {
     const { action, oxygen } = setup();
     fireEvent.click(oxygen());

@@ -106,6 +106,12 @@ function PreDepartureCheckRow({
           }}
           onBlur={standDown}
           onKeyDown={(event) => {
+            // A held Enter repeats keydown, and each repeat clicks: one press
+            // could ask and then clear (#2567). Only the first press counts.
+            if (event.repeat) {
+              event.preventDefault();
+              return;
+            }
             if (event.key === "Escape") standDown();
           }}
           className={buttonClass({

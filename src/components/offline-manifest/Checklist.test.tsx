@@ -119,6 +119,16 @@ describe("OfflineChecklist: clearing a checked item asks first", () => {
     expect(record).not.toHaveBeenCalled();
   });
 
+  it("ignores a held Enter key, so one press cannot ask and then clear", async () => {
+    const { record, oxygen } = setup();
+    // A browser repeats keydown while Enter is held, and each repeat clicks a
+    // focused button: the first asks, one past the gap would clear.
+    expect(fireEvent.keyDown(oxygen(), { key: "Enter", repeat: true })).toBe(false);
+    // The first press is the browser's to turn into a click.
+    expect(fireEvent.keyDown(oxygen(), { key: "Enter" })).toBe(true);
+    expect(record).not.toHaveBeenCalled();
+  });
+
   it("names two taps to a screen reader on a checked item", () => {
     const { oxygen } = setup();
     expect(oxygen()).toHaveAccessibleName(/press twice to clear/);
