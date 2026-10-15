@@ -239,7 +239,9 @@ test.describe("trip pulse", () => {
     // The group band owns the state word; its count is every unsettled diver
     // (blockers, advisories, birthdays), not just the one blocked seat.
     await expect(page.getByRole("heading", { name: /^Still to clear ·/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Priya Sharma" })).toBeVisible();
+    // Exact: the band's folded rows also name her ("Priya Sharma · …"); this
+    // is her own row on the roster.
+    await expect(page.getByRole("link", { name: "Priya Sharma", exact: true })).toBeVisible();
   });
 
   test("the money fact's link opens an Orders index narrowed to that one departure", async ({
