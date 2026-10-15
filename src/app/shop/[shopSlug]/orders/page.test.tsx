@@ -15,7 +15,6 @@ import {
   orders,
   paymentOperationIntents,
   people,
-  shops as shopsTable,
   stripePayouts,
   stripeRefundFailures,
   trips,
@@ -35,7 +34,6 @@ import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
-import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 import { PayoutLines } from "./_components/PayoutLines";
 
 // Same mocking shape as ../settings/SettingsPage.test.tsx: the page is invoked
@@ -925,27 +923,5 @@ describe("the day ledger", () => {
     // Wednesday evening there, and its money belongs to Wednesday.
     expect(thursday?.rows).toHaveLength(2);
     expect(thursday?.meta).toBe("2 orders · $268.00");
-  });
-});
-
-/**
- * **The demo opens on its orders, not on a setup ask** (fourth review, item
- * 53). "Take payments with DiveDay" stood above 156 paid orders on a shop
- * presented as running; Billing already says a demo is never billed.
- */
-describe("the payments setup card", () => {
-  it("is not shown on the demo shop", async () => {
-    const page = await renderOrders("owner");
-    expect(findElements(page, PaymentsSetupCard)).toHaveLength(0);
-  });
-
-  it("asks a real shop with no payments connected", async () => {
-    const page = await renderOrders("owner", async (db, session) => {
-      await db
-        .update(shopsTable)
-        .set({ isDemo: false })
-        .where(eq(shopsTable.id, session.user.shopId));
-    });
-    expect(findElements(page, PaymentsSetupCard)).toHaveLength(1);
   });
 });

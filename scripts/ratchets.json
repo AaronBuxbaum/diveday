@@ -424,7 +424,6 @@
     "src/app/shop/[shopSlug]/settings/integrations/page.tsx#IntegrationsSettingsPage": 306,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": 301,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 372,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 366,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 345,
@@ -435,7 +434,7 @@
     "src/db/seed-dive-sites.ts#seedDiveSites": 467,
     "src/db/seed-history.ts#seedHistory": 732,
     "src/db/seed-more-trips.ts#seedMoreTrips": 642,
-    "src/db/seed-trips.ts#seedTrips": 431,
+    "src/db/seed-trips.ts#seedTrips": 392,
     "src/lib/import.ts#prepareContactImport": 508
   },
   "live-people": {

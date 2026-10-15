@@ -603,10 +603,21 @@ export async function seedTrips(
     }),
   );
 
-  // Conditions are a live reading, not a description: the boat that sails today
-  // has this morning's numbers, the next two have yesterday's, and everything
-  // further out is honestly blank because nobody has looked yet.
-  //
+  await seedCrewConditions(db, shopId, tripRows);
+
+  return { tripRows, captainId, divemasterId };
+}
+
+/**
+ * Conditions are a live reading, not a description: the boat that sails today
+ * has this morning's numbers, the next two have yesterday's, and everything
+ * further out is honestly blank because nobody has looked yet.
+ */
+async function seedCrewConditions(
+  db: DbExecutor,
+  shopId: string,
+  tripRows: readonly { id: string }[],
+): Promise<void> {
   // Typed the way a crew types them, in the shop's own unit: a round 60 ft is
   // stored as its metres, so it reads back as 60 ft, not as 18 m's odd 59 ft
   // (fourth review, item 54). Today's boat sails at whatever hour keeps it on
@@ -659,6 +670,4 @@ export async function seedTrips(
       .set({ ...values, conditionsUpdatedAt: nowDate() })
       .where(eq(trips.id, trip.id));
   }
-
-  return { tripRows, captainId, divemasterId };
 }

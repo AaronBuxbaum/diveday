@@ -12,6 +12,7 @@ export async function clearCourseForms(page: Page, courseSlug: string): Promise<
   const forms = page.locator("form", {
     has: page.getByRole("button", { name: "Save forms" }),
   });
+  await expect(forms.getByRole("checkbox")).not.toHaveCount(0);
   for (const box of await forms.getByRole("checkbox").all()) {
     if (await box.isChecked()) await box.uncheck();
   }

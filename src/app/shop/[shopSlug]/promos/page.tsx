@@ -406,8 +406,6 @@ export default async function PromosPage({
           `#new-code`. A client navigation to a fragment never runs the
           browser's own reveal, so a plain `<details>` would arrive collapsed
           with the refusal inside it. */}
-      {/* The demo never connects payments, as Billing never bills it, so it
-          shows no door that opens only on the ask (fourth review, 53). */}
       {connected || (promoPage.total > 0 && !shop.isDemo) ? (
         <AutoOpenDetails
           id="new-code"
