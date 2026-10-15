@@ -131,22 +131,25 @@ test("a staffer marks a message done and moves it back", async ({ page }) => {
 
 /**
  * **A message asking to move a seat reaches the move** (fourth UX review, item
- * 32). Priya's message names the seat she holds as a link to it on its roster,
- * and the row's "⋯" offers "Move to another departure", which lands on that
+ * 32). Priya's message names each seat she holds as a link to it on its
+ * roster, and the row's "⋯" offers a move for each, which lands on that
  * seat with the roster's own move already open. Nothing on the Inbox moves a
  * seat; the roster's one path does.
  */
 test("a message about a seat opens it, and its menu opens the seat's move", async ({ page }) => {
   await page.goto("/shop/blue-mantis/inbox");
-  const seat = page.getByRole("link", { name: /^Booked on Two-Tank Reef — Molasses & French/ });
+  // She holds more than one seat (the reef boat and the wreck), so the row
+  // names each, and each has its own move (dive-domain review r4-4, F1).
+  const seat = page
+    .getByRole("link", { name: /^Booked on Two-Tank Reef — Molasses & French/ })
+    .first();
   await expect(seat).toBeVisible();
   await expect(seat).toHaveAttribute("href", /\/shop\/blue-mantis\/trips\/[^#]+#booking-/);
 
   await page.getByRole("button", { name: "More for the message from Priya Sharma" }).click();
   await page
-    .getByRole("link", {
-      name: "Move Priya Sharma’s seat on Two-Tank Reef — Molasses & French to another departure",
-    })
+    .getByRole("link", { name: /^Move Priya Sharma’s seat on Two-Tank Reef — Molasses & French/ })
+    .first()
     .click();
   await expect(page).toHaveURL(/\/trips\/[^#]+#move-booking-/);
   // The roster's move, open on her seat: its one select and its button.
