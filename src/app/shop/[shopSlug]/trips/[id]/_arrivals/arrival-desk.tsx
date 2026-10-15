@@ -176,30 +176,33 @@ export async function buildArrivalDesk({
       // walked back, and taking a state away can never add risk.
       controls.set(
         row.bookingId,
-        <span className="flex items-center gap-3">
-          {/* **The paper pass, on the arrived and cleared row and nowhere
-              else** (ADR 20260908-one-hand, decision 6, lever X): for the
-              diver at the desk with no phone, the moment just after their name
-              is ticked. Never a pass for a seat readiness refuses. */}
-          {ready ? (
-            <Link
-              href={paperPassPath(shopSlug, row.bookingId)}
-              className={buttonClass({ variant: "link", size: "sm", flush: true })}
-            >
-              {t("print.counter.passDoor")}
-            </Link>
-          ) : null}
-          <ArrivalTap
-            action={undo}
-            bookingId={row.bookingId}
-            checkedIn
-            label={t("checkIn.row.arrived")}
-            pendingLabel={t("checkIn.undoing")}
-            ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
-            sendFailedLabel={t("checkIn.sendFailed")}
-          />
-        </span>,
+        <ArrivalTap
+          action={undo}
+          bookingId={row.bookingId}
+          checkedIn
+          label={t("checkIn.row.arrived")}
+          pendingLabel={t("checkIn.undoing")}
+          ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
+          sendFailedLabel={t("checkIn.sendFailed")}
+        />,
       );
+      // **The paper pass, on the arrived and cleared row and nowhere else**
+      // (ADR 20260908-one-hand, decision 6, lever X): for the diver at the
+      // desk with no phone, the moment just after their name is ticked. Never
+      // a pass for a seat readiness refuses. Under the name, not beside
+      // "Checked in": two controls in the row's end broke "Tom Okafor" over
+      // two lines at 390 (fourth review, item 48).
+      if (ready) {
+        below.set(
+          row.bookingId,
+          <Link
+            href={paperPassPath(shopSlug, row.bookingId)}
+            className={buttonClass({ variant: "link", size: "sm", flush: true })}
+          >
+            {t("print.counter.passDoor")}
+          </Link>,
+        );
+      }
       continue;
     }
     // Readiness is the gate: a tap beside the reasons would be an act the

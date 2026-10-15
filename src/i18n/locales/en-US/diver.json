@@ -794,6 +794,7 @@
   },
   "ready": {
     "metaTitle": "Your trip readiness — DiveDay",
+    "checklistHeading": "Your checklist",
     "namelessFallback": "there",
     "allSetHeading": "You’re all set",
     "materialsDone": "The shop has these marked done",
@@ -1230,7 +1231,7 @@
       "torch": "Dive light",
       "smb": "Surface marker buoy"
     },
-    "jargonHintLabel": "What is {item}?",
+    "jargonHintLabel": "About {item}",
     "jargonHints": {
       "bcd": "The inflatable vest you wear that holds your tank and lets you control whether you float or sink.",
       "regulator": "The mouthpiece and hose that let you breathe air from your tank underwater.",

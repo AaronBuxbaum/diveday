@@ -794,6 +794,7 @@
   },
   "ready": {
     "metaTitle": "Tu preparación para la salida — DiveDay",
+    "checklistHeading": "Tu lista de pasos",
     "namelessFallback": "buceador",
     "allSetHeading": "Lo tienes todo listo",
     "materialsDone": "El centro ya los ha marcado como terminados",
@@ -1230,7 +1231,7 @@
       "torch": "Linterna",
       "smb": "Boya de superficie"
     },
-    "jargonHintLabel": "¿Qué es {item}?",
+    "jargonHintLabel": "Acerca de {item}",
     "jargonHints": {
       "bcd": "El chaleco inflable que llevas puesto, sujeta tu botella y te permite controlar si flotas o te hundes.",
       "regulator": "La boquilla y la manguera que te dejan respirar aire de tu botella bajo el agua.",

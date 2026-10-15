@@ -553,6 +553,12 @@ async function DiverReadinessPage({
           <p className="mt-8 text-base text-muted">{checklistDetailText(t, spine.setupItem)}</p>
         ) : (
           <>
+            {/* The checklist's own heading, for a screen reader only: the
+                step bodies hold H3s ("Want a morning pickup?", "I could use a
+                hand") that otherwise sat under the H1 with nothing between
+                (fourth review, item 47). The status line below already says it
+                to a sighted reader. */}
+            <h2 className="sr-only">{t("ready.checklistHeading")}</h2>
             {stageLine ? (
               <BoatStageLine sentence={stageLine.sentence} said={stageLine.said} />
             ) : null}

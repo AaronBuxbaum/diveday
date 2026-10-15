@@ -48,8 +48,8 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // card, and since ADR 20260821-the-ready-page-asks-once the section does not
   // exist until the card that makes it real does — asking a diver whether they
   // want enriched air, and then refusing to fill it, was a question with no
-  // answer. The per-dive surcharge and the "What is Nitrox?" hover-over went
+  // answer. The per-dive surcharge and the "About Nitrox" hover-over went
   // with it. `e2e/nitrox.spec.ts` owns the other side, where a card exists.
   await expect(fit.getByText(/per dive/)).toHaveCount(0);
-  await expect(fit.getByRole("button", { name: "What is Nitrox?" })).toHaveCount(0);
+  await expect(fit.getByRole("button", { name: "About Nitrox" })).toHaveCount(0);
 });

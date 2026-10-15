@@ -792,7 +792,7 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
    */
   it("says the boots come with the suit, one hover away", () => {
     renderDrysuit();
-    const trigger = screen.getByRole("button", { name: "What is Drysuit?" });
+    const trigger = screen.getByRole("button", { name: "About Drysuit" });
     const describedBy = trigger.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
     expect(document.getElementById(describedBy ?? "")?.textContent).toMatch(
