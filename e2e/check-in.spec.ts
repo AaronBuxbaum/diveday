@@ -327,6 +327,20 @@ test("the walk-in form explains an invalid submission", async ({ page }) => {
   );
 });
 
+// The counter's paper pass prints one diver's name for a stranger's pocket
+// (shop-on-paper.spec.ts prints a real one). A booking id the shop does not
+// hold, or one that is not an id at all, prints nothing: the not-found
+// backstop, and not one line of a pass. Read by what renders, not by status:
+// the segment's `loading.tsx` has the 200 on the wire before `notFound()`.
+test("a pass for a booking the shop does not hold prints nothing", async ({ page }) => {
+  for (const id of ["00000000-0000-4000-8000-0000000000ff", "not-a-booking"]) {
+    await page.goto(`/shop/blue-mantis/print/pass/${id}`);
+    await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
+    await expect(page.locator(".paper-sheet")).toHaveCount(0);
+    await expect(page.getByText("Show this at the counter, or say your name.")).toHaveCount(0);
+  }
+});
+
 test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ page }) => {
   // A same-day, one-seat trip so it's inside the counter's arrivals window
   // and trivially fillable in one step.

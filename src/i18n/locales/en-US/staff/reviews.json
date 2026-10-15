@@ -79,5 +79,12 @@
     "empty": "Write a reply before saving.",
     "tooLong": "Keep the reply to {max, plural, one {# character} other {# characters}}.",
     "notAnswerable": "Only a published review with words can take a reply."
+  },
+  "narrow": {
+    "label": "Show reviews",
+    "all": "All",
+    "low": "3 stars and under",
+    "comment": "With a comment",
+    "none": "No reviews match this view."
   }
 }

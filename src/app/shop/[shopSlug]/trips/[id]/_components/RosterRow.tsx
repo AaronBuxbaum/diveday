@@ -185,7 +185,13 @@ export function RosterRow({
       {record ? null : identityCheck}
       {record ? null : reEntryNote}
       {arrivalBelow}
-      <AutoOpenDetails openOnHash={`booking-${booking.id}`} open={holdOpen} className="group">
+      {/* The Inbox's "Move to another departure" lands on `#move-booking-…`,
+          which opens this row and the move inside it (fourth review, item 32). */}
+      <AutoOpenDetails
+        openOnHash={[`booking-${booking.id}`, `move-booking-${booking.id}`]}
+        open={holdOpen}
+        className="group"
+      >
         {markSummary}
         {/* **One panel per seat** (owner, 2026-10-05: "confusing and ugly").
             It used to be a loose stack — fixes, then facts, each fact with

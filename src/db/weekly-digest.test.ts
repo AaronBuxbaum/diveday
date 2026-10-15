@@ -1,10 +1,12 @@
-import { and, count, eq, ne } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { messageFor } from "@/lib/notifications/render";
 import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { readOwed } from "./owed";
 import {
   bookings,
+  courseInquiries,
   orders,
   paymentOperationIntents,
   people,
@@ -16,6 +18,7 @@ import {
   listWeeklyDigestRecipients,
   previewWeeklyDigest,
   readWeeklyDigestChoice,
+  readWeeklyDigestFacts,
   resolveWeeklyDigestUnsubscribeToken,
   sendDueWeeklyDigests,
   sendWeeklyDigestForShop,
@@ -399,16 +402,15 @@ describe("previewWeeklyDigest", () => {
       stripeCustomerId: "cus_digest",
       stripeInvoiceId: "in_digest_open",
     });
-    const [open] = await db
-      .select({ n: count() })
-      .from(orders)
-      .where(and(eq(orders.shopId, shop.id), eq(orders.status, "open")));
+    const owed = await readOwed(db, shop, monday);
 
     const ownerPreview = await previewFor(owner.personId);
     const money = ownerPreview.sections.find((section) => section.kind === "money");
     expect(money?.kind).toBe("money");
     if (money?.kind === "money") {
-      expect(money.openOrders).toBe(open?.n ?? 0);
+      expect(money.owed.orderCount).toBe(owed.orders.count);
+      expect(money.owed.orderCents).toBe(owed.orders.cents);
+      expect(money.owed.seatCents).toBe(owed.seats.cents);
       expect(money.currency).toBe(shop.currency);
       expect(money.url).toBe(`${ORIGIN}/shop/${shop.slug}/orders`);
     }
@@ -416,6 +418,52 @@ describe("previewWeeklyDigest", () => {
     const crewPreview = await previewFor(captain.personId);
     expect(crewPreview.sections.map((section) => section.kind)).not.toContain("money");
     expect(messageFor(crewPreview).text).not.toContain("/orders");
+  });
+
+  /**
+   * **A request marked done is not waiting** (fourth UX review, item 24): the
+   * digest filters on `handledAt` like every staff reader of requests.
+   */
+  it("counts only the date requests nobody has marked done", async () => {
+    const { db, shop, monday } = await context();
+    const day = new Date(monday.getTime() + 10 * 24 * 3_600_000).toISOString().slice(0, 10);
+    const waitingOf = async () =>
+      (await readWeeklyDigestFacts(db, shop, monday)).grades.reports.dateRequestsWaiting;
+    const before = await waitingOf();
+    await db.insert(courseInquiries).values([
+      { shopId: shop.id, interest: "Night dive", name: "Waiting", preferredDate: day },
+      {
+        shopId: shop.id,
+        interest: "Night dive",
+        name: "Done",
+        preferredDate: day,
+        handledAt: monday,
+        handledAs: "done",
+      },
+    ]);
+    expect(await waitingOf()).toBe(before + 1);
+  });
+
+  it("gives the owner the gear line and the safety sentence, and the crew neither", async () => {
+    const { db, shop, owner, captain, monday } = await context();
+    const facts = await readWeeklyDigestFacts(db, shop, monday);
+    expect(facts.grades.staff.gearServiceDue).toBe(0);
+    expect(facts.grades.staff.safety).toEqual({ openRollCalls: 0, uncrewed: 0, incidents: 0 });
+    const kindsFor = async (personId: string) => {
+      const preview = await previewWeeklyDigest(db, {
+        shop,
+        personId,
+        origin: ORIGIN,
+        now: monday,
+      });
+      if (preview?.kind !== "weekly_digest") throw new Error("no preview");
+      return preview.sections.map((section) => section.kind);
+    };
+    const crewKinds = await kindsFor(captain.personId);
+    expect(crewKinds).not.toContain("safety");
+    expect(crewKinds).not.toContain("gear_service");
+    const ownerKinds = await kindsFor(owner.personId);
+    expect(ownerKinds.includes("gear_service")).toBe(facts.grades.reports.gearServiceDue > 0);
   });
 
   it("previews nothing for somebody who is not staff here", async () => {

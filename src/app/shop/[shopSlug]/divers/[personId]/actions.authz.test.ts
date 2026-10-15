@@ -209,6 +209,28 @@ describe("erasing a diver's personal and medical data", () => {
     expect((await personRow(db, diver)).anonymizedAt).toBeNull();
   });
 
+  it("refuses an owner whose account was disabled, even on a deleted record", async () => {
+    // The session still says owner; the account behind it does not. The gate
+    // re-reads `user_accounts`, which is what closes the JWT window.
+    const { db, shop, diver, owner } = await context();
+    const before = await personRow(db, diver);
+    signIn(shop, owner);
+    await redirectedTo(() => deletePersonAction(shop.slug, diver, new FormData()));
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, owner));
+    const formData = new FormData();
+    formData.set("confirmName", before.fullName);
+
+    const to = await redirectedTo(() => erasePersonAction(shop.slug, diver, formData));
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${diver}?notice=not-authorized-erase&form=erase#erase-heading`,
+    );
+    expect((await personRow(db, diver)).anonymizedAt).toBeNull();
+  });
+
   /**
    * The state gate, which is not an authorization gate and is deliberately
    * tested beside them: erasure is offered on a **deleted** record only, so the

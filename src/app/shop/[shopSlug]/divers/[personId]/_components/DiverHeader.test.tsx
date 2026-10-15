@@ -117,3 +117,24 @@ describe("DiverHeader actions", () => {
     expect(submit).toHaveClass("min-h-12", "text-base");
   });
 });
+
+/** "Package: 7 of 10 dives left" (fourth UX review, item 20). */
+describe("the package line", () => {
+  it("says how many of the package's dives are left", () => {
+    const { getByText } = render(
+      <DiverHeader
+        diver={diver()}
+        shopSlug="blue-mantis"
+        t={t}
+        visits={0}
+        packages={{ left: 7, of: 10 }}
+      />,
+    );
+    expect(getByText("Package: 7 of 10 dives left")).toBeInTheDocument();
+  });
+
+  it("says nothing for a diver with no package", () => {
+    const { container } = renderHeader();
+    expect(container.textContent).not.toContain("Package:");
+  });
+});

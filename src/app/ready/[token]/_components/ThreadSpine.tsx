@@ -184,9 +184,12 @@ export function ThreadSpine({
           // step by id through `page.locator`, which is the reach a `data-`
           // attribute exists for (e2e/fixtures.ts filters every `getBy*` to
           // visible nodes, so a closed step's contents are unreachable by role).
+          // `data-step-state` says where the step stands without reading the
+          // state word, which a settled step does not print.
           <li
             key={step.id}
             data-thread-step={step.id}
+            data-step-state={step.state}
             className="border-t border-border last:border-b"
           >
             {step.body ? (

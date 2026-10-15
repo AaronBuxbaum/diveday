@@ -1,18 +1,11 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { sourceFiles } from "@/test/source";
 import { BANNER_TITLE_CLASS, DISPLAY_TITLE_CLASS, SUB_TITLE_CLASS } from "./typography";
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "../..");
-
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(path);
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [path] : [];
-  });
-}
 
 describe("the reading ramp's wrap rules", () => {
   it("never leaves a sub-title's last word alone on its line", () => {

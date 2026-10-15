@@ -10,6 +10,11 @@
  * Shop-scoped on every table it reads: the order through `shopOrderWhere`,
  * and each join on its own `shop_id`, so no row of another shop's can ride
  * along a foreign key.
+ *
+ * The seats divers paid for online at booking ride beside the orders
+ * (`listSeatPaymentsForExport`, fourth UX review item 18), so the file
+ * reconciles with Reports and the Stripe payout rather than leaving out the
+ * shop's main revenue stream.
  */
 import { and, asc, desc, eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
@@ -32,6 +37,10 @@ export type OrderExportLine = {
   taxCents: number;
   amountPaidCents: number;
   refundedCents: number;
+  /** When the money arrived; null until it has. */
+  paidAt: Date | null;
+  /** How it was taken: a Stripe invoice, cash, or the shop's own card machine. */
+  collection: (typeof orders.$inferSelect)["collection"];
   diverName: string;
   tripTitle: string | null;
   tripStartsAt: Date | null;
@@ -58,6 +67,8 @@ export async function listOrderLinesForExport(
       taxCents: orders.taxCents,
       amountPaidCents: orders.amountPaidCents,
       refundedCents: orders.refundedCents,
+      paidAt: orders.paidAt,
+      collection: orders.collection,
       diverName: people.fullName,
       tripTitle: trips.title,
       tripStartsAt: trips.startsAt,
@@ -97,6 +108,8 @@ export async function listOrderLinesForExport(
     taxCents: row.taxCents,
     amountPaidCents: row.amountPaidCents,
     refundedCents: row.refundedCents,
+    paidAt: row.paidAt,
+    collection: row.collection,
     diverName: row.diverName,
     tripTitle: row.tripTitle,
     tripStartsAt: row.tripStartsAt,

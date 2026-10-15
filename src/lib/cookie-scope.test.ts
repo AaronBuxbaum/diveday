@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { sourceFiles } from "@/test/source";
 
 /**
  * **No cookie this app sets may carry a `Domain` attribute.**
@@ -33,21 +34,6 @@ import { describe, expect, it } from "vitest";
  */
 
 const SOURCE_ROOT = path.join(process.cwd(), "src");
-
-function sourceFiles(dir: string): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const full = path.join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      found.push(...sourceFiles(full));
-      continue;
-    }
-    if (!/\.tsx?$/.test(entry)) continue;
-    if (/\.test\.tsx?$/.test(entry)) continue;
-    found.push(full);
-  }
-  return found;
-}
 
 /** The argument text of every `…cookies.set(` call, one entry per call site. */
 function cookieSetArguments(source: string): string[] {

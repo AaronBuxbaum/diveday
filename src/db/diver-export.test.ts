@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { nowDate } from "@/lib/clock";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { formBuddyTeam } from "./buddy-pairs";
 import { canPersonExportShopData, loadDiverExportBundleInput } from "./export";
@@ -19,6 +19,8 @@ import {
 } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { getCurrentWaiverTemplate } from "./waivers";
+
+const ctx = fileScopedShopContext();
 
 async function personIdForEmail(
   db: Awaited<ReturnType<typeof seededShopContext>>["db"],
@@ -72,7 +74,7 @@ function serialize(
 
 describe("one diver's own record export (issue #726)", () => {
   it("scopes to the diver's own shop and person, and no one else's", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
 
     // A real person id, but asked for under a shop it does not belong to.
@@ -89,7 +91,7 @@ describe("one diver's own record export (issue #726)", () => {
   });
 
   it("never carries another diver's name or details, even from a shared party booking and buddy team", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
     const { tripId, lead, follower } = await partyOfTwo(shop, db);
 
@@ -144,7 +146,7 @@ describe("one diver's own record export (issue #726)", () => {
   });
 
   it("withholds medical answers from a signed waiver, and the scanned medical document that came with an import, but keeps every other field", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
     const { follower } = await partyOfTwo(shop, db);
     const template = await getCurrentWaiverTemplate(db, shop.id);
@@ -221,7 +223,7 @@ describe("one diver's own record export (issue #726)", () => {
   });
 
   it("drops staff free-text notes from a diver's own orders, keeping the money", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
     const { lead } = await partyOfTwo(shop, db);
     // Raw inserts, deliberately: this test is about the export's column
@@ -284,7 +286,7 @@ describe("one diver's own record export (issue #726)", () => {
    * old clause put the later boat first every time rather than half the time.
    */
   it("orders a diver's own bookings.csv by the departure when two seats share an instant", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const tripRows = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     const [earlier, later] = [...tripRows].sort(
       (left, right) => left.startsAt.getTime() - right.startsAt.getTime(),
@@ -319,7 +321,7 @@ describe("one diver's own record export (issue #726)", () => {
   });
 
   it("resolves a staff name onto a roll-call event without naming any other diver", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
     const { lead } = await partyOfTwo(shop, db);
 

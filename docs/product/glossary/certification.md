@@ -39,9 +39,14 @@
 - **Agency check** — the DiveDay browser extension doing the "Check with SSI" lookup from the
   staffer's own browser (H-105, ADR 20261008-cert-check-extension). The extension types the diver
   into the agency's own lookup page and hands back the page's text; the server certifies the card
-  only when one record on that page names the diver ("Lena Ortiz" or "Ortiz, Lena"), carries the
-  birth date or card number the lookup was typed with, and states the claimed level in the agency's
-  own words, with nothing limiting it. A birth date written all in numbers whose day and month could
+  only when one record on that page names the diver ("Lena Ortiz" or "Ortiz, Lena", or a labeled pair
+  of adjacent lines, "First name: Lena" over "Last name: Ortiz", paired top to bottom so one record's
+  family name never completes the next one's given name), carries the birth date or card number the
+  lookup was typed with, and states the claimed level in the agency's own words, with nothing
+  limiting it. A record ends at the agency's own page furniture (SDI's "Request Certification", a
+  search control such as "Manual Search" on its own line); a labeled pair's record holds only a
+  record's kinds of lines and dates or numbers its rating, so the search form echoed back is not a
+  result. "Jr." straight after the diver's last name is part of their name. A birth date written all in numbers whose day and month could
   swap is read in that agency's own order only, so a transposed date is another diver's. Short of a
   match the staffer is told which: someone by this name but not with this birth date or number (a
   namesake, whose words are never shown), a Junior or limited card, or the diver at another level.
@@ -61,6 +66,29 @@
   a signed-out **DiveChek check** stops it at once. The staffer can stop it. A re-run skips the cards
   the page already settled. Never a bulk confirm: nothing is certified that its agency's page did
   not show.
+- **Page-shape report** — what an **Agency check** that could not finish sends back instead of the
+  page's text (ADR 20261008-cert-check-extension): the page's structure only, in a form's own words.
+  The path (never its query string), the title, the top headings, each box's tag, type and label
+  words, each button's words, counts, and whether a password box or a captcha is there. Every word
+  outside a fixed vocabulary of form words becomes "_", and the diver's own names always do, so no
+  name, date or number on the page is in it. The server checks it again, logs it as one line
+  (`agency_check.page_shape`) and never shows it. It travels with two fixed reasons the staffer
+  reads beside the agency's link: **captcha** ("SSI is asking if you're human. Check on its page."),
+  a captcha on the lookup's own form, where nothing is typed, or on an answer that says nothing
+  about the diver, whose text is never handed back; and **page changed** ("SSI's page has
+  changed. Check on its page."), a lookup page with a form but no box or button where the
+  extension expects one. In a **Check all**, either leaves that agency's other cards for the
+  staffer.
+- **Minimum extension version** — the oldest copy of the extension the app talks to
+  (`MIN_EXTENSION_VERSION`). An older copy is treated as absent: the agency's link, never its
+  button, and Settings says "Update the extension". The extension also answers **hello** with its
+  version and the agencies it checks.
+- **Try the checks** — Settings' page (owners and managers) that runs the extension in this browser
+  against nothing real: whether it is here and current, a **dry run** of each public agency's lookup
+  on a sample page the extension carries, filled with a made-up diver by the real filler and never
+  sent, whether Chrome lets the extension on each agency's own site, and whether an open PADI Pros'
+  Site tab is signed in, read without a search. It ends in a copyable session report of versions,
+  outcomes and **Page-shape reports**, with no person in it, to email to DiveDay's support address.
 - **DiveChek check** — the **Agency check** for a PADI card, on PADI's DiveChek in the staffer's own
   browser, signed in to the PADI Pros' Site (H-121); the "(member sign-in)" link opens the same
   site. Searched by name and birth date, so a diver with no birth date on file keeps the link.
@@ -68,11 +96,18 @@
   the typed birth date are one diver's cards, and two birth dates under the name, or a page saying
   it found two divers or more, certify nothing ("PADI lists more than one diver by this name"). A
   record ends at the first line that could be someone else's (another name, or a name and another
-  birth date), its birth date comes before its level, and it carries the card's number when the card
-  has one. An instructor named on the row is the trainer, not a limit. A **Junior certification**
+  birth date) or at the page's own furniture, its birth date comes before its level, and it carries
+  the card's number when the card has one. Only those records, and the words saying why or how many,
+  leave the staffer's browser. An instructor named on the row is the trainer, not a limit. A **Junior certification**
   reads as its level for a diver 15 or older on the day of the check; under 15 it says "PADI shows a
   Junior card. Under 15, record it by hand." A signed-out browser says "Sign in to the PADI Pros'
   Site first" and stops a "Check all". A best guess of PADI's page until a staffer tries it (#2259).
+  Offered only at a shop that turned the **PADI checks** on.
+- **PADI checks** — the shop's own switch, "PADI checks (beta)" in Settings, for both checks run on
+  the PADI Pros' Site: the **DiveChek check** and the PADI eLearning check (H-121, H-106). Off by
+  default, because they run under the shop's own PADI membership and have not been tried on the
+  real page; off, a PADI card keeps its "(member sign-in)" link and nothing offers or accepts a
+  check (`agencyCheckOffered`, `shops.padi_checks_enabled`).
 - **Agency-listed certification** — a nitrox or specialty certification an **Agency check** found on
   the same page as the card it matched, and that the staffer chose to add (layer 3 of ADR
   20261008-cert-check-extension). After a match the staffer reads "PADI also shows these

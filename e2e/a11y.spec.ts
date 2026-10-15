@@ -299,7 +299,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/reports", heading: "Money" },
       { path: "/shop/blue-mantis/staffing", heading: "Schedule" },
       { path: "/shop/blue-mantis/courses", heading: "Courses" },
-      { path: "/shop/blue-mantis/waivers", heading: "The release" },
+      { path: "/shop/blue-mantis/waivers", heading: "Waivers and signed records" },
       { path: "/shop/blue-mantis/dive-sites", heading: "Dive-site library" },
       { path: "/shop/blue-mantis/dive-sites/catalog", heading: "DiveDay common dive sites" },
     ]);

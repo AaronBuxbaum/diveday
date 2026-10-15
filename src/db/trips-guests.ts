@@ -1,3 +1,4 @@
+import { agencyCheckOffered } from "@/lib/agency-check";
 import { nowDate } from "@/lib/clock";
 import { courseCertifiesStudents, readLearningMaterials } from "@/lib/courses";
 import { demandRecommendation } from "@/lib/demand";
@@ -49,7 +50,8 @@ import type { TripSharedReads } from "./trips-shared-reads";
  * Returns `null` when the trip is absent so the page keeps its own `notFound()`.
  */
 
-export type TripGuestsShop = { id: string; timezone: string };
+/** `padiChecksEnabled`: whether PADI's eLearning check is offered here (H-121). */
+export type TripGuestsShop = { id: string; timezone: string; padiChecksEnabled: boolean };
 
 export type TripGuestsFilters = {
   /** The returning-diver picker's query. Blank means the picker is closed. */
@@ -347,7 +349,12 @@ export async function getTripGuests(
      * What the DiveDay browser extension would search the agency's eLearning
      * page for, per seat, where it can (H-106): a PADI course with materials.
      */
-    elearningQueryByBooking: elearningQueries(trip.course ?? null, roster),
+    elearningQueryByBooking: elearningQueries(trip.course ?? null, roster, shop),
+    /** The same course, where the shop's switch keeps PADI's eLearning check off (H-121). */
+    elearningChecksOff:
+      Boolean(trip.course) &&
+      readLearningMaterials(trip.course?.learningMaterials).length > 0 &&
+      !agencyCheckOffered(trip.course?.agency ?? "", shop),
     /**
      * Per diver, the cards the DiveDay browser extension could check with
      * their agencies from this tab (H-105). Held seats are never in it.
@@ -366,7 +373,8 @@ export async function getTripGuests(
     demand: demandRecommendation({
       capacity: trip.capacity,
       booked: trip.booked,
-      waitlisted: waitlist.length,
+      // Seats wanted, not leads: a waiting couple is two (fourth review, item 34).
+      waitlisted: waitlist.reduce((seats, { entry }) => seats + entry.partySize, 0),
     }),
     lastMinute: {
       matched: lastMinuteMatched,
@@ -398,9 +406,12 @@ function elearningQueries(
     booking: { id: string };
     person: { fullName: string; email: string | null };
   }[],
+  shop: { padiChecksEnabled: boolean },
 ): Map<string, ElearningQuery> {
   const queries = new Map<string, ElearningQuery>();
   if (!course || readLearningMaterials(course.learningMaterials).length === 0) return queries;
+  // PADI's eLearning waits for the shop's own switch (H-121).
+  if (!agencyCheckOffered(course.agency, shop)) return queries;
   for (const { booking, person } of roster) {
     const query = elearningCheckQuery({
       agency: course.agency,

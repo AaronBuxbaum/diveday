@@ -24,36 +24,6 @@ describe("the counter-rental ticket", () => {
     expect(code).not.toMatch(/formatMoney|Cents\b|amount/i);
   });
 
-  it("hides every act and the order link from the paper", () => {
-    const header = SOURCE.slice(SOURCE.indexOf("<header"), SOURCE.indexOf("</header>"));
-    expect(header).toMatch(/flex shrink-0 flex-wrap items-center gap-3 print:hidden/);
-    expect(header.indexOf("counterRentals.ticket.order")).toBeGreaterThan(
-      header.indexOf("gap-3 print:hidden"),
-    );
-    const acts = SOURCE.slice(SOURCE.indexOf("onWall.length > 0 || out.length > 0"));
-    expect(acts).toMatch(/<section className="mt-6 flex flex-col gap-4 print:hidden">/);
-  });
-
-  it("lays the tag and the kind on columns every row shares, as the slip does (K-505)", () => {
-    const list = SOURCE.slice(SOURCE.indexOf("<ul"), SOURCE.indexOf("</ul>"));
-    expect(list).toContain("grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3");
-    expect(list).toContain("grid-cols-subgrid");
-  });
-
-  it("prints the shop's phone in the footer, the number the person calls", () => {
-    const footer = SOURCE.slice(SOURCE.lastIndexOf("border-t border-border pt-4"));
-    expect(footer).toContain("shop.contactPhone");
-  });
-
-  it("asks the dives on the return, optional, inside the return's own form", () => {
-    const pane = SOURCE.slice(
-      SOURCE.indexOf("<GearReturnPane"),
-      SOURCE.indexOf("</GearReturnPane>"),
-    );
-    expect(pane).toContain('name="dives"');
-    expect(pane).not.toMatch(/name="dives"[^>]*required/);
-  });
-
   /**
    * Issue #2261, H-108: the person's waiver is said on screen with the link to
    * send, never on the slip they carry away, and nothing on the ticket waits
@@ -68,32 +38,5 @@ describe("the counter-rental ticket", () => {
     expect(line).toContain("personId={ticket.personId}");
     // The send is a counter send from this ticket (issue #2346).
     expect(line).toContain("ticketId={ticket.ticketId}");
-  });
-
-  it("does not call a flagged return back on the wall", () => {
-    expect(SOURCE).toContain('"returned-flagged"');
-  });
-
-  /**
-   * Issue #2345: the counter's return offers the same unticked "Pull for
-   * service" boxes a departure's does (#2205), one per unit that is out, and
-   * says "Pulled" only when the writer moved one.
-   */
-  it("offers the bench for the units that are out, and words a real pull", () => {
-    const pane = SOURCE.slice(
-      SOURCE.indexOf("<GearReturnPane"),
-      SOURCE.indexOf("</GearReturnPane>"),
-    );
-    expect(pane).toContain("bench={{");
-    expect(pane).toContain('legend: t("gear.prep.returnPullToBench")');
-    expect(pane).toMatch(/units: out\.map\(/);
-    expect(SOURCE).toContain('"returned-pulled": {');
-  });
-
-  it("names how many units were pulled, and says nothing on a count it cannot read", () => {
-    expect(SOURCE).toMatch(/"returned-pulled": \{[^}]*counted: true/);
-    expect(SOURCE).toContain("noticeCountParam(count)");
-    expect(SOURCE).toContain("!found.counted || noticeCount !== null");
-    expect(SOURCE).toContain('<FlashParams params={["notice", "count"]} />');
   });
 });

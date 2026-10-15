@@ -8,6 +8,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  lte,
   max,
   not,
   or,
@@ -505,6 +506,27 @@ export type StaffReviewPage = {
 export type StaffReviewScope = "all" | "waiting" | "moderated";
 
 /**
+ * **"3 stars and under" and "With a comment"** (fourth UX review, item 30):
+ * the two narrowings an owner reaches for in a long record, so the 3-star
+ * "we sat at the dock forty minutes" is found without paging. Applied to both
+ * groups and to their counts alike, so a header never counts rows the list
+ * does not show.
+ */
+export const STAFF_REVIEW_NARROWS = ["low", "comment"] as const;
+export type StaffReviewNarrow = (typeof STAFF_REVIEW_NARROWS)[number];
+
+/** A `?show=` value, narrowed; anything else is no narrowing. */
+export function staffReviewNarrow(raw: string | undefined): StaffReviewNarrow | null {
+  return STAFF_REVIEW_NARROWS.find((narrow) => narrow === raw) ?? null;
+}
+
+function narrowWhere(narrow: StaffReviewNarrow | null | undefined) {
+  if (narrow === "low") return lte(tripReviews.rating, 3);
+  if (narrow === "comment") return sql`length(trim(coalesce(${tripReviews.comment}, ''))) > 0`;
+  return undefined;
+}
+
+/**
  * The moderation queue: this shop's reviews, one page at a time (ordered by
  * creation, then id for a stable tiebreak) so a shop with years of trips costs
  * one page, not the whole table.
@@ -524,7 +546,12 @@ export type StaffReviewScope = "all" | "waiting" | "moderated";
 export async function listShopReviewsForStaff(
   db: DbExecutor,
   shopId: string,
-  options: { page?: number; limit?: number; scope?: StaffReviewScope } = {},
+  options: {
+    page?: number;
+    limit?: number;
+    scope?: StaffReviewScope;
+    narrow?: StaffReviewNarrow | null;
+  } = {},
 ): Promise<StaffReviewPage> {
   const hidden = hiddenReviewExists(db);
   const moderationActor = alias(people, "review_moderation_actor");
@@ -533,6 +560,7 @@ export async function listShopReviewsForStaff(
     eq(tripReviews.shopId, shopId),
     options.scope === "waiting" ? waiting : undefined,
     options.scope === "moderated" ? or(eq(tripReviews.isPublished, true), hidden) : undefined,
+    narrowWhere(options.narrow),
   );
   // One spread in the final argument position, not a conditional spread mid-call:
   // `orderBy` takes a rest parameter, and TypeScript only accepts a spread
@@ -650,9 +678,10 @@ export type StaffReviewGroupCounts = { waiting: number; published: number; hidde
 export async function countStaffReviewGroups(
   db: DbExecutor,
   shopId: string,
+  narrow: StaffReviewNarrow | null = null,
 ): Promise<StaffReviewGroupCounts> {
   const hidden = hiddenReviewExists(db);
-  const shop = eq(tripReviews.shopId, shopId);
+  const shop = and(eq(tripReviews.shopId, shopId), narrowWhere(narrow));
   const countWhere = async (where: ReturnType<typeof and>) => {
     const [row] = await db
       .select({ count: sql<number>`count(*)::int` })

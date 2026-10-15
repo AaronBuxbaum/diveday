@@ -3,13 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 import { trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **A rehearsal is added from the builder** (ADR 20261012-rehearsal-departures):
@@ -39,7 +41,7 @@ const pad = (value: number) => String(value).padStart(2, "0");
 const TITLE = "Training day drill";
 
 async function signedInOwner() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   vi.mocked(requireShopSurface).mockResolvedValue({

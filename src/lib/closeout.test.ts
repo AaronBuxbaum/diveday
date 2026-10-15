@@ -142,6 +142,27 @@ describe("assembleDayCloseout", () => {
     ]);
   });
 
+  /**
+   * The close-out's still-out window on the 25-hour day: a boat that left at
+   * the first 01:30 and was due back at the second one has sailed but is not
+   * back until an hour of real time after its due time, 02:30 EST.
+   */
+  it("measures a boat's hours out in real time across the repeated hour", () => {
+    const leaves = new Date("2026-11-01T05:30:00Z"); // 01:30 EDT
+    const due = new Date("2026-11-01T06:30:00Z"); // 01:30 EST
+    const at = (iso: string) =>
+      assembleDayCloseout({
+        trips: [trip({ tripId: "owl", title: "Owl Dive", startsAt: leaves, endsAt: due })],
+        gaps: [],
+        timeZone: TZ,
+        now: new Date(iso),
+      }).departures[0]?.status;
+
+    expect(at("2026-11-01T06:00:00Z")).toBe("not_departed"); // 01:00 EST
+    expect(at("2026-11-01T07:00:00Z")).toBe("still_out"); // 02:00 EST
+    expect(at("2026-11-01T07:30:00Z")).not.toBe("still_out"); // 02:30 EST
+  });
+
   // **A crew tap settles a station the clock would leave open; it never
   // reopens one the clock has closed** — issue #1480. The late-arrival hour is
   // an allowance for a *time-based inference*; a crew member tapping Home at
@@ -345,6 +366,15 @@ describe("shopDayOf", () => {
   it("names the day the shop's own wall clock is in, not UTC's", () => {
     // 23:30 local on Aug 4 is 03:30 UTC on Aug 5.
     expect(shopDayOf(new Date("2026-08-05T03:30:00Z"), TZ)).toBe("2026-08-04");
+  });
+
+  it("holds the day through both 2026 clock changes in New York", () => {
+    // 25-hour day: 23:30 EST on Nov 1 is 04:30Z on Nov 2.
+    expect(shopDayOf(new Date("2026-11-02T04:30:00Z"), TZ)).toBe("2026-11-01");
+    expect(shopDayOf(new Date("2026-11-02T05:00:00Z"), TZ)).toBe("2026-11-02");
+    // 23-hour day: 23:30 EDT on Mar 8 is 03:30Z on Mar 9.
+    expect(shopDayOf(new Date("2026-03-09T03:30:00Z"), TZ)).toBe("2026-03-08");
+    expect(shopDayOf(new Date("2026-03-09T04:00:00Z"), TZ)).toBe("2026-03-09");
   });
 });
 

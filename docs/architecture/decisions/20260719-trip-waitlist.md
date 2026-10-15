@@ -5,6 +5,15 @@
 - **Amended by:** [20260813-wait-list-is-a-lead-list](20260813-wait-list-is-a-lead-list.md) — the
   `created_at` order below is how staff *read* the list, never an order they owe anyone. "Must
   preserve first-come order" in the context is withdrawn.
+- **Amended 2026-10-15 (fourth UX review, item 34): a waiting party.** An entry carries
+  `party_size` (1 to 20, the public booking form's own bound), the joiner and the people diving
+  with them, held as a count with the joiner's details only. "Full at submission time" now means
+  full *for that party*: the join refuses as available only when that many diver seats are free.
+  Whoever invites (staff, or the nightly wait-list roll) invites a party only when that many seats
+  are free, and an invitation already out holds its party's seats. The roll copies the party with
+  the lead. The alternative, one entry per person joined by a group id, was rejected: the
+  companions have no details to hold until they book, and a group id would let a roll split the
+  couple the entry exists to keep together.
 
 ## Context
 

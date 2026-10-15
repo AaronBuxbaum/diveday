@@ -33,7 +33,8 @@
     "oneTime": "Salida única",
     "perDiver": "por buceador",
     "cancel": "Cancelar esta salida",
-    "more": "Más para esta salida"
+    "more": "Más para esta salida",
+    "meetingDaysSummary": "{count, plural, other {# días}} · {first} – {last}"
   },
   "openSeats": {
     "label": "Plazas sin vender",
@@ -262,7 +263,9 @@
     "minimumDecisionLabel": "Decidir con",
     "minimumDecisionDescription": "Cuánto antes de la salida se toma la decisión. La página de reserva publica el momento exacto.",
     "diversSuffix": "buceadores",
-    "hoursBeforeSuffix": "horas de antelación"
+    "hoursBeforeSuffix": "horas de antelación",
+    "coursePrice": "{amount} por buceador, el precio del curso",
+    "coursePriceHint": "Se fija en el curso, con su cuota de eLearning"
   },
   "conditions": {
     "description": "Se muestra a los buceadores en lugar del pronóstico marino automático.",
@@ -393,7 +396,8 @@
     "hoursAgo": "hace {hours} h",
     "daysAgo": "hace {days} d",
     "emailSubject": "Se ha liberado una plaza en {tripTitle}",
-    "emailBody": "Hola {firstName},\n\nAcaba de liberarse una plaza en {tripTitle} ({tripWhen}) con {shopName}. Estás en su lista de espera, así que consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!"
+    "emailBody": "Hola {firstName},\n\nAcaba de liberarse una plaza en {tripTitle} ({tripWhen}) con {shopName}. Estás en su lista de espera, así que consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!",
+    "party": "Grupo de {count}"
   },
   "invitations": {
     "description": "Una invitación no reserva una plaza ni añade a nadie al manifiesto.",
@@ -473,7 +477,8 @@
       "complete": "PADI muestra el eLearning terminado. Material marcado como terminado.",
       "notComplete": "PADI todavía no muestra terminado el eLearning de este curso.",
       "noRecord": "PADI no encontró eLearning con el correo de este alumno.",
-      "unreadable": "No se pudo leer la página de PADI. Inicia sesión en el PADI Pros’ Site y vuelve a verificar.",
+      "unreadable": "No se pudo leer la página de PADI.",
+      "signedOut": "Inicia sesión en el PADI Pros’ Site primero y vuelve a verificar.",
       "failed": "No se guardó. Inténtalo de nuevo."
     },
     "agencyCheckAll": {
@@ -485,7 +490,8 @@
       "cancelled": "Detenida. Verificadas: {checked}. Certificadas: {certified}.",
       "stopped": "Se detuvo en {name}: no se pudo leer la página de {agency}. El resto queda para ti.",
       "stoppedTransport": "Se detuvo en {name}: DiveDay no respondió. Recarga para ver cómo quedó cada certificación.",
-      "stoppedSignedOut": "Se detuvo en {name}: inicia sesión en el PADI Pros’ Site primero. El resto queda para ti."
+      "stoppedSignedOut": "Se detuvo en {name}: inicia sesión en el PADI Pros’ Site primero. El resto queda para ti.",
+      "left": "Las demás certificaciones de {agency} quedan para ti: verifícalas en su página."
     },
     "certifyConfirm": "Confirmar certificación",
     "certifyDiver": "Certificar",
@@ -678,6 +684,7 @@
     "carryWaitlistTo": "O ofréceles una salida que ya está en el tablero",
     "carryWaitlist": "Pasar la lista de espera",
     "carryWaitlistPending": "Pasando…",
+    "carryWaitlistTarget": "{target} · {count, plural, =0 {llena} one {queda # plaza} other {quedan # plazas}}",
     "activityHeading": "Actividad",
     "noActivity": "Todavía no hay actividad del personal registrada.",
     "promoteHeading": "Promocionar esta salida",

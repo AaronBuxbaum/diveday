@@ -313,6 +313,7 @@
     "waiverNotSent": "{count, plural, one {Waiver not signed, not sent yet.} other {# waivers not signed, not sent yet.}}",
     "waiverPending": "{count, plural, one {Waiver not signed, link sent.} other {# waivers not signed, links sent.}}",
     "waiverExpired": "{count, plural, one {Waiver link expired.} other {# waiver links expired.}}",
+    "waiverLapsed": "{count, plural, one {Signed waiver lapsed.} other {# signed waivers lapsed.}}",
     "medicalReview": "{count, plural, one {Medical answer needs a doctor’s sign-off.} other {# medical answers need a doctor’s sign-off.}}",
     "medicalNotCleared": "{count, plural, one {Not cleared to dive by a physician.} other {# divers not cleared to dive by a physician.}}",
     "guardianSignatureMissing": "{count, plural, one {Waiver needs a guardian’s signature.} other {# waivers need a guardian’s signature.}}",

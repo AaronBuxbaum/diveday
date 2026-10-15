@@ -140,14 +140,16 @@ export function elearningCheckQuery(input: {
   email: string | null;
   courseTitle: string;
 }): ElearningQuery | null {
-  if (!(ELEARNING_AGENCIES as readonly string[]).includes(input.agency)) return null;
+  // A course's agency is free text: "PADI" and " padi " are PADI.
+  const agency = foldText(input.agency);
+  if (!(ELEARNING_AGENCIES as readonly string[]).includes(agency)) return null;
   const email = input.email?.trim().toLowerCase() ?? "";
   if (!EMAIL.test(email)) return null;
   const words = input.fullName.trim().split(/\s+/).filter(Boolean);
   if (words.length < 2) return null;
   if (courseWords(input.courseTitle).length === 0) return null;
   return {
-    agency: input.agency as ElearningAgency,
+    agency: agency as ElearningAgency,
     firstName: words[0] as string,
     lastName: words[words.length - 1] as string,
     email,

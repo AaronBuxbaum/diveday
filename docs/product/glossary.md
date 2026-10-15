@@ -43,9 +43,12 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Intro-session in-water ratio
 - Junior certification
 - Levels
+- Minimum extension version
 - Minor
 - Other agency
+- PADI checks
 - PADI Scuba Diver
+- Page-shape report
 - Prior visit
 - RAID
 - Readiness
@@ -58,6 +61,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Target diver:divemaster ratio
 - Temperature unit
 - Trip admission
+- Try the checks
 - Verified certification
 
 ## Day of the dive
@@ -101,15 +105,17 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Card dispute
 - Checkout sale / tip sale
 - Dashboard refund
-- Dive (package unit)
+- Dives owed on packages
 - Failed refund
 - First paid month
 - Free term
+- Owed
 - Paid after close
 - Paid mark
 - Pass-through fee
 - Payments restricted
 - Payout
+- Sailed / Still to sail
 - Subscription (DiveDay billing)
 
 ## Operations
@@ -181,7 +187,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Imported payment history
 - Imported waiver acceptance
 - In-water certified assistant
-- Incident kind
+- Inbox seat
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
@@ -271,6 +277,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Trip stage
 - Unaccounted for
 - Wait list
+- Wait-list party
 - Wait-list roll
 - Waiver / release
 - Waiver activity

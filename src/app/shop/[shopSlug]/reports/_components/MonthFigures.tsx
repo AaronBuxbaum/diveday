@@ -54,6 +54,11 @@ export type MonthFigure = {
    * row may ever carry one, and only while its condition holds.
    */
   earned?: string;
+  /**
+   * "Sailed 104 · Still to sail 25" (fourth UX review, item 22): the current
+   * month's figure split at now, so boats still for sale do not read as done.
+   */
+  split?: string;
   /** "up 18% vs $6,690 in August 2025" — the baseline, one step quieter. */
   comparison?: string;
   /** One quiet jump to the surface behind the number (revenue → Orders). */
@@ -110,14 +115,16 @@ export function figureCellClass(index: number): string {
 }
 
 /**
- * One column count per figure row. Two entries because there are two of them
- * in the tree — the month's five and the year's four (ADR 20260908-one-hand,
+ * One column count per figure row. An entry per row shape, because there are three of them
+ * in the tree — the month's five, the year's four and the year's three money
+ * figures (fourth UX review, item 25) (ADR 20260908-one-hand,
  * decision 6, lever T) — and a second component for the second one would be a
  * second spelling of one grammar, which is the drift decision 1 exists to end.
  * The class strings are written out rather than interpolated: Tailwind reads
  * class names as literals.
  */
 const FIGURE_COLUMNS = {
+  3: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-3",
   4: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-4",
   5: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5",
 } as const;
@@ -163,7 +170,7 @@ export function MonthFigures({
                   revenue) set its comparison 4px higher than every
                   neighbour's first line (K-287). Rendered only when it holds
                   something: an empty `mt-2` block is a phantom gap. */}
-              {figure.earned || figure.detail || figure.comparison ? (
+              {figure.earned || figure.detail || figure.split || figure.comparison ? (
                 <div className="mt-2 space-y-1">
                   {figure.earned ? (
                     <EarnedMomentLine animate={false}>{figure.earned}</EarnedMomentLine>
@@ -175,6 +182,9 @@ export function MonthFigures({
                     >
                       {figure.detail}
                     </span>
+                  ) : null}
+                  {figure.split ? (
+                    <span className="block text-sm text-muted tabular-nums">{figure.split}</span>
                   ) : null}
                   {figure.comparison ? (
                     <span className="block text-sm text-muted tabular-nums">

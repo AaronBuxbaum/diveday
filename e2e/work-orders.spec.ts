@@ -199,8 +199,9 @@ test.describe("staff", () => {
       .first()
       .click();
     const card = page.getByRole("region", { name: "Bill and pickup" });
-    // Unconnected: the total and where it is paid, and no button.
-    await expect(card.getByText("Collected at the counter.")).toBeVisible();
+    // Unconnected: the total and how to record it paid at pickup, and no bill.
+    await expect(card.getByText("Paid at pickup:")).toBeVisible();
+    await expect(card.getByRole("button", { name: "Cash" })).toBeVisible();
     await expect(card.getByRole("button", { name: "Send the bill" })).toHaveCount(0);
 
     // The test double: connected and charges-enabled, without calling Stripe.

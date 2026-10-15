@@ -33,7 +33,8 @@
     "oneTime": "One-time departure",
     "perDiver": "per diver",
     "cancel": "Cancel this departure",
-    "more": "More for this departure"
+    "more": "More for this departure",
+    "meetingDaysSummary": "{count, plural, other {# days}} · {first} – {last}"
   },
   "openSeats": {
     "label": "Unsold seats",
@@ -262,7 +263,9 @@
     "minimumDecisionLabel": "Decide by",
     "minimumDecisionDescription": "How long before departure the call is made. The booking page publishes the exact moment.",
     "diversSuffix": "divers",
-    "hoursBeforeSuffix": "hours before"
+    "hoursBeforeSuffix": "hours before",
+    "coursePrice": "{amount} per diver, the course’s price",
+    "coursePriceHint": "Set on the course, with its eLearning fee"
   },
   "conditions": {
     "description": "Replaces the automated marine outlook for divers.",
@@ -393,7 +396,8 @@
     "hoursAgo": "{hours}h ago",
     "daysAgo": "{days}d ago",
     "emailSubject": "A seat opened up on {tripTitle}",
-    "emailBody": "Hi {firstName},\n\nA seat just opened on {tripTitle} ({tripWhen}) with {shopName}. You’re on the wait list for it, so grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!"
+    "emailBody": "Hi {firstName},\n\nA seat just opened on {tripTitle} ({tripWhen}) with {shopName}. You’re on the wait list for it, so grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!",
+    "party": "Party of {count}"
   },
   "invitations": {
     "description": "An invitation does not hold a seat or add anyone to the manifest.",
@@ -473,7 +477,8 @@
       "complete": "PADI shows the eLearning finished. Materials marked done.",
       "notComplete": "PADI doesn’t show this course’s eLearning finished yet.",
       "noRecord": "PADI found no eLearning under this student’s email.",
-      "unreadable": "Couldn’t read PADI’s page. Sign in to the PADI Pros’ Site, then check again.",
+      "unreadable": "Couldn’t read PADI’s page.",
+      "signedOut": "Sign in to the PADI Pros’ Site first, then check again.",
       "failed": "That didn’t save. Try again."
     },
     "agencyCheckAll": {
@@ -485,7 +490,8 @@
       "cancelled": "Stopped. Checked {checked}. Certified: {certified}.",
       "stopped": "Stopped at {name}: couldn’t read {agency}’s page. The rest are left for you.",
       "stoppedTransport": "Stopped at {name}: DiveDay didn’t answer. Reload to see where each certification stands.",
-      "stoppedSignedOut": "Stopped at {name}: sign in to the PADI Pros’ Site first. The rest are left for you."
+      "stoppedSignedOut": "Stopped at {name}: sign in to the PADI Pros’ Site first. The rest are left for you.",
+      "left": "Left {agency}’s other certifications for you: check them on its page."
     },
     "certifyConfirm": "Confirm certification",
     "certifyDiver": "Certify",
@@ -678,6 +684,7 @@
     "carryWaitlistTo": "Or offer them a departure already on the board",
     "carryWaitlist": "Carry the wait list",
     "carryWaitlistPending": "Carrying…",
+    "carryWaitlistTarget": "{target} · {count, plural, =0 {full} one {# seat left} other {# seats left}}",
     "activityHeading": "Activity",
     "noActivity": "No staff activity recorded yet.",
     "promoteHeading": "Promote this trip",

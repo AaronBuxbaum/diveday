@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { sourceFiles } from "@/test/source";
 import {
   baseLayerRules,
   declarations,
@@ -91,14 +92,6 @@ describe("the ring utilities", () => {
 });
 
 const SRC = path.join(import.meta.dirname, "..");
-
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(full);
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
-  });
-}
 
 /** `has-[:focus-visible]:outline-2` → `["has-[:focus-visible]", "outline-2"]`: a colon in brackets stays put. */
 function segments(token: string): string[] {

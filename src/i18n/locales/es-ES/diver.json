@@ -325,7 +325,9 @@
     },
     "pitchDoor": "El resto del briefing",
     "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}",
-    "logEntryWaiting": "Después de bucear, tu página de bitácora te espera."
+    "logEntryWaiting": "Después de bucear, tu página de bitácora te espera.",
+    "runLine": "Sale {cadence} · la próxima, {date}",
+    "crewToBeConfirmed": "{role} · por confirmar"
   },
   "factSource": {
     "forecast": "Pronóstico",
@@ -381,6 +383,7 @@
     "waitlistHeading": "Anótate en la lista de espera",
     "waitlistBody": "Si se libera una plaza, el centro ya tendrá tus datos.",
     "waitlistJoining": "Anotándote…",
+    "waitlistPartyHint": "Basta con que una persona se anote por todo el grupo.",
     "wantAnyTripAlertsInstead": "¿No te convence esta? ¿Prefieres alertas de ofertas para cualquier salida?",
     "joinLastMinuteDealAlerts": "Anótate en la lista de última hora",
     "waitlistConfirmedHeading": "Estás en la lista de espera, {name}.",
@@ -456,7 +459,8 @@
       "easyFirstDive": "Una primera inmersión tranquila para empezar.",
       "refresherCourse": "Cuéntame sobre el curso de repaso.",
       "noGate": "Ninguna de estas opciones cambia si puedes reservar."
-    }
+    },
+    "alternativeSameRun": "Próxima fecha con plazas, {date}"
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",
@@ -595,7 +599,8 @@
       "noCoursesHeading": "Todavía no hay cursos publicados",
       "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida.",
       "requires": "Requiere {level} o superior",
-      "groupStart": "Empieza aquí"
+      "groupStart": "Empieza aquí",
+      "askForADate": "Pide una fecha"
     },
     "shelf": {
       "allCourses": "Todos los cursos",
@@ -656,7 +661,7 @@
     "photoAdded": "Añadida a tu resumen. ¡Gracias por compartirla!",
     "photoMissing": "Elige primero una foto y luego añádela.",
     "photoUnsupported": "Este centro todavía no tiene activada la subida de fotos, así que etiquétalas cuando publiques.",
-    "photoFailed": "Esa foto no se ha subido. Prueba con un JPEG o PNG de menos de 5\u00a0MB.",
+    "photoFailed": "Esa foto no se ha subido. Prueba con un JPEG o PNG de menos de 5 MB.",
     "photoCancelled": "Esta reserva no tiene resumen al que añadir una foto.",
     "tipCancelled": "Sin problema, no se ha cobrado la propina.",
     "tipRange": "Introduce una propina de entre 1 y 500 $.",
@@ -676,7 +681,7 @@
     "addAPhoto": "Añadir una foto",
     "chooseDifferentPhotos": "Elegir otras fotos",
     "photoWrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
-    "photoTooBigSuffix": ": supera los {maxMb}\u00a0MB. Prueba con una foto más pequeña.",
+    "photoTooBigSuffix": ": supera los {maxMb} MB. Prueba con una foto más pequeña.",
     "photoTooMany": "Elige un máximo de {max, plural, one {# foto} other {# fotos}} a la vez.",
     "addingPhoto": "Añadiendo…",
     "addToMyRecap": "Añadir a mi resumen",
@@ -878,6 +883,7 @@
       "waiverNotSent": "El centro aún no ha enviado tu exención. Puedes pedirla al llegar, o contactar con ellos más abajo.",
       "waiverPending": "Firma tu exención. Solo lleva unos dos minutos.",
       "waiverExpired": "El enlace de tu exención caducó. Consigue uno nuevo; solo lleva unos dos minutos.",
+      "waiverLapsed": "Tu exención firmada caducó. Consigue un enlace nuevo y vuelve a firmar; solo lleva unos dos minutos.",
       "medicalReview": "Gracias por firmar. Una respuesta médica necesita una revisión más de cerca. Puede requerirse el visto bueno de un médico, y tu centro se pondrá en contacto sobre los siguientes pasos.",
       "guardianSignatureMissing": "Tu madre, padre o tutor legal también tiene que firmar la exención. Consigue un enlace nuevo y fírmenla juntos.",
       "certificationMissing": "Comparte tus datos de certificación con el centro (añádelos abajo o ponte en contacto) para que puedan registrarlos en tu ficha.",
@@ -1048,7 +1054,7 @@
     "emergencyContact": "Contacto de emergencia",
     "contactName": "Nombre del contacto",
     "contactPhone": "Teléfono del contacto",
-    "emergencyOnFile": "Ya registrado: {name}\u00a0·\u00a0<nowrap>{phone}</nowrap>.",
+    "emergencyOnFile": "Ya registrado: {name} · <nowrap>{phone}</nowrap>.",
     "emergencyContactChangeHint": "Cámbialo aquí si está desactualizado. Rellena los dos campos, o déjalos vacíos para mantener lo que ya está registrado. Pídele al centro que elimine el contacto de tu ficha si ya no quieres tenerlo.",
     "signature": "Tu firma",
     "typeFullName": "Escribe tu nombre completo",
@@ -3443,14 +3449,14 @@
       "needGear": "¿Necesitas alquilar equipo?",
       "bcd": "Chaleco",
       "wetsuit": "Neopreno",
-      "bcdPrice": "15,00\u00a0US$",
-      "wetsuitPrice": "12,00\u00a0US$",
-      "nitrox": "Me gustaría nitrox (12,00\u00a0US$ por inmersión)",
-      "fare": "145,00\u00a0US$ × 1 buceador",
-      "fareAmount": "145,00\u00a0US$",
-      "gearAmount": "27,00\u00a0US$",
+      "bcdPrice": "15,00 US$",
+      "wetsuitPrice": "12,00 US$",
+      "nitrox": "Me gustaría nitrox (12,00 US$ por inmersión)",
+      "fare": "145,00 US$ × 1 buceador",
+      "fareAmount": "145,00 US$",
+      "gearAmount": "27,00 US$",
       "dueNow": "A pagar ahora",
-      "total": "172,00\u00a0US$",
+      "total": "172,00 US$",
       "bookAndPay": "Reservar y pagar"
     },
     "storefront": {
@@ -3463,16 +3469,16 @@
       "nextBoat": "Próxima salida con plazas",
       "nextTime": "7:30",
       "nextWhen": "sáb, 10 oct",
-      "perDiver": "95\u00a0US$ por buceador",
+      "perDiver": "95 US$ por buceador",
       "bookThisBoat": "Reservar esta salida",
       "scheduleHeading": "Calendario",
       "weekday": "sáb",
       "month": "oct",
       "reefTime": "7:30 – 11:00",
       "reefSites": "Molasses Reef y French Reef",
-      "reefPrice": "95\u00a0US$",
+      "reefPrice": "95 US$",
       "nightTime": "19:30 – 21:30",
-      "nightPrice": "120\u00a0US$",
+      "nightPrice": "120 US$",
       "onlyLeft": "{count, plural, one {Solo queda # plaza} other {Solo quedan # plazas}}"
     },
     "waiverSigning": {
@@ -3541,7 +3547,7 @@
       "label": "Cursos",
       "eyebrow": "Curso {agency}",
       "summary": "Certifícate como PADI Open Water Diver",
-      "price": "595\u00a0US$",
+      "price": "595 US$",
       "perDiver": "por buceador",
       "duration": "Duración",
       "durationValue": "3 días · 8:00 – 17:00",
@@ -3563,15 +3569,15 @@
       "title": "Dinero",
       "newOrder": "Nuevo pedido",
       "today": "Hoy · sáb, 10 oct",
-      "dayMeta": "4 pedidos · 365,00\u00a0US$",
+      "dayMeta": "4 pedidos · 365,00 US$",
       "wreckTrip": "Pecio Spiegel Grove",
       "counterSale": "Alquiler: chaleco y regulador",
       "open": "Abierto",
       "partlyRefunded": "Reembolsado en parte",
       "refunded": "Reembolsado",
-      "amountReef": "95,00\u00a0US$",
-      "amountWreck": "145,00\u00a0US$",
-      "amountCounter": "30,00\u00a0US$"
+      "amountReef": "95,00 US$",
+      "amountWreck": "145,00 US$",
+      "amountCounter": "30,00 US$"
     },
     "scheduleWeek": {
       "label": "Agenda",
@@ -3586,9 +3592,9 @@
       "wreckTime": "8:00",
       "afternoonTrip": "Dos tanques de tarde",
       "wreckTrip": "Pecio Spiegel Grove",
-      "reefMeta": "Molasses Reef · Mantis I · 95\u00a0US$",
-      "afternoonMeta": "French Reef · Mantis I · 95\u00a0US$",
-      "wreckMeta": "Spiegel Grove · Mantis II · 145\u00a0US$",
+      "reefMeta": "Molasses Reef · Mantis I · 95 US$",
+      "afternoonMeta": "French Reef · Mantis I · 95 US$",
+      "wreckMeta": "Spiegel Grove · Mantis II · 145 US$",
       "crewLabel": "Tripulación:",
       "nobodyYet": "nadie todavía",
       "seats": "{booked} de {capacity}",
@@ -3992,7 +3998,7 @@
           },
           "waiverDocuments": {
             "what": "Documentos de exención / médicos",
-            "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5\u00a0MB."
+            "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5 MB."
           },
           "role": {
             "what": "Rol",
@@ -4541,6 +4547,18 @@
         "heading": "Enlaces que funcionan como llaves",
         "body": "Parte de lo que DiveDay envía es un enlace que no necesita contraseña: la exención que firma un buceador, su página de preparación, el recuerdo después de una inmersión. Tener el enlace es el permiso, así que se puede abrir en el muelle con una mano libre. Esos enlaces se tratan como credenciales en todo momento: el token se elimina antes de registrar una visita o informar de un error, y antes de que ninguna línea llegue a un registro. Caducan, y un centro puede invalidar uno."
       },
+      "extension": {
+        "heading": "La extensión de verificación de certificaciones",
+        "intro": "El personal de un centro puede añadir la verificación de certificaciones de DiveDay a Chrome o Edge. Hace una sola cosa: cuando alguien del personal presiona “Verificar con SSI”, u otra agencia, en la certificación de un buceador en DiveDay, la busca en la página de consulta de esa agencia, desde su navegador, y devuelve la respuesta a DiveDay. Solo funciona en ese momento, y solo en las páginas de personal de DiveDay y en las páginas de consulta de las agencias.",
+        "sendsTerm": "Qué envía a la agencia",
+        "sendsBody": "el nombre del buceador y lo que pide el formulario de esa agencia, una fecha de nacimiento o un número de tarjeta, y solo a la agencia que eligió el miembro del personal, igual que si lo escribiera a mano. Para el eLearning de PADI de un alumno, el correo del alumno va a PADI.",
+        "readsTerm": "Qué lee",
+        "readsBody": "la respuesta de la agencia. En el PADI Pros’ Site, que el personal abre con el acceso a PADI de su propio centro, devuelve solo las líneas sobre ese buceador, o sobre el alumno cuando verifica su eLearning. Cuando una verificación falla, puede enviar a DiveDay la estructura de la página (sus etiquetas, las palabras de sus botones y sus títulos, nunca nada escrito en ella ni los datos de nadie) para poder arreglar la lectura.",
+        "keepsTerm": "Qué guarda DiveDay",
+        "keepsBody": "cuando la respuesta muestra la certificación, las palabras de la agencia pasan a ser la nota de revisión de la tarjeta, con el nombre del miembro del personal cuyo navegador la verificó. Cuando la página muestra otras certificaciones del buceador y alguien del personal las añade, las líneas de la agencia sobre el buceador pasan a ser también su nota de revisión. Si no, no se guarda nada de la página de la agencia.",
+        "neverTerm": "Lo que nunca hace",
+        "neverBody": "no guarda contraseñas ni accesos a ninguna agencia, no almacena nada en el navegador, no lee ningún otro sitio ni el historial, y no pasa nada a nadie para publicidad, para venderlo ni para evaluar créditos."
+      },
       "keep": {
         "heading": "Cuánto tiempo se guarda",
         "intro": "Los registros propios del centro se guardan mientras el centro use DiveDay, y desaparecen cuando el centro los borra o cierra su cuenta. La mayoría de los historiales tienen ventanas fijas, y estos son los números reales con los que el sistema los poda:",
@@ -5031,6 +5049,7 @@
     "reminderAction": {
       "waiverPending": "Firma tu exención",
       "waiverExpired": "El enlace de tu exención caducó. Consigue uno nuevo; solo lleva unos dos minutos",
+      "waiverLapsed": "Tu exención firmada caducó. Vuelve a firmarla",
       "certificationMissing": "Envíanos los datos de tu certificación",
       "certificationInsufficient": "Consulta tu nivel de certificación con nosotros",
       "certificationSelfDeclared": "Trae tu certificación para que podamos verla",
@@ -5121,7 +5140,10 @@
       "body": "Se acaba de liberar una plaza en {tripTitle}, y te la ofrecemos a ti.",
       "claim": "Resérvala antes de que se agote",
       "claimLink": "Reservar tu plaza",
-      "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!"
+      "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!",
+      "subjectParty": "Se liberaron {seats} plazas en {tripTitle}",
+      "bodyParty": "Se acaban de liberar {seats} plazas en {tripTitle}, y te las ofrecemos para tu grupo.",
+      "rolledBody": "La salida del {sailed} ya zarpó. El {date} tiene lugar, y te ofrecemos {seats, plural, one {una plaza} other {# plazas}} en {tripTitle}."
     },
     "tripInvitation": {
       "subject": "Una invitación de {shopName}: {tripTitle}",
@@ -5204,8 +5226,9 @@
         "heading": "Dinero",
         "took": "Las salidas de la semana pasada dejaron {amount} después de impuestos.",
         "tips": "{amount} en propinas para repartir con la tripulación.",
-        "openOrders": "{count, plural, one {# pedido sigue abierto.} other {# pedidos siguen abiertos.}}",
-        "link": "Abrir Dinero"
+        "link": "Abrir Dinero",
+        "owedOrders": "Por cobrar {amount} en {count, plural, one {# pedido abierto} other {# pedidos abiertos}}.",
+        "owedSeats": "Por cobrar {amount} en {count, plural, one {# plaza que zarpó sin pagar} other {# plazas que zarparon sin pagar}}."
       },
       "thisWeek": {
         "heading": "Esta semana, {range}",
@@ -5237,7 +5260,19 @@
       "why": "Recibes esto cada lunes como parte del equipo de {shopName}.",
       "settings": "Ajustes de correo",
       "turnOff": "Dejar de recibir estos correos",
-      "quietWeek": "La semana pasada no hubo actividad y esta semana no hay nada en la agenda, así que este lunes no se envía ningún correo."
+      "quietWeek": "La semana pasada no hubo actividad y esta semana no hay nada en la agenda, así que este lunes no se envía ningún correo.",
+      "safety": {
+        "heading": "Seguridad",
+        "rollCalls": "{count, plural, one {# pase de lista sigue abierto.} other {# pases de lista siguen abiertos.}}",
+        "uncrewed": "{count, plural, one {# salida aún no tiene tripulación.} other {# salidas aún no tienen tripulación.}}",
+        "incidents": "{count, plural, one {Se presentó # informe de incidente la semana pasada.} other {Se presentaron # informes de incidente la semana pasada.}}",
+        "link": "Abrir Hoy"
+      },
+      "gearService": {
+        "heading": "Equipo",
+        "body": "{count, plural, one {# equipo necesita mantenimiento.} other {# equipos necesitan mantenimiento.}}",
+        "link": "Abrir Equipo"
+      }
     },
     "staffInvite": {
       "subject": "{inviterName} te ha invitado a {shopName} en DiveDay",

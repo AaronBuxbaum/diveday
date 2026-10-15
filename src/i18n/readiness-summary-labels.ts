@@ -14,6 +14,7 @@ export const CHECKLIST_DETAIL_KEYS: Record<ChecklistDetailCode, DiverMessageKey>
   identity_unconfirmed: "ready.checklistDetail.identityUnconfirmed",
   under_minimum_age: "ready.checklistDetail.underMinimumAge",
   waiver_not_sent: "ready.checklistDetail.waiverNotSent",
+  waiver_lapsed: "ready.checklistDetail.waiverLapsed",
   waiver_pending: "ready.checklistDetail.waiverPending",
   waiver_expired: "ready.checklistDetail.waiverExpired",
   medical_review: "ready.checklistDetail.medicalReview",

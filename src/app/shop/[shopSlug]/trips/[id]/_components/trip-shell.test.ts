@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { sourceFiles } from "@/test/source";
 import { declarations, readGlobalsCss, unlayeredRules } from "@/test/stylesheet";
 import { TRIP_SHELL_CLASS } from "./trip-shell";
 
@@ -21,14 +22,6 @@ import { TRIP_SHELL_CLASS } from "./trip-shell";
 const SHOP = path.join(import.meta.dirname, "..", "..", "..");
 
 const WEARERS = ["trips/[id]/layout.tsx", "print/page.tsx", "print/loading.tsx"] as const;
-
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(full);
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
-  });
-}
 
 describe("the trip shell", () => {
   it("is the staff work surface on screen and the full sheet less a gutter on paper", () => {

@@ -10,7 +10,9 @@ import { bookings, certifications, nitroxCertifications, trips } from "@/db/sche
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -18,7 +20,7 @@ const { buildArrivalDesk } = await import("./arrival-desk");
 
 /** A seat at the counter whose diver has never been on one of this shop's boats. */
 async function firstTimerAtTheCounter() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const now = nowDate();
   const queue = await listCheckInQueue(db, shop.id, { now });
   for (const row of queue) {

@@ -1,0 +1,2 @@
+ALTER TABLE "orders" ADD COLUMN "counter_claimed_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_counter_claim_open" CHECK ("counter_claimed_at" is null or ("status" = 'open' and "collection" <> 'stripe_invoice' and "stripe_invoice_id" is not null));

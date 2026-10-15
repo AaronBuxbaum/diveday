@@ -26,6 +26,7 @@ import {
   SETUP_PHONE_MAX,
   SETUP_TEXT_MAX,
 } from "@/lib/setup-requests";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 
 /**
  * Every kind of notification DiveDay sends, as a discriminated union of zod
@@ -355,6 +356,10 @@ const waitlistInviteSchema = z.object({
   /** The invite timestamp, so each explicit re-invite is a distinct send. */
   invitedAt: z.date(),
   unsubscribeUrl: z.url().max(2_000),
+  /** The waiting party's size (fourth review, item 34). */
+  partySize: z.number().int().min(1).max(MAX_PUBLIC_PARTY_SIZE).optional(),
+  /** The run's date that filled, for an invite the nightly roll sent (item 31). */
+  sailedStartsAt: z.date().optional(),
 });
 
 /**
@@ -1117,7 +1122,12 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
     kind: z.literal("money"),
     revenueCents: z.number().int(),
     tipsCents: z.number().int().min(0),
-    openOrders: z.number().int().min(0),
+    owed: z.object({
+      orderCents: z.number().int().min(0),
+      orderCount: z.number().int().min(0),
+      seatCents: z.number().int().min(0),
+      seatCount: z.number().int().min(0),
+    }),
     currency: z.string().trim().min(3).max(3),
     url: z.url().max(2_000),
   }),
@@ -1148,6 +1158,18 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("overdue"),
     count: z.number().int().min(1),
+    url: z.url().max(2_000),
+  }),
+  z.object({
+    kind: z.literal("safety"),
+    openRollCalls: z.number().int().min(0),
+    uncrewed: z.number().int().min(0),
+    incidents: z.number().int().min(0),
+    url: z.url().max(2_000),
+  }),
+  z.object({
+    kind: z.literal("gear_service"),
+    due: z.number().int().min(1),
     url: z.url().max(2_000),
   }),
 ]);

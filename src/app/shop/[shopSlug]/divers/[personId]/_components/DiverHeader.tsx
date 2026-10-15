@@ -36,6 +36,7 @@ export function DiverHeader({
   book,
   moment,
   visits,
+  packages,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -55,6 +56,8 @@ export function DiverHeader({
   moment?: ReactNode;
   /** How many times this diver has been out with the shop, sailed plus imported. */
   visits: number;
+  /** Dives left on the packages this diver holds (fourth UX review, item 20); null when none. */
+  packages?: { left: number; of: number } | null;
 }) {
   return (
     <>
@@ -114,6 +117,9 @@ export function DiverHeader({
             ) : null}
             {visits > 0 ? (
               <span className="tabular-nums">{t("divers.header.visits", { count: visits })}</span>
+            ) : null}
+            {packages ? (
+              <span className="tabular-nums">{t("divers.header.packageBalance", packages)}</span>
             ) : null}
           </div>
         }

@@ -5,9 +5,11 @@ import path from "node:path";
 import { count, desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { CsvValue, ExportTable } from "@/lib/export";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { loadDiverExportBundleInput, loadShopExportBundleInput } from "./export";
 import { bookings, people } from "./schema";
+
+const ctx = fileScopedShopContext({ history: true });
 
 /**
  * **The whole export bundle, pinned** — the seeded shop's, and its three
@@ -89,7 +91,7 @@ function dumpOnMismatch(name: string, files: NormalizedFile[]): string {
 
 describe("the export bundle, pinned", () => {
   it("pins the seeded shop's whole bundle", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = ctx;
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("seeded shop failed to load");
     const files = normalizeTables(input.tables);
@@ -109,7 +111,7 @@ describe("the export bundle, pinned", () => {
   });
 
   it("pins three seeded divers' own bundles", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = ctx;
     const busiest = await db
       .select({ personId: people.id, fullName: people.fullName, seats: count(bookings.id) })
       .from(people)

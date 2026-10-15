@@ -88,6 +88,9 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   await expect(page.getByText(/^“Two-Tank Morning Reef” is on the board\. /)).toBeVisible();
   await expect(page.getByText(`/s/${unique}`)).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
+  // The checklist went with the first departure, but its release step did not
+  // (fourth UX review, item 21): divers still sign DiveDay's sample.
+  await expect(page.getByRole("link", { name: "Read the release" })).toBeVisible();
 
   // The budget: every screen the owner had to touch, counted honestly.
   expect(screens, `owner screens walked: ${screens.join(" → ")}`).toHaveLength(SCREEN_BUDGET);
