@@ -761,3 +761,29 @@ test("a phone number read off a diver's record finds their seat at the counter",
   await page.waitForURL(/\/trips\/[0-9a-f-]{36}#booking-[0-9a-f-]+$/);
   await expect(deskRow(page, "Priya Sharma")).toBeVisible();
 });
+
+/**
+ * **Today's search falls through to the shop** (fifth loop, item 12): a name
+ * that is on file but not arriving today says so, and opens their record,
+ * rather than answering with nothing.
+ */
+test("Today's arrival search says who is on file but not arriving today", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/divers/new");
+  await page.getByLabel("Full name").fill("Zephyrine Quayside");
+  await page.getByRole("button", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
+
+  await page.goto("/shop/blue-mantis");
+  // The search names itself on the page, not only to a screen reader.
+  await expect(page.getByRole("heading", { name: "Find an arriving diver" })).toBeVisible();
+  const search = page.getByRole("searchbox", { name: "Find an arriving diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
+  await search.fill("Zephyrine Quayside");
+  await search.press("Enter");
+
+  const elsewhere = page.getByTestId("arrival-elsewhere");
+  await expect(elsewhere.getByText("Not arriving today.")).toBeVisible();
+  await expect(elsewhere.getByText("Zephyrine Quayside has nothing booked.")).toBeVisible();
+  await elsewhere.getByRole("link", { name: "Open Zephyrine Quayside’s record" }).click();
+  await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
+});
