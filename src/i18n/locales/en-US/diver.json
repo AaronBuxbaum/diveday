@@ -5452,12 +5452,14 @@
       "body": "{shopName}: the crew found this aboard after {tripTitle}: {item}. We’re holding it for you."
     },
     "courseCertified": {
-      "subject": "You’re certified: {level}",
-      "body": "You’re certified: {level}. {shopName} recorded it on {date}.",
+      "subject": "You’re {code, select, open_water {an Open Water Diver} advanced_open_water {an Advanced Open Water Diver} rescue {a Rescue Diver} divemaster {a Divemaster} other {an Instructor}}, {firstName}",
+      "recorded": "Recorded by {shopName} on {date}.",
+      "card": "Your {agency} card comes from {agency}; this record already counts.",
+      "cardAnyAgency": "Your card comes from your training agency; this record already counts.",
       "next": "Your next course: {course}"
     },
     "smsCourseCertified": {
-      "body": "{shopName}: you’re certified, {level}. Congratulations."
+      "body": "{shopName}: you’re {code, select, open_water {an Open Water Diver} advanced_open_water {an Advanced Open Water Diver} rescue {a Rescue Diver} divemaster {a Divemaster} other {an Instructor}} now. Your card comes from your agency; this record already counts."
     },
     "inquiryReceived": {
       "subject": "{shopName} has your request",

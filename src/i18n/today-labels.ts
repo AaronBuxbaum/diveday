@@ -244,8 +244,9 @@ export function nameListText(t: StaffTranslator, names: readonly string[], shown
 
 /** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
 
-export function missingFitNamedDetailText(t: StaffTranslator): string {
-  return t("today.detail.missingFitNamed");
+/** One diver's sizes job: a blank size, or nobody has asked about their kit yet. */
+export function missingFitNamedDetailText(t: StaffTranslator, unasked: boolean): string {
+  return t(unasked ? "today.detail.kitUnaskedNamed" : "today.detail.missingSizeNamed");
 }
 
 export function ungatedNitroxNamedDetailText(t: StaffTranslator): string {
@@ -804,11 +805,14 @@ export function openPrepListActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openPrepList");
 }
 
-/** The small day-of hand-off row, kept as codes here so staff copy stays localized. */
+/**
+ * The small day-of hand-off row, kept as codes here so staff copy stays
+ * localized. The row leads with the diver's name, as every person row does,
+ * so the sentence never repeats it (fourth review, item 43).
+ */
 export function helpRequestDetailText(
   t: StaffTranslator,
   input: {
-    personName: string;
     kind: "carry_gear" | "first_timer" | "find_group";
     status: "requested" | "acknowledged";
   },
@@ -824,7 +828,7 @@ export function helpRequestDetailText(
     input.status === "acknowledged"
       ? "today.helpRequest.detailAcknowledged"
       : "today.helpRequest.detailRequested",
-    { name: input.personName, help },
+    { help },
   );
 }
 

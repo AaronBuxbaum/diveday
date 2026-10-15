@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { boatWorkItems } from "@/lib/boat-work";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
 import type { TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
@@ -11,6 +11,7 @@ import { setBookingNitrox } from "./nitrox";
 import { boats, nitroxCertifications, orders, people, tripWaitlistEntries } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
+import { getDepartureNeeds } from "./today-departure-needs";
 import { pushDepartureRows } from "./today-departure-rows";
 import { rowsContext } from "./today-rows-test-fixtures";
 import { sendLastMinuteDealBlast } from "./trip-promos";
@@ -279,10 +280,12 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(cleared.actions.some((action) => action.id === `contact:${reef.id}`)).toBe(false);
   });
 
-  // Third review, item 4: Today said four jobs for a boat whose own band said
-  // two. Both now read one reader, so the boat's work on Today is exactly the
-  // band's, row for row, in the same words.
-  it("lists a boat's work on Today exactly as the boat's own band does", async () => {
+  // Third review, item 4, then fourth review, item 36: Today listed seven rows
+  // for the 1:30 PM boat while its own band said "3 things to sort", because
+  // the band counted only the boat's work and this test only compared that
+  // subset. The band now reads Today's rows for the departure themselves, so
+  // what is pinned here is the whole list a person sees on each screen.
+  it("gives the boat's band exactly the rows Today lists for that boat", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -294,29 +297,31 @@ describe("departure rows on the queue, read through getTodayWork", () => {
         .set({ emergencyContactName: null, emergencyContactPhone: null })
         .where(eq(people.id, entry.person.id));
     }
-    const owner = (await listStaff(db, shop.id)).find((entry) => entry.roles.includes("owner"));
-    if (!owner) throw new Error("seeded shop has no owner");
-
-    const [today, overview] = await Promise.all([
-      getTodayWork(db, shop.id, shop.slug, shop.timezone),
-      getTripOverview(db, shop, reef.id, owner.person.id),
+    const now = nowDate();
+    const t = staffTranslator("en-US");
+    const [today, needs] = await Promise.all([
+      getTodayWork(db, shop.id, shop.slug, shop.timezone, now),
+      getDepartureNeeds(db, shop, reef.id, { now, t, locale: "en-US", roles: ["owner"] }),
     ]);
-    if (!overview) throw new Error("overview missing");
-    const band = boatWorkItems(overview.pulse.work, { startsAt: reef.startsAt, now: nowDate() });
-    expect(band.map((item) => item.code)).toContain("missing_contact");
+    const onToday = today.actions.filter((action) => action.departure?.tripId === reef.id);
+    expect(needs?.map((action) => action.id)).toEqual(onToday.map((action) => action.id));
+    expect(needs?.map((action) => action.detail)).toEqual(onToday.map((action) => action.detail));
+    // More than the boat's work: the contacts row is there, and so is every
+    // row the boat's work never counted.
+    expect(needs?.some((action) => action.id === `contact:${reef.id}`)).toBe(true);
+    expect(needs?.some((action) => !/^(prep|nitrox|contact|orders):/.test(action.id))).toBe(true);
+  });
 
-    const prefix = {
-      missing_sizes: "prep",
-      ungated_nitrox: "nitrox",
-      missing_contact: "contact",
-      open_orders: "orders",
-    } as const;
-    const onToday = today.actions
-      .filter((action) => action.departure?.tripId === reef.id)
-      .map((action) => action.id.split(":")[0]);
-    for (const item of band) expect(onToday).toContain(prefix[item.code]);
-    const workPrefixes = new Set<string>(Object.values(prefix));
-    expect(onToday.filter((id) => id && workPrefixes.has(id))).toHaveLength(band.length);
+  it("gives no list for a boat outside Today's window, which Today does not show", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const far = trips.find((trip) => trip.startsAt.getTime() - now.getTime() > 14 * 86_400_000);
+    if (!far) throw new Error("demo has no departure two weeks out");
+    const t = staffTranslator("en-US");
+    expect(
+      await getDepartureNeeds(db, shop, far.id, { now, t, locale: "en-US", roles: ["owner"] }),
+    ).toBeNull();
   });
 
   // Layer 1 review, finding 3: the orders count read every booking on the

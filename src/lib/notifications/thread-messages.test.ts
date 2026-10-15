@@ -8,12 +8,15 @@ import { courseInquiryReceivedEmail } from "./course-inquiry-received";
  * the certification (item 14) and a date request's acknowledgment (item 13).
  */
 describe("courseCertifiedEmail", () => {
-  it("names the level, the shop and the day, and the next course when there is one", () => {
+  // Fourth review, item 40: the news said once, in the subject, and the body
+  // answers where the card comes from rather than repeating it.
+  it("says the news once, then who recorded it, where the card comes from, and what is next", () => {
     const email = courseCertifiedEmail({
       locale: "en-US",
       diverName: "Priya Raman",
       shopName: "Blue Mantis Divers",
       level: "open_water",
+      agency: "padi",
       recordedAt: new Date("2026-10-25T18:00:00Z"),
       timezone: "America/New_York",
       nextCourse: {
@@ -21,9 +24,10 @@ describe("courseCertifiedEmail", () => {
         url: "https://diveday.test/s/blue-mantis/courses/advanced",
       },
     });
-    expect(email.subject).toBe("You’re certified: Open Water");
-    expect(email.text).toContain("Hi Priya");
-    expect(email.text).toMatch(/Blue Mantis Divers recorded it on Sun, Oct\s25\./);
+    expect(email.subject).toBe("You’re an Open Water Diver, Priya");
+    expect(email.text).toMatch(/^Recorded by Blue Mantis Divers on Sun, Oct\s25\./);
+    expect(email.text).toContain("Your PADI card comes from PADI; this record already counts.");
+    expect(email.text).not.toContain("You’re");
     expect(email.text).toContain("Your next course: Advanced Open Water Diver");
     expect(email.html).toContain('href="https://diveday.test/s/blue-mantis/courses/advanced"');
   });
@@ -41,10 +45,26 @@ describe("courseCertifiedEmail", () => {
     expect(email.html).toContain("&lt;b&gt;Mantis&lt;/b&gt;");
   });
 
+  it("names no agency it does not know, and takes the article the level needs", () => {
+    const email = courseCertifiedEmail({
+      locale: "en-US",
+      diverName: "Sam Lee",
+      shopName: "Blue Mantis Divers",
+      level: "rescue",
+      agency: "other",
+      recordedAt: new Date("2026-10-25T18:00:00Z"),
+      timezone: "America/New_York",
+    });
+    expect(email.subject).toBe("You’re a Rescue Diver, Sam");
+    expect(email.text).toContain("Your card comes from your training agency;");
+  });
+
   it("says it in Spanish as a text", () => {
     expect(
       courseCertifiedText({ locale: "es-ES", shopName: "Blue Mantis", level: "open_water" }),
-    ).toBe("Blue Mantis: ya tienes tu certificación Open Water. Felicidades.");
+    ).toBe(
+      "Blue Mantis: ya tienes tu certificación Open Water. La tarjeta te la envía tu agencia; este registro ya cuenta.",
+    );
   });
 });
 

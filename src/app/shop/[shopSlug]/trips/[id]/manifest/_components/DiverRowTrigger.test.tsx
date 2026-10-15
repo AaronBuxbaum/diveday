@@ -172,14 +172,14 @@ describe("the welcome word", () => {
 
   it("says nothing about a diver who consented to nothing", () => {
     const { container } = renderList({ divers: [diver()] });
-    expect(container.textContent).not.toContain("first time with us");
+    expect(container.textContent).not.toContain("First dive with us");
   });
 
   it("renders as muted text under the name, at 16px", () => {
     const { container } = renderList({
       divers: [diver({ welcomeCue: { kind: "first_trip" } })],
     });
-    const line = welcomeLine(container, "first time with us");
+    const line = welcomeLine(container, "First dive with us");
     expect(line).toBeDefined();
     // `text-base`, not the 12.5px the canvas drew: this is a safety surface,
     // where the licence to trade legibility for restraint stops.
@@ -191,7 +191,7 @@ describe("the welcome word", () => {
     const { container } = renderList({
       divers: [diver({ welcomeCue: { kind: "returning", years: 3 } })],
     });
-    const line = welcomeLine(container, "back after 3 years");
+    const line = welcomeLine(container, "Back after 3 years");
     expect(line).toBeDefined();
     // A `Badge` is a pill: rounded-full, a tint fill, a border. None of those.
     expect(line?.className).not.toMatch(/rounded-full|bg-\w+-tint|border/);
@@ -208,7 +208,7 @@ describe("the welcome word", () => {
         }),
       ],
     });
-    expect(welcomeLine(container, "first time with us")).toBeDefined();
+    expect(welcomeLine(container, "First dive with us")).toBeDefined();
     expect(container.textContent).toContain("Birthday today");
   });
 });

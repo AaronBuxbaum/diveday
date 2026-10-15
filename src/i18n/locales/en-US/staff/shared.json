@@ -519,8 +519,8 @@
     "never": "never"
   },
   "welcomeCue": {
-    "firstTrip": "first time with us",
-    "returning": "back after {years, plural, one {# year} other {# years}}",
+    "firstTrip": "First dive with us",
+    "returning": "Back after {years, plural, one {# year} other {# years}}",
     "dockLine": "Say hello to {name}: {card}.",
     "dockLineNoCard": "Say hello to {name}.",
     "dockLineSays": "Say hello to {name}: says {level}."
@@ -582,7 +582,8 @@
     "splitting": "Creating…"
   },
   "boatWork": {
-    "missingSizes": "{count, plural, one {# person} other {# people}} missing rental sizes",
+    "missingSize": "{count} missing a size",
+    "kitUnasked": "{count} not asked about kit",
     "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} nitrox with no verified card",
     "missingContact": "{count, plural, one {# person has} other {# people have}} no emergency contact",
     "openOrders": "{count, plural, one {# order} other {# orders}} awaiting payment"

@@ -13,7 +13,7 @@ import {
 import { publicCoursePath } from "@/lib/public-routes";
 import type { AppDb } from "./client";
 import { notificationProviderForDb, sendNotification } from "./notifications";
-import { courses, people, shops, trips } from "./schema";
+import { certificationAgency, courses, people, shops, trips } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
@@ -115,6 +115,8 @@ export async function tellCourseCertified(
         .limit(1)
     : [];
   const next = await nextCourseAfter(db, shop.id, input.level, issuing?.agency ?? null);
+  // The card's issuer, named in the message only when it is one we know.
+  const agency = certificationAgency.enumValues.find((value) => value === issuing?.agency);
   const origin = providers.appOrigin === undefined ? publicAppUrl() : providers.appOrigin;
   const nextCourse =
     next && origin
@@ -137,6 +139,7 @@ export async function tellCourseCertified(
           diverName: person.fullName,
           shopName: shop.name,
           level: input.level,
+          ...(agency ? { agency } : {}),
           recordedAt: input.recordedAt,
           timezone: shop.timezone,
           ...(nextCourse ? { nextCourse } : {}),

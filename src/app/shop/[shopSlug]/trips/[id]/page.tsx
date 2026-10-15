@@ -16,6 +16,7 @@ import {
   canPersonRetireMedicalRefusal,
 } from "@/db/authz";
 import { listBoats } from "@/db/boats";
+import { getDepartureNeeds } from "@/db/today-departure-needs";
 import { listTripLenses } from "@/db/trip-lenses";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips";
@@ -120,6 +121,13 @@ export default async function ManageTripPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const sharedReads = loadTripSharedReads(db, shop.id, tripId);
+  const now = nowDate();
+  // Today's rows for this boat, for the band's "Needs you · N" (fourth review,
+  // item 36). Not asked for on Details, which shows no band.
+  const needs =
+    view === "details"
+      ? null
+      : getDepartureNeeds(db, shop, tripId, { now, t, locale, roles: session.user.roles });
   const [
     overview,
     guests,
@@ -194,7 +202,6 @@ export default async function ManageTripPage({
       : undefined);
   const lifecycleStatus = noticeForForm(tripNotice, "lifecycle");
 
-  const now = nowDate();
   const pulseFacts = tripPulseFacts({
     pulseNeeded,
     pulse,
@@ -207,6 +214,7 @@ export default async function ManageTripPage({
     tripId,
     startsAt: trip.startsAt,
     now,
+    needs: pulseNeeded ? await needs : null,
     t,
   });
 
@@ -471,7 +479,7 @@ export default async function ManageTripPage({
 
             <PulseFacts
               facts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
-              foldLabel={(count) => t("trips.pulse.toSort", { count })}
+              foldLabel={(count) => t("trips.pulse.needsYou", { count })}
             />
 
             <TripRosterContent

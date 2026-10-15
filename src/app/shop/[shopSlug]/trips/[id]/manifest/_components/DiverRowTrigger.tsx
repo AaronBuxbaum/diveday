@@ -114,7 +114,7 @@ export function DiverRowTrigger({
  * "running late".
  *
  * **The welcome word** (issue #1182, delight report D22; ADR
- * 20260904-reef-all-the-way-down slice 16d): "first time with us", "back after
+ * 20260904-reef-all-the-way-down slice 16d): "First dive with us", "Back after
  * 3 years". Muted text under the name, never a `Badge` and never inside the
  * roll-call circle — a badge is the profile decoration D22's boundary rules
  * out, and it would also take the row's one capsule away from an exception the

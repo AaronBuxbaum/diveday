@@ -63,7 +63,7 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
       .update(bookings)
       .set({ welcomeSharedAt: seat.now })
       .where(eq(bookings.id, seat.bookingId));
-    expect(await belowFor(seat)).toHaveTextContent("first time with us");
+    expect(await belowFor(seat)).toHaveTextContent("First dive with us");
   });
 
   it("puts the dock line under the cue: the first name to say and the card they hold (UX review 2026-10-10, item 36)", async () => {
@@ -127,7 +127,7 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
       .set({ welcomeSharedAt: null })
       .where(eq(bookings.id, seat.bookingId));
     const below = await belowFor(seat);
-    expect(below).not.toHaveTextContent("first time with us");
+    expect(below).not.toHaveTextContent("First dive with us");
     expect(below).not.toHaveTextContent("Say hello");
   });
 });

@@ -209,7 +209,7 @@ test("a checked-in diver who is blocked again stays still to clear", async ({ pa
       .getByRole("link", { name: personName, exact: true }),
   ).toBeVisible();
   await expect(deskRow(page, personName).getByText("Blocked", { exact: true })).toBeVisible();
-  await expect(page.getByText(/can’t board yet$/).first()).toBeVisible();
+  await expect(page.getByText(/\d+ blocked$/).first()).toBeVisible();
   await expect(page.getByText("Everyone’s checked in")).toHaveCount(0);
 });
 

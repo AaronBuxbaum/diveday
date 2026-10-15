@@ -63,7 +63,6 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         context: when,
         departure,
         detail: helpRequestDetailText(t, {
-          personName: request.personName,
           kind: request.kind,
           status: request.status,
         }),
@@ -126,7 +125,8 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
     const work = boatWorkFor(boatWork, trip.id);
     for (const item of boatWorkItems(
       {
-        missingFit: work.missingFit.length,
+        missingSize: work.missingSize.length,
+        kitUnasked: work.kitUnasked.length,
         ungatedNitrox: work.ungatedNitrox.length,
         missingContact: work.missingContact.length,
         openOrders: work.openOrders,
@@ -268,8 +268,8 @@ function boatWorkRow(
       return {
         idPrefix: "prep",
         kind: "dive_prep",
-        divers: work.missingFit,
-        namedDetail: missingFitNamedDetailText(t),
+        divers: [...work.missingSize, ...work.kitUnasked],
+        namedDetail: missingFitNamedDetailText(t, work.missingSize.length === 0),
         actionLabel: openPrepListActionText(t),
         href: `${tripHref}/prep#${PREP_SECTION_ID}`,
       };

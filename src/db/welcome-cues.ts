@@ -25,7 +25,7 @@ export type WelcomeCueInputs = {
  *
  * The "already departed" half is the same predicate `returningDiverIds`
  * (src/db/reminders.ts) uses — a non-cancelled booking on a trip that has
- * started — so "first time with us" means one thing wherever the app says it.
+ * started — so "First dive with us" means one thing wherever the app says it.
  * It deliberately looks at **every** prior seat, including one on a departure
  * that was later cancelled after sailing: the question is whether this shop has
  * met them, not whether a row is tidy.

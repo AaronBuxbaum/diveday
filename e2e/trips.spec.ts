@@ -227,11 +227,11 @@ test.describe("trip pulse", () => {
     await page.getByText(/^\d+ things to sort$/).click();
     await expect(page.getByRole("link", { name: /missing rental sizes/ })).toBeVisible();
     // This boat is inside its arrivals window, so the desk's count leads the
-    // roster and says "can't board yet" itself; the pulse's door to the same
+    // roster and says "N blocked" itself; the pulse's door to the same
     // rows stands down while it is on screen (one fact, once).
     await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
-    await expect(page.getByText(/can’t board yet/)).toBeVisible();
-    await expect(page.getByRole("link", { name: /can’t board yet/ })).toHaveCount(0);
+    await expect(page.getByText(/\d+ blocked$/)).toBeVisible();
+    await expect(page.getByRole("link", { name: /\d+ blocked$/ })).toHaveCount(0);
     // The group band owns the state word; its count is every unsettled diver
     // (blockers, advisories, birthdays), not just the one blocked seat.
     await expect(page.getByRole("heading", { name: /^Still to clear ·/ })).toBeVisible();

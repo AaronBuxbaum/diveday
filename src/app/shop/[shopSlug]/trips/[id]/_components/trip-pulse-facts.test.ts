@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { TodayAction } from "@/lib/today";
 import { tripPulseFacts } from "./trip-pulse-facts";
 
 const t = staffTranslator("en-US");
-const noWork = { missingFit: 0, ungatedNitrox: 0, missingContact: 0, openOrders: 0 };
+const noWork = {
+  missingSize: 0,
+  kitUnasked: 0,
+  ungatedNitrox: 0,
+  missingContact: 0,
+  openOrders: 0,
+};
 const now = new Date("2026-10-13T12:00:00Z");
 
 type Input = Parameters<typeof tripPulseFacts>[0];
@@ -21,6 +28,7 @@ function input(over: Partial<Input> = {}): Input {
     tripId: "trip-1",
     startsAt: new Date("2026-10-14T03:30:00Z"),
     now,
+    needs: null,
     t,
     ...over,
   };
@@ -64,7 +72,7 @@ describe("tripPulseFacts", () => {
   it("puts money owed last, in neutral ink, over every open order for the trip", () => {
     const facts = tripPulseFacts(
       input({
-        pulse: { blocked: 1, boarded: 0, work: { ...noWork, missingFit: 2, openOrders: 1 } },
+        pulse: { blocked: 1, boarded: 0, work: { ...noWork, missingSize: 2, openOrders: 1 } },
       }),
     );
     const last = facts.at(-1);
@@ -73,22 +81,70 @@ describe("tripPulseFacts", () => {
     expect(facts[1]?.href).toContain("/prep#");
   });
 
-  it("lists the boat's work in the words Today's rows for it use", () => {
+  it("outside Today's window, lists the boat's work alone", () => {
     const facts = tripPulseFacts(
       input({
         pulse: {
           blocked: 0,
           boarded: 0,
-          work: { missingFit: 4, ungatedNitrox: 0, missingContact: 3, openOrders: 2 },
+          work: { ...noWork, missingSize: 1, kitUnasked: 3, missingContact: 3, openOrders: 2 },
         },
       }),
     );
     expect(facts.map((fact) => fact.text)).toEqual([
-      "4 people missing rental sizes",
+      "1 missing a size · 3 not asked about kit",
       "3 people have no emergency contact",
       "2 orders awaiting payment",
     ]);
     expect(facts[1]?.href).toBe("/shop/blue-mantis/trips/trip-1#roster");
     expect(facts.every((fact) => fact.tone === undefined)).toBe(true);
+  });
+
+  // Fourth review, item 36: the band said "3 things to sort" while Today listed
+  // seven rows for the same boat. In Today's window the band is Today's rows.
+  it("in Today's window, lists exactly Today's rows for the boat, in Today's words", () => {
+    const row = (over: Partial<TodayAction>): TodayAction =>
+      ({
+        id: "x",
+        kind: "dive_prep",
+        urgency: "today",
+        subject: "Two-Tank Reef",
+        context: null,
+        detail: "",
+        actionLabel: "Open",
+        href: "/shop/blue-mantis/trips/trip-1/prep#prep",
+        dueAt: null,
+        ...over,
+      }) as TodayAction;
+    const needs = [
+      row({
+        id: "help-request:1",
+        subject: "Diego Alvarez",
+        detail: "Asked for help: carry gear.",
+        href: "/shop/blue-mantis/trips/trip-1#booking-b1",
+      }),
+      row({
+        id: "say-hello:trip-1",
+        aboutDeparture: true,
+        detail: "Say hello to Ana.",
+        href: "/shop/blue-mantis/trips/trip-1",
+      }),
+      row({
+        id: "prep:trip-1",
+        aboutDeparture: true,
+        detail: "1 missing a size · 3 not asked about kit.",
+      }),
+    ];
+    const facts = tripPulseFacts(
+      input({ needs, pulse: { blocked: 0, boarded: 0, work: { ...noWork, openOrders: 5 } } }),
+    );
+    expect(facts.map((fact) => fact.text)).toEqual([
+      "Diego Alvarez · Asked for help: carry gear.",
+      "Say hello to Ana.",
+      "1 missing a size · 3 not asked about kit.",
+    ]);
+    // A row that opens this very page lands on its roster, never a dead tap.
+    expect(facts[1]?.href).toBe("/shop/blue-mantis/trips/trip-1#roster");
+    expect(new Set(facts.map((fact) => fact.key)).size).toBe(3);
   });
 });

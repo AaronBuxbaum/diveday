@@ -519,8 +519,8 @@
     "never": "nunca"
   },
   "welcomeCue": {
-    "firstTrip": "primera vez con nosotros",
-    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}",
+    "firstTrip": "Primera inmersión con nosotros",
+    "returning": "De vuelta tras {years, plural, one {# año} other {# años}}",
     "dockLine": "Saluda a {name}: {card}.",
     "dockLineNoCard": "Saluda a {name}.",
     "dockLineSays": "Saluda a {name}: dice {level}."
@@ -582,7 +582,8 @@
     "splitting": "Creando…"
   },
   "boatWork": {
-    "missingSizes": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler",
+    "missingSize": "{count} sin talla",
+    "kitUnasked": "{count} sin consultar por su equipo",
     "ungatedNitrox": "{count, plural, one {# buceador quiere} other {# buceadores quieren}} nitrox sin certificación verificada",
     "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia",
     "openOrders": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"

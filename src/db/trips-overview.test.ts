@@ -152,7 +152,8 @@ describe("getTripOverview", () => {
       if (!seated.ok) throw new Error("could not seat a rider");
       const after = await overviewFor(ctx);
       expect(after.trip.booked).toBe(before.trip.booked + 1);
-      expect(after.pulse.work.missingFit).toBe(before.pulse.work.missingFit);
+      expect(after.pulse.work.missingSize).toBe(before.pulse.work.missingSize);
+      expect(after.pulse.work.kitUnasked).toBe(before.pulse.work.kitUnasked);
     });
   });
 
@@ -195,7 +196,7 @@ describe("getTripOverview", () => {
       expect(home?.pulse).toEqual({
         blocked: 0,
         boarded: 0,
-        work: { missingFit: 0, ungatedNitrox: 0, missingContact: 0, openOrders: 0 },
+        work: { missingSize: 0, kitUnasked: 0, ungatedNitrox: 0, missingContact: 0, openOrders: 0 },
       });
     });
   });

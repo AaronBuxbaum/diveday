@@ -69,6 +69,9 @@ describe("tellCourseCertified", () => {
       level: "advanced_open_water",
     });
     if (sent?.kind !== "course_certified") throw new Error("wrong kind");
+    // The course's agency travels with it, so the message can say who issues
+    // the card (fourth review, item 40).
+    expect(sent.agency).toBeTruthy();
     if (next) {
       expect(sent.nextCourse?.url).toBe(`https://diveday.test/s/${shop.slug}/courses/${next.slug}`);
     } else {

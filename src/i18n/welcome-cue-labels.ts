@@ -12,12 +12,14 @@ import type { StaffTranslator } from "./staff-messages";
  */
 
 /**
- * The fragment under a diver's name on the manifest: "first time with us",
- * "back after 3 years".
+ * The line under a diver's name on the roster and the manifest: "First dive
+ * with us", "Back after 3 years".
  *
- * Lower case and unpunctuated on purpose — it is a continuation of the name
- * above it, not a sentence about a record, and a capitalised "First Time With
- * Us" beside a name is a badge with the badge shape filed off.
+ * Its own line, so it opens with a capital like every other line under a name,
+ * and unpunctuated because it is a label, not a sentence (fourth review, item
+ * 42: Today said "first dive with you", the roster "first time with us", the
+ * diver record "first dive with us"; one phrase now). Sentence case, never
+ * "First Time With Us": a title-cased cue is a badge with the shape filed off.
  */
 export function welcomeCueText(t: StaffTranslator, cue: WelcomeCue): string {
   return cue.kind === "first_trip"
