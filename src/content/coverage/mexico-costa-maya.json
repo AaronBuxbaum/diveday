@@ -1,0 +1,289 @@
+{
+  "area": "mexico-costa-maya",
+  "method": "Costa Maya: the Mahahual reef (Chinchorrito to Punta Tam), the Parque Nacional Arrecifes de Xcalak down to the Belize border, and the Reserva de la Biosfera Banco Chinchorro offshore. Official lists: the CONANP programas de manejo for Xcalak (SIMEC 37_libro_pm.pdf) and Banco Chinchorro (SIMEC 53_libro_pm.pdf). Neither names dive sites beyond La Poza in Xcalak, so the official list counts only there; the Chinchorro programme confines scuba to a 'zona de buceo' on the atoll's west margin and allows only snorkelling in the 100 m 'zonas de pecios' around wrecks, so wrecks are excluded even though two operators sell them. Mahahual has no official site list. Operator lists, one each: Takata Experience, Pepe Dive Mahahual (its Mahahual, Xcalak, Chinchorro and FAQ pages are one operator), Mahahual Dive Centre, Amigos del Mar (Mahahual and Chinchorro pages, one operator; site names on the Chinchorro page are read from its image captions), Mar Adentro Diving, XTC Dive Center (Wayback copy of 2026; the live site returns 403) and Diving Xcalak. Takata's 'La Poza' (20-25 m, tarpon) is read as Xcalak's La Poza. Diving Mahahual (Diving Yucatan), Costa de Cocos and the XTC Chinchorro page name no sites; GLUUP, Divescover, Stingy Nomads, LocoGringo, ambergriscaye.com and the 2003 URI Mahahual report were read for leads only. A site is counted when named on two independent lists and divable on recreational scuba; one-list names and wrecks are excluded. XTC and Diving Xcalak print the same five Xcalak names; they are counted as separate operators. Counted 2026-10-14.",
+  "sources": [
+    "https://simec.conanp.gob.mx/pdf_libro_pm/37_libro_pm.pdf",
+    "https://simec.conanp.gob.mx/pdf_libro_pm/53_libro_pm.pdf",
+    "https://takataexperience.com/dive-sites-mahahual/",
+    "https://pepedivemahahual.com/en/diving/mahahual/",
+    "https://pepedivemahahual.com/preguntas-frecuentes-sobre-el-buceo-en-mahahual/",
+    "https://pepedivemahahual.com/en/diving/xcalak/",
+    "https://pepedivemahahual.com/en/diving/chinchorro/",
+    "https://mahahualdive.com/mother-nature-wants-to-be-photographed-2/",
+    "https://amigosdelmar.net/dive-mahahual-reef/",
+    "https://amigosdelmar.net/dive-banco-chinchorro/",
+    "https://maradentrodiving.com/en/about-us/",
+    "https://maradentrodiving.com/en/diving-in-xcalak/",
+    "https://web.archive.org/web/2026/https://xtcdivecenter.com/recreational-diving/",
+    "https://divingxcalak.com/en_US/dive-sites/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Chinchorrito",
+      "template": "chinchorrito",
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/mahahual/",
+        "https://mahahualdive.com/mother-nature-wants-to-be-photographed-2/"
+      ]
+    },
+    {
+      "name": "Faro Viejo",
+      "template": null,
+      "listedBy": [
+        "https://takataexperience.com/dive-sites-mahahual/",
+        "https://pepedivemahahual.com/preguntas-frecuentes-sobre-el-buceo-en-mahahual/"
+      ]
+    },
+    {
+      "name": "Puerto Angel",
+      "template": null,
+      "listedBy": ["https://amigosdelmar.net/dive-mahahual-reef/"],
+      "excluded": "on one operator list only (Amigos del Mar)"
+    },
+    {
+      "name": "40 Cañones (Mahahual reef)",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/mahahual/",
+        "https://mahahualdive.com/mother-nature-wants-to-be-photographed-2/"
+      ]
+    },
+    {
+      "name": "Capitanía",
+      "template": null,
+      "listedBy": ["https://pepedivemahahual.com/preguntas-frecuentes-sobre-el-buceo-en-mahahual/"],
+      "excluded": "on one operator list only (Pepe Dive Mahahual)"
+    },
+    {
+      "name": "Escalones (Los Escalones)",
+      "template": "escalones",
+      "listedBy": [
+        "https://takataexperience.com/dive-sites-mahahual/",
+        "https://pepedivemahahual.com/en/diving/mahahual/",
+        "https://mahahualdive.com/mother-nature-wants-to-be-photographed-2/",
+        "https://amigosdelmar.net/dive-mahahual-reef/",
+        "https://maradentrodiving.com/en/about-us/"
+      ]
+    },
+    {
+      "name": "Piratas",
+      "template": null,
+      "listedBy": ["https://takataexperience.com/dive-sites-mahahual/"],
+      "excluded": "on one operator list only (Takata Experience)"
+    },
+    {
+      "name": "El Acuario (Aquario)",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/mahahual/",
+        "https://pepedivemahahual.com/preguntas-frecuentes-sobre-el-buceo-en-mahahual/",
+        "https://mahahualdive.com/mother-nature-wants-to-be-photographed-2/"
+      ]
+    },
+    {
+      "name": "Dos Ojos",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/mahahual/",
+        "https://pepedivemahahual.com/preguntas-frecuentes-sobre-el-buceo-en-mahahual/",
+        "https://mahahualdive.com/mother-nature-wants-to-be-photographed-2/"
+      ]
+    },
+    {
+      "name": "Herradura",
+      "template": null,
+      "listedBy": ["https://mahahualdive.com/mother-nature-wants-to-be-photographed-2/"],
+      "excluded": "on one operator list only (Mahahual Dive Centre)"
+    },
+    {
+      "name": "La Rampa",
+      "template": null,
+      "listedBy": ["https://pepedivemahahual.com/preguntas-frecuentes-sobre-el-buceo-en-mahahual/"],
+      "excluded": "on one operator list only (Pepe Dive Mahahual)"
+    },
+    {
+      "name": "Río Bermejo (The Labyrinth)",
+      "template": null,
+      "listedBy": ["https://amigosdelmar.net/dive-mahahual-reef/"],
+      "excluded": "on one operator list only (Amigos del Mar)"
+    },
+    {
+      "name": "Los Arcos",
+      "template": null,
+      "listedBy": ["https://amigosdelmar.net/dive-mahahual-reef/"],
+      "excluded": "on one operator list only (Amigos del Mar)"
+    },
+    {
+      "name": "Punta Tam (Punta Tan)",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/mahahual/",
+        "https://mahahualdive.com/mother-nature-wants-to-be-photographed-2/"
+      ]
+    },
+    {
+      "name": "Santa Julia",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2026/https://xtcdivecenter.com/recreational-diving/"
+      ],
+      "excluded": "on one operator list only (XTC Dive Center)"
+    },
+    {
+      "name": "Doña Nica",
+      "template": "dona-nica",
+      "listedBy": [
+        "https://web.archive.org/web/2026/https://xtcdivecenter.com/recreational-diving/",
+        "https://divingxcalak.com/en_US/dive-sites/"
+      ]
+    },
+    {
+      "name": "Alejandro's Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2026/https://xtcdivecenter.com/recreational-diving/",
+        "https://divingxcalak.com/en_US/dive-sites/"
+      ]
+    },
+    {
+      "name": "Hob Na (Grouper Hangout)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2026/https://xtcdivecenter.com/recreational-diving/",
+        "https://divingxcalak.com/en_US/dive-sites/"
+      ]
+    },
+    {
+      "name": "La Poza (La Posa, Fosa de los Sábalos)",
+      "template": "la-poza-xcalak",
+      "listedBy": [
+        "https://simec.conanp.gob.mx/pdf_libro_pm/37_libro_pm.pdf",
+        "https://takataexperience.com/dive-sites-mahahual/",
+        "https://pepedivemahahual.com/en/diving/xcalak/",
+        "https://maradentrodiving.com/en/diving-in-xcalak/",
+        "https://web.archive.org/web/2026/https://xtcdivecenter.com/recreational-diving/",
+        "https://divingxcalak.com/en_US/dive-sites/"
+      ]
+    },
+    {
+      "name": "La Pozeta (La Poceta)",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/xcalak/",
+        "https://maradentrodiving.com/en/diving-in-xcalak/"
+      ]
+    },
+    {
+      "name": "La Chimenea",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/xcalak/",
+        "https://maradentrodiving.com/en/diving-in-xcalak/",
+        "https://web.archive.org/web/2026/https://xtcdivecenter.com/recreational-diving/",
+        "https://divingxcalak.com/en_US/dive-sites/"
+      ]
+    },
+    {
+      "name": "Punta Gonzalez (Gonzales)",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/chinchorro/",
+        "https://amigosdelmar.net/dive-banco-chinchorro/"
+      ]
+    },
+    {
+      "name": "Santa Teresita (Teresitas)",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/chinchorro/",
+        "https://amigosdelmar.net/dive-banco-chinchorro/"
+      ]
+    },
+    {
+      "name": "Gatas (Gata)",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/chinchorro/",
+        "https://amigosdelmar.net/dive-banco-chinchorro/"
+      ]
+    },
+    {
+      "name": "Baliza",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/chinchorro/",
+        "https://amigosdelmar.net/dive-banco-chinchorro/"
+      ]
+    },
+    {
+      "name": "El Solitario",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/chinchorro/",
+        "https://amigosdelmar.net/dive-banco-chinchorro/"
+      ]
+    },
+    {
+      "name": "El Muro",
+      "template": null,
+      "listedBy": ["https://pepedivemahahual.com/en/diving/chinchorro/"],
+      "excluded": "on one operator list only (Pepe Dive Mahahual); may be Amigos del Mar's Gran Muro, which no page confirms"
+    },
+    {
+      "name": "Gran Muro",
+      "template": null,
+      "listedBy": ["https://amigosdelmar.net/dive-banco-chinchorro/"],
+      "excluded": "on one operator list only (Amigos del Mar)"
+    },
+    {
+      "name": "Coral Negro",
+      "template": null,
+      "listedBy": ["https://pepedivemahahual.com/en/diving/chinchorro/"],
+      "excluded": "on one operator list only (Pepe Dive Mahahual)"
+    },
+    {
+      "name": "El Acuario (Banco Chinchorro)",
+      "template": null,
+      "listedBy": ["https://pepedivemahahual.com/en/diving/chinchorro/"],
+      "excluded": "on one operator list only (Pepe Dive Mahahual)"
+    },
+    {
+      "name": "Cam's Playground",
+      "template": null,
+      "listedBy": ["https://amigosdelmar.net/dive-banco-chinchorro/"],
+      "excluded": "on one operator list only (Amigos del Mar)"
+    },
+    {
+      "name": "Reina del Sur (Queen of the South)",
+      "template": null,
+      "listedBy": ["https://amigosdelmar.net/dive-banco-chinchorro/"],
+      "excluded": "on one operator list only (Amigos del Mar)"
+    },
+    {
+      "name": "40 Cañones (40 Canyons, Banco Chinchorro)",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/chinchorro/",
+        "https://amigosdelmar.net/dive-banco-chinchorro/"
+      ],
+      "excluded": "wreck inside a Banco Chinchorro 'zona de pecios', where the CONANP management programme permits buceo libre (snorkelling) but not scuba; operators sell it, but it is not counted as a recreational scuba site"
+    },
+    {
+      "name": "SS Inger (Ginger Soul)",
+      "template": null,
+      "listedBy": [
+        "https://pepedivemahahual.com/en/diving/chinchorro/",
+        "https://amigosdelmar.net/dive-banco-chinchorro/"
+      ],
+      "excluded": "wreck inside a Banco Chinchorro 'zona de pecios', where the CONANP management programme permits buceo libre (snorkelling) but not scuba; operators sell it, but it is not counted as a recreational scuba site; Pepe's 'Ginger Soul' and Amigos del Mar's 'SS Inger' are taken to be the same 19th-century steamer east of Cayo Centro"
+    },
+    {
+      "name": "Calderas",
+      "template": null,
+      "listedBy": ["https://pepedivemahahual.com/en/diving/chinchorro/"],
+      "excluded": "wreck inside a Banco Chinchorro 'zona de pecios', where the CONANP management programme permits buceo libre (snorkelling) but not scuba; operators sell it, but it is not counted as a recreational scuba site; also on one operator list only (Pepe Dive Mahahual)"
+    }
+  ]
+}
