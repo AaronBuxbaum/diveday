@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications/kinds";
-import { fileScopedShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 
 const fileCtx = fileScopedShopContext();
 
@@ -41,8 +41,8 @@ const {
 } = await import("./trip-invitations");
 const { upcomingTripsWithCounts } = await import("./trips");
 
-async function context() {
-  const { db, shop } = fileCtx;
+async function context(base: { db: typeof fileCtx.db; shop: typeof fileCtx.shop } = fileCtx) {
+  const { db, shop } = base;
   const [author] = await db
     .select({ id: people.id })
     .from(people)
@@ -254,7 +254,11 @@ describe("deliverTripInvitation", () => {
     });
 
     it("sends one email for two submits that land together", async () => {
-      const ctx = await context();
+      // A database of its own, not the file's shared transaction: the two
+      // submits race for the send window, and inside one wrapping transaction
+      // on one connection they never contend, so both would send
+      // (src/test/db.ts, "When NOT to use this").
+      const ctx = await context(await seededShopContext());
       const { invitationId } = await directInvitation(ctx);
       const input = {
         shopId: ctx.shop.id,
