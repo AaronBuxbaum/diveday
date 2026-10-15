@@ -118,6 +118,8 @@ export default async function OrderDetailPage({
             {canDisputeSheet ? (
               <Link
                 href={shopPath(shopSlug, "orders", order.order.id, "print", "dispute")}
+                // Opening the sheet writes a trail line, so a viewport prefetch must not open it.
+                prefetch={false}
                 className={buttonClass({ variant: "ghost", size: "sm", className: "print:hidden" })}
               >
                 {t("disputeSheet.door")}
