@@ -46,7 +46,7 @@
       "seasonSaved": "Season start saved.",
       "seasonInvalid": "Pick a day that month has.",
       "reopensSaved": "Saved. Your public page names this date while its schedule is quiet.",
-      "reopensInvalid": "That isn’t a date on the calendar. Pick one from the box.",
+      "reopensInvalid": "That date isn’t one we can post. Pick one within the next 18 months.",
       "timezoneInvalid": "That isn’t a timezone we recognize. Pick one from the list.",
       "emergencySaved": "Emergency reference saved.",
       "packageSaved": "Package added.",

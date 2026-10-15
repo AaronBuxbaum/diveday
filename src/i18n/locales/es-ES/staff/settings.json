@@ -46,7 +46,7 @@
       "seasonSaved": "Inicio de temporada guardado.",
       "seasonInvalid": "Elige un día que ese mes tenga.",
       "reopensSaved": "Guardado. Tu página pública muestra esta fecha mientras su calendario esté tranquilo.",
-      "reopensInvalid": "Esa fecha no existe en el calendario. Elige una en el campo.",
+      "reopensInvalid": "No podemos publicar esa fecha. Elige una dentro de los próximos 18 meses.",
       "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
       "emergencySaved": "Referencia de emergencia guardada.",
       "packageSaved": "Paquete añadido.",
