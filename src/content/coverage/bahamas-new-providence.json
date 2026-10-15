@@ -1,0 +1,401 @@
+{
+  "area": "bahamas-new-providence",
+  "method": "New Providence (Nassau, Paradise Island, Rose Island, the south-west Tongue of the Ocean wall and the film wrecks). No Bahamas National Trust dive-site list exists for the island, so the official stand-in is the tourism list, meaning the Bahamas Ministry of Tourism (bahamas.com dive, island, blog and natural-wonders pages) together with the Bahamas Diving Association pages it co-publishes (read through the Wayback Machine, 2005-06), counted as one list. Operator lists: Stuart Cove's Dive Bahamas (its site pages from the 2003 Wayback snapshot, whose English site names are legible, plus its current shark-adventure and dive-trips pages; the current dive-site page is a map image that archives without its image) and Bahama Divers (its 2012 Wayback diving page, the latest readable one; bahamadivers.com is now a blog and a default server page). Nassau Scuba Centre and Dive Dive Dive could not be read (nassauscubacentre.com archives only empty frames). The 2003 and 2012 snapshots predate recent sinkings, so a site counts only when it also appears on a second list; wrecks sunk after 2012 (Ray of Hope, Sea Trader) appear on the tourism list alone. A site counts when named, recreationally divable and on at least two independent lists; one-list names, the pelagic Shark Buoy and the 135-foot-plus walls are excluded with reasons. Counted 2026-10-14.",
+  "sources": [
+    "https://web.archive.org/web/20030806071742/http://www.stuartcove.com/japan/dive/pages/divesites/north_side.html",
+    "https://web.archive.org/web/20030806071203/http://www.stuartcove.com/japan/dive/pages/divesites/mid-south.html",
+    "https://web.archive.org/web/20030806082345/http://www.stuartcove.com/japan/dive/pages/divesites/south_side.html",
+    "https://web.archive.org/web/20030806083537/http://www.stuartcove.com/japan/dive/pages/divesites/west_side.html",
+    "https://web.archive.org/web/20030806081335/http://www.stuartcove.com/japan/dive/pages/divesites/shark_wall.html",
+    "https://stuartcove.com/shark-diving/shark-adventure/",
+    "https://stuartcove.com/scuba-diving/dive-trips/",
+    "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html",
+    "https://www.bahamas.com/plan-your-trip/diving",
+    "https://www.bahamas.com/blog/the-diving-and-cultural-capital-of-the-bahamas",
+    "https://www.bahamas.com/blog/the-deeper-dialed-up-side-of-nassau",
+    "https://www.bahamas.com/islands/nassau-paradise-island",
+    "https://web.archive.org/web/20051102091846/http://www.bahamasdiving.com/6729/with_flash/html/nassau.html",
+    "https://web.archive.org/web/20051230115329/http://www.bahamasdiving.com/6729/with_flash/html/shark.html"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Oasis Wall",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806071742/http://www.stuartcove.com/japan/dive/pages/divesites/north_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Tunnel Wall",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806071742/http://www.stuartcove.com/japan/dive/pages/divesites/north_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Abilin Wreck",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806071742/http://www.stuartcove.com/japan/dive/pages/divesites/north_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Lyford Cay Wall",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20051230120321/http://www.bahamasdiving.com/6729/with_flash/html/walls.html"
+      ],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Bahama Mama",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806071203/http://www.stuartcove.com/japan/dive/pages/divesites/mid-south.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Runway Wall (The Runway, Shark Wall North)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806071203/http://www.stuartcove.com/japan/dive/pages/divesites/mid-south.html",
+        "https://stuartcove.com/shark-diving/shark-adventure/",
+        "https://web.archive.org/web/20051230115329/http://www.bahamasdiving.com/6729/with_flash/html/shark.html",
+        "https://www.bahamas.com/blog/the-diving-and-cultural-capital-of-the-bahamas"
+      ]
+    },
+    {
+      "name": "Shark Arena (The Arena)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806081335/http://www.stuartcove.com/japan/dive/pages/divesites/shark_wall.html",
+        "https://stuartcove.com/shark-diving/shark-adventure/",
+        "https://web.archive.org/web/20051230115329/http://www.bahamasdiving.com/6729/with_flash/html/shark.html"
+      ]
+    },
+    {
+      "name": "Shark Wall",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806081335/http://www.stuartcove.com/japan/dive/pages/divesites/shark_wall.html",
+        "https://stuartcove.com/shark-diving/shark-adventure/"
+      ],
+      "excluded": "named on one list only (Stuart Cove's)"
+    },
+    {
+      "name": "Shark Wreck (Edwin Williams wreck)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806081335/http://www.stuartcove.com/japan/dive/pages/divesites/shark_wall.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Pumpkin Patch",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806071203/http://www.stuartcove.com/japan/dive/pages/divesites/mid-south.html",
+        "https://web.archive.org/web/20051102091846/http://www.bahamasdiving.com/6729/with_flash/html/nassau.html"
+      ]
+    },
+    {
+      "name": "Mike's Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806071203/http://www.stuartcove.com/japan/dive/pages/divesites/mid-south.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Ridge",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806071203/http://www.stuartcove.com/japan/dive/pages/divesites/mid-south.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Catib Breeze",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806071203/http://www.stuartcove.com/japan/dive/pages/divesites/mid-south.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Razorback",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806082345/http://www.stuartcove.com/japan/dive/pages/divesites/south_side.html",
+        "https://web.archive.org/web/20051102091846/http://www.bahamasdiving.com/6729/with_flash/html/nassau.html"
+      ]
+    },
+    {
+      "name": "Sliding Anchor",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806082345/http://www.stuartcove.com/japan/dive/pages/divesites/south_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Play Ground",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806082345/http://www.stuartcove.com/japan/dive/pages/divesites/south_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Orange Bowl",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806082345/http://www.stuartcove.com/japan/dive/pages/divesites/south_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Southwest Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806082345/http://www.stuartcove.com/japan/dive/pages/divesites/south_side.html",
+        "https://web.archive.org/web/20051102091846/http://www.bahamasdiving.com/6729/with_flash/html/nassau.html"
+      ]
+    },
+    {
+      "name": "Fancy Purple",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806082345/http://www.stuartcove.com/japan/dive/pages/divesites/south_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Anne",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806082345/http://www.stuartcove.com/japan/dive/pages/divesites/south_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Sea Trader",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/blog/the-deeper-dialed-up-side-of-nassau"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Ray of Hope",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/blog/the-deeper-dialed-up-side-of-nassau"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Goulding Cay",
+      "template": "goulding-cay-nassau",
+      "listedBy": [
+        "https://web.archive.org/web/20030806083537/http://www.stuartcove.com/japan/dive/pages/divesites/west_side.html",
+        "https://web.archive.org/web/20051102091846/http://www.bahamasdiving.com/6729/with_flash/html/nassau.html",
+        "https://www.bahamas.com/blog/the-diving-and-cultural-capital-of-the-bahamas"
+      ]
+    },
+    {
+      "name": "Willaurie Wreck",
+      "template": "willaurie-wreck",
+      "listedBy": [
+        "https://web.archive.org/web/20030806083537/http://www.stuartcove.com/japan/dive/pages/divesites/west_side.html",
+        "https://web.archive.org/web/20051102091846/http://www.bahamasdiving.com/6729/with_flash/html/nassau.html",
+        "https://www.bahamas.com/blog/the-deeper-dialed-up-side-of-nassau"
+      ]
+    },
+    {
+      "name": "Palace Wall",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806083537/http://www.stuartcove.com/japan/dive/pages/divesites/west_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "James Bond Wrecks (James Bond Wreck, Tears of Allah, Vulcan bomber)",
+      "template": "james-bond-wrecks-nassau",
+      "listedBy": [
+        "https://web.archive.org/web/20030806083537/http://www.stuartcove.com/japan/dive/pages/divesites/west_side.html",
+        "https://stuartcove.com/scuba-diving/dive-trips/",
+        "https://web.archive.org/web/20051102091846/http://www.bahamasdiving.com/6729/with_flash/html/nassau.html",
+        "https://www.bahamas.com/plan-your-trip/diving",
+        "https://www.bahamas.com/blog/the-deeper-dialed-up-side-of-nassau"
+      ]
+    },
+    {
+      "name": "Sand Chute",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806083537/http://www.stuartcove.com/japan/dive/pages/divesites/west_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Wreck on the Wall",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806083537/http://www.stuartcove.com/japan/dive/pages/divesites/west_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "David Tucker Wreck",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030806083537/http://www.stuartcove.com/japan/dive/pages/divesites/west_side.html"
+      ],
+      "excluded": "named on one list only (Stuart Cove's, 2003)"
+    },
+    {
+      "name": "Cessna (Jaws film plane)",
+      "template": null,
+      "listedBy": ["https://stuartcove.com/scuba-diving/dive-trips/"],
+      "excluded": "named on one list only (Stuart Cove's)"
+    },
+    {
+      "name": "DC-3 plane (Into the Blue)",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/blog/the-deeper-dialed-up-side-of-nassau"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Porpoise Bends Reef",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/blog/the-diving-and-cultural-capital-of-the-bahamas"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Lost Blue Hole",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html",
+        "https://www.bahamas.com/plan-your-trip/diving",
+        "https://www.bahamas.com/islands/nassau-paradise-island"
+      ]
+    },
+    {
+      "name": "Barracuda Shoals",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html",
+        "https://web.archive.org/web/20051102091846/http://www.bahamasdiving.com/6729/with_flash/html/nassau.html"
+      ]
+    },
+    {
+      "name": "Fish Hotel",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html",
+        "https://web.archive.org/web/20051102091846/http://www.bahamasdiving.com/6729/with_flash/html/nassau.html"
+      ]
+    },
+    {
+      "name": "De La Salle Wreck",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "Trinity Caves",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "Piece of Cake",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "The Shipyard",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "The Lighthouse Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "Miranda Wreck",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "Angelfish Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "Thunderball Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "Cannonball Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "LCT Barge",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "Traveler's Rest Wall",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20121001231343/http://www.bahamadivers.com/diving.html"
+      ],
+      "excluded": "named on one list only (Bahama Divers, 2012)"
+    },
+    {
+      "name": "Shark Buoy",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/plan-your-trip/diving",
+        "https://web.archive.org/web/20051230115329/http://www.bahamasdiving.com/6729/with_flash/html/shark.html"
+      ],
+      "excluded": "on one list only (tourism list); open-ocean silky-shark dive over 6,000 feet, not run by a readable operator list"
+    }
+  ]
+}

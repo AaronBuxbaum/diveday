@@ -1,0 +1,439 @@
+{
+  "area": "turks-caicos-grand-turk",
+  "method": "Grand Turk (the Columbus Landfall wall and its shore reefs), Salt Cay and South Caicos. Grand Turk: Blue Water Divers' published dive site map (33 sites, read from its Google My Maps layer) against the Visit Turks and Caicos tourism board's 2026 dive sites map (14 sites); Grand Turk Diving publishes no site list, Oasis Divers' domain is an under-construction page and the shop is reported closed, and the Turks & Caicos Reef Fund mooring list covers only the Caicos Bank, so no official list was found. Salt Cay: the tourism board map against Salt Cay Divers' 'a few of our dive sites' line, which is a partial list. South Caicos: the tourism board map against East Bay Resort's dive page (Wayback capture of 2023; the 2019 capture adds the Subway), which names only three sites; the Salterra resort's dive centre publishes none. Each operator or board counts once; a site is counted when named, divable and on at least two, with spelling variants merged (Rookery is the board's The Rockery; Northwest Drop-Off is North West Wall; Shark Point Canyon is Shark Point, which is an assumption; Wanderlust is Wandalust). Excluded: sites on one list only, and the generic 'South Caicos Wall'. Positions are omitted because the operator map's pin coordinates disagree with its own descriptions. The South Caicos and Salt Cay denominators are thin because no second operator list could be read. Counted 2026-10-14.",
+  "sources": [
+    "https://www.visittci.com/diving",
+    "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+    "https://www.grandturkscuba.com/grand-turk-diving/",
+    "https://www.google.com/maps/d/kml?mid=zXPPTPRcaXrU.k_tLjR6p4Jrg&forcekml=1",
+    "https://saltcaydivers.com/diving-4/",
+    "https://web.archive.org/web/2023/http://www.eastbayresort.com/diving/",
+    "https://web.archive.org/web/2019/http://www.eastbayresort.com/diving/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Blacksmith Rock",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Aquarium",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Fish Pond",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Gorgonian Wall",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Amphitheatre (Amphitheater)",
+      "template": "amphitheatre-grand-turk",
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "McDonald's",
+      "template": "mcdonalds-grand-turk",
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Alpine Meadows (The Annex)",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Alien Nation",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Finbars (Finbar's Reef)",
+      "template": "finbars-reef-grand-turk",
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Pillories",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Black Forest",
+      "template": "black-forest-grand-turk",
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Twin Ledges",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "The Anchor",
+      "template": "the-anchor-grand-turk",
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Lamar's Reef",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Middle Reef",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "The Library",
+      "template": "the-library-grand-turk",
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Cables",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Connie's Reef",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Coral Gardens",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Coral Lakes",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Coral Canyon (Coral Canyons)",
+      "template": "coral-canyon-grand-turk",
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "The Tunnels (Tunnels, Sand River Canyon)",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Approach Landing",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "The Chair",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Chief Ministers North",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Chief Ministers South",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "English Point",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://www.grandturkscuba.com/grand-turk-diving/"
+      ]
+    },
+    {
+      "name": "Windmills",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "The Pits",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Pelican Point",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Pirate's Beach",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "Smitty's Reef",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "The Abyss",
+      "template": null,
+      "listedBy": ["https://www.grandturkscuba.com/grand-turk-diving/"],
+      "excluded": "on one list only (Blue Water Divers' map)"
+    },
+    {
+      "name": "North West Wall (Northwest Drop-Off)",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://saltcaydivers.com/diving-4/"
+      ]
+    },
+    {
+      "name": "Point Pleasant",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://saltcaydivers.com/diving-4/"
+      ]
+    },
+    {
+      "name": "The Rockery (Rookery)",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://saltcaydivers.com/diving-4/"
+      ]
+    },
+    {
+      "name": "Shark Point (Shark Point Canyon)",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://saltcaydivers.com/diving-4/"
+      ]
+    },
+    {
+      "name": "Kelly's Folly",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://saltcaydivers.com/diving-4/"
+      ]
+    },
+    {
+      "name": "Black Coral Canyon",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://saltcaydivers.com/diving-4/"
+      ]
+    },
+    {
+      "name": "Turtle Gardens",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://saltcaydivers.com/diving-4/"
+      ]
+    },
+    {
+      "name": "Wandalust (Wanderlust)",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://saltcaydivers.com/diving-4/"
+      ]
+    },
+    {
+      "name": "HMS Endymion",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://saltcaydivers.com/diving-4/"
+      ]
+    },
+    {
+      "name": "Rock's Paradise",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Kelly's Annex",
+      "template": null,
+      "listedBy": ["https://saltcaydivers.com/diving-4/"],
+      "excluded": "on one list only (Salt Cay Divers)"
+    },
+    {
+      "name": "Powerhouse",
+      "template": null,
+      "listedBy": ["https://saltcaydivers.com/diving-4/"],
+      "excluded": "on one list only (Salt Cay Divers)"
+    },
+    {
+      "name": "Three Pillars",
+      "template": null,
+      "listedBy": ["https://saltcaydivers.com/diving-4/"],
+      "excluded": "on one list only (Salt Cay Divers)"
+    },
+    {
+      "name": "The Arch",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://web.archive.org/web/2023/http://www.eastbayresort.com/diving/"
+      ]
+    },
+    {
+      "name": "East Bay Spur",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://web.archive.org/web/2023/http://www.eastbayresort.com/diving/"
+      ]
+    },
+    {
+      "name": "The Subway",
+      "template": null,
+      "listedBy": ["https://web.archive.org/web/2019/http://www.eastbayresort.com/diving/"],
+      "excluded": "on one list only (East Bay Resort, 2019 page)"
+    },
+    {
+      "name": "South Caicos Wall",
+      "template": null,
+      "listedBy": ["https://web.archive.org/web/2023/http://www.eastbayresort.com/diving/"],
+      "excluded": "on one list only (East Bay Resort); the whole wall, not one named dive"
+    },
+    {
+      "name": "Honeycomb",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "The Cone",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Dove Cay",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Fish Bowl",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "The Maze",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Plane/Convair CV-440",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Spanish Chain",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Troy's Dream",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "The Warhead",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Catacombs (South Caicos)",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Shark Alley (South Caicos)",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "The Grotto (South Caicos)",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    }
+  ]
+}

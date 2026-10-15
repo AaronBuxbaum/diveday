@@ -1,0 +1,361 @@
+{
+  "area": "usvi-st-thomas-st-john",
+  "method": "St Thomas and St John, US Virgin Islands, including the Buck Island and Capella Island cluster off Bolongo Bay, the St James and Pillsbury Sound cays, Thatch Cay, Congo and Carval, and St John's national-park and south-shore sites; Water Island is covered by the same operators. St Croix and the BVI are separate areas. Lists used: five independent operator lists (Aqua Action Dive Center, whose owner now also holds the Coki Dive Center brand, so the two count once; Red Hook Dive Center, whose three area pages are image maps read as pictures; JJ Divers; Aqua Marine Dive Center; St Thomas Dive Center), the USVI Department of Tourism pages for St Thomas and St John (one list, counted once), and the NPS Submerged Resources dive guide to Virgin Islands National Park (read from an archived 2023 snapshot because the live page now returns 404; the 2012 text predates the current interactive mooring map, so it counts as the single official list). The NPS live mooring map, the USVI DPNR mooring list, and Coral Reef National Monument have no readable named dive-site list. Low Key Watersports, Cruz Bay Watersports, Coki Dive Center (closed, sold to Aqua Action) and Blue Island Divers (domain lapsed) publish no named site list, and Patagon Dive Center is closed; none of them is counted. A site is counted when named on at least two independent lists and recreationally divable on scuba; one-list names, snorkel-only sites, and duplicates are kept as excluded rows. Cow Rock and Calf Rock are two dives by Aqua Action and Red Hook but one dive elsewhere, so they are one row. No list gives coordinates, so no positions are recorded. Counted 2026-10-14.",
+  "sources": [
+    "https://www.aadivers.com/scubadivesites.php",
+    "https://www.redhookdivecenter.com/dive-sites/north/",
+    "https://www.redhookdivecenter.com/dive-sites/pillsbury-sound/",
+    "https://www.redhookdivecenter.com/dive-sites/south/",
+    "https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/",
+    "https://diveaquamarine.com/dive-sites/",
+    "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi",
+    "https://www.visitusvi.com/experience/scuba-diving-st-thomas/",
+    "https://www.visitusvi.com/st-john/st-john-scuba-diving",
+    "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/VIIS.html",
+    "https://divelowkey.com/scuba-diving/",
+    "https://cokidive.com",
+    "https://www.nps.gov/viis/planyourvisit/virgin-islands-marine-visitor-use-information.htm"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Arches and Tunnels (Thatch Cay)",
+      "template": "arches-and-tunnels-thatch-cay",
+      "listedBy": [
+        "https://www.redhookdivecenter.com/dive-sites/north/",
+        "https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/"
+      ]
+    },
+    {
+      "name": "Jaws",
+      "template": null,
+      "listedBy": ["https://www.redhookdivecenter.com/dive-sites/north/"],
+      "excluded": "on one operator list only (Red Hook)"
+    },
+    {
+      "name": "Coki Beach",
+      "template": "coki-beach-st-thomas",
+      "listedBy": [
+        "https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/",
+        "https://www.visitusvi.com/experience/scuba-diving-st-thomas/"
+      ]
+    },
+    {
+      "name": "Congo Cay",
+      "template": "congo-cay-st-thomas",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.redhookdivecenter.com/dive-sites/north/",
+        "https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/",
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/VIIS.html",
+        "https://www.visitusvi.com/st-john/st-john-scuba-diving"
+      ]
+    },
+    {
+      "name": "Carval Rock (The Cut)",
+      "template": "carval-rock-st-thomas",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.redhookdivecenter.com/dive-sites/north/",
+        "https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/",
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/VIIS.html",
+        "https://www.visitusvi.com/st-john/st-john-scuba-diving"
+      ]
+    },
+    {
+      "name": "Grass Cay",
+      "template": "grass-cay-st-thomas",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.redhookdivecenter.com/dive-sites/pillsbury-sound/",
+        "https://www.visitusvi.com/st-john/st-john-scuba-diving"
+      ]
+    },
+    {
+      "name": "Mingo Cay (Mingo Bay, Mingo Passage, Mingo Mounds)",
+      "template": "mingo-cay-st-thomas",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.redhookdivecenter.com/dive-sites/pillsbury-sound/",
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/VIIS.html"
+      ]
+    },
+    {
+      "name": "Squidville",
+      "template": null,
+      "listedBy": ["https://www.redhookdivecenter.com/dive-sites/pillsbury-sound/"],
+      "excluded": "on one operator list only (Red Hook)"
+    },
+    {
+      "name": "Waterlemon Cay",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/VIIS.html"
+      ],
+      "excluded": "snorkel-only in practice and on one list only (NPS)"
+    },
+    {
+      "name": "Haulover",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/VIIS.html"
+      ],
+      "excluded": "on one list only (NPS); mainly a shore snorkel area"
+    },
+    {
+      "name": "Trunk Bay Underwater Trail",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/VIIS.html"
+      ],
+      "excluded": "snorkel-only"
+    },
+    {
+      "name": "Eagle Shoal (The Cathedral)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/VIIS.html",
+        "https://www.visitusvi.com/st-john/st-john-scuba-diving"
+      ]
+    },
+    {
+      "name": "Saltpond Bay",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/VIIS.html"
+      ],
+      "excluded": "snorkel-only, on one list only (NPS)"
+    },
+    {
+      "name": "Tektite (Great Lameshur Bay)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/VIIS.html"
+      ],
+      "excluded": "on one list only (NPS)"
+    },
+    {
+      "name": "Coral Hill",
+      "template": null,
+      "listedBy": ["https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/"],
+      "excluded": "on one operator list only (JJ Divers); text duplicates its Grass Cay entry"
+    },
+    {
+      "name": "Shipwreck Cove (JJ Divers)",
+      "template": null,
+      "listedBy": ["https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/"],
+      "excluded": "on one operator list only (JJ Divers); description duplicates Carval Rock"
+    },
+    {
+      "name": "Dog Island",
+      "template": null,
+      "listedBy": ["https://diveaquamarine.com/dive-sites/"],
+      "excluded": "on one operator list only (Aqua Marine)"
+    },
+    {
+      "name": "Cabrita Point",
+      "template": null,
+      "listedBy": ["https://diveaquamarine.com/dive-sites/"],
+      "excluded": "on one operator list only (Aqua Marine)"
+    },
+    {
+      "name": "Castle Reef",
+      "template": null,
+      "listedBy": ["https://www.redhookdivecenter.com/dive-sites/south/"],
+      "excluded": "on one operator list only (Red Hook)"
+    },
+    {
+      "name": "Cow Rock and Calf Rock (Cow and Calf Rocks)",
+      "template": "cow-and-calf-rocks-st-thomas",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.redhookdivecenter.com/dive-sites/south/",
+        "https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/",
+        "https://diveaquamarine.com/dive-sites/",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi",
+        "https://www.visitusvi.com/experience/scuba-diving-st-thomas/"
+      ]
+    },
+    {
+      "name": "Stragglers",
+      "template": "stragglers-st-thomas",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.redhookdivecenter.com/dive-sites/south/",
+        "https://diveaquamarine.com/dive-sites/",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"
+      ]
+    },
+    {
+      "name": "Ray's Rise",
+      "template": null,
+      "listedBy": ["https://www.redhookdivecenter.com/dive-sites/south/"],
+      "excluded": "on one operator list only (Red Hook)"
+    },
+    {
+      "name": "Ledges of Little St. James",
+      "template": "ledges-of-little-st-james",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.redhookdivecenter.com/dive-sites/south/",
+        "https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/",
+        "https://diveaquamarine.com/dive-sites/",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi",
+        "https://www.visitusvi.com/experience/scuba-diving-st-thomas/"
+      ]
+    },
+    {
+      "name": "Joe's Jam (Coral Bowl, Shark Bowl)",
+      "template": "joes-jam-coral-bowl-st-thomas",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://diveaquamarine.com/dive-sites/",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi",
+        "https://www.visitusvi.com/experience/scuba-diving-st-thomas/"
+      ]
+    },
+    {
+      "name": "French Cap",
+      "template": null,
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi",
+        "https://www.visitusvi.com/experience/scuba-diving-st-thomas/"
+      ]
+    },
+    {
+      "name": "Packet Rock (HMS Warwick)",
+      "template": "packet-rock-st-thomas",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://diveaquamarine.com/dive-sites/",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"
+      ]
+    },
+    {
+      "name": "Fish Stick (Fish Sticks)",
+      "template": "fish-stick-buck-island",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://diveaquamarine.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Fish Rock",
+      "template": null,
+      "listedBy": ["https://diveaquamarine.com/dive-sites/"],
+      "excluded": "on one operator list only (Aqua Marine)"
+    },
+    {
+      "name": "Dive Flag Rock (Buck Island Wall, Andres' Reef)",
+      "template": "dive-flag-rock-buck-island",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://diveaquamarine.com/dive-sites/",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"
+      ]
+    },
+    {
+      "name": "Buck Island Point",
+      "template": null,
+      "listedBy": ["https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"],
+      "excluded": "on one operator list only (St Thomas Dive Center)"
+    },
+    {
+      "name": "Barracuda Point",
+      "template": null,
+      "listedBy": ["https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"],
+      "excluded": "on one operator list only (St Thomas Dive Center)"
+    },
+    {
+      "name": "Brayson's Call",
+      "template": null,
+      "listedBy": ["https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"],
+      "excluded": "on one operator list only (St Thomas Dive Center)"
+    },
+    {
+      "name": "Submarine Alley",
+      "template": null,
+      "listedBy": ["https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"],
+      "excluded": "on one operator list only (St Thomas Dive Center)"
+    },
+    {
+      "name": "Tejo's Treasure",
+      "template": null,
+      "listedBy": ["https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"],
+      "excluded": "on one operator list only (St Thomas Dive Center)"
+    },
+    {
+      "name": "Wye Reef",
+      "template": "wye-reef-buck-island",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"
+      ]
+    },
+    {
+      "name": "Armando's Paradise",
+      "template": null,
+      "listedBy": ["https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"],
+      "excluded": "on one operator list only (St Thomas Dive Center)"
+    },
+    {
+      "name": "Supermarket",
+      "template": null,
+      "listedBy": ["https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"],
+      "excluded": "on one operator list only (St Thomas Dive Center)"
+    },
+    {
+      "name": "Cartanza Senora (Cartanser Sr)",
+      "template": "cartanser-sr-buck-island",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.redhookdivecenter.com/dive-sites/north/",
+        "https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/",
+        "https://diveaquamarine.com/dive-sites/",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi",
+        "https://www.visitusvi.com/experience/scuba-diving-st-thomas/"
+      ]
+    },
+    {
+      "name": "Navy Barges",
+      "template": null,
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://diveaquamarine.com/dive-sites/",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"
+      ]
+    },
+    {
+      "name": "Kennedy Wreck",
+      "template": null,
+      "listedBy": ["https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi"],
+      "excluded": "on one operator list only (St Thomas Dive Center)"
+    },
+    {
+      "name": "W.I.T. Concrete (WIT Shoal)",
+      "template": null,
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.stthomasdivecenter.com/dive-sites-on-st-thomas-usvi",
+        "https://www.visitusvi.com/experience/scuba-diving-st-thomas/"
+      ]
+    },
+    {
+      "name": "Miss Opportunity",
+      "template": "miss-opportunity-st-thomas",
+      "listedBy": [
+        "https://www.aadivers.com/scubadivesites.php",
+        "https://www.visitusvi.com/experience/scuba-diving-st-thomas/"
+      ]
+    },
+    {
+      "name": "General Rogers",
+      "template": null,
+      "listedBy": ["https://www.stthomasscubadiving.com/st-thomas-diving/st-thomas-dive-sites/"],
+      "excluded": "on one operator list only (JJ Divers)"
+    }
+  ]
+}

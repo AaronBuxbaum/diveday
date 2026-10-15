@@ -1,0 +1,208 @@
+{
+  "area": "puerto-rico",
+  "method": "The main island with La Parguera, Rincón, Aguadilla, Fajardo and Vieques, plus Desecheo, Mona and Culebra. Puerto Rico has no official mooring or dive-site dataset (the DRNA and NOAA documents found name reserves, not dive sites), so the Puerto Rico Tourism Company's scuba article (read through the Wayback Machine because the live site blocks fetching) stands in as the one tourism-board list. Operator lists read: Paradise Scuba (La Parguera site page), West Divers (The Wall), Aqua Adventure (Culebra), Aquatica (Desecheo trips and Crashboat), Black Beard Sports (Vieques, Mosquito Pier) and Taíno Divers (Tres Palmas). Culebra Divers, Sea Ventures and Island Scuba name no sites; Aquatica's interactive dive map could not be read; Ocean Sports and Papayo Divers could not be fetched. Each operator or board counts once; a site is counted when named, divable and on at least two lists. Only four destinations meet that, because most operators name sites no one else repeats: the one-list names are excluded, not dropped, so a later pass that finds a second list can count them. The denominator is therefore thin and undercounts, above all on La Parguera, Desecheo, Culebra and Vieques. Counted 2026-10-14.",
+  "sources": [
+    "https://web.archive.org/web/2026/https://www.discoverpuertorico.com/article/scuba-diving-novice-to-advanced",
+    "https://www.paradisescubasnorkelingpr.com/puerto-rico-dive-sites/",
+    "https://www.paradisescubasnorkelingpr.com/scuba-diving-trips/wall-dive-la-parguera/",
+    "https://www.lapargueralajas.com/west-divers-1",
+    "https://www.aquaadventurepr.com/our-adventures/charter-destinations/scuba-diving-sites/scuba-diving-in-culebra/",
+    "https://aquaticapr.com/scuba-diving-snorkeling-puerto-rico/desecheo-island-trips/",
+    "https://aquaticapr.com/scuba-diving-snorkeling-puerto-rico/marine-ecology-experience/",
+    "https://www.blackbeardsports.com/fun-dives-vieques",
+    "https://www.tainodivers.com/"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Desecheo Island (boat dives)",
+      "template": "desecheo-island",
+      "listedBy": [
+        "https://web.archive.org/web/2026/https://www.discoverpuertorico.com/article/scuba-diving-novice-to-advanced",
+        "https://aquaticapr.com/scuba-diving-snorkeling-puerto-rico/desecheo-island-trips/"
+      ]
+    },
+    {
+      "name": "Candyland (Desecheo)",
+      "template": null,
+      "listedBy": [
+        "https://aquaticapr.com/scuba-diving-snorkeling-puerto-rico/desecheo-island-trips/"
+      ],
+      "excluded": "on one list only (Aquatica); a site within the counted Desecheo Island dive"
+    },
+    {
+      "name": "Yellow Reef (Desecheo)",
+      "template": null,
+      "listedBy": [
+        "https://aquaticapr.com/scuba-diving-snorkeling-puerto-rico/desecheo-island-trips/"
+      ],
+      "excluded": "on one list only (Aquatica); a site within the counted Desecheo Island dive"
+    },
+    {
+      "name": "Crash Boat (Aguadilla)",
+      "template": "crash-boat-aguadilla",
+      "listedBy": [
+        "https://web.archive.org/web/2026/https://www.discoverpuertorico.com/article/scuba-diving-novice-to-advanced",
+        "https://aquaticapr.com/scuba-diving-snorkeling-puerto-rico/marine-ecology-experience/"
+      ]
+    },
+    {
+      "name": "Tres Palmas Marine Reserve (Rincón shore dive)",
+      "template": null,
+      "listedBy": ["https://www.tainodivers.com/"],
+      "excluded": "on one list only (Taíno Divers)"
+    },
+    {
+      "name": "La Parguera Wall",
+      "template": "la-parguera-wall",
+      "listedBy": [
+        "https://web.archive.org/web/2026/https://www.discoverpuertorico.com/article/scuba-diving-novice-to-advanced",
+        "https://www.lapargueralajas.com/west-divers-1",
+        "https://www.paradisescubasnorkelingpr.com/scuba-diving-trips/wall-dive-la-parguera/"
+      ]
+    },
+    {
+      "name": "Blackwall",
+      "template": null,
+      "listedBy": ["https://www.paradisescubasnorkelingpr.com/puerto-rico-dive-sites/"],
+      "excluded": "on one list only (Paradise Scuba); a named stop on the La Parguera Wall system, not repeated by West Divers, the tourism company or another shop"
+    },
+    {
+      "name": "Hole in the Wall (La Parguera)",
+      "template": null,
+      "listedBy": ["https://www.paradisescubasnorkelingpr.com/puerto-rico-dive-sites/"],
+      "excluded": "on one list only (Paradise Scuba); a named stop on the La Parguera Wall system, not repeated by West Divers, the tourism company or another shop"
+    },
+    {
+      "name": "Efra's Wall",
+      "template": null,
+      "listedBy": ["https://www.paradisescubasnorkelingpr.com/puerto-rico-dive-sites/"],
+      "excluded": "on one list only (Paradise Scuba); a named stop on the La Parguera Wall system, not repeated by West Divers, the tourism company or another shop"
+    },
+    {
+      "name": "Old Buoy",
+      "template": null,
+      "listedBy": ["https://www.paradisescubasnorkelingpr.com/puerto-rico-dive-sites/"],
+      "excluded": "on one list only (Paradise Scuba); a named stop on the La Parguera Wall system, not repeated by West Divers, the tourism company or another shop"
+    },
+    {
+      "name": "Canyons 1 and 2",
+      "template": null,
+      "listedBy": ["https://www.paradisescubasnorkelingpr.com/puerto-rico-dive-sites/"],
+      "excluded": "on one list only (Paradise Scuba); a named stop on the La Parguera Wall system, not repeated by West Divers, the tourism company or another shop"
+    },
+    {
+      "name": "Estrella",
+      "template": null,
+      "listedBy": ["https://www.paradisescubasnorkelingpr.com/puerto-rico-dive-sites/"],
+      "excluded": "on one list only (Paradise Scuba); a named stop on the La Parguera Wall system, not repeated by West Divers, the tourism company or another shop"
+    },
+    {
+      "name": "Chimney (La Parguera)",
+      "template": null,
+      "listedBy": ["https://www.paradisescubasnorkelingpr.com/puerto-rico-dive-sites/"],
+      "excluded": "on one list only (Paradise Scuba); a named stop on the La Parguera Wall system, not repeated by West Divers, the tourism company or another shop"
+    },
+    {
+      "name": "Forest",
+      "template": null,
+      "listedBy": ["https://www.paradisescubasnorkelingpr.com/puerto-rico-dive-sites/"],
+      "excluded": "on one list only (Paradise Scuba); a named stop on the La Parguera Wall system, not repeated by West Divers, the tourism company or another shop"
+    },
+    {
+      "name": "Enrique Reef",
+      "template": null,
+      "listedBy": ["https://www.paradisescubasnorkelingpr.com/puerto-rico-dive-sites/"],
+      "excluded": "on one list only (Paradise Scuba); a named stop on the La Parguera Wall system, not repeated by West Divers, the tourism company or another shop"
+    },
+    {
+      "name": "Mosquito Pier (Vieques)",
+      "template": "mosquito-pier-vieques",
+      "listedBy": [
+        "https://web.archive.org/web/2026/https://www.discoverpuertorico.com/article/scuba-diving-novice-to-advanced",
+        "https://www.blackbeardsports.com/fun-dives-vieques"
+      ]
+    },
+    {
+      "name": "Cayo Luis Peña",
+      "template": null,
+      "listedBy": [
+        "https://www.aquaadventurepr.com/our-adventures/charter-destinations/scuba-diving-sites/scuba-diving-in-culebra/"
+      ],
+      "excluded": "on one list only (Aqua Adventure); Culebra operators Culebra Divers and Sea Ventures name no sites"
+    },
+    {
+      "name": "Monito",
+      "template": null,
+      "listedBy": [
+        "https://www.aquaadventurepr.com/our-adventures/charter-destinations/scuba-diving-sites/scuba-diving-in-culebra/"
+      ],
+      "excluded": "on one list only (Aqua Adventure); Culebra operators Culebra Divers and Sea Ventures name no sites"
+    },
+    {
+      "name": "Carlos Rosario",
+      "template": null,
+      "listedBy": [
+        "https://www.aquaadventurepr.com/our-adventures/charter-destinations/scuba-diving-sites/scuba-diving-in-culebra/"
+      ],
+      "excluded": "on one list only (Aqua Adventure); Culebra operators Culebra Divers and Sea Ventures name no sites"
+    },
+    {
+      "name": "Cayo Geniqui",
+      "template": null,
+      "listedBy": [
+        "https://www.aquaadventurepr.com/our-adventures/charter-destinations/scuba-diving-sites/scuba-diving-in-culebra/"
+      ],
+      "excluded": "on one list only (Aqua Adventure); Culebra operators Culebra Divers and Sea Ventures name no sites"
+    },
+    {
+      "name": "Geniqui Caves",
+      "template": null,
+      "listedBy": [
+        "https://www.aquaadventurepr.com/our-adventures/charter-destinations/scuba-diving-sites/scuba-diving-in-culebra/"
+      ],
+      "excluded": "on one list only (Aqua Adventure); Culebra operators Culebra Divers and Sea Ventures name no sites"
+    },
+    {
+      "name": "Cayo Ballena",
+      "template": null,
+      "listedBy": [
+        "https://www.aquaadventurepr.com/our-adventures/charter-destinations/scuba-diving-sites/scuba-diving-in-culebra/"
+      ],
+      "excluded": "on one list only (Aqua Adventure); Culebra operators Culebra Divers and Sea Ventures name no sites"
+    },
+    {
+      "name": "Cayo Tiburón",
+      "template": null,
+      "listedBy": [
+        "https://www.aquaadventurepr.com/our-adventures/charter-destinations/scuba-diving-sites/scuba-diving-in-culebra/"
+      ],
+      "excluded": "on one list only (Aqua Adventure); Culebra operators Culebra Divers and Sea Ventures name no sites"
+    },
+    {
+      "name": "Los Corchos",
+      "template": null,
+      "listedBy": [
+        "https://www.aquaadventurepr.com/our-adventures/charter-destinations/scuba-diving-sites/scuba-diving-in-culebra/"
+      ],
+      "excluded": "on one list only (Aqua Adventure); Culebra operators Culebra Divers and Sea Ventures name no sites"
+    },
+    {
+      "name": "The Wit Power tugboat wreck (Culebra)",
+      "template": null,
+      "listedBy": [
+        "https://www.aquaadventurepr.com/our-adventures/charter-destinations/scuba-diving-sites/scuba-diving-in-culebra/"
+      ],
+      "excluded": "on one list only (Aqua Adventure); the same page also lists 'Tugboat', treated as a duplicate"
+    },
+    {
+      "name": "Mona Island",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2026/https://www.discoverpuertorico.com/article/scuba-diving-novice-to-advanced"
+      ],
+      "excluded": "on one list only (tourism company); trips run mostly from liveaboards under DRNA permits, and no operator site list was readable"
+    }
+  ]
+}

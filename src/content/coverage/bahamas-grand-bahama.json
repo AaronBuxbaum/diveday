@@ -1,0 +1,244 @@
+{
+  "area": "bahamas-grand-bahama",
+  "method": "Grand Bahama: Freeport/Lucaya south-shore reefs and wrecks, West End and Tiger Beach off the west end. No Bahamas National Trust dive-site list exists (Lucayan National Park's caves are overhead-environment only), so the official stand-in is the tourism list, meaning the Bahamas Ministry of Tourism (bahamas.com dive, island, blog and natural-wonders pages) together with the Bahamas Diving Association pages it co-publishes (read through the Wayback Machine, 2005-06), counted as one list. Operator lists: Sunn Odyssey Divers (its 2014 Wayback Cruise Info and Dive Sites page, the last version with a site list), UNEXSO (its 2019 Wayback dive-packages page naming Theo's Wreck, Sea Star and Shark Junction; the live site is now a Sanctuary Bay dolphin page with diving 'returning soon'), Grand Bahama Scuba (2015 Wayback shallow, medium and deep reef pages plus the current wreck and shark pages) and Neal Watson's Bimini Scuba Center (Tiger Beach expeditions). Reef Oasis, Sea Ventures and Xanadu Undersea Adventures publish no readable site list (reefoasisdiveclub.com is an unrelated Egyptian operator), so they count for nothing. A site counts when named, recreationally divable and on at least two independent lists; Ben's Cavern is counted as the guided, cavern-certified cavern dive that Sunn Odyssey and the tourism list sell, while Owl's Hole and Mermaid's Lair are excluded as caves. One-list names are excluded. Counted 2026-10-14.",
+  "sources": [
+    "https://www.bahamas.com/plan-your-trip/diving",
+    "https://www.bahamas.com/blog/dive-it-all-on-grand-bahama",
+    "https://www.bahamas.com/blog/the-bahamas-big-easy",
+    "https://www.bahamas.com/experiences/dive-freeport",
+    "https://web.archive.org/web/20060324041830/http://www.bahamasdiving.com/6729/with_flash/html/grandbahama.html",
+    "https://web.archive.org/web/20051230115329/http://www.bahamasdiving.com/6729/with_flash/html/shark.html",
+    "https://web.archive.org/web/20141018234802/http://www.sunnodysseydivers.com/cruise-info--dive-sites.html",
+    "https://web.archive.org/web/20191022164458/https://unexso.com/diving-vacation-packages/",
+    "https://web.archive.org/web/20150419050302/http://www.grandbahamascuba.com/dive-sites/the-shallow-reef/",
+    "https://web.archive.org/web/20150420061059/http://www.grandbahamascuba.com/dive-sites/the-medium-reef/",
+    "https://web.archive.org/web/20150420061054/http://www.grandbahamascuba.com/dive-sites/the-deep-reef/",
+    "https://grandbahamascuba.com/wreck-dives",
+    "https://grandbahamascuba.com/shark-dive",
+    "https://www.biminiscubacenter.com/tiger-beach"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Tiger Beach",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/plan-your-trip/diving",
+        "https://www.bahamas.com/blog/dive-it-all-on-grand-bahama",
+        "https://www.biminiscubacenter.com/tiger-beach"
+      ]
+    },
+    {
+      "name": "Shark Junction (Shark Alley, Shark Encounter)",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/blog/dive-it-all-on-grand-bahama",
+        "https://web.archive.org/web/20051230115329/http://www.bahamasdiving.com/6729/with_flash/html/shark.html",
+        "https://web.archive.org/web/20191022164458/https://unexso.com/diving-vacation-packages/",
+        "https://grandbahamascuba.com/shark-dive"
+      ]
+    },
+    {
+      "name": "Theo's Wreck",
+      "template": "theos-wreck",
+      "listedBy": [
+        "https://www.bahamas.com/blog/dive-it-all-on-grand-bahama",
+        "https://web.archive.org/web/20060324041830/http://www.bahamasdiving.com/6729/with_flash/html/grandbahama.html",
+        "https://web.archive.org/web/20141018234802/http://www.sunnodysseydivers.com/cruise-info--dive-sites.html",
+        "https://web.archive.org/web/20191022164458/https://unexso.com/diving-vacation-packages/"
+      ]
+    },
+    {
+      "name": "Sea Star (Sea Star II)",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/blog/dive-it-all-on-grand-bahama",
+        "https://web.archive.org/web/20141018234802/http://www.sunnodysseydivers.com/cruise-info--dive-sites.html",
+        "https://web.archive.org/web/20191022164458/https://unexso.com/diving-vacation-packages/"
+      ]
+    },
+    {
+      "name": "Papa Doc (Poppa Doc)",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/blog/dive-it-all-on-grand-bahama",
+        "https://web.archive.org/web/20060324041830/http://www.bahamasdiving.com/6729/with_flash/html/grandbahama.html"
+      ],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Tugboat Jose",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20060324041830/http://www.bahamasdiving.com/6729/with_flash/html/grandbahama.html"
+      ],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Etheridge",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/blog/dive-it-all-on-grand-bahama"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Sinikurt",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/blog/dive-it-all-on-grand-bahama"],
+      "excluded": "named on one list only (tourism list; may be Grand Bahama Scuba's 'Sini's Wreck' but depths differ, so not merged)"
+    },
+    {
+      "name": "Sini's Wreck",
+      "template": null,
+      "listedBy": ["https://grandbahamascuba.com/wreck-dives"],
+      "excluded": "named on one list only (Grand Bahama Scuba)"
+    },
+    {
+      "name": "Silver Point Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/blog/the-bahamas-big-easy",
+        "https://web.archive.org/web/20141018234802/http://www.sunnodysseydivers.com/cruise-info--dive-sites.html"
+      ]
+    },
+    {
+      "name": "Silver Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20150419050302/http://www.grandbahamascuba.com/dive-sites/the-shallow-reef/"
+      ],
+      "excluded": "named on one list only (Grand Bahama Scuba; possibly Silver Point Reef, not merged)"
+    },
+    {
+      "name": "Sanctuary Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20150419050302/http://www.grandbahamascuba.com/dive-sites/the-shallow-reef/"
+      ],
+      "excluded": "named on one list only (Grand Bahama Scuba)"
+    },
+    {
+      "name": "Treasure Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20150419050302/http://www.grandbahamascuba.com/dive-sites/the-shallow-reef/"
+      ],
+      "excluded": "named on one list only (Grand Bahama Scuba)"
+    },
+    {
+      "name": "Fish Farm",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/blog/the-bahamas-big-easy",
+        "https://web.archive.org/web/20141018234802/http://www.sunnodysseydivers.com/cruise-info--dive-sites.html",
+        "https://web.archive.org/web/20150419050302/http://www.grandbahamascuba.com/dive-sites/the-shallow-reef/"
+      ]
+    },
+    {
+      "name": "Rainbow Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/blog/dive-it-all-on-grand-bahama",
+        "https://www.bahamas.com/blog/the-bahamas-big-easy"
+      ],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Picasso's Gallery",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/experiences/dive-freeport"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Caves (ocean dive)",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/blog/dive-it-all-on-grand-bahama"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Angel Camp",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20150420061059/http://www.grandbahamascuba.com/dive-sites/the-medium-reef/"
+      ],
+      "excluded": "named on one list only (Grand Bahama Scuba)"
+    },
+    {
+      "name": "Badger",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20150420061059/http://www.grandbahamascuba.com/dive-sites/the-medium-reef/"
+      ],
+      "excluded": "named on one list only (Grand Bahama Scuba)"
+    },
+    {
+      "name": "The Chamber",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20150420061059/http://www.grandbahamascuba.com/dive-sites/the-medium-reef/"
+      ],
+      "excluded": "named on one list only (Grand Bahama Scuba)"
+    },
+    {
+      "name": "Pygmy Caves (Tunnels)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20141018234802/http://www.sunnodysseydivers.com/cruise-info--dive-sites.html",
+        "https://web.archive.org/web/20150420061054/http://www.grandbahamascuba.com/dive-sites/the-deep-reef/"
+      ]
+    },
+    {
+      "name": "Gail's Grotto",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20150420061054/http://www.grandbahamascuba.com/dive-sites/the-deep-reef/"
+      ],
+      "excluded": "named on one list only (Grand Bahama Scuba)"
+    },
+    {
+      "name": "Littlehale's Lair",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20141018234802/http://www.sunnodysseydivers.com/cruise-info--dive-sites.html",
+        "https://web.archive.org/web/20150420061054/http://www.grandbahamascuba.com/dive-sites/the-deep-reef/"
+      ]
+    },
+    {
+      "name": "Eden Banks",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20141018234802/http://www.sunnodysseydivers.com/cruise-info--dive-sites.html"
+      ],
+      "excluded": "named on one list only (Sunn Odyssey, 2014)"
+    },
+    {
+      "name": "Moray Manor",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20141018234802/http://www.sunnodysseydivers.com/cruise-info--dive-sites.html"
+      ],
+      "excluded": "named on one list only (Sunn Odyssey, 2014)"
+    },
+    {
+      "name": "Ben's Cavern",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/blog/dive-it-all-on-grand-bahama",
+        "https://web.archive.org/web/20060324041830/http://www.bahamasdiving.com/6729/with_flash/html/grandbahama.html",
+        "https://web.archive.org/web/20141018234802/http://www.sunnodysseydivers.com/cruise-info--dive-sites.html"
+      ]
+    },
+    {
+      "name": "Owl's Hole",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/blog/dive-it-all-on-grand-bahama"],
+      "excluded": "cave; overhead environment"
+    },
+    {
+      "name": "Mermaid's Lair Cave",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/blog/dive-it-all-on-grand-bahama"],
+      "excluded": "cave; advanced overhead environment"
+    }
+  ]
+}
