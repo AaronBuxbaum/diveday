@@ -6795,6 +6795,7 @@ for (const scheme of ["light", "dark"] as const) {
                 filled: data.query?.agency !== "naui",
                 typed: data.query?.agency !== "naui",
                 submitted: data.query?.agency !== "naui",
+                hostAccess: true,
                 missing: data.query?.agency === "naui" ? ["birthDate"] : [],
               },
               "padi-session": { ok: true, padi: "signed_in" },

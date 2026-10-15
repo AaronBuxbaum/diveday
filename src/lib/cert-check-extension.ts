@@ -146,13 +146,18 @@ export function extensionChecks(hello: ExtensionHello | null, agency: string): b
   );
 }
 
-/** A sample page's dry run: what the filler found, typed and pressed. */
+/**
+ * A sample page's dry run: what the filler found, typed and pressed, and
+ * whether this browser lets the extension on the agency's own site (Chrome's
+ * site access), without which a real check there can neither fill nor read.
+ */
 export type ExtensionDryRun =
   | {
       ok: true;
       filled: boolean;
       typed: boolean;
       submitted: boolean;
+      hostAccess: boolean;
       missing: string[];
       pageShape?: PageShape;
     }
@@ -169,24 +174,31 @@ export function parseExtensionDryRun(data: Record<string, unknown>): ExtensionDr
     filled: data.filled === true,
     typed: data.typed === true,
     submitted: data.submitted === true,
+    hostAccess: data.hostAccess === true,
     missing: missing.slice(0, 10),
     ...(pageShape ? { pageShape } : {}),
   };
 }
 
-/** Whether a dry run did all it should: every box found, typed as the agency wants, and sent. */
+/**
+ * Whether a dry run did all it should: every box found, typed as the agency
+ * wants, and sent, in a browser that lets the extension on the agency's site.
+ */
 export function dryRunPassed(run: ExtensionDryRun | null): boolean {
-  return run?.ok === true && run.filled && run.typed && run.submitted;
+  return run?.ok === true && run.filled && run.typed && run.submitted && run.hostAccess;
 }
 
-/** Whether a PADI Pros' Site tab in this browser is signed in. Nothing was looked up to say so. */
-export type PadiSession = "signed_in" | "signed_out" | "no_tab";
+/**
+ * Whether a PADI Pros' Site tab in this browser is signed in, or (`no_access`)
+ * whether this browser keeps the extension off PADI's hosts. Nothing was
+ * looked up to say so.
+ */
+export type PadiSession = "signed_in" | "signed_out" | "no_tab" | "no_access";
+
+const PADI_SESSIONS: readonly unknown[] = ["signed_in", "signed_out", "no_tab", "no_access"];
 
 export function parsePadiSession(data: Record<string, unknown>): PadiSession | null {
-  return data.ok === true &&
-    (data.padi === "signed_in" || data.padi === "signed_out" || data.padi === "no_tab")
-    ? data.padi
-    : null;
+  return data.ok === true && PADI_SESSIONS.includes(data.padi) ? (data.padi as PadiSession) : null;
 }
 
 /** The extension's reason, or `fill_failed` for anything it did not say plainly. */

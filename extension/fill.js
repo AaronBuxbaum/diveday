@@ -22,6 +22,12 @@
  * `/divechek`); every box filled must search, in a form with no other box;
  * a student's email goes only into a box that says it searches or is the
  * student's; and the only button pressed is that search's own.
+ *
+ * Two answers say the page is not ready rather than changed: `form`, a page
+ * with no box to type into at all yet (a form still drawing, a challenge in
+ * front of it), and `captcha`, a lookup whose own form asks whether the
+ * staffer is human (a captcha box drawn in it, as shape.js reads one). A
+ * captcha elsewhere on the page, on a newsletter's form, stops nothing.
  * @param {{firstName: string, lastName: string, birthDate?: string|null, cardNumber?: string|null, email?: string}} query
  * @param {{fields: string[], dateFormat: string, either?: boolean, signIn?: boolean}} spec
  * @param {string} [signInPath] the source of `SIGN_IN_PATH` (protocol.js)
@@ -224,6 +230,13 @@ function fillAgencyForm(query, spec, signInPath) {
   ) {
     return { ok: false, missing: ["signedIn"] };
   }
+  // No box to type into anywhere yet: the page has not drawn its form.
+  if (
+    !Array.from(document.querySelectorAll("input, select")).some(typable) &&
+    emailBoxes.length === 0
+  ) {
+    return { ok: false, missing: ["form"] };
+  }
 
   // What will be typed where, decided before anything is typed.
   const plan = [];
@@ -398,6 +411,27 @@ function fillAgencyForm(query, spec, signInPath) {
     if (!button && !form) return { ok: false, missing: ["submit"] };
   }
 
+  // The lookup's own form, or the nearest block holding its boxes and button.
+  let scope = form;
+  for (let around = boxes[0].parentElement; !scope && around; around = around.parentElement) {
+    if (boxes.every((box) => around.contains(box)) && (!button || around.contains(button))) {
+      scope = around;
+    }
+  }
+  // A captcha box drawn in that form (shape.js reads one the same way):
+  // outside reCAPTCHA's badge and any invisible widget. Nothing is typed.
+  const asksIfHuman = Array.from(
+    (scope || document).querySelectorAll(
+      'iframe[src*="recaptcha"], iframe[src*="hcaptcha"], iframe[src*="challenges.cloudflare.com"]',
+    ),
+  ).some(
+    (frame) =>
+      visible(frame) &&
+      !frame.closest(".grecaptcha-badge, [data-size='invisible']") &&
+      !/[?&]size=invisible/.test(frame.getAttribute("src") || ""),
+  );
+  if (asksIfHuman) return { ok: false, missing: ["captcha"] };
+
   for (const entry of plan) setValue(entry.box, entry.value);
   if (button) {
     button.click();
@@ -440,8 +474,13 @@ function readAgencyPage() {
  * not DiveDay's to take. Each line carrying the student's email, the line
  * naming them just above it (first and last name, accents and case aside,
  * within the `AFTER` lines the server reads as one record), and the lines
- * under it up to `AFTER`: never a line carrying any other address, never past
- * one, and never the line just above one, which names that address's student.
+ * under it that are a course, a status or a date, never past `AFTER` lines
+ * from the name line (or the email's, with no name line above it), the
+ * record the server reads (src/lib/elearning-check.ts). Never a line
+ * carrying any other address, never past one, never a line with no course,
+ * status or digit on it (the next student's name), and never the line just
+ * above another address, which names that address's student, unless it is a
+ * status alone ("Complete"), which is this student's.
  * When no line carries the email, only the lines saying why (no result, a
  * count, a sign-in), at most `WHY_LINES`, none with an address on it.
  * @param {string} text
@@ -452,10 +491,39 @@ function readAgencyPage() {
 function excerptAround(text, email, firstName, lastName) {
   const AFTER = 6;
   const WHY_LINES = 10;
-  const ADDRESS = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
+  // An address as the server reads one: never brackets or punctuation around it.
+  const ADDRESS = /[^\s@,;:()<>]+@[^\s@,;:()<>]+\.[a-z]{2,}/gi;
   const COUNT = /(^| )\d+ (students?|results?|records?)( found)?( |$)/;
   const WHY =
     /(^| )(no results?|no records?|no matching|no students?|not found|could not find|unable to find|0 results|sign ?in|log ?in|password|session (has )?expired)( |$)/;
+  // The server's status words (src/lib/elearning-check.ts), folded.
+  const STATUS_WORDS = [
+    "incomplete",
+    "not complete",
+    "not completed",
+    "in progress",
+    "not started",
+    "pending",
+    "expired",
+    "refunded",
+    "revoked",
+    "cancelled",
+    "canceled",
+    "suspended",
+    "started",
+    "partial",
+    "assigned",
+    "enrolled",
+    "awaiting",
+    "due",
+    "complete by",
+    "complete",
+    "completed",
+    "status",
+    "progress",
+  ];
+  const COURSE =
+    /(^| )(diver|course|online|elearning|e learning|open water|advanced|rescue|master|divemaster|instructor|specialty|enriched|nitrox|refresher|reactivate|tec|scuba)( |$)/;
   const fold = (value) =>
     ` ${String(value || "")
       .normalize("NFD")
@@ -463,42 +531,58 @@ function excerptAround(text, email, firstName, lastName) {
       .toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, " ")
       .trim()} `;
+  const addressesOn = (line) =>
+    (line.match(ADDRESS) || []).map((address) => address.replace(/[.,;:)>]+$/, "").toLowerCase());
   const wanted = email.trim().toLowerCase();
   const lines = text.split(/\r?\n/);
-  const others = lines.map((line) =>
-    (line.match(ADDRESS) || []).some((address) => address.toLowerCase() !== wanted),
-  );
-  const carries = lines.map((line) =>
-    (line.match(ADDRESS) || []).some((address) => address.toLowerCase() === wanted),
-  );
+  const folded = lines.map(fold);
+  const others = lines.map((line) => addressesOn(line).some((address) => address !== wanted));
+  const carries = lines.map((line) => addressesOn(line).includes(wanted));
   const first = fold(firstName);
   const last = fold(lastName);
   const names = (index) => {
     const line = fold(lines[index].replace(ADDRESS, " "));
     return first.trim() !== "" && last.trim() !== "" && line.includes(first) && line.includes(last);
   };
+  const hasStatus = (index) => STATUS_WORDS.some((word) => folded[index].includes(` ${word} `));
+  /** A status and nothing else: "Complete", "In progress", "100%". */
+  const statusOnly = (index) => {
+    let rest = folded[index];
+    for (const word of STATUS_WORDS) rest = rest.split(` ${word} `).join(" ");
+    return folded[index].trim() !== "" && rest.replace(/\d{1,3}/g, " ").trim() === "";
+  };
+  /** A line a record of this student's may run on with: a course, a status or a date. */
+  const recordLine = (index) =>
+    /\d/.test(lines[index]) || hasStatus(index) || COURSE.test(folded[index]);
   const keep = new Set();
   lines.forEach((_, index) => {
     if (!carries[index] || others[index]) return;
     keep.add(index);
-    // The student's name line above, when the address sits under it.
+    // The student's name line above, when the address sits under it: the
+    // record is then read from there, as the server reads it.
+    let from = index;
     for (let at = index - 1; at >= Math.max(0, index - AFTER); at -= 1) {
       if (others[at] || carries[at]) break;
       if (names(at)) {
         for (let line = at; line < index; line += 1) keep.add(line);
+        from = at;
         break;
       }
     }
-    for (let at = index + 1; at <= Math.min(lines.length - 1, index + AFTER); at += 1) {
+    for (let at = index + 1; at <= Math.min(lines.length - 1, from + AFTER); at += 1) {
       if (others[at] || carries[at]) break;
-      // The line just above another address names that address's student.
-      if (at + 1 < lines.length && others[at + 1]) break;
+      if (!recordLine(at)) break;
+      // The line just above another address names that address's student,
+      // unless it is a status alone, which is this student's.
+      if (at + 1 < lines.length && others[at + 1] && !statusOnly(at)) break;
       keep.add(at);
     }
   });
   if (keep.size === 0) {
     return lines
-      .filter((line, index) => !others[index] && (WHY.test(fold(line)) || COUNT.test(fold(line))))
+      .filter(
+        (_, index) => !others[index] && (WHY.test(folded[index]) || COUNT.test(folded[index])),
+      )
       .slice(0, WHY_LINES)
       .join("\n");
   }
@@ -546,17 +630,34 @@ function excerptAroundName(text, firstName, lastName) {
   const labelled = (label, name) => new RegExp(`^ ${label}${name.replace(/ +$/, "")} $`);
   const firstLine = labelled(FIRST_LABEL, first);
   const lastLine = labelled(LAST_LABEL, last);
+  // Labelled name lines pair top to bottom, each line in one pair at most,
+  // as the judge pairs them: one record's last name never pairs with the
+  // next record's first ("Last name: Ortiz" over "First name: Lena" after
+  // "First name: Mark" is Mark Ortiz's, not Lena's).
+  const FIRST_PART = new RegExp(`^ ${FIRST_LABEL} \\S`);
+  const LAST_PART = new RegExp(`^ ${LAST_LABEL} \\S`);
+  const part = (line) => (FIRST_PART.test(line) ? "first" : LAST_PART.test(line) ? "last" : null);
+  const pairStarts = new Set();
+  for (let index = 0; index + 1 < folded.length; ) {
+    const a = part(folded[index]);
+    const b = part(folded[index + 1]);
+    if (a && b && a !== b) {
+      pairStarts.add(index);
+      index += 2;
+    } else {
+      index += 1;
+    }
+  }
   const splitAt = (index) =>
-    index + 1 < folded.length &&
+    pairStarts.has(index) &&
     ((firstLine.test(folded[index]) && lastLine.test(folded[index + 1])) ||
       (lastLine.test(folded[index]) && firstLine.test(folded[index + 1])));
   const kept = new Map();
   folded.forEach((line, index) => {
-    // The count's own words, never the rest of a long line around them.
+    // The count's own words, never the rest of the line around them, which
+    // may name the shop.
     const count = line.match(COUNT);
-    if (count && !kept.has(index)) {
-      kept.set(index, line.length < 60 ? lines[index] : count[0].trim());
-    }
+    if (count && !kept.has(index)) kept.set(index, count[0].trim());
     const split = splitAt(index);
     if (!names(line) && !split) return;
     const end = index + AFTER + (split ? 1 : 0);
@@ -566,7 +667,12 @@ function excerptAroundName(text, firstName, lastName) {
   });
   if (!folded.some((line, index) => names(line) || splitAt(index))) {
     return lines
-      .filter((_, index) => WHY.test(folded[index]) || COUNT.test(folded[index]))
+      .map((line, index) => {
+        if (WHY.test(folded[index])) return line;
+        const count = folded[index].match(COUNT);
+        return count ? count[0].trim() : null;
+      })
+      .filter((line) => line !== null)
       .slice(0, WHY_LINES)
       .join("\n");
   }

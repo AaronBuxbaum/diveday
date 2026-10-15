@@ -3,6 +3,7 @@
 import { AGENCY_CHECKS } from "@/lib/agency-check";
 import { log } from "@/lib/log";
 import { agencyCheckReportContext, PAGE_SHAPE_LOG_EVENT } from "@/lib/page-shape";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { requireStaffSession } from "@/lib/session";
 
 /**
@@ -14,10 +15,22 @@ import { requireStaffSession } from "@/lib/session";
  * that is the staffer's sign-in, not the page.
  *
  * Nothing is written to the database and nothing comes back. The shop comes
- * off the session; the post is refused by its contents, not answered.
+ * off the session; the post is refused by its contents, not answered, and
+ * past a staffer's or a shop's hour's allowance it is dropped unread
+ * (`RATE_LIMITS.agencyCheckReportByPerson`, `agencyCheckReportByShop`).
  */
 export async function reportAgencyCheckPageAction(formData: FormData): Promise<void> {
   const session = await requireStaffSession();
+  const byPerson = await checkRateLimit(
+    rateLimitKey("agency-check-report", "person", session.user.personId),
+    RATE_LIMITS.agencyCheckReportByPerson,
+  );
+  if (!byPerson.allowed) return;
+  const byShop = await checkRateLimit(
+    rateLimitKey("agency-check-report", "shop", session.user.shopId),
+    RATE_LIMITS.agencyCheckReportByShop,
+  );
+  if (!byShop.allowed) return;
   const context = agencyCheckReportContext(
     {
       agency: formData.get("agency"),

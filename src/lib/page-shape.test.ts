@@ -215,10 +215,33 @@ describe("describePageShape", () => {
     expect(parsePageShape(shape)).not.toBeNull();
   });
 
+  /** Domain review R7 (adversarial) 6: a widget asks only once it has drawn its box. */
   it("sees reCAPTCHA's box, hCaptcha and Turnstile, and not reCAPTCHA's invisible badge", () => {
-    expect(shapeOf(`<form><div class="g-recaptcha"></div></form>`).captcha).toBe(true);
-    expect(shapeOf(`<div class="h-captcha"></div>`).captcha).toBe(true);
-    expect(shapeOf(`<div class="cf-turnstile"></div>`).captcha).toBe(true);
+    const box = (host: string) => `<iframe src="https://${host}/anchor?k=1"></iframe>`;
+    expect(
+      shapeOf(`<form><div class="g-recaptcha">${box("www.google.com/recaptcha/api2")}</div></form>`)
+        .captcha,
+    ).toBe(true);
+    expect(
+      shapeOf(`<div class="h-captcha">${box("newassets.hcaptcha.com/captcha")}</div>`).captcha,
+    ).toBe(true);
+    expect(
+      shapeOf(`<div class="cf-turnstile">${box("challenges.cloudflare.com/cdn-cgi")}</div>`)
+        .captcha,
+    ).toBe(true);
+    // A widget that drew no box, or only reCAPTCHA's badge, asks nothing.
+    expect(shapeOf(`<form><div class="g-recaptcha"></div></form>`).captcha).toBe(false);
+    expect(shapeOf(`<div class="cf-turnstile"></div>`).captcha).toBe(false);
+    expect(
+      shapeOf(
+        `<div class="g-recaptcha"><div class="grecaptcha-badge">${box("www.google.com/recaptcha/api2")}</div></div>`,
+      ).captcha,
+    ).toBe(false);
+    expect(
+      shapeOf(
+        `<div class="cf-turnstile"><iframe style="display:none" src="https://challenges.cloudflare.com/x"></iframe></div>`,
+      ).captcha,
+    ).toBe(false);
     expect(
       shapeOf(
         `<div class="grecaptcha-badge"><iframe src="https://www.google.com/recaptcha/api2/anchor?size=invisible"></iframe></div>`,
@@ -226,6 +249,14 @@ describe("describePageShape", () => {
     ).toBe(false);
     expect(shapeOf(`<div class="g-recaptcha" data-size="invisible"></div>`).captcha).toBe(false);
     expect(shapeOf(`<div class="g-recaptcha" style="display:none"></div>`).captcha).toBe(false);
+  });
+
+  /** Security review R7, nit: a value that cannot be written out is refused, never thrown on. */
+  it("refuses a report that cannot be written out", () => {
+    const circular: Record<string, unknown> = { path: "/" };
+    circular.self = circular;
+    expect(parsePageShape(circular)).toBeNull();
+    expect(parsePageShape({ path: 1n })).toBeNull();
   });
 
   it("says a password box is there, and reads no hidden one", () => {

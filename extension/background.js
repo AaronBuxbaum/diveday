@@ -124,14 +124,42 @@ function failed(reason, pageShape) {
   return pageShape ? { ok: false, reason, pageShape } : { ok: false, reason };
 }
 
+/** Text folded as the server folds it: no accents, no case, words split by single spaces. */
+function foldWords(value) {
+  return ` ${String(value || "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()} `;
+}
+
+/** Words a lookup's answer finds nobody with. Never a bare "not found", which a missing page says too. */
+const NO_RECORD =
+  /(^| )(no results?|no records?( found)?|no matching|no (divers?|students?) found|0 results|could not find|unable to find)( |$)/;
+
+/**
+ * Whether a settled page says something about the diver: it names them (first
+ * and last name), or it says it found nobody. The server judges it either way.
+ */
+function answersAboutDiver(text, query) {
+  const page = foldWords(text);
+  const first = foldWords(query.firstName);
+  const last = foldWords(query.lastName);
+  const named =
+    first.trim() !== "" && last.trim() !== "" && page.includes(first) && page.includes(last);
+  return named || NO_RECORD.test(page);
+}
+
 /** What a settled page hands back, once it is known to be the lookup's own answer. */
 async function settledReply(tabId, spec, text, query) {
   if (await signedOutAfterSearch(tabId, spec)) return { ok: false, reason: "signed_out" };
   if (await leftSite(tabId, spec)) return { ok: false, reason: "fill_failed" };
-  // A page asking whether the staffer is human answers nothing about the
-  // diver: none of its text comes back.
+  // A page asking whether the staffer is human, and saying nothing about the
+  // diver, answers nothing: none of its text comes back. One that names the
+  // diver or finds nobody is an answer, captcha beside it or not.
   const shape = await shapeOf(tabId, spec, query);
-  if (shape?.captcha) return failed("captcha", shape);
+  if (shape?.captcha && !answersAboutDiver(text, query)) return failed("captcha", shape);
   const at = await tabAddress(tabId);
   return {
     ok: true,
@@ -144,6 +172,8 @@ async function settledReply(tabId, spec, text, query) {
 const CHECK_DEADLINE_MS = 40_000;
 /** How often the answer is read while it settles. */
 const POLL_MS = 1_000;
+/** How many times a form that is there, short of a box or button the lookup needs, is tried. */
+const FILL_TRIES = 5;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -190,26 +220,37 @@ async function check(query, pages) {
     if (!(await tabLoaded(tab.id, deadline))) return { ok: false, reason: "timeout" };
     if (await landedOnSignIn(tab.id, spec)) return { ok: false, reason: "signed_out" };
     if (await leftSite(tab.id, spec)) return { ok: false, reason: "fill_failed" };
-    // A captcha on the form is the staffer's to answer: nothing is typed.
-    const opened = await shapeOf(tab.id, spec, query);
-    if (opened?.captcha) return failed("captcha", opened);
-    // A page that draws its form after load gets a moment to do it.
+    // A page with no box at all yet (a form still drawing, a challenge in
+    // front of it) is waited for to the deadline, and is never a changed
+    // page. A form that is there, short of a box or button the lookup needs,
+    // gets `FILL_TRIES` tries a second apart.
     let filled;
     let before = "";
-    for (let attempt = 0; attempt < 5; attempt += 1) {
+    let tries = 0;
+    for (;;) {
       before = (await run(tab.id, readAgencyPage)) || "";
       filled = await run(tab.id, fillAgencyForm, [query, spec, SIGN_IN_PATH_SOURCE]);
       if (filled?.ok) break;
       // A sign-in form: nothing was typed, and retrying would not change that.
       if (filled?.missing?.includes("signedIn")) return { ok: false, reason: "signed_out" };
+      // A captcha on the lookup's own form is the staffer's to answer: nothing was typed.
+      if (filled?.missing?.includes("captcha")) {
+        return failed("captcha", await shapeOf(tab.id, spec, query));
+      }
+      if (!filled?.missing?.includes("form")) tries += 1;
+      if (tries >= FILL_TRIES || Date.now() + POLL_MS >= deadline) break;
       await sleep(POLL_MS);
     }
     if (!filled?.ok) {
       if (await landedOnSignIn(tab.id, spec)) return { ok: false, reason: "signed_out" };
-      // On the lookup's own site, with no box or button where the lookup
-      // expects one: the agency has changed its page, or put a captcha on it.
       const shape = await shapeOf(tab.id, spec, query);
-      if (shape?.captcha) return failed("captcha", shape);
+      // Still no box at the deadline: a challenge in front of the page, or a
+      // page that never drew its form. Never a changed page.
+      if (filled?.missing?.includes("form")) {
+        return failed(shape?.captcha ? "captcha" : "timeout", shape);
+      }
+      // On the lookup's own site, a form with no box or button where the
+      // lookup expects one: the agency has changed its page.
       if (shape && Array.isArray(filled?.missing) && filled.missing.length > 0) {
         return failed("page_changed", shape);
       }
@@ -272,9 +313,29 @@ function answerDryRun(tabId, result) {
   else dryRunsAnswered.set(tabId, result);
 }
 
+/**
+ * Whether this browser lets the extension on every host a lookup may be on.
+ * Chrome lets a person withhold a host the extension asks for (its site
+ * access), and a lookup there can then neither be filled nor read.
+ */
+async function hostAccess(spec) {
+  try {
+    return (
+      (await chrome.permissions.contains({
+        origins: siteOf(spec).map((origin) => `${origin}/*`),
+      })) === true
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function dryRun(agency) {
   const spec = Object.hasOwn(AGENCIES, agency) ? AGENCIES[agency] : null;
   if (!spec || spec.signIn) return { ok: false, reason: "unsupported" };
+  // The sample page is the extension's own; the agency's site is where a
+  // real check runs, so whether it may go there is part of the dry run.
+  const allowed = await hostAccess(spec);
   let tab;
   try {
     tab = await chrome.tabs.create({
@@ -285,7 +346,7 @@ async function dryRun(agency) {
     return { ok: false, reason: "tab_failed" };
   }
   try {
-    return await new Promise((resolve) => {
+    const result = await new Promise((resolve) => {
       const timer = setTimeout(() => finish({ ok: false, reason: "timeout" }), DRY_RUN_DEADLINE_MS);
       function finish(result) {
         clearTimeout(timer);
@@ -296,6 +357,7 @@ async function dryRun(agency) {
       if (dryRunsAnswered.has(tab.id)) finish(dryRunsAnswered.get(tab.id));
       else dryRunsWaiting.set(tab.id, finish);
     });
+    return result.ok ? { ...result, hostAccess: allowed } : result;
   } finally {
     chrome.tabs.remove(tab.id).catch(() => {});
   }
@@ -323,10 +385,12 @@ function dryRunResult(result) {
  * **Whether a PADI Pros' Site tab is signed in**, for "Try the checks": the
  * open tabs on PADI's hosts, each read only for a sign-in address or a
  * password box (`pageAsksToSignIn`). No tab is opened, nothing is typed or
- * searched, and nothing of any page comes back but the one word.
+ * searched, and nothing of any page comes back but the one word:
+ * `no_access` when this browser keeps the extension off either PADI host.
  */
 async function padiSession() {
   const origins = siteOf(AGENCIES.padi);
+  if (!(await hostAccess(AGENCIES.padi))) return { ok: true, padi: "no_access" };
   let tabs = [];
   try {
     tabs = await chrome.tabs.query({ url: origins.map((origin) => `${origin}/*`) });

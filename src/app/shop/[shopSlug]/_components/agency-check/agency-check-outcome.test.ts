@@ -26,6 +26,7 @@ const COPY = {
   unreadable: "unreadable",
   captcha: "captcha",
   pageChanged: "pageChanged",
+  unsupported: "unsupported",
   notFoundOnPage: "notFoundOnPage {name}",
   noAnswer: "noAnswer",
   signedOut: "signedOut",
@@ -48,7 +49,7 @@ describe("agencyCheckOutcome", () => {
    * the two in a row that stop a "Check all".
    */
   it("reads the extension's silence as a page it could not read, whatever came before", () => {
-    for (const reason of ["fill_failed", "timeout", "tab_failed", "unsupported"] as const) {
+    for (const reason of ["fill_failed", "timeout", "tab_failed"] as const) {
       expect(agencyCheckFailure(reason)).toBe("page");
     }
     expect(agencyCheckOutcome(null, "page")).toBe("unreadable");
@@ -64,18 +65,20 @@ describe("agencyCheckOutcome", () => {
    * could not be read.
    */
   /**
-   * A captcha and a changed page each have their own sentence and send the
-   * staffer to the agency's own page, and to a "Check all" they are a page it
-   * could not read: two in a row stop it.
+   * A captcha, a changed page and an agency this copy of the extension does
+   * not check each have their own sentence and send the staffer to the
+   * agency's own page, and to a "Check all" each leaves that agency's other
+   * cards (domain review R7).
    */
-  it("says a captcha and a changed page in their own words, with the agency's link", () => {
-    for (const reason of ["captcha", "page_changed"] as const) {
+  it("says a captcha, a changed page and an unchecked agency in their own words, with the agency's link", () => {
+    for (const reason of ["captcha", "page_changed", "unsupported"] as const) {
       expect(agencyCheckFailure(reason)).toBe(reason);
-      expect(agencyCheckOutcome(null, reason)).toBe("unreadable");
+      expect(agencyCheckOutcome(null, reason)).toBe(reason);
       expect(agencyCheckSendsToAgency(null, reason)).toBe(true);
     }
     expect(agencyCheckOutcomeText(null, "captcha", COPY, "Lena Ortiz")).toBe("captcha");
     expect(agencyCheckOutcomeText(null, "page_changed", COPY, "Lena Ortiz")).toBe("pageChanged");
+    expect(agencyCheckOutcomeText(null, "unsupported", COPY, "Lena Ortiz")).toBe("unsupported");
     expect(agencyCheckSendsToAgency(null, "page")).toBe(false);
     expect(agencyCheckSendsToAgency(null, "signed_out")).toBe(false);
   });

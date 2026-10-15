@@ -14,6 +14,7 @@ import {
   agencyCheckForm,
   agencyCheckMatchedText,
   agencyCheckOutcomeText,
+  agencyCheckSendsToAgency,
 } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-outcome";
 import { reportFailedCheck } from "@/app/shop/[shopSlug]/_components/agency-check/report-failed-check";
 import { UndoToast } from "@/components/UndoToast";
@@ -36,8 +37,11 @@ const LINK_CLASS =
  * looks the diver up on the agency's page in the background and hands back the
  * page's text; `agencyCheckAction` decides on the server whether that page
  * names this diver at this level, and certifies the card if it does. Every
- * other answer writes nothing and puts the link back beside a sentence saying
- * what the agency's page showed.
+ * other answer writes nothing and says what the agency's page showed. When
+ * the next step is the agency's own page (it answered short of a match, asks
+ * whether the staffer is human, has changed, or is not one this copy checks),
+ * its link takes the button's place; a page that could not be read, or a
+ * signed-out PADI, keeps the button for another try, with the link beside it.
  *
  * Like `MarkCertifiedControl`, it renders for a card that has just been
  * certified too, drawing nothing but the toast, because the toast's Undo has
@@ -118,10 +122,11 @@ export function AgencyCheck({
     copy,
     query ? `${query.firstName} ${query.lastName}` : "",
   );
+  const sendsToAgency = agencyCheckSendsToAgency(result, failure);
 
   return (
     <>
-      {!awaiting ? null : hasExtension && query ? (
+      {!awaiting ? null : hasExtension && query && !sendsToAgency ? (
         <button
           type="button"
           onClick={check}
@@ -131,7 +136,7 @@ export function AgencyCheck({
         >
           {busy ? copy.checking : copy.check}
         </button>
-      ) : (
+      ) : hasExtension && query && outcome ? null : (
         link
       )}
       {awaiting && hasExtension && !query && offNote ? (

@@ -48,7 +48,7 @@ type AgencyPages = {
   ssiListsMore: boolean;
   /**
    * SSI's lookup as it is, with its boxes renamed past recognising (a
-   * redesign), or with reCAPTCHA's box on its form.
+   * redesign), or with reCAPTCHA's box drawn on its form (its frame).
    */
   ssiForm: "as-is" | "renamed" | "captcha";
   /**
@@ -100,7 +100,7 @@ function ssiPage(url: URL, listsMore: boolean, form: AgencyPages["ssiForm"]): st
       <form method="get" action="/online_diver_check">
         <label>Diver name <input name="diver_name"></label>
         <label>Card number <input name="card_number"></label>
-        ${form === "captcha" ? '<div class="g-recaptcha" style="width:304px;height:78px"></div>' : ""}
+        ${form === "captcha" ? '<div class="g-recaptcha"><iframe title="reCAPTCHA" width="304" height="78" src="/recaptcha/api2/anchor?k=stand-in"></iframe></div>' : ""}
         <button type="submit">Search</button>
       </form>`,
     );
@@ -658,9 +658,9 @@ test("SSI's page with its boxes renamed reads as a changed page, and nothing is 
 
   await cards.getByRole("button", { name: "Check with SSI" }).click();
 
-  await expect(
-    cards.getByText("SSI’s page has changed, and DiveDay has been told. Check on its page."),
-  ).toBeVisible({ timeout: 30_000 });
+  await expect(cards.getByText("SSI’s page has changed. Check on its page.")).toBeVisible({
+    timeout: 30_000,
+  });
   expect(agencyPages.requests.filter((request) => request.includes("diver_name="))).toEqual([]);
   await expect(cards.getByText(/^Checked with SSI by /)).toHaveCount(0);
 });

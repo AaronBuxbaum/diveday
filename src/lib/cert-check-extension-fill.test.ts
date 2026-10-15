@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { RECORD_LINES } from "./agency-check";
 
 /**
  * The extension's form filler (`extension/fill.js`), on stand-in forms. The
@@ -24,16 +23,14 @@ const extension = (
         spec: unknown,
         signInPath?: string,
       ) => { ok: true } | { ok: false; missing: string[] };
-      excerptAround: (text: string, email: string, firstName: string, lastName: string) => string;
       pageAsksToSignIn: (signInPath?: string) => boolean;
-      excerptAroundName: (text: string, firstName: string, lastName: string) => string;
       AGENCIES: Record<string, unknown>;
       ELEARNING: Record<string, unknown>;
       SIGN_IN_PATH: string;
     };
   }
 ).DiveDayCertCheck;
-const { excerptAround, excerptAroundName, AGENCIES, ELEARNING, SIGN_IN_PATH } = extension;
+const { AGENCIES, ELEARNING, SIGN_IN_PATH } = extension;
 /** The filler as the service worker calls it, with the sign-in rule from protocol.js. */
 const fillAgencyForm = (query: unknown, spec: unknown) =>
   extension.fillAgencyForm(query, spec, SIGN_IN_PATH);
@@ -81,6 +78,54 @@ describe("fillAgencyForm", () => {
     expect(value("#l")).toBe("Ortiz");
     expect(value("#d")).toBe("04/12/1990");
     expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  /** Domain review R7 (adversarial) 6: only a captcha on the lookup's own form stops it. */
+  it("types nothing into a lookup whose own form asks whether the staffer is human", () => {
+    document.body.innerHTML = `
+      <form>
+        <input name="first_name"><input name="last_name"><input name="dob">
+        <div class="g-recaptcha"><iframe src="https://www.google.com/recaptcha/api2/anchor?k=1"></iframe></div>
+        <button type="submit">Search</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(
+      fillAgencyForm(lena, { fields: ["name", "birthDate"], dateFormat: "MM/DD/YYYY" }),
+    ).toEqual({ ok: false, missing: ["captcha"] });
+    expect(value('[name="first_name"]')).toBe("");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("fills a lookup when the captcha is on another form, or draws no box, or is only a badge", () => {
+    for (const elsewhere of [
+      `<form><input type="email" name="newsletter"><div class="g-recaptcha"><iframe src="https://www.google.com/recaptcha/api2/anchor?k=1"></iframe></div><button>Subscribe</button></form>`,
+      `<div class="cf-turnstile"></div>`,
+      `<div class="g-recaptcha"><div class="grecaptcha-badge"><iframe src="https://www.google.com/recaptcha/api2/anchor?k=1&size=invisible"></iframe></div></div>`,
+    ]) {
+      document.body.innerHTML = `
+        <form id="lookup">
+          <input name="first_name"><input name="last_name"><input name="dob">
+          ${elsewhere.includes("newsletter") ? "" : elsewhere}
+          <button type="submit">Search</button>
+        </form>
+        ${elsewhere.includes("newsletter") ? elsewhere : ""}`;
+      const form = document.getElementById("lookup") as HTMLFormElement;
+      const onSubmit = vi.fn((event: Event) => event.preventDefault());
+      form.addEventListener("submit", onSubmit);
+      expect(
+        fillAgencyForm(lena, { fields: ["name", "birthDate"], dateFormat: "MM/DD/YYYY" }),
+        elsewhere,
+      ).toEqual({ ok: true });
+      expect(onSubmit, elsewhere).toHaveBeenCalledOnce();
+    }
+  });
+
+  /** Domain review R7 (adversarial) 7: a page with no box yet is not a changed page. */
+  it("says there is no form yet when the page has no box to type into", () => {
+    document.body.innerHTML = `<h1>Just a moment…</h1><p>Checking your browser.</p>`;
+    expect(
+      fillAgencyForm(lena, { fields: ["name", "birthDate"], dateFormat: "MM/DD/YYYY" }),
+    ).toEqual({ ok: false, missing: ["form"] });
   });
 
   it("uses a date picker's own format", () => {
@@ -137,10 +182,19 @@ describe("fillAgencyForm", () => {
   it("never types into a hidden box", () => {
     document.body.innerHTML = `
       <form><input type="hidden" name="card_number"><button>Verify</button></form>`;
+    // No box a person could type into: a form not drawn yet, never a changed one.
+    expect(fillAgencyForm(lena, { fields: ["number"], dateFormat: "YYYY-MM-DD" })).toEqual({
+      ok: false,
+      missing: ["form"],
+    });
+    expect(value('[name="card_number"]')).toBe("");
+    document.body.innerHTML = `
+      <form><input type="hidden" name="card_number"><input name="q"><button>Verify</button></form>`;
     expect(fillAgencyForm(lena, { fields: ["number"], dateFormat: "YYYY-MM-DD" })).toEqual({
       ok: false,
       missing: ["number"],
     });
+    expect(value('[name="card_number"]')).toBe("");
   });
 
   it("searches CMAS by code when there is one, and by name and birth date when not", () => {
@@ -307,72 +361,6 @@ describe("fillAgencyForm", () => {
     ).toEqual({ ok: false, missing: ["signedIn"] });
     expect(value('input[type="email"]')).toBe("");
     expect(onSubmit).not.toHaveBeenCalled();
-  });
-});
-
-describe("excerptAround", () => {
-  /** Every address in a text, lowercased. */
-  const addresses = (text: string) =>
-    [...text.matchAll(/[^\s@]+@[^\s@]+\.[^\s@]+/g)].map((match) => match[0].toLowerCase());
-
-  it("hands back only the lines near the student's email", () => {
-    const page = [
-      ...Array.from({ length: 20 }, (_, index) => `Other ${index}\tother${index}@example.com`),
-      "Lena Ortiz\tLena@Example.com\tOpen Water Diver Online\tComplete",
-      ...Array.from({ length: 20 }, (_, index) => `Later ${index}\tlater${index}@example.com`),
-    ].join("\n");
-    const excerpt = excerptAround(page, "lena@example.com", "Lena", "Ortiz");
-    expect(excerpt).toBe("Lena Ortiz\tLena@Example.com\tOpen Water Diver Online\tComplete");
-  });
-
-  /** Security review (MEDIUM): a Pros' Site list is other students' names and emails. */
-  it("never hands back another student's address or the lines around it", () => {
-    const page = [
-      "Students",
-      "Sam Reyes",
-      "sam@example.com",
-      "Open Water Diver Online",
-      "In progress",
-      "Lena Ortiz",
-      "lena@example.com",
-      "Open Water Diver Online",
-      "Complete",
-      "Mia Chen",
-      "mia@example.com",
-      "Advanced Open Water Diver Online",
-    ].join("\n");
-    const excerpt = excerptAround(page, "lena@example.com", "Lena", "Ortiz");
-    expect(excerpt.split("\n")).toEqual([
-      "Lena Ortiz",
-      "lena@example.com",
-      "Open Water Diver Online",
-      "Complete",
-    ]);
-    expect(addresses(excerpt)).toEqual(["lena@example.com"]);
-    expect(excerpt).not.toContain("Mia Chen");
-    expect(excerpt).not.toContain("Sam Reyes");
-  });
-
-  it("drops a line carrying another address beside the student's", () => {
-    const page = ["Lena Ortiz lena@example.com", "Family: mum@example.com", "Complete"].join("\n");
-    const excerpt = excerptAround(page, "lena@example.com", "Lena", "Ortiz");
-    expect(addresses(excerpt)).toEqual(["lena@example.com"]);
-  });
-
-  it("hands back only why, at most ten lines, from a page that never names the email", () => {
-    const page = [
-      "Search results",
-      "Sam Reyes sam@example.com Open Water Diver Online Complete",
-      "No results found",
-      "No results found for mia@example.com",
-      ...Array(100).fill("Mia Chen mia@example.com"),
-      ...Array(20).fill("No results"),
-    ].join("\n");
-    const excerpt = excerptAround(page, "lena@example.com", "Lena", "Ortiz");
-    expect(excerpt).toContain("No results found");
-    expect(excerpt).not.toContain("Sam Reyes");
-    expect(addresses(excerpt)).toEqual([]);
-    expect(excerpt.split("\n").length).toBeLessThanOrEqual(10);
   });
 });
 
@@ -668,122 +656,6 @@ describe("fillAgencyForm on PADI DiveChek", () => {
     document.getElementById("other")?.addEventListener("click", other);
     expect(fillAgencyForm(lena, divechek)).toEqual({ ok: false, missing: ["submit"] });
     expect(other).not.toHaveBeenCalled();
-  });
-});
-
-describe("excerptAroundName", () => {
-  it("hands back only this diver's lines, and how many divers were found", () => {
-    const page = [
-      "PADI Pros’ Site",
-      "Welcome back, Coral Coast Divers",
-      "Recent students: Sam Reyes, Mia Chen",
-      "DiveChek",
-      "1 diver found",
-      ...Array.from({ length: 10 }, (_, index) => `menu ${index}`),
-      "Lena Ortiz",
-      "Date of Birth: 12 Apr 1990",
-      "Open Water Diver 15 Jun 2015",
-      ...Array.from({ length: 10 }, (_, index) => `footer ${index}`),
-    ].join("\n");
-    const excerpt = excerptAroundName(page, "Léna", "ORTIZ");
-    expect(excerpt).toContain("1 diver found");
-    expect(excerpt).toContain("Date of Birth: 12 Apr 1990");
-    expect(excerpt).toContain("Open Water Diver");
-    expect(excerpt).not.toContain("Sam Reyes");
-    expect(excerpt).not.toContain("Coral Coast Divers");
-    expect(excerpt).not.toContain("footer 9");
-  });
-
-  it("hands back no more lines under a name than the server reads as one record", () => {
-    const page = ["Lena Ortiz", "a", "b", "c", "d", "Mark Lee", "e"].join("\n");
-    expect(excerptAroundName(page, "Lena", "Ortiz").split("\n")).toEqual(
-      ["Lena Ortiz", "a", "b", "c", "d"].slice(0, RECORD_LINES + 1),
-    );
-  });
-
-  it("keeps a name split over two labelled lines, either order, so a second diver laid out that way still shows", () => {
-    const page = [
-      "PADI Pros’ Site",
-      "Welcome back, Coral Coast Divers",
-      "First name: Lena",
-      "Last name: Ortiz",
-      "Date of Birth: 12 Apr 1990",
-      "Open Water Diver",
-      "Apellidos: Ortiz",
-      "Nombre: Léna",
-      "Date of Birth: 3 Sep 1987",
-      "Advanced Open Water Diver",
-      "Card 1",
-      "Card 2",
-      "Footer",
-      "Recent students: Sam Reyes",
-    ].join("\n");
-    const excerpt = excerptAroundName(page, "Lena", "Ortiz");
-    expect(excerpt.split("\n")).toEqual([
-      "First name: Lena",
-      "Last name: Ortiz",
-      "Date of Birth: 12 Apr 1990",
-      "Open Water Diver",
-      "Apellidos: Ortiz",
-      "Nombre: Léna",
-      "Date of Birth: 3 Sep 1987",
-      "Advanced Open Water Diver",
-      "Card 1",
-      "Card 2",
-    ]);
-    expect(excerpt).not.toContain("Coral Coast Divers");
-    expect(excerpt).not.toContain("Sam Reyes");
-  });
-
-  it("never reads a first name and someone else's last name, or lines apart, as the diver's", () => {
-    const apart = ["First name: Lena", "Date of Birth: 12 Apr 1990", "Last name: Ortiz"].join("\n");
-    expect(excerptAroundName(apart, "Lena", "Ortiz")).toBe("");
-    const other = ["First name: Lena", "Last name: Ortiz Smith"].join("\n");
-    expect(excerptAroundName(other, "Lena", "Ortiz")).toBe("");
-  });
-
-  it("reads a 'Last, First' name line as the diver's", () => {
-    const page = ["Menu", "Ortiz, Lena", "12 Apr 1990", "Open Water Diver"].join("\n");
-    expect(excerptAroundName(page, "Lena", "Ortiz")).toBe(
-      "Ortiz, Lena\n12 Apr 1990\nOpen Water Diver",
-    );
-  });
-
-  it("keeps only the count's words from a long line around it", () => {
-    const page = [
-      `Welcome back, Coral Coast Divers. Your recent students include Sam Reyes. 2 divers found`,
-      "Lena Ortiz",
-    ].join("\n");
-    const excerpt = excerptAroundName(page, "Lena", "Ortiz");
-    expect(excerpt).toContain("2 divers found");
-    expect(excerpt).not.toContain("Sam Reyes");
-  });
-
-  it("keeps every record naming the diver, so the server can see there are several", () => {
-    const page = ["Lena Ortiz", "12 Apr 1990", ...Array(20).fill("x"), "Lena Ortiz", "3 Sep 1987"];
-    expect(excerptAroundName(page.join("\n"), "Lena", "Ortiz")).toContain("3 Sep 1987");
-  });
-
-  it("never takes a longer name for the diver's", () => {
-    const page = ["Welcome", ...Array(50).fill("row"), "Lenara Ortizzi", "Open Water Diver"];
-    expect(excerptAroundName(page.join("\n"), "Lena", "Ortiz")).not.toContain("Lenara");
-  });
-
-  /** Security review S4: a page without the diver hands back only why. */
-  it("keeps only the lines that say why, from a page that never names the diver", () => {
-    const page = [
-      "Welcome back, Coral Coast Divers",
-      "Recent students: Sam Reyes, Mia Chen",
-      "Sign in",
-      "Email",
-      "Password",
-      ...Array(100).fill("Mark Lee"),
-    ].join("\n");
-    expect(excerptAroundName(page, "Lena", "Ortiz")).toBe("Sign in\nPassword");
-    const none = ["DiveChek", "Sam Reyes", "No results found", "Mia Chen"].join("\n");
-    expect(excerptAroundName(none, "Lena", "Ortiz")).toBe("No results found");
-    const many = Array(30).fill("Password").join("\n");
-    expect(excerptAroundName(many, "Lena", "Ortiz").split("\n")).toHaveLength(10);
   });
 });
 

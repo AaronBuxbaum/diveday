@@ -5,6 +5,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { AGENCY_CHECKS, type CheckableAgency } from "@/lib/agency-check";
 import { agencyVerificationPage } from "@/lib/agency-verification";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { requireShopSurface } from "@/lib/session";
 import { CertCheckTry } from "../_components/CertCheckTry";
 import { SettingsEditorPage } from "../_components/SettingsEditorPage";
@@ -48,6 +49,8 @@ export default async function CertChecksTryPage({
     >
       <CertCheckTry
         agencies={agencies}
+        padiOn={shop.padiChecksEnabled}
+        supportEmail={SUPPORT_EMAIL}
         copy={{
           run: t("settings.certChecks.run"),
           running: t("settings.certChecks.running"),
@@ -65,6 +68,12 @@ export default async function CertChecksTryPage({
           signedOut: t("settings.certChecks.signedOut"),
           noTab: t("settings.certChecks.noTab"),
           noAnswer: t("settings.certChecks.noAnswer"),
+          noAccess: t("settings.certChecks.noAccess"),
+          allowSite: t.raw("settings.certChecks.allowSite"),
+          failedNext: t("settings.certChecks.failedNext"),
+          padiOff: t("shared.padiChecksOff"),
+          reportHint: t("settings.certChecks.reportHint"),
+          email: t("settings.main.support.emailCta", { email: SUPPORT_EMAIL }),
           copy: t("settings.certChecks.copy"),
           copied: t("shared.waiverSend.copied"),
           copyFailed: t("shared.waiverSend.copyFailed"),

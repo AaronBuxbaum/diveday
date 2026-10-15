@@ -66,6 +66,7 @@ cannot see it.
 | A note to everyone on a departure | `src/app/shop/[shopSlug]/trips/[id]/departure-note-actions.ts` `holdDepartureNoteAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `rate_limited` reason |
 | Core Web Vitals beacon | `src/app/api/vitals/route.ts` | IP | `RATE_LIMITS.webVitalsBeacon` (300/hour) |
 | CSP violation report | `src/app/api/csp-report/route.ts` | IP | `RATE_LIMITS.cspReport` (120/hour) |
+| Failed cert check's page-shape report | `src/app/actions/agency-check-report.ts` | staffer, shop | `RATE_LIMITS.agencyCheckReportByPerson` (30/hour), `RATE_LIMITS.agencyCheckReportByShop` (120/hour) |
 
 Five notes the table can't carry:
 

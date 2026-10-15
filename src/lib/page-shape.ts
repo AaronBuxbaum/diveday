@@ -292,7 +292,14 @@ export type PageShape = z.infer<typeof pageShapeSchema>;
 /** The report, or null for anything that is not one: a stray word refuses all of it. */
 export function parsePageShape(value: unknown): PageShape | null {
   if (typeof value === "string" || value === null || typeof value !== "object") return null;
-  if (JSON.stringify(value).length > PAGE_SHAPE_MAX_BYTES) return null;
+  let written: string;
+  try {
+    written = JSON.stringify(value);
+  } catch {
+    // A loop or a value JSON cannot hold is not a report.
+    return null;
+  }
+  if (written.length > PAGE_SHAPE_MAX_BYTES) return null;
   const parsed = pageShapeSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
 }

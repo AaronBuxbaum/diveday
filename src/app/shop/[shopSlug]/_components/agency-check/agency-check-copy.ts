@@ -42,6 +42,8 @@ export type AgencyCheckCopy = {
   captcha: string;
   /** The agency's lookup page is not the shape the extension knows. */
   pageChanged: string;
+  /** This copy of the extension does not check the agency: update it. */
+  unsupported: string;
   /** A template: `{name}`. The page came back, but did not show this diver cleanly. */
   notFoundOnPage: string;
   /** DiveDay's own server did not answer: reload to see where the card stands. */
@@ -90,6 +92,11 @@ export type AgencyCheckAllCopy = {
   stoppedTransport: string;
   /** A template: `{name}` and `{agency}`, when the staffer is not signed in to the agency. */
   stoppedSignedOut: string;
+  /**
+   * A template: `{agency}`, added once a run ends for each agency whose other
+   * cards it left (a captcha, a changed page, an agency this copy does not check).
+   */
+  left: string;
 };
 
 /**
@@ -147,6 +154,7 @@ export function agencyCheckCopy(
     unreadable: t("divers.certifications.agencyCheck.unreadable", { agency: name }),
     captcha: t("divers.certifications.agencyCheck.captcha", { agency: name }),
     pageChanged: t("divers.certifications.agencyCheck.pageChanged", { agency: name }),
+    unsupported: t("divers.certifications.agencyCheck.unsupported", { agency: name }),
     // The agency now, the diver in the browser: one host holds many divers.
     notFoundOnPage: fill(t.raw("divers.certifications.agencyCheck.notFoundOnPage"), {
       agency: name,
@@ -200,5 +208,6 @@ export function agencyCheckAllCopy(t: StaffTranslator, count: number): AgencyChe
     stopped: t.raw("trips.roster.agencyCheckAll.stopped"),
     stoppedTransport: t.raw("trips.roster.agencyCheckAll.stoppedTransport"),
     stoppedSignedOut: t.raw("trips.roster.agencyCheckAll.stoppedSignedOut"),
+    left: t.raw("trips.roster.agencyCheckAll.left"),
   };
 }

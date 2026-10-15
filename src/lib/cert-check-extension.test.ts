@@ -165,16 +165,24 @@ describe("the extension's copy of the protocol", () => {
     /** What the page asks once searched: a sign-in, or nothing. */
     asksToSignInAfter?: boolean;
     elearning?: boolean;
-    /** What the filler answers; a fill that worked by default. */
-    fill?: { ok: boolean; missing?: string[] };
+    /** What the filler answers, by try (from 0); a fill that worked by default. */
+    fill?:
+      | { ok: boolean; missing?: string[] }
+      | ((attempt: number) => { ok: boolean; missing?: string[] });
     /** The page's shape (shape.js), before the form is filled and after. */
     shape?: (filled: boolean) => object | null;
+    /** The page's text once searched. */
+    textAfter?: string;
   }) {
     const { readFileSync } = await import("node:fs");
     const vm = await import("node:vm");
     const source = (file: string) =>
       readFileSync(new URL(`../../extension/${file}`, import.meta.url), "utf8");
     let filled = false;
+    let fills = 0;
+    // The worker's clock, moved only by its own waits, so a wait to the
+    // deadline takes no time here.
+    let clock = 1_000_000;
     const ran: string[] = [];
     const worker: Record<string, unknown> = {
       chrome: {
@@ -189,7 +197,11 @@ describe("the extension's copy of the protocol", () => {
           executeScript: async ({ func }: { func: { name: string } }) => {
             ran.push(func.name);
             if (func.name === "fillAgencyForm") {
-              const answer = options.fill ?? { ok: true };
+              const answer =
+                typeof options.fill === "function"
+                  ? options.fill(fills)
+                  : (options.fill ?? { ok: true });
+              fills += 1;
               filled = answer.ok;
               return [{ result: answer }];
             }
@@ -199,13 +211,30 @@ describe("the extension's copy of the protocol", () => {
             if (func.name === "pageAsksToSignIn") {
               return [{ result: filled && options.asksToSignInAfter === true }];
             }
-            return [{ result: filled ? "Lena Ortiz\nOpen Water Diver" : "Search form" }];
+            return [
+              {
+                result: filled
+                  ? (options.textAfter ?? "Lena Ortiz\nOpen Water Diver")
+                  : "Search form",
+              },
+            ];
           },
         },
       },
       URL,
-      setTimeout: (fn: () => void) => setImmediate(fn),
-      clearTimeout: () => {},
+      Date: { now: () => clock },
+      setTimeout: (fn: () => void, ms = 0) => {
+        const timer = { cleared: false };
+        setImmediate(() => {
+          if (timer.cleared) return;
+          clock += ms;
+          fn();
+        });
+        return timer;
+      },
+      clearTimeout: (timer?: { cleared: boolean }) => {
+        if (timer) timer.cleared = true;
+      },
       importScripts: (...files: string[]) => {
         for (const file of files) vm.runInContext(source(file), worker, { filename: file });
       },
@@ -232,7 +261,7 @@ describe("the extension's copy of the protocol", () => {
       },
       pages,
     );
-    return { reply, ran };
+    return { reply, ran, fills: () => fills, elapsed: () => clock - 1_000_000 };
   }
 
   /** Security review R4-2: a public lookup sent to PADI's signed-in site is never read. */
@@ -307,16 +336,29 @@ describe("the extension's copy of the protocol", () => {
     captcha: false,
   };
 
-  it("types nothing on a page asking whether the staffer is human, and says so with its shape", async () => {
+  /** Domain review R7 (adversarial) 6: the filler says when the lookup's own form asks. */
+  it("types nothing on a lookup whose form asks whether the staffer is human, and says so with its shape", async () => {
     const shape = { ...FORM_SHAPE, captcha: true };
-    const { reply, ran } = await workerCheck({
+    const { reply, fills } = await workerCheck({
       agency: "ssi",
       before: "https://my.divessi.com/online_diver_check",
       after: "https://my.divessi.com/online_diver_check",
+      fill: { ok: false, missing: ["captcha"] },
       shape: () => shape,
     });
     expect(reply).toEqual({ ok: false, reason: "captcha", pageShape: shape });
-    expect(ran).not.toContain("fillAgencyForm");
+    expect(fills()).toBe(1);
+  });
+
+  it("fills a lookup though a captcha is elsewhere on its page", async () => {
+    const { reply, ran } = await workerCheck({
+      agency: "ssi",
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://my.divessi.com/online_diver_check?diver_name=Lena",
+      shape: () => ({ ...FORM_SHAPE, captcha: true }),
+    });
+    expect(ran).toContain("fillAgencyForm");
+    expect(reply).toMatchObject({ ok: true, pageText: "Lena Ortiz\nOpen Water Diver" });
   });
 
   it("reads a lookup page with no box where the lookup expects one as a changed page, with its shape", async () => {
@@ -331,6 +373,41 @@ describe("the extension's copy of the protocol", () => {
     expect(ran.filter((name) => name === "fillAgencyForm").length).toBeGreaterThan(0);
   });
 
+  /** Domain review R7 (adversarial) 7: a page that has not drawn its form yet has not changed. */
+  it("waits for a page with no box yet, and fills it once its form shows", async () => {
+    const { reply, fills } = await workerCheck({
+      agency: "ssi",
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://my.divessi.com/online_diver_check?diver_name=Lena",
+      fill: (attempt) => (attempt < 12 ? { ok: false, missing: ["form"] } : { ok: true }),
+      shape: () => ({ ...FORM_SHAPE, boxes: [] }),
+    });
+    expect(fills()).toBe(13);
+    expect(reply).toMatchObject({ ok: true });
+  });
+
+  it("never reads a page that shows no box before the deadline as changed", async () => {
+    const empty = { ...FORM_SHAPE, boxes: [], buttons: [], forms: 0 };
+    const { reply, elapsed } = await workerCheck({
+      agency: "ssi",
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://my.divessi.com/online_diver_check",
+      fill: { ok: false, missing: ["form"] },
+      shape: () => empty,
+    });
+    expect(reply).toEqual({ ok: false, reason: "timeout", pageShape: empty });
+    expect(elapsed()).toBeGreaterThanOrEqual(35_000);
+    const challenge = { ...empty, captcha: true };
+    const blocked = await workerCheck({
+      agency: "ssi",
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://my.divessi.com/online_diver_check",
+      fill: { ok: false, missing: ["form"] },
+      shape: () => challenge,
+    });
+    expect(blocked.reply).toEqual({ ok: false, reason: "captcha", pageShape: challenge });
+  });
+
   it("hands back no text from an answer asking whether the staffer is human", async () => {
     const answered = { ...FORM_SHAPE, captcha: true };
     const { reply } = await workerCheck({
@@ -338,8 +415,23 @@ describe("the extension's copy of the protocol", () => {
       before: "https://my.divessi.com/online_diver_check",
       after: "https://my.divessi.com/online_diver_check?diver_name=Lena",
       shape: (filled) => (filled ? answered : FORM_SHAPE),
+      textAfter: "Online Diver Check\nPlease verify you are human",
     });
     expect(reply).toEqual({ ok: false, reason: "captcha", pageShape: answered });
+  });
+
+  /** Domain review R7 (adversarial) 6: a captcha beside an answer does not hide the answer. */
+  it("hands back an answer that names the diver or finds nobody, captcha or not", async () => {
+    for (const textAfter of ["Lena Ortiz\nOpen Water Diver", "No results found"]) {
+      const { reply } = await workerCheck({
+        agency: "ssi",
+        before: "https://my.divessi.com/online_diver_check",
+        after: "https://my.divessi.com/online_diver_check?diver_name=Lena",
+        shape: (filled) => (filled ? { ...FORM_SHAPE, captcha: true } : FORM_SHAPE),
+        textAfter,
+      });
+      expect(reply, textAfter).toMatchObject({ ok: true, pageText: textAfter });
+    }
   });
 
   it("answers hello with its version and the agencies it checks", async () => {
@@ -392,10 +484,17 @@ describe("the extension's copy of the protocol", () => {
       readFileSync(new URL(`../../extension/${file}`, import.meta.url), "utf8");
     let tabs: { id: number; url?: string }[] = [];
     let asks = true;
+    let allowed = true;
     const ran: string[] = [];
     const worker: Record<string, unknown> = {
       chrome: {
         runtime: { id: "test", onMessage: { addListener: () => {} } },
+        permissions: {
+          contains: async ({ origins }: { origins: string[] }) => {
+            expect(origins).toEqual(["https://pro.padi.com/*", "https://pros.padi.com/*"]);
+            return allowed;
+          },
+        },
         tabs: {
           query: async ({ url }: { url: string[] }) => {
             expect(url).toEqual(["https://pro.padi.com/*", "https://pros.padi.com/*"]);
@@ -429,6 +528,64 @@ describe("the extension's copy of the protocol", () => {
     asks = false;
     expect(await padiSession()).toEqual({ ok: true, padi: "signed_in" });
     expect(new Set(ran)).toEqual(new Set(["pageAsksToSignIn"]));
+    // Domain review R7 (adversarial) 5: a browser that withheld PADI's hosts says so.
+    allowed = false;
+    expect(await padiSession()).toEqual({ ok: true, padi: "no_access" });
+  });
+
+  /** Domain review R7 (adversarial) 5: a dry run fails where the agency's own site is withheld. */
+  it("says with each dry run whether this browser lets the extension on that agency's site", async () => {
+    const { readFileSync } = await import("node:fs");
+    const vm = await import("node:vm");
+    const source = (file: string) =>
+      readFileSync(new URL(`../../extension/${file}`, import.meta.url), "utf8");
+    const withheld = new Set(["https://www.naui.org/*"]);
+    const asked: string[][] = [];
+    const worker: Record<string, unknown> = {
+      chrome: {
+        runtime: {
+          id: "test",
+          onMessage: { addListener: () => {} },
+          getURL: (path: string) => `chrome-extension://test/${path}`,
+        },
+        permissions: {
+          contains: async ({ origins }: { origins: string[] }) => {
+            asked.push(origins);
+            return origins.every((origin) => !withheld.has(origin));
+          },
+        },
+        tabs: {
+          create: async () => {
+            // The sample page answers at once, as a filled form would.
+            (worker.answerDryRun as (tabId: number, result: unknown) => void)(
+              7,
+              (worker.dryRunResult as (result: unknown) => unknown)({
+                filled: true,
+                typed: true,
+                submitted: true,
+                missing: [],
+              }),
+            );
+            return { id: 7 };
+          },
+          remove: async () => {},
+        },
+      },
+      URL,
+      setTimeout: () => 0,
+      clearTimeout: () => {},
+      importScripts: (...files: string[]) => {
+        for (const file of files) vm.runInContext(source(file), worker, { filename: file });
+      },
+    };
+    vm.createContext(worker);
+    vm.runInContext(source("background.js"), worker, { filename: "background.js" });
+    const dryRun = worker.dryRun as (agency: string) => Promise<Record<string, unknown>>;
+    expect(await dryRun("ssi")).toMatchObject({ ok: true, filled: true, hostAccess: true });
+    expect(await dryRun("naui")).toMatchObject({ ok: true, filled: true, hostAccess: false });
+    expect(asked).toEqual([["https://my.divessi.com/*"], ["https://www.naui.org/*"]]);
+    expect(dryRunPassed(parseExtensionDryRun(await dryRun("naui")))).toBe(false);
+    expect(dryRunPassed(parseExtensionDryRun(await dryRun("ssi")))).toBe(true);
   });
 
   it("reads anything else the extension says as a form it could not fill", () => {
@@ -599,13 +756,23 @@ describe("what a failed check carries back", () => {
 
   it("reads a dry run as passed only when every box was found, typed and sent", () => {
     const run = (fields: Record<string, unknown>) =>
-      parseExtensionDryRun({ ok: true, filled: true, typed: true, submitted: true, ...fields });
+      parseExtensionDryRun({
+        ok: true,
+        filled: true,
+        typed: true,
+        submitted: true,
+        hostAccess: true,
+        ...fields,
+      });
     expect(dryRunPassed(run({}))).toBe(true);
+    expect(dryRunPassed(run({ hostAccess: false }))).toBe(false);
+    expect(dryRunPassed(run({ hostAccess: undefined }))).toBe(false);
     expect(dryRunPassed(run({ typed: false }))).toBe(false);
     expect(dryRunPassed(run({ submitted: "yes" }))).toBe(false);
     expect(dryRunPassed(parseExtensionDryRun({ ok: false, reason: "timeout" }))).toBe(false);
     expect(run({ missing: ["name", "<b>", 3] })).toMatchObject({ missing: ["name"] });
     expect(parsePadiSession({ ok: true, padi: "signed_in" })).toBe("signed_in");
+    expect(parsePadiSession({ ok: true, padi: "no_access" })).toBe("no_access");
     expect(parsePadiSession({ ok: true, padi: "Ada" })).toBeNull();
   });
 });

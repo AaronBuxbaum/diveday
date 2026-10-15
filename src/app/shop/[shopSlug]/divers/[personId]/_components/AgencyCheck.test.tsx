@@ -96,6 +96,8 @@ describe("AgencyCheck when the agency's page cannot be read", () => {
       await screen.findByText("SSI is asking if you’re human. Check on its page."),
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "Check with SSI" })).toBeVisible();
+    // Domain review R7 (operational): the link takes the button's place.
+    expect(screen.queryByRole("button", { name: "Check with SSI" })).toBeNull();
     expect(action).not.toHaveBeenCalled();
     const [[posted]] = vi.mocked(reportAgencyCheckPageAction).mock.calls as unknown as [[FormData]];
     expect(Object.fromEntries(posted.entries())).toEqual({
@@ -108,18 +110,23 @@ describe("AgencyCheck when the agency's page cannot be read", () => {
     expect(JSON.stringify(Object.fromEntries(posted.entries()))).not.toMatch(/Lena|Ortiz|123456/);
   });
 
-  it("says SSI's page changed, and sends nothing for a signed-out PADI page", async () => {
+  /**
+   * Domain review R7 (operational) 1: the report is fire and forget and may
+   * never arrive, so the sentence never says DiveDay was told.
+   */
+  it("says SSI's page changed, claims no report arrived, and sends nothing for a signed-out PADI page", async () => {
     document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+    vi.mocked(reportAgencyCheckPageAction).mockRejectedValueOnce(new Error("dropped"));
     vi.mocked(requestAgencyPage).mockResolvedValue({ ok: false, reason: "page_changed" });
     renderSsiCard();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Check with SSI" }));
     });
-    expect(
-      await screen.findByText(
-        "SSI’s page has changed, and DiveDay has been told. Check on its page.",
-      ),
-    ).toBeVisible();
+    const sentence = await screen.findByText("SSI’s page has changed. Check on its page.");
+    expect(sentence).toBeVisible();
+    expect(sentence.textContent).not.toMatch(/told|DiveDay/);
+    expect(screen.getByRole("link", { name: "Check with SSI" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Check with SSI" })).toBeNull();
     expect(reportAgencyCheckPageAction).toHaveBeenCalledTimes(1);
     cleanup();
 
@@ -129,6 +136,35 @@ describe("AgencyCheck when the agency's page cannot be read", () => {
       fireEvent.click(screen.getByRole("button", { name: "Check with SSI" }));
     });
     expect(reportAgencyCheckPageAction).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AgencyCheck when this copy of the extension does not check the agency", () => {
+  /** Domain review R7 (operational), nit: its own sentence, and the link in the button's place. */
+  it("says to update the extension, with SSI's link", async () => {
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+    vi.mocked(requestAgencyPage).mockResolvedValue({ ok: false, reason: "unsupported" });
+    renderSsiCard();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Check with SSI" }));
+    });
+    expect(
+      await screen.findByText("This copy of the extension doesn’t check SSI. Update it."),
+    ).toBeVisible();
+    expect(screen.getByRole("link", { name: "Check with SSI" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Check with SSI" })).toBeNull();
+  });
+
+  it("keeps the button for another try, beside the link, after a page it could not read", async () => {
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+    vi.mocked(requestAgencyPage).mockResolvedValue({ ok: false, reason: "timeout" });
+    renderSsiCard();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Check with SSI" }));
+    });
+    expect(await screen.findByText("Couldn’t read SSI’s page.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Check with SSI" })).toBeEnabled();
+    expect(screen.getAllByRole("link", { name: "Check with SSI" })).toHaveLength(1);
   });
 });
 

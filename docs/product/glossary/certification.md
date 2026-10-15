@@ -69,8 +69,11 @@
   name, date or number on the page is in it. The server checks it again, logs it as one line
   (`agency_check.page_shape`) and never shows it. It travels with two fixed reasons the staffer
   reads beside the agency's link: **captcha** ("SSI is asking if you're human. Check on its page."),
-  where nothing is typed, and **page changed** ("SSI's page has changed, and DiveDay has been
-  told."), a lookup page with no box or button where the extension expects one.
+  a captcha on the lookup's own form, where nothing is typed, or on an answer that says nothing
+  about the diver, whose text is never handed back; and **page changed** ("SSI's page has
+  changed. Check on its page."), a lookup page with a form but no box or button where the
+  extension expects one. In a **Check all**, either leaves that agency's other cards for the
+  staffer.
 - **Minimum extension version** — the oldest copy of the extension the app talks to
   (`MIN_EXTENSION_VERSION`). An older copy is treated as absent: the agency's link, never its
   button, and Settings says "Update the extension". The extension also answers **hello** with its
@@ -78,8 +81,9 @@
 - **Try the checks** — Settings' page (owners and managers) that runs the extension in this browser
   against nothing real: whether it is here and current, a **dry run** of each public agency's lookup
   on a sample page the extension carries, filled with a made-up diver by the real filler and never
-  sent, and whether an open PADI Pros' Site tab is signed in, read without a search. It ends in a
-  copyable session report of versions, outcomes and **Page-shape reports**, with no person in it.
+  sent, whether Chrome lets the extension on each agency's own site, and whether an open PADI Pros'
+  Site tab is signed in, read without a search. It ends in a copyable session report of versions,
+  outcomes and **Page-shape reports**, with no person in it, to email to DiveDay's support address.
 - **DiveChek check** — the **Agency check** for a PADI card, on PADI's DiveChek in the staffer's own
   browser, signed in to the PADI Pros' Site (H-121); the "(member sign-in)" link opens the same
   site. Searched by name and birth date, so a diver with no birth date on file keeps the link.

@@ -19,8 +19,12 @@
  * report can say "first name", "date of birth", "search", never who.
  *
  * `captcha` is a captcha the staffer would have to answer on the page itself
- * (reCAPTCHA's box, hCaptcha, Cloudflare Turnstile), never reCAPTCHA's
- * invisible badge, which asks nothing.
+ * (reCAPTCHA's box, hCaptcha, Cloudflare Turnstile), anywhere on it: a widget
+ * asks once it has drawn its box (a frame on the page), never as an empty
+ * placeholder, a hidden frame or reCAPTCHA's invisible badge, which ask
+ * nothing. Whether it stands in the lookup's way is the filler's call, on
+ * the lookup's own form (fill.js), and the worker's, on an answer that says
+ * nothing about the diver (background.js).
  * @param {string[]} vocabulary
  * @param {string[]} scrub the diver's names, never kept
  * @returns {object}
@@ -41,8 +45,8 @@ function describePageShape(vocabulary, scrub) {
     "radio",
     "url",
   ];
-  const CAPTCHA =
-    '.g-recaptcha, .h-captcha, .cf-turnstile, iframe[src*="recaptcha"], iframe[src*="hcaptcha"], iframe[src*="challenges.cloudflare.com"]';
+  const CAPTCHA_FRAME =
+    'iframe[src*="recaptcha"], iframe[src*="hcaptcha"], iframe[src*="challenges.cloudflare.com"]';
 
   function fold(text) {
     return String(text || "")
@@ -127,12 +131,13 @@ function describePageShape(vocabulary, scrub) {
           : button.textContent || button.getAttribute("aria-label"),
       ),
     );
-  const captcha = Array.from(document.querySelectorAll(CAPTCHA)).some(
-    (element) =>
-      visible(element) &&
-      !element.closest(".grecaptcha-badge") &&
-      element.getAttribute("data-size") !== "invisible" &&
-      !/[?&]size=invisible/.test(element.getAttribute("src") || ""),
+  // A captcha frame on the page, outside reCAPTCHA's badge and any invisible
+  // widget: a box the staffer would have to tick.
+  const captcha = Array.from(document.querySelectorAll(CAPTCHA_FRAME)).some(
+    (frame) =>
+      visible(frame) &&
+      !frame.closest(".grecaptcha-badge, [data-size='invisible']") &&
+      !/[?&]size=invisible/.test(frame.getAttribute("src") || ""),
   );
   const shape = {
     path,
