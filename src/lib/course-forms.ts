@@ -42,6 +42,11 @@ export type RequiredCourseForm = {
   title: string;
   position: number;
   /**
+   * A medical questionnaire: blocks boarding whatever
+   * `COURSE_FORMS_BLOCK_BOARDING` says (#2337).
+   */
+  medicalScreening?: boolean;
+  /**
    * Older versions that still count for this session: the one that was
    * current when a session that has started began. A student who signed the
    * words in force on the first morning has agreed to the course they are

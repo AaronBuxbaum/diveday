@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   date,
   index,
@@ -41,6 +42,15 @@ export const courseForms = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    /**
+     * The form is a medical questionnaire. Such a form keeps blocking boarding
+     * whatever `COURSE_FORMS_BLOCK_BOARDING` says (ADR 20261008-course-forms,
+     * issue #2337): the dive medical always blocks, so a questionnaire a shop
+     * pasted into a course form must not become a warning when the switch is
+     * off. Set by an owner or manager on the form; a property of the identity,
+     * so changing it asks no student to sign again.
+     */
+    medicalScreening: boolean("medical_screening").notNull().default(false),
     /** Soft delete (ADR 20260820-every-delete-is-soft). A deleted form is required by no course. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

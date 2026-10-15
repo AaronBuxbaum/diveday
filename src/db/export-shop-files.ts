@@ -1309,7 +1309,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
   shopFile(WAIVER_RECORDS_CSV),
   {
     file: "course_forms.csv",
-    header: ["id", "title", "current_version", "deleted_at", "created_at"],
+    header: ["id", "title", "current_version", "medical_screening", "deleted_at", "created_at"],
     rows: ({ courseFormRows, courseFormVersionRows }) =>
       courseFormRows.map((row) => {
         const latest = courseFormVersionRows
@@ -1318,7 +1318,14 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
             (newest, version) => (!newest || version.version > newest.version ? version : newest),
             undefined,
           );
-        return [row.id, latest?.title, latest?.version, row.deletedAt, row.createdAt];
+        return [
+          row.id,
+          latest?.title,
+          latest?.version,
+          row.medicalScreening,
+          row.deletedAt,
+          row.createdAt,
+        ];
       }),
     note: EXPORT_FILE_NOTES["course_forms.csv"],
   },

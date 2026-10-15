@@ -69,6 +69,8 @@ export type CourseFormSummary = {
   version: number;
   versionId: string;
   updatedAt: Date;
+  /** A medical questionnaire: keeps blocking boarding whatever the switch says (#2337). */
+  medicalScreening: boolean;
 };
 
 /**
@@ -84,6 +86,7 @@ export async function listCourseForms(
   const rows = await db
     .select({
       id: courseForms.id,
+      medicalScreening: courseForms.medicalScreening,
       createdAt: courseForms.createdAt,
       versionId: courseFormVersions.id,
       version: courseFormVersions.version,
@@ -113,6 +116,7 @@ export async function listCourseForms(
       version: row.version,
       versionId: row.versionId,
       updatedAt: row.versionCreatedAt,
+      medicalScreening: row.medicalScreening,
     });
   }
   return [...current.values()].sort(
@@ -131,12 +135,18 @@ function byCodePoint(a: string, b: string): number {
 /** A new form, at version 1. */
 export async function createCourseForm(
   db: AppDb,
-  input: { shopId: string; title: string; body: string; actorPersonId: string },
+  input: {
+    shopId: string;
+    title: string;
+    body: string;
+    actorPersonId: string;
+    medicalScreening?: boolean;
+  },
 ): Promise<{ id: string }> {
   return db.transaction(async (tx) => {
     const [form] = await tx
       .insert(courseForms)
-      .values({ shopId: input.shopId })
+      .values({ shopId: input.shopId, medicalScreening: input.medicalScreening ?? false })
       .returning({ id: courseForms.id });
     if (!form) throw new Error("createCourseForm: insert returned no row");
     await tx.insert(courseFormVersions).values({
@@ -152,7 +162,7 @@ export async function createCourseForm(
 }
 
 export type SaveCourseFormOutcome =
-  | { ok: true; versioned: boolean }
+  | { ok: true; versioned: boolean; marked: boolean }
   | { ok: false; reason: "not_found" };
 
 /**
@@ -163,11 +173,19 @@ export type SaveCourseFormOutcome =
  */
 export async function saveCourseFormVersion(
   db: AppDb,
-  input: { shopId: string; formId: string; title: string; body: string; actorPersonId: string },
+  input: {
+    shopId: string;
+    formId: string;
+    title: string;
+    body: string;
+    actorPersonId: string;
+    /** Absent leaves the marker as it is. */
+    medicalScreening?: boolean;
+  },
 ): Promise<SaveCourseFormOutcome> {
   return db.transaction(async (tx) => {
     const [form] = await tx
-      .select({ id: courseForms.id })
+      .select({ id: courseForms.id, medicalScreening: courseForms.medicalScreening })
       .from(courseForms)
       .where(
         and(
@@ -191,8 +209,18 @@ export async function saveCourseFormVersion(
       title: normalizeCourseFormText(input.title),
       body: normalizeCourseFormText(input.body),
     };
+    // The marker is the form's identity, not its words: flipping it asks no
+    // student to sign again, so it never writes a version.
+    const marked =
+      input.medicalScreening !== undefined && input.medicalScreening !== form.medicalScreening;
+    if (marked) {
+      await tx
+        .update(courseForms)
+        .set({ medicalScreening: input.medicalScreening })
+        .where(and(eq(courseForms.id, form.id), eq(courseForms.shopId, input.shopId)));
+    }
     if (current && !courseFormTextChanged(current, next)) {
-      return { ok: true, versioned: false } as const;
+      return { ok: true, versioned: false, marked } as const;
     }
     await tx.insert(courseFormVersions).values({
       shopId: input.shopId,
@@ -202,7 +230,7 @@ export async function saveCourseFormVersion(
       body: next.body,
       createdByPersonId: input.actorPersonId,
     });
-    return { ok: true, versioned: true } as const;
+    return { ok: true, versioned: true, marked } as const;
   });
 }
 
@@ -543,6 +571,7 @@ export async function requiredCourseFormsForTrips(
       tripId: trips.id,
       startsAt: trips.startsAt,
       formId: courseForms.id,
+      medicalScreening: courseForms.medicalScreening,
       position: courseFormRequirements.position,
       requiredSince: courseFormRequirements.createdAt,
       versionId: courseFormVersions.id,
@@ -600,6 +629,7 @@ export async function requiredCourseFormsForTrips(
       version: asked.version,
       title: asked.title,
       position: current.position,
+      ...(current.medicalScreening ? { medicalScreening: true } : {}),
       ...(alsoAccepted.length > 0 ? { alsoAccepted } : {}),
     });
     result.set(current.tripId, list);

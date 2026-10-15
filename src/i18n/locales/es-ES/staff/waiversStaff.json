@@ -101,6 +101,8 @@
     "create": "Añadir formulario",
     "titleLabel": "Título",
     "bodyLabel": "Texto que firma el estudiante",
+    "medicalScreeningLabel": "Es un cuestionario médico",
+    "medicalScreeningHint": "Sigue impidiendo embarcar a quien no lo haya firmado, sea cual sea el ajuste de los formularios del curso.",
     "bodyPlaceholder": "Pega aquí el texto completo del formulario.",
     "notice": {
       "saved": "Guardado.",

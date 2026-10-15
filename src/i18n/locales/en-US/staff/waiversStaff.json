@@ -101,6 +101,8 @@
     "create": "Add form",
     "titleLabel": "Title",
     "bodyLabel": "Text students sign",
+    "medicalScreeningLabel": "This is a medical questionnaire",
+    "medicalScreeningHint": "Keeps blocking boarding for a student who has not signed it, whatever the course forms setting.",
     "bodyPlaceholder": "Paste the form’s full text here.",
     "notice": {
       "saved": "Saved.",

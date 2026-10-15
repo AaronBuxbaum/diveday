@@ -11,7 +11,15 @@ import {
   COURSE_FORM_BODY_MIN,
   COURSE_FORM_TITLE_MAX,
 } from "@/lib/course-forms";
-import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/lib/form-parse";
+import {
+  blankAsAbsent,
+  checkbox,
+  formValue,
+  parseForm,
+  readForm,
+  single,
+  text,
+} from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -97,6 +105,8 @@ const courseFormSchema = z.object({
   formId: blankAsAbsent(z.uuid()),
   title: single(z.string().trim().min(2).max(COURSE_FORM_TITLE_MAX), ""),
   body: single(z.string().trim().min(COURSE_FORM_BODY_MIN).max(COURSE_FORM_BODY_MAX), ""),
+  /** A medical questionnaire: keeps blocking boarding whatever the switch says (#2337). */
+  medicalScreening: checkbox(),
 });
 
 /** The posted form id as typed, for a refusal to land beside the form it was about. */
@@ -137,6 +147,7 @@ export async function saveCourseFormAction(formData: FormData) {
       title: parsed.data.title,
       body: parsed.data.body,
       actorPersonId: staff.user.personId,
+      medicalScreening: parsed.data.medicalScreening,
     });
     revalidateAndRedirect(
       waivers,
@@ -150,10 +161,11 @@ export async function saveCourseFormAction(formData: FormData) {
     title: parsed.data.title,
     body: parsed.data.body,
     actorPersonId: staff.user.personId,
+    medicalScreening: parsed.data.medicalScreening,
   });
   const code = !saved.ok
     ? "course-form-not-found"
-    : saved.versioned
+    : saved.versioned || saved.marked
       ? "course-form-saved"
       : "course-form-unchanged";
   revalidateAndRedirect(waivers, noticeUrl(anchorFor(formId), code, { form: formId }));

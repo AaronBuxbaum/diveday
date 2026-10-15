@@ -1124,7 +1124,8 @@
   `COURSE_FORMS_BLOCK_BOARDING`, turns that into a warning instead, and buying a seat never waits on
   it (ADR 20261008-course-forms). A course template names its agency's **standard forms** by title.
   Creating or syncing the course sets them up empty, and a form with no text is asked of nobody
-  until the shop pastes the agency's wording in.
+  until the shop pastes the agency's wording in. A form the shop ticks as a **medical
+  questionnaire** keeps blocking even with that switch at warn-only.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and

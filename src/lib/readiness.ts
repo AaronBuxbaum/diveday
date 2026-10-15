@@ -202,7 +202,8 @@ export type ReadinessBlockerCode =
   /**
    * A form the course asks every student to sign is unsigned for this
    * enrollment — one blocker per form, carrying its title (ADR
-   * 20261008-course-forms). Raised only while `COURSE_FORMS_BLOCK_BOARDING`.
+   * 20261008-course-forms). Raised while `COURSE_FORMS_BLOCK_BOARDING`, and for a form marked
+   * medical screening whatever the switch says (#2337).
    */
   | "course_form_unsigned"
   /**
@@ -1030,8 +1031,9 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // The course's own forms, one blocker per form still unsigned for this
   // enrollment. Independent of the departure's waiver setting: a course that
   // lists a form has said, on its own, that every student signs it. Behind one
-  // switch until the owner rules on block-or-warn (ADR 20261008-course-forms).
-  if (COURSE_FORMS_BLOCK_BOARDING && input.courseForms) {
+  // switch until the owner rules on block-or-warn (ADR 20261008-course-forms);
+  // a form marked medical screening blocks whatever the switch says (#2337).
+  if (input.courseForms) {
     for (const { form, gap } of courseFormGaps({
       ...input.courseForms,
       signer: {
@@ -1040,6 +1042,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
         timezone: input.courseForms.timezone,
       },
     })) {
+      if (!COURSE_FORMS_BLOCK_BOARDING && !form.medicalScreening) continue;
       blockers.push({
         code: gap === "guardian_missing" ? "course_form_guardian_missing" : "course_form_unsigned",
         params: { formTitle: form.title },
