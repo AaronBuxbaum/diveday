@@ -54,6 +54,30 @@ describe("an unverified push", () => {
   });
 });
 
+describe("an override for a red that came from below", () => {
+  // The reasons the override carried on 2026-10-14, and the shapes around them.
+  it.each([
+    "verify:push is red only on two tests in src/db/open-local-db.test.ts that fail on main too",
+    "red on main, not mine",
+    "the lint error is inherited from the layer below",
+    "known flake in the PGlite close",
+    "these failures are pre-existing",
+    "main is red on two unit shards",
+  ])("is refused, pointing at verify:push's base check: %s", (why) => {
+    const reason = pushViolation(`${OVERRIDE}="${why}" git push -u origin claude/layer`, answers());
+    expect(reason).toMatch(/reads the layer below's CI/);
+  });
+
+  it("leaves the two cases the override is for", () => {
+    for (const why of [
+      "saving work before the container is reclaimed",
+      "only CI can render the visual diff for this capture",
+    ]) {
+      expect(pushViolation(`${OVERRIDE}="${why}" git push`, answers())).toBeNull();
+    }
+  });
+});
+
 describe("leaves alone", () => {
   it("a push of the commit the stamp names", () => {
     expect(
