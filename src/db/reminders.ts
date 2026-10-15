@@ -222,6 +222,14 @@ function reminderSmsBody(
         place: [input.meetingPoint.label, input.meetingPoint.address].filter(Boolean).join(", "),
       })}`
     : "";
+  // **Measured for #2449 (2026-10-15), no short link built.** The week-ahead
+  // text for the demo's reef and night boats is ~304 characters before this
+  // clause, and UCS-2 (the "—" in a trip title and the "–" in the time range
+  // are outside GSM-7): 5 segments at 67 each. The full link adds ~86
+  // characters (6 segments); a short redirect would still be 6. The link is
+  // not what makes the text long, so a second bearer-URL shape (`/r/<id>`) buys
+  // nothing here. The lever, if the segment cost matters, is the text's own
+  // characters, not the link.
   // The same capability the email's button carries, minted once per reminder:
   // it goes only to this seat's own phone, as the email goes to its own inbox.
   const ready = input.readinessUrl
