@@ -342,35 +342,48 @@ export async function sendRescheduleNotices(
         now,
       })
     : new Map<string, IssuedCapability>();
-  for (const { booking, person } of seats) {
-    if (booking.identityUnconfirmedAt) {
-      outcome.identityHeld += 1;
-      // Nothing re-sends this when staff confirm who the diver is unless the
-      // skip is remembered (#2445): the earliest start the seat last knew, and
-      // whether the place moved.
-      await db
-        .update(bookings)
-        .set({
-          rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${previousStartsAt.toISOString()}::timestamptz)`,
-          rescheduleMissedPlace: payload.meetingPointMoved
-            ? true
-            : sql`${bookings.rescheduleMissedPlace}`,
-        })
-        .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shopId)));
-      continue;
+  const toldBookingIds = new Set<string>();
+  try {
+    for (const { booking, person } of seats) {
+      if (booking.identityUnconfirmedAt) {
+        outcome.identityHeld += 1;
+        // Nothing re-sends this when staff confirm who the diver is unless the
+        // skip is remembered (#2445): the earliest start the seat last knew, and
+        // whether the place moved.
+        await db
+          .update(bookings)
+          .set({
+            rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${previousStartsAt.toISOString()}::timestamptz)`,
+            rescheduleMissedPlace: payload.meetingPointMoved
+              ? true
+              : sql`${bookings.rescheduleMissedPlace}`,
+          })
+          .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shopId)));
+        continue;
+      }
+      const told = await tellSeat(db, {
+        shop,
+        trip,
+        booking,
+        person,
+        previousStartsAt,
+        meetingPoint,
+        channels,
+        now,
+        capability: links.get(booking.id) ?? null,
+      });
+      outcome[told] += 1;
+      if (told === "told") toldBookingIds.add(booking.id);
     }
-    const told = await tellSeat(db, {
-      shop,
-      trip,
-      booking,
-      person,
-      previousStartsAt,
-      meetingPoint,
-      channels,
-      now,
-      capability: links.get(booking.id) ?? null,
-    });
-    outcome[told] += 1;
+  } finally {
+    // A pass that throws part-way leaves no live link behind for a notice that
+    // did not go, those it never reached included (#2451).
+    const unsent = [...links]
+      .filter(([bookingId]) => !toldBookingIds.has(bookingId))
+      .map(([, link]) => link.token);
+    if (unsent.length > 0) {
+      await revokeIssuedCapabilities(db, { shopId: shop.id, tokens: unsent, now });
+    }
   }
   // The divers have the new time now; a later move starts from this one.
   if (outcome.told > 0) await clearDiversTold(db, shop.id, trip.id);

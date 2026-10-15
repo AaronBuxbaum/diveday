@@ -11,7 +11,7 @@ export type ReminderLink = { shopId: string; token: string; url: string };
  * known: per shop, by token, so a link that was delivered stays live.
  */
 export class ReminderLinks {
-  private readonly unsent: ReminderLink[] = [];
+  private readonly sent = new Set<string>();
 
   constructor(private readonly byBooking: ReadonlyMap<string, ReminderLink>) {}
 
@@ -28,17 +28,21 @@ export class ReminderLinks {
   ): void {
     if (delivery.status === "sent") {
       summary.sent += 1;
+      this.sent.add(bookingId);
       return;
     }
     summary.failed += 1;
-    const link = this.byBooking.get(bookingId);
-    if (link) this.unsent.push(link);
   }
 
-  /** Take back the links of reminders that did not go. */
+  /**
+   * Take back the link of every reminder that did not go: one that failed, and
+   * one a pass that threw never reached. Everything minted and not sent, so it
+   * belongs in a `finally`.
+   */
   async revokeUnsent(db: AppDb, now: Date): Promise<void> {
     const byShop = new Map<string, string[]>();
-    for (const { shopId, token } of this.unsent) {
+    for (const [bookingId, { shopId, token }] of this.byBooking) {
+      if (this.sent.has(bookingId)) continue;
       byShop.set(shopId, [...(byShop.get(shopId) ?? []), token]);
     }
     for (const [shopId, tokens] of byShop) {

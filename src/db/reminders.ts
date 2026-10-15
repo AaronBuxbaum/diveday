@@ -623,166 +623,193 @@ export async function sendDueReminders(
 
   const links = await mintReminderLinks(db, origin, sending, now, whatsAppProviders);
 
-  for (const {
-    row: { booking, person, trip, shop },
-    cadence,
-    checklist,
-    materialsDue,
-  } of sending) {
-    const meetings = meetingsByTrip.get(trip.id) ?? [];
-    const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
-    // There is no request to negotiate `Accept-Language` from at a cron fire,
-    // so this reads whatever the diver's own past requests already recorded,
-    // and falls back to the shop's stored locale when there is nothing — same
-    // fallback the calendar feed uses, for the same reason (docs ADR
-    // 20260731-per-person-notification-locale). Both the email and the SMS
-    // below take this one value, so a diver never gets the two channels in
-    // different languages.
-    const locale = recipientLocale(person.locale, shop.defaultLocale);
-    const t = diverTranslator(locale);
-    const readinessUrl = links.urlFor(booking.id);
-    const phone = smsRecipient(person.phone);
-    // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
-    const meetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));
+  // A pass that throws part-way takes back every link it minted and did not
+  // send, not only those of the sends it saw fail (#2451).
+  try {
+    for (const {
+      row: { booking, person, trip, shop },
+      cadence,
+      checklist,
+      materialsDue,
+    } of sending) {
+      const meetings = meetingsByTrip.get(trip.id) ?? [];
+      const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
+      // There is no request to negotiate `Accept-Language` from at a cron fire,
+      // so this reads whatever the diver's own past requests already recorded,
+      // and falls back to the shop's stored locale when there is nothing — same
+      // fallback the calendar feed uses, for the same reason (docs ADR
+      // 20260731-per-person-notification-locale). Both the email and the SMS
+      // below take this one value, so a diver never gets the two channels in
+      // different languages.
+      const locale = recipientLocale(person.locale, shop.defaultLocale);
+      const t = diverTranslator(locale);
+      const readinessUrl = links.urlFor(booking.id);
+      const phone = smsRecipient(person.phone);
+      // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
+      const meetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));
 
-    // Name the diver's own outstanding items from that same checklist, so the
-    // reminder never diverges from the readiness engine — and so the rule above
-    // and the words below cannot be reading two different answers.
-    const { outstanding, medicalReview } = checklist
-      ? reminderReadiness(checklist)
-      : { outstanding: [], medicalReview: false };
+      // Name the diver's own outstanding items from that same checklist, so the
+      // reminder never diverges from the readiness engine — and so the rule above
+      // and the words below cannot be reading two different answers.
+      const { outstanding, medicalReview } = checklist
+        ? reminderReadiness(checklist)
+        : { outstanding: [], medicalReview: false };
 
-    // The night-before (day) lead becomes the full brief: plain-language
-    // conditions from the crew, what to bring, who to text, and a softer voice
-    // for a first-timer. The 7-day nudge carries none of it.
-    const isDay = cadence.kind === "trip_reminder_24h";
-    const forecast = isDay
-      ? forecastText(
-          t,
-          locale,
-          {
-            conditionsSummary: trip.conditionsSummary,
-            waterTemperatureC: trip.waterTemperatureC,
-            visibilityMeters: trip.visibilityMeters,
-            surfaceConditions: trip.surfaceConditions,
-          },
-          // Written in the shop's own units, so the brief agrees with the trip
-          // page the diver opens from it (src/lib/temperature-units.ts,
-          // src/lib/depth-units.ts). Storage stays Celsius and metres.
-          { temperature: temperatureUnitFor(shop), depth: shop.depthUnit },
-        )
-      : null;
-    const whoToText = isDay ? shop.contactPhone?.trim() || null : null;
-    const brief = isDay
-      ? {
-          forecast,
-          bring: shop.packingList,
-          whoToText,
-          firstTimerNote: firstTimerReassuranceText(t, !returning.has(person.id)),
-        }
-      : undefined;
+      // The night-before (day) lead becomes the full brief: plain-language
+      // conditions from the crew, what to bring, who to text, and a softer voice
+      // for a first-timer. The 7-day nudge carries none of it.
+      const isDay = cadence.kind === "trip_reminder_24h";
+      const forecast = isDay
+        ? forecastText(
+            t,
+            locale,
+            {
+              conditionsSummary: trip.conditionsSummary,
+              waterTemperatureC: trip.waterTemperatureC,
+              visibilityMeters: trip.visibilityMeters,
+              surfaceConditions: trip.surfaceConditions,
+            },
+            // Written in the shop's own units, so the brief agrees with the trip
+            // page the diver opens from it (src/lib/temperature-units.ts,
+            // src/lib/depth-units.ts). Storage stays Celsius and metres.
+            { temperature: temperatureUnitFor(shop), depth: shop.depthUnit },
+          )
+        : null;
+      const whoToText = isDay ? shop.contactPhone?.trim() || null : null;
+      const brief = isDay
+        ? {
+            forecast,
+            bring: shop.packingList,
+            whoToText,
+            firstTimerNote: firstTimerReassuranceText(t, !returning.has(person.id)),
+          }
+        : undefined;
 
-    const reminderText = (replyKeywords: boolean) =>
-      reminderSmsBody(t, locale, {
-        shopName: shop.name,
-        tripTitle: trip.title,
-        startsAt: trip.startsAt,
-        endsAt: trip.endsAt,
-        timezone: shop.timezone,
-        lead,
-        dockCallMinutes: shop.dockCallMinutes,
-        outstanding,
-        medicalReview,
-        forecast,
-        whoToText,
-        replyKeywords,
-        materials: materialsDue,
-        courseSession: Boolean(trip.courseId),
-        diveMode: trip.diveMode,
-        meetingPoint,
-        readinessUrl,
-      });
-    const smsBody = reminderText(false);
-    // The same reminder, plus the reply line, for the one text channel that
-    // can hear an answer. Which of the two actually goes out is
-    // `sendCourtesyMessage`'s call, and it may still fall back to SMS after a
-    // failed WhatsApp send — which is exactly why both bodies travel together
-    // rather than one being chosen here (ADR 20260909-reply-keywords).
-    const whatsAppBody = reminderText(true);
-
-    if (person.email) {
-      emailWork.push({
-        bookingId: booking.id,
-        shopId: shop.id,
-        shopName: shop.name,
-        kind: cadence.kind,
-        phone,
-        smsBody,
-        smsStopLine: t("notifications.sms.stopLine"),
-        whatsAppBody,
-        notification: {
-          kind: cadence.kind,
-          bookingId: booking.id,
-          shopId: shop.id,
-          to: person.email,
-          locale,
-          diverName: person.fullName,
+      const reminderText = (replyKeywords: boolean) =>
+        reminderSmsBody(t, locale, {
           shopName: shop.name,
           tripTitle: trip.title,
           startsAt: trip.startsAt,
           endsAt: trip.endsAt,
           timezone: shop.timezone,
+          lead,
           dockCallMinutes: shop.dockCallMinutes,
-          pickupTime: booking.pickupTime,
-          hotelPickupLocation: booking.hotelPickupLocation,
           outstanding,
           medicalReview,
-          readinessUrl,
-          ...(inboundEmailOn ? { replyKeywords: true } : {}),
-          ...(brief ? { brief } : {}),
-          ...(materialsDue.length > 0 ? { learningMaterials: materialsDue } : {}),
-          ...(meetings.length > 1 ? { scheduleDays: meetings } : {}),
-          ...(trip.courseId ? { courseSession: true } : {}),
+          forecast,
+          whoToText,
+          replyKeywords,
+          materials: materialsDue,
+          courseSession: Boolean(trip.courseId),
+          diveMode: trip.diveMode,
           meetingPoint,
-        },
-      });
-    } else if (phone) {
-      smsWork.push({
-        bookingId: booking.id,
-        shopId: shop.id,
-        shopName: shop.name,
-        kind: cadence.kind,
-        phone,
-        smsBody,
-        smsStopLine: t("notifications.sms.stopLine"),
-        whatsAppBody,
-      });
-    } else {
-      // No reachable channel — record it so staff can see the gap.
-      await recordNotificationDelivery(db, {
-        shopId: shop.id,
-        bookingId: booking.id,
-        kind: cadence.kind,
-        delivery: { status: "not_configured" },
-      });
-      summary.failed += 1;
-    }
-  }
+          readinessUrl,
+        });
+      const smsBody = reminderText(false);
+      // The same reminder, plus the reply line, for the one text channel that
+      // can hear an answer. Which of the two actually goes out is
+      // `sendCourtesyMessage`'s call, and it may still fall back to SMS after a
+      // failed WhatsApp send — which is exactly why both bodies travel together
+      // rather than one being chosen here (ADR 20260909-reply-keywords).
+      const whatsAppBody = reminderText(true);
 
-  const emailDeliveries = await sendNotificationBatch(
-    db,
-    emailWork.map((work) => work.notification),
-    emailProvider,
-  );
-  for (let index = 0; index < emailWork.length; index += 1) {
-    const work = emailWork[index];
-    const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
-    // A textable phone gets a courtesy text only when the email actually sent,
-    // so the once-per-booking dedup row keeps it from re-firing next run. Its
-    // outcome is deliberately not recorded: email is the tracked channel here,
-    // and a courtesy text that failed must not overwrite a delivered email.
-    if (delivery.status === "sent" && work.phone) {
-      await sendCourtesyMessage(
+      if (person.email) {
+        emailWork.push({
+          bookingId: booking.id,
+          shopId: shop.id,
+          shopName: shop.name,
+          kind: cadence.kind,
+          phone,
+          smsBody,
+          smsStopLine: t("notifications.sms.stopLine"),
+          whatsAppBody,
+          notification: {
+            kind: cadence.kind,
+            bookingId: booking.id,
+            shopId: shop.id,
+            to: person.email,
+            locale,
+            diverName: person.fullName,
+            shopName: shop.name,
+            tripTitle: trip.title,
+            startsAt: trip.startsAt,
+            endsAt: trip.endsAt,
+            timezone: shop.timezone,
+            dockCallMinutes: shop.dockCallMinutes,
+            pickupTime: booking.pickupTime,
+            hotelPickupLocation: booking.hotelPickupLocation,
+            outstanding,
+            medicalReview,
+            readinessUrl,
+            ...(inboundEmailOn ? { replyKeywords: true } : {}),
+            ...(brief ? { brief } : {}),
+            ...(materialsDue.length > 0 ? { learningMaterials: materialsDue } : {}),
+            ...(meetings.length > 1 ? { scheduleDays: meetings } : {}),
+            ...(trip.courseId ? { courseSession: true } : {}),
+            meetingPoint,
+          },
+        });
+      } else if (phone) {
+        smsWork.push({
+          bookingId: booking.id,
+          shopId: shop.id,
+          shopName: shop.name,
+          kind: cadence.kind,
+          phone,
+          smsBody,
+          smsStopLine: t("notifications.sms.stopLine"),
+          whatsAppBody,
+        });
+      } else {
+        // No reachable channel — record it so staff can see the gap.
+        await recordNotificationDelivery(db, {
+          shopId: shop.id,
+          bookingId: booking.id,
+          kind: cadence.kind,
+          delivery: { status: "not_configured" },
+        });
+        summary.failed += 1;
+      }
+    }
+
+    const emailDeliveries = await sendNotificationBatch(
+      db,
+      emailWork.map((work) => work.notification),
+      emailProvider,
+    );
+    for (let index = 0; index < emailWork.length; index += 1) {
+      const work = emailWork[index];
+      const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
+      // A textable phone gets a courtesy text only when the email actually sent,
+      // so the once-per-booking dedup row keeps it from re-firing next run. Its
+      // outcome is deliberately not recorded: email is the tracked channel here,
+      // and a courtesy text that failed must not overwrite a delivered email.
+      if (delivery.status === "sent" && work.phone) {
+        await sendCourtesyMessage(
+          {
+            to: work.phone,
+            body: work.smsBody,
+            smsStopLine: work.smsStopLine,
+            whatsAppBody: work.whatsAppBody,
+            shopName: work.shopName,
+          },
+          { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
+        );
+      }
+      await recordNotificationDelivery(db, {
+        shopId: work.shopId,
+        bookingId: work.bookingId,
+        kind: work.kind,
+        delivery,
+      });
+      links.settle(summary, work.bookingId, delivery);
+    }
+
+    for (const work of smsWork) {
+      // Phone-only diver: the courtesy text is the tracked channel, whichever of
+      // WhatsApp or SMS carried it. CourtesyDelivery is the same shape as
+      // NotificationDelivery, so it records through the same seam.
+      const { delivery } = await sendCourtesyMessage(
         {
           to: work.phone,
           body: work.smsBody,
@@ -792,40 +819,17 @@ export async function sendDueReminders(
         },
         { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
       );
+      await recordNotificationDelivery(db, {
+        shopId: work.shopId,
+        bookingId: work.bookingId,
+        kind: work.kind,
+        delivery,
+      });
+      links.settle(summary, work.bookingId, delivery);
     }
-    await recordNotificationDelivery(db, {
-      shopId: work.shopId,
-      bookingId: work.bookingId,
-      kind: work.kind,
-      delivery,
-    });
-    links.settle(summary, work.bookingId, delivery);
+  } finally {
+    await links.revokeUnsent(db, now);
   }
-
-  for (const work of smsWork) {
-    // Phone-only diver: the courtesy text is the tracked channel, whichever of
-    // WhatsApp or SMS carried it. CourtesyDelivery is the same shape as
-    // NotificationDelivery, so it records through the same seam.
-    const { delivery } = await sendCourtesyMessage(
-      {
-        to: work.phone,
-        body: work.smsBody,
-        smsStopLine: work.smsStopLine,
-        whatsAppBody: work.whatsAppBody,
-        shopName: work.shopName,
-      },
-      { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
-    );
-    await recordNotificationDelivery(db, {
-      shopId: work.shopId,
-      bookingId: work.bookingId,
-      kind: work.kind,
-      delivery,
-    });
-    links.settle(summary, work.bookingId, delivery);
-  }
-
-  await links.revokeUnsent(db, now);
 
   return summary;
 }
