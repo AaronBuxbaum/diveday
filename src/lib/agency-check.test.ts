@@ -519,6 +519,15 @@ describe("judgeAgencyPage on PADI DiveChek", () => {
     expect(padi(DIVECHEK, { cardNumber: "9999ZZ0000" }).verdict).toBe("level_unconfirmed");
   });
 
+  it("reads the card number as a whole token, never as a piece of a longer one (#2592)", () => {
+    // A number typed short, or the tail of the record's, is another card.
+    expect(padi(DIVECHEK, { cardNumber: "1506AB12" }).verdict).toBe("level_unconfirmed");
+    expect(padi(DIVECHEK, { cardNumber: "06AB1234" }).verdict).toBe("level_unconfirmed");
+    expect(padi(DIVECHEK, { cardNumber: "AB1234" }).verdict).toBe("level_unconfirmed");
+    // Spaces and dashes inside the number still read as one number.
+    expect(padi(DIVECHEK, { cardNumber: "1506 AB 1234" }).verdict).toBe("match");
+  });
+
   it("never reads another level as the one claimed", () => {
     expect(padi(DIVECHEK, { level: "advanced_open_water" }).verdict).toBe("level_unconfirmed");
     expect(padi(DIVECHEK, { level: "rescue" }).verdict).toBe("level_unconfirmed");

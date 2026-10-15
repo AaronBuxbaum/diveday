@@ -572,9 +572,24 @@ function compact(text: string): string {
   return foldText(text).replace(/\s+/g, "");
 }
 
+/**
+ * Whether the record carries this card number **as a whole**: some run of its
+ * words, joined, is the number. A number the shop typed short, or the tail of a
+ * longer one, is another card (issue #2592); separators the page puts inside a
+ * number (`1506 AB 1234`, `N-12345`) still read as one.
+ */
 function hasCardNumber(record: readonly string[], cardNumber: string | null): boolean {
   const number = cardNumber ? compact(cardNumber) : "";
-  return number.length >= 3 && compact(record.join(" ")).includes(number);
+  if (number.length < 3) return false;
+  const words = foldText(record.join(" ")).split(" ");
+  for (let start = 0; start < words.length; start += 1) {
+    let joined = "";
+    for (let end = start; end < words.length && joined.length < number.length; end += 1) {
+      joined += words[end];
+      if (joined === number) return true;
+    }
+  }
+  return false;
 }
 
 /** Whole years old on a calendar date; both are `YYYY-MM-DD`. */
