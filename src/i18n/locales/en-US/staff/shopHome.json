@@ -15,6 +15,7 @@
   "emailFailed": "That email still couldn’t be sent. Check the address and email configuration.",
   "offlineLabel": "Offline — this board may be out of date",
   "nextDeparture": "Next up is <link>{title}</link> on {date} at {time}.",
+  "updatedAt": "Updated {time}",
   "noDeparturesEmpty": "Nothing is on the books yet. Add a departure and it will show up here the morning it sails.",
   "scheduleTrip": "Add a departure",
   "notice": {

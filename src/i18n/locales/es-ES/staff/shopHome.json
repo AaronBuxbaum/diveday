@@ -15,6 +15,7 @@
   "emailFailed": "Ese correo no se pudo enviar. Revisa la dirección y la configuración de correo.",
   "offlineLabel": "Sin conexión: este tablón puede estar desactualizado",
   "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
+  "updatedAt": "Actualizado: {time}",
   "noDeparturesEmpty": "Todavía no hay nada programado. Añade una salida y aparecerá aquí la mañana que zarpe.",
   "scheduleTrip": "Añadir una salida",
   "notice": {

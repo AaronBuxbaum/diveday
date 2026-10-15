@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LiveRefresh } from "@/components/LiveRefresh";
 import { PullToRefresh, type PullToRefreshCopy } from "@/components/PullToRefresh";
 
 export function CheckInQueueRefresh({
@@ -23,6 +24,8 @@ export function CheckInQueueRefresh({
       <PullToRefresh copy={copy} onRefresh={async () => router.refresh()}>
         {children}
       </PullToRefresh>
+      {/* The queue fills while it sits on the counter (fifth loop, item 8). */}
+      <LiveRefresh />
     </div>
   );
 }

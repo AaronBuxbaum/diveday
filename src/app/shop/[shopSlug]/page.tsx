@@ -24,6 +24,7 @@ import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessio
 import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
+import { LiveRefresh } from "@/components/LiveRefresh";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
@@ -716,6 +717,14 @@ async function TodayBody({
             offlineTitle: t("shared.connectivity.offlineTitle"),
           }}
         />
+        {/* **When this page last read the day** (fifth loop, item 8). The
+            desk leaves Today open all morning; `LiveRefresh` re-reads it on
+            focus and once a minute, and this line is the server's clock at
+            that read, so a stale page says so. */}
+        <p className="mt-1 text-xs text-muted print:hidden" data-testid="today-updated">
+          {t("shopHome.updatedAt", { time: formatTime(now, locale, shop.timezone) })}
+        </p>
+        <LiveRefresh />
       </DayHeader>
 
       {created && firstBookableMoment ? (
