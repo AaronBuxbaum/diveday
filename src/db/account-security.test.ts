@@ -11,6 +11,7 @@ import {
   beginTotpEnrollment,
   enableTotp,
   getAccountSecurity,
+  getTotpSecret,
   grantStepUp,
   hasStepUp,
   verifyAccountSecondFactor,
@@ -442,5 +443,181 @@ describe("hasRequiredStepUp", () => {
       purpose: "money",
     });
     expect(await hasRequiredStepUp(db, sessionAs(undefined), "money")).toBe(false);
+  });
+});
+
+/**
+ * Step-up and turning two-factor off check a code without spending its time
+ * step; sign-in spends it. A check that does not spend must also write nothing.
+ */
+describe("account-security unspent checks", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("accepts a code without spending its step, so sign-in can still use it", async () => {
+    const { db, account } = await seededAccount();
+    const { secret } = await enrolledEarlier(db, account.id);
+    const code = totpCode(secret);
+
+    expect(await verifyAccountSecondFactor(db, account.id, code, { consumeTotpStep: false })).toBe(
+      true,
+    );
+    expect(await verifyAccountSecondFactor(db, account.id, code, { consumeTotpStep: false })).toBe(
+      true,
+    );
+    expect((await getAccountSecurity(db, account.id))?.lastTotpStep).toBeNull();
+    expect(await verifyAccountSecondFactor(db, account.id, code)).toBe(true);
+    expect(await verifyAccountSecondFactor(db, account.id, code)).toBe(false);
+  });
+
+  it("still refuses a wrong code when the step is not spent", async () => {
+    const { db, account } = await seededAccount();
+    const { secret } = await enrolledEarlier(db, account.id);
+    const wrong = totpCode(secret, nowMs() + 10 * TOTP_STEP_SECONDS * 1000);
+
+    expect(await verifyAccountSecondFactor(db, account.id, wrong, { consumeTotpStep: false })).toBe(
+      false,
+    );
+  });
+
+  it("leaves a previous-key secret sealed as it was when the step is not spent", async () => {
+    const { db, account } = await seededAccount();
+    const { secret } = await enrolledEarlier(db, account.id);
+    const before = await getAccountSecurity(db, account.id);
+    const previous = sealingKey().toString("base64");
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", randomBytes(32).toString("base64"));
+    vi.stubEnv("SECRET_ENCRYPTION_KEY_PREVIOUS", previous);
+
+    expect(
+      await verifyAccountSecondFactor(db, account.id, totpCode(secret), {
+        consumeTotpStep: false,
+      }),
+    ).toBe(true);
+    const after = await getAccountSecurity(db, account.id);
+    expect(after?.totpSecretSealed).toBe(before?.totpSecretSealed);
+    expect(after?.totpSecretKeyId).toBe(before?.totpSecretKeyId);
+  });
+});
+
+describe("account-security enrolment edges", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("passes the second factor for an account that never set one up", async () => {
+    const { db, account } = await seededAccount();
+    expect(await getAccountSecurity(db, account.id)).toBeNull();
+    expect(await verifyAccountSecondFactor(db, account.id, "000000")).toBe(true);
+  });
+
+  it("refuses to start a second enrolment over one that is already on", async () => {
+    const { db, account } = await seededAccount();
+    const { secret } = await enrolledEarlier(db, account.id);
+    const before = await getAccountSecurity(db, account.id);
+
+    expect(await beginTotpEnrollment(db, account.id)).toBeNull();
+    const after = await getAccountSecurity(db, account.id);
+    expect(after?.totpSecretSealed).toBe(before?.totpSecretSealed);
+    expect(after?.recoveryCodeHashes).toEqual(before?.recoveryCodeHashes);
+    expect(await getTotpSecret(db, account.id)).toBe(secret);
+  });
+
+  it("refuses to turn two-factor on with no enrolment started", async () => {
+    const { db, account } = await seededAccount();
+    expect(await enableTotp(db, account.id, "000000")).toBe(false);
+    expect(await getAccountSecurity(db, account.id)).toBeNull();
+  });
+
+  /** The enabling code spends its step, so presenting it again changes nothing. */
+  it("refuses the enabling code a second time", async () => {
+    const { db, account } = await seededAccount();
+    const started = await beginTotpEnrollment(db, account.id);
+    if (!started) throw new Error("enrollment needs a sealing key");
+    const code = totpCode(started.secret);
+
+    expect(await enableTotp(db, account.id, code)).toBe(true);
+    const enabledAt = (await getAccountSecurity(db, account.id))?.totpEnabledAt;
+    expect(await enableTotp(db, account.id, code)).toBe(false);
+    expect((await getAccountSecurity(db, account.id))?.totpEnabledAt).toEqual(enabledAt);
+  });
+
+  it("shows the enrolment secret, and nothing for an account without one", async () => {
+    const { db, account } = await seededAccount();
+    expect(await getTotpSecret(db, account.id)).toBeNull();
+    const started = await beginTotpEnrollment(db, account.id);
+    expect(await getTotpSecret(db, account.id)).toBe(started?.secret);
+  });
+
+  it("shows no secret once the key that sealed it is gone", async () => {
+    const { db, account } = await seededAccount();
+    await beginTotpEnrollment(db, account.id);
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", randomBytes(32).toString("base64"));
+    vi.stubEnv("SECRET_ENCRYPTION_KEY_PREVIOUS", "");
+
+    expect(await getTotpSecret(db, account.id)).toBeNull();
+  });
+
+  /**
+   * A row whose recorded key id is stale but whose secret already opens under
+   * the current key: an accepted code corrects the id and leaves the
+   * ciphertext alone.
+   */
+  it("records the current key's id without re-sealing a secret it already protects", async () => {
+    const { db, account } = await seededAccount();
+    const { secret } = await enrolledEarlier(db, account.id);
+    await db
+      .update(accountSecurity)
+      .set({ totpSecretKeyId: null })
+      .where(eq(accountSecurity.userAccountId, account.id));
+    const before = await getAccountSecurity(db, account.id);
+
+    expect(await verifyAccountSecondFactor(db, account.id, totpCode(secret))).toBe(true);
+    const after = await getAccountSecurity(db, account.id);
+    expect(after?.totpSecretKeyId).toBe(secretKeyFingerprint(sealingKey()));
+    expect(after?.totpSecretSealed).toBe(before?.totpSecretSealed);
+  });
+});
+
+/**
+ * A missing or mis-pasted key degrades to "no": enrolment does not start, and
+ * neither a TOTP code nor a recovery code is accepted. Nothing throws.
+ */
+describe.each([
+  ["missing", { SECRET_ENCRYPTION_KEY: "" }],
+  ["malformed", { SECRET_ENCRYPTION_KEY: "not-a-key" }],
+  ["with a malformed previous key", { SECRET_ENCRYPTION_KEY_PREVIOUS: "c2hvcnQ=" }],
+])("account-security with the sealing key %s", (_label, env) => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function breakKey() {
+    for (const [name, value] of Object.entries(env)) vi.stubEnv(name, value);
+  }
+
+  it("does not start an enrolment", async () => {
+    const { db, account } = await seededAccount();
+    breakKey();
+    expect(await beginTotpEnrollment(db, account.id)).toBeNull();
+    expect(await getAccountSecurity(db, account.id)).toBeNull();
+  });
+
+  it("refuses both a TOTP code and a recovery code, and spends neither", async () => {
+    const { db, account } = await seededAccount();
+    const { secret, recoveryCodes } = await enrolledEarlier(db, account.id);
+    breakKey();
+    const code = recoveryCodes[0] ?? "";
+
+    expect(await verifyAccountSecondFactor(db, account.id, totpCode(secret))).toBe(false);
+    expect(await verifyAccountSecondFactor(db, account.id, code)).toBe(false);
+    expect(await enableTotp(db, account.id, totpCode(secret))).toBe(false);
+    expect(await getTotpSecret(db, account.id)).toBeNull();
+
+    vi.unstubAllEnvs();
+    expect((await getAccountSecurity(db, account.id))?.recoveryCodeHashes).toHaveLength(
+      recoveryCodes.length,
+    );
+    expect(await verifyAccountSecondFactor(db, account.id, code)).toBe(true);
   });
 });
