@@ -34,6 +34,7 @@ import {
 } from "./schema";
 import { liveTrip } from "./trips-live";
 import { issueWaiverOnJoin } from "./waiver-issue";
+import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 
 /**
  * Seat claims (docs ADR 20260804-seat-claim-links): one organizer books a
@@ -76,7 +77,11 @@ export async function getClaimPageData(
   token: string,
   now: Date = nowDate(),
 ): Promise<ClaimPageData | null> {
-  const capability = await verifyBookingCapability(db, { token, purpose: "claim", now });
+  const capability = await verifyBookingCapability(db, {
+    token,
+    purpose: "claim",
+    now,
+  });
   if (!capability) return null;
   const [row] = await db
     .select({ booking: bookings, trip: trips, shop: shops, person: people })
@@ -171,7 +176,10 @@ export async function getClaimPageState(
 ): Promise<ClaimPageState> {
   const data = await getClaimPageData(db, token, now);
   if (data) return { kind: "claimable", data };
-  const stale = await staleBookingCapabilityForToken(db, { token, purpose: "claim" });
+  const stale = await staleBookingCapabilityForToken(db, {
+    token,
+    purpose: "claim",
+  });
   if (!stale) return { kind: "unknown" };
   const [shop] = await db
     .select({
@@ -199,8 +207,8 @@ export async function getClaimPageState(
  * selling one, the same reasoning `restoreBooking` records for undo.
  */
 function claimableNow(
-  booking: typeof bookings.$inferSelect,
-  trip: typeof trips.$inferSelect,
+  booking: Pick<typeof bookings.$inferSelect, "status" | "partyLeadBookingId" | "claimedAt">,
+  trip: Pick<typeof trips.$inferSelect, "status" | "startsAt">,
   now: Date,
 ): boolean {
   return (
@@ -358,7 +366,11 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     booking.participantType,
   );
   if (!admission.admitted) {
-    return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
+    return {
+      ok: false,
+      reason: "trip_prerequisite",
+      refusal: admission.refusal,
+    };
   }
 
   // One person, one seat: if the claimant already holds their own live seat
@@ -574,10 +586,24 @@ export async function issuePartySeatClaims(
   const now = input.now ?? nowDate();
   const rows = await db
     .select({
-      booking: bookings,
-      person: people,
-      trip: trips,
-      waiver: waiverRecords,
+      // Only what the panel reads: not the person's contact details or the
+      // trip's pricing, and not the waiver's token, draft or signed body.
+      booking: {
+        id: bookings.id,
+        status: bookings.status,
+        tripId: bookings.tripId,
+        partyLeadBookingId: bookings.partyLeadBookingId,
+        claimedAt: bookings.claimedAt,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+        identityBookedAs: bookings.identityBookedAs,
+      },
+      person: { fullName: people.fullName },
+      trip: {
+        status: trips.status,
+        startsAt: trips.startsAt,
+        endsAt: trips.endsAt,
+      },
+      waiver: WAIVER_STATE_COLUMNS,
       // The shop's current material terms, in the same statement
       // (`getCurrentWaiverGeneration`'s read): no extra round trip on a page
       // the render-cost ratchet counts.
@@ -622,7 +648,10 @@ export async function issuePartySeatClaims(
   // in this request, so the departure's end is already in hand.
   const claims = await mintBookingCapabilities(db, {
     shopId: input.shopId,
-    seats: claimable.map((row) => ({ bookingId: row.booking.id, tripEndsAt: row.trip.endsAt })),
+    seats: claimable.map((row) => ({
+      bookingId: row.booking.id,
+      tripEndsAt: row.trip.endsAt,
+    })),
     purpose: "claim",
     now,
   });
