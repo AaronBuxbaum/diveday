@@ -872,3 +872,29 @@ export async function openMinorSeatWaiver(
   });
   return issued.ok ? { ok: true, token: issued.token } : { ok: false };
 }
+
+/**
+ * **Back to the parent's own page after a child's release** (dive-domain
+ * review F6 of layer r4-1). `signMinorWaiverAction` hands the lead's own
+ * readiness token to the waiver page in a cookie scoped to that one waiver
+ * link; once it is signed, this returns the token only when it is a live
+ * readiness link for the seat's own party lead, in this shop. Anything else
+ * is null and the signer lands where every signer does. Nothing is minted:
+ * whoever holds the cookie already held the lead's link.
+ */
+export async function partyLeadReturnToken(
+  db: AppDb,
+  input: { shopId: string; seatBookingId: string; leadToken: string },
+): Promise<string | null> {
+  const capability = await verifyBookingCapability(db, {
+    token: input.leadToken,
+    purpose: "readiness",
+  });
+  if (!capability || capability.shopId !== input.shopId) return null;
+  const [seat] = await db
+    .select({ partyLeadBookingId: bookings.partyLeadBookingId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.seatBookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  return seat?.partyLeadBookingId === capability.bookingId ? input.leadToken : null;
+}

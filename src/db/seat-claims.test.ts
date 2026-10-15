@@ -28,6 +28,7 @@ import {
   getClaimPageState,
   issuePartySeatClaims,
   openMinorSeatWaiver,
+  partyLeadReturnToken,
 } from "./seat-claims";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
 import { getWaiverSignerOnFile } from "./waiver-signing";
@@ -1389,4 +1390,45 @@ describe("a parent signs a minor seat's release", () => {
       minorNote: "physician",
     });
   });
+
+  /**
+   * Dive-domain review F6 of layer r4-1: a parent who signs from the party
+   * panel goes back to their own page, so the next child is one tap away.
+   * The return only ever names the lead's own readiness link, handed in by
+   * the lead's own tap, and only for a seat in that lead's party.
+   */
+  it("returns the parent to their own page, and nobody else to it", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const leadLink = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: lead.bookingId,
+      purpose: "readiness",
+    });
+    const miaLink = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: mia.bookingId,
+      purpose: "readiness",
+    });
+    expect(
+      await partyLeadReturnToken(db, {
+        shopId: shop.id,
+        seatBookingId: mia.bookingId,
+        leadToken: leadLink.token,
+      }),
+    ).toBe(leadLink.token);
+    // A link that is not the seat's lead, a stranger's string, or another shop: no return.
+    for (const input of [
+      { shopId: shop.id, seatBookingId: mia.bookingId, leadToken: miaLink.token },
+      { shopId: shop.id, seatBookingId: mia.bookingId, leadToken: "not-a-token" },
+      { shopId: shop.id, seatBookingId: lead.bookingId, leadToken: leadLink.token },
+      {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        seatBookingId: mia.bookingId,
+        leadToken: leadLink.token,
+      },
+    ]) {
+      expect(await partyLeadReturnToken(db, input)).toBeNull();
+    }
+  });
 });
+
