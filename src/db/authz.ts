@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { cache } from "react";
 import {
+  canAddDiver,
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
@@ -187,6 +188,10 @@ export const canPersonManageRentalSettings = (db: DbExecutor, shopId: string, pe
     personId,
     (roles) => canManageShopSettings(roles) && canManagePaymentSettings(roles),
   );
+
+/** Live DB-checked companion of the add-a-diver gate, which every staff role holds (src/lib/authz.ts). */
+export const canPersonAddDiver = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canAddDiver);
 
 export const canPersonDeleteDiver = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canDeleteDiver);

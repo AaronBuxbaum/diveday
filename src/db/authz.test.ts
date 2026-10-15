@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
 import {
+  canPersonAddDiver,
   canPersonCallDayBlowout,
   canPersonConfigureTrips,
   canPersonDeleteDiver,
@@ -116,6 +117,25 @@ describe("loadActiveStaffRolesByPerson", () => {
     expect(
       await loadActiveStaffRolesByPerson(db, "00000000-0000-0000-0000-000000000000"),
     ).toBeNull();
+  });
+});
+
+describe("adding a diver from search (every staff role)", () => {
+  it("admits each staff role and refuses an account with no staff role", async () => {
+    const { db, shop } = ctx;
+    for (const role of [
+      "owner",
+      "manager",
+      "instructor",
+      "captain",
+      "divemaster",
+      "crew",
+    ] as const) {
+      expect(await canPersonAddDiver(db, shop.id, await makeStaff(db, shop.id, [role]))).toBe(true);
+    }
+    expect(await canPersonAddDiver(db, shop.id, "00000000-0000-0000-0000-000000000000")).toBe(
+      false,
+    );
   });
 });
 

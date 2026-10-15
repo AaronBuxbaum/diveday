@@ -196,6 +196,19 @@ export function canManageShopSettings(roles: readonly Role[] | undefined): boole
 }
 
 /**
+ * Add a diver from the staff search: create the person a walk-up, a phone call
+ * or a name on a clipboard turns out to be. **Every staff role holds it**, a
+ * captain included, because the person at the dock may be the one who meets a
+ * walk-up (Aaron, 2026-10-13, issue #2340). It is named so the decision is
+ * visible here and a role can be taken off it in one place, rather than being
+ * the only person-creating door that asks nothing but "are you staff".
+ * Removing or merging that record is not this: those are owner/manager work.
+ */
+export function canAddDiver(roles: readonly Role[] | undefined): boolean {
+  return isStaff(roles);
+}
+
+/**
  * Soft-delete a diver, which frees their email and drops them from the roster.
  * The daily crew adds and checks in divers; removing a person record is an
  * owner/manager call.
