@@ -2729,13 +2729,13 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
    * from the first course rather than to tables, folds nitrox in early, and
    * owns Solo Diver, which neither of the others teaches at all.
    *
-   * Every rung below maps onto the four levels DiveDay can record
-   * (`CertificationLevel`), and where SDI's own prerequisite is finer than
-   * that — Advanced Adventure Diver is not literally "Advanced Open Water" —
-   * the note says so in the shop's voice rather than quietly rounding a
-   * diver up or down. Same rule the PADI entries follow for Adventure Diver
-   * and Scuba Diver: the gate is ours, and a diver on the rung between is
-   * told to talk to us instead of being refused by a page.
+   * Every gate below is SDI's own floor on the levels DiveDay can record
+   * (`CertificationLevel`). Rescue, Deep and Wreck ask for Open Water Scuba
+   * Diver, which the ladder records exactly, so they gate at `open_water`
+   * and say SDI's words: Advanced Adventure Diver is built *from* those
+   * dives, never a prerequisite for them. Solo Diver is the one that asks
+   * for Advanced Adventure Diver, and gates there. Unlike PADI's Adventure
+   * Diver, no SDI floor falls between two rungs, so nothing here is rounded.
    * ------------------------------------------------------------------ */
   {
     slug: "sdi-scuba-discovery",
@@ -2941,11 +2941,11 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-rescue-diver",
-    version: 1,
+    version: 2,
     title: "Rescue Diver",
     agency: "sdi",
     description: "Spot a problem early, and know exactly what to do when you cannot.",
-    minimumCertificationLevel: "advanced_open_water",
+    minimumCertificationLevel: "open_water",
     certifiesLevel: "rescue",
     content: {
       ...blank,
@@ -2962,7 +2962,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       groupSizeText: "Small groups — every scenario is run by every diver",
       minimumAge: 18,
       prerequisiteNote:
-        "SDI Advanced Adventure Diver or higher, or an equivalent advanced certification from another agency, plus current CPR and first-aid training — we can run that alongside if you do not hold it. Hold a card between Open Water and Advanced? Call us before you book. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or equivalent, plus current CPR and first aid. We can run CPR and first aid alongside if you do not hold them. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Confined-water rescue skills sessions",
@@ -3176,11 +3176,11 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-deep-diver",
-    version: 1,
+    version: 2,
     title: "Deep Diver",
     agency: "sdi",
     description: "Plan, manage and enjoy the deeper end of recreational diving.",
-    minimumCertificationLevel: "advanced_open_water",
+    minimumCertificationLevel: "open_water",
     certifiesLevel: null,
     content: {
       ...blank,
@@ -3195,7 +3195,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       durationText: "Two days · four dives",
       groupSizeText: "Small groups, because depth shortens everyone's dive",
       prerequisiteNote:
-        "SDI Advanced Adventure Diver or an equivalent advanced certification, and enriched-air training is strongly recommended for the deeper dives. Hold a card between Open Water and Advanced? Call us before you book. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or equivalent. Enriched-air training is strongly recommended for the deeper dives. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Four progressively deeper training dives",
@@ -3329,11 +3329,11 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-wreck-diver",
-    version: 1,
+    version: 2,
     title: "Wreck Diver",
     agency: "sdi",
     description: "Survey a wreck properly, and understand exactly where the outside ends.",
-    minimumCertificationLevel: "advanced_open_water",
+    minimumCertificationLevel: "open_water",
     certifiesLevel: null,
     content: {
       ...blank,
@@ -3348,7 +3348,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       durationText: "Two days · four dives",
       groupSizeText: "Small groups, because a wreck is easy to lose people on",
       prerequisiteNote:
-        "SDI Advanced Adventure Diver or an equivalent advanced certification. Hold a card between Open Water and Advanced? Call us before you book. Our wrecks sit deep enough that deep training is worth having first. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or equivalent. Our wrecks sit deep enough that deep training is worth having first. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Four wreck dives",
