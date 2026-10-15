@@ -80,6 +80,7 @@ describe.each([
   it("keeps a status readable on its own wash", () => {
     for (const [wash, signal] of [
       ["primary-tint", "primary"],
+      ["accent-tint", "foreground"],
       ["success-tint", "success"],
       ["warning-tint", "warning"],
       ["danger-tint", "danger"],
@@ -96,11 +97,15 @@ describe.each([
    * selected or info; yellow is the deck's warning. The wash leans navy (more
    * blue than red), where the warning wash leans the other way.
    */
-  it("keeps the selected wash navy, never the warning's yellow", () => {
+  it("keeps the selected and accent washes navy, never the warning's yellow", () => {
     const channels = (hex: string) =>
       [0, 1, 2].map((i) => Number.parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16));
     const [red = 0, , blue = 0] = channels(token("primary-tint"));
     expect(blue, "--primary-tint leans blue").toBeGreaterThan(red);
+    // The accent wash is the one-action colour's tint; yellow on the boat is
+    // the warning (#2569), so it leans navy too.
+    const [accentRed = 0, , accentBlue = 0] = channels(token("accent-tint"));
+    expect(accentBlue, "--accent-tint leans blue").toBeGreaterThan(accentRed);
     const [warnRed = 0, , warnBlue = 0] = channels(token("warning-tint"));
     expect(warnRed, "--warning-tint leans red").toBeGreaterThan(warnBlue);
   });
