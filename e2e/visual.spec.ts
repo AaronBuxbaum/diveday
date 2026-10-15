@@ -3,6 +3,7 @@ import type { Browser, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
@@ -3974,6 +3975,68 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "identity-menu-open", scheme);
         await page.keyboard.press("Escape");
         await expect(trigger).toHaveAttribute("aria-expanded", "false");
+      });
+
+      /**
+       * **The demo banner's "Switch role" menu, open** (issue #2513): the
+       * rewritten role descriptions live only here, and no capture opened it.
+       * Left open for the shot; the next test starts on a page of its own.
+       */
+      test(`the demo's role menu, open, renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis");
+        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
+        await page.getByRole("button", { name: /^Switch role/ }).click();
+        await page.getByRole("button", { name: "Switch to Instructor" }).waitFor();
+        await capture(page, "demo-role-menu", scheme);
+      });
+
+      /**
+       * **The hold a move leaves under Save** (issue #2513, UX review
+       * 2026-10-11 item 1): "Telling … the new time…" counts down and then
+       * speaks, so the frame kept is the settled one after Undo, "Not told"
+       * with its "Tell them" door. On the trip page, from the Details form.
+       */
+      test(`the trip page holds a reschedule notice under Save (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripAbout(page);
+        await page.getByText("Edit details", { exact: true }).click();
+        await page.getByLabel("Departs").fill("13:45");
+        await page.getByLabel("Returns").fill("17:15");
+        await page.getByRole("button", { name: "Save changes" }).click();
+        await page.getByText(/^Telling \d+ divers? the new time…$/).waitFor();
+        await page.getByRole("button", { name: "Undo" }).click();
+        await page.getByText(staffTranslator("en-US")("shared.rescheduleHold.notTold")).waitFor();
+        await capture(page, "trip-reschedule-hold", scheme);
+      });
+
+      /** The same hold on the schedule board, under the move's own notice. */
+      test(`the board holds a reschedule notice after a move (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const title = "Wreck Trip — Spiegel Grove";
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
+        await boardListSettled(page);
+        await page
+          .getByRole("button", { name: new RegExp(`^Move, copy, or remove ${title},`) })
+          .first()
+          .click();
+        await page
+          .getByRole("button", { name: new RegExp(`^Move ${title},`) })
+          .first()
+          .click();
+        await page.getByText("If you move it").waitFor();
+        const date = page.getByLabel("New date");
+        const next = new Date(`${await date.inputValue()}T12:00:00Z`);
+        next.setUTCDate(next.getUTCDate() + 1);
+        await date.fill(next.toISOString().slice(0, 10));
+        await page.getByRole("button", { name: "Move it" }).click();
+        await page.getByText(/^Telling \d+ divers? the new time…$/).waitFor();
+        await page.getByRole("button", { name: "Undo" }).click();
+        await page.getByText(staffTranslator("en-US")("shared.rescheduleHold.notTold")).waitFor();
+        await capture(page, "schedule-builder-reschedule-hold", scheme);
       });
 
       /**
