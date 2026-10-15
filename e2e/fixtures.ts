@@ -647,8 +647,8 @@ export const test = base.extend<
     await use(makeActivitySafe(page));
   },
 
-  // One real UI sign-in per (worker, role) pair — lazy and memoized, so a
-  // worker that only ever needs "owner" still only pays for "owner". This
+  // One real UI sign-in per (worker, role) pair — memoized, and lazy for every
+  // role but "owner" (signed in up front, below). This
   // was the single largest cost in the suite before the owner case alone was
   // cached (~27 sign-ins at ~2s each); role-permissions.spec.ts's three
   // tests each doing their own live sign-in for a different role was the
@@ -704,6 +704,18 @@ export const test = base.extend<
         }
         return cached;
       };
+      // The owner's sign-in is paid here, in this worker fixture's own setup
+      // slot, because a lazy one landed inside the first owner test's 15s
+      // budget: Playwright times a test-scoped fixture (`storageState`, which
+      // calls `resolve`) against the test, and a worker-scoped one against its
+      // own slot. Measured on a loaded four-core box, the sign-in took 2-3.7s
+      // of that budget on top of a 5s reset, and two heavy tests that are the
+      // first owner test in their file (crew-notices, self-registration's
+      // signed walk-in) ran out of it before their last step. Owner is the role nearly
+      // every staff spec asks for; a worker that only ever needs another role
+      // pays one extra sign-in here, outside any test's budget. Other roles,
+      // and a re-sign-in after a test bumps the generation, stay lazy.
+      await resolve("owner");
       await use(resolve);
     },
     { scope: "worker" },
