@@ -1060,7 +1060,11 @@ export async function getTripManifests(
       // is home — the whole expiry lives in `welcomeCueFor`, so nothing here
       // has to remember to stop rendering it.
       welcomeCue: welcomeCueFor({
-        ...(welcomeInputs.get(booking.id) ?? { sharedAt: null, lastDivedAt: null }),
+        ...(welcomeInputs.get(booking.id) ?? {
+          sharedAt: null,
+          lastDivedAt: null,
+          nonDiver: false,
+        }),
         tripEndsAt: trip.endsAt,
       }),
       depthAdvisory: depthByBooking.get(booking.id),

@@ -4,13 +4,15 @@ import { tripScheduleDays, trips } from "@/db/schema";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { addCalendarDays, utcToWallTime } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **A departure's days, named one by one.** Day one is the departure's date and
@@ -42,7 +44,7 @@ const pad = (value: number) => String(value).padStart(2, "0");
 const TITLE = "Open Water weekends";
 
 async function signedInOwner() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   vi.mocked(requireShopSurface).mockResolvedValue({

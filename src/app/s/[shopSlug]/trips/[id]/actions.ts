@@ -176,6 +176,7 @@ const waitlistForm = z.object({
   "fullName-0": formValue(),
   "email-0": formValue(),
   phone: formValue().transform((value) => value || undefined),
+  partySize: formValue(),
 });
 
 export async function bookSpot(
@@ -980,6 +981,17 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
   if (!parsed.success) {
     redirect(`${publicTripPath(shopSlug, tripId)}?error=invalid${embedParam(embed, "&")}`);
   }
+  // How many wait together (fourth review, item 34), within the booking form's
+  // own bound. The lead's details are the entry; the party is a count.
+  const partySize = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PUBLIC_PARTY_SIZE)
+    .safeParse(joiner.ok ? joiner.data.partySize : undefined);
+  if (!partySize.success) {
+    redirect(`${publicTripPath(shopSlug, tripId)}?error=invalid${embedParam(embed, "&")}`);
+  }
   const dbi = await getDb();
   const shopNow = await getShopBySlug(dbi, shopSlug);
   if (!shopNow) {
@@ -991,6 +1003,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     fullName: parsed.data.fullName,
     email: parsed.data.email,
     phone: parsed.data.phone || undefined,
+    partySize: partySize.data,
     // Bounded per *subject* address rather than per IP — the only key a
     // rotating set of submitters cannot clear (RATE_LIMITS.declarationByPerson).
     // An exhausted budget drops the claim; the wait-list join still succeeds,

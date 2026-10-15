@@ -95,6 +95,14 @@ test("a signed-out visitor browses the public course catalog, with the editor st
   await expect(
     page.getByRole("heading", { level: 3, name: "Open Water Diver", exact: true }),
   ).toBeVisible();
+  // When each course next runs, as the storefront's shelf says it (fourth
+  // review, item 33), and a door to ask on a course with nothing on the board.
+  const openWater = page
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("heading", { name: "Open Water Diver", exact: true }) });
+  await expect(openWater).toContainText(/Next \w{3},\s\w{3}\s\d{1,2}/);
+  const ask = page.getByRole("link").filter({ hasText: "Ask for a date" }).first();
+  await expect(ask).toHaveAttribute("href", /^\/s\/blue-mantis\/courses\/[^#]+#get-in-touch$/);
   // No staff affordance renders at all — not disabled, absent (AGENTS.md
   // hard rule: gate by not rendering).
   await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);

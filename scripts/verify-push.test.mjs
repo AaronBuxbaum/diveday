@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   appTreeKey,
   browserSpecs,
+  E2E_CHUNK,
   excerpt,
+  notRunHere,
   plan,
-  REACH_BUDGET_MS,
   sourceScanTests,
   writeStamps,
 } from "./verify-push.mjs";
@@ -116,25 +117,31 @@ describe("the browser specs a push runs", () => {
   const strong = new Map([["e2e/a.spec.ts", new Set(["quotes it"])]]);
   const rank = new Map();
 
-  it("caps what the diff only reaches at five minutes, whatever the strong tier left", () => {
+  it("runs every spec the diff reaches, narrowest first, whatever it costs", () => {
     const reach = new Map([
       ["e2e/b.spec.ts", new Set()],
       ["e2e/c.spec.ts", new Set()],
       ["e2e/d.spec.ts", new Set()],
     ]);
-    const picked = browserSpecs({ changed: ["src/lib/x.ts"], strong, reach, rank, record });
-    expect(REACH_BUDGET_MS).toBe(5 * minute);
-    // Cheapest first: c (1) and d (unrecorded, one minute by default) fit; b (4) would make six.
-    expect(picked.specs).toEqual(["e2e/a.spec.ts", "e2e/c.spec.ts", "e2e/d.spec.ts"]);
-    expect(picked.left).toEqual(["e2e/b.spec.ts"]);
-  });
-
-  it("never spends more than the whole budget when the strong tier is already near it", () => {
-    const heavy = { ...record, "e2e/a.spec.ts": 14 * minute };
-    const reach = new Map([["e2e/b.spec.ts", new Set()]]);
-    const picked = browserSpecs({ changed: ["src/lib/x.ts"], strong, reach, rank, record: heavy });
-    expect(picked.specs).toEqual(["e2e/a.spec.ts"]);
-    expect(picked.left).toEqual(["e2e/b.spec.ts"]);
+    const heavy = {
+      ...record,
+      "e2e/a.spec.ts": 40 * minute,
+      "e2e/b.spec.ts": 30 * minute,
+    };
+    const picked = browserSpecs({
+      changed: ["src/lib/x.ts"],
+      strong,
+      reach,
+      rank,
+      record: heavy,
+    });
+    expect(picked.specs).toEqual([
+      "e2e/a.spec.ts",
+      "e2e/c.spec.ts",
+      "e2e/d.spec.ts",
+      "e2e/b.spec.ts",
+    ]);
+    expect(picked).not.toHaveProperty("left");
   });
 
   it("runs no browser spec, so builds nothing, when only unit tests changed", () => {
@@ -145,7 +152,7 @@ describe("the browser specs a push runs", () => {
       rank,
       record,
     });
-    expect(picked).toEqual({ specs: [], reached: [], left: [], testsOnly: true });
+    expect(picked).toEqual({ specs: [], reached: [], testsOnly: true });
   });
 
   it("still runs the specs a diff of e2e specs names", () => {
@@ -213,5 +220,56 @@ describe("the stamp", () => {
     ]);
     expect(writes[`/repo/.git/diveday-verified/${sha}`].sha).toBe(sha);
     expect(dirs).toEqual(["/repo/.git/diveday-verified"]);
+  });
+});
+
+describe("a large browser selection", () => {
+  it("runs in steps of E2E_CHUNK specs, so none outlives its hour", () => {
+    const specs = Array.from({ length: E2E_CHUNK * 2 + 1 }, (_, i) => `e2e/s${i}.spec.ts`);
+    const steps = plan({ ...base, changed: ["src/lib/x.ts"], existing: () => true, specs });
+    const runs = steps.filter((step) => step.name.startsWith("e2e specs"));
+    expect(runs.map((step) => step.name)).toEqual([
+      "e2e specs 1/3",
+      "e2e specs 2/3",
+      "e2e specs 3/3",
+    ]);
+    expect(runs.flatMap((step) => step.args.filter((arg) => arg.endsWith(".spec.ts")))).toEqual(
+      specs,
+    );
+  });
+});
+
+describe("what a green run says it did not run", () => {
+  const allSpecs = ["e2e/a.spec.ts", "e2e/b.spec.ts", "e2e/visual.spec.ts"];
+
+  it("names the unit tests, the unselected specs and the visual captures", () => {
+    const lines = notRunHere({
+      docsOnly: false,
+      testsOnly: false,
+      specs: ["e2e/a.spec.ts"],
+      allSpecs,
+    });
+    expect(lines).toEqual([
+      expect.stringMatching(/^unit tests that neither read source/),
+      "1 Playwright specs the diff neither names nor reaches",
+      expect.stringMatching(/^visual captures/),
+    ]);
+  });
+
+  it("counts a spec a smoke pick ran by line as run", () => {
+    const lines = notRunHere({
+      docsOnly: false,
+      testsOnly: false,
+      specs: ["e2e/a.spec.ts:12", "e2e/b.spec.ts"],
+      allSpecs,
+    });
+    expect(lines).toHaveLength(2);
+  });
+
+  it("says why no spec ran when only tests changed, and leaves out units for a docs diff", () => {
+    expect(notRunHere({ docsOnly: false, testsOnly: true, specs: [], allSpecs })[1]).toBe(
+      "all 2 Playwright specs (no page code changed)",
+    );
+    expect(notRunHere({ docsOnly: true, testsOnly: false, specs: [], allSpecs })).toHaveLength(2);
   });
 });

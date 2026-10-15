@@ -8,7 +8,7 @@
   "departureLabel": "Qué salida",
   "departureUnchosen": "Elige una salida",
   "departureFull": "{title} · {date} · {time} · llena",
-  "noDepartures": "No hay ninguna salida llena, así que no hay lista de espera a la que apuntarse.",
+  "noDepartures": "No hay ninguna salida llena, así que no hay lista de espera a la que anotarse.",
   "interestLabel": "Sobre qué preguntó",
   "interestPlaceholder": "Dos tanques en el arrecife en marzo",
   "preferredDateLabel": "Día que quiere",

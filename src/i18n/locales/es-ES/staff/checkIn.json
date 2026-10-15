@@ -3,7 +3,7 @@
   "instrument": {
     "hereOf": "<figure>{here}</figure> de {expected} aquí",
     "toCome": "{count} por llegar",
-    "cantBoard": "{count, plural, one {# persona todavía no puede embarcar} other {# personas todavía no pueden embarcar}}",
+    "cantBoard": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "notHere": "{count, plural, one {# persona no vino} other {# personas no vinieron}}"
   },
   "row": {

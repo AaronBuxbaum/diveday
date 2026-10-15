@@ -7,6 +7,7 @@ import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-ca
 import type { AppDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { hasActiveCourses } from "@/db/courses";
+import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { countSpendableDives } from "@/db/dive-packages";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { countGearItems } from "@/db/gear";
@@ -33,7 +34,6 @@ import {
   listTripScheduleDays,
   pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
-  tripPublicCrew,
 } from "@/db/trips";
 import { getTripGuests } from "@/db/trips-guests";
 import { liveTrip } from "@/db/trips-live";
@@ -320,7 +320,7 @@ async function publicTripPageReads(db: AppDb, shopSlug: string, tripId: string) 
     tripDivesRead,
     listTripScheduleDays(db, shop.id, tripId),
     tripCrewSpokenLanguages(db, shop.id, tripId),
-    tripPublicCrew(db, shop.id, tripId),
+    tripRead.then((found) => (found ? diverCrewWithAway(db, shop.id, found, shop.timezone) : [])),
     listTripChangeEvents(db, shop.id, tripId),
     tripDivesRead.then((dives) => {
       const siteIds = dives
@@ -369,7 +369,7 @@ async function readyPageReads(db: AppDb, token: string) {
     getTripWithBooked(db, data.shop.id, data.trip.id),
     listTripDives(db, data.shop.id, data.trip.id),
     listTripChangeEvents(db, data.shop.id, data.trip.id),
-    tripPublicCrew(db, data.shop.id, data.trip.id),
+    diverCrewWithAway(db, data.shop.id, data.detail.trip, data.detail.shop.timezone),
     latestTripStage(db, data.shop.id, data.trip.id),
     getBookingPayment(db, data.shop.id, capability.bookingId),
     data.trip.course ? getCourseFormsForBooking(db, data.shop.id, capability.bookingId) : null,
@@ -489,8 +489,12 @@ const TRIP_PHASE_CEILING = 6;
  * reads one after another after its fan-out, and `/ready` its readiness pass,
  * four more steps of `getReadyPageData` and five single awaits in the thread.
  */
-const PUBLIC_TRIP_CEILING = 18;
-const READY_CEILING = 36;
+// 18 → 20 and 36 → 38 (fourth review, item 12; r4-4 reviews N2/N5): both
+// diver doors mark an away crew member "to be confirmed", which reads the
+// departure's schedule days and the crew's days away beside the crew, in the
+// same round trip (the phase ceilings below are unchanged).
+const PUBLIC_TRIP_CEILING = 20;
+const READY_CEILING = 38;
 // 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
 // 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
 // Stripe account and the other boats off the trip — are its third round trip.

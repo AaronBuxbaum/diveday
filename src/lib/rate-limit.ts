@@ -723,6 +723,15 @@ export const RATE_LIMITS = {
    * below a useful firehose is the size worth having.
    */
   cspReport: perHour(120),
+  /**
+   * A failed cert check's page-shape report (`reportAgencyCheckPageAction`),
+   * per signed-in staffer, and per shop. Each is one log line; a staffer
+   * checking a busy departure fails a few at most, and two failures in a row
+   * stop a "Check all", so 30 an hour is far past real use. The shop's bucket
+   * bounds every staff session at one shop together.
+   */
+  agencyCheckReportByPerson: perHour(30),
+  agencyCheckReportByShop: perHour(120),
 } as const satisfies Record<string, RateLimitConfig>;
 
 /**

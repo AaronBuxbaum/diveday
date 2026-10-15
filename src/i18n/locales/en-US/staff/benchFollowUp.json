@@ -19,7 +19,6 @@
   "bill": {
     "heading": "Bill",
     "total": "Total: {amount}",
-    "atShop": "Collected at the counter.",
     "ownerOnly": "An owner or manager sends the bill.",
     "needsEmail": "Add an email to the customer’s record to send the bill.",
     "send": "Send the bill",
@@ -27,7 +26,9 @@
     "sending": "Sending…",
     "sent": "Sent {date}",
     "openOrder": "Open order",
-    "description": "Work order #{number}"
+    "description": "Work order #{number}",
+    "paidAtPickup": "Paid at pickup:",
+    "recording": "Recording…"
   },
   "notice": {
     "readySent": "Ready message sent.",
@@ -44,7 +45,8 @@
     "billStripeFailed": "Stripe couldn’t create that bill. Try again in a moment.",
     "billNoLines": "Add parts or labor first.",
     "remindersOff": "Service reminders off for that piece.",
-    "remindersOn": "Service reminders on for that piece."
+    "remindersOn": "Service reminders on for that piece.",
+    "billPaidCounter": "Payment recorded. The ticket is paid."
   },
   "reminders": {
     "off": "No reminders",

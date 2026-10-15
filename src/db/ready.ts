@@ -489,7 +489,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     getShopStripeAccount(db, row.shopId),
     verifiedNitroxPersonIds(db, row.shopId),
     nitroxCardOnFilePersonIds(db, row.shopId),
-    // The same reader the manifest uses, so "first time with us" means the
+    // The same reader the manifest uses, so "First dive with us" means the
     // same thing on the diver's own page as it does under their name at the
     // rail (issue #1182).
     welcomeCueInputsByBooking(db, row.shopId, row.tripId, now),
@@ -678,6 +678,7 @@ export async function getReadyPageData(
     // have consented. The staff surfaces read the consented one.
     welcomeOffer: offerableWelcomeCue({
       lastDivedAt: welcomeInputs.get(bookingId)?.lastDivedAt ?? null,
+      nonDiver: welcomeInputs.get(bookingId)?.nonDiver ?? false,
       tripEndsAt: trip.endsAt,
       now,
     }),

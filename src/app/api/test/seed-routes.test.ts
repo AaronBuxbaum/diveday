@@ -111,6 +111,15 @@ const routes: SeedRoute[] = [
     },
   },
   {
+    slug: "seed-booking-checkout",
+    // Past the guard it reads its query first: no slug is a 400 before the
+    // database is touched, so the 400 is the signal it got through. It opens a
+    // booking checkout the e2e harness then pays through the signed webhook.
+    expectPastTheGuard: async (response) => {
+      expect(response.status).toBe(400);
+    },
+  },
+  {
     slug: "seed-open-package-invoice",
     // Past the guard it reads its query first: no slug is a 400 before the
     // database is touched, so the 400 is the signal it got through. It raises

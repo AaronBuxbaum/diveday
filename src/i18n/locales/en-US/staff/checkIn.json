@@ -3,7 +3,7 @@
   "instrument": {
     "hereOf": "<figure>{here}</figure> of {expected} here",
     "toCome": "{count} to come",
-    "cantBoard": "{count, plural, one {# person can’t board yet} other {# people can’t board yet}}",
+    "cantBoard": "{count} blocked",
     "notHere": "{count, plural, one {# person is not here} other {# people are not here}}"
   },
   "row": {

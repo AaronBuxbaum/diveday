@@ -4,6 +4,7 @@ import type { DiveDeclaration } from "@/lib/dive-declaration";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { seatRefusal } from "@/lib/participant-types";
 import { publicTripPath } from "@/lib/public-routes";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import type { AppDb } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { sendNotification } from "./notifications";
@@ -68,7 +69,18 @@ export type InviteWaitlistDiverResult =
  */
 export async function inviteWaitlistDiver(
   db: AppDb,
-  input: { shopId: string; shopSlug: string; entryId: string; now?: Date },
+  input: {
+    shopId: string;
+    shopSlug: string;
+    entryId: string;
+    now?: Date;
+    /**
+     * The run's date this lead waited for, when the nightly roll moved them
+     * here: the invite says it filled and this date has room (fourth review,
+     * item 31).
+     */
+    sailedStartsAt?: Date;
+  },
 ): Promise<InviteWaitlistDiverResult> {
   const [ctx] = await db
     .select({ entry: tripWaitlistEntries, person: people, trip: trips, shop: shops })
@@ -111,6 +123,8 @@ export async function inviteWaitlistDiver(
       bookingUrl: new URL(publicTripPath(input.shopSlug, ctx.trip.id), `${origin}/`).toString(),
       invitedAt,
       unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
+      partySize: ctx.entry.partySize,
+      ...(input.sailedStartsAt ? { sailedStartsAt: input.sailedStartsAt } : {}),
     }).catch(() => ({ status: "failed" as const }));
     delivery = result.status === "sent" ? "sent" : "unconfigured";
   }
@@ -132,6 +146,11 @@ export type WaitlistRequest = {
    * out of somebody's typing (ADR 20260813-wait-list-is-a-lead-list).
    */
   declaration?: DiveDeclaration;
+  /**
+   * How many seats the joiner waits for, themselves included (fourth review,
+   * item 34). One when absent; held to the public form's own bounds.
+   */
+  partySize?: number;
 };
 
 export type WaitlistOutcome =
@@ -153,6 +172,10 @@ export type WaitlistOutcome =
 export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise<WaitlistOutcome> {
   const email = req.email.trim().toLowerCase();
   const fullName = req.fullName.trim();
+  const askedParty = Math.min(
+    MAX_PUBLIC_PARTY_SIZE,
+    Math.max(1, Math.trunc(req.partySize ?? 1) || 1),
+  );
 
   return db.transaction(async (tx): Promise<WaitlistOutcome> => {
     // Same trip-row lock as createBooking: the full/not-full decision must be
@@ -170,6 +193,9 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
     if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
       return { ok: false, reason: "trip_unavailable" };
     }
+    // The form offers "up to the boat's seats"; the server keeps that promise,
+    // so a hand-posted party cannot claim more demand than the boat holds.
+    const partySize = Math.max(1, Math.min(askedParty, trip.capacity));
 
     // `heldSeatCounts`, the same counts `createBookingRecord` reads — this
     // decision has to be the one the booking door would make, or the two
@@ -182,9 +208,14 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
     // full for this person (ADR 20261007-participant-types).
     // Measured against the certificate-capped seats, as the booking door is
     // (H-107): an over-limit departure is full at its certificate.
+    //
+    // A party waits until the whole party fits (ADR 20260719-trip-waitlist,
+    // amended): its last diver must fit beside the others, so the counts are
+    // read as if the rest were already aboard.
     const capacity = await sellableCapacity(tx, trip);
     const held = await heldSeatCounts(tx, req.shopId, trip.id);
-    if (seatRefusal("diver", { ...trip, capacity }, held) === null) {
+    const withParty = { aboard: held.aboard + partySize - 1, divers: held.divers + partySize - 1 };
+    if (seatRefusal("diver", { ...trip, capacity }, withParty) === null) {
       return { ok: false, reason: "trip_available" };
     }
 
@@ -241,6 +272,18 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
       )
       .limit(1);
     if (existing) {
+      // Asking again is how a joiner updates what they said, the party too.
+      if (existing.partySize !== partySize) {
+        await tx
+          .update(tripWaitlistEntries)
+          .set({ partySize })
+          .where(
+            and(
+              eq(tripWaitlistEntries.id, existing.id),
+              eq(tripWaitlistEntries.shopId, req.shopId),
+            ),
+          );
+      }
       return {
         ok: false,
         reason: "already_waitlisted",
@@ -251,7 +294,7 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
 
     const [entry] = await tx
       .insert(tripWaitlistEntries)
-      .values({ shopId: req.shopId, tripId: trip.id, personId: person.id })
+      .values({ shopId: req.shopId, tripId: trip.id, personId: person.id, partySize })
       .returning();
     if (!entry) throw new Error("joinTripWaitlist: entry insert returned no row");
     return { ok: true, entryId: entry.id, personName: person.fullName };

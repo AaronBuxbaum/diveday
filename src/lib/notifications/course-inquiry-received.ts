@@ -28,8 +28,9 @@ export type CourseInquiryReceivedInput = {
 };
 
 /**
- * "We have your request", in the shop's voice: what they asked about, the
- * dates they named, and how to reach the shop sooner.
+ * The shop's acknowledgment of a request: what they asked about, that nothing
+ * is held yet, the dates they named, and how to reach the shop sooner. The
+ * subject already says the shop has it, so the body never says it again.
  *
  * **Nothing the diver typed is echoed back.** The address is unverified and
  * the form is public, so a name, an interest or a message here would let a

@@ -68,6 +68,7 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   identity_unconfirmed: "today.blockerAction.confirmIdentity",
   under_minimum_age: "today.blockerAction.checkDateOfBirth",
   waiver_not_sent: "today.blockerAction.sendWaiver",
+  waiver_lapsed: "today.blockerAction.sendWaiver",
   waiver_pending: "today.blockerAction.nudgeWaiver",
   waiver_expired: "today.blockerAction.reissueWaiver",
   medical_review: "today.blockerAction.reviewMedical",
@@ -109,6 +110,7 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   identity_unconfirmed: "today.blockerGroup.confirmIdentities",
   under_minimum_age: "today.blockerGroup.checkDatesOfBirth",
   waiver_not_sent: "today.blockerGroup.sendWaivers",
+  waiver_lapsed: "today.blockerGroup.sendWaivers",
   waiver_pending: "today.blockerGroup.nudgeWaivers",
   waiver_expired: "today.blockerGroup.reissueWaivers",
   medical_review: "today.blockerGroup.reviewMedicals",
@@ -171,6 +173,7 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   requirements_not_configured: "today.blockerRow.requirementsNotConfigured",
   identity_unconfirmed: "today.blockerRow.identityUnconfirmed",
   waiver_not_sent: "today.blockerRow.waiverNotSent",
+  waiver_lapsed: "today.blockerRow.waiverLapsed",
   waiver_pending: "today.blockerRow.waiverPending",
   waiver_expired: "today.blockerRow.waiverExpired",
   medical_review: "today.blockerRow.medicalReview",
@@ -244,8 +247,9 @@ export function nameListText(t: StaffTranslator, names: readonly string[], shown
 
 /** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
 
-export function missingFitNamedDetailText(t: StaffTranslator): string {
-  return t("today.detail.missingFitNamed");
+/** One diver's sizes job: a blank size, or nobody has asked about their kit yet. */
+export function missingFitNamedDetailText(t: StaffTranslator, unasked: boolean): string {
+  return t(unasked ? "today.detail.kitUnaskedNamed" : "today.detail.missingSizeNamed");
 }
 
 export function ungatedNitroxNamedDetailText(t: StaffTranslator): string {
@@ -804,11 +808,14 @@ export function openPrepListActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openPrepList");
 }
 
-/** The small day-of hand-off row, kept as codes here so staff copy stays localized. */
+/**
+ * The small day-of hand-off row, kept as codes here so staff copy stays
+ * localized. The row leads with the diver's name, as every person row does,
+ * so the sentence never repeats it (fourth review, item 43).
+ */
 export function helpRequestDetailText(
   t: StaffTranslator,
   input: {
-    personName: string;
     kind: "carry_gear" | "first_timer" | "find_group";
     status: "requested" | "acknowledged";
   },
@@ -824,7 +831,7 @@ export function helpRequestDetailText(
     input.status === "acknowledged"
       ? "today.helpRequest.detailAcknowledged"
       : "today.helpRequest.detailRequested",
-    { name: input.personName, help },
+    { help },
   );
 }
 

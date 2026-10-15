@@ -42,7 +42,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * Reading the board: the schedule lists, their aggregates, and the calendar
@@ -944,10 +944,11 @@ export async function listUpcomingSessionsForCourse(
  * **Who is asking when this course next runs.** There are two honest answers
  * and they are not the same date.
  *
- * - `"storefront"` — what a diver may turn up to: live, scheduled, **public**,
- *   within the hour's late-arrival buffer. Exactly
+ * - `"storefront"` — what a diver may book: live, scheduled, **public**, not a
+ *   rehearsal, not on a conditions hold, **with a seat left**, within the
+ *   hour's late-arrival buffer. Every such session is in
  *   {@link listUpcomingSessionsForCourse}'s scope, so the shelf never promises
- *   a date the course page then lacks.
+ *   a date the course page then lacks (dive-domain review r4-4, F3).
  * - `"shop"` — what the shop has on its own books, private sessions included.
  *   A course booked out to one family is scheduled; telling the staff who
  *   scheduled it that it is not would be a lie about their own week.
@@ -977,6 +978,7 @@ export async function nextSessionStartByCourse(
   now: Date = nowDate(),
 ): Promise<Map<string, Date>> {
   if (courseIds.length === 0) return new Map();
+  if (scope === "storefront") return nextSellableSessionByCourse(db, shopId, courseIds, now);
   const rows = await db
     .select({ courseId: trips.courseId, startsAt: sql<Date>`min(${trips.startsAt})` })
     .from(trips)
@@ -986,7 +988,6 @@ export async function nextSessionStartByCourse(
         eq(trips.shopId, shopId),
         inArray(trips.courseId, [...courseIds]),
         eq(trips.status, "scheduled"),
-        ...(scope === "storefront" ? [eq(trips.isPrivate, false)] : []),
         gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
       ),
     )
@@ -994,6 +995,46 @@ export async function nextSessionStartByCourse(
   return new Map(
     rows.flatMap((row) => (row.courseId ? [[row.courseId, new Date(row.startsAt)] as const] : [])),
   );
+}
+
+/**
+ * The storefront's answer: the first session a diver could book today, so a
+ * catalog row's "Next Sat, Oct 24" never names one they open to find full
+ * (dive-domain review r4-4, F3). Public, never a rehearsal, not on a
+ * conditions hold, and with a seat left under the same `having` the board's
+ * `hasSpace` uses; a course with none of those has no key, and the catalog
+ * asks for a date instead.
+ */
+async function nextSellableSessionByCourse(
+  db: AppDb,
+  shopId: string,
+  courseIds: readonly string[],
+  now: Date,
+): Promise<Map<string, Date>> {
+  const rows = await db
+    .select({ courseId: trips.courseId, startsAt: trips.startsAt })
+    .from(trips)
+    .leftJoin(bookings, liveBookingJoin)
+    .where(
+      and(
+        liveTrip(),
+        notRehearsal(),
+        eq(trips.shopId, shopId),
+        inArray(trips.courseId, [...courseIds]),
+        eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
+        eq(trips.conditionsHold, false),
+        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+      ),
+    )
+    .groupBy(trips.id)
+    .having(hasSpaceHaving(true))
+    .orderBy(asc(trips.startsAt));
+  const next = new Map<string, Date>();
+  for (const row of rows) {
+    if (row.courseId && !next.has(row.courseId)) next.set(row.courseId, row.startsAt);
+  }
+  return next;
 }
 
 /** One single-day departure as the week board draws it. */

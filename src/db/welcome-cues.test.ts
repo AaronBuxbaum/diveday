@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, trips } from "./schema";
+import { bookings, people, trips } from "./schema";
 import { setWelcomeConsent, welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
@@ -133,6 +133,71 @@ describe("welcomeCueInputsByBooking", () => {
     const inputs = await welcomeCueInputsByBooking(db, shop.id, trip.id);
     expect(inputs.size).toBe(roster.length);
     for (const [, value] of inputs) expect(value.sharedAt).toBeNull();
+  });
+
+  // Dive-domain review of layer r4-5, note 7: "First dive with us" is a claim
+  // about diving. A seat the diver never sat in, or one they spent snorkeling
+  // or riding, is not a prior dive; a snorkeler or rider is greeted on any
+  // prior seat, and with words that do not call it a dive.
+  async function twoDepartures() {
+    const { db, shop } = ctx;
+    const rows = await db
+      .select({ id: trips.id, startsAt: trips.startsAt })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .orderBy(trips.startsAt);
+    const earlier = rows[0];
+    const later = rows.find((row) => earlier && row.startsAt > earlier.startsAt);
+    if (!earlier || !later) throw new Error("welcome fixture needs two departures");
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Noor Haddad" })
+      .returning({ id: people.id });
+    if (!person) throw new Error("fixture insert failed");
+    const seat = async (
+      tripId: string,
+      type: "diver" | "snorkeler" | "rider",
+      status: "booked" | "no_show" = "booked",
+    ) => {
+      const [row] = await db
+        .insert(bookings)
+        .values({
+          shopId: shop.id,
+          tripId,
+          personId: person.id,
+          participantType: type,
+          bookedAs: type,
+          status,
+        })
+        .returning({ id: bookings.id });
+      if (!row) throw new Error("fixture insert failed");
+      return row.id;
+    };
+    return { db, shop, earlier, later, seat };
+  }
+
+  it("does not count a no-show as a prior dive", async () => {
+    const { db, shop, earlier, later, seat } = await twoDepartures();
+    await seat(earlier.id, "diver", "no_show");
+    const now = await seat(later.id, "diver");
+    const inputs = await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt);
+    expect(inputs.get(now)).toMatchObject({ lastDivedAt: null, nonDiver: false });
+  });
+
+  it("does not count a snorkel seat as a prior dive", async () => {
+    const { db, shop, earlier, later, seat } = await twoDepartures();
+    await seat(earlier.id, "snorkeler");
+    const now = await seat(later.id, "diver");
+    const inputs = await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt);
+    expect(inputs.get(now)?.lastDivedAt).toBeNull();
+  });
+
+  it("greets a rider on any prior seat, as a non-diver", async () => {
+    const { db, shop, earlier, later, seat } = await twoDepartures();
+    await seat(earlier.id, "snorkeler");
+    const now = await seat(later.id, "rider");
+    const inputs = await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt);
+    expect(inputs.get(now)).toMatchObject({ lastDivedAt: earlier.startsAt, nonDiver: true });
   });
 
   it("says nothing about a departure that is off the board", async () => {

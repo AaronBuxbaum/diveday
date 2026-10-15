@@ -370,9 +370,11 @@
     },
     "certCheck": {
       "heading": "Verificación de certificaciones",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE, CMAS y PADI (con sesión iniciada en el PADI Pros’ Site en el mismo navegador), en Chrome o Edge en una computadora.",
-      "added": "Añadida a este navegador",
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y, cuando la agencia muestra la certificación, la marca como certificada a nombre de ese miembro del equipo, como lo haría “Marcar certificado”. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Reservas y exenciones, en Chrome o Edge en una computadora.",
+      "added": "Añadida a este navegador ({version})",
       "notAdded": "Sin añadir",
+      "outdated": "Actualiza la extensión: este navegador tiene la versión {version} y DiveDay necesita la {minimum}.",
+      "try": "Prueba las verificaciones",
       "install": "Añadir a Chrome"
     },
     "integrations": {
@@ -423,7 +425,7 @@
       },
       "lastMinuteList": {
         "heading": "Lista de última hora",
-        "label": "Permitir que los buceadores se apunten a una lista de última hora",
+        "label": "Permitir que los buceadores se anoten en una lista de última hora",
         "description": "Los buceadores dejan su correo y puedes ofrecerles plazas libres en una salida cercana."
       },
       "tips": {
@@ -435,6 +437,11 @@
         "heading": "Nuestro año",
         "label": "Mostrar “Nuestro año” en tu calendario",
         "description": "El año hasta hoy en cifras al pie de tu calendario público: buceadores, salidas y sitios. Nunca dinero. Apagado hasta que lo actives."
+      },
+      "padiChecks": {
+        "heading": "Verificación con PADI (beta)",
+        "label": "Verificar certificaciones y eLearning de PADI",
+        "description": "Beta: nadie lo ha probado todavía en la página real de DiveChek de PADI, y PADI no ha dicho si acepta que una extensión la rellene. Funciona en un navegador donde uno de tus profesionales PADI tiene la sesión iniciada en el PADI Pros’ Site, con la afiliación de ese profesional. Desactivado, el enlace al PADI Pros’ Site se mantiene. Un propietario o un gerente puede activarlo."
       }
     },
     "crewSchedule": {
@@ -454,7 +461,7 @@
       "heading": "Sitios de buceo"
     },
     "waivers": {
-      "heading": "Plantilla de exención"
+      "heading": "Exenciones y registros firmados"
     },
     "safetyChecklist": {
       "heading": "Lista de verificación previa a la salida"
@@ -534,7 +541,8 @@
       "submit": "Añadir paquete",
       "submitting": "Añadiendo…",
       "delete": "Eliminar",
-      "deleting": "Eliminando…"
+      "deleting": "Eliminando…",
+      "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})"
     }
   },
   "team": {
@@ -787,10 +795,10 @@
         "wetsuit_size": "Talla de neopreno",
         "boot_size": "Talla de botas (se guarda como una sola talla de aletas y escarpines)",
         "fin_size": "Talla de aletas y escarpines",
-        "waiver_accepted": "Waiver aceptado",
-        "waiver_signed_at": "Waiver firmado",
-        "waiver_source_name": "Origen del waiver",
-        "waiver_document_url": "Documento del waiver",
+        "waiver_accepted": "Exención aceptada",
+        "waiver_signed_at": "Exención firmada",
+        "waiver_source_name": "Origen de la exención",
+        "waiver_document_url": "Documento de la exención",
         "medical_document_url": "Documento médico",
         "payment_date": "Fecha de pago",
         "payment_status": "Estado del pago",
@@ -808,7 +816,7 @@
         "visit_reference": "Referencia de reserva",
         "internal_notes": "Notas internas"
       },
-      "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa. En su lugar se confía en una columna “waiver aceptado” reconocida; ver más abajo.",
+      "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de exención, así que su contenido nunca se importa. En su lugar se confía en una columna “Exención aceptada” reconocida; ver más abajo.",
       "unmappedColumns": "No reconocidas, así que se ignoran: {columns}.",
       "waiverRowsNoticeOne": "{count} fila declara una exención ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud médica, y la marca como “importada”.",
       "waiverRowsNoticeOther": "{count} filas declaran una exención ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud médica, y la marca como “importada”.",
@@ -870,9 +878,9 @@
         "rowsSkippedNote": " {count} fila(s) omitidas.",
         "cardsHeldByAnother": "{count} número(s) de certificación del archivo ya están en otro buceador de tu centro, así que esos registros no se añadieron a nadie. Revisa el archivo por si hay un número repetido y luego revisa y añade los registros de certificación en DiveDay.",
         "specialtyGateNote": "Una inmersión que requiere una de esas especialidades espera esa confirmación. Tócala en el registro del buceador y la puerta se abre.",
-        "waiversLineOne": "{count} waiver importado como aceptado, marcado “importado” en el perfil del buceador.",
-        "waiversLineOther": "{count} waivers importados como aceptados, marcados “importado” en el perfil del buceador.",
-        "waiversSkippedExistingNote": " {count} buceador(es) ya tenían un waiver vigente en el archivo, se dejaron sin tocar.",
+        "waiversLineOne": "{count} exención importada como aceptada, marcada “importado” en el perfil del buceador.",
+        "waiversLineOther": "{count} exenciones importadas como aceptadas, marcadas “importado” en el perfil del buceador.",
+        "waiversSkippedExistingNote": " {count} buceador(es) ya tenían una exención vigente en el archivo, se dejaron sin tocar.",
         "waiversSkippedNoTemplateNoteOne": " {count} omitido. Configura primero una plantilla de exención.",
         "waiversSkippedNoTemplateNoteOther": " {count} omitidos. Configura primero una plantilla de exención.",
         "waiverDocumentsFailedNote": " {count} enlace(s) de documento no se pudieron descargar y se dejaron fuera del registro.",
@@ -1074,5 +1082,27 @@
     "partnerLinkField": "Enlace de referido",
     "showRequired": "Elige la salida de esta tarjeta.",
     "fromFareharbor": "¿Te cambias desde FareHarbor? <link>Mira qué inserción sustituye a cada uno de sus widgets</link>."
+  },
+  "certChecks": {
+    "title": "Prueba las verificaciones",
+    "description": "Solo páginas de muestra en este navegador: no se busca en ninguna agencia y ningún dato de un buceador sale de él.",
+    "run": "Ejecutar las verificaciones",
+    "running": "Ejecutando…",
+    "extension": "Extensión",
+    "samples": "Búsquedas de muestra",
+    "padi": "Sesión en el PADI Pros’ Site",
+    "report": "Informe de la sesión",
+    "passed": "Correcta",
+    "failed": "Fallida",
+    "notListed": "No está en esta versión",
+    "signedIn": "Sesión iniciada",
+    "signedOut": "Sin sesión",
+    "noTab": "Ninguna pestaña de PADI abierta",
+    "noAnswer": "Sin respuesta",
+    "noAccess": "Sin acceso al sitio de PADI",
+    "allowSite": "Chrome no deja entrar a la extensión en el sitio de {agency}. Actívalo en Extensiones, DiveDay certification check, Detalles, Acceso al sitio.",
+    "failedNext": "Envíanos el informe de abajo.",
+    "reportHint": "Cópialo y pégalo en un correo para nosotros.",
+    "copy": "Copiar informe"
   }
 }

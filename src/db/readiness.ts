@@ -23,6 +23,7 @@ import {
   effectiveWaiverForBooking,
   overriddenReferral,
   overriddenRefusal,
+  releaseLapsedForBooking,
   riderMedicalHold,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
@@ -1705,6 +1706,13 @@ export async function listTripsReadiness(
       currentTemplateVersion: currentTemplateGeneration,
       now,
     });
+    const releaseLapsed = releaseLapsedForBooking({
+      bookingWaiver: row.waiver,
+      personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
+      currentTemplateVersion: currentTemplateGeneration,
+      heldToMedical: isHeldToMedical(row.booking.participantType),
+      now,
+    });
     const referral = overriddenReferral(
       effectiveWaiver,
       signedWaiversByPerson.get(row.person.id) ?? [],
@@ -1772,6 +1780,7 @@ export async function listTripsReadiness(
         requirement,
         siteRequirement,
         waiver: effectiveWaiver,
+        releaseLapsed,
         certifications: certificationsByPerson.get(row.person.id) ?? [],
         // Measured against this departure: only a course that finishes before
         // it sails can be the card this diver boards on.

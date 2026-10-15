@@ -1246,7 +1246,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
               })}
               meta={`${t("shopHome.spine.departures", {
                 count: spine.tomorrow.stations.length,
-              })} · ${t("shopHome.spine.jobs", { count: spine.tomorrow.jobs })}`}
+              })} · ${t("shopHome.spine.needsYouCount", { count: spine.tomorrow.jobs })}`}
             >
               <div className="mt-4">
                 <Stations
@@ -1289,7 +1289,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
                 linkLabel={t("shopHome.spine.openBoard")}
                 trailing={
                   <span className="flex items-center gap-2 text-sm text-muted tabular-nums">
-                    {t("shopHome.spine.jobs", { count: spine.week.jobs })}
+                    {t("shopHome.spine.needsYouCount", { count: spine.week.jobs })}
                   </span>
                 }
               >

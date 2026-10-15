@@ -42,7 +42,7 @@ vi.mock("@/db/tips", () => ({
   recordTipStripeCustomer: vi.fn(),
 }));
 vi.mock("@/db/orders", () => ({
-  markOrderPaidByInvoiceId: vi.fn(),
+  applyInvoicePaid: vi.fn(),
   markOrderVoidedByInvoiceId: vi.fn(),
   recordOrderPaymentIntent: vi.fn(),
 }));
@@ -74,8 +74,9 @@ const {
   recordCheckoutPaymentIntent,
 } = await import("@/db/checkouts");
 const { markTipPaidBySessionId, markTipExpiredBySessionId } = await import("@/db/tips");
-const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } =
-  await import("@/db/orders");
+const { applyInvoicePaid, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } = await import(
+  "@/db/orders"
+);
 const { recordStripeChargeRefund } = await import("@/db/refunds");
 const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
@@ -138,7 +139,7 @@ beforeEach(() => {
   vi.mocked(markCheckoutPaymentFailedBySessionId)
     .mockReset()
     .mockResolvedValue(FAKE_CHECKOUT as never);
-  vi.mocked(markOrderPaidByInvoiceId).mockReset();
+  vi.mocked(applyInvoicePaid).mockReset().mockResolvedValue({ status: "not_found" });
   vi.mocked(markOrderVoidedByInvoiceId).mockReset();
   vi.mocked(recordOrderPaymentIntent).mockReset().mockResolvedValue(true);
   vi.mocked(recordCheckoutPaymentIntent).mockReset().mockResolvedValue(true);
@@ -166,13 +167,12 @@ afterEach(() => {
 describe("invoice events", () => {
   it("invoice.paid takes the id and amount_paid off the real Invoice object", async () => {
     expect((await deliver("invoice.paid")).status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(
-      FAKE_DB,
-      "in_1QsAVeLkdIwHu7ixKmNpQrSt",
-      24_000,
-      ACCOUNT,
-      0,
-    );
+    expect(applyInvoicePaid).toHaveBeenCalledWith(FAKE_DB, {
+      stripeInvoiceId: "in_1QsAVeLkdIwHu7ixKmNpQrSt",
+      amountPaidCents: 24_000,
+      expectedAccountId: ACCOUNT,
+      taxCents: 0,
+    });
   });
 
   it("invoice.voided voids by the same invoice id", async () => {
@@ -258,7 +258,10 @@ describe("checkout session events", () => {
 
 describe("money reversed outside DiveDay (ADR 20261009-stripe-reversals-reach-diveday)", () => {
   it("invoice.paid records the PaymentIntent off the real invoice-payments list", async () => {
-    vi.mocked(markOrderPaidByInvoiceId).mockResolvedValue({ id: "order_1" } as never);
+    vi.mocked(applyInvoicePaid).mockResolvedValue({
+      status: "settled",
+      order: { id: "order_1" },
+    } as never);
     await deliver("invoice.paid");
     expect(recordOrderPaymentIntent).toHaveBeenCalledWith(FAKE_DB, {
       stripeInvoiceId: "in_1QsAVeLkdIwHu7ixKmNpQrSt",
@@ -451,6 +454,6 @@ describe("the livemode cross-check, against real test-mode events", () => {
     vi.stubEnv("STRIPE_WEBHOOK_SECRET", LIVE_SECRET);
     const response = await deliver("invoice.paid", "whsec_not_ours");
     expect(response.status).toBe(400);
-    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+    expect(applyInvoicePaid).not.toHaveBeenCalled();
   });
 });

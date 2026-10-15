@@ -13,7 +13,7 @@ import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   ariaLabelsIn,
   findElements,
@@ -26,6 +26,8 @@ import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { CounterQrCard } from "./CounterQrCard";
 import { SETTINGS_RAIL_ROWS, type SectionId, settingsSectionFragment } from "./settings-groups";
+
+const ctx = fileScopedShopContext();
 
 // Same mocking shape as ./embed/page.test.tsx: the page is invoked directly,
 // outside Next's request scope, so the three things that only exist inside one
@@ -58,7 +60,7 @@ const SHOP_SLUG = "blue-mantis";
  * the lookup and a made-up role set would disagree with what the row says.
  */
 async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySession }> {
-  const db: AppDb = await seededTestDb();
+  const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, SHOP_SLUG);
   if (!shop) throw new Error("demo shop missing");
   const member = (await listShopStaff(db, shop.id)).find((staff) => staff.roles.includes(role));

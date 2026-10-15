@@ -49,7 +49,8 @@ describe("fullTripAlternatives", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ tripId: "b", reason: "same_site" });
     expect(rows[0]?.href).toBe("/s/blue-mantis/trips/b");
-    expect(rows[0]?.when.weekday).toBeTruthy();
+    // Worded as the header words a date, never assembled from parts.
+    expect(rows[0]?.when).toMatch(/^Sun, Jul\s26$/);
   });
 
   it("keeps a framed reader inside the frame", () => {
@@ -67,6 +68,31 @@ describe("fullTripAlternatives", () => {
       where,
     );
     expect(rows).toEqual([]);
+  });
+});
+
+describe("fullTripAlternatives on a repeating departure", () => {
+  // Fourth UX review, item 31: this Saturday is full and next Saturday has
+  // room. The run's next date leads, ahead of a same-site boat.
+  const saturday = { ...(trip as object), seriesId: "run-sat" } as never;
+
+  it("offers the run's next date first, as its own reason", () => {
+    const rows = fullTripAlternatives(
+      saturday,
+      board([
+        candidate("sun", { startsAt: new Date("2026-07-26T12:00:00Z") }),
+        candidate("next-sat", {
+          seriesId: "run-sat",
+          diveSiteId: null,
+          startsAt: new Date("2026-08-01T12:00:00Z"),
+        }),
+      ]),
+      where,
+    );
+    expect(rows.map((row) => [row.tripId, row.reason])).toEqual([
+      ["next-sat", "same_run"],
+      ["sun", "same_site"],
+    ]);
   });
 });
 

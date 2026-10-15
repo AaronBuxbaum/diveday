@@ -18,7 +18,7 @@
   "noDeparturesEmpty": "Todavía no hay nada programado. Añade una salida y aparecerá aquí la mañana que zarpe.",
   "scheduleTrip": "Añadir una salida",
   "notice": {
-    "waiversNotAuthorized": "Editar el waiver está limitado a propietarios y gerentes.",
+    "waiversNotAuthorized": "Editar la exención está limitado a propietarios y gerentes.",
     "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes.",
     "reportsNotAuthorized": "Los informes muestran los ingresos del centro, así que están limitados a propietarios y gerentes.",
     "settingsNotAuthorized": "La configuración del centro la gestionan el propietario o un gerente. Tu suscripción al calendario sigue siendo tuya.",
@@ -136,7 +136,6 @@
     "week": "Esta semana",
     "openBoard": "Abrir el calendario",
     "departures": "{count, plural, one {# salida} other {# salidas}}",
-    "jobs": "{count, plural, one {# tarea} other {# tareas}}",
     "seatsOpen": "{count, plural, one {# plaza libre} other {# plazas libres}}",
     "full": "Completa",
     "until": "hasta las {time}",

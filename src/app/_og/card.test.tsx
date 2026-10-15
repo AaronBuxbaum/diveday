@@ -4,6 +4,7 @@ import path from "node:path";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LOGO_MARK_CIRCLES, LOGO_MARK_VIEWBOX, LogoMark } from "@/components/Logo";
+import { stripComments } from "@/test/source";
 import { OG_COLORS, OG_MARK_SIZE, ogMarkCircles } from "./card";
 
 afterEach(cleanup);
@@ -64,11 +65,6 @@ const METADATA_IMAGE_MODULES = new Set(
     ["ts", "tsx", "js", "jsx"].map((extension) => `${name}.${extension}`),
   ),
 );
-
-/** Line comments first, then blocks — a `//` mentioning `/*` would otherwise eat the file. */
-function stripComments(source: string): string {
-  return source.replace(/(^|[^:])\/\/[^\n]*/g, "$1").replace(/\/\*[\s\S]*?\*\//g, "");
-}
 
 describe("the mark's geometry has one home", () => {
   it("derives the card's bubbles from LogoMark's viewBox coordinates", () => {

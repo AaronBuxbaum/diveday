@@ -35,6 +35,7 @@ import {
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
+import { stripComments } from "@/test/source";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { boatSafetyNoticeText } from "./boat-safety-labels";
 import { boatWorkText } from "./boat-work-labels";
@@ -1250,15 +1251,10 @@ describe.each(CASES)("$module › $map", ({ rows, map }) => {
  * directory and requires the table to hold exactly those maps, so a map added
  * tomorrow fails here rather than joining the twenty-four that had no proof
  * for months. It is a text scan for the same reason
- * `provider-coverage.test.ts` is: the maps it looks for are private to their
+ * `scripts/check-intl-providers.mjs` is: the maps it looks for are private to their
  * modules and there is nothing to import.
  */
 const I18N_DIR = path.join(process.cwd(), "src/i18n");
-
-/** Comments in this directory quote map literals constantly — never scan them. */
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
-}
 
 /**
  * Every `const NAME: Record<…>` whose type arguments name a message key.

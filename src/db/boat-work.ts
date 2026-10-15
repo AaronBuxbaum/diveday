@@ -8,7 +8,7 @@ import { bookings, nitroxCertifications, people, rentalFitProfiles, shops } from
 /**
  * **One reader of a boat's work** (third review, item 4). The jobs a
  * departure carries that are not hazards: sizes the packer cannot pack from,
- * nitrox asked for with no verified card, divers with no emergency contact,
+ * divers nobody has asked about their own kit, nitrox asked for with no verified card, divers with no emergency contact,
  * and orders still awaiting payment. Today's rows for each boat and the
  * boat's own band on the Divers tab both read this, through
  * `boatWorkItems` (`src/lib/boat-work.ts`), so the two can never tell the
@@ -21,13 +21,22 @@ import { bookings, nitroxCertifications, people, rentalFitProfiles, shops } from
 export type BoatWorkDiver = { fullName: string };
 
 export type BoatWork = {
-  missingFit: BoatWorkDiver[];
+  /** Asked, and take a piece from the shop with no size against it. */
+  missingSize: BoatWorkDiver[];
+  /** Never asked what they rent and what they bring (fourth review, item 36). */
+  kitUnasked: BoatWorkDiver[];
   ungatedNitrox: BoatWorkDiver[];
   missingContact: BoatWorkDiver[];
   openOrders: number;
 };
 
-const NO_WORK: BoatWork = { missingFit: [], ungatedNitrox: [], missingContact: [], openOrders: 0 };
+const NO_WORK: BoatWork = {
+  missingSize: [],
+  kitUnasked: [],
+  ungatedNitrox: [],
+  missingContact: [],
+  openOrders: 0,
+};
 
 export async function readBoatWork(
   db: AppDb,
@@ -51,7 +60,8 @@ export async function readBoatWork(
       return [
         tripId,
         {
-          missingFit: divers(ids, (seat) => seat.missingFit),
+          missingSize: divers(ids, (seat) => seat.fit === "incomplete"),
+          kitUnasked: divers(ids, (seat) => seat.fit === "not_recorded"),
           ungatedNitrox: divers(ids, (seat) => seat.ungatedNitrox),
           missingContact: divers(ids, (seat) => seat.missingContact),
           openOrders: openOrders.get(tripId) ?? 0,
@@ -68,7 +78,8 @@ export function boatWorkFor(work: ReadonlyMap<string, BoatWork>, tripId: string)
 
 type SeatWork = {
   fullName: string;
-  missingFit: boolean;
+  /** `rentalFitCompleteness`'s state: two different jobs when it is not complete. */
+  fit: "complete" | "incomplete" | "not_recorded";
   ungatedNitrox: boolean;
   missingContact: boolean;
 };
@@ -84,7 +95,10 @@ type SeatWork = {
  *   one shoe size has a fit row and still a gap; the packer finds out at the
  *   rack otherwise. Scoped to the shop's own catalog (joined, not re-read), so
  *   a fit written before the shop stopped renting an item never nags about a
- *   size nobody can be handed.
+ *   size nobody can be handed. Two jobs, counted apart (fourth review, item
+ *   36): a diver who answered and left a size blank is a question about one
+ *   piece, and a diver nobody has asked about kit at all is a different
+ *   conversation; one "4 people missing rental sizes" hid which was which.
  * - **Nitrox.** Asked for, with no card that authorizes a fill right now. A
  *   diver may request nitrox before their card is verified (flagged, not
  *   blocked), and a card can be pulled after a request was accepted; either way
@@ -142,8 +156,7 @@ async function readSeatWork(
   for (const row of rows) {
     seats.set(row.bookingId, {
       fullName: row.fullName,
-      missingFit:
-        rentalFitCompleteness(row.fit, row.rentalItems, row.participantType).state !== "complete",
+      fit: rentalFitCompleteness(row.fit, row.rentalItems, row.participantType).state,
       ungatedNitrox: row.wantsNitrox && !row.nitroxCard,
       missingContact: !row.contactName || !row.contactPhone,
     });

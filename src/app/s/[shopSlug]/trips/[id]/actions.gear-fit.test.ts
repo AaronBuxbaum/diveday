@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { and, eq } from "drizzle-orm";
+import { describe, expect, it, vi } from "vitest";
+import type { AppDb } from "@/db/client";
+import { bookings, people, rentalFitProfiles, shops } from "@/db/schema";
+import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
+import { createTrip } from "@/db/trips-create";
+import { HOUR_MS, nowDate } from "@/lib/clock";
+import { fileScopedShopContext } from "@/test/db";
 
 /**
  * **The checkout's gear ticks write the fit only of a diver this booking is
@@ -11,7 +18,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * else, and the fit is that diver's standing record. A rented wetsuit ticked
  * there would clear their `dives_dry` and, with it, the drysuit weight check
  * on every later trip (`security-reviewer`, layer 2 of the H-78 work).
+ *
+ * The real action on a real database, asserting rows: only the framework edge
+ * (`next/*`), the request's IP and locale and the app's public URL are
+ * stubbed. Stripe has no key here, so the checkout declines to start and the
+ * diver lands on the trip page; the gear is written before that.
  */
+
+const ctx = fileScopedShopContext();
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -22,40 +36,12 @@ vi.mock("next/navigation", () => ({
 vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({ get: () => undefined })),
+  headers: vi.fn(async () => new Headers()),
 }));
-vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({}) as never) }));
-vi.mock("@/db/shops", () => ({ getShopBySlug: vi.fn() }));
-vi.mock("@/db/trips", () => ({ getTripWithBooked: vi.fn() }));
-vi.mock("@/db/bookings", () => ({
-  createBookingParty: vi.fn(),
-  getBookingForTrip: vi.fn(async () => null),
-}));
-vi.mock("@/db/checkouts", () => ({ startBookingCheckout: vi.fn(async () => null) }));
-vi.mock("@/db/buddy-referrals", () => ({
-  resolveBuddyReferral: vi.fn(async () => null),
-  recordBuddyReferral: vi.fn(),
-}));
-vi.mock("@/db/booking-capabilities", () => ({ issueBookingCapability: vi.fn(async () => null) }));
-vi.mock("@/db/booking-handoff", () => ({
-  consumeBookingHandoff: vi.fn(),
-  offerBookingHandoffByEmail: vi.fn(),
-}));
-vi.mock("@/db/people", () => ({ recordDiverOwnLocaleForBooking: vi.fn() }));
-vi.mock("@/db/notifications", () => ({ sendAndRecordNotification: vi.fn() }));
-vi.mock("@/db/waiver-issue", () => ({
-  issueJoinWaiverLink: vi.fn(async () => null),
-  issueWaiverOnJoin: vi.fn(),
-  settleJoinWaiverDelivery: vi.fn(),
-}));
-vi.mock("@/db/nitrox", () => ({ setBookingNitrox: vi.fn() }));
-vi.mock("@/db/rental-fit", () => ({
-  saveRentalFit: vi.fn(async () => ({})),
-  recordPaidRentalKinds: vi.fn(async () => true),
-}));
-vi.mock("@/db/stripe-accounts", () => ({
-  getShopStripeAccount: vi.fn(async () => ({})),
-  canAcceptPayments: vi.fn(() => true),
-}));
+vi.mock("@/db/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/client")>();
+  return { ...actual, getDb: vi.fn() };
+});
 vi.mock("@/lib/notifications", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/notifications")>();
   return { ...actual, publicAppUrl: vi.fn(() => "https://diveday.test") };
@@ -66,92 +52,122 @@ vi.mock("@/i18n/request", () => ({
   requestFirstHandLocale: vi.fn(async () => "en-US" as const),
 }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
-vi.mock("@/lib/rate-limit", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
-  return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })) };
-});
 
-const { getShopBySlug } = await import("@/db/shops");
-const { getTripWithBooked } = await import("@/db/trips");
-const { createBookingParty } = await import("@/db/bookings");
-const { recordPaidRentalKinds, saveRentalFit } = await import("@/db/rental-fit");
+const { getDb } = await import("@/db/client");
 const { bookSpot } = await import("./actions");
 
-const SHOP_ID = "8a1f0c2e-1111-4222-8333-444444444444";
-const TRIP_ID = "9b2e1d3f-5555-4666-8777-888888888888";
+const ACCOUNT = "acct_gear_fit";
+const EMAIL = "dana@example.com";
 
-/** A shop that prices rental gear online, so the checkout asks for it. */
-const shop = {
-  id: SHOP_ID,
-  slug: "blue-mantis",
-  rentalItems: ["bcd", "wetsuit", "drysuit"],
-  rentalPricing: { setCents: null, perItemCents: { wetsuit: 1200 }, nitroxCents: null },
-  passThroughFee: null,
-};
-/** A paid departure, so the checkout runs and the gear step with it. */
-const trip = {
-  id: TRIP_ID,
-  courseId: null,
-  course: null,
-  plannedDives: 2,
-  priceCents: 9_000,
-  startsAt: new Date("2026-07-24T13:30:00.000Z"),
-};
-
-function wetsuitBooking(): FormData {
-  const form = new FormData();
-  form.set("partySize", "1");
-  form.set("fullName-0", "Somebody Else");
-  form.set("email-0", "dana@example.com");
-  form.set("gear-0-wetsuit", "on");
-  return form;
+/**
+ * The seeded shop, made to price a wetsuit online and take cards, with one
+ * paid departure and Dana already on file as a dry diver.
+ */
+async function gearShop(db: AppDb, shopId: string) {
+  vi.mocked(getDb).mockResolvedValue(db);
+  await db
+    .update(shops)
+    .set({
+      rentalItems: ["bcd", "wetsuit", "drysuit"],
+      rentalPricing: { setCents: null, perItemCents: { wetsuit: 1200 }, nitroxCents: null },
+      passThroughFee: null,
+    })
+    .where(eq(shops.id, shopId));
+  await upsertShopStripeAccount(db, shopId, ACCOUNT);
+  await setShopStripeAccountStatus(db, ACCOUNT, {
+    chargesEnabled: true,
+    payoutsEnabled: true,
+    detailsSubmitted: true,
+  });
+  const now = nowDate();
+  const trip = await createTrip(db, {
+    shopId,
+    title: "Gear-Fit Two-Tank",
+    startsAt: new Date(now.getTime() + 72 * HOUR_MS),
+    endsAt: new Date(now.getTime() + 76 * HOUR_MS),
+    capacity: 12,
+    plannedDives: 2,
+    priceCents: 9_000,
+  });
+  if (!trip) throw new Error("test trip could not be created");
+  const [dana] = await db
+    .insert(people)
+    .values({ shopId, fullName: "Dry Dana", email: EMAIL })
+    .returning({ id: people.id });
+  await db
+    .insert(rentalFitProfiles)
+    .values({ shopId, personId: dana.id, rentsDrysuit: true, divesDry: true });
+  return { tripId: trip.id, danaId: dana.id };
 }
 
-async function book(identityUnconfirmed: boolean) {
-  vi.mocked(createBookingParty).mockResolvedValue({
-    ok: true,
-    bookings: [
-      { bookingId: "booking-1", personId: "dana", personName: "Dry Dana", identityUnconfirmed },
-    ],
-  });
+/** Book one seat as `fullName` on Dana's email, ticking a rented wetsuit. */
+async function book(shopSlug: string, tripId: string, fullName: string) {
+  const form = new FormData();
+  form.set("partySize", "1");
+  form.set("fullName-0", fullName);
+  form.set("email-0", EMAIL);
+  form.set("gear-0-wetsuit", "on");
   // The action ends in a redirect, which the mock throws.
-  await bookSpot({ shopSlug: "blue-mantis", tripId: TRIP_ID, embed: false }, {}, wetsuitBooking())
+  await bookSpot({ shopSlug, tripId, embed: false }, {}, form)
     .then(() => undefined)
     .catch((error: unknown) => {
       if (!(error instanceof Error && error.message.startsWith("REDIRECT:"))) throw error;
     });
 }
 
-beforeEach(() => {
-  vi.mocked(getShopBySlug).mockResolvedValue(shop as never);
-  vi.mocked(getTripWithBooked).mockResolvedValue(trip as never);
-});
-afterEach(() => vi.clearAllMocks());
+async function fitOf(db: AppDb, shopId: string, personId: string) {
+  const [fit] = await db
+    .select()
+    .from(rentalFitProfiles)
+    .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
+  return fit;
+}
+
+async function seatOf(db: AppDb, tripId: string, personId: string) {
+  const [seat] = await db
+    .select({
+      paidRentalKinds: bookings.paidRentalKinds,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+    })
+    .from(bookings)
+    .where(and(eq(bookings.tripId, tripId), eq(bookings.personId, personId)));
+  return seat;
+}
 
 describe("gear ticked at checkout", () => {
-  it("leaves a held seat's matched diver's fit alone, dives_dry and all", async () => {
-    await book(true);
-    expect(saveRentalFit).not.toHaveBeenCalled();
-  });
+  it("leaves a held seat's matched diver's fit alone, and keeps the paid gear on the booking", async () => {
+    const { db, shop } = ctx;
+    const { tripId, danaId } = await gearShop(db, shop.id);
 
-  it("keeps a held seat's paid gear on its booking, so the rack still carries it", async () => {
-    // The fit is not written, so without this the wetsuit the diver paid for
-    // would be on no packing list at all (dive-domain review of issue #2144).
-    await book(true);
-    expect(recordPaidRentalKinds).toHaveBeenCalledWith(expect.anything(), {
-      shopId: SHOP_ID,
-      bookingId: "booking-1",
-      kinds: ["wetsuit"],
+    await book(shop.slug, tripId, "Somebody Else");
+
+    const seat = await seatOf(db, tripId, danaId);
+    expect(seat, "the seat attached to Dana").toBeDefined();
+    expect(seat?.identityUnconfirmedAt, "and is held (H-13)").not.toBeNull();
+    // Dana's standing fit is untouched: still dry, still a drysuit, no wetsuit.
+    expect(await fitOf(db, shop.id, danaId)).toMatchObject({
+      divesDry: true,
+      rentsDrysuit: true,
+      rentsWetsuit: false,
     });
+    // The wetsuit the booker paid for still reaches the rack, on the booking
+    // (dive-domain review of issue #2144).
+    expect(seat?.paidRentalKinds).toEqual(["wetsuit"]);
   });
 
   it("records the fit of a diver the booking is sure of", async () => {
-    // The control: the same post on a confirmed seat is what reaches the
-    // packing list, so the guard above is the only thing standing between.
-    await book(false);
-    expect(saveRentalFit).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ personId: "dana", rentsWetsuit: true, rentsDrysuit: false }),
-    );
+    // The control: the same post under the name on file is what reaches the
+    // fit, so the hold above is the only thing standing between.
+    const { db, shop } = ctx;
+    const { tripId, danaId } = await gearShop(db, shop.id);
+
+    await book(shop.slug, tripId, "Dry Dana");
+
+    expect((await seatOf(db, tripId, danaId))?.identityUnconfirmedAt).toBeNull();
+    expect(await fitOf(db, shop.id, danaId)).toMatchObject({
+      divesDry: false,
+      rentsWetsuit: true,
+      rentsDrysuit: false,
+    });
   });
 });

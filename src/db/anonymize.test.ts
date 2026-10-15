@@ -2,7 +2,7 @@ import { and, eq, gte, inArray, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
@@ -45,6 +45,8 @@ import {
 } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
 
+const fileCtx = fileScopedShopContext({ history: true });
+
 /**
  * A managed storage origin, the shape `isManagedStorageUrl` accepts. A blob URL
  * on any other host is refused by `queueMediaDeletion` and queues nothing.
@@ -52,7 +54,7 @@ import { upsertShopStripeAccount } from "./stripe-accounts";
 const MANAGED_BLOB_HOST = "https://diveday-media.s3.us-east-1.amazonaws.com";
 
 async function erasureFixtures() {
-  const { db, shop } = await seededShopContext({ history: true });
+  const { db, shop } = fileCtx;
   const [owner] = await db
     .select({ id: people.id })
     .from(people)

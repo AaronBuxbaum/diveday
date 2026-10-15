@@ -1,16 +1,4 @@
-import {
-  and,
-  asc,
-  count,
-  eq,
-  gt,
-  inArray,
-  isNotNull,
-  isNull,
-  lte,
-  ne,
-  notExists,
-} from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, notExists, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { diverSeatLimit } from "@/lib/participant-types";
@@ -41,7 +29,11 @@ async function copyLeads(
   input: { shopId: string; fromTripId: string; toTripId: string; uninvitedOnly: boolean },
 ): Promise<string[]> {
   const leads = await db
-    .select({ personId: tripWaitlistEntries.personId, createdAt: tripWaitlistEntries.createdAt })
+    .select({
+      personId: tripWaitlistEntries.personId,
+      createdAt: tripWaitlistEntries.createdAt,
+      partySize: tripWaitlistEntries.partySize,
+    })
     .from(tripWaitlistEntries)
     .where(
       and(
@@ -77,6 +69,8 @@ async function copyLeads(
         tripId: input.toTripId,
         personId: lead.personId,
         createdAt: lead.createdAt,
+        // A party travels whole (ADR 20260719-trip-waitlist, amended).
+        partySize: lead.partySize,
       })),
     )
     .onConflictDoNothing()
@@ -123,8 +117,8 @@ function seatedOn(tripId: string) {
  * boat's sellable seats, the divers-only limit, and for a course session the
  * instructor it needs and the ratio its crew allows. A wait-list lead asks for
  * a diver's seat, so the divers-only limit binds. Every invitation already out
- * to someone who has not taken a seat holds one of those seats, so it is taken
- * off. Advice for whom to invite, never a gate: the seat is still measured
+ * to someone who has not taken a seat holds as many of those seats as their
+ * party asked for, so they are taken off. Advice for whom to invite, never a gate: the seat is still measured
  * under the trip's lock when the diver books.
  */
 async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect): Promise<number> {
@@ -144,7 +138,7 @@ async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect): Promi
     if (ratioCap !== null) room = Math.min(room, ratioCap - held.aboard);
   }
   const [outstanding] = await db
-    .select({ invited: count(tripWaitlistEntries.id) })
+    .select({ invited: sql<number>`coalesce(sum(${tripWaitlistEntries.partySize}), 0)::int` })
     .from(tripWaitlistEntries)
     .where(
       and(
@@ -245,6 +239,8 @@ export async function rollSailedSeriesWaitlists(
         and(
           liveTrip(),
           takesSeats(row.shopId),
+          // The invite links the public page: a private date is never the next one.
+          eq(trips.isPrivate, false),
           eq(trips.seriesId, row.seriesId),
           gt(trips.startsAt, now),
         ),
@@ -268,7 +264,7 @@ export async function rollSailedSeriesWaitlists(
     let open = await invitableSeats(db, next);
     if (open <= 0) continue;
     const queue = await db
-      .select({ id: tripWaitlistEntries.id })
+      .select({ id: tripWaitlistEntries.id, partySize: tripWaitlistEntries.partySize })
       .from(tripWaitlistEntries)
       .where(
         and(
@@ -280,17 +276,25 @@ export async function rollSailedSeriesWaitlists(
       )
       // diveday:allow-time-id-order: the order invites go out in, shown to nobody; the id only breaks a tie between two leads who asked in the same instant.
       .orderBy(asc(tripWaitlistEntries.createdAt), asc(tripWaitlistEntries.id));
+    // A party is invited only when the whole party fits (fourth review,
+    // item 34): two divers are never split across dates. A party too big for
+    // what is free waits, and a smaller lead behind it may still fit, since a
+    // wait list is a set of leads, not a queue (ADR 20260813).
     for (const entry of queue) {
       if (open <= 0) break;
+      if (entry.partySize > open) continue;
       const invited = await inviteWaitlistDiver(db, {
         shopId: row.shopId,
         shopSlug: row.shopSlug,
         entryId: entry.id,
         now,
+        // Its own sentence: the date they asked for filled, this one has room
+        // (fourth review, item 31).
+        sailedStartsAt: row.startsAt,
       });
       if (invited.ok) {
         outcome.invited += 1;
-        open -= 1;
+        open -= entry.partySize;
       }
     }
   }

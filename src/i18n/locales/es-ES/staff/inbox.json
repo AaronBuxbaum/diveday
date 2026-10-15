@@ -20,6 +20,12 @@
   },
   "attachments": "{count, plural, one {# archivo adjunto, sigue con quien lo envió} other {# archivos adjuntos, siguen con quien los envió}}",
   "seat": "Reservó {trip}, {when}",
+  "nearStamp": "{day}, {time}",
+  "nearSeat": "{day} a las {time}",
+  "move": "Mover a otra salida",
+  "moveFor": "Mover la plaza de {name} en {trip} a otra salida",
+  "moveSeat": "Mover {trip}, {when}",
+  "moveSeatFor": "Mover la plaza de {name} en {trip}, {when}, a otra salida",
   "late": {
     "action": "Marcar que llega tarde",
     "actionFor": "Marcar que {name} llega tarde a {trip}",

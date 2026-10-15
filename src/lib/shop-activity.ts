@@ -81,6 +81,8 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   review_reply_edited: "reviews",
   review_reply_deleted: "reviews",
   order_refunded: "money",
+  order_paid_cash: "money",
+  order_paid_card_machine: "money",
   paid_after_close_refunded: "money",
   seat_refunded: "money",
   seat_self_refunded: "money",

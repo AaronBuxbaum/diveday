@@ -20,7 +20,8 @@ const ledgerRows = (page: Page) =>
 const dayHeadings = (page: Page) => page.locator('h2[id^="orders-day-"]');
 
 /** The toolbar's count, which is where the whole filtered total is stated now. */
-const orderCount = (page: Page) => page.getByText(/^\d+ orders?$/);
+// "entries", not "orders": the ledger lists online seat payments beside orders.
+const orderCount = (page: Page) => page.getByText(/^\d+ entr(?:y|ies)$/);
 
 // The seeded demo carries a billing history whose orders have fabricated Stripe
 // ids (the demo never connects an account). The Stripe-calling controls —
@@ -121,7 +122,7 @@ test.describe("demo billing history", () => {
     expect(response.status()).toBe(200);
     const [header, ...rows] = (await response.text()).trimEnd().split("\r\n");
     expect(header).toBe(
-      "Order,Raised,Diver,Departure,Departure date,Status,Line kind,Line,Quantity,Line amount,Order total,Tax,Paid,Refunded,Currency",
+      "Order,Raised,Diver,Departure,Departure date,Status,Paid on,Method,Line kind,Line,Quantity,Line amount,Order total,Tax,Paid,Refunded,Currency",
     );
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((row) => row.includes(",paid,"))).toBe(true);

@@ -11,8 +11,11 @@ import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile, Shop, UpcomingTrip } from "./shared";
 
 /**
- * **"Book a departure" — the record's one primary act**, and the picker it
- * discloses in place (ADR 20260827-people-not-lists, decision 1).
+ * **"Add a booking" — the record's one primary act**, and the picker it
+ * discloses in place (ADR 20260827-people-not-lists, decision 1). Every door
+ * that seats a diver says "Add a booking", here, on the board, in the global
+ * door and on the trip (fourth review, item 44); "Add a diver" creates a
+ * person and books nothing.
  *
  * It used to be a section of its own two thirds of the way down a ~6,400px
  * scroll, under a heading, above a second list of the same bookings. The form

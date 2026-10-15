@@ -367,3 +367,16 @@ describe("WaitlistGroup on a departure that can take nobody", () => {
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 });
+
+/** Fourth UX review, item 34: a couple waits as one lead of two. */
+describe("WaitlistGroup party", () => {
+  it("says how many a lead waits for, and nothing for one", () => {
+    const pair = entry("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"));
+    (pair.entry as { partySize: number }).partySize = 2;
+    const single = entry("b", "Rafa Ortiz", new Date("2026-08-03T14:00:00Z"));
+    (single.entry as { partySize: number }).partySize = 1;
+    renderSection([pair, single]);
+    expect(screen.getAllByText("Party of 2")).toHaveLength(1);
+    expect(screen.queryByText("Party of 1")).toBeNull();
+  });
+});

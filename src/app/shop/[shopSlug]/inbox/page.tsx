@@ -5,7 +5,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { pagedInboxMessages } from "@/db/inbound-messages";
-import { messageSeats } from "@/db/running-late";
+import { inboxSeats } from "@/db/inbox-seats";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -85,12 +85,16 @@ export default async function InboxPage({
   const messages = await pagedInboxMessages(db, shop.id, {
     page: Number.parseInt(page ?? "", 10),
   });
-  // The departure each message could be about (UX review 2026-10-13, item 19).
-  const seats = await messageSeats(
+  // One clock for the read and the stamps: "Today, 7:00 AM" and the seat it
+  // links to are the same today (fourth review, item 45).
+  const now = nowDate();
+  // The departure each message is about (UX review 2026-10-13, item 19; fourth
+  // review, item 32): the late-window seat, or the seat they held when they wrote.
+  const seats = await inboxSeats(
     db,
     shop.id,
     messages.rows.map((row) => row.message),
-    nowDate(),
+    now,
   );
   const waiting = messages.rows.filter((row) => row.message.answeredAt === null);
   const answered = messages.rows.filter((row) => row.message.answeredAt !== null);
@@ -129,10 +133,11 @@ export default async function InboxPage({
                     shopSlug={shopSlug}
                     locale={locale}
                     timezone={shop.timezone}
+                    now={now}
                     t={t}
                     deleteAction={deleteInboxMessageAction}
                     doneAction={setInboxMessageDoneAction}
-                    seat={seats.get(row.message.id) ?? null}
+                    seats={seats.get(row.message.id) ?? []}
                     lateAction={markInboxSenderLateAction}
                   />
                 ))}
@@ -150,10 +155,11 @@ export default async function InboxPage({
                     shopSlug={shopSlug}
                     locale={locale}
                     timezone={shop.timezone}
+                    now={now}
                     t={t}
                     deleteAction={deleteInboxMessageAction}
                     doneAction={setInboxMessageDoneAction}
-                    seat={seats.get(row.message.id) ?? null}
+                    seats={seats.get(row.message.id) ?? []}
                     lateAction={markInboxSenderLateAction}
                   />
                 ))}

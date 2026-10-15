@@ -24,8 +24,9 @@ function FactLink({ fact }: { fact: TripPulseFact }) {
  * A fact that holds the boat up (`tone: "danger"`) always stands on its own
  * line: a missing instructor or a boat clash is never one tap deep. The rest
  * (rental sizes to take, orders awaiting payment) are work, not hazards: one
- * of them renders as its own link, and two or more fold into one line, "2
- * things to sort", that opens to the same links. Not "before boarding": an
+ * of them renders as its own link, and two or more fold into one line,
+ * "Needs you · 7", that opens to the same links: Today's own rows for this
+ * boat when it is in Today's window, so the two numbers are one. Not "before boarding": an
  * order awaiting payment does not gate boarding.
  *
  * **The stack's gap is measured to the words** (K-262). Each fact is a 44px
@@ -38,7 +39,7 @@ export function PulseFacts({
   foldLabel,
 }: {
   facts: readonly TripPulseFact[];
-  /** "2 things to sort", already counted for the folded facts. */
+  /** "Needs you · 2", already counted for the folded facts. */
   foldLabel: (count: number) => string;
 }) {
   if (facts.length === 0) return null;
@@ -48,7 +49,7 @@ export function PulseFacts({
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-7">
       {hazards.map((fact) => (
-        <FactLink key={fact.href} fact={fact} />
+        <FactLink key={fact.key ?? fact.href} fact={fact} />
       ))}
       {fold ? (
         <details className="group/facts w-full">
@@ -60,12 +61,12 @@ export function PulseFacts({
           </summary>
           <div className="mt-5 flex flex-col gap-y-7 ps-5">
             {work.map((fact) => (
-              <FactLink key={fact.href} fact={fact} />
+              <FactLink key={fact.key ?? fact.href} fact={fact} />
             ))}
           </div>
         </details>
       ) : (
-        work.map((fact) => <FactLink key={fact.href} fact={fact} />)
+        work.map((fact) => <FactLink key={fact.key ?? fact.href} fact={fact} />)
       )}
     </div>
   );
@@ -74,7 +75,7 @@ export function PulseFacts({
 /**
  * The facts the Divers tab shows. None on a finished departure, whose tab is
  * its record (UX review 2026-10-10, item 10). While the desk's count is on
- * screen it says "1 person can't board yet" itself, so the pulse's door to
+ * screen it says "1 blocked" itself, so the pulse's door to
  * the same rows stands down. Only that door: the boat's work (a missing
  * emergency contact also opens the roster) is not on the desk's count.
  */

@@ -49,3 +49,37 @@ describe("YearReport", () => {
     expect(margined).toEqual([]);
   });
 });
+
+/** The year's money and its CSV (fourth UX review, item 25). */
+describe("the year's money", () => {
+  it("shows net revenue, tax and tips, and the year's file", () => {
+    render(
+      <YearReport
+        year={YEAR}
+        money={{
+          report: { revenueCents: 1_250_000, taxCents: 87_500, tipsCents: 64_000, tipCount: 31 },
+          currency: "usd",
+          csvHref: "/shop/blue-mantis/reports/download?year=2026",
+        }}
+        locale="en-US"
+        shopSlug="blue-mantis"
+        t={t}
+      />,
+    );
+    const money = screen.getByRole("region", { name: "The year’s money" });
+    expect(money).toHaveTextContent("Net revenue");
+    expect(money).toHaveTextContent("$12,500");
+    expect(money).toHaveTextContent("Tax collected");
+    expect(money).toHaveTextContent("$875");
+    expect(money).toHaveTextContent("31 tips, for the crew");
+    expect(screen.getByRole("link", { name: "Download the year (CSV)" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/reports/download?year=2026",
+    );
+  });
+
+  it("draws no money row when it is not given one", () => {
+    render(<YearReport year={YEAR} locale="en-US" shopSlug="blue-mantis" t={t} />);
+    expect(screen.queryByRole("region", { name: "The year’s money" })).toBeNull();
+  });
+});

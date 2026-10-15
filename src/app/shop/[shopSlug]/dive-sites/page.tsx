@@ -312,16 +312,11 @@ async function CatalogView({
     );
   }
 
-  const shopCoordinates =
-    shop.latitude != null && shop.longitude != null
-      ? { latitude: shop.latitude, longitude: shop.longitude }
-      : null;
-
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
   // into range so a bookmarked page past the end lands on the last real one.
   const catalog = await listGlobalDiveSiteTemplates(db, {
     page: Number.parseInt(page ?? "", 10),
-    shopCoordinates,
+    shop,
   });
   const pageHref = (target: number) => (target > 1 ? `${catalogHref}&page=${target}` : catalogHref);
   // Reading a template before taking it. Importing was a one-tap commitment
@@ -329,7 +324,7 @@ async function CatalogView({
   // by opening the site it now owned and deleting it again. The whole briefing
   // is public DiveDay content; there was never a reason to withhold it.
   const previewSlug = slug?.trim();
-  const preview = previewSlug ? await getGlobalDiveSiteTemplate(await getDb(), previewSlug) : null;
+  const preview = previewSlug ? await getGlobalDiveSiteTemplate(db, previewSlug, shop) : null;
   if (previewSlug && preview) {
     return (
       <TemplatePreview

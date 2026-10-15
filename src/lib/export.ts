@@ -74,7 +74,7 @@ export const EXPORT_FILE_NOTES = {
   "trip_help_requests.csv":
     "One non-medical day-of help request per booking, with its visible hand-off status and timestamps. The request is retained with the trip history; resolved staff identity is included when available.",
   "waitlist_entries.csv":
-    "Divers in line for full trips. A wait-list entry never consumed a seat and never appears on a manifest.",
+    "Divers in line for full trips, and how many seats each waits for (party_size, themselves included). A wait-list entry never consumed a seat and never appears on a manifest.",
   "trip_invitations.csv":
     "Staff outreach attached to a departure without claiming a seat: the source request or diver, the contact snapshot, and whether staff recorded an invitation attempt. Invitations never become bookings, capacity, readiness or manifest state by themselves.",
   "last_minute_list.csv":
@@ -194,6 +194,14 @@ export const EXPORT_FILE_NOTES = {
 
 export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;
 
+/** The full-width signs an East Asian locale can read as their ASCII twins. */
+const FULL_WIDTH_SIGNS: Record<string, string> = {
+  "\uff1d": "=",
+  "\uff20": "@",
+  "\uff0b": "+",
+  "\uff0d": "-",
+};
+
 /**
  * Would this diver-authored string execute as a formula in Excel/LibreOffice?
  * `=`, `@`, tab, and CR always count. A leading `+` or `-` counts only when
@@ -201,10 +209,19 @@ export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;
  * is an E.164 phone number a destination system must receive intact — the one
  * thing a purely numeric cell can do in a spreadsheet is display as a number,
  * never reach a DDE/command payload, which needs letters or pipes.
+ *
+ * The OWASP bypass set is read the same way: leading blanks and line breaks
+ * are skipped (an import can trim them), and a full-width `＝ ＠ ＋ －` is read
+ * as its ASCII sign. A line break *inside* a cell is left alone: RFC-4180
+ * quoting keeps it in that cell, which does not start a formula.
  */
 function opensAsFormula(text: string): boolean {
   if (/^[=@\t\r]/.test(text)) return true;
-  return /^[+-]/.test(text) && !/^[+-][\d\s()./-]*$/.test(text);
+  const lead = text.replace(/^\s+/, "");
+  const sign = FULL_WIDTH_SIGNS[lead.charAt(0)] ?? lead.charAt(0);
+  const head = sign + lead.slice(1);
+  if (/^[=@]/.test(head)) return true;
+  return /^[+-]/.test(head) && !/^[+-][\d\s()./-]*$/.test(head);
 }
 
 /** Serialize one cell: empty for null/undefined, ISO for dates, RFC-4180 quoting. */

@@ -440,6 +440,11 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // "Want a pickup?" here; a new shop runs none until it says so (fourth
       // UX review, item 8).
       offersHotelPickup: true,
+      // **Blue Mantis runs the PADI checks (beta)**, off for a new shop and for
+      // a minted one (`shops.padi_checks_enabled`, H-121): the demo is where
+      // "Check with PADI" and the eLearning check are photographed and
+      // exercised.
+      padiChecksEnabled: true,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: demoEmail("front.desk"),

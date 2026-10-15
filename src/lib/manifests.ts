@@ -189,7 +189,7 @@ export type ManifestDiverInput = {
   /** The diver has a birthday today or within the callout window (H-21). */
   birthday?: BirthdayCallout | null;
   /**
-   * The word under this diver's name: first time with us, or back after a long
+   * The word under this diver's name: "First dive with us", or "Back after" a long
    * gap (issue #1182, delight report D22). Null unless the diver themselves
    * said the crew may know, and null again an hour after the boat is home.
    *

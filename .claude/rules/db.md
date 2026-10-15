@@ -60,6 +60,9 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
   live-trip-read guard (`scripts/check-live-trips.mjs`).
 - **A write of `trips.starts_at` bumps `revision`** or says `diveday:allow-flat-revision: <why>`:
   trip-revision guard (`scripts/check-trip-revision.mjs`, issue #1165).
+- **A db test runs on a real database**: mock the framework edge (`next/*`, the session, provider
+  HTTP via `src/test/fakes.ts`), never `@/db/*`; a lock or race guard gets a `*.postgres.test.ts`
+  ([testing.md](../../docs/engineering/testing.md#what-each-layer-is-for)).
 - **Tenant isolation**: every domain table carries `shop_id` and every query filters by the
   session's shop; personal or medical data, export/import and token flows get a
   `security-reviewer` review.

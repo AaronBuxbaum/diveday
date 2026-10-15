@@ -54,7 +54,7 @@ Each rule names what enforces it; the reasoning, the ADRs and the longer form of
   Biome rule `timezone`.
 - **Copy comes from a message bundle, in every locale at once**: `pnpm check:copy`,
   `pnpm check:locale`; a diver Client Component needs `DiverIntlProvider` above it
-  (`src/i18n/provider-coverage.test.ts`). Waiver and medical wording stays English (H-01, H-03).
+  (`scripts/check-intl-providers.mjs`). Waiver and medical wording stays English (H-01, H-03).
 - **Every sentence earns its place, or it is deleted**: the **copy-restraint** skill; an
   accessibility trade goes in [docs/design/accessibility-tradeoffs.md](../../docs/design/accessibility-tradeoffs.md).
 - **Delete says Delete**: the `softDelete` lint rule (ADR 20260820-every-delete-is-soft).

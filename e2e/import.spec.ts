@@ -188,7 +188,7 @@ test.describe("contact import — specialty cards", () => {
 
     const addDiver = page
       .locator("section")
-      .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
+      .filter({ has: page.getByRole("heading", { name: "Add a booking" }) });
     const returningDiverSearch = addDiver.getByRole("searchbox", {
       name: "Find a returning diver",
     });

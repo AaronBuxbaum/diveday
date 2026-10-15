@@ -325,7 +325,9 @@
     },
     "pitchDoor": "The rest of the briefing",
     "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}",
-    "logEntryWaiting": "After you dive, your log entry is waiting for you."
+    "logEntryWaiting": "After you dive, your log entry is waiting for you.",
+    "runLine": "Runs {cadence} · next {date}",
+    "crewToBeConfirmed": "{role} · to be confirmed"
   },
   "factSource": {
     "forecast": "Forecast",
@@ -381,6 +383,7 @@
     "waitlistHeading": "Join the wait list",
     "waitlistBody": "If a seat opens, the shop will have your details ready.",
     "waitlistJoining": "Joining…",
+    "waitlistPartyHint": "One of you is enough: join once for the whole group.",
     "wantAnyTripAlertsInstead": "Not set on this one? Want any-trip deal alerts instead?",
     "joinLastMinuteDealAlerts": "Join the last-minute list",
     "waitlistConfirmedHeading": "You’re on the wait list, {name}.",
@@ -456,7 +459,8 @@
       "easyFirstDive": "An easy first dive to start with.",
       "refresherCourse": "Tell me about the refresher course.",
       "noGate": "None of these changes whether you can book."
-    }
+    },
+    "alternativeSameRun": "Next date with room, {date}"
   },
   "bookingGear": {
     "heading": "Rental gear",
@@ -499,6 +503,13 @@
     "submitting": "Sending…",
     "sentHeading": "Check your inbox",
     "sentBody": "If that email has a current booking with us, we’ve sent a fresh link to it."
+  },
+  "findYourBooking": {
+    "title": "Find your booking",
+    "description": "Pick the shop you booked with. On its page, enter the email you booked with and the shop sends your link again.",
+    "listLabel": "Shops on DiveDay",
+    "notListed": "Not here? The email from your booking links to the shop’s page.",
+    "empty": "No shops are listed yet. The email from your booking links to the shop’s page."
   },
   "courtesyEmailUnsubscribe": {
     "title": "Stop these emails?",
@@ -588,7 +599,8 @@
       "noCoursesHeading": "No courses listed yet",
       "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point.",
       "requires": "Requires {level} or higher",
-      "groupStart": "Start here"
+      "groupStart": "Start here",
+      "askForADate": "Ask for a date"
     },
     "shelf": {
       "allCourses": "All courses",
@@ -649,7 +661,7 @@
     "photoAdded": "Added to your recap. Thanks for sharing!",
     "photoMissing": "Pick a photo first, then add it.",
     "photoUnsupported": "Photo uploads aren’t set up for this shop yet, so tag them when you post.",
-    "photoFailed": "That photo didn’t upload. Try a JPEG or PNG under 5\u00a0MB.",
+    "photoFailed": "That photo didn’t upload. Try a JPEG or PNG under 5 MB.",
     "photoCancelled": "There’s no recap for this booking to add a photo to.",
     "tipCancelled": "No worries, the tip wasn’t charged.",
     "tipRange": "Enter a tip amount between $1 and $500.",
@@ -669,7 +681,7 @@
     "addAPhoto": "Add a photo",
     "chooseDifferentPhotos": "Choose different photos",
     "photoWrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
-    "photoTooBigSuffix": ": that’s over {maxMb}\u00a0MB. Try a smaller photo.",
+    "photoTooBigSuffix": ": that’s over {maxMb} MB. Try a smaller photo.",
     "photoTooMany": "Pick up to {max, plural, one {# photo} other {# photos}} at a time.",
     "addingPhoto": "Adding…",
     "addToMyRecap": "Add to my recap",
@@ -744,7 +756,7 @@
   },
   "register": {
     "title": "Get set up with {shop}",
-    "intro": "Fill this in once and it’s on file. We’ll send your release to sign. Bring your certification card on the day.",
+    "intro": "Fill this in once and it’s on file. We’ll send your release to sign.",
     "nameLabel": "Your name",
     "emailLabel": "Email",
     "phoneLabel": "Phone",
@@ -795,6 +807,7 @@
   },
   "ready": {
     "metaTitle": "Your trip readiness — DiveDay",
+    "checklistHeading": "Your checklist",
     "namelessFallback": "there",
     "allSetHeading": "You’re all set",
     "materialsDone": "The shop has these marked done",
@@ -871,6 +884,7 @@
       "waiverNotSent": "The shop hasn’t sent your waiver yet. You can ask for it when you arrive, or reach them below.",
       "waiverPending": "Sign your waiver. It only takes about two minutes.",
       "waiverExpired": "Your waiver link ran out. Grab a fresh one; it only takes about two minutes.",
+      "waiverLapsed": "Your signed waiver has lapsed. Grab a fresh link and sign again; it only takes about two minutes.",
       "medicalReview": "Thanks for signing. One medical answer needs a closer look. A doctor’s sign-off may be required, and your shop will be in touch about next steps.",
       "guardianSignatureMissing": "A parent or legal guardian also has to sign the waiver. Grab a fresh link and sign it together.",
       "certificationMissing": "Add your certification details to your record.",
@@ -1041,7 +1055,7 @@
     "emergencyContact": "Emergency contact",
     "contactName": "Contact name",
     "contactPhone": "Contact phone",
-    "emergencyOnFile": "Already on file: {name}\u00a0·\u00a0<nowrap>{phone}</nowrap>.",
+    "emergencyOnFile": "Already on file: {name} · <nowrap>{phone}</nowrap>.",
     "emergencyContactChangeHint": "Change it here if it’s out of date. Fill in both boxes, or leave both blank to keep what’s on file. Ask the shop if you need the contact taken off your record.",
     "signature": "Your signature",
     "typeFullName": "Type your full name",
@@ -1231,7 +1245,7 @@
       "torch": "Dive light",
       "smb": "Surface marker buoy"
     },
-    "jargonHintLabel": "What is {item}?",
+    "jargonHintLabel": "About {item}",
     "jargonHints": {
       "bcd": "The inflatable vest you wear that holds your tank and lets you control whether you float or sink.",
       "regulator": "The mouthpiece and hose that let you breathe air from your tank underwater.",
@@ -2961,8 +2975,7 @@
     "yourEmail": "Your email",
     "yourPhone": "Your phone",
     "howManyDivers": "How many divers",
-    "orPhone": "(or phone)",
-    "orEmail": "(or email)",
+    "contactHint": "One of the two, so we can reach you.",
     "dateOptionsHeading": "When would you like to dive?",
     "whenSuits": "Flexible timing",
     "moreDetails": "More details",
@@ -3638,6 +3651,8 @@
       "heroTitle": "Every diver booked, signed, checked and accounted for.",
       "heroDescription": "Online booking, waivers and medical forms, certification checks, check-in and the boat manifest, in one app for your dive shop. A diver who isn’t ready is named at the desk days before the boat leaves.",
       "heroPriceLine": "One flat price of {price} {cadence}, and no cut of your bookings.",
+      "diverDoor": "Booked a dive?",
+      "diverDoorLink": "Find your booking",
       "phoneFrameLabel": "A captain calling the roll in DiveDay at the dock: 4 of 9 divers aboard, one name tapped aboard and the next still to call.",
       "dockEyebrow": "At the dock",
       "dockDetail": "Saved to this phone before the boat left, so the roll call keeps working with no signal.",
@@ -3984,7 +3999,7 @@
           },
           "waiverDocuments": {
             "what": "Waiver / medical documents",
-            "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5\u00a0MB."
+            "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5 MB."
           },
           "role": {
             "what": "Role",
@@ -4533,6 +4548,18 @@
         "heading": "Links that work as keys",
         "body": "Some of what DiveDay sends is a link that needs no password: the waiver a diver signs, their trip-prep page, the recap after a dive. Holding the link is the permission, so it can be opened on a dock with one hand free. Those links are treated as credentials throughout: the token is removed before a page view is recorded or an error reported, and before any line reaches a log. They expire, and a shop can invalidate one."
       },
+      "extension": {
+        "heading": "The certification-check extension",
+        "intro": "Shop staff can add DiveDay’s certification check to Chrome or Edge. It does one thing: when a staff member presses “Check with SSI”, or another agency, on a diver’s card in DiveDay, it looks the card up on that agency’s own lookup page, from their browser, and hands the answer back to DiveDay. It runs only then, and only on DiveDay’s staff pages and the agencies’ lookup pages.",
+        "sendsTerm": "What it sends to the agency",
+        "sendsBody": "the diver’s name and what that agency’s form asks for, a birth date or a card number, and only to the agency the staff member chose, as typing them in would. For a course student’s PADI eLearning, the student’s email goes to PADI.",
+        "readsTerm": "What it reads",
+        "readsBody": "the agency’s answer. On the PADI Pros’ Site, which a staff member opens under their own shop’s PADI sign-in, it hands back only the lines about that diver, and for a student’s eLearning only the student’s own lines. When a check fails, it may send DiveDay the page’s structure (its labels, button words and headings, never anything typed into it or anyone’s details) so the reader can be fixed.",
+        "keepsTerm": "What DiveDay keeps",
+        "keepsBody": "when the answer shows the card, the agency’s words for it become the card’s review note, with the name of the staff member whose browser checked. When the page lists other cards for the diver and a staff member adds them, the agency’s lines for the diver become those cards’ review notes too. Otherwise nothing from the agency’s page is kept.",
+        "neverTerm": "What it never does",
+        "neverBody": "it holds no password and no agency sign-in, stores nothing in the browser, reads no other site and no browsing history, and passes nothing to anyone for advertising, for sale or to judge credit."
+      },
       "keep": {
         "heading": "How long it is kept",
         "intro": "The shop’s own records are kept while the shop is using DiveDay, and go when the shop deletes them or ends its account. Most append-only trails have fixed windows, and these are the real numbers the system prunes on:",
@@ -5023,6 +5050,7 @@
     "reminderAction": {
       "waiverPending": "Sign your waiver",
       "waiverExpired": "Your waiver link expired. Grab a fresh one; it only takes about two minutes",
+      "waiverLapsed": "Your signed waiver has lapsed. Sign it again",
       "certificationMissing": "Send us your certification details",
       "certificationInsufficient": "Check your certification level with us",
       "certificationSelfDeclared": "Bring your certification card so we can check it",
@@ -5058,13 +5086,13 @@
       "courtesyUnsubscribe": "Stop optional emails from {shopName}"
     },
     "tripConditionsHold": {
-      "subject": "Conditions hold — {tripTitle}",
+      "subject": "Conditions hold: {tripTitle}",
       "body": "We’ve placed {tripTitle} on a conditions hold for {date}. Your seat is still held while the crew makes the final weather call.",
       "crewNoteLabel": "Crew note:",
       "seeUpdate": "See the live trip update"
     },
     "tripMinimumNotMet": {
-      "subject": "Trip canceled — {tripTitle}",
+      "subject": "Trip canceled: {tripTitle}",
       "body": "We run {tripTitle} on {date} with at least {minimum, plural, one {# diver} other {# divers}}, and it had {booked, plural, one {# booking} other {# bookings}} by the time we said we’d decide, so it’s off. Your seat is released, and there’s nothing you need to do.",
       "moneyRefunded": "You’ve been refunded in full. The money is on its way back to the card you paid with, and can take a few days to land.",
       "moneyRefundOwed": "You’re owed a full refund, and we’ll be in touch to get it back to you.",
@@ -5080,7 +5108,7 @@
       "findAnother": "See what else is running"
     },
     "tripBlowout": {
-      "subject": "Trip canceled — {tripTitle}",
+      "subject": "Trip canceled: {tripTitle}",
       "body": "We’ve had to cancel {tripTitle} on {date} because of the weather. Your seat is released, and there’s nothing you need to do.",
       "bodyRunEnded": "We’ve stopped running {tripTitle} for now, so the departure on {date} is canceled. Your seat is released, and there’s nothing you need to do.",
       "moneyNone": "You haven’t been charged anything for this trip.",
@@ -5094,7 +5122,7 @@
       "seeSchedule": "See the full schedule"
     },
     "bookingConfirmation": {
-      "subject": "You’re on the boat — {tripTitle}",
+      "subject": "You’re on the boat: {tripTitle}",
       "confirmed": "Your seat on {tripTitle} is confirmed.",
       "dockNote": "Please be at the dock {dock} early. We’ll take it from there.",
       "waiverStep": "First, sign your waiver. {shopName} needs it before you board.",
@@ -5113,7 +5141,10 @@
       "body": "A seat just opened on {tripTitle}, and we’re offering it to you.",
       "claim": "Claim it before it’s gone",
       "claimLink": "Claim your seat",
-      "footer": "The seat isn’t held for you, so don’t wait too long. See you on the boat!"
+      "footer": "The seat isn’t held for you, so don’t wait too long. See you on the boat!",
+      "subjectParty": "{seats} seats opened up on {tripTitle}",
+      "bodyParty": "{seats} seats just opened on {tripTitle}, and we’re offering them to your party.",
+      "rolledBody": "{sailed} has sailed. {date} has room, and we’re offering you {seats, plural, one {a seat} other {# seats}} on {tripTitle}."
     },
     "tripInvitation": {
       "subject": "An invitation from {shopName}: {tripTitle}",
@@ -5122,7 +5153,7 @@
       "link": "See the trip and book your seat"
     },
     "lastMinuteDeal": {
-      "subject": "{discount} off {tripTitle} — last-minute deal",
+      "subject": "{discount} off {tripTitle}: last-minute deal",
       "body": "We just opened up {discount} off {tripTitle}.",
       "useCode": "Use code {code} at booking:",
       "bookLink": "Book {tripTitle}",
@@ -5136,12 +5167,12 @@
       "finishPaying": "Finish paying"
     },
     "tripReminder": {
-      "weekSubject": "You sail this week — {tripTitle}",
+      "weekSubject": "You sail this week: {tripTitle}",
       "weekBody": "A quick reminder that {tripTitle} sails this week.",
       "weekSubjectCourse": "Your course starts this week: {tripTitle}",
       "weekBodyCourse": "A quick reminder that {tripTitle} starts this week.",
       "dockNote": "Please be at the dock {dock} early.",
-      "daySubject": "You sail tomorrow — {tripTitle}",
+      "daySubject": "You sail tomorrow: {tripTitle}",
       "dayOpenerFirstTimer": "You dive with us tomorrow. Everything you need for the day is below.",
       "dayOpenerReturning": "A quick reminder that {tripTitle} sails tomorrow.",
       "arrival": "Aim to be at the dock by {time}, {dock} before we sail.",
@@ -5156,7 +5187,7 @@
       "day": "Day {number}: {date}, {time}"
     },
     "tripRecap": {
-      "subject": "Your dive with {shopName} — {tripTitle}",
+      "subject": "Your dive with {shopName}: {tripTitle}",
       "thanks": "Thanks for diving {tripTitle} with us on {date}.",
       "dived": "You dived {sites}.",
       "flySafeAfterDive": "We ask you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
@@ -5196,8 +5227,9 @@
         "heading": "Money",
         "took": "Last week’s departures took {amount} after tax.",
         "tips": "{amount} in tips to pass on to the crew.",
-        "openOrders": "{count, plural, one {# order is still open.} other {# orders are still open.}}",
-        "link": "Open Money"
+        "link": "Open Money",
+        "owedOrders": "Owed {amount} on {count, plural, one {# open order} other {# open orders}}.",
+        "owedSeats": "Owed {amount} on {count, plural, one {# seat that sailed unpaid} other {# seats that sailed unpaid}}."
       },
       "thisWeek": {
         "heading": "This week, {range}",
@@ -5229,7 +5261,19 @@
       "why": "You get this every Monday as staff at {shopName}.",
       "settings": "Email settings",
       "turnOff": "Stop these emails",
-      "quietWeek": "Nothing happened last week and nothing is on the board this week, so no email goes out this Monday."
+      "quietWeek": "Nothing happened last week and nothing is on the board this week, so no email goes out this Monday.",
+      "safety": {
+        "heading": "Safety",
+        "rollCalls": "{count, plural, one {# roll call is still open.} other {# roll calls are still open.}}",
+        "uncrewed": "{count, plural, one {# departure has no crew on it yet.} other {# departures have no crew on them yet.}}",
+        "incidents": "{count, plural, one {# incident report was filed last week.} other {# incident reports were filed last week.}}",
+        "link": "Open Today"
+      },
+      "gearService": {
+        "heading": "Gear",
+        "body": "{count, plural, one {# unit is due for service.} other {# units are due for service.}}",
+        "link": "Open Gear"
+      }
     },
     "staffInvite": {
       "subject": "{inviterName} invited you to {shopName} on DiveDay",
@@ -5453,17 +5497,25 @@
       "body": "{shopName}: the crew found this aboard after {tripTitle}: {item}. We’re holding it for you."
     },
     "courseCertified": {
-      "subject": "You’re certified: {level}",
-      "body": "You’re certified: {level}. {shopName} recorded it on {date}.",
+      "subject": "You’re {code, select, open_water {an Open Water Diver} advanced_open_water {an Advanced Open Water Diver} rescue {a Rescue Diver} divemaster {a Divemaster} other {an Instructor}}, {firstName}",
+      "subjectJunior": "You’re {code, select, open_water {a Junior Open Water Diver} advanced_open_water {a Junior Advanced Open Water Diver} rescue {a Junior Rescue Diver} other {a Junior diver}}, {firstName}",
+      "subjectCourse": "You’ve finished {course}, {firstName}",
+      "recorded": "Recorded by {shopName} on {date}.",
+      "junior": "Until you turn 15 it’s a Junior card, with a shallower depth limit.",
+      "card": "Your card is on its way from {agency}; this record already counts with {shopName}.",
+      "cardAnyAgency": "Your card is on its way from your training agency; this record already counts with {shopName}.",
       "next": "Your next course: {course}"
     },
     "smsCourseCertified": {
-      "body": "{shopName}: you’re certified, {level}. Congratulations."
+      "body": "{shopName}: you’re {code, select, open_water {an Open Water Diver} advanced_open_water {an Advanced Open Water Diver} rescue {a Rescue Diver} divemaster {a Divemaster} other {an Instructor}} now.",
+      "bodyJunior": "{shopName}: you’re {code, select, open_water {a Junior Open Water Diver} advanced_open_water {a Junior Advanced Open Water Diver} rescue {a Junior Rescue Diver} other {a Junior diver}} now.",
+      "bodyCourse": "{shopName}: you’ve finished {course}.",
+      "card": "Your card is on its way from your agency; this record already counts with {shopName}."
     },
     "inquiryReceived": {
       "subject": "{shopName} has your request",
-      "course": "Thanks for asking about {course}. We have your request.",
-      "dive": "Thanks for asking about a day of diving. We have your request.",
+      "course": "Thanks for asking about {course}. Nothing is booked or held yet.",
+      "dive": "Thanks for asking about a day of diving. Nothing is booked or held yet.",
       "dateOne": "You asked for {date}.",
       "datesTwo": "You asked for {date}, or {alternate}.",
       "reply": "We’ll get back to you by email or phone.",

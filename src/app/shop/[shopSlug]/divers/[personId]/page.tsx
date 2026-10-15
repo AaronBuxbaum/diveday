@@ -11,6 +11,7 @@ import {
   canPersonOverrideGearRequest,
   canPersonReadMedicalClearanceDocument,
 } from "@/db/authz";
+import { diverPackageBalance } from "@/db/dive-packages";
 import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
 import { canPersonExportShopData } from "@/db/export";
@@ -170,6 +171,7 @@ export default async function DiverDetailPage({
     activityPage,
     thread,
     gear,
+    packages,
   ] = await Promise.all([
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonMergeDiver(db, shop.id, session.user.personId),
@@ -192,9 +194,6 @@ export default async function DiverDetailPage({
     // it broke: the UI hides the control when the permission is false, so a
     // crew member is never shown a button they will be bounced from (ADR
     // 20260724-role-authorization).
-    //
-    // In this batch rather than after it: a seventh `await` on its own would
-    // put a serial round trip on a page that already parallelises six.
     canPersonManageOrders(db, shop.id, session.user.personId),
     getShopStripeAccount(db, shop.id),
     listDiverRecordNotes(db, shop.id, personId),
@@ -203,9 +202,9 @@ export default async function DiverDetailPage({
     // anything past the end, so a stale bookmark lands on the last real page.
     pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
     // What this diver wrote and what the shop wrote back, interleaved by time.
-    // Shop-scoped from the session like every read here.
     personThread(db, shop.id, personId),
     loadDiverGear(db, shop, personId, { removed }),
+    diverPackageBalance(db, shop.id, personId, now),
   ]);
   // `orders/new` refuses outright without a payable account, so the story's
   // foot simply omits "New invoice" rather than offering a link that bounces.
@@ -293,6 +292,7 @@ export default async function DiverDetailPage({
         shopSlug={shopSlug}
         t={t}
         visits={visits}
+        packages={packages}
         status={cleared ? undefined : detailsStatus}
         moment={
           cleared ? (

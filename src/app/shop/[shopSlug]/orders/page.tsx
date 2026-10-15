@@ -41,6 +41,7 @@ import {
 } from "./_components/notice-rows";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
+import { OwedLine } from "./_components/OwedLine";
 import {
   FailedRefundsQueue,
   OwedRefundsQueue,
@@ -302,10 +303,8 @@ export default async function OrdersIndexPage({
     return search ? `/shop/${shopSlug}/${path}?${search}` : `/shop/${shopSlug}/${path}`;
   };
 
-  // Looked up rather than read off the first row — a filter that matches
-  // nothing still has to say whose orders it was looking for, and the
-  // row-derived name vanished on exactly the empty screen that needed the
-  // explanation most.
+  // Looked up rather than read off the first row: a filter that matches
+  // nothing still has to say whose orders it was looking for.
   const filteredPersonName = personFilter
     ? await getShopPersonName(db, shop.id, personFilter)
     : null;
@@ -501,6 +500,7 @@ export default async function OrdersIndexPage({
       />
 
       <PayoutLines payouts={payouts} locale={locale} timeZone={shop.timezone} t={t} />
+      {canExportOrders ? <OwedLine db={db} shop={shop} locale={locale} t={t} /> : null}
 
       {showToolbar ? (
         <OrdersToolbar

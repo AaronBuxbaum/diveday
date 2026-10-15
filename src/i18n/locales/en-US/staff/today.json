@@ -34,12 +34,12 @@
   },
   "helpRequest": {
     "kind": {
-      "carryGear": "Carry gear",
-      "firstTimer": "First-timer orientation",
-      "findGroup": "Find their group"
+      "carryGear": "carry gear",
+      "firstTimer": "first-timer orientation",
+      "findGroup": "finding their group"
     },
-    "detailRequested": "{name} asked for help: {help}.",
-    "detailAcknowledged": "{name} is waiting for help: {help}.",
+    "detailRequested": "Asked for help: {help}.",
+    "detailAcknowledged": "Waiting for help: {help}.",
     "acknowledge": "Acknowledge",
     "markHandled": "Mark handled",
     "saving": "Saving…"
@@ -175,7 +175,8 @@
     "departureCountOpen": "Dock count unfinished: {uncounted, plural, one {# of {total, plural, one {# person} other {# people}} has} other {# of {total, plural, one {# person} other {# people}} have}} no result.",
     "noRollCall": "No roll call recorded for {total, plural, one {# person} other {# people}}.",
     "boatWork": "{work}.",
-    "missingFitNamed": "Missing rental sizes.",
+    "missingSizeNamed": "Missing a rental size.",
+    "kitUnaskedNamed": "Not asked about kit.",
     "ungatedNitroxNamed": "Wants nitrox, no verified card.",
     "highWindAlert": "Forecast {speed} kt wind{hasDirection, select, yes { from {direction}} other {}}{hasGusts, select, yes {, gusts {gusts} kt} other {}}.",
     "instructorMissing": "No instructor assigned.",
@@ -256,10 +257,10 @@
     "restrictedDetail": "Stripe paused them on {when}. Divers pay at the shop until Stripe turns them back on."
   },
   "reviewsPending": {
-    "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you"
+    "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you."
   },
   "unansweredMessages": {
-    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer"
+    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer."
   },
   "unitsUnconfirmed": {
     "subject": "{currency} and {depth}, guessed from your timezone",
@@ -283,7 +284,8 @@
     "overdueDetail": "{credential} expired {dueOn}."
   },
   "sayHello": {
-    "firstTrip": "{names}: first dive with you.",
+    "firstTrip": "{names}: first dive with us.",
+    "firstTime": "{names}: first time with us.",
     "returning": "{name} is back after {years, plural, one {# year} other {# years}}."
   },
   "unfinished": {
@@ -311,6 +313,7 @@
     "waiverNotSent": "{count, plural, one {Waiver not signed, not sent yet.} other {# waivers not signed, not sent yet.}}",
     "waiverPending": "{count, plural, one {Waiver not signed, link sent.} other {# waivers not signed, links sent.}}",
     "waiverExpired": "{count, plural, one {Waiver link expired.} other {# waiver links expired.}}",
+    "waiverLapsed": "{count, plural, one {Signed waiver lapsed.} other {# signed waivers lapsed.}}",
     "medicalReview": "{count, plural, one {Medical answer needs a doctor’s sign-off.} other {# medical answers need a doctor’s sign-off.}}",
     "medicalNotCleared": "{count, plural, one {Not cleared to dive by a physician.} other {# divers not cleared to dive by a physician.}}",
     "guardianSignatureMissing": "{count, plural, one {Waiver needs a guardian’s signature.} other {# waivers need a guardian’s signature.}}",

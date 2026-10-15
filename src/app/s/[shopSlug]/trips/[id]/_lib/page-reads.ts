@@ -4,6 +4,7 @@ import { readKnownDiver } from "@/db/booking-handoff";
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
+import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { bookingConfirmationMailState } from "@/db/notifications";
 import {
@@ -12,6 +13,7 @@ import {
   tripRequirementSummaries,
 } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
+import { publicRunOf } from "@/db/series-next";
 import { tripMayTakeACode } from "@/db/shop-promos";
 import type { shopBySlugCached } from "@/db/shops-cached";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -24,7 +26,6 @@ import {
   listTripScheduleDays,
   pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
-  tripPublicCrew,
 } from "@/db/trips";
 import type { auth } from "@/lib/auth";
 import { perDiverBookingPriceCents } from "@/lib/courses";
@@ -136,6 +137,7 @@ export async function readTripPage(
     paymentUrl,
     board,
     reviewAggregate,
+    run,
   ] = await Promise.all([
     // A staffer looking at their own shop's booking page is *previewing* it, and
     // this page used to answer that with a redirect straight back to the
@@ -156,8 +158,9 @@ export async function readTripPage(
     listTripScheduleDays(db, shop.id, tripId),
     tripCrewSpokenLanguages(db, shop.id, tripId),
     // Only the crew who said yes (issue #1181, D21). Empty for every shop that
-    // has switched nothing on, which is every shop until somebody does.
-    tripPublicCrew(db, shop.id, tripId),
+    // has switched nothing on, which is every shop until somebody does. Marked
+    // away as /ready marks them, so both diver doors say "to be confirmed".
+    tripRead.then((found) => (found ? diverCrewWithAway(db, shop.id, found, shop.timezone) : [])),
     listTripChangeEvents(db, shop.id, tripId),
     // **The door remembers who opened it** (ADR 20260906-before-you-ask,
     // decision 3). Facts reach this page through a handoff and nothing else: a
@@ -255,6 +258,10 @@ export async function readTripPage(
     // The shop's rating rides along as the organizer's `aggregateRating` in
     // the standalone page's structured data.
     isEmbed || !shop.reviewsEnabled ? null : getShopReviewAggregate(db, shop.id),
+    // A repeating departure's cadence and its next date (fourth review, item 35).
+    tripRead.then((found) =>
+      found?.seriesId ? publicRunOf(db, { shopId: shop.id, tripId: found.id, now }) : null,
+    ),
   ]);
   return {
     staffPreview,
@@ -275,5 +282,6 @@ export async function readTripPage(
     paymentUrl,
     board,
     reviewAggregate,
+    run,
   };
 }

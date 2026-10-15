@@ -17,25 +17,34 @@ describe("welcomeCueText", () => {
       expect(welcomeCueText(t, { kind: "first_trip" })).toBeTruthy();
       expect(welcomeCueText(t, { kind: "returning", years: 3 })).toBeTruthy();
     }
-    expect(welcomeCueText(en, { kind: "first_trip" })).toBe("first time with us");
-    expect(welcomeCueText(es, { kind: "first_trip" })).toBe("primera vez con nosotros");
+    expect(welcomeCueText(en, { kind: "first_trip" })).toBe("First dive with us");
+    expect(welcomeCueText(es, { kind: "first_trip" })).toBe("Primera inmersión con nosotros");
+  });
+
+  it("never calls a snorkeler's or a rider's first seat a dive", () => {
+    expect(welcomeCueText(en, { kind: "first_trip", nonDiver: true })).toBe("First time with us");
+    expect(welcomeCueText(es, { kind: "first_trip", nonDiver: true })).toBe(
+      "Primera vez con nosotros",
+    );
   });
 
   it("agrees with the number of years, at one and at two, in both locales", () => {
-    expect(welcomeCueText(en, { kind: "returning", years: 1 })).toBe("back after 1 year");
-    expect(welcomeCueText(en, { kind: "returning", years: 2 })).toBe("back after 2 years");
-    expect(welcomeCueText(es, { kind: "returning", years: 1 })).toBe("de vuelta tras 1 año");
-    expect(welcomeCueText(es, { kind: "returning", years: 2 })).toBe("de vuelta tras 2 años");
+    expect(welcomeCueText(en, { kind: "returning", years: 1 })).toBe("Back after 1 year");
+    expect(welcomeCueText(en, { kind: "returning", years: 2 })).toBe("Back after 2 years");
+    expect(welcomeCueText(es, { kind: "returning", years: 1 })).toBe("De vuelta tras 1 año");
+    expect(welcomeCueText(es, { kind: "returning", years: 2 })).toBe("De vuelta tras 2 años");
   });
 
-  it("continues the name above it rather than announcing itself", () => {
-    // Lower case, no full stop, no "Welcome": it is a fragment under a name on
-    // a manifest row, not a badge and not a sentence about a record.
+  it("is its own line under the name: sentence case, no full stop, never a badge", () => {
+    // Fourth review, item 42: Today, the roster and the diver record said a
+    // first-timer three ways. One phrase, capitalized like every line under a
+    // name, and still not Title Case or a sentence about a record.
     for (const text of [
       welcomeCueText(en, { kind: "first_trip" }),
       welcomeCueText(en, { kind: "returning", years: 4 }),
     ]) {
-      expect(text[0]).toBe(text[0]?.toLowerCase());
+      expect(text[0]).toBe(text[0]?.toUpperCase());
+      expect(text.slice(1)).toBe(text.slice(1).toLowerCase());
       expect(text).not.toMatch(/\.$/);
     }
   });
@@ -51,6 +60,17 @@ describe("sayHelloSentences", () => {
     // `Intl.ListFormat`, never a hand-rolled ", " — which would put an English
     // "and" into the Spanish sentence.
     expect(sentences[0]).toContain("Ben Okafor and Lina Costa");
+  });
+
+  it("says first time, not first dive, for the first-timers who are not diving", () => {
+    const sentences = sayHelloSentences(en, "en-US", [
+      { name: "Ben Okafor", cue: { kind: "first_trip" } },
+      { name: "Lina Costa", cue: { kind: "first_trip", nonDiver: true } },
+    ]);
+    expect(sentences).toEqual([
+      "Ben Okafor: first dive with us.",
+      "Lina Costa: first time with us.",
+    ]);
   });
 
   it("joins the names in the reader's own language", () => {

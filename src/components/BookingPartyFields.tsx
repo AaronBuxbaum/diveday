@@ -68,6 +68,7 @@ export function BookingPartyFields({
   onLeadEmailSettled,
   participantChoices,
   onTypesChange,
+  leadOnly = false,
 }: {
   maxPartySize: number;
   /** Show an optional phone field for the lead booker (diver 1). */
@@ -113,6 +114,8 @@ export function BookingPartyFields({
    * caller's money block can price each seat. Pass a stable reference.
    */
   onTypesChange?: (types: ParticipantType[]) => void;
+  /** The size and only the lead's details: a wait-list party (`TripFullSection`). */
+  leadOnly?: boolean;
 }) {
   const t = useTranslations();
   const [size, setSize] = useState(1);
@@ -262,7 +265,7 @@ export function BookingPartyFields({
               : t("party.bigGroupContactGeneric", { count: limit })}
         </p>
       ) : null}
-      {diverSlots.slice(0, size).map((slot, index) => {
+      {diverSlots.slice(0, leadOnly ? 1 : size).map((slot, index) => {
         const member = party[index] ?? emptyMember;
         const nameError = fieldErrors?.[`fullName-${index}`];
         const emailError = fieldErrors?.[`email-${index}`];
@@ -368,7 +371,7 @@ export function BookingPartyFields({
                       </select>
                     </Field>
                   ) : null}
-                  <UnderEighteenChoice index={index} />
+                  {leadOnly ? null : <UnderEighteenChoice index={index} />}
                   {index === 0 || !useLeadEmail[index] ? (
                     <Field
                       label={

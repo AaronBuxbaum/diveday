@@ -126,6 +126,8 @@ export type RosterRows = {
   courseNextStepByBooking?: Map<string, string>;
   /** What the browser extension searches PADI's eLearning for, per seat (H-106). */
   elearningQueryByBooking?: Map<string, ElearningQuery>;
+  /** A PADI course with materials at a shop whose PADI checks are off (H-121). */
+  elearningChecksOff?: boolean;
   /** Per diver, the cards the browser extension could check with their agencies (H-105). */
   agencyCheckCardsByPerson?: ReadonlyMap<string, readonly AgencyCheckableCard[]>;
   /**
@@ -239,7 +241,8 @@ export type RosterActions = {
 /** The departures a seat may move to, already worded with their zone. */
 export type SeatMove = {
   action: (formData: FormData) => void;
-  targets: readonly { id: string; label: string }[];
+  /** Each with the seats it still sells (`listSeatMoveTargets`). */
+  targets: readonly { id: string; label: string; seatsLeft: number }[];
 };
 
 /**

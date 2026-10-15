@@ -151,7 +151,7 @@ describe("BookingGearFields", () => {
       ["Regulator", /mouthpiece and hose that let you breathe/i],
       ["Nitrox", /breathing gas with extra oxygen/i],
     ] as const) {
-      const trigger = screen.getByRole("button", { name: `What is ${item}?` });
+      const trigger = screen.getByRole("button", { name: `About ${item}` });
       const describedBy = trigger.getAttribute("aria-describedby");
       expect(describedBy).toBeTruthy();
       expect(document.getElementById(describedBy ?? "")?.textContent).toMatch(detail);
