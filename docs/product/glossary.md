@@ -121,6 +121,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Arrival event
 - Arrival lookup
 - Arrivals window
+- Ask to move
 - At sea
 - Automated cancellation refund
 - Automated marine outlook
@@ -291,6 +292,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Marine-life catalog
 - Material generation
 - Observed species
+- Photo ledger
 - Sailed with no crew on record
 - Sighting
 - Staff credential
