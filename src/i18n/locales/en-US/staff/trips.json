@@ -527,6 +527,7 @@
     "groupSailed": "Sailed",
     "groupDidNotSail": "Didn’t sail",
     "groupNotCounted": "Not counted at the dock",
+    "groupUnaccounted": "Not back aboard",
     "groupNoRollCall": "No roll call taken",
     "groupWaiting": "Waiting for a seat",
     "heading": "Divers",

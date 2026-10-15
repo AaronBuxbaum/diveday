@@ -276,6 +276,13 @@ export type RosterRecord = {
    * later cancelled, never reads "No roll call taken".
    */
   rollCallTaken: boolean;
+  /**
+   * Seats the crew said did not come back aboard at an after-dive checkpoint
+   * and nobody has counted since (`listUnaccountedForByTrip`). They sailed,
+   * and a record that filed them under "Sailed" beside a diver still in the
+   * water would be the lie this group exists to refuse (issue #2404).
+   */
+  unaccounted: ReadonlySet<string>;
 };
 
 /** What the page slots into the ledger beneath the seats. */
@@ -625,6 +632,7 @@ export function groupRoster({
     didNotSail: [] as RosterEntry[],
     uncounted: [] as RosterEntry[],
     unrecorded: [] as RosterEntry[],
+    unaccounted: [] as RosterEntry[],
   };
 }
 
@@ -641,6 +649,9 @@ export function groupRoster({
  *   departure whose roll call was taken. Silence is not "didn't sail".
  * - **No roll call taken**: the same silence on a departure with no dock roll
  *   call at all, under a band that says so rather than a guess.
+ * - **Not back aboard**: said missing at an after-dive checkpoint and not
+ *   counted since. Ahead of every other group, and the departure stays open
+ *   while one is here (`departureStage`, issue #2404).
  *
  * Nothing is still to clear, nothing is blocked, and no shared advisory is
  * said: the dive is over (dive-domain rule: a record never asks for action).
@@ -650,8 +661,14 @@ function recordGroups(roster: RosterEntry[], record: RosterRecord) {
   const didNotSail: RosterEntry[] = [];
   const uncounted: RosterEntry[] = [];
   const unrecorded: RosterEntry[] = [];
+  const unaccounted: RosterEntry[] = [];
   for (const entry of roster) {
     const id = entry.booking.id;
+    // First: the one group that is still a question, whatever else is on file.
+    if (record.unaccounted.has(id)) {
+      unaccounted.push(entry);
+      continue;
+    }
     const dockResult = record.dock.get(id) ?? null;
     const afterDiveResultStands = record.afterDive.has(id);
     const noShow = entry.booking.status === "no_show";
@@ -677,6 +694,7 @@ function recordGroups(roster: RosterEntry[], record: RosterRecord) {
     didNotSail,
     uncounted,
     unrecorded,
+    unaccounted,
   };
 }
 

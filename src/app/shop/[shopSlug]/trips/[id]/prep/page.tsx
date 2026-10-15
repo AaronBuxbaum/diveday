@@ -14,8 +14,8 @@ import { PREP_SECTION_ID, scopedId } from "@/lib/element-id";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { departureStage } from "@/lib/trip-phase";
 import { uuidParam } from "@/lib/uuid";
+import { readDepartureStage } from "../_arrivals/departure-record";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { TripStageBadge, TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
@@ -95,7 +95,7 @@ export default async function TripPrepPage({
   const { trip } = prep;
   const now = nowDate();
   // The crew's word for the header chip, and whether the departure is home.
-  const { shown: shownStage, finished } = departureStage({
+  const { shown: shownStage, finished } = await readDepartureStage(db, shop.id, tripId, {
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,

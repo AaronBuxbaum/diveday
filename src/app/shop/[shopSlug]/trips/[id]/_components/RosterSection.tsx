@@ -163,6 +163,12 @@ export function RosterSection({
           {/* The record's groups (UX review 2026-10-10, item 10): empty
               unless the departure is finished, and then the only ones. */}
           <RosterSeatGroup
+            label={t("trips.roster.groupUnaccounted")}
+            entries={groups.unaccounted}
+            settled={false}
+            context={context}
+          />
+          <RosterSeatGroup
             label={t("trips.roster.groupSailed")}
             entries={groups.sailed}
             settled

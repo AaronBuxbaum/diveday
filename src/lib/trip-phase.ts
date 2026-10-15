@@ -190,13 +190,32 @@ export function checkInOpen(input: Parameters<typeof tripPhaseOf>[0]): boolean {
  * finished, which turns its Divers tab into a record and stops its header
  * counting seats (UX review 2026-10-10, items 1 and 10), and whether the
  * Divers tab says check-in is open (`checkInOpen`).
+ *
+ * **A departure is not finished while the roll call still lacks a diver**
+ * (issue #2404). `unaccountedFor` is the page's answer to "is any seat recorded
+ * not back aboard at an after-dive checkpoint and not counted since"
+ * (`listUnaccountedForByTrip`, src/db/manifests.ts). The clock and a stale tap
+ * would call a night boat out past its hour Back while someone may still be in
+ * the water, and the desk would give way to a record that files them under
+ * "Sailed". So the clock and a stale tap no longer finish it. **The crew's own
+ * `home` from the departure's last day still does**: it is the last word a
+ * departure has, and the record then names the seat as unaccounted for rather
+ * than hiding it. Nothing else moves: the chip, the clock's phase and
+ * check-in read as they did. The page reads the roll call only once the
+ * departure would otherwise read as finished, so a boat still out costs it
+ * nothing.
  */
 export function departureStage<R extends { stage: TripStage; recordedAt: Date }>(
-  input: Parameters<typeof boatStageOf<R>>[0],
+  input: Parameters<typeof boatStageOf<R>>[0] & { unaccountedFor?: boolean },
 ): { shown: R | null; finished: boolean; checkInOpen: boolean } {
+  const { unaccountedFor = false, ...reading } = input;
+  const homeSaid =
+    !reading.cancelled &&
+    reading.stage !== null &&
+    readTap({ ...reading, tap: reading.stage }) === "final_home";
   return {
-    shown: boatStageOf(input),
-    finished: tripPhaseOf(input) === "back",
-    checkInOpen: checkInOpen(input),
+    shown: boatStageOf(reading),
+    finished: tripPhaseOf(reading) === "back" && (homeSaid || !unaccountedFor),
+    checkInOpen: checkInOpen(reading),
   };
 }

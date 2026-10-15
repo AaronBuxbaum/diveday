@@ -164,6 +164,7 @@ describe("the guests ledger (slice 5d)", () => {
         ]),
         afterDive: new Set(),
         rollCallTaken: true,
+        unaccounted: new Set(),
       },
     });
     expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
@@ -180,12 +181,30 @@ describe("the guests ledger (slice 5d)", () => {
         dock: new Map([[ready.booking.id, "boarded"]]),
         afterDive: new Set(),
         rollCallTaken: true,
+        unaccounted: new Set(),
       },
     });
     expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Not counted at the dock · 1" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: /Didn’t sail/ })).toBeNull();
     expect(screen.queryByRole("heading", { name: /No roll call taken/ })).toBeNull();
+  });
+
+  it("files a diver counted out and not back under its own band, never as Sailed", () => {
+    renderRoster({
+      ...fixtures,
+      record: {
+        dock: new Map([
+          [ready.booking.id, "boarded"],
+          [blocked.booking.id, "boarded"],
+        ]),
+        afterDive: new Set([blocked.booking.id]),
+        rollCallTaken: true,
+        unaccounted: new Set([blocked.booking.id]),
+      },
+    });
+    expect(screen.getByRole("heading", { name: "Not back aboard · 1" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
   });
 
   it("makes add diver the terminal ledger group, including on an empty roster", () => {

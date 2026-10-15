@@ -527,6 +527,7 @@
     "groupSailed": "Zarparon",
     "groupDidNotSail": "No zarparon",
     "groupNotCounted": "Sin contar en el muelle",
+    "groupUnaccounted": "Sin volver a bordo",
     "groupNoRollCall": "Sin pase de lista",
     "groupWaiting": "En espera de plaza",
     "heading": "Buceadores",

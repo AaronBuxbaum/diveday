@@ -336,6 +336,98 @@ describe("a night boat back after midnight, Home never tapped", () => {
 });
 
 /**
+ * **A departure with a diver not back aboard is not finished** (issue #2404).
+ * The clock and a stale tap call a boat Back; the roll call may still hold a
+ * diver the crew have not counted onto it. The page then keeps its desk and
+ * does not file the boat as a record, unless the crew said Home.
+ */
+describe("a departure with a diver not back aboard", () => {
+  // The #2409 boat: 22:00 to 02:00 local, last tap Underway at 22:10, read at 03:00.
+  const nightStarts = new Date("2026-07-22T02:00:00.000Z");
+  const nightEnds = new Date("2026-07-22T06:00:00.000Z");
+  const underway = {
+    stage: "underway" as TripStage,
+    recordedAt: new Date("2026-07-22T02:10:00.000Z"),
+  };
+  const at = (
+    now: string,
+    over: Partial<Parameters<typeof departureStage>[0]> = {},
+  ): Parameters<typeof departureStage>[0] => ({
+    startsAt: nightStarts,
+    endsAt: nightEnds,
+    now: new Date(now),
+    timeZone: ZONE,
+    stage: underway,
+    cancelled: false,
+    ...over,
+  });
+  const THREE_AM = "2026-07-22T07:00:00.000Z";
+
+  it("is finished at 03:00 when nobody is unaccounted for, as before", () => {
+    expect(departureStage(at(THREE_AM)).finished).toBe(true);
+    expect(departureStage(at(THREE_AM, { unaccountedFor: false })).finished).toBe(true);
+  });
+
+  it("is not finished at 03:00 while a diver is not back aboard", () => {
+    const stage = departureStage(at(THREE_AM, { unaccountedFor: true }));
+    expect(stage.finished).toBe(false);
+    // Nothing else about the reading moves: the chip stays silent, the clock's phase is its own.
+    expect(stage.shown).toBeNull();
+    expect(tripPhaseOf(at(THREE_AM))).toBe("back");
+  });
+
+  it("stays unfinished however long the diver stays unaccounted for, with no tap at all", () => {
+    for (const now of [THREE_AM, "2026-07-23T07:00:00.000Z", "2026-08-30T07:00:00.000Z"]) {
+      expect(departureStage(at(now, { unaccountedFor: true, stage: null })).finished, now).toBe(
+        false,
+      );
+    }
+  });
+
+  it("is finished once the crew say Home, whoever is unaccounted for", () => {
+    const home = {
+      stage: "home" as TripStage,
+      recordedAt: new Date("2026-07-22T05:30:00.000Z"),
+    };
+    expect(departureStage(at(THREE_AM, { stage: home, unaccountedFor: true })).finished).toBe(true);
+  });
+
+  it("is not finished by a Home from an earlier day of a course, which is only the crew tying up", () => {
+    const courseStarts = new Date("2026-07-21T11:00:00.000Z");
+    const courseEnds = new Date("2026-07-23T16:00:00.000Z");
+    const dayOneHome = {
+      stage: "home" as TripStage,
+      recordedAt: new Date("2026-07-21T21:00:00.000Z"),
+    };
+    const input = {
+      startsAt: courseStarts,
+      endsAt: courseEnds,
+      now: new Date("2026-07-25T12:00:00.000Z"),
+      timeZone: ZONE,
+      stage: dayOneHome,
+      cancelled: false,
+      unaccountedFor: true,
+    };
+    expect(departureStage(input).finished).toBe(false);
+  });
+
+  it("is never made finished by it, and a boat that is not Back is unchanged", () => {
+    expect(departureStage(at("2026-07-22T06:30:00.000Z", { unaccountedFor: true })).finished).toBe(
+      false,
+    );
+    expect(departureStage(at("2026-07-22T06:30:00.000Z")).finished).toBe(false);
+  });
+
+  it("has no finish to hold back on a canceled departure", () => {
+    expect(departureStage(at(THREE_AM, { cancelled: true, unaccountedFor: true }))).toEqual({
+      shown: null,
+      finished: false,
+      checkInOpen: false,
+    });
+  });
+});
+
+/**
  * `trips.starts_at`/`ends_at` bound the whole run of a multi-day course. A
  * `home` tap after day one is the crew tying up for the night, not the course
  * finishing, and yesterday's word is not today's.

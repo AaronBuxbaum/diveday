@@ -26,10 +26,9 @@ import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { departureStage } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { diversTabState } from "./_arrivals/departure-record";
+import { diversTabState, readDepartureStage } from "./_arrivals/departure-record";
 import { DESK_NOTICES } from "./_arrivals/notices";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
@@ -226,14 +225,19 @@ export default async function ManageTripPage({
 
   const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const { shown, finished, checkInOpen } = departureStage({
-    startsAt: trip.startsAt,
-    endsAt: trip.endsAt,
-    now,
-    timeZone: shop.timezone,
-    stage: stageReading,
-    cancelled,
-  });
+  const { shown, finished, checkInOpen, unaccounted } = await readDepartureStage(
+    db,
+    shop.id,
+    tripId,
+    {
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      now,
+      timeZone: shop.timezone,
+      stage: stageReading,
+      cancelled,
+    },
+  );
   // The desk while arrivals are open, or a finished departure's record.
   const { desk, record } = await diversTabState({
     db,
@@ -247,6 +251,7 @@ export default async function ManageTripPage({
     t,
     onDivers: !showDetails,
     finished,
+    unaccounted,
   });
 
   const tabsCopy = tripTabsCopy(t, checkInOpen ? { trip, shop, locale } : undefined);
