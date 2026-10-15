@@ -261,6 +261,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           notesByBooking,
           courseNextStepByBooking,
           elearningQueryByBooking: guests.elearningQueryByBooking,
+          elearningChecksOff: guests.elearningChecksOff,
           agencyCheckCardsByPerson: guests.agencyCheckCardsByPerson,
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,

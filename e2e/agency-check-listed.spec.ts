@@ -15,8 +15,8 @@ const ADDED = "Added.";
  * **The other cards the agency's page lists, after a match** (layer 3 of ADR
  * 20261008-cert-check-extension).
  *
- * As in `agency-check.spec.ts`, the real extension cannot run in CI and the
- * agencies' pages are not ours to hit, so this stands in for it at the one
+ * As in `agency-check.spec.ts` (the installed extension is
+ * `agency-check-extension.spec.ts`'s), the agencies' pages are not ours to hit, so this stands in for it at the one
  * seam the app sees: the marker on `<html>` and the `postMessage` request and
  * reply. SSI's page here names the diver, their number and their level, then
  * their nitrox and Deep cards. The verdict, the offer, the write and the
@@ -25,7 +25,7 @@ const ADDED = "Added.";
 async function installFakeExtension(page: Page) {
   await page.addInitScript(() => {
     const announce = () => {
-      document.documentElement.setAttribute("data-diveday-cert-check", "1.2.0");
+      document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
       window.dispatchEvent(new Event("diveday-cert-check-ready"));
     };
     if (document.readyState === "loading") {

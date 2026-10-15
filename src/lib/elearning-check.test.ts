@@ -35,6 +35,13 @@ describe("elearningCheckQuery", () => {
     });
   });
 
+  /** Domain review R4-4: a course's agency is free text. */
+  it("reads a course typed as PADI, in any case and spacing, as PADI", () => {
+    for (const agency of ["PADI", " padi ", "Padi"]) {
+      expect(elearningCheckQuery({ ...base, agency })?.agency, agency).toBe("padi");
+    }
+  });
+
   it("checks nothing for an agency other than PADI", () => {
     for (const agency of ["ssi", "naui", "sdi", "other"]) {
       expect(elearningCheckQuery({ ...base, agency })).toBeNull();

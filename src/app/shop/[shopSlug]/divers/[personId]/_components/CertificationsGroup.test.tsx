@@ -47,11 +47,12 @@ function diver(overrides: Partial<DiverProfile> = {}): DiverProfile {
 function renderGroup(
   profile: DiverProfile,
   gap?: ComponentProps<typeof CertificationsGroup>["gap"],
+  shop: Shop = SHOP,
 ) {
   return render(
     <CertificationsGroup
       diver={profile}
-      shop={SHOP}
+      shop={shop}
       shopSlug="blue-mantis"
       personId="person-1"
       locale="en-US"
@@ -461,7 +462,7 @@ describe("the agency check link", () => {
     );
     expect(screen.getByRole("link", { name: "Check with PADI (member sign-in)" })).toHaveAttribute(
       "href",
-      "https://pros.padi.com/",
+      "https://pro.padi.com/",
     );
   });
 
@@ -496,7 +497,7 @@ describe("the agency check, with the extension", () => {
   }
 
   function withExtension(run: () => void) {
-    document.documentElement.setAttribute("data-diveday-cert-check", "1.0.0");
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
     try {
       run();
     } finally {
@@ -542,12 +543,37 @@ describe("the agency check, with the extension", () => {
       const profile = diver({
         certifications: [pending("padi")],
       } as unknown as Partial<DiverProfile>);
-      renderGroup({
-        ...profile,
-        person: { ...profile.person, dateOfBirth: "1990-04-12" },
-      } as unknown as DiverProfile);
+      renderGroup(
+        {
+          ...profile,
+          person: { ...profile.person, dateOfBirth: "1990-04-12" },
+        } as unknown as DiverProfile,
+        undefined,
+        { ...SHOP, padiChecksEnabled: true },
+      );
       expect(screen.getByRole("button", { name: "Check with PADI" })).toBeInTheDocument();
       expect(screen.queryByRole("link", { name: /Check with PADI/ })).toBeNull();
+    });
+  });
+
+  it("keeps PADI's link, and offers no check, at a shop that has not turned PADI checks on", () => {
+    withExtension(() => {
+      const profile = diver({
+        certifications: [pending("padi"), pending("ssi")],
+      } as unknown as Partial<DiverProfile>);
+      renderGroup(
+        {
+          ...profile,
+          person: { ...profile.person, dateOfBirth: "1990-04-12" },
+        } as unknown as DiverProfile,
+        undefined,
+        { ...SHOP, padiChecksEnabled: false },
+      );
+      expect(screen.queryByRole("button", { name: "Check with PADI" })).toBeNull();
+      expect(
+        screen.getByRole("link", { name: "Check with PADI (member sign-in)" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Check with SSI" })).toBeInTheDocument();
     });
   });
 

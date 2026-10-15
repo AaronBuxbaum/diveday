@@ -404,6 +404,12 @@ jobs:
             exit 1
           fi
           echo "shard ${{ matrix.shard }}/6: ${#spec_files[@]} specs"
+          # The cert-check extension spec loads the real extension, which the
+          # headless shell cannot: only the shard dealt it pays for the full
+          # Chromium (e2e/agency-check-extension.spec.ts).
+          if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/agency-check-extension.spec.ts'; then
+            pnpm exec playwright install chromium
+          fi
           pnpm exec playwright test "${spec_files[@]}"
         # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
         # cores) was pinned to E2E_WORKERS=1 with double the shards

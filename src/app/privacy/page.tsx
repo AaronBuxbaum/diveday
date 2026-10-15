@@ -183,6 +183,23 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
         <p>{p("links.body")}</p>
       </LegalSection>
 
+      {/* The Chrome Web Store listing's privacy URL is this anchor
+          (extension/store/listing.md), so the id is part of a published
+          address. Every sentence is readable off extension/ and
+          src/lib/agency-check.ts: what agencyCheckQuery sends, the signed-in
+          excerpt in fill.js, and the review note a match writes. */}
+      <LegalSection id="extension" heading={p("extension.heading")}>
+        <p>{p("extension.intro")}</p>
+        <LegalTermList
+          items={[
+            { term: p("extension.sendsTerm"), body: p("extension.sendsBody") },
+            { term: p("extension.readsTerm"), body: p("extension.readsBody") },
+            { term: p("extension.keepsTerm"), body: p("extension.keepsBody") },
+            { term: p("extension.neverTerm"), body: p("extension.neverBody") },
+          ]}
+        />
+      </LegalSection>
+
       {/* The numbers in this list are `RETENTION_DAYS` (src/lib/retention.ts)
           rendered as prose. They are stated in years and days rather than
           interpolated from the constant on purpose: a policy sentence reads

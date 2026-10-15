@@ -23,6 +23,10 @@ import type { AgencyCheckQuery, CheckableAgency } from "./agency-check";
  * - **Stops at once when the staffer is signed out of the agency** (PADI):
  *   that is the agency's state, not one diver's, and every card after it
  *   would meet the same sign-in.
+ * - **Leaves an agency's other cards** when its page asks whether the staffer
+ *   is human, has changed, or is not one this copy of the extension checks:
+ *   that agency's state too, so its remaining cards are not sent, and the
+ *   other agencies' go on. Not counted toward two unreadable in a row.
  * - **The staffer can stop it.** `cancelled` is asked before each card; the
  *   card in flight finishes, and nothing after it is sent.
  * - **Capped at the departure.** The caller hands in one departure's cards; the
@@ -61,6 +65,12 @@ export type AgencyCheckOutcome =
   | "several_records"
   /** The page did not read as a result for this diver: skipped, and two in a row stop the queue. */
   | "unreadable"
+  /** The agency's page asks whether the staffer is human: that agency's other cards are left. */
+  | "captcha"
+  /** The agency's lookup page has changed: that agency's other cards are left. */
+  | "page_changed"
+  /** This copy of the extension does not check the agency: its other cards are left. */
+  | "unsupported"
   /** A lookup behind the shop's own sign-in (PADI) met a sign-in page: stops the queue at once. */
   | "signed_out"
   /** DiveDay's server did not answer: as unreadable, two in a row stop the queue. */
@@ -79,6 +89,11 @@ export function stopsAgencyCheckQueue(outcome: AgencyCheckOutcome): boolean {
 /** Whether this outcome counts toward the two in a row that stop the run. */
 export function isUnreadableOutcome(outcome: AgencyCheckOutcome): boolean {
   return outcome === "unreadable" || outcome === "transport";
+}
+
+/** Whether this outcome leaves the rest of that agency's cards unsent: every one would meet the same page. */
+export function leavesAgencyCards(outcome: AgencyCheckOutcome): boolean {
+  return outcome === "captcha" || outcome === "page_changed" || outcome === "unsupported";
 }
 
 /** How many unreadable results or transport failures in a row stop the run. */
@@ -112,6 +127,11 @@ export type AgencyCheckQueueSummary<Card> = {
   stopped: { card: Card; outcome: AgencyCheckOutcome } | null;
   /** The run was cancelled before it finished (the staffer stopped it, or the page went away). */
   cancelled: boolean;
+  /**
+   * Each agency whose other cards were left (`leavesAgencyCards`): the card
+   * that met it, why, and how many of that agency's cards were not sent.
+   */
+  left: { card: Card; outcome: AgencyCheckOutcome; skipped: number }[];
 };
 
 /**
@@ -120,7 +140,9 @@ export type AgencyCheckQueueSummary<Card> = {
  * waits between two checks (never before the first, never after the last).
  * `cancelled` is asked before each card, so a page that unmounts stops asking.
  */
-export async function runAgencyCheckQueue<Card extends { certificationId: string }>(input: {
+export async function runAgencyCheckQueue<
+  Card extends { certificationId: string; agency?: string },
+>(input: {
   cards: readonly Card[];
   check: (card: Card) => Promise<AgencyCheckOutcome>;
   pause: (ms: number) => Promise<void>;
@@ -137,16 +159,26 @@ export async function runAgencyCheckQueue<Card extends { certificationId: string
   let certified = 0;
   let confirmed = 0;
   let unreadableInARow = 0;
+  const left: AgencyCheckQueueSummary<Card>["left"] = [];
+  const leftFor = (card: Card) =>
+    card.agency === undefined ? undefined : left.find((each) => each.card.agency === card.agency);
   const summary = (
     stopped: AgencyCheckQueueSummary<Card>["stopped"],
     cancelled: boolean,
-  ): AgencyCheckQueueSummary<Card> => ({ checked, certified, confirmed, stopped, cancelled });
-  for (const [index, card] of cards.entries()) {
+  ): AgencyCheckQueueSummary<Card> => ({ checked, certified, confirmed, stopped, cancelled, left });
+  let sent = 0;
+  for (const card of cards) {
     if (input.cancelled?.()) return summary(null, true);
-    if (index > 0) {
+    const leaving = leftFor(card);
+    if (leaving) {
+      leaving.skipped += 1;
+      continue;
+    }
+    if (sent > 0) {
       await input.pause(pauseMs);
       if (input.cancelled?.()) return summary(null, true);
     }
+    sent += 1;
     input.onStart?.(card, checked);
     let outcome: AgencyCheckOutcome;
     try {
@@ -158,6 +190,9 @@ export async function runAgencyCheckQueue<Card extends { certificationId: string
     if (outcome === "certified") certified += 1;
     if (outcome === "confirmed") confirmed += 1;
     unreadableInARow = isUnreadableOutcome(outcome) ? unreadableInARow + 1 : 0;
+    if (leavesAgencyCards(outcome) && card.agency !== undefined) {
+      left.push({ card, outcome, skipped: 0 });
+    }
     input.onSettle?.(card, outcome, checked);
     if (stopsAgencyCheckQueue(outcome) || unreadableInARow >= UNREADABLE_IN_A_ROW) {
       return summary({ card, outcome }, false);
