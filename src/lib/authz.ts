@@ -155,6 +155,20 @@ export function canViewShopActivity(roles: readonly Role[] | undefined): boolean
   return isOwnerOrManager(roles);
 }
 
+/**
+ * Print a seat's dispute sheet (`orders/[id]/print/dispute`, issue #2390): the
+ * signed release's date, name and version, the check-in time and every
+ * roll-call result for one booking, on a page whose purpose is to be handed to
+ * a card network. Owner or manager, the same wall as {@link canRefund} and
+ * {@link canExportShopData}: it is a diver's attendance record leaving the shop
+ * on the strength of a money argument, and the crew who run the water have no
+ * part in that argument. It carries no medical answer at any role
+ * (`assembleDisputeSheet`, src/lib/dispute-sheet.ts).
+ */
+export function canExportDisputeSheet(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
 /** Issue or record a refund — money leaving the shop's account. */
 export function canRefund(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);

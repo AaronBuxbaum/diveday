@@ -8,6 +8,7 @@ import {
   canConfigureTrips,
   canDeleteDiver,
   canErasePersonalData,
+  canExportDisputeSheet,
   canExportIncidentRecord,
   canExportShopData,
   canImportShopData,
@@ -188,6 +189,22 @@ describe("canExportIncidentRecord (owner only)", () => {
   it("rejects empty and undefined roles", () => {
     expect(canExportIncidentRecord([])).toBe(false);
     expect(canExportIncidentRecord(undefined)).toBe(false);
+  });
+});
+
+describe("canExportDisputeSheet (owner or manager)", () => {
+  it("admits the accountable roles and nobody who runs the water", () => {
+    expect(canExportDisputeSheet(["owner"])).toBe(true);
+    expect(canExportDisputeSheet(["manager"])).toBe(true);
+    for (const role of ["instructor", "divemaster", "captain", "crew", "diver"] as const) {
+      expect(canExportDisputeSheet([role])).toBe(false);
+    }
+  });
+
+  it("admits a manager who also holds an operating role, and refuses empty roles", () => {
+    expect(canExportDisputeSheet(["captain", "manager"])).toBe(true);
+    expect(canExportDisputeSheet([])).toBe(false);
+    expect(canExportDisputeSheet(undefined)).toBe(false);
   });
 });
 

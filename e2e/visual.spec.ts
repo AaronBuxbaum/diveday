@@ -1813,6 +1813,21 @@ function publicReefCard(page: Page) {
   return page.locator("li").filter({ hasText: REEF_TRIP });
 }
 
+/**
+ * A seat's dispute sheet, reached the way an owner reaches it: the Orders
+ * index narrowed to the history's deposit orders (each raised for a real seat),
+ * the first one, then its "Dispute sheet" door. Waits on the last section's
+ * heading so a capture never photographs the skeleton.
+ */
+async function openDisputeSheet(page: Page) {
+  await page.goto("/shop/blue-mantis/orders?q=Trip+deposit");
+  const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
+  await ledgerRow.filter({ visible: true }).first().waitFor();
+  await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
+  await page.getByRole("link", { name: "Dispute sheet" }).click();
+  await page.getByRole("heading", { level: 2, name: "What staff did" }).waitFor();
+}
+
 /** Open the seeded reef charter's staff record, the way staff reach it. */
 async function openReefTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -7011,6 +7026,14 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "order-detail", scheme);
       });
 
+      // **The dispute sheet on screen** (issue #2390): a seat's order, the
+      // signed release, the check-in and the roll call, reached the way an
+      // owner reaches it, from the order's own "Dispute sheet" door.
+      test(`a seat's dispute sheet renders true to the design (${scheme})`, async ({ page }) => {
+        await openDisputeSheet(page);
+        await capture(page, "order-dispute-sheet", scheme);
+      });
+
       // A deposit names the departure it was raised for and what the seat
       // still owes (third UX review, item 32).
       test(`a deposit order's detail names its departure (${scheme})`, async ({ page }) => {
@@ -8986,6 +9009,12 @@ test.describe("print", () => {
     await page.goto("/shop/blue-mantis/print");
     await page.getByRole("heading", { level: 1, name: "Day packet" }).waitFor();
     await capturePrint(page, "day-packet");
+  });
+
+  // The dispute sheet is handed to a card network, so paper is its artifact.
+  test("the dispute sheet prints monochrome and padded", async ({ page }) => {
+    await openDisputeSheet(page);
+    await capturePrint(page, "order-dispute-sheet");
   });
 
   // The departure log exists to be printed and handed over, so the print

@@ -108,6 +108,7 @@
       "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes. Pide a uno de ellos que lo tramite.",
       "voidNotAuthorized": "Anular pedidos está limitado a propietarios y gerentes.",
       "demoDisabled": "Este es un pedido de demostración, así que no se puede modificar.",
+      "disputeNotAuthorized": "Las hojas de disputa son solo para propietarios y gerentes. Pide a uno de ellos que imprima esta.",
       "fallback": "Algo cambió en este pedido. Los detalles de abajo están al día."
     }
   },
