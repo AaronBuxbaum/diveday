@@ -1546,6 +1546,35 @@ describe("calculateReadiness — the medical by participant type (H-109)", () =>
     expect(result.blockers).toEqual([{ code }]);
   });
 
+  /**
+   * **The way aboard for a held snorkeler is a rider's seat, and it is not a
+   * one-way door** (issue #2382). The same release, read as a snorkeler, a
+   * rider, then a snorkeler again, must hold again: nothing about riding clears
+   * the hold on the record.
+   */
+  it.each(holds)(
+    "holds a snorkeler again after a switch to rider and back, over %s",
+    (_label, overrides, code) => {
+      const input = {
+        timezone: "UTC",
+        requirement,
+        waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
+        certifications: [],
+        now,
+      };
+      expect(calculateReadiness({ ...input, participantType: "snorkeler" }).blockers).toEqual([
+        { code },
+      ]);
+      expect(calculateReadiness({ ...input, participantType: "rider" })).toEqual({
+        status: "ready",
+        blockers: [],
+      });
+      const back = calculateReadiness({ ...input, participantType: "snorkeler" });
+      expect(back.status).toBe("blocked");
+      expect(back.blockers).toEqual([{ code }]);
+    },
+  );
+
   it.each(holds)("still holds a seat with no type over %s", (_label, overrides, code) => {
     const result = calculateReadiness({
       timezone: "UTC",

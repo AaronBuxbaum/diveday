@@ -520,3 +520,54 @@ describe("the one-line row", () => {
     expect(screen.queryByText("Waiver not signed yet")).toBeNull();
   });
 });
+
+/**
+ * **A snorkeler held on a medical is told how to board them riding only**
+ * (H-109, issue #2382). Staff switch the seat to rider; the rider chip carries
+ * the warning. No new clearance exists, so the hint is only a pointer, and only
+ * on a seat that is in the water on a medical hold.
+ */
+describe("a snorkeler held on a medical", () => {
+  const hint = /change this seat to Rider/i;
+  const medicalBlockers = {
+    medical_review: [{ code: "medical_review", params: undefined }],
+    medical_not_cleared: [{ code: "medical_not_cleared", params: undefined }],
+  };
+
+  it.each(["medical_review", "medical_not_cleared"] as const)(
+    "points a snorkeler's %s hold at the switch to rider",
+    (code) => {
+      const snorkeler = entry("s", "Sky Lund", { participantType: "snorkeler" });
+      renderRoster({
+        roster: [snorkeler],
+        readiness: new Map([
+          ["s", readinessRow("blocked", medicalBlockers[code])],
+        ]) as ReadinessByBooking,
+        waivers: new Map([["s", signedWaiver]]) as WaiverByBooking,
+      });
+      expect(screen.getAllByText(hint)).toHaveLength(1);
+    },
+  );
+
+  it("says nothing of the kind to a diver on the same hold", () => {
+    renderRoster({
+      roster: [entry("d", "Dee Park", { participantType: "diver" })],
+      readiness: new Map([
+        ["d", readinessRow("blocked", medicalBlockers.medical_review)],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["d", signedWaiver]]) as WaiverByBooking,
+    });
+    expect(screen.queryByText(hint)).toBeNull();
+  });
+
+  it("says nothing on a snorkeler blocked for something else", () => {
+    renderRoster({
+      roster: [entry("s", "Sky Lund", { participantType: "snorkeler" })],
+      readiness: new Map([
+        ["s", readinessRow("blocked", [{ code: "waiver_not_sent", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+    });
+    expect(screen.queryByText(hint)).toBeNull();
+  });
+});

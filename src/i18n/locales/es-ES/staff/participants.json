@@ -33,7 +33,8 @@
     "comingAs": "Participa como: {type}",
     "typeLabel": "Participa como",
     "save": "Guardar",
-    "changeAnyway": "Cambiar de todos modos"
+    "changeAnyway": "Cambiar de todos modos",
+    "snorkelerMedicalHint": "Para que embarque solo de acompañante, cambia su plaza a Acompañante en «Participa como»."
   },
   "headCount": {
     "aboardOfTotalPeople": "{aboard} de {total, plural, one {# persona} other {# personas}} a bordo",
