@@ -503,7 +503,6 @@
     "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": 301,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 424,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 366,
-    "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 345,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 338,
     "src/db/reminders.ts#sendDueReminders": 340,
