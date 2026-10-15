@@ -13,8 +13,9 @@ import { logStripeRequestThrew } from "./stripe-request-log";
  * balance transactions (`GET /v1/balance_transactions?payout=…`), and two facts
  * an owner reconciling a bank statement wants come off that list: the span of
  * days the payout covers ("covering Sep 27 to Oct 1") and Stripe's fees on it.
- * The webhook asks once and stores the answer; Reports and the Orders index
- * only ever read the stored row, so no page waits on Stripe.
+ * The webhook asks once, after it has answered (`after()`, issue #2464), and
+ * stores the answer; Reports and the Orders index only ever read the stored
+ * row, so no page waits on Stripe.
  *
  * Read-only: nothing here moves money or carries an idempotency key.
  *
@@ -24,8 +25,9 @@ import { logStripeRequestThrew } from "./stripe-request-log";
  *   question (a 4xx no retry changes), the list ran longer than this reads, or
  *   no key of the event's mode is configured. The payout is recorded without a
  *   span or fees, which the page reads as "Stripe did not say".
- * - `failed`: Stripe was unreachable (network, 429, 5xx), so the webhook
- *   answers non-2xx and Stripe delivers the event again.
+ * - `failed`: Stripe was unreachable (network, 429, 5xx). The delivery was
+ *   already answered 2xx before the question was asked, so nothing retries it:
+ *   the payout stays recorded without a span or fees, as for `unavailable`.
  */
 export type PayoutSummary =
   | { status: "summarized"; coveredFrom: Date | null; coveredTo: Date | null; feeCents: number }
