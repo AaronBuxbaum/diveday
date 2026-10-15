@@ -23,7 +23,8 @@ import { type RollCallCheckpoint, rollCallCheckpoints } from "./roll-call";
  * - **Activity lines are an allowlist of codes** ({@link DISPUTE_ACTIVITY_CODES}),
  *   not a deny-list: a code added tomorrow stays off the sheet until someone
  *   decides it belongs. A line carries the names its sentence needs (`actor`,
- *   `diver`) and nothing else from its params.
+ *   `diver`) and nothing else from its params; the diver is always the sheet's
+ *   own name for them, so a held seat never prints the matched person's.
  * - **A seat whose identity is held for review** (`identity_unconfirmed`)
  *   gets no waiver: the record on file would be the matched person's, which is
  *   the case the incident export withholds for too (issue #2128).
@@ -40,8 +41,14 @@ export type DisputeSignatureMethod = "online" | "counter" | "imported";
 export type DisputeRollCallResult = "boarded" | "not_boarded" | "not_recorded";
 
 /**
- * The activity codes that may appear on the sheet: a seat's lifecycle (added,
- * moved, removed, checked in, written off) and its money. Deliberately absent:
+ * The activity codes that may appear on the sheet: only those a writer ties to
+ * **this seat**. A line is tied to a seat by its `booking_id` (the counter
+ * check-in, the no-show words, the money acts of `recordShopActivity`) or, for
+ * the diver's own cancel, by the trip and the diver as the actor. A departure
+ * line (`seat_added`, `booking_removed`, `seat_moved_*`, `rider_added_at_dock`)
+ * carries neither handle, so the reader cannot say whose it is and the sheet
+ * does not claim it; `booking_restored` has no writer; `seat_claimed` and the
+ * party-seat lines name a second diver as the actor. Deliberately absent too:
  * notes (staff-only), identity decisions, anything that opened or exported a
  * diver's record, medical or certification overrides, and the demo's scripted
  * lines.
@@ -49,29 +56,27 @@ export type DisputeRollCallResult = "boarded" | "not_boarded" | "not_recorded";
 export const DISPUTE_ACTIVITY_CODES = [
   "counter_check_in",
   "counter_check_in_undone",
-  "booking_removed",
-  "booking_restored",
   "booking_no_show",
   "booking_no_show_undone",
   "booking_no_show_boarded",
   "booking_no_show_missing_after_dive",
-  "seat_added",
-  "seat_added_walk_in",
-  "seat_added_from_trip_link",
-  "rider_added_at_dock",
-  "seat_moved_away",
-  "seat_moved_here",
-  "seat_claimed",
   "seat_self_cancelled",
   "seat_self_refunded",
-  "party_seat_self_cancelled",
-  "party_seat_self_refunded",
   "seat_refunded",
   "payment_waived",
   "payment_marked_refunded",
   "payment_balance_written_off",
   "party_marked_paid",
 ] as const;
+
+/**
+ * Lines whose actor is the diver themselves (their own trip link). The sheet
+ * prints the booked name it already carries, never a name read off the row.
+ */
+const DIVER_ACTOR_CODES: ReadonlySet<string> = new Set([
+  "seat_self_cancelled",
+  "seat_self_refunded",
+]);
 
 export type DisputeActivityCode = (typeof DISPUTE_ACTIVITY_CODES)[number];
 
@@ -113,6 +118,8 @@ export type DisputeRollCallEventInput = {
   createdAt: Date;
   seq: number;
   recordedByName: string;
+  /** `offline` means `occurredAt` is a phone's clock, not this server's. */
+  source: "live" | "offline";
 };
 
 export type DisputeArrivalEventInput = {
@@ -121,6 +128,7 @@ export type DisputeArrivalEventInput = {
   createdAt: Date;
   seq: number;
   recordedByName: string;
+  source: "live" | "offline";
 };
 
 export type DisputeActivityInput = {
@@ -173,13 +181,15 @@ export type DisputeSheet = {
     templateVersion: number;
   } | null;
   /** Null when no arrival stands: never tapped in, or the tap was taken back. */
-  checkIn: { at: Date; recordedByName: string } | null;
+  checkIn: { at: Date; recordedByName: string; offline: boolean } | null;
   /** One row per checkpoint of the departure, in sailing order, recorded or not. */
   rollCall: {
     checkpoint: RollCallCheckpoint;
     result: DisputeRollCallResult;
     at: Date | null;
     recordedByName: string | null;
+    /** The time is the recording phone's clock, set while it had no signal. */
+    offline: boolean;
   }[];
   activity: {
     code: DisputeActivityCode;
@@ -210,13 +220,22 @@ function signatureMethodOf(method: string | null): DisputeSignatureMethod {
   return "online";
 }
 
-/** The two names a trail sentence needs; any other param is dropped. */
-function sentenceNames(raw: unknown): { actor?: string; diver?: string } {
+/**
+ * The two names a trail sentence needs; any other param is dropped. The diver
+ * is always the sheet's own name for the diver: a held seat's row was written
+ * with the matched person's name, which is not who booked (issue #2128).
+ */
+function sentenceNames(
+  code: string,
+  raw: unknown,
+  diverName: string,
+): { actor?: string; diver?: string } {
   const names: { actor?: string; diver?: string } = {};
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return names;
   const record = raw as Record<string, unknown>;
-  if (typeof record.actor === "string") names.actor = record.actor;
-  if (typeof record.diver === "string") names.diver = record.diver;
+  if (DIVER_ACTOR_CODES.has(code)) names.actor = diverName;
+  else if (typeof record.actor === "string") names.actor = record.actor;
+  if (typeof record.diver === "string") names.diver = diverName;
   return names;
 }
 
@@ -241,7 +260,11 @@ export function assembleDisputeSheet(input: DisputeSheetInput): DisputeSheet {
   const [standingArrival] = newestFirst(input.arrivalEvents);
   const checkIn =
     standingArrival?.status === "arrived"
-      ? { at: standingArrival.occurredAt, recordedByName: standingArrival.recordedByName }
+      ? {
+          at: standingArrival.occurredAt,
+          recordedByName: standingArrival.recordedByName,
+          offline: standingArrival.source === "offline",
+        }
       : null;
 
   // One row per checkpoint the departure plans. The newest event at each wins;
@@ -257,6 +280,7 @@ export function assembleDisputeSheet(input: DisputeSheetInput): DisputeSheet {
         result: "not_recorded" as const,
         at: null,
         recordedByName: null,
+        offline: false,
       };
     }
     return {
@@ -264,14 +288,21 @@ export function assembleDisputeSheet(input: DisputeSheetInput): DisputeSheet {
       result: standing.status,
       at: standing.occurredAt,
       recordedByName: standing.recordedByName,
+      offline: standing.source === "offline",
     };
   });
 
   const activity = newestFirst(
     input.activity.map((line) => ({ ...line, createdAt: line.occurredAt })),
   ).flatMap((line) =>
-    isDisputeActivityCode(line.code)
-      ? [{ code: line.code, params: sentenceNames(line.params), at: line.occurredAt }]
+    isDisputeActivityCode(line.code) && !(input.identityHeld && DIVER_ACTOR_CODES.has(line.code))
+      ? [
+          {
+            code: line.code,
+            params: sentenceNames(line.code, line.params, input.diverName),
+            at: line.occurredAt,
+          },
+        ]
       : [],
   );
 

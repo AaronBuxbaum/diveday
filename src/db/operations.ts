@@ -131,6 +131,7 @@ export type DiverActivityCode =
   | "identity_split_off"
   | "medical_clearance_opened"
   | "record_exported"
+  | "dispute_sheet_printed"
   | "running_late_from_message";
 
 /**

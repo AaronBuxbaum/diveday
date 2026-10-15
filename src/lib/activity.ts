@@ -192,6 +192,8 @@ type ActivityParamShapes = {
   integration_backfill_sent: { actor: string; provider: string; count: string; since: string };
   /** A staffer downloaded a diver's own record. */
   record_exported: { actor: string; diver: string };
+  /** A staffer opened a seat's dispute sheet, which leaves the shop (#2390). */
+  dispute_sheet_printed: { actor: string; diver: string };
   /**
    * A staffer marked a diver running late from a message they wrote (UX
    * review 2026-10-13, item 19), so the roster's "said {time}" has a name
@@ -355,6 +357,7 @@ export const ACTIVITY_CODES = [
   "party_seat_self_refunded",
   "medical_clearance_opened",
   "record_exported",
+  "dispute_sheet_printed",
   "integration_backfill_sent",
   "running_late_from_message",
   "order_refunded",

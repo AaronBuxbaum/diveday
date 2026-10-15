@@ -1,9 +1,14 @@
-import { and, desc, eq, inArray, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
-import { assembleDisputeSheet, type DisputeSheet } from "@/lib/dispute-sheet";
+import {
+  assembleDisputeSheet,
+  DISPUTE_ACTIVITY_CODES,
+  type DisputeSheet,
+} from "@/lib/dispute-sheet";
 import { isUuid } from "@/lib/uuid";
-import type { DbExecutor } from "./client";
+import type { AppDb, DbExecutor } from "./client";
+import { recordDiverActivity } from "./operations";
 import { queryAll } from "./query-helpers";
 import {
   activityEvents,
@@ -136,6 +141,7 @@ export async function getDisputeSheet(
           occurredAt: bookingArrivalEvents.occurredAt,
           createdAt: bookingArrivalEvents.createdAt,
           seq: bookingArrivalEvents.seq,
+          source: bookingArrivalEvents.source,
           recordedByName: recorders.fullName,
         })
         .from(bookingArrivalEvents)
@@ -163,6 +169,7 @@ export async function getDisputeSheet(
           occurredAt: rollCallEvents.occurredAt,
           createdAt: rollCallEvents.createdAt,
           seq: rollCallEvents.seq,
+          source: rollCallEvents.source,
           recordedByName: recorders.fullName,
         })
         .from(rollCallEvents)
@@ -181,14 +188,33 @@ export async function getDisputeSheet(
           seq: activityEvents.seq,
         })
         .from(activityEvents)
-        .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.bookingId, bookingId))),
+        .where(
+          and(
+            eq(activityEvents.shopId, shopId),
+            inArray(activityEvents.code, [...DISPUTE_ACTIVITY_CODES]),
+            or(
+              // The writers that name the seat: check-in, no-show, the money acts.
+              eq(activityEvents.bookingId, bookingId),
+              // The diver's own cancel from their trip link is written on the
+              // departure with the diver as its actor. A held seat's matched
+              // person is not known to be who booked, so it claims none.
+              identityHeld
+                ? undefined
+                : and(
+                    eq(activityEvents.tripId, seat.tripId),
+                    eq(activityEvents.actorPersonId, seat.personId),
+                    inArray(activityEvents.code, ["seat_self_cancelled", "seat_self_refunded"]),
+                  ),
+            ),
+          ),
+        ),
   ]);
 
   return assembleDisputeSheet({
     shopName,
     timezone,
     generatedAt,
-    diverName: identityHeld ? (seat.bookedAs ?? seat.fullName) : seat.fullName,
+    diverName: identityHeld ? seat.bookedAs?.trim() || seat.fullName : seat.fullName,
     identityHeld,
     trip: { title: seat.tripTitle, startsAt: seat.startsAt, plannedDives: seat.plannedDives },
     order: { ...order, description: order.description ?? "", lines },
@@ -196,5 +222,34 @@ export async function getDisputeSheet(
     arrivalEvents: arrivals,
     rollCallEvents: rollCalls,
     activity,
+  });
+}
+
+/**
+ * **Opening the sheet is on the diver's trail**, beside the record export that
+ * also hands a diver's data to someone outside the shop (issue #2390). The line
+ * lands on the booked person's record; a held seat writes none, because the
+ * record it would land on is the matched person's, who may not be who booked.
+ * Best effort and never throws: the sheet is already on screen.
+ */
+export async function recordDisputeSheetOpened(
+  db: AppDb,
+  shopId: string,
+  orderId: string,
+  actorPersonId: string,
+): Promise<boolean> {
+  if (!isUuid(shopId) || !isUuid(orderId)) return false;
+  const [seat] = await db
+    .select({ personId: bookings.personId, heldAt: bookings.identityUnconfirmedAt })
+    .from(orders)
+    .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
+    .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
+    .limit(1);
+  if (!seat || seat.heldAt) return false;
+  return recordDiverActivity(db, {
+    shopId,
+    personId: seat.personId,
+    actorPersonId,
+    code: "dispute_sheet_printed",
   });
 }

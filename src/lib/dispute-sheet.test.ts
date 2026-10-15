@@ -53,6 +53,7 @@ const roll = (
   createdAt: at(hours),
   seq,
   recordedByName: "Sam Reyes",
+  source: "live" as const,
 });
 
 describe("assembleDisputeSheet: what may appear", () => {
@@ -155,9 +156,67 @@ describe("assembleDisputeSheet: what may appear", () => {
       }),
     );
     expect(sheet.activity).toEqual([
-      { code: "counter_check_in", params: { actor: "Sam", diver: "Grace" }, at: at(13) },
+      {
+        code: "counter_check_in",
+        params: { actor: "Sam", diver: "Grace Halloran" },
+        at: at(13),
+      },
     ]);
     expect(JSON.stringify(sheet)).not.toContain("q3 answered yes");
+  });
+
+  it("prints the sheet's diver, never the name a held seat's row was written with", () => {
+    const sheet = assembleDisputeSheet(
+      input({
+        identityHeld: true,
+        diverName: "Booked Stranger",
+        activity: [
+          {
+            code: "payment_waived",
+            params: { actor: "Sam", diver: "Matched Person" },
+            occurredAt: at(2),
+            seq: 1,
+          },
+          {
+            code: "counter_check_in",
+            params: { diver: "Matched Person" },
+            occurredAt: at(3),
+            seq: 2,
+          },
+          {
+            code: "seat_self_cancelled",
+            params: { actor: "Matched Person" },
+            occurredAt: at(4),
+            seq: 3,
+          },
+        ],
+      }),
+    );
+    expect(JSON.stringify(sheet)).not.toContain("Matched Person");
+    expect(sheet.activity.map((line) => line.params.diver)).toEqual([
+      "Booked Stranger",
+      "Booked Stranger",
+    ]);
+  });
+
+  it("names the diver as the actor of their own cancel and drops lines about a second diver", () => {
+    const sheet = assembleDisputeSheet(
+      input({
+        activity: [
+          { code: "seat_self_cancelled", params: { actor: "Grace H." }, occurredAt: at(2), seq: 1 },
+          {
+            code: "party_seat_self_cancelled",
+            params: { actor: "Lead Diver", diver: "Grace" },
+            occurredAt: at(3),
+            seq: 2,
+          },
+          { code: "seat_claimed", params: { actor: "Claimer" }, occurredAt: at(4), seq: 3 },
+        ],
+      }),
+    );
+    expect(sheet.activity).toEqual([
+      { code: "seat_self_cancelled", params: { actor: "Grace Halloran" }, at: at(2) },
+    ]);
   });
 
   it("only allows codes that exist in the activity registry", async () => {
@@ -248,11 +307,17 @@ describe("assembleDisputeSheet: roll call and check-in", () => {
       createdAt: at(13),
       seq: 1,
       recordedByName: "Lee Park",
+      source: "live" as const,
     };
     expect(assembleDisputeSheet(input({ arrivalEvents: [arrived] })).checkIn).toEqual({
       at: at(13),
       recordedByName: "Lee Park",
+      offline: false,
     });
+    expect(
+      assembleDisputeSheet(input({ arrivalEvents: [{ ...arrived, source: "offline" }] })).checkIn
+        ?.offline,
+    ).toBe(true);
     expect(
       assembleDisputeSheet(
         input({
@@ -269,7 +334,7 @@ describe("assembleDisputeSheet: roll call and check-in", () => {
         activity: [
           { code: "counter_check_in", params: { diver: "Grace" }, occurredAt: at(13), seq: 2 },
           {
-            code: "seat_added",
+            code: "payment_waived",
             params: { actor: "Sam", diver: "Grace" },
             occurredAt: at(1),
             seq: 1,
@@ -277,6 +342,6 @@ describe("assembleDisputeSheet: roll call and check-in", () => {
         ],
       }),
     );
-    expect(sheet.activity.map((line) => line.code)).toEqual(["seat_added", "counter_check_in"]);
+    expect(sheet.activity.map((line) => line.code)).toEqual(["payment_waived", "counter_check_in"]);
   });
 });

@@ -5,7 +5,7 @@ import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportDisputeSheet } from "@/db/authz";
-import { getDisputeSheet } from "@/db/dispute-sheet";
+import { getDisputeSheet, recordDisputeSheetOpened } from "@/db/dispute-sheet";
 import { activityLine } from "@/i18n/activity-labels";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
@@ -65,13 +65,14 @@ export default async function DisputeSheetPage({
   // An unparseable id names no row; Postgres would raise on it rather than miss.
   const orderId = uuidParam(id);
   if (!orderId) notFound();
-  const { db, shop } = await requireShopSurface(shopSlug, {
+  const { db, shop, session } = await requireShopSurface(shopSlug, {
     allow: canPersonExportDisputeSheet,
     refusal: { notice: "dispute-not-authorized", landing: ["orders", orderId] },
   });
   const timezone = shop.timezone ?? "UTC";
   const sheet = await getDisputeSheet(db, shop.id, orderId, shop.name, timezone);
   if (!sheet) notFound();
+  await recordDisputeSheetOpened(db, shop.id, orderId, session.user.personId);
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -194,7 +195,7 @@ export default async function DisputeSheetPage({
         </h2>
         <p className={`mt-2 text-sm ${checkIn ? "" : "text-muted"}`}>
           {checkIn
-            ? t("disputeSheet.checkIn", {
+            ? t(checkIn.offline ? "disputeSheet.checkInOffline" : "disputeSheet.checkIn", {
                 date: dateTime(checkIn.at),
                 name: checkIn.recordedByName,
               })
@@ -221,7 +222,7 @@ export default async function DisputeSheetPage({
                 </Td>
                 <Td muted>
                   {row.at && row.recordedByName
-                    ? t("disputeSheet.recordedBy", {
+                    ? t(row.offline ? "disputeSheet.recordedOffline" : "disputeSheet.recordedBy", {
                         date: dateTime(row.at),
                         name: row.recordedByName,
                       })
