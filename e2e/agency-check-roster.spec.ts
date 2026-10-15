@@ -12,8 +12,8 @@ const DEPARTURE = /Two-Tank Reef — French Reef/;
 /**
  * **"Check with SSI" from a departure's Divers tab, and "Check all"** (H-105).
  *
- * As in `agency-check.spec.ts`, the real extension cannot run in CI and the
- * agencies' pages are not ours to hit, so this stands in for the extension at
+ * As in `agency-check.spec.ts` (the installed extension is
+ * `agency-check-extension.spec.ts`'s), the agencies' pages are not ours to hit, so this stands in for the extension at
  * the one seam the app sees: the marker on `<html>` and the `postMessage`
  * request and reply. It counts the lookups it was asked for, so the spec can
  * say how many the page sent. The verdict, the write and each card's Undo are

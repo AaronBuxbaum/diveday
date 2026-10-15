@@ -12,11 +12,11 @@ const {
   REQUEST_TYPE,
   ELEARNING_REQUEST_TYPE,
   SIGN_IN_PATH: SIGN_IN_PATH_SOURCE,
-  fillAgencyForm,
-  readAgencyPage,
-  excerptAround,
-  excerptAroundName,
 } = globalThis.DiveDayCertCheck;
+// fill.js's functions (fillAgencyForm, readAgencyPage, excerptAround,
+// excerptAroundName) are this worker's own globals: importScripts ran fill.js
+// in this one scope. Never name them again here: a top-level `const` of the
+// same name makes that import throw, and the worker never listens.
 
 /** An address that signs in, signs up or manages an account, never a lookup (protocol.js). */
 const SIGN_IN_PATH = new RegExp(SIGN_IN_PATH_SOURCE, "i");

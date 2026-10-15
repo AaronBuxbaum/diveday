@@ -58,6 +58,32 @@ describe("the extension's copy of the protocol", () => {
     for (const reason of reasons) expect(EXTENSION_FAILURE_REASONS).toContain(reason);
   });
 
+  it("loads its service worker the way Chrome does, every script into one global scope", async () => {
+    // `importScripts` runs each file as a classic script in the worker's own
+    // global scope, so a top-level `const` in background.js and a function of
+    // the same name in fill.js collide, the import throws, and the worker never
+    // listens. Loaded one by one, as above, they never meet.
+    const { readFileSync } = await import("node:fs");
+    const vm = await import("node:vm");
+    const source = (file: string) =>
+      readFileSync(new URL(`../../extension/${file}`, import.meta.url), "utf8");
+    const listeners: unknown[] = [];
+    const worker: Record<string, unknown> = {
+      chrome: {
+        runtime: { id: "test", onMessage: { addListener: (fn: unknown) => listeners.push(fn) } },
+      },
+      importScripts: (...files: string[]) => {
+        for (const file of files) vm.runInContext(source(file), worker, { filename: file });
+      },
+    };
+    vm.createContext(worker);
+    vm.runInContext("globalThis.self = globalThis;", worker);
+    expect(() =>
+      vm.runInContext(source("background.js"), worker, { filename: "background.js" }),
+    ).not.toThrow();
+    expect(listeners).toHaveLength(1);
+  });
+
   it("reads anything else the extension says as a form it could not fill", () => {
     expect(extensionFailureReason("signed_out")).toBe("signed_out");
     expect(extensionFailureReason("Sign in, then <b>click here</b>")).toBe("fill_failed");

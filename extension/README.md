@@ -13,7 +13,7 @@ The extension decides nothing. It fills in the agency's form, waits for the answ
 - `background.js`: opens the page in a background tab, runs `fill.js`, reads the answer, closes the tab. For a signed-in page it answers `signed_out` when PADI shows its sign-in, and hands back only the lines about the diver or student searched for: for a diver, each line naming them and the four under it (`RECORD_LINES` in `src/lib/agency-check.ts`), or, when none does, only the lines saying why, at most ten.
 - `bridge.js`: on DiveDay's pages, sets the `data-diveday-cert-check` marker and carries messages.
 
-`src/lib/cert-check-extension.test.ts` and `src/lib/cert-check-extension-fill.test.ts` test this folder.
+`src/lib/cert-check-extension.test.ts` and `src/lib/cert-check-extension-fill.test.ts` test this folder, and `e2e/agency-check-extension.spec.ts` installs it in a real Chromium against stand-in agency pages: `pnpm e2e:run e2e/agency-check-extension.spec.ts --reporter=line` after `pnpm e2e:build`, with the full Chromium (`pnpm exec playwright install chromium`; the headless shell cannot load an extension).
 
 ## Try it locally
 
