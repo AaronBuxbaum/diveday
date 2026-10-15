@@ -466,6 +466,13 @@ export async function departureOpenToDiver(
   return admission.admitted;
 }
 
+/**
+ * **Email only, by decision** (Aaron, 2026-10-13, #2476): this is a commercial
+ * message and no per-channel marketing consent exists, so a diver with a phone
+ * and no email is not reached and the counter sees "not sent". SMS or WhatsApp
+ * waits for that consent field; do not route this through `courtesy.ts`'s
+ * transactional channel choice in the meantime.
+ */
 export async function offerDepartureToDiver(
   db: AppDb,
   input: {
