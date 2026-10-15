@@ -5,12 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ERASURE_FAILURE_DETAIL } from "@/lib/payments/erasure-failure";
 import { fileScopedShopContext } from "@/test/db";
-import {
-  notificationKind,
-  notificationSendQueue,
-  people,
-  processorErasureObligations,
-} from "./schema";
+import { notificationSendQueue, people, processorErasureObligations } from "./schema";
 
 /**
  * The data migration that cleans provider free text out of `last_error` rows
@@ -93,13 +88,11 @@ describe("the last_error cleanup migration", () => {
 
   it("nulls a queue row's free text where an error code is set, and leaves the rest", async () => {
     const { db, shop } = ctx;
-    const kind = notificationKind.enumValues[0];
     const nextAttemptAt = new Date("2026-10-15T12:00:00Z");
     await db.insert(notificationSendQueue).values([
       {
         shopId: shop.id,
         idempotencyKey: "cleanup-coded",
-        kind,
         nextAttemptAt,
         errorCode: "provider_rejected",
         lastError: "550 mailbox jane@example.com unavailable",
@@ -107,7 +100,6 @@ describe("the last_error cleanup migration", () => {
       {
         shopId: shop.id,
         idempotencyKey: "cleanup-uncoded",
-        kind,
         nextAttemptAt,
         errorCode: null,
         lastError: "TypeError",
@@ -115,7 +107,6 @@ describe("the last_error cleanup migration", () => {
       {
         shopId: shop.id,
         idempotencyKey: "cleanup-clean",
-        kind,
         nextAttemptAt,
         errorCode: "provider_rejected",
         lastError: null,
