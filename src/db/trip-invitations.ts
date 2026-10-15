@@ -273,7 +273,9 @@ const DIRECT_RESEND_WINDOW_MS = 24 * HOUR_MS;
  * token and idempotency key, so a repeat inside `DIRECT_RESEND_WINDOW_MS` of
  * the last stamp is refused before anything is written or sent: the composer
  * fallback, so staff can still write by hand, and the window does not slide
- * forward on a refusal. Any staff role may still send; a reply to a date
+ * forward on a refusal. The window is read and stamped under one row lock
+ * (`claimDirectSend`), so two submits that land together send once. Any
+ * staff role may still send; a reply to a date
  * request is service mail and is not throttled. An offer from the counter
  * (`offerDepartureToDiver`) passes the stamp its own claim took (#2480) and
  * is held by that claim instead.
@@ -292,24 +294,21 @@ export async function deliverTripInvitation(
 ): Promise<TripInvitationDelivery> {
   const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
   if (!context) return "fallback";
-  const now = nowDate();
-  const last = context.invitation.invitedAt;
-  if (
-    context.invitation.source === "direct" &&
-    !input.invitedAt &&
-    last &&
-    now.getTime() - last.getTime() < DIRECT_RESEND_WINDOW_MS
-  ) {
-    return "fallback";
+  let invitedAt: Date;
+  if (context.invitation.source === "direct" && !input.invitedAt) {
+    const claimed = await claimDirectSend(db, input.shopId, input.invitationId);
+    if (!claimed) return "fallback";
+    invitedAt = claimed;
+  } else {
+    invitedAt = input.invitedAt ?? nowDate();
+    const recorded = await recordTripInvitation(db, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      invitationId: input.invitationId,
+      now: invitedAt,
+    });
+    if (!recorded) return "fallback";
   }
-  const invitedAt = input.invitedAt ?? now;
-  const recorded = await recordTripInvitation(db, {
-    shopId: input.shopId,
-    tripId: input.tripId,
-    invitationId: input.invitationId,
-    now: invitedAt,
-  });
-  if (!recorded) return "fallback";
   const origin = publicAppUrl();
   const shared = {
     invitationId: context.invitation.id,
@@ -369,6 +368,43 @@ export async function deliverTripInvitation(
     provider,
   );
   return delivery.status === "sent" ? "sent" : "fallback";
+}
+
+/**
+ * **Take a cold invitation's send, or learn it is not this call's** (#2133).
+ * The row is locked, read and stamped in one transaction, so two submits that
+ * land together cannot both pass the window: the second waits for the first's
+ * stamp and is refused. Returns the stamp the send writes.
+ */
+async function claimDirectSend(
+  db: AppDb,
+  shopId: string,
+  invitationId: string,
+): Promise<Date | null> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ invitedAt: tripInvitations.invitedAt })
+      .from(tripInvitations)
+      .where(
+        and(
+          eq(tripInvitations.id, invitationId),
+          eq(tripInvitations.shopId, shopId),
+          eq(tripInvitations.source, "direct"),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!row) return null;
+    const now = nowDate();
+    if (row.invitedAt && now.getTime() - row.invitedAt.getTime() < DIRECT_RESEND_WINDOW_MS) {
+      return null;
+    }
+    await tx
+      .update(tripInvitations)
+      .set({ invitedAt: now })
+      .where(and(eq(tripInvitations.id, invitationId), eq(tripInvitations.shopId, shopId)));
+    return now;
+  });
 }
 
 /**

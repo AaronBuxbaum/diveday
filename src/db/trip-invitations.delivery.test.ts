@@ -250,6 +250,25 @@ describe("deliverTripInvitation", () => {
       expect(await stampOf(ctx, input.invitationId)).toEqual(stamped);
     });
 
+    it("sends one email for two submits that land together", async () => {
+      const ctx = await context();
+      const { invitationId } = await directInvitation(ctx);
+      const input = {
+        shopId: ctx.shop.id,
+        shopSlug: ctx.shop.slug,
+        tripId: ctx.trip.id,
+        invitationId,
+      };
+
+      const outcomes = await Promise.all([
+        deliverTripInvitation(ctx.db, input),
+        deliverTripInvitation(ctx.db, input),
+      ]);
+
+      expect(outcomes.sort()).toEqual(["fallback", "sent"]);
+      expect(sendNotification).toHaveBeenCalledTimes(1);
+    });
+
     it("refuses at 23 hours and sends again once 24 hours have passed", async () => {
       const { ctx, input } = await sentOnce();
       const at = (hours: number) =>
