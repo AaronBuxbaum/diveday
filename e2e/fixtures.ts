@@ -168,6 +168,34 @@ export type PrivateShop = {
 /** How many lines of browser activity a failure carries. See `browserActivity`. */
 const ACTIVITY_LIMIT = 400;
 
+/** How long a failed test's page gets to answer `evaluate(() => true)`. Same bound as e2e/visual.spec.ts. */
+const RENDERER_PROBE_MS = 5_000;
+
+/**
+ * True only when the page *never answered* a trivial evaluate within
+ * `RENDERER_PROBE_MS`. A closed page, or an evaluate that rejects (a navigation
+ * destroyed its context), is a page that responded, so neither is a wedge.
+ * Page-side timers cannot fire in a renderer that stopped running the page, so
+ * the bound is a driver-side race (e2e/visual.spec.ts, `probeRenderer`).
+ */
+async function rendererWedged(page: Page): Promise<boolean> {
+  if (page.isClosed()) return false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const wedged = await Promise.race([
+    page
+      .evaluate(() => true)
+      .then(
+        () => false,
+        () => false,
+      ),
+    new Promise<true>((resolve) => {
+      timer = setTimeout(() => resolve(true), RENDERER_PROBE_MS);
+    }),
+  ]);
+  clearTimeout(timer);
+  return wedged;
+}
+
 export const test = base.extend<
   {
     demoReset: undefined;
@@ -374,8 +402,20 @@ export const test = base.extend<
       await use(undefined);
 
       if (testInfo.status !== testInfo.expectedStatus && entries.length > 0) {
+        // **First line: is the renderer even there?** A click stuck on "waiting
+        // for element to be visible, enabled and stable" with nothing after it
+        // reads like an app race and is not always one. On 2026-10-15 a
+        // certifications.spec.ts click sat there for 55 seconds because the
+        // renderer had stopped answering at all (Playwright's own failure
+        // screenshot and the context close each hung ~5s) — the known Chromium
+        // wedge of e2e/visual.spec.ts, here in a functional spec that had no
+        // way to say so. Only a *timeout* is the verdict: a rejection means the
+        // page answered, with an error.
+        const wedged = (await rendererWedged(page))
+          ? `renderer: no answer to evaluate(() => true) in ${RENDERER_PROBE_MS}ms — wedged, not slow\n`
+          : "";
         await testInfo.attach("browser-activity", {
-          body: [verdict(), "", ...entries].join("\n"),
+          body: [wedged + verdict(), "", ...entries].join("\n"),
           contentType: "text/plain",
         });
       }

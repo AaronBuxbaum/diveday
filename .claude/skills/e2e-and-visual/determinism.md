@@ -30,6 +30,12 @@ The harness discipline that contains it, which any new capture code must keep:
 - **On a stall, probe before blaming.** Both helpers ask the page `evaluate(() => true)` with a
   5s bound and word their message by the answer: alive means our wait leaked (investigate);
   "wedged, not slow" means the known wedge.
+- **A functional spec has no bound of its own, so its failure says it.** `browserActivity`
+  (`e2e/fixtures.ts`) probes a *failed* test's page once, and a page that never answers puts
+  `renderer: no answer to evaluate(() => true) in 5000ms — wedged, not slow` first in the
+  attachment the CI log prints. A click stuck on "waiting for element to be visible, enabled and
+  stable" with no line after it, a failure screenshot that never arrives, and that verdict are the
+  wedge (certifications.spec.ts, run 38783640609); the same click with an answering page is yours.
 - **The literal phrase `wedged, not slow` is load-bearing.** ci.yml's visual job greps the
   capture log for it: a failed capture step carrying that verdict gets exactly one
   `--last-failed` rerun, because a proven-wedged browser is the one failure a rerun cannot mask.
