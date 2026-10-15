@@ -350,6 +350,12 @@ export type DayCloseoutState = {
   shopDay: string;
   /** Today's departures, loudest first. */
   departures: CloseoutDeparture[];
+  /**
+   * Tomorrow's tanks and rental pieces (`dayLoadOut`), read only once every
+   * departure today has settled; absent or null otherwise (fifth-loop ideas,
+   * item 2).
+   */
+  tomorrow?: DayLoadOut | null;
 };
 
 /**
@@ -643,6 +649,12 @@ export type EveningClose = {
    * own predicate — before it spends the accent.
    */
   allHome: boolean;
+  /**
+   * **Tomorrow from tonight** (fifth-loop ideas, item 2): tomorrow's tanks and
+   * rental pieces across its departures, said under the takings while the day
+   * is closing. Null while a boat is out, or for a tomorrow with no departure.
+   */
+  tomorrow: DayLoadOut | null;
 };
 
 /**
@@ -658,6 +670,8 @@ export type EveningClose = {
 export function assembleEveningClose(
   departures: readonly CloseoutDeparture[],
   now: Date = nowDate(),
+  /** `DayCloseoutState.tomorrow`; said only while the day is closing. */
+  tomorrow: DayLoadOut | null = null,
 ): EveningClose {
   const stations: StationClose[] = departures
     .map((departure) => {
@@ -720,7 +734,16 @@ export function assembleEveningClose(
     out === back &&
     stations.every((station) => station.status === "all_home") &&
     stations.every((station) => station.crewAccountedFor);
-  return { stations, closing, out, back, divers, crew, allHome };
+  return {
+    stations,
+    closing,
+    out,
+    back,
+    divers,
+    crew,
+    allHome,
+    tomorrow: closing ? tomorrow : null,
+  };
 }
 
 /**

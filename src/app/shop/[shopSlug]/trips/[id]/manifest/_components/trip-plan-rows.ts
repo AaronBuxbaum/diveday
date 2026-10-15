@@ -1,5 +1,6 @@
 import { siteHistoryText } from "@/i18n/site-history-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import {
   type MeetingPointShopRow,
   type MeetingPointTripRow,
@@ -19,35 +20,33 @@ import type { SiteHistory } from "@/lib/site-history";
  */
 export function tripPlanRows(
   t: StaffTranslator,
-  shop: MeetingPointShopRow,
+  shop: MeetingPointShopRow & { timezone: string },
   plannedDives: readonly {
     dive: { diveNumber: number };
     diveSite: { id: string; name: string } | null;
   }[],
   meetingPoint: MeetingPointTripRow | null,
-  lastTime?: {
-    history: ReadonlyMap<string, SiteHistory>;
-    locale: string;
-    timeZone: string;
-    now: Date;
-  },
+  /** `lastAtSites` for the plan's sites; absent, no dive says its last visit. */
+  siteHistory?: ReadonlyMap<string, SiteHistory>,
+  locale?: string,
 ) {
+  const now = nowDate();
   return {
     dives: plannedDives.map(({ dive, diveSite }) => {
-      const history = diveSite ? lastTime?.history.get(diveSite.id) : undefined;
+      const history = diveSite ? siteHistory?.get(diveSite.id) : undefined;
       return {
         diveNumber: dive.diveNumber,
         line: diveSite
           ? t("manifest.planChange.diveRow", { number: dive.diveNumber, site: diveSite.name })
           : t("manifest.planChange.diveRowNoSite", { number: dive.diveNumber }),
         lastTime:
-          diveSite && history && lastTime
+          diveSite && history && locale
             ? siteHistoryText(t, {
                 site: diveSite.name,
                 history,
-                locale: lastTime.locale,
-                timeZone: lastTime.timeZone,
-                now: lastTime.now,
+                locale,
+                timeZone: shop.timezone,
+                now,
               })
             : undefined,
       };

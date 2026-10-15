@@ -124,8 +124,8 @@ export async function readManifestPage(
     buddyTeamsList,
     bookingNotes,
     diverNotes,
-    checklistItems,
-    checklistChecks,
+    // The boat check, and what earlier crews on this boat said is wrong with it.
+    boatCheck: { checklistItems, checklistChecks, snags },
     plannedDives,
     executedDives,
     liveDiveSites,
@@ -135,7 +135,6 @@ export async function readManifestPage(
     meetingPoint,
     vessel: vessels.get(tripId) ?? null,
     kitRecord,
-    snags,
     siteHistory,
     fieldGuides,
     loggedSightings,

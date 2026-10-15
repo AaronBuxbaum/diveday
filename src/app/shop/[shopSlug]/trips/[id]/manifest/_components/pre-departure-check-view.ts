@@ -2,6 +2,7 @@ import type { OpenSnag } from "@/db/boat-snags";
 import type { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
+import type { SnagActions } from "./PreDepartureCheckList";
 
 /**
  * The boat check as `PreDepartureCheckList` draws it: each item with who
@@ -14,7 +15,7 @@ export function preDepartureCheckView({
   checklistItems,
   checklistChecks,
   snags = [],
-  canNoteSnags = false,
+  snagActions,
   locale,
   timeZone,
   t,
@@ -23,8 +24,8 @@ export function preDepartureCheckView({
   checklistChecks: Awaited<ReturnType<typeof latestPreDepartureChecksForTrip>>;
   /** `openSnagsForTrip`: open snags on this departure's boat. */
   snags?: readonly OpenSnag[];
-  /** The departure has a boat, so a note has a next crew to reach. */
-  canNoteSnags?: boolean;
+  /** Present only when the departure has a boat, so a note has a next crew to reach. */
+  snagActions?: SnagActions;
   locale: string;
   timeZone: string;
   t: StaffTranslator;
@@ -84,7 +85,7 @@ export function preDepartureCheckView({
   return {
     items: checklistListItems,
     carried: snags.filter((snag) => !snag.notedHere).map(snagView),
-    canNoteSnags,
+    snagActions,
     copy: {
       heading: t("trips.preDepartureCheck.heading"),
       summary: t("trips.preDepartureCheck.summary", {

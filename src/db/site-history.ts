@@ -7,6 +7,7 @@ import {
   siteHistoryOf,
 } from "@/lib/site-history";
 import type { DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import { diveSites, executedDives, people, tripDives, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -28,67 +29,71 @@ export async function lastAtSites(
 ): Promise<Map<string, SiteHistory>> {
   const siteIds = [...new Set(input.siteIds)];
   if (siteIds.length === 0) return new Map();
-  const earlier = and(
-    eq(trips.shopId, input.shopId),
-    lt(trips.startsAt, input.before),
-    ne(trips.id, input.excludeTripId),
-    liveTrip(),
-  );
+  const earlier = () =>
+    and(
+      eq(trips.shopId, input.shopId),
+      lt(trips.startsAt, input.before),
+      ne(trips.id, input.excludeTripId),
+    );
   const divedAt = sql<Date>`coalesce(${executedDives.enteredAt}, ${trips.startsAt})`.mapWith(
     trips.startsAt,
   );
-  const [dived, movedAway] = await Promise.all([
-    db
-      .selectDistinctOn([executedDives.actualSiteId], {
-        siteId: executedDives.actualSiteId,
-        divedAt,
-        recordedByName: people.fullName,
-        conditions: executedDives.observedConditions,
-        actualSiteName: actualSite.name,
-      })
-      .from(executedDives)
-      .innerJoin(trips, eq(trips.id, executedDives.tripId))
-      .innerJoin(actualSite, eq(actualSite.id, executedDives.actualSiteId))
-      .leftJoin(people, eq(people.id, executedDives.recordedByPersonId))
-      .where(
-        and(
-          eq(executedDives.shopId, input.shopId),
-          isNull(executedDives.deletedAt),
-          inArray(executedDives.actualSiteId, siteIds),
-          earlier,
-        ),
-      )
-      .orderBy(executedDives.actualSiteId, desc(divedAt), desc(executedDives.diveNumber)),
-    db
-      .selectDistinctOn([tripDives.diveSiteId], {
-        siteId: tripDives.diveSiteId,
-        divedAt,
-        recordedByName: people.fullName,
-        conditions: executedDives.observedConditions,
-        actualSiteName: actualSite.name,
-      })
-      .from(tripDives)
-      .innerJoin(trips, eq(trips.id, tripDives.tripId))
-      .innerJoin(
-        executedDives,
-        and(
-          eq(executedDives.tripId, tripDives.tripId),
-          eq(executedDives.diveNumber, tripDives.diveNumber),
-          eq(executedDives.shopId, input.shopId),
-          isNull(executedDives.deletedAt),
-        ),
-      )
-      .innerJoin(actualSite, eq(actualSite.id, executedDives.actualSiteId))
-      .leftJoin(people, eq(people.id, executedDives.recordedByPersonId))
-      .where(
-        and(
-          inArray(tripDives.diveSiteId, siteIds),
-          isNotNull(executedDives.actualSiteId),
-          ne(executedDives.actualSiteId, tripDives.diveSiteId),
-          earlier,
-        ),
-      )
-      .orderBy(tripDives.diveSiteId, desc(divedAt), desc(tripDives.diveNumber)),
+  const [dived, movedAway] = await queryAll(db, [
+    () =>
+      db
+        .selectDistinctOn([executedDives.actualSiteId], {
+          siteId: executedDives.actualSiteId,
+          divedAt,
+          recordedByName: people.fullName,
+          conditions: executedDives.observedConditions,
+          actualSiteName: actualSite.name,
+        })
+        .from(executedDives)
+        .innerJoin(trips, eq(trips.id, executedDives.tripId))
+        .innerJoin(actualSite, eq(actualSite.id, executedDives.actualSiteId))
+        .leftJoin(people, eq(people.id, executedDives.recordedByPersonId))
+        .where(
+          and(
+            eq(executedDives.shopId, input.shopId),
+            isNull(executedDives.deletedAt),
+            inArray(executedDives.actualSiteId, siteIds),
+            earlier(),
+            liveTrip(),
+          ),
+        )
+        .orderBy(executedDives.actualSiteId, desc(divedAt), desc(executedDives.diveNumber)),
+    () =>
+      db
+        .selectDistinctOn([tripDives.diveSiteId], {
+          siteId: tripDives.diveSiteId,
+          divedAt,
+          recordedByName: people.fullName,
+          conditions: executedDives.observedConditions,
+          actualSiteName: actualSite.name,
+        })
+        .from(tripDives)
+        .innerJoin(trips, eq(trips.id, tripDives.tripId))
+        .innerJoin(
+          executedDives,
+          and(
+            eq(executedDives.tripId, tripDives.tripId),
+            eq(executedDives.diveNumber, tripDives.diveNumber),
+            eq(executedDives.shopId, input.shopId),
+            isNull(executedDives.deletedAt),
+          ),
+        )
+        .innerJoin(actualSite, eq(actualSite.id, executedDives.actualSiteId))
+        .leftJoin(people, eq(people.id, executedDives.recordedByPersonId))
+        .where(
+          and(
+            inArray(tripDives.diveSiteId, siteIds),
+            isNotNull(executedDives.actualSiteId),
+            ne(executedDives.actualSiteId, tripDives.diveSiteId),
+            earlier(),
+            liveTrip(),
+          ),
+        )
+        .orderBy(tripDives.diveSiteId, desc(divedAt), desc(tripDives.diveNumber)),
   ]);
   const record = (row: (typeof dived)[number]): SiteHistoryRecord => ({
     divedAt: row.divedAt,

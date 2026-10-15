@@ -712,7 +712,7 @@ describe("tomorrow from tonight", () => {
   it("adds tomorrow's boats together once the day is closing", () => {
     renderSpine({
       departures: [],
-      evening: evening([closed({ tripId: "t1" })], { takings: null, tomorrow }),
+      evening: evening([closed({ tripId: "t1" })], { takings: null }, tomorrow),
     });
     expect(screen.getByRole("heading", { name: "Tomorrow from tonight" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Print tomorrow" })).toHaveAttribute(
@@ -734,7 +734,8 @@ describe("tomorrow from tonight", () => {
             ended: false,
           }),
         ],
-        { takings: null, tomorrow },
+        { takings: null },
+        tomorrow,
       ),
     });
     expect(screen.queryByRole("heading", { name: "Tomorrow from tonight" })).toBeNull();

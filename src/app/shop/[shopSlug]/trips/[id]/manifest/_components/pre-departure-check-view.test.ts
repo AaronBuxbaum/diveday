@@ -38,6 +38,7 @@ describe("preDepartureCheckView", () => {
       notedHere,
       stillThere: null,
     });
+    const snagActions = { note: async () => null, answer: async () => null };
     const view = preDepartureCheckView({
       checklistItems: [
         { id: "radio", label: "Radio check" },
@@ -45,7 +46,7 @@ describe("preDepartureCheckView", () => {
       ] as never,
       checklistChecks: new Map() as never,
       snags: [snag("a", false, "radio"), snag("b", true, "o2")],
-      canNoteSnags: true,
+      snagActions,
       locale: "en-US",
       timeZone: "America/New_York",
       t,
@@ -56,6 +57,6 @@ describe("preDepartureCheckView", () => {
     expect(view.carried[0]?.notedBy).toContain("Sal Moretti");
     expect(view.items[0]?.snags).toEqual([]);
     expect(view.items[1]?.snags.map((here) => here.note)).toEqual(["Spare cylinder low"]);
-    expect(view.canNoteSnags).toBe(true);
+    expect(view.snagActions).toBe(snagActions);
   });
 });

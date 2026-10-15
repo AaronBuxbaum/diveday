@@ -1,4 +1,3 @@
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { listBoats } from "@/db/boats";
 import { listTripLenses } from "@/db/trip-lenses";
@@ -11,10 +10,7 @@ import { tripCrewNotes } from "./trip-crew-notes";
 const ctx = fileScopedShopContext();
 const t = staffTranslator("en-US");
 
-async function rowsFor(
-  tripNotice?: Parameters<typeof tripAboutRows>[0]["tripNotice"],
-  siteHistory?: readonly string[],
-) {
+async function rowsFor(tripNotice?: Parameters<typeof tripAboutRows>[0]["tripNotice"]) {
   const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -37,7 +33,6 @@ async function rowsFor(
     shopLenses: await listTripLenses(db, shop.id),
     automatedForecast: Promise.resolve(null),
     tideLines: Promise.resolve([]),
-    siteHistory,
   });
 }
 
@@ -56,17 +51,6 @@ describe("tripAboutRows (in-memory PGlite)", () => {
     const who = rows.find((row) => row.id === "requirements");
     expect(typeof who?.value).toBe("string");
     expect(who?.value).not.toBe("");
-  });
-
-  it("says each site's last visit under the plan, and nothing when none was dived", async () => {
-    // Fifth-loop ideas, item 6.
-    const line = "Molasses Reef: last dived Mon, Oct 12 (Sal Moretti).";
-    const plan = (await rowsFor(undefined, [line])).find((row) => row.id === "details");
-    const markup = renderToStaticMarkup(plan?.value as never);
-    expect(markup).toContain("Molasses");
-    expect(markup).toContain(line);
-    const bare = (await rowsFor()).find((row) => row.id === "details");
-    expect(typeof bare?.value).toBe("string");
   });
 
   it("says where the boat meets, the shop's own door when the departure names none", async () => {

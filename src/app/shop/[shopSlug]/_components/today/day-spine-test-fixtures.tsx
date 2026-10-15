@@ -2,7 +2,7 @@
 import { render } from "@testing-library/react";
 import type { FirstBooking } from "@/db/first-booking";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
+import { assembleEveningClose, type CloseoutDeparture, type DayLoadOut } from "@/lib/closeout";
 import {
   assembleDaySpine,
   type FactOfScale,
@@ -103,9 +103,10 @@ export function closed(
 export function evening(
   departures: CloseoutDeparture[],
   overrides: Partial<Omit<EveningReading, "close">> = {},
+  tomorrow: DayLoadOut | null = null,
 ): EveningReading {
   return {
-    close: assembleEveningClose(departures, NOW),
+    close: assembleEveningClose(departures, NOW, tomorrow),
     takings: null,
     headCountCloses: new Map(),
     recapEditors: new Map(),

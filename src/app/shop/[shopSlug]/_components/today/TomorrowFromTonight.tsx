@@ -5,6 +5,8 @@ import { dayLoadOutLine } from "@/i18n/load-out-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DayLoadOut } from "@/lib/closeout";
 import { shopPath } from "@/lib/staff-notices";
+import type { EveningReading } from "./DaySpine";
+import { DayTakings } from "./DayTakings";
 
 /**
  * **Tomorrow from tonight** (fifth-loop ideas, item 2): once today's boats are
@@ -44,5 +46,45 @@ export function TomorrowFromTonight({
         {t("closeout.loadOut.print")}
       </Link>
     </section>
+  );
+}
+
+/**
+ * **The evening's two readings, once the day is closing**: what today made
+ * (`DayTakings`, for a reader who may read money) and what tomorrow needs from
+ * tonight. Fragments, so each stays a section of the spine's own column.
+ */
+export function EveningReadings({
+  evening,
+  currency,
+  locale,
+  timeZone,
+  shopSlug,
+  t,
+}: {
+  /** Absent on a spine with no closing state, which says neither. */
+  evening: EveningReading | undefined;
+  currency: string;
+  locale: string;
+  timeZone: string;
+  shopSlug: string;
+  t: StaffTranslator;
+}) {
+  if (!evening?.close.closing) return null;
+  return (
+    <>
+      {evening.takings ? (
+        <DayTakings
+          takings={evening.takings}
+          currency={currency}
+          locale={locale}
+          timeZone={timeZone}
+          t={t}
+        />
+      ) : null}
+      {evening.close.tomorrow ? (
+        <TomorrowFromTonight loadOut={evening.close.tomorrow} shopSlug={shopSlug} t={t} />
+      ) : null}
+    </>
   );
 }

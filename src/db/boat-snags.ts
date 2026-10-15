@@ -223,7 +223,7 @@ export async function openSnagsForTrip(
         lte(notedOn.startsAt, boat.startsAt),
       ),
     )
-    .orderBy(asc(boatSnags.notedAt), asc(boatSnags.id));
+    .orderBy(asc(boatSnags.notedAt), asc(preDepartureChecklistItems.label), asc(boatSnags.id));
   return rows.map((row) => ({
     id: row.id,
     checklistItemId: row.checklistItemId,
@@ -287,7 +287,12 @@ export async function openSnagsForShop(
     // diveday:allow-deleted-trips: the departure a snag was written on dates it; the boat's problem outlives a deleted departure.
     .innerJoin(notedOn, eq(notedOn.id, boatSnags.notedOnTripId))
     .where(and(eq(boatSnags.shopId, shopId), isNull(boatSnags.fixedAt)))
-    .orderBy(asc(boatSnags.notedAt), asc(boatSnags.id))
+    .orderBy(
+      asc(boatSnags.notedAt),
+      asc(boats.name),
+      asc(preDepartureChecklistItems.label),
+      asc(boatSnags.id),
+    )
     .limit(50);
   if (rows.length === 0) return [];
   const boatIds = [...new Set(rows.map((row) => row.boatId))];
@@ -309,7 +314,7 @@ export async function openSnagsForShop(
         liveTrip(),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
   return rows.map((row) => {
     const own = departures.filter(
       (trip) => trip.boatId === row.boatId && trip.startsAt > row.notedOnStartsAt,

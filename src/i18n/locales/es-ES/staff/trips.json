@@ -724,6 +724,7 @@
     "kept": "Este ensayo tiene un pase de lista, una inmersión registrada o un informe de incidente, así que no se elimina solo."
   },
   "siteHistory": {
+    "label": "La última vez",
     "dived": "{site}: última inmersión el {date} ({name}).",
     "divedNoName": "{site}: última inmersión el {date}.",
     "divedWith": "{site}: última inmersión el {date} ({name}): {conditions}.",

@@ -289,6 +289,14 @@
           "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1057 -> 1072",
           "src/db/staffing.test.ts": "946 -> 952"
         }
+      },
+      {
+        "why": "boat_snags (fifth-loop ideas, item 1) is a new table, and the export, erasure and retention coverage lists each name every table by design: one entry apiece, which no sibling file can hold",
+        "files": {
+          "src/db/erasure-coverage.test.ts": "1176 -> 1178",
+          "src/db/export.test.ts": "1670 -> 1673",
+          "src/db/retention.test.ts": "1262 -> 1265"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -298,9 +306,9 @@
     "src/app/api/webhooks/stripe/route.ts": 932,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1118,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1338,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1337,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 927,
-    "src/app/shop/[shopSlug]/page.tsx": 966,
+    "src/app/shop/[shopSlug]/page.tsx": 943,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1072,
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 948,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
@@ -324,9 +332,9 @@
     "src/db/dive-sites.test.ts": 1174,
     "src/db/diver-merge.test.ts": 1285,
     "src/db/divers.test.ts": 3105,
-    "src/db/erasure-coverage.test.ts": 1176,
+    "src/db/erasure-coverage.test.ts": 1178,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1670,
+    "src/db/export.test.ts": 1673,
     "src/db/import.test.ts": 1077,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
@@ -339,7 +347,7 @@
     "src/db/reminders.test.ts": 1078,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1594,
-    "src/db/retention.test.ts": 1262,
+    "src/db/retention.test.ts": 1265,
     "src/db/reviews.test.ts": 1004,
     "src/db/seat-claims.test.ts": 1478,
     "src/db/self-declared-cards.test.ts": 1864,
@@ -410,7 +418,7 @@
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 425,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 383,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 304,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 303,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 519,
     "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 388,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
@@ -429,7 +437,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 366,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 345,
     "src/db/checkouts.ts#startBookingCheckout": 303,
-    "src/db/export.ts#loadShopExportContext": 338,
+    "src/db/export.ts#loadShopExportContext": 334,
     "src/db/reminders.ts#sendDueReminders": 340,
     "src/db/reporting.ts#getMonthlyReport": 338,
     "src/db/seed-dive-sites.ts#seedDiveSites": 467,
@@ -504,7 +512,7 @@
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 479,
     "src/app/shop/[shopSlug]/orders/page.tsx": 734,
-    "src/app/shop/[shopSlug]/page.tsx": 966,
+    "src/app/shop/[shopSlug]/page.tsx": 943,
     "src/app/shop/[shopSlug]/promos/page.tsx": 601,
     "src/app/shop/[shopSlug]/reports/page.tsx": 669,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 466,
@@ -514,7 +522,7 @@
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 789,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 704,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 494,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 492,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 525
   },
   "tokens": {

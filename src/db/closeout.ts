@@ -2,10 +2,12 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "dri
 import { nowDate } from "@/lib/clock";
 import {
   assembleDayCloseout,
+  assembleEveningClose,
   type DayCloseoutState,
   type DayLoadOut,
   dayLoadOut,
   seatSailed,
+  tomorrowNoon,
 } from "@/lib/closeout";
 import type { CrewRollCallSubject } from "@/lib/manifests";
 import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
@@ -378,12 +380,24 @@ export async function getDayCloseout(
   shopId: string,
   timeZone: string,
   now: Date = nowDate(),
+  /**
+   * The shop whose tomorrow to add up once every boat today has settled
+   * (fifth-loop ideas, item 2). Absent, tomorrow is never read.
+   */
+  loadOutShop?: TripPrepShop,
 ): Promise<DayCloseoutState> {
   const [tripsToday, gaps] = await Promise.all([
     todaysTrips(db, shopId, timeZone, now),
     listRollCallGaps(db, shopId, now),
   ]);
-  return assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
+  const state = assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
+  // Only once the evening is closing: a dozen prep reads for a day still sailing would
+  // be spent on a block nobody is shown.
+  if (!loadOutShop || !assembleEveningClose(state.departures, now).closing) return state;
+  return {
+    ...state,
+    tomorrow: await readDayLoadOut(db, loadOutShop, tomorrowNoon(now, timeZone), now),
+  };
 }
 
 /**

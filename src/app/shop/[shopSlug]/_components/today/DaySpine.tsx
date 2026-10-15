@@ -26,7 +26,7 @@ import { StatusMark } from "@/components/ui/StatusMark";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
-import type { DayLoadOut, DayTakings as DayTakingsReading, EveningClose } from "@/lib/closeout";
+import type { DayTakings as DayTakingsReading, EveningClose } from "@/lib/closeout";
 import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
@@ -45,7 +45,6 @@ import {
 } from "@/lib/today";
 import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
-import { DayTakings } from "./DayTakings";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
 import {
@@ -53,7 +52,7 @@ import {
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
 import { spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
-import { TomorrowFromTonight } from "./TomorrowFromTonight";
+import { EveningReadings } from "./TomorrowFromTonight";
 import { WaiverSendControl } from "./WaiverSendControl";
 
 /**
@@ -769,12 +768,6 @@ export type EveningReading = {
    */
   takings: DayTakingsReading | null;
   /**
-   * Tomorrow's tanks and rental pieces, added across its departures
-   * (`readDayLoadOut`; fifth-loop ideas, item 2). Read only once the day is
-   * closing; null or absent for a tomorrow with no departure.
-   */
-  tomorrow?: DayLoadOut | null;
-  /**
    * No earlier day of this shop holds a sailed departure, so tonight is the
    * first boat that ever came home. The once-ever wording the coral table
    * sanctions — condition-derived, self-expiring, never stored.
@@ -1210,20 +1203,16 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
         </UnlessWindy>
       ) : null}
 
-      {/* **What today made** (issue #1930). While one boat is out there is no
-          day to have made anything yet. */}
-      {closing && evening?.takings ? (
-        <DayTakings
-          takings={evening.takings}
-          currency={currency}
-          locale={locale}
-          timeZone={timeZone}
-          t={t}
-        />
-      ) : null}
-      {closing && evening?.tomorrow ? (
-        <TomorrowFromTonight loadOut={evening.tomorrow} shopSlug={shopSlug} t={t} />
-      ) : null}
+      {/* **What today made** (issue #1930), and what tomorrow needs from
+          tonight (fifth-loop ideas, item 2). Neither while a boat is out. */}
+      <EveningReadings
+        evening={evening}
+        currency={currency}
+        locale={locale}
+        timeZone={timeZone}
+        shopSlug={shopSlug}
+        t={t}
+      />
 
       {/* The two horizons, collapsed. Tomorrow expands in place through the
           app's one disclosure spelling (`LedgerGroup`'s `folded`); the week is

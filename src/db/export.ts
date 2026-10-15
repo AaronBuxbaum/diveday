@@ -225,6 +225,20 @@ async function readReviewRowsWithReplies(tx: AppTransaction, shopId: string) {
  * shop that does not exist. Each entry of `SHOP_EXPORT_FILES` takes only what
  * it names from this.
  */
+/**
+ * The boat check's rows: the shop's checklist, every tick, and the snags a crew
+ * noted against an item for the boat's next crew (fifth-loop ideas, item 1).
+ */
+async function readBoatCheckRows(tx: AppTransaction, scope: ShopExportScope) {
+  const checklistItemRows = await readScoped(tx, "preDepartureChecklistItems", scope);
+  return {
+    checklistItemRows,
+    checklistItemLabel: new Map(checklistItemRows.map((row) => [row.id, row.label])),
+    checklistEventRows: await readScoped(tx, "preDepartureCheckEvents", scope),
+    boatSnagRows: await readScoped(tx, "boatSnags", scope),
+  };
+}
+
 async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const [shop] = await tx.select().from(shops).where(eq(shops.id, shopId)).limit(1);
   if (!shop) return null;
@@ -533,12 +547,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const workOrderEventRows = await readScoped(tx, "workOrderEvents", scope);
 
-  const checklistItemRows = await readScoped(tx, "preDepartureChecklistItems", scope);
-  const checklistItemLabel = new Map(checklistItemRows.map((row) => [row.id, row.label]));
-
-  const checklistEventRows = await readScoped(tx, "preDepartureCheckEvents", scope);
-
-  const boatSnagRows = await readScoped(tx, "boatSnags", scope);
+  const boatCheckRows = await readBoatCheckRows(tx, scope);
 
   const priorVisitRows = await readScoped(tx, "priorVisits", scope);
 
@@ -706,10 +715,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     workOrderLineRows,
     workOrderCareRows,
     workOrderEventRows,
-    checklistItemRows,
-    checklistItemLabel,
-    checklistEventRows,
-    boatSnagRows,
+    ...boatCheckRows,
     priorVisitRows,
     importedPaymentHistoryRows,
     boatRows,

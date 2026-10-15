@@ -124,8 +124,7 @@ export default async function TripManifestPage({
     buddyTeamsList,
     bookingNotes,
     diverNotes,
-    checklistItems,
-    checklistChecks,
+    boatCheck,
     plannedDives,
     executedDives,
     liveDiveSites,
@@ -135,7 +134,6 @@ export default async function TripManifestPage({
     meetingPoint,
     vessel,
     kitRecord,
-    snags,
     siteHistory,
     fieldGuides,
     loggedSightings,
@@ -175,10 +173,8 @@ export default async function TripManifestPage({
   });
   const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);
   const checklist = preDepartureCheckView({
-    checklistItems,
-    checklistChecks,
-    snags,
-    canNoteSnags: vessel !== null,
+    ...boatCheck,
+    snagActions: vessel ? { note: actions.noteSnag, answer: actions.answerSnag } : undefined,
     locale,
     timeZone: shop.timezone,
     t,
@@ -317,15 +313,8 @@ export default async function TripManifestPage({
         <PreDepartureCheckList
           idPrefix={idPrefix}
           action={actions.preDepartureCheck}
-          items={checklist.items}
           atDeparture={isDeparture}
-          copy={checklist.copy}
-          carried={checklist.carried}
-          snagActions={
-            checklist.canNoteSnags
-              ? { note: actions.noteSnag, answer: actions.answerSnag }
-              : undefined
-          }
+          {...checklist}
         />
         {/* The page's job, as high as it can go: the divers, immediately under
             the panel that counts them. It used to be the *last* section, below
@@ -392,12 +381,7 @@ export default async function TripManifestPage({
           <TripPlanSection
             idPrefix={idPrefix}
             heading={t("manifest.planChange.heading")}
-            {...tripPlanRows(t, shop, plannedDives, meetingPoint, {
-              history: siteHistory,
-              locale,
-              timeZone: shop.timezone,
-              now: nowDate(),
-            })}
+            {...tripPlanRows(t, shop, plannedDives, meetingPoint, siteHistory, locale)}
           />
         ) : null}
 
@@ -473,8 +457,7 @@ export default async function TripManifestPage({
             completeManifests,
             shop: { ...shop, emergencyReference },
             shopSlug,
-            checklistItems,
-            checklistChecks,
+            ...boatCheck,
             boatSafety,
             t,
           })}
