@@ -20,6 +20,13 @@ export type TripPageSearchParams = {
   confirmPhone?: string;
   /** `details` opens the Details tab; anything else is the Divers tab. */
   view?: string;
+  /**
+   * A refused Paid mark's status, amount (in cents) and method, so the sheet
+   * reopens holding them (issue #2607). Read through `readMarkRetry`, never raw.
+   */
+  markStatus?: string;
+  markAmount?: string;
+  markMethod?: string;
   /** The reschedule notice a retime held, and how many seats it tells. */
   held?: string;
   tell?: string;

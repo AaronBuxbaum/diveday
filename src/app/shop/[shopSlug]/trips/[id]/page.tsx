@@ -22,6 +22,7 @@ import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips"
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { readMarkRetry } from "@/lib/payment-marks";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -106,6 +107,9 @@ export default async function ManageTripPage({
       view,
       held,
       tell,
+      markStatus,
+      markAmount,
+      markMethod,
     },
   ] = await Promise.all([params, searchParams]);
   // An unparseable id names no row. Guarded here rather than in the query
@@ -261,6 +265,10 @@ export default async function ManageTripPage({
     mayRetireRefusal,
   });
 
+  const markRetry = notice?.startsWith("payment-")
+    ? readMarkRetry({ status: markStatus, amount: markAmount, method: markMethod })
+    : null;
+
   return (
     <>
       <FlashParams
@@ -277,6 +285,9 @@ export default async function ManageTripPage({
           "confirmName",
           "confirmEmail",
           "confirmPhone",
+          "markStatus",
+          "markAmount",
+          "markMethod",
         ]}
       />
       {/* **One gap between every section, masthead included** (K-262). Each
@@ -507,6 +518,9 @@ export default async function ManageTripPage({
                 // staffer lands where they were working, not on a closed list.
                 // A removed seat has no row to hold.
                 keepOpenBookingId: notice?.startsWith("booking-removed") ? undefined : bid,
+                // A refused Paid mark reopens holding what was typed, on the
+                // seat the notice names (issue #2607).
+                paymentMarkRetry: markRetry && bid ? { bookingId: bid, ...markRetry } : undefined,
                 // The one paper-release refusal with a way through (issue #1573),
                 // scoped to the seat the action named so a roster of minors does not
                 // all sprout the staffer's confirmation.

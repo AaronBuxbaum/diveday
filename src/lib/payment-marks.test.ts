@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { heldAfterMark, markNeedsWriteOffRight, readManualPaymentMark } from "./payment-marks";
+import {
+  heldAfterMark,
+  markNeedsWriteOffRight,
+  markRetryParams,
+  readManualPaymentMark,
+  readMarkRetry,
+} from "./payment-marks";
 
 describe("readManualPaymentMark", () => {
   it("reads money taken: the amount in minor units and the method", () => {
@@ -149,5 +155,56 @@ describe("heldAfterMark", () => {
       amountCents: 12_000,
       method: "cash",
     });
+  });
+});
+
+describe("markRetryParams", () => {
+  it("carries the parsed amount in cents, the status and the method", () => {
+    expect(markRetryParams("paid", "$45.50", "cash", "usd")).toEqual({
+      markStatus: "paid",
+      markAmount: "4550",
+      markMethod: "cash",
+    });
+  });
+
+  it("drops what it cannot read instead of repeating it", () => {
+    expect(markRetryParams("deposit_paid", "lots", "barter", "usd")).toEqual({
+      markStatus: "deposit_paid",
+      markAmount: undefined,
+      markMethod: undefined,
+    });
+    expect(markRetryParams("paid", "-5", null, "usd").markAmount).toBeUndefined();
+    expect(markRetryParams("paid", null, "card", "usd").markAmount).toBeUndefined();
+  });
+
+  it("is empty for a status that carries no money", () => {
+    expect(markRetryParams("waived", "10", "cash", "usd")).toEqual({});
+    expect(markRetryParams("unpaid", null, null, "usd")).toEqual({});
+  });
+});
+
+describe("readMarkRetry", () => {
+  it("reads a bounced mark back", () => {
+    expect(readMarkRetry({ status: "paid", amount: "4550", method: "card" })).toEqual({
+      status: "paid",
+      amountCents: 4550,
+      method: "card",
+    });
+  });
+
+  it("is no retry without a money status", () => {
+    expect(readMarkRetry({})).toBeNull();
+    expect(readMarkRetry({ status: "refunded", amount: "100" })).toBeNull();
+  });
+
+  it("falls back to empty on hand-edited values rather than failing", () => {
+    expect(readMarkRetry({ status: "deposit_paid", amount: "12.5", method: "<b>" })).toEqual({
+      status: "deposit_paid",
+      amountCents: null,
+      method: null,
+    });
+    for (const amount of ["0", "-3", "1e9", "9999999999", "abc", ""]) {
+      expect(readMarkRetry({ status: "paid", amount })?.amountCents).toBeNull();
+    }
   });
 });

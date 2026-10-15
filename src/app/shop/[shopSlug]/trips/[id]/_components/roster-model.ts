@@ -17,6 +17,7 @@ import { seatSailed } from "@/lib/closeout";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import type { ElearningQuery } from "@/lib/elearning-check";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
+import type { MarkRetry } from "@/lib/payment-marks";
 import { isDiver } from "@/lib/participant-types";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
@@ -154,6 +155,8 @@ export type RosterRows = {
    * with its panel open on the way back.
    */
   keepOpenBookingId?: string;
+  /** The Paid mark that just bounced (issue #2607): reopens that seat's sheet holding what was typed. */
+  paymentMarkRetry?: { bookingId: string } & MarkRetry;
   /**
    * The seat whose paper release was just refused for a co-signer sharing the
    * diver's name (issue #1573). That one row's form offers the staffer's

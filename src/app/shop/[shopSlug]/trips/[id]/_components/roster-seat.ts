@@ -65,6 +65,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     packageDivesByBooking,
     paymentMarksByBooking,
     keepOpenBookingId,
+    paymentMarkRetry,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
   } = rows;
@@ -129,6 +130,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
           })
         : null,
     handMarkRefused: paymentSourceCode === "online" || paymentSourceCode === "package",
+    retry: paymentMarkRetry?.bookingId === booking.id ? paymentMarkRetry : null,
   };
   const paymentSource = counterMark
     ? markFacts?.mark?.recordedByName

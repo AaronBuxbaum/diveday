@@ -56,6 +56,77 @@ export function readManualPaymentMark(
 }
 
 /**
+ * **What a bounced Paid mark carries back, and nothing else** (issue #2607). A
+ * Paid mark the server refuses redirects to the roster with a notice; without
+ * this the sheet reopened empty and a staffer at the dock retyped the amount
+ * and picked the method again after every error, with a line waiting.
+ *
+ * Three plain values ride the URL: which money status was picked, the amount in
+ * the currency's smallest unit as digits, and the method's code. Nothing else
+ * from the form does (no notes, no names), and none is echoed as typed: the
+ * amount is the parsed figure, the status and method are matched against their
+ * own lists, so an unreadable value is dropped, never repeated.
+ */
+export const MARK_RETRY_PARAMS = {
+  status: "markStatus",
+  amount: "markAmount",
+  method: "markMethod",
+} as const;
+
+/** The largest amount the sheet will be pre-filled with: $1,000,000.00 in cents. */
+const MARK_RETRY_MAX_CENTS = 100_000_000;
+
+export type MarkRetry = {
+  status: "paid" | "deposit_paid";
+  amountCents: number | null;
+  method: ManualPaymentMethodCode | null;
+};
+
+/**
+ * The query values for `noticeUrl` when the Paid mark bounces: what the staffer
+ * picked and typed, as far as it can be read. Empty for a status that carries
+ * no money, so an unrelated refusal adds nothing to the URL.
+ */
+export function markRetryParams(
+  status: string,
+  amountRaw: string | null,
+  methodRaw: string | null,
+  currency: string,
+): Record<string, string | undefined> {
+  if (!MONEY_STATUSES.has(status)) return {};
+  const typed = (amountRaw ?? "").trim();
+  const reading = typed ? readTypedMoney(typed, currency) : null;
+  const cents = reading ? majorToMinor(Number(reading.canonical), currency) : 0;
+  return {
+    [MARK_RETRY_PARAMS.status]: status,
+    [MARK_RETRY_PARAMS.amount]:
+      cents > 0 && cents <= MARK_RETRY_MAX_CENTS ? String(cents) : undefined,
+    [MARK_RETRY_PARAMS.method]: isManualPaymentMethod(methodRaw) ? methodRaw : undefined,
+  };
+}
+
+/**
+ * Read a bounced Paid mark back off the page's query string. The params are
+ * hand-editable, so each is validated on its own: an unknown status means no
+ * retry at all, and an oversized, negative, fractional or non-numeric amount,
+ * or an unknown method, falls back to empty rather than failing the page.
+ */
+export function readMarkRetry(raw: {
+  status?: string;
+  amount?: string;
+  method?: string;
+}): MarkRetry | null {
+  if (raw.status !== "paid" && raw.status !== "deposit_paid") return null;
+  const amountCents =
+    raw.amount !== undefined && /^[1-9]\d{0,8}$/.test(raw.amount) ? Number(raw.amount) : null;
+  return {
+    status: raw.status,
+    amountCents: amountCents !== null && amountCents <= MARK_RETRY_MAX_CENTS ? amountCents : null,
+    method: isManualPaymentMethod(raw.method) ? raw.method : null,
+  };
+}
+
+/**
  * Whether this mark is a decision about money — the right `canRefund` gates.
  *
  * Two marks are: Paid or Deposit paid with no money at all, and Paid on less

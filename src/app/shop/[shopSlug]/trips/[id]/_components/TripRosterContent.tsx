@@ -17,6 +17,7 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import type { MarkRetry } from "@/lib/payment-marks";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
@@ -84,6 +85,8 @@ export type TripRosterContentContext = {
   confirmPhone?: string;
   undoBookingId?: string;
   keepOpenBookingId?: string;
+  /** A refused Paid mark, to reopen the sheet holding what was typed (issue #2607). */
+  paymentMarkRetry?: { bookingId: string } & MarkRetry;
   /** The seat whose paper release was refused for a namesake co-signer (#1573). */
   namesakeRefusedBookingId?: string;
   /** The seat whose change into diving the card check just refused. */
@@ -139,6 +142,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     confirmPhone,
     undoBookingId,
     keepOpenBookingId,
+    paymentMarkRetry,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
     mayWriteOffPayment,
@@ -269,6 +273,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           packageDivesByBooking: guests.packageDivesByBooking,
           paymentMarksByBooking: guests.paymentMarksByBooking,
           keepOpenBookingId,
+          paymentMarkRetry,
           namesakeRefusedBookingId,
           participantTypeCertBookingId,
         }}
