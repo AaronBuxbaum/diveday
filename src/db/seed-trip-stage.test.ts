@@ -108,4 +108,28 @@ describe("seedTripStage", () => {
       expect(tap.by).toBe(expected?.personId);
     }
   });
+
+  it("names the departure's captain on every stamp, never a deckhand", async () => {
+    // A demo visitor reads "Home · Keiko Tanaka" on a boat whose captain is
+    // Sal Moretti as a deckhand confirming the boat is home (issue #2503).
+    const { db, shop } = await seededShopContext();
+    const taps = await db
+      .select({ tripId: tripStageEvents.tripId, by: tripStageEvents.recordedByPersonId })
+      .from(tripStageEvents)
+      .where(eq(tripStageEvents.shopId, shop.id));
+    expect(taps.length).toBeGreaterThan(0);
+    for (const tap of taps) {
+      const crew = await db
+        .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, tap.tripId));
+      // No crew at all is the one case the writer falls back to the shop's captain.
+      if (crew.length === 0) continue;
+      const captains = crew.filter((member) => member.tripRole === "captain");
+      expect(
+        captains.map((member) => member.personId),
+        `trip ${tap.tripId}`,
+      ).toContain(tap.by);
+    }
+  });
 });
