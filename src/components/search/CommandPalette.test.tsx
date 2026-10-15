@@ -28,6 +28,8 @@ const COPY: CommandPaletteCopy = {
   groupGear: "Gear",
   gearStatuses: { in_service: "In service", needs_service: "Needs service" },
   groupGoTo: "Go to",
+  groupRecent: "Recent",
+  groupToday: "Today",
   language: "Language",
   groupSession: "This session",
   signOut: "Sign out",
@@ -313,5 +315,92 @@ describe("CommandPalette settings shortcuts", () => {
     // The registry's row (labelled by its id here); the rail's "Team" is skipped.
     expect(await screen.findByRole("option", { name: "team" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Team" })).toBeNull();
+  });
+});
+
+/**
+ * **⌘K opens on what you were just doing** (fifth loop, item 13): the records
+ * this staffer last opened from it on this device, then today's boats, before
+ * anything is typed. Browser storage only, per shop and per staffer.
+ */
+describe("CommandPalette recents and today's boats", () => {
+  afterEach(() => window.localStorage.clear());
+
+  function renderWith(props: Partial<Parameters<typeof CommandPalette>[0]> = {}) {
+    return render(
+      <CommandPalette
+        shopSlug="blue-mantis"
+        gates={{ waivers: true, reports: true, team: true, settings: true }}
+        locale="en-US"
+        languages={[]}
+        setLocaleAction={async () => {}}
+        signOutAction={async () => {}}
+        createDiverAction={async () => {}}
+        readerId="p-desk"
+        copy={COPY}
+        {...props}
+      />,
+    );
+  }
+
+  it("remembers a diver opened from it, and opens on them next time", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(results(null)), { status: 200 })),
+    );
+    renderWith();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    await userEvent.type(screen.getByRole("combobox"), "gra");
+    await userEvent.click(await screen.findByRole("option", { name: "Grace Mensah" }));
+    expect(routerPush).toHaveBeenCalledWith("/shop/blue-mantis/divers/p-grace");
+
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    const first = screen.getAllByRole("option")[0];
+    expect(first).toHaveAccessibleName("Grace Mensah");
+    expect(screen.getByText("Recent")).toBeInTheDocument();
+  });
+
+  it("keeps one staffer's recents from the next one on the same device", async () => {
+    window.localStorage.setItem(
+      "diveday.palette.recent.blue-mantis.p-owner",
+      JSON.stringify([
+        {
+          key: "diver:p-1",
+          kind: "diver",
+          label: "Owner's diver",
+          href: "/shop/blue-mantis/divers/p-1",
+        },
+      ]),
+    );
+    renderWith();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    expect(screen.queryByText("Owner's diver")).toBeNull();
+    expect(screen.queryByText("Recent")).toBeNull();
+  });
+
+  it("refuses a stored row that does not point inside the shop's pages", async () => {
+    window.localStorage.setItem(
+      "diveday.palette.recent.blue-mantis.p-desk",
+      JSON.stringify([
+        { key: "diver:x", kind: "diver", label: "Elsewhere", href: "https://x.example" },
+      ]),
+    );
+    renderWith();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    expect(screen.queryByText("Elsewhere")).toBeNull();
+  });
+
+  it("offers today's boats under Today before anything is typed, and not once a query is", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(results(null)), { status: 200 })),
+    );
+    renderWith({ todayBoats: [{ id: "t-1", title: "Two-Tank Reef", time: "7:00 AM" }] });
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    const boat = screen.getByRole("option", { name: "Two-Tank Reef" });
+    expect(boat).toHaveTextContent("7:00 AM");
+    await userEvent.type(screen.getByRole("combobox"), "gra");
+    await screen.findByRole("option", { name: "Grace Mensah" });
+    expect(screen.queryByRole("option", { name: "Two-Tank Reef" })).toBeNull();
   });
 });

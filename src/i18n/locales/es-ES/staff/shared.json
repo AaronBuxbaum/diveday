@@ -155,6 +155,8 @@
     "groupGear": "Equipo",
     "groupSession": "Sesión",
     "groupGoTo": "Ir a",
+    "groupRecent": "Recientes",
+    "groupToday": "Hoy",
     "goToBoarding": "Embarque — el barco de hoy",
     "goToOfflineRollCall": "Abrir pase de lista sin conexión",
     "hintMove": "para moverte",

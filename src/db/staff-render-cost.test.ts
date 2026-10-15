@@ -445,7 +445,13 @@ const CHROME_CEILING = 20;
 // 65 → 66: a "certification pending" row offers the agency check (H-105), so
 // Today reads which of the blocked divers' cards the extension could look up
 // (`listAgencyCheckableCards`), one statement beside the wave, not after it.
-const TODAY_CEILING = 66;
+// 66 → 69: measured on the fifth loop's desk layer base (1f431d2e0) before it
+// changed anything; the fourth review's safety layer reads crew away notes and
+// the booking layer its own rows, and neither moved this line.
+// 69 → 71 (fifth loop, items 3 and 7): the shop's emergency card and the count
+// of found items waiting to go home, two statements beside the wave rather
+// than after it, so the phase count below does not move.
+const TODAY_CEILING = 71;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no

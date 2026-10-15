@@ -128,10 +128,33 @@ export async function todayNextDepartureTripId(
   timeZone: string,
   now: Date = nowDate(),
 ): Promise<string | null> {
+  return nextOfTodaysDepartures(await todaysDepartures(db, shopId, timeZone, now), now);
+}
+
+/** The departure a boarding door opens: the first still out or to come, else the first. */
+export function nextOfTodaysDepartures(
+  todays: readonly { id: string; endsAt: Date }[],
+  now: Date,
+): string | null {
+  const active = todays.find((row) => row.endsAt >= now) ?? todays[0];
+  return active?.id ?? null;
+}
+
+/**
+ * **Today's scheduled departures, in clock order** — the boarding door's
+ * source, and ⌘K's "Today" group before anything is typed (fifth loop, item
+ * 13), from one read.
+ */
+export async function todaysDepartures(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date = nowDate(),
+): Promise<{ id: string; title: string; startsAt: Date; endsAt: Date }[]> {
   const today = shopDay(now, timeZone);
   const scan = shopDayWindow(now);
   const rows = await db
-    .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
     .from(trips)
     .where(
       and(
@@ -143,9 +166,7 @@ export async function todayNextDepartureTripId(
       ),
     )
     .orderBy(asc(trips.startsAt));
-  const todays = rows.filter((row) => shopDay(row.startsAt, timeZone) === today);
-  const active = todays.find((row) => row.endsAt >= now) ?? todays[0];
-  return active?.id ?? null;
+  return rows.filter((row) => shopDay(row.startsAt, timeZone) === today);
 }
 
 /** A departure happening today, with just enough to know whether it can sail. */

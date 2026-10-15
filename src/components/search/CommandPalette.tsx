@@ -18,6 +18,14 @@ import {
   staffPaletteDestinations,
 } from "@/lib/staff-destinations";
 import { PaletteGlyph } from "./PaletteGlyph";
+import {
+  forgetRecents,
+  type RecentKind,
+  type RecentRecord,
+  readRecents,
+  recentsStorageKey,
+  rememberRecent,
+} from "./palette-recents";
 
 /**
  * A row in the palette. Most are destinations (`href`); a few *do* something
@@ -44,6 +52,8 @@ type PaletteItem = {
    * row of a query that names one thing carries it.
    */
   card?: { lines: string[]; act: string };
+  /** A record this row opens, kept as one of this staffer's recents once chosen. */
+  recent?: RecentRecord;
   /**
    * The row's left rail. Always decorative — every row's accessible name is
    * its `aria-label` — and always present, because a rail that appears on some
@@ -94,6 +104,11 @@ const EMPTY: SearchResults = {
   gear: [],
 };
 
+/** One of today's departures, for the palette's "Today" group (fifth loop, item 13). */
+export type PaletteTodayBoat = { id: string; title: string; time: string };
+
+const NO_TODAY_BOATS: readonly PaletteTodayBoat[] = [];
+
 export type CommandPaletteCopy = {
   search: string;
   dialogAriaLabel: string;
@@ -111,6 +126,10 @@ export type CommandPaletteCopy = {
   /** Every gear status, worded — the palette has the translator, `src/db` does not. */
   gearStatuses: Record<GearItemStatus, string>;
   groupGoTo: string;
+  /** What this staffer opened from here on this device, before anything is typed. */
+  groupRecent: string;
+  /** Today's departures, before anything is typed. */
+  groupToday: string;
   /** Heading over the language rows — also what a staffer types to find them. */
   language: string;
   /** Heading over the rows about this session rather than this shop's work. */
@@ -215,6 +234,8 @@ function useShopSearch(query: string, setResults: (results: SearchResults) => vo
  */
 function paletteGroups({
   results,
+  recents = [],
+  todayBoats = NO_TODAY_BOATS,
   query,
   boatBoardingHref,
   root,
@@ -230,6 +251,9 @@ function paletteGroups({
   startTransition,
 }: {
   results: SearchResults;
+  /** This staffer's recents on this device, newest first (`palette-recents.ts`). */
+  recents?: readonly RecentRecord[];
+  todayBoats?: readonly PaletteTodayBoat[];
   query: string;
   boatBoardingHref: string | undefined;
   root: string;
@@ -256,6 +280,36 @@ function paletteGroups({
     copy,
   });
   const out: PaletteGroup[] = [];
+  // **Before anything is typed, what you were just doing** (fifth loop, item
+  // 13): the records this staffer last opened here, then today's boats, each
+  // one tap away above the doors.
+  if (rawQuery === "" && recents.length > 0) {
+    out.push({
+      id: "recent",
+      heading: copy.groupRecent,
+      items: recents.map((record) => ({
+        key: `recent:${record.key}`,
+        label: record.label,
+        detail: record.detail,
+        href: record.href,
+        recent: record,
+        icon: <PaletteGlyph name={record.kind} />,
+      })),
+    });
+  }
+  if (rawQuery === "" && todayBoats.length > 0) {
+    out.push({
+      id: "today",
+      heading: copy.groupToday,
+      items: todayBoats.map((boat) => ({
+        key: `today:${boat.id}`,
+        label: boat.title,
+        detail: boat.time,
+        href: `${root}/trips/${boat.id}`,
+        icon: <PaletteGlyph name="trip" />,
+      })),
+    });
+  }
   // **Ask it, and it answers.** The first row when the query names one
   // thing: the fact, and the primary act the home's ledger rows would
   // offer. The doors that ship today render beneath; a query that names
@@ -283,13 +337,15 @@ function paletteGroups({
     out.push({ id: "answer", items });
   }
   // A diver opens their record (ADR 20261001-logbook).
-  const diverItems: PaletteItem[] = results.divers.map((diver) => ({
-    key: `diver:${diver.id}`,
-    label: diver.fullName,
-    detail: diver.detail ?? undefined,
-    href: `${root}/divers/${diver.id}`,
-    icon: <PaletteGlyph name="diver" />,
-  }));
+  const diverItems: PaletteItem[] = results.divers.map((diver) =>
+    recordItem(
+      "diver",
+      diver.id,
+      diver.fullName,
+      diver.detail ?? undefined,
+      `${root}/divers/${diver.id}`,
+    ),
+  );
   // "Add a diver called <whatever you typed>" matches *every* query by
   // construction, so it is the one row that can never lose a ranking contest
   // — which is how typing "sign out" used to offer to create a diver named
@@ -323,13 +379,9 @@ function paletteGroups({
     out.push({
       id: "trips",
       heading: copy.groupTrips,
-      items: results.trips.map((trip) => ({
-        key: `trip:${trip.id}`,
-        label: trip.title,
-        detail: trip.detail,
-        href: `${root}/trips/${trip.id}`,
-        icon: <PaletteGlyph name="trip" />,
-      })),
+      items: results.trips.map((trip) =>
+        recordItem("trip", trip.id, trip.title, trip.detail, `${root}/trips/${trip.id}`),
+      ),
     });
   }
   if (results.diveSites.length > 0) {
@@ -365,28 +417,26 @@ function paletteGroups({
     out.push({
       id: "gear",
       heading: copy.groupGear,
-      items: results.gear.map((unit) => ({
-        key: `gear:${unit.id}`,
-        label: unit.label,
-        detail: unit.detail
-          ? `${copy.gearStatuses[unit.status]} · ${unit.detail}`
-          : copy.gearStatuses[unit.status],
-        href: `${root}/gear/${unit.id}`,
-        icon: <PaletteGlyph name="gear" />,
-      })),
+      items: results.gear.map((unit) =>
+        recordItem(
+          "gear",
+          unit.id,
+          unit.label,
+          unit.detail
+            ? `${copy.gearStatuses[unit.status]} · ${unit.detail}`
+            : copy.gearStatuses[unit.status],
+          `${root}/gear/${unit.id}`,
+        ),
+      ),
     });
   }
   if (results.orders.length > 0) {
     out.push({
       id: "orders",
       heading: copy.groupOrders,
-      items: results.orders.map((order) => ({
-        key: `order:${order.id}`,
-        label: order.personName,
-        detail: order.detail,
-        href: `${root}/orders/${order.id}`,
-        icon: <PaletteGlyph name="order" />,
-      })),
+      items: results.orders.map((order) =>
+        recordItem("order", order.id, order.personName, order.detail, `${root}/orders/${order.id}`),
+      ),
     });
   }
   // The second door to the language switcher, beside the one behind the
@@ -455,6 +505,25 @@ function paletteGroups({
   // of one would only repeat it.
   if (addDiver) out.push({ id: "add-diver", items: [addDiver] });
   return out;
+}
+
+/** A row that opens one record, remembered among this staffer's recents once chosen. */
+function recordItem(
+  kind: RecentKind,
+  id: string,
+  label: string,
+  detail: string | undefined,
+  href: string,
+): PaletteItem {
+  const key = `${kind}:${id}`;
+  return {
+    key,
+    label,
+    detail,
+    href,
+    recent: { key, kind, label, detail, href },
+    icon: <PaletteGlyph name={kind} />,
+  };
 }
 
 /**
@@ -556,6 +625,8 @@ export function CommandPalette({
   signOutAction,
   createDiverAction,
   settingsShortcuts = NO_SETTINGS_SHORTCUTS,
+  todayBoats = NO_TODAY_BOATS,
+  readerId,
   copy,
   variant = "bar",
 }: {
@@ -589,6 +660,10 @@ export function CommandPalette({
    * row's label or its group's name.
    */
   settingsShortcuts?: readonly SettingsShortcut[];
+  /** Today's departures, offered before anything is typed (fifth loop, item 13). */
+  todayBoats?: readonly PaletteTodayBoat[];
+  /** The signed-in staffer: "Recent" is kept per shop and per staffer on this device. */
+  readerId?: string;
   copy: CommandPaletteCopy;
 }) {
   const router = useRouter();
@@ -598,6 +673,13 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(EMPTY);
   const [active, setActive] = useState(0);
+  const [recents, setRecents] = useState<RecentRecord[]>([]);
+  const recentsKey = recentsStorageKey(shopSlug, readerId);
+  // A shared desk's next staffer does not inherit these.
+  const signOutForgetting = useCallback(() => {
+    forgetRecents(recentsKey);
+    return signOutAction();
+  }, [recentsKey, signOutAction]);
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const root = `/shop/${shopSlug}`;
@@ -616,13 +698,15 @@ export function CommandPalette({
   const listening = useCommandKey(setOpen);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-    else {
+    if (open) {
+      inputRef.current?.focus();
+      setRecents(readRecents(recentsKey));
+    } else {
       setQuery("");
       setResults(EMPTY);
       setActive(0);
     }
-  }, [open]);
+  }, [open, recentsKey]);
 
   useShopSearch(query, setResults);
 
@@ -630,6 +714,8 @@ export function CommandPalette({
     () =>
       paletteGroups({
         results,
+        recents,
+        todayBoats,
         query,
         boatBoardingHref,
         root,
@@ -639,13 +725,15 @@ export function CommandPalette({
         languages,
         locale,
         setLocaleAction,
-        signOutAction,
+        signOutAction: signOutForgetting,
         createDiverAction,
         settingsShortcuts,
         startTransition,
       }),
     [
       results,
+      recents,
+      todayBoats,
       query,
       boatBoardingHref,
       root,
@@ -655,7 +743,7 @@ export function CommandPalette({
       languages,
       locale,
       setLocaleAction,
-      signOutAction,
+      signOutForgetting,
       createDiverAction,
       settingsShortcuts,
     ],
@@ -686,13 +774,14 @@ export function CommandPalette({
     (item: PaletteItem | undefined) => {
       if (!item) return;
       setOpen(false);
+      if (item.recent) rememberRecent(recentsKey, item.recent);
       if (item.run) {
         item.run();
         return;
       }
       if (item.href) router.push(item.href);
     },
-    [router],
+    [router, recentsKey],
   );
 
   function onKeyDown(event: React.KeyboardEvent) {
