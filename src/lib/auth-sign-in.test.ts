@@ -66,6 +66,8 @@ describe("signing in with DiveDay credentials", () => {
     const answer = await signIn(OWNER);
 
     expect(Object.keys(answer.user).sort()).toEqual(["email", "id", "name"]);
+    // The shop the sign-in lands on, named by the server: a staff session's own.
+    expect(answer.shopSlug).toBe("blue-mantis");
     expect(JSON.stringify(answer)).not.toMatch(/hashed|password/i);
     expect(await sessionsFor(db, account.id)).toBe(before + 1);
   });
