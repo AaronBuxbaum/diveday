@@ -54,6 +54,7 @@ import {
 } from "./ResendConfirmationControl";
 import { spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
 import { WaiverSendControl } from "./WaiverSendControl";
+import { WeekHorizon } from "./WeekHorizon";
 
 /**
  * **The shop home is the day's spine** — ADR
@@ -1273,29 +1274,14 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
             </LedgerGroup>
           ) : null}
           {spine.week.jobs > 0 ? (
-            <ul className={HORIZON_PANEL_CLASS}>
-              <LedgerRow
-                size="lg"
-                // The hairline goes transparent rather than to width zero:
-                // `border-t`'s width beats a `border-0` on emit order, and a
-                // colour beats a colour by name.
-                //
-                // The row keeps its room from `sm` up as well: it used to take
-                // it back there (`sm:mx-0 sm:px-0`), which left the fill
-                // flush against "This week" while Tomorrow's summary in the
-                // panel beside it kept its 8px.
-                className="sm:rounded-panel sm:border-transparent sm:last:border-transparent"
-                href={`/shop/${shopSlug}/schedule/board`}
-                linkLabel={t("shopHome.spine.openBoard")}
-                trailing={
-                  <span className="flex items-center gap-2 text-sm text-muted tabular-nums">
-                    {t("shopHome.spine.jobs", { count: spine.week.jobs })}
-                  </span>
-                }
-              >
-                <p className="text-base font-semibold tracking-tight">{t("shopHome.spine.week")}</p>
-              </LedgerRow>
-            </ul>
+            <WeekHorizon
+              panelClass={HORIZON_PANEL_CLASS}
+              jobs={spine.week.jobs}
+              shopSlug={shopSlug}
+              t={t}
+            >
+              <StationRows rows={spine.week.rows} controls={controls} />
+            </WeekHorizon>
           ) : null}
         </div>
       ) : null}
