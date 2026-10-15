@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
-import type { CertificationLevel } from "@/lib/certification-levels";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { canonicalAgency } from "@/lib/courses";
 import { isJuniorOnDate } from "@/lib/depth-ceiling";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";

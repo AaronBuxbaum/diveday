@@ -37,9 +37,10 @@ function priorSeats(db: DbExecutor, shopId: string, otherTrips: SQL, now: Date) 
   return db
     .select({
       personId: bookings.personId,
-      lastDiveAt: sql<Date | null>`max(case when ${bookings.participantType} = 'diver' then ${trips.startsAt} end)`
-        .mapWith(trips.startsAt)
-        .as("last_dive_at"),
+      lastDiveAt:
+        sql<Date | null>`max(case when ${bookings.participantType} = 'diver' then ${trips.startsAt} end)`
+          .mapWith(trips.startsAt)
+          .as("last_dive_at"),
       lastSeatAt: max(trips.startsAt).as("last_seat_at"),
     })
     .from(bookings)

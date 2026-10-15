@@ -108,7 +108,12 @@ describe("courseCertifiedEmail", () => {
       "Blue Mantis: terminaste Open Water Diver. Tu agencia te enviará la tarjeta; este registro ya cuenta en Blue Mantis.",
     );
     expect(
-      courseCertifiedText({ locale: "es-ES", shopName: "Blue Mantis", level: "open_water", junior: true }),
+      courseCertifiedText({
+        locale: "es-ES",
+        shopName: "Blue Mantis",
+        level: "open_water",
+        junior: true,
+      }),
     ).toBe(
       "Blue Mantis: ya tienes tu certificación Junior Open Water. Hasta que cumplas 15 es una tarjeta Junior, con un límite de profundidad menor. Tu agencia te enviará la tarjeta; este registro ya cuenta en Blue Mantis.",
     );

@@ -14,8 +14,7 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
  */
 export type WelcomeCue =
   /** `nonDiver`: a snorkeler's or a rider's first seat, which is not a "first dive". */
-  | { kind: "first_trip"; nonDiver?: true }
-  | { kind: "returning"; years: number };
+  { kind: "first_trip"; nonDiver?: true } | { kind: "returning"; years: number };
 
 /**
  * How long a gap has to be before coming back is worth a word.
@@ -67,7 +66,8 @@ export function offerableWelcomeCue({
   now = nowDate(),
 }: CueInput): WelcomeCue | null {
   if (now.getTime() > tripEndsAt.getTime() + DEPARTURE_BUFFER_MS) return null;
-  if (!lastDivedAt) return nonDiver ? { kind: "first_trip", nonDiver: true } : { kind: "first_trip" };
+  if (!lastDivedAt)
+    return nonDiver ? { kind: "first_trip", nonDiver: true } : { kind: "first_trip" };
   const years = Math.floor((now.getTime() - lastDivedAt.getTime()) / YEAR_MS);
   return years >= WELCOME_GAP_YEARS ? { kind: "returning", years } : null;
 }

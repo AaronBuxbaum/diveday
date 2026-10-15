@@ -67,7 +67,10 @@ describe("sayHelloSentences", () => {
       { name: "Ben Okafor", cue: { kind: "first_trip" } },
       { name: "Lina Costa", cue: { kind: "first_trip", nonDiver: true } },
     ]);
-    expect(sentences).toEqual(["Ben Okafor: first dive with us.", "Lina Costa: first time with us."]);
+    expect(sentences).toEqual([
+      "Ben Okafor: first dive with us.",
+      "Lina Costa: first time with us.",
+    ]);
   });
 
   it("joins the names in the reader's own language", () => {
