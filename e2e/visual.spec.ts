@@ -6221,12 +6221,12 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "incident-report-draft", scheme);
       });
 
-      // The month's Safety tab beside Reports: roll calls, dock marks, card
+      // The month's Safety page, its own destination: roll calls, dock marks, card
       // checks written past, crew credentials and the month's incident
       // reports, read from what the shop already records.
       test(`the Safety tab renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/reports/safety");
-        await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+        await page.goto("/shop/blue-mantis/safety");
+        await page.getByRole("heading", { level: 1, name: "Safety" }).waitFor();
         await page.getByRole("region", { name: "Roll calls left open" }).waitFor();
         await capture(page, "reports-safety", scheme);
       });

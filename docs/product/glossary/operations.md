@@ -680,7 +680,7 @@
   counted as sailing: a seat nobody spoke for is **Not counted at the dock** or **No roll call
   taken**, never "Sailed" and never **Didn't sail**.
   A **crew sailing** is one crew member on one departure that is home, unless the crew marked
-  them ashore at the dock; the Safety tab reads each against the crew member's credentials as they
+  them ashore at the dock; the Safety page reads each against the crew member's credentials as they
   stand today, on the departure's last day.
 - **The record** — a home departure's Divers tab: each seat filed under **Sailed**, **Didn't
   sail**, **Not counted at the dock** or **No roll call taken** (`recordGroups`,
@@ -757,7 +757,7 @@
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Incident kind** / **incident severity** — the two closed answers an **incident report** files
   with: its kind (injury or illness, near miss, equipment, missing diver, fatality, other) and how
-  serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety tab;
+  serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety page;
   read by nothing that gates. A severity is the crew's judgment, never a medical classification
   ([20261014-incident-kind-severity](../../architecture/decisions/20261014-incident-kind-severity.md)).
 - **Stale roll call** — an after-dive roll call still open after its departure was due back. The

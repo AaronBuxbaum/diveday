@@ -103,7 +103,7 @@
   "/shop/[shopSlug]/print/pass/[bookingId]": {
     "e2e": ["shop-on-paper.spec.ts"]
   },
-  "/shop/[shopSlug]/reports/safety": {
+  "/shop/[shopSlug]/safety": {
     "e2e": ["incident-reports.spec.ts"]
   },
   "/shop/[shopSlug]/schedule/blowout/[tripId]": {

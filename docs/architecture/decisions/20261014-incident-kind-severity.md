@@ -36,4 +36,4 @@ how bad it was. The narrative answers both, but not in a shape a list can show.
 ## Consequences
 
 A report filed before 2026-10-14 keeps no kind or severity: its record says "not written" and the
-Safety tab shows it without a badge. An addendum can say what it was; the fields stay empty.
+Safety page shows it without a badge. An addendum can say what it was; the fields stay empty.

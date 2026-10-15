@@ -32,6 +32,7 @@ function sectionNavCopy(
       divers: t("shared.shopSections.divers"),
       inbox: t("shared.shopSections.inbox"),
       money: t("shared.shopSections.money"),
+      safety: t("shared.shopSections.safety"),
       courses: t("shared.shopSections.courses"),
       gear: t("shared.shopSections.gear"),
       settings: t("shared.shopSections.settings"),

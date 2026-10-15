@@ -25,8 +25,7 @@ import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
-import { StaffSectionTabs } from "../../_components/StaffSectionTabs";
-import { type MonthFigure, MonthFigures } from "../_components/MonthFigures";
+import { type MonthFigure, MonthFigures } from "../reports/_components/MonthFigures";
 import { SafetyLists } from "./_components/SafetyLists";
 
 // Paints from its own `loading.tsx`, like Reports (ADR 20260804-instant-navigation).
@@ -37,7 +36,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * **The month's safety, beside its money** (ADR 20261012-incident-reports).
+ * **The month's safety, a place of its own** (ADR 20261012-incident-reports).
  * Owners and managers only, on the Reports gate. It reads what the shop
  * already records — roll calls, dock marks, card checks written past, crew
  * credentials, incident reports — over the departures that came back in the
@@ -147,18 +146,11 @@ export default async function SafetyReportPage({
 
   const navClass = buttonClass({ variant: "secondary", size: "icon" });
   const navDisabledClass = `${navClass} pointer-events-none opacity-40`;
-  const safetyPath = shopPath(shopSlug, "reports", "safety");
+  const safetyPath = shopPath(shopSlug, "safety");
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader title={t("shared.shopSections.money")} />
-      <StaffSectionTabs
-        shopSlug={shopSlug}
-        section="money"
-        current="safety"
-        roles={session.user.roles}
-        t={t}
-      />
+      <ShopPageHeader title={t("shared.shopSections.safety")} />
       <p className="mb-6 max-w-prose text-muted">{t("incidents.safety.intro")}</p>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

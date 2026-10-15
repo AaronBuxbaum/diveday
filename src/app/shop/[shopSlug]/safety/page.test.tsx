@@ -62,15 +62,16 @@ async function renderAs(viewerRoles: Role[]) {
 }
 
 /**
- * **The Safety tab is on the Reports gate** (ADR 20261012-incident-reports):
+ * **The Safety page is on the Reports gate** (ADR 20261012-incident-reports):
  * owners and managers, re-read from the database. The e2e signs in only as
  * the owner (the demo shop has no manager login), so the manager is pinned
- * here. Its heading is the section's, "Money", as on every tab of a section.
+ * here. It is a destination of its own (#2398), so its heading is "Safety", not Money's.
  */
-describe("the Safety tab", () => {
+describe("the Safety page", () => {
   it.each([["owner"], ["manager"]] as const)("opens for a %s", async (role) => {
     const text = await renderAs([role]);
-    expect(text).toContain("Money");
+    expect(text).toContain("Safety");
+    expect(text).not.toContain("Money");
     expect(text).toContain("What the shop recorded on departures that left this month");
   });
 
