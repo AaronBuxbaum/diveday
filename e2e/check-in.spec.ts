@@ -680,7 +680,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // predicate the booking transaction enforces — and the sale itself runs
   // through `createBooking`, not through anything this ticket added.
   await page.goto(walkIn);
-  await expect(page.getByText(/0\/1 booked/)).toBeVisible();
+  await expect(page.getByText(/0 of 1 booked/)).toBeVisible();
   const findSecond = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
   await findSecond.fill("Diego Alvarez");
   await findSecond.press("Enter");
