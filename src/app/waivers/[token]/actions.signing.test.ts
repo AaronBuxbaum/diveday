@@ -166,7 +166,7 @@ describe("the signing doors", () => {
    * ignored, and the signer lands where every signer does.
    */
   it("send a parent who came from the party panel back to it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("seeded shop has no upcoming trip");
