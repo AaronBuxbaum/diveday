@@ -340,7 +340,7 @@ export async function startBookingCheckout(
     // and hold no seat on (src/db/anonymize.ts, issue #1722). Dropping this
     // clause would hand the next caller on those same bookings the page minted
     // for the diver we just told the shop had been erased.
-    existing.checkoutUrl &&
+    hasPageFor(existing, input.customerEmail) &&
     (!existing.expiresAt || existing.expiresAt > nowDate()) &&
     (await checkoutCoversExactly(db, input.shopId, existing.id, input.bookingIds))
   ) {
@@ -420,11 +420,9 @@ export async function startBookingCheckout(
   // called, and an exhausted code is refused with a reason the diver can act
   // on (layer-7 security review).
   let cappedSessionExpiresAt: Date | undefined;
+  // Retire other pending pages over these seats, promo or not: two live ones would double-pay (#2474).
+  await retireOverlappingPendingCheckouts(db, input.shopId, input.bookingIds);
   if (appliedPromo) {
-    // A diver's own earlier, unpaid page for any of these seats would
-    // otherwise hold a use against their retry; the seats are claimed for this
-    // attempt now, so no other attempt is using that page's figure either.
-    await retireOverlappingPendingCheckouts(db, input.shopId, input.bookingIds);
     const now = nowDate();
     const reservation = await reserveDiscountUse(db, {
       shopId: input.shopId,
@@ -849,6 +847,19 @@ async function retireStaleCheckout(db: AppDb, existing: BookingCheckout): Promis
  * means a different quantity and total — and completing the old session would
  * mark the *old* linked bookings paid, not the party the diver is looking at.
  */
+/**
+ * Whether the pending row still has a hosted page, minted for this address.
+ * No page (erased, above) is not reusable; and a seat's claimer is a different
+ * person from the lead who paid for it before the claim, so they are never
+ * handed the lead's page, receipt and Stripe customer (issue #2474).
+ */
+function hasPageFor(checkout: BookingCheckout, customerEmail: string): boolean {
+  return (
+    Boolean(checkout.checkoutUrl) &&
+    checkout.customerEmail?.toLowerCase() === customerEmail.toLowerCase()
+  );
+}
+
 async function checkoutCoversExactly(
   db: DbExecutor,
   shopId: string,

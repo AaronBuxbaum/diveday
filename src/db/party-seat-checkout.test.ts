@@ -4,7 +4,8 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { recordingCheckout } from "@/test/fakes";
 import { addPartySeat, cancelBooking, createBooking } from "./bookings";
-import { markCheckoutPaidBySessionId } from "./checkouts";
+import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
+import { listPaidAfterCloseCheckouts } from "./checkouts-paid-after-close";
 import { startPartySeatCheckout } from "./party-seat-checkout";
 import { getReadyPageData } from "./ready";
 import { bookings } from "./schema";
@@ -200,5 +201,61 @@ describe("startPartySeatCheckout", () => {
     const second = await startPartySeatCheckout(f.db, input(f), seen.provider);
     expect(second).toEqual({ ok: false, reason: "already_paid" });
     expect(seen.requests).toHaveLength(0);
+  });
+
+  it("retires a pending party session over the seat, so a later payment of it is surfaced, not double-paid (#2474)", async () => {
+    const f = await leadWithSeat();
+    const stripe = recordingCheckout();
+    const party = await startBookingCheckout(
+      f.db,
+      {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        bookingIds: [f.leadBookingId, f.seatBookingId],
+        customerEmail: "nora-pay-seat@example.com",
+        successUrl: "https://diveday.example/ready/t?pay=paid",
+        cancelUrl: "https://diveday.example/ready/t?pay=cancelled",
+        describeLine: ({ tripTitle }: { tripTitle: string }) => tripTitle,
+      },
+      stripe.provider,
+    );
+    if (!party.ok) throw new Error(`party checkout failed: ${party.reason}`);
+    const seat = await startPartySeatCheckout(f.db, input(f), stripe.provider);
+    if (!seat.ok) throw new Error(`seat checkout failed: ${seat.reason}`);
+    expect(seat.checkout.stripeSessionId).not.toBe(party.checkout.stripeSessionId);
+
+    await markCheckoutPaidBySessionId(f.db, seat.checkout.stripeSessionId, "acct_test");
+    await markCheckoutPaidBySessionId(f.db, party.checkout.stripeSessionId, "acct_test", 36_000);
+
+    const owed = await listPaidAfterCloseCheckouts(f.db, f.shop.id);
+    expect(owed.map((o) => o.checkoutId)).toEqual([party.checkout.id]);
+  });
+
+  it("does not hand a claimer the page the lead's address was minted for (#2474)", async () => {
+    const f = await leadWithSeat();
+    const stripe = recordingCheckout();
+    const lead = await startPartySeatCheckout(f.db, input(f), stripe.provider);
+    if (!lead.ok) throw new Error(`seat checkout failed: ${lead.reason}`);
+    await f.db
+      .update(bookings)
+      .set({ claimedAt: nowDate() })
+      .where(eq(bookings.id, f.seatBookingId));
+    const claimer = await startBookingCheckout(
+      f.db,
+      {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        bookingIds: [f.seatBookingId],
+        customerEmail: "milo-own@example.com",
+        successUrl: "https://diveday.example/ready/t?pay=paid",
+        cancelUrl: "https://diveday.example/ready/t?pay=cancelled",
+        describeLine: ({ tripTitle }: { tripTitle: string }) => tripTitle,
+      },
+      stripe.provider,
+    );
+    if (!claimer.ok) throw new Error(`claimer checkout failed: ${claimer.reason}`);
+    expect(claimer.reused).toBe(false);
+    expect(claimer.checkout.stripeSessionId).not.toBe(lead.checkout.stripeSessionId);
+    expect(claimer.checkout.customerEmail).toBe("milo-own@example.com");
   });
 });
