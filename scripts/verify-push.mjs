@@ -21,6 +21,9 @@
 //   base CI → regen → lint → typecheck → check:repo → guards → source scans → vitest related
 //         → the base's red tests → e2e build → affected Playwright specs → stamp
 //
+// Every affected spec runs, with no time budget, and the output and the stamp end with what was
+// not run here (`notRunHere`), so a green gate is never mistaken for a green suite.
+//
 //   pnpm verify:push                      run it
 //   pnpm verify:push --plan               print the base, the steps and the selected specs, run nothing
 //   pnpm verify:push --base-red <file…>   also run these, when the base is red on a job that names none
@@ -55,15 +58,8 @@ import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Recorded CI time the strong and reach tiers may spend together before reach stops adding. */
-export const E2E_BUDGET_MS = 15 * 60_000;
-
-/**
- * What the reach tier (specs the diff only reaches through the import graph) may spend at most,
- * whatever room the strong tier left. Every push is a new sha, a ten-layer restack is ten runs,
- * and a reached spec is a guess CI answers anyway (code re-review 2026-10-13, item 16b).
- */
-export const REACH_BUDGET_MS = 5 * 60_000;
+/** Specs per Playwright step: about twenty local minutes at two workers. */
+export const E2E_CHUNK = 25;
 
 /** A unit, script or guard test: no page imports one, so no browser spec can move with it. */
 const UNIT_TEST = /\.test\.(?:ts|tsx|mts|mjs|js)$/;
@@ -179,30 +175,62 @@ export function plan({ changed, specs, scans, baseFiles = [], existing = () => t
   }
   if (specs.length > 0) {
     steps.push({ name: "e2e build", command: "pnpm", args: ["e2e:build"], build: true });
-    steps.push({
-      name: "e2e specs",
-      command: "pnpm",
-      args: ["e2e:run", ...specs, "--reporter=line"],
+    // Chunked so a hub-route change, which selects most of the suite, stays inside each step's
+    // hour (SUBPROCESS_TIMEOUTS.verifyPushStep) and prints progress between chunks.
+    const chunks = [];
+    for (let at = 0; at < specs.length; at += E2E_CHUNK)
+      chunks.push(specs.slice(at, at + E2E_CHUNK));
+    chunks.forEach((chunk, i) => {
+      steps.push({
+        name: chunks.length === 1 ? "e2e specs" : `e2e specs ${i + 1}/${chunks.length}`,
+        command: "pnpm",
+        args: ["e2e:run", ...chunk, "--reporter=line"],
+      });
     });
   }
   return steps;
 }
 
 /**
- * The Playwright specs to run: every one the diff names, then what it only reaches, cheapest
- * first, inside both the whole budget and {@link REACH_BUDGET_MS}. A diff of only unit tests (and
- * docs) runs none, so it never pays for an e2e build: nothing a page imports changed.
+ * The Playwright specs to run: every one the diff names, then every one it only reaches,
+ * narrowest route first. There is no time budget: a spec left to CI was a red CI run nobody saw
+ * coming (#2619, 2026-10-15: 30 of 129 affected specs left to CI, and one of them went red). A
+ * diff of only unit tests (and docs) runs none, so it never pays for an e2e build: nothing a page
+ * imports changed.
  */
 export function browserSpecs({ changed, strong, reach, rank, record }) {
   const testsOnly =
     changed.length > 0 &&
     changed.every((file) => UNIT_TEST.test(file) || DOCS_ONLY.test(file)) &&
     changed.some((file) => UNIT_TEST.test(file));
-  if (testsOnly) return { specs: [], reached: [], left: [], testsOnly };
+  if (testsOnly) return { specs: [], reached: [], testsOnly };
   const named = [...strong.keys()].sort();
-  const room = Math.min(REACH_BUDGET_MS, Math.max(0, E2E_BUDGET_MS - estimateMs(named, record)));
-  const { run, left } = withinBudget(reach, rank, record, room);
-  return { specs: [...named, ...run], reached: run, left, testsOnly };
+  const { run } = withinBudget(reach, rank, record, Number.POSITIVE_INFINITY);
+  return { specs: [...named, ...run], reached: run, testsOnly };
+}
+
+/**
+ * What this run did not run, said plainly in the output and the stamp, so "verify:push is
+ * green" is never read as "every test passed here". CI runs all of it.
+ */
+export function notRunHere({ docsOnly, testsOnly, specs, allSpecs }) {
+  const lines = [];
+  if (!docsOnly) {
+    lines.push(
+      "unit tests that neither read source from disk nor import the changed code (CI's unit shards run all of them)",
+    );
+  }
+  const visual = (spec) => /(?:^|\/)visual[^/]*\.spec\.ts$/.test(spec);
+  const skipped = allSpecs.filter((spec) => !visual(spec) && !specs.includes(spec));
+  if (skipped.length > 0) {
+    lines.push(
+      testsOnly || docsOnly
+        ? `all ${skipped.length} Playwright specs (no page code changed)`
+        : `${skipped.length} Playwright specs the diff neither names nor reaches`,
+    );
+  }
+  lines.push("visual captures (reg-suit): CI only, and a difference never fails the build");
+  return lines;
 }
 
 /**
@@ -273,7 +301,16 @@ function tail(file) {
   }
 }
 
+/** Every Playwright spec in the repository, as `e2e/<name>.spec.ts`. */
+function allSpecFiles() {
+  return readdirSync(path.join(ROOT, "e2e"), { recursive: true })
+    .map((file) => `e2e/${String(file).split(path.sep).join("/")}`)
+    .filter((file) => file.endsWith(".spec.ts"))
+    .sort();
+}
+
 /** The {@link appTreeKey} a build was made from, so a commit that changes none of it reuses it. */
+
 function buildTreeFile() {
   return path.join(ROOT, ".next", "diveday-build-tree");
 }
@@ -308,7 +345,6 @@ function main() {
   const {
     specs,
     reached: reachRun,
-    left,
     testsOnly,
   } = browserSpecs({
     changed: selection.changed,
@@ -343,8 +379,8 @@ function main() {
 
   console.log(
     `verify:push: ${selection.changed.length} file(s) against ${selection.base}; ` +
-      `${strong.length} spec(s) the diff names, ${reachRun.length} it reaches, ` +
-      `${left.length} more left to CI (about ${Math.round(estimateMs(specs, record) / 60000)} CI-minutes of browser tests).`,
+      `${strong.length} spec(s) the diff names, ${reachRun.length} it reaches, all run here ` +
+      `(about ${Math.round(estimateMs(specs, record) / 60000)} CI-minutes of browser tests).`,
   );
   for (const spec of strong) {
     console.log(`  ${spec}  — ${[...selection.strong.get(spec)].slice(0, 2).join("; ")}`);
@@ -352,12 +388,14 @@ function main() {
   if (reachRun.length > 0) console.log(`  reached: ${reachRun.join(" ")}`);
   if (baseSpecs.length > 0) console.log(`  red on the base: ${baseSpecs.join(" ")}`);
   if (testsOnly) console.log("  only tests changed: no e2e build, no browser specs.");
+  const skipped = notRunHere({ docsOnly, testsOnly, specs, allSpecs: allSpecFiles() });
   if (args.includes("--plan")) {
     for (const step of steps) {
       const shown =
         step.name === "source scans" ? [`<${step.args.length - 4} test files>`] : step.args;
       console.log(`  step ${step.name}: ${step.command} ${shown.join(" ")}`);
     }
+    for (const line of skipped) console.log(`  not run here: ${line}`);
     return;
   }
 
@@ -412,14 +450,15 @@ function main() {
     at: new Date().toISOString(),
     steps: ran,
     specs,
-    leftToCi: left,
+    notRunHere: skipped,
     baseCi: verdict.unknown
       ? { unknown: verdict.unknown }
       : { red: verdict.red, ran: [...decision.files, ...decision.specs] },
   };
   writeStamps(stamp, { git });
   console.log(`verify:push: green. ${head.slice(0, 9)} may be pushed.`);
-  if (left.length > 0) console.log(`Left to CI: ${left.join(" ")}`);
+  console.log("Not run here, so CI is the first to run it:");
+  for (const line of skipped) console.log(`  - ${line}`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

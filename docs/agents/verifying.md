@@ -90,9 +90,15 @@ common git dir too, so a push from any worktree finds it):
    only fixes a spec reuses it). *Strong*: specs the diff edits or whose helper it edits, specs
    quoting text the diff removed (a locale value, JSX text, a seed literal), and specs visiting a
    route whose own directory the diff edits. *Reach*: specs visiting a route whose page imports an
-   edited module, or a hub route (one more than ten specs visit), run narrowest first while they
-   stay inside five recorded CI-minutes and the whole selection inside fifteen; the rest are named
-   and left to CI. A diff of only unit tests runs no spec and builds nothing.
+   edited module, or a hub route (one more than ten specs visit), run narrowest first. Every
+   selected spec runs, in steps of 25: until 2026-10-15 a time budget left the rest to CI, and
+   on #2619 that was 30 of 129, one of which went red there. A diff of only unit tests runs no
+   spec and builds nothing.
+
+A green run ends with **"Not run here"**, also recorded as `notRunHere` in the stamp: unit tests
+that neither read source nor import the changed code, the Playwright specs the diff neither names
+nor reaches, and the visual captures. CI runs those first, so a report says "verify:push green",
+never "all tests pass locally".
 
 Replayed against the commits that broke specs on 2026-10-11 and 2026-10-12, the selection ran
 the broken spec in five of six: the sightings disclaimer, the reviews count, the dive-site editor
