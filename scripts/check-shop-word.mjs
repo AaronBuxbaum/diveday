@@ -75,6 +75,18 @@ const RULES = [
     says: 'the waiver is "la exención", and the noun is feminine — every article and adjective reaching back to it moves with it (la, una, esta, firmada, archivada)',
   },
   {
+    id: "waiver",
+    // The English word itself, which the 2026-10-14 review found in the
+    // request email ("Completa tu waiver para {tripTitle}"), the reminder and
+    // the import wizard: 7 diver strings and 9 staff ones, all written after
+    // the README settled the word.
+    //
+    // Word-bounded, so `Smartwaiver` (a competitor's name in the switching
+    // guide) and `waiver_records.csv` (a file a shop really downloads) pass.
+    pattern: /\bwaivers?\b/i,
+    says: 'the waiver is "la exención" in Spanish too: "Completa tu exención", "Exención firmada". The English word survives only inside a proper name or a file name',
+  },
+  {
     id: "dive-site",
     // "Three terms were live for the same row in `dive_sites`" and the
     // 2026-08-05 sweep settled `sitio de buceo`. Both losing spellings were
@@ -232,6 +244,19 @@ const RULES = [
     // verb on the tap and the pill, and "registro" alone is a record.
     pattern: /\bregistros? de llegadas?\b|\bllegada y registro\b/i,
     says: 'check-in is "el check-in" (the feature, the phase, "Llegada y check-in"); the tap on a row stays "Registrar"',
+  },
+  {
+    id: "sign-up",
+    // README's vocabulary table — "apuntarse (a una lista)" -> "inscribirse /
+    // anotarse". The 2026-10-14 review found "Apuntándote…" on the wait-list
+    // button one line under "Anótate en la lista de espera".
+    //
+    // Only the reflexive shapes, because the plain verb is innocent and in the
+    // bundles: a backup endpoint "apunta a una dirección privada", the field
+    // guide says "apunta tu luz" and "no le apuntes la luz a los ojos".
+    pattern:
+      /\bap[uú]nt(?:a(?:r|ndo)?|á(?:ndo)?)?(?:me|te|se|nos)\b|\b(?:me|te|se|nos)\s+ap[uú]nt\w*/i,
+    says: 'joining a list is "anotarse" ("Anótate", "Anotándote…", "Anotarme en la lista de espera"). "Apuntarse" reads as Spain',
   },
   {
     id: "computer",

@@ -380,7 +380,7 @@
     "reefNotGoingAnywhere": "— el arrecife no se va a ninguna parte.",
     "waitlistHeading": "Anótate en la lista de espera",
     "waitlistBody": "Si se libera una plaza, el centro ya tendrá tus datos.",
-    "waitlistJoining": "Apuntándote…",
+    "waitlistJoining": "Anotándote…",
     "wantAnyTripAlertsInstead": "¿No te convence esta? ¿Prefieres alertas de ofertas para cualquier salida?",
     "joinLastMinuteDealAlerts": "Anótate en la lista de última hora",
     "waitlistConfirmedHeading": "Estás en la lista de espera, {name}.",
@@ -478,7 +478,7 @@
     "availableFrom": "Disponible desde",
     "availableUntil": "Disponible hasta",
     "submit": "Avísame",
-    "submitting": "Apuntándote…",
+    "submitting": "Anotándote…",
     "joinedHeading": "Estás en la lista.",
     "joinedBody": "Te escribiremos si sale una plaza de última hora con descuento en tus fechas.",
     "unsubscribe": {
@@ -548,7 +548,7 @@
     "requestDateLink": "Solicitar una fecha",
     "orGetInTouch": "o escríbenos y programamos una.",
     "startsAt": "Empieza a las {time}",
-    "joinWaitList": "Apuntarme a la lista de espera",
+    "joinWaitList": "Anotarme en la lista de espera",
     "bookThisDate": "Reservar esta fecha",
     "faqsHeading": "Preguntas que hacen los buceadores",
     "howItRunsHeading": "Cómo se desarrolla el curso",
@@ -5020,7 +5020,7 @@
       "whoToText": "¿Preguntas para el día? Escríbenos al {phone}."
     },
     "reminderAction": {
-      "waiverPending": "Firma tu waiver",
+      "waiverPending": "Firma tu exención",
       "waiverExpired": "El enlace de tu exención caducó. Consigue uno nuevo; solo lleva unos dos minutos",
       "certificationMissing": "Envíanos los datos de tu certificación",
       "certificationInsufficient": "Consulta tu nivel de certificación con nosotros",
@@ -5272,12 +5272,12 @@
       "noteMedicalReview": "Este es tu comprobante. {shopName} todavía necesita el visto bueno de un médico sobre las respuestas de salud antes de que {diverName} pueda bucear, y se pondrá en contacto contigo."
     },
     "waiverRequest": {
-      "subject": "Completa tu waiver para {tripTitle}",
-      "genericSubject": "Completa tu waiver",
-      "body": "Necesitamos tu waiver para {tripTitle}.",
-      "genericBody": "Necesitamos tu waiver.",
+      "subject": "Completa tu exención para {tripTitle}",
+      "genericSubject": "Completa tu exención",
+      "body": "Necesitamos tu exención para {tripTitle}.",
+      "genericBody": "Necesitamos tu exención.",
       "completeText": "Complétalo aquí",
-      "completeLink": "Completar tu waiver",
+      "completeLink": "Completar tu exención",
       "expiry": "Este enlace privado caduca el {expiresAt}."
     },
     "readinessLink": {
