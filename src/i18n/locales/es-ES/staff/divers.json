@@ -476,6 +476,7 @@
     "noteDeleted": "Nota del buceador eliminada.",
     "paymentNotConnected": "Los pagos aún no están conectados. Conéctalos para cobrar a este buceador.",
     "personSaved": "Datos del buceador actualizados.",
+    "personSavedAdultAnswerUnused": "Guardado. Hay una fecha de nacimiento registrada, así que no se usó “Tiene 18 años o más”.",
     "profileSaved": "Perfil de ajuste de alquiler guardado.",
     "removedReadOnly": "Restaura a este buceador antes de cambiar sus datos.",
     "restoreRefused": "No se pudo restaurar a este buceador, porque un buceador activo usa ahora su correo. Cambia ese correo e inténtalo de nuevo.",

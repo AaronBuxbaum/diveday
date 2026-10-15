@@ -164,6 +164,14 @@ const NOTICE_KEYS: DiverNoticeMap = {
 
   // Details editor.
   "person-saved": { form: "details", tone: "success", key: "divers.notices.personSaved" },
+  // Issue #2167: "They're 18 or older" ticked beside a date that was kept or
+  // typed. The date answers the age, so the tick is dropped, and said so.
+  "person-saved-adult-answer-unused": {
+    form: "details",
+    tone: "warning",
+    key: "divers.notices.personSavedAdultAnswerUnused",
+    field: "diver-date-of-birth",
+  },
   "not-authorized-details": {
     form: "details",
     tone: "danger",

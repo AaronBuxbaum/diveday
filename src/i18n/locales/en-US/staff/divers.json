@@ -476,6 +476,7 @@
     "noteDeleted": "Diver note deleted.",
     "paymentNotConnected": "Payments aren’t connected yet. Connect them to charge this diver.",
     "personSaved": "Diver details updated.",
+    "personSavedAdultAnswerUnused": "Saved. A date of birth is on file, so “They’re 18 or older” wasn’t used.",
     "profileSaved": "Rental fit profile saved.",
     "removedReadOnly": "Restore this diver before changing their details.",
     "restoreRefused": "Couldn’t restore this diver, because an active diver now uses their email. Change that email, then try again.",

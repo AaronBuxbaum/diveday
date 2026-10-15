@@ -128,10 +128,12 @@ export async function createDiver(db: AppDb, input: NewDiver) {
  * address another live diver holds; `age_unstated` a stored date of birth
  * emptied without "They're 18 or older" (issue #2167); `date_of_birth_required`
  * a stored date emptied while the diver holds a seat on a course with a
- * minimum age, where no answer stands in for the date.
+ * minimum age, where no answer stands in for the date. `adultAnswerUnused` is
+ * a save that kept "They're 18 or older" off the record because a date of
+ * birth is on file, which the staffer is told (issue #2167).
  */
 export type UpdateDiverResult =
-  | { ok: true; person: Person }
+  | { ok: true; person: Person; adultAnswerUnused: boolean }
   | {
       ok: false;
       reason: "not_found" | "email_in_use" | "age_unstated" | "date_of_birth_required";
@@ -279,7 +281,10 @@ export async function updateDiver(
         })
         .where(and(editable, livePerson()))
         .returning();
-      return person ? { ok: true, person } : { ok: false, reason: "not_found" };
+      if (!person) return { ok: false, reason: "not_found" };
+      const adultAnswerUnused =
+        Boolean(input.adultAttestedByPersonId) && !clearing && person.dateOfBirth !== null;
+      return { ok: true, person, adultAnswerUnused };
     });
   } catch (error) {
     // Same race as the check above, closed instead of just narrowed

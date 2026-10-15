@@ -70,7 +70,9 @@ export async function savePersonAction(shopSlug: string, personId: string, formD
   // (read-only) or merged away; neither is an email conflict, so it is not
   // worded as one. The extra read is paid only on that path.
   const notice = saved.ok
-    ? "person-saved"
+    ? saved.adultAnswerUnused
+      ? "person-saved-adult-answer-unused"
+      : "person-saved"
     : saved.reason === "email_in_use"
       ? "duplicate"
       : saved.reason === "age_unstated"

@@ -242,6 +242,23 @@ describe("updateDiver and the date of birth", () => {
 
       expect(kept.dateOfBirth).toBe("2013-05-02");
       expect(kept.adultAttestedAt).toBeNull();
+
+      // Dropped, but not in silence: the save says the answer was not used.
+      const typed = await updateDiver(db, {
+        shopId: shop.id,
+        personId,
+        fullName: "Cleared Cleo",
+        dateOfBirth: "2001-05-02",
+        adultAttestedByPersonId: staffId,
+      });
+      expect(typed).toMatchObject({ ok: true, adultAnswerUnused: true });
+      const unticked = await updateDiver(db, {
+        shopId: shop.id,
+        personId,
+        fullName: "Cleared Cleo",
+        dateOfBirth: "2001-05-02",
+      });
+      expect(unticked).toMatchObject({ ok: true, adultAnswerUnused: false });
     });
 
     /**
