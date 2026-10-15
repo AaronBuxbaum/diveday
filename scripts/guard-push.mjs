@@ -37,6 +37,17 @@ export const OVERRIDE = "DIVEDAY_PUSH_UNVERIFIED";
 /** A reason shorter than this is "skip", not a reason. */
 const MIN_REASON = 10;
 
+/**
+ * A reason that says the red is someone else's: the base, main, the layer below, a flake. That
+ * was the override's commonest use (#2594 and #2608 on 2026-10-14), and it is the one push that
+ * is certain to be red, on this layer and every layer above it. `pnpm verify:push` now reads the
+ * base's CI itself and stamps a layer that makes the base's red tests pass here
+ * (`scripts/base-ci.mjs`), so the override is left for the two cases it was for: work saved
+ * before the container is reclaimed, and a question only CI can answer.
+ */
+export const INHERITED_REASON =
+  /\b(?:not (?:mine|ours|this (?:pr|layer)'?s?)|inherit\w*|flak\w*|pre-?existing)\b|\b(?:red|fail\w*|broken)\b[^.]*\b(?:main|base|below|lower layer|upstream)\b|\b(?:main|base|below)\b[^.]*\b(?:red|fail\w*|broken)\b/i;
+
 const STAMP = "diveday-verified.json";
 
 /**
@@ -118,6 +129,15 @@ export function pushViolation(command, read, cwd = ".") {
     if (!push) continue;
     const here = at(push.dir ? path.resolve(dir, push.dir) : dir);
     if (push.reason !== null) {
+      if (INHERITED_REASON.test(push.reason)) {
+        return (
+          `\`${OVERRIDE}\` is not for a red that came from the base ("${push.reason}"): that push is ` +
+          "red on this layer and on every layer above it. Run `pnpm verify:push`: it reads the " +
+          "layer below's CI and stamps this commit once the base's red tests pass here, so carry " +
+          "the fix, or get it fixed in the layer that broke and merge that once it is green " +
+          "(docs/agents/verifying.md#the-pre-push-gate)."
+        );
+      }
       if (push.reason.length >= MIN_REASON) continue;
       return `\`${OVERRIDE}\` needs a reason a reviewer can read (at least ${MIN_REASON} characters), in quotes: \`${OVERRIDE}="why this push skips verify:push" ${segment.replace(/^.*?git /, "git ")}\`.`;
     }

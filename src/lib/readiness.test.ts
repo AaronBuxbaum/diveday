@@ -18,6 +18,7 @@ import {
   combineSiteRequirements,
   hasVerifiedCertificationAtLeast,
   higherCertificationLevel,
+  needsCardSighting,
   noCertificationStands,
   REQUIRABLE_CERTIFICATION_LEVELS,
   unreviewedCardState,
@@ -1080,6 +1081,15 @@ describe("aboardBlockerKind", () => {
  * replaced the "Certification marked verified" banner. Two of its three answers
  * are refusals, and the interesting one is the third.
  */
+describe("needsCardSighting for a card an agency check listed", () => {
+  it("asks for the card when the page showed no number for it, never when it did", () => {
+    const listed = { status: "pending", listedFromCertificationId: "c-1" } as const;
+    expect(needsCardSighting({ ...listed, identifier: null })).toBe(true);
+    expect(needsCardSighting({ ...listed, identifier: "SDI-2002" })).toBe(false);
+    expect(needsCardSighting({ status: "pending", identifier: null })).toBe(false);
+  });
+});
+
 describe("unreviewedCardState", () => {
   it("returns a staff-captured card to pending and drops the review stamp", () => {
     expect(unreviewedCardState({ status: "verified", reviewedAt: now })).toEqual({
@@ -1111,6 +1121,25 @@ describe("unreviewedCardState", () => {
     expect(
       unreviewedCardState({ status: "verified", reviewedAt: now, issuedByShopAt: now }),
     ).toEqual({ ok: false, reason: "sighted_card" });
+  });
+
+  it("refuses a card an agency check listed where the agency numbers each card", () => {
+    // SDI numbers each card, so the listed card's number may be the staffer's
+    // sighting: a revert cannot tell, and treats it as one.
+    const listed = {
+      status: "verified",
+      reviewedAt: now,
+      listedFromCertificationId: "c-1",
+    } as const;
+    expect(unreviewedCardState({ ...listed, agency: "sdi" })).toEqual({
+      ok: false,
+      reason: "sighted_card",
+    });
+    // PADI numbers the diver: the number was borrowed, never sighted.
+    expect(unreviewedCardState({ ...listed, agency: "padi" })).toEqual({
+      ok: true,
+      status: "pending",
+    });
   });
 
   it("refuses a card nobody has reviewed, so a replayed undo cannot un-verify one", () => {

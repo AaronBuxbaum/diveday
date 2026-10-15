@@ -32,14 +32,18 @@ Before every push:
    `vitest --changed` can never select), `vitest related` over the changed code, and the Playwright specs the diff
    reaches (`pnpm e2e:affected` prints them and why). It stops at the first red step and prints
    that step's tail. Green, it stamps HEAD; `git push` is refused for a commit without a stamp
-   (`scripts/guard-push.mjs`), so a merge from the layer below means another run. The reasons
+   (`scripts/guard-push.mjs`), so a merge from the layer below means another run. It reads the
+   layer below's CI first: on a red base it re-runs the files CI names and stamps only when they
+   pass here, so carry the fix or wait for the layer that broke; a red job naming no file needs
+   `--base-red <file…>` from its log. The reasons
    and the measurements: [verifying.md](../../../docs/agents/verifying.md#the-pre-push-gate).
 7. **One validated push per round.** Commit as often as you like; push once, when
    `verify:push` is green for the round's work, because each push cancels the CI run of the one
    before it (the measurement is in [verifying.md](../../../docs/agents/verifying.md#one-validated-push-per-round)).
    A push without a green run is right only when the `unpushed-work` hook is saving work before
    a turn ends, or when you push to learn what only CI can answer; write the reason in front of
-   the command (`DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`) and in the PR.
+   the command (`DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`) and in the PR. "Red on main" or
+   "not mine" is never one: the guard refuses it, since that push is red on every layer above.
 8. **A PR body** names its reviews in the template's `## Reviews launched` section, one line per
    reviewer with its answer on the same line; `scripts/guard-pr-body.mjs` runs CI's check over
    the body before `create_pull_request` or `update_pull_request` sends it.

@@ -96,7 +96,9 @@ test("a page that does not read as a result writes nothing and offers the link",
 
   await group.getByRole("button", { name: "Check with SSI" }).click();
 
-  await expect(group.getByText("Couldn’t read SSI’s page.")).toBeVisible();
+  await expect(
+    group.getByText(/^Couldn’t find .+ on SSI’s page\. Open it and look\.$/),
+  ).toBeVisible();
   await expect(group.getByRole("link", { name: "Check with SSI" })).toHaveAttribute(
     "href",
     "https://my.divessi.com/online_diver_check",

@@ -265,6 +265,15 @@
           "src/db/trips-series.test.ts": "1824 -> 1873",
           "src/i18n/label-maps.test.ts": "1313 -> 1331"
         }
+      },
+      {
+        "why": "merge of #2610, whose stricter length ratchet postdates the cert-check extension's Today diver link and agency-check tests",
+        "files": {
+          "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": "1281 -> 1338",
+          "src/lib/agency-check.test.ts": "0 -> 930",
+          "src/lib/readiness.test.ts": "1585 -> 1614",
+          "src/lib/today.test.ts": "1614 -> 1651"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -274,7 +283,7 @@
     "src/app/api/webhooks/stripe/route.ts": 932,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1110,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1281,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1338,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 927,
     "src/app/shop/[shopSlug]/page.tsx": 967,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1057,
@@ -326,6 +335,7 @@
     "src/db/waiver-issue.test.ts": 1051,
     "src/db/work-orders.test.ts": 1408,
     "src/i18n/label-maps.test.ts": 1331,
+    "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,
     "src/lib/incident-export.test.ts": 1187,
@@ -333,9 +343,9 @@
     "src/lib/notifications/email.test.ts": 1480,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
-    "src/lib/readiness.test.ts": 1585,
+    "src/lib/readiness.test.ts": 1614,
     "src/lib/staffing-week.test.ts": 1115,
-    "src/lib/today.test.ts": 1614,
+    "src/lib/today.test.ts": 1651,
     "src/lib/trip-admission.test.ts": 918,
     "src/lib/waivers.test.ts": 1205,
     "src/proxy.test.ts": 1241
@@ -373,12 +383,19 @@
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": "328 -> 329"
         }
+      },
+      {
+        "why": "merge of #2610, whose stricter length ratchet postdates the cert-check extension's Today diver link and agency-check tests",
+        "files": {
+          "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": "0 -> 304"
+        }
       }
     ],
     "src/app/ready/[token]/page.tsx#DiverReadinessPage": 310,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 429,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 383,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 304,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 519,
     "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 388,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,

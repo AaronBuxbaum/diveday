@@ -481,7 +481,8 @@ describe("fast-forwarding the shared checkout at session start", () => {
     }
   });
 
-  it("runs only at startup and resume, and can be opted out of", () => {
+  it("runs at startup, resume and on every prompt, and can be opted out of", () => {
+    expect(plan(shared(), { source: "prompt" })).toEqual({ from: OLD, to: NEW, behind: 659 });
     expect(plan(shared(), { source: "compact" })).toBeNull();
     expect(plan(shared(), { source: "clear" })).toBeNull();
     expect(plan(shared(), { env: { DIVEDAY_SESSION_FASTFORWARD: "0" } })).toBeNull();

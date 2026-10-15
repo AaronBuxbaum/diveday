@@ -32,6 +32,18 @@ globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
       dateFormat: "YYYY-MM-DD",
       either: true,
     },
+    // DiveChek, on the PADI Pros' Site, behind the shop's own PADI sign-in:
+    // the staffer's browser is already signed in, DiveDay never is. `signIn`
+    // holds the filler and the service worker tighter (fill.js, background.js):
+    // search boxes only, never a sign-in or account page, and only this
+    // diver's lines come back. The address and the form are a best guess that
+    // has not been tried against the live site (issue #2259).
+    padi: {
+      url: "https://pros.padi.com/divechek",
+      fields: ["name", "birthDate"],
+      dateFormat: "MM/DD/YYYY",
+      signIn: true,
+    },
   },
   // Where a course student's eLearning progress is read, by agency. PADI shows
   // it only to a professional signed in to the PADI Pros' Site, so this opens
@@ -44,6 +56,7 @@ globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
       url: "https://pros.padi.com/",
       fields: ["email"],
       dateFormat: "YYYY-MM-DD",
+      signIn: true,
     },
   },
 });

@@ -18,7 +18,9 @@ the stack pushes one layer at a time, because overlapping runs queue on a 20-job
 *Parallel work*). Pixels and depth are not exceptions. Only two cases go on their own branch off
 `main`: **no stack is open** (`git fetch origin main` first, every time), or **a fix that must
 merge now**. After merging a layer up, run **`pnpm regen`** and commit what it changed before you
-push. The reasoning and the measured incidents are in [why.md](why.md).
+push. **Merge the layer below once its CI is green**, not while it is red: a red layer merged up is
+a red run on every layer above, and `pnpm verify:push` refuses it unless your layer makes the
+base's red tests pass. The reasoning and the measured incidents are in [why.md](why.md).
 
 ## Building the chain
 
