@@ -6,6 +6,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { getMonthDeparturesWithEmptySeats } from "@/db/open-seats";
 import { getMonthMoneyDetail } from "@/db/report-lines";
 import {
   canPersonViewShopReports,
@@ -49,6 +50,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
+import { EmptySeats } from "./_components/EmptySeats";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 import {
   MoneyByLine,
@@ -285,7 +287,7 @@ export default async function ReportsPage({
   // pass over the shop's whole history. See the PR description for the
   // measured cost.
   const shopMoney = { currency, timeZone: tz };
-  const [input, tripPage, baselineInput, moneyDetail] = await Promise.all([
+  const [input, tripPage, baselineInput, moneyDetail, emptySeats] = await Promise.all([
     getMonthlyReport(db, shop.id, monthStart, monthEnd, { currency, timeZone: tz }),
     // A non-numeric or missing `?page=` reads as page 1; the query clamps it
     // into range, so switching to a shorter month never strands the reader on
@@ -302,6 +304,8 @@ export default async function ReportsPage({
     // The money by line, the package dives still owed, and the returning
     // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
     getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, shopMoney, current),
+    // The departures that left with empty seats (issue #2424), on the debrief's own rule.
+    getMonthDeparturesWithEmptySeats(db, shop.id, { startUtc: monthStart, endUtc: monthEnd }, now),
   ]);
   const report = summarizeMonth(input);
   const money = (cents: number) => formatReportMoney(cents, currency, locale);
@@ -637,6 +641,13 @@ export default async function ReportsPage({
           <MonthDetailLines report={report} detail={moneyDetail} t={t} money={money} />
           <MoneyByLine detail={moneyDetail} t={t} money={money} />
           <MonthPayouts detail={moneyDetail} t={t} locale={locale} timeZone={tz} />
+          <EmptySeats
+            summary={emptySeats}
+            shopSlug={shopSlug}
+            t={t}
+            locale={locale}
+            timeZone={tz}
+          />
 
           {report.tripCount > 0 ? (
             <DepartureLedger
