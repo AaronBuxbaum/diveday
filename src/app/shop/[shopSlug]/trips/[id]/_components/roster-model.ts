@@ -126,6 +126,8 @@ export type RosterRows = {
   courseNextStepByBooking?: Map<string, string>;
   /** What the browser extension searches PADI's eLearning for, per seat (H-106). */
   elearningQueryByBooking?: Map<string, ElearningQuery>;
+  /** A PADI course with materials at a shop whose PADI checks are off (H-121). */
+  elearningChecksOff?: boolean;
   /** Per diver, the cards the browser extension could check with their agencies (H-105). */
   agencyCheckCardsByPerson?: ReadonlyMap<string, readonly AgencyCheckableCard[]>;
   /**

@@ -38,6 +38,12 @@ export type AgencyCheckCopy = {
   severalRecords: string;
   /** The agency's page could not be read at all (the extension came back without it). */
   unreadable: string;
+  /** The agency's page asks whether the staffer is human: open it and check there. */
+  captcha: string;
+  /** The agency's lookup page is not the shape the extension knows. */
+  pageChanged: string;
+  /** This copy of the extension does not check the agency: update it. */
+  unsupported: string;
   /** A template: `{name}`. The page came back, but did not show this diver cleanly. */
   notFoundOnPage: string;
   /** DiveDay's own server did not answer: reload to see where the card stands. */
@@ -86,6 +92,11 @@ export type AgencyCheckAllCopy = {
   stoppedTransport: string;
   /** A template: `{name}` and `{agency}`, when the staffer is not signed in to the agency. */
   stoppedSignedOut: string;
+  /**
+   * A template: `{agency}`, added once a run ends for each agency whose other
+   * cards it left (a captcha, a changed page, an agency this copy does not check).
+   */
+  left: string;
 };
 
 /**
@@ -121,6 +132,8 @@ export function agencyCheckCopy(
 ): AgencyCheckCopy {
   const name = t(AGENCY_KEYS[agency]);
   const signIn = agencyVerificationPage(agency)?.kind === "member_sign_in";
+  // What the agency was searched by, for "found this name, not this" and "found nobody".
+  const identity = isCheckableAgency(agency) ? AGENCY_CHECKS[agency].needs : "birth_date";
   return {
     check: signIn ? t("divers.certifications.checkWithAgency", { agency: name }) : link,
     link,
@@ -130,13 +143,18 @@ export function agencyCheckCopy(
     levelUnconfirmed: t("divers.certifications.agencyCheck.levelUnconfirmed", { agency: name }),
     limitedCard: t("divers.certifications.agencyCheck.limitedCard", { agency: name }),
     juniorUnder15: t("divers.certifications.agencyCheck.juniorUnder15", { agency: name }),
-    namesake: t("divers.certifications.agencyCheck.namesake", {
-      agency: name,
-      identity: isCheckableAgency(agency) ? AGENCY_CHECKS[agency].needs : "birth_date",
-    }),
-    noRecord: t("divers.certifications.agencyCheck.noRecord", { agency: name }),
+    namesake: t("divers.certifications.agencyCheck.namesake", { agency: name, identity }),
+    // The CMAS portal is filled in federation by federation: a gap there is
+    // not a sign the card is wrong.
+    noRecord:
+      agency === "cmas"
+        ? t("divers.certifications.agencyCheck.noRecordCmas")
+        : t("divers.certifications.agencyCheck.noRecord", { agency: name, identity }),
     severalRecords: t("divers.certifications.agencyCheck.severalRecords", { agency: name }),
     unreadable: t("divers.certifications.agencyCheck.unreadable", { agency: name }),
+    captcha: t("divers.certifications.agencyCheck.captcha", { agency: name }),
+    pageChanged: t("divers.certifications.agencyCheck.pageChanged", { agency: name }),
+    unsupported: t("divers.certifications.agencyCheck.unsupported", { agency: name }),
     // The agency now, the diver in the browser: one host holds many divers.
     notFoundOnPage: fill(t.raw("divers.certifications.agencyCheck.notFoundOnPage"), {
       agency: name,
@@ -190,5 +208,6 @@ export function agencyCheckAllCopy(t: StaffTranslator, count: number): AgencyChe
     stopped: t.raw("trips.roster.agencyCheckAll.stopped"),
     stoppedTransport: t.raw("trips.roster.agencyCheckAll.stoppedTransport"),
     stoppedSignedOut: t.raw("trips.roster.agencyCheckAll.stoppedSignedOut"),
+    left: t.raw("trips.roster.agencyCheckAll.left"),
   };
 }

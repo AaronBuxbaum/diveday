@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { enqueueIntegrationEvent } from "@/db/integration-events";
 import { saveShopIntegration, upsertIntegrationSyncRecord } from "@/db/integrations";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { deliverQuickBooksEvent } from "./quickbooks";
+
+const ctx = fileScopedShopContext();
 
 const CONFIG = {
   clientId: "client",
@@ -66,7 +68,7 @@ describe("deliverQuickBooksEvent — refund receipts", () => {
    * QuickBooks kept $50 of an $80 refund and nothing in the app said so.
    */
   it("posts a receipt for every refund slice, not only the first", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
 
     const bodies: unknown[] = [];
@@ -114,7 +116,7 @@ describe("deliverQuickBooksEvent — refund receipts", () => {
 
   /** The same event redelivered is still exactly one receipt. */
   it("does not post twice when one refund event is retried", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
 
     let calls = 0;
@@ -141,7 +143,7 @@ describe("deliverQuickBooksEvent — refund receipts", () => {
 
   /** A sales receipt is genuinely once per order, and stays that way. */
   it("still posts one sales receipt per order", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
 
     let calls = 0;
@@ -207,7 +209,7 @@ describe("deliverQuickBooksEvent — voids", () => {
   }
 
   it("voids the sales receipt it booked, once", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
     await upsertIntegrationSyncRecord(db, {
       shopId: shop.id,
@@ -236,7 +238,7 @@ describe("deliverQuickBooksEvent — voids", () => {
   });
 
   it("does nothing for an order it never booked", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
     const { calls, fetchImpl } = recordingFetch();
     expect(
@@ -252,7 +254,7 @@ describe("deliverQuickBooksEvent — voids", () => {
   });
 
   it("does not book a sale whose void is already queued", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
     const paid = await enqueueIntegrationEvent(db, {
       shopId: shop.id,

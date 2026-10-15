@@ -363,9 +363,11 @@
     },
     "certCheck": {
       "heading": "Certification checks",
-      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and marks the certification certified when the agency shows it. It checks SSI, NAUI, SDI, GUE, CMAS and PADI (signed in to the PADI Pros’ Site in the same browser), in Chrome or Edge on a computer.",
-      "added": "Added to this browser",
+      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and, when the agency shows the certification, marks it certified in that staffer’s name, as Mark certified would. It checks SSI, NAUI, SDI, GUE and CMAS, and PADI once “PADI checks (beta)” in Bookings & waivers is on, in Chrome or Edge on a computer.",
+      "added": "Added to this browser ({version})",
       "notAdded": "Not added",
+      "outdated": "Update the extension: this browser has {version}, DiveDay needs {minimum}.",
+      "try": "Try the checks",
       "install": "Add to Chrome"
     },
     "integrations": {
@@ -428,6 +430,11 @@
         "heading": "Our year",
         "label": "Show “Our year” on your schedule",
         "description": "The year so far in counts at the foot of your public schedule: divers, boats out, and sites. Never money. Off until you turn it on."
+      },
+      "padiChecks": {
+        "heading": "PADI checks (beta)",
+        "label": "Check PADI certifications and eLearning with the extension",
+        "description": "Beta: nobody has tried this on PADI’s real DiveChek page yet, and PADI hasn’t said yes or no to an extension filling it in. It runs in a browser where one of your PADI Pros is signed in to the Pros’ Site, under that Pro’s membership. Off, the link to the Pros’ Site stays. An owner or manager can turn it on."
       }
     },
     "crewSchedule": {
@@ -1066,5 +1073,27 @@
     "partnerLinkField": "Referral link",
     "showRequired": "Pick the departure this card is for.",
     "fromFareharbor": "Switching from FareHarbor? <link>See which embed replaces each of its widgets</link>."
+  },
+  "certChecks": {
+    "title": "Try the checks",
+    "description": "Sample pages in this browser only: no agency is searched, and no diver’s details leave it.",
+    "run": "Run the checks",
+    "running": "Running…",
+    "extension": "Extension",
+    "samples": "Sample lookups",
+    "padi": "PADI Pros’ Site",
+    "report": "Session report",
+    "passed": "Passed",
+    "failed": "Failed",
+    "notListed": "Not in this copy",
+    "signedIn": "Signed in",
+    "signedOut": "Signed out",
+    "noTab": "No PADI tab open",
+    "noAnswer": "No answer",
+    "noAccess": "Not allowed on PADI’s site",
+    "allowSite": "Chrome keeps the extension off {agency}’s site. Turn it on in Extensions, DiveDay certification check, Details, Site access.",
+    "failedNext": "Send us the report below.",
+    "reportHint": "Copy it, then paste it into an email to us.",
+    "copy": "Copy report"
   }
 }

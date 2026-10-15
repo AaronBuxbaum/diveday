@@ -8,6 +8,7 @@ import {
   agencyCheckMatchedText,
   agencyCheckOutcome,
   agencyCheckOutcomeText,
+  agencyCheckSendsToAgency,
 } from "./agency-check-outcome";
 
 const COPY = {
@@ -23,6 +24,9 @@ const COPY = {
   noRecord: "noRecord",
   severalRecords: "severalRecords",
   unreadable: "unreadable",
+  captcha: "captcha",
+  pageChanged: "pageChanged",
+  unsupported: "unsupported",
   notFoundOnPage: "notFoundOnPage {name}",
   noAnswer: "noAnswer",
   signedOut: "signedOut",
@@ -45,7 +49,7 @@ describe("agencyCheckOutcome", () => {
    * the two in a row that stop a "Check all".
    */
   it("reads the extension's silence as a page it could not read, whatever came before", () => {
-    for (const reason of ["fill_failed", "timeout", "tab_failed", "unsupported"] as const) {
+    for (const reason of ["fill_failed", "timeout", "tab_failed"] as const) {
       expect(agencyCheckFailure(reason)).toBe("page");
     }
     expect(agencyCheckOutcome(null, "page")).toBe("unreadable");
@@ -60,6 +64,25 @@ describe("agencyCheckOutcome", () => {
    * written, so the staffer is told to reload, never that the agency's page
    * could not be read.
    */
+  /**
+   * A captcha, a changed page and an agency this copy of the extension does
+   * not check each have their own sentence and send the staffer to the
+   * agency's own page, and to a "Check all" each leaves that agency's other
+   * cards (domain review R7).
+   */
+  it("says a captcha, a changed page and an unchecked agency in their own words, with the agency's link", () => {
+    for (const reason of ["captcha", "page_changed", "unsupported"] as const) {
+      expect(agencyCheckFailure(reason)).toBe(reason);
+      expect(agencyCheckOutcome(null, reason)).toBe(reason);
+      expect(agencyCheckSendsToAgency(null, reason)).toBe(true);
+    }
+    expect(agencyCheckOutcomeText(null, "captcha", COPY, "Lena Ortiz")).toBe("captcha");
+    expect(agencyCheckOutcomeText(null, "page_changed", COPY, "Lena Ortiz")).toBe("pageChanged");
+    expect(agencyCheckOutcomeText(null, "unsupported", COPY, "Lena Ortiz")).toBe("unsupported");
+    expect(agencyCheckSendsToAgency(null, "page")).toBe(false);
+    expect(agencyCheckSendsToAgency(null, "signed_out")).toBe(false);
+  });
+
   it("tells the staffer to reload when DiveDay itself did not answer", () => {
     expect(agencyCheckOutcome(null, "transport")).toBe("transport");
     expect(agencyCheckOutcomeText(null, "transport", COPY, "Lena Ortiz")).toBe("noAnswer");

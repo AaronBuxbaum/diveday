@@ -21,7 +21,8 @@ Before every commit:
    selects:
    `pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot`
 4. **A flow, a page or its copy changed**: `pnpm e2e:affected` names the specs that read what
-   you changed; run them with `pnpm e2e <spec…> --reporter=line` (section 2).
+   you changed, plus five smoke tests; run them with `pnpm e2e <spec…> --reporter=line`
+   (section 2).
 5. **UI changed**: look at it (section 3).
 
 Before every push:
@@ -71,7 +72,8 @@ lint` includes the `clock` rule, which fails if domain/data code reads the wall 
 
 Never ship UI you haven't seen; the commands, the probe and the dev-server traps are in
 [look.md](look.md). In light only (dark only for colour work, H-90): `pnpm e2e:build` once, then
-`pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*<capture group>' --reporter=line`, read the PNGs
+`pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*<capture group>' --reporter=line` (or the
+captures the diff reaches, by the **e2e-and-visual** skill's `--grep` recipe), read the PNGs
 in `e2e/screenshots/` against `docs/design/principles.md`'s checklist, and give every pixel-probe
 flag a verdict. No capture group: `node scripts/screenshot.mjs <path>`. Significant UI: the
 `design-review` skill. Send the screenshots with your report.

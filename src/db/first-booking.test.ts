@@ -1,11 +1,13 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { shopFirstBooking } from "./first-booking";
 import { bookings, people, priorVisits, shops, trips } from "./schema";
 import { createTrip } from "./trips";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **The shop's first booking ever, while it is still the only one** — the
@@ -18,8 +20,8 @@ import { createTrip } from "./trips";
  */
 const NOW = new Date("2026-09-01T14:00:00.000Z");
 
-async function freshShop(slug: string) {
-  const db = await seededTestDb();
+async function freshShop(slug: string, { fresh = false } = {}) {
+  const db = fresh ? (await seededShopContext()).db : ctx.db;
   const [shop] = await db
     .insert(shops)
     .values({ name: `Shop ${slug}`, slug, timezone: "America/New_York" })
@@ -118,7 +120,10 @@ describe("shopFirstBooking", () => {
       [lower, higher],
       [higher, lower],
     ]) {
-      const { db, shopId } = await freshShop(`first-booking-tie-${first.slice(-1)}`);
+      // Its own database per pass: both passes write the same two booking ids.
+      const { db, shopId } = await freshShop(`first-booking-tie-${first.slice(-1)}`, {
+        fresh: true,
+      });
       const trip = await aDeparture(db, shopId, new Date("2026-09-05T12:30:00.000Z"));
       const one = await aSeat(db, shopId, trip.id, "Ravi Chandra");
       const two = await aSeat(db, shopId, trip.id, "Noor Rahman");

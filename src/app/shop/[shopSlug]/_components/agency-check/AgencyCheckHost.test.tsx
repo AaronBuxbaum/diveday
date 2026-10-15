@@ -24,6 +24,9 @@ vi.mock("@/components/useCertCheckExtension", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/components/useCertCheckExtension")>()),
   requestAgencyPage: vi.fn(),
 }));
+vi.mock("@/app/actions/agency-check-report", () => ({
+  reportAgencyCheckPageAction: vi.fn(async () => {}),
+}));
 const routerRefresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: routerRefresh }) }));
 const { requestAgencyPage } = await import("@/components/useCertCheckExtension");
@@ -56,7 +59,7 @@ afterEach(() => {
 });
 
 function withExtension() {
-  document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+  document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
 }
 
 /** A departure of these cards, one row per diver, under one host. */
@@ -444,6 +447,38 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
     expect(vi.mocked(requestAgencyPage)).toHaveBeenCalledTimes(2);
     expect(action.mock.calls.map(([personId]) => personId)).toEqual(["person-1"]);
     expect(row("person-3").getByRole("button", { name: "Check with PADI" })).toBeEnabled();
+  });
+
+  /** Domain review R7: a captcha is SSI's state, so SSI's other cards are left; NAUI's go on. */
+  it("leaves an agency's other cards once its page asks whether the staffer is human", async () => {
+    withExtension();
+    vi.mocked(requestAgencyPage).mockImplementation(async (query) =>
+      query.agency === "ssi" ? { ok: false, reason: "captcha" } : { ok: true, pageText: "page" },
+    );
+    const action = renderDeparture([card(1), card(2), card(3, "naui")], () => MATCH);
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Check all 3 cards with their agencies" }),
+      );
+    });
+
+    expect(
+      await screen.findByText(
+        "Checked 2. Certified: 1. Left SSI’s other certifications for you: check them on its page.",
+      ),
+    ).toBeInTheDocument();
+    expect(vi.mocked(requestAgencyPage).mock.calls.map(([query]) => query.agency)).toEqual([
+      "ssi",
+      "naui",
+    ]);
+    expect(action.mock.calls.map(([personId]) => personId)).toEqual(["person-3"]);
+    expect(
+      row("person-1").getByText("SSI is asking if you’re human. Check on its page."),
+    ).toBeVisible();
+    expect(row("person-1").getByRole("link", { name: "Check with SSI" })).toBeVisible();
+    expect(row("person-1").queryByRole("button", { name: "Check with SSI" })).toBeNull();
+    expect(row("person-2").getByRole("button", { name: "Check with SSI" })).toBeEnabled();
   });
 
   it("answers a single row's match with the diver record's toast and its Undo", async () => {

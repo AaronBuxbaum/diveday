@@ -17,8 +17,17 @@
  * A page behind the shop's own sign-in (`spec.signIn`, PADI's Pros' Site) is
  * held tighter than a public lookup: nothing is typed on a sign-in, sign-up or
  * account address (`signInPath`, from protocol.js) or a page asking for a
- * password or, outside any search, an email; every box filled must search;
- * and the only button pressed is that search's own.
+ * password or, outside any search, an email; nothing is typed anywhere but the
+ * page the lookup opened, when its address names one (DiveChek's
+ * `/divechek`); every box filled must search, in a form with no other box;
+ * a student's email goes only into a box that says it searches or is the
+ * student's; and the only button pressed is that search's own.
+ *
+ * Two answers say the page is not ready rather than changed: `form`, a page
+ * with no box to type into at all yet (a form still drawing, a challenge in
+ * front of it), and `captcha`, a lookup whose own form asks whether the
+ * staffer is human (a captcha box drawn in it, as shape.js reads one). A
+ * captcha elsewhere on the page, on a newsletter's form, stops nothing.
  * @param {{firstName: string, lastName: string, birthDate?: string|null, cardNumber?: string|null, email?: string}} query
  * @param {{fields: string[], dateFormat: string, either?: boolean, signIn?: boolean}} spec
  * @param {string} [signInPath] the source of `SIGN_IN_PATH` (protocol.js)
@@ -39,8 +48,13 @@ function fillAgencyForm(query, spec, signInPath) {
   // Whole words, so "Research" is not a search. A box says it searches with
   // these; a signed-in search's own button may also say check or verify.
   const BOX_SEARCH = /\b(search|find|look ?up|buscar)\b/i;
-  const BUTTON_SEARCH = /\b(search|find|look ?up|check|chek|divechek|verify|buscar|verificar)\b/i;
+  // PADI's own DiveChek instructions say its button reads "Run Report".
+  const BUTTON_SEARCH =
+    /\b(search|find|look ?up|check|chek|divechek|verify|run ?report|buscar|verificar)\b/i;
   const SUBMITS = 'button, input[type="submit"]';
+  // A signed-in email box that searches only because its form's button says
+  // so must also say whose email it wants: "Email a copy to" is not a search.
+  const STUDENT = /\b(student|alumno|estudiante|diver|buceador)\b/i;
 
   /** Words as a person reads them: "searchFirstName" and "search_first" are two words each. */
   function words(text) {
@@ -73,8 +87,22 @@ function fillAgencyForm(query, spec, signInPath) {
 
   function visible(element) {
     if (element.type === "hidden" || element.disabled || element.readOnly) return false;
-    const style = window.getComputedStyle(element);
-    return style.display !== "none" && style.visibility !== "hidden";
+    // On the page as a person sees it: a block hidden around the element
+    // hides it too.
+    if (typeof element.checkVisibility === "function") {
+      return element.checkVisibility({ checkVisibilityCSS: true, visibilityProperty: true });
+    }
+    for (let at = element; at; at = at.parentElement) {
+      const style = window.getComputedStyle(at);
+      if (style.display === "none") return false;
+      if (at === element && style.visibility === "hidden") return false;
+    }
+    return window.getComputedStyle(element).visibility !== "hidden";
+  }
+
+  /** A button a lookup may press: on the page, and never a reset. */
+  function pressable(element) {
+    return visible(element) && element.type !== "reset";
   }
 
   /** A box a lookup could type into: not a button, a tick, a file, a password or an email. */
@@ -98,12 +126,15 @@ function fillAgencyForm(query, spec, signInPath) {
   }
 
   // A form's button speaks for its boxes only when the form is small: its one
-  // submit control says search ("one"), or it says search among others and
-  // every box in the form is one this lookup fills ("all", checked once the
-  // boxes are found). A profile form with a Search beside its Save is neither.
+  // submit control says search ("one"), or it says search among others
+  // ("all"); either way every box in the form must be one this lookup fills,
+  // checked once the boxes are found. A profile form with a Search beside its
+  // Save, or a Verify under a Phone box, is neither. A reset is never one.
   function formSearches(form) {
     if (!form) return null;
-    const submits = Array.from(form.querySelectorAll(SUBMITS)).filter(visible);
+    const submits = Array.from(form.querySelectorAll(SUBMITS)).filter(
+      (button) => visible(button) && button.type !== "reset",
+    );
     const searching = submits.filter((button) => BUTTON_SEARCH.test(buttonWords(button)));
     if (searching.length === 0) return null;
     return submits.length === 1 ? "one" : "all";
@@ -175,6 +206,20 @@ function fillAgencyForm(query, spec, signInPath) {
       return { ok: false, missing: ["signedIn"] };
     }
   }
+  // A signed-in lookup that opens a page of its own (DiveChek) is filled on
+  // that page only, never on another of the site's pages it was sent to.
+  if (signedInPage) {
+    const trim = (path) => path.replace(/\/+$/, "").toLowerCase();
+    let wanted = "";
+    try {
+      wanted = trim(new URL(spec.url).pathname);
+    } catch {
+      return { ok: false, missing: ["page"] };
+    }
+    if (wanted !== "" && trim(location.pathname) !== wanted) {
+      return { ok: false, missing: ["page"] };
+    }
+  }
   // A sign-in that asks for the email first and the password on the next
   // step: an email box that is not a search, on a signed-in page.
   if (
@@ -184,6 +229,13 @@ function fillAgencyForm(query, spec, signInPath) {
     )
   ) {
     return { ok: false, missing: ["signedIn"] };
+  }
+  // No box to type into anywhere yet: the page has not drawn its form.
+  if (
+    !Array.from(document.querySelectorAll("input, select")).some(typable) &&
+    emailBoxes.length === 0
+  ) {
+    return { ok: false, missing: ["form"] };
   }
 
   // What will be typed where, decided before anything is typed.
@@ -268,7 +320,12 @@ function fillAgencyForm(query, spec, signInPath) {
 
   function planEmail() {
     if (!query.email) return false;
-    const box = emailBoxes.find((element) => !used().includes(element) && searches(element));
+    const box = emailBoxes.find(
+      (element) =>
+        !used().includes(element) &&
+        searches(element) &&
+        (!signedInPage || boxSearches(element) || STUDENT.test(words(describe(element)))),
+    );
     if (!box) return false;
     plan.push({ box, value: query.email });
     return true;
@@ -299,7 +356,7 @@ function fillAgencyForm(query, spec, signInPath) {
     // Every box in one search. A box that searches only because its form's
     // button says so is in a form whose every box this lookup fills.
     if (boxes.some((box) => box.form !== form)) return { ok: false, missing: ["submit"] };
-    if (!boxes.every(boxSearches) && formSearches(form) === "all") {
+    if (!boxes.every(boxSearches) && formSearches(form) !== null) {
       const others = Array.from(form.querySelectorAll("input, select")).filter(
         (element) => typable(element) && !boxes.includes(element),
       );
@@ -309,7 +366,10 @@ function fillAgencyForm(query, spec, signInPath) {
     // buttons, whatever it says, and never a bare submit of the form.
     button = form
       ? Array.from(form.querySelectorAll(SUBMITS)).find(
-          (element) => visible(element) && BUTTON_SEARCH.test(buttonWords(element)),
+          (element) =>
+            visible(element) &&
+            element.type !== "reset" &&
+            BUTTON_SEARCH.test(buttonWords(element)),
         ) || null
       : Array.from(
           (boxes[0].closest('[role="search"]') || document.createElement("div")).querySelectorAll(
@@ -317,20 +377,60 @@ function fillAgencyForm(query, spec, signInPath) {
           ),
         ).find(visible) || null;
     if (!button) return { ok: false, missing: ["submit"] };
+  } else if (spec.either) {
+    // CMAS: one page, two searches, each with its own button ("Search by code"
+    // under the code, "Manual Search" under the names and birth date), in one
+    // form or none. The search performed is the first search button after its
+    // last box, in the nearest block around that box that has one.
+    const last = boxes[boxes.length - 1];
+    for (let around = last.parentElement; around && !button; around = around.parentElement) {
+      button =
+        Array.from(around.querySelectorAll(SUBMITS)).find(
+          (element) =>
+            pressable(element) &&
+            BUTTON_SEARCH.test(buttonWords(element)) &&
+            Boolean(last.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING),
+        ) || null;
+    }
+    if (!button) return { ok: false, missing: ["submit"] };
   } else {
+    // The form's search-worded button first, else its first submit; never a
+    // reset, and never a wordless type="button" (a date picker's toggle).
+    const formButtons = form ? Array.from(form.querySelectorAll(SUBMITS)).filter(pressable) : [];
     button =
-      (form &&
-        Array.from(form.querySelectorAll(SUBMITS)).find(
-          (element) => element.type === "submit" || element.tagName === "BUTTON",
-        )) ||
-      Array.from(document.querySelectorAll(SUBMITS)).find((element) =>
-        /search|find|verify|check|submit|buscar|verificar/i.test(
-          element.textContent || element.value || "",
-        ),
+      formButtons.find((element) => BUTTON_SEARCH.test(buttonWords(element))) ||
+      formButtons.find((element) => element.type === "submit") ||
+      Array.from(document.querySelectorAll(SUBMITS)).find(
+        (element) =>
+          pressable(element) &&
+          /search|find|verify|check|submit|buscar|verificar/i.test(
+            element.textContent || element.value || "",
+          ),
       ) ||
       null;
     if (!button && !form) return { ok: false, missing: ["submit"] };
   }
+
+  // The lookup's own form, or the nearest block holding its boxes and button.
+  let scope = form;
+  for (let around = boxes[0].parentElement; !scope && around; around = around.parentElement) {
+    if (boxes.every((box) => around.contains(box)) && (!button || around.contains(button))) {
+      scope = around;
+    }
+  }
+  // A captcha box drawn in that form (shape.js reads one the same way):
+  // outside reCAPTCHA's badge and any invisible widget. Nothing is typed.
+  const asksIfHuman = Array.from(
+    (scope || document).querySelectorAll(
+      'iframe[src*="recaptcha"], iframe[src*="hcaptcha"], iframe[src*="challenges.cloudflare.com"]',
+    ),
+  ).some(
+    (frame) =>
+      visible(frame) &&
+      !frame.closest(".grecaptcha-badge, [data-size='invisible']") &&
+      !/[?&]size=invisible/.test(frame.getAttribute("src") || ""),
+  );
+  if (asksIfHuman) return { ok: false, missing: ["captcha"] };
 
   for (const entry of plan) setValue(entry.box, entry.value);
   if (button) {
@@ -341,91 +441,411 @@ function fillAgencyForm(query, spec, signInPath) {
   return { ok: true };
 }
 
+/**
+ * Whether the page asks to sign in: a password box on it, or an address that
+ * signs in, signs up or manages an account (`signInPath`, from protocol.js).
+ * A searched page behind the shop's sign-in that does is a lapsed session,
+ * never a result.
+ * @param {string} signInPath
+ */
+function pageAsksToSignIn(signInPath) {
+  if (typeof signInPath !== "string" || signInPath.length === 0) return true;
+  if (new RegExp(signInPath, "i").test(location.pathname)) return true;
+  return Array.from(document.querySelectorAll('input[type="password"]')).some((box) => {
+    if (box.disabled) return false;
+    if (typeof box.checkVisibility === "function") {
+      return box.checkVisibility({ checkVisibilityCSS: true, visibilityProperty: true });
+    }
+    for (let at = box; at; at = at.parentElement) {
+      if (window.getComputedStyle(at).display === "none") return false;
+    }
+    return window.getComputedStyle(box).visibility !== "hidden";
+  });
+}
+
 /** The page's text as a person would read it, one block per line. */
 function readAgencyPage() {
   return document.body ? document.body.innerText : "";
 }
 
 /**
- * Only the part of an eLearning page about the email searched for: the lines
- * near each line naming it, or, when none does, the page's first lines (enough
- * to say "No results" or "Sign in"). Read with the staffer's PADI sign-in, the
- * rest of the page may be about other students, and it is not DiveDay's to
- * take.
+ * Only the part of an eLearning page about the student searched for, read
+ * with the staffer's PADI sign-in, whose other rows are other students' and
+ * not DiveDay's to take. Each line carrying the student's email, the line
+ * naming them just above it (first and last name, accents and case aside,
+ * within the `AFTER` lines the server reads as one record), and the lines
+ * under it that are a course, a status or a date, never past `AFTER` lines
+ * from the name line (or the email's, with no name line above it), the
+ * record the server reads (src/lib/elearning-check.ts). Never a line
+ * carrying any other address, never past one, never a line with no course,
+ * status or digit on it (the next student's name), and never the line just
+ * above another address, which names that address's student, unless it is a
+ * status alone ("Complete"), which is this student's.
+ * When no line carries the email, only the lines saying why (no result, a
+ * count, a sign-in), at most `WHY_LINES`, none with an address on it.
  * @param {string} text
  * @param {string} email
- */
-function excerptAround(text, email) {
-  const AROUND = 8;
-  const lines = text.split(/\r?\n/);
-  const wanted = email.trim().toLowerCase();
-  const keep = new Set();
-  lines.forEach((line, index) => {
-    if (!line.toLowerCase().includes(wanted)) return;
-    for (let at = Math.max(0, index - AROUND); at <= index + AROUND; at += 1) keep.add(at);
-  });
-  if (keep.size === 0) return lines.slice(0, 40).join("\n");
-  return lines.filter((_, index) => keep.has(index)).join("\n");
-}
-
-/**
- * Only the part of a signed-in lookup page about the diver searched for: each
- * line naming them (first and last name in either order, accents and case
- * aside) and the `AFTER` lines under it, the most the server reads as one
- * record (`RECORD_LINES` in src/lib/agency-check.ts), plus the words of any
- * line saying how many divers were found, which say nothing about anyone. When
- * no line names them, only the lines saying why: no result, several divers, or
- * a sign-in, at most `WHY_LINES`. Read with the shop's own PADI sign-in, the
- * rest of the page is not DiveDay's to take.
- * @param {string} text
  * @param {string} firstName
  * @param {string} lastName
  */
-function excerptAroundName(text, firstName, lastName) {
-  const AFTER = 4;
+function excerptAround(text, email, firstName, lastName) {
+  const AFTER = 6;
   const WHY_LINES = 10;
-  const COUNT = /(^| )\d+ divers?( found)?( |$)/;
+  // An address as the server reads one: never brackets or punctuation around it.
+  const ADDRESS = /[^\s@,;:()<>]+@[^\s@,;:()<>]+\.[a-z]{2,}/gi;
+  const COUNT = /(^| )\d+ (students?|results?|records?)( found)?( |$)/;
   const WHY =
-    /(^| )(no results?|no records?|no matching|no diver|not found|could not find|unable to find|0 results|sign ?in|log ?in|password|session (has )?expired)( |$)/;
+    /(^| )(no results?|no records?|no matching|no students?|not found|could not find|unable to find|0 results|sign ?in|log ?in|password|session (has )?expired)( |$)/;
+  // The server's status words (src/lib/elearning-check.ts), folded.
+  const STATUS_WORDS = [
+    "incomplete",
+    "not complete",
+    "not completed",
+    "in progress",
+    "not started",
+    "pending",
+    "expired",
+    "refunded",
+    "revoked",
+    "cancelled",
+    "canceled",
+    "suspended",
+    "started",
+    "partial",
+    "assigned",
+    "enrolled",
+    "awaiting",
+    "due",
+    "complete by",
+    "complete",
+    "completed",
+    "status",
+    "progress",
+  ];
+  const COURSE =
+    /(^| )(diver|course|online|elearning|e learning|open water|advanced|rescue|master|divemaster|instructor|specialty|enriched|nitrox|refresher|reactivate|tec|scuba)( |$)/;
   const fold = (value) =>
-    ` ${value
+    ` ${String(value || "")
       .normalize("NFD")
       .replace(/\p{M}/gu, "")
       .toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, " ")
       .trim()} `;
-  const first = fold(firstName);
-  const last = fold(lastName);
+  const addressesOn = (line) =>
+    (line.match(ADDRESS) || []).map((address) => address.replace(/[.,;:)>]+$/, "").toLowerCase());
+  const wanted = email.trim().toLowerCase();
   const lines = text.split(/\r?\n/);
   const folded = lines.map(fold);
-  const names = (line) => line.includes(first) && line.includes(last);
-  const kept = new Map();
-  folded.forEach((line, index) => {
-    // The count's own words, never the rest of a long line around them.
-    const count = line.match(COUNT);
-    if (count && !kept.has(index)) {
-      kept.set(index, line.length < 60 ? lines[index] : count[0].trim());
+  const others = lines.map((line) => addressesOn(line).some((address) => address !== wanted));
+  const carries = lines.map((line) => addressesOn(line).includes(wanted));
+  const first = fold(firstName);
+  const last = fold(lastName);
+  const names = (index) => {
+    const line = fold(lines[index].replace(ADDRESS, " "));
+    return first.trim() !== "" && last.trim() !== "" && line.includes(first) && line.includes(last);
+  };
+  const hasStatus = (index) => STATUS_WORDS.some((word) => folded[index].includes(` ${word} `));
+  /** A status and nothing else: "Complete", "In progress", "100%". */
+  const statusOnly = (index) => {
+    let rest = folded[index];
+    for (const word of STATUS_WORDS) rest = rest.split(` ${word} `).join(" ");
+    return folded[index].trim() !== "" && rest.replace(/\d{1,3}/g, " ").trim() === "";
+  };
+  /** A line a record of this student's may run on with: a course, a status or a date. */
+  const recordLine = (index) =>
+    /\d/.test(lines[index]) || hasStatus(index) || COURSE.test(folded[index]);
+  const keep = new Set();
+  lines.forEach((_, index) => {
+    if (!carries[index] || others[index]) return;
+    keep.add(index);
+    // The student's name line above, when the address sits under it: the
+    // record is then read from there, as the server reads it.
+    let from = index;
+    for (let at = index - 1; at >= Math.max(0, index - AFTER); at -= 1) {
+      if (others[at] || carries[at]) break;
+      if (names(at)) {
+        for (let line = at; line < index; line += 1) keep.add(line);
+        from = at;
+        break;
+      }
     }
-    if (!names(line)) return;
-    for (let at = index; at <= Math.min(lines.length - 1, index + AFTER); at += 1) {
-      kept.set(at, lines[at]);
+    for (let at = index + 1; at <= Math.min(lines.length - 1, from + AFTER); at += 1) {
+      if (others[at] || carries[at]) break;
+      if (!recordLine(at)) break;
+      // The line just above another address names that address's student,
+      // unless it is a status alone, which is this student's.
+      if (at + 1 < lines.length && others[at + 1] && !statusOnly(at)) break;
+      keep.add(at);
     }
   });
-  if (!folded.some(names)) {
+  if (keep.size === 0) {
     return lines
-      .filter((_, index) => WHY.test(folded[index]) || COUNT.test(folded[index]))
+      .filter(
+        (_, index) => !others[index] && (WHY.test(folded[index]) || COUNT.test(folded[index])),
+      )
       .slice(0, WHY_LINES)
       .join("\n");
   }
-  return [...kept.keys()]
-    .sort((a, b) => a - b)
-    .map((index) => kept.get(index))
-    .join("\n");
+  return lines.filter((_, index) => keep.has(index)).join("\n");
+}
+
+/**
+ * Only the part of a DiveChek page the server reads about the diver searched
+ * for: each of their records, from the line naming them (first and last name
+ * in either order, accents and case aside, or split over two labelled lines)
+ * to the line where the server ends it (`readAgencyPage` in
+ * src/lib/agency-check.ts): the first line that could be someone else's, or
+ * the `recordLines`-th line under the name. Every other line comes back only
+ * as the words on it that say why or how many ("no results", "2 divers
+ * found", "sign in"), once each, above the records: never a neighbour's name,
+ * birth date or card, and nothing around a count. A "no results" line
+ * straight under a record, which unsays it for the server, comes back there
+ * as its words. Read with the shop's own PADI sign-in, the rest of the page
+ * is not DiveDay's to take. Only PADI's lookup is behind a sign-in, so only a
+ * DiveChek page comes here (background.js).
+ *
+ * The excerpt must judge as the whole page does, verdict and evidence alike,
+ * so it reads lines as the server does (spaces collapsed, blank lines gone),
+ * ends a record with the server's own words (`DIVECHEK_RECORD` in
+ * protocol.js), keeps a kept labelled name line's page partner, and puts a
+ * `GAP` line, which ends a record and never pairs, between lines that were
+ * not neighbors on the page.
+ * @param {string} text
+ * @param {string} firstName
+ * @param {string} lastName
+ */
+function excerptAroundName(text, firstName, lastName) {
+  const reading = globalThis.DiveDayCertCheck?.DIVECHEK_RECORD;
+  if (!reading) throw new Error("excerptAroundName needs protocol.js");
+  const GAP = "…";
+  // foldText in src/lib/agency-check.ts.
+  const fold = (value) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}&]+/gu, " ")
+      .trim();
+  const hasWords = (line, phrase) => phrase.length > 0 && ` ${line} `.includes(` ${phrase} `);
+  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const first = fold(firstName);
+  const last = fold(lastName);
+  const raw = text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const lines = raw.map(fold);
+
+  // The words that say why or how many, each a whole phrase of the line.
+  const noRecordWords = reading.noRecordWords.map(fold);
+  const saysNoRecord = (line) => noRecordWords.some((phrase) => hasWords(line, phrase));
+  const COUNT = /(?<=^| )\d+ divers?( found)?(?= |$)/g;
+  const SIGN_IN = /(?<=^| )(sign ?in|log ?in|password|session (has )?expired)(?= |$)/g;
+  const whyWords = (line) => [
+    ...noRecordWords.filter((phrase) => hasWords(line, phrase)),
+    ...[...line.matchAll(COUNT)].map((match) => match[0]),
+    ...[...line.matchAll(SIGN_IN)].map((match) => match[0]),
+  ];
+
+  // Dates as the server reads them (`datesOn`).
+  const DATE_ON_LINE =
+    /(?<![\p{L}\p{N}])(?:(\d{4}) (\d{1,2}) (\d{1,2})|(\d{1,2}) (\d{1,2}) (\d{4})|(\d{1,2}) ([a-z]+) (\d{4})|([a-z]+) (\d{1,2}) (\d{4}))(?![\p{L}\p{N}])/gu;
+  const monthNumber = (word) => {
+    const index = reading.monthNames.findIndex(
+      (name) =>
+        word === name || word === name.slice(0, 3) || (name === "september" && word === "sept"),
+    );
+    return index === -1 ? null : index + 1;
+  };
+  const isoDate = (year, month, day) =>
+    month < 1 || month > 12 || day < 1 || day > 31 ? null : `${year}-${month}-${day}`;
+  const hasDate = (line) => {
+    for (const m of line.matchAll(DATE_ON_LINE)) {
+      let date = null;
+      if (m[1]) {
+        date = isoDate(Number(m[1]), Number(m[2]), Number(m[3]));
+      } else if (m[4]) {
+        const a = Number(m[4]);
+        const b = Number(m[5]);
+        const year = Number(m[6]);
+        if (a > 12) date = isoDate(year, b, a);
+        else if (b > 12) date = isoDate(year, a, b);
+        else date = reading.dates === "mdy" ? isoDate(year, a, b) : isoDate(year, b, a);
+      } else if (m[7]) {
+        const month = monthNumber(m[8]);
+        date = month ? isoDate(Number(m[9]), month, Number(m[7])) : null;
+      } else if (m[10]) {
+        const month = monthNumber(m[10]);
+        date = month ? isoDate(Number(m[12]), month, Number(m[11])) : null;
+      }
+      if (date) return true;
+    }
+    return false;
+  };
+
+  // A record's words as the server reads them (`readAgencyPage`).
+  const levelWording = reading.levelWording.map(fold);
+  const listedWording = reading.listedWording.map(fold);
+  const limiting = reading.limitingWords.map(fold);
+  const furniture = reading.furnitureWords.map(fold);
+  const controls = reading.searchControlLines.map(fold);
+  const trainer = reading.trainerWords.map(fold);
+  const recordLineWords = new Set(reading.recordLineWords);
+  const withoutCardNames = (line) =>
+    listedWording
+      .reduce((rest, phrase) => ` ${rest} `.split(` ${phrase} `).join(" "), line)
+      .replace(/ +/g, " ")
+      .trim();
+  const isFurniture = (line) =>
+    furniture.some((phrase) => line === phrase || line.startsWith(`${phrase} `)) ||
+    controls.some((control) => line === control);
+  const limits = (line) => limiting.some((word) => hasWords(withoutCardNames(line), word));
+  const ratingWords = (line) =>
+    levelWording.some((phrase) => hasWords(line, phrase)) ||
+    listedWording.some((phrase) => hasWords(line, phrase)) ||
+    limiting.some((word) => hasWords(line, word));
+  const recordLinePhrases = [...levelWording, ...listedWording, ...limiting].sort(
+    (a, b) => b.length - a.length,
+  );
+  const isRecordLine = (line) => {
+    let rest = ` ${line} `;
+    for (const phrase of recordLinePhrases) rest = rest.split(` ${phrase} `).join("  ");
+    return rest
+      .trim()
+      .split(/ +/)
+      .every((word) => !word || /\p{N}/u.test(word) || recordLineWords.has(word));
+  };
+
+  // The diver's name on one line, as the server reads it.
+  const forward = new RegExp(`(^| )${escapeRegExp(first)}( \\S+)* ${escapeRegExp(last)}( |$)`);
+  const reversed = new RegExp(`(^| )${escapeRegExp(last)} ?, ?${escapeRegExp(first)}( |$)`);
+  const commaFolded = raw.map((line) =>
+    line
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}&,]+/gu, " ")
+      .replace(/ ?, ?/g, " , ")
+      .trim(),
+  );
+  const namesDiver = (index) => forward.test(lines[index]) || reversed.test(commaFolded[index]);
+
+  // A name split over two adjacent labelled lines, as the server reads it
+  // (`splitNamesOf`): paired top to bottom once, a pair with a stray labelled
+  // line beside it refused.
+  const partOf = (index) => {
+    for (const part of ["given", "family"]) {
+      for (const label of reading.nameLabels[part]) {
+        if (!lines[index].startsWith(`${label} `)) continue;
+        const labelWords = label.split(" ").length;
+        const tokens = raw[index].split(" ").filter(Boolean);
+        let consumed = 0;
+        let at = 0;
+        while (at < tokens.length && consumed < labelWords) {
+          consumed += fold(tokens[at]).split(" ").filter(Boolean).length;
+          at += 1;
+        }
+        if (consumed !== labelWords) return null;
+        return { part, words: lines[index].slice(label.length + 1).split(" ") };
+      }
+    }
+    return null;
+  };
+  const parts = lines.map((_, index) => partOf(index));
+  const partner = new Map();
+  for (let index = 0; index + 1 < parts.length; ) {
+    const a = parts[index];
+    const b = parts[index + 1];
+    if (a && b && a.part !== b.part) {
+      partner.set(index, index + 1);
+      partner.set(index + 1, index);
+      index += 2;
+    } else {
+      index += 1;
+    }
+  }
+  const stray = (index) => parts[index] != null && !partner.has(index);
+  const firstWords = first.split(" ");
+  const lastWords = last.split(" ");
+  const splitNameAt = (index) => {
+    if (partner.get(index) !== index + 1 || stray(index - 1) || stray(index + 2)) return false;
+    const a = parts[index];
+    const b = parts[index + 1];
+    const given = a.part === "given" ? a : b;
+    const family = a.part === "given" ? b : a;
+    if (
+      given.words.slice(0, firstWords.length).join(" ") !== first ||
+      family.words.slice(-lastWords.length).join(" ") !== last ||
+      given.words.length > firstWords.length + reading.splitNameExtraWords ||
+      family.words.length > lastWords.length + reading.splitNameExtraWords
+    ) {
+      return false;
+    }
+    const name = `${given.words.join(" ")} ${family.words.join(" ")}`;
+    return !/\p{N}/u.test(name) && !ratingWords(name) && !trainer.some((w) => hasWords(name, w));
+  };
+
+  // Each record of the diver's, ended where the server ends a DiveChek record.
+  const kept = new Map();
+  const below = new Map();
+  if (first !== "" && last !== "") {
+    for (let index = 0; index < lines.length; index += 1) {
+      const split = splitNameAt(index);
+      if (!split && !namesDiver(index)) continue;
+      const nameEnd = split ? index + 1 : index;
+      const ownDate = !split && hasDate(lines[index]);
+      let to = nameEnd + 1;
+      while (to < lines.length && to <= nameEnd + reading.recordLines) {
+        const line = lines[to];
+        if (saysNoRecord(line)) break;
+        if (isFurniture(line)) {
+          if (limits(line)) to += 1;
+          break;
+        }
+        if (split && !isRecordLine(line)) break;
+        if (namesDiver(to) || splitNameAt(to)) break;
+        const birthDateLine = to === nameEnd + 1 && !ownDate && hasDate(line);
+        if (!birthDateLine && !ratingWords(line) && (!/\d/.test(line) || hasDate(line))) break;
+        to += 1;
+      }
+      for (let at = index; at < to; at += 1) kept.set(at, raw[at]);
+      if (to < lines.length && saysNoRecord(lines[to])) below.set(to, whyWords(lines[to])[0]);
+    }
+  }
+  // Labelled name lines keep their page pairing: a kept line's partner, and a
+  // stray labelled line beside a kept pair, are kept with it.
+  for (const index of [...kept.keys()]) {
+    const other = partner.get(index);
+    if (other === undefined) continue;
+    kept.set(other, raw[other]);
+    const above = Math.min(index, other) - 1;
+    const under = Math.max(index, other) + 1;
+    if (stray(above)) kept.set(above, raw[above]);
+    if (stray(under)) kept.set(under, raw[under]);
+  }
+
+  const why = new Set();
+  lines.forEach((line, index) => {
+    if (!kept.has(index)) for (const words of whyWords(line)) why.add(words);
+  });
+  const out = [...why];
+  let previous = null;
+  const indices = [...new Set([...kept.keys(), ...below.keys()])].sort((a, b) => a - b);
+  for (const index of indices) {
+    const whole = kept.has(index);
+    // A "no results" line's words sit straight under their record, and
+    // nothing runs on from them.
+    if (previous !== null && (index !== previous + 1 || !kept.has(previous))) out.push(GAP);
+    out.push(whole ? kept.get(index) : below.get(index));
+    previous = index;
+  }
+  return out.join("\n");
 }
 
 globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
   fillAgencyForm,
   readAgencyPage,
+  pageAsksToSignIn,
   excerptAround,
   excerptAroundName,
 });

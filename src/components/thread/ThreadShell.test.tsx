@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -10,21 +10,13 @@ import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
+import { sourceFiles } from "@/test/source";
 import { THREAD_FOOT_SECTION_CLASS, THREAD_MEASURE_CLASS, ThreadShell } from "./ThreadShell";
 
 afterEach(cleanup);
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(HERE, "..", "..");
-
-/** Every non-test `.ts`/`.tsx` under `src/`, so a sweep can be stated as a fact. */
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(full);
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
-  });
-}
 
 function read(relativePath: string) {
   return readFileSync(join(SRC_DIR, relativePath), "utf8");

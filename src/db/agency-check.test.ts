@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { certificationForAgencyCheck, listAgencyCheckableCards } from "./agency-check";
 import type { AppDb } from "./client";
-import { certifications, people } from "./schema";
+import { certifications, people, shops } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { withAgencyChecks } from "./today";
 
@@ -118,6 +118,7 @@ describe("listAgencyCheckableCards", () => {
 
   it("offers a pending PADI card for DiveChek only when the diver's birth date is on file", async () => {
     const { db, shop } = ctx;
+    await db.update(shops).set({ padiChecksEnabled: true }).where(eq(shops.id, shop.id));
     const dated = await diver(db, shop.id, "Lena Ortiz");
     const padi = await card(db, shop.id, dated, { agency: "padi", identifier: "1506AB1234" });
     const [undated] = await db
@@ -148,6 +149,26 @@ describe("listAgencyCheckableCards", () => {
         shopId: shop.id,
         personId: undated.id,
         certificationId: undatedCard.id,
+      }),
+    ).toBeNull();
+  });
+
+  it("offers no PADI card at a shop that has not turned PADI checks on, and keeps the rest", async () => {
+    const { db, shop } = ctx;
+    // The seeded demo runs them; a new shop does not.
+    await db.update(shops).set({ padiChecksEnabled: false }).where(eq(shops.id, shop.id));
+    const personId = await diver(db, shop.id, "Lena Ortiz");
+    const padi = await card(db, shop.id, personId, { agency: "padi", identifier: "1506AB1234" });
+    const ssi = await card(db, shop.id, personId, { level: "advanced_open_water" });
+
+    const byPerson = await listAgencyCheckableCards(db, { shopId: shop.id, personIds: [personId] });
+
+    expect(byPerson.get(personId)?.map((c) => c.certificationId)).toEqual([ssi.id]);
+    expect(
+      await certificationForAgencyCheck(db, {
+        shopId: shop.id,
+        personId,
+        certificationId: padi.id,
       }),
     ).toBeNull();
   });

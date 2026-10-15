@@ -67,9 +67,18 @@ export function LegalDocument({
 }
 
 /** One numbered-in-spirit section: a heading and whatever prose or list it holds. */
-export function LegalSection({ heading, children }: { heading: string; children: ReactNode }) {
+export function LegalSection({
+  heading,
+  id,
+  children,
+}: {
+  heading: string;
+  /** An anchor another page links to, such as `/privacy#extension`. */
+  id?: string;
+  children: ReactNode;
+}) {
   return (
-    <section>
+    <section id={id} className={id ? "scroll-mt-24" : undefined}>
       <h2 className={SUB_TITLE_CLASS}>{heading}</h2>
       <div className={SECTION_BODY_CLASS}>{children}</div>
     </section>

@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { discardFormDraft, listFreshFormDrafts, readFormDraft, saveFormDraft } from "./form-drafts";
 import { people, personRoles } from "./schema";
 
+const ctx = fileScopedShopContext();
+
 async function fixture() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [owner] = await db
     .select({ personId: personRoles.personId })
     .from(personRoles)

@@ -420,6 +420,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   requirements_not_configured: "shared.readiness.blockers.requirementsNotConfigured",
   identity_unconfirmed: "shared.readiness.blockers.identityUnconfirmed",
   waiver_not_sent: "shared.readiness.blockers.waiverNotSent",
+  waiver_lapsed: "shared.readiness.blockers.waiverLapsed",
   waiver_pending: "shared.readiness.blockers.waiverPending",
   waiver_expired: "shared.readiness.blockers.waiverExpired",
   medical_review: "shared.readiness.blockers.medicalReview",

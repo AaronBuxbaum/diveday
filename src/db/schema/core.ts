@@ -190,6 +190,16 @@ export const shops = pgTable(
      */
     publicYearEnabled: boolean("public_year_enabled").notNull().default(false),
     /**
+     * **PADI checks (beta)**: "Check with PADI" (DiveChek) on a pending PADI
+     * card and the PADI eLearning check on a course roster, both run by the
+     * DiveDay extension in a staffer's browser signed in to the PADI Pros'
+     * Site under the shop's own membership (H-121, H-106). Off by default and
+     * the shop's own opt-in: the membership and its terms are the shop's, and
+     * neither check has been tried against the live site yet (#2259). Off
+     * keeps the "(member sign-in)" link (`src/lib/agency-check.ts`).
+     */
+    padiChecksEnabled: boolean("padi_checks_enabled").notNull().default(false),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not

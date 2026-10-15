@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-
+import { stripComments } from "@/test/source";
 import { offlineManifestTranslator } from "./offline-manifest-messages";
 
 /**
@@ -117,16 +117,6 @@ function staffNamespacesIn(file: string, known: readonly string[]): string[] {
     .map((match) => match[1] as string)
     .filter((namespace) => known.includes(namespace));
   return [...new Set(found)].sort();
-}
-
-/**
- * Block and line comments out, so a namespace named in prose is not read as a
- * key the view renders. Deliberately crude: it is scanning TypeScript source
- * for a *mention*, and the one shape it must not break is a URL in code
- * (`https://…`), which is why a `//` preceded by `:` survives.
- */
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
 describe("the offline manifest's message bundle", () => {

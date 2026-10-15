@@ -1665,6 +1665,14 @@ test("the legal pages are published, honest about what is unsettled, and reachab
     await expect(page.getByRole("term").filter({ hasText: processor }).first()).toBeVisible();
   }
 
+  // The Chrome Web Store listing's privacy URL is /privacy#extension
+  // (extension/store/listing.md): the anchor is a published address.
+  const extension = page.locator("section#extension");
+  await expect(extension.getByRole("heading", { level: 2 })).toHaveText(
+    "The certification-check extension",
+  );
+  await expect(extension.getByRole("term").filter({ hasText: "What it never does" })).toBeVisible();
+
   // The retention windows are RETENTION_DAYS as prose. If that constant moves,
   // this copy is part of that change. "Attempts", not "outcomes": the 400-day
   // window prunes notification_delivery_attempts, and the first draft attached

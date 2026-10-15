@@ -24,7 +24,8 @@ const CHECK_ALL_FROM = 2;
  * the page; the run goes one card at a time with a pause between
  * (`runAgencyCheckQueue`), each row settling as its own check does. It skips
  * one diver the agency's page does not show, stops on two in a row or on a
- * signed-out agency, and has a Stop of its own. What it says while it runs and
+ * signed-out agency, leaves an agency's other cards once its page asks
+ * whether the staffer is human or has changed, and has a Stop of its own. What it says while it runs and
  * once it ends is one quiet line, read out as it changes. It has no Undo of
  * its own: each card it certified keeps its Undo on its row.
  */
@@ -73,7 +74,7 @@ export function AgencyCheckAll({
       <p
         role="status"
         aria-live="polite"
-        className={`text-sm ${queue.phase === "ended" && queue.stopped ? "text-warning-strong" : "text-muted"}`}
+        className={`text-sm ${queue.phase === "ended" && (queue.stopped || queue.left.some((each) => each.skipped > 0)) ? "text-warning-strong" : "text-muted"}`}
       >
         {status}
       </p>
@@ -81,8 +82,21 @@ export function AgencyCheckAll({
   );
 }
 
-/** What an ended run says: where it stopped and why, or what it came to. */
+/** What an ended run says: where it stopped and why, or what it came to, and which agencies' cards it left. */
 function endedText(
+  ended: Extract<AgencyCheckQueueState, { phase: "ended" }>,
+  copy: AgencyCheckAllCopy,
+  agencyName: (agency: CheckableAgency) => string,
+): string {
+  // Each agency whose other cards the run left, once, after what it came to.
+  const left = ended.left
+    .filter((each) => each.skipped > 0)
+    .map((each) => fill(copy.left, { agency: agencyName(each.card.agency) }));
+  return [counted(ended, copy, agencyName), ...left].join(" ");
+}
+
+/** Where an ended run stopped and why, or what it came to. */
+function counted(
   ended: Extract<AgencyCheckQueueState, { phase: "ended" }>,
   copy: AgencyCheckAllCopy,
   agencyName: (agency: CheckableAgency) => string,

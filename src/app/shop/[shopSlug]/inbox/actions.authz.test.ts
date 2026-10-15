@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { countUnansweredMessages } from "@/db/inbound-messages";
 import { bookings, inboundMessages, shops } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -11,6 +11,8 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **Deleting a stranger's message** (issue #1506).
@@ -77,7 +79,7 @@ async function deletedAt(db: AppDb, messageId: string): Promise<Date | null> {
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   return {
     db,

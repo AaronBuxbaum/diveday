@@ -363,9 +363,11 @@
     },
     "certCheck": {
       "heading": "Verificación de certificaciones",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE, CMAS y PADI (con sesión iniciada en el PADI Pros’ Site en el mismo navegador), en Chrome o Edge en una computadora.",
-      "added": "Añadida a este navegador",
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y, cuando la agencia muestra la certificación, la marca como certificada a nombre de ese miembro del equipo, como lo haría “Marcar certificado”. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Reservas y exenciones, en Chrome o Edge en una computadora.",
+      "added": "Añadida a este navegador ({version})",
       "notAdded": "Sin añadir",
+      "outdated": "Actualiza la extensión: este navegador tiene la versión {version} y DiveDay necesita la {minimum}.",
+      "try": "Prueba las verificaciones",
       "install": "Añadir a Chrome"
     },
     "integrations": {
@@ -428,6 +430,11 @@
         "heading": "Nuestro año",
         "label": "Mostrar “Nuestro año” en tu calendario",
         "description": "El año hasta hoy en cifras al pie de tu calendario público: buceadores, salidas y sitios. Nunca dinero. Apagado hasta que lo actives."
+      },
+      "padiChecks": {
+        "heading": "Verificación con PADI (beta)",
+        "label": "Verificar certificaciones y eLearning de PADI",
+        "description": "Beta: nadie lo ha probado todavía en la página real de DiveChek de PADI, y PADI no ha dicho si acepta que una extensión la rellene. Funciona en un navegador donde uno de tus profesionales PADI tiene la sesión iniciada en el PADI Pros’ Site, con la afiliación de ese profesional. Desactivado, el enlace al PADI Pros’ Site se mantiene. Un propietario o un gerente puede activarlo."
       }
     },
     "crewSchedule": {
@@ -1066,5 +1073,27 @@
     "partnerLinkField": "Enlace de referido",
     "showRequired": "Elige la salida de esta tarjeta.",
     "fromFareharbor": "¿Te cambias desde FareHarbor? <link>Mira qué inserción sustituye a cada uno de sus widgets</link>."
+  },
+  "certChecks": {
+    "title": "Prueba las verificaciones",
+    "description": "Solo páginas de muestra en este navegador: no se busca en ninguna agencia y ningún dato de un buceador sale de él.",
+    "run": "Ejecutar las verificaciones",
+    "running": "Ejecutando…",
+    "extension": "Extensión",
+    "samples": "Búsquedas de muestra",
+    "padi": "Sesión en el PADI Pros’ Site",
+    "report": "Informe de la sesión",
+    "passed": "Correcta",
+    "failed": "Fallida",
+    "notListed": "No está en esta versión",
+    "signedIn": "Sesión iniciada",
+    "signedOut": "Sin sesión",
+    "noTab": "Ninguna pestaña de PADI abierta",
+    "noAnswer": "Sin respuesta",
+    "noAccess": "Sin acceso al sitio de PADI",
+    "allowSite": "Chrome no deja entrar a la extensión en el sitio de {agency}. Actívalo en Extensiones, DiveDay certification check, Detalles, Acceso al sitio.",
+    "failedNext": "Envíanos el informe de abajo.",
+    "reportHint": "Cópialo y pégalo en un correo para nosotros.",
+    "copy": "Copiar informe"
   }
 }

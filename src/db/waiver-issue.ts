@@ -521,7 +521,8 @@ export async function issueAndDeliverPersonWaiver(
 
 /**
  * Send a waiver the moment a diver joins a dive — but only when one is actually
- * needed. "Needed" is exactly the readiness engine's `waiver_not_sent` blocker:
+ * needed. "Needed" is exactly the readiness engine's `waiver_not_sent` blocker
+ * (or `waiver_lapsed`, its twin for a diver whose signature ran out):
  * the trip requires a waiver, the diver has no current signature carried forward
  * (sign-once), and none has been issued yet. Reusing that decision keeps the
  * join-send from ever emailing a redundant link to a diver who already signed,
@@ -546,7 +547,11 @@ export async function issueWaiverOnJoin(
  */
 async function joinWaiverOwed(db: AppDb, shopId: string, bookingId: string): Promise<boolean> {
   const readiness = await getBookingReadiness(db, shopId, bookingId);
-  const needsWaiver = readiness?.blockers.some((blocker) => blocker.code === "waiver_not_sent");
+  // A lapsed release is owed a link exactly as an unsent one is: nothing on
+  // file stands, and no link is out.
+  const needsWaiver = readiness?.blockers.some(
+    (blocker) => blocker.code === "waiver_not_sent" || blocker.code === "waiver_lapsed",
+  );
   if (!needsWaiver) return false;
   // A held seat is owed nothing yet: its link would open on a record that may
   // be somebody else's, so `issueWaiverRequest` refuses it. Nothing to report

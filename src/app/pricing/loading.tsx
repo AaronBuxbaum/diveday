@@ -20,7 +20,7 @@ const INVOICE_ROWS = [
  * (measured at 1280, 440px of text a column on the hero's `max-w-5xl`, K-404).
  * A grid row is as tall as its taller item, so the rows are two lines, one,
  * then two: the practice-shop line, about 420px, fits on one there where
- * `max-w-4xl`'s 376px wrapped it (loading.test.tsx holds both).
+ * `max-w-4xl`'s 376px wrapped it.
  */
 const COVERS_LINES = [
   ["item1", { base: 3, sm: 2 }],

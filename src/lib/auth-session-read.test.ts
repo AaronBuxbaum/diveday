@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { revokeAccountSession, revokeAllAccountSessions } from "@/db/account-security";
 import type { AppDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { createAuth, readSessionFrom, sessionCookieWriteDue } from "@/lib/auth";
@@ -30,11 +31,20 @@ type Harness = {
   sessionId: string;
   expiresAt: Date;
   sessionCookie: string;
+  accountId: string;
 };
 
-async function signedInHarness(): Promise<Harness> {
-  const db = await seededTestDb();
-  const auth = createAuth(db);
+/**
+ * A signed-in session for the seed's first account holding `role`. Pass an
+ * earlier harness's `db` and `auth` to mint a second session in the same
+ * database: another device, or another account.
+ */
+async function signedInHarness(
+  on?: { db: AppDb; auth: ReturnType<typeof createAuth> },
+  role: "owner" | "captain" = "owner",
+): Promise<Harness> {
+  const db = on?.db ?? (await seededTestDb());
+  const auth = on?.auth ?? createAuth(db);
   const [account] = await db
     .select({
       id: userAccounts.id,
@@ -47,15 +57,15 @@ async function signedInHarness(): Promise<Harness> {
     .innerJoin(people, eq(people.id, userAccounts.personId))
     .innerJoin(shops, eq(shops.id, people.shopId))
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(eq(personRoles.role, "owner"))
+    .where(eq(personRoles.role, role))
     .limit(1);
-  if (!account) throw new Error("seed has no owner with an account");
+  if (!account) throw new Error(`seed has no ${role} with an account`);
   const context = await auth.$context;
   const session = await context.internalAdapter.createSession(account.id, false, {
     personId: account.personId,
     shopId: account.shopId,
     shopSlug: account.shopSlug,
-    roles: ["owner"],
+    roles: [role],
     name: account.name,
   });
   if (!session) throw new Error("failed to create a session");
@@ -73,6 +83,7 @@ async function signedInHarness(): Promise<Harness> {
     sessionId: session.id,
     expiresAt: session.expiresAt,
     sessionCookie,
+    accountId: account.id,
   };
 }
 
@@ -203,6 +214,74 @@ describe("the session read writes no cookie it does not owe (issue #2263)", () =
     );
 
     expect(session).toBeNull();
+  });
+});
+
+/**
+ * The two revokes on Settings > Security, through the functions the actions
+ * call (`src/db/account-security.ts`), against the read every staff request
+ * makes. A warm `session_data` cache is in hand each time, because that cookie
+ * is what a stolen browser still holds.
+ */
+describe("revoking sessions from Settings > Security", () => {
+  it("ends the revoked device's next read, and leaves the account's other device signed in", async () => {
+    const laptop = await signedInHarness();
+    const phone = await signedInHarness(laptop);
+    const warm = await warmCacheCookie(phone);
+
+    expect(await revokeAccountSession(laptop.db, laptop.accountId, phone.sessionId)).toBe(true);
+
+    expect(
+      await readSessionFrom(phone.auth, cookiesOf(phone.sessionCookie, warm), mintedAt(phone)),
+    ).toBeNull();
+    const still = await readSessionFrom(
+      laptop.auth,
+      cookiesOf(laptop.sessionCookie),
+      mintedAt(laptop),
+    );
+    expect(still?.user.sessionId).toBe(laptop.sessionId);
+  });
+
+  it("will not revoke another account's session by id", async () => {
+    const owner = await signedInHarness();
+    const captain = await signedInHarness(owner, "captain");
+    expect(owner.accountId).not.toBe(captain.accountId);
+
+    expect(await revokeAccountSession(owner.db, owner.accountId, captain.sessionId)).toBe(false);
+
+    const read = await readSessionFrom(
+      captain.auth,
+      cookiesOf(captain.sessionCookie),
+      mintedAt(captain),
+    );
+    expect(read?.user.sessionId).toBe(captain.sessionId);
+  });
+
+  /**
+   * "Sign out everywhere" ends *every* session of the account, the one that
+   * pressed it included: the action then sends that browser to sign-in
+   * (`revokeAllSessionsAction`). Another account's sessions are untouched.
+   */
+  it("revoke-all ends every session of the account, this one included, and no one else's", async () => {
+    const laptop = await signedInHarness();
+    const phone = await signedInHarness(laptop);
+    const captain = await signedInHarness(laptop, "captain");
+    const warmPhone = await warmCacheCookie(phone);
+
+    await revokeAllAccountSessions(laptop.db, laptop.accountId);
+
+    expect(
+      await readSessionFrom(phone.auth, cookiesOf(phone.sessionCookie, warmPhone), mintedAt(phone)),
+    ).toBeNull();
+    expect(
+      await readSessionFrom(laptop.auth, cookiesOf(laptop.sessionCookie), mintedAt(laptop)),
+    ).toBeNull();
+    const other = await readSessionFrom(
+      captain.auth,
+      cookiesOf(captain.sessionCookie),
+      mintedAt(captain),
+    );
+    expect(other?.user.sessionId).toBe(captain.sessionId);
   });
 });
 

@@ -33,9 +33,9 @@ test("the status page answers an anonymous reader, with no session and no shop",
 });
 
 test("the probe answers the literal the uptime check matches on", { tag: READ_ONLY }, async ({
-  page,
+  request,
 }) => {
-  const response = await page.request.get("/api/health");
+  const response = await request.get("/api/health");
 
   expect(response.status()).toBe(200);
   expect(response.headers()["cache-control"]).toBe("no-store");

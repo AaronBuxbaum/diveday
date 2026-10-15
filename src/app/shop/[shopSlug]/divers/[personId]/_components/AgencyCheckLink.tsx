@@ -32,6 +32,8 @@ export function AgencyCheckLink({
     certificationId: string;
     awaiting: boolean;
     query: AgencyCheckQuery | null;
+    /** The shop's switch keeps this agency's check off (H-121): say so beside the link. */
+    switchedOff?: boolean;
     action: (previous: AgencyCheckResult, formData: FormData) => Promise<AgencyCheckResult>;
     /** Files the page's other cards the staffer ticked, after a match (layer 3). */
     addListed?: (
@@ -63,6 +65,7 @@ export function AgencyCheckLink({
       action={check.action}
       addListed={check.addListed}
       copy={agencyCheckCopy(t, agency, link.label)}
+      offNote={check.switchedOff ? t("shared.padiChecksOff") : undefined}
     />
   );
 }

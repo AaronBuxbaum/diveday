@@ -12,13 +12,15 @@ import { listDiveSites, listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { diveSites, shops } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { STAFF_MESSAGES, staffTranslator } from "@/i18n/staff-messages";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { findElements, hrefsIn, inputNamesIn, selectNamesIn } from "@/test/jsx-inspect";
 import { BrandColorField } from "../BrandColorField";
 import type { SettingsShop } from "../groups/kit";
 import { DockDayForm, EmergencyReferenceForm } from "./BoatsSitesEditors";
 import { ProfileForm } from "./ProfileForm";
 import { RentalItemsForm } from "./RentalEditors";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **The editors that left the hub for pages of their own** (#1854). Each is
@@ -31,7 +33,7 @@ const t = staffTranslator("en-US");
 async function demoShop(
   change?: (db: AppDb, shopId: string) => Promise<void>,
 ): Promise<{ db: AppDb; shop: SettingsShop }> {
-  const db = await seededTestDb();
+  const db = ctx.db;
   const seeded = await getShopBySlug(db, SHOP_SLUG);
   if (!seeded) throw new Error("demo shop missing");
   if (change) await change(db, seeded.id);

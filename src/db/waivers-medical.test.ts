@@ -11,7 +11,7 @@ import {
 } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { getBookingReadiness } from "./readiness";
+import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { bookings, people, personRoles, shops, userAccounts, waiverRecords } from "./schema";
 import { createTrip, listStaff } from "./trips";
 import { listSignedWaiversByPerson } from "./waivers-audit";
@@ -817,6 +817,161 @@ describe("physician medical clearance", () => {
     expect(stillRefused.medicalClearedAt).toBeNull();
     expect(stillRefused.medicalClearanceDeclinedAt).toEqual(refusedAt);
     expect((await getBookingReadiness(db, shop.id, booking.id))?.status).toBe("blocked");
+  });
+
+  it("clears a referral a rider's fresh link superseded, so the hold it keeps has a way out (H-104)", async () => {
+    // A superseded referral no physician cleared still holds every seat the
+    // diver has (`isUnclearedReferral`), so the physician's evaluation must
+    // still reach it: otherwise the desk is told "nothing to clear" about a
+    // hold it can see, and only a clean re-sign, never the physician, ends it.
+    const { db, shop, booking, person, staff } = await heldContext();
+    await db
+      .update(bookings)
+      .set({ participantType: "rider", bookedAs: "rider" })
+      .where(eq(bookings.id, booking.id));
+    const longAgo = new Date(now.getTime() - 400 * 24 * 60 * 60 * 1000);
+    await db
+      .update(waiverRecords)
+      .set({ signedAt: longAgo, completedAt: longAgo, consentedAt: longAgo })
+      .where(eq(waiverRecords.bookingId, booking.id));
+    const [referral] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, booking.id));
+    const fresh = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!fresh.ok) throw new Error(`the rider's fresh link was refused: ${fresh.reason}`);
+    const [superseded] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, referral.id));
+    expect(superseded.supersededAt).toEqual(now);
+
+    const startsAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const diveTrip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Referral still open reef",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!diveTrip) throw new Error("trip insert failed");
+    const [diving] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: diveTrip.id,
+        personId: person.id,
+        status: "booked",
+      })
+      .returning();
+    if (!diving) throw new Error("booking insert failed");
+    const divingRow = async () =>
+      (await listTripReadiness(db, shop.id, diveTrip.id)).find(
+        (row) => row.booking.id === diving.id,
+      );
+    const medicalCodes = async () =>
+      ((await divingRow())?.readiness.blockers ?? [])
+        .map((blocker) => blocker.code)
+        .filter((code) => code.startsWith("medical_"));
+    expect(await medicalCodes()).toEqual(["medical_review"]);
+
+    expect(await hasUnansweredMedicalHold(db, shop.id, person.id)).toBe(true);
+    const clearedAt = new Date(now.getTime() + 60_000);
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
+      shopId: shop.id,
+      personId: person.id,
+      recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
+      now: clearedAt,
+    });
+    expect(outcome).toMatchObject({ ok: true, recordId: referral.id, alreadyRecorded: false });
+    expect(await hasUnansweredMedicalHold(db, shop.id, person.id)).toBe(false);
+    expect(await medicalCodes()).toEqual([]);
+
+    // The rider signs the fresh link clean: the referral it stands over was
+    // answered by a physician, so no seat warns that it stood over one.
+    const signedAt = new Date(now.getTime() + 120_000);
+    await completeWaiver(db, fresh.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now: signedAt,
+    });
+    expect((await divingRow())?.overriddenReferral).toBeNull();
+  });
+
+  it("answers the seat's live hold before a newer superseded one, so the seat it holds clears (S2)", async () => {
+    // An older live hold on one seat and a newer referral superseded off
+    // another. The physician's answer must reach the live one first: landing
+    // on the superseded record would leave the seat's own hold standing and
+    // tell the desk the clearance was recorded.
+    const { db, shop, booking, person, staff } = await heldContext();
+    const [live] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, booking.id));
+    if (!live) throw new Error("expected the live hold");
+
+    const startsAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const otherTrip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Second referral reef",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!otherTrip) throw new Error("trip insert failed");
+    const [other] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: otherTrip.id,
+        personId: person.id,
+        status: "booked",
+      })
+      .returning();
+    if (!other) throw new Error("booking insert failed");
+    const later = new Date(now.getTime() + 60 * 60 * 1000);
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: other.id, now });
+    if (!issued.ok) throw new Error(`the second link was refused: ${issued.reason}`);
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+      now: later,
+    });
+    const [newer] = await db
+      .update(waiverRecords)
+      .set({ supersededAt: new Date(later.getTime() + 60_000) })
+      .where(and(eq(waiverRecords.bookingId, other.id), eq(waiverRecords.status, "medical_review")))
+      .returning();
+    if (!newer) throw new Error("expected the newer referral to supersede");
+
+    const answer = () =>
+      recordMedicalEvaluation(db, {
+        outcome: "cleared",
+        shopId: shop.id,
+        personId: person.id,
+        recordedByPersonId: staff.id,
+        evaluatedOn: EVALUATED_ON,
+        physicianName: "Dr. Imani Reyes",
+        now: new Date(later.getTime() + 120_000),
+      });
+    expect(await answer()).toMatchObject({ ok: true, recordId: live.id, alreadyRecorded: false });
+    // The newer referral is its own disclosure and still needs its own answer.
+    expect(await hasUnansweredMedicalHold(db, shop.id, person.id)).toBe(true);
+    expect(await answer()).toMatchObject({ ok: true, recordId: newer.id, alreadyRecorded: false });
+    expect(await hasUnansweredMedicalHold(db, shop.id, person.id)).toBe(false);
+    const after = await getBookingReadiness(db, shop.id, booking.id);
+    expect(after?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "medical_review" }),
+    );
   });
 
   it("destroys the physician's evaluation when the diver is erased, and keeps the fact", async () => {

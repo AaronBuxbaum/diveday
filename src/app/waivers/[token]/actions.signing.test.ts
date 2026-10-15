@@ -2,7 +2,9 @@ import { and, eq, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { people, waiverRecords } from "@/db/schema";
 import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The signing form's two doors, which were closures inside `page.tsx` until they moved here.
@@ -54,7 +56,7 @@ async function redirectedTo(run: () => Promise<unknown>): Promise<string> {
 
 /** A fresh waiver link for an adult on the seeded shop, with no booking behind it. */
 async function openLink() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const [person] = await db
     .select()

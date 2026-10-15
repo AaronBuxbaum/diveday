@@ -45,6 +45,7 @@ describe("the counter's name-match prompt", () => {
     // every other piece of evidence satisfied and still blocked — is in
     // `src/lib/readiness.test.ts`.
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement: null,
       waiver: null,
       certifications: [],

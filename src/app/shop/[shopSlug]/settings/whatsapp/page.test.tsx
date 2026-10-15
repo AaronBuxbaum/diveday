@@ -5,10 +5,12 @@ import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { STAFF_MESSAGES } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 // Same mocking shape as ../team/page.test.tsx: the page is invoked directly,
 // outside Next's request scope, so the db handle, better-auth and request
@@ -34,7 +36,7 @@ afterEach(() => {
 });
 
 async function renderWhatsApp() {
-  const db: AppDb = await seededTestDb();
+  const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
   const personId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);

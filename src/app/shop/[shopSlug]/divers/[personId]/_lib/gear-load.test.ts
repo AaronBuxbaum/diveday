@@ -1,12 +1,14 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { people } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { loadDiverGear } from "./gear-load";
+
+const ctx = fileScopedShopContext();
 
 describe("loadDiverGear", () => {
   it("offers the rent door only when the shop has a fleet and the record is live", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("seeded person missing");
 

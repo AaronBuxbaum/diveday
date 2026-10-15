@@ -226,6 +226,7 @@ describe("recordSelfDeclaredCards", () => {
       const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
       if (!card) throw new Error("no card written");
       const blockers = calculateReadiness({
+        timezone: "UTC",
         requirement: {
           requiresWaiver: false,
           minimumCertificationLevel: "rescue",
