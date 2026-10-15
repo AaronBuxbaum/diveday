@@ -13,6 +13,7 @@ import {
 } from "@/i18n/today-labels";
 import { HOUR_MS } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
+import type { AgencyCheckableCard } from "./agency-check-queue";
 import type { Role } from "./authz";
 import type { DiveIntentCount } from "./dive-intent";
 import type { CrewIncompleteReason } from "./manifests";
@@ -892,6 +893,14 @@ export type TodayAction = {
    */
   rentalFit?: { reservationId: string };
   /**
+   * A lone diver whose headline is a card still waiting for its check
+   * (`certification_pending`): who, so the shop home can offer the agency check
+   * from the row (H-105). `cards` is empty as the queue words the row and filled
+   * by the read (`withAgencyChecks`, `src/db/today.ts`); a row whose diver holds
+   * no card the extension can check has none.
+   */
+  agencyCheck?: { personId: string; cards: readonly AgencyCheckableCard[] };
+  /**
    * The staff member a staff row is about (`staff_credential_due`), so the crew
    * lens can keep a reader's own row open rather than fold it with the desk's.
    */
@@ -1180,6 +1189,14 @@ export function diverBlockerAction(
     href: destination.href,
     ...(sendsWaiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
     ...(kind === "payment" ? { payment: { bookingId: input.bookingId } } : {}),
+    // Never on a held seat (H-13): the human on this booking may not be the
+    // one whose cards are on file, so nobody checks that person's card from
+    // here until a staffer confirms who it is. Said outright, not left to
+    // which blocker heads the row.
+    ...(blocker.code === "certification_pending" &&
+    !input.blockers.some((each) => each.code === "identity_unconfirmed")
+      ? { agencyCheck: { personId: input.personId, cards: [] } }
+      : {}),
     dueAt: input.startsAt,
   };
 }

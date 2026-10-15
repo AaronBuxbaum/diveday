@@ -11,10 +11,38 @@ const {
   PAGE_TEXT_MAX_LENGTH,
   REQUEST_TYPE,
   ELEARNING_REQUEST_TYPE,
+  SIGN_IN_PATH: SIGN_IN_PATH_SOURCE,
   fillAgencyForm,
   readAgencyPage,
   excerptAround,
+  excerptAroundName,
 } = globalThis.DiveDayCertCheck;
+
+/** An address that signs in, signs up or manages an account, never a lookup (protocol.js). */
+const SIGN_IN_PATH = new RegExp(SIGN_IN_PATH_SOURCE, "i");
+
+/**
+ * Whether a page behind the shop's own sign-in landed somewhere other than
+ * its lookup: a sign-in page on another host (whose address this extension
+ * may not even read, having no permission there) or a sign-in address on its
+ * own. The staffer is told to sign in, never "couldn't read the page".
+ */
+async function landedOnSignIn(tabId, spec) {
+  if (!spec.signIn) return false;
+  let tab;
+  try {
+    tab = await chrome.tabs.get(tabId);
+  } catch {
+    return false;
+  }
+  if (!tab.url) return true;
+  try {
+    const at = new URL(tab.url);
+    return at.origin !== new URL(spec.url).origin || SIGN_IN_PATH.test(at.pathname);
+  } catch {
+    return true;
+  }
+}
 
 /** How long a lookup may take, end to end. The page gives up at 45 seconds. */
 const CHECK_DEADLINE_MS = 40_000;
@@ -64,16 +92,23 @@ async function check(query, pages) {
   }
   try {
     if (!(await tabLoaded(tab.id, deadline))) return { ok: false, reason: "timeout" };
+    if (await landedOnSignIn(tab.id, spec)) return { ok: false, reason: "signed_out" };
     // A page that draws its form after load gets a moment to do it.
     let filled;
     let before = "";
     for (let attempt = 0; attempt < 5; attempt += 1) {
       before = (await run(tab.id, readAgencyPage)) || "";
-      filled = await run(tab.id, fillAgencyForm, [query, spec]);
+      filled = await run(tab.id, fillAgencyForm, [query, spec, SIGN_IN_PATH_SOURCE]);
       if (filled?.ok) break;
+      // A sign-in form: nothing was typed, and retrying would not change that.
+      if (filled?.missing?.includes("signedIn")) return { ok: false, reason: "signed_out" };
       await sleep(POLL_MS);
     }
-    if (!filled?.ok) return { ok: false, reason: "fill_failed" };
+    if (!filled?.ok) {
+      return (await landedOnSignIn(tab.id, spec))
+        ? { ok: false, reason: "signed_out" }
+        : { ok: false, reason: "fill_failed" };
+    }
 
     // The answer has settled when two reads a second apart agree and differ
     // from the form as it was, whether the page navigated or redrew itself.
@@ -92,11 +127,19 @@ async function check(query, pages) {
       }
       previous = text;
     }
-    return previous && previous !== before
-      ? { ok: true, pageText: previous.slice(0, PAGE_TEXT_MAX_LENGTH) }
+    if (previous && previous !== before) {
+      return { ok: true, pageText: previous.slice(0, PAGE_TEXT_MAX_LENGTH) };
+    }
+    // The search sent the tab to a sign-in it may not read: a lapsed session.
+    return (await landedOnSignIn(tab.id, spec))
+      ? { ok: false, reason: "signed_out" }
       : { ok: false, reason: "timeout" };
   } catch {
-    return { ok: false, reason: "fill_failed" };
+    // A page this extension may not script: on a signed-in lookup, most often
+    // the sign-in page of another host it was sent to.
+    return (await landedOnSignIn(tab.id, spec))
+      ? { ok: false, reason: "signed_out" }
+      : { ok: false, reason: "fill_failed" };
   } finally {
     chrome.tabs.remove(tab.id).catch(() => {});
   }
@@ -168,6 +211,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     birthDate: message.query.birthDate,
     cardNumber: message.query.cardNumber,
   };
-  check(query, AGENCIES).then(sendResponse);
+  const spec = Object.hasOwn(AGENCIES, query.agency) ? AGENCIES[query.agency] : null;
+  check(query, AGENCIES)
+    .then((reply) =>
+      // A signed-in page hands back only this diver's lines (fill.js).
+      reply.ok && spec?.signIn
+        ? {
+            ok: true,
+            pageText: excerptAroundName(reply.pageText, query.firstName, query.lastName),
+          }
+        : reply,
+    )
+    .then(sendResponse);
   return true;
 });

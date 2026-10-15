@@ -22,6 +22,12 @@ vi.mock("@/app/actions/held-sends", () => ({
 vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   keepRentalFitAction: vi.fn(),
 }));
+// The agency check's host (H-105) wraps the spine and repaints through the
+// router when a "Check all" ends; no app router is mounted here.
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StatusMark } from "@/components/ui/StatusMark";

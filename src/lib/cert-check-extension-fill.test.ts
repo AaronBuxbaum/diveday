@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { RECORD_LINES } from "./agency-check";
 
 /**
  * The extension's form filler (`extension/fill.js`), on stand-in forms. The
@@ -12,18 +13,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 async function loadExtensionScript(file: string): Promise<void> {
   await import(/* @vite-ignore */ new URL(`../../extension/${file}`, import.meta.url).href);
 }
+await loadExtensionScript("protocol.js");
 await loadExtensionScript("fill.js");
-const { fillAgencyForm, excerptAround } = (
+await loadExtensionScript("agencies.js");
+const extension = (
   globalThis as unknown as {
     DiveDayCertCheck: {
       fillAgencyForm: (
         query: unknown,
         spec: unknown,
+        signInPath?: string,
       ) => { ok: true } | { ok: false; missing: string[] };
       excerptAround: (text: string, email: string) => string;
+      excerptAroundName: (text: string, firstName: string, lastName: string) => string;
+      AGENCIES: Record<string, unknown>;
+      SIGN_IN_PATH: string;
     };
   }
 ).DiveDayCertCheck;
+const { excerptAround, excerptAroundName, AGENCIES, SIGN_IN_PATH } = extension;
+/** The filler as the service worker calls it, with the sign-in rule from protocol.js. */
+const fillAgencyForm = (query: unknown, spec: unknown) =>
+  extension.fillAgencyForm(query, spec, SIGN_IN_PATH);
 
 const lena = {
   firstName: "Lena",
@@ -46,6 +57,7 @@ function value(selector: string) {
 
 beforeEach(() => {
   document.body.innerHTML = "";
+  window.history.replaceState(null, "", "/");
 });
 
 describe("fillAgencyForm", () => {
@@ -116,6 +128,8 @@ describe("fillAgencyForm", () => {
       fillAgencyForm(lena, { fields: ["name", "birthDate"], dateFormat: "YYYY-MM-DD" }),
     ).toEqual({ ok: false, missing: ["birthDate"] });
     expect(onSubmit).not.toHaveBeenCalled();
+    // Nothing is typed until everything the lookup needs is found.
+    for (const box of document.querySelectorAll("input")) expect(box.value).toBe("");
   });
 
   it("never types into a hidden box", () => {
@@ -214,5 +228,275 @@ describe("excerptAround", () => {
     const excerpt = excerptAround(page, "lena@example.com");
     expect(excerpt).toContain("No results found");
     expect(excerpt.split("\n")).toHaveLength(40);
+  });
+});
+
+/**
+ * **PADI DiveChek**, on the PADI Pros' Site, in the staffer's own signed-in
+ * browser. The form is a best guess (#2259); what these pin is the safety the
+ * signed-in page gets: search boxes only, never a sign-in or account page,
+ * and no button pressed but the search's own.
+ */
+describe("fillAgencyForm on PADI DiveChek", () => {
+  const divechek = AGENCIES.padi;
+
+  it("types the diver's name and birth date into DiveChek's search, and presses its Search", () => {
+    document.body.innerHTML = `
+      <form>
+        <label for="f">First Name</label><input id="f">
+        <label for="l">Last Name</label><input id="l">
+        <label for="d">Date of Birth</label><input id="d">
+        <button>Search</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: true });
+    expect(value("#f")).toBe("Lena");
+    expect(value("#l")).toBe("Ortiz");
+    expect(value("#d")).toBe("04/12/1990");
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it("types nothing on a page that asks for a password, and says the staffer is signed out", () => {
+    document.body.innerHTML = `
+      <form>
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth"><input type="password" aria-label="Password">
+        <button>Search</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: false, missing: ["signedIn"] });
+    for (const box of document.querySelectorAll("input")) expect(box.value).toBe("");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it.each(["/login", "/account/details", "/sign-up", "/auth/callback", "/my-profile"])(
+    "types nothing at %s, whatever the page's boxes say",
+    (path) => {
+      window.history.replaceState(null, "", path);
+      document.body.innerHTML = `
+        <form>
+          <input aria-label="First Name"><input aria-label="Last Name">
+          <input aria-label="Date of Birth"><button>Search</button>
+        </form>`;
+      const onSubmit = submitted();
+      expect(fillAgencyForm(lena, divechek)).toEqual({ ok: false, missing: ["signedIn"] });
+      for (const box of document.querySelectorAll("input")) expect(box.value).toBe("");
+      expect(onSubmit).not.toHaveBeenCalled();
+    },
+  );
+
+  it("never types a diver into a box that does not search, such as the shop's own profile", () => {
+    document.body.innerHTML = `
+      <form>
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth"><button>Save changes</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(fillAgencyForm(lena, divechek)).toEqual({
+      ok: false,
+      missing: ["name", "birthDate"],
+    });
+    for (const box of document.querySelectorAll("input")) expect(box.value).toBe("");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("presses only the search's own button, never another of the signed-in page's", () => {
+    document.body.innerHTML = `
+      <button id="other">Submit certification</button>
+      <div role="search">
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth"><button id="search">Go</button>
+      </div>`;
+    const other = vi.fn();
+    const search = vi.fn();
+    document.getElementById("other")?.addEventListener("click", other);
+    document.getElementById("search")?.addEventListener("click", search);
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: true });
+    expect(search).toHaveBeenCalledOnce();
+    expect(other).not.toHaveBeenCalled();
+  });
+
+  /** Security review S2: a page-wide form's Search button does not make its profile boxes a search. */
+  it("types nothing into a page-wide form with a Save beside its Search", () => {
+    document.body.innerHTML = `
+      <form>
+        <input aria-label="Search the site"><button>Search</button>
+        <label for="f">First Name</label><input id="f">
+        <label for="l">Last Name</label><input id="l">
+        <label for="d">Date of Birth</label><input id="d">
+        <label for="p">Phone</label><input id="p">
+        <button>Save changes</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: false, missing: ["name", "birthDate"] });
+    for (const box of document.querySelectorAll("input")) expect(box.value).toBe("");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("fills a small form whose every box is the lookup's, beside a second button", () => {
+    document.body.innerHTML = `
+      <form>
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth">
+        <button type="reset">Clear</button><button id="go">Search</button>
+      </form>`;
+    submitted();
+    const go = vi.fn();
+    document.getElementById("go")?.addEventListener("click", go);
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: true });
+    expect(go).toHaveBeenCalledOnce();
+  });
+
+  it("never reads Research as search", () => {
+    document.body.innerHTML = `
+      <form>
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth"><button>Research</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: false, missing: ["name", "birthDate"] });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  /** Domain review D9: DiveChek's button may say Check, Chek or Verify. */
+  it.each(["Check", "Chek", "Verify", "Run DiveChek"])(
+    "presses the search's own %s button",
+    (words) => {
+      document.body.innerHTML = `
+      <form>
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth"><button id="go">${words}</button>
+      </form>`;
+      submitted();
+      const go = vi.fn();
+      document.getElementById("go")?.addEventListener("click", go);
+      expect(fillAgencyForm(lena, divechek)).toEqual({ ok: true });
+      expect(go).toHaveBeenCalledOnce();
+    },
+  );
+
+  /** Security review S3: a search with no button of its own is never submitted some other way. */
+  it("never submits a form whose search has no button of its own", () => {
+    document.body.innerHTML = `
+      <form>
+        <input type="search" aria-label="First Name"><input type="search" aria-label="Last Name">
+        <input type="search" aria-label="Date of Birth"><button>Go</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: false, missing: ["submit"] });
+    for (const box of document.querySelectorAll("input")) expect(box.value).toBe("");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  /** Security review S5: a sign-in that asks for the email first, the password on the next step. */
+  it("reads an email box that does not search as a sign-in", () => {
+    document.body.innerHTML = `
+      <form><input type="email" aria-label="Email"><button>Continue</button></form>
+      <form>
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth"><button>Search</button>
+      </form>`;
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: false, missing: ["signedIn"] });
+    for (const box of document.querySelectorAll("input")) expect(box.value).toBe("");
+  });
+
+  it("types nothing on a signed-in page without the sign-in address rule", () => {
+    document.body.innerHTML = `
+      <form>
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth"><button>Search</button>
+      </form>`;
+    expect(extension.fillAgencyForm(lena, divechek)).toEqual({
+      ok: false,
+      missing: ["signedIn"],
+    });
+  });
+
+  it("presses nothing when the search has no button of its own to press", () => {
+    document.body.innerHTML = `
+      <button id="other">Submit</button>
+      <div role="search">
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth">
+      </div>`;
+    const other = vi.fn();
+    document.getElementById("other")?.addEventListener("click", other);
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: false, missing: ["submit"] });
+    expect(other).not.toHaveBeenCalled();
+  });
+});
+
+describe("excerptAroundName", () => {
+  it("hands back only this diver's lines, and how many divers were found", () => {
+    const page = [
+      "PADI Pros’ Site",
+      "Welcome back, Coral Coast Divers",
+      "Recent students: Sam Reyes, Mia Chen",
+      "DiveChek",
+      "1 diver found",
+      ...Array.from({ length: 10 }, (_, index) => `menu ${index}`),
+      "Lena Ortiz",
+      "Date of Birth: 12 Apr 1990",
+      "Open Water Diver 15 Jun 2015",
+      ...Array.from({ length: 10 }, (_, index) => `footer ${index}`),
+    ].join("\n");
+    const excerpt = excerptAroundName(page, "Léna", "ORTIZ");
+    expect(excerpt).toContain("1 diver found");
+    expect(excerpt).toContain("Date of Birth: 12 Apr 1990");
+    expect(excerpt).toContain("Open Water Diver");
+    expect(excerpt).not.toContain("Sam Reyes");
+    expect(excerpt).not.toContain("Coral Coast Divers");
+    expect(excerpt).not.toContain("footer 9");
+  });
+
+  it("hands back no more lines under a name than the server reads as one record", () => {
+    const page = ["Lena Ortiz", "a", "b", "c", "d", "Mark Lee", "e"].join("\n");
+    expect(excerptAroundName(page, "Lena", "Ortiz").split("\n")).toEqual(
+      ["Lena Ortiz", "a", "b", "c", "d"].slice(0, RECORD_LINES + 1),
+    );
+  });
+
+  it("reads a 'Last, First' name line as the diver's", () => {
+    const page = ["Menu", "Ortiz, Lena", "12 Apr 1990", "Open Water Diver"].join("\n");
+    expect(excerptAroundName(page, "Lena", "Ortiz")).toBe(
+      "Ortiz, Lena\n12 Apr 1990\nOpen Water Diver",
+    );
+  });
+
+  it("keeps only the count's words from a long line around it", () => {
+    const page = [
+      `Welcome back, Coral Coast Divers. Your recent students include Sam Reyes. 2 divers found`,
+      "Lena Ortiz",
+    ].join("\n");
+    const excerpt = excerptAroundName(page, "Lena", "Ortiz");
+    expect(excerpt).toContain("2 divers found");
+    expect(excerpt).not.toContain("Sam Reyes");
+  });
+
+  it("keeps every record naming the diver, so the server can see there are several", () => {
+    const page = ["Lena Ortiz", "12 Apr 1990", ...Array(20).fill("x"), "Lena Ortiz", "3 Sep 1987"];
+    expect(excerptAroundName(page.join("\n"), "Lena", "Ortiz")).toContain("3 Sep 1987");
+  });
+
+  it("never takes a longer name for the diver's", () => {
+    const page = ["Welcome", ...Array(50).fill("row"), "Lenara Ortizzi", "Open Water Diver"];
+    expect(excerptAroundName(page.join("\n"), "Lena", "Ortiz")).not.toContain("Lenara");
+  });
+
+  /** Security review S4: a page without the diver hands back only why. */
+  it("keeps only the lines that say why, from a page that never names the diver", () => {
+    const page = [
+      "Welcome back, Coral Coast Divers",
+      "Recent students: Sam Reyes, Mia Chen",
+      "Sign in",
+      "Email",
+      "Password",
+      ...Array(100).fill("Mark Lee"),
+    ].join("\n");
+    expect(excerptAroundName(page, "Lena", "Ortiz")).toBe("Sign in\nPassword");
+    const none = ["DiveChek", "Sam Reyes", "No results found", "Mia Chen"].join("\n");
+    expect(excerptAroundName(none, "Lena", "Ortiz")).toBe("No results found");
+    const many = Array(30).fill("Password").join("\n");
+    expect(excerptAroundName(many, "Lena", "Ortiz").split("\n")).toHaveLength(10);
   });
 });

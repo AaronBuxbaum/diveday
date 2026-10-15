@@ -39,11 +39,64 @@
 - **Agency check** — the DiveDay browser extension doing the "Check with SSI" lookup from the
   staffer's own browser (H-105, ADR 20261008-cert-check-extension). The extension types the diver
   into the agency's own lookup page and hands back the page's text; the server certifies the card
-  only when one record on that page names the diver, carries the birth date or card number the lookup
-  was typed with, and states the claimed level in the agency's own words, with nothing limiting it.
+  only when one record on that page names the diver ("Lena Ortiz" or "Ortiz, Lena"), carries the
+  birth date or card number the lookup was typed with, and states the claimed level in the agency's
+  own words, with nothing limiting it. A birth date written all in numbers whose day and month could
+  swap is read in that agency's own order only, so a transposed date is another diver's. Short of a
+  match the staffer is told which: someone by this name but not with this birth date or number (a
+  namesake, whose words are never shown), a Junior or limited card, or the diver at another level.
   It stamps `agency_checked_at`, with those words as the review note, and names the staffer whose
-  browser ran it. Anything else writes nothing and leaves the link. Level cards only, for SSI, NAUI,
-  SDI, GUE and CMAS; an unsighted self-declaration still needs its sighting.
+  browser ran it. That stamp means *the staffer's browser reported a match*: the words came from
+  their browser, not signed by the agency, so it attests no more than **Mark certified** does, with
+  the same permission. Anything else writes nothing and leaves the link. A match on a pending card
+  says it certified it; on an imported card, that it confirmed it. Level cards only, for SSI, NAUI,
+  SDI, GUE, CMAS and PADI, never divemaster or instructor (a professional rating is checked on the
+  agency's professional tool); an unsighted self-declaration still needs its sighting. The lookup carries
+  only what the agency's form asks for: a birth date or a card number, both only for CMAS.
+- **Check all (agency)** — a departure's "Check all 9 cards with their agencies" on its Divers tab
+  (H-105): each **Agency check** the departure holds, one card at a time with a pause between, from
+  the staffer's browser. Each card is judged and certified on its own and keeps its own Undo; there
+  is no Undo for the departure. One diver the agency's page does not show is skipped, named, with
+  the agency's page to open; two unreadable pages or unanswered requests in a row stop the run, and
+  a signed-out **DiveChek check** stops it at once. The staffer can stop it. A re-run skips the cards
+  the page already settled. Never a bulk confirm: nothing is certified that its agency's page did
+  not show.
+- **DiveChek check** — the **Agency check** for a PADI card, on PADI's DiveChek in the staffer's own
+  browser, signed in to the PADI Pros' Site (H-121); the "(member sign-in)" link opens the same
+  site. Searched by name and birth date, so a diver with no birth date on file keeps the link.
+  Narrower than a public page. One diver: DiveChek may list a row per certification, so rows with
+  the typed birth date are one diver's cards, and two birth dates under the name, or a page saying
+  it found two divers or more, certify nothing ("PADI lists more than one diver by this name"). A
+  record ends at the first line that could be someone else's (another name, or a name and another
+  birth date), its birth date comes before its level, and it carries the card's number when the card
+  has one. An instructor named on the row is the trainer, not a limit. A **Junior certification**
+  reads as its level for a diver 15 or older on the day of the check; under 15 it says "PADI shows a
+  Junior card. Under 15, record it by hand." A signed-out browser says "Sign in to the PADI Pros'
+  Site first" and stops a "Check all". A best guess of PADI's page until a staffer tries it (#2259).
+- **Agency-listed certification** — a nitrox or specialty certification an **Agency check** found on
+  the same page as the card it matched, and that the staffer chose to add (layer 3 of ADR
+  20261008-cert-check-extension). After a match the staffer reads "PADI also shows these
+  certifications. Add them? Each waits for Mark certified." with one tick per certification, all
+  ticked. Only lines inside the diver's own matched record are read, and only as far as every line
+  is explained (the diver's name, the birth date, the certification's name in that agency's words,
+  a recreational card DiveDay holds no kind for such as Perfect Buoyancy, its dates and numbers);
+  the first other word, such as a neighbour's name, "Tec" or "Instructor" after a certification's
+  name, ends it. Each agency's words come from a closed table, so wording not in it is ignored. GUE's
+  Recreational Diver 1 offers nitrox (see **Bundled nitrox**). A kind the diver already has on file
+  in any state is never offered, except an unsighted nitrox **Self-declared certification**: adding
+  the card the page lists retires that claim, as any card the shop holds outranks the diver's word.
+  Ticked ones land **pending**, stamped with the level card whose check listed them, with the
+  agency's words as the review note and "Listed on PADI's page." beside them, before and after the
+  confirm. Where the agency numbers the diver (PADI, SSI, NAUI, GUE) they carry the number the shop
+  holds for the diver, and a staffer's one-tap **Mark certified** certifies them, keeping the words.
+  Where it numbers each card (SDI, CMAS) they carry the number printed on their own line, or none,
+  and then the confirm is the card sighting. Never certified by the check: nitrox authorizes a fill
+  and a specialty opens a site. Undoing the check archives the ones still pending. The server judges
+  the posted page again and files only kinds it offers itself. Not levels: a second level card on
+  the diver's one agency number cannot be filed. On a departure's Divers tab the offer sits under
+  the diver's row, after a **Check all (agency)** has finished; on Today it sits under the Needs you
+  list, naming the diver with a link to their record, because the row leaves with the card it was
+  about.
 - **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
   Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
   20261008-cert-check-extension). The server ticks **Materials done** only when one record names
@@ -227,7 +280,9 @@
   Every imported card still confirms on one tap; what came back here is narrower and applies only to
   the diver-written rows that did not exist then. What did **not** change for imports is that the
   confirm exists at all: an imported card clears nothing until a staffer makes that tap, per card,
-  and there is still deliberately no bulk confirm. Cards reviewed before that date keep the sentence
+  and there is still deliberately no bulk confirm. An **Agency check** confirms an imported level
+  card only when the agency's own page shows it, one card at a time, and a **Check all (agency)** is
+  only that, card after card. Cards reviewed before that date keep the sentence
   the old attestation wrote into their `review_note`.
 - **Prior visit** — one line of a diver's history at the shop's *previous* system, brought across by
   the contact importer from a bookings or orders export (one row per booking). It is a **booking
@@ -385,7 +440,8 @@
   per agency and per table, so the same number on a `certifications` row and a `nitrox_certifications`
   row is not a collision. It is written down because it looks like a mistake to whoever does it, and
   the two things a staffer does instead — refuse a fill to a properly trained diver, or hand the
-  tank over off-system — are both worse than an entry that looks odd.
+  tank over off-system — are both worse than an entry that looks odd. An **Agency check** of a GUE Rec 1 card offers the
+  nitrox card on that number for the same reason (**Agency-listed certification**).
 - **Other agency** — the enum's escape hatch (`certification_agency = 'other'`), and **a lossy one**:
   there is no free-text companion column anywhere in the schema, so a diver holding an **SEI**,
   **ANDI**, **ACUC**, **PSAI** or **NASE** card is recorded as "Other agency" with nowhere

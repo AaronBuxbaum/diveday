@@ -475,6 +475,17 @@
       "unreadable": "No se pudo leer la página de PADI. Inicia sesión en el PADI Pros’ Site y vuelve a verificar.",
       "failed": "No se guardó. Inténtalo de nuevo."
     },
+    "agencyCheckAll": {
+      "start": "{count, plural, one {Verificar # certificación con su agencia} other {Verificar las # certificaciones con sus agencias}}",
+      "stop": "Detener",
+      "progress": "Verificando {done} de {total}…",
+      "finished": "Verificadas: {checked}. Certificadas: {certified}.",
+      "confirmed": "Confirmadas: {confirmed}.",
+      "cancelled": "Detenida. Verificadas: {checked}. Certificadas: {certified}.",
+      "stopped": "Se detuvo en {name}: no se pudo leer la página de {agency}. El resto queda para ti.",
+      "stoppedTransport": "Se detuvo en {name}: DiveDay no respondió. Recarga para ver cómo quedó cada certificación.",
+      "stoppedSignedOut": "Se detuvo en {name}: inicia sesión en el PADI Pros’ Site primero. El resto queda para ti."
+    },
     "certifyConfirm": "Confirmar certificación",
     "certifyDiver": "Certificar",
     "certifyLevel": "Nivel",

@@ -7,6 +7,7 @@ import {
   unitsUnconfirmedDetailText,
   unitsUnconfirmedSubjectText,
 } from "@/i18n/today-labels";
+import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -37,6 +38,7 @@ import { boatStageOf, tripPhaseOf } from "@/lib/trip-phase";
 import type { TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
 import { shopDayBounds } from "@/lib/zoned";
+import { listAgencyCheckableCards } from "./agency-check";
 import {
   blockedOnNextBoatDay,
   type HorizonReadinessEvidence,
@@ -1861,21 +1863,31 @@ export async function getTodayWork(
   });
 
   // **One wave** (`readTodayWave`): every read takes only the shop, the
-  // window and the clock, so none waits on another.
-  const wave = await readTodayWave(db, shopId, {
-    now,
-    horizon,
-    timeZone,
-    inWindow,
-    todayTrips,
-    todayTripIds,
-    todayLocal,
-    bookingIdsByTrip,
-    includeOpsAlerts,
-    personId,
-    owingBookingIds,
-    noOpenOrders,
-  });
+  // window and the clock, so none waits on another. Beside it, the cards a
+  // "certification pending" row could check (H-105), read now rather than
+  // after the queue is built so they cost no phase of their own: every diver
+  // the evidence blocks on a pending card is asked about, a superset of the
+  // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
+  const [wave, agencyCheckCards] = await Promise.all([
+    readTodayWave(db, shopId, {
+      now,
+      horizon,
+      timeZone,
+      inWindow,
+      todayTrips,
+      todayTripIds,
+      todayLocal,
+      bookingIdsByTrip,
+      includeOpsAlerts,
+      personId,
+      owingBookingIds,
+      noOpenOrders,
+    }),
+    listAgencyCheckableCards(db, {
+      shopId,
+      personIds: agencyCheckCandidates(readinessByTrip),
+    }),
+  ]);
   const {
     departureRollCall,
     departureCrewRollCall,
@@ -2022,7 +2034,10 @@ export async function getTodayWork(
       });
   }
 
-  const visibleActions = filterActionsForRoles(actions, roles);
+  const visibleActions = attachAgencyChecks(
+    filterActionsForRoles(actions, roles),
+    agencyCheckCards,
+  );
 
   return {
     departures,
@@ -2045,4 +2060,58 @@ export async function getTodayWork(
     crewedSessions,
     availableStaff,
   };
+}
+
+/**
+ * **The cards a "certification pending" row can check from Today** (H-105).
+ * The queue names the diver (`diverBlockerAction`); this reads which of their
+ * cards the DiveDay browser extension could look up, by the same rule as the
+ * action that judges the check (`listAgencyCheckableCards`), and drops the
+ * offer from a row whose diver holds none.
+ */
+export async function withAgencyChecks(
+  db: AppDb,
+  shopId: string,
+  actions: TodayAction[],
+): Promise<TodayAction[]> {
+  const personIds = actions.flatMap((action) =>
+    action.agencyCheck ? [action.agencyCheck.personId] : [],
+  );
+  if (personIds.length === 0) return actions;
+  return attachAgencyChecks(actions, await listAgencyCheckableCards(db, { shopId, personIds }));
+}
+
+/**
+ * Who on the window's seats a "certification pending" row could name: blocked
+ * on a pending card, and not a held seat (`diverBlockerAction` offers no check
+ * to one until a staffer confirms who is standing there).
+ */
+function agencyCheckCandidates(
+  readinessByTrip: HorizonReadinessEvidence["readinessByTrip"],
+): string[] {
+  const personIds: string[] = [];
+  for (const rows of readinessByTrip.values()) {
+    for (const row of rows) {
+      const codes = row.readiness.blockers.map((blocker) => blocker.code);
+      if (codes.includes("certification_pending") && !codes.includes("identity_unconfirmed")) {
+        personIds.push(row.person.id);
+      }
+    }
+  }
+  return personIds;
+}
+
+/** Fills each row's offer from the cards read, and drops it where the diver holds none. */
+function attachAgencyChecks(
+  actions: TodayAction[],
+  cards: ReadonlyMap<string, AgencyCheckableCard[]>,
+): TodayAction[] {
+  return actions.map((action) => {
+    if (!action.agencyCheck) return action;
+    const { agencyCheck, ...rest } = action;
+    const found = cards.get(agencyCheck.personId);
+    return found
+      ? { ...rest, agencyCheck: { personId: agencyCheck.personId, cards: found } }
+      : rest;
+  });
 }
