@@ -274,6 +274,14 @@
           "src/lib/readiness.test.ts": "1585 -> 1614",
           "src/lib/today.test.ts": "1614 -> 1651"
         }
+      },
+      {
+        "why": "merge of the stack top into fourth-review layer r4-1: both sides added to these files",
+        "files": {
+          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1110 -> 1118",
+          "src/db/seat-claims.test.ts": "1047 -> 1478",
+          "src/lib/notifications/email.test.ts": "1480 -> 1494"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -282,7 +290,7 @@
     "src/app/api/webhooks/stripe/route.test.ts": 1876,
     "src/app/api/webhooks/stripe/route.ts": 932,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
-    "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1110,
+    "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1118,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1338,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 927,
     "src/app/shop/[shopSlug]/page.tsx": 967,
@@ -326,7 +334,7 @@
     "src/db/reporting.test.ts": 1594,
     "src/db/retention.test.ts": 1262,
     "src/db/reviews.test.ts": 1004,
-    "src/db/seat-claims.test.ts": 1047,
+    "src/db/seat-claims.test.ts": 1478,
     "src/db/self-declared-cards.test.ts": 1864,
     "src/db/staffing.test.ts": 946,
     "src/db/trips-crew.test.ts": 1489,
@@ -340,7 +348,7 @@
     "src/lib/import.test.ts": 1459,
     "src/lib/incident-export.test.ts": 1187,
     "src/lib/manifests.test.ts": 1320,
-    "src/lib/notifications/email.test.ts": 1480,
+    "src/lib/notifications/email.test.ts": 1494,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
     "src/lib/readiness.test.ts": 1614,
@@ -391,18 +399,25 @@
         }
       }
     ],
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 493,
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 666,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 307,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 425,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 383,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 304,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 519,
     "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 388,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
+    "src/app/shop/[shopSlug]/gear/page.tsx#GearRegisterPage": 308,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 421,
     "src/app/shop/[shopSlug]/page.tsx#TodayBody": 463,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 377,
     "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 409,
+    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
     "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 467,
+    "src/app/shop/[shopSlug]/settings/integrations/page.tsx#IntegrationsSettingsPage": 306,
+    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": 301,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 424,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 366,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 345,
@@ -414,14 +429,7 @@
     "src/db/seed-history.ts#seedHistory": 742,
     "src/db/seed-more-trips.ts#seedMoreTrips": 642,
     "src/db/seed-trips.ts#seedTrips": 431,
-    "src/lib/import.ts#prepareContactImport": 508,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 304,
-    "src/app/shop/[shopSlug]/gear/page.tsx#GearRegisterPage": 308,
-    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
-    "src/app/shop/[shopSlug]/settings/integrations/page.tsx#IntegrationsSettingsPage": 306,
-    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": 301
+    "src/lib/import.ts#prepareContactImport": 508
   },
   "live-people": {
     "//": "Reads of `people` written before scripts/check-live-people.mjs that carry no `livePerson()`, per file. Most are right (a by-id read in a transaction, a name for an activity line); a count may only fall. Written by `node scripts/check-live-people.mjs --write`.",
