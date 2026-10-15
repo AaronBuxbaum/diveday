@@ -1,6 +1,7 @@
 "use client";
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useId, useState } from "react";
+import { readKeptTyped } from "@/components/KeepTypedOnRefusal";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -18,8 +19,10 @@ import type { GearItemKind } from "@/lib/gear";
 import { currencySymbol, majorToMinor } from "@/lib/money";
 import {
   CONFIRM_FIELD_PREFIX,
+  COUNTER_RENTAL_FORM,
   PAYMENT_FIELD,
   PRICE_FIELD_PREFIX,
+  RENTAL_PAYMENTS,
   type RentalPayment,
   SET_PRICE_FIELD,
   UNIT_FIELD,
@@ -110,6 +113,7 @@ export function CounterRentalCart({
   invoiceExtras,
   words,
   notice,
+  restoreKept = false,
 }: {
   groups: { kind: GearItemKind; kindLabel: string; units: PickerUnit[] }[];
   coreKinds: GearItemKind[];
@@ -124,6 +128,12 @@ export function CounterRentalCart({
   invoiceExtras: ReactNode;
   words: CartWords;
   notice: ReactNode;
+  /**
+   * The page came back with this form's refusal: put back the picks, prices
+   * and payment this tab just submitted (fifth loop, item 14), so the staffer
+   * swaps the one unit that was refused rather than building the bill again.
+   */
+  restoreKept?: boolean;
 }) {
   const billId = useId();
   const [kind, setKind] = useState<GearItemKind | undefined>(groups[0]?.kind);
@@ -133,6 +143,25 @@ export function CounterRentalCart({
   const [payment, setPayment] = useState<RentalPayment | null>(null);
 
   const byId = new Map(groups.flatMap((group) => group.units.map((unit) => [unit.id, unit])));
+
+  const restore = useEffectEvent(() => {
+    const kept = readKeptTyped(COUNTER_RENTAL_FORM);
+    if (!kept) return;
+    const ids = (kept[UNIT_FIELD] ?? "").split(" ").filter((id) => byId.has(id));
+    if (ids.length > 0) setPickedIds(ids);
+    const keptPrices: Record<string, string> = {};
+    for (const id of ids) {
+      const price = kept[`${PRICE_FIELD_PREFIX}${id}`];
+      if (price !== undefined) keptPrices[id] = price;
+    }
+    setPrices(keptPrices);
+    if (kept[SET_PRICE_FIELD] !== undefined) setSetFigure(kept[SET_PRICE_FIELD]);
+    const keptPayment = RENTAL_PAYMENTS.find((value) => value === kept[PAYMENT_FIELD]);
+    if (keptPayment) setPayment(keptPayment);
+  });
+  useEffect(() => {
+    if (restoreKept) restore();
+  }, [restoreKept]);
   const picked = pickedIds.flatMap((id) => byId.get(id) ?? []);
   const asSet =
     setPrice !== null &&

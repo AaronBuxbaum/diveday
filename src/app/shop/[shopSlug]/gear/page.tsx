@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
+import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
@@ -409,6 +410,9 @@ export default async function GearRegisterPage({
           </summary>
           <div className="border-t border-border p-5 sm:p-6">
             <FieldGrid as="form" action={createGearItemAction} columns={2}>
+              {/* A refused tag or date comes back with the serial, brand and
+                  size still typed (fifth loop, item 14). */}
+              <KeepTypedOnRefusal form="gear-add-unit" restore={Boolean(addStatus)} />
               <Field label={t("gear.form.kind")}>
                 <select name="kind" className={controlClass} defaultValue="bcd">
                   {GEAR_KIND_ORDER.map((option) => (
