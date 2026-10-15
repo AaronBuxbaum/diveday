@@ -414,7 +414,7 @@
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 304,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 519,
-    "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 388,
+    "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 381,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
     "src/app/shop/[shopSlug]/gear/page.tsx#GearRegisterPage": 308,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 421,

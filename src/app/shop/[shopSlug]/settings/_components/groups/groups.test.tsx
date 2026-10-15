@@ -82,6 +82,8 @@ describe("each settings group renders as its own component", () => {
     expect(rendered[0]?.rows).toEqual(["timezone", "units", "address"]);
     expect(rendered[1]?.rows).toEqual(["crewSchedule"]);
     expect(rendered[2]?.rows).toEqual([]);
+    // PADI checks sit under the extension's own row, where a shop meets the checks.
+    expect(rendered[3]?.rows).toEqual(["certCheck", "padiChecks", "packing"]);
     expect(rendered[4]?.rows).toEqual(["rentalTerms", "regulatorService"]);
     expect(rendered[5]?.rows).toEqual(["tax", "tips", "stripe"]);
     expect(rendered[6]?.rows).toEqual(["reviews", "reviewLink"]);

@@ -1,5 +1,6 @@
 {
   "operationalWindow": {},
+  "padiChecksOff": "La verificación con PADI está desactivada en este centro. Un propietario o un gerente puede activarla en Ajustes, Reservas y exenciones.",
   "skipToContent": "Saltar al contenido principal",
   "notFound": {
     "heading": "No pudimos encontrar esa página",

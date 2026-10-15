@@ -47,6 +47,7 @@ export type RowOutstandingInput = Pick<
   | "readinessByBooking"
   | "courseNextStepByBooking"
   | "elearningQueryByBooking"
+  | "elearningChecksOff"
   | "markRosterWaiverInPersonAction"
   | "markPaymentAction"
   | "certifyDiverAction"
@@ -90,6 +91,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     readinessByBooking,
     courseNextStepByBooking,
     elearningQueryByBooking,
+    elearningChecksOff,
     markRosterWaiverInPersonAction,
     markPaymentAction,
     certifyDiverAction,
@@ -197,6 +199,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
           materialsDone={Boolean(materialsDone)}
           action={elearningCheckAction}
           copy={elearningCheckCopy(t)}
+          offNote={elearningChecksOff ? t("shared.padiChecksOff") : null}
         />
       ) : null}
 

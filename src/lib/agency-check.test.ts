@@ -367,7 +367,7 @@ describe("judgeAgencyPage", () => {
     // The name line keeps only the diver's name: whatever else it says is not theirs.
     expect(result).toEqual({ verdict: "match", evidence: "Lena Ortiz · 1990-04-12 · Scuba Diver" });
     const long = judge(
-      `Someone Else 1970-01-01\nLena Ortiz\n1990-04-12 ${"x".repeat(400)}\nScuba Diver`,
+      `Someone Else 1970-01-01\nLena Ortiz\n1990-04-12 ${"7".repeat(400)}\nScuba Diver`,
     );
     expect(long.verdict).toBe("match");
     if (long.verdict === "match") {

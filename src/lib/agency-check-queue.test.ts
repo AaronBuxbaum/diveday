@@ -4,11 +4,12 @@ import {
   type AgencyCheckOutcome,
   agencyCheckQueueCards,
   isUnreadableOutcome,
+  leavesAgencyCards,
   runAgencyCheckQueue,
   stopsAgencyCheckQueue,
 } from "./agency-check-queue";
 
-type Card = { certificationId: string };
+type Card = { certificationId: string; agency?: string };
 
 function cards(...ids: string[]): Card[] {
   return ids.map((certificationId) => ({ certificationId }));
@@ -71,6 +72,7 @@ describe("runAgencyCheckQueue", () => {
       confirmed: 0,
       stopped: null,
       cancelled: false,
+      left: [],
     });
   });
 
@@ -87,6 +89,7 @@ describe("runAgencyCheckQueue", () => {
       confirmed: 0,
       stopped: null,
       cancelled: false,
+      left: [],
     });
   });
 
@@ -109,6 +112,7 @@ describe("runAgencyCheckQueue", () => {
       confirmed: 0,
       stopped: null,
       cancelled: false,
+      left: [],
     });
     expect(log).toContain("check c");
   });
@@ -166,6 +170,52 @@ describe("runAgencyCheckQueue", () => {
     expect(log).not.toContain("check b");
   });
 
+  /**
+   * Domain review R7: a captcha, a changed page or an agency this copy of the
+   * extension does not check is the agency's state, not one diver's. That
+   * agency's other cards are left as they are; the other agencies' go on.
+   */
+  it("leaves an agency's other cards after its page asks whether the staffer is human", async () => {
+    const input = [
+      { certificationId: "a", agency: "ssi" },
+      { certificationId: "b", agency: "ssi" },
+      { certificationId: "c", agency: "naui" },
+      { certificationId: "d", agency: "ssi" },
+      { certificationId: "e", agency: "naui" },
+    ];
+    const { summary, log } = await run(input, { a: "captcha", c: "unreadable" });
+    expect(log.filter((line) => line.startsWith("check"))).toEqual([
+      "check a",
+      "check c",
+      "check e",
+    ]);
+    expect(log.filter((line) => line.startsWith("pause"))).toHaveLength(2);
+    expect(summary).toEqual({
+      checked: 3,
+      certified: 1,
+      confirmed: 0,
+      // A captcha then one unreadable page is not two unreadable in a row.
+      stopped: null,
+      cancelled: false,
+      left: [{ card: input[0], outcome: "captcha", skipped: 2 }],
+    });
+  });
+
+  it("leaves an agency's other cards after a changed page or a copy that does not check it", async () => {
+    const input = [
+      { certificationId: "a", agency: "gue" },
+      { certificationId: "b", agency: "cmas" },
+      { certificationId: "c", agency: "gue" },
+      { certificationId: "d", agency: "cmas" },
+    ];
+    const { summary } = await run(input, { a: "page_changed", b: "unsupported" });
+    expect(summary.checked).toBe(2);
+    expect(summary.left).toEqual([
+      { card: input[0], outcome: "page_changed", skipped: 1 },
+      { card: input[1], outcome: "unsupported", skipped: 1 },
+    ]);
+  });
+
   it("checks each card once, however often the list names it", async () => {
     const { log } = await run(cards("a", "a", "b"), {});
     expect(log.filter((line) => line.startsWith("check"))).toEqual(["check a", "check b"]);
@@ -179,6 +229,7 @@ describe("runAgencyCheckQueue", () => {
       confirmed: 0,
       stopped: null,
       cancelled: true,
+      left: [],
     });
     expect(log).not.toContain("check b");
   });
@@ -191,6 +242,7 @@ describe("runAgencyCheckQueue", () => {
       confirmed: 0,
       stopped: null,
       cancelled: false,
+      left: [],
     });
     expect(log).toEqual([]);
   });
@@ -209,9 +261,29 @@ describe("agency check outcomes", () => {
         "signed_out",
         "transport",
         "refused",
+        "captcha",
+        "page_changed",
+        "unsupported",
       ] as const
     ).filter(stopsAgencyCheckQueue);
     expect(stops).toEqual(["signed_out"]);
+  });
+
+  it("leave an agency's other cards only for a captcha, a changed page or an unchecked agency", () => {
+    const leaves = (
+      [
+        "certified",
+        "no_record",
+        "unreadable",
+        "signed_out",
+        "transport",
+        "refused",
+        "captcha",
+        "page_changed",
+        "unsupported",
+      ] as const
+    ).filter(leavesAgencyCards);
+    expect(leaves).toEqual(["captcha", "page_changed", "unsupported"]);
   });
 
   it("count unreadable results and transport failures toward two in a row", () => {
@@ -226,6 +298,9 @@ describe("agency check outcomes", () => {
         "signed_out",
         "transport",
         "refused",
+        "captcha",
+        "page_changed",
+        "unsupported",
       ] as const
     ).filter(isUnreadableOutcome);
     expect(counted).toEqual(["unreadable", "transport"]);

@@ -1,5 +1,6 @@
 {
   "operationalWindow": {},
+  "padiChecksOff": "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings & waivers.",
   "skipToContent": "Skip to main content",
   "notFound": {
     "heading": "We couldn’t find that page",

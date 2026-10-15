@@ -10,6 +10,7 @@ export function elearningCheckCopy(t: StaffTranslator): ElearningCheckCopy {
     notComplete: t("trips.roster.elearningCheck.notComplete"),
     noRecord: t("trips.roster.elearningCheck.noRecord"),
     unreadable: t("trips.roster.elearningCheck.unreadable"),
+    signedOut: t("trips.roster.elearningCheck.signedOut"),
     failed: t("trips.roster.elearningCheck.failed"),
     undo: t("shared.undoToast.undo"),
     undoPending: t("shared.undoToast.pendingLabel"),

@@ -39,6 +39,7 @@ import {
   agencyCheckMatchedText,
   agencyCheckOutcome,
 } from "./agency-check-outcome";
+import { reportFailedCheck } from "./report-failed-check";
 
 /** `agencyCheckAction`, bound to the shop on the server; the diver is the card's. */
 export type AgencyCheckHostAction = (
@@ -245,7 +246,8 @@ export function AgencyCheckHost({
       if (!reply.ok) {
         // Signed out of PADI stops a "Check all" at once, and says why: every
         // PADI card after it would meet the same sign-in. Any other failure is
-        // a page that could not be read.
+        // a page that could not be read, and its shape goes to DiveDay's log.
+        reportFailedCheck(card.agency, reply);
         const failure = agencyCheckFailure(reply.reason);
         settle(null, failure);
         return { outcome: agencyCheckOutcome(null, failure) ?? "unreadable", result: null };
