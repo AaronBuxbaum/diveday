@@ -22,6 +22,9 @@ CREATE TABLE "boat_snags" (
 --> statement-breakpoint
 CREATE INDEX "boat_snags_shop_boat_open_idx" ON "boat_snags" ("shop_id","boat_id","noted_at") WHERE "fixed_at" is null;--> statement-breakpoint
 CREATE INDEX "boat_snags_noted_on_trip_idx" ON "boat_snags" ("shop_id","noted_on_trip_id");--> statement-breakpoint
+CREATE INDEX "boat_snags_noted_by_person_id_idx" ON "boat_snags" ("noted_by_person_id");--> statement-breakpoint
+CREATE INDEX "boat_snags_still_there_by_person_id_idx" ON "boat_snags" ("still_there_by_person_id");--> statement-breakpoint
+CREATE INDEX "boat_snags_fixed_by_person_id_idx" ON "boat_snags" ("fixed_by_person_id");--> statement-breakpoint
 ALTER TABLE "boat_snags" ADD CONSTRAINT "boat_snags_shop_id_shops_id_fkey" FOREIGN KEY ("shop_id") REFERENCES "shops"("id");--> statement-breakpoint
 ALTER TABLE "boat_snags" ADD CONSTRAINT "boat_snags_boat_id_boats_id_fkey" FOREIGN KEY ("boat_id") REFERENCES "boats"("id");--> statement-breakpoint
 ALTER TABLE "boat_snags" ADD CONSTRAINT "boat_snags_scbYNnLxsRZb_fkey" FOREIGN KEY ("checklist_item_id") REFERENCES "pre_departure_checklist_items"("id");--> statement-breakpoint

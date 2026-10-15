@@ -393,6 +393,11 @@ export const boatSnags = pgTable(
       .on(table.shopId, table.boatId, table.notedAt)
       .where(sql`${table.fixedAt} is null`),
     index("boat_snags_noted_on_trip_idx").on(table.shopId, table.notedOnTripId),
+    // Led by the person column, so removing a person probes each by index
+    // (`people-fk-indexes.test.ts`).
+    index("boat_snags_noted_by_person_id_idx").on(table.notedByPersonId),
+    index("boat_snags_still_there_by_person_id_idx").on(table.stillThereByPersonId),
+    index("boat_snags_fixed_by_person_id_idx").on(table.fixedByPersonId),
     check(
       "boat_snags_note_length",
       sql`char_length(${table.note}) between 1 and ${sql.raw(String(SNAG_NOTE_MAX))}`,
