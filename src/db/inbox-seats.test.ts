@@ -26,7 +26,12 @@ async function context() {
     (trip) => trip.title === "Two-Tank Reef — Christ of the Abyss",
   );
   if (!open) throw new Error("expected seeded trip missing");
-  const booked = await createBooking(db, { actor: "staff", shopId: shop.id, tripId: open.id, ...DIVER });
+  const booked = await createBooking(db, {
+    actor: "staff",
+    shopId: shop.id,
+    tripId: open.id,
+    ...DIVER,
+  });
   if (!booked.ok) throw new Error("setup booking failed");
   const [diver] = await db
     .select({ id: people.id })
@@ -39,7 +44,14 @@ async function context() {
     .from(bookings)
     .where(eq(bookings.id, booked.bookingId));
   if (!seat) throw new Error("setup seat missing");
-  return { db, shop, trip: open, bookingId: booked.bookingId, personId: diver.id, bookedAt: seat.createdAt };
+  return {
+    db,
+    shop,
+    trip: open,
+    bookingId: booked.bookingId,
+    personId: diver.id,
+    bookedAt: seat.createdAt,
+  };
 }
 
 describe("inboxSeats", () => {

@@ -297,19 +297,38 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           record,
           waitingGroup:
             waitlist.length > 0 ? (
-              <WaitlistGroup
-                waitlist={waitlist}
-                shopSlug={shopSlug}
-                tripId={trip.id}
-                shopName={shopName}
-                tripTitle={trip.title}
-                tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
-                certificationSummaries={certificationSummaries}
-                departureRequirement={dealRequirement}
-                locale={locale}
-                timezone={timezone}
-                canInvite={acceptsDivers}
-              />
+              <>
+                <WaitlistGroup
+                  waitlist={waitlist}
+                  shopSlug={shopSlug}
+                  tripId={trip.id}
+                  shopName={shopName}
+                  tripTitle={trip.title}
+                  tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
+                  certificationSummaries={certificationSummaries}
+                  departureRequirement={dealRequirement}
+                  locale={locale}
+                  timezone={timezone}
+                  canInvite={acceptsDivers}
+                />
+                {/* **One waiting diver is worth carrying too** (fourth review,
+                    item 31). The demand banner, and the carry door inside it,
+                    wait for a cluster; a full boat with one lead offered
+                    staff only an invite to a boat with no seat. Under the list
+                    it is about, whenever the banner is not standing. */}
+                {!demand &&
+                isFull(seatsOnSale(trip)) &&
+                actions.carryWaitlistAction &&
+                actions.moveSeat?.targets.length ? (
+                  <div className="px-4 pb-4 sm:px-5">
+                    <CarryWaitlistForm
+                      action={actions.carryWaitlistAction}
+                      targets={actions.moveSeat.targets}
+                      t={t}
+                    />
+                  </div>
+                ) : null}
+              </>
             ) : null,
           invitedGroup:
             invitations.length > 0 ? (

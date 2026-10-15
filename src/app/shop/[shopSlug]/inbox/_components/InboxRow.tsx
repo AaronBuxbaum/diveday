@@ -152,41 +152,46 @@ export function InboxRow({
   // The seat's own roster row, by the anchor that opens it (`RosterRow`), and
   // the same row with its move open (`SeatFootActions`).
   const seatHref = seat ? shopPath(shopSlug, "trips", seat.tripId) : null;
-  const facts: { key: string; node: ReactNode }[] = [
-    // The address is on the stranger's row only: for a diver on file the name
-    // above already says who this is, and their address is on their record.
-    message.personId ? null : { key: "from", node: message.fromAddress },
-    // A LATE reply already marked the seat; the seat's own fact says so.
-    message.keywordIntent && !(message.keywordIntent === "late" && seat?.runningLateAt)
-      ? { key: "keyword", node: t(KEYWORD_KEYS[message.keywordIntent]) }
-      : null,
-    seat && seatHref
-      ? {
-          key: "seat",
-          node: (
-            // Above the row's stretched door (`z-0`), so it takes its own tap.
-            <Link
-              href={`${seatHref}#booking-${seat.bookingId}`}
-              className="relative z-10 font-medium text-primary hover:underline"
-            >
-              {t("inbox.seat", {
-                trip: seat.title,
-                when: formatWeekdayTime(seat.startsAt, locale, timezone),
-              })}
-            </Link>
-          ),
-        }
-      : null,
-    seat?.runningLateAt
-      ? {
-          key: "late",
-          node: t("inbox.late.marked", { time: formatTime(seat.runningLateAt, locale, timezone) }),
-        }
-      : null,
-    message.mediaCount > 0
-      ? { key: "media", node: t("inbox.attachments", { count: message.mediaCount }) }
-      : null,
-  ].filter((fact): fact is { key: string; node: ReactNode } => fact !== null);
+  type Fact = { key: string; node: ReactNode };
+  const facts = (
+    [
+      // The address is on the stranger's row only: for a diver on file the name
+      // above already says who this is, and their address is on their record.
+      message.personId ? null : { key: "from", node: message.fromAddress },
+      // A LATE reply already marked the seat; the seat's own fact says so.
+      message.keywordIntent && !(message.keywordIntent === "late" && seat?.runningLateAt)
+        ? { key: "keyword", node: t(KEYWORD_KEYS[message.keywordIntent]) }
+        : null,
+      seat && seatHref
+        ? {
+            key: "seat",
+            node: (
+              // Above the row's stretched door (`z-0`), so it takes its own tap.
+              <Link
+                href={`${seatHref}#booking-${seat.bookingId}`}
+                className="relative z-10 font-medium text-primary hover:underline"
+              >
+                {t("inbox.seat", {
+                  trip: seat.title,
+                  when: formatWeekdayTime(seat.startsAt, locale, timezone),
+                })}
+              </Link>
+            ),
+          }
+        : null,
+      seat?.runningLateAt
+        ? {
+            key: "late",
+            node: t("inbox.late.marked", {
+              time: formatTime(seat.runningLateAt, locale, timezone),
+            }),
+          }
+        : null,
+      message.mediaCount > 0
+        ? { key: "media", node: t("inbox.attachments", { count: message.mediaCount }) }
+        : null,
+    ] as (Fact | null)[]
+  ).filter((fact): fact is Fact => fact !== null);
 
   return (
     <LedgerRow

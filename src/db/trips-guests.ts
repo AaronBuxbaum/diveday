@@ -343,7 +343,8 @@ export async function getTripGuests(
     demand: demandRecommendation({
       capacity: trip.capacity,
       booked: trip.booked,
-      waitlisted: waitlist.length,
+      // Seats wanted, not leads: a waiting couple is two (fourth review, item 34).
+      waitlisted: waitlist.reduce((seats, { entry }) => seats + entry.partySize, 0),
     }),
     lastMinute: {
       matched: lastMinuteMatched,

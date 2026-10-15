@@ -200,6 +200,7 @@ export default async function TripDetailPage({
     paymentUrl,
     board,
     reviewAggregate,
+    run,
   } = await readTripPage(db, shop, {
     tripId,
     isEmbed,
@@ -323,18 +324,17 @@ export default async function TripDetailPage({
         {structuredData ? <JsonLd data={structuredData} /> : null}
         <FlashParams params={["error", "pay"]} />
         {staffPreviewBar}
-        {/* **Two columns from `lg` up.** At 1280 the column was 528px wide in a
-            1280 window and the form stood about 1,500px down, the last thing
-            a diver reached. From `lg` the form and the contact line take a
-            25rem right-hand column level with the title, and the hero and the
-            reading run down the left at the 528px they always had, so nothing
-            in them (the pitch's tiles, their `sizes`) changes width. The
-            section stack below joins this grid as `contents`; its last row
-            is `1fr`, so a form taller than the reading stretches that row
-            rather than the gaps between sections. A phone keeps the one
-            column and the form terminal, as the source order does (ADR
-            20260827-the-divers-thread, decision 2 and its 2026-10-03
-            amendment). */}
+        {/* **Two columns from `lg` up.** At 1280 the column was 528px wide and
+            the form stood 1,500px down, the last thing a diver reached. From
+            `lg` the form and the contact line take a 25rem right-hand column
+            level with the title, and the hero and the reading run down the
+            left at the 528px they always had, so nothing in them (the pitch's
+            tiles, their `sizes`) changes width. The section stack below joins
+            this grid as `contents`; its last row is `1fr`, so a form taller
+            than the reading stretches that row rather than the gaps between
+            sections. A phone keeps the one column and the form terminal, as
+            the source order does (ADR 20260827-the-divers-thread, decision 2
+            and its 2026-10-03 amendment). */}
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           <TripHero
             shop={shop}
@@ -345,6 +345,7 @@ export default async function TripDetailPage({
             shopSlug={shopSlug}
             coverPhoto={coverPhoto}
             minimumSeats={minimumSeats}
+            run={run}
             t={t}
           />
           {/* **One rhythm below the hero** (pixel-craft class 4, K-162;
@@ -464,7 +465,6 @@ export default async function TripDetailPage({
                   shopSlug={shopSlug}
                   trip={bookingFormTrip(trip)}
                   tripRef={tripRef}
-                  remaining={remaining}
                   errorMessage={errorMessage}
                   contactEmail={shop.contactEmail}
                   contactPhone={shop.contactPhone}

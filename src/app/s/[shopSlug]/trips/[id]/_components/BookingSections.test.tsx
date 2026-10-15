@@ -543,7 +543,6 @@ describe("TripFullSection — the shop's own better answer", () => {
         shopSlug="reef-shop"
         trip={trip({ booked: 8 })}
         tripRef={tripRef}
-        remaining={0}
         alternatives={alternatives}
       />,
     );
@@ -564,13 +563,29 @@ describe("TripFullSection — the shop's own better answer", () => {
     expect(screen.queryByText(/Same site/)).toBeNull();
   });
 
+  it("names the run's next date as that, on a full repeating boat (fourth review, item 31)", () => {
+    renderFull([{ ...alternative, reason: "same_run" }]);
+    expect(screen.getByText("Next date, Thu 7 Aug")).toBeInTheDocument();
+  });
+
+  it("lets a party wait together, asking only the lead's details (fourth review, item 34)", () => {
+    renderFull();
+    // Up to the boat's eight seats, not the none that are left.
+    const size = screen.getByRole("combobox", { name: "Number of divers" });
+    expect(size.querySelectorAll("option")).toHaveLength(8);
+    fireEvent.change(size, { target: { value: "2" } });
+    expect(size).toHaveValue("2");
+    expect(size).toHaveAttribute("name", "partySize");
+    expect(screen.getAllByRole("textbox", { name: /name/i })).toHaveLength(1);
+    expect(screen.queryByText("Diver 2")).toBeNull();
+  });
+
   it("states who the trip is for inside the wait-list form (UX audit #25)", () => {
     const { container } = renderDiver(
       <TripFullSection
         shopSlug="reef-shop"
         trip={trip({ booked: 8 })}
         tripRef={tripRef}
-        remaining={0}
         requirement="This charter is for divers with Advanced Open Water or higher."
       />,
     );

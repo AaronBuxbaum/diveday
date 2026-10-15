@@ -32,13 +32,22 @@ export type OtherBoatsWhere = {
  */
 export function fullTripAlternatives(trip: PublicTrip, board: Board, where: OtherBoatsWhere) {
   return similarDepartures({
-    full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
+    // Its run, so next week's date of a full weekly boat is offered first
+    // (fourth UX review, item 31).
+    full: {
+      tripId: trip.id,
+      courseId: trip.courseId,
+      diveSiteId: trip.diveSiteId,
+      seriesId: trip.seriesId,
+      startsAt: trip.startsAt,
+    },
     candidates: board.map((candidate) => ({
       id: candidate.id,
       title: candidate.title,
       startsAt: candidate.startsAt,
       courseId: candidate.courseId,
       diveSiteId: candidate.diveSiteId,
+      seriesId: candidate.seriesId,
     })),
   }).map((row) => ({
     tripId: row.tripId,

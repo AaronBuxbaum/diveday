@@ -388,7 +388,8 @@
     "hoursAgo": "hace {hours} h",
     "daysAgo": "hace {days} d",
     "emailSubject": "Se ha liberado una plaza en {tripTitle}",
-    "emailBody": "Hola {firstName},\n\nAcaba de liberarse una plaza en {tripTitle} ({tripWhen}) con {shopName}. Estás en su lista de espera, así que consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!"
+    "emailBody": "Hola {firstName},\n\nAcaba de liberarse una plaza en {tripTitle} ({tripWhen}) con {shopName}. Estás en su lista de espera, así que consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!",
+    "party": "Grupo de {count}"
   },
   "invitations": {
     "description": "Una invitación no reserva una plaza ni añade a nadie al manifiesto.",

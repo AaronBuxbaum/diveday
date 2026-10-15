@@ -388,7 +388,8 @@
     "hoursAgo": "{hours}h ago",
     "daysAgo": "{days}d ago",
     "emailSubject": "A seat opened up on {tripTitle}",
-    "emailBody": "Hi {firstName},\n\nA seat just opened on {tripTitle} ({tripWhen}) with {shopName}. You’re on the wait list for it, so grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!"
+    "emailBody": "Hi {firstName},\n\nA seat just opened on {tripTitle} ({tripWhen}) with {shopName}. You’re on the wait list for it, so grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!",
+    "party": "Party of {count}"
   },
   "invitations": {
     "description": "An invitation does not hold a seat or add anyone to the manifest.",

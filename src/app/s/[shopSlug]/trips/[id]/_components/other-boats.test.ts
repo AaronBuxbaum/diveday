@@ -58,6 +58,31 @@ describe("fullTripAlternatives", () => {
   });
 });
 
+describe("fullTripAlternatives on a repeating departure", () => {
+  // Fourth UX review, item 31: this Saturday is full and next Saturday has
+  // room. The run's next date leads, ahead of a same-site boat.
+  const saturday = { ...(trip as object), seriesId: "run-sat" } as never;
+
+  it("offers the run's next date first, as its own reason", () => {
+    const rows = fullTripAlternatives(
+      saturday,
+      [
+        candidate("sun", { startsAt: new Date("2026-07-26T12:00:00Z") }),
+        candidate("next-sat", {
+          seriesId: "run-sat",
+          diveSiteId: null,
+          startsAt: new Date("2026-08-01T12:00:00Z"),
+        }),
+      ] as never,
+      where,
+    );
+    expect(rows.map((row) => [row.tripId, row.reason])).toEqual([
+      ["next-sat", "same_run"],
+      ["sun", "same_site"],
+    ]);
+  });
+});
+
 describe("worthALookList", () => {
   it("never offers the departure the diver is reading", () => {
     const rows = worthALookList(trip, [candidate((trip as { id: string }).id)] as never, {

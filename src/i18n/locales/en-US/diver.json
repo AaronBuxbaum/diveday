@@ -325,7 +325,9 @@
     },
     "pitchDoor": "The rest of the briefing",
     "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}",
-    "logEntryWaiting": "After you dive, your log entry is waiting for you."
+    "logEntryWaiting": "After you dive, your log entry is waiting for you.",
+    "runLine": "Runs {cadence} · next {date}",
+    "crewToBeConfirmed": "{role} · to be confirmed"
   },
   "factSource": {
     "forecast": "Forecast",
@@ -455,7 +457,8 @@
       "easyFirstDive": "An easy first dive to start with.",
       "refresherCourse": "Tell me about the refresher course.",
       "noGate": "None of these changes whether you can book."
-    }
+    },
+    "alternativeSameRun": "Next date, {date}"
   },
   "bookingGear": {
     "heading": "Rental gear",
@@ -4173,7 +4176,10 @@
       "body": "A seat just opened on {tripTitle}, and we’re offering it to you.",
       "claim": "Claim it before it’s gone",
       "claimLink": "Claim your spot",
-      "footer": "The seat isn’t held for you, so don’t wait too long. See you on the boat!"
+      "footer": "The seat isn’t held for you, so don’t wait too long. See you on the boat!",
+      "subjectParty": "{seats} seats opened up on {tripTitle}",
+      "bodyParty": "{seats} seats just opened on {tripTitle}, and we’re offering them to your party.",
+      "rolledBody": "{filled} filled. {date} has room, and we’re offering you {seats, plural, one {a seat} other {# seats}} on {tripTitle}."
     },
     "tripInvitation": {
       "subject": "An invitation from {shopName}: {tripTitle}",

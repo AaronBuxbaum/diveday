@@ -162,7 +162,6 @@ export function TripFullSection({
   shopSlug,
   trip,
   tripRef,
-  remaining,
   errorMessage,
   contactEmail,
   contactPhone,
@@ -174,7 +173,6 @@ export function TripFullSection({
   shopSlug: string;
   trip: BookingFormTrip;
   tripRef: TripRef;
-  remaining: number;
   errorMessage?: string;
   contactEmail?: string | null;
   contactPhone?: string | null;
@@ -205,7 +203,7 @@ export function TripFullSection({
     title: string;
     href: string;
     when: { weekday: string; day: string; month: string };
-    reason: "same_course" | "same_site";
+    reason: "same_run" | "same_course" | "same_site";
   }[];
 }) {
   const t = useTranslations("booking");
@@ -251,9 +249,11 @@ export function TripFullSection({
               </Link>{" "}
               <span className="text-muted">
                 {t(
-                  alternative.reason === "same_course"
-                    ? "alternativeSameCourse"
-                    : "alternativeSameSite",
+                  alternative.reason === "same_run"
+                    ? "alternativeSameRun"
+                    : alternative.reason === "same_course"
+                      ? "alternativeSameCourse"
+                      : "alternativeSameSite",
                   {
                     date: `${alternative.when.weekday} ${alternative.when.day} ${alternative.when.month}`,
                   },
@@ -281,8 +281,15 @@ export function TripFullSection({
             </p>
           ) : null}
         </div>
+        {/* A party waits together as one lead with a count, invited when that
+            many seats are free (fourth review, item 34). Up to the boat's own
+            seats: a party bigger than the boat is a charter, and the line
+            under the count says to ask the shop. Nobody else's name is asked
+            for a seat that may never open, nor the lead's "Under 18": nothing
+            is signed until a seat is booked. */}
         <BookingPartyFields
-          maxPartySize={remaining}
+          maxPartySize={trip.capacity}
+          leadOnly
           leadPhone
           contactEmail={contactEmail}
           contactPhone={contactPhone}

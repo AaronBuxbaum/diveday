@@ -717,6 +717,37 @@ describe("waitlistInviteEmail", () => {
   });
 });
 
+describe("waitlistInviteEmail for a party and for a rolled lead", () => {
+  const base = {
+    locale: "en-US" as const,
+    diverName: "Nora Quinn",
+    shopName: "Blue Mantis",
+    tripTitle: "Saturday Two-Tank",
+    // Saturday Oct 24, 8:00 AM in New York.
+    startsAt: new Date("2026-10-24T12:00:00.000Z"),
+    endsAt: new Date("2026-10-24T15:00:00.000Z"),
+    timezone: "America/New_York",
+    bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-2",
+    unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
+  };
+
+  it("offers a waiting party its seats together (fourth review, item 34)", () => {
+    const email = waitlistInviteEmail({ ...base, partySize: 2 });
+    expect(email.subject).toBe("2 seats opened up on Saturday Two-Tank");
+    expect(email.text).toContain("2 seats just opened on Saturday Two-Tank");
+  });
+
+  it("says the date they asked for filled and this one has room (fourth review, item 31)", () => {
+    const email = waitlistInviteEmail({
+      ...base,
+      filledStartsAt: new Date("2026-10-17T12:00:00.000Z"),
+    });
+    expect(email.text).toMatch(/Sat,\sOct\s17 filled\. Sat,\sOct\s24 has room/);
+    expect(email.text).not.toContain("just opened");
+    expect(email.html).toContain("<strong>Saturday Two-Tank</strong>");
+  });
+});
+
 describe("email rendering", () => {
   it("escapes staff-entered text before it is placed in waiver email HTML", () => {
     const email = waiverRequestEmail({

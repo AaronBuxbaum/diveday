@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, people, shops } from "./schema";
+import { bookings, people, shops, tripWaitlistEntries } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
 import {
   getTripRoster,
@@ -122,6 +122,83 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
     await expect(
       joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor }),
     ).resolves.toEqual({ ok: false, reason: "trip_available" });
+  });
+});
+
+/**
+ * **A wait-list party** (fourth UX review, item 34; ADR 20260719-trip-waitlist,
+ * amended): a couple waits together for the full Saturday as one entry of two,
+ * and a boat with one seat left is still full for them.
+ */
+describe("joinTripWaitlist for a party", () => {
+  async function entry(id: string | undefined) {
+    if (!id) throw new Error("expected an entry");
+    const [row] = await ctx.db
+      .select()
+      .from(tripWaitlistEntries)
+      .where(eq(tripWaitlistEntries.id, id));
+    return row;
+  }
+
+  it("records the party on one entry", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const outcome = await joinTripWaitlist(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      ...visitor,
+      partySize: 2,
+    });
+    expect(outcome).toMatchObject({ ok: true });
+    expect((await entry(outcome.entryId))?.partySize).toBe(2);
+  });
+
+  it("waits a pair on a boat with one seat left, and sends one diver to book it", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const [released] = await getTripRoster(db, shop.id, fullTrip.id);
+    if (!released) throw new Error("expected the full trip to have a roster");
+    await db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, released.booking.id));
+
+    await expect(
+      joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor }),
+    ).resolves.toEqual({ ok: false, reason: "trip_available" });
+    const pair = await joinTripWaitlist(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      ...visitor,
+      partySize: 2,
+    });
+    expect(pair).toMatchObject({ ok: true });
+  });
+
+  it("updates the party when the joiner asks again", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const first = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    const again = await joinTripWaitlist(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      ...visitor,
+      partySize: 3,
+    });
+    expect(again).toMatchObject({
+      ok: false,
+      reason: "already_waitlisted",
+      entryId: first.entryId,
+    });
+    expect((await entry(first.entryId))?.partySize).toBe(3);
+  });
+
+  it("keeps a party inside the form's bounds", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const outcome = await joinTripWaitlist(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      ...visitor,
+      partySize: 99,
+    });
+    expect((await entry(outcome.entryId))?.partySize).toBe(20);
   });
 });
 

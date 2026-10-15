@@ -325,7 +325,9 @@
     },
     "pitchDoor": "El resto del briefing",
     "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}",
-    "logEntryWaiting": "Después de bucear, tu página de bitácora te espera."
+    "logEntryWaiting": "Después de bucear, tu página de bitácora te espera.",
+    "runLine": "Sale {cadence} · la próxima, {date}",
+    "crewToBeConfirmed": "{role} · por confirmar"
   },
   "factSource": {
     "forecast": "Pronóstico",
@@ -455,7 +457,8 @@
       "easyFirstDive": "Una primera inmersión tranquila para empezar.",
       "refresherCourse": "Cuéntame sobre el curso de repaso.",
       "noGate": "Ninguna de estas opciones cambia si puedes reservar."
-    }
+    },
+    "alternativeSameRun": "Próxima fecha, {date}"
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",
@@ -4173,7 +4176,10 @@
       "body": "Se acaba de liberar una plaza en {tripTitle}, y te la ofrecemos a ti.",
       "claim": "Resérvala antes de que se agote",
       "claimLink": "Reservar tu plaza",
-      "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!"
+      "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!",
+      "subjectParty": "Se liberaron {seats} plazas en {tripTitle}",
+      "bodyParty": "Se acaban de liberar {seats} plazas en {tripTitle}, y te las ofrecemos para tu grupo.",
+      "rolledBody": "El {filled} se llenó. El {date} tiene lugar, y te ofrecemos {seats, plural, one {una plaza} other {# plazas}} en {tripTitle}."
     },
     "tripInvitation": {
       "subject": "Una invitación de {shopName}: {tripTitle}",

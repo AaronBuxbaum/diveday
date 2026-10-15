@@ -8,6 +8,7 @@ import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { bookingConfirmationMailState } from "@/db/notifications";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
+import { publicRunOf } from "@/db/series-next";
 import { tripMayTakeACode } from "@/db/shop-promos";
 import type { shopBySlugCached } from "@/db/shops-cached";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -126,6 +127,7 @@ export async function readTripPage(
     paymentUrl,
     board,
     reviewAggregate,
+    run,
   ] = await Promise.all([
     // A staffer looking at their own shop's booking page is *previewing* it, and
     // this page used to answer that with a redirect straight back to the
@@ -224,6 +226,10 @@ export async function readTripPage(
     // The shop's rating rides along as the organizer's `aggregateRating` in
     // the standalone page's structured data.
     isEmbed || !shop.reviewsEnabled ? null : getShopReviewAggregate(db, shop.id),
+    // A repeating departure's cadence and its next date (fourth review, item 35).
+    tripRead.then((found) =>
+      found?.seriesId ? publicRunOf(db, { shopId: shop.id, tripId: found.id, now }) : null,
+    ),
   ]);
   return {
     staffPreview,
@@ -244,5 +250,6 @@ export async function readTripPage(
     paymentUrl,
     board,
     reviewAggregate,
+    run,
   };
 }

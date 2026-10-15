@@ -74,7 +74,7 @@ export const EXPORT_FILE_NOTES = {
   "trip_help_requests.csv":
     "One non-medical day-of help request per booking, with its visible hand-off status and timestamps. The request is retained with the trip history; resolved staff identity is included when available.",
   "waitlist_entries.csv":
-    "Divers in line for full trips. A wait-list entry never consumed a seat and never appears on a manifest.",
+    "Divers in line for full trips, and how many seats each waits for (party_size, themselves included). A wait-list entry never consumed a seat and never appears on a manifest.",
   "trip_invitations.csv":
     "Staff outreach attached to a departure without claiming a seat: the source request or diver, the contact snapshot, and whether staff recorded an invitation attempt. Invitations never become bookings, capacity, readiness or manifest state by themselves.",
   "last_minute_list.csv":

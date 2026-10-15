@@ -511,8 +511,14 @@ export const tripWaitlistEntries = pgTable(
     // When staff last invited this diver to grab a freed seat. Null until the
     // first invite; shown as "Invited 2h ago" so two staff don't double-invite.
     invitedAt: timestamp("invited_at", { withTimezone: true }),
+    // How many seats this lead waits for: the joiner and the people they are
+    // diving with, who wait and are invited together, never split across dates
+    // (fourth review, item 34; ADR 20260719-trip-waitlist, amended). The
+    // public form's own ceiling bounds it.
+    partySize: integer("party_size").notNull().default(1),
   },
   (table) => [
+    check("trip_waitlist_entries_party_size_range", sql`${table.partySize} between 1 and 20`),
     uniqueIndex("trip_waitlist_entries_trip_person_unique").on(table.tripId, table.personId),
     index("trip_waitlist_entries_trip_created_idx").on(table.tripId, table.createdAt),
     index("trip_waitlist_entries_shop_trip_idx").on(table.shopId, table.tripId),

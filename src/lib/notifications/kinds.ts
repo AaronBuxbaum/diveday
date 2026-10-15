@@ -25,6 +25,7 @@ import {
   SETUP_PHONE_MAX,
   SETUP_TEXT_MAX,
 } from "@/lib/setup-requests";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 
 /**
  * Every kind of notification DiveDay sends, as a discriminated union of zod
@@ -340,6 +341,10 @@ const waitlistInviteSchema = z.object({
   /** The invite timestamp, so each explicit re-invite is a distinct send. */
   invitedAt: z.date(),
   unsubscribeUrl: z.url().max(2_000),
+  /** The waiting party's size (fourth review, item 34). */
+  partySize: z.number().int().min(1).max(MAX_PUBLIC_PARTY_SIZE).optional(),
+  /** The run's date that filled, for an invite the nightly roll sent (item 31). */
+  filledStartsAt: z.date().optional(),
 });
 
 /**
