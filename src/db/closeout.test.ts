@@ -6,7 +6,7 @@ import { rollCallCheckpoints } from "@/lib/roll-call";
 import { fileScopedShopContext } from "@/test/db";
 import { standingArrivalStatus } from "./arrival-provenance";
 import type { AppDb } from "./client";
-import { getDayCloseout, listHeadCountCloses } from "./closeout";
+import { getDayCloseout, listHeadCountCloses, readDayLoadOut } from "./closeout";
 import { recordRollCall } from "./manifests";
 import { markBookingNoShow } from "./no-show";
 import { getTripOpenSeatsDebrief } from "./open-seats";
@@ -22,7 +22,7 @@ import {
 } from "./schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { recordTripStage } from "./trip-stages";
-import { listStaff } from "./trips";
+import { getTripPrep, listShopDayDepartures, listStaff } from "./trips";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -899,5 +899,27 @@ describe("day close-out (in-memory PGlite)", () => {
 
     const after = await getDayCloseout(db, shop.id, shop.timezone);
     expect(after.departures.find((d) => d.tripId === trip.id)?.status).toBe("all_home");
+  });
+
+  /** Tomorrow from tonight (fifth-loop ideas, item 2): the day's boats, as each Gear tab counts them. */
+  it("adds each departure's own tank tiles, and says nothing for an empty day", async () => {
+    const { db, shop } = shared;
+    const [first] = await db
+      .select({ startsAt: tripsTable.startsAt })
+      .from(tripsTable)
+      .where(and(eq(tripsTable.shopId, shop.id), eq(tripsTable.status, "scheduled")))
+      .limit(1);
+    if (!first) throw new Error("demo trip missing");
+    const at = first.startsAt;
+    const now = new Date(nowMs());
+    const departures = await listShopDayDepartures(db, shop.id, shop.timezone, at);
+    let total = 0;
+    for (const departure of departures) {
+      total += (await getTripPrep(db, shop, departure.id, now))?.checklist.tanks.total ?? 0;
+    }
+    const loadOut = await readDayLoadOut(db, shop, at, now);
+    expect(loadOut?.departures).toBe(departures.length);
+    expect(loadOut?.tanks.total).toBe(total);
+    expect(await readDayLoadOut(db, shop, new Date("2001-01-01T12:00:00Z"), now)).toBeNull();
   });
 });

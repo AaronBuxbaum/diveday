@@ -31,7 +31,12 @@ import { canPersonExportIncidentRecord } from "@/db/authz";
 import { daySummaryBlocked, sharedInHorizonReadiness } from "@/db/blockers";
 import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
-import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
+import {
+  getDayCloseout,
+  listHeadCountCloses,
+  readDayLoadOut,
+  shopHasSailedBefore,
+} from "@/db/closeout";
 import { shopFirstBooking } from "@/db/first-booking";
 import { loadFirstRunFacts } from "@/db/first-run";
 import { listFreshFormDrafts } from "@/db/form-drafts";
@@ -54,7 +59,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose } from "@/lib/closeout";
+import { assembleEveningClose, tomorrowNoon } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
@@ -85,7 +90,7 @@ import {
   spineIsQuiet,
   spineJobCount,
 } from "@/lib/today";
-import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
 import {
   deleteCrewRecapPhotoAction,
@@ -217,29 +222,6 @@ export default async function ShopPage({
         />
       </Suspense>
     </main>
-  );
-}
-
-/**
- * Noon on the shop's *next* calendar day, in its own zone — the instant the
- * second bounded `getTodayWork` call reads tomorrow's shop-day from.
- *
- * Noon rather than midnight so a daylight-saving jump cannot land it on the
- * wrong side of the boundary it is naming, and the shop's zone rather than the
- * server's because "tomorrow" is a fact about where the boat sails from.
- */
-function tomorrowNoon(now: Date, timeZone: string): Date {
-  const wall = utcToWallTime(now, timeZone);
-  const next = new Date(Date.UTC(wall.year, wall.month - 1, wall.day + 1));
-  return wallTimeToUtc(
-    {
-      year: next.getUTCFullYear(),
-      month: next.getUTCMonth() + 1,
-      day: next.getUTCDate(),
-      hour: 12,
-      minute: 0,
-    },
-    timeZone,
   );
 }
 
@@ -387,44 +369,52 @@ async function TodayBody({
   //
   // **The day's money** (`readDayMoney`): what today made, gated on `canReadShopMoney` (the live
   // role read of the first wave) and the day closing; and the tips on the reader's own boats.
-  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMoney] =
-    await Promise.all([
-      getTodayWork(
-        db,
-        shop.id,
-        shopSlug,
-        shop.timezone,
-        now,
-        lens ? session.user.personId : undefined,
-        t,
-        locale,
-        // Stuck Stripe operations and failed photo deletions are owner/manager chores — same gate
-        // as Reports (task 157), read live above.
-        canReadShopMoney,
-        evidence,
-        shopCrewTarget(shop),
-        session.user.roles,
-      ),
-      getShopDayDepartures(db, shop.id, shop.timezone, tomorrowNoon(now, shop.timezone), evidence),
-      eveningClose.stations.length > 0
-        ? Promise.all([
-            listHeadCountCloses(
-              db,
-              shop.id,
-              eveningClose.stations
-                .filter((station) => station.status === "all_home")
-                .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
-            ),
-            canPersonExportIncidentRecord(db, shop.id, session.user.personId),
-          ])
-        : ([new Map(), false] as [Map<string, { closedAt: Date; closedBy: string }>, boolean]),
-      // The once-ever wording, asked for only in the moment it could apply.
-      eveningClose.allHome ? shopHasSailedBefore(db, shop.id, dayBounds.from) : true,
-      readDayMoney(db, shop, dayBounds, {
-        personId: session.user.personId,
-        withTakings: eveningClose.closing && canReadShopMoney,
-      }),
-    ]);
+  const [
+    work,
+    tomorrowDepartures,
+    [headCountCloses, canOpenLog],
+    sailedBefore,
+    dayMoney,
+    tomorrowLoadOut,
+  ] = await Promise.all([
+    getTodayWork(
+      db,
+      shop.id,
+      shopSlug,
+      shop.timezone,
+      now,
+      lens ? session.user.personId : undefined,
+      t,
+      locale,
+      // Stuck Stripe operations and failed photo deletions are owner/manager chores — same gate
+      // as Reports (task 157), read live above.
+      canReadShopMoney,
+      evidence,
+      shopCrewTarget(shop),
+      session.user.roles,
+    ),
+    getShopDayDepartures(db, shop.id, shop.timezone, tomorrowNoon(now, shop.timezone), evidence),
+    eveningClose.stations.length > 0
+      ? Promise.all([
+          listHeadCountCloses(
+            db,
+            shop.id,
+            eveningClose.stations
+              .filter((station) => station.status === "all_home")
+              .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
+          ),
+          canPersonExportIncidentRecord(db, shop.id, session.user.personId),
+        ])
+      : ([new Map(), false] as [Map<string, { closedAt: Date; closedBy: string }>, boolean]),
+    // The once-ever wording, asked for only in the moment it could apply.
+    eveningClose.allHome ? shopHasSailedBefore(db, shop.id, dayBounds.from) : true,
+    readDayMoney(db, shop, dayBounds, {
+      personId: session.user.personId,
+      withTakings: eveningClose.closing && canReadShopMoney,
+    }),
+    // Tomorrow's tanks and pieces, once tonight is closing (fifth-loop ideas, item 2).
+    eveningClose.closing ? readDayLoadOut(db, shop, tomorrowNoon(now, shop.timezone), now) : null,
+  ]);
   const { actions, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
   // The day's whole board, clock order — the strip's marks and the count under the date both read
@@ -591,6 +581,7 @@ async function TodayBody({
   const evening: EveningReading = {
     close: eveningClose,
     takings: dayTakingsReading,
+    tomorrow: tomorrowLoadOut,
     headCountCloses,
     recapEditors,
     canOpenLog,

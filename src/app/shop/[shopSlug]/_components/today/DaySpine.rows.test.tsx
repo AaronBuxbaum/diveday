@@ -704,3 +704,40 @@ describe("the crew's tips line", () => {
     expect(screen.queryByText(/in tips this week/)).toBeNull();
   });
 });
+
+/** Tomorrow from tonight (fifth-loop ideas, item 2): the evening says what tomorrow needs. */
+describe("tomorrow from tonight", () => {
+  const tomorrow = { departures: 2, tanks: { total: 42, air: 36, nitrox: 6 }, rentalPieces: 29 };
+
+  it("adds tomorrow's boats together once the day is closing", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], { takings: null, tomorrow }),
+    });
+    expect(screen.getByRole("heading", { name: "Tomorrow from tonight" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Print tomorrow" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/print?day=tomorrow"),
+    );
+  });
+
+  it("waits while a boat is still out", () => {
+    renderSpine({
+      departures: [],
+      evening: evening(
+        [
+          closed({
+            tripId: "out",
+            status: "still_out",
+            startsAt: hoursFromNow(-2),
+            endsAt: hoursFromNow(1),
+            ended: false,
+          }),
+        ],
+        { takings: null, tomorrow },
+      ),
+    });
+    expect(screen.queryByRole("heading", { name: "Tomorrow from tonight" })).toBeNull();
+    expect(screen.getByText("Still out")).toBeInTheDocument();
+  });
+});

@@ -4,11 +4,14 @@ import { Fragment } from "react";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
+import { readDayLoadOut } from "@/db/closeout";
 import { listShopDayDepartures } from "@/db/trips";
+import { dayLoadOutLine } from "@/i18n/load-out-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
+import { tomorrowNoon } from "@/lib/closeout";
 import { formatDateTimeTz, formatDateWithYear } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { settleWithLimit } from "@/lib/settle-with-limit";
@@ -61,22 +64,38 @@ const DEPARTURES_IN_FLIGHT = 3;
  * act at the other end of it — a page in the "More" menu would have been a
  * destination nobody visits at 5 am with wet hands.
  *
- * There is no `?date=`. This prints today, which is the only day anyone has
- * ever wanted on paper at the counter, and it keeps an attacker-supplied
- * parameter off a document that carries every diver's emergency contact.
+ * There is no `?date=`. This prints today, which is the day anyone wants on
+ * paper at the counter, and it keeps an attacker-supplied date off a document
+ * that carries every diver's emergency contact. **The one other day is a fixed
+ * word, `?day=tomorrow`** (fifth-loop ideas, item 2): the evening close's
+ * "Print tomorrow", for the fill station and the gear room working tonight.
+ * Any other value prints today; there is still no way to name a date.
+ *
+ * The header adds the day's tanks and rental pieces across every boat, and,
+ * when there is nitrox to fill, says once what that count is: seats with a
+ * verified card, every mix still analyzed and signed for at the fill station
+ * (H-11: a count, never a fill log). It used to sit under every boat's tiles.
  */
 export default async function ShopDayPrintPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ day?: string }>;
 }) {
   const { shopSlug } = await params;
+  const tomorrow = (await searchParams).day === "tomorrow";
   const { shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const now = nowDate();
   const db = await getDb();
-  const departures = await listShopDayDepartures(db, shop.id, shop.timezone, now);
+  // Any instant inside the day to print: now, or noon on the shop's next day.
+  const dayAt = tomorrow ? tomorrowNoon(now, shop.timezone) : now;
+  const [departures, loadOut] = await Promise.all([
+    listShopDayDepartures(db, shop.id, shop.timezone, dayAt),
+    readDayLoadOut(db, shop, dayAt, now),
+  ]);
   // **A few boats at a time, and `settled` rather than `all`.**
   //
   // The ceiling first, because it is the newer half (issue #1598). Each packet
@@ -142,7 +161,9 @@ export default async function ShopDayPrintPage({
         <AutoPrint readySelector={PACKET_READY_SELECTOR} />
         <header className="mb-10 border-b border-border pb-6 print:mb-6">
           <p className={EYEBROW_CLASS}>DiveDay</p>
-          <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("shared.printPacket.dayTitle")}</h1>
+          <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>
+            {t(tomorrow ? "shared.printPacket.dayTitleTomorrow" : "shared.printPacket.dayTitle")}
+          </h1>
           {/* The sheet has to say which day it is and how many boats it covers:
             paper outlives the morning it was printed, and a captain holding
             page 7 has no other way to know a boat is missing from it. */}
@@ -152,9 +173,13 @@ export default async function ShopDayPrintPage({
               // only thing that tells a captain holding page seven that a boat
               // is missing from the stack.
               count: sheets.length,
-              date: formatDateWithYear(now, locale, shop.timezone),
+              date: formatDateWithYear(dayAt, locale, shop.timezone),
             })}
           </p>
+          {loadOut ? <p className="mt-1 tabular-nums">{dayLoadOutLine(t, loadOut)}</p> : null}
+          {loadOut && loadOut.tanks.nitrox > 0 ? (
+            <p className="mt-1 text-sm text-muted">{t("tripPrep.nitroxCountNote")}</p>
+          ) : null}
           <p className="mt-1 text-muted">
             {t("print.sheet.printed", {
               date: formatDateTimeTz(now, locale, shop.timezone),
@@ -172,7 +197,11 @@ export default async function ShopDayPrintPage({
         {sheets.map((sheet) => (
           <Fragment key={sheet.id}>{sheet.packet}</Fragment>
         ))}
-        {sheets.length === 0 ? <p>{t("shared.printPacket.dayEmpty")}</p> : null}
+        {sheets.length === 0 ? (
+          <p>
+            {t(tomorrow ? "shared.printPacket.dayEmptyTomorrow" : "shared.printPacket.dayEmpty")}
+          </p>
+        ) : null}
         <PacketReady />
       </div>
     </main>
