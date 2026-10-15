@@ -12,7 +12,10 @@ fix it, don't route around it (`.skip`, a widened timeout, a deleted assertion) 
 for someone else. Before starting the fix, search the repo's open PRs for one that already
 touches the same spec or test name (see AGENTS.md **Parallel work**). Two sessions racing to fix
 the same flake produce conflicting patches; if another PR already owns it, coordinate in that
-thread instead of pushing a second, competing fix.
+thread instead of pushing a second, competing fix. A **proven** flake (failed and passed on one sha, or
+failed in the nightly flake hunt) you cannot fix in this change may be quarantined instead:
+`@quarantine` with an open issue and an expiry at most 7 days out
+([testing.md](../../../docs/engineering/testing.md#what-runs-when)'s "Flakes").
 
 ## The loop
 

@@ -287,7 +287,7 @@ export const areas = {
     tests: ["e2e"],
     invariants: [
       "Use semantic tokens only; no raw colors in components.",
-      "Inspect light/dark and phone/desktop output.",
+      "Inspect light at phone and desktop, dark at desktop.",
       "Include empty, loading, validation, error, and success states.",
       "Keep touch targets and focus states accessible.",
     ],

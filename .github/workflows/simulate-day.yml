@@ -31,6 +31,12 @@ jobs:
     name: One dive day, end to end
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # For the alert steps at the end: a red run opens or comments on one issue.
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -59,3 +65,13 @@ jobs:
           path: test-results/simulate-day/
           if-no-files-found: ignore
           retention-days: 7
+      # The run's state where a human already looks (test review 2026-10-14, decision 5): it was
+      # red 27 nights of 30 and nobody was told. A red run on the default branch opens one
+      # `ci-red` issue or comments on the open one; the first green run closes it. A manual run
+      # on another branch says nothing, since its colour is that branch's, not main's.
+      - name: Open or update the red-run issue
+        if: failure() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: node scripts/workflow-alert.mjs --workflow simulate-day --outcome failure --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - name: Close the red-run issue
+        if: success() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: node scripts/workflow-alert.mjs --workflow simulate-day --outcome success --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

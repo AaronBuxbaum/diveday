@@ -52,6 +52,7 @@ const checks = [
   ["context-budget", "check-context-budget.mjs"],
   ["e2e-fixtures", "check-e2e-fixtures.mjs"],
   ["e2e-hygiene", "check-e2e-hygiene.mjs"],
+  ["critical-journeys", "check-critical-journeys.mjs"],
   ["route-coverage", "check-route-coverage.mjs"],
   ["loading-skeletons", "check-loading-skeletons.mjs"],
   ["uuid-segments", "check-uuid-segments.mjs"],

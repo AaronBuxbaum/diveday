@@ -47,6 +47,7 @@ jobs:
     permissions:
       actions: read
       contents: write
+      issues: write
       pull-requests: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -130,3 +131,13 @@ jobs:
           else
             gh pr create --base main --head "$BRANCH" --title "Refresh the recorded shard durations" --body "$body"
           fi
+      # A red refresh opens one `ci-red` issue or comments on the open one; the first green run
+      # closes it (test review 2026-10-14, decision 5: this job's only run had failed unseen).
+      # The checkout above is the default branch's own (a commit to main or the fallback branch
+      # moves HEAD, not the scripts), so the alert runs the script as main has it.
+      - name: Open or update the red-run issue
+        if: failure() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: node scripts/workflow-alert.mjs --workflow durations-refresh --outcome failure --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - name: Close the red-run issue
+        if: success() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: node scripts/workflow-alert.mjs --workflow durations-refresh --outcome success --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

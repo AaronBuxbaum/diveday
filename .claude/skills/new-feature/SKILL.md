@@ -25,12 +25,15 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
    [`docs/design/surfaces.md`](../../../docs/design/surfaces.md) — five sentences, once — and states
    the one idea in a comment beside whatever code the idea constrains.
 5. **UI second** — thin routes in `src/app/`, semantic tokens only, copy in briefing voice.
-   A new critical flow gets an `e2e/` spec (happy + failure path); a new surface gets a visual
-   snapshot in `e2e/visual.spec.ts`. Render relative time via `nowDate()` from `src/lib/clock.ts`,
-   never a bare `new Date()`. Each test's layer is
+   Render relative time via `nowDate()` from `src/lib/clock.ts`, never a bare `new Date()`. Each
+   test's layer is
    [testing.md](../../../docs/engineering/testing.md#how-a-change-decides-its-tests)'s six-step
-   list: a geometry fix is proven by a capture, a rule over source by a `check:repo` guard, never a
-   class or source assertion beside the component. See the `e2e-and-visual` skill.
+   list: a changed flow extends the spec that walks it (found by role and message key, never a
+   sentence), a new screen or state gets the capture captures.md says it earns, and a new journey a
+   shop could not run a day without gets a row in testing.md's
+   [critical journeys](../../../docs/engineering/testing.md#critical-journeys); a geometry fix is
+   proven by a capture, a rule over source by a `check:repo` guard, never a class or source
+   assertion beside the component. See the `e2e-and-visual` skill.
 6. **Verify** — run the `verify` skill. UI work additionally gets the `design-review` skill.
 7. **Document** — update whatever your change invalidated: glossary for new terms, overview
    for structure, roadmap checkbox, ADR index.

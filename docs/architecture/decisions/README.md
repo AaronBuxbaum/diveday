@@ -391,5 +391,6 @@ script again.
 | 20261014-checkouts-reach-integrations | Online checkouts, tips and their… |
 | 20261014-incident-kind-severity | An incident report files with… |
 | 20261014-starting-content-is-measured-and-vetted | Starting content is measured by… |
+| 20261015-coverage-and-mutation-testing | Measure the safety files with… |
 
 <!-- adr-index:end -->

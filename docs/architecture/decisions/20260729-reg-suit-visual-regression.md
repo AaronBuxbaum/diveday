@@ -203,3 +203,8 @@ a deterministic failure into an intermittent pass, which `pnpm check:e2e-hygiene
 
 **What this acceptance depends on, and it is worth stating.** "The next comparison catches it" is only true while there *is* a next comparison. A visual gate that is red for an unrelated reason — as it was for three days on the tide-window capture, issue #1487 — converts this accepted window into an open-ended one, silently, because a run that compares nothing still reports nothing changed. That is the reason the "a run that compared nothing is a red check" amendment above exists, and the reason it is the one thing here that must not be relaxed.
 
+### Amended 2026-10-15: dark mode at the desktop width only
+
+**The call, made by the owner on 2026-10-14 (test review, decision 1).** `capture()` shoots light at 390 and 1280 (and 820 for a `TABLET_SURFACES` name), and dark at 1280 alone; `captureStickyFoot()` follows the same rule and the phone-only fold capture is light only. A run is 912 images instead of 1,218. The two schemes share one layout and differ only in tokens, so the dark phone image mostly repeated the light one's geometry, at a quarter of the capture minutes and of every UI pull request's review. The accepted risk is a dark-only defect that shows at phone width alone.
+
+**The baseline.** The first `main` run after this lands reports every `-dark-vw-390` and `-dark-vw-820` image as deleted (not captured), which is expected and not red, and publishes a baseline without them. A pull request cut before that run sees the same deletions for the surfaces it selects. Revisit if a dark phone defect reaches a shop.
