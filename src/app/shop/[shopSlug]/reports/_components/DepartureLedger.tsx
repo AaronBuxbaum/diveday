@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 
 /**
  * **The month's departures as a ledger** — ADR 20260827-the-shops-shelves,

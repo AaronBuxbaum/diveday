@@ -409,6 +409,11 @@ export const bookings = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("bookings_person_id_idx").on(table.personId),
     uniqueIndex("bookings_trip_person_unique").on(table.tripId, table.personId),
     // Enriched air is a gas a diver breathes; a snorkeler or a rider asking for
     // it is a write that went wrong somewhere, and the prep list would pack it.

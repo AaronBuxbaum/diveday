@@ -272,7 +272,7 @@ describe("GET /api/cron/reminders — dead-man's switch", () => {
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(
       1,
       { monitorSlug: "diveday-daily-tick", status: "in_progress" },
-      expect.objectContaining({ schedule: { type: "crontab", value: "0 14 * * *" } }),
+      expect.objectContaining({ schedule: { type: "crontab", value: "7 14 * * *" } }),
     );
   });
 

@@ -60,7 +60,9 @@ export async function issueCalendarFeed(
     // the person row closes that window even in the common case where there
     // is no existing feed row to lock. The partial unique index on
     // (person_id, scope) WHERE revoked_at IS NULL is the backstop if this is
-    // ever bypassed; this lock is what keeps it from being reached.
+    // ever bypassed; this lock is what keeps it from being reached. `no key
+    // update` still serializes two issues and leaves the `KEY SHARE` of every
+    // insert naming this person alone.
     const [locked] = await tx
       .select({ id: people.id })
       .from(people)
@@ -72,7 +74,7 @@ export async function issueCalendarFeed(
         ),
       )
       .limit(1)
-      .for("update");
+      .for("no key update");
     if (!locked) return null;
 
     const roles = await rolesFor(tx, input.shopId, input.personId);

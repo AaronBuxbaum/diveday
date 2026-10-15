@@ -85,9 +85,12 @@ export async function ensureShopBillingCustomer(
 
 /**
  * Record the Checkout session "Add a card" just opened, **only if** the row
- * still holds the one the caller settled (`previous`). False means another
- * tab opened its own session in between; the caller expires this one and
- * refuses, so at most one open session per shop can ever start a subscription.
+ * still holds the one the caller settled (`previous`), or already holds this
+ * very session. False means another tab opened its own session in between;
+ * the caller expires this one and refuses, so at most one open session per
+ * shop can ever start a subscription. The second case is two tabs handed the
+ * same session by Stripe's idempotency key (`createCheckoutSession`): the
+ * slower one must not expire the session the faster one just recorded.
  */
 export async function recordShopCheckoutSession(
   db: AppDb,
@@ -100,9 +103,12 @@ export async function recordShopCheckoutSession(
     .where(
       and(
         eq(shopSubscriptions.shopId, shopId),
-        input.previous === null
-          ? isNull(shopSubscriptions.stripeCheckoutSessionId)
-          : eq(shopSubscriptions.stripeCheckoutSessionId, input.previous),
+        or(
+          input.previous === null
+            ? isNull(shopSubscriptions.stripeCheckoutSessionId)
+            : eq(shopSubscriptions.stripeCheckoutSessionId, input.previous),
+          eq(shopSubscriptions.stripeCheckoutSessionId, input.sessionId),
+        ),
       ),
     )
     .returning({ shopId: shopSubscriptions.shopId });

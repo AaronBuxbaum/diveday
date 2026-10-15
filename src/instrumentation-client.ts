@@ -1,6 +1,6 @@
-import * as Sentry from "@sentry/nextjs";
 import { config as configureZod } from "zod/v4/core";
 import { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION } from "@/app/observability";
+import { deferSentry } from "@/lib/observability/sentry-browser";
 import { SENTRY_DSN } from "@/lib/sentry-dsn";
 
 // Zod compiles a faster object parser with `new Function`, and finds out whether
@@ -12,23 +12,43 @@ import { SENTRY_DSN } from "@/lib/sentry-dsn";
 // why it lives here and not beside a schema.
 configureZod({ jitless: true });
 
-// Initialize client-side error reporting before React starts (docs/architecture/decisions/20260727-sentry-error-monitoring-q7fk2p.md).
-if (SENTRY_DSN) {
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    environment: process.env.NODE_ENV,
-    // Tracing is off and Session Replay is never configured here, so both are
-    // unused. Neither currently shrinks the shared first-load bundle under
-    // this app's Turbopack build — see the `bundleSizeOptimizations` comment
-    // in next.config.ts for why — but turning them off is still the correct,
-    // forward-compatible config. Sentry Logs has no switch since
-    // @sentry/nextjs 11; nothing here calls `Sentry.logger`, so its flush
-    // timer never arms.
-    tracesSampleRate: 0,
-    dataCollection: SENTRY_DATA_COLLECTION,
-    beforeSend: redactEvent,
-    beforeBreadcrumb: redactBreadcrumb,
-  });
+/**
+ * Client-side error reporting (docs/architecture/decisions/20260727-sentry-error-monitoring-q7fk2p.md),
+ * loaded on idle rather than imported here: a static import put the SDK on
+ * every route's first-load floor (code review 2026-10-13b, item 34). Errors
+ * thrown before it arrives are kept and handed to it (`deferSentry`).
+ */
+function whenIdle(run: () => void) {
+  if (typeof window.requestIdleCallback === "function") {
+    // The timeout bounds the wait on a page that is never idle.
+    window.requestIdleCallback(run, { timeout: 4000 });
+  } else {
+    setTimeout(run, 1);
+  }
 }
 
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+const reporter =
+  SENTRY_DSN && typeof window !== "undefined"
+    ? deferSentry({
+        load: () => import("@sentry/nextjs"),
+        init: (Sentry) =>
+          Sentry.init({
+            dsn: SENTRY_DSN,
+            environment: process.env.NODE_ENV,
+            // Tracing is off and Session Replay is never configured here, so
+            // both are unused. Sentry Logs has no switch since @sentry/nextjs
+            // 11; nothing here calls `Sentry.logger`, so its flush timer never
+            // arms.
+            tracesSampleRate: 0,
+            dataCollection: SENTRY_DATA_COLLECTION,
+            beforeSend: redactEvent,
+            beforeBreadcrumb: redactBreadcrumb,
+          }),
+        target: window,
+        whenIdle,
+      })
+    : undefined;
+
+export function onRouterTransitionStart(href: string, navigationType: string) {
+  reporter?.onRouterTransitionStart(href, navigationType);
+}

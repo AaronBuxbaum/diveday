@@ -474,6 +474,7 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "danger",
     key: "divers.notices.bookingInvalid",
   },
+  "seat-busy": { form: "book", tone: "danger", key: "seatDiver.busy" },
 
   // Removal, restore, erasure — each beside its own control.
   deleted: { form: "remove", tone: "success", key: "divers.notices.deleted" },

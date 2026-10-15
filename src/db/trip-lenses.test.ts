@@ -4,7 +4,7 @@ import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { shops, tripLenses, trips } from "./schema";
 import {
-  countTripLensDepartures,
+  countDeparturesByTripLens,
   createTripLens,
   deleteTripLens,
   getTripLens,
@@ -143,7 +143,7 @@ describe("deleting a word", () => {
   it("counts the departures the delete touches, so the confirm can say", async () => {
     const { db, shop } = await seededShopContext();
     const lens = mustCreate(await createTripLens(db, shop.id, "Shark season"));
-    expect(await countTripLensDepartures(db, shop.id, lens.id)).toBe(0);
+    expect((await countDeparturesByTripLens(db, shop.id)).get(lens.id) ?? 0).toBe(0);
 
     const rows = await db
       .select({ id: trips.id })
@@ -153,7 +153,8 @@ describe("deleting a word", () => {
     for (const row of rows) {
       await db.update(trips).set({ lensId: lens.id }).where(eq(trips.id, row.id));
     }
-    expect(await countTripLensDepartures(db, shop.id, lens.id)).toBe(rows.length);
+    // One read for the whole vocabulary (code review 2026-10-13b, item 36).
+    expect((await countDeparturesByTripLens(db, shop.id)).get(lens.id)).toBe(rows.length);
   });
 
   it("frees the word for reuse, because the unique slug covers live rows only", async () => {
@@ -202,7 +203,7 @@ describe("another shop's vocabulary", () => {
     expect(await getTripLens(db, rival.id, lens.id)).toBeNull();
     expect(await renameTripLens(db, rival.id, lens.id, "Stolen")).toBeNull();
     expect(await deleteTripLens(db, rival.id, lens.id)).toBe(false);
-    expect(await countTripLensDepartures(db, rival.id, lens.id)).toBe(0);
+    expect((await countDeparturesByTripLens(db, rival.id)).get(lens.id) ?? 0).toBe(0);
     expect(await listTripLenses(db, rival.id)).toEqual([]);
 
     // And the word is untouched at the shop that wrote it.

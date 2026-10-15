@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { LARGE_FILE_LINES } from "./guard-read.mjs";
 import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
@@ -13,7 +14,8 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  * `page.tsx` files over 300 lines and eight over 1,000 — domain logic, Drizzle queries and a
  * dozen local components living in the route file, where the architecture guard cannot see
  * them. A page that size is also one an agent cannot read whole (`scripts/guard-read.mjs`
- * refuses a file over 600 lines without a range), so every edit to it starts blind.
+ * refuses a file over {@link FILE_LINE_LIMIT} lines without a range), so every edit to it
+ * starts blind.
  *
  * ### Why a ratchet rather than a flat gate
  *
@@ -38,7 +40,7 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  * and banks the ones over {@link FUNCTION_LINE_LIMIT} in the `function-length` section, keyed
  * `<file>#<name>`. Same mechanics: a new one over the limit fails, a banked one may only shrink,
  * a shrink is banked with `--write`, and `--absorb "<why>"` records a rise from a merge — all
- * through this file, which runs both halves (`main(["functions"])` runs the second alone).
+ * through this file, which runs every half (`main(["functions"])` runs the second alone).
  *
  * A function is measured off the formatter's layout rather than a parse: TypeScript 7 no longer
  * exports a parser to JavaScript (see `scripts/check-db-concurrency.mjs`'s header), and Biome
@@ -48,6 +50,29 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  * declaration from its first line to the first column-0 line that only closes. The one shape it
  * misreads is a multi-line template literal whose body starts in column 0, which ends the
  * function early: it can under-count, never over-count, and nothing over the limit does it today.
+ *
+ * A function is charged for its **code lines** only: blank lines and comment lines (`//`,
+ * `/* … *\/` blocks, JSX `{/* … *\/}`) are left out ({@link countCodeLines}). The 2026-10-13
+ * review found the line count charging this repository's documentation habit as complexity: of
+ * nineteen functions over 400 lines, seven were over in code, `OfflineManifestManager` was a
+ * third comment, and one commit rewrapped comments to fit the limit. So the limit is
+ * {@link FUNCTION_LINE_LIMIT} code lines, and a comment never costs a split.
+ *
+ * ### The file half
+ *
+ * A function-only ratchet is met by splitting inside the file: `CommandPalette.tsx` stayed at
+ * 1,017 lines after its one function was brought under the limit, and ten source files under
+ * `src/app` and `src/components` stayed over the read guard. So the `file-length` section banks
+ * every file under {@link FILE_ROOTS} (and every test file under `src/`) over
+ * {@link FILE_LINE_LIMIT} physical lines, the same number `scripts/guard-read.mjs` refuses to
+ * hand an agent whole. Same mechanics again: a split moves code into a new file.
+ *
+ * ### Near the limit
+ *
+ * A split that stops at the line leaves the next edit to break the ratchet, and the agent who
+ * makes that edit pays for the split. Every half prints a warning (not a failure) for an
+ * unbanked entry within {@link NEAR_LIMIT_BAND} of its limit, so a session knows before it
+ * edits, and a split aims well under: 350 lines for a page, 250 code lines for a function.
  */
 
 const ROOT = process.cwd();
@@ -56,10 +81,21 @@ export const PAGE_LINE_LIMIT = 400;
 const GUARDED_ROOT = "src/app";
 
 const FUNCTION_GUARD = "function-length";
-export const FUNCTION_LINE_LIMIT = 400;
+/** Code lines: blank and comment lines are not counted ({@link countCodeLines}). */
+export const FUNCTION_LINE_LIMIT = 300;
 export const FUNCTION_ROOTS = ["src/app", "src/components", "src/features", "src/db", "src/lib"];
 const SOURCE_FILE = /\.(?:ts|tsx|mjs|js)$/;
 const TEST_FILE = /\.test\.(?:ts|tsx|mjs|js)$/;
+
+const FILE_GUARD = "file-length";
+/** The read guard's own number: a file over it is never handed to an agent whole. */
+export const FILE_LINE_LIMIT = LARGE_FILE_LINES;
+/** Source files (tests excluded) measured whole; every test file under {@link TEST_ROOT} too. */
+export const FILE_ROOTS = ["src/app", "src/components"];
+const TEST_ROOT = "src";
+
+/** An unbanked entry this close to its limit is warned about, never refused. */
+export const NEAR_LIMIT_BAND = 20;
 
 /** `function Name(`, with any of `export`, `default`, `async` in front. */
 const FUNCTION_DECLARATION =
@@ -76,7 +112,48 @@ const FUNCTION_INITIALIZER =
 const TERMINAL_CLOSER = /^[}\])][\s)\]};,]*$/;
 
 /**
- * Every top-level function in a source file, as `{ name, line, lines }`.
+ * How many of `lines` are code: not blank, not inside a block comment, not a `//` line, not a
+ * JSX `{/* … *\/}` line. Line-based, like the rest of this guard: a comment trailing code on the
+ * same line counts as code, and a line that closes a block comment and then carries code counts.
+ *
+ * @param {string[]} lines
+ */
+export function countCodeLines(lines) {
+  let code = 0;
+  let inBlock = false;
+  for (const raw of lines) {
+    let text = raw.trim();
+    if (inBlock) {
+      const close = text.indexOf("*/");
+      if (close === -1) continue;
+      inBlock = false;
+      text = text
+        .slice(close + 2)
+        .replace(/^\}/, "")
+        .trim();
+    }
+    while (text.startsWith("/*") || text.startsWith("{/*")) {
+      const open = text.indexOf("/*");
+      const close = text.indexOf("*/", open + 2);
+      if (close === -1) {
+        inBlock = true;
+        text = "";
+        break;
+      }
+      text = text
+        .slice(close + 2)
+        .replace(/^\}/, "")
+        .trim();
+    }
+    if (text.length === 0 || text.startsWith("//")) continue;
+    code++;
+  }
+  return code;
+}
+
+/**
+ * Every top-level function in a source file, as `{ name, line, lines, code }`: `lines` from its
+ * first line to its last, `code` the ones {@link countCodeLines} counts.
  *
  * A declaration ends at the first column-0 line that only closes. A column-0 line that closes
  * and opens (`}: Props) {`) is still the signature; any other column-0 line is the next
@@ -113,19 +190,26 @@ export function measureFunctions(source) {
       }
       break;
     }
-    functions.push({ name, line: start + 1, lines: end - start + 1 });
+    functions.push({
+      name,
+      line: start + 1,
+      lines: end - start + 1,
+      code: countCodeLines(lines.slice(start, end + 1)),
+    });
     start = end;
   }
   return functions;
 }
 
-/** Every function's length keyed `<file>#<name>`; a name declared twice keeps its longest. */
+/**
+ * Every function's code lines keyed `<file>#<name>`; a name declared twice keeps its longest.
+ */
 export function functionCounts(files) {
   const counts = new Map();
   for (const [file, source] of files) {
-    for (const { name, lines } of measureFunctions(source)) {
+    for (const { name, code } of measureFunctions(source)) {
       const key = `${file}#${name}`;
-      counts.set(key, Math.max(counts.get(key) ?? 0, lines));
+      counts.set(key, Math.max(counts.get(key) ?? 0, code));
     }
   }
   return counts;
@@ -145,6 +229,10 @@ const PAGE_ADVICE = {
 const FUNCTION_ADVICE = {
   over: "Split it along its sections into named functions or sibling components.",
   grew: "Move what you added into a function of its own instead of raising the number.",
+};
+const FILE_ADVICE = {
+  over: "Move a component, a group of helpers or a describe block into a sibling file.",
+  grew: "Put what you added in a sibling file (a new test file for new tests) instead of raising the number.",
 };
 
 /**
@@ -192,6 +280,22 @@ export function compareFunctionLengths(counts, baseline, limit = FUNCTION_LINE_L
   return comparePageLengths(counts, baseline, limit, FUNCTION_ADVICE);
 }
 
+/** {@link comparePageLengths} for the file half: its limit and its advice. */
+export function compareFileLengths(counts, baseline, limit = FILE_LINE_LIMIT) {
+  return comparePageLengths(counts, baseline, limit, FILE_ADVICE);
+}
+
+/**
+ * Unbanked entries within {@link NEAR_LIMIT_BAND} of the limit, longest first, as warnings.
+ * They pass; the warning tells the next session to split before it adds, not after.
+ */
+export function nearLimit(counts, baseline, limit, band = NEAR_LIMIT_BAND) {
+  return [...counts.entries()]
+    .filter(([key, lines]) => baseline[key] === undefined && lines <= limit && lines > limit - band)
+    .sort(([, a], [, b]) => b - a)
+    .map(([key, lines]) => `${key}: ${lines} of ${limit} — split it before you add to it.`);
+}
+
 /** The baseline a `--write` would produce: every page still over the limit. */
 export function nextBaseline(counts, limit = PAGE_LINE_LIMIT) {
   return Object.fromEntries(
@@ -228,6 +332,18 @@ async function measurePages() {
   return counts;
 }
 
+async function measureFiles() {
+  const source = (name) => SOURCE_FILE.test(name) && !TEST_FILE.test(name);
+  const files = [];
+  for (const root of FILE_ROOTS) files.push(...(await walk(root, source)));
+  files.push(...(await walk(TEST_ROOT, (name) => TEST_FILE.test(name))));
+  const counts = new Map();
+  for (const file of files) {
+    counts.set(posix(file), countLines(await readFile(path.join(ROOT, file), "utf8")));
+  }
+  return counts;
+}
+
 async function measureFunctionsInRoots() {
   const files = [];
   for (const root of FUNCTION_ROOTS) {
@@ -254,10 +370,21 @@ const HALVES = {
     limit: FUNCTION_LINE_LIMIT,
     measure: measureFunctionsInRoots,
     compare: compareFunctionLengths,
-    note: `Line counts of the top-level functions under ${FUNCTION_ROOTS.join(", ")} still over ${FUNCTION_LINE_LIMIT} lines, keyed <file>#<name>. Written by \`node scripts/check-page-length.mjs --write\`. Each number may only go down — see scripts/check-page-length.mjs.`,
+    note: `Code lines (blank and comment lines left out) of the top-level functions under ${FUNCTION_ROOTS.join(", ")} still over ${FUNCTION_LINE_LIMIT}, keyed <file>#<name>. Written by \`node scripts/check-page-length.mjs --write\`. Each number may only go down — see scripts/check-page-length.mjs.`,
     refusal:
-      'A function only gets shorter — split it along its sections (a rise from a merge is absorbed with `node scripts/check-page-length.mjs --absorb "<why>"`, which banks both halves)',
+      'A function only gets shorter — split it along its sections (a rise from a merge is absorbed with `node scripts/check-page-length.mjs --absorb "<why>"`, which banks every half)',
     noun: "functions",
+    unit: "code lines",
+  },
+  files: {
+    guard: FILE_GUARD,
+    limit: FILE_LINE_LIMIT,
+    measure: measureFiles,
+    compare: compareFileLengths,
+    note: `Line counts of the files under ${FILE_ROOTS.join(", ")} and the test files under ${TEST_ROOT} still over ${FILE_LINE_LIMIT} lines, the size scripts/guard-read.mjs refuses to read whole. Written by \`node scripts/check-page-length.mjs --write\`. Each number may only go down — see scripts/check-page-length.mjs.`,
+    refusal:
+      'A file only gets shorter — move code into a sibling file (a rise from a merge is absorbed with `node scripts/check-page-length.mjs --absorb "<why>"`, which banks every half)',
+    noun: "files",
   },
 };
 
@@ -267,7 +394,9 @@ async function runHalf(half) {
   if (process.argv.includes("--report")) {
     const over = Object.entries(nextBaseline(counts, half.limit)).sort(([, a], [, b]) => b - a);
     for (const [key, lines] of over) console.log(`${String(lines).padStart(5)}  ${key}`);
-    console.log(`\n${over.length} of ${counts.size} ${half.noun} over ${half.limit} lines\n`);
+    console.log(
+      `\n${over.length} of ${counts.size} ${half.noun} over ${half.limit} ${half.unit ?? "lines"}\n`,
+    );
     return 0;
   }
 
@@ -284,7 +413,7 @@ async function runHalf(half) {
       note: half.note,
       refusal: half.refusal,
       absorb,
-      summary: (entries) => `${entries} ${half.noun} over ${half.limit} lines`,
+      summary: (entries) => `${entries} ${half.noun} over ${half.limit} ${half.unit ?? "lines"}`,
     });
   }
 
@@ -293,15 +422,19 @@ async function runHalf(half) {
     console.error(`${half.guard} violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
     return 1;
   }
+  const near = nearLimit(counts, baseline, half.limit);
+  if (near.length > 0) {
+    console.warn(`${half.guard}: near the limit\n${near.map((n) => `- ${n}`).join("\n")}`);
+  }
   const over = Object.keys(baseline).length;
   console.log(
-    `${half.guard}: nothing grew — ${over} of ${counts.size} ${half.noun} still over ${half.limit} lines`,
+    `${half.guard}: nothing grew — ${over} of ${counts.size} ${half.noun} still over ${half.limit} ${half.unit ?? "lines"}`,
   );
   return 0;
 }
 
 /** Runs the named halves in order and exits non-zero when any of them failed. */
-export async function main(halves = ["pages", "functions"]) {
+export async function main(halves = ["pages", "functions", "files"]) {
   let code = 0;
   for (const name of halves) code = Math.max(code, await runHalf(HALVES[name]));
   process.exit(code);

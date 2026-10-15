@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { configuredValue } from "@/lib/configured";
+import { boundedStripeFetch } from "./stripe-fetch";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -93,8 +94,9 @@ function authHeaders(secretKey: string): Record<string, string> {
 
 export function stripeConnectProvider(
   config: ConnectConfig,
-  fetchImpl: Fetch,
+  unboundedFetch: Fetch,
 ): StripeConnectProvider {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   return {
     authorizeUrl({ redirectUri, state }) {
       const params = new URLSearchParams({

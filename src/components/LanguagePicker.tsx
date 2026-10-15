@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { MENU_PANEL, MENU_TICK_GUTTER } from "@/components/ui/menu";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { motionMs } from "@/lib/motion";

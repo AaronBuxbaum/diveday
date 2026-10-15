@@ -7,7 +7,7 @@ import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
 import { scopedId } from "@/lib/element-id";

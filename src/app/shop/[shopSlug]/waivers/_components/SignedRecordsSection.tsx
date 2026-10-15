@@ -5,7 +5,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
 import { SearchField } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { QueryForm } from "@/components/ui/QueryForm";
 import type { SignedRecordView, SignedWaiverEntry, WaiverIntegrityAuditPage } from "@/db/waivers";
 import type { StaffTranslator } from "@/i18n/staff-messages";

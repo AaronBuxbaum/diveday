@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { SHEET_PANEL_CLASS, SheetHeader } from "@/components/ui/sheet";
 import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import { motionMs } from "@/lib/motion";
@@ -100,6 +100,11 @@ export function PersonSheet({
   mark?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  // The sheet opens client-side only, so a tap that lands before React owns the
+  // trigger is swallowed. It publishes the staff surfaces' `data-hydrated` flag,
+  // which the e2e suite waits on (`openManifestPerson`).
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLElement>(null);
   const titleId = useId();
@@ -236,6 +241,7 @@ export function PersonSheet({
           aria-expanded={open}
           aria-controls={sheetId}
           aria-label={triggerLabel}
+          data-hydrated={hydrated ? "true" : undefined}
           className={triggerClassName}
           onClick={() => setOpen(true)}
         >

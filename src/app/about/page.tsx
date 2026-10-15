@@ -8,7 +8,7 @@ import { MarketingFooter, MarketingFooterFallback } from "@/components/Marketing
 import { CaptainPhoneFrame } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import {
   BANNER_TITLE_CLASS,
   MARKETING_EYEBROW_CLASS,

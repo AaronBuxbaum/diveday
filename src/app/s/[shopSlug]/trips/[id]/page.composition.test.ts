@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeSource } from "@/test/route-source";
 import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet";
 
 /**
@@ -20,21 +19,18 @@ import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet"
  * `src/i18n/provider-coverage.test.ts`, and for the same reason.
  */
 
-const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const SOURCE = component("page.tsx");
 /** The page's one wave of reads, lifted beside it so the route stays a renderer (#2353). */
-const READS_SOURCE = readFileSync(join(__dirname, "_lib/page-reads.ts"), "utf8");
+const READS_SOURCE = component("_lib/page-reads.ts");
 
 /**
  * The source of a file the page composes, read by name: under the route's
  * `_components/`, or under `src/components/`. A section that moves out of the
  * page moves its pins with it by changing only the name passed here.
  */
+/** The route's source, wherever a split put it (`src/test/route-source.ts`). */
 function component(file: string): string {
-  try {
-    return readFileSync(join(__dirname, "_components", file), "utf8");
-  } catch {
-    return readFileSync(join(__dirname, "..", "..", "..", "..", "..", "components", file), "utf8");
-  }
+  return routeSource(import.meta.dirname, file);
 }
 
 const FOOT_BAR_SOURCE = component("PhoneFootBar.tsx");
@@ -153,7 +149,10 @@ describe("the trip page's order", () => {
     // one the hero renders that is not on its own list.
     const jsxNames = (text: string) =>
       new Set([...text.matchAll(/<([A-Z][A-Za-z]*)/g)].map((m) => `<${m[1]}`));
-    const region = SOURCE.slice(positionOf("<TripHero"), positionOf("{confirmed ? ("));
+    const region = SOURCE.slice(
+      positionOf("<TripHero"),
+      positionOf("{confirmed && bookingToken ? ("),
+    );
     expect([...jsxNames(region)].sort()).toEqual([...ABOVE_THE_FORM].sort());
     const heroBody = HERO.slice(HERO.indexOf("return ("));
     expect([...jsxNames(heroBody)].sort()).toEqual([...IN_THE_HERO].sort());
@@ -229,7 +228,7 @@ describe("the trip page's order", () => {
     // The departure widens from `lg` to hold the form beside the reading; the
     // cancelled landing has no form and keeps the one column.
     const DEPARTURE = `${FRAME} lg:max-w-5xl`;
-    const LOADING = readFileSync(join(__dirname, "loading.tsx"), "utf8");
+    const LOADING = component("loading.tsx");
     const HEADER = component("TripHeader.tsx");
     // Both of this page's non-embed columns — the departure and the cancelled
     // landing — and its loading skeleton.
@@ -277,7 +276,7 @@ describe("the trip page's order", () => {
     expect(region.match(/<TripChangeLedger[^>]*className=/g) ?? []).toEqual([]);
     // The skeleton stands its bars on the same stack, so nothing moves when
     // the sections land.
-    expect(readFileSync(join(__dirname, "loading.tsx"), "utf8")).toContain(opening);
+    expect(component("loading.tsx")).toContain(opening);
     // Under the pitch's door the conditions line sits flush, its rule the
     // door's close; with no door the two stand a section apart.
     expect(region).toContain(

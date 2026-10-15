@@ -30,7 +30,7 @@ const CRON_MONITOR_SLUG =
  * timed-out rather than still running.
  */
 const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "0 4 * * 1" },
+  schedule: { type: "crontab", value: "7 4 * * 1" },
   checkinMargin: 240,
   maxRuntime: 10,
   timezone: "Etc/UTC",

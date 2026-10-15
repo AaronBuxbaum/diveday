@@ -4,8 +4,8 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { GroupLabel } from "./group-label";
 import {
-  GroupLabel,
   InsetGroup,
   LedgerGroup,
   LedgerRow,
@@ -20,6 +20,7 @@ afterEach(cleanup);
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(HERE, "..", "..");
 const LEDGER = join(HERE, "ledger.tsx");
+const GROUP_LABEL = join(HERE, "group-label.tsx");
 
 /** Every `.ts`/`.tsx`/`.css` under `src/`, so a sweep can be stated as a fact. */
 function sourceFiles(dir: string): string[] {
@@ -31,14 +32,14 @@ function sourceFiles(dir: string): string[] {
 }
 
 /**
- * The two files a sweep must not report itself against: `ledger.tsx`, which is
- * where the spelling is supposed to live, and this file, which has to name it
- * once to pin it. Every *other* test file is in scope — a copy pasted into a
+ * The files a sweep must not report itself against: `group-label.tsx` and
+ * `ledger.tsx`, which are where the spellings are supposed to live, and this
+ * file, which has to name them once to pin them. Every *other* test file is in scope — a copy pasted into a
  * test is still a second copy, and excluding the whole `.test.*` family (as
  * this sweep first did) leaves a hole exactly where a snapshot of a hand-rolled
  * label would land.
  */
-const SWEEP_EXEMPT = new Set([LEDGER, join(HERE, "ledger.test.tsx")]);
+const SWEEP_EXEMPT = new Set([GROUP_LABEL, LEDGER, join(HERE, "ledger.test.tsx")]);
 
 /**
  * The class tokens a `className={…}` expression can produce, read from the
@@ -166,13 +167,13 @@ const LABEL_SWEEP_EXEMPT = new Set([
 ]);
 
 /**
- * Read out of `ledger.tsx` rather than written here, for two reasons: this file
+ * Read out of `group-label.tsx` rather than written here, for two reasons: this file
  * then holds the value in exactly one place — the pin below — rather than
  * scattering copies of the thing it is policing, and a later adjustment to the
  * tracking value moves every check in this file with it instead of leaving a
  * stale literal behind.
  */
-const spelling = readFileSync(LEDGER, "utf8").match(/tracking-\[[\d.]+em\]/)?.[0];
+const spelling = readFileSync(GROUP_LABEL, "utf8").match(/tracking-\[[\d.]+em\]/)?.[0];
 
 /**
  * The mechanical half of ADR 20260827-clearwater-surface-language's decision 3
@@ -182,7 +183,7 @@ const spelling = readFileSync(LEDGER, "utf8").match(/tracking-\[[\d.]+em\]/)?.[0
  * pasted somewhere nobody is looking.
  */
 describe("the group label is single-sourced", () => {
-  it("declares the tracking value in ledger.tsx", () => {
+  it("declares the tracking value in group-label.tsx", () => {
     expect(spelling).toBe("tracking-[0.14em]");
   });
 
@@ -254,7 +255,7 @@ describe("GroupLabel", () => {
       </GroupLabel>,
     );
     const heading = screen.getByRole("heading", { level: 2, name: "Run the shop" });
-    // The tracking class comes from `spelling` — read out of `ledger.tsx` — so
+    // The tracking class comes from `spelling` — read out of `group-label.tsx` — so
     // an adjustment to the value moves this check with it. Written literally,
     // it would be the stale literal the sweep above exists to forbid.
     expect(heading).toHaveClass(

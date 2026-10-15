@@ -142,6 +142,7 @@ describe("stripeBillingProvider", () => {
       cancelUrl: "https://dive.day/shop/x/settings/billing",
       firstChargeAt: end,
       now: NOW,
+      replaces: null,
     });
     expect(result).toEqual({
       status: "ok",
@@ -154,6 +155,33 @@ describe("stripeBillingProvider", () => {
     expect(body.get("line_items[0][price]")).toBe("price_monthly");
     expect(body.get("subscription_data[metadata][shop_id]")).toBe("shop-1");
     expect(body.get("subscription_data[trial_end]")).toBe(String(end.getTime() / 1000));
+  });
+
+  it("keys a Checkout by shop, what is sent and the session it replaces", async () => {
+    // Unkeyed, a press whose answer timed out and was pressed again opened a
+    // second live session for one subscription (layer B security review).
+    const fetchMock = fakeFetch(200, { id: "cs_1", url: "https://checkout.stripe.com/c/pay/cs_1" });
+    const provider = stripeBillingProvider(CONFIG, fetchMock as never);
+    const key = async (overrides: { replaces?: string | null; firstChargeAt?: Date | null }) => {
+      await provider.createCheckoutSession({
+        shopId: "shop-1",
+        customerId: "cus_123",
+        successUrl: "https://dive.day/ok",
+        cancelUrl: "https://dive.day/back",
+        firstChargeAt: new Date("2027-04-02T04:00:00.000Z"),
+        now: NOW,
+        replaces: null,
+        ...overrides,
+      });
+      const init = fetchMock.mock.calls.at(-1)?.[1];
+      return ((init?.headers ?? {}) as Record<string, string>)["Idempotency-Key"];
+    };
+    const first = await key({});
+    expect(first).toMatch(/^diveday-billing-checkout-shop-1-[0-9a-f]{16}$/);
+    expect(await key({})).toBe(first);
+    // A press after the last session was settled must not replay that session.
+    expect(await key({ replaces: "cs_0" })).not.toBe(first);
+    expect(await key({ firstChargeAt: null })).not.toBe(first);
   });
 
   it("settles the last Checkout session: expires an open one, reports a completed one", async () => {
@@ -231,6 +259,7 @@ describe("stripeBillingProvider", () => {
         cancelUrl: "https://x",
         firstChargeAt: null,
         now: NOW,
+        replaces: null,
       }),
     ).toEqual({ status: "failed" });
   });

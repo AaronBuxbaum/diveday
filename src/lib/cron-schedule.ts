@@ -25,7 +25,7 @@
 export const DAILY_TICK_UTC_HOUR = 14;
 
 /** UTC minute of the daily tick. Mirrors vercel.json. */
-export const DAILY_TICK_UTC_MINUTE = 0;
+export const DAILY_TICK_UTC_MINUTE = 7;
 
 /**
  * The daily tick as a crontab expression, for the places that must hand the
