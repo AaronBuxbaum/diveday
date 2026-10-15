@@ -1945,7 +1945,7 @@ export async function moveBooking(
           isNull(tripHelpRequests.handledAt),
         ),
       );
-    // An "Ask to move" from the booking page (H-118) was about the old
+    // An "Ask to move" from the booking page (H-126) was about the old
     // departure, and this move is its answer: the Inbox row stops waiting,
     // and the new date's page may be asked about afresh.
     await tx

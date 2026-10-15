@@ -88,7 +88,7 @@ export default async function PublicPackagesPage({
     facts: [
       t("packages.dives", { count: pkg.diveCount }),
       t("packages.perDive", { amount: money(Math.round(pkg.priceCents / pkg.diveCount)) }),
-      // A dive is one tank (H-115): said on the card, where the $200 is decided.
+      // A dive is one tank (H-123): said on the card, where the $200 is decided.
       t("packages.diveIsATank"),
       pkg.scope === "all" ? t("packages.scopeAll") : t("packages.scopeFunDives"),
       // Whether the card runs out is part of a few-hundred-dollar decision, so it is said

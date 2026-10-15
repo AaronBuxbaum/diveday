@@ -1,4 +1,4 @@
-# H-117: Which price does a course session show?
+# H-125: Which price does a course session show?
 
 - **Status:** Chosen
 - **Human owner:** Product owner

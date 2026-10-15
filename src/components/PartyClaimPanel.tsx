@@ -16,7 +16,7 @@ export type PartyClaimSeat = {
   /** A shareable claim URL for a still-unclaimed seat; null once claimed (or unmintable). */
   claimUrl: string | null;
   /**
-   * The organizer may sign this seat's release as its parent (H-116): an
+   * The organizer may sign this seat's release as its parent (H-124): an
    * unclaimed "Under 18" seat still owing one. Absent reads as no.
    */
   signForMinor?: boolean;
@@ -48,7 +48,7 @@ export function PartyClaimPanel({
   seats: PartyClaimSeat[];
   /**
    * Opens a minor seat's release for the organizer to sign as its parent
-   * (H-116), bound to the organizer's own link. Without it no seat offers to.
+   * (H-124), bound to the organizer's own link. Without it no seat offers to.
    */
   signWaiverAction?: (formData: FormData) => Promise<void>;
 }) {
@@ -117,7 +117,7 @@ export function PartyClaimPanel({
                 </details>
               </div>
             ) : null}
-            {/* **A parent signs a child's release** (H-116): "Sign Mia's
+            {/* **A parent signs a child's release** (H-124): "Sign Mia's
                 waiver" opens her release on this device, with the guardian's
                 card. Only the seat's id is posted; the server re-checks it. */}
             {seat.signForMinor && signWaiverAction ? (

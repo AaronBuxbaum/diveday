@@ -1,4 +1,4 @@
-# H-123: May the demo wear the visitor's own shop name?
+# H-131: May the demo wear the visitor's own shop name?
 
 - **Status:** Chosen
 - **Human owner:** Product owner

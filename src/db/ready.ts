@@ -339,7 +339,7 @@ export type ReadyPageData = {
    */
   runningLate: { open: boolean; saidAt: Date | null };
   /**
-   * **"Ask to move"** (H-118). Past the free-cancellation window, or on a
+   * **"Ask to move"** (H-126). Past the free-cancellation window, or on a
    * trip with none, a paid cancel returns nothing right away, so the diver
    * may ask the shop for another date instead: `open` while that ask could be
    * made — a paid seat the diver may still release, not held, on their own

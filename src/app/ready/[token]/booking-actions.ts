@@ -66,7 +66,7 @@ export async function payFromReady(token: string) {
 }
 
 /**
- * **Ask to move** (H-118). Past the free-cancellation window, cancelling
+ * **Ask to move** (H-126). Past the free-cancellation window, cancelling
  * forfeits what was paid; this files a request in the shop's Inbox naming the
  * seat instead, with the diver's optional note. Nothing moves here: moving a
  * paid seat stays staff-side (ADR 20260821-the-diver-may-release-their-own-seat).

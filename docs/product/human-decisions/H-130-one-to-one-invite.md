@@ -1,4 +1,4 @@
-# H-122: May staff invite one past diver to a named departure?
+# H-130: May staff invite one past diver to a named departure?
 
 - **Status:** Chosen
 - **Human owner:** Product owner

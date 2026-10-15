@@ -328,7 +328,7 @@ describe("a message from somebody with a boat to catch", () => {
   });
 });
 
-describe("an Ask to move from the booking page (H-118)", () => {
+describe("an Ask to move from the booking page (H-126)", () => {
   const SEAT: MessageSeat = {
     bookingId: "bf000000-1111-4222-8333-444444444444",
     tripId: "cf000000-1111-4222-8333-444444444444",

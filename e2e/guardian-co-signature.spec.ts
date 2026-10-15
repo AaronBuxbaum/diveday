@@ -329,7 +329,7 @@ test("a seat booked as under 18 asks for a parent on its release", async ({ page
 });
 
 /**
- * **A parent signs a child's release from their own page** (H-116, ADR
+ * **A parent signs a child's release from their own page** (H-124, ADR
  * 20261014-parent-signs-minor-release). Mia is booked "Under 18" with no
  * email of her own, so nothing reaches anyone for her; the lead's panel offers
  * "Sign Mia's waiver", which opens Mia's release with the guardian's card on

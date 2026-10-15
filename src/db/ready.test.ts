@@ -223,7 +223,7 @@ describe("getReadyPageData", () => {
   });
 
   /**
-   * H-118: "Ask to move" is offered exactly when a cancel would forfeit what
+   * H-126: "Ask to move" is offered exactly when a cancel would forfeit what
    * was paid, and says it was asked once it has been.
    */
   it("offers Ask to move only past the free window on a paid seat, then says it was asked", async () => {

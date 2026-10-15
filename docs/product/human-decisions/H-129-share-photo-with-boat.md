@@ -1,4 +1,4 @@
-# H-121: May a diver share a photo with everyone on the boat?
+# H-129: May a diver share a photo with everyone on the boat?
 
 - **Status:** Chosen
 - **Human owner:** Product owner

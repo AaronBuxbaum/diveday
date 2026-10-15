@@ -26,7 +26,7 @@ export function PartySection({
   allSet: boolean;
   /** Bound to the page's token when the booking may lead a seat; null otherwise. */
   addSeatAction: ((formData: FormData) => Promise<void>) | null;
-  /** "Sign Mia's waiver" (H-116), bound to the page's token. */
+  /** "Sign Mia's waiver" (H-124), bound to the page's token. */
   signWaiverAction?: (formData: FormData) => Promise<void>;
   t: DiverTranslator;
 }) {
