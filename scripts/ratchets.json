@@ -349,6 +349,7 @@
     "src/db/trips-queries.test.ts": 1143,
     "src/db/trips-series.test.ts": 1873,
     "src/db/waiver-issue.test.ts": 1178,
+    "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-orders.test.ts": 1408,
     "src/i18n/label-maps.test.ts": 1327,
     "src/lib/agency-check.test.ts": 930,
@@ -364,8 +365,7 @@
     "src/lib/today.test.ts": 1651,
     "src/lib/trip-admission.test.ts": 984,
     "src/lib/waivers.test.ts": 1402,
-    "src/proxy.test.ts": 1241,
-    "src/db/waivers-medical.test.ts": 1004
+    "src/proxy.test.ts": 1241
   },
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
