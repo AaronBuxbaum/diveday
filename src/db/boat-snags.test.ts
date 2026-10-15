@@ -282,14 +282,37 @@ describe("boat snags (in-memory PGlite)", () => {
       .where(eq(boatSnags.id, fixedBefore));
     await db.update(boatSnags).set({ notedAt: between }).where(eq(boatSnags.id, writtenAfter));
 
+    // `writtenAfter` is this crew's own late note (the boat left late): the
+    // record carries it whatever the clock said; a carried snag needs the
+    // scheduled start to have found it open.
     const atFirst = await snagsOpenWhenSailed(db, shop.id, first.id);
     expect(atFirst.map((snag) => snag.note).sort()).toEqual([
       "Ladder bolt loose",
+      "Swim step cracked",
       "VHF crackles on 16",
     ]);
     expect(atFirst[0]).toMatchObject({ itemLabel: item.label, notedByName: captain.fullName });
     const atSecond = await snagsOpenWhenSailed(db, shop.id, second.id);
     expect(atSecond.map((snag) => snag.id).sort()).toEqual([carried, writtenAfter].sort());
     expect(await snagsOpenWhenSailed(db, shop.id, third.id)).toEqual([]);
+  });
+
+  it("names nothing open when a canceled departure sailed, because it never did", async () => {
+    const { db, shop, first, second, item, captain } = await snagContext();
+    const noted = await noteSnag(db, {
+      shopId: shop.id,
+      tripId: first.id,
+      checklistItemId: item.id,
+      personId: captain.id,
+      note: "VHF crackles on 16",
+    });
+    if (!noted.ok) throw new Error("note refused");
+    await db
+      .update(boatSnags)
+      .set({ notedAt: new Date(first.startsAt.getTime() - 60 * 60_000) })
+      .where(eq(boatSnags.id, noted.snagId));
+    expect(await snagsOpenWhenSailed(db, shop.id, second.id)).toHaveLength(1);
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, second.id));
+    expect(await snagsOpenWhenSailed(db, shop.id, second.id)).toEqual([]);
   });
 });

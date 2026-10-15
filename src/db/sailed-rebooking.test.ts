@@ -117,6 +117,8 @@ describe("sailedRebooking (in-memory PGlite)", () => {
     const missing = await seat(db, shop.id, dawn.id, "Nadia Osei");
     const ashore = await seat(db, shop.id, dawn.id, "Theo Park");
     const back = await seat(db, shop.id, dawn.id, "Ana Ruiz");
+    // Nobody counted the dock; the after-dive count missed her.
+    const uncounted = await seat(db, shop.id, dawn.id, "Ines Varga");
     const lines = await sailedRebooking(db, {
       shopId: shop.id,
       tripId: dawn.id,
@@ -133,11 +135,13 @@ describe("sailedRebooking (in-memory PGlite)", () => {
         afterDive: new Map([
           [missing.bookingId, "missing_after_dive"],
           [back.bookingId, "boarded"],
+          [uncounted.bookingId, "missing_after_dive"],
         ]),
       },
     });
     expect(lines.has(missing.bookingId)).toBe(false);
     expect(lines.has(ashore.bookingId)).toBe(false);
+    expect(lines.has(uncounted.bookingId)).toBe(false);
     expect(lines.has(back.bookingId)).toBe(true);
   });
 

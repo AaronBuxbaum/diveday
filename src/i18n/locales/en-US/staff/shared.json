@@ -139,7 +139,8 @@
     "daySubtitle": "{count, plural, one {# departure} other {# departures}} · {date}",
     "dayEmpty": "No departures today.",
     "dayEmptyTomorrow": "No departures tomorrow.",
-    "dayDoor": "Print the day"
+    "dayDoor": "Print the day",
+    "dayDoorTomorrow": "Print tomorrow"
   },
   "commandPalette": {
     "search": "Search",

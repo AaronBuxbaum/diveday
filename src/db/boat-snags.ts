@@ -42,21 +42,21 @@ async function activeStaff(tx: DbExecutor, shopId: string, personId: string): Pr
 
 /**
  * The live departure and its boat, or why there is nothing to hang a snag on.
- * A writer passes `forWrite`: a canceled departure never sails, so it neither
- * writes a snag nor answers one.
+ * A writer, and the sailed-with record, pass `sailing`: a canceled departure
+ * never sails, so it neither writes a snag, answers one, nor sailed with one.
  */
 async function tripBoat(
   tx: DbExecutor,
   shopId: string,
   tripId: string,
-  forWrite = false,
+  sailing = false,
 ): Promise<{ boatId: string; startsAt: Date } | "trip_unavailable" | "no_boat"> {
   const [trip] = await tx
     .select({ boatId: trips.boatId, startsAt: trips.startsAt, status: trips.status })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
-  if (!trip || (forWrite && trip.status === "cancelled")) return "trip_unavailable";
+  if (!trip || (sailing && trip.status === "cancelled")) return "trip_unavailable";
   return trip.boatId ? { boatId: trip.boatId, startsAt: trip.startsAt } : "no_boat";
 }
 
@@ -377,18 +377,21 @@ export type SailedWithSnag = {
 
 /**
  * **What the crew knew when the boat left** (dive-domain review FIX 5): the
- * boat's snags written before the departure's scheduled start and not fixed
- * before it, for the departure log and the incident printout. A read over
- * stamps the snag already carries, never a new write; "VHF crackles on 16" is
- * written down so the record says the crew sailed knowing it. Oldest first;
- * empty for a departure with no boat.
+ * boat's snags not fixed before the departure's scheduled start, for the
+ * departure log and the incident printout. This crew's own snags count
+ * whenever they were written (a boat that leaves at 8:20 sails with the
+ * 8:07 note); one carried from an earlier crew counts only when written
+ * before the scheduled start. A read over stamps the snag already carries,
+ * never a new write; "VHF crackles on 16" is written down so the record says
+ * the crew sailed knowing it. Oldest first; empty for a departure with no
+ * boat or a canceled one, which never sailed.
  */
 export async function snagsOpenWhenSailed(
   db: DbExecutor,
   shopId: string,
   tripId: string,
 ): Promise<SailedWithSnag[]> {
-  const boat = await tripBoat(db, shopId, tripId);
+  const boat = await tripBoat(db, shopId, tripId, true);
   if (typeof boat === "string") return [];
   return db
     .select({
@@ -411,7 +414,7 @@ export async function snagsOpenWhenSailed(
       and(
         eq(boatSnags.shopId, shopId),
         eq(boatSnags.boatId, boat.boatId),
-        lt(boatSnags.notedAt, boat.startsAt),
+        or(eq(boatSnags.notedOnTripId, tripId), lt(boatSnags.notedAt, boat.startsAt)),
         or(isNull(boatSnags.fixedAt), gte(boatSnags.fixedAt, boat.startsAt)),
       ),
     )

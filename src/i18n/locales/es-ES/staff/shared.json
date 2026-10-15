@@ -139,7 +139,8 @@
     "daySubtitle": "{count, plural, one {# salida} other {# salidas}} · {date}",
     "dayEmpty": "Hoy no hay salidas.",
     "dayEmptyTomorrow": "Mañana no hay salidas.",
-    "dayDoor": "Imprimir el día"
+    "dayDoor": "Imprimir el día",
+    "dayDoorTomorrow": "Imprimir mañana"
   },
   "commandPalette": {
     "search": "Buscar",

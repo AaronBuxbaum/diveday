@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { after } from "next/server";
 import { Fragment } from "react";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { readDayLoadOut } from "@/db/closeout";
@@ -15,6 +17,7 @@ import { tomorrowNoon } from "@/lib/closeout";
 import { formatDateTimeTz, formatDateWithYear } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { settleWithLimit } from "@/lib/settle-with-limit";
+import { shopPath } from "@/lib/staff-notices";
 import { AutoPrint } from "../trips/[id]/_components/AutoPrint";
 import { TRIP_SHELL_CLASS } from "../trips/[id]/_components/trip-shell";
 import { keptSheets } from "../trips/[id]/print/_components/kept-sheets";
@@ -68,8 +71,10 @@ const DEPARTURES_IN_FLIGHT = 3;
  * paper at the counter, and it keeps an attacker-supplied date off a document
  * that carries every diver's emergency contact. **The one other day is a fixed
  * word, `?day=tomorrow`** (fifth-loop ideas, item 2): the evening close's
- * "Print tomorrow", for the fill station and the gear room working tonight.
- * Any other value prints today; there is still no way to name a date.
+ * "Print tomorrow", for the fill station and the gear room working tonight,
+ * and a permanent door on today's sheet (a night boat's evening close comes
+ * late; dive-domain review N1). Any other value prints today; there is still
+ * no way to name a date.
  *
  * The header adds the day's tanks and rental pieces across every boat, and,
  * when there is nitrox to fill, says once what that count is: seats with a
@@ -185,6 +190,18 @@ export default async function ShopDayPrintPage({
               date: formatDateTimeTz(now, locale, shop.timezone),
             })}
           </p>
+          {tomorrow ? null : (
+            <Link
+              href={`${shopPath(shopSlug, "print")}?day=tomorrow`}
+              className={buttonClass({
+                variant: "secondary",
+                size: "sm",
+                className: "mt-3 print:hidden",
+              })}
+            >
+              {t("shared.printPacket.dayDoorTomorrow")}
+            </Link>
+          )}
         </header>
         {/* **A `Fragment`, not a wrapper div.** The page breaks between sheets
           are `globals.css`'s `.print-bundle-page:first-of-type { break-before:

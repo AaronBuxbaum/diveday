@@ -14,6 +14,7 @@ import { readDayMoney } from "@/app/shop/[shopSlug]/_components/today/day-money"
 import { FirstBookableCard } from "@/app/shop/[shopSlug]/_components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
+import { QuietDay } from "@/app/shop/[shopSlug]/_components/today/QuietDay";
 import { RecapNoteEditor } from "@/app/shop/[shopSlug]/_components/today/RecapNoteEditor";
 import {
   RoleOrientationCard,
@@ -26,7 +27,6 @@ import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
-import { LedgerRow } from "@/components/ui/ledger";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { daySummaryBlocked, sharedInHorizonReadiness } from "@/db/blockers";
 import { hasArrivals, listCheckInQueue } from "@/db/check-in";
@@ -799,36 +799,14 @@ async function TodayBody({
       ) : null}
 
       {quietDay ? (
-        <div className="mt-8 flex flex-col gap-4">
-          <Link
-            href={`/shop/${shopSlug}/schedule/board?add=1`}
-            className={buttonClass({ className: "w-full justify-center sm:w-auto" })}
-          >
-            {t("shopHome.quietAddDeparture")}
-          </Link>
-          {nextDeparture ? (
-            <ul>
-              <LedgerRow
-                href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
-                linkLabel={nextDeparture.title}
-              >
-                <div className="min-w-0">
-                  <p className="font-medium break-words">{nextDeparture.title}</p>
-                  <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 text-sm text-muted tabular-nums">
-                    <span>{t("shopHome.quietNextDepartureLabel")}</span>
-                    <span>
-                      {formatShortDate(nextDeparture.startsAt, locale, shop.timezone)} ·{" "}
-                      {formatTime(nextDeparture.startsAt, locale, shop.timezone)}
-                    </span>
-                    <span>
-                      {nextDeparture.booked}/{nextDeparture.sellableCapacity}
-                    </span>
-                  </p>
-                </div>
-              </LedgerRow>
-            </ul>
-          ) : null}
-        </div>
+        <QuietDay
+          shopSlug={shopSlug}
+          nextDeparture={nextDeparture}
+          loadOut={eveningClose.tomorrow}
+          locale={locale}
+          timeZone={shop.timezone}
+          t={t}
+        />
       ) : (
         <DaySpine
           context={{

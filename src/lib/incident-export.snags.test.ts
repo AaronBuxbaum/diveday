@@ -32,13 +32,20 @@ function input(overrides: Partial<IncidentExportInput> = {}): IncidentExportInpu
   };
 }
 
+/**
+ * The hash of `input()` as built at a8a4f877d, before `sailedWithSnags`
+ * existed: a log printed then must still match a fresh export with no snags.
+ */
+const PRE_FIELD_HASH = "0d46a441e95fca1128142c615f66803dd9795a94335109a8704e03d65ed84af9";
+
 /** What the crew knew when the boat left (dive-domain review of fifth-loop item 1). */
 describe("buildIncidentExport: snags open when the boat sailed", () => {
-  it("carries an empty list for a boat with none, and still reproduces its hash", () => {
+  it("carries an empty list for a boat with none, and hashes as before the field existed", () => {
     const doc = buildIncidentExport(input());
     expect(doc.sailedWithSnags).toEqual([]);
     const { contentHash, ...body } = doc;
     expect(incidentExportContentHash(body)).toBe(contentHash);
+    expect(contentHash).toBe(PRE_FIELD_HASH);
   });
 
   it("carries each one and hashes it", () => {

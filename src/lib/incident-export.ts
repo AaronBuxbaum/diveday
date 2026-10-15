@@ -284,8 +284,8 @@ export type IncidentPreDepartureCheckEntry = {
 };
 
 /**
- * A boat snag open when the departure sailed: written before its start and
- * not fixed before it (`snagsOpenWhenSailed`).
+ * A boat snag open when the departure sailed: not fixed before its start, and
+ * written by this crew or carried from before it (`snagsOpenWhenSailed`).
  */
 export type IncidentSailedSnagEntry = {
   itemLabel: string;
