@@ -15,12 +15,14 @@ account's `payouts_enabled` flag. Stripe's fees were nowhere at all. (UX review 
 
 ## Decision
 
-- **The Connect endpoint also subscribes to `payout.paid` and `payout.failed`.** One
+- **The Connect endpoint also subscribes to `payout.paid`, `payout.failed` and `payout.canceled`.** One
   `stripe_payouts` row per Stripe payout, upserted by `recordStripePayout`
   (`src/db/payouts.ts`). The shop is the one holding the event's own `account` in
   `shop_stripe_accounts`; nothing in the payout body chooses it, and a row never moves to another
-  account. Events are ordered by their `created` time, and `failed` is terminal: a `paid`
-  delivered after a failure (late or stamped later) changes nothing.
+  account. Events are ordered by their `created` time, and `failed` and `canceled` are terminal: a `paid`
+  delivered after either (late or stamped later) changes nothing. A canceled payout is shown on
+  Reports as canceled and never on the Orders index's paid or failed lines; `payout.updated` is
+  not subscribed (nothing it carries is shown).
 - **What a payout carried is asked of Stripe once, at webhook time, never at render.** A paid
   automatic payout is itemized with `GET /v1/balance_transactions?payout=…` on the connected
   account (`src/lib/payments/payout-summary.ts`, read-only, the platform key of the event's own

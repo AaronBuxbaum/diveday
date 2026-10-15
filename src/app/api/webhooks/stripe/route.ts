@@ -208,9 +208,9 @@ const payoutObjectSchema = z.object({
   amount: z.number().int().nonnegative(),
   currency: z.string().min(1),
   arrival_date: z.number().int(),
-  // The only two statuses a `payout.paid` / `payout.failed` event carries;
-  // anything else is refused rather than stored as "Paid out".
-  status: z.enum(["paid", "failed"]),
+  // The only statuses a `payout.paid` / `payout.failed` / `payout.canceled`
+  // event carries; anything else is refused rather than stored as "Paid out".
+  status: z.enum(["paid", "failed", "canceled"]),
   automatic: z.boolean().optional(),
   failure_code: z.string().nullable().optional(),
 });
@@ -333,7 +333,7 @@ async function applyDisputeEvent(
 }
 
 /**
- * A `payout.paid` or `payout.failed` event (ADR 20261012-payouts-reach-diveday).
+ * A `payout.paid`, `payout.failed` or `payout.canceled` event (ADR 20261012-payouts-reach-diveday).
  * Whose payout it is comes from the event's own `account` alone, the same way
  * every reversal is scoped. Returns the outcome to log, or `"deferred"` when
  * Stripe could not be asked what the payout carried.
@@ -807,7 +807,8 @@ export async function POST(request: Request) {
         logOutcome(await applyDisputeEvent(db, event, occurredAt, sourceLookup));
         break;
       case "payout.paid":
-      case "payout.failed": {
+      case "payout.failed":
+      case "payout.canceled": {
         // Money Stripe moved to the shop's bank, or tried to (ADR
         // 20261012-payouts-reach-diveday).
         const outcome = await applyPayoutEvent(db, event, occurredAt, expectedLivemode);

@@ -592,6 +592,7 @@
     "paid": "Pago de {amount} a tu banco el {date}, por lo cobrado del {from} al {to}",
     "paidOneDay": "Pago de {amount} a tu banco el {date}, por lo cobrado el {from}",
     "paidNoSpan": "Pago de {amount} a tu banco el {date}",
+    "canceled": "Se canceló un pago de {amount} previsto para el {date}.",
     "failed": "Falló un pago de {amount} previsto para el {date}. Revisa la cuenta bancaria en Stripe."
   }
 }

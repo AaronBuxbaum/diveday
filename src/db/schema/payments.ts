@@ -1138,7 +1138,7 @@ export const paymentDisputes = pgTable(
 /**
  * **A Stripe payout**: money Stripe moved from a shop's connected account to
  * its bank, one row per Stripe payout, kept current by the `payout.paid` and
- * `payout.failed` webhooks (ADR 20261012-payouts-reach-diveday).
+ * `payout.failed` and `payout.canceled` webhooks (ADR 20261012-payouts-reach-diveday).
  *
  * This is the line that ties Reports to the bank statement: "Paid out $1,842
  * on Oct 3, covering Sep 27 to Oct 1". The amount, currency and arrival date

@@ -171,6 +171,29 @@ describe("recordStripePayout", () => {
     expect(row?.status).toBe("failed");
   });
 
+  it("a cancelled payout reads as cancelled, and a late paid never undoes it", async () => {
+    const { db } = ctx;
+    await connected(db);
+    const { lookup, summarize } = lookupAnswering(SUMMARIZED);
+    const canceled = await recordStripePayout(
+      db,
+      payoutEvent({ status: "canceled", at: "2026-10-03T01:00:00Z" }),
+      lookup,
+    );
+    expect(canceled).toMatchObject({
+      status: "recorded",
+      payout: { status: "canceled", failureCode: null, feeCents: null },
+    });
+    expect(summarize).not.toHaveBeenCalled();
+    expect(
+      await recordStripePayout(db, payoutEvent({ at: "2026-10-05T01:00:00Z" }), lookup),
+    ).toEqual({ status: "stale" });
+    const [row] = await db.select().from(stripePayouts);
+    expect(row?.status).toBe("canceled");
+    // Neither the Orders index's paid line nor its failure warning reads it.
+    expect(await latestShopPayouts(db, ctx.shop.id)).toEqual({ paid: null, failed: null });
+  });
+
   it("never moves a payout to another account", async () => {
     const { db } = ctx;
     await connected(db);

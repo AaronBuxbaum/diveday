@@ -592,6 +592,7 @@
     "paid": "Paid out {amount} on {date}, covering {from} to {to}",
     "paidOneDay": "Paid out {amount} on {date}, covering {from}",
     "paidNoSpan": "Paid out {amount} on {date}",
+    "canceled": "A payout of {amount} due {date} was canceled.",
     "failed": "A payout of {amount} due {date} failed. Check the bank account in Stripe."
   }
 }

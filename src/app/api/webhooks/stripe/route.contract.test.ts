@@ -384,6 +384,19 @@ describe("payouts (ADR 20261012-payouts-reach-diveday)", () => {
   });
 });
 
+describe("payout.canceled", () => {
+  it("records the cancelled status off a real Payout, with no failure code", async () => {
+    expect((await deliver("payout.canceled")).status).toBe(200);
+    expect(recordStripePayout).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({
+        payout: expect.objectContaining({ status: "canceled", failureCode: null }),
+      }),
+      expect.anything(),
+    );
+  });
+});
+
 describe("account events", () => {
   it("account.updated passes the real Account's own flags and currency through", async () => {
     expect((await deliver("account.updated")).status).toBe(200);

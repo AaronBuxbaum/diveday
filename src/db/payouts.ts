@@ -3,8 +3,10 @@ import type { PayoutSummaryLookup } from "@/lib/payments/payout-summary";
 import type { AppDb, DbExecutor } from "./client";
 import { type StripePayout, shopStripeAccounts, stripePayouts } from "./schema";
 
-/** Stripe's terminal "this never reached the bank" status. */
+/** Stripe's terminal "this never reached the bank" statuses. */
 const FAILED = "failed";
+const CANCELED = "canceled";
+const NEVER_ARRIVED = [FAILED, CANCELED] as const;
 
 export type PayoutEvent = {
   /** The event's own `account`: the only statement of whose payout this is. */
@@ -15,7 +17,7 @@ export type PayoutEvent = {
     id: string;
     amountCents: number;
     currency: string;
-    status: "paid" | "failed";
+    status: "paid" | "failed" | "canceled";
     arrivalDate: Date;
     /** Stripe itemizes only an automatic payout's balance transactions. */
     automatic: boolean;
@@ -32,16 +34,20 @@ export type PayoutOutcome =
   /** Stripe could not be asked what the payout carried; deliver the event again. */
   | { status: "deferred" };
 
+function isNeverArrived(status: string): boolean {
+  return (NEVER_ARRIVED as readonly string[]).includes(status);
+}
+
 /**
  * **Record a payout Stripe made to a shop's bank** (ADR
- * 20261012-payouts-reach-diveday), from `payout.paid` or `payout.failed`.
+ * 20261012-payouts-reach-diveday), from `payout.paid`, `payout.failed` or `payout.canceled`.
  *
  * The shop is the one holding the event's connected account, and still
  * connected — never anything in the payout body — and a row never moves to
  * another account once written.
  * One row per Stripe payout, upserted, ordered by the event's `created` time:
- * a replay changes nothing and a late `paid` never overwrites a `failed`
- * (Stripe can fail a payout after calling it paid, never the other way round).
+ * a replay changes nothing and a late `paid` never overwrites a `failed` or
+ * `canceled` (Stripe can fail a payout after calling it paid, never the other way round).
  *
  * A paid automatic payout is itemized once, the first time it is seen paid;
  * a row that already has its summary is never asked about again. Stripe being
@@ -72,12 +78,13 @@ export async function recordStripePayout(
     .where(eq(stripePayouts.stripePayoutId, event.payout.id))
     .limit(1);
   if (existing && existing.stripeAccountId !== event.stripeAccountId) return { status: "stale" };
-  if (existing?.status === FAILED && event.payout.status !== FAILED) return { status: "stale" };
+  const neverArrives = event.payout.status !== "paid";
+  if (existing && isNeverArrived(existing.status) && !neverArrives) return { status: "stale" };
   if (existing && existing.lastEventAt > event.occurredAt) return { status: "stale" };
 
   const failed = event.payout.status === FAILED;
   const needsSummary =
-    !failed &&
+    !neverArrives &&
     event.payout.automatic &&
     existing?.feeCents == null &&
     existing?.coveredFrom == null;
@@ -134,7 +141,12 @@ export async function recordStripePayout(
       setWhere: and(
         eq(stripePayouts.stripeAccountId, row.stripeAccountId),
         sql`${stripePayouts.lastEventAt} <= ${row.lastEventAt}`,
-        failed ? sql`true` : sql`${stripePayouts.status} <> ${FAILED}`,
+        neverArrives
+          ? sql`true`
+          : sql`${stripePayouts.status} not in (${sql.join(
+              NEVER_ARRIVED.map((status) => sql`${status}`),
+              sql`, `,
+            )})`,
       ),
     })
     .returning();
