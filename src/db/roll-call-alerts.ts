@@ -14,8 +14,9 @@ import { shoreAlertRecipient } from "@/lib/shore-alert-contact";
 import { shopPath } from "@/lib/staff-notices";
 import type { AppDb, DbExecutor } from "./client";
 import { sendNotification } from "./notifications";
+import { ownerLogins } from "./owner-logins";
 import { pushTripAlert } from "./push-subscriptions";
-import { people, personRoles, shops, trips, userAccounts } from "./schema";
+import { shops, trips } from "./schema";
 import { issueShoreAlertStopToken } from "./shore-alert-tokens";
 import { listRollCallGaps, type OpenRollCall } from "./today";
 import { liveTrip, notRehearsal } from "./trips-live";
@@ -70,29 +71,6 @@ export type StaleRollCallSummary = {
   /** Owners' claims given back because no owner email or push landed. */
   released: number;
 };
-
-/** The shop's owners with an active login: the alert's email recipients. */
-async function ownerLogins(db: DbExecutor, shopId: string) {
-  return db
-    .selectDistinct({
-      personId: people.id,
-      fullName: people.fullName,
-      email: userAccounts.email,
-      locale: people.locale,
-    })
-    .from(userAccounts)
-    .innerJoin(people, eq(people.id, userAccounts.personId))
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(
-      and(
-        eq(people.shopId, shopId),
-        isNull(people.deletedAt),
-        isNull(people.anonymizedAt),
-        eq(userAccounts.status, "active"),
-        eq(personRoles.role, "owner"),
-      ),
-    );
-}
 
 /** The two claims a departure's alert takes, one per audience. */
 const CLAIMS = {

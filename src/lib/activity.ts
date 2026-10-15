@@ -245,6 +245,13 @@ type ActivityParamShapes = {
   shore_alert_contact_changed: { actor: string };
   shore_alert_contact_cleared: { actor: string };
   /**
+   * **The shore contact stopped the alerts themselves**, with the link in one
+   * (H-118 re-review). No account did it, so the line names nobody: the one
+   * row in `activity_events` with no actor (the table's check allows it for
+   * this code only).
+   */
+  shore_alert_contact_stopped: Record<string, never>;
+  /**
    * An erasure ran over this line.
    *
    * A code rather than a blanked payload, so the row reads the same way it
@@ -355,6 +362,7 @@ export const ACTIVITY_CODES = [
   "shore_alert_contact_set",
   "shore_alert_contact_changed",
   "shore_alert_contact_cleared",
+  "shore_alert_contact_stopped",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",

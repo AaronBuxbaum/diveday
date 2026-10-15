@@ -5412,6 +5412,11 @@
       "shoreWhy": "You’re getting this because {shopName} lists you as its shore contact for roll-call alerts, and you confirmed it.",
       "shoreStop": "Stop these alerts"
     },
+    "shoreAlertStopped": {
+      "subject": "{shopName}: the shore contact stopped roll-call alerts",
+      "body": "Your shore contact used the link in a roll-call alert to stop them. DiveDay won’t email them again unless you save their address and they confirm it again.",
+      "open": "Open the emergency reference"
+    },
     "shoreAlertConfirmation": {
       "subject": "{shopName} asks you to be its shore contact",
       "body": "{shopName} wants to email you when a boat’s roll call is still open after the boat was due back, because someone may not be back aboard. Confirm to get these alerts. Each one has a link to stop them.",

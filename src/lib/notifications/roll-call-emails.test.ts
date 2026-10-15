@@ -11,6 +11,7 @@ import {
   rollCallStaleEmail,
   rollCallStaleShoreEmail,
   shoreAlertConfirmationEmail,
+  shoreAlertStoppedEmail,
 } from "./roll-call-emails";
 
 const base = {
@@ -281,5 +282,43 @@ describe("the shore_alert_confirmation kind", () => {
       "shore-alert-confirmation/44444444-4444-4444-8444-444444444444",
     );
     expect(notificationIsQueueable(notification)).toBe(false);
+  });
+});
+
+/** H-118 re-review: the owners hear when the shore contact stopped the alerts. */
+describe("the shore_alert_stopped kind", () => {
+  const input = {
+    locale: "en-US" as const,
+    recipientName: "Ana Ruiz",
+    shopName: "Blue <Mantis>",
+    settingsUrl: "https://diveday.example/shop/blue/settings/emergency-reference",
+  };
+
+  it("says the shore contact stopped them and what brings them back, in both languages", () => {
+    const email = shoreAlertStoppedEmail(input);
+    expect(email.subject).toBe("Blue <Mantis>: the shore contact stopped roll-call alerts");
+    expect(email.text).toContain("Hi Ana");
+    expect(email.text).toContain("confirm it again");
+    expect(email.text).toContain(input.settingsUrl);
+    expect(shoreAlertStoppedEmail({ ...input, locale: "es-ES" }).subject).toBe(
+      "Blue <Mantis>: el contacto en tierra dejó los avisos del pase de lista",
+    );
+  });
+
+  it("goes once per owner per stop, from DiveDay", () => {
+    const notification = notificationSchema.parse({
+      kind: "shore_alert_stopped",
+      shopId: "11111111-1111-4111-8111-111111111111",
+      personId: "22222222-2222-4222-8222-222222222222",
+      to: "owner@example.com",
+      stoppedAt: new Date("2026-10-15T12:00:00Z"),
+      ...input,
+    });
+    expect(notificationIdempotencyKey(notification)).toBe(
+      "shore-alert-stopped/22222222-2222-4222-8222-222222222222/2026-10-15T12:00:00.000Z",
+    );
+    expect(messageFor(notification).subject).toBe(
+      "Blue <Mantis>: the shore contact stopped roll-call alerts",
+    );
   });
 });

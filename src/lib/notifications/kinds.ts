@@ -1531,6 +1531,25 @@ const shoreAlertConfirmationSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
 });
 
+/**
+ * **The shore contact stopped the alerts themselves** (H-118 re-review): one
+ * email to each owner with an active login when a stop link took the address
+ * off the shop, so the shop learns its shore contact is gone. Staff
+ * operational mail, from DiveDay; the address that stopped is never in it.
+ */
+const shoreAlertStoppedSchema = z.object({
+  kind: z.literal("shore_alert_stopped"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  settingsUrl: z.url().max(2_000),
+  /** When the link was used: one email per owner per stop. */
+  stoppedAt: z.date(),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -1605,6 +1624,7 @@ export const notificationSchema = z
     rollCallStaleSchema,
     rollCallStaleShoreSchema,
     shoreAlertConfirmationSchema,
+    shoreAlertStoppedSchema,
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
@@ -1902,5 +1922,7 @@ export function notificationIdempotencyKey(notification: Notification): string {
       return `roll-call-stale-shore/${notification.tripId}`;
     case "shore_alert_confirmation":
       return `shore-alert-confirmation/${notification.tokenId}`;
+    case "shore_alert_stopped":
+      return `shore-alert-stopped/${notification.personId}/${notification.stoppedAt.toISOString()}`;
   }
 }

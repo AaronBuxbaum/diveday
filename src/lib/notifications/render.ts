@@ -45,6 +45,7 @@ import {
   rollCallStaleEmail,
   rollCallStaleShoreEmail,
   shoreAlertConfirmationEmail,
+  shoreAlertStoppedEmail,
 } from "./roll-call-emails";
 import { shopVoiceOf } from "./shop-voice";
 import { weeklyDigestEmail } from "./weekly-digest-email";
@@ -154,6 +155,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   }
   if (notification.kind === "roll_call_stale") return rollCallStaleEmail(notification);
   if (notification.kind === "roll_call_stale_shore") return rollCallStaleShoreEmail(notification);
+  if (notification.kind === "shore_alert_stopped") return shoreAlertStoppedEmail(notification);
   if (notification.kind === "shore_alert_confirmation") {
     return shoreAlertConfirmationEmail(notification);
   }

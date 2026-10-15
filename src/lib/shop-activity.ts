@@ -85,6 +85,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   shore_alert_contact_set: "safety",
   shore_alert_contact_changed: "safety",
   shore_alert_contact_cleared: "safety",
+  shore_alert_contact_stopped: "safety",
   order_refunded: "money",
   paid_after_close_refunded: "money",
   seat_refunded: "money",

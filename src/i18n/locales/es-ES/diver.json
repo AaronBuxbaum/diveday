@@ -5412,6 +5412,11 @@
       "shoreWhy": "Recibes este aviso porque {shopName} te tiene como su contacto en tierra para los avisos del pase de lista, y lo confirmaste.",
       "shoreStop": "Dejar de recibir estos avisos"
     },
+    "shoreAlertStopped": {
+      "subject": "{shopName}: el contacto en tierra dejó los avisos del pase de lista",
+      "body": "Tu contacto en tierra usó el enlace de un aviso del pase de lista para dejar de recibirlos. DiveDay no volverá a escribirle salvo que guardes su dirección y la confirme de nuevo.",
+      "open": "Abrir la referencia de emergencia"
+    },
     "shoreAlertConfirmation": {
       "subject": "{shopName} te pide ser su contacto en tierra",
       "body": "{shopName} quiere escribirte cuando el pase de lista de un barco siga abierto pasada su hora de regreso, porque puede que alguien no haya vuelto a bordo. Confirma para recibir estos avisos. Cada uno lleva un enlace para dejar de recibirlos.",

@@ -152,3 +152,29 @@ export function shoreAlertConfirmationEmail(
     html: `<p>${escapeHtml(body)}</p>${emailButton(input.confirmUrl, confirm)}<p>${escapeHtml(expiry)}</p>`,
   };
 }
+
+export type ShoreAlertStoppedEmailInput = {
+  locale: DiverLocale;
+  recipientName: string;
+  shopName: string;
+  settingsUrl: string;
+};
+
+/**
+ * To each owner when the shore contact used the stop link in an alert (H-118
+ * re-review): that it stopped, what brings it back, and where. The address is
+ * not in it.
+ */
+export function shoreAlertStoppedEmail(input: ShoreAlertStoppedEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
+  const greetingText = t("notifications.common.greeting", { firstName });
+  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const body = t("notifications.shoreAlertStopped.body");
+  const open = t("notifications.shoreAlertStopped.open");
+  return {
+    subject: t("notifications.shoreAlertStopped.subject", { shopName: input.shopName }),
+    text: `${greetingText}\n\n${body}\n\n${open}:\n${input.settingsUrl}\n`,
+    html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.settingsUrl, open)}`,
+  };
+}

@@ -1,8 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import type { Notification, NotificationProvider } from "@/lib/notifications";
+import { ACTIVITY_CODE_KINDS } from "@/lib/shop-activity";
 import { SHORE_ALERT_CONFIRMATION_TTL_MS } from "@/lib/shore-alert-contact";
 import { fileScopedShopContext } from "@/test/db";
-import { shops } from "./schema";
+import { activityEvents, shops } from "./schema";
 import { setShopShoreAlertContact } from "./shops";
 import {
   checkShoreAlertConfirmation,
@@ -178,6 +180,83 @@ describe("stopping shore alerts by the link in one", () => {
       alreadyStopped: true,
     });
     expect((await shoreColumns())?.email).toBe("next@example.com");
+  });
+
+  it("works once: a spent link cannot take the same address off again", async () => {
+    const { db, shop, staffId } = await shoreOnFile();
+    const token = await issueShoreAlertStopToken(db, {
+      shopId: shop.id,
+      email: "shore@example.com",
+    });
+    await stopShoreAlertsByToken(db, { token, now: at });
+    // The shop adds the same address back and it confirms again.
+    await setShopShoreAlertContact(db, shop.id, {
+      email: "shore@example.com",
+      consentAt: at,
+      consentByPersonId: staffId,
+      confirmedAt: at,
+    });
+    expect(await resolveShoreAlertStopToken(db, token)).toMatchObject({ alreadyStopped: true });
+    expect(await stopShoreAlertsByToken(db, { token, now: at })).toMatchObject({
+      alreadyStopped: true,
+    });
+    expect((await shoreColumns())?.email).toBe("shore@example.com");
+  });
+
+  it("tells the shop: a line in its log no account wrote, and an email to each owner", async () => {
+    const { db, shop } = await shoreOnFile();
+    await db
+      .update(shops)
+      .set({ shoreAlertConfirmedAt: at, isDemo: false })
+      .where(eq(shops.id, shop.id));
+    const token = await issueShoreAlertStopToken(db, {
+      shopId: shop.id,
+      email: "shore@example.com",
+    });
+    const sent: Notification[] = [];
+    const provider: NotificationProvider = {
+      async send(notification) {
+        sent.push(notification);
+        return { status: "sent", providerMessageId: `msg-${sent.length}` };
+      },
+    };
+    const origin = "https://diveday.example";
+    await stopShoreAlertsByToken(db, { token, now: at, origin, provider });
+
+    const stoppedLines = () =>
+      db
+        .select({
+          actor: activityEvents.actorPersonId,
+          tripId: activityEvents.tripId,
+          params: activityEvents.params,
+        })
+        .from(activityEvents)
+        .where(
+          and(
+            eq(activityEvents.shopId, shop.id),
+            eq(activityEvents.code, "shore_alert_contact_stopped"),
+          ),
+        );
+    expect(await stoppedLines()).toEqual([{ actor: null, tripId: null, params: {} }]);
+    expect(ACTIVITY_CODE_KINDS.shore_alert_contact_stopped).toBe("safety");
+
+    expect(sent.length).toBeGreaterThan(0);
+    for (const notification of sent) {
+      if (notification.kind !== "shore_alert_stopped") throw new Error("wrong kind");
+      expect(notification).toMatchObject({
+        shopId: shop.id,
+        settingsUrl: `${origin}/shop/${shop.slug}/settings/emergency-reference`,
+        stoppedAt: at,
+      });
+      // The owners hear that it stopped, never the address it went to.
+      expect(JSON.stringify(notification)).not.toContain("shore@example.com");
+    }
+
+    // A second use is already stopped: no second line, no second email.
+    sent.length = 0;
+    await stopShoreAlertsByToken(db, { token, now: at, origin, provider });
+    expect(await stoppedLines()).toHaveLength(1);
+    expect(sent).toEqual([]);
   });
 
   it("is unknown for a token that was never minted", async () => {

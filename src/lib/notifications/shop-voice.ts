@@ -70,6 +70,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "desk_after_hours":
     case "stripe_payments_restricted":
     case "roll_call_stale":
+    case "shore_alert_stopped":
       return null;
   }
 }

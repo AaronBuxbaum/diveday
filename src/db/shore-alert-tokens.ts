@@ -1,9 +1,14 @@
 import { and, eq, exists, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
+import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { SHORE_ALERT_CONFIRMATION_TTL_MS } from "@/lib/shore-alert-contact";
+import { shopPath } from "@/lib/staff-notices";
 import type { AppDb, DbExecutor } from "./client";
-import { shopShoreAlertTokens, shops } from "./schema";
+import { sendNotification } from "./notifications";
+import { ownerLogins } from "./owner-logins";
+import { activityEvents, shopShoreAlertTokens, shops } from "./schema";
 
 /**
  * **The shore contact's two links** (H-118 review; `shop_shore_alert_tokens`).
@@ -220,8 +225,11 @@ export type ShoreAlertStopContext = {
 
 /**
  * Resolves a stop link to its shop, or null for a token that is not one. A
- * link whose address the shop no longer names resolves as already stopped,
- * so a second click says so rather than failing.
+ * link that was used, or whose address the shop no longer names, resolves as
+ * already stopped, so a second click says so rather than failing. A link
+ * works once: after the shop adds the same address back and it confirms
+ * again, an old alert's spent link cannot take it off a second time
+ * (H-118 security re-review).
  */
 export async function resolveShoreAlertStopToken(
   db: DbExecutor,
@@ -233,6 +241,7 @@ export async function resolveShoreAlertStopToken(
       shopName: shops.name,
       email: shopShoreAlertTokens.email,
       current: shops.shoreAlertEmail,
+      usedAt: shopShoreAlertTokens.usedAt,
     })
     .from(shopShoreAlertTokens)
     .innerJoin(shops, eq(shops.id, shopShoreAlertTokens.shopId))
@@ -245,39 +254,119 @@ export async function resolveShoreAlertStopToken(
     .limit(1);
   if (!row) return null;
   const named = row.current !== null && lower(row.current) === row.email;
-  return { shopId: row.shopId, shopName: row.shopName, alreadyStopped: !named };
+  return {
+    shopId: row.shopId,
+    shopName: row.shopName,
+    alreadyStopped: row.usedAt !== null || !named,
+  };
 }
 
 /**
- * The stop: clears the shop's shore contact (all four columns, which the
- * table's checks require to move together) while the shop still names the
- * address the link went to. Idempotent.
+ * The stop: claims the link (it works once), clears the shop's shore contact
+ * (all four columns, which the table's checks require to move together) while
+ * the shop still names the address the link went to, and writes the log's
+ * line with no actor, all in one transaction. Then it tells each owner by
+ * email (H-118 re-review: a one-click unsubscribe from a mail client makes an
+ * accidental stop plausible, and the shop must not learn of it from a silent
+ * Today). A spent, stale or unknown link changes nothing and sends nothing.
  */
 export async function stopShoreAlertsByToken(
-  db: DbExecutor,
-  input: { token: string; now?: Date },
+  db: AppDb,
+  input: { token: string; now?: Date; origin?: string | null; provider?: NotificationProvider },
 ): Promise<ShoreAlertStopContext | null> {
-  const context = await resolveShoreAlertStopToken(db, input.token);
-  if (!context || context.alreadyStopped) return context;
   const now = input.now ?? nowDate();
   const tokenHash = hashBearerToken(input.token);
-  await db
-    .update(shops)
-    .set({
-      shoreAlertEmail: null,
-      shoreAlertConsentAt: null,
-      shoreAlertConsentByPersonId: null,
-      shoreAlertConfirmedAt: null,
-    })
-    .where(
-      and(
-        eq(shops.id, context.shopId),
-        sql`lower(${shops.shoreAlertEmail}) = (select ${shopShoreAlertTokens.email} from ${shopShoreAlertTokens} where ${shopShoreAlertTokens.tokenHash} = ${tokenHash})`,
-      ),
-    );
-  await db
-    .update(shopShoreAlertTokens)
-    .set({ usedAt: now })
-    .where(and(eq(shopShoreAlertTokens.tokenHash, tokenHash), isNull(shopShoreAlertTokens.usedAt)));
-  return context;
+  const stopped = await db.transaction(async (tx) => {
+    const [claimed] = await tx
+      .update(shopShoreAlertTokens)
+      .set({ usedAt: now })
+      .where(
+        and(
+          eq(shopShoreAlertTokens.tokenHash, tokenHash),
+          eq(shopShoreAlertTokens.purpose, "stop"),
+          isNull(shopShoreAlertTokens.usedAt),
+        ),
+      )
+      .returning({ shopId: shopShoreAlertTokens.shopId, email: shopShoreAlertTokens.email });
+    if (!claimed) return null;
+    const [cleared] = await tx
+      .update(shops)
+      .set({
+        shoreAlertEmail: null,
+        shoreAlertConsentAt: null,
+        shoreAlertConsentByPersonId: null,
+        shoreAlertConfirmedAt: null,
+      })
+      .where(
+        and(eq(shops.id, claimed.shopId), sql`lower(${shops.shoreAlertEmail}) = ${claimed.email}`),
+      )
+      .returning({
+        id: shops.id,
+        name: shops.name,
+        slug: shops.slug,
+        isDemo: shops.isDemo,
+        defaultLocale: shops.defaultLocale,
+      });
+    if (!cleared) return null;
+    await tx.insert(activityEvents).values({
+      shopId: cleared.id,
+      actorPersonId: null,
+      code: "shore_alert_contact_stopped",
+      params: {},
+      occurredAt: now,
+    });
+    return cleared;
+  });
+  if (!stopped) return resolveShoreAlertStopToken(db, input.token);
+  await tellOwnersShoreAlertsStopped(db, { shop: stopped, stoppedAt: now, ...input });
+  return { shopId: stopped.id, shopName: stopped.name, alreadyStopped: false };
+}
+
+/**
+ * One email to each owner with an active login. Never throws: the stop is
+ * already recorded, and the person who clicked must not see an error over the
+ * shop's mail.
+ */
+async function tellOwnersShoreAlertsStopped(
+  db: AppDb,
+  input: {
+    shop: { id: string; name: string; slug: string; isDemo: boolean; defaultLocale: string };
+    stoppedAt: Date;
+    origin?: string | null;
+    provider?: NotificationProvider;
+  },
+): Promise<void> {
+  const { shop } = input;
+  // A demo shop never sent an alert, so it has no stop link to use.
+  if (shop.isDemo) return;
+  const origin = input.origin === undefined ? publicAppUrl() : input.origin;
+  if (!origin) return;
+  try {
+    let sent = 0;
+    const owners = await ownerLogins(db, shop.id);
+    for (const owner of owners) {
+      const delivery = await sendNotification(
+        db,
+        {
+          kind: "shore_alert_stopped",
+          shopId: shop.id,
+          personId: owner.personId,
+          to: owner.email,
+          locale: recipientLocale(owner.locale, shop.defaultLocale),
+          recipientName: owner.fullName,
+          shopName: shop.name,
+          settingsUrl: `${origin}${shopPath(shop.slug, "settings", "emergency-reference")}`,
+          stoppedAt: input.stoppedAt,
+        },
+        input.provider,
+      );
+      if (delivery.status === "sent") sent += 1;
+    }
+    log("shore_alert.stopped", "info", { shopId: shop.id, owners: owners.length, sent });
+  } catch (error) {
+    log("shore_alert.stopped_notify_failed", "error", {
+      shopId: shop.id,
+      error: error instanceof Error ? error.name : "unknown",
+    });
+  }
 }
