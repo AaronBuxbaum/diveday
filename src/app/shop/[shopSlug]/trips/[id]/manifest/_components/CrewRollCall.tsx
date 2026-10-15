@@ -222,7 +222,7 @@ export function CrewRollCall({
               const teamLabel = buddyTeamLabel(member.buddyTeams ?? []);
               const capsule = member.buddyAlert ? (
                 <Badge tone={member.buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
-                  {buddyAlertText(t, member.buddyAlert)}
+                  {buddyAlertText(t, member.buddyAlert, member.buddyMissing)}
                 </Badge>
               ) : null;
               /**
@@ -409,7 +409,7 @@ export function CrewRollCall({
                       {teamLabel ? (
                         <Badge tone="neutral">
                           {teamLabel}
-                          {member.buddyAlert ? ` · ${buddyAlertText(t, member.buddyAlert)}` : ""}
+                          {member.buddyAlert ? ` · ${buddyAlertText(t, member.buddyAlert, member.buddyMissing)}` : ""}
                         </Badge>
                       ) : null}
                     </p>

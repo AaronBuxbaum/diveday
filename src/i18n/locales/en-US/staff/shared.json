@@ -485,7 +485,9 @@
   "buddyTeam": {
     "with": "Buddy team: {names}",
     "separatedDock": "Buddy not aboard yet",
-    "separatedAfterDive": "Buddy not back aboard"
+    "separatedAfterDive": "Buddy not back aboard",
+    "separatedDockNamed": "{name} not aboard yet",
+    "separatedAfterDiveNamed": "{name} not back aboard"
   },
   "payments": {
     "connect": "Connect payments"

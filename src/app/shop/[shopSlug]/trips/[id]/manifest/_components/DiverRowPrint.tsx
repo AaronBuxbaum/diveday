@@ -82,7 +82,7 @@ export function DiverRowPrint({
         {teamLabel ? (
           <Badge tone="neutral">
             {teamLabel}
-            {diver.buddyAlert ? ` · ${buddyAlertText(t, diver.buddyAlert)}` : ""}
+            {diver.buddyAlert ? ` · ${buddyAlertText(t, diver.buddyAlert, diver.buddyMissing)}` : ""}
           </Badge>
         ) : null}
       </p>

@@ -613,12 +613,43 @@ export function buddyAlertFor(
   // After a dive the crew is *counting a boat back*, believing everyone is
   // already on it. There an uncalled teammate is "not yet", not a split: only a
   // recorded "did not come back" earns the alarm (see the note above).
-  const split =
-    checkpoint === "departure"
-      ? teammates.some((mate) => mate?.state !== "boarded" && !isRecordedAshore(checkpoint, mate))
-      : teammates.some((mate) => isNotBackAboard(checkpoint, mate));
-  if (!split) return null;
+  if (!teammates.some((mate) => teammateRaisesAlert(checkpoint, mate))) return null;
   return checkpoint === "departure" ? "separated_dock" : "separated_after_dive";
+}
+
+/** Whether one teammate's record is the one that raises the alert at this checkpoint. */
+function teammateRaisesAlert(checkpoint: RollCallCheckpoint, mate: MaybeRollCall): boolean {
+  return checkpoint === "departure"
+    ? mate?.state !== "boarded" && !isRecordedAshore(checkpoint, mate)
+    : isNotBackAboard(checkpoint, mate);
+}
+
+/**
+ * **Who the buddy alert is about** (#2403): the full names of the teammates
+ * whose records raise it, across every team the row is on, in team order.
+ * Empty when the row has no alert. The words and the first-name rule live in
+ * `src/i18n/buddy-labels.ts`; this only answers who, from the same predicate
+ * `buddyAlertFor` asks, so the name and the alert cannot disagree. A
+ * teammate the caller cannot resolve is dropped like everywhere here.
+ */
+function buddyMissingNamesIn(
+  checkpoint: RollCallCheckpoint,
+  self: MaybeRollCall,
+  teams: ReadonlyArray<ManifestBuddyTeam | null | undefined>,
+  byBooking: ReadonlyMap<string, MaybeRollCall>,
+  byCrewId: ReadonlyMap<string, MaybeRollCall>,
+): string[] {
+  if (self?.state !== "boarded") return [];
+  return teams.flatMap((team) =>
+    (team?.others ?? []).flatMap((other) => {
+      const known =
+        other.kind === "diver" ? byBooking.has(other.bookingId) : byCrewId.has(other.personId);
+      if (!known) return [];
+      const record =
+        other.kind === "diver" ? byBooking.get(other.bookingId) : byCrewId.get(other.personId);
+      return teammateRaisesAlert(checkpoint, record) ? [other.fullName] : [];
+    }),
+  );
 }
 
 /** One crew member, reduced to the only field a head count reads. */
@@ -903,6 +934,11 @@ export type TripManifest = {
      * 20260804-buddy-teams).
      */
     buddyAlert: BuddyAlert | null;
+    /**
+     * Who raises it: the teammates' full names, empty without an alert
+     * (#2403). Absent on a hand-built row, which reads as the generic words.
+     */
+    buddyMissing?: string[];
   })[];
   /**
    * Whether this checkpoint is closed — divers *and* crew. Derived here so the
@@ -921,6 +957,11 @@ export type TripManifest = {
      * know who came back, so it displays teams and computes nothing.
      */
     buddyAlert: BuddyAlert | null;
+    /**
+     * Who raises it: the teammates' full names, empty without an alert
+     * (#2403). Absent on a hand-built row, which reads as the generic words.
+     */
+    buddyMissing?: string[];
   })[];
   summary: {
     /**
@@ -1094,6 +1135,13 @@ export function buildTripManifest(input: {
     readiness: diver.readiness ?? unavailableReadiness(),
     rollCall: diver.rollCall,
     buddyAlert: buddyAlertFor(checkpoint, diver.rollCall, teammateRollCalls([diver.buddyTeam])),
+    buddyMissing: buddyMissingNamesIn(
+      checkpoint,
+      diver.rollCall,
+      [diver.buddyTeam],
+      rollCallByBooking,
+      rollCallByCrewId,
+    ),
   }));
   const crew = input.crew.map((member) => ({
     ...member,
@@ -1101,6 +1149,13 @@ export function buildTripManifest(input: {
       checkpoint,
       member.rollCall,
       teammateRollCalls(member.buddyTeams ?? []),
+    ),
+    buddyMissing: buddyMissingNamesIn(
+      checkpoint,
+      member.rollCall,
+      member.buddyTeams ?? [],
+      rollCallByBooking,
+      rollCallByCrewId,
     ),
   }));
   const awaiting = divers.filter((diver) => !diver.rollCall).length;
