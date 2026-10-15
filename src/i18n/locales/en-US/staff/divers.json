@@ -202,7 +202,7 @@
     "bookActivityButton": "Book",
     "noOpenActivities": "No upcoming departure has a seat open.",
     "noEmailNote": "No email on file. Hand this diver their waiver link in person, or add an address to their record.",
-    "bookDeparture": "Book a departure"
+    "bookDeparture": "Add a booking"
   },
   "payments": {
     "shopPaymentFallback": "Shop payment"

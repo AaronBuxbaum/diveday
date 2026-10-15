@@ -200,7 +200,7 @@ describe("the guests ledger (slice 5d)", () => {
     const addDiver = container.querySelector("#add-diver");
     expect(addDiver).not.toBeNull();
     expect(
-      within(addDiver as HTMLElement).getByRole("heading", { name: "Add a diver" }),
+      within(addDiver as HTMLElement).getByRole("heading", { name: "Add a booking" }),
     ).toBeVisible();
     expect(within(addDiver as HTMLElement).getByTestId("add-diver-form")).toBeVisible();
     expect(screen.queryByText("No one on this boat yet")).toBeNull();

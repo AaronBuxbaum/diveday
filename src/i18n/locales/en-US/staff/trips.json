@@ -15,7 +15,7 @@
   "stageLabel": "Stage",
   "about": {
     "add": "Add",
-    "addDiverJump": "Jump to add a diver",
+    "addDiverJump": "Jump to add a booking",
     "details": "Details",
     "viewPublic": "View public page",
     "printPacket": "Print packet",
@@ -360,7 +360,7 @@
     "remove": "Remove"
   },
   "addDiver": {
-    "heading": "Add a diver",
+    "heading": "Add a booking",
     "fullDescription": "The boat is full.",
     "findLabel": "Find a returning diver",
     "findPlaceholder": "Name, email, or phone",

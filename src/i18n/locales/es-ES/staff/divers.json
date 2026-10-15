@@ -202,7 +202,7 @@
     "bookActivityButton": "Reservar",
     "noOpenActivities": "Ninguna salida próxima tiene plazas libres.",
     "noEmailNote": "Sin correo registrado. Entrégale el enlace de la exención en persona o añade una dirección a su ficha.",
-    "bookDeparture": "Reservar una salida"
+    "bookDeparture": "Añadir una reserva"
   },
   "payments": {
     "shopPaymentFallback": "Pago del centro"

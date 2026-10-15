@@ -348,7 +348,7 @@ export default async function ManageTripPage({
                 // The roster's own band, on the Divers tab: from Details the
                 // anchor is not on the page.
                 href={`${shopPath(shopSlug, "trips", tripId)}#add-diver`}
-                label={t("trips.addDiver.addDiver")}
+                label={t("trips.addDiver.heading")}
                 compactLabel={t("trips.about.add")}
                 ariaLabel={t("trips.about.addDiverJump")}
               />

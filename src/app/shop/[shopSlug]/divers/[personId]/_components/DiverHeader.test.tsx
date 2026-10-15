@@ -33,7 +33,7 @@ function diver(): DiverProfile {
 
 function renderHeader({
   status,
-  book = <span>Book a departure</span>,
+  book = <span>Add a booking</span>,
 }: {
   status?: HeaderStatus;
   book?: ComponentProps<typeof DiverHeader>["book"];
@@ -69,12 +69,12 @@ describe("the diver's phone number", () => {
 
 /**
  * **One act in the masthead** (ADR 20261001-logbook, decision 2). Edit details
- * sat beside Book a departure as a second dropdown; it is the record's first
+ * sat beside Add a booking as a second dropdown; it is the record's first
  * file group now (`DiverDetailsGroup`), so the header's only disclosure is
  * Book's own picker.
  */
 describe("DiverHeader actions", () => {
-  it("carries Book a departure and nothing beside it", () => {
+  it("carries Add a booking and nothing beside it", () => {
     const book = (
       <BookActivity
         diver={diver()}

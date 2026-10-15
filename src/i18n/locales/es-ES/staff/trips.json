@@ -15,7 +15,7 @@
   "stageLabel": "Etapa",
   "about": {
     "add": "Añadir",
-    "addDiverJump": "Ir a añadir un buceador",
+    "addDiverJump": "Ir a añadir una reserva",
     "details": "Detalles",
     "viewPublic": "Ver página pública",
     "printPacket": "Imprimir paquete",
@@ -360,7 +360,7 @@
     "remove": "Eliminar"
   },
   "addDiver": {
-    "heading": "Añadir un buceador",
+    "heading": "Añadir una reserva",
     "fullDescription": "El barco está lleno.",
     "findLabel": "Buscar un buceador habitual",
     "findPlaceholder": "Nombre, correo o teléfono",
