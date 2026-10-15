@@ -1,0 +1,3 @@
+ALTER TABLE "roll_call_events" ADD COLUMN "readiness_status" text;--> statement-breakpoint
+ALTER TABLE "roll_call_events" ADD COLUMN "readiness_blockers" jsonb;--> statement-breakpoint
+ALTER TABLE "roll_call_events" ADD CONSTRAINT "roll_call_events_readiness_snapshot_shape" CHECK (("readiness_status" is null and "readiness_blockers" is null) or ("status" = 'boarded' and "readiness_status" in ('ready', 'blocked')));

@@ -26,6 +26,11 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import {
+  type CountedAboardBlocked,
+  type ReadinessSnapshot,
+  readinessSnapshotOf,
+} from "@/lib/roll-call-readiness";
 import { runningLateShown } from "@/lib/running-late";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
@@ -632,6 +637,79 @@ export async function listUnaccountedForByTrip(
     const unaccounted = byTrip.get(seat.tripId) ?? new Set<string>();
     unaccounted.add(bookingId);
     byTrip.set(seat.tripId, unaccounted);
+  }
+  return byTrip;
+}
+
+/**
+ * **The seats counted aboard while blocked**, per departure and booking, for a
+ * finished departure's record (issue #2414): "Sailed · counted aboard at after
+ * dive 1 while blocked: no certification on file".
+ *
+ * Read off the snapshot each `boarded` event keeps (`readiness_status`), never
+ * recomputed: readiness today says nothing about readiness at the rail. A
+ * record, not a gate; nothing refuses or allows anything on it.
+ *
+ * - **Only a standing word counts.** The newest event per seat and checkpoint
+ *   wins, so a count the crew corrected to `not_boarded` or retracted
+ *   (`cleared`) leaves nothing here, the supersession every roll-call reader
+ *   applies.
+ * - **The earliest checkpoint a seat was counted blocked at** is the one said,
+ *   in checkpoint order, so the line names where the trouble started.
+ * - **A cancelled booking is nobody.**
+ *
+ * One grouped query for the trips asked about.
+ */
+export async function listCountedAboardBlockedByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, Map<string, CountedAboardBlocked>>> {
+  const byTrip = new Map<string, Map<string, CountedAboardBlocked>>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+      readinessStatus: rollCallEvents.readinessStatus,
+      readinessBlockers: rollCallEvents.readinessBlockers,
+    })
+    .from(rollCallEvents)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
+    )
+    .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  const seen = new Set<string>();
+  const earliest = new Map<
+    string,
+    { ordinal: number; tripId: string; blocked: CountedAboardBlocked }
+  >();
+  for (const row of rows) {
+    const key = `${row.bookingId}\u0000${row.checkpoint}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (row.status !== "boarded" || row.readinessStatus !== "blocked") continue;
+    const ordinal = rollCallCheckpointOrdinal(row.checkpoint as RollCallCheckpoint);
+    const held = earliest.get(row.bookingId);
+    if (held && held.ordinal <= ordinal) continue;
+    earliest.set(row.bookingId, {
+      ordinal,
+      tripId: row.tripId,
+      blocked: { checkpoint: row.checkpoint, blockers: row.readinessBlockers ?? [] },
+    });
+  }
+  for (const [bookingId, { tripId, blocked }] of earliest) {
+    const seats = byTrip.get(tripId) ?? new Map<string, CountedAboardBlocked>();
+    seats.set(bookingId, blocked);
+    byTrip.set(tripId, seats);
   }
   return byTrip;
 }
@@ -1697,9 +1775,18 @@ export async function recordRollCall(
     // head count of bodies on the boat: a diver whose card was pulled or payment
     // reversed mid-trip is still aboard, and refusing to record them present
     // would corrupt the one number that says nobody was left in the water.
-    if (input.status === "boarded" && checkpoint === "departure") {
+    //
+    // The same reading is what the event keeps (issue #2414): a `boarded` event
+    // carries what readiness said at that moment, so a record can say "counted
+    // aboard while blocked" after the card is later verified. Written, never
+    // read to gate; every other status stores nothing.
+    let readinessSnapshot: ReadinessSnapshot | null = null;
+    if (input.status === "boarded") {
       const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
-      if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
+      if (checkpoint === "departure" && readiness?.status !== "ready") {
+        return { ok: false, reason: "not_ready" };
+      }
+      readinessSnapshot = readiness ? readinessSnapshotOf(readiness) : null;
     }
 
     const [event] = await tx
@@ -1722,6 +1809,8 @@ export async function recordRollCall(
             checkpoint,
           }),
         ),
+        readinessStatus: readinessSnapshot?.status ?? null,
+        readinessBlockers: readinessSnapshot?.blockers ?? null,
         occurredAt,
       })
       .returning({ id: rollCallEvents.id });

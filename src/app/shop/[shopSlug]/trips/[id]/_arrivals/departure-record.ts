@@ -2,6 +2,7 @@ import type { AppDb } from "@/db/client";
 import {
   departureRollCallTakenTripIds,
   listAfterDiveRollCallByTrip,
+  listCountedAboardBlockedByTrip,
   listDepartureRollCallByTrip,
   listUnaccountedForByTrip,
 } from "@/db/manifests";
@@ -49,16 +50,18 @@ export async function departureRecord(
   tripId: string,
   unaccounted: ReadonlySet<string>,
 ): Promise<RosterRecord> {
-  const [dock, afterDive, taken] = await Promise.all([
+  const [dock, afterDive, taken, blocked] = await Promise.all([
     listDepartureRollCallByTrip(db, shopId, [tripId]),
     listAfterDiveRollCallByTrip(db, shopId, [tripId]),
     departureRollCallTakenTripIds(db, shopId, [tripId]),
+    listCountedAboardBlockedByTrip(db, shopId, [tripId]),
   ]);
   return {
     dock: dock.get(tripId) ?? new Map(),
     afterDive: new Set(afterDive.get(tripId)?.keys() ?? []),
     rollCallTaken: taken.has(tripId),
     unaccounted,
+    countedAboardBlocked: blocked.get(tripId) ?? new Map(),
   };
 }
 

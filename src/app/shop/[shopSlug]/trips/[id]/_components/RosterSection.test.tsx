@@ -165,6 +165,7 @@ describe("the guests ledger (slice 5d)", () => {
         afterDive: new Set(),
         rollCallTaken: true,
         unaccounted: new Set(),
+        countedAboardBlocked: new Map(),
       },
     });
     expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
@@ -182,6 +183,7 @@ describe("the guests ledger (slice 5d)", () => {
         afterDive: new Set(),
         rollCallTaken: true,
         unaccounted: new Set(),
+        countedAboardBlocked: new Map(),
       },
     });
     expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
@@ -201,10 +203,39 @@ describe("the guests ledger (slice 5d)", () => {
         afterDive: new Set([blocked.booking.id]),
         rollCallTaken: true,
         unaccounted: new Set([blocked.booking.id]),
+        countedAboardBlocked: new Map(),
       },
     });
     expect(screen.getByRole("heading", { name: "Not back aboard · 1" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
+  });
+
+  it("says on a sailed row, in words and with no control, that the diver was counted aboard while blocked", () => {
+    renderRoster({
+      ...fixtures,
+      record: {
+        dock: new Map([
+          [ready.booking.id, "boarded"],
+          [blocked.booking.id, "boarded"],
+        ]),
+        afterDive: new Set([blocked.booking.id]),
+        rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map([
+          [
+            blocked.booking.id,
+            { checkpoint: "after_dive_1", blockers: [{ code: "certification_missing" }] },
+          ],
+        ]),
+      },
+    });
+    expect(screen.getByRole("heading", { name: "Sailed · 2" })).toBeVisible();
+    expect(screen.getByText("1 counted aboard while blocked")).toBeVisible();
+    const line = screen.getByText(/Counted aboard \(After dive 1\) while blocked: /);
+    expect(line).toBeVisible();
+    // One line on the one seat, and the record asks for nothing: no Blocked capsule, no fixes.
+    expect(screen.getAllByText(/while blocked: /)).toHaveLength(1);
+    expect(screen.queryByText("Blocked")).toBeNull();
   });
 
   it("makes add diver the terminal ledger group, including on an empty roster", () => {

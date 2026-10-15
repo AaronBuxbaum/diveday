@@ -93,7 +93,8 @@ export function RosterSection({
     controls,
     record,
   });
-  const { stillToClear, ready, here, notHere, hereMeta, blockedCount, sharedFacts } = groups;
+  const { stillToClear, ready, here, notHere, hereMeta, blockedCount, sharedFacts, sailedMeta } =
+    groups;
   // A record never celebrates a clearance: there was nothing left to clear.
   const showAllClear = roster.length > 0 && !record;
   const context: RosterRowContext = {
@@ -103,6 +104,7 @@ export function RosterSection({
     actions,
     arrival,
     record: Boolean(record),
+    countedAboardBlocked: record?.countedAboardBlocked,
     sharedAdvisoryTexts: groups.sharedAdvisoryTexts,
     waiverControls: controls,
     paymentStatusCopy: rosterPaymentStatusCopy(t),
@@ -173,7 +175,9 @@ export function RosterSection({
             entries={groups.sailed}
             settled
             context={context}
-          />
+          >
+            {sailedMeta ? <span className="text-xs text-muted">{sailedMeta}</span> : null}
+          </RosterSeatGroup>
           <RosterSeatGroup
             label={t("trips.roster.groupDidNotSail")}
             entries={groups.didNotSail}

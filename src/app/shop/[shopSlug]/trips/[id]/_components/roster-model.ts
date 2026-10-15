@@ -18,6 +18,7 @@ import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import type { ElearningQuery } from "@/lib/elearning-check";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { isDiver } from "@/lib/participant-types";
+import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
@@ -283,6 +284,12 @@ export type RosterRecord = {
    * water would be the lie this group exists to refuse (issue #2404).
    */
   unaccounted: ReadonlySet<string>;
+  /**
+   * Seats counted aboard while blocked, off the snapshot the count kept
+   * (`listCountedAboardBlockedByTrip`, issue #2414). A fact about the past in
+   * danger text, never a control: nothing here asks for action.
+   */
+  countedAboardBlocked: ReadonlyMap<string, CountedAboardBlocked>;
 };
 
 /** What the page slots into the ledger beneath the seats. */
@@ -478,7 +485,7 @@ export function groupRoster({
   record?: RosterRecord;
 }) {
   const { roster, readinessByBooking, waiverByBooking } = rows;
-  if (record) return recordGroups(roster, record);
+  if (record) return recordGroups(t, roster, record);
   const WAIVER_CONTROLS = controls;
   // A depth advisory whose sentence renders identically for much of the boat
   // is one fact about the dive plan, not N facts about N divers (principle 9):
@@ -633,6 +640,7 @@ export function groupRoster({
     uncounted: [] as RosterEntry[],
     unrecorded: [] as RosterEntry[],
     unaccounted: [] as RosterEntry[],
+    sailedMeta: undefined as string | undefined,
   };
 }
 
@@ -656,7 +664,7 @@ export function groupRoster({
  * Nothing is still to clear, nothing is blocked, and no shared advisory is
  * said: the dive is over (dive-domain rule: a record never asks for action).
  */
-function recordGroups(roster: RosterEntry[], record: RosterRecord) {
+function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterRecord) {
   const sailed: RosterEntry[] = [];
   const didNotSail: RosterEntry[] = [];
   const uncounted: RosterEntry[] = [];
@@ -695,7 +703,19 @@ function recordGroups(roster: RosterEntry[], record: RosterRecord) {
     uncounted,
     unrecorded,
     unaccounted,
+    // The group's fact, said once (principle 9): how many of those who sailed
+    // were counted aboard while blocked. Nothing at all when none were.
+    sailedMeta: countedBlockedMeta(t, sailed, record),
   };
+}
+
+function countedBlockedMeta(
+  t: StaffTranslator,
+  sailed: readonly RosterEntry[],
+  record: RosterRecord,
+): string | undefined {
+  const count = sailed.filter(({ booking }) => record.countedAboardBlocked.has(booking.id)).length;
+  return count === 0 ? undefined : t("trips.roster.sailedBlockedMeta", { count });
 }
 
 export type RosterGroups = ReturnType<typeof groupRoster>;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import {
   groupRoster,
   PAYMENT_STATUSES_ALL,
@@ -192,6 +193,7 @@ describe("groupRoster", () => {
       afterDive: new Set(afterDive),
       rollCallTaken,
       unaccounted: new Set(unaccounted),
+      countedAboardBlocked: new Map<string, CountedAboardBlocked>(),
     };
   }
 
@@ -252,6 +254,25 @@ describe("groupRoster", () => {
     expect(ids(groups.unaccounted)).toEqual(["missing"]);
     expect(ids(groups.sailed)).toEqual(["aboard"]);
     expect(ids(groups.didNotSail)).toEqual(["ashore"]);
+  });
+
+  it("in the record, says once how many who sailed were counted aboard while blocked", () => {
+    const record = {
+      ...recordOf({ a: "boarded", b: "boarded", c: "not_boarded" }, ["a"]),
+      countedAboardBlocked: new Map<string, CountedAboardBlocked>([
+        ["a", { checkpoint: "after_dive_1", blockers: [{ code: "certification_missing" }] }],
+        // Not a sailed seat: never counted in the sailed band's fact.
+        ["c", { checkpoint: "after_dive_1", blockers: [{ code: "certification_missing" }] }],
+      ]),
+    };
+    const groups = recordGroupsFor([seat("a"), seat("b"), seat("c")], record);
+    expect(ids(groups.sailed)).toEqual(["a", "b"]);
+    expect(groups.sailedMeta).toBe("1 counted aboard while blocked");
+  });
+
+  it("in the record, says nothing about blocking when nobody was counted aboard blocked", () => {
+    const groups = recordGroupsFor([seat("a")], recordOf({ a: "boarded" }));
+    expect(groups.sailedMeta).toBeUndefined();
   });
 
   it("in the record, a diver nobody has said missing is never unaccounted", () => {

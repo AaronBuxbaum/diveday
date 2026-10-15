@@ -528,6 +528,8 @@
     "groupDidNotSail": "Didn’t sail",
     "groupNotCounted": "Not counted at the dock",
     "groupUnaccounted": "Not back aboard",
+    "recordCountedBlocked": "Counted aboard ({checkpoint}) while blocked: {reasons}",
+    "sailedBlockedMeta": "{count, plural, one {# counted aboard while blocked} other {# counted aboard while blocked}}",
     "groupNoRollCall": "No roll call taken",
     "groupWaiting": "Waiting for a seat",
     "heading": "Divers",

@@ -708,6 +708,15 @@ export const ROLL_CALL_EVENTS_CSV = sharedFile<ShopRow<"rollCallRows">>({
       value: (row, { personName }) => personName.get(row.recordedByPersonId),
     },
     { header: "note", in: "shop", value: (row) => row.note },
+    // What readiness said when a diver was counted aboard (issue #2414): the
+    // evidence behind "counted aboard while blocked", which is recomputed live
+    // and so cannot be rebuilt afterwards. Codes only, `;`-joined.
+    { header: "readiness_status", in: "both", value: (row) => row.readinessStatus },
+    {
+      header: "readiness_blockers",
+      in: "both",
+      value: (row) => row.readinessBlockers?.map((blocker) => blocker.code).join(";") ?? null,
+    },
     { header: "occurred_at", in: "both", value: (row) => row.occurredAt },
     { header: "created_at", in: "shop", value: (row) => row.createdAt },
   ],
