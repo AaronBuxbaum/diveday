@@ -12,13 +12,24 @@ allowBuilds:
 minimumReleaseAge: 0
 
 # `pnpm audit --audit-level high` runs in CI over the whole tree (repository
-# safeguards). An advisory listed here has no patched release and is reachable
-# only from development tooling. Delete a line once the fix ships.
+# safeguards). An advisory is listed here when it is reachable only from
+# development tooling and has no patched release within the major its parent
+# pins, so a same-major override (below) cannot reach it. Delete a line once
+# its parent moves to a patched release.
 #   GHSA-vfj7-8cjw-p6xm: braces <=3.0.3, stack exhaustion on nested patterns.
 #     Dev only: reg-suit > reg-cli > del > globby > fast-glob > micromatch.
+#   GHSA-vrm6-8vpv-qv8q, GHSA-v9p9-hfj2-hcw8: undici <6.24.0;
+#   GHSA-vxpw-j846-p89q: undici <6.27.0;
+#   GHSA-x8mw-p69m-v3mx: @fastify/busboy >=1.0.0 <3.2.1 (undici 5's parser).
+#     Dev only: vercel CLI > undici 5 (vercel 64.2.0, the latest, pins 5.29.0).
+#     These four lines go once vercel moves to undici 6 or later.
 auditConfig:
   ignoreGhsas:
     - GHSA-vfj7-8cjw-p6xm
+    - GHSA-vrm6-8vpv-qv8q
+    - GHSA-v9p9-hfj2-hcw8
+    - GHSA-vxpw-j846-p89q
+    - GHSA-x8mw-p69m-v3mx
 
 # Security overrides for transitive dependencies (`pnpm audit`).
 # Each one lifts a pinned or stale copy to a patched release in the *same*
