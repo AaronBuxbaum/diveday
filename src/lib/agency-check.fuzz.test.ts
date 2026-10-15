@@ -19,19 +19,25 @@ import {
  *   number when the card has one), the claimed level in the agency's words,
  *   and no limiting word.
  * - **No match from a page with a second diver by this name** on DiveChek.
- * - **The evidence holds no other diver's name** and no namesake's birth date.
+ * - **The evidence holds no other diver's name** and no namesake's birth date
+ *   or number. Other divers include candidates who share only the diver's
+ *   first or last name, sometimes with the birth date searched by, sometimes
+ *   their name alone (a "did you mean" list), and some laid out over labeled
+ *   lines: two such records must never pair into this diver's name.
  * - **The diver's clean record does match**, so the generator is not vacuous.
  * - **Deterministic, and blind to unrelated rows**: the verdict is the same
  *   when the blocks are shuffled and when noise is appended after them.
  * - **The extension's DiveChek excerpt judges as the whole page does**
  *   (`excerptAroundName` in `extension/fill.js`).
  *
- * Unrelated rows on a public lookup are kept more than {@link RECORD_LINES}
- * lines from the diver's name: a public record ends only at a line naming
- * them again, so a neighbour's row inside that window is read as theirs. The
- * ADR accepts that because a public lookup lists only divers by the name
- * searched; DiveChek's rule, which ends the record at another diver's line,
- * is fuzzed with neighbours anywhere. A failure prints its seed.
+ * On a public lookup the diver's record is followed by neutral lines and the
+ * agency's own furniture ("Request Certification"), which ends it: a public
+ * record otherwise ends only at a line naming the diver again, so a
+ * neighbour's row inside its `RECORD_LINES` window is read as theirs. The ADR
+ * accepts that because a public lookup lists only divers by the name searched,
+ * and the evidence keeps only a record's own kinds of words. DiveChek's rule,
+ * which ends the record at another diver's line, is fuzzed with neighbours
+ * anywhere. A failure prints its seed.
  */
 
 await import(/* @vite-ignore */ new URL("../../extension/fill.js", import.meta.url).href);
@@ -151,6 +157,18 @@ const MONTHS = [
   "December",
 ] as const;
 
+/** Every way {@link writeDate} may print a date. */
+function everyWriting(iso: string, agency: CheckableAgency): string[] {
+  const [year, month, day] = iso.split("-") as [string, string, string];
+  const monthName = MONTHS[Number(month) - 1] as string;
+  return [
+    iso,
+    AGENCY_CHECKS[agency].dates === "mdy" ? `${month}/${day}/${year}` : `${day}.${month}.${year}`,
+    `${Number(day)} ${monthName.slice(0, 3)} ${year}`,
+    `${monthName} ${Number(day)}, ${year}`,
+  ];
+}
+
 function hasWords(line: string, phrase: string): boolean {
   return ` ${foldText(line)} `.includes(` ${foldText(phrase)} `);
 }
@@ -192,6 +210,13 @@ function writeName(name: string, r: Random): string {
 
 type Shape = "lines" | "inline" | "reversed" | "middle" | "split";
 const SHAPES: readonly Shape[] = ["lines", "inline", "reversed", "middle", "split"];
+/** Labels for a name over two lines, given part then family part. */
+const SPLIT_LABELS = [
+  ["First name", "Last name"],
+  ["Given Name", "Family Name"],
+  ["Forename", "Surname"],
+  ["Nombre", "Apellidos"],
+] as const;
 
 /**
  * One diver's block of lines. On DiveChek the birth date sits on the name line
@@ -208,28 +233,39 @@ function block(input: {
   birthDate: string | null;
   number: string | null;
   levelLine: string;
+  /** A candidate list's row: the name lines and nothing else. */
+  nameOnly?: boolean;
 }): string[] {
   const { agency, r, shape } = input;
   const first = writeName(input.first, r);
   const last = writeName(input.last, r);
   const { dates } = AGENCY_CHECKS[agency];
   const date = input.birthDate ? writeDate(input.birthDate, dates, r) : null;
+  const [givenLabel, familyLabel] = r.pick(SPLIT_LABELS);
+  const splitLines = [`${givenLabel}: ${first}`, `${familyLabel}: ${last}`];
   const nameLines =
     shape === "split"
-      ? [`First name: ${first}`, `Last name: ${last}`]
+      ? r.chance(0.5)
+        ? splitLines
+        : splitLines.reverse()
       : shape === "reversed"
         ? [`${last}, ${first}`]
         : shape === "middle"
           ? [`${first} ${writeName(input.middle, r)} ${last}`]
           : [`${first} ${last}`];
   const lines = [...nameLines];
+  if (input.nameOnly) return lines;
   if (date && shape === "inline") lines[0] = `${lines[0]} ${date}`;
   else if (date) lines.push(`Date of Birth: ${date}`);
+  // A record laid out under labels dates its card: the level's line carries a
+  // year, which is how the judge tells it from the search form echoed back.
+  const levelLine =
+    shape === "split" ? `${input.levelLine} (${2010 + r.int(15)})` : input.levelLine;
   if (agency === "padi") {
-    lines.push(input.number ? `${input.levelLine} ${input.number}` : input.levelLine);
+    lines.push(input.number ? `${levelLine} ${input.number}` : levelLine);
   } else {
     if (input.number) lines.push(`Card ${input.number}`);
-    lines.push(input.levelLine);
+    lines.push(levelLine);
   }
   return lines;
 }
@@ -244,13 +280,14 @@ type Case = {
   target: {
     present: boolean;
     shape: Shape;
+    withBirthDate: boolean;
     identified: boolean;
     levelHolds: boolean;
     limited: boolean;
   };
   namesakes: { birthDate: string; number: string }[];
   otherNames: string[];
-  /** Whether any block names the diver over two labelled lines. */
+  /** Whether any block names anyone over two labelled lines. */
   splitName: boolean;
 };
 
@@ -324,9 +361,18 @@ function generate(agency: CheckableAgency, seed: number): Case {
     });
   }
   const otherNames: string[] = [];
-  for (let i = r.int(3); i > 0; i -= 1) {
-    const [first, last] = r.pick(OTHERS);
-    otherNames.push(first, last);
+  for (let i = r.int(4); i > 0; i -= 1) {
+    const [otherFirst, otherLast] = r.pick(OTHERS);
+    // A candidate sharing the diver's first or last name, but never both.
+    const partial = r.chance(0.6) ? r.pick(["first", "last"] as const) : null;
+    const first = partial === "first" ? diver.first : otherFirst;
+    const last = partial === "last" ? diver.last : otherLast;
+    if (partial !== "first") otherNames.push(first);
+    if (partial !== "last") otherNames.push(last);
+    // A neighbour's name and level on one line is the ADR's known gap, so
+    // only a split candidate carries the birth date searched by.
+    const shape = r.pick(["lines", "inline", "split", "split"] as const);
+    splitName ||= shape === "split";
     blocks.push({
       kind: "other",
       lines: block({
@@ -335,11 +381,11 @@ function generate(agency: CheckableAgency, seed: number): Case {
         first,
         middle: "",
         last,
-        // A neighbour's name and level on one line is the ADR's known gap.
-        shape: r.pick(["lines", "inline"] as const),
-        birthDate: randomDate(r, birthDate),
+        shape,
+        birthDate: shape === "split" ? birthDate : randomDate(r, birthDate),
         number: randomNumber(agency, r, number),
         levelLine: levelLine(r),
+        nameOnly: r.chance(0.3),
       }),
     });
   }
@@ -368,7 +414,7 @@ function generate(agency: CheckableAgency, seed: number): Case {
     blocks: r.shuffle(blocks),
     header,
     footer,
-    target: { present, shape, identified, levelHolds, limited },
+    target: { present, shape, withBirthDate, identified, levelHolds, limited },
     namesakes,
     otherNames,
     splitName,
@@ -395,8 +441,15 @@ function check(c: Case, r: Random): void {
   const verdict = judge(page);
   const why = `seed ${c.seed} (${c.agency}, ${c.query.level})\n${page}\n→ ${JSON.stringify(verdict)}`;
   const { target } = c;
+  // DiveChek's own count: the birth dates under the diver's name, or a line
+  // saying two divers or more.
+  const birthDates = new Set([
+    ...(target.present && target.withBirthDate ? [c.query.birthDate] : []),
+    ...c.namesakes.map((namesake) => namesake.birthDate),
+  ]);
   const severalDivers =
-    c.agency === "padi" && c.namesakes.length + (target.present && target.identified ? 1 : 0) >= 2;
+    c.agency === "padi" &&
+    (birthDates.size >= 2 || c.header.some((line) => /^[2-9] divers found$/.test(line)));
 
   expect(judge(page), why).toEqual(verdict);
 
@@ -412,6 +465,11 @@ function check(c: Case, r: Random): void {
     }
     for (const namesake of c.namesakes) {
       expect(verdict.evidence, why).not.toContain(namesake.number);
+      for (const written of everyWriting(namesake.birthDate, c.agency)) {
+        expect(verdict.evidence, `evidence holds a namesake's birth date: ${why}`).not.toContain(
+          written,
+        );
+      }
     }
   }
   if (severalDivers) expect(verdict.verdict, why).toBe("several_records");
@@ -431,9 +489,11 @@ function check(c: Case, r: Random): void {
   expect(judge(`${page}\n${noise.join("\n")}`), `noise appended: ${why}`).toEqual(verdict);
 
   // The extension hands the server only the lines naming the diver on
-  // DiveChek, and `excerptAroundName` does not yet know a split name: it drops
-  // those lines, which fails closed for the diver's own record but would hide
-  // a second diver laid out that way. Fuzzed where no block is split.
+  // DiveChek, and this copy of `excerptAroundName` does not know a split name:
+  // it drops those lines, which fails closed for the diver's own record but
+  // would hide a second diver laid out that way. Fuzzed where no block is
+  // split. fill.js's excerptAroundName gains split labels in the other
+  // worker's commit; remove this skip once that is merged.
   if (c.agency === "padi" && !c.splitName) {
     const excerpt = excerptAroundName(page, c.query.firstName, c.query.lastName);
     expect(judge(excerpt).verdict === "match", `excerpt: ${why}\nexcerpt:\n${excerpt}`).toBe(

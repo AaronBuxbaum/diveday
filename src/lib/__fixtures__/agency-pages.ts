@@ -200,9 +200,21 @@ export const AGENCY_PAGE_FIXTURES: readonly AgencyPageFixture[] = [
       "First Name: Lena",
       "Last Name: Ortiz",
       "Date of Birth: 04/12/1990",
-      "Scuba Diver",
+      "Scuba Diver 06/15/2015",
     ),
     expected: "match",
+  },
+  {
+    // Security review: the form echoed back with the typed values, and no result.
+    name: "NAUI, the search echoed under its labels with the menus' levels below",
+    query: { agency: "naui", level: "open_water", ...lena, cardNumber: null },
+    pageText: naui(
+      "First Name: Lena",
+      "Last Name: Ortiz",
+      "Date of Birth: 04/12/1990",
+      "Open Water Diver",
+    ),
+    expected: "unreadable",
   },
   {
     name: "NAUI, its own 'No record was found.'",
@@ -281,7 +293,7 @@ export const AGENCY_PAGE_FIXTURES: readonly AgencyPageFixture[] = [
       "Given Name: Lena María",
       "Family Name: Ortiz",
       "Birthdate: 12.04.1990",
-      "One Star Diver",
+      "One Star Diver 15.06.2015",
       "Federation: FEDAS",
     ),
     expected: "match",
@@ -314,6 +326,34 @@ export const AGENCY_PAGE_FIXTURES: readonly AgencyPageFixture[] = [
       "One Star Diver",
     ),
     expected: "unreadable",
+  },
+  {
+    // Operational review: the search echoed back above another Lena Ortiz's result.
+    name: "CMAS, the search echoed above a namesake's result",
+    query: { agency: "cmas", level: "open_water", ...lena, cardNumber: null },
+    pageText: cmas(
+      "Given Name: Lena",
+      "Family Name: Ortiz",
+      "Birthdate: 12.04.1990",
+      "Manual Search",
+      "One Star Diver",
+      "Federation: FFESSM",
+      "Name: Lena Ortiz",
+      "Birthdate: 01.07.1985",
+    ),
+    expected: "namesake",
+  },
+  {
+    // Operational review: SDI's furniture after a limit on the record's own line.
+    name: "SDI, a pending card beside 'Request Certification'",
+    query: { agency: "sdi", level: "open_water", ...lena, cardNumber: "SDI-1001" },
+    pageText: sdi(
+      "Lena Ortiz",
+      "1990-04-12",
+      "Open Water Scuba Diver SDI-1001",
+      "Pending — Request Certification",
+    ),
+    expected: "limited_card",
   },
   {
     name: "CMAS, nothing found",

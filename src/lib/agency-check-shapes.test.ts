@@ -45,6 +45,60 @@ describe("judgeAgencyPage beside an agency's page furniture", () => {
     // A limiting word on the diver's own lines still limits.
     expect(judge(`${record} (Referral)\nRequest Certification`, sdi).verdict).toBe("limited_card");
   });
+
+  /** Operational review: a limit written beside the furniture was cut off with it. */
+  it("reads furniture only at the start of a line, so a limit before it still limits", () => {
+    const sdi = { agency: "sdi", cardNumber: "SDI-1001" } as const;
+    const record = "Lena Ortiz\n1990-04-12\nOpen Water Scuba Diver SDI-1001";
+    expect(judge(`${record}\nPending — Request Certification`, sdi).verdict).toBe("limited_card");
+    expect(judge(`${record}\nRequest Certification (pending)`, sdi).verdict).toBe("limited_card");
+    expect(
+      judge("Lena Ortiz\n1990-04-12\nOpen Water Scuba Diver · Request Certification", sdi).verdict,
+    ).toBe("match");
+  });
+
+  it("ends a record at a search control on its own line", () => {
+    for (const control of ["Manual Search", "Search", "Verify another card", "Back to search"]) {
+      expect(
+        judge(`Lena Ortiz\n1990-04-12\n${control}\nOpen Water Scuba Diver`, { agency: "sdi" })
+          .verdict,
+        control,
+      ).toBe("level_unconfirmed");
+    }
+  });
+
+  /** Security review: a neighbor's name inside the window is never kept as a review note. */
+  it("keeps only the record's own kinds of words as evidence", () => {
+    const result = judge("Lena Ortiz\n1990-04-12\nOpen Water Scuba Diver\nMark Lee\n1980-01-01", {
+      agency: "sdi",
+    });
+    expect(result.verdict).toBe("match");
+    expect(JSON.stringify(result)).not.toContain("Mark");
+    expect(JSON.stringify(result)).not.toContain("Lee");
+  });
+});
+
+/** Operational review: "Jr." straight after the diver's last name is part of their name. */
+describe("judgeAgencyPage on a name suffix", () => {
+  const robert = { firstName: "Robert", lastName: "Smith", agency: "sdi" } as const;
+  it("reads Jr. after the last name as a suffix, not a junior rating", () => {
+    for (const name of ["Robert Smith Jr.", "Robert Smith Junior", "ROBERT SMITH, JR"]) {
+      expect(judge(`${name}\n1990-04-12\nOpen Water Scuba Diver`, robert).verdict, name).toBe(
+        "match",
+      );
+    }
+  });
+  it("still limits a junior rating written after the name, or elsewhere in the record", () => {
+    expect(judge("Robert Smith Jr Open Water Scuba Diver\n1990-04-12", robert).verdict).toBe(
+      "limited_card",
+    );
+    expect(
+      judge("Robert Smith Jr.\n1990-04-12\nJunior Open Water Scuba Diver", robert).verdict,
+    ).toBe("limited_card");
+    expect(judge("Robert Jr Smith\n1990-04-12\nOpen Water Scuba Diver", robert).verdict).toBe(
+      "limited_card",
+    );
+  });
 });
 
 /**
@@ -63,35 +117,118 @@ describe("judgeAgencyPage on a name split over two labeled lines", () => {
       "First name: Lena",
       "Last name: Ortiz",
       "Date of birth: 04/12/1990",
-      "Certification: Scuba Diver",
+      "Certification: Scuba Diver 06/15/2015",
     );
     expect(judge(page)).toEqual({
       verdict: "match",
-      evidence: "Lena Ortiz · Date of birth: 04/12/1990 · Certification: Scuba Diver",
+      evidence: "Lena Ortiz · Date of birth: 04/12/1990 · Certification: Scuba Diver 06/15/2015",
     });
   });
 
   it.each([
     ["FIRST NAME: Léna", "LAST NAME: ORTÍZ"],
-    ["Given names: Lena María", "Family name: Ortiz"],
+    ["Given name: Lena María", "Family name: Ortiz"],
     ["Forename: Lena", "Surname: Ortiz"],
     ["First Name Lena", "Last Name Ortiz"],
     ["Surname: Ortiz", "Given name: Lena"],
     ["Nombre: Lena", "Apellidos: Ortiz"],
   ])("reads %s over %s, accents, case, middle names and order aside", (first, last) => {
-    expect(judge(split(first, last, "04/12/1990", "Scuba Diver")).verdict).toBe("match");
+    expect(judge(split(first, last, "04/12/1990", "Scuba Diver 2015")).verdict).toBe("match");
   });
 
   it("reads a compound family name ending in the diver's last name", () => {
     expect(
-      judge(split("First name: Lena", "Last name: de la Ortiz", "04/12/1990", "Scuba Diver"))
+      judge(split("First name: Lena", "Last name: de la Ortiz", "04/12/1990", "Scuba Diver 2015"))
         .verdict,
     ).toBe("match");
   });
 
+  /** Operational review: hyphenated names pair as they read on one line. */
+  it("reads hyphenated given and family names", () => {
+    expect(
+      judge(
+        split("First name: Mary-Jane", "Last name: Ortiz-Lee", "04/12/1990", "Scuba Diver 2015"),
+        {
+          firstName: "Mary-Jane",
+          lastName: "Ortiz-Lee",
+        },
+      ).verdict,
+    ).toBe("match");
+  });
+
+  /** Adversarial review #1: one record's family line never pairs with the next record's given line. */
+  it("pairs labeled lines top to bottom, so two records never make a third", () => {
+    const familyFirst = [
+      "Surname: Lee",
+      "Given name: Lena",
+      "Surname: Ortiz",
+      "Given name: Mark",
+      "Date of birth: 04/12/1990",
+      "Rescue Scuba Diver 2015",
+    ].join("\n");
+    const rescue = judge(familyFirst, { level: "rescue" });
+    expect(rescue.verdict).not.toBe("match");
+    expect(JSON.stringify(rescue)).not.toContain("Mark");
+    const givenFirst = [
+      "First name: Mark",
+      "Last name: Ortiz",
+      "First name: Lena",
+      "Last name: Lee",
+      "Date of birth: 04/12/1990",
+      "Scuba Diver 2015",
+    ].join("\n");
+    expect(judge(givenFirst).verdict).not.toBe("match");
+  });
+
+  it("refuses a pair beside a stray labeled name line", () => {
+    for (const page of [
+      [
+        "First name: Mark",
+        "First name: Lena",
+        "Last name: Ortiz",
+        "04/12/1990",
+        "Scuba Diver 2015",
+      ],
+      ["Given name: Lena", "Surname: Ortiz", "Given name: Mark", "04/12/1990", "Scuba Diver 2015"],
+    ]) {
+      expect(judge(page.join("\n")).verdict, page.join(" / ")).toBe("unreadable");
+    }
+  });
+
+  /** Security review #4: the search form echoed back with a menu's level under it is no result. */
+  it("reads the search form echoed under its labels, a menu's level below, as no result", () => {
+    expect(
+      judge(
+        split(
+          "First Name: Lena",
+          "Last Name: Ortiz",
+          "Date of Birth: 04/12/1990",
+          "Open Water Diver",
+        ),
+      ).verdict,
+    ).toBe("unreadable");
+  });
+
+  /** Operational review #2: a labeled search echo above another diver's result. */
+  it("ends a split record at a line that is not part of a record", () => {
+    const page = [
+      "Given Name: Lena",
+      "Family Name: Ortiz",
+      "Birthdate: 12.04.1990",
+      "Manual Search",
+      "One Star Diver",
+      "Federation: FFESSM",
+      "Name: Lena Ortiz",
+      "Birthdate: 01.07.1985",
+    ].join("\n");
+    expect(judge(page, { agency: "cmas", cardNumber: null }).verdict).not.toBe("match");
+    const noControl = page.replace("Manual Search\n", "Status: Active\n");
+    expect(judge(noControl, { agency: "cmas", cardNumber: null }).verdict).not.toBe("match");
+  });
+
   it("still needs the birth date it searched by", () => {
     expect(
-      judge(split("First name: Lena", "Last name: Ortiz", "1985-07-01", "Scuba Diver")),
+      judge(split("First name: Lena", "Last name: Ortiz", "1985-07-01", "Scuba Diver 2015")),
     ).toEqual({ verdict: "namesake" });
   });
 
@@ -110,7 +247,7 @@ describe("judgeAgencyPage on a name split over two labeled lines", () => {
       "Scuba Diver",
       "Last name: Ortiz",
     ].join("\n");
-    expect(judge(neighbor).verdict).not.toBe("match");
+    expect(judge(neighbor).verdict).toBe("unreadable");
   });
 
   it("never reads a pair whose line also carries a rating, a date or someone else", () => {
@@ -203,6 +340,45 @@ describe("judgeAgencyPage on a name split over two labeled lines", () => {
       ].join("\n");
       expect(padi(page, { level: "advanced_open_water" }).verdict).not.toBe("match");
       expect(JSON.stringify(padi(page))).not.toContain("Mark");
+    });
+  });
+});
+
+/** Review of the extension's page-shape commit: a broken page is never the agency saying no. */
+describe("judgeAgencyPage on a page that is not the agency's answer", () => {
+  it("reads a 404 or a moved form as unreadable, never no record", () => {
+    for (const page of [
+      "404 – Page not found",
+      "Page Not Found\nThe page you requested was not found.",
+    ]) {
+      expect(judge(page).verdict, page).toBe("unreadable");
+    }
+  });
+
+  it("still reads the agencies' own no-record wording", () => {
+    for (const page of [
+      "No record found.",
+      "No diver found",
+      "No record was found.",
+      "No results",
+    ]) {
+      expect(judge(page).verdict, page).toBe("no_record");
+    }
+  });
+
+  it("counts a split-name record as a second DiveChek diver", () => {
+    const page = [
+      "2 results",
+      "Lena Ortiz",
+      "Date of Birth: 04/12/1990",
+      "Open Water Diver",
+      "First name: Lena",
+      "Last name: Ortiz",
+      "Date of Birth: 09/03/1987",
+      "Advanced Open Water Diver",
+    ].join("\n");
+    expect(judge(page, { agency: "padi", cardNumber: null })).toEqual({
+      verdict: "several_records",
     });
   });
 });

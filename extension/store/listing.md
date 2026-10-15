@@ -23,7 +23,9 @@ Checks a diver's certification on their agency's own lookup page, from DiveDay, 
 
 **Description:**
 
-For dive shops that run on DiveDay. When a staff member presses "Check with SSI" (or NAUI, SDI, GUE, CMAS or PADI) on a diver's card in DiveDay, this extension opens that agency's own certification lookup page in a background tab, fills in the diver's name and the one detail the agency's form asks for, reads the answer and hands it back to DiveDay, which decides whether the card is certified. The staff member sees the answer beside the card, with an Undo.
+For dive shops that run on DiveDay. When a staff member presses a card's check button in DiveDay ("Check with SSI", "Check with NAUI", "Check with SDI", "Check with GUE", "Search the CMAS portal" or "Check with PADI (member sign-in)"), this extension opens that agency's own certification lookup page in a background tab, fills in what that agency's form asks for (SSI: the name and card number; NAUI, SDI and PADI: the name and birth date; GUE: the card number only, no name; CMAS: the CMAS code, or the name and birth date), reads the answer and hands it back to DiveDay, which decides whether the card is certified. The staff member sees the answer beside the card, with an Undo.
+
+When a check fails because the agency's page has changed, the extension may send DiveDay the page's structure (its labels, button words and headings, never anything typed into it or anyone's details) so DiveDay can fix the reader.
 
 It does nothing on its own: it runs only when a staff member presses a check button on DiveDay's staff pages, and it reads only the agencies' lookup pages listed in its permissions. PADI's DiveChek and eLearning checks use the shop's own signed-in PADI Pros' Site in the staff member's browser; DiveDay never holds a PADI sign-in, and a shop turns those checks on for itself.
 
@@ -33,7 +35,7 @@ Privacy: https://dive.day/privacy#extension
 
 **Screenshots** (1280×800): see [the runbook](../../docs/engineering/cert-check-extension-runbook.md#store-screenshots). They show the demo shop's made-up divers only.
 
-**Icon** (128×128): not drawn yet. `manifest.json` carries no `icons` entry, and the store needs one; see the runbook.
+**Icon** (128×128): `icons/icon-128.png`, the one `manifest.json` names.
 
 ## Privacy practices tab
 
@@ -61,8 +63,8 @@ Looks up a diver's dive certification on the certifying agency's own public or m
 
 | Category | Collected? | What and why |
 | --- | --- | --- |
-| Personally identifiable information | Yes | The diver's name, and a birth date or card number (a course student's email for PADI eLearning), sent only to the agency the staff member chose, to look the card up. |
-| Website content | Yes | The text of the agency's answer page, returned to the staff member's DiveDay shop to decide the check. On the PADI Pros' Site only the lines about that diver. |
+| Personally identifiable information | Yes | What the agency's form asks for, sent only to the agency the staff member chose, to look the card up: SSI the diver's name and card number; NAUI, SDI and PADI DiveChek the name and birth date; GUE the card number only; CMAS the CMAS code, or the name and birth date; PADI eLearning the course student's email only. |
+| Website content | Yes | The text of the agency's answer page, returned to the staff member's DiveDay shop to decide the check. On the PADI Pros' Site only the lines about that diver, and for eLearning only the student's own lines. When a check fails, the page's structure (labels, button words, headings; never anything typed or any person's details), so DiveDay can fix the reader. |
 | Health information | No | |
 | Financial and payment information | No | |
 | Authentication information | No | It never reads or stores a password or a sign-in. |

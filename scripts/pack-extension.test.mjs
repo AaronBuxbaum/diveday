@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { unzipSync } from "fflate";
@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   EXTENSION_DIR,
   extensionFiles,
-  isPublished,
   packExtension,
   packingRefusals,
   protocolVersion,
@@ -20,6 +19,14 @@ const manifest = (overrides = {}) => ({
   ...overrides,
 });
 const PROTOCOL = 'const X = {\n  VERSION: "1.4.0",\n};\n';
+const AGENCIES =
+  'const PADI_ORIGINS = ["https://pro.padi.com", "https://pros.padi.com"];\nconst A = { naui: { url: "https://www.naui.org/services/verify/" } };\n';
+const refusals = (overrides = {}) =>
+  packingRefusals({
+    manifest: manifest(overrides),
+    protocolSource: PROTOCOL,
+    agenciesSource: AGENCIES,
+  });
 
 const made = [];
 afterEach(() => {
@@ -39,7 +46,7 @@ function stage(files) {
 
 describe("packingRefusals", () => {
   it("packs a published manifest whose version protocol.js announces", () => {
-    expect(packingRefusals({ manifest: manifest(), protocolSource: PROTOCOL })).toEqual([]);
+    expect(refusals()).toEqual([]);
   });
 
   it.each([
@@ -49,39 +56,64 @@ describe("packingRefusals", () => {
     "*://dive.day/shop/*",
     "http://dive.day/shop/*",
   ])("refuses the local-testing match %s", (pattern) => {
-    const withMatch = manifest({
+    const found = refusals({
       content_scripts: [{ matches: ["https://dive.day/shop/*", pattern], js: ["bridge.js"] }],
     });
-    const refusals = packingRefusals({ manifest: withMatch, protocolSource: PROTOCOL });
-    expect(refusals).toHaveLength(1);
-    expect(refusals[0]).toContain(pattern);
+    expect(found).toHaveLength(1);
+    expect(found[0]).toContain(pattern);
   });
 
   it("refuses a localhost host permission too", () => {
-    const withHost = manifest({
-      host_permissions: ["https://www.naui.org/*", "http://localhost/*"],
-    });
-    expect(packingRefusals({ manifest: withHost, protocolSource: PROTOCOL })).toHaveLength(1);
+    expect(
+      refusals({ host_permissions: ["https://www.naui.org/*", "http://localhost/*"] }),
+    ).toEqual([expect.stringContaining("is for local testing")]);
   });
 
-  it("leaves alone a host that only starts like localhost", () => {
-    const lookalike = manifest({ host_permissions: ["https://localhost.example.com/*"] });
-    expect(packingRefusals({ manifest: lookalike, protocolSource: PROTOCOL })).toEqual([]);
+  /** Security review: only the agencies the extension looks up, and only DiveDay's staff pages. */
+  it.each([
+    "<all_urls>",
+    "https://*/*",
+    "*://*/*",
+    "file:///*",
+    "https://localhost.example.com/*",
+    "https://www.naui.org.evil.example/*",
+  ])("refuses the host permission %s, which no agency's lookup is on", (pattern) => {
+    const found = refusals({ host_permissions: ["https://www.naui.org/*", pattern] });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toContain(pattern);
+  });
+
+  it.each([
+    "<all_urls>",
+    "https://*/*",
+    "file:///*",
+    "https://dive.day/*",
+    "https://*.dive.day/shop/*",
+  ])("refuses the content-script match %s, which is not DiveDay's staff pages", (pattern) => {
+    const found = refusals({ content_scripts: [{ matches: [pattern], js: ["bridge.js"] }] });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toContain(pattern);
+  });
+
+  it("refuses an optional host permission the same way", () => {
+    expect(refusals({ optional_host_permissions: ["<all_urls>"] })).toHaveLength(1);
   });
 
   it("refuses a manifest version protocol.js does not announce", () => {
-    expect(
-      packingRefusals({ manifest: manifest({ version: "1.5.0" }), protocolSource: PROTOCOL }),
-    ).toEqual([
+    expect(refusals({ version: "1.5.0" })).toEqual([
       "manifest.json is version 1.5.0 but protocol.js announces 1.4.0: bump both together.",
     ]);
-    expect(packingRefusals({ manifest: manifest(), protocolSource: "nothing" })).toHaveLength(1);
+    expect(
+      packingRefusals({
+        manifest: manifest(),
+        protocolSource: "nothing",
+        agenciesSource: AGENCIES,
+      }),
+    ).toHaveLength(1);
   });
 
   it("refuses anything but Manifest V3", () => {
-    expect(
-      packingRefusals({ manifest: manifest({ manifest_version: 2 }), protocolSource: PROTOCOL }),
-    ).toHaveLength(1);
+    expect(refusals({ manifest_version: 2 })).toHaveLength(1);
   });
 
   it("finds nothing to refuse in the extension as committed", () => {
@@ -89,30 +121,97 @@ describe("packingRefusals", () => {
       packingRefusals({
         manifest: JSON.parse(readFileSync(join(EXTENSION_DIR, "manifest.json"), "utf8")),
         protocolSource: readFileSync(join(EXTENSION_DIR, "protocol.js"), "utf8"),
+        agenciesSource: readFileSync(join(EXTENSION_DIR, "agencies.js"), "utf8"),
       }),
     ).toEqual([]);
   });
 });
 
+/** A stand-in of the 1.5.0 layout: what the manifest names, what that loads, and strays beside it. */
+const LAYOUT = {
+  "manifest.json": JSON.stringify(
+    manifest({
+      icons: { 16: "icons/icon-16.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" },
+      background: { service_worker: "background.js" },
+    }),
+  ),
+  "background.js":
+    'importScripts("protocol.js", "agencies.js", "fill.js", "shape.js");\nchrome.runtime.getURL(`sample.html#${agency}`);\n',
+  "protocol.js": PROTOCOL,
+  "agencies.js": AGENCIES,
+  "fill.js": "// fill",
+  "shape.js": "// shape",
+  "bridge.js": "// bridge",
+  "sample.html": '<script src="shape.js"></script>\n<script src="sample.js"></script>\n',
+  "sample.js": "// sample",
+  "icons/icon-16.png": "png",
+  "icons/icon-48.png": "png",
+  "icons/icon-128.png": "png",
+  "README.md": "# readme",
+  "store/listing.md": "# listing",
+  "store/screenshot-1.png": "png",
+  ".DS_Store": "x",
+  "notes.txt": "a stray",
+  "old/fill.js": "// a stray copy",
+};
+
 describe("what goes in the zip", () => {
-  it.each([
-    ["manifest.json", true],
-    ["fill.js", true],
-    ["icons/128.png", true],
-    ["README.md", false],
-    ["store/listing.md", false],
-    ["store/screenshot-1.png", false],
-    [".DS_Store", false],
-    ["notes/plan.MD", false],
-  ])("%s is published: %s", (path, published) => {
-    expect(isPublished(path)).toBe(published);
+  /** Security review: an allowlist from the manifest, not everything in the folder. */
+  it("holds exactly the files the manifest names and what they load", () => {
+    expect(extensionFiles(stage(LAYOUT))).toEqual({
+      ok: true,
+      files: [
+        "agencies.js",
+        "background.js",
+        "bridge.js",
+        "fill.js",
+        "icons/icon-128.png",
+        "icons/icon-16.png",
+        "icons/icon-48.png",
+        "manifest.json",
+        "protocol.js",
+        "sample.html",
+        "sample.js",
+        "shape.js",
+      ],
+    });
+  });
+
+  it("refuses a file the manifest names that is not there", () => {
+    const { "shape.js": _, ...withoutShape } = LAYOUT;
+    expect(extensionFiles(stage(withoutShape))).toEqual({
+      ok: false,
+      refusals: [expect.stringContaining("shape.js")],
+    });
+  });
+
+  it("refuses a symlink, even to a file inside the folder", () => {
+    const { "fill.js": _, ...rest } = LAYOUT;
+    const dir = stage(rest);
+    symlinkSync(join(dir, "protocol.js"), join(dir, "fill.js"));
+    expect(extensionFiles(dir)).toEqual({
+      ok: false,
+      refusals: [expect.stringContaining("fill.js is a symlink")],
+    });
+  });
+
+  it("refuses a path that leaves the folder", () => {
+    const dir = stage({
+      ...LAYOUT,
+      "manifest.json": JSON.stringify(manifest({ icons: { 128: "../secret.png" } })),
+    });
+    expect(extensionFiles(dir)).toMatchObject({ ok: false });
   });
 
   it("holds the committed extension's code and nothing else", () => {
-    const files = extensionFiles();
-    expect(files).toContain("manifest.json");
-    expect(files).toContain("background.js");
-    expect(files.some((file) => file.endsWith(".md") || file.startsWith("store/"))).toBe(false);
+    const result = extensionFiles();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.files).toContain("manifest.json");
+    expect(result.files).toContain("background.js");
+    expect(result.files.some((file) => file.endsWith(".md") || file.startsWith("store/"))).toBe(
+      false,
+    );
   });
 
   it("reads the version from protocol.js", () => {
@@ -125,6 +224,7 @@ describe("packExtension", () => {
   const files = {
     "manifest.json": JSON.stringify(manifest()),
     "protocol.js": PROTOCOL,
+    "agencies.js": AGENCIES,
     "bridge.js": "// bridge",
     "README.md": "# readme",
     "store/listing.md": "# listing",
