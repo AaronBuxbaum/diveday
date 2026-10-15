@@ -49,6 +49,20 @@ describe("seeded waiver template history", () => {
     expect(isSampleRelease(current?.body)).toBe(false);
   });
 
+  it("releases the shop by name and vouches for the medical questionnaire it accompanies", async () => {
+    // Layer r4-6 review: a release after counsel's pass names the entity it
+    // releases, and states that the medical answers given beside it are true.
+    const { db, shop } = await seededShopContext();
+    const [current, ...superseded] = await waiverTemplateHistory(db, shop.id);
+    expect(current?.body).toContain(
+      `The answers I gave on the diver medical questionnaire that accompanies this release are true and complete, and I will tell ${shop.name} if they change.`,
+    );
+    expect(current?.body).toContain(`release and hold harmless ${shop.name}, its staff`);
+    expect(current?.body).not.toContain("the dive shop");
+    // The retired wordings stay generic: that is what made them retired.
+    for (const row of superseded) expect(row.body).toContain("the dive shop");
+  });
+
   it("leaves every seeded signature current against it, so no diver's release goes stale", async () => {
     // The whole reason `seedWaiverVersions` runs first: every later scenario
     // snapshots `getCurrentWaiverTemplate`, and a record carrying an older

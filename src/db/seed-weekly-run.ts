@@ -3,6 +3,7 @@ import {
   type CalendarDate,
   calendarDateInTimezone,
   calendarDateWeekday,
+  calendarDaysBetween,
   shiftCalendarDate,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -23,50 +24,41 @@ import { seatStandingCrew } from "./trips-crew";
  * doors so it is exactly what a shop that set one up would have:
  * `createTripSeries` materializes the horizon, the run gets a standing crew
  * (`trip_series_crew`, seated on each date by `seatStandingCrew`, which leaves
- * a person off a date they already crew elsewhere), and the crew's holiday
- * weekend, plus any Saturday the crew are out on a longer boat, is deleted
- * with `deleteTrip`, which leaves the skip the nightly roll honors.
+ * a person off a date they already crew elsewhere), and the Saturday Mantis
+ * II is hauled out for her annual survey, plus any Saturday the crew are out
+ * on a longer boat, is deleted with `deleteTrip`, which leaves the skip the
+ * nightly roll honors.
  */
-export const DEMO_WEEKLY_RUN_TITLE = "Saturday Two-Tank — Elbow & Christ of the Abyss";
+/** Named for the two sites its dives visit, in order. */
+export const DEMO_WEEKLY_RUN_TITLE = "Saturday Two-Tank — Benwood & Christ of the Abyss";
 
 /** Saturday, in `calendarDateWeekday`'s Sunday-zero count. */
 const SATURDAY = 6;
 
 /**
- * The weekend the shop takes off: the first Saturday after `firstRun` that
- * sits on a holiday weekend (Memorial Day, Independence Day, Labor Day,
- * Thanksgiving, or the week between Christmas and New Year), within the
- * run's horizon. A season with none of those in it skips its third Saturday,
- * so the demo always shows a gap in the run. Pure, so the choice is tested
- * on its own.
+ * The Saturday Mantis II is hauled out for her annual survey: the one closest
+ * to the second week of September, after the summer season and before the
+ * winter one, among the run's dates after its first. A run whose horizon
+ * passed September, or stops short of it, loses the date nearest to it, so the
+ * demo always shows a gap in the run. Pure, so the choice is tested on its own.
  */
-export function holidaySaturday(firstRun: CalendarDate): CalendarDate {
+export function surveySaturday(firstRun: CalendarDate): CalendarDate {
   const horizonEnd = shiftCalendarDate(firstRun, SERIES_HORIZON_DAYS);
-  for (
-    let saturday = shiftCalendarDate(firstRun, 7);
-    saturday <= horizonEnd;
-    saturday = shiftCalendarDate(saturday, 7)
-  ) {
-    if (isHolidaySaturday(saturday)) return saturday;
+  const year = Number(firstRun.slice(0, 4));
+  const surveys = [year - 1, year, year + 1].map(secondWeekOfSeptemberSaturday);
+  const distance = (saturday: CalendarDate) =>
+    Math.min(...surveys.map((survey) => Math.abs(calendarDaysBetween(saturday, survey))));
+  let closest = shiftCalendarDate(firstRun, 7);
+  for (let saturday = closest; saturday <= horizonEnd; saturday = shiftCalendarDate(saturday, 7)) {
+    if (distance(saturday) < distance(closest)) closest = saturday;
   }
-  return shiftCalendarDate(firstRun, 14);
+  return closest;
 }
 
-function isHolidaySaturday(saturday: CalendarDate): boolean {
-  const [, monthText, dayText] = saturday.split("-");
-  const month = Number(monthText);
-  const day = Number(dayText);
-  // The Saturday before Memorial Day (last Monday of May: May 25–31).
-  if (month === 5 && day >= 23 && day <= 29) return true;
-  // Independence Day falls on, or is observed beside, this Saturday.
-  if (month === 7 && day >= 3 && day <= 5) return true;
-  // The Saturday before Labor Day (first Monday of September: Sep 1–7).
-  if ((month === 8 && day >= 30) || (month === 9 && day <= 5)) return true;
-  // The Saturday after Thanksgiving (fourth Thursday of November: Nov 22–28).
-  if (month === 11 && day >= 24 && day <= 30) return true;
-  // Between Christmas and New Year.
-  if ((month === 12 && day >= 24) || (month === 1 && day <= 1)) return true;
-  return false;
+/** The Saturday that falls on September 8–14 of `year`. */
+function secondWeekOfSeptemberSaturday(year: number): CalendarDate {
+  const eighth = `${year}-09-08`;
+  return shiftCalendarDate(eighth, (SATURDAY - calendarDateWeekday(eighth) + 7) % 7);
 }
 
 /** Days from the shop's today to the next Saturday, never today itself. */
@@ -159,13 +151,13 @@ export async function seedWeeklyRun(
     );
   }
 
-  const closed = holidaySaturday(firstRun);
-  const [holiday] = await db
+  const closed = surveySaturday(firstRun);
+  const [survey] = await db
     .select({ id: trips.id })
     .from(trips)
     .where(and(eq(trips.seriesId, series.id), eq(trips.seriesOccurrenceDate, closed)))
     .limit(1);
-  for (const tripId of new Set([...madeWay, ...(holiday ? [holiday.id] : [])])) {
+  for (const tripId of new Set([...madeWay, ...(survey ? [survey.id] : [])])) {
     const outcome = await deleteTrip(app, shopId, tripId);
     if (!outcome.ok) throw new Error(`seed: a Saturday the run skips stayed (${outcome.reason})`);
   }

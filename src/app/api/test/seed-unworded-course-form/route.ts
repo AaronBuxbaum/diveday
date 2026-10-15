@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
   const form = await createCourseForm(db, {
     shopId: shop.id,
-    title: "Medical Statement",
+    title: "Youth Diving: Responsibility and Risks Acknowledgment",
     body: "",
     actorPersonId: staff.person.id,
   });

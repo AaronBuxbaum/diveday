@@ -2,30 +2,30 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { tripAssignments, tripSeries, tripSeriesCrew, tripSeriesSkips, trips } from "./schema";
-import { DEMO_WEEKLY_RUN_TITLE, holidaySaturday } from "./seed-weekly-run";
+import { DEMO_WEEKLY_RUN_TITLE, surveySaturday } from "./seed-weekly-run";
 import { getTripSeriesSummary } from "./trips";
 
-describe("holidaySaturday", () => {
-  it("takes Labor Day weekend off for a run that starts in July", () => {
-    expect(holidaySaturday("2026-07-25")).toBe("2026-09-05");
+describe("surveySaturday", () => {
+  it("hauls Mantis II out in the second week of September for a run that starts in July", () => {
+    expect(surveySaturday("2026-07-25")).toBe("2026-09-12");
   });
 
-  it("takes the Saturday after Thanksgiving off for a run that starts in October", () => {
-    expect(holidaySaturday("2026-10-17")).toBe("2026-11-28");
+  it("takes the Saturday nearest that week when the horizon has passed it", () => {
+    expect(surveySaturday("2026-10-17")).toBe("2026-10-24");
+  });
+
+  it("takes the Saturday nearest that week when the horizon stops short of it", () => {
+    expect(surveySaturday("2027-03-06")).toBe("2027-07-03");
   });
 
   it("never skips the run's first Saturday", () => {
-    expect(holidaySaturday("2026-11-28")).toBe("2026-12-26");
-  });
-
-  it("skips the third Saturday when no holiday falls in the horizon", () => {
-    expect(holidaySaturday("2027-01-09")).toBe("2027-01-23");
+    expect(surveySaturday("2026-09-12")).toBe("2026-09-19");
   });
 });
 
 /**
  * **The demo has a weekly boat** (fourth review, item 51): one open-ended
- * Saturday run with a standing crew and a skipped holiday, so a prospect sees
+ * Saturday run with a standing crew and a skipped Saturday, so a prospect sees
  * "Repeats weekly on Sat · keeps going" rather than only one-time departures.
  */
 describe("the seeded weekly run", () => {
@@ -78,7 +78,12 @@ describe("the seeded weekly run", () => {
     expect(short).toEqual([]);
   });
 
-  it("skips the holiday Saturday, and the roll keeps it skipped", async () => {
+  it("names the two sites its dives visit", async () => {
+    const { series } = await run();
+    expect(series.title).toBe("Saturday Two-Tank — Benwood & Christ of the Abyss");
+  });
+
+  it("skips the Saturday Mantis II is hauled out for her annual survey, and the roll keeps it skipped", async () => {
     const { db, series } = await run();
     const skips = await db
       .select({ date: tripSeriesSkips.occurrenceDate })
@@ -86,7 +91,7 @@ describe("the seeded weekly run", () => {
       .where(eq(tripSeriesSkips.seriesId, series.id));
     // The frozen clock's run starts on 2026-07-25, when the owner skippers
     // the long-range day, so that Saturday makes way too.
-    expect(skips.map((row) => row.date).sort()).toEqual(["2026-07-25", "2026-09-05"]);
+    expect(skips.map((row) => row.date).sort()).toEqual(["2026-07-25", "2026-09-12"]);
     const removed = await db
       .select({ date: trips.seriesOccurrenceDate })
       .from(trips)

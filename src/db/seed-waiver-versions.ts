@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
-import { waiverTemplates } from "./schema";
+import { shops, waiverTemplates } from "./schema";
 import { at } from "./seed-clock";
 
 /**
@@ -21,12 +21,12 @@ import { at } from "./seed-clock";
  * title, so every record snapshotted from it and every currency check against
  * `templateVersion` still line up; its version number, the date it was saved
  * and its words move. The words are the shop's own
- * ({@link SHOP_RELEASE_BODY}), not DiveDay's sample: a demo presented as a
+ * ({@link shopReleaseBody}), not DiveDay's sample: a demo presented as a
  * running shop opened its Waivers page on "Divers are signing DiveDay's
  * sample wording" (fourth review, item 53).
  *
  * **Runs first in `seedDemoSchedule`, before anything issues a waiver.**
- * `getCurrentWaiverTemplate` picks the newest row by `createdAt`, and every
+ * `getCurrentWaiverTemplate` picks the highest version, and every
  * later scenario (bookings, the month's other sailings, the cert-gate boats,
  * the history back-fill) snapshots whatever that returns. Moving this after any
  * of them would leave records claiming a version the shop is no longer on, and
@@ -78,25 +78,33 @@ const SUPERSEDED_RELEASES: { body: string; createdAt: () => Date }[] = [
 /**
  * **The release the shop signs today, in its own words**: the version-2 text
  * after counsel's pass, with the lines a working boat added (the captain's
- * call on site and weather, staying with a buddy, flying after diving). Not
- * legal advice, the same caveat `DEFAULT_WAIVER_BODY` carries, and
- * deliberately not byte-equal to it (`isSampleRelease`).
+ * call on site and weather, staying with a buddy, flying after diving), the
+ * diver's word that the medical questionnaire signed beside it is true, and
+ * the shop released by name rather than "the dive shop". Not legal advice, the
+ * same caveat `DEFAULT_WAIVER_BODY` carries, and deliberately not byte-equal
+ * to it (`isSampleRelease`). A release body has no placeholders, so the
+ * shop's name is written in here: the canonical demo and a minted one each
+ * get their own.
  */
-export const SHOP_RELEASE_BODY = [
-  "Release of Liability, Waiver of Claims, and Assumption of Risk",
-  "",
-  "I understand that scuba diving, snorkeling, and riding a dive boat offshore carry inherent risks, including changing weather and sea conditions, boat and equipment handling, marine life, decompression illness, and barotrauma, and that these can lead to serious injury or death.",
-  "",
-  "I confirm that I am fit to dive, that I am not diving under the influence of alcohol or drugs, and that I will tell the crew before departure if my health, certification, or comfort changes, or if I plan to fly within 24 hours of my last dive.",
-  "",
-  "I agree to follow every briefing and instruction from the captain and crew, to stay with my buddy, to use the equipment as trained, to dive within the limits of my certification and experience, and to end any dive I am not comfortable with.",
-  "",
-  "I understand that the captain may change the site, shorten the day, or call off the trip for weather or sea conditions.",
-  "",
-  "Knowing these risks, I voluntarily assume full responsibility for them and, to the fullest extent permitted by law, release and hold harmless the dive shop, its staff, boat crew, and vessels from any claim arising from my participation, except for injury caused by their gross negligence or willful misconduct.",
-  "",
-  "I have read this release in full, understand it, and agree to it freely.",
-].join("\n");
+export function shopReleaseBody(shopName: string): string {
+  return [
+    "Release of Liability, Waiver of Claims, and Assumption of Risk",
+    "",
+    "I understand that scuba diving, snorkeling, and riding a dive boat offshore carry inherent risks, including changing weather and sea conditions, boat and equipment handling, marine life, decompression illness, and barotrauma, and that these can lead to serious injury or death.",
+    "",
+    "I confirm that I am fit to dive, that I am not diving under the influence of alcohol or drugs, and that I will tell the crew before departure if my health, certification, or comfort changes, or if I plan to fly within 24 hours of my last dive.",
+    "",
+    `The answers I gave on the diver medical questionnaire that accompanies this release are true and complete, and I will tell ${shopName} if they change.`,
+    "",
+    "I agree to follow every briefing and instruction from the captain and crew, to stay with my buddy, to use the equipment as trained, to dive within the limits of my certification and experience, and to end any dive I am not comfortable with.",
+    "",
+    "I understand that the captain may change the site, shorten the day, or call off the trip for weather or sea conditions.",
+    "",
+    `Knowing these risks, I voluntarily assume full responsibility for them and, to the fullest extent permitted by law, release and hold harmless ${shopName}, its staff, boat crew, and vessels from any claim arising from my participation, except for injury caused by their gross negligence or willful misconduct.`,
+    "",
+    "I have read this release in full, understand it, and agree to it freely.",
+  ].join("\n");
+}
 
 /** What version the demo shop's current release ends up on. */
 const DEMO_WAIVER_TEMPLATE_VERSION = SUPERSEDED_RELEASES.length + 1;
@@ -105,6 +113,12 @@ const DEMO_WAIVER_TEMPLATE_VERSION = SUPERSEDED_RELEASES.length + 1;
 const CURRENT_RELEASE_SAVED_AT = () => at(-16, 11);
 
 export async function seedWaiverVersions(db: DbExecutor, shopId: string): Promise<void> {
+  const [shop] = await db
+    .select({ name: shops.name })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (!shop) return;
   const existing = await db
     .select({ id: waiverTemplates.id, title: waiverTemplates.title })
     .from(waiverTemplates)
@@ -125,7 +139,7 @@ export async function seedWaiverVersions(db: DbExecutor, shopId: string): Promis
     .update(waiverTemplates)
     .set({
       version: DEMO_WAIVER_TEMPLATE_VERSION,
-      body: SHOP_RELEASE_BODY,
+      body: shopReleaseBody(shop.name),
       createdAt: CURRENT_RELEASE_SAVED_AT(),
     })
     .where(eq(waiverTemplates.id, current.id));

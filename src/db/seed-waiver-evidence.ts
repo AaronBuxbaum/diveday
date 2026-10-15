@@ -79,7 +79,7 @@ const SIGNING_SPREAD_DAYS = 21;
  * read. The per-index millisecond keeps two signatures on the same day from
  * tying, which is what `nextCreatedAt` exists to prevent elsewhere.
  */
-function signedAtFor(index: number): Date {
+export function signedAtFor(index: number): Date {
   const daysBack = index % SIGNING_SPREAD_DAYS;
   if (daysBack === 0) return new Date(nowMs() - (35 + index * 7) * 60_000);
   const hour = 8 + (index % 8);

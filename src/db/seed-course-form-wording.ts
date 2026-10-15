@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNotNull, ne } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import {
@@ -8,6 +8,7 @@ import {
 } from "./course-forms";
 import { bookings, courseFormVersions, people, trips } from "./schema";
 import { withinDeskHours } from "./seed-clock";
+import { signedAtFor } from "./seed-waiver-evidence";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -101,7 +102,11 @@ export async function seedCourseFormWording(
   const tripIds = [...required.keys()];
   if (tripIds.length === 0) return;
   const students = await db
-    .select({ bookingId: bookings.id, tripId: bookings.tripId, fullName: people.fullName })
+    .select({
+      bookingId: bookings.id,
+      tripId: bookings.tripId,
+      fullName: people.fullName,
+    })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(
@@ -110,11 +115,16 @@ export async function seedCourseFormWording(
         inArray(bookings.tripId, tripIds),
         ne(bookings.status, "cancelled"),
       ),
-    );
-  // Signed at the desk while it was open, before now.
-  const signedAt = withinDeskHours(now);
+    )
+    // A fixed order, so each student's signing time is a function of the seed.
+    .orderBy(asc(people.fullName), asc(bookings.id));
+  let signing = 0;
   for (const student of students) {
     for (const form of required.get(student.tripId) ?? []) {
+      // Each form signed at the desk on its own visit, while the desk was
+      // open, spread over the past weeks the way the waiver evidence is.
+      const signedAt = withinDeskHours(signedAtFor(signing));
+      signing += 1;
       const record = (guardian?: { name: string; relationship: string }) =>
         recordPaperCourseForm(app, {
           shopId,
@@ -127,9 +137,7 @@ export async function seedCourseFormWording(
         });
       let outcome = await record();
       if (!outcome.ok && outcome.reason === "guardian_required") {
-        // A minor's form carries a parent's co-signature, as a paper one does.
-        const surname = student.fullName.split(" ").at(-1) ?? student.fullName;
-        outcome = await record({ name: `Alex ${surname}`, relationship: "parent" });
+        outcome = await record({ name: guardianNameFor(student.fullName), relationship: "parent" });
       }
       // A seat held for staff to confirm who it is takes no form yet.
       if (!outcome.ok && outcome.reason !== "unavailable") {
@@ -137,4 +145,20 @@ export async function seedCourseFormWording(
       }
     }
   }
+}
+
+/**
+ * A minor's form carries a parent's co-signature, as a paper one does. The
+ * seed has no parent on file, so it invents one sharing the student's surname
+ * under a given name ("Alex") that reads as either parent. It must never be
+ * the student's own name: `recordPaperCourseForm` refuses a co-signer whose
+ * name matches the diver's with `guardian_name_matches_diver` unless staff
+ * attest to the namesake, and the seed would throw. A student called Alex
+ * gets "Sam".
+ */
+export function guardianNameFor(studentFullName: string): string {
+  const parts = studentFullName.trim().split(/\s+/);
+  const surname = parts.at(-1) ?? studentFullName;
+  const given = parts[0]?.toLowerCase() === "alex" ? "Sam" : "Alex";
+  return `${given} ${surname}`;
 }

@@ -654,8 +654,7 @@ async function seedCrewConditions(
     [
       2,
       {
-        conditionsSummary:
-          "Open water, so the call is made at the dock. Expect current on the line.",
+        conditionsSummary: "Offshore, so the call is made at the dock. Expect current on the line.",
         waterTemperatureC: 26,
         visibilityMeters: visibility(80, 24),
         surfaceConditions: `Moderate southeast wind · ${depthUnit === "feet" ? "3 ft" : "1 m"} swell`,
