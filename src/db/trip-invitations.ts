@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, gte, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, ne, or } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -11,7 +11,6 @@ import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { sendNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
 import {
-  activityEvents,
   bookings,
   certifications,
   courseInquiries,
@@ -279,8 +278,8 @@ const DIRECT_RESEND_WINDOW_MS = 24 * HOUR_MS;
  * is given back when the mail does not go (`releaseDirectSend`), so a failed
  * send or a missing address never locks the diver out. Any staff role may
  * still send; a reply to a date request is service mail and is not throttled.
- * An offer from the counter (`offerDepartureToDiver`) passes the claim it took
- * itself.
+ * An offer from the counter (`offerDepartureToDiver`) is a cold invitation and
+ * takes the same claim.
  */
 export async function deliverTripInvitation(
   db: AppDb,
@@ -289,25 +288,17 @@ export async function deliverTripInvitation(
     shopSlug: string;
     tripId: string;
     invitationId: string;
-    /** The stamp to write; an offer passes the one its claim took. */
-    invitedAt?: Date;
   },
   provider?: NotificationProvider,
 ): Promise<TripInvitationDelivery> {
   const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
   if (!context) return "fallback";
-  if (context.invitation.source === "direct" && !input.invitedAt) {
+  if (context.invitation.source === "direct") {
     const claim = await claimDirectSend(db, input.shopId, input.invitationId);
     if (!claim) return "fallback";
-    let delivery: TripInvitationDelivery = "fallback";
-    try {
-      delivery = await sendTripInvitation(db, input, context, claim.at, provider);
-    } finally {
-      if (delivery !== "sent") await releaseDirectSend(db, input.shopId, input.invitationId, claim);
-    }
-    return delivery;
+    return sendClaimedTripInvitation(db, input, context, claim, provider);
   }
-  const invitedAt = input.invitedAt ?? nowDate();
+  const invitedAt = nowDate();
   const recorded = await recordTripInvitation(db, {
     shopId: input.shopId,
     tripId: input.tripId,
@@ -318,11 +309,30 @@ export async function deliverTripInvitation(
   return sendTripInvitation(db, input, context, invitedAt, provider);
 }
 
+/** A cold invitation's send under its claim, given back when the mail does not go. */
+async function sendClaimedTripInvitation(
+  db: AppDb,
+  input: { shopId: string; shopSlug: string; invitationId: string },
+  context: TripInvitationContext,
+  claim: DirectSendClaim,
+  provider: NotificationProvider | undefined,
+): Promise<TripInvitationDelivery> {
+  let delivery: TripInvitationDelivery = "fallback";
+  try {
+    delivery = await sendTripInvitation(db, input, context, claim.at, provider);
+  } finally {
+    if (delivery !== "sent") await releaseDirectSend(db, input.shopId, input.invitationId, claim);
+  }
+  return delivery;
+}
+
+type TripInvitationContext = NonNullable<Awaited<ReturnType<typeof getTripInvitation>>>;
+
 /** The send itself, once the stamp (and for a cold invitation, the claim) is written. */
 async function sendTripInvitation(
   db: AppDb,
   input: { shopId: string; shopSlug: string },
-  context: NonNullable<Awaited<ReturnType<typeof getTripInvitation>>>,
+  context: TripInvitationContext,
   invitedAt: Date,
   provider: NotificationProvider | undefined,
 ): Promise<TripInvitationDelivery> {
@@ -461,11 +471,14 @@ async function releaseDirectSend(
  * emailed. Nothing is seated and nothing is charged.
  *
  * An invitation already standing for this diver and departure is sent again
- * rather than refused, so a second tap after "no email" was fixed works. Mail
- * that did go out under an hour ago answers `already_sent` and sends nothing
- * (#2480): a double tap at a busy counter is one email, not two. "Did go out"
- * is the `departure_offered` line on the departure's trail, written only on a
- * sent delivery, so a fallback never blocks the retry.
+ * rather than refused, so a second tap after "no email" was fixed works. An
+ * offer is a cold invitation, so it takes the same claim (`claimDirectSend`):
+ * mail to this diver for this departure that went out in the last 24 hours,
+ * from the counter or the guests page, answers `already_sent` and sends
+ * nothing (#2133, and #2480's double tap at a busy counter is one email, not
+ * two). A send that did not go gives its claim back, so a fallback never
+ * blocks the retry. The `departure_offered` line goes on the departure's
+ * trail only on a sent delivery.
  * `unavailable` covers every reason there is nothing to offer: the departure
  * is gone or full, the diver could not book it (`departureOpenToDiver`), or
  * the person is not this shop's diver. Nothing is written or sent then.
@@ -580,7 +593,7 @@ export async function offerDepartureToDiver(
   if (!(await departureOpenToDiver(db, input))) return "unavailable";
   await createDirectTripInvitation(db, input);
   const [standing] = await db
-    .select({ id: tripInvitations.id, invitedAt: tripInvitations.invitedAt })
+    .select({ id: tripInvitations.id })
     .from(tripInvitations)
     .innerJoin(trips, eq(trips.id, tripInvitations.tripId))
     .where(
@@ -594,20 +607,17 @@ export async function offerDepartureToDiver(
     )
     .limit(1);
   if (!standing) return "unavailable";
-  const claimedAt = await claimOffer(db, input, standing.id);
-  if (!claimedAt) return "already_sent";
-  const delivery = await deliverTripInvitation(
+  const context = await getTripInvitation(db, input.shopId, input.tripId, standing.id);
+  if (!context) return "unavailable";
+  const claim = await claimDirectSend(db, input.shopId, standing.id);
+  if (!claim) return "already_sent";
+  const delivery = await sendClaimedTripInvitation(
     db,
-    {
-      shopId: input.shopId,
-      shopSlug: input.shopSlug,
-      tripId: input.tripId,
-      invitationId: standing.id,
-      invitedAt: claimedAt,
-    },
+    { ...input, invitationId: standing.id },
+    context,
+    claim,
     provider,
   );
-  if (delivery !== "sent") await releaseOffer(db, input.shopId, standing.id, claimedAt);
   if (delivery === "sent") {
     const [diver] = await db
       .select({ fullName: people.fullName })
@@ -623,95 +633,4 @@ export async function offerDepartureToDiver(
     });
   }
   return delivery;
-}
-
-/**
- * How long a fresh stamp with no "offered" line yet is an offer still
- * sending. A second tap inside it is the same tap; a send takes seconds.
- */
-const OFFER_IN_FLIGHT_MS = 2 * 60_000;
-
-/**
- * **Take the offer's send, or learn it is not this tap's** (#2480). The
- * invitation row is locked, read, and stamped in one transaction, so two taps
- * that land together cannot both pass: the second waits for the first's
- * stamp and finds it in flight. Refused when mail already went within the
- * hour, or another tap is sending now. Returns the stamp the send writes.
- */
-async function claimOffer(
-  db: AppDb,
-  input: { shopId: string; tripId: string; personId: string },
-  invitationId: string,
-): Promise<Date | null> {
-  return db.transaction(async (tx) => {
-    const [row] = await tx
-      .select({ invitedAt: tripInvitations.invitedAt })
-      .from(tripInvitations)
-      .where(and(eq(tripInvitations.id, invitationId), eq(tripInvitations.shopId, input.shopId)))
-      .limit(1)
-      .for("update");
-    if (!row) return null;
-    const now = nowDate();
-    if (row.invitedAt) {
-      if (now.getTime() - row.invitedAt.getTime() < OFFER_IN_FLIGHT_MS) {
-        // Inside the window: a send still going, or one that already went.
-        return null;
-      }
-      if (await offerSentSince(tx, input, row.invitedAt)) return null;
-    }
-    await tx
-      .update(tripInvitations)
-      .set({ invitedAt: now })
-      .where(and(eq(tripInvitations.id, invitationId), eq(tripInvitations.shopId, input.shopId)));
-    return now;
-  });
-}
-
-/**
- * Give the claim back after mail that did not go. The stamp stays, because
- * "Contacted" is still true (staff reach the diver by hand), but it moves to
- * just outside the in-flight window so the next tap may try again; only while
- * it is still this claim's.
- */
-async function releaseOffer(db: AppDb, shopId: string, invitationId: string, claimedAt: Date) {
-  await db
-    .update(tripInvitations)
-    .set({ invitedAt: new Date(claimedAt.getTime() - OFFER_IN_FLIGHT_MS) })
-    .where(
-      and(
-        eq(tripInvitations.id, invitationId),
-        eq(tripInvitations.shopId, shopId),
-        eq(tripInvitations.invitedAt, claimedAt),
-      ),
-    );
-}
-
-/**
- * Whether this departure's offer reached this diver by email at or after the
- * standing invitation's last stamp, and under an hour ago. The stamp is
- * written before the send and the trail line only after a sent one, so a
- * last attempt that fell back has no line after its stamp.
- */
-async function offerSentSince(
-  db: DbExecutor,
-  input: { shopId: string; tripId: string; personId: string },
-  invitedAt: Date,
-): Promise<boolean> {
-  const hourAgo = new Date(nowDate().getTime() - HOUR_MS);
-  if (invitedAt.getTime() < hourAgo.getTime()) return false;
-  const [line] = await db
-    .select({ id: activityEvents.id })
-    .from(activityEvents)
-    .where(
-      and(
-        eq(activityEvents.shopId, input.shopId),
-        eq(activityEvents.tripId, input.tripId),
-        eq(activityEvents.subjectPersonId, input.personId),
-        eq(activityEvents.code, "departure_offered"),
-        gte(activityEvents.occurredAt, invitedAt),
-        gte(activityEvents.occurredAt, hourAgo),
-      ),
-    )
-    .limit(1);
-  return Boolean(line);
 }
