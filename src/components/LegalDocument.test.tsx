@@ -184,3 +184,27 @@ describe("the legal document's skeleton", () => {
     expect(container.querySelectorAll("h1, h2, p, dl, a, button")).toHaveLength(0);
   });
 });
+
+/** `/privacy#extension` is the Chrome Web Store listing's privacy URL. */
+describe("a legal section's anchor", () => {
+  it("carries the id another page links to, and clears a sticky header", () => {
+    render(
+      <LegalSection id="extension" heading="The extension">
+        <p>Body.</p>
+      </LegalSection>,
+    );
+    const section = screen.getByRole("heading", { name: "The extension" }).closest("section");
+    expect(section).toHaveAttribute("id", "extension");
+    expect(section).toHaveClass("scroll-mt-24");
+  });
+
+  it("has none unless asked", () => {
+    render(
+      <LegalSection heading="Plain">
+        <p>Body.</p>
+      </LegalSection>,
+    );
+    const section = screen.getByRole("heading", { name: "Plain" }).closest("section");
+    expect(section).not.toHaveAttribute("id");
+  });
+});
