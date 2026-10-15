@@ -134,6 +134,9 @@ type ActivityParamShapes = {
    */
   incident_report_filed: { actor: string };
   incident_report_addendum_added: { actor: string };
+  incident_draft_discarded: { actor: string };
+  incident_legal_hold_set: { actor: string };
+  incident_legal_hold_released: { actor: string };
   /** A staffer seated a diver. */
   seat_added: { actor: string; diver: string };
   /** …as a walk-in, which is the same act with a different story behind it. */
@@ -301,6 +304,9 @@ export const ACTIVITY_CODES = [
   "blowout_called",
   "incident_report_filed",
   "incident_report_addendum_added",
+  "incident_draft_discarded",
+  "incident_legal_hold_set",
+  "incident_legal_hold_released",
   "seat_added",
   "seat_added_walk_in",
   "seat_added_from_trip_link",

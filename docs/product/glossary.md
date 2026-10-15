@@ -163,6 +163,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Deposit
 - Desk hours
 - Didn't sail
+- Discarded draft
 - Dive briefing
 - Dive day
 - Dive day (north star)
@@ -190,6 +191,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Last-minute deal
 - Last-minute list
 - Learning materials
+- Legal hold
 - Manifest
 - Medical hold
 - Medical questionnaire

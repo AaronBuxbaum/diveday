@@ -755,6 +755,12 @@
   narrative beside it. Kept seven years from the incident; erasing a diver removes their identity
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
+- **Legal hold** (on an **incident report**) — an owner-set flag that keeps a report past its
+  seven-year window while a claim is open. The retention prune skips a held report until an owner
+  releases the hold, and a held report cannot be deleted. Only an owner sets or releases it
+  ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
+- **Discarded draft** — an **incident report** draft an owner deleted because it should never have
+  been started. Soft-deleted and invisible; a filed report can never be discarded.
 - **Incident kind** / **incident severity** — the two closed answers an **incident report** files
   with: its kind (injury or illness, near miss, equipment, missing diver, fatality, other) and how
   serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety page;

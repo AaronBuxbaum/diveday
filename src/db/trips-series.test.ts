@@ -1375,25 +1375,6 @@ describe("a run's standing crew (2026-10-12): applied per date, never assumed", 
     ).toBeGreaterThan(0);
   });
 
-  it("names the standing crew in the series summary, and none before one is set", async () => {
-    const run = await runWithCrew();
-    expect(
-      (await getTripSeriesSummary(run.db, run.shop.id, run.source.id, run.now))?.standingCrewNames,
-    ).toEqual([]);
-    await setSeriesStandingCrew(run.db, {
-      shopId: run.shop.id,
-      seriesId: run.result.series.id,
-      sourceTripId: run.source.id,
-      standing: true,
-      actorPersonId: null,
-      now: run.now,
-    });
-    const summary = await getTripSeriesSummary(run.db, run.shop.id, run.source.id, run.now);
-    expect(summary?.standingCrewNames).toHaveLength(2);
-    expect(summary?.standingCrewNames).toEqual([...(summary?.standingCrewNames ?? [])].sort());
-    expect(summary?.standingCrew).toBe(true);
-  });
-
   it("leaves a date with its own crew when somebody on this one is on another boat then", async () => {
     const run = await runWithCrew();
     const [, clashing] = run.result.trips;

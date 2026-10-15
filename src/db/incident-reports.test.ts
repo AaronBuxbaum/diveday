@@ -2,18 +2,21 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { IncidentDraftFields } from "@/lib/incident-reports";
 import { fileScopedShopContext } from "@/test/db";
+import { demoteOwnerToManager } from "@/test/staff-session";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { loadShopExportBundleInput } from "./export";
 import {
   addIncidentAddendum,
   addIncidentPerson,
+  discardIncidentDraft,
   fileIncidentReport,
   getIncidentReport,
   listShopIncidentReports,
   listTripIncidentReports,
   removeIncidentPerson,
   saveIncidentDraft,
+  setIncidentLegalHold,
   startIncidentReport,
 } from "./incident-reports";
 import { pruneExpiredRecords } from "./retention";
@@ -23,6 +26,7 @@ import {
   incidentReportPeople,
   incidentReports,
   tripAssignments,
+  trips,
 } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -611,6 +615,211 @@ describe("retention", () => {
         .select()
         .from(incidentReportAddenda)
         .where(eq(incidentReportAddenda.reportId, started.reportId)),
+    ).toHaveLength(0);
+  });
+});
+
+describe("discarding a draft", () => {
+  async function draftBy(personId: string) {
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    const started = await startIncidentReport(db, {
+      shopId: shop.id,
+      tripId: f.trip.id,
+      actorPersonId: personId,
+    });
+    if (!started.ok) throw new Error("expected a draft");
+    const target = (actor: string) => ({
+      shopId: shop.id,
+      reportId: started.reportId,
+      tripId: f.trip.id,
+      actorPersonId: actor,
+    });
+    const row = async () =>
+      (await db.select().from(incidentReports).where(eq(incidentReports.id, started.reportId)))[0];
+    return { db, shop, f, started, target, row };
+  }
+
+  it("lets an owner delete a mistaken draft: the row stays, no screen shows it, the trail says who", async () => {
+    const d = await draftBy((await fixture(ctx.db, ctx.shop.id)).crew.id);
+    expect(await discardIncidentDraft(d.db, d.target(d.f.owner.id))).toEqual({ ok: true });
+    expect((await d.row())?.deletedAt).not.toBeNull();
+    // Gone to the departure's list, the shop's list, the page, and every write.
+    const list = await listTripIncidentReports(d.db, d.shop.id, d.f.trip.id, d.f.owner.id);
+    expect(list.reports).toHaveLength(0);
+    const from = new Date("2000-01-01T00:00:00Z");
+    const to = new Date("2100-01-01T00:00:00Z");
+    expect(await listShopIncidentReports(d.db, d.shop.id, d.f.owner.id, from, to)).toHaveLength(0);
+    expect(await getIncidentReport(d.db, d.shop.id, d.started.reportId, d.f.owner.id)).toBeNull();
+    expect(await saveIncidentDraft(d.db, { ...d.target(d.f.crew.id), fields: complete })).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+    expect(await fileIncidentReport(d.db, d.target(d.f.owner.id))).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+    const trail = await d.db
+      .select()
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.tripId, d.f.trip.id),
+          eq(activityEvents.code, "incident_draft_discarded"),
+        ),
+      );
+    expect(trail).toHaveLength(1);
+    expect(JSON.stringify(trail[0])).not.toContain("coughing");
+  });
+
+  it("refuses a filed report by every route, and the database refuses it too", async () => {
+    const d = await draftBy((await fixture(ctx.db, ctx.shop.id)).crew.id);
+    await saveIncidentDraft(d.db, { ...d.target(d.f.crew.id), fields: complete });
+    expect(await fileIncidentReport(d.db, d.target(d.f.crew.id))).toEqual({ ok: true });
+    expect(await discardIncidentDraft(d.db, d.target(d.f.owner.id))).toEqual({
+      ok: false,
+      reason: "filed",
+    });
+    expect((await d.row())?.deletedAt).toBeNull();
+    // A hand-written update cannot do what the function refuses.
+    await expect(
+      d.db.transaction(async (tx) => {
+        await tx
+          .update(incidentReports)
+          .set({ deletedAt: new Date() })
+          .where(eq(incidentReports.id, d.started.reportId));
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("is an owner's call alone: not the draft's author, not a manager, not other crew", async () => {
+    const d = await draftBy((await fixture(ctx.db, ctx.shop.id)).crew.id);
+    // The author is on the crew and may edit the draft, but may not delete it.
+    expect(await discardIncidentDraft(d.db, d.target(d.f.crew.id))).toEqual({
+      ok: false,
+      reason: "not_allowed",
+    });
+    // Staff ashore cannot even tell it exists.
+    expect(await discardIncidentDraft(d.db, d.target(d.f.ashore.id))).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+    await demoteOwnerToManager(d.db, d.f.owner.id);
+    expect(await discardIncidentDraft(d.db, d.target(d.f.owner.id))).toEqual({
+      ok: false,
+      reason: "not_allowed",
+    });
+    expect((await d.row())?.deletedAt).toBeNull();
+  });
+
+  it("refuses another shop and another departure's address as if the draft did not exist", async () => {
+    const d = await draftBy((await fixture(ctx.db, ctx.shop.id)).crew.id);
+    expect(
+      await discardIncidentDraft(d.db, { ...d.target(d.f.owner.id), shopId: OTHER_SHOP }),
+    ).toEqual({ ok: false, reason: "not_found" });
+    expect(
+      await discardIncidentDraft(d.db, { ...d.target(d.f.owner.id), tripId: OTHER_TRIP }),
+    ).toEqual({ ok: false, reason: "not_found" });
+    expect((await d.row())?.deletedAt).toBeNull();
+  });
+
+  it("refuses a draft under a legal hold until the hold is released", async () => {
+    const d = await draftBy((await fixture(ctx.db, ctx.shop.id)).crew.id);
+    expect(await setIncidentLegalHold(d.db, { ...d.target(d.f.owner.id), held: true })).toEqual({
+      ok: true,
+    });
+    expect(await discardIncidentDraft(d.db, d.target(d.f.owner.id))).toEqual({
+      ok: false,
+      reason: "held",
+    });
+    await setIncidentLegalHold(d.db, { ...d.target(d.f.owner.id), held: false });
+    expect(await discardIncidentDraft(d.db, d.target(d.f.owner.id))).toEqual({ ok: true });
+  });
+
+  it("lets a discarded draft's departure keep reading as a trip with no report", async () => {
+    const d = await draftBy((await fixture(ctx.db, ctx.shop.id)).crew.id);
+    await discardIncidentDraft(d.db, d.target(d.f.owner.id));
+    const [trip] = await d.db.select({ id: trips.id }).from(trips).where(eq(trips.id, d.f.trip.id));
+    expect(trip?.id).toBe(d.f.trip.id);
+  });
+});
+
+describe("a legal hold", () => {
+  async function filedReport() {
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    const started = await startIncidentReport(db, {
+      shopId: shop.id,
+      tripId: f.trip.id,
+      actorPersonId: f.crew.id,
+    });
+    if (!started.ok) throw new Error("expected a draft");
+    const base = (actor: string) => ({
+      shopId: shop.id,
+      reportId: started.reportId,
+      tripId: f.trip.id,
+      actorPersonId: actor,
+    });
+    await saveIncidentDraft(db, { ...base(f.crew.id), fields: complete });
+    await fileIncidentReport(db, base(f.crew.id));
+    return { db, shop, f, started, base };
+  }
+
+  it("is the owner's to set and release, and says so on the trail once each", async () => {
+    const r = await filedReport();
+    expect(await setIncidentLegalHold(r.db, { ...r.base(r.f.owner.id), held: true })).toEqual({
+      ok: true,
+    });
+    // Setting it again changes nothing and writes no second line.
+    await setIncidentLegalHold(r.db, { ...r.base(r.f.owner.id), held: true });
+    expect(
+      (await getIncidentReport(r.db, r.shop.id, r.started.reportId, r.f.owner.id))?.legalHold,
+    ).toBe(true);
+    await setIncidentLegalHold(r.db, { ...r.base(r.f.owner.id), held: false });
+    const codes = (
+      await r.db.select().from(activityEvents).where(eq(activityEvents.tripId, r.f.trip.id))
+    ).map((event) => event.code);
+    expect(codes.filter((code) => code === "incident_legal_hold_set")).toHaveLength(1);
+    expect(codes.filter((code) => code === "incident_legal_hold_released")).toHaveLength(1);
+  });
+
+  it("is refused to the crew who filed the report, to a manager, and to another shop", async () => {
+    const r = await filedReport();
+    expect(await setIncidentLegalHold(r.db, { ...r.base(r.f.crew.id), held: true })).toEqual({
+      ok: false,
+      reason: "not_allowed",
+    });
+    await demoteOwnerToManager(r.db, r.f.owner.id);
+    expect(await setIncidentLegalHold(r.db, { ...r.base(r.f.owner.id), held: true })).toEqual({
+      ok: false,
+      reason: "not_allowed",
+    });
+    expect(
+      await setIncidentLegalHold(r.db, {
+        ...r.base(r.f.owner.id),
+        shopId: OTHER_SHOP,
+        held: true,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+    const [row] = await r.db
+      .select()
+      .from(incidentReports)
+      .where(eq(incidentReports.id, r.started.reportId));
+    expect(row?.legalHoldAt).toBeNull();
+  });
+
+  it("keeps a held report past seven years, and lets it go when released", async () => {
+    const r = await filedReport();
+    await setIncidentLegalHold(r.db, { ...r.base(r.f.owner.id), held: true });
+    const past = new Date(OCCURRED_AT.getTime() + 2556 * 86_400_000);
+    await pruneExpiredRecords(r.db, { now: past });
+    expect(
+      await r.db.select().from(incidentReports).where(eq(incidentReports.id, r.started.reportId)),
+    ).toHaveLength(1);
+    await setIncidentLegalHold(r.db, { ...r.base(r.f.owner.id), held: false });
+    await pruneExpiredRecords(r.db, { now: past });
+    expect(
+      await r.db.select().from(incidentReports).where(eq(incidentReports.id, r.started.reportId)),
     ).toHaveLength(0);
   });
 });
