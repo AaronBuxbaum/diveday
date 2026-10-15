@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import type { SystemReason } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
 import type { AppDb, DbExecutor } from "./client";
@@ -545,6 +546,38 @@ export async function recordTripActivity(
       subjectPersonId: input.subjectPersonId ?? null,
       code: entry.code,
       params: { actor: scope.actorName, ...names },
+      occurredAt: nowDate(),
+    })
+    .returning();
+  return event ?? null;
+}
+
+/**
+ * **A line the system wrote on its own** (issue #2539): an automatic call-off,
+ * where no person acted. The row has no actor and says why in `system_reason`,
+ * which the table's check holds in step. Returns null for a departure that is
+ * not this shop's.
+ */
+export async function recordSystemTripActivity(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; reason: SystemReason },
+) {
+  const [trip] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    // diveday:allow-deleted-trips: the call-off line is written as the departure is called off.
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .limit(1);
+  if (!trip) return null;
+  const [event] = await db
+    .insert(activityEvents)
+    .values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      actorPersonId: null,
+      systemReason: input.reason,
+      code: "departure_called_off_automatically",
+      params: { reason: input.reason },
       occurredAt: nowDate(),
     })
     .returning();

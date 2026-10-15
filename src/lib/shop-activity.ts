@@ -78,6 +78,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   departure_copied: "departures",
   departure_deleted: "departures",
   series_cancelled: "departures",
+  departure_called_off_automatically: "departures",
   review_replied: "reviews",
   review_reply_edited: "reviews",
   review_reply_deleted: "reviews",

@@ -30,6 +30,16 @@
  * person is renamed. That is also why erasure has to reach in here — see
  * {@link ACTIVITY_REDACTED} and `src/db/anonymize.ts`.
  */
+/**
+ * **Why the system, not a person, wrote a line.** Stored in
+ * `activity_events.system_reason` when there is no actor. Only reasons with a
+ * writer are listed: `minimum_not_met` is the hourly rule that cancels a
+ * departure short of its minimum head count. (The nightly series roll only adds
+ * dates and cancels none, so it has no reason here.)
+ */
+export const SYSTEM_REASONS = ["minimum_not_met"] as const;
+export type SystemReason = (typeof SYSTEM_REASONS)[number];
+
 type ActivityParamShapes = {
   /** A diver arrived and a staffer recorded it. */
   counter_check_in: { diver: string };
@@ -232,6 +242,14 @@ type ActivityParamShapes = {
    */
   series_cancelled: { actor: string };
   /**
+   * **The system called the departure off on its own** (issue #2539): no
+   * person did it, so the line has no actor (`activity_events.actor_person_id`
+   * is null and `system_reason` says why) and `reason` is that same code, for
+   * the sentence. Written beside the crew notice and the divers' mail by the
+   * rule that made the call (`src/db/trips-minimum.ts`).
+   */
+  departure_called_off_automatically: { reason: SystemReason };
+  /**
    * **The shop answered a review in public** (batch 4, K2): wrote the reply
    * under it, changed it, or took it down. Filed on the departure the review
    * is about, and naming no reviewer, like the moderation lines beside it.
@@ -345,6 +363,7 @@ export const ACTIVITY_CODES = [
   "departure_copied",
   "departure_deleted",
   "series_cancelled",
+  "departure_called_off_automatically",
   "review_replied",
   "review_reply_edited",
   "review_reply_deleted",
