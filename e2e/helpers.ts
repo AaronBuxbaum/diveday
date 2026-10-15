@@ -919,7 +919,10 @@ export async function openManifestPerson(row: Locator): Promise<void> {
     await expect(existingDialog).toHaveCount(0);
   }
   const trigger = row.locator('button[aria-haspopup="dialog"]').first();
-  await expect(trigger).toBeVisible();
+  // The sheet opens client-side only: a click on the server-rendered trigger
+  // before hydration (a fresh load, or the router's hard-navigation fallback
+  // when an RSC fetch fails) is dropped, and aria-expanded never turns.
+  await expect(trigger).toHaveAttribute("data-hydrated", "true");
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
 }
