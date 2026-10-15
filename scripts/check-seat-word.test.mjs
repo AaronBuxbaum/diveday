@@ -47,6 +47,17 @@ describe("everyone says seat", () => {
     expect(flagged(hint, "trips.json")).toEqual(["form.locationHint"]);
   });
 
+  it("lets a field-guide species say spot, in the diver bundle only", () => {
+    const guide = {
+      marineLife: { species: { "lane-snapper": { description: "a dark spot high on the flank" } } },
+    };
+    expect(flagged(guide, "diver.json")).toEqual([]);
+    expect(flagged(guide, "trips.json")).toEqual(["marineLife.species.lane-snapper.description"]);
+    expect(flagged({ marineLife: { heading: "3 spots left" } }, "diver.json")).toEqual([
+      "marineLife.heading",
+    ]);
+  });
+
   it("names only allowed strings that still exist and still say spot", async () => {
     for (const entry of allowedSpotStrings) {
       const [file, keyPath] = entry.split(":");

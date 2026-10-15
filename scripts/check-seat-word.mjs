@@ -18,8 +18,10 @@ import { pathToFileURL } from "node:url";
  * (`src/i18n/locales/en-US/diver.json`). Spanish says `plaza` on both sides
  * and has no second word to drift into.
  *
- * `allowed` names each string where "spot" is right (a place, a mark on a
- * fish, the verb), and why.
+ * `allowed` names each string where "spot" is right (a place, the idiom),
+ * and why; `allowedSubtrees` names a whole branch of a bundle where it always
+ * is (the field guide's species, where a spot is a mark on a fish or a place
+ * on the reef and a seat is never meant).
  */
 
 const ROOT = process.cwd();
@@ -38,34 +40,20 @@ const allowed = new Map([
     'a place, not capacity: "a spot on the reef" is where an incident happened',
   ],
   [
-    "diver.json:marineLife.species.barred-hamlet.tip",
-    'a place: a hamlet "holds a spot" on the reef',
-  ],
-  ["diver.json:marineLife.species.hogfish.tip", 'the verb: "before you spot the fish"'],
-  [
-    "diver.json:marineLife.species.mutton-snapper.description",
-    'a mark on the fish: "a small black spot high on the flank"',
-  ],
-  [
-    "diver.json:marineLife.species.pederson-cleaner-shrimp.description",
-    'a mark on the shrimp: "violet spots"',
-  ],
-  [
-    "diver.json:marineLife.species.rock-beauty.tip",
-    'a place: "it comes back out to the same spot"',
-  ],
-  ["diver.json:marineLife.species.rock-hind.description", 'a mark on the fish: "red-brown spots"'],
-  [
-    "diver.json:marineLife.species.spotted-moray.description",
-    'a mark on the eel: "white peppered with dark spots"',
-  ],
-  [
-    "diver.json:marineLife.species.threespot-damselfish.description",
-    'a mark on the fish: "a black spot at the tail"',
-  ],
-  [
     "diver.json:marketing.featurePages.checkIn.summary",
     'the idiom "walk-ins added on the spot", meaning there and then',
+  ],
+]);
+
+/**
+ * `file:key.path.` prefix -> why "spot" is right anywhere beneath it. The
+ * marine-life catalog grows by the species and says "spot" for markings in
+ * dozens of them; listing each would only rot.
+ */
+const allowedSubtrees = new Map([
+  [
+    "diver.json:marineLife.species.",
+    "the field guide: a spot is a mark on a fish, a place on the reef or the verb, never capacity",
   ],
 ]);
 
@@ -84,6 +72,9 @@ export function findSpotWords(bundle, { file = "" } = {}) {
     strings += 1;
     if (!PATTERN.test(node)) return;
     if (allowed.has(`${file}:${keyPath}`)) return;
+    for (const prefix of allowedSubtrees.keys()) {
+      if (`${file}:${keyPath}`.startsWith(prefix)) return;
+    }
     violations.push({ keyPath, text: node });
   };
   walk(bundle, "");
