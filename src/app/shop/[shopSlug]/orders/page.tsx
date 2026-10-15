@@ -11,7 +11,7 @@ import { LedgerGroup } from "@/components/ui/ledger";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonManageOrders, canPersonManagePaymentSettings } from "@/db/authz";
 import { listImportedPaymentHistory } from "@/db/imported-payment-history";
-import { ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
+import { countShopOrders, ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
 import { getShopPersonName } from "@/db/people";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { orderStatus } from "@/db/schema";
@@ -166,6 +166,8 @@ export default async function OrdersIndexPage({
     q?: string;
     /** One departure's orders — the trip pulse's awaiting-payment fact links here. */
     tripId?: string;
+    /** `cancelled`: that departure's orders left on released seats (issue #2550). */
+    seats?: string;
     from?: string;
     to?: string;
     range?: string;
@@ -175,7 +177,7 @@ export default async function OrdersIndexPage({
   }>;
 }) {
   const { shopSlug } = await params;
-  const { status, personId, q, tripId, from, to, range, page, importedPage, notice } =
+  const { status, personId, q, tripId, seats, from, to, range, page, importedPage, notice } =
     await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
@@ -231,7 +233,12 @@ export default async function OrdersIndexPage({
     query: trimmedQuery,
     tripId: tripFilter,
     personId: personFilter,
-  } = orderIndexFilter({ status, personId, q, tripId, from, to, range }, shop.timezone, nowDate());
+    seats: seatsFilter,
+  } = orderIndexFilter(
+    { status, personId, q, tripId, seats, from, to, range },
+    shop.timezone,
+    nowDate(),
+  );
   const showAll = selectedRange === "all";
   const customRange = selectedRange === "custom";
 
@@ -271,7 +278,12 @@ export default async function OrdersIndexPage({
 
   /** This page's URL with the filters kept and only the given params swapped. */
   const hrefWith = (
-    overrides: { page?: number; importedPage?: number; range?: string | null },
+    overrides: {
+      page?: number;
+      importedPage?: number;
+      range?: string | null;
+      seats?: "live" | "cancelled";
+    },
     path = "orders",
   ) => {
     const query = new URLSearchParams();
@@ -279,6 +291,7 @@ export default async function OrdersIndexPage({
     if (personFilter) query.set("personId", personFilter);
     if (trimmedQuery) query.set("q", trimmedQuery);
     if (tripFilter) query.set("tripId", tripFilter);
+    if ((overrides.seats ?? seatsFilter) === "cancelled") query.set("seats", "cancelled");
     if (from) query.set("from", from);
     if (to) query.set("to", to);
     const nextRange =
@@ -313,6 +326,14 @@ export default async function OrdersIndexPage({
   // nothing, and looked up so a departure with no open orders left still says
   // which departure the empty screen is about.
   const filteredTripTitle = tripFilter ? await getShopTripTitle(db, shop.id, tripFilter) : null;
+  // The other half of the departure's seats, so the list can say what it is
+  // leaving out and where it is (issue #2550): the live seats' orders carry a
+  // line for those on cancelled seats, and the cancelled view a way back.
+  const otherSeats = seatsFilter === "cancelled" ? "live" : "cancelled";
+  const otherSeatsCount =
+    tripFilter && seatsFilter
+      ? await countShopOrders(db, shop.id, { ...orderFilter, seats: otherSeats })
+      : 0;
   const hasFilters = Boolean(
     statusFilter ||
       personFilter ||
@@ -552,6 +573,30 @@ export default async function OrdersIndexPage({
             className="font-medium text-primary hover:underline"
           >
             {t("orders.index.openFilteredTrip")}
+          </Link>
+        </p>
+      ) : null}
+
+      {tripFilter && filteredTripTitle && seatsFilter === "cancelled" ? (
+        <p className="mt-2 text-sm text-muted" data-testid="orders-cancelled-seats">
+          {t("orders.index.cancelledSeatsOnly")}{" "}
+          <Link
+            href={hrefWith({ seats: "live" })}
+            className="font-medium text-primary hover:underline"
+          >
+            {t("orders.index.backToLiveSeats")}
+          </Link>
+        </p>
+      ) : null}
+      {tripFilter && filteredTripTitle && otherSeatsCount > 0 ? (
+        <p className="mt-2 text-sm text-muted" data-testid="orders-other-seats">
+          <Link
+            href={hrefWith({ seats: otherSeats })}
+            className="font-medium text-primary hover:underline"
+          >
+            {seatsFilter === "cancelled"
+              ? t("orders.index.liveSeatsLine", { count: otherSeatsCount })
+              : t("orders.index.cancelledSeatsLine", { count: otherSeatsCount })}
           </Link>
         </p>
       ) : null}

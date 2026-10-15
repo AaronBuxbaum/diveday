@@ -11,6 +11,8 @@ export type OrderIndexParams = {
   q?: string;
   /** One departure's orders — the trip pulse's awaiting-payment fact links here. */
   tripId?: string;
+  /** `cancelled` lists the orders left on released seats; anything else is the boat's live seats. */
+  seats?: string;
   from?: string;
   to?: string;
   range?: string;
@@ -60,6 +62,14 @@ export function orderIndexFilter(params: OrderIndexParams, timeZone: string, now
   const query = params.q?.trim() || undefined;
   const tripId = uuidParam(params.tripId);
   const personId = uuidParam(params.personId);
+  // One departure's orders read the boat's live seats unless the cancelled
+  // seats are asked for by name (issue #2550): the pulse's count and the list
+  // it opens then agree, and the rest stays one link away.
+  const seats: "live" | "cancelled" | undefined = tripId
+    ? params.seats === "cancelled"
+      ? "cancelled"
+      : "live"
+    : undefined;
   const fromBoundary = dayBoundary(params.from, timeZone, 0);
   const toBoundary = dayBoundary(params.to, timeZone, 1);
   const hasDateBounds = Boolean(fromBoundary || toBoundary);
@@ -78,6 +88,7 @@ export function orderIndexFilter(params: OrderIndexParams, timeZone: string, now
     // The search **combines** with a pinned diver rather than yielding to it.
     q: query,
     tripId,
+    seats,
     from: custom
       ? fromBoundary
       : range === "recent"
@@ -85,5 +96,5 @@ export function orderIndexFilter(params: OrderIndexParams, timeZone: string, now
         : undefined,
     to: custom ? toBoundary : undefined,
   };
-  return { filter, range, status, query, tripId, personId };
+  return { filter, range, status, query, tripId, personId, seats };
 }

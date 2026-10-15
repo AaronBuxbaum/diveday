@@ -734,7 +734,7 @@ describe("the trip filter", () => {
     await db.insert(orders).values([invoice("seat", booking.id), invoice("counter", null)]);
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(session);
-    return { tripId: trip.id };
+    return { tripId: trip.id, db, bookingId: booking.id };
   }
 
   it("narrows the list to that departure's orders", async () => {
@@ -747,6 +747,49 @@ describe("the trip filter", () => {
 
     // The shape the trip pulse's "N orders are awaiting payment ›" links to.
     expect(listedOrders(await renderWith({ tripId, status: "open", range: "all" }))).toBe(1);
+  });
+
+  /**
+   * Issue #2550. The pulse counts open orders on seats still on the boat; the
+   * index it opens read every seat, so after a cancellation the count could
+   * be lower than the rows behind the link. The default view now agrees with
+   * the count, and the order left on the cancelled seat is one labelled link
+   * away, never dropped from the ledger.
+   */
+  it("lists a cancelled seat's open order under its own line, not among the boat's", async () => {
+    const { tripId, db, bookingId } = await shopWithAnInvoicedSeat();
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+
+    const live = await renderWith({ tripId, status: "open", range: "all" });
+    expect(listedOrders(live)).toBe(0);
+    const line = hrefsIn(live).find((href) => href.includes("seats=cancelled"));
+    expect(line).toContain(`tripId=${tripId}`);
+    expect(textIn(live)).toContain("1 more order is on canceled seats");
+
+    const cancelled = await renderWith({
+      tripId,
+      status: "open",
+      range: "all",
+      seats: "cancelled",
+    });
+    expect(listedOrders(cancelled)).toBe(1);
+    expect(textIn(cancelled)).toContain("Showing the orders left on canceled seats");
+    // The way back keeps the departure and drops the seat filter.
+    expect(
+      hrefsIn(cancelled).some((href) => href.includes("tripId=") && !href.includes("seats=")),
+    ).toBe(true);
+  });
+
+  it("says nothing about cancelled seats when none holds an order", async () => {
+    const { tripId } = await shopWithAnInvoicedSeat();
+    const element = await renderWith({ tripId, status: "open", range: "all" });
+    expect(hrefsIn(element).filter((href) => href.includes("seats="))).toEqual([]);
+  });
+
+  it("ignores ?seats= without a departure", async () => {
+    await shopWithAnInvoicedSeat();
+    const element = await renderWith({ status: "open", range: "all", seats: "cancelled" });
+    expect(listedOrders(element)).toBeGreaterThan(1);
   });
 
   it("keeps the departure in the toolbar", async () => {

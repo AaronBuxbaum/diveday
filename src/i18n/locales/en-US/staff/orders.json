@@ -140,6 +140,10 @@
     "filteredByDiver": "Showing orders for {name}.",
     "filteredByTrip": "Showing orders for {title}.",
     "openFilteredTrip": "Open the departure",
+    "cancelledSeatsOnly": "Showing the orders left on canceled seats. Each may still need a refund or a void.",
+    "backToLiveSeats": "Back to the boat’s orders",
+    "cancelledSeatsLine": "{count, plural, one {# more order is} other {# more orders are}} on canceled seats ›",
+    "liveSeatsLine": "{count, plural, one {# order is} other {# orders are}} on seats still on the boat ›",
     "setupCard": {
       "title": "Take payments with DiveDay",
       "body": "Connect Stripe and the front desk can send orders from here."
