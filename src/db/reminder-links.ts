@@ -35,6 +35,19 @@ export class ReminderLinks {
   }
 
   /**
+   * Run the sends, then take back what they left unsent, **also when they
+   * throw**: a pass that dies part-way revokes every link it minted and did not
+   * send, not only those of the sends it saw fail (#2451).
+   */
+  async whileSending(db: AppDb, now: Date, send: () => Promise<void>): Promise<void> {
+    try {
+      await send();
+    } finally {
+      await this.revokeUnsent(db, now);
+    }
+  }
+
+  /**
    * Take back the link of every reminder that did not go: one that failed, and
    * one a pass that threw never reached. Everything minted and not sent, so it
    * belongs in a `finally`.

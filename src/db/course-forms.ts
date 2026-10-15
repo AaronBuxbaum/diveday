@@ -49,7 +49,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { livePerson, liveTrip } from "./trips-live";
 
 /**
  * **Course forms**, the stateful half (ADR 20261008-course-forms). The rule
@@ -224,7 +224,9 @@ export async function saveCourseFormVersion(
       const [actor] = await tx
         .select({ name: people.fullName })
         .from(people)
-        .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+        .where(
+          and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()),
+        )
         .limit(1);
       await tx.insert(activityEvents).values({
         shopId: input.shopId,

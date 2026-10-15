@@ -361,6 +361,11 @@ async function mintReminderLinks(
   return new ReminderLinks(links);
 }
 
+/** A pass that has scanned `scanned` bookings and sent nothing yet. */
+function emptyReminderSummary(scanned: number): ReminderRunSummary {
+  return { scanned, sent: 0, skipped: 0, held: 0, identityHeld: 0, settled: 0, failed: 0 };
+}
+
 /**
  * Send every pre-trip reminder that has come due since the last run, across all
  * shops. Idempotent by construction: a booking's reminder is deduped by a
@@ -431,15 +436,7 @@ export async function sendDueReminders(
       ),
     );
 
-  const summary: ReminderRunSummary = {
-    scanned: rows.length,
-    sent: 0,
-    skipped: 0,
-    held: 0,
-    identityHeld: 0,
-    settled: 0,
-    failed: 0,
-  };
+  const summary = emptyReminderSummary(rows.length);
   if (rows.length === 0) return summary;
 
   // Resolved once for every shop in this scan rather than per booking — the
@@ -570,9 +567,8 @@ export async function sendDueReminders(
     row: { booking, person, trip, shop, courseMaterials },
     cadence,
   } of dueRows) {
-    // The diver's own checklist, from the same engine their readiness page
-    // reads — built first because the rhythm rule (issue #1177) decides on it
-    // whether anything below runs at all.
+    // The diver's own checklist, from their readiness page's engine, built
+    // first: the rhythm rule (issue #1177) decides on it whether this sends.
     const evidence = readinessByBooking.get(booking.id);
     const checklist = evidence
       ? buildDiverChecklist(evidence.requirement, evidence.readiness)
@@ -622,10 +618,7 @@ export async function sendDueReminders(
   }
 
   const links = await mintReminderLinks(db, origin, sending, now, whatsAppProviders);
-
-  // A pass that throws part-way takes back every link it minted and did not
-  // send, not only those of the sends it saw fail (#2451).
-  try {
+  await links.whileSending(db, now, async () => {
     for (const {
       row: { booking, person, trip, shop },
       cadence,
@@ -634,13 +627,10 @@ export async function sendDueReminders(
     } of sending) {
       const meetings = meetingsByTrip.get(trip.id) ?? [];
       const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
-      // There is no request to negotiate `Accept-Language` from at a cron fire,
-      // so this reads whatever the diver's own past requests already recorded,
-      // and falls back to the shop's stored locale when there is nothing — same
-      // fallback the calendar feed uses, for the same reason (docs ADR
-      // 20260731-per-person-notification-locale). Both the email and the SMS
-      // below take this one value, so a diver never gets the two channels in
-      // different languages.
+      // No request to negotiate `Accept-Language` from at a cron fire: this reads
+      // what the diver's past requests recorded, else the shop's stored locale,
+      // as the calendar feed does (ADR 20260731-per-person-notification-locale).
+      // Email and SMS take this one value, so the channels never differ in language.
       const locale = recipientLocale(person.locale, shop.defaultLocale);
       const t = diverTranslator(locale);
       const readinessUrl = links.urlFor(booking.id);
@@ -827,9 +817,7 @@ export async function sendDueReminders(
       });
       links.settle(summary, work.bookingId, delivery);
     }
-  } finally {
-    await links.revokeUnsent(db, now);
-  }
+  });
 
   return summary;
 }
