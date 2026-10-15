@@ -22,8 +22,10 @@ export type RecentRecord = {
 
 export const MAX_RECENTS = 5;
 
+const RECENTS_PREFIX = "diveday.palette.recent.";
+
 export function recentsStorageKey(shopSlug: string, readerId: string | undefined): string {
-  return `diveday.palette.recent.${shopSlug}.${readerId ?? "anyone"}`;
+  return `${RECENTS_PREFIX}${shopSlug}.${readerId ?? "anyone"}`;
 }
 
 const KINDS: ReadonlySet<string> = new Set(["diver", "trip", "order", "gear"]);
@@ -74,5 +76,23 @@ export function forgetRecents(storageKey: string): void {
     window.localStorage.removeItem(storageKey);
   } catch {
     // Nothing kept, nothing to forget.
+  }
+}
+
+/**
+ * **Every staffer's recents on this device, gone** — what the shop-name menu's
+ * own Sign out does, which knows neither the shop nor the reader the palette
+ * keyed them by. A counter tablet passed between shifts keeps no names.
+ */
+export function forgetAllRecents(): void {
+  try {
+    const keys: string[] = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (key?.startsWith(RECENTS_PREFIX)) keys.push(key);
+    }
+    for (const key of keys) window.localStorage.removeItem(key);
+  } catch {
+    // Storage refused: nothing was kept to forget.
   }
 }

@@ -12,6 +12,7 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { isBoatModeOn, setBoatMode } from "@/lib/boat-mode";
 import { motionMs } from "@/lib/motion";
 import { tellUsMailto, tellUsPath } from "@/lib/tell-us";
+import { forgetAllRecents } from "./search/palette-recents";
 
 export type ShopIdentityMenuCopy = {
   boatMode: string;
@@ -204,6 +205,9 @@ export function ShopIdentityMenu({
               the rule rather than in the same stack as the language rows. */}
           <form
             action={signOutAction}
+            // The ⌘K recents hold names; a shared tablet keeps none past a
+            // sign-out (fifth loop, item 13).
+            onSubmit={forgetAllRecents}
             data-scroll-reset="true"
             className="mt-1 border-t border-border pt-1"
           >

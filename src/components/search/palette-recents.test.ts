@@ -1,5 +1,12 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { MAX_RECENTS, type RecentRecord, recentsStorageKey, withRecent } from "./palette-recents";
+import {
+  forgetAllRecents,
+  MAX_RECENTS,
+  type RecentRecord,
+  recentsStorageKey,
+  withRecent,
+} from "./palette-recents";
 
 const record = (id: string): RecentRecord => ({
   key: `diver:${id}`,
@@ -24,5 +31,17 @@ describe("recentsStorageKey", () => {
       recentsStorageKey("blue-mantis", "p-2"),
     );
     expect(recentsStorageKey("a", "p-1")).not.toBe(recentsStorageKey("b", "p-1"));
+  });
+});
+
+describe("forgetAllRecents", () => {
+  it("clears every staffer's recents on the device and nothing else", () => {
+    window.localStorage.setItem(recentsStorageKey("blue-mantis", "a"), "[]");
+    window.localStorage.setItem(recentsStorageKey("reef-shop", "b"), "[]");
+    window.localStorage.setItem("diveday.something-else", "kept");
+    forgetAllRecents();
+    expect(window.localStorage.getItem(recentsStorageKey("blue-mantis", "a"))).toBeNull();
+    expect(window.localStorage.getItem(recentsStorageKey("reef-shop", "b"))).toBeNull();
+    expect(window.localStorage.getItem("diveday.something-else")).toBe("kept");
   });
 });
