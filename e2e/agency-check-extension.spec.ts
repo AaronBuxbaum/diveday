@@ -274,9 +274,24 @@ function stageExtension(sourceDir: string, targetDir: string): string {
   return targetDir;
 }
 
-/** The full Chromium an extension needs; the fleet's headless shell cannot load one. */
+/**
+ * The full Chromium an extension needs; the fleet's headless shell cannot load one.
+ *
+ * Branded Google Chrome ignores `--load-extension`, so when the pinned Chromium
+ * is missing and `chromiumExecutableOverride()` falls back to the system Chrome,
+ * every test here would die with "browser has been closed" (a Playwright bump
+ * on 2026-10-15 left a Mac on an older build and did exactly that). Refuse it
+ * by name instead.
+ */
 function extensionCapableChromium(): string | undefined {
   const override = chromiumExecutableOverride();
+  if (override?.includes("Google Chrome.app")) {
+    throw new Error(
+      `agency-check-extension.spec.ts loads the real extension, and the fallback browser ${override} ` +
+        `is branded Google Chrome, which ignores --load-extension. Install the pinned Chromium: ` +
+        `\`pnpm exec playwright install chromium\`.`,
+    );
+  }
   if (override) return override;
   const bundled = chromium.executablePath();
   if (fs.existsSync(bundled)) return undefined;
