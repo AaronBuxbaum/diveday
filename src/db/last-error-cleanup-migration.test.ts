@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { ERASURE_FAILURE_DETAIL } from "@/lib/payments/erasure-failure";
+import { ERASURE_FAILURE_DETAIL, erasureFailureOf } from "@/lib/payments/erasure-failure";
 import { fileScopedShopContext } from "@/test/db";
 import { notificationSendQueue, people, processorErasureObligations } from "./schema";
 
@@ -49,7 +49,7 @@ async function seedObligations(lastErrors: Array<string | null>) {
 }
 
 describe("the last_error cleanup migration", () => {
-  it("keeps what a writer emits today and cuts the rest down to its HTTP status", async () => {
+  it("keeps what a writer emits today and cuts the rest down to its HTTP status or the unanswered detail", async () => {
     const kept = [
       "HTTP 404",
       "HTTP 400: resource_missing",
@@ -82,36 +82,33 @@ describe("the last_error cleanup migration", () => {
     expect(at(kept.length)).toBe("HTTP 400");
     expect(at(kept.length + 1)).toBe("HTTP 402");
     expect(at(kept.length + 2)).toBe("HTTP 400");
-    expect(at(kept.length + 3)).toBeNull();
+    // No status to keep: the fixed "unanswered" detail, so the reason survives.
+    expect(at(kept.length + 3)).toBe(ERASURE_FAILURE_DETAIL.unanswered);
+    expect(erasureFailureOf(at(kept.length + 3) ?? null)).toBe("unreachable");
     expect(at(kept.length + 4)).toBeNull();
   });
 
-  it("nulls a queue row's free text where an error code is set, and leaves the rest", async () => {
+  it("keeps a queue row's token-shaped last_error and nulls the rest, whatever its error_code", async () => {
     const { db, shop } = ctx;
     const nextAttemptAt = new Date("2026-10-15T12:00:00Z");
-    await db.insert(notificationSendQueue).values([
-      {
+    const rows = [
+      ["cleanup-coded-free", "provider_rejected", "550 mailbox jane@example.com unavailable"],
+      ["cleanup-uncoded-free", null, "Error: could not send to Jane Diver"],
+      ["cleanup-class", null, "TypeError"],
+      ["cleanup-code", "provider_rejected", "ECONNRESET"],
+      ["cleanup-sqlstate", null, "23505"],
+      ["cleanup-coded-token", "provider_rejected", "ResendError"],
+      ["cleanup-clean", "provider_rejected", null],
+    ] as const;
+    await db.insert(notificationSendQueue).values(
+      rows.map(([idempotencyKey, errorCode, lastError]) => ({
         shopId: shop.id,
-        idempotencyKey: "cleanup-coded",
+        idempotencyKey,
         nextAttemptAt,
-        errorCode: "provider_rejected",
-        lastError: "550 mailbox jane@example.com unavailable",
-      },
-      {
-        shopId: shop.id,
-        idempotencyKey: "cleanup-uncoded",
-        nextAttemptAt,
-        errorCode: null,
-        lastError: "TypeError",
-      },
-      {
-        shopId: shop.id,
-        idempotencyKey: "cleanup-clean",
-        nextAttemptAt,
-        errorCode: "provider_rejected",
-        lastError: null,
-      },
-    ]);
+        errorCode,
+        lastError,
+      })),
+    );
 
     await runCleanup();
 
@@ -122,8 +119,12 @@ describe("the last_error cleanup migration", () => {
           .from(notificationSendQueue)
           .where(eq(notificationSendQueue.idempotencyKey, key))
       )[0]?.lastError;
-    expect(await lastErrorOf("cleanup-coded")).toBeNull();
-    expect(await lastErrorOf("cleanup-uncoded")).toBe("TypeError");
+    expect(await lastErrorOf("cleanup-coded-free")).toBeNull();
+    expect(await lastErrorOf("cleanup-uncoded-free")).toBeNull();
+    expect(await lastErrorOf("cleanup-class")).toBe("TypeError");
+    expect(await lastErrorOf("cleanup-code")).toBe("ECONNRESET");
+    expect(await lastErrorOf("cleanup-sqlstate")).toBe("23505");
+    expect(await lastErrorOf("cleanup-coded-token")).toBe("ResendError");
     expect(await lastErrorOf("cleanup-clean")).toBeNull();
   });
 });
