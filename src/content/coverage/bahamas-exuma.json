@@ -1,0 +1,146 @@
+{
+  "area": "bahamas-exuma",
+  "method": "The Exumas: the Exuma Cays Land and Sea Park chain from Highborne to Staniel Cay and Great Exuma around George Town and Stocking Island. The Bahamas National Trust Exuma Cays Land and Sea Park page gives moorings and fees but no dive-site list. Lists used: the tourism list (Bahamas Ministry of Tourism dive page together with the My Out Islands Exumas diving page, counted as one list); Staniel Cay Adventures; Dive Exuma (George Town); the Aqua Cat family of liveaboards (Aqua Cat, Blackbeard's and Cat Ppalu, one owner, read as the 2015 Wayback site list and the 2020 All Star Liveaboards blog); and the Bahamas Aggressor Exuma Cays dive-site sheet (published by the Aggressor line, hosted by a UK reseller; the vessel has left the Bahamas, so its list is historical). Staniel Cay Yacht Club, Exuma Scuba and the Four Seasons Emerald Bay shop publish no readable site list. Sites on the Nassau legs (Lost Blue Hole, Periwinkle Reef) belong to Nassau and are not counted here. A site counts when named, recreationally divable on scuba and on at least two lists. Thunderball Grotto is excluded as mainly a snorkel site and the park itself as an area. Counted 2026-10-14.",
+  "sources": [
+    "https://www.myoutislands.com/bahamas-islands/exumas/diving",
+    "https://www.bahamas.com/plan-your-trip/diving",
+    "https://stanielcayadventures.com/dive/",
+    "https://www.dive-exuma.com/diving/",
+    "https://web.archive.org/web/20151103034457/http://www.aquacatcruises.com/scuba-diving-sites/",
+    "https://allstarliveaboards.com/10-amazing-bahamas-dive-sites/",
+    "https://www.diversetravel.co.uk/wp-content/uploads/2020/07/BAHAMAS-AGGRESSOR_Exuma-Cays-ITIN.pdf"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Exuma Cays Land and Sea Park",
+      "template": null,
+      "excluded": "marine park, not a single named site"
+    },
+    {
+      "name": "Washing Machine",
+      "template": null,
+      "excluded": "on one list only (Aqua Cat)"
+    },
+    {
+      "name": "Cracked Coral Head",
+      "template": null,
+      "excluded": "on one list only (Aggressor)"
+    },
+    {
+      "name": "Barracuda Shoals",
+      "template": null,
+      "listedBy": [
+        "https://allstarliveaboards.com/10-amazing-bahamas-dive-sites/",
+        "https://www.diversetravel.co.uk/wp-content/uploads/2020/07/BAHAMAS-AGGRESSOR_Exuma-Cays-ITIN.pdf"
+      ]
+    },
+    {
+      "name": "Black Tip Wall",
+      "template": null,
+      "listedBy": [
+        "https://stanielcayadventures.com/dive/",
+        "https://www.diversetravel.co.uk/wp-content/uploads/2020/07/BAHAMAS-AGGRESSOR_Exuma-Cays-ITIN.pdf"
+      ]
+    },
+    {
+      "name": "Cathedral (Dog Rocks)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20151103034457/http://www.aquacatcruises.com/scuba-diving-sites/",
+        "https://www.diversetravel.co.uk/wp-content/uploads/2020/07/BAHAMAS-AGGRESSOR_Exuma-Cays-ITIN.pdf"
+      ]
+    },
+    {
+      "name": "Whale Tail Wall",
+      "template": null,
+      "excluded": "on one list only (Aqua Cat)"
+    },
+    {
+      "name": "Pillar Wall",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20151103034457/http://www.aquacatcruises.com/scuba-diving-sites/",
+        "https://www.diversetravel.co.uk/wp-content/uploads/2020/07/BAHAMAS-AGGRESSOR_Exuma-Cays-ITIN.pdf",
+        "https://stanielcayadventures.com/dive/"
+      ]
+    },
+    {
+      "name": "Jeep Reef",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20151103034457/http://www.aquacatcruises.com/scuba-diving-sites/",
+        "https://www.diversetravel.co.uk/wp-content/uploads/2020/07/BAHAMAS-AGGRESSOR_Exuma-Cays-ITIN.pdf",
+        "https://stanielcayadventures.com/dive/"
+      ]
+    },
+    {
+      "name": "Amberjack Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/plan-your-trip/diving",
+        "https://web.archive.org/web/20151103034457/http://www.aquacatcruises.com/scuba-diving-sites/",
+        "https://www.diversetravel.co.uk/wp-content/uploads/2020/07/BAHAMAS-AGGRESSOR_Exuma-Cays-ITIN.pdf",
+        "https://stanielcayadventures.com/dive/"
+      ]
+    },
+    {
+      "name": "Austin Smith Wreck",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20151103034457/http://www.aquacatcruises.com/scuba-diving-sites/",
+        "https://www.diversetravel.co.uk/wp-content/uploads/2020/07/BAHAMAS-AGGRESSOR_Exuma-Cays-ITIN.pdf",
+        "https://stanielcayadventures.com/dive/"
+      ]
+    },
+    {
+      "name": "Danger Reef",
+      "template": null,
+      "excluded": "on one list only (Staniel Cay Adventures)"
+    },
+    {
+      "name": "Thunderball Grotto",
+      "template": null,
+      "excluded": "mainly a snorkel site; scuba on one list only (Staniel Cay Adventures)"
+    },
+    {
+      "name": "Angelfish Blue Hole",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/exumas/diving",
+        "https://www.dive-exuma.com/diving/"
+      ]
+    },
+    {
+      "name": "Crab Cay Crevasse",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Elkhorn Gardens",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Lobster Reef",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Pagoda Reef",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Stingray Reef",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "The Tug (wreck)",
+      "template": null,
+      "excluded": "on one list only (Dive Exuma)"
+    }
+  ]
+}
