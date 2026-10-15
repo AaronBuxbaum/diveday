@@ -103,10 +103,6 @@ export type RosterTrip = {
    * wears the "Materials not done" capsule. After the last day it is history.
    */
   courseMaterialsOpen?: boolean;
-  /** The Trip surface already leads with its masthead capacity read. */
-  compact?: boolean;
-  /** Keep the old standalone Guests heading for the compatibility route. */
-  showSummaryHeading?: boolean;
 };
 
 export type RosterPrivateNote = Awaited<ReturnType<typeof listBookingNotes>>[number] & {

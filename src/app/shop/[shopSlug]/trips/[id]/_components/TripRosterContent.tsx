@@ -91,8 +91,6 @@ export type TripRosterContentContext = {
   mayWriteOffPayment: boolean;
   /** Whether this staffer may raise an invoice — see `RosterSection`. */
   canManageOrders: boolean;
-  /** The canonical Trip surface already owns the masthead capacity read. */
-  compact?: boolean;
   /**
    * What reads as the roster's consequence rather than its footnote — on the
    * departure page, the packing list derived from these very seats.
@@ -143,7 +141,6 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     participantTypeCertBookingId,
     mayWriteOffPayment,
     canManageOrders,
-    compact = false,
     afterRoster = null,
     arrival,
     record,
@@ -249,8 +246,6 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           certifyDefaultLevel: guests.certifyDefaultLevel,
           courseHasMaterials: guests.courseHasMaterials,
           courseMaterialsOpen: guests.courseMaterialsOpen,
-          compact,
-          showSummaryHeading: !compact,
         }}
         rows={{
           roster,

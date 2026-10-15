@@ -43,7 +43,7 @@ describe("the guests ledger (slice 5d)", () => {
    * found nothing at 2 on the page the desk uses most.
    */
   it("gives its group bands the level under the page title, skipping none", () => {
-    renderRoster({ ...fixtures, compact: true, showSummaryHeading: false });
+    renderRoster(fixtures);
 
     const bands = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(bands).toEqual(expect.arrayContaining(["Still to clear · 1", "Ready · 1"]));
@@ -110,7 +110,6 @@ describe("the guests ledger (slice 5d)", () => {
         ["c", signedWaiver],
         ["d", signedWaiver],
       ]) as WaiverByBooking,
-      compact: true,
     });
 
     expect(screen.getByRole("link", { name: "Asha Osei" })).toHaveClass(
@@ -449,12 +448,11 @@ describe("the roster's row geometry", () => {
  * own step.
  */
 describe("the roster's place on the departure page", () => {
-  it("carries no top margin of its own when compact", () => {
+  it("carries no top margin of its own", () => {
     const { container } = renderRoster({
       roster: [],
       readiness: new Map() as ReadinessByBooking,
       waivers: new Map() as WaiverByBooking,
-      compact: true,
     });
     const roster = container.querySelector("#roster");
     expect(roster).not.toBeNull();

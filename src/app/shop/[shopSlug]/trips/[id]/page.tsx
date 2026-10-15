@@ -513,7 +513,6 @@ export default async function ManageTripPage({
                   notice === "participant-type-cert" && mayOverrideCertBlock ? bid : undefined,
                 mayWriteOffPayment,
                 canManageOrders,
-                compact: true,
                 actions: rosterActions,
               }}
             />

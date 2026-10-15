@@ -8,7 +8,6 @@ import {
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { signingDate } from "@/lib/guardian";
@@ -81,8 +80,7 @@ export function RosterSection({
   actions: RosterActions;
   slots?: RosterSlots;
 }) {
-  const { locale, shopTimezone, booked, capacity, compact = false } = trip;
-  const showSummaryHeading = trip.showSummaryHeading ?? true;
+  const { locale, shopTimezone } = trip;
   const { waitingGroup, invitedGroup, addDiverGroup, arrival, record } = slots;
   const { roster } = rows;
   const t = staffTranslator(locale);
@@ -126,37 +124,23 @@ export function RosterSection({
   const section = (
     <section
       id="roster"
-      aria-label={showSummaryHeading ? undefined : t("trips.roster.heading")}
-      // Compact is the departure page, whose `space-y-10` spaces this
-      // (K-262); a roster rendered outside that stack keeps its own step.
-      className={`${compact ? "" : "mt-10"} scroll-mt-24`}
+      aria-label={t("trips.roster.heading")}
+      // The departure page's `space-y-10` spaces this (K-262).
+      className="scroll-mt-24"
     >
       {arrival?.instrument ? (
         <div className="mb-10">{arrival.instrument(groups.deskWorkOpen)}</div>
       ) : null}
-      {showSummaryHeading ? (
-        <div>
-          <h2 className={SECTION_TITLE_CLASS}>
-            {t("trips.roster.heading")}{" "}
-            <span className="font-normal text-muted tabular-nums">
-              {t("trips.roster.bookedOfCapacity", { booked, capacity })}
-            </span>
-          </h2>
-          {/* The moment the last blocker clears. Nothing renders until an
-            action on this page moves the count to zero — see RosterAllClear
-            for why that has to be decided in the browser rather than here.
-            Held back on an empty roster: "everyone is cleared" about nobody
-            is not a finished thing. */}
-          {showAllClear ? (
-            <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
-          ) : null}
-        </div>
-      ) : null}
-      {!showSummaryHeading && showAllClear ? (
+      {/* The departure page's H1 heads this tab. The moment the last blocker
+          clears, nothing renders until an action on this page moves the count to
+          zero — see RosterAllClear for why that has to be decided in the browser
+          rather than here. Held back on an empty roster: "everyone is cleared"
+          about nobody is not a finished thing. */}
+      {showAllClear ? (
         <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
       ) : null}
       {actions.agencyCheckAction ? (
-        <div className={compact ? "" : "mt-5"}>
+        <div>
           <AgencyCheckAll cards={agencyCards} copy={agencyCheckAllCopy(t, agencyCards.length)} />
         </div>
       ) : null}
@@ -169,7 +153,7 @@ export function RosterSection({
         <div
           className={sectionCardClass({
             padding: "none",
-            className: `${compact ? "" : "mt-5"} overflow-hidden`,
+            className: "overflow-hidden",
           })}
         >
           {/* Inside the card, so mounting proves the rows a deep link scrolls
