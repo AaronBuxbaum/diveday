@@ -13,7 +13,9 @@ import {
   FieldGrid,
 } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { maxPlausibleBirthDate } from "@/lib/age";
+import { ageOnDate, isMinorOnDate, maxPlausibleBirthDate } from "@/lib/age";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import type { DiverStatusRow } from "@/lib/diver-status";
 import { savePersonAction } from "../details-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
@@ -175,7 +177,7 @@ export function DiverDetailsGroup({
             date is on file, since that is the only save that reads it. */}
         {diver.person.dateOfBirth ? (
           <ChoiceRow type="checkbox" name="adultAttested" value="yes" className="col-span-full">
-            {t("divers.header.clearDateAdultAttested")}
+            {clearDateAnswerLabel(t, diver.person.dateOfBirth, timezone)}
           </ChoiceRow>
         ) : null}
         {/* Task 144 — Today used to tell staff to "ask at the counter" and
@@ -246,6 +248,18 @@ export function DiverDetailsGroup({
  * with no date, who said the diver is 18 or older (H-100). That answer is what
  * the guardian rule reads until a date is typed here, so it says whose it is.
  */
+/**
+ * The box that clears a stored date. The answer overrides the date, so when
+ * that date makes the diver a minor today, the box says the age on file and
+ * what ticking it claims (dive-domain review of #2167).
+ */
+function clearDateAnswerLabel(t: StaffTranslator, dateOfBirth: string, timezone: string): string {
+  const today = calendarDateInTimezone(nowDate(), timezone);
+  return isMinorOnDate(dateOfBirth, today)
+    ? t("divers.header.clearDateAdultAttestedMinor", { age: ageOnDate(dateOfBirth, today) })
+    : t("divers.header.clearDateAdultAttested");
+}
+
 function dateOfBirthHint(t: StaffTranslator, diver: DiverProfile): string {
   if (diver.person.dateOfBirth || !diver.person.adultAttestedAt) {
     return t("divers.header.optionalHint");

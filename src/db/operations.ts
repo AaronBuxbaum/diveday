@@ -130,6 +130,7 @@ export type DiverActivityCode =
   | "identity_split_off"
   | "medical_clearance_opened"
   | "medical_answers_read"
+  | "date_of_birth_cleared_as_adult"
   | "record_exported"
   | "running_late_from_message";
 
@@ -142,7 +143,7 @@ export type DiverActivityCode =
  * or a booking.
  */
 export async function recordDiverActivity(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; personId: string; actorPersonId: string; code: DiverActivityCode },
 ): Promise<boolean> {
   const [diver] = await db

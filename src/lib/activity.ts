@@ -169,6 +169,12 @@ type ActivityParamShapes = {
   medical_clearance_opened: { actor: string; diver: string };
   /** An owner or manager read a diver's full medical questionnaire (issue #2157). */
   medical_answers_read: { actor: string; diver: string };
+  /**
+   * A staffer cleared a diver's stored date of birth by answering "They're 18
+   * or older" (issue #2167). On the trail, because a date typed later drops
+   * the record's own answer columns and must not drop who said it.
+   */
+  date_of_birth_cleared_as_adult: { actor: string; diver: string };
   /** A staffer downloaded a diver's own record. */
   record_exported: { actor: string; diver: string };
   /**
@@ -319,6 +325,7 @@ export const ACTIVITY_CODES = [
   "party_seat_self_refunded",
   "medical_clearance_opened",
   "medical_answers_read",
+  "date_of_birth_cleared_as_adult",
   "record_exported",
   "running_late_from_message",
   "order_refunded",

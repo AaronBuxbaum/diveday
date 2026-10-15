@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createDiver, updateDiver } from "./divers";
-import { courses, people, trips } from "./schema";
+import { activityEvents, courses, people, trips } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -20,6 +20,19 @@ const ctx = fileScopedShopContext();
 function saved(result: Awaited<ReturnType<typeof updateDiver>>) {
   if (!result.ok) throw new Error(`updateDiver refused: ${result.reason}`);
   return result.person;
+}
+
+/** The diver-trail lines saying a stored date was cleared as 18 or older. */
+async function clearedLines(db: AppDb, personId: string) {
+  return db
+    .select({ actorPersonId: activityEvents.actorPersonId, params: activityEvents.params })
+    .from(activityEvents)
+    .where(
+      and(
+        eq(activityEvents.subjectPersonId, personId),
+        eq(activityEvents.code, "date_of_birth_cleared_as_adult"),
+      ),
+    );
 }
 
 /** The seeded staffer who gives an 18-or-older answer. */
@@ -157,6 +170,60 @@ describe("updateDiver and the date of birth", () => {
       expect(person.dateOfBirth).toBeNull();
       expect(person.adultAttestedAt).toBeInstanceOf(Date);
       expect(person.adultAttestedByPersonId).toBe(staffId);
+      // The date said 13, so the answer overrides it: the diver's trail names
+      // who said so, where a later correction cannot erase it.
+      expect(await clearedLines(db, personId)).toEqual([
+        {
+          actorPersonId: staffId,
+          params: { actor: "Dana Reyes", diver: "Cleared Cleo" },
+        },
+      ]);
+    });
+
+    it("keeps the trail line when a date typed later drops the answer", async () => {
+      const { db, shop, personId } = await minor();
+      const staffId = await staffer(db, shop.id);
+      saved(
+        await updateDiver(db, {
+          shopId: shop.id,
+          personId,
+          fullName: "Cleared Cleo",
+          dateOfBirth: "",
+          adultAttestedByPersonId: staffId,
+        }),
+      );
+
+      const corrected = saved(
+        await updateDiver(db, {
+          shopId: shop.id,
+          personId,
+          fullName: "Cleared Cleo",
+          dateOfBirth: "2013-05-02",
+        }),
+      );
+
+      expect(corrected.adultAttestedByPersonId).toBeNull();
+      expect(await clearedLines(db, personId)).toHaveLength(1);
+    });
+
+    it("refuses the clear when the answering staffer is no longer on the record", async () => {
+      const { db, shop, personId } = await minor();
+      const gone = await createDiver(db, { shopId: shop.id, fullName: "Gone Gael" });
+      if (!gone) throw new Error("staffer insert failed");
+      await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, gone.id));
+
+      const result = await updateDiver(db, {
+        shopId: shop.id,
+        personId,
+        fullName: "Cleared Cleo",
+        dateOfBirth: "",
+        adultAttestedByPersonId: gone.id,
+      });
+
+      expect(result).toEqual({ ok: false, reason: "age_unstated" });
+      const [row] = await db.select().from(people).where(eq(people.id, personId));
+      expect(row?.dateOfBirth).toBe("2013-05-02");
+      expect(await clearedLines(db, personId)).toEqual([]);
     });
 
     it("ignores the answer when a date is kept or typed", async () => {

@@ -23,6 +23,7 @@ import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
 import { diveDay } from "./dive-days";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
+import { recordDiverActivity } from "./operations";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { listPersonBookingPayments } from "./payments";
@@ -235,6 +236,23 @@ export async function updateDiver(
         return { ok: false, reason: "date_of_birth_required" };
       }
       if (clearing && !input.adultAttestedByPersonId) return { ok: false, reason: "age_unstated" };
+      // The answer overrides the date it clears, which may have said the
+      // diver was a minor, so who gave it goes on the diver's trail too: a
+      // date typed later empties the answer columns below, never the trail
+      // (dive-domain review of #2167). No line, no clear: an answer from a
+      // staffer no longer on the record is not one.
+      if (
+        clearing &&
+        input.adultAttestedByPersonId &&
+        !(await recordDiverActivity(tx, {
+          shopId: input.shopId,
+          personId: input.personId,
+          actorPersonId: input.adultAttestedByPersonId,
+          code: "date_of_birth_cleared_as_adult",
+        }))
+      ) {
+        return { ok: false, reason: "age_unstated" };
+      }
       const [person] = await tx
         .update(people)
         .set({
