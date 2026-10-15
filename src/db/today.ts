@@ -651,6 +651,10 @@ export async function listRollCallGaps(
         population[dive] = (population[dive] ?? 0) + 1;
         if (state !== undefined) recorded[dive] = (recorded[dive] ?? 0) + 1;
         if (isAccountedForAfterDive(state)) continue;
+        // The latest checkpoint speaks (issue #2404): "not back" after dive 1
+        // is settled by "back aboard" after a later dive, the rule
+        // `listUnaccountedForByTrip` and `homewardCheckpointGap` keep.
+        if (state === "not_boarded" && states.slice(dive + 1).includes("boarded")) continue;
         unaccounted[dive] = (unaccounted[dive] ?? 0) + 1;
         if (state === "not_boarded") notBackAboard[dive] = (notBackAboard[dive] ?? 0) + 1;
       }

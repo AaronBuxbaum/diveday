@@ -566,9 +566,10 @@ async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds:
  * A seat is in the set when its newest word at some after-dive checkpoint is
  * `not_boarded` ("did not come back") and no later after-dive checkpoint has
  * its newest word `boarded`. The latest checkpoint speaks, the rule
- * `homewardCheckpointGap` and Today's missing-diver row already keep: a diver
- * missing after dive 1 and counted aboard after dive 2 is back, and one
- * missing after dive 1 whom nobody has counted since is still not.
+ * `homewardCheckpointGap` and Today's missing-diver row (`listRollCallGaps`,
+ * `src/db/today.ts`) keep too: a diver missing after dive 1 and counted aboard
+ * after dive 2 is back, and one missing after dive 1 whom nobody has counted
+ * since is still not.
  *
  * - **Newest event per seat and checkpoint wins, and a newest `cleared` drops
  *   that checkpoint out**, so a mis-tapped "not back" the crew retracted, or a
