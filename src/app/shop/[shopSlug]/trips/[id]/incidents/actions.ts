@@ -118,6 +118,8 @@ export async function saveIncidentDraftAction(
       diveSiteId: text(formData, "diveSiteId"),
       locationText: text(formData, "locationText"),
       whatHappened: text(formData, "whatHappened"),
+      kind: text(formData, "kind"),
+      severity: text(formData, "severity"),
       firstAidGiven: text(formData, "firstAidGiven"),
       oxygenGiven: text(formData, "oxygenGiven"),
       oxygenMinutes: text(formData, "oxygenMinutes"),

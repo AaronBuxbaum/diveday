@@ -232,15 +232,46 @@ export async function payInvoiceThroughWebhook(
   request: APIRequestContext,
   invoice: { invoiceId: string; stripeAccountId: string; amountCents: number },
 ): Promise<void> {
-  const created = Math.floor(e2eNow().getTime() / 1000);
-  const payload = JSON.stringify({
+  await postSignedStripeEvent(request, {
     id: `evt_e2e_${invoice.invoiceId}`,
     type: "invoice.paid",
     account: invoice.stripeAccountId,
-    created,
-    livemode: false,
     data: { object: { id: invoice.invoiceId, amount_paid: invoice.amountCents } },
   });
+}
+
+/**
+ * **Settle a card payment at booking the way Stripe does** (ADR
+ * 20260721-checkout-at-booking): a test-mode `checkout.session.completed`
+ * carrying `payment_status: "paid"`, the one event that clears a booking's
+ * payment gate, signed and posted like `payInvoiceThroughWebhook`.
+ */
+export async function payCheckoutThroughWebhook(
+  request: APIRequestContext,
+  checkout: { sessionId: string; stripeAccountId: string; amountCents: number },
+): Promise<void> {
+  await postSignedStripeEvent(request, {
+    id: `evt_e2e_${checkout.sessionId}`,
+    type: "checkout.session.completed",
+    account: checkout.stripeAccountId,
+    data: {
+      object: {
+        id: checkout.sessionId,
+        object: "checkout.session",
+        payment_status: "paid",
+        status: "complete",
+        amount_total: checkout.amountCents,
+      },
+    },
+  });
+}
+
+async function postSignedStripeEvent(
+  request: APIRequestContext,
+  event: { id: string; type: string; account: string; data: { object: Record<string, unknown> } },
+): Promise<void> {
+  const created = Math.floor(e2eNow().getTime() / 1000);
+  const payload = JSON.stringify({ ...event, created, livemode: false });
   const signature = createHmac("sha256", E2E_STRIPE_TEST_WEBHOOK_SECRET)
     .update(`${created}.${payload}`)
     .digest("hex");
@@ -691,8 +722,13 @@ export async function findTripOnBoard(
   page: Page,
   shopSlug: string,
   title: string | RegExp,
+  options: { daysOut?: number } = {},
 ): Promise<Locator> {
-  await page.goto(`/shop/${shopSlug}/schedule/board`);
+  // A caller that knows how far out the seed puts the departure opens that
+  // week directly: a month out is five full board renders crawled one at a
+  // time, which is most of a 15-second test on a loaded box.
+  const week = options.daysOut === undefined ? "" : `?week=${daysFromNow(options.daysOut)}`;
+  await page.goto(`/shop/${shopSlug}/schedule/board${week}`);
   return walkBoardWeeksFor(page, title);
 }
 
@@ -705,8 +741,9 @@ export async function tripPathByTitle(
   page: Page,
   shopSlug: string,
   title: string | RegExp,
+  options: { daysOut?: number } = {},
 ): Promise<string> {
-  const link = await findTripOnBoard(page, shopSlug, title);
+  const link = await findTripOnBoard(page, shopSlug, title, options);
   const href = await link.getAttribute("href");
   if (!href) throw new Error(`no trip card found for ${title}`);
   return href;
@@ -746,9 +783,18 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** A seeded departure's trip id, found the way staff reach it. */
-export async function seededTripId(page: Page, shopSlug: string, title: string): Promise<string> {
-  const href = await tripPathByTitle(page, shopSlug, title);
+/**
+ * A seeded departure's trip id, found the way staff reach it. `daysOut` is the
+ * seed's own offset for the departure (`at(31, …)`): the board opens on that
+ * week instead of crawling to it from this one.
+ */
+export async function seededTripId(
+  page: Page,
+  shopSlug: string,
+  title: string,
+  options: { daysOut?: number } = {},
+): Promise<string> {
+  const href = await tripPathByTitle(page, shopSlug, title, options);
   const tripId = href.match(/\/trips\/([0-9a-f-]+)/i)?.[1];
   if (!tripId) throw new Error(`could not read a trip id from "${href}" for ${title}`);
   return tripId;
@@ -888,7 +934,10 @@ export async function openManifestPerson(row: Locator): Promise<void> {
     await expect(existingDialog).toHaveCount(0);
   }
   const trigger = row.locator('button[aria-haspopup="dialog"]').first();
-  await expect(trigger).toBeVisible();
+  // The sheet opens client-side only: a click on the server-rendered trigger
+  // before hydration (a fresh load, or the router's hard-navigation fallback
+  // when an RSC fetch fails) is dropped, and aria-expanded never turns.
+  await expect(trigger).toHaveAttribute("data-hydrated", "true");
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
 }

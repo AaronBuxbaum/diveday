@@ -128,4 +128,46 @@ describe("boardWeekView", () => {
     );
     expect(week?.spans[0]).toMatchObject({ startColumn: 1, columnSpan: 2, dateIso: "2026-07-18" });
   });
+
+  /** Fourth review, item 12: the crew member away on a day the departure meets. */
+  it("names who is rostered and away, with their days, on a boat and a course bar", () => {
+    const away = [
+      { id: "b", personId: "p1", startsOn: "2026-07-21", endsOn: "2026-07-22", note: null },
+    ];
+    const week = boardWeekView(
+      input({
+        shop: { hasBoatDiving: true, crewScheduleEnabled: true },
+        crewByTrip: new Map([
+          [
+            "t1",
+            [
+              { id: "p1", name: "Marcus Webb", away },
+              { id: "p2", name: "Sal Moretti", away: [] },
+            ],
+          ],
+          ["c1", [{ id: "p1", name: "Marcus Webb", away }]],
+        ]),
+        weekRows: {
+          days: { "2026-07-21": [departure({})] },
+          spans: [
+            {
+              ...departure({ tripId: "c1", title: "Open Water" }),
+              firstDay: "2026-07-21",
+              lastDay: "2026-07-22",
+              dayCount: 2,
+              instructorName: "Marcus Webb",
+            },
+          ],
+        } as unknown as Input["weekRows"],
+      }),
+    );
+    const today = week?.days.find((day) => day.isToday);
+    expect(today?.entries[0]?.crewAway?.replace(/\s/g, " ")).toBe(
+      "Marcus Webb away Tue, Jul 21 – Wed, Jul 22",
+    );
+    expect(week?.spans[0]?.crewAway).toContain("Marcus Webb away");
+    expect(
+      boardWeekView(input())?.days.find((day) => day.isToday)?.entries[0]?.crewAway,
+    ).toBeNull();
+  });
 });

@@ -48,11 +48,13 @@ import { gzipSync } from "node:zlib";
 /**
  * Gzipped-KB ceiling for the shared first-load JS.
  *
- * The floor is 237.8 KB as measured. The headroom is deliberately small: a
- * dependency arriving in the root layout's client graph is the failure this
- * exists to catch, and the cheapest one of those on record was 83.5 KB.
+ * The floor is 163.7 KB as measured on 2026-10-13, after the staff palette and
+ * the Sentry SDK left it (code review 2026-10-13b, items 7 and 34). The headroom
+ * is deliberately small: a dependency arriving in the root layout's client
+ * graph is the failure this exists to catch, and the cheapest one of those on
+ * record was 83.5 KB.
  */
-const SHARED_FIRST_LOAD_BUDGET_KB = 242;
+const SHARED_FIRST_LOAD_BUDGET_KB = 170;
 
 const NEXT_DIR = ".next";
 const ROUTE_STATS = path.join(NEXT_DIR, "diagnostics", "route-bundle-stats.json");
@@ -74,6 +76,26 @@ export function sharedFirstLoadChunks(routeStats) {
   return first.firstLoadChunkPaths.filter((chunk) =>
     rest.every((route) => route.firstLoadChunkPaths.includes(chunk)),
   );
+}
+
+/**
+ * **Code the floor must not carry, by a string only that code ships.** A floor
+ * chunk carrying one is that code on every diver and marketing page, whatever
+ * it weighs, so this fails before the byte budget would. The staff palette's
+ * `aria-keyshortcuts` and the ledger row menu's `data-row-menu-open` rode the
+ * root 404 into all 107 routes at 13.8 KB gzip while the total stayed under its
+ * ceiling (code review 2026-10-13b, item 7); the Sentry SDK's `__SENTRY__`
+ * carrier was about 57 KB of the floor until `src/instrumentation-client.ts`
+ * loaded it on idle (item 34). Exported for the test.
+ */
+export const FLOOR_MARKERS = {
+  "aria-keyshortcuts": "the staff command palette",
+  "data-row-menu-open": "the ledger's row menu",
+  __SENTRY__: "the Sentry browser SDK, which loads on idle",
+};
+
+export function floorMarkersIn(source) {
+  return Object.keys(FLOOR_MARKERS).filter((marker) => source.includes(marker));
 }
 
 async function main() {
@@ -107,8 +129,23 @@ async function main() {
   }
 
   let totalKb = 0;
+  const markedChunks = [];
   for (const chunk of shared) {
-    totalKb += gzipSync(await readFile(chunk)).length / 1024;
+    const source = await readFile(chunk);
+    totalKb += gzipSync(source).length / 1024;
+    const markers = floorMarkersIn(source.toString("utf8"));
+    if (markers.length > 0) {
+      markedChunks.push(`${chunk}: ${markers.map((marker) => FLOOR_MARKERS[marker]).join(", ")}`);
+    }
+  }
+  if (markedChunks.length > 0) {
+    console.error(
+      `perf: the shared first-load floor, which every route loads, carries code it must not:\n  ${markedChunks.join("\n  ")}\n` +
+        "  A module every route loads (the root layout, the root not-found, instrumentation-client.ts)\n" +
+        "  imports it statically. Load it with `next/dynamic` from a Client Component, as\n" +
+        "  `LazyCommandPalette` does, or on idle, as `deferSentry` does.",
+    );
+    process.exit(1);
   }
   const rounded = Math.round(totalKb * 10) / 10;
   const where = `${shared.length} chunks shared by all ${routeStats.length} routes`;

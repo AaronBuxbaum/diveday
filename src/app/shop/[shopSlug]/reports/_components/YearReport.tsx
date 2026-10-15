@@ -1,9 +1,12 @@
 import { EmptyState } from "@/components/EmptyState";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { tapTargetLinkClass } from "@/components/ui/button";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatMonthDay, monthNames, shortMonthNames } from "@/lib/format";
+import { formatReportMoney, type MonthlyReport } from "@/lib/reporting";
 import type { ShopYearCell, ShopYearSummary } from "@/lib/shop-year";
 import { shopPath } from "@/lib/staff-notices";
 import { type MonthFigure, MonthFigures } from "./MonthFigures";
@@ -27,13 +30,27 @@ import { YearStrip } from "./YearStrip";
  */
 const SITES_SHOWN = 5;
 
+/**
+ * **The year's money** (fourth UX review, item 25): net revenue, tax and tips
+ * for the departures that have sailed this year, the figures an owner pages
+ * ten months to add in January. Already formatted; the CSV is twelve month
+ * rows of the same.
+ */
+export type YearMoney = {
+  report: Pick<MonthlyReport, "revenueCents" | "taxCents" | "tipsCents" | "tipCount">;
+  currency: string;
+  csvHref: string;
+};
+
 export function YearReport({
   year,
+  money,
   locale,
   shopSlug,
   t,
 }: {
   year: ShopYearSummary;
+  money?: YearMoney;
   locale: string;
   shopSlug: string;
   t: StaffTranslator;
@@ -160,6 +177,42 @@ export function YearReport({
         </section>
 
         <MonthFigures label={t("reports.year.numbersLabel")} figures={figures} columns={4} />
+
+        {money ? (
+          <div>
+            <MonthFigures
+              label={t("reports.year.money.label")}
+              columns={3}
+              figures={[
+                {
+                  key: "revenue",
+                  label: t("reports.metrics.revenueLabel"),
+                  value: formatReportMoney(money.report.revenueCents, money.currency, locale),
+                  detail: t("reports.year.money.revenueDetail"),
+                },
+                {
+                  key: "tax",
+                  label: t("reports.year.money.taxLabel"),
+                  value: formatReportMoney(money.report.taxCents, money.currency, locale),
+                },
+                {
+                  key: "tips",
+                  label: t("reports.metrics.tipsLabel"),
+                  value: formatReportMoney(money.report.tipsCents, money.currency, locale),
+                  detail: t("reports.year.money.tipsDetail", { count: money.report.tipCount }),
+                },
+              ]}
+            />
+            <p className="mt-3 text-end text-sm">
+              <a
+                href={money.csvHref}
+                className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
+              >
+                {t("reports.year.money.downloadYear")}
+              </a>
+            </p>
+          </div>
+        ) : null}
 
         {shownSites.length > 0 ? (
           <section aria-labelledby="year-sites">

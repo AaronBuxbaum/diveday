@@ -346,6 +346,42 @@ export function violationFor(
   return null;
 }
 
+/** The reporter each focused run gets when it names none. */
+const QUIET_REPORTER = {
+  test: "--reporter=dot",
+  e2e: "--reporter=line",
+  "e2e:run": "--reporter=line",
+};
+
+/**
+ * The command with a quiet reporter written in, or null to leave it as typed. A focused
+ * `pnpm test <file>` or `pnpm e2e <spec>` with no reporter prints every passing case; the
+ * quiet form is mechanical, so the hook writes it in instead of costing the session a run it
+ * has to read past.
+ *
+ * Only one simple command, never a chain, pipe, substitution or background job: a rewrite that
+ * has to guess which half of the session's own composition to touch will one day touch the
+ * wrong one. And never a command `violationFor` refuses, which keeps its refusal.
+ */
+export function quietFormFor(command, scripts = packageScripts()) {
+  const trimmed = command.trim();
+  // Same length as `trimmed`, with quoted text and heredocs blanked: what the shell would run.
+  const live = withoutInertText(trimmed);
+  if (/[|;&\n`]|\$\(/.test(live.replace(/\d?>&\d/g, ""))) return null;
+  if (violationFor(trimmed, scripts, { changes: () => [] })) return null;
+
+  const body = withoutEnvAssignments(live.split(/\s+/));
+  if (body[0] !== "pnpm") return null;
+  const name = body[1] === "run" ? body[2] : body[1];
+  const reporter = QUIET_REPORTER[name];
+  if (!reporter || !scripts.has(name)) return null;
+  if (/(^|\s)--reporter(=|\s|$)/.test(live)) return null;
+
+  const redirect = live.search(/\s\d?>/);
+  if (redirect === -1) return `${trimmed} ${reporter}`;
+  return `${trimmed.slice(0, redirect)} ${reporter}${trimmed.slice(redirect)}`;
+}
+
 async function main() {
   let payload = "";
   for await (const chunk of process.stdin) payload += chunk;
@@ -356,7 +392,22 @@ async function main() {
   if (typeof command !== "string") return;
 
   const reason = violationFor(command);
-  if (!reason) return;
+  if (!reason) {
+    const quiet = quietFormFor(command);
+    if (quiet) {
+      // No permissionDecision: an "allow" would wave the command past the permission
+      // system, and the rewrite only changes how much it prints.
+      process.stdout.write(
+        JSON.stringify({
+          hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            updatedInput: { ...parsed.tool_input, command: quiet },
+          },
+        }),
+      );
+    }
+    return;
+  }
 
   recordRefusal("guard-bash", reason, { session: parsed.session_id });
   console.error(`Refused by scripts/guard-bash.mjs: ${reason}`);

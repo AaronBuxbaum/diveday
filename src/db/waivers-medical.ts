@@ -108,7 +108,8 @@ export async function hasUnansweredMedicalHold(
         eq(waiverRecords.shopId, shopId),
         eq(waiverRecords.personId, personId),
         eq(waiverRecords.status, "medical_review"),
-        isNull(waiverRecords.supersededAt),
+        // Superseded or not: a referral keeps holding after its seat takes a
+        // fresh link (`isUnclearedReferral`), so it stays answerable.
         isNull(waiverRecords.anonymizedAt),
         isNull(waiverRecords.medicalClearedAt),
         isNull(waiverRecords.medicalClearanceDeclinedAt),
@@ -201,7 +202,11 @@ export async function recordMedicalEvaluation(
           eq(waiverRecords.shopId, input.shopId),
           eq(waiverRecords.personId, input.personId),
           eq(waiverRecords.status, "medical_review"),
-          isNull(waiverRecords.supersededAt),
+          // A superseded referral is answerable too. Superseding moves a hold
+          // off a seat and answers nothing (`isUnclearedReferral`): it still
+          // holds every seat the diver has, so a physician must still be able
+          // to end it, or the desk is told "nothing to clear" about a hold it
+          // can see (glossary: Medical hold).
           isNull(waiverRecords.anonymizedAt),
         ),
       )
@@ -213,9 +218,16 @@ export async function recordMedicalEvaluation(
     const answered = held.find(
       (record) => record.medicalClearedAt !== null || record.medicalClearanceDeclinedAt !== null,
     );
-    const open = held.find(
+    // A live hold before a superseded one: it is the one holding its own seat
+    // outright (`isUnresolvedMedicalHold`), so an answer landing on a newer
+    // superseded referral instead would leave that seat blocked while the desk
+    // reads "recorded". Newest first within each.
+    const unanswered = held.filter(
       (record) => record.medicalClearedAt === null && record.medicalClearanceDeclinedAt === null,
     );
+    const open =
+      unanswered.find((record) => record.supersededAt === null) ??
+      unanswered.find((record) => record.supersededAt !== null);
     if (!open) {
       if (!answered) return { ok: false, reason: "no_medical_hold" };
       const standing: MedicalEvaluationOutcome = answered.medicalClearedAt

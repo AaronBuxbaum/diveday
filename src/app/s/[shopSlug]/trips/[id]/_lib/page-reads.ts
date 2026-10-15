@@ -7,7 +7,11 @@ import { type AppDb, getDb } from "@/db/client";
 import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { bookingConfirmationMailState } from "@/db/notifications";
-import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
+import {
+  getTripRequirements,
+  getTripSiteRequirement,
+  tripRequirementSummaries,
+} from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { publicRunOf } from "@/db/series-next";
 import { tripMayTakeACode } from "@/db/shop-promos";
@@ -27,6 +31,7 @@ import type { auth } from "@/lib/auth";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
+import type { SiteCertRequirement } from "@/lib/readiness";
 import { isLiveShopStaff } from "@/lib/session";
 import { hasSailed, seatsOnSale } from "@/lib/trips";
 
@@ -44,6 +49,11 @@ export const publicTripRecord = cache(async (shopId: string, tripId: string) =>
 );
 
 type Shop = NonNullable<Awaited<ReturnType<typeof shopBySlugCached>>>;
+
+/** One departure of the shop's board, with what it asks of anybody. */
+type BoardDeparture = Awaited<ReturnType<typeof pagedUpcomingTripsWithCounts>>["trips"][number] & {
+  requirement: SiteCertRequirement | null;
+};
 
 /** What the request asked this page for, already narrowed by the page. */
 export type TripPageRequest = {
@@ -212,17 +222,38 @@ export async function readTripPage(
     ),
     // One read of the shop's own board, feeding both lists of other boats
     // below (issues #1166 and #1161), and only when one could show.
-    Promise.all([tripRead, confirmedRead, waitlistRead]).then(async ([found, booked, waiting]) =>
-      found && !hasSailed(found.startsAt, now) && !found.conditionsHold && !booked && !waiting
-        ? (
-            await pagedUpcomingTripsWithCounts(db, shop.id, {
-              now,
-              limit: 50,
-              hasSpace: true,
-              publicOnly: true,
-            })
-          ).trips.map(seatsOnSale)
-        : [],
+    //
+    // Each departure carries what it asks of anybody (its gate folded with
+    // its sites'), and the read boat's own rides as `ceiling`, so neither list
+    // offers a boat that asks more than this one (fourth UX review, item 10).
+    Promise.all([tripRead, confirmedRead, waitlistRead]).then(
+      async ([found, booked, waiting]): Promise<{
+        departures: BoardDeparture[];
+        ceiling: SiteCertRequirement | null;
+      }> => {
+        if (!found || hasSailed(found.startsAt, now) || found.conditionsHold || booked || waiting) {
+          return { departures: [], ceiling: null };
+        }
+        const departures = (
+          await pagedUpcomingTripsWithCounts(db, shop.id, {
+            now,
+            limit: 50,
+            hasSpace: true,
+            publicOnly: true,
+          })
+        ).trips.map(seatsOnSale);
+        const asks = await tripRequirementSummaries(db, shop.id, [
+          found.id,
+          ...departures.map((departure) => departure.id),
+        ]);
+        return {
+          departures: departures.map((departure) => ({
+            ...departure,
+            requirement: asks.get(departure.id) ?? null,
+          })),
+          ceiling: asks.get(found.id) ?? null,
+        };
+      },
     ),
     // The shop's rating rides along as the organizer's `aggregateRating` in
     // the standalone page's structured data.

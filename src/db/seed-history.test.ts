@@ -4,7 +4,7 @@ import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getTripManifest } from "./manifests";
 import { getMonthlyReport } from "./reporting";
-import { tripRequirements, trips as tripsTable } from "./schema";
+import { tripAssignments, tripRequirements, trips as tripsTable } from "./schema";
 import { resetDemoSchedule } from "./seed";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 
@@ -142,5 +142,35 @@ describe("seeded history manifests", () => {
     // subtracts the latter from the former — so a tax seeded *inside* the price
     // would show up here as revenue that had quietly shrunk.
     expect(report.revenueCents).toBeGreaterThan(report.taxCents);
+  });
+});
+
+/**
+ * **Every boat in the back-fill had somebody driving it** (fourth review, item
+ * 13): Reports listed this month's boats as "0 crew" while Safety judged "0 of
+ * 0" crew sailings, the emptiest record reading cleanest.
+ */
+describe("seeded history crew", () => {
+  it("puts a captain and a divemaster on every sailed history boat", async () => {
+    const { db, shop } = ctx;
+    await resetDemoSchedule(db, shop.id, { history: true });
+    const history = await db
+      .select({ id: tripsTable.id })
+      .from(tripsTable)
+      .where(
+        and(
+          eq(tripsTable.shopId, shop.id),
+          eq(tripsTable.description, "Sailed. Kept in the log for the shop's monthly numbers."),
+        ),
+      );
+    expect(history.length).toBeGreaterThan(0);
+    const crew = await db.select().from(tripAssignments);
+    for (const trip of history) {
+      const roles = crew
+        .filter((row) => row.tripId === trip.id)
+        .map((row) => row.tripRole)
+        .sort();
+      expect(roles, trip.id).toEqual(["captain", "divemaster"]);
+    }
   });
 });

@@ -8,9 +8,11 @@ import type { weekBoard } from "@/db/trips";
 // page from `ShopChrome` rather than above it, so the route gets a static
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
+import { awayDatesText } from "@/i18n/away-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { maxConcurrentTrips, overlappingBoatIds } from "@/lib/boats";
 import { calendarDateInTimezone, calendarDateToUtcMidnight } from "@/lib/calendar-date";
+import type { AvailabilityBlock } from "@/lib/crew-requests";
 import { addDepartureHref, groupDateRequests } from "@/lib/date-requests";
 import {
   formatCalendarDateRange,
@@ -223,6 +225,7 @@ export function boardWeekView({
         crew: shop.crewScheduleEnabled
           ? (crewByTrip.get(entry.tripId) ?? []).map((member) => member.name)
           : null,
+        crewAway: crewAwayLine(crewByTrip.get(entry.tripId), st, locale),
         // The two numbers the bar is a picture of. Beside `meta` rather than
         // parsed back out of it: "10 of 12" is a sentence in two languages and
         // `src/lib/week-seats.ts` must never have to read one.
@@ -287,6 +290,7 @@ export function boardWeekView({
         // A rehearsal is a single departure, never a multi-day span.
         rehearsal: false,
         rollCallOpen: weekRollCalls.get(span.tripId) ?? null,
+        crewAway: crewAwayLine(crewByTrip.get(span.tripId), st, locale),
         ref: `${span.title}, ${formatCalendarDateRange(span.firstDay, span.lastDay, locale)}`,
         startColumn: first + 1,
         columnSpan: last - first + 1,
@@ -392,4 +396,28 @@ export function boardWeekView({
         askedCount: st("schedule.week.askedDays", { days: weekAsked.length }),
       }
     : null;
+}
+
+/**
+ * **"Marcus Webb away Sat, Oct 17 – Sun, Oct 18"** (fourth review, item 12):
+ * the rostered people who said they are away on a day this departure meets,
+ * each with those days. Null when nobody is. Said whether or not the crew is
+ * the week's usual one, because the usual crew being away is exactly the case
+ * a habit hides. Informs, never gates: nobody is taken off the departure.
+ */
+function crewAwayLine(
+  members: readonly { name: string; away: readonly AvailabilityBlock[] }[] | undefined,
+  st: StaffTranslator,
+  locale: string,
+): string | null {
+  const away = (members ?? []).filter((member) => member.away.length > 0);
+  if (away.length === 0) return null;
+  return away
+    .map((member) =>
+      st("schedule.week.crewAway", {
+        name: member.name,
+        dates: awayDatesText(member.away, locale),
+      }),
+    )
+    .join(" · ");
 }

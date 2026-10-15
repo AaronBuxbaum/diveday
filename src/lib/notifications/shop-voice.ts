@@ -64,6 +64,8 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "course_inquiry":
     case "weekly_digest":
     case "desk_after_hours":
+    case "stripe_payments_restricted":
+    case "roll_call_stale":
       return null;
   }
 }

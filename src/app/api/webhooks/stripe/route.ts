@@ -9,7 +9,7 @@ import {
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import {
-  markOrderPaidByInvoiceId,
+  applyInvoicePaid,
   markOrderVoidedByInvoiceId,
   recordOrderPaymentIntent,
 } from "@/db/orders";
@@ -18,12 +18,13 @@ import { recordStripePayout } from "@/db/payouts";
 import { recordStripeRefundFailure } from "@/db/refund-failures";
 import { recordStripeChargeRefund } from "@/db/refunds";
 import {
+  applyStripeAccountStatus,
   disconnectShopStripeAccount,
-  setShopStripeAccountStatus,
   stripeAccountHolder,
 } from "@/db/stripe-accounts";
 import { recordTipPaymentIntent } from "@/db/stripe-payment-targets";
 import { paymentSourceLookupFromEnvironment } from "@/db/stripe-providers";
+import { tellOwnersPaymentsRestricted } from "@/db/stripe-restricted";
 import {
   markTipExpiredBySessionId,
   markTipPaidBySessionId,
@@ -45,10 +46,13 @@ import { payoutSummaryLookupFromEnvironment } from "@/lib/payments/payout-summar
 import { refundFailureReasonOf } from "@/lib/payments/refund-failure-reason";
 import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
 import { type StripeWebhookEvent, verifyStripeWebhook } from "@/lib/payments/webhook";
+import { logWebhookRefusal } from "@/lib/webhook-refusal";
 
 const invoiceObjectSchema = z.object({
   id: z.string().min(1),
   amount_paid: z.number().int().optional(),
+  // True on the echo of a counter settle (`recordPaymentOnOpenOrder`).
+  paid_out_of_band: z.boolean().optional(),
   total_tax_amounts: z
     .array(z.object({ amount: z.number().int().nonnegative() }))
     .nullable()
@@ -126,6 +130,56 @@ const refundObjectSchema = z.object({
     .nullable()
     .optional(),
 });
+
+/**
+ * Settle the order an invoice backs (`applyInvoicePaid`), remember the
+ * PaymentIntent that paid it, and tell the integrations. Returns the outcome
+ * to log, or `"deferred"` while a counter claim on the invoice is in flight.
+ * A counter settlement logs its order id: when the counter call died after
+ * Stripe answered, no activity line names the staffer, and this line is what
+ * the request log can be joined on to find who tapped.
+ */
+async function handleInvoicePaid(
+  db: AppDb,
+  event: StripeWebhookEvent,
+): Promise<{ outcome: string; extra?: LogContext }> {
+  const invoice = invoiceObjectSchema.safeParse(event.data.object);
+  if (!invoice.success) return { outcome: "malformed_payload" };
+  const outcome = await applyInvoicePaid(db, {
+    stripeInvoiceId: invoice.data.id,
+    amountPaidCents: invoice.data.amount_paid ?? 0,
+    expectedAccountId: event.account,
+    taxCents: invoiceTaxCents(invoice.data),
+    paidOutOfBand: invoice.data.paid_out_of_band,
+  });
+  if (outcome.status === "deferred") return { outcome: "deferred" };
+  if (outcome.status === "not_found") return { outcome: "order_not_found" };
+  // Only an order Stripe collected (`settled` is a row still a Stripe invoice
+  // under its lock): a counter order's money never passed through a
+  // PaymentIntent, whatever attempts the invoice holds.
+  const paymentIntentId =
+    outcome.status === "settled" ? invoicePaymentIntentId(event.data.object) : null;
+  if (paymentIntentId) {
+    await recordOrderPaymentIntent(db, {
+      stripeInvoiceId: invoice.data.id,
+      paymentIntentId,
+      expectedAccountId: event.account,
+    });
+  }
+  // A paid order enqueues `order.paid` for every connected integration.
+  // Stripe's webhook is the most common way an order becomes paid, so draining
+  // here is what makes the write-driven path worth having at all (ADR
+  // 20260919-integration-delivery-is-write-driven). After the 200, never before
+  // it: Stripe retries on a slow response, and a provider's latency must not
+  // become a redelivery.
+  dispatchIntegrationsAfterResponse();
+  return outcome.status === "settled"
+    ? { outcome: "order_paid" }
+    : {
+        outcome: "order_paid_at_counter",
+        extra: { orderId: outcome.order.id, shopId: outcome.order.shopId },
+      };
+}
 
 /**
  * Void the order an invoice backs, and tell the integrations (`order.voided`,
@@ -378,10 +432,43 @@ const accountObjectSchema = z.object({
   payouts_enabled: z.boolean(),
   details_submitted: z.boolean(),
   // Optional: a fixture or an unusual event payload missing it still
-  // parses — `setShopStripeAccountStatus` leaves the stored currency
+  // parses — `applyStripeAccountStatus` leaves the stored currency
   // untouched rather than resetting it to "usd" (task 60).
   default_currency: z.string().optional(),
 });
+
+/**
+ * Store an `account.updated` delivery's flags, and tell the owners when this
+ * is the write that turned card payments off (batch 6 item 8). Bookings
+ * already fall back to paying at the shop; this is the owner hearing why.
+ * Claimed once per change of state (`applyStripeAccountStatus`), so a
+ * redelivery tells nobody twice, and the telling never throws. Returns
+ * whether this delivery was that change.
+ */
+async function applyAccountUpdate(
+  db: AppDb,
+  account: {
+    id: string;
+    charges_enabled: boolean;
+    payouts_enabled: boolean;
+    details_submitted: boolean;
+    default_currency?: string;
+  },
+): Promise<boolean> {
+  const applied = await applyStripeAccountStatus(db, account.id, {
+    chargesEnabled: account.charges_enabled,
+    payoutsEnabled: account.payouts_enabled,
+    detailsSubmitted: account.details_submitted,
+    defaultCurrency: account.default_currency,
+  });
+  if (applied.newlyRestricted && applied.account?.paymentsRestrictedAt) {
+    await tellOwnersPaymentsRestricted(db, {
+      shopId: applied.account.shopId,
+      restrictedAt: applied.account.paymentsRestrictedAt,
+    });
+  }
+  return applied.newlyRestricted;
+}
 
 /**
  * A single Connect webhook endpoint for every shop's connected account
@@ -414,8 +501,10 @@ export async function POST(request: Request) {
     }
   }
 
-  if (verification.status === "not_configured") return new Response(null, { status: 503 });
-  if (verification.status !== "verified") return new Response(null, { status: 400 });
+  if (verification.status !== "verified") {
+    logWebhookRefusal("stripe", verification.status);
+    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
+  }
 
   const { event } = verification;
   const db = await getDb();
@@ -539,35 +628,9 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case "invoice.paid": {
-        const invoice = invoiceObjectSchema.safeParse(event.data.object);
-        if (invoice.success) {
-          const order = await markOrderPaidByInvoiceId(
-            db,
-            invoice.data.id,
-            invoice.data.amount_paid ?? 0,
-            event.account,
-            invoiceTaxCents(invoice.data),
-          );
-          logOutcome(order ? "order_paid" : "order_not_found");
-          const paymentIntentId = order ? invoicePaymentIntentId(event.data.object) : null;
-          if (paymentIntentId) {
-            await recordOrderPaymentIntent(db, {
-              stripeInvoiceId: invoice.data.id,
-              paymentIntentId,
-              expectedAccountId: event.account,
-            });
-          }
-          // A paid order enqueues `order.paid` for every connected
-          // integration. Stripe's webhook is the most common way an order
-          // becomes paid, so draining here is what makes the write-driven
-          // path worth having at all (ADR
-          // 20260919-integration-delivery-is-write-driven). After the 200
-          // below, never before it: Stripe retries on a slow response, and a
-          // provider's latency must not become a redelivery.
-          if (order) dispatchIntegrationsAfterResponse();
-        } else {
-          logOutcome("malformed_payload");
-        }
+        const { outcome, extra } = await handleInvoicePaid(db, event);
+        if (outcome === "deferred") deferred = true;
+        else logOutcome(outcome, extra);
         break;
       }
       case "invoice.voided": {
@@ -691,13 +754,8 @@ export async function POST(request: Request) {
             logOutcome("stale_account_update", { account: account.data.id });
             break;
           }
-          await setShopStripeAccountStatus(db, account.data.id, {
-            chargesEnabled: account.data.charges_enabled,
-            payoutsEnabled: account.data.payouts_enabled,
-            detailsSubmitted: account.data.details_submitted,
-            defaultCurrency: account.data.default_currency,
-          });
-          logOutcome("account_updated", { account: account.data.id });
+          const restricted = await applyAccountUpdate(db, account.data);
+          logOutcome("account_updated", { account: account.data.id, restricted });
         } else {
           logOutcome("malformed_payload");
         }
@@ -796,14 +854,14 @@ export async function POST(request: Request) {
     // *does* retry rather than marking this delivery done (PAY-M1).
     //
     // Every handler this dispatch can reach is safely re-runnable:
-    // `markOrderPaidByInvoiceId`/`markOrderVoidedByInvoiceId` are transactional
+    // `applyInvoicePaid`/`markOrderVoidedByInvoiceId` are transactional
     // and transition-gated, `markCheckoutPaidBySessionId` never overwrites a
     // recorded settled total and dedupes its promo redemption,
     // `markTipPaidBySessionId` early-returns once paid, both
     // `*ExpiredBySessionId` and `markCheckoutPaymentFailedBySessionId` only
     // touch a `pending` row,
     // `recordStripeRefundFailure` writes one row per refund, reversing with it,
-    // `setShopStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
+    // `applyStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
     // `disconnectShopStripeAccount` neither moves `disconnectedAt` on a row
     // that is already disconnected nor touches one reconnected since this
     // event's own `created` time, `recordStripeChargeRefund` only ever raises a

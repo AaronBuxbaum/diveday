@@ -271,3 +271,56 @@ export async function departureBoatId(
     .limit(1);
   return trip?.boatId ?? null;
 }
+
+/**
+ * **The oxygen and first aid kit aboard a departure's boat, as the register
+ * holds them** (fourth review, item 17). The printed packet left "Oxygen kit
+ * is kept / Last checked / O2 pressure" as blanks even when the shop's gear
+ * register says which kit is aboard this hull and when it was last serviced.
+ *
+ * Only what the shop recorded, never a guess: the in-service units aboard, by
+ * their own labels, and the newest `service` record on an oxygen kit. A
+ * cylinder's hydro test or visual inspection is not a kit service, and a note
+ * is not a check, so neither counts (review F2). Null for a departure on no
+ * boat; empty lists when the register has nothing aboard.
+ *
+ * The packet prints these as a line of their own above the kit blanks, never
+ * in them: "kept ___" asks where on the boat, and "last checked ___ · O2
+ * pressure ___" is the crew's own pre-trip check, which no register answers.
+ */
+export type DepartureKitRecord = {
+  boatName: string;
+  oxygenKits: string[];
+  firstAidKits: string[];
+  oxygenServicedOn: CalendarDate | null;
+};
+
+export async function departureKitRecord(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<DepartureKitRecord | null> {
+  const boatId = await departureBoatId(db, shopId, tripId);
+  if (!boatId) return null;
+  const [boat] = await db
+    .select({ name: boats.name })
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId)))
+    .limit(1);
+  if (!boat) return null;
+  const aboard = (await listSafetyKit(db, shopId)).filter(
+    (unit) => unit.aboardBoatId === boatId && unit.status === "in_service",
+  );
+  const oxygen = aboard.filter((unit) => unit.kind === "o2_kit");
+  const services = oxygen
+    .flatMap((unit) => unit.clocks)
+    .filter((clock) => clock.kind === "service")
+    .map((clock) => clock.servicedOn)
+    .sort();
+  return {
+    boatName: boat.name,
+    oxygenKits: oxygen.map((unit) => unit.label),
+    firstAidKits: aboard.filter((unit) => unit.kind === "first_aid_kit").map((unit) => unit.label),
+    oxygenServicedOn: services.at(-1) ?? null,
+  };
+}

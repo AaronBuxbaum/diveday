@@ -15,6 +15,7 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatMoneyCents } from "@/lib/format";
 import {
   MAX_DECISION_HOURS,
@@ -263,6 +264,7 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
         </FieldGrid>
       </fieldset>
       <TripDiveFields
+        id="dives"
         frameClassName={GROUP_INSET}
         diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
         initialCount={trip.plannedDives}
@@ -345,18 +347,7 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
             className={`${controlClass} tabular-nums`}
           />
         </Field>
-        <Field label={t("trips.details.priceLabel")} hint={t("trips.details.optionalHint")}>
-          <input
-            name="priceDollars"
-            type="number"
-            step={priceStep}
-            min={0}
-            max={maxPriceMajor(currency)}
-            placeholder={pricePlaceholder}
-            defaultValue={trip.priceCents === null ? "" : minorToMajor(trip.priceCents, currency)}
-            className={`${controlClass} tabular-nums`}
-          />
-        </Field>
+        <PriceField {...{ trip, currency, locale, priceStep, pricePlaceholder, t }} />
       </FieldGrid>
       {/* **The departure's own three**, editable since issue #681. They
               used to be settable only when the departure was created, so the
@@ -598,6 +589,58 @@ function SelfGuidedField({ t, checked }: { t: StaffTranslator; checked: boolean 
       >
         {t("schedule.builder.selfGuidedHint")}
       </ChoiceRow>
+    </Field>
+  );
+}
+
+/**
+ * **A priced course holds the price, not its session** (fourth UX review,
+ * item 26): checkout charges the course fee plus its eLearning fee and ignores
+ * the departure's own figure, so an editable box here set a number nobody is
+ * charged. The session states the course's total instead; the stored value
+ * rides along unchanged, so a save never clears it.
+ */
+function PriceField({
+  trip,
+  currency,
+  locale,
+  priceStep,
+  pricePlaceholder,
+  t,
+}: {
+  trip: Trip;
+  currency: string;
+  locale: string;
+  priceStep: string;
+  pricePlaceholder: string;
+  t: StaffTranslator;
+}) {
+  const stored = trip.priceCents === null ? "" : minorToMajor(trip.priceCents, currency);
+  if (trip.course && trip.course.priceCents !== null) {
+    const coursePriceCents = perDiverBookingPriceCents(trip, trip.course) ?? 0;
+    return (
+      <Field group label={t("trips.details.priceLabel")} hint={t("trips.details.coursePriceHint")}>
+        <p className="py-2 text-sm tabular-nums">
+          {t("trips.details.coursePrice", {
+            amount: formatMoneyCents(coursePriceCents, currency, locale),
+          })}
+        </p>
+        <input type="hidden" name="priceDollars" value={stored} />
+      </Field>
+    );
+  }
+  return (
+    <Field label={t("trips.details.priceLabel")} hint={t("trips.details.optionalHint")}>
+      <input
+        name="priceDollars"
+        type="number"
+        step={priceStep}
+        min={0}
+        max={maxPriceMajor(currency)}
+        placeholder={pricePlaceholder}
+        defaultValue={stored}
+        className={`${controlClass} tabular-nums`}
+      />
     </Field>
   );
 }

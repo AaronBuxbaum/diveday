@@ -1,7 +1,8 @@
 import { RollCallMark } from "@/components/RollCallMark";
 import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { groupLabelClass, LedgerRow } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 import { ReadinessBar } from "@/components/ui/ProgressBar";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";

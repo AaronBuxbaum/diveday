@@ -32,7 +32,7 @@ export type ExportFile = { name: string; content: string | Uint8Array };
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
   "boats.csv":
-    "The shop's boats: the seats each sells, the passenger limit on its certificate when the shop recorded one, and the dates its next safety inspection is due and its registration and insurance expire. Every date is a calendar day the shop typed; an empty one was never recorded.",
+    "The shop's boats: the seats each sells, the passenger limit on its certificate when the shop recorded one, and the dates its next safety inspection is due and its registration and insurance expire, and its radio identity: the call sign, upper case, and the nine-digit MMSI the emergency card prints for departures on that boat. Every date is a calendar day the shop typed; an empty one was never recorded.",
   "trip_lenses.csv":
     "The shop's trip tags, as they appear on its public schedule. trips.csv points at one by lens_id.",
   "contacts.csv":
@@ -145,7 +145,7 @@ export const EXPORT_FILE_NOTES = {
   "internal_notes.csv":
     "The shop's own private notes about its divers and their bookings — what the front desk wrote down so the next person on the counter would know. Never shown to a diver, and never part of any gate: a note is context, not evidence, so nothing in readiness, boarding, or medical clearance has ever read one. They are here because they are the shop's own words about its own customers, and a shop that leaves without them arrives somewhere else having forgotten everything it knew.",
   "incident_reports.csv":
-    "The shop's own incident reports: one row per incident on a departure, in the shop's words. when, where, what happened, first aid, oxygen (and for how many minutes), whether emergency services were called, who took the person over and when, and follow-up notes. An empty yes/no means nobody answered it, never no. status 'draft' is unfinished; 'filed' is final and changed afterwards only by an erasure redacting a diver's name. Personal and medical data: keep this file where the waivers are kept.",
+    "The shop's own incident reports: one row per incident on a departure, in the shop's words. when, where, what happened, its kind (injury, which includes illness; near_miss; equipment; missing_diver; fatality; other) and severity (minor, moderate or serious: the crew's own judgment, not a clinical scale; both empty on reports filed before 2026-10-14), first aid, oxygen (and for how many minutes), whether emergency services were called, who took the person over and when, and follow-up notes. An empty yes/no means nobody answered it, never no. status 'draft' is unfinished; 'filed' is final and changed afterwards only by an erasure redacting a diver's name. Personal and medical data: keep this file where the waivers are kept.",
   "incident_report_people.csv":
     "Who each incident report names, and how (affected, witness or responder): a diver by their booking, a staffer by their person record, or anyone else by the name staff typed. A diver erased since reads under the erased name.",
   "incident_report_addenda.csv":
@@ -194,6 +194,14 @@ export const EXPORT_FILE_NOTES = {
 
 export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;
 
+/** The full-width signs an East Asian locale can read as their ASCII twins. */
+const FULL_WIDTH_SIGNS: Record<string, string> = {
+  "\uff1d": "=",
+  "\uff20": "@",
+  "\uff0b": "+",
+  "\uff0d": "-",
+};
+
 /**
  * Would this diver-authored string execute as a formula in Excel/LibreOffice?
  * `=`, `@`, tab, and CR always count. A leading `+` or `-` counts only when
@@ -201,10 +209,19 @@ export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;
  * is an E.164 phone number a destination system must receive intact — the one
  * thing a purely numeric cell can do in a spreadsheet is display as a number,
  * never reach a DDE/command payload, which needs letters or pipes.
+ *
+ * The OWASP bypass set is read the same way: leading blanks and line breaks
+ * are skipped (an import can trim them), and a full-width `＝ ＠ ＋ －` is read
+ * as its ASCII sign. A line break *inside* a cell is left alone: RFC-4180
+ * quoting keeps it in that cell, which does not start a formula.
  */
 function opensAsFormula(text: string): boolean {
   if (/^[=@\t\r]/.test(text)) return true;
-  return /^[+-]/.test(text) && !/^[+-][\d\s()./-]*$/.test(text);
+  const lead = text.replace(/^\s+/, "");
+  const sign = FULL_WIDTH_SIGNS[lead.charAt(0)] ?? lead.charAt(0);
+  const head = sign + lead.slice(1);
+  if (/^[=@]/.test(head)) return true;
+  return /^[+-]/.test(head) && !/^[+-][\d\s()./-]*$/.test(head);
 }
 
 /** Serialize one cell: empty for null/undefined, ISO for dates, RFC-4180 quoting. */

@@ -1,4 +1,8 @@
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
+import {
+  addAgencyListedCardsAction,
+  agencyCheckAction,
+} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
 import type { AppDb } from "@/db/client";
 import {
   addToWaitlistAction,
@@ -69,6 +73,11 @@ export async function tripRosterActions({
     recordTripInvitationAction: recordTripInvitationAction.bind(null, shopSlug, tripId),
     undoRemoveBookingAction: undoRemoveBookingAction.bind(null, shopSlug, tripId),
     carryWaitlistAction: carryWaitlistAction.bind(null, shopSlug, tripId),
+    // The diver record's own check, bound to the shop only: each card names
+    // its diver, and the action re-proves card, diver and staffer as it does
+    // there (H-105).
+    agencyCheckAction: agencyCheckAction.bind(null, shopSlug),
+    agencyListedAction: addAgencyListedCardsAction.bind(null, shopSlug),
     moveSeat: await seatMoveFor({
       db,
       shopId: shop.id,

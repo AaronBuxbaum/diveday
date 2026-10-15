@@ -128,7 +128,7 @@ export function rankSiteSightings(input: {
  * How many species the crew's chip row offers.
  *
  * Twelve, which is two or three rows of 44px targets on a phone at the rail and
- * still scannable in one look. It is deliberately **not** the whole 148-species
+ * still scannable in one look. It is deliberately **not** the whole
  * catalog: a boat is the worst place in the product to hunt through a wall of
  * names, and the long tail already has a door — the dive log's own species
  * select, one disclosure above, carries every species DiveDay knows.

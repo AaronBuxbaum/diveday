@@ -47,7 +47,7 @@ import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRos
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
 import { tripCrewNotes } from "./_components/trip-crew-notes";
-import { tripHeaderPrice } from "./_components/trip-header-price";
+import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-price";
 import { DETAILS_FORMS, pageNoticesFor } from "./_components/trip-notice-tabs";
 import { tripPulseFacts } from "./_components/trip-pulse-facts";
 import type { TripPageSearchParams } from "./_components/trip-search-params";
@@ -226,7 +226,7 @@ export default async function ManageTripPage({
 
   const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const { shown, finished, checkInOpen } = departureStage({
+  const { shown, finished, sailed, checkInOpen } = departureStage({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -304,14 +304,13 @@ export default async function ManageTripPage({
               <TripStageBadge stage={shown?.stage ?? null} copy={tabsCopy} />
               <TripCapacityBadge
                 trip={trip}
-                finished={finished}
+                finished={sailed}
                 cancelledLabel={t("trips.detail.cancelledBadge")}
                 t={t}
               />
             </>
           }
-          // **The price is here because nothing else on Divers says it**: a
-          // staffer quoting a walk-in should not have to open Details.
+          // The price is here because nothing else on Divers says it.
           // **Say it before the tap, not after.** The desk is live-only — the
           // boat has an encrypted device copy and this does not — so a dropped
           // signal means the list is stale and the next tap will not send
@@ -330,7 +329,8 @@ export default async function ManageTripPage({
               />
             ) : undefined
           }
-          price={tripHeaderPrice(trip.priceCents, shop.currency, locale, t)}
+          price={tripHeaderPrice(trip, shop.currency, locale, t)}
+          daySpan={tripHeaderDaySpan(scheduleDays, locale, shop.timezone, t)}
           // Only while the boat can take a seat: full, sailed, held or
           // cancelled, and the header offers nothing (owner, 2026-10-06). A
           // full boat's wait list stays in the roster's own Add band.
@@ -459,7 +459,7 @@ export default async function ManageTripPage({
               refreshing: t("checkIn.pullToRefresh.refreshing"),
             }}
           >
-            {pulseNeeded && !finished ? (
+            {pulseNeeded && !sailed ? (
               <MinimumSeatsBand
                 trip={trip}
                 booked={trip.booked}
@@ -470,7 +470,7 @@ export default async function ManageTripPage({
             ) : null}
 
             <PulseFacts
-              facts={shownPulseFacts(pulseFacts, { desk, finished })}
+              facts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
               foldLabel={(count) => t("trips.pulse.toSort", { count })}
             />
 

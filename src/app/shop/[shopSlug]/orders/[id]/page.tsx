@@ -12,7 +12,7 @@ import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonManageOrders, canPersonRefund } from "@/db/authz";
 import { getOrderBookingContext } from "@/db/order-booking";
-import { getOrder } from "@/db/orders";
+import { getOrder, isVoidableCounterOrder } from "@/db/orders";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -22,7 +22,11 @@ import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { PaidAtCounterLine, VoidCounterOrderForm } from "./_components/CounterPayment";
+import {
+  PaidAtCounterLine,
+  RecordPaymentForm,
+  VoidCounterOrderForm,
+} from "./_components/CounterPayment";
 import { DisabledDemoButton } from "./_components/DisabledDemoButton";
 import { OrderBookingLine } from "./_components/OrderBookingLine";
 import { OrderDisputeBanner, OrderMeta } from "./_components/OrderMeta";
@@ -76,12 +80,13 @@ export default async function OrderDetailPage({
   ]);
   // Money taken at the counter, in cash or on the shop's own card machine (ADR
   // 20261009-counter-payments). It has no Stripe invoice, so none of the
-  // Stripe controls below apply; an owner or manager can void it instead.
+  // Stripe controls below apply; an owner or manager can void it instead,
+  // unless it was an invoice settled at the counter, which Stripe holds paid
+  // and cannot un-pay.
   const counterCollection =
     order.order.collection === "stripe_invoice" ? null : order.order.collection;
   const canVoidCounter =
-    counterCollection !== null &&
-    order.order.status === "paid" &&
+    isVoidableCounterOrder(order.order) &&
     (await canPersonManageOrders(db, shop.id, session.user.personId));
   // What is left to give back, as a number a person types. Read off the order
   // rather than its total, so a second partial refund offers the remainder
@@ -255,6 +260,11 @@ export default async function OrderDetailPage({
             demo ? (
               <>
                 <DisabledDemoButton
+                  label={t("orders.detail.recordPayment.label")}
+                  hint={demoActionHint}
+                  variant="secondary"
+                />
+                <DisabledDemoButton
                   label={t("orders.detail.refreshStatus")}
                   hint={demoActionHint}
                   variant="secondary"
@@ -267,6 +277,9 @@ export default async function OrderDetailPage({
               </>
             ) : (
               <>
+                {/* Money that came over the counter for an invoice already
+                    sent (fourth UX review, item 19). */}
+                <RecordPaymentForm orderId={order.order.id} t={t} />
                 <form action={refreshAction}>
                   <input type="hidden" name="orderId" value={order.order.id} />
                   <SubmitButton

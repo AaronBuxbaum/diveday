@@ -29,6 +29,7 @@
     "lineItemsLegend": "Líneas del pedido",
     "lineItemKindAria": "Tipo de la línea {number}",
     "lineItemDescriptionPlaceholder": "Descripción",
+    "lineItemDescriptionAria": "Descripción de la línea {number}",
     "quantityLabel": "Cantidad",
     "unitPriceLabel": "Precio unitario (USD)",
     "unitPricePlaceholder": "$0.00",
@@ -107,7 +108,15 @@
       "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes. Pide a uno de ellos que lo tramite.",
       "voidNotAuthorized": "Anular pedidos está limitado a propietarios y gerentes.",
       "demoDisabled": "Este es un pedido de demostración, así que no se puede modificar.",
-      "fallback": "Algo cambió en este pedido. Los detalles de abajo están al día."
+      "fallback": "Algo cambió en este pedido. Los detalles de abajo están al día.",
+      "paymentRecorded": "Pago registrado. Stripe ya no se lo pedirá al buceador.",
+      "paymentStripeRefused": "Stripe no quiso marcar esta factura como pagada. Es posible que el buceador acabe de pagarla en línea, así que actualiza antes de registrar nada.",
+      "paymentRecordFailed": "No se pudo registrar este pago.",
+      "paymentInFlight": "Se está registrando un pago de este pedido. Revisa el pedido en un minuto antes de volver a intentarlo."
+    },
+    "recordPayment": {
+      "label": "Registrar pago:",
+      "recording": "Registrando…"
     }
   },
   "index": {
@@ -148,8 +157,9 @@
     "ledger": {
       "today": "Hoy · {date}",
       "continued": "{day}, continuación",
-      "dayMeta": "{count, plural, one {# pedido} other {# pedidos}} · {subtotal}",
-      "rowLabel": "{name} — {amount}"
+      "dayMeta": "{count, plural, one {# movimiento} other {# movimientos}} · {subtotal}",
+      "rowLabel": "{name} — {amount}",
+      "paidAtBooking": "Pagado al reservar"
     },
     "table": {
       "diver": "Buceador",
@@ -157,7 +167,7 @@
       "amount": "Importe"
     },
     "pagination": {
-      "total": "{count, plural, one {# pedido} other {# pedidos}}"
+      "total": "{count, plural, one {# movimiento} other {# movimientos}}"
     },
     "importedHistory": {
       "sectionLabel": "Historial de pagos importado",
@@ -213,6 +223,11 @@
       "heading": "{count, plural, one {# reembolso no llegó} other {# reembolsos no llegaron}} al buceador. El dinero volvió a tu saldo de Stripe. Vuelve a reembolsarlos.",
       "openOrder": "Abrir pedido",
       "openTrip": "Abrir salida"
+    },
+    "owed": {
+      "label": "Por cobrar:",
+      "orders": "{amount} en {count, plural, one {# pedido abierto} other {# pedidos abiertos}}, el más antiguo del {date}",
+      "seats": "{amount} en {count, plural, one {# plaza que zarpó sin pagar} other {# plazas que zarparon sin pagar}}"
     }
   }
 }

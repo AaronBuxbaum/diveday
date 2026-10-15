@@ -2,12 +2,14 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { messageFor } from "@/lib/notifications/render";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { people, waiverRecords } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { sendGuardianReleaseCopy } from "./waiver-guardian-copy";
 import { completeWaiver, issueWaiverRequest, recordInPersonWaiver } from "./waivers";
+
+const fileCtx = fileScopedShopContext();
 
 /**
  * **The guardian's copy of a release they co-signed** (issue #1453, owner
@@ -23,7 +25,7 @@ const now = new Date("2026-08-01T12:00:00.000Z");
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const trip = trips.find((row) => row.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("demo trip missing");

@@ -10,7 +10,7 @@ import { CourseNextStepNote } from "@/app/ready/[token]/_components/CourseNextSt
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
 import { readyDeadLink } from "@/app/ready/[token]/_components/dead-link";
 import { PayStepBody } from "@/app/ready/[token]/_components/PayStepBody";
-import { payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
+import { atShopMoneyLine, payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
 import { resolvePaymentReceipt } from "@/app/ready/[token]/_components/payment-receipt";
 import { ReadyFitForm } from "@/app/ready/[token]/_components/ReadyFitForm";
 import { ReadyBookedPage, ReadyMastheadMeta } from "@/app/ready/[token]/_components/ReadyMasthead";
@@ -45,7 +45,7 @@ import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { diverCrewWithAway } from "@/db/crew-away-diver";
-import { countSpendableDives } from "@/db/dive-packages";
+import { packageDivesForBooking } from "@/db/dive-packages";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
@@ -356,7 +356,7 @@ async function DiverReadinessPage({
     // verified `readiness` capability above; the query only ever walks seats
     // led by this booking, so a member's own /ready renders no panel. One wave with
     // the rest: each needs only the verified booking, shop and person (review 2026-10-11).
-    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDivesLeft] =
+    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDives] =
       await Promise.all([
         issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
         threadTripReads,
@@ -384,7 +384,7 @@ async function DiverReadinessPage({
         ),
         // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
         data.trip.course ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
-        countSpendableDives(db, shop.id, data.person.id),
+        packageDivesForBooking(db, { shopId: shop.id, personId: data.person.id, bookingId }),
       ]);
     const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
     const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
@@ -426,12 +426,10 @@ async function DiverReadinessPage({
 
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
-    const { paidLine, depositBalanceLine } = payStepLines(
-      t,
-      money,
-      paymentReceipt,
-      packageDivesLeft,
-    );
+    const { paidLine, depositBalanceLine } = payStepLines(t, money, paymentReceipt, packageDives);
+
+    // What is owed at the shop, said once (fourth UX review, item 5).
+    const atShopLine = atShopMoneyLine(t, locale, shop.currency, data, fullTrip, partySeatClaims);
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
     const stepLine = (step: ThreadStep): string | null =>
@@ -569,6 +567,7 @@ async function DiverReadinessPage({
               settled={spine.done === spine.countable}
             />
             <ThreadSpine steps={spineSteps} />
+            {atShopLine ? <p className="mt-4 text-base text-muted">{atShopLine}</p> : null}
           </>
         )}
         <CourseNextStepNote db={db} shopId={shop.id} bookingId={bookingId} t={t} />

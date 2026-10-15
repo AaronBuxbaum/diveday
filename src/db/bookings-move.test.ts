@@ -7,11 +7,13 @@ import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
 import { formBuddyTeam } from "./buddy-pairs";
 import type { AppDb } from "./client";
+import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
 import { listTripActivity } from "./operations";
 import {
   bookings,
   certifications,
   courses,
+  inboundMessages,
   people,
   tripDeskEvents,
   tripHelpRequests,
@@ -305,6 +307,30 @@ describe("moveBooking", () => {
       pickupTime: null,
       runningLateAt: null,
     });
+  });
+
+  /**
+   * Dive-domain review F1 of layer r4-1: an "Ask to move" is about the old
+   * departure. The move answers it, so the new date's page offers the ask
+   * again and the Inbox row stops waiting.
+   */
+  it("answers the diver's standing Ask to move", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    const asked = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId: seat.bookingId,
+      now: new Date(nowMs() - 60_000),
+    });
+    if (asked.status !== "recorded") throw new Error(`expected recorded, got ${asked.status}`);
+    expect(await hasMoveAsk(db, shop.id, seat.bookingId)).toBe(true);
+
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toMatchObject({ ok: true });
+    const [row] = await db
+      .select({ answeredAt: inboundMessages.answeredAt })
+      .from(inboundMessages)
+      .where(eq(inboundMessages.id, asked.id));
+    expect(row?.answeredAt).not.toBeNull();
+    expect(await hasMoveAsk(db, shop.id, seat.bookingId)).toBe(false);
   });
 
   it("leaves a help request the old crew already handled on the old departure", async () => {

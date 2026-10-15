@@ -5,6 +5,7 @@
       "packingSaved": "Lista de equipo guardada para todas las salidas.",
       "packingInvalid": "Añade entre uno y doce artículos a la lista.",
       "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
+      "pickupSaved": "Guardado. A los buceadores solo se les pregunta por la recogida cuando esto está activado.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
       "unitsSaved": "Unidades guardadas.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
@@ -222,6 +223,12 @@
       "submitting": "Guardando…",
       "value": "{count, plural, one {# artículo} other {# artículos}}"
     },
+    "pickup": {
+      "label": "Ofrecemos recogida en el hotel",
+      "description": "Si está activado, la página de cada buceador pregunta si quiere que lo recojan y dónde se aloja.",
+      "submit": "Guardar recogida",
+      "submitting": "Guardando…"
+    },
     "dockCall": {
       "heading": "Ritmo del día de buceo",
       "description": "Todos estos números están en minutos.",
@@ -363,9 +370,11 @@
     },
     "certCheck": {
       "heading": "Verificación de certificaciones",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE y CMAS, en Chrome o Edge en una computadora.",
-      "added": "Añadida a este navegador",
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y, cuando la agencia muestra la certificación, la marca como certificada a nombre de ese miembro del equipo, como lo haría “Marcar certificado”. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Reservas y exenciones, en Chrome o Edge en una computadora.",
+      "added": "Añadida a este navegador ({version})",
       "notAdded": "Sin añadir",
+      "outdated": "Actualiza la extensión: este navegador tiene la versión {version} y DiveDay necesita la {minimum}.",
+      "try": "Prueba las verificaciones",
       "install": "Añadir a Chrome"
     },
     "integrations": {
@@ -428,6 +437,11 @@
         "heading": "Nuestro año",
         "label": "Mostrar “Nuestro año” en tu calendario",
         "description": "El año hasta hoy en cifras al pie de tu calendario público: buceadores, salidas y sitios. Nunca dinero. Apagado hasta que lo actives."
+      },
+      "padiChecks": {
+        "heading": "Verificación con PADI (beta)",
+        "label": "Verificar certificaciones y eLearning de PADI",
+        "description": "Beta: nadie lo ha probado todavía en la página real de DiveChek de PADI, y PADI no ha dicho si acepta que una extensión la rellene. Funciona en un navegador donde uno de tus profesionales PADI tiene la sesión iniciada en el PADI Pros’ Site, con la afiliación de ese profesional. Desactivado, el enlace al PADI Pros’ Site se mantiene. Un propietario o un gerente puede activarlo."
       }
     },
     "crewSchedule": {
@@ -447,7 +461,7 @@
       "heading": "Sitios de buceo"
     },
     "waivers": {
-      "heading": "Plantilla de exención"
+      "heading": "Exenciones y registros firmados"
     },
     "safetyChecklist": {
       "heading": "Lista de verificación previa a la salida"
@@ -507,6 +521,7 @@
       "lineExamples": "Cámara hiperbárica, línea de accidentes de buceo, guardacostas…",
       "phoneLabel": "Número {n}",
       "vesselLabel": "Embarcación",
+      "vesselHint": "Solo se imprime en las salidas sin embarcación. El indicativo y el MMSI de cada embarcación van en Embarcaciones.",
       "shoreContactLabel": "Contacto en tierra",
       "planLabel": "Si algo sale mal",
       "submit": "Guardar referencia de emergencia",
@@ -526,7 +541,8 @@
       "submit": "Añadir paquete",
       "submitting": "Añadiendo…",
       "delete": "Eliminar",
-      "deleting": "Eliminando…"
+      "deleting": "Eliminando…",
+      "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})"
     }
   },
   "team": {
@@ -1066,5 +1082,27 @@
     "partnerLinkField": "Enlace de referido",
     "showRequired": "Elige la salida de esta tarjeta.",
     "fromFareharbor": "¿Te cambias desde FareHarbor? <link>Mira qué inserción sustituye a cada uno de sus widgets</link>."
+  },
+  "certChecks": {
+    "title": "Prueba las verificaciones",
+    "description": "Solo páginas de muestra en este navegador: no se busca en ninguna agencia y ningún dato de un buceador sale de él.",
+    "run": "Ejecutar las verificaciones",
+    "running": "Ejecutando…",
+    "extension": "Extensión",
+    "samples": "Búsquedas de muestra",
+    "padi": "Sesión en el PADI Pros’ Site",
+    "report": "Informe de la sesión",
+    "passed": "Correcta",
+    "failed": "Fallida",
+    "notListed": "No está en esta versión",
+    "signedIn": "Sesión iniciada",
+    "signedOut": "Sin sesión",
+    "noTab": "Ninguna pestaña de PADI abierta",
+    "noAnswer": "Sin respuesta",
+    "noAccess": "Sin acceso al sitio de PADI",
+    "allowSite": "Chrome no deja entrar a la extensión en el sitio de {agency}. Actívalo en Extensiones, DiveDay certification check, Detalles, Acceso al sitio.",
+    "failedNext": "Envíanos el informe de abajo.",
+    "reportHint": "Cópialo y pégalo en un correo para nosotros.",
+    "copy": "Copiar informe"
   }
 }

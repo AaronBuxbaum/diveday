@@ -140,6 +140,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // Off unless the shop said yes: a restore must not publish its counts
       // for a shop that never chose to.
       "public_year_enabled",
+      // The shop's own yes to the PADI checks (H-121): a restore must not
+      // run them under a PADI membership whose shop never chose to.
+      "padi_checks_enabled",
       "contact_email",
       "contact_phone",
       "address_street",
@@ -148,6 +151,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "address_postal_code",
       "address_country",
       "dock_call_minutes",
+      // Whether the shop runs hotel pickups: a restore must not start asking
+      // divers about a pickup the shop does not offer (fourth UX review, item 8).
+      "offers_hotel_pickup",
       // The rest of the shop's dock-day rhythm (ADR
       // 20260812-configurable-dock-day-rhythm). Six numbers that describe
       // how this shop runs a day — as much the shop's own record as its
@@ -230,6 +236,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.lastMinuteListEnabled,
         shop.tipsEnabled,
         shop.publicYearEnabled,
+        shop.padiChecksEnabled,
         shop.contactEmail,
         shop.contactPhone,
         shop.addressStreet,
@@ -238,6 +245,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.addressPostalCode,
         shop.addressCountry,
         shop.dockCallMinutes,
+        shop.offersHotelPickup,
         shop.gearSetupMinutes,
         shop.briefingMinutes,
         shop.boatRideMinutes,
@@ -283,6 +291,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "inspection_due_on",
       "registration_expires_on",
       "insurance_expires_on",
+      "call_sign",
+      "mmsi",
       "created_at",
     ],
     rows: ({ boatRows }) =>
@@ -295,6 +305,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.inspectionDueOn,
         row.registrationExpiresOn,
         row.insuranceExpiresOn,
+        row.callSign,
+        row.mmsi,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["boats.csv"],
@@ -1559,6 +1571,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "dive_site_id",
       "location_text",
       "what_happened",
+      "kind",
+      "severity",
       "first_aid_given",
       "oxygen_given",
       "oxygen_minutes",
@@ -1586,6 +1600,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.diveSiteId,
         row.locationText,
         row.whatHappened,
+        row.kind,
+        row.severity,
         row.firstAidGiven,
         row.oxygenGiven,
         row.oxygenMinutes,

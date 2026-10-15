@@ -1,5 +1,6 @@
 {
   "operationalWindow": {},
+  "padiChecksOff": "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings & waivers.",
   "skipToContent": "Skip to main content",
   "notFound": {
     "heading": "We couldn’t find that page",
@@ -205,6 +206,7 @@
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
+      "waiverLapsed": "Signed waiver lapsed; send a fresh link.",
       "medicalReview": "A medical answer needs a doctor’s sign-off before this diver dives.",
       "medicalNotCleared": "A physician did not clear this diver to dive.",
       "guardianSignatureMissing": "Signed by a minor alone. A parent or guardian has to sign too; send a fresh waiver link.",
@@ -459,6 +461,7 @@
     "itemDrysuitGlovesWithSize": "{item} {size}: drysuit, wet or dry?",
     "itemDrysuitWeightCheck": "{item}: drysuit, weight check in the water",
     "itemNoLongerRented": "{item} (shop no longer rents this)",
+    "itemSizeMissing": "{item} (size missing)",
     "notRecorded": "No fit on file, not asked yet",
     "ownKit": "Own kit",
     "needsStaffFit": "Needs staff fit at check-in",

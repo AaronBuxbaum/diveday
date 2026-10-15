@@ -2,7 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RosterEntry } from "./types";
 

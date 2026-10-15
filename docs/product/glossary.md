@@ -16,11 +16,13 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Adventure Diver
 - Agency
 - Agency check
+- Agency-listed certification
 - Assistant Instructor (AI)
 - Bundled nitrox
 - C-card
 - Card sighting
 - Certification summary
+- Check all (agency)
 - Claimed certification
 - Clearing a declared-uncertified stamp
 - CMAS
@@ -29,6 +31,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Depth ceiling
 - Depth marker
 - Depth unit
+- DiveChek check
 - DSD (Discover Scuba Diving)
 - eLearning check
 - Entry-level in-water ratio
@@ -40,9 +43,12 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Intro-session in-water ratio
 - Junior certification
 - Levels
+- Minimum extension version
 - Minor
 - Other agency
+- PADI checks
 - PADI Scuba Diver
+- Page-shape report
 - Prior visit
 - RAID
 - Readiness
@@ -55,6 +61,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Target diver:divemaster ratio
 - Temperature unit
 - Trip admission
+- Try the checks
 - Verified certification
 
 ## Day of the dive
@@ -96,13 +103,19 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Billing standing
 - Cancellation notice
 - Card dispute
+- Checkout sale / tip sale
 - Dashboard refund
+- Dives owed on packages
 - Failed refund
 - First paid month
 - Free term
+- Owed
 - Paid after close
+- Paid mark
 - Pass-through fee
+- Payments restricted
 - Payout
+- Sailed / Still to sail
 - Subscription (DiveDay billing)
 
 ## Operations
@@ -114,6 +127,8 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Arrival event
 - Arrival lookup
 - Arrivals window
+- Ask to move
+- At sea
 - Automated cancellation refund
 - Automated marine outlook
 - Back on the water
@@ -167,6 +182,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - First-timer track
 - Held
 - Horizon
+- Hotel pickup
 - Implausible-station advisory
 - Imported payment history
 - Imported waiver acceptance
@@ -210,6 +226,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Prerequisite note
 - Private session / private course
 - Progression order
+- Radio identity
 - Reconciliation
 - Rehearsal
 - Reminder cadence
@@ -226,6 +243,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Safety kit
 - Sailed
 - Salvage offer
+- Seat
 - Seat claim
 - Seat held
 - Seat move
@@ -242,6 +260,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Snorkeler
 - Souls on board
 - Staff invite
+- Stale roll call
 - Standing crew
 - Station acknowledgement
 - Station echo
@@ -271,13 +290,17 @@ fails while it is stale. Grep the domain files for a term; this index says which
 
 [glossary/records-and-evidence.md](glossary/records-and-evidence.md)
 
+- Coverage denominator
 - Day profile
+- Dive area
 - Earliest flight
 - Executed dive
 - Field guide
 - Marine-life catalog
 - Material generation
 - Observed species
+- Photo ledger
+- Sailed with no crew on record
 - Sighting
 - Staff credential
 - Supervision claim

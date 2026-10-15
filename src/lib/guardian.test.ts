@@ -131,3 +131,31 @@ describe("guardianSignatureOf", () => {
     ).toBeNull();
   });
 });
+
+/**
+ * West of UTC the trap is the other way round, and wider. Honolulu runs ten
+ * hours behind with no daylight saving, so 23:30 on the eve of an 18th
+ * birthday is already 09:30 on the birthday in UTC. A reading in the wrong
+ * zone would clear a seventeen-year-old's solo signature.
+ */
+describe("signing in Pacific/Honolulu on the eve of the 18th birthday", () => {
+  /** 2026-07-18 at 23:30 Honolulu. */
+  const lateEve = new Date("2026-07-19T09:30:00.000Z");
+  const turnsEighteenOnThe19th = { dateOfBirth: "2008-07-19", minorDeclared: false };
+
+  it("reads the signing day as the 18th, the last day of being seventeen", () => {
+    expect(signingDate(lateEve, "Pacific/Honolulu")).toBe("2026-07-18");
+    expect(signingDate(lateEve, "UTC")).toBe("2026-07-19");
+  });
+
+  it("needs a guardian when read in the shop's own zone", () => {
+    const solo = record({ signedAt: lateEve, completedAt: lateEve });
+    expect(
+      guardianSignatureMissing(solo, { ...turnsEighteenOnThe19th, timezone: "Pacific/Honolulu" }),
+    ).toBe(true);
+    // The same instant read in UTC is the birthday itself: the wrong zone clears it.
+    expect(guardianSignatureMissing(solo, { ...turnsEighteenOnThe19th, timezone: "UTC" })).toBe(
+      false,
+    );
+  });
+});

@@ -8,17 +8,18 @@ import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { InboxSeat } from "@/db/inbox-seats";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatTime, formatWeekdayTime } from "@/lib/format";
-import { type InboundChannel, inboxMessageAnchor } from "@/lib/inbox";
+import { type InboxChannel, inboxMessageAnchor } from "@/lib/inbox";
 import { shopPath } from "@/lib/staff-notices";
 
 /**
  * The channel a message came in on, in staff words. `src/db` hands over the
  * code and this picks the sentence (ADR 20260731-domain-layer-copy-leaks).
  */
-const CHANNEL_KEYS: Record<InboundChannel, StaffMessageKey> = {
+const CHANNEL_KEYS: Record<InboxChannel, StaffMessageKey> = {
   email: "inbox.channel.email",
   whatsapp: "inbox.channel.whatsapp",
   sms: "inbox.channel.sms",
+  page: "inbox.channel.page",
 };
 
 /**
@@ -209,7 +210,9 @@ export function InboxRow({
             {formatDateTimeTz(message.receivedAt, locale, timezone)}
           </span>
           <RowMenu label={t("inbox.menu.label", { name })}>
-            {lateSeat && !lateSeat.runningLateAt && lateAction ? (
+            {/* An "Ask to move" (H-126) is about another date, never this
+                boat's lateness. */}
+            {lateSeat && !lateSeat.runningLateAt && lateAction && message.channel !== "page" ? (
               <form action={lateAction}>
                 <input type="hidden" name="messageId" value={message.id} />
                 <SubmitButton
@@ -275,10 +278,13 @@ export function InboxRow({
               lead line is the diver's own first words rather than a slot
               apologising for an empty one. */}
           {subject ? <p className="truncate font-medium">{subject}</p> : null}
-          {/* The diver's own words, and nothing added to them. */}
-          <p className={subject ? `mt-0.5 ${wordsCut} text-sm text-muted` : wordsCut}>
-            {excerpt(message.body)}
-          </p>
+          {/* The diver's own words, and nothing added to them. An "Ask to
+              move" sent without a note has none; its facts say what it is. */}
+          {message.body.trim() ? (
+            <p className={subject ? `mt-0.5 ${wordsCut} text-sm text-muted` : wordsCut}>
+              {excerpt(message.body)}
+            </p>
+          ) : null}
           {/* `wrap-anywhere`: a stranger's address has no break in it, and at
               640 it ran 96px out of a 72px column (K-461). Cut, it would lose
               half of what the row is for, so it breaks inside the column. */}

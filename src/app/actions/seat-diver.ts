@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { setDateRequestOutcome } from "@/db/course-inquiries";
 import { findSimilarDivers } from "@/db/divers";
+import { busyOnLockWait } from "@/db/lock-bounds";
 import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
 import { nowDate } from "@/lib/clock";
 import { blankAsAbsent, formValue, parseForm, single } from "@/lib/form-parse";
@@ -16,6 +17,7 @@ import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
 import {
+  SEAT_BUSY_NOTICE,
   SEAT_SURFACES,
   type SeatLanding,
   type SeatSurface,
@@ -159,8 +161,13 @@ async function seat(
   participantType?: ParticipantType,
   requestId?: string | null,
 ): Promise<void> {
+  // A seat transaction waits five seconds for a held departure and then gives
+  // up with `55P03` (`src/db/lock-bounds.ts`). That is a busy boat, not a
+  // fault: the staffer reads "tap again" on the page they were on, rather than
+  // a crash page with the diver still at the counter. Anything else still
+  // throws. The redirect is outside the `try`, since `redirect` throws too.
   const db = await getDb();
-  const result = await seatDiver(db, {
+  const outcome = await seatDiver(db, {
     shopId: actor.shopId,
     tripId: landing.tripId,
     actorPersonId: actor.personId,
@@ -168,7 +175,9 @@ async function seat(
     entry: surface.entry,
     refusals: surface.refusals,
     participantType,
-  });
+  }).catch(busyOnLockWait);
+  if (outcome === "busy") refuse(surface, landing, SEAT_BUSY_NOTICE);
+  const result = outcome;
   if (!result.ok) refuse(surface, landing, surface.refusalNotice[result.reason], result.refusal);
   // **The request this seat answers closes** (third UX review, item 13): it
   // leaves its day on the Requests page and stops counting there. A request
@@ -204,11 +213,16 @@ async function seat(
   // person's particulars, the waiver control among them (`RosterSection.tsx`'s
   // `showsPersonDetail`) — the link the waiver notice sends a staffer to fetch
   // is one of the things the confirm releases.
+  //
+  // Last, a seat whose confirmation went out says so (fourth
+  // UX review, item 3): "Diver added. Their confirmation is on its way."
   const notice = result.identityUnconfirmed
     ? surface.seatedIdentityUnconfirmedNotice
     : result.waiver === "not_delivered" || result.waiver === "failed"
       ? surface.seatedWaiverUndeliveredNotice
-      : surface.seatedNotice;
+      : result.confirmation === "sent"
+        ? surface.seatedConfirmationSentNotice
+        : surface.seatedNotice;
   revalidateAndRedirect(
     path,
     noticeUrl(path, notice, {

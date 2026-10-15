@@ -1,9 +1,16 @@
 import type { ReactNode } from "react";
+import type {
+  AgencyCheckHostAction,
+  AgencyListedHostAction,
+} from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
+import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { CourseMaterialsDone } from "@/db/course-materials";
 import type { listBookingNotes } from "@/db/operations";
+import type { PaymentMarkFacts } from "@/db/payment-marks";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { seatSailed } from "@/lib/closeout";
@@ -119,6 +126,10 @@ export type RosterRows = {
   courseNextStepByBooking?: Map<string, string>;
   /** What the browser extension searches PADI's eLearning for, per seat (H-106). */
   elearningQueryByBooking?: Map<string, ElearningQuery>;
+  /** A PADI course with materials at a shop whose PADI checks are off (H-121). */
+  elearningChecksOff?: boolean;
+  /** Per diver, the cards the browser extension could check with their agencies (H-105). */
+  agencyCheckCardsByPerson?: ReadonlyMap<string, readonly AgencyCheckableCard[]>;
   /**
    * Who finished the course's materials, by person, across every departure of
    * the course (`courseMaterialsDoneByPerson`): the roster's "done" reads here.
@@ -133,6 +144,8 @@ export type RosterRows = {
   heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
   /** Per seat, the unspent package dives its diver could put toward this trip (issue #1697). */
   packageDivesByBooking?: ReadonlyMap<string, number>;
+  /** Per seat, the Paid mark's money and the seat's balance (`paymentMarkFactsForTrip`). */
+  paymentMarksByBooking?: ReadonlyMap<string, PaymentMarkFacts>;
   /**
    * The booking a staffer just acted on (`?bid=`), if any — a saved contact,
    * an updated payment. Acting on a row can move what they touched into the
@@ -208,6 +221,14 @@ export type RosterActions = {
     previous: ElearningCheckResult,
     formData: FormData,
   ) => Promise<ElearningCheckResult>;
+  /**
+   * `agencyCheckAction` bound to the shop (H-105): each row's "Check with SSI"
+   * and the departure's "Check all", one card at a time. The same action, gate
+   * and stamp as the diver record's.
+   */
+  agencyCheckAction?: AgencyCheckHostAction;
+  /** Files the other cards a match's page listed, ticked under the diver's row (layer 3). */
+  agencyListedAction?: AgencyListedHostAction;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
   /**
    * "Move to another departure" (ADR 20261013-staff-move-a-seat): the action
@@ -423,6 +444,14 @@ export function rosterPaymentStatusCopy(t: StaffTranslator): PaymentStatusContro
     },
     update: t("trips.roster.paymentUpdate"),
     updating: t("trips.roster.paymentUpdating"),
+    amountLabel: t("trips.roster.paymentAmountLabel"),
+    methodLabel: t("trips.roster.paymentMethodLabel"),
+    methods: {
+      cash: t("trips.roster.paymentMethodCash"),
+      card: t("trips.roster.paymentMethodCard"),
+      other: t("trips.roster.paymentMethodOther"),
+    },
+    forgiving: forgivingCopy(t),
   };
 }
 

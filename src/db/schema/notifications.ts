@@ -416,7 +416,17 @@ export const notificationRateLimitState = pgTable("notification_rate_limit_state
  * number through End User Messaging — so the day that lands it is a webhook
  * and not a migration.
  */
-export const inboundChannel = pgEnum("inbound_channel", ["email", "sms", "whatsapp"]);
+export const inboundChannel = pgEnum("inbound_channel", [
+  "email",
+  "sms",
+  "whatsapp",
+  /**
+   * The diver's own booking page (`/ready/[token]`): an "Ask to move" past the
+   * free-cancellation window (H-126). Nothing to answer *on* — the shop calls
+   * or writes back from the record — so a reply composer never targets it.
+   */
+  "page",
+]);
 
 /**
  * What a one-word reply turned out to be asking for (ADR
@@ -499,6 +509,13 @@ export const inboundMessages = pgTable(
      */
     keywordIntent: inboundKeywordIntent("keyword_intent"),
     /**
+     * The seat this message is about, when the diver said so rather than the
+     * Inbox inferring it (H-126): an "Ask to move" from the booking page names
+     * its booking. Null on every message that arrived by email or WhatsApp,
+     * whose seat is still read off the diver's open bookings.
+     */
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    /**
      * Whether the channel vouched for `from_address` (#2311): WhatsApp
      * always, email only when SES's DMARC or aligned SPF check passed — the
      * same answer that decides whether the message may be matched to a diver
@@ -519,6 +536,11 @@ export const inboundMessages = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("inbound_messages_person_id_idx").on(table.personId),
     uniqueIndex("inbound_messages_channel_provider_message_unique").on(
       table.channel,
       table.providerMessageId,
@@ -590,6 +612,11 @@ export const staffReplies = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("staff_replies_person_id_idx").on(table.personId),
     index("staff_replies_shop_person_sent_idx").on(table.shopId, table.personId, table.sentAt),
     index("staff_replies_inbound_message_idx").on(table.inboundMessageId),
   ],

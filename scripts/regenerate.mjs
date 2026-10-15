@@ -18,7 +18,7 @@ import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Ratchet sections written by another guard's `--write` rather than a script of their own. */
-const WRITTEN_BY = { "function-length": "page-length" };
+const WRITTEN_BY = { "file-length": "page-length", "function-length": "page-length" };
 
 export function ratchetScripts(root = ROOT) {
   const ratchets = JSON.parse(readFileSync(path.join(root, "scripts/ratchets.json"), "utf8"));

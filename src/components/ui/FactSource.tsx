@@ -1,4 +1,4 @@
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import type { FactSource as FactSourceKind } from "@/lib/fact-source";
 
 /**

@@ -8,10 +8,12 @@ import { shopSubscriptions, shops } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { STAFF_MESSAGES } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 // Same mocking shape as ../whatsapp/page.test.tsx: the page is invoked
 // directly, so the db handle, better-auth and request headers are stubbed.
@@ -45,7 +47,7 @@ async function render(
   setup: (db: AppDb, shopId: string) => Promise<void> = async () => {},
   searchParams: { notice?: string } = {},
 ) {
-  const db = await seededTestDb();
+  const db = ctx.db;
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
   await setup(db, shop.id);

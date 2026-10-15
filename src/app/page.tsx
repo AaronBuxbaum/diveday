@@ -23,7 +23,7 @@ import {
 } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import {
   BANNER_TITLE_CLASS,
   LEAD_TITLE_CLASS,

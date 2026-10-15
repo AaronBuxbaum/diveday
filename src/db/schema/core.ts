@@ -190,6 +190,16 @@ export const shops = pgTable(
      */
     publicYearEnabled: boolean("public_year_enabled").notNull().default(false),
     /**
+     * **PADI checks (beta)**: "Check with PADI" (DiveChek) on a pending PADI
+     * card and the PADI eLearning check on a course roster, both run by the
+     * DiveDay extension in a staffer's browser signed in to the PADI Pros'
+     * Site under the shop's own membership (H-121, H-106). Off by default and
+     * the shop's own opt-in: the membership and its terms are the shop's, and
+     * neither check has been tried against the live site yet (#2259). Off
+     * keeps the "(member sign-in)" link (`src/lib/agency-check.ts`).
+     */
+    padiChecksEnabled: boolean("padi_checks_enabled").notNull().default(false),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not
@@ -316,6 +326,13 @@ export const shops = pgTable(
      * reminder. Defaults to 30.
      */
     dockCallMinutes: integer("dock_call_minutes").notNull().default(30),
+    /**
+     * Whether the shop runs hotel pickups (fourth UX review item 8). Off by
+     * default, because most shops do not: `/ready` asked every diver at every
+     * shop "Want a morning pickup?", a promise the shop never made. Only a
+     * shop that says it offers them has the question asked.
+     */
+    offersHotelPickup: boolean("offers_hotel_pickup").notNull().default(false),
     /**
      * The rest of the shop's dock-day rhythm, in minutes (src/lib/diver-planning.ts).
      * Before these columns existed the whole day was inferred from

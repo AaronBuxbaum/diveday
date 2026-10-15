@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
@@ -7,6 +8,7 @@ import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
 import type { MedicalAnswers } from "@/db/schema";
+import { partyLeadReturnToken } from "@/db/seat-claims";
 import { getShopById } from "@/db/shops";
 import { sendGuardianReleaseCopy } from "@/db/waiver-guardian-copy";
 import { emailFreshWaiverLink, type WaiverLinkRescue } from "@/db/waiver-issue";
@@ -37,6 +39,7 @@ import {
   readMedicalAnswers,
 } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { PARTY_RETURN_COOKIE, partyReturnCookiePath } from "@/lib/party-return";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { WAIVER_FIELD_ERROR, type WaiverInvalidField } from "./waiver-fields";
@@ -538,6 +541,12 @@ export async function completeWaiverAction(token: string, formData: FormData) {
   // completed-state render below still shows that page for anyone who
   // revisits this token afterward.
   const db = await getDb();
+  // A parent who opened this from their party panel goes back to it, so the
+  // next child's release is one tap away (dive-domain review F6).
+  const partyReturn = recordBookingId
+    ? await partyReturnPath(db, { shopId: record.shopId, seatBookingId: recordBookingId, token })
+    : null;
+  if (partyReturn) revalidateAndRedirect(`/waivers/${token}`, partyReturn);
   const readyCapability = recordBookingId
     ? await issueBookingCapability(db, {
         shopId: record.shopId,
@@ -547,4 +556,26 @@ export async function completeWaiverAction(token: string, formData: FormData) {
     : null;
   const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
   revalidateAndRedirect(`/waivers/${token}`, readyPath ?? `/waivers/${token}`);
+}
+
+/**
+ * The lead's own `/ready#party-seats`, when the lead's tap handed this release
+ * their link (`PARTY_RETURN_COOKIE`) and it is a live readiness link for this
+ * seat's party lead; null otherwise, and the signer lands on the seat's own
+ * page as every signer does. The cookie is spent either way.
+ */
+async function partyReturnPath(
+  db: Awaited<ReturnType<typeof getDb>>,
+  input: { shopId: string; seatBookingId: string; token: string },
+): Promise<string | null> {
+  const jar = await cookies();
+  const leadToken = jar.get(PARTY_RETURN_COOKIE)?.value;
+  if (!leadToken) return null;
+  jar.delete({ name: PARTY_RETURN_COOKIE, path: partyReturnCookiePath(input.token) });
+  const returned = await partyLeadReturnToken(db, {
+    shopId: input.shopId,
+    seatBookingId: input.seatBookingId,
+    leadToken,
+  });
+  return returned ? `${readinessLinkPath(returned)}#party-seats` : null;
 }

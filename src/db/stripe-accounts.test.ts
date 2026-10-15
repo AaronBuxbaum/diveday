@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { setShopCurrency } from "./shops";
 import {
+  applyStripeAccountStatus,
   canAcceptPayments,
   checkoutMode,
   disconnectShopStripeAccount,
@@ -47,6 +48,61 @@ describe("shop stripe accounts", () => {
     expect(await getShopStripeAccountByAccountId(db, "acct_123")).toMatchObject({
       shopId: shop.id,
       chargesEnabled: true,
+    });
+  });
+
+  describe("when Stripe turns card payments off", () => {
+    const on = { chargesEnabled: true, payoutsEnabled: true, detailsSubmitted: true };
+    const off = { chargesEnabled: false, payoutsEnabled: false, detailsSubmitted: true };
+
+    it("claims the change once, however many times Stripe says so", async () => {
+      const { db, shop } = await shopContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_restricted");
+      await applyStripeAccountStatus(db, "acct_restricted", on);
+
+      const first = await applyStripeAccountStatus(db, "acct_restricted", off);
+      expect(first.newlyRestricted).toBe(true);
+      expect(first.account?.paymentsRestrictedAt).toBeInstanceOf(Date);
+      expect(canAcceptPayments(first.account)).toBe(false);
+
+      const replay = await applyStripeAccountStatus(db, "acct_restricted", off);
+      expect(replay.newlyRestricted).toBe(false);
+      expect(replay.account?.paymentsRestrictedAt).toEqual(first.account?.paymentsRestrictedAt);
+    });
+
+    it("clears when Stripe turns them back on, so the next restriction is news again", async () => {
+      const { db, shop } = await shopContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_restored");
+      await applyStripeAccountStatus(db, "acct_restored", on);
+      await applyStripeAccountStatus(db, "acct_restored", off);
+
+      const restored = await applyStripeAccountStatus(db, "acct_restored", on);
+      expect(restored.newlyRestricted).toBe(false);
+      expect(restored.account?.paymentsRestrictedAt).toBeNull();
+
+      expect((await applyStripeAccountStatus(db, "acct_restored", off)).newlyRestricted).toBe(true);
+    });
+
+    it("is not a restriction for an account still onboarding, which never had payments on", async () => {
+      const { db, shop } = await shopContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_onboarding");
+      const result = await applyStripeAccountStatus(db, "acct_onboarding", off);
+      expect(result.newlyRestricted).toBe(false);
+      expect(result.account?.paymentsRestrictedAt).toBeNull();
+    });
+
+    it("is not a restriction on a disconnected account, and a reconnect starts clean", async () => {
+      const { db, shop } = await shopContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_gone");
+      await applyStripeAccountStatus(db, "acct_gone", on);
+      await applyStripeAccountStatus(db, "acct_gone", off);
+      await disconnectShopStripeAccount(db, "acct_gone");
+      expect((await getShopStripeAccountByAccountId(db, "acct_gone"))?.paymentsRestrictedAt).toBe(
+        null,
+      );
+
+      const reconnected = await upsertShopStripeAccount(db, shop.id, "acct_gone");
+      expect(reconnected.paymentsRestrictedAt).toBeNull();
     });
   });
 

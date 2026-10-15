@@ -5,6 +5,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { canPersonManagePaymentSettings, canPersonManageShopSettings } from "@/db/authz";
+import { countBoatsWithoutRadioIdentity } from "@/db/boats";
 import { shopHasPricedRecords } from "@/db/shops";
 import { getShopStripeAccount, stripeCurrencyMismatch } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
@@ -143,6 +144,7 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     "boat-updated": { tone: "success", text: t("boats.boatUpdated") },
     "boat-deleted": { tone: "success", text: t("boats.boatDeleted") },
     "boat-invalid": { tone: "danger", text: t("boats.boatInvalid") },
+    "boat-radio-invalid": { tone: "danger", text: t("boats.boatRadioInvalid") },
     "lens-created": { tone: "success", text: t("lenses.created") },
     "lens-updated": { tone: "success", text: t("lenses.updated") },
     "lens-deleted": { tone: "success", text: t("lenses.deleted") },
@@ -212,6 +214,11 @@ export default async function SettingsPage({
       configuredValue(process.env.STRIPE_CONNECT_CLIENT_ID, CONNECT_CLIENT_ID) &&
       publicAppUrl(),
   );
+  // The fleet's door names the boats the emergency card still reads off the
+  // shop's vessel line (review B1); a shop with no boat diving has no door.
+  const boatsWithoutRadioIdentity = shop.hasBoatDiving
+    ? await countBoatsWithoutRadioIdentity(db, session.user.shopId)
+    : 0;
   const canImport = canImportShopData(session.user.roles);
   // Hiding the link is convenience; the page itself re-checks against live roles.
   const canManageMessaging = canManageMessagingSettings(session.user.roles);
@@ -268,7 +275,7 @@ export default async function SettingsPage({
 
         <TeamGroup view={view} canManageTeam={canManageTeam} />
 
-        <BoatsSitesGroup view={view} />
+        <BoatsSitesGroup view={view} boatsWithoutRadioIdentity={boatsWithoutRadioIdentity} />
 
         <BookingsGroup view={view} canManageWaivers={canManageWaivers} />
 

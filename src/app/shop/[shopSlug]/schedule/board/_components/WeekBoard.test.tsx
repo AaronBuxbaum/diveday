@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import {
   type BuilderWeek,
   WeekBoard,
@@ -294,7 +294,7 @@ describe("the day rail (K-326, K-327, K-328)", () => {
       expect(firstLineCentre(time, at)).toBe(rail);
       for (const none of empty) expect(firstLineCentre(none, at)).toBe(rail);
     }
-    // The skeleton draws an empty day from the same string (loading.test.tsx).
+    // The skeleton draws an empty day from the same string.
     for (const none of empty) expect(none.className).toBe(WEEK_EMPTY_DAY_CLASS);
   });
 
@@ -543,6 +543,32 @@ describe("the crew line and the crew schedule switch", () => {
     board(week({}, [entry({ dateIso: "2026-08-27", crew: null })]));
     expect(screen.queryByText("nobody yet")).toBeNull();
     expect(screen.queryByText(new RegExp(COPY.crewLabel))).toBeNull();
+  });
+
+  /**
+   * **Rostered and away, on the board** (fourth review, item 12): said even
+   * when the crew is the week's usual one, which is when no crew line prints.
+   */
+  it("says who is away on a departure they are rostered on, in warning ink", () => {
+    const usual = ["Marcus Webb", "Sal Moretti"];
+    board(
+      week({}, [
+        entry({ tripId: "t1", crew: usual }),
+        entry({ tripId: "t2", startTime: "09:00", time: "9:00 AM", crew: usual }),
+        entry({
+          tripId: "t3",
+          startTime: "13:00",
+          time: "1:00 PM",
+          crew: usual,
+          crewAway: "Marcus Webb away Sat, Oct 17 – Sun, Oct 18",
+        }),
+      ]),
+    );
+    const line = screen.getByText("Marcus Webb away Sat, Oct 17 – Sun, Oct 18");
+    expect(line.parentElement).toHaveClass("text-warning");
+    // The usual crew prints no crew line; the away line stands on its own.
+    expect(screen.queryByText(new RegExp(`${COPY.crewLabel} Marcus`))).toBeNull();
+    expect(screen.getAllByText(/away/)).toHaveLength(1);
   });
 });
 

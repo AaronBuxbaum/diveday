@@ -326,30 +326,107 @@ export async function getRecapPageState(
   checkoutProvider?: CheckoutProvider,
   now: Date = nowDate(),
 ): Promise<RecapPageState> {
-  const closed = await recapClosedReason(db, bookingId, now);
-  if (closed === null) {
-    const data = await loadRecapPageData(db, bookingId, checkoutProvider);
-    if (data) return { kind: "recap", data };
-  }
-  if (closed === "unknown") return { kind: "unknown" };
+  const row = await readRecapRow(db, bookingId);
+  if (!row) return { kind: "unknown" };
+  const shop: DeadRecapShop = {
+    name: row.shopName,
+    slug: row.slug,
+    contactEmail: row.contactEmail,
+    contactPhone: row.contactPhone,
+    defaultLocale: row.defaultLocale,
+  };
+  const byRow = recapClosedByRow(row);
+  if (byRow) return closedRecapState(byRow, shop);
+  // **The page's reads go out beside the seat checks** (code review
+  // 2026-10-13b, item 32). Every one of them is a read and none is shown until
+  // the gate below has said the recap is open, so a closed recap costs the
+  // reads and discloses nothing; an open one, the common shape, no longer
+  // waits for the gate first. Stripe is the exception and waits: it is asked
+  // only for an open recap's pending tip.
+  const [bySeat, loaded] = await Promise.all([
+    recapClosedBySeat(db, row, bookingId, now),
+    loadRecapPageData(db, row, bookingId),
+  ]);
+  if (bySeat) return closedRecapState(bySeat, shop);
+  if (!loaded) return { kind: "dead", shop };
+  const { latestTip } = loaded;
+  // A still-pending tip's local status is a lead, not proof — a delayed or
+  // missed webhook must never leave the page offering a dead Checkout link,
+  // or (via a bare `?tip=paid` return-URL) reading as confirmed when Stripe
+  // itself hasn't said so.
+  const tip =
+    latestTip?.status === "pending"
+      ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
+      : latestTip;
+  return {
+    kind: "recap",
+    data: {
+      ...loaded.data,
+      tip: tip
+        ? { status: tip.status, amountCents: tip.amountCents, checkoutUrl: tip.checkoutUrl }
+        : null,
+    },
+  };
+}
 
-  const [shop] = await db
-    .select({
-      name: shops.name,
-      slug: shops.slug,
-      contactEmail: shops.contactEmail,
-      contactPhone: shops.contactPhone,
-      defaultLocale: shops.defaultLocale,
-    })
-    .from(bookings)
-    .innerJoin(shops, eq(shops.id, bookings.shopId))
-    .where(eq(bookings.id, bookingId))
-    .limit(1);
-  if (!shop) return { kind: "unknown" };
-  if (closed === "departure-cancelled") return { kind: "departure-cancelled", shop };
-  if (closed === "waiting") return { kind: "waiting", shop };
+function closedRecapState(
+  reason: Exclude<RecapClosedReason, "unknown">,
+  shop: DeadRecapShop,
+): RecapPageState {
+  if (reason === "departure-cancelled") return { kind: "departure-cancelled", shop };
+  if (reason === "waiting") return { kind: "waiting", shop };
   return { kind: "dead", shop };
 }
+
+/**
+ * **The one row the gate and the page both start from**: the booking's tier,
+ * its departure's status and the facts the page's reads key on, the diver's
+ * name and the shop's published identity. One select where the gate and the
+ * page each used to read the booking, and a closed page used a third to name
+ * its shop. `liveTrip()` here is what makes a deleted departure `unknown`.
+ */
+async function readRecapRow(db: AppDb, bookingId: string) {
+  const [row] = await db
+    .select({
+      shopId: bookings.shopId,
+      tripId: bookings.tripId,
+      personId: bookings.personId,
+      status: bookings.status,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      tripStatus: trips.status,
+      tripStartsAt: trips.startsAt,
+      tripBoatId: trips.boatId,
+      tripCourseId: trips.courseId,
+      diverName: people.fullName,
+      diverEmail: people.email,
+      shopName: shops.name,
+      slug: shops.slug,
+      logoUrl: shops.logoUrl,
+      timezone: shops.timezone,
+      defaultLocale: shops.defaultLocale,
+      contactEmail: shops.contactEmail,
+      contactPhone: shops.contactPhone,
+      reviewUrl: shops.reviewUrl,
+      reviewsEnabled: shops.reviewsEnabled,
+      tipsEnabled: shops.tipsEnabled,
+      currency: shops.currency,
+      depthUnit: shops.depthUnit,
+      temperatureUnit: shops.temperatureUnit,
+      brandColor: shops.brandColor,
+      brandDisplayFont: shops.brandDisplayFont,
+      courseNextStep: bookings.courseNextStep,
+      courseNextStepByPersonId: bookings.courseNextStepByPersonId,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .where(and(eq(bookings.id, bookingId), liveTrip()))
+    .limit(1);
+  return row ?? null;
+}
+
+type RecapRow = NonNullable<Awaited<ReturnType<typeof readRecapRow>>>;
 
 /**
  * **Why a recap is closed, or null when it is open** — the one gate the page,
@@ -377,24 +454,30 @@ export async function recapClosedReason(
   bookingId: string,
   now: Date = nowDate(),
 ): Promise<RecapClosedReason | null> {
-  const [row] = await db
-    .select({
-      shopId: bookings.shopId,
-      tripId: bookings.tripId,
-      status: bookings.status,
-      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
-      tripStatus: trips.status,
-    })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(eq(bookings.id, bookingId), liveTrip()))
-    .limit(1);
+  const row = await readRecapRow(db, bookingId);
   if (!row) return "unknown";
+  return recapClosedByRow(row) ?? (await recapClosedBySeat(db, row, bookingId, now));
+}
+
+/** The booking tier, then the departure, then the held seat: what the row alone decides. */
+function recapClosedByRow(
+  row: Pick<RecapRow, "status" | "tripStatus" | "identityUnconfirmedAt">,
+): "dead" | "departure-cancelled" | null {
   if (row.status === "cancelled" || row.status === "no_show") return "dead";
   // Read `getRecapPageData`'s doc comment before relaxing this: an active
   // booking on a cancelled trip is the *normal* shape of a blow-out.
   if (row.tripStatus !== "scheduled") return "departure-cancelled";
   if (row.identityUnconfirmedAt) return "dead";
+  return null;
+}
+
+/** Then the causes the roll call decides: the dock before the wait. */
+async function recapClosedBySeat(
+  db: AppDb,
+  row: Pick<RecapRow, "shopId" | "tripId">,
+  bookingId: string,
+  now: Date,
+): Promise<"dead" | "waiting" | null> {
   const one = [{ booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } }];
   // Both asked at once, then answered in the disclosure order above: the dock
   // before the wait (code review 2026-10-13, item 29).
@@ -566,51 +649,27 @@ export async function getRecapPageData(
   checkoutProvider?: CheckoutProvider,
   now: Date = nowDate(),
 ): Promise<RecapPageData | null> {
-  if ((await recapClosedReason(db, bookingId, now)) !== null) return null;
-  return loadRecapPageData(db, bookingId, checkoutProvider);
+  const state = await getRecapPageState(db, bookingId, checkoutProvider, now);
+  return state.kind === "recap" ? state.data : null;
 }
 
-/** The page's content, once {@link recapClosedReason} has said it is open. */
+/**
+ * The page's content from {@link readRecapRow}'s row, before the gate has
+ * answered (`getRecapPageState` discards it when the recap is closed). The
+ * tip comes back as stored; Stripe is asked only once the recap is open.
+ */
 async function loadRecapPageData(
   db: AppDb,
+  row: RecapRow,
   bookingId: string,
-  checkoutProvider?: CheckoutProvider,
-): Promise<RecapPageData | null> {
-  const [row] = await db
-    .select({
-      shopId: bookings.shopId,
-      tripId: bookings.tripId,
-      personId: bookings.personId,
-      diverName: people.fullName,
-      diverEmail: people.email,
-      shopName: shops.name,
-      slug: shops.slug,
-      logoUrl: shops.logoUrl,
-      timezone: shops.timezone,
-      defaultLocale: shops.defaultLocale,
-      contactEmail: shops.contactEmail,
-      contactPhone: shops.contactPhone,
-      reviewUrl: shops.reviewUrl,
-      reviewsEnabled: shops.reviewsEnabled,
-      tipsEnabled: shops.tipsEnabled,
-      currency: shops.currency,
-      depthUnit: shops.depthUnit,
-      temperatureUnit: shops.temperatureUnit,
-      brandColor: shops.brandColor,
-      brandDisplayFont: shops.brandDisplayFont,
-      courseNextStep: bookings.courseNextStep,
-      courseNextStepByPersonId: bookings.courseNextStepByPersonId,
-    })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(shops, eq(shops.id, bookings.shopId))
-    .where(eq(bookings.id, bookingId))
-    .limit(1);
-  if (!row) return null;
-  const trip = await getTripWithBooked(db, row.shopId, row.tripId);
-  if (!trip) return null;
-
+): Promise<{
+  data: Omit<RecapPageData, "tip">;
+  latestTip: Awaited<ReturnType<typeof getLatestTipForBooking>>;
+} | null> {
+  // One wave: the trip with its booked list beside everything keyed on the
+  // row, where the trip used to be read first and the wave waited for it.
   const [
+    trip,
     dives,
     livedDives,
     divedRecentlyIds,
@@ -623,7 +682,9 @@ async function loadRecapPageData(
     latestTip,
     sessionCertifications,
     nextStepAuthors,
+    tappedSightings,
   ] = await Promise.all([
+    getTripWithBooked(db, row.shopId, row.tripId),
     listTripDives(db, row.shopId, row.tripId),
     // The only read of `executed_dives` on this page. `listExecutedDives`
     // already drops soft-deleted rows and non-live trips, which is what keeps
@@ -632,8 +693,8 @@ async function loadRecapPageData(
     // Did this diver dive here yesterday? DAN's 18 hours covers multiple days
     // as well as repetitive dives, so the answer widens the fly-safe basis
     // below. One more element of this `Promise.all`, not a second round trip.
-    diveDaysBefore(db, row.shopId, [row.personId], trip.startsAt, row.timezone),
-    trip.boatId ? getBoatForHistory(db, row.shopId, trip.boatId) : Promise.resolve(null),
+    diveDaysBefore(db, row.shopId, [row.personId], row.tripStartsAt, row.timezone),
+    row.tripBoatId ? getBoatForHistory(db, row.shopId, row.tripBoatId) : Promise.resolve(null),
     tripCrewByTrip(db, row.shopId, [row.tripId]),
     db
       .select({
@@ -657,7 +718,7 @@ async function loadRecapPageData(
           // blurring it: which is why this count may never disagree with the
           // prompt that names the day to a staffer.
           diveDay(),
-          lte(trips.startsAt, trip.startsAt),
+          lte(trips.startsAt, row.tripStartsAt),
         ),
       ),
     db
@@ -678,7 +739,7 @@ async function loadRecapPageData(
     // self-declaration, a pending review, an imported card and a card from
     // another session all read as "nothing was recorded", which is what the
     // recap then says out loud.
-    trip.course
+    row.tripCourseId
       ? db
           .select({ level: certifications.level, issuedAt: certifications.issuedByShopAt })
           .from(certifications)
@@ -705,7 +766,9 @@ async function loadRecapPageData(
           .where(eq(people.id, row.courseNextStepByPersonId))
           .limit(1)
       : Promise.resolve([]),
+    listTripSightings(db, row.shopId, row.tripId),
   ]);
+  if (!trip) return null;
 
   const sites: RecapSite[] = [];
   const seen = new Set<string>();
@@ -759,7 +822,7 @@ async function loadRecapPageData(
     const slug = executed.observedSpeciesSlug;
     if (slug && !observedSpecies.includes(slug)) observedSpecies.push(slug);
   }
-  for (const tapped of await listTripSightings(db, row.shopId, row.tripId)) {
+  for (const tapped of tappedSightings) {
     if (!observedSpecies.includes(tapped.speciesSlug)) observedSpecies.push(tapped.speciesSlug);
   }
 
@@ -800,20 +863,11 @@ async function loadRecapPageData(
   const visitCount = Math.max(1, mergedHistory.length);
   const crew = (crewMap.get(row.tripId) ?? []).map((c) => c.name);
 
-  // A still-pending tip's local status is a lead, not proof — a delayed or
-  // missed webhook must never leave the page offering a dead Checkout link,
-  // or (via a bare `?tip=paid` return-URL) reading as confirmed when Stripe
-  // itself hasn't said so.
-  const tip =
-    latestTip?.status === "pending"
-      ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
-      : latestTip;
-
   const sessionCertification = sessionCertifications[0] ?? null;
   const nextStepWords = row.courseNextStep?.trim() || null;
   const nextStepAuthor = nextStepAuthors[0]?.fullName?.trim() || null;
 
-  return {
+  const data: Omit<RecapPageData, "tip"> = {
     shop: {
       id: row.shopId,
       name: row.shopName,
@@ -874,15 +928,9 @@ async function loadRecapPageData(
     // And never for a shop that switched tips off (`shops.tips_enabled`).
     canTip: row.tipsEnabled && Boolean(row.diverEmail) && canAcceptPayments(stripeAccount),
     currency: toShopCurrency(row.currency),
-    tip: tip
-      ? {
-          status: tip.status,
-          amountCents: tip.amountCents,
-          checkoutUrl: tip.checkoutUrl,
-        }
-      : null,
     visitCount,
   };
+  return { data, latestTip };
 }
 
 /** A diver's recap photos, including staff-shared departure photos, newest first. */

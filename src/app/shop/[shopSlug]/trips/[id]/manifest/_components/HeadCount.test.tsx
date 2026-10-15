@@ -98,3 +98,28 @@ describe("HeadCount with blocked divers", () => {
     expect(container.textContent).toBe("8of 8 divers aboard");
   });
 });
+
+/**
+ * Batch 6, item 2: the head count against the boat's certificate. The sale is
+ * refused above it (H-107); the rail never is, so the count says it.
+ */
+describe("HeadCount over the certificate", () => {
+  it("turns the figure danger and says the limit, in words a reader reaches", () => {
+    const { container } = render(
+      <HeadCount aboard={13} out={13} overCertificate={{ limit: 12 }} t={t} />,
+    );
+    const figure = screen.getByRole("progressbar");
+    expect(figure).toHaveClass("border-danger");
+    expect(figure.querySelector("span")).toHaveClass("text-danger");
+    const line = screen.getByText("Certificate allows 12 passengers");
+    expect(line).toHaveClass("text-danger", "font-bold");
+    expect(line.closest("[aria-hidden='true']")).toBeNull();
+    expect(container.textContent).toBe("13of 13 divers aboardCertificate allows 12 passengers");
+  });
+
+  it("stays its ordinary self within the certificate", () => {
+    const { container } = render(<HeadCount aboard={12} out={12} overCertificate={null} t={t} />);
+    expect(screen.getByRole("progressbar")).not.toHaveClass("border-danger");
+    expect(container.textContent).toBe("12of 12 divers aboard");
+  });
+});

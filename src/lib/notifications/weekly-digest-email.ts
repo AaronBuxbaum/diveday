@@ -69,8 +69,23 @@ function blockFor(
           t("notifications.weeklyDigest.money.tips", { amount: money(section.tipsCents) }),
         );
       }
-      if (section.openOrders > 0) {
-        lines.push(t("notifications.weeklyDigest.money.openOrders", { count: section.openOrders }));
+      // "Owed": the Orders page's line, in the email (fourth UX review, item 23).
+      const { owed } = section;
+      if (owed.orderCents > 0) {
+        lines.push(
+          t("notifications.weeklyDigest.money.owedOrders", {
+            amount: money(owed.orderCents),
+            count: owed.orderCount,
+          }),
+        );
+      }
+      if (owed.seatCents > 0) {
+        lines.push(
+          t("notifications.weeklyDigest.money.owedSeats", {
+            amount: money(owed.seatCents),
+            count: owed.seatCount,
+          }),
+        );
       }
       return {
         heading: t("notifications.weeklyDigest.money.heading"),
@@ -137,6 +152,34 @@ function blockFor(
         lines: [t("notifications.weeklyDigest.overdue.body", { count: section.count })],
         url: section.url,
         linkLabel: t("notifications.weeklyDigest.overdue.link"),
+      };
+    // The owner's safety sentence and gear line (fourth UX review, item 24).
+    case "safety": {
+      const lines: string[] = [];
+      if (section.openRollCalls > 0) {
+        lines.push(
+          t("notifications.weeklyDigest.safety.rollCalls", { count: section.openRollCalls }),
+        );
+      }
+      if (section.uncrewed > 0) {
+        lines.push(t("notifications.weeklyDigest.safety.uncrewed", { count: section.uncrewed }));
+      }
+      if (section.incidents > 0) {
+        lines.push(t("notifications.weeklyDigest.safety.incidents", { count: section.incidents }));
+      }
+      return {
+        heading: t("notifications.weeklyDigest.safety.heading"),
+        lines,
+        url: section.url,
+        linkLabel: t("notifications.weeklyDigest.safety.link"),
+      };
+    }
+    case "gear_service":
+      return {
+        heading: t("notifications.weeklyDigest.gearService.heading"),
+        lines: [t("notifications.weeklyDigest.gearService.body", { count: section.due })],
+        url: section.url,
+        linkLabel: t("notifications.weeklyDigest.gearService.link"),
       };
   }
 }

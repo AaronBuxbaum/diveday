@@ -26,6 +26,7 @@ export function boatNoticeMessages(t: StaffTranslator): NoticeMessages {
     "boat-updated": { tone: "success", text: t("boats.boatUpdated") },
     "boat-deleted": { tone: "success", text: t("boats.boatDeleted") },
     "boat-invalid": { tone: "danger", text: t("boats.boatInvalid") },
+    "boat-radio-invalid": { tone: "danger", text: t("boats.boatRadioInvalid") },
   };
 }
 
@@ -59,6 +60,7 @@ export function dockDayNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
+    "pickup-saved": { tone: "success", text: t("settings.main.notice.pickupSaved") },
   };
 }
 

@@ -7,6 +7,7 @@ const allOn = {
   lastMinuteListEnabled: true,
   tipsEnabled: true,
   publicYearEnabled: true,
+  padiChecksEnabled: true,
 };
 
 describe("shopOffers", () => {
@@ -21,8 +22,17 @@ describe("shopOffers", () => {
 describe("parseShopFeature", () => {
   it("accepts only a known feature", () => {
     expect(parseShopFeature("reviews")).toBe("reviews");
+    expect(parseShopFeature("padiChecks")).toBe("padiChecks");
     expect(parseShopFeature("crewSchedule")).toBeNull();
     expect(parseShopFeature("tipsEnabled")).toBeNull();
     expect(parseShopFeature(null)).toBeNull();
+  });
+});
+
+describe("PADI checks", () => {
+  it("wait for the shop's own yes, like Our year", async () => {
+    const { shops } = await import("@/db/schema");
+    expect(shops.padiChecksEnabled.default).toBe(false);
+    expect(shops.publicYearEnabled.default).toBe(false);
   });
 });

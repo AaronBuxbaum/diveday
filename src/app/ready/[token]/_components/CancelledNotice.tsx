@@ -4,10 +4,12 @@ import { buttonClass } from "@/components/ui/button";
 import type { AppDb } from "@/db/client";
 import { getBookingPayment } from "@/db/payments";
 import type { ReadyPageData } from "@/db/ready";
+import { partySeatsKeptAfterLeadCancel } from "@/db/seat-claims";
 import { nextPublicTripInSeries } from "@/db/series-next";
 import type { DiverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { verifiedCancelNotice } from "./cancel-notices";
 
@@ -31,10 +33,25 @@ export async function cancelledNotice(
     shop: { id: string; slug: string; name: string; timezone: string };
     locale: string;
     t: DiverTranslator;
+    /** A lead's party seats still booked, by name (batch 6 item 10); read from the seats. */
+    partyKept?: string[];
   },
 ) {
   const { trip, shop, locale, t } = input;
   const refundKey = verifiedCancelNotice(input.paymentStatus);
+  const kept = input.partyKept ?? [];
+  const money = refundKey
+    ? t(refundKey)
+    : t("ready.cancelledSeatReleased", { trip: trip.title, shop: shop.name });
+  // The lead learns which of the seats they booked stayed: their own divers'.
+  const keptLine =
+    kept.length > 0
+      ? t("ready.cancelledPartyKept", {
+          count: kept.length,
+          names: cachedListFormat(locale, { type: "conjunction" }).format(kept),
+          trip: trip.title,
+        })
+      : null;
   const next = await nextPublicTripInSeries(db, {
     shopId: shop.id,
     tripId: trip.id,
@@ -44,11 +61,7 @@ export async function cancelledNotice(
     <EntryDone
       glyph="cancelled"
       title={t("ready.cancelledHeading")}
-      text={
-        refundKey
-          ? t(refundKey)
-          : t("ready.cancelledSeatReleased", { trip: trip.title, shop: shop.name })
-      }
+      text={keptLine ? `${money} ${keptLine}` : money}
       action={
         <span className="flex flex-col items-center gap-2">
           {next ? (
@@ -85,9 +98,13 @@ export async function cancelledNoticeForReady(
   locale: string,
   t: DiverTranslator,
 ) {
-  const payment = await getBookingPayment(db, data.shop.id, bookingId);
+  const [payment, partyKept] = await Promise.all([
+    getBookingPayment(db, data.shop.id, bookingId),
+    partySeatsKeptAfterLeadCancel(db, { shopId: data.shop.id, leadBookingId: bookingId }),
+  ]);
   return cancelledNotice(db, {
     paymentStatus: payment?.status,
+    partyKept,
     trip: { id: data.trip.id, title: data.detail.trip.title },
     shop: {
       id: data.shop.id,

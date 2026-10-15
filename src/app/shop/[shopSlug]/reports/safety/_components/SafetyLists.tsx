@@ -2,11 +2,15 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { SectionCard } from "@/components/ui/card";
 import type { IncidentReportLine } from "@/db/incident-reports";
+import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "@/i18n/incident-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { SafetyMonth } from "@/lib/safety-report";
 import { shopPath } from "@/lib/staff-notices";
+
+const SEVERITY_TONE = { minor: "neutral", moderate: "warning", serious: "danger" } as const;
 
 const ROW = "flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 py-2";
 
@@ -33,8 +37,9 @@ function ListCard({
 }
 
 /**
- * The month's lists: the reports, the counts left open, the lapsed sailings,
- * and, when there are any, the crew who sailed with nothing on file.
+ * The month's lists: the reports, the counts left open, and, when there are
+ * any, the departures that sailed with no crew on record; then the lapsed
+ * sailings and the crew who sailed with nothing on file.
  */
 export function SafetyLists({
   month,
@@ -72,6 +77,16 @@ export function SafetyLists({
                 {t(report.status === "filed" ? "incidents.status.filed" : "incidents.status.draft")}
               </Badge>
               <span className="font-medium">{report.tripTitle}</span>
+              {/* What kind and how serious (batch 6, item 7), once the report
+                  says; a serious one wears the danger the month's reader scans for. */}
+              {report.kind ? (
+                <span className="text-sm font-medium">{t(INCIDENT_KIND_KEYS[report.kind])}</span>
+              ) : null}
+              {report.severity ? (
+                <Badge size="sm" tone={SEVERITY_TONE[report.severity]}>
+                  {t(INCIDENT_SEVERITY_KEYS[report.severity])}
+                </Badge>
+              ) : null}
               <span className="text-sm text-muted">
                 {formatDateTimeTz(report.at, locale, timeZone)}
                 {" "}· {t("incidents.trip.writtenBy", { name: report.createdByName })}
@@ -106,6 +121,31 @@ export function SafetyLists({
           </li>
         ))}
       </ListCard>
+
+      {/* Only when there are any, like the unrecorded crew below: a list
+          whose empty state restates the figure's zero earns nothing. Each
+          row opens the departure's crew (fourth review, item 13). */}
+      {month.noCrewDepartures.length > 0 ? (
+        <ListCard
+          title={t("incidents.safety.noCrewTitle")}
+          empty=""
+          count={month.noCrewDepartures.length}
+        >
+          {month.noCrewDepartures.map((departure) => (
+            <li key={departure.tripId}>
+              <Link
+                href={`${tripHref(departure.tripId)}?view=details#crew`}
+                className={`${ROW} hover:underline`}
+              >
+                <span className="font-medium">{departure.title}</span>
+                <span className="text-sm text-muted">
+                  {formatShortDate(departure.startsAt, locale, timeZone)}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ListCard>
+      ) : null}
 
       <ListCard
         title={t("incidents.safety.lapsedTitle")}

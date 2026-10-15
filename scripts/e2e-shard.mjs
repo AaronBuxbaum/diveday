@@ -228,10 +228,13 @@ export function weigh(items, durations) {
 
 /**
  * The full deal: `count` bins of spec paths, computed from the tree at `root`
- * and the committed functional durations (or the ones passed in).
+ * and the committed functional durations (or the ones passed in), less any
+ * spec in `skip` — a path-gated spec the diff did not reach
+ * (`e2e/pixel-probe.spec.ts`, which ci.yml runs only when the probe or the
+ * stylesheet changed).
  */
-export async function dealSpecs(count, root = process.cwd(), durations) {
-  const specs = await listSpecs(root);
+export async function dealSpecs(count, root = process.cwd(), durations, skip = []) {
+  const specs = (await listSpecs(root)).filter((spec) => !skip.includes(spec));
   const recorded = durations ?? (await readDurations(root)).functional;
   const estimated = await Promise.all(
     specs.map(async (spec) => ({
@@ -358,7 +361,7 @@ async function main() {
   const shardArg = option("shard");
   if (!shardArg) {
     console.error(
-      "usage: node scripts/e2e-shard.mjs --shard=<index>/<count> [--visual=<playwright --list json>] [--explain] [--summary=<file>]",
+      "usage: node scripts/e2e-shard.mjs --shard=<index>/<count> [--visual=<playwright --list json>] [--skip=<spec>,…] [--explain] [--summary=<file>]",
     );
     process.exit(2);
   }
@@ -379,7 +382,8 @@ async function main() {
     recordedShare =
       items.filter((line) => isDuration(durations.visual[line])).length / items.length;
   } else {
-    bins = await dealSpecs(count, process.cwd(), durations.functional);
+    const skip = (option("skip") ?? "").split(",").filter(Boolean);
+    bins = await dealSpecs(count, process.cwd(), durations.functional, skip);
     const items = bins.flatMap((bin) => bin.items);
     recordedShare =
       items.filter((spec) => isDuration(durations.functional[spec])).length / items.length;

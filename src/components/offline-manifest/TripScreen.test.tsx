@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   appendOfflineRollCall,
@@ -369,6 +369,10 @@ describe("OfflineManifestView — one column, one text edge", () => {
    */
   it("says to tap again with one finger when a palm's press is refused, and records nothing", async () => {
     await renderTrip(richEnvelope("trip-1"));
+    // The heading can be found before the commit that drew it has run its
+    // effects, and the cue starts listening in one of them: a press that early
+    // was refused with nobody to say so, and this test failed now and then.
+    await act(async () => {});
     const mark = within(priyaRow()).getByRole("button", { name: "Mark boarded" });
     const touch = (type: "pointerDown" | "pointerUp", pointerId: number) =>
       fireEvent[type](document, { pointerId, pointerType: "touch" });

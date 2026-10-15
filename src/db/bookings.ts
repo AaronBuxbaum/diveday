@@ -1,6 +1,13 @@
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { checkMinimumAge, isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
+import {
+  bookingIdentityColumns,
+  courseEnrollmentRefusal,
+  courseRatioRefusal,
+  type IdentityClaim,
+  participantTypeRefusal,
+} from "@/lib/booking-gates";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
@@ -9,10 +16,11 @@ import { seatListPriceCents } from "@/lib/deposits";
 import { typeChangedDeskEventKind } from "@/lib/desk-events";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
+import { seatName } from "@/lib/held-seat";
+import { normalizeEmailAddress } from "@/lib/inbox";
 import {
   holdsRegisterKind,
   isDiver,
-  offeredParticipantTypes,
   type ParticipantType,
   seatRefusal,
   typeChangeRefusal,
@@ -41,6 +49,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
+import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
 import { recordDiverActivity, recordTripActivity } from "./operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
@@ -58,6 +67,7 @@ import {
   courses,
   gearItemKind,
   gearReservations,
+  inboundMessages,
   notificationSendQueue,
   people,
   personRoles,
@@ -903,6 +913,7 @@ async function createBookingRecord(
   pending: PendingDeclaration[],
 ): Promise<BookingOutcome> {
   const tx = db;
+  await boundLockWaits(tx);
   // FOR UPDATE serializes concurrent bookings on the same trip: under READ
   // COMMITTED two transactions could otherwise both read `booked = capacity-1`
   // and both insert. The unit suite runs on PGlite, which is single-connection
@@ -918,22 +929,10 @@ async function createBookingRecord(
     .for("update");
   if (!tripTakesSeatFrom(trip, req.actor)) return { ok: false, reason: "trip_unavailable" };
   const participantType: ParticipantType = req.participantType ?? "diver";
-  // A course session is diving by definition, and its admission rule, its
-  // ratio and its minimum age are all about the student in the water. Recording
-  // somebody as a snorkeler or a rider to get them aboard one would be a lie in
-  // the record the crew reads at the rail, so it is refused before anything
-  // else is read.
-  if (trip.courseId && !isDiver(participantType)) {
-    return { ok: false, reason: "participant_type_unavailable" };
-  }
-  // **The public form sells only what this departure prices**, read again
-  // here on the locked row rather than trusted from the form's own parse: a
-  // shop that cleared its rider price between the page loading and the post
-  // has stopped selling that seat. Staff may seat any type (a charter's
-  // partner who rides free); the anonymous form may not.
-  if (req.actor === "public" && !offeredParticipantTypes(trip).includes(participantType)) {
-    return { ok: false, reason: "participant_type_unavailable" };
-  }
+  // A course session takes divers only, and the public form sells only the
+  // types this departure prices, read on the locked row (`participantTypeRefusal`).
+  const typeRefusal = participantTypeRefusal({ actor: req.actor, participantType, trip });
+  if (typeRefusal) return { ok: false, reason: typeRefusal };
 
   const [course] = trip.courseId
     ? await tx
@@ -956,134 +955,14 @@ async function createBookingRecord(
     entryLevelSeatCap = courseSeatCapacity(course, instructorCount, assistantCount);
   }
 
-  // Resolve the diver. A returning diver picked by identity reuses that exact
-  // person row (the whole point of "enter once"); a walk-in is looked up by
-  // email so a re-typed regular still collapses onto their record. A
-  // soft-deleted person's email is free (matching createDiver): a rebooking
-  // diver whose record staff removed gets a fresh person row, not a booking
-  // attached to a record that's invisible on the roster. Any new walk-in row is
-  // only written after the capacity gate passes (`pendingInsert`).
-  let person: typeof people.$inferSelect | undefined;
-  let pendingInsert: { fullName: string; email: string | null; phone?: string } | null = null;
-  // Set when this booking attached itself to an existing person on something
-  // short of proof, and must not silently inherit that person's evidence
-  // (H-13). Two ways in, and a fresh no-email row raises neither because it has
-  // no prior identity to disagree with:
-  //
-  //  - the by-email path reused a row whose name on file does not match the
-  //    submitted one — the shared-inbox / different-human signal this flag was
-  //    built for;
-  //  - the identity path carries `fromNameMatch`, meaning the person id came
-  //    off the counter's name prompt rather than out of a search a staffer went
-  //    looking in (issue #1556) — and, on that path, the typed name disagrees
-  //    with the one on file, or two divers answer to it.
-  //
-  // This is where the two counter doors part, on purpose: a seat picked from
-  // the search list carries no `fromNameMatch` and lands released, namesake
-  // or not, however the row was found (H-79, issue #1790; the reasoning is on
-  // `BookingPerson.fromNameMatch`).
-  let identityUnconfirmed = false;
-  // What the staffer is shown beside the matched record while the flag stands,
-  // and what a split-off record is named (`splitBookingIdentity`).
-  let identityClaim: { bookedAs: string; matchedBy: "shared_email" | "picked_name" } | null = null;
-  if ("personId" in req) {
-    [person] = await tx
-      .select()
-      .from(people)
-      .where(
-        and(eq(people.id, req.personId), eq(people.shopId, req.shopId), isNull(people.deletedAt)),
-      )
-      .limit(1)
-      // Waits on a merge holding this row `for update`, then re-reads it: a
-      // record merged away mid-booking is deleted by then and refused here,
-      // instead of taking a seat the merge has already moved past. `key share`
-      // is the weakest lock that does it, so two bookings for one diver never
-      // block each other.
-      .for("key share");
-    // A copied URL, a since-removed diver or a merged-away record must not book into this tenant.
-    if (!person) return { ok: false, reason: "person_not_found" };
-    identityUnconfirmed = req.fromNameMatch
-      ? await nameMatchLeavesIdentityInDoubt(tx, req.shopId, person, req.fromNameMatch.typedName)
-      : false;
-    if (identityUnconfirmed && req.fromNameMatch) {
-      identityClaim = { bookedAs: req.fromNameMatch.typedName.trim(), matchedBy: "picked_name" };
-    }
-  } else {
-    const email = req.email?.trim().toLowerCase() || null;
-    if (email) {
-      [person] = await tx
-        .select()
-        .from(people)
-        .where(
-          and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)),
-        )
-        .limit(1)
-        // As above: a record a merge is moving away is re-read once it lands.
-        .for("key share");
-      if (person) {
-        // Reuse-by-email before the capacity gate: flag a name that doesn't match
-        // the person already on file for this address.
-        identityUnconfirmed = !personNamesMatch(person.fullName, req.fullName);
-        if (identityUnconfirmed) {
-          identityClaim = { bookedAs: req.fullName.trim(), matchedBy: "shared_email" };
-        }
-      } else {
-        pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
-      }
-    } else {
-      // No email to dedup against — matching createDiver (src/db/divers.ts),
-      // this always gets a fresh person row rather than guessing an identity.
-      pendingInsert = { fullName: req.fullName.trim(), email: null, phone: req.phone };
-    }
-  }
+  const resolved = await resolveBookingPerson(tx, req);
+  if (!resolved.ok) return resolved;
+  let { person, identityUnconfirmed, identityClaim } = resolved;
+  const { pendingInsert } = resolved;
 
-  // Both course gates below read the shop's local calendar, so take its
-  // timezone once for whichever of them applies.
-  if (course?.minimumCertificationLevel || course?.minimumAge) {
-    const [shop] = await tx
-      .select({ timezone: shops.timezone })
-      .from(shops)
-      .where(eq(shops.id, req.shopId))
-      .limit(1);
-    if (!shop) throw new Error(`createBookingRecord: shop ${req.shopId} not found`);
-
-    // Existing-card courses deliberately fail closed at enrollment. Staff can
-    // capture and verify a card, then the same public form will admit the
-    // diver; we never reserve capacity based on a self-assertion.
-    if (course.minimumCertificationLevel) {
-      if (!person) return { ok: false, reason: "course_prerequisite" };
-      const cardRows = await tx
-        .select()
-        .from(certifications)
-        .where(
-          and(
-            eq(certifications.shopId, req.shopId),
-            eq(certifications.personId, person.id),
-            isNull(certifications.deletedAt),
-          ),
-        );
-      if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
-        return { ok: false, reason: "course_prerequisite" };
-      }
-    }
-
-    // Minimum age, measured on the day the course actually runs (H-08). Unlike
-    // the card gate this **fails open**: a diver with no date of birth on file
-    // books exactly as before, because nothing collects one at booking and
-    // failing closed would lock out every diver already on the books. Age is
-    // still verified at the dock; this only catches the case the shop already
-    // has the data to catch. A walk-in with no `person` row yet is likewise
-    // unknown, and passes.
-    //
-    // Staff only — see `BookingRequest.actor` for why the anonymous form must
-    // not refuse on someone else's date of birth. An under-age seat booked
-    // through the public form surfaces as a readiness blocker instead.
-    if (req.actor !== "public" && course.minimumAge && person?.dateOfBirth) {
-      const courseDate = calendarDateInTimezone(trip.startsAt, shop.timezone);
-      if (checkMinimumAge(person.dateOfBirth, course.minimumAge, courseDate).status === "under") {
-        return { ok: false, reason: "course_min_age" };
-      }
-    }
+  if (course) {
+    const refusal = await courseEnrollmentFor(tx, req, course, person, trip.startsAt);
+    if (refusal) return { ok: false, reason: refusal };
   }
 
   // `seatHeld`, not "every status but cancelled": a seat a staffer marked
@@ -1111,9 +990,8 @@ async function createBookingRecord(
   if (seatFull) {
     return { ok: false, reason: seatFull };
   }
-  if (entryLevelSeatCap !== null && booked >= entryLevelSeatCap) {
-    return { ok: false, reason: "course_ratio_full" };
-  }
+  const ratioRefusal = courseRatioRefusal(booked, entryLevelSeatCap);
+  if (ratioRefusal) return { ok: false, reason: ratioRefusal };
 
   // The trip's own cert/specialty/nitrox gate (DOM-M6). Every door that sells a
   // seat lands here — the public schedule form, `seatDiver`'s four staff doors,
@@ -1167,38 +1045,47 @@ async function createBookingRecord(
   const admissionAdvisory = admission.admitted ? undefined : admission.refusal;
 
   if (!person && pendingInsert) {
-    if (pendingInsert.email) {
-      // Under concurrency this can still resolve to an existing row (a racing
-      // insert won); `nameMatches` reflects the row that actually landed, so a
-      // simultaneous shared-inbox booking is flagged the same as a serial one.
-      const resolved = await findOrCreatePerson(tx, {
-        shopId: req.shopId,
-        fullName: pendingInsert.fullName,
-        email: pendingInsert.email,
-        phone: pendingInsert.phone,
-      });
-      person = resolved.person;
-      identityUnconfirmed = !resolved.nameMatches;
-      identityClaim = identityUnconfirmed
-        ? { bookedAs: pendingInsert.fullName, matchedBy: "shared_email" }
-        : null;
-    } else {
-      // No email means no `people_shop_email_unique` row to race for (that
-      // index is partial — null emails never collide, schema.ts) — a plain
-      // insert, same shape as findOrCreatePerson's own insert branch.
-      const [inserted] = await tx
-        .insert(people)
-        .values(await noEmailPersonRow(tx, req, pendingInsert))
-        .returning();
-      if (!inserted) throw new Error("createBookingRecord: person insert returned no row");
-      await tx.insert(personRoles).values({ personId: inserted.id, role: "diver" });
-      person = inserted;
-    }
+    ({ person, identityUnconfirmed, identityClaim } = await writeWalkIn(tx, req, pendingInsert));
   }
   // Only reachable on the identity path if the row vanished mid-transaction;
   // the walk-in path always has a pendingInsert. Guards the non-null uses below.
   if (!person) return { ok: false, reason: "person_not_found" };
 
+  return writeSeat(tx, {
+    req,
+    trip,
+    person,
+    participantType,
+    identityUnconfirmed,
+    identityClaim,
+    admissionAdvisory,
+    pending,
+  });
+}
+
+/**
+ * **The seat itself**, once every gate in `createBookingRecord` has passed and
+ * the person row exists: a cancelled seat for this diver on this departure is
+ * reactivated as a new booking, anything else live is `already_booked`, and
+ * otherwise a fresh row is inserted. Either way any prepaid dive covering it is
+ * spent here, in the same transaction, and the seat's declaration is queued
+ * for `flushDeclarations`.
+ */
+async function writeSeat(
+  tx: DbExecutor,
+  input: {
+    req: BookingRequest;
+    trip: typeof trips.$inferSelect;
+    person: typeof people.$inferSelect;
+    participantType: ParticipantType;
+    identityUnconfirmed: boolean;
+    identityClaim: IdentityClaim | null;
+    admissionAdvisory: BookingAdmissionAdvisory | undefined;
+    pending: PendingDeclaration[];
+  },
+): Promise<BookingOutcome> {
+  const { req, trip, person, participantType, identityUnconfirmed, identityClaim } = input;
+  const { admissionAdvisory, pending } = input;
   const [existing] = await tx
     .select()
     .from(bookings)
@@ -1225,9 +1112,7 @@ async function createBookingRecord(
         reEntryAsk: req.reEntryAsk ?? null,
         // Re-booking this seat re-evaluates identity: a matching name now clears
         // any stale flag, a mismatch (re)raises it.
-        identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
-        identityBookedAs: identityUnconfirmed ? (identityClaim?.bookedAs ?? null) : null,
-        identityMatchedBy: identityUnconfirmed ? (identityClaim?.matchedBy ?? null) : null,
+        ...bookingIdentityColumns(identityUnconfirmed, identityClaim, nowDate()),
         // A reactivated row starts a *new* booking and must not inherit party
         // membership from its earlier life: a stale `party_lead_booking_id`
         // would list this fresh, independent seat in the old organizer's claim
@@ -1281,9 +1166,7 @@ async function createBookingRecord(
       conditionsBriefedAt: trip.conditionsUpdatedAt,
       diveIntent: req.diveIntent ?? null,
       reEntryAsk: req.reEntryAsk ?? null,
-      identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
-      identityBookedAs: identityUnconfirmed ? (identityClaim?.bookedAs ?? null) : null,
-      identityMatchedBy: identityUnconfirmed ? (identityClaim?.matchedBy ?? null) : null,
+      ...bookingIdentityColumns(identityUnconfirmed, identityClaim, nowDate()),
       referralSource: partnerReferralSlug(req.referralSource),
       minorDeclaredAt: req.minorDeclared ? nowDate() : null,
       // **Stamped by the application clock, not the column's `defaultNow()`.**
@@ -1355,6 +1238,201 @@ async function createBookingRecord(
     identityUnconfirmed,
     admissionAdvisory,
   };
+}
+
+/**
+ * **Who this seat is for**, read under the trip lock before any gate decides.
+ *
+ * Returns the person row when one exists, or the row to write for a walk-in
+ * once every gate has passed (`pendingInsert`; {@link writeWalkIn}), and
+ * whether the match stands on something short of proof (H-13).
+ */
+async function resolveBookingPerson(
+  tx: DbExecutor,
+  req: BookingRequest,
+): Promise<
+  | { ok: false; reason: "person_not_found" }
+  | {
+      ok: true;
+      person: typeof people.$inferSelect | undefined;
+      pendingInsert: PendingWalkIn | null;
+      identityUnconfirmed: boolean;
+      identityClaim: IdentityClaim | null;
+    }
+> {
+  // Resolve the diver. A returning diver picked by identity reuses that exact
+  // person row (the whole point of "enter once"); a walk-in is looked up by
+  // email so a re-typed regular still collapses onto their record. A
+  // soft-deleted person's email is free (matching createDiver): a rebooking
+  // diver whose record staff removed gets a fresh person row, not a booking
+  // attached to a record that's invisible on the roster. Any new walk-in row is
+  // only written after the capacity gate passes (`pendingInsert`).
+  let person: typeof people.$inferSelect | undefined;
+  let pendingInsert: PendingWalkIn | null = null;
+  // Set when this booking attached itself to an existing person on something
+  // short of proof, and must not silently inherit that person's evidence
+  // (H-13). Two ways in, and a fresh no-email row raises neither because it has
+  // no prior identity to disagree with:
+  //
+  //  - the by-email path reused a row whose name on file does not match the
+  //    submitted one — the shared-inbox / different-human signal this flag was
+  //    built for;
+  //  - the identity path carries `fromNameMatch`, meaning the person id came
+  //    off the counter's name prompt rather than out of a search a staffer went
+  //    looking in (issue #1556) — and, on that path, the typed name disagrees
+  //    with the one on file, or two divers answer to it.
+  //
+  // This is where the two counter doors part, on purpose: a seat picked from
+  // the search list carries no `fromNameMatch` and lands released, namesake
+  // or not, however the row was found (H-79, issue #1790; the reasoning is on
+  // `BookingPerson.fromNameMatch`).
+  let identityUnconfirmed = false;
+  // What the staffer is shown beside the matched record while the flag stands,
+  // and what a split-off record is named (`splitBookingIdentity`).
+  let identityClaim: IdentityClaim | null = null;
+  if ("personId" in req) {
+    [person] = await tx
+      .select()
+      .from(people)
+      .where(
+        and(eq(people.id, req.personId), eq(people.shopId, req.shopId), isNull(people.deletedAt)),
+      )
+      .limit(1)
+      // Waits on a merge holding this row `for update`, then re-reads it: a
+      // record merged away mid-booking is deleted by then and refused here,
+      // instead of taking a seat the merge has already moved past. `key share`
+      // is the weakest lock that does it, so two bookings for one diver never
+      // block each other.
+      .for("key share");
+    // A copied URL, a since-removed diver or a merged-away record must not book into this tenant.
+    if (!person) return { ok: false, reason: "person_not_found" };
+    identityUnconfirmed = req.fromNameMatch
+      ? await nameMatchLeavesIdentityInDoubt(tx, req.shopId, person, req.fromNameMatch.typedName)
+      : false;
+    if (identityUnconfirmed && req.fromNameMatch) {
+      identityClaim = { bookedAs: req.fromNameMatch.typedName.trim(), matchedBy: "picked_name" };
+    }
+  } else {
+    const email = req.email?.trim().toLowerCase() || null;
+    if (email) {
+      [person] = await tx
+        .select()
+        .from(people)
+        .where(
+          and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)),
+        )
+        .limit(1)
+        // As above: a record a merge is moving away is re-read once it lands.
+        .for("key share");
+      if (person) {
+        // Reuse-by-email before the capacity gate: flag a name that doesn't match
+        // the person already on file for this address.
+        identityUnconfirmed = !personNamesMatch(person.fullName, req.fullName);
+        if (identityUnconfirmed) {
+          identityClaim = { bookedAs: req.fullName.trim(), matchedBy: "shared_email" };
+        }
+      } else {
+        pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
+      }
+    } else {
+      // No email to dedup against — matching createDiver (src/db/divers.ts),
+      // this always gets a fresh person row rather than guessing an identity.
+      pendingInsert = { fullName: req.fullName.trim(), email: null, phone: req.phone };
+    }
+  }
+  return { ok: true, person, pendingInsert, identityUnconfirmed, identityClaim };
+}
+
+/** A walk-in's person row, written only once every gate has passed. */
+type PendingWalkIn = { fullName: string; email: string | null; phone?: string };
+
+/**
+ * **A course's enrollment gates**, read under the trip lock and decided by
+ * `courseEnrollmentRefusal` (`src/lib/booking-gates.ts`): the card gate fails
+ * closed, the staff-only age gate fails open. Reads the diver's cards only when
+ * the course asks for one, and the shop's calendar only when age is in play.
+ */
+async function courseEnrollmentFor(
+  tx: DbExecutor,
+  req: BookingRequest,
+  course: typeof courses.$inferSelect,
+  person: typeof people.$inferSelect | undefined,
+  startsAt: Date,
+): Promise<"course_prerequisite" | "course_min_age" | null> {
+  if (!course.minimumCertificationLevel && !course.minimumAge) return null;
+  const cards =
+    person && course.minimumCertificationLevel
+      ? await tx
+          .select()
+          .from(certifications)
+          .where(
+            and(
+              eq(certifications.shopId, req.shopId),
+              eq(certifications.personId, person.id),
+              isNull(certifications.deletedAt),
+            ),
+          )
+      : [];
+  let courseDate: string | null = null;
+  if (req.actor !== "public" && course.minimumAge && person?.dateOfBirth) {
+    const [shop] = await tx
+      .select({ timezone: shops.timezone })
+      .from(shops)
+      .where(eq(shops.id, req.shopId))
+      .limit(1);
+    if (!shop) throw new Error(`createBookingRecord: shop ${req.shopId} not found`);
+    courseDate = calendarDateInTimezone(startsAt, shop.timezone);
+  }
+  return courseEnrollmentRefusal({
+    actor: req.actor,
+    course,
+    diver: person ? { cards, dateOfBirth: person.dateOfBirth } : null,
+    courseDate,
+  });
+}
+
+/**
+ * Write the walk-in's person row, after every gate has passed so a refused
+ * walk-in leaves no orphan behind.
+ */
+async function writeWalkIn(
+  tx: DbExecutor,
+  req: BookingRequest,
+  pendingInsert: PendingWalkIn,
+): Promise<{
+  person: typeof people.$inferSelect;
+  identityUnconfirmed: boolean;
+  identityClaim: IdentityClaim | null;
+}> {
+  if (pendingInsert.email) {
+    // Under concurrency this can still resolve to an existing row (a racing
+    // insert won); `nameMatches` reflects the row that actually landed, so a
+    // simultaneous shared-inbox booking is flagged the same as a serial one.
+    const resolved = await findOrCreatePerson(tx, {
+      shopId: req.shopId,
+      fullName: pendingInsert.fullName,
+      email: pendingInsert.email,
+      phone: pendingInsert.phone,
+    });
+    const identityUnconfirmed = !resolved.nameMatches;
+    return {
+      person: resolved.person,
+      identityUnconfirmed,
+      identityClaim: identityUnconfirmed
+        ? { bookedAs: pendingInsert.fullName, matchedBy: "shared_email" }
+        : null,
+    };
+  }
+  // No email means no `people_shop_email_unique` row to race for (that
+  // index is partial — null emails never collide, schema.ts) — a plain
+  // insert, same shape as findOrCreatePerson's own insert branch.
+  const [inserted] = await tx
+    .insert(people)
+    .values(await noEmailPersonRow(tx, req, pendingInsert))
+    .returning();
+  if (!inserted) throw new Error("createBookingRecord: person insert returned no row");
+  await tx.insert(personRoles).values({ personId: inserted.id, role: "diver" });
+  return { person: inserted, identityUnconfirmed: false, identityClaim: null };
 }
 
 /** One seat's declaration, held until every seat in the submission is settled. */
@@ -1950,6 +2028,21 @@ export async function moveBooking(
           isNull(tripHelpRequests.handledAt),
         ),
       );
+    // An "Ask to move" from the booking page (H-126) was about the old
+    // departure, and this move is its answer: the Inbox row stops waiting,
+    // and the new date's page may be asked about afresh.
+    await tx
+      .update(inboundMessages)
+      .set({ answeredAt: nowDate() })
+      .where(
+        and(
+          eq(inboundMessages.shopId, shopId),
+          eq(inboundMessages.channel, "page"),
+          eq(inboundMessages.keywordIntent, "move"),
+          eq(inboundMessages.bookingId, booking.id),
+          isNull(inboundMessages.answeredAt),
+        ),
+      );
     await settlePackageCoverage(tx, {
       shopId,
       personId: booking.personId,
@@ -2497,8 +2590,22 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
   });
 }
 
+/**
+ * **What a party lead's own cancel did to the seats they booked** (batch 6
+ * item 10). `cancelled` went with the lead: unclaimed and still `booked`.
+ * `stayed` did not: claimed by their own diver, or already checked in. Names
+ * are the seat's own (`seatName`), the same the lead's party panel shows.
+ * `ownAddress` is a cancelled seat whose own email is not the lead's: that
+ * diver gets their own cancellation notice (glossary "Cancellation notice"),
+ * and a seat on the lead's address, or with none, stays quiet.
+ */
+export type PartyCancelOutcome = {
+  cancelled: Array<{ bookingId: string; seatName: string; ownAddress: boolean }>;
+  stayed: Array<{ bookingId: string; seatName: string }>;
+};
+
 export type SelfCancelResult =
-  | { ok: true }
+  | { ok: true; party?: PartyCancelOutcome }
   | {
       ok: false;
       /** already_cancelled / not_cancellable / trip_departed are distinct so a
@@ -2528,7 +2635,16 @@ export type SelfCancelResult =
  */
 export async function selfCancelBooking(
   db: AppDb,
-  input: { shopId: string; bookingId: string; now?: Date },
+  input: {
+    shopId: string;
+    bookingId: string;
+    now?: Date;
+    /**
+     * A party lead's unclaimed seats go with them (batch 6 item 10). Both
+     * diver paths, `/ready` and the reply keyword, ask for it.
+     */
+    withUnclaimedParty?: boolean;
+  },
 ): Promise<SelfCancelResult> {
   const now = input.now ?? nowDate();
   return db.transaction(async (tx) => {
@@ -2538,7 +2654,12 @@ export async function selfCancelBooking(
     // the write, which the unconditional update this replaced could then
     // blindly stomp back to cancelled (security review finding on this ADR).
     const [row] = await tx
-      .select({ status: bookings.status, tripId: bookings.tripId, personId: bookings.personId })
+      .select({
+        status: bookings.status,
+        tripId: bookings.tripId,
+        personId: bookings.personId,
+        partyLeadBookingId: bookings.partyLeadBookingId,
+      })
       .from(bookings)
       .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
       .limit(1)
@@ -2568,29 +2689,130 @@ export async function selfCancelBooking(
       )
       .returning({ id: bookings.id });
     if (!cancelled) return { ok: false, reason: "not_cancellable" };
-    // Same belt-and-suspenders revoke `cancelBooking` does for the staff path.
-    await revokeBookingCapabilities(tx, {
+    await releaseSelfCancelledSeat(tx, {
       shopId: input.shopId,
       bookingId: input.bookingId,
-    });
-    // Same rule as the staff cancel: un-collected units go back on the wall
-    // with the seat (ADR 20260815-minimal-gear-register).
-    await releaseUnclaimedGearReservations(tx, {
-      shopId: input.shopId,
-      bookingId: input.bookingId,
-    });
-    await releasePackageCoverageForBooking(tx, input.shopId, input.bookingId);
-    // And the same handoff line the staff cancel writes: a seat the diver gave
-    // back from their own link is exactly as much news to the crew (#1202).
-    await recordDeskEvent(tx, {
-      shopId: input.shopId,
       tripId: row.tripId,
-      kind: "seat_released",
-      bookingId: input.bookingId,
-      subjectPersonId: row.personId,
+      personId: row.personId,
     });
-    return { ok: true };
+    // Only a lead has party seats: a member's own cancel never reaches another seat.
+    if (!input.withUnclaimedParty || row.partyLeadBookingId !== null) return { ok: true };
+    const party = await cancelUnclaimedPartySeats(tx, {
+      shopId: input.shopId,
+      leadBookingId: input.bookingId,
+      tripId: row.tripId,
+    });
+    return { ok: true, party };
   });
+}
+
+/**
+ * Everything a self-cancelled seat lets go of, the same for the diver's own
+ * seat and each party seat that goes with a lead's.
+ */
+async function releaseSelfCancelledSeat(
+  tx: DbExecutor,
+  seat: { shopId: string; bookingId: string; tripId: string; personId: string },
+) {
+  // Same belt-and-suspenders revoke `cancelBooking` does for the staff path.
+  await revokeBookingCapabilities(tx, { shopId: seat.shopId, bookingId: seat.bookingId });
+  // Same rule as the staff cancel: un-collected units go back on the wall
+  // with the seat (ADR 20260815-minimal-gear-register).
+  await releaseUnclaimedGearReservations(tx, { shopId: seat.shopId, bookingId: seat.bookingId });
+  await releasePackageCoverageForBooking(tx, seat.shopId, seat.bookingId);
+  // And the same handoff line the staff cancel writes: a seat the diver gave
+  // back from their own link is exactly as much news to the crew (#1202).
+  await recordDeskEvent(tx, {
+    shopId: seat.shopId,
+    tripId: seat.tripId,
+    kind: "seat_released",
+    bookingId: seat.bookingId,
+    subjectPersonId: seat.personId,
+  });
+}
+
+/**
+ * **The lead's unclaimed seats go with the lead** (batch 6 item 10). Inside
+ * the lead's own cancel transaction, so the seats and the lead are released
+ * together or not at all. Only seats whose `party_lead_booking_id` is this
+ * lead in this shop are reached, each locked and re-checked: an unclaimed,
+ * `booked` seat is cancelled; a claimed seat belongs to its own diver and
+ * stays, as does one already checked in. A seat claimed between the confirm
+ * and this lock stays too, and the lead is told it did.
+ *
+ * Ordered as the lead's party panel orders them (`issuePartySeatClaims`).
+ */
+export async function cancelUnclaimedPartySeats(
+  tx: DbExecutor,
+  input: { shopId: string; leadBookingId: string; tripId: string },
+): Promise<PartyCancelOutcome> {
+  const [lead] = await tx
+    .select({ email: people.email })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  const leadAddress = normalizeEmailAddress(lead?.email);
+  const seats = await tx
+    .select({
+      bookingId: bookings.id,
+      status: bookings.status,
+      claimedAt: bookings.claimedAt,
+      personId: bookings.personId,
+      fullName: people.fullName,
+      email: people.email,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      identityBookedAs: bookings.identityBookedAs,
+    })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.partyLeadBookingId, input.leadBookingId),
+        eq(bookings.tripId, input.tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id))
+    .for("update", { of: bookings });
+  const outcome: PartyCancelOutcome = { cancelled: [], stayed: [] };
+  for (const seat of seats) {
+    const name = seatName(seat.fullName, seat);
+    if (seat.claimedAt !== null || seat.status !== "booked") {
+      outcome.stayed.push({ bookingId: seat.bookingId, seatName: name });
+      continue;
+    }
+    const [gone] = await tx
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(
+        and(
+          eq(bookings.id, seat.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.status, "booked"),
+          isNull(bookings.claimedAt),
+        ),
+      )
+      .returning({ id: bookings.id });
+    if (!gone) {
+      outcome.stayed.push({ bookingId: seat.bookingId, seatName: name });
+      continue;
+    }
+    await releaseSelfCancelledSeat(tx, {
+      shopId: input.shopId,
+      bookingId: seat.bookingId,
+      tripId: input.tripId,
+      personId: seat.personId,
+    });
+    const seatAddress = normalizeEmailAddress(seat.email);
+    outcome.cancelled.push({
+      bookingId: seat.bookingId,
+      seatName: name,
+      ownAddress: seatAddress !== null && seatAddress !== leadAddress,
+    });
+  }
+  return outcome;
 }
 
 /**

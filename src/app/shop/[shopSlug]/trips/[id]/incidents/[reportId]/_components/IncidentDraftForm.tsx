@@ -10,10 +10,13 @@ import {
   FormStatus,
   textareaClassFor,
 } from "@/components/ui/form";
+import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "@/i18n/incident-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   INCIDENT_HANDOVER_KINDS,
+  INCIDENT_KINDS,
   INCIDENT_OXYGEN_MINUTES_MAX,
+  INCIDENT_SEVERITIES,
   INCIDENT_SHORT_TEXT_MAX,
   INCIDENT_TEXT_MAX,
   type IncidentDraftFields,
@@ -129,6 +132,30 @@ export function IncidentDraftForm({
             className={textareaClassFor(6)}
           />
         </Field>
+        {/* What kind and how serious (batch 6, item 7): blank until answered,
+            like the handover — a draft with no kind is not a report of "other". */}
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Field label={t("incidents.form.kind")}>
+            <select name="kind" defaultValue={fields.kind ?? ""} className={controlClass}>
+              <option value="" />
+              {INCIDENT_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {t(INCIDENT_KIND_KEYS[kind])}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("incidents.form.severity")}>
+            <select name="severity" defaultValue={fields.severity ?? ""} className={controlClass}>
+              <option value="" />
+              {INCIDENT_SEVERITIES.map((severity) => (
+                <option key={severity} value={severity}>
+                  {t(INCIDENT_SEVERITY_KEYS[severity])}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
       </SectionCard>
 
       <SectionCard title={t("incidents.form.care")}>

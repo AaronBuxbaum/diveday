@@ -52,7 +52,7 @@ describe("OrderDisputeBanner", () => {
 
   it("names the amount and the evidence deadline", () => {
     const html = renderToStaticMarkup(
-      OrderDisputeBanner({ dispute, timezone: "UTC", locale: "en-US", t }) ?? <></>,
+      OrderDisputeBanner({ dispute, timezone: "UTC", locale: "en-US", t }) ?? null,
     );
     expect(html).toContain("$50.00");
   });

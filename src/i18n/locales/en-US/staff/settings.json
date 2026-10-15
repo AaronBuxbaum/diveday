@@ -5,6 +5,7 @@
       "packingSaved": "Packing checklist saved for every trip.",
       "packingInvalid": "Add between one and twelve packing items.",
       "dockSaved": "Dock call time saved for every confirmation and reminder.",
+      "pickupSaved": "Saved. Divers are asked about a pickup only when this is on.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
       "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
@@ -222,6 +223,12 @@
       "submitting": "Saving…",
       "value": "{count, plural, one {# item} other {# items}}"
     },
+    "pickup": {
+      "label": "We offer hotel pickup",
+      "description": "When on, each diver’s page asks whether they want a pickup and where they’re staying.",
+      "submit": "Save pickup",
+      "submitting": "Saving…"
+    },
     "dockCall": {
       "heading": "Dock-day rhythm",
       "description": "Every number here is in minutes.",
@@ -363,9 +370,11 @@
     },
     "certCheck": {
       "heading": "Certification checks",
-      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and marks the certification certified when the agency shows it. It checks SSI, NAUI, SDI, GUE and CMAS, in Chrome or Edge on a computer.",
-      "added": "Added to this browser",
+      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and, when the agency shows the certification, marks it certified in that staffer’s name, as Mark certified would. It checks SSI, NAUI, SDI, GUE and CMAS, and PADI once “PADI checks (beta)” in Bookings & waivers is on, in Chrome or Edge on a computer.",
+      "added": "Added to this browser ({version})",
       "notAdded": "Not added",
+      "outdated": "Update the extension: this browser has {version}, DiveDay needs {minimum}.",
+      "try": "Try the checks",
       "install": "Add to Chrome"
     },
     "integrations": {
@@ -428,6 +437,11 @@
         "heading": "Our year",
         "label": "Show “Our year” on your schedule",
         "description": "The year so far in counts at the foot of your public schedule: divers, boats out, and sites. Never money. Off until you turn it on."
+      },
+      "padiChecks": {
+        "heading": "PADI checks (beta)",
+        "label": "Check PADI certifications and eLearning with the extension",
+        "description": "Beta: nobody has tried this on PADI’s real DiveChek page yet, and PADI hasn’t said yes or no to an extension filling it in. It runs in a browser where one of your PADI Pros is signed in to the Pros’ Site, under that Pro’s membership. Off, the link to the Pros’ Site stays. An owner or manager can turn it on."
       }
     },
     "crewSchedule": {
@@ -447,7 +461,7 @@
       "heading": "Dive sites"
     },
     "waivers": {
-      "heading": "Waiver template"
+      "heading": "Waivers and signed records"
     },
     "safetyChecklist": {
       "heading": "Pre-departure checklist"
@@ -507,6 +521,7 @@
       "lineExamples": "Chamber, dive-accident hotline, coast guard…",
       "phoneLabel": "Number {n}",
       "vesselLabel": "Vessel",
+      "vesselHint": "Printed only on departures with no boat. Each boat’s call sign and MMSI go in Boats.",
       "shoreContactLabel": "Shore contact",
       "planLabel": "If something goes wrong",
       "submit": "Save emergency reference",
@@ -526,7 +541,8 @@
       "submit": "Add package",
       "submitting": "Adding…",
       "delete": "Delete",
-      "deleting": "Deleting…"
+      "deleting": "Deleting…",
+      "owed": "Dives owed on packages: {dives, number} ({value})"
     }
   },
   "team": {
@@ -1066,5 +1082,27 @@
     "partnerLinkField": "Referral link",
     "showRequired": "Pick the departure this card is for.",
     "fromFareharbor": "Switching from FareHarbor? <link>See which embed replaces each of its widgets</link>."
+  },
+  "certChecks": {
+    "title": "Try the checks",
+    "description": "Sample pages in this browser only: no agency is searched, and no diver’s details leave it.",
+    "run": "Run the checks",
+    "running": "Running…",
+    "extension": "Extension",
+    "samples": "Sample lookups",
+    "padi": "PADI Pros’ Site",
+    "report": "Session report",
+    "passed": "Passed",
+    "failed": "Failed",
+    "notListed": "Not in this copy",
+    "signedIn": "Signed in",
+    "signedOut": "Signed out",
+    "noTab": "No PADI tab open",
+    "noAnswer": "No answer",
+    "noAccess": "Not allowed on PADI’s site",
+    "allowSite": "Chrome keeps the extension off {agency}’s site. Turn it on in Extensions, DiveDay certification check, Details, Site access.",
+    "failedNext": "Send us the report below.",
+    "reportHint": "Copy it, then paste it into an email to us.",
+    "copy": "Copy report"
   }
 }

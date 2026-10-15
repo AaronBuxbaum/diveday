@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   highWindAlertDetailText,
@@ -7,9 +7,11 @@ import {
   unitsUnconfirmedDetailText,
   unitsUnconfirmedSubjectText,
 } from "@/i18n/today-labels";
+import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import type { AvailabilityBlock } from "@/lib/crew-requests";
 import { effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import type { DiveIntentCount } from "@/lib/dive-intent";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
@@ -37,6 +39,7 @@ import { boatStageOf, tripPhaseOf } from "@/lib/trip-phase";
 import type { TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
 import { shopDayBounds } from "@/lib/zoned";
+import { listAgencyCheckableCards } from "./agency-check";
 import {
   blockedOnNextBoatDay,
   type HorizonReadinessEvidence,
@@ -48,6 +51,7 @@ import { todayBoatSafety } from "./boat-safety";
 import { readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
+import { crewAwayByTrip } from "./crew-away";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
   listFitAdjustedReturns,
@@ -84,7 +88,12 @@ import {
   tripWaitlistEntries,
 } from "./schema";
 import { listStaffCredentials } from "./staff-credentials";
-import { canAcceptPayments, shopStripeAccountForRender } from "./stripe-accounts";
+import {
+  canAcceptPayments,
+  paymentsRestrictedSince,
+  shopStripeAccountForRender,
+} from "./stripe-accounts";
+import { pushCrewAwayRows } from "./today-crew-away-rows";
 import { pushDepartureRows } from "./today-departure-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { pushRollCallRows } from "./today-roll-call-rows";
@@ -252,6 +261,12 @@ export type CrewedSessionSummary = {
   booked: number;
   ready: number;
   blocked: number;
+  /**
+   * The reader's own days away that this session meets on (fourth review,
+   * item 12; `crewAwayByTrip`). Empty when they are not away. Optional so a
+   * summary built elsewhere reads as "not away".
+   */
+  away?: AvailabilityBlock[];
 };
 
 export type TodayWork = {
@@ -365,6 +380,12 @@ export type OpenRollCall = {
   underway: boolean;
   /** Older than the dock-work window — kept as residue rather than vanishing. */
   stale: boolean;
+  /**
+   * When the owners were alerted that this departure's count was still open
+   * after the boat was due back (batch 6, item 6; src/db/roll-call-alerts.ts),
+   * or null. Optional so a gap assembled by hand says nothing about it.
+   */
+  alertedAt?: Date | null;
 };
 
 /**
@@ -478,6 +499,7 @@ export async function listRollCallGaps(
       capacity: trips.capacity,
       priceCents: trips.priceCents,
       plannedDives: trips.plannedDives,
+      alertedAt: trips.rollCallAlertedAt,
     })
     .from(trips)
     .where(
@@ -672,6 +694,7 @@ export async function listRollCallGaps(
       rosterSize: bookingIds.length,
       underway,
       stale,
+      alertedAt: trip.alertedAt,
     };
 
     // A human said a diver did not come back. That outranks every other gap on
@@ -1524,6 +1547,15 @@ async function readTodayWave(
     owingBookingIds,
     noOpenOrders,
   } = input;
+  // The shop's Stripe account, read at most once in this wave whoever asks
+  // first: the owner's restricted-payments row and the payment rows' invoice
+  // controls both read it. In a render it is also the page's own read
+  // (`shopStripeAccountForRender`'s `cache()`).
+  let accountRead: ReturnType<typeof shopStripeAccountForRender> | undefined;
+  const stripeAccount = () => {
+    accountRead ??= shopStripeAccountForRender(db, shopId);
+    return accountRead;
+  };
   const [
     departureRollCall,
     departureCrewRollCall,
@@ -1552,6 +1584,7 @@ async function readTodayWave(
     workOrdersNeedingAttention,
     crewedAssignments,
     openOrders,
+    crewAway,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
     // needs to tell "already aboard" from "still ashore" from "never left the
@@ -1647,6 +1680,7 @@ async function readTodayWave(
             olderThan: new Date(now.getTime() - OWED_REFUND_STALE_AFTER_MS),
           }),
           listOpenPaymentDisputes(db, shopId),
+          stripeAccount().then(paymentsRestrictedSince),
         ])
       : null,
     readReviewsAwaitingModeration(db, shopId),
@@ -1680,20 +1714,13 @@ async function readTodayWave(
       ),
     }),
     listWorkOrdersNeedingAttention(db, shopId, { todayLocal, timezone: timeZone }),
-    // Which in-window trips this person crews, when the caller asked.
-    personId && inWindow.length > 0
-      ? db
-          .select({ tripId: tripAssignments.tripId })
-          .from(tripAssignments)
-          .where(
-            and(
-              eq(tripAssignments.personId, personId),
-              inArray(
-                tripAssignments.tripId,
-                inWindow.map((trip) => trip.id),
-              ),
-            ),
-          )
+    // Which of the day's trips this person crews, when the caller asked.
+    personId
+      ? readerCrewedTrips(db, shopId, personId, {
+          windowTripIds: inWindow.map((trip) => trip.id),
+          dayStart: shopDayBounds(now, timeZone).from,
+          now,
+        })
       : null,
     // The payment rows' invoice controls (below): the open order behind each
     // owing seat, read only when the shop's own Stripe account can take a
@@ -1704,11 +1731,19 @@ async function readTodayWave(
     // render (`shopStripeAccountForRender`).
     owingBookingIds.length === 0
       ? noOpenOrders
-      : shopStripeAccountForRender(db, shopId).then((account) =>
+      : stripeAccount().then((account) =>
           canAcceptPayments(account)
             ? openOrdersForBookings(db, shopId, owingBookingIds)
             : noOpenOrders,
         ),
+    // Who is rostered on a departure ahead and said they are away on a day it
+    // meets (fourth review, item 12): the `crew_away` rows.
+    crewAwayByTrip(
+      db,
+      shopId,
+      inWindow.map((trip) => trip.id),
+      timeZone,
+    ),
   ]);
   return {
     departureRollCall,
@@ -1743,6 +1778,7 @@ async function readTodayWave(
     workOrdersNeedingAttention,
     crewedAssignments,
     openOrders,
+    crewAway,
   };
 }
 
@@ -1839,21 +1875,31 @@ export async function getTodayWork(
   });
 
   // **One wave** (`readTodayWave`): every read takes only the shop, the
-  // window and the clock, so none waits on another.
-  const wave = await readTodayWave(db, shopId, {
-    now,
-    horizon,
-    timeZone,
-    inWindow,
-    todayTrips,
-    todayTripIds,
-    todayLocal,
-    bookingIdsByTrip,
-    includeOpsAlerts,
-    personId,
-    owingBookingIds,
-    noOpenOrders,
-  });
+  // window and the clock, so none waits on another. Beside it, the cards a
+  // "certification pending" row could check (H-105), read now rather than
+  // after the queue is built so they cost no phase of their own: every diver
+  // the evidence blocks on a pending card is asked about, a superset of the
+  // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
+  const [wave, agencyCheckCards] = await Promise.all([
+    readTodayWave(db, shopId, {
+      now,
+      horizon,
+      timeZone,
+      inWindow,
+      todayTrips,
+      todayTripIds,
+      todayLocal,
+      bookingIdsByTrip,
+      includeOpsAlerts,
+      personId,
+      owingBookingIds,
+      noOpenOrders,
+    }),
+    listAgencyCheckableCards(db, {
+      shopId,
+      personIds: agencyCheckCandidates(readinessByTrip),
+    }),
+  ]);
   const {
     departureRollCall,
     departureCrewRollCall,
@@ -1867,6 +1913,7 @@ export async function getTodayWork(
     boatsOut,
     shopUnits,
     crewedAssignments,
+    crewAway,
   } = wave;
 
   const helpRequestsByTrip = new Map<string, typeof helpRequests>();
@@ -1908,6 +1955,8 @@ export async function getTodayWork(
   };
 
   pushRollCallRows(actions, rows);
+
+  pushCrewAwayRows(actions, rows);
 
   pushDepartureRows(actions, rows);
 
@@ -1983,7 +2032,9 @@ export async function getTodayWork(
   let crewedSessions: CrewedSessionSummary[] = [];
   if (crewedAssignments) {
     const crewed = new Set(crewedAssignments.map((row) => row.tripId));
-    crewedTripIds = inWindow.filter((trip) => crewed.has(trip.id)).map((trip) => trip.id);
+    // Every crewed trip, not only the window's: the dawn boat still out is a
+    // card on the spine the window no longer holds (fourth review, item 14).
+    crewedTripIds = [...crewed];
     crewedSessions = inWindow
       .filter((trip) => trip.course && crewed.has(trip.id))
       .map((trip) => {
@@ -1996,11 +2047,15 @@ export async function getTodayWork(
           booked: trip.booked,
           ready: rows.filter((row) => row.readiness.status === "ready").length,
           blocked: rows.filter((row) => row.readiness.status === "blocked").length,
+          away: crewAway.get(trip.id)?.find((entry) => entry.personId === personId)?.blocks ?? [],
         };
       });
   }
 
-  const visibleActions = filterActionsForRoles(actions, roles);
+  const visibleActions = attachAgencyChecks(
+    filterActionsForRoles(actions, roles),
+    agencyCheckCards,
+  );
 
   return {
     departures,
@@ -2023,4 +2078,89 @@ export async function getTodayWork(
     crewedSessions,
     availableStaff,
   };
+}
+
+/**
+ * **Which of the day's departures the reader crews** (fourth review, item 14):
+ * the queue's own window, and every departure that has sailed since the shop's
+ * day began. The window looks only forward, so the captain's dawn boat, still
+ * out with them aboard, lost its "You're crewing" mark the moment it sailed
+ * while the 1:30 PM card kept its own. The mark follows the assignment, not
+ * the window.
+ */
+function readerCrewedTrips(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  input: { windowTripIds: readonly string[]; dayStart: Date; now: Date },
+): Promise<{ tripId: string }[]> {
+  const sailedToday = and(gte(trips.startsAt, input.dayStart), lte(trips.startsAt, input.now));
+  return db
+    .select({ tripId: tripAssignments.tripId })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(
+      and(
+        eq(tripAssignments.personId, personId),
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        input.windowTripIds.length > 0
+          ? or(inArray(trips.id, [...input.windowTripIds]), sailedToday)
+          : sailedToday,
+      ),
+    );
+}
+
+/**
+ * **The cards a "certification pending" row can check from Today** (H-105).
+ * The queue names the diver (`diverBlockerAction`); this reads which of their
+ * cards the DiveDay browser extension could look up, by the same rule as the
+ * action that judges the check (`listAgencyCheckableCards`), and drops the
+ * offer from a row whose diver holds none.
+ */
+export async function withAgencyChecks(
+  db: AppDb,
+  shopId: string,
+  actions: TodayAction[],
+): Promise<TodayAction[]> {
+  const personIds = actions.flatMap((action) =>
+    action.agencyCheck ? [action.agencyCheck.personId] : [],
+  );
+  if (personIds.length === 0) return actions;
+  return attachAgencyChecks(actions, await listAgencyCheckableCards(db, { shopId, personIds }));
+}
+
+/**
+ * Who on the window's seats a "certification pending" row could name: blocked
+ * on a pending card, and not a held seat (`diverBlockerAction` offers no check
+ * to one until a staffer confirms who is standing there).
+ */
+function agencyCheckCandidates(
+  readinessByTrip: HorizonReadinessEvidence["readinessByTrip"],
+): string[] {
+  const personIds: string[] = [];
+  for (const rows of readinessByTrip.values()) {
+    for (const row of rows) {
+      const codes = row.readiness.blockers.map((blocker) => blocker.code);
+      if (codes.includes("certification_pending") && !codes.includes("identity_unconfirmed")) {
+        personIds.push(row.person.id);
+      }
+    }
+  }
+  return personIds;
+}
+
+/** Fills each row's offer from the cards read, and drops it where the diver holds none. */
+function attachAgencyChecks(
+  actions: TodayAction[],
+  cards: ReadonlyMap<string, AgencyCheckableCard[]>,
+): TodayAction[] {
+  return actions.map((action) => {
+    if (!action.agencyCheck) return action;
+    const { agencyCheck, ...rest } = action;
+    const found = cards.get(agencyCheck.personId);
+    return found
+      ? { ...rest, agencyCheck: { personId: agencyCheck.personId, cards: found } }
+      : rest;
+  });
 }

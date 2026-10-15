@@ -8,7 +8,7 @@
   however, evidence — `buildIncidentExport` renders it into a SHA-256-sealed document for an
   investigator or a treating physician, which is why a dive nobody logged must read as *not
   recorded* rather than being interpolated from its neighbours.
-- **Marine-life catalog** — DiveDay's own list of 148 wider-Caribbean species
+- **Marine-life catalog** — DiveDay's own list of wider-Caribbean species
   (`src/db/marine-life-catalog.ts`): a slug, a Latin binomial, a category and a photo, and no prose
   at all. Every word a person reads about one is DiveDay's, written once in every language and
   resolved at render (`src/i18n/marine-life-labels.ts`, ADR 20260813-marine-life-is-diveday-copy). A
@@ -17,6 +17,23 @@
   **course template**, whose words are copied onto the shop's row and owned by the shop from then on:
   a dive plan for one reef is the shop's to write, and what a stoplight parrotfish looks like is the
   same sentence for every shop in the Caribbean.
+- **Dive area** — a named stretch of coast DiveDay's dive-site catalog is organised and measured
+  by (`src/content/dive-areas.ts`): the Upper Keys, Bonaire, Cozumel. Each **site template** names
+  one. An area carries where it is as an address says it (a country, and a subdivision where the
+  country holds other places), which is what decides whether the catalog is offered to a shop, and
+  it is the grain of the catalog's coverage promise. Not a **dive site**, which is one shop's place.
+- **Coverage denominator** — the named sites shops in one **dive area** actually run, drawn up
+  from public lists (a marine-park or mooring list, operators' site lists) into
+  `src/content/coverage/<area>.json`, each mapped to the template that defines it or to none. What
+  "the catalog covers 80% of an area" is measured against; an area is **promised** once it reaches
+  that, and may not fall back (`pnpm content:coverage`). The **marine-life catalog** is measured the
+  same way, one denominator per animal group in `src/content/species-coverage.json`: fish from
+  REEF survey sighting frequencies, everything else from iNaturalist observation counts.
+- **Photo ledger** — one record per photograph DiveDay bundles for its starting content, and one
+  entry per template that was searched for and has none worth bundling
+  (`src/content/photo-records.json`). It says where a file came from, under what licence, how big
+  the original was and the day a person looked at it and kept it. Written only by
+  `pnpm content:photos`; the folders' credit lists are rendered from it.
 - **Field guide** — the faces a **dive site** is known for: up to eight catalog species a shop picks
   for that site (`dive_site_creatures`, `MAX_SITE_CREATURES`), in the order it chose. A **briefing
   selection**, not an inventory — the point is to tell a diver what to *expect*, so it holds the
@@ -132,3 +149,12 @@
   credential read — which the booking gate, the seat cap and the crew editor's refusals use, because
   H-59 keeps a locally recorded renewal date from ever refusing a sale or an assignment (issue
   #1853). A surface showing a gap the two claims disagree about names who lapsed.
+- **Sailed with no crew on record** — a departure that went back in the month with nobody on its
+  crew counted as sailing (`SafetyMonth.noCrewDepartures`, `src/lib/safety-report.ts`; fourth
+  review item 13). Its own figure on the Safety report, listed by name, because a departure with no
+  crew never reaches the lapsed-credential check, so the emptiest record would otherwise read as
+  the cleanest. "Who was the captain?" is an insurer's first question; zero here means every boat
+  that sailed had somebody on record, never that nobody was asked. Boats only: "sailed" is a
+  boat's word, so a shore day or pool session is never listed. A month with no crew recorded on
+  any departure is a shop that does not roster crew here, so the figure gives way to one quiet
+  line, "No crew recorded on any departure this month" (`noCrewOnRecord`; review F1).

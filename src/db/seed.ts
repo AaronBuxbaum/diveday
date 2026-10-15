@@ -206,7 +206,7 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
  * | `./seed-packages.ts` | two dive packages on sale, so the public Packages tab and price list have something to show |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
- * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder |
+ * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder; the dawn boat's divers paired at the dock |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
@@ -360,10 +360,10 @@ const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
   // The photo strip under the cover: four of the bundled reef frames, so the
   // storefront captures draw the strip at the width a real shop's would.
   shopfrontPhotoUrls: [
-    "Blue Tangs Molasses Reef 1999.jpg",
+    "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
     "French Angelfish Pickles Reef 20230713.jpg",
     "FGBNMS - nurse shark (27551309652).jpg",
-    "Yellowtail Snappers Molasses Reef 1999.jpg",
+    "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
   ].map((file) => `/dive-sites/${encodeURIComponent(file)}`),
 };
 
@@ -434,6 +434,15 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // new shop (`shops.crew_schedule_enabled`), and the demo is where every
       // crew surface is photographed and exercised.
       crewScheduleEnabled: true,
+      // A Key Largo shop picks divers up from the resorts, so `/ready` asks
+      // "Want a pickup?" here; a new shop runs none until it says so (fourth
+      // UX review, item 8).
+      offersHotelPickup: true,
+      // **Blue Mantis runs the PADI checks (beta)**, off for a new shop and for
+      // a minted one (`shops.padi_checks_enabled`, H-121): the demo is where
+      // "Check with PADI" and the eLearning check are photographed and
+      // exercised.
+      padiChecksEnabled: true,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: demoEmail("front.desk"),
@@ -454,7 +463,9 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
           // i18n-exempt: the shop's own words, not DiveDay's.
           { label: "DAN emergency hotline", phone: "+1 919 555 0111" },
         ],
-        vessel: "Mantis II - VHF 16, MMSI 338055501",
+        // Only the fallback now (fourth review, item 11): a departure on a
+        // boat prints that boat's own name, call sign and MMSI, seeded below.
+        vessel: "Both boats keep VHF 16",
         shoreContact: "Front desk, +1 305 555 0142",
         plan: "Give O2, call the chamber first, then the Coast Guard on 16.",
       },
@@ -523,12 +534,18 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       name: "Mantis I",
       capacity: 14,
       description: "The small boat — fourteen aboard, a shaded deck, ten minutes to the reef.",
+      // Each hull's radio identity, printed on its departures' emergency card
+      // (fourth review, item 11). Fictional, in the US MMSI range.
+      callSign: "WDM2201",
+      mmsi: "338055502",
     },
     {
       shopId: shop.id,
       name: "Mantis II",
       capacity: 20,
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      callSign: "WDM2202",
+      mmsi: "338055501",
     },
   ]);
 
@@ -779,12 +796,18 @@ export async function createDemoShop(
       name: "Mantis I",
       capacity: 14,
       description: "The small boat — fourteen aboard, a shaded deck, ten minutes to the reef.",
+      // Each hull's radio identity, printed on its departures' emergency card
+      // (fourth review, item 11). Fictional, in the US MMSI range.
+      callSign: "WDM2201",
+      mmsi: "338055502",
     },
     {
       shopId: shop.id,
       name: "Mantis II",
       capacity: 20,
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      callSign: "WDM2202",
+      mmsi: "338055501",
     },
   ]);
 
@@ -1508,9 +1531,9 @@ export async function resetDemoSchedule(
   // reset mid-run — the same class of bug the comment above already walks.
   await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
-  await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
+  await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
 
   // Everyone except the staff seeded once at shop creation (`staffDefs`, by

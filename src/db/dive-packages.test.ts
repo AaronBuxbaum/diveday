@@ -9,9 +9,12 @@ import {
 } from "./bookings";
 import {
   consumeEntitlementForBooking,
+  consumeEntitlementsForBooking,
+  countDivesSpentOnBooking,
   countSpendableDives,
   createDivePackage,
   deleteDivePackage,
+  diverPackageBalance,
   grantPackageEntitlements,
   listDivePackages,
   listPackagesOnSale,
@@ -224,6 +227,49 @@ describe("selling and spending a package", () => {
     ).resolves.toBeNull();
 
     expect(await countSpendableDives(db, shop.id, person.id)).toBe(9);
+  });
+
+  it("tells staff how many of the package's dives are left, and nothing once lapsed", async () => {
+    const { db, shop, person, booking } = await sold();
+    expect(await diverPackageBalance(db, shop.id, person.id)).toEqual({ left: 10, of: 10 });
+    await consumeEntitlementsForBooking(db, {
+      shopId: shop.id,
+      personId: person.id,
+      bookingId: booking.id,
+      trip: { courseId: null, plannedDives: 1 },
+    });
+    expect(await diverPackageBalance(db, shop.id, person.id)).toEqual({ left: 9, of: 10 });
+    await db
+      .update(divePackageEntitlements)
+      .set({ expiresAt: new Date("2030-01-01T00:00:00Z") })
+      .where(eq(divePackageEntitlements.personId, person.id));
+    // Lapsed dives are not dives left.
+    const later = new Date("2030-02-01T00:00:00Z");
+    expect(await diverPackageBalance(db, shop.id, person.id, later)).toBeNull();
+  });
+
+  it("never reads another shop's package for the balance", async () => {
+    const { db, person } = await sold();
+    expect(await diverPackageBalance(db, crypto.randomUUID(), person.id)).toBeNull();
+  });
+
+  it("spends one dive per tank, and counts what the booking spent (H-123)", async () => {
+    // A package dive is one tank: a two-tank boat takes two of the five, and
+    // /ready says "Uses 2 package dives (3 left)" from this count.
+    const { db, shop, person, booking } = await sold({ diveCount: 5 });
+    expect(await countDivesSpentOnBooking(db, shop.id, booking.id)).toBe(0);
+    await consumeEntitlementsForBooking(db, {
+      shopId: shop.id,
+      personId: person.id,
+      bookingId: booking.id,
+      trip: { courseId: null, plannedDives: 2 },
+    });
+    expect(await countDivesSpentOnBooking(db, shop.id, booking.id)).toBe(2);
+    expect(await countSpendableDives(db, shop.id, person.id)).toBe(3);
+    // Another shop asking about the same booking id sees nothing.
+    expect(
+      await countDivesSpentOnBooking(db, "00000000-0000-4000-8000-000000000000", booking.id),
+    ).toBe(0);
   });
 
   it("releases nothing for a booking that consumed nothing", async () => {

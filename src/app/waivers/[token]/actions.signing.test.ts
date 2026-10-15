@@ -1,8 +1,13 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { issueBookingCapability } from "@/db/booking-capabilities";
+import { createBookingParty } from "@/db/bookings";
 import { people, waiverRecords } from "@/db/schema";
+import { upcomingTripsWithCounts } from "@/db/trips";
 import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The signing form's two doors, which were closures inside `page.tsx` until they moved here.
@@ -35,6 +40,16 @@ vi.mock("@/i18n/request", async (importOriginal) => {
   return { ...actual, requestFirstHandLocale: vi.fn(async () => "en-US") };
 });
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
+const cookieJar = new Map<string, string>();
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({
+    get: (name: string) => {
+      const value = cookieJar.get(name);
+      return value === undefined ? undefined : { name, value };
+    },
+    delete: ({ name }: { name: string }) => cookieJar.delete(name),
+  })),
+}));
 
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
@@ -54,7 +69,7 @@ async function redirectedTo(run: () => Promise<unknown>): Promise<string> {
 
 /** A fresh waiver link for an adult on the seeded shop, with no booking behind it. */
 async function openLink() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const [person] = await db
     .select()
@@ -82,6 +97,7 @@ function signedForm(
 }
 
 beforeEach(() => {
+  cookieJar.clear();
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
 });
 
@@ -142,5 +158,48 @@ describe("the signing doors", () => {
     ).toBe(`/waivers/${token}`);
     const [record] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
     expect(record?.status).not.toBe("pending");
+  });
+
+  /**
+   * Dive-domain review F6 of layer r4-1: a parent who opened this from their
+   * party panel lands back on it; a link that is not the seat's lead is
+   * ignored, and the signer lands where every signer does.
+   */
+  it("send a parent who came from the party panel back to it", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    const party = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Rae Returner",
+        email: "rae.returner@example.com",
+      },
+      { actor: "public", shopId: shop.id, tripId: trip.id, fullName: "Sol Seat" },
+    ]);
+    if (!party.ok) throw new Error(`party booking failed: ${party.reason}`);
+    const [lead, seat] = party.bookings;
+    if (!lead || !seat) throw new Error("party incomplete");
+    const leadLink = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: lead.bookingId,
+      purpose: "readiness",
+    });
+    if (!leadLink) throw new Error("expected a readiness link");
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: seat.bookingId });
+    if (!issued.ok) throw new Error(`waiver request refused: ${issued.reason}`);
+    cookieJar.set("diveday_party_return", leadLink.token);
+    expect(
+      await redirectedTo(() =>
+        completeWaiverAction(
+          issued.token,
+          signedForm(shop, { signerName: "Sol Seat", acknowledged: "on" }),
+        ),
+      ),
+    ).toBe(`/ready/${leadLink.token}#party-seats`);
+    expect(cookieJar.has("diveday_party_return")).toBe(false);
   });
 });

@@ -42,7 +42,7 @@ vi.mock("@/db/tips", () => ({
   recordTipStripeCustomer: vi.fn(),
 }));
 vi.mock("@/db/orders", () => ({
-  markOrderPaidByInvoiceId: vi.fn(),
+  applyInvoicePaid: vi.fn(),
   markOrderVoidedByInvoiceId: vi.fn(),
   recordOrderPaymentIntent: vi.fn(),
 }));
@@ -50,8 +50,11 @@ vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
 vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
 vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
 vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn() }));
+vi.mock("@/db/stripe-restricted", () => ({
+  tellOwnersPaymentsRestricted: vi.fn(),
+}));
 vi.mock("@/db/stripe-accounts", () => ({
-  setShopStripeAccountStatus: vi.fn(),
+  applyStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
 }));
 vi.mock("@/db/webhook-events", () => ({
@@ -71,13 +74,14 @@ const {
   recordCheckoutPaymentIntent,
 } = await import("@/db/checkouts");
 const { markTipPaidBySessionId, markTipExpiredBySessionId } = await import("@/db/tips");
-const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } =
-  await import("@/db/orders");
+const { applyInvoicePaid, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } = await import(
+  "@/db/orders"
+);
 const { recordStripeChargeRefund } = await import("@/db/refunds");
 const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
 const { recordStripePayout } = await import("@/db/payouts");
-const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
+const { applyStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );
 const { claimStripeWebhookEvent, hasNewerAccountUpdate } = await import("@/db/webhook-events");
@@ -135,14 +139,16 @@ beforeEach(() => {
   vi.mocked(markCheckoutPaymentFailedBySessionId)
     .mockReset()
     .mockResolvedValue(FAKE_CHECKOUT as never);
-  vi.mocked(markOrderPaidByInvoiceId).mockReset();
+  vi.mocked(applyInvoicePaid).mockReset().mockResolvedValue({ status: "not_found" });
   vi.mocked(markOrderVoidedByInvoiceId).mockReset();
   vi.mocked(recordOrderPaymentIntent).mockReset().mockResolvedValue(true);
   vi.mocked(recordCheckoutPaymentIntent).mockReset().mockResolvedValue(true);
   vi.mocked(recordStripeChargeRefund).mockReset().mockResolvedValue({ status: "already_recorded" });
   vi.mocked(recordStripeDispute).mockReset().mockResolvedValue({ status: "not_found" });
   vi.mocked(recordStripePayout).mockReset().mockResolvedValue({ status: "not_found" });
-  vi.mocked(setShopStripeAccountStatus).mockReset();
+  vi.mocked(applyStripeAccountStatus)
+    .mockReset()
+    .mockResolvedValue({ account: null, newlyRestricted: false });
   vi.mocked(disconnectShopStripeAccount).mockReset();
   vi.mocked(markTipPaidBySessionId).mockReset();
   vi.mocked(markTipExpiredBySessionId).mockReset();
@@ -161,13 +167,12 @@ afterEach(() => {
 describe("invoice events", () => {
   it("invoice.paid takes the id and amount_paid off the real Invoice object", async () => {
     expect((await deliver("invoice.paid")).status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(
-      FAKE_DB,
-      "in_1QsAVeLkdIwHu7ixKmNpQrSt",
-      24_000,
-      ACCOUNT,
-      0,
-    );
+    expect(applyInvoicePaid).toHaveBeenCalledWith(FAKE_DB, {
+      stripeInvoiceId: "in_1QsAVeLkdIwHu7ixKmNpQrSt",
+      amountPaidCents: 24_000,
+      expectedAccountId: ACCOUNT,
+      taxCents: 0,
+    });
   });
 
   it("invoice.voided voids by the same invoice id", async () => {
@@ -253,7 +258,10 @@ describe("checkout session events", () => {
 
 describe("money reversed outside DiveDay (ADR 20261009-stripe-reversals-reach-diveday)", () => {
   it("invoice.paid records the PaymentIntent off the real invoice-payments list", async () => {
-    vi.mocked(markOrderPaidByInvoiceId).mockResolvedValue({ id: "order_1" } as never);
+    vi.mocked(applyInvoicePaid).mockResolvedValue({
+      status: "settled",
+      order: { id: "order_1" },
+    } as never);
     await deliver("invoice.paid");
     expect(recordOrderPaymentIntent).toHaveBeenCalledWith(FAKE_DB, {
       stripeInvoiceId: "in_1QsAVeLkdIwHu7ixKmNpQrSt",
@@ -382,7 +390,7 @@ describe("payouts (ADR 20261012-payouts-reach-diveday)", () => {
 describe("account events", () => {
   it("account.updated passes the real Account's own flags and currency through", async () => {
     expect((await deliver("account.updated")).status).toBe(200);
-    expect(setShopStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, ACCOUNT, {
+    expect(applyStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, ACCOUNT, {
       chargesEnabled: true,
       payoutsEnabled: true,
       detailsSubmitted: true,
@@ -446,6 +454,6 @@ describe("the livemode cross-check, against real test-mode events", () => {
     vi.stubEnv("STRIPE_WEBHOOK_SECRET", LIVE_SECRET);
     const response = await deliver("invoice.paid", "whsec_not_ours");
     expect(response.status).toBe(400);
-    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+    expect(applyInvoicePaid).not.toHaveBeenCalled();
   });
 });

@@ -81,6 +81,7 @@ export const SECTION_IDS = [
   "packing",
   "counterCard",
   "certCheck",
+  "padiChecks",
   "units",
   "crewSchedule",
   "divingOptions",
@@ -119,6 +120,7 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   publicYear: "public-year",
   counterCard: "counter-card",
   certCheck: "cert-check",
+  padiChecks: "padi-checks",
 };
 
 /** The `#fragment` that opens and scrolls to a hub section. */
@@ -269,6 +271,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.certCheck.heading",
     group: "bookings-waivers",
     target: { kind: "section", id: "certCheck" },
+  },
+  {
+    id: "padiChecks",
+    labelKey: "settings.main.features.padiChecks.heading",
+    group: "bookings-waivers",
+    target: { kind: "section", id: "padiChecks" },
   },
   {
     id: "packing",

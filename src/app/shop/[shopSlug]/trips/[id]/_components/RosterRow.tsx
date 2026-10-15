@@ -1,3 +1,4 @@
+import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -99,7 +100,9 @@ export function RosterRow({
     hasWork,
     reference,
     record,
+    identityUnconfirmed,
   } = s7;
+  const { rows, actions } = context;
   const badgeCluster =
     headerBadges.length > 0 ? (
       <div className="ms-auto flex flex-wrap items-center justify-end gap-2 max-sm:ms-0 max-sm:justify-start">
@@ -169,6 +172,15 @@ export function RosterRow({
           swallow what a link promised, and `holdOpen` keeps open the row a
           form on it just answered. */}
       {record ? null : reasonList}
+      {/* "Check with SSI", under the reason that says the card is pending
+          (H-105): drawn only with the browser extension, and never on a held
+          seat, whose matched diver's details are not yet this seat's. */}
+      {record || identityUnconfirmed || !actions.agencyCheckAction ? null : (
+        <AgencyCheckRow
+          personId={person.id}
+          cards={rows.agencyCheckCardsByPerson?.get(person.id) ?? []}
+        />
+      )}
       {arrival || record ? null : identityContact}
       {record ? null : identityCheck}
       {record ? null : reEntryNote}

@@ -1,3 +1,4 @@
+import { passengersAboveCertificateAboard } from "@/lib/boat-safety";
 import {
   blockedAtDock,
   type RollCallCheckpoint,
@@ -8,8 +9,9 @@ import {
 
 /**
  * **What the count panel says beside its number**: how many buddy teams are
- * split, who is recorded not back aboard — by name, divers and crew — and the
- * blocked divers at the dock. One derivation, so the panel's names and its
+ * split, who is recorded not back aboard — by name, divers and crew — the
+ * blocked divers at the dock, and whether the passengers aboard pass the
+ * boat's certificate. One derivation, so the panel's names and its
  * counts can never disagree with the rows below it.
  */
 export function headCountView({
@@ -47,5 +49,12 @@ export function headCountView({
       fullName: member.fullName,
     })),
     blockedAtDock: blockedAtDock(manifest.divers),
+    // The people the crew counted aboard at this checkpoint, held against the
+    // boat's certificate (batch 6, item 2). Divers, snorkelers and riders —
+    // passengers, which is what the certificate counts; never the crew.
+    overCertificate: passengersAboveCertificateAboard(
+      manifest.summary.boarded,
+      manifest.trip.certifiedPassengers,
+    ),
   };
 }

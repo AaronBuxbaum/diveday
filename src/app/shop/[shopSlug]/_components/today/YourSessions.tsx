@@ -1,5 +1,6 @@
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { CrewedSessionSummary } from "@/db/today";
+import { awayDatesText } from "@/i18n/away-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";
 
@@ -12,6 +13,10 @@ import { formatShortDate, formatTime } from "@/lib/format";
  * It is its own labeled group between the summary sentence and the first
  * station, in the spine's own grammar rather than a stack of sunken cards (ADR
  * 20260827-clearwater-surface-language, decision 2).
+ *
+ * **A session on a day the reader said they are away says so** (fourth
+ * review, item 12), in warning ink under the counts: "2 ready · 0 blocked"
+ * read as all well on a Sunday the instructor would not be there.
  */
 export function YourSessions({
   sessions,
@@ -57,6 +62,11 @@ export function YourSessions({
                   </>
                 ) : null}
               </p>
+              {session.away && session.away.length > 0 ? (
+                <p className="mt-1 text-sm font-medium text-warning-strong">
+                  {t("today.yourSessions.away", { dates: awayDatesText(session.away, locale) })}
+                </p>
+              ) : null}
             </div>
           </LedgerRow>
         ))}

@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 import { accountSessions, people, personRoles, shops, userAccounts } from "@/db/schema";
 import { createAuth, DIGEST_BLIND_SESSION_PATHS } from "@/lib/auth";
 import { authSecret } from "@/lib/auth-secret";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **A session row stores a digest of its token, never the token** (code review
@@ -24,7 +26,7 @@ import { seededTestDb } from "@/test/db";
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
 async function harness() {
-  const db = await seededTestDb();
+  const db = ctx.db;
   const auth = createAuth(db);
   const [account] = await db
     .select({

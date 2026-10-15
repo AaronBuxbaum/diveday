@@ -150,6 +150,7 @@ export async function startBillingCheckoutAction(): Promise<void> {
       freeTermEndsOn: row?.freeTermEndsOn ?? null,
     }),
     now,
+    replaces: previous,
   });
   if (checkout.status !== "ok") refuse(context.slug, "unavailable");
   const recorded = await recordShopCheckoutSession(db, context.shopId, {

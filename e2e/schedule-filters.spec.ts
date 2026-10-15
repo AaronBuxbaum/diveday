@@ -310,7 +310,7 @@ test("the stated level never reaches the booking form", { tag: READ_ONLY }, asyn
     .click();
   await expect(page).toHaveURL(/\/trips\//);
 
-  const booking = page.getByRole("region", { name: "Grab a spot" });
-  await expect(booking.getByRole("button", { name: "Book these spots" })).toBeVisible();
+  const booking = page.getByRole("region", { name: "Grab a seat" });
+  await expect(booking.getByRole("button", { name: "Book this seat" })).toBeVisible();
   await expect(booking.getByLabel(/Certification level/)).toHaveCount(0);
 });

@@ -169,6 +169,44 @@ export function seatMoneyTerms(
   return { due: "online", amountCents: whole };
 }
 
+/**
+ * **What a party's lead owes, said once** (fourth UX review, item 5). The
+ * form said "$95.00 × 3 divers … Due at the shop $285.00", the lead's email
+ * "Your seat: $95.00", and `/ready` nothing, while every unclaimed seat stays
+ * with the lead "exactly as booked". So the seats the lead holds are summed
+ * into one set of terms, `seats` counting the priced ones: the email and
+ * `/ready` both say "3 seats: $285.00, due at the shop".
+ *
+ * `types` is one entry per seat the lead holds, their own first. An unpriced
+ * seat adds nothing and is not counted; null when no seat is priced. Mixed
+ * deposit and full-fare seats combine as a deposit: what is taken by card
+ * now, and the balance at the dock.
+ */
+export type PartyMoneyTerms = SeatMoneyTerms & { seats: number };
+
+export function partyMoneyTerms(
+  trip: DepositTrip & ParticipantPricing,
+  course: CoursePricing | null,
+  types: readonly ParticipantType[],
+  chargesOnline: boolean,
+): PartyMoneyTerms | null {
+  const terms = types
+    .map((type) => seatMoneyTerms(trip, course, type, chargesOnline))
+    .filter((term): term is SeatMoneyTerms => term !== null);
+  if (terms.length === 0) return null;
+  const seats = terms.length;
+  const balanceCents = terms.reduce(
+    (sum, term) => sum + (term.due === "deposit" ? term.balanceCents : 0),
+    0,
+  );
+  const nowCents = terms.reduce(
+    (sum, term) => sum + (term.due === "deposit" ? term.depositCents : term.amountCents),
+    0,
+  );
+  if (balanceCents > 0) return { due: "deposit", depositCents: nowCents, balanceCents, seats };
+  return { due: chargesOnline ? "online" : "at_shop", amountCents: nowCents, seats };
+}
+
 export type CancellationTrip = {
   startsAt: Date;
   cancellationWindowHours: number | null;

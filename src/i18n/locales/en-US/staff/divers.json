@@ -65,12 +65,33 @@
     "checkWithAgencyMemberSignIn": "Check with {agency} (member sign-in)",
     "searchAgencyPortal": "Search the {agency} portal",
     "checkedWithAgencyBy": "Checked with {agency} by {name} on {date}.",
+    "listedByAgency": "Listed on {agency}’s page.",
     "agencyCheck": {
       "checking": "Checking with {agency}…",
       "matched": "{agency} shows this certification. Marked certified.",
+      "matchedConfirmed": "{agency} shows this certification. Confirmed.",
       "levelUnconfirmed": "{agency} found this diver, but not at this level.",
-      "noRecord": "{agency} has no match for this name.",
-      "unreadable": "Couldn’t read {agency}’s page."
+      "limitedCard": "{agency} shows a Junior or limited card.",
+      "juniorUnder15": "{agency} shows a Junior card. Under 15, record it by hand.",
+      "namesake": "{agency} shows a diver by this name, but not with this {identity, select, card_number {card number} birth_date {birth date} other {birth date or card number}}.",
+      "noRecord": "{agency} has no match for this {identity, select, card_number {card number} birth_date {name and birth date} other {name}}.",
+      "noRecordCmas": "The CMAS portal doesn’t list this certification. Federations are still adding theirs, so ask the federation named on the card.",
+      "severalRecords": "{agency} lists more than one diver by this name.",
+      "unreadable": "Couldn’t read {agency}’s page.",
+      "captcha": "{agency} is asking if you’re human. Check on its page.",
+      "pageChanged": "{agency}’s page has changed. Check on its page.",
+      "unsupported": "This copy of the extension doesn’t check {agency}. Update it.",
+      "notFoundOnPage": "Couldn’t find {name} on {agency}’s page. Open it and look.",
+      "noAnswer": "DiveDay didn’t answer. Reload to see where this certification stands.",
+      "signedOut": "Sign in to the PADI Pros’ Site first, then check again.",
+      "listed": {
+        "lead": "{agency} also shows these certifications. Add them? Each waits for Mark certified.",
+        "leadFor": "{agency} also shows these certifications for {name}. Add them? Each waits for Mark certified.",
+        "add": "Add",
+        "adding": "Adding…",
+        "added": "Added.",
+        "failed": "Couldn’t add them. Reload to see this diver’s certifications."
+      }
     },
     "sightCard": "Verify certification record",
     "sightCardHint": "The diver told us this level. Enter the agency and number from the certification record you verified.",
@@ -157,7 +178,16 @@
     "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# diver} other {# divers}}"
-    }
+    },
+    "viewNotBack": "Not back in 12 months",
+    "lastDivedGroup": "Most recent dive first",
+    "lastDived": "last dived {date}",
+    "neverDived": "no dives yet",
+    "sortLabel": "Sort:",
+    "sortName": "Name",
+    "sortLastDived": "Last dived",
+    "sortAriaLabel": "Roster order",
+    "downloadList": "Download this list (CSV)"
   },
   "header": {
     "noContactDetails": "No contact details yet",
@@ -176,7 +206,8 @@
     "emergencyContactPhoneLabel": "Emergency contact phone",
     "saving": "Saving…",
     "saveDetails": "Save details",
-    "visits": "{count, plural, one {# visit} other {# visits}}"
+    "visits": "{count, plural, one {# visit} other {# visits}}",
+    "packageBalance": "Package: {left} of {of, plural, one {# dive} other {# dives}} left"
   },
   "bookActivity": {
     "courseOrDiveLabel": "Departure",
@@ -390,6 +421,8 @@
   "notices": {
     "alreadyBooked": "This diver is already booked on that activity.",
     "booked": "Booked. Review it below, then create and send the invoice.",
+    "bookedConfirmed": "Booked, and their confirmation is on its way. Review it below, then create and send the invoice.",
+    "bookedConfirmedNoInvoice": "Booked, and their confirmation is on its way.",
     "bookedNoInvoice": "Booked.",
     "bookedWaiverUndelivered": "Booked, but their waiver wasn’t emailed. Open the trip’s Divers tab to send it or share the link.",
     "bookedIdentityUnconfirmed": "Booked, but the seat is held until you confirm it’s the same person. Open the trip’s Divers tab to confirm it.",

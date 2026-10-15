@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { CONFIRMATION_WINDOW_MS, confirmationCode } from "@/lib/reply-keywords";
 import { fileScopedShopContext } from "@/test/db";
-import { createBooking } from "./bookings";
+import { createBooking, createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
 import { recordInboundMessage } from "./inbound-messages";
 import { handleInboundReplyKeyword } from "./reply-keywords";
@@ -462,6 +462,72 @@ describe("handleInboundReplyKeyword — what it does", () => {
         money: { story: "none" },
       }),
     ]);
+  });
+
+  /**
+   * **A lead's cancel by code takes their unclaimed seats too** (batch 6 layer 2
+   * review): the same rule as `/ready`, so a lead who cancels by reply does not
+   * leave seats they paid for booked under nobody. A seat with its own address
+   * is told; one with no address is not.
+   */
+  it("cancels a lead's unclaimed party seats with the lead's own on the code", async () => {
+    const { db, shop } = ctx;
+    const open = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (trip) => trip.title === "Two-Tank Reef — Christ of the Abyss",
+    );
+    if (!open) throw new Error("expected seeded trip missing");
+    const party = await createBookingParty(db, [
+      { actor: "public", shopId: shop.id, tripId: open.id, ...DIVER },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Milo Quinn",
+        email: "milo-quinn@example.com",
+      },
+      { actor: "public", shopId: shop.id, tripId: open.id, fullName: "Pia Quinn" },
+    ]);
+    if (!party.ok) throw new Error(`setup party failed: ${party.reason}`);
+    const [lead, milo, pia] = party.bookings.map((seat) => seat.bookingId);
+    const [leadRow] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, lead ?? ""));
+    const now = new Date(open.startsAt.getTime() - 24 * 60 * 60 * 1000);
+    const provider = acceptingProvider();
+    await handleInboundReplyKeyword(db, {
+      shopId: shop.id,
+      inboundMessageId: await inbound(db, shop.id, "C", { receivedAt: now }),
+      now,
+      provider,
+    });
+    const code = confirmationCode(
+      {
+        shopId: shop.id,
+        bookingId: lead ?? "",
+        personId: leadRow?.personId ?? "",
+        channel: "email",
+        toAddress: DIVER.email,
+      },
+      now.getTime(),
+    );
+    const later = new Date(now.getTime() + 60_000);
+    expect(
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: await inbound(db, shop.id, code, { receivedAt: later }),
+        now: later,
+        provider,
+      }),
+    ).toBe("cancelled");
+
+    expect(await statusOf(db, lead ?? "")).toBe("cancelled");
+    expect(await statusOf(db, milo ?? "")).toBe("cancelled");
+    expect(await statusOf(db, pia ?? "")).toBe("cancelled");
+    const notices = provider.sent.filter((sent) => sent.kind === "booking_cancelled");
+    expect(notices.map((notice) => notice.to).sort()).toEqual(
+      [DIVER.email, "milo-quinn@example.com"].sort(),
+    );
   });
 
   /**

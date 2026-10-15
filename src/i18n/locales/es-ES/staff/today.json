@@ -49,7 +49,8 @@
     "studentsCount": "{count, plural, one {# estudiante} other {# estudiantes}}",
     "readyCount": "{count, plural, one {# listo} other {# listos}}",
     "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
-    "openRoster": "Ver lista"
+    "openRoster": "Ver lista",
+    "away": "Avisaste que estás ausente {dates}."
   },
   "yourWeek": {
     "heading": "Tu semana",
@@ -88,6 +89,7 @@
     "failedPhotoDeletion": "Limpieza",
     "owedRefund": "Reembolso pendiente",
     "paymentDispute": "Disputa de tarjeta",
+    "paymentsRestricted": "Pagos con tarjeta",
     "reviewsPending": "Reseñas",
     "unansweredMessages": "Mensajes",
     "gearOverdue": "Equipo atrasado",
@@ -103,7 +105,8 @@
     "helpRequest": "Solicitud de ayuda",
     "sayHello": "Saluda",
     "rentalFit": "Equipo",
-    "blockedAboard": "A bordo"
+    "blockedAboard": "A bordo",
+    "crewAway": "Tripulación ausente"
   },
   "blockerAction": {
     "setRequirements": "Configurar requisitos",
@@ -187,7 +190,9 @@
     "ratingLapsed": "{names} {count, plural, one {tiene una titulación vencida} other {tienen titulaciones vencidas}} para esta salida.",
     "missingContactNamed": "Sin contacto de emergencia.",
     "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}}, sin oferta de última hora enviada.",
-    "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera."
+    "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera.",
+    "crewAway": "{name} está ausente {dates}.",
+    "rollCallAlerted": "Propietarios avisados: {time}."
   },
   "actionLabel": {
     "openRollCall": "Abrir recuento",
@@ -202,6 +207,7 @@
     "openOrders": "Revisar en Pedidos",
     "openOrder": "Abrir pedido",
     "openDataSettings": "Revisar en Ajustes",
+    "openPaymentSettings": "Abrir la configuración de pagos",
     "openReviews": "Ver reseñas",
     "openInbox": "Ver mensajes",
     "openGearRegister": "Abrir registro de equipo",
@@ -245,7 +251,9 @@
     "owedRefundGroupDetailNoAmount": "{tripTitle} del {when}: {names}. Devuélvelo y luego marca cada plaza como reembolsada.",
     "disputeSubject": "Disputa de tarjeta",
     "disputeDetail": "{amount} en disputa. Envía tus pruebas a Stripe antes del {due}.",
-    "disputeDetailNoDeadline": "{amount} en disputa. Respóndela en Stripe."
+    "disputeDetailNoDeadline": "{amount} en disputa. Respóndela en Stripe.",
+    "restrictedSubject": "Los pagos con tarjeta están desactivados",
+    "restrictedDetail": "Stripe los pausó el {when}. Los buceadores pagan en el centro hasta que Stripe los reactive."
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión"
@@ -303,6 +311,7 @@
     "waiverNotSent": "{count, plural, one {Exención sin firmar, aún sin enviar.} other {# exenciones sin firmar, aún sin enviar.}}",
     "waiverPending": "{count, plural, one {Exención sin firmar, enlace enviado.} other {# exenciones sin firmar, enlaces enviados.}}",
     "waiverExpired": "{count, plural, one {El enlace de la exención caducó.} other {# enlaces de exención caducados.}}",
+    "waiverLapsed": "{count, plural, one {Exención firmada caducada.} other {# exenciones firmadas caducadas.}}",
     "medicalReview": "{count, plural, one {Una respuesta médica necesita el visto bueno de un médico.} other {# respuestas médicas necesitan el visto bueno de un médico.}}",
     "medicalNotCleared": "{count, plural, one {Un médico no lo autorizó a bucear.} other {# buceadores sin autorización médica para bucear.}}",
     "guardianSignatureMissing": "{count, plural, one {La exención necesita la firma de un tutor.} other {# exenciones necesitan la firma de un tutor.}}",

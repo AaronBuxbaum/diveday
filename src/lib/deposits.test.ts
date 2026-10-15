@@ -3,6 +3,7 @@ import {
   cancellationDeadline,
   checkoutCharge,
   checkoutSeatTerms,
+  partyMoneyTerms,
   refundOnCancellation,
   seatBalanceOwedCents,
   seatListPriceCents,
@@ -230,5 +231,44 @@ describe("seatBalanceOwedCents", () => {
     expect(seatBalanceOwedCents(null, null)).toBeNull();
     expect(seatBalanceOwedCents(0, null)).toBeNull();
     expect(seatBalanceOwedCents(5_000, { status: "deposit_paid", amountCents: 5_000 })).toBeNull();
+  });
+});
+
+describe("partyMoneyTerms (fourth UX review, item 5)", () => {
+  const trip = { priceCents: 9_500, depositCents: null, snorkelerPriceCents: 4_000 };
+
+  it("sums the seats the lead holds into one figure owed at the shop", () => {
+    expect(partyMoneyTerms(trip, null, ["diver", "diver", "diver"], false)).toEqual({
+      due: "at_shop",
+      amountCents: 28_500,
+      seats: 3,
+    });
+  });
+
+  it("prices each seat by what it is: a snorkeler pays the snorkeler fare", () => {
+    expect(partyMoneyTerms(trip, null, ["diver", "snorkeler"], true)).toEqual({
+      due: "online",
+      amountCents: 13_500,
+      seats: 2,
+    });
+  });
+
+  it("splits what is taken now from the balance when any seat takes a deposit", () => {
+    expect(
+      partyMoneyTerms({ ...trip, depositCents: 2_500 }, null, ["diver", "diver"], true),
+    ).toEqual({ due: "deposit", depositCents: 5_000, balanceCents: 14_000, seats: 2 });
+  });
+
+  it("counts only priced seats, and says nothing when none is priced", () => {
+    expect(
+      partyMoneyTerms({ ...trip, snorkelerPriceCents: null }, null, ["diver", "snorkeler"], false),
+    ).toEqual({
+      due: "at_shop",
+      amountCents: 9_500,
+      seats: 1,
+    });
+    expect(
+      partyMoneyTerms({ priceCents: null, depositCents: null }, null, ["diver"], false),
+    ).toBeNull();
   });
 });

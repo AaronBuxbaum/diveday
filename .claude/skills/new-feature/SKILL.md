@@ -27,15 +27,19 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
 5. **UI second** — thin routes in `src/app/`, semantic tokens only, copy in briefing voice.
    A new critical flow gets an `e2e/` spec (happy + failure path); a new surface gets a visual
    snapshot in `e2e/visual.spec.ts`. Render relative time via `nowDate()` from `src/lib/clock.ts`,
-   never a bare `new Date()`. See the `e2e-and-visual` skill.
+   never a bare `new Date()`. Each test's layer is
+   [testing.md](../../../docs/engineering/testing.md#how-a-change-decides-its-tests)'s six-step
+   list: a geometry fix is proven by a capture, a rule over source by a `check:repo` guard, never a
+   class or source assertion beside the component. See the `e2e-and-visual` skill.
 6. **Verify** — run the `verify` skill. UI work additionally gets the `design-review` skill.
 7. **Document** — update whatever your change invalidated: glossary for new terms, overview
    for structure, roadmap checkbox, ADR index.
-8. **File the follow-ups** — the slice you deliberately left for later, the question the build
-   raised, the risk you saw in passing: one GitHub issue each, labelled `needs-triage` (see
+8. **File the follow-ups** — a bug, a safety gap, or a decision the build raised: one GitHub issue
+   each, labelled `needs-triage` (see
    [docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)'s "Filing a follow-up"
-   section), each ending in a prompt a fresh session could run. A vertical slice *should* generate
-   these; that is what makes it a slice. List them by number in the PR description.
+   section), each ending in a prompt a fresh session could run, listed by number in the PR
+   description. The slice left for later and the debt seen in passing go in one "Notes" comment
+   on the PR.
 9. **Ship** — commit with an imperative subject and a why-body, push, open/refresh the draft
    PR with a summary and screenshots. Keep draft until CI is green. **The branch was cut from the
    branch you opened last if that one is still open**, related or not, so this is a layer of a stack

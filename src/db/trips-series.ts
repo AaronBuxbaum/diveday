@@ -28,12 +28,12 @@ import type { AppDb, AppTransaction } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { queryAll } from "./query-helpers";
+import { recordedRollCallRows } from "./roll-call-history";
 import {
   boats,
   bookingPayments,
   bookings,
   courses,
-  rollCallEvents,
   shops,
   tripDives,
   tripScheduleDays,
@@ -44,11 +44,13 @@ import {
 } from "./schema";
 import {
   insertTripInstance,
+  insertTripInstances,
   type NewTrip,
   normalizedDiveCount,
   normalizedDiveDrafts,
   replaceTripDives,
   resolveCourse,
+  type TripInstanceParams,
   type TripScheduleDayInput,
   validateDiveSites,
 } from "./trips-create";
@@ -270,55 +272,69 @@ async function materializeWindow(
   for (const row of taken) if (row.date) spokenFor.add(row.date);
   for (const row of skipped) spokenFor.add(row.date);
 
-  const created = [];
+  // Built in memory, written as one batch (code review 2026-10-13b, item 40):
+  // a daily run over the horizon is 121 departures, and one insert chain each
+  // kept the staffer on the schedule builder for hundreds of statements.
+  const planned: { days: TripScheduleDayInput[]; params: TripInstanceParams }[] = [];
   for (const occurrenceDate of proposed) {
     if (spokenFor.has(occurrenceDate)) continue;
     const days = daysOnOccurrence(template.days, occurrenceDate, timeZone);
     const first = days[0];
     const last = days.at(-1);
     if (!first || !last) continue;
-    const instance = await insertTripInstance(tx, {
-      shopId: series.shopId,
-      seriesId: series.id,
-      seriesOccurrenceDate: occurrenceDate,
-      courseId: template.trip.courseId ?? undefined,
-      course,
-      title: template.trip.title,
-      description: template.trip.description ?? undefined,
-      startsAt: first.startsAt,
-      endsAt: last.endsAt,
-      capacity: seats.capacity,
-      plannedDives: template.trip.plannedDives,
-      priceCents: template.trip.priceCents,
-      depositCents: template.trip.depositCents,
-      // Every Saturday sells the same snorkel and ride-along seats.
-      snorkelerPriceCents: template.trip.snorkelerPriceCents,
-      riderPriceCents: template.trip.riderPriceCents,
-      diverCapacity: seats.diverCapacity,
-      cancellationWindowHours: template.trip.cancellationWindowHours,
-      isPrivate: template.trip.isPrivate,
-      // The case this matters most for: a standing weekly self-guided charter
-      // would otherwise raise `uncrewed_departure` on every instance the
-      // nightly horizon roll materializes, forever (issue #973).
-      selfGuided: template.trip.selfGuided,
-      // A standing staged-deco charter keeps its silence about flying on
-      // every instance (H-84).
-      exceedsNoDecoLimits: template.trip.exceedsNoDecoLimits,
-      diveMode: template.trip.diveMode,
-      // Every Saturday carries the same trip tag, so every instance inherits
-      // it exactly as it inherits the hull and the legs. Dropping it here
-      // meant a shop that tagged a repeating departure lost the tag on every
-      // occurrence the nightly roll materialized, and the public tag rail
-      // under-reported the shop's own board.
-      lensId: template.trip.lensId,
-      boatId: template.trip.boatId,
-      drafts: template.drafts,
-      scheduleDays: days,
+    planned.push({
+      days,
+      params: {
+        shopId: series.shopId,
+        seriesId: series.id,
+        seriesOccurrenceDate: occurrenceDate,
+        courseId: template.trip.courseId ?? undefined,
+        course,
+        title: template.trip.title,
+        description: template.trip.description ?? undefined,
+        startsAt: first.startsAt,
+        endsAt: last.endsAt,
+        capacity: seats.capacity,
+        plannedDives: template.trip.plannedDives,
+        priceCents: template.trip.priceCents,
+        depositCents: template.trip.depositCents,
+        // Every Saturday sells the same snorkel and ride-along seats.
+        snorkelerPriceCents: template.trip.snorkelerPriceCents,
+        riderPriceCents: template.trip.riderPriceCents,
+        diverCapacity: seats.diverCapacity,
+        cancellationWindowHours: template.trip.cancellationWindowHours,
+        isPrivate: template.trip.isPrivate,
+        // The case this matters most for: a standing weekly self-guided charter
+        // would otherwise raise `uncrewed_departure` on every instance the
+        // nightly horizon roll materializes, forever (issue #973).
+        selfGuided: template.trip.selfGuided,
+        // A standing staged-deco charter keeps its silence about flying on
+        // every instance (H-84).
+        exceedsNoDecoLimits: template.trip.exceedsNoDecoLimits,
+        diveMode: template.trip.diveMode,
+        // Every Saturday carries the same trip tag, so every instance inherits
+        // it exactly as it inherits the hull and the legs. Dropping it here
+        // meant a shop that tagged a repeating departure lost the tag on every
+        // occurrence the nightly roll materialized, and the public tag rail
+        // under-reported the shop's own board.
+        lensId: template.trip.lensId,
+        boatId: template.trip.boatId,
+        drafts: template.drafts,
+        scheduleDays: days,
+      },
     });
-    created.push(instance);
-    // A run with a standing crew sails with it on the new date too, each
-    // person asked again of this date's hours (`seatStandingCrew`).
-    if (standingCrew.length > 0) {
+  }
+  const created = await insertTripInstances(
+    tx,
+    planned.map(({ params }) => params),
+  );
+  // A run with a standing crew sails with it on the new date too, each
+  // person asked again of this date's hours (`seatStandingCrew`). One date at
+  // a time: each asks who is already busy on that date's hours.
+  if (standingCrew.length > 0) {
+    for (const [index, instance] of created.entries()) {
+      const days = planned[index]?.days;
+      if (!days) continue;
       await seatStandingCrew(tx, {
         shopId: series.shopId,
         tripId: instance.id,
@@ -747,13 +763,19 @@ export async function listRunningPublicSeries(
   now: Date = nowDate(),
   limit = 3,
 ): Promise<RunningPublicSeries[]> {
+  // One row per run, not every future date of every run (code review
+  // 2026-10-13b, item 40): three daily runs used to ship about 360 rows to
+  // print three lines. `DISTINCT ON` keeps each run's furthest date, whose
+  // title the line names; the window keeps its soonest, which orders the runs.
   const rows = await db
-    .select({
+    .selectDistinctOn([trips.seriesId], {
       seriesId: tripSeries.id,
       intervalWeeks: tripSeries.intervalWeeks,
       weekdayMask: tripSeries.weekdayMask,
       title: trips.title,
-      startsAt: trips.startsAt,
+      soonest: sql<Date>`min(${trips.startsAt}) over (partition by ${trips.seriesId})`.mapWith(
+        trips.startsAt,
+      ),
     })
     .from(tripSeries)
     .innerJoin(trips, and(eq(trips.seriesId, tripSeries.id), eq(trips.shopId, tripSeries.shopId)))
@@ -771,10 +793,10 @@ export async function listRunningPublicSeries(
         gt(trips.startsAt, now),
       ),
     )
-    .orderBy(asc(trips.startsAt));
+    .orderBy(trips.seriesId, desc(trips.startsAt));
   const bySeries = new Map<string, RunningPublicSeries>();
-  for (const row of rows) {
-    // Rows run soonest first, so the last one per run is its furthest date.
+  // Soonest-running first, as the board's end lists them.
+  for (const row of rows.sort((a, b) => a.soonest.getTime() - b.soonest.getTime())) {
     bySeries.set(row.seriesId, {
       title: row.title,
       intervalWeeks: row.intervalWeeks,
@@ -1401,23 +1423,8 @@ export async function applyDetailsToFutureSeries(
     // trip (CR-006) — a bulk apply must not silently orphan a sibling's
     // roll-call checkpoints either.
     const siblingIds = siblings.map((sibling) => sibling.id);
-    const siblingCheckpoints =
-      siblingIds.length > 0
-        ? await tx
-            .select({
-              tripId: rollCallEvents.tripId,
-              bookingId: rollCallEvents.bookingId,
-              checkpoint: rollCallEvents.checkpoint,
-              status: rollCallEvents.status,
-              occurredAt: rollCallEvents.occurredAt,
-              createdAt: rollCallEvents.createdAt,
-            })
-            .from(rollCallEvents)
-            // Shop first, for the table's only index (item 27, 2026-10-11).
-            .where(
-              and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, siblingIds)),
-            )
-        : [];
+    // Divers and crew alike, as the single edit reads them (`recordedRollCallRows`).
+    const siblingCheckpoints = await recordedRollCallRows(tx, shopId, siblingIds);
     const checkpointsByTrip = new Map<string, typeof siblingCheckpoints>();
     for (const row of siblingCheckpoints) {
       const list = checkpointsByTrip.get(row.tripId) ?? [];

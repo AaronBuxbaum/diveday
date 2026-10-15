@@ -45,9 +45,10 @@ describe("the marine-life catalog", () => {
   /**
    * The capture variants are the same promise one directory down, and they go
    * stale in the one way nobody would notice: a species added today gets its
-   * source from `scripts/fetch-marine-life-photo.mjs` and its variants in the
-   * same breath, but a source added by hand, or a width added to
-   * `MARINE_LIFE_TILE_WIDTHS` without a `--tiles-only` sweep, leaves a hole.
+   * source from `pnpm content:photos accept` and its variants in the same
+   * breath, but a source added by hand, or a width added to
+   * `MARINE_LIFE_TILE_WIDTHS` without a `pnpm content:photos tiles` sweep,
+   * leaves a hole.
    *
    * A hole here is quiet by construction: the variants are only ever served to
    * an e2e capture, so the miss is a broken image in a screenshot nobody reads

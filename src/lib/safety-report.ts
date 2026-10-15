@@ -26,6 +26,8 @@ export type SafetyDepartureInput = {
   startsAt: Date;
   endsAt: Date;
   plannedDives: number;
+  /** Only a boat sails: a shore or pool day is never "sailed with no crew" (review F1). */
+  diveMode: "boat" | "shore" | "pool";
   /** Every booking not cancelled: the manifest's own roster. */
   bookingIds: readonly string[];
   /** The crew list. */
@@ -93,6 +95,26 @@ export type SafetyMonth = {
    * The lapsed count's denominator, so a skipped sailing never reads as clean.
    */
   checkedSailings: number;
+  /**
+   * **Departures that sailed with no crew on record** (fourth review, item
+   * 13): nobody on the crew list, or every one of them recorded ashore at the
+   * dock. Such a departure adds nothing to `crewSailings`, so the lapsed count
+   * above read "0 of 0" for a month of boats nobody was recorded driving: the
+   * emptiest record reading cleanest. Listed, in the order they sailed, so the
+   * owner can open each one.
+   *
+   * Boats only (review F1): "sailed" is a boat's word, and a shore day or a
+   * pool session with nobody on its crew list is not this finding.
+   */
+  noCrewDepartures: { tripId: string; title: string; startsAt: Date }[];
+  /**
+   * **No crew recorded on any departure that came back this month** (review
+   * F1). The crew schedule is off for a new shop and the crew list optional,
+   * so a shop that never rosters crew was never asked; the report says so in
+   * one quiet line and `noCrewDepartures` is left empty rather than listing
+   * every boat it ran.
+   */
+  noCrewOnRecord: boolean;
 };
 
 /** The newest standing result per subject and checkpoint; a `cleared` undo leaves none. */
@@ -197,6 +219,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
   const openRollCalls: SafetyMonth["openRollCalls"] = [];
   const lapsedSailings: SafetyMonth["lapsedSailings"] = [];
   const unrecorded = new Map<string, SafetyMonth["unrecordedCrew"][number]>();
+  const noCrewDepartures: SafetyMonth["noCrewDepartures"] = [];
   let unrecordedSailings = 0;
 
   // An occurrence nobody booked and nobody counted is a date on the board,
@@ -228,6 +251,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
     }
 
     const divesOn = lastDayOfDeparture(departure.endsAt, input.timeZone);
+    const crewSailingsBefore = crewSailings;
     for (const personId of departure.crewIds) {
       // A crew member recorded ashore at the dock did not sail.
       if (crewResult(departure.tripId, personId, dock) === "not_boarded") continue;
@@ -256,6 +280,13 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
         });
       }
     }
+    if (crewSailings === crewSailingsBefore && departure.diveMode === "boat") {
+      noCrewDepartures.push({
+        tripId: departure.tripId,
+        title: departure.title,
+        startsAt: departure.startsAt,
+      });
+    }
   }
 
   return {
@@ -270,5 +301,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
     unrecordedSailings,
     unrecordedCrew: [...unrecorded.values()],
     checkedSailings: crewSailings - unrecordedSailings,
+    noCrewDepartures: crewSailings === 0 ? [] : noCrewDepartures,
+    noCrewOnRecord: departures.length > 0 && crewSailings === 0,
   };
 }

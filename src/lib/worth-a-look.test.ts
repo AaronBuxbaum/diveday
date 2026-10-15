@@ -170,3 +170,77 @@ describe("worthALook", () => {
     expect(look(subject({ diveSiteId: "molasses" }), [])).toEqual([]);
   });
 });
+
+/**
+ * **Never a boat the reader cannot board** (fourth UX review, item 10). The
+ * Open Water morning boat offered "Thu 8:00 AM Deep Wreck Charter … Also a
+ * morning boat.", which needs Advanced and nitrox; the Discover Scuba session
+ * offered a two-tank reef a first-timer cannot get on. A suggestion may ask no
+ * more than the departure being read, on the ladder, nitrox or a specialty.
+ */
+describe("worthALook asks no more than the boat being read", () => {
+  const openWater = {
+    minimumCertificationLevel: "open_water" as const,
+    requiredSpecialties: [],
+    requiresNitrox: false,
+  };
+  const morning = at("2026-09-08T12:00:00.000Z");
+
+  it("drops a deeper, nitrox boat from an Open Water boat's list", () => {
+    const rows = look(subject({ requirement: openWater }), [
+      candidate("wreck", {
+        startsAt: morning,
+        requirement: {
+          minimumCertificationLevel: "advanced_open_water",
+          requiredSpecialties: [],
+          requiresNitrox: true,
+        },
+      }),
+    ]);
+    expect(rows).toEqual([]);
+  });
+
+  it("drops any certified boat from a first-timer's session", () => {
+    const rows = look(subject({ requirement: null }), [
+      candidate("reef", { startsAt: morning, requirement: openWater }),
+    ]);
+    expect(rows).toEqual([]);
+  });
+
+  it("drops a boat asking a specialty the read boat does not, and keeps one asking the same", () => {
+    const rows = look(subject({ requirement: openWater }), [
+      candidate("deep", {
+        startsAt: morning,
+        requirement: { ...openWater, requiredSpecialties: ["deep"] },
+      }),
+      candidate("reef", { startsAt: morning, requirement: openWater }),
+    ]);
+    expect(rows.map((row) => row.tripId)).toEqual(["reef"]);
+  });
+});
+
+/**
+ * Dive-domain review F3 of layer r4-1: a Discover Scuba session carries no
+ * site level, and a reef whose sites the shop never rated asks nothing on
+ * paper either, so the ladder alone let a first-timer be offered a fun dive.
+ * The reader of a course that admits the uncertified may hold no card, and
+ * is only ever offered another session of that course.
+ */
+describe("worthALook for a course open to the uncertified", () => {
+  const morning = at("2026-09-08T12:00:00.000Z");
+
+  it("offers another session of the course and never an unrated fun dive", () => {
+    const rows = look(subject({ courseId: "dsd", requirement: null, opensToUncertified: true }), [
+      candidate("reef", { startsAt: morning, requirement: null }),
+      candidate("dsd-tue", { courseId: "dsd", requirement: null }),
+    ]);
+    expect(rows.map((row) => row.tripId)).toEqual(["dsd-tue"]);
+  });
+
+  it("keeps a certified course's reader on the ordinary rules", () => {
+    const rows = look(subject({ courseId: "aow", requirement: null }), [
+      candidate("reef", { startsAt: morning, requirement: null }),
+    ]);
+    expect(rows.map((row) => row.tripId)).toEqual(["reef"]);
+  });
+});

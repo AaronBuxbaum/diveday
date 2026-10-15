@@ -1,4 +1,4 @@
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { FIGURE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DayTakings as DayTakingsReading } from "@/lib/closeout";

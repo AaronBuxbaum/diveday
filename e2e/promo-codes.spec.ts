@@ -454,7 +454,7 @@ test.describe("as owner", () => {
     // The form has rendered (pricedTripAsVisitor waits on hydration), so "no
     // promo box" is a real absence rather than a not-yet-rendered one.
     await expect(
-      page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }),
+      page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }),
     ).toBeVisible();
     await expect(page.getByLabel("Promo code")).toHaveCount(0);
     await expect(page.getByText("(if you have one)")).toHaveCount(0);

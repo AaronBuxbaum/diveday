@@ -249,7 +249,9 @@ const SENDERS: Record<string, string> = {
   "src/lib/notifications/courtesy.ts": "the SMS/WhatsApp primitive; its callers are listed here",
   "src/lib/notifications/web-push.ts": "the push primitive; its one caller is push-subscriptions",
   "src/db/notifications.ts": "the chokepoint itself",
-  "src/db/push-subscriptions.ts": "reads the departure with `notRehearsal()` before any push",
+  "src/db/push-subscriptions.ts":
+    "`pushManifestChanged` reads the departure with `notRehearsal()`; `pushTripAlert`'s one caller is roll-call-alerts",
+  "src/db/roll-call-alerts.ts": "the candidate scan carries `notRehearsal()`, so no email or push",
   "src/db/manifest-events.ts": "calls `pushManifestChanged`, which reads with `notRehearsal()`",
   "src/db/reminders.ts": "the candidate scan carries `notRehearsal()`, so no email or text",
   "src/db/recap.ts": "the candidate scan carries `notRehearsal()`, so no email or text",
@@ -275,6 +277,7 @@ const SENDERS: Record<string, string> = {
   "src/db/course-certified.ts":
     "its departure read carries `notRehearsal()`, so a practice run certifies nobody and tells nobody",
   "src/db/desk-pings.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/db/stripe-restricted.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/staff-reply.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/weekly-digest.ts": "its counts carry `notRehearsal()`",
   "src/db/work-order-follow-up.ts": NOT_ABOUT_A_DEPARTURE,

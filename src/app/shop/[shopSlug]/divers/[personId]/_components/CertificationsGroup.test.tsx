@@ -11,6 +11,7 @@ import type { DiverProfile, Shop } from "./shared";
 // Next server runtime. The suite is about what the group *says*, so they are
 // stubbed rather than booted — the same call `WaiverGroup.test.tsx` makes.
 vi.mock("../card-actions", () => ({
+  addAgencyListedCardsAction: vi.fn(),
   addCardAction: vi.fn(),
   agencyCheckAction: vi.fn(),
   clearNoCertificationAction: vi.fn(),
@@ -46,11 +47,12 @@ function diver(overrides: Partial<DiverProfile> = {}): DiverProfile {
 function renderGroup(
   profile: DiverProfile,
   gap?: ComponentProps<typeof CertificationsGroup>["gap"],
+  shop: Shop = SHOP,
 ) {
   return render(
     <CertificationsGroup
       diver={profile}
-      shop={SHOP}
+      shop={shop}
       shopSlug="blue-mantis"
       personId="person-1"
       locale="en-US"
@@ -495,7 +497,7 @@ describe("the agency check, with the extension", () => {
   }
 
   function withExtension(run: () => void) {
-    document.documentElement.setAttribute("data-diveday-cert-check", "1.0.0");
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
     try {
       run();
     } finally {
@@ -519,7 +521,7 @@ describe("the agency check, with the extension", () => {
     });
   });
 
-  it("keeps the link for PADI's member sign-in and for a diver's unsighted claim", () => {
+  it("keeps the link for a PADI card with no birth date to search DiveChek by, and for a diver's unsighted claim", () => {
     withExtension(() => {
       renderGroup(
         diver({
@@ -530,6 +532,48 @@ describe("the agency check, with the extension", () => {
         } as unknown as Partial<DiverProfile>),
       );
       expect(screen.queryByRole("button", { name: /Check with/ })).toBeNull();
+      expect(
+        screen.getByRole("link", { name: "Check with PADI (member sign-in)" }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("checks a PADI card with DiveChek when the diver's birth date is on file", () => {
+    withExtension(() => {
+      const profile = diver({
+        certifications: [pending("padi")],
+      } as unknown as Partial<DiverProfile>);
+      renderGroup(
+        {
+          ...profile,
+          person: { ...profile.person, dateOfBirth: "1990-04-12" },
+        } as unknown as DiverProfile,
+        undefined,
+        { ...SHOP, padiChecksEnabled: true },
+      );
+      expect(screen.getByRole("button", { name: "Check with PADI" })).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /Check with PADI/ })).toBeNull();
+    });
+  });
+
+  it("keeps PADI's link, and offers no check, at a shop that has not turned PADI checks on", () => {
+    withExtension(() => {
+      const profile = diver({
+        certifications: [pending("padi"), pending("ssi")],
+      } as unknown as Partial<DiverProfile>);
+      renderGroup(
+        {
+          ...profile,
+          person: { ...profile.person, dateOfBirth: "1990-04-12" },
+        } as unknown as DiverProfile,
+        undefined,
+        { ...SHOP, padiChecksEnabled: false },
+      );
+      expect(screen.queryByRole("button", { name: "Check with PADI" })).toBeNull();
+      expect(
+        screen.getByRole("link", { name: "Check with PADI (member sign-in)" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Check with SSI" })).toBeInTheDocument();
     });
   });
 
@@ -551,5 +595,56 @@ describe("the agency check, with the extension", () => {
       screen.getByText(/^Checked with SSI by Rae Owner on Thu,\sOct\s8\.$/),
     ).toBeInTheDocument();
     expect(screen.getByText("Priya Sharma · Open Water Diver")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **A card an agency check listed** (layer 3): its stamp says the note is the
+ * agency's words, before and after Mark certified, and a card filed with no
+ * number of its own is confirmed through the sighting.
+ */
+describe("a card an agency check listed", () => {
+  function listed(extra: Record<string, unknown> = {}) {
+    return {
+      id: "n-listed",
+      agency: "sdi",
+      status: "pending",
+      identifier: "SDI-2002",
+      selfDeclaredAt: null,
+      reviewNote: "Lena Ortiz · Computer Nitrox Diver",
+      listedFromCertificationId: "c-1",
+      ...extra,
+    };
+  }
+
+  it("says the words are the agency's page, whatever the card's state", () => {
+    for (const status of ["pending", "verified"]) {
+      renderGroup(
+        diver({ nitroxCertifications: [listed({ status })] } as unknown as Partial<DiverProfile>),
+      );
+      expect(screen.getByText("Listed on SDI’s page.")).toBeInTheDocument();
+      expect(screen.getByText("Lena Ortiz · Computer Nitrox Diver")).toBeInTheDocument();
+      cleanup();
+    }
+    // A staffer's own note on a card no check listed claims no page.
+    renderGroup(
+      diver({
+        nitroxCertifications: [listed({ listedFromCertificationId: null })],
+      } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.queryByText("Listed on SDI’s page.")).toBeNull();
+  });
+
+  it("asks for the card when the page showed no number for it", () => {
+    renderGroup(
+      diver({
+        nitroxCertifications: [listed({ identifier: null })],
+      } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.getByText("Verify certification record")).toBeInTheDocument();
+    cleanup();
+    // With the number its own line showed, the ordinary one tap.
+    renderGroup(diver({ nitroxCertifications: [listed()] } as unknown as Partial<DiverProfile>));
+    expect(screen.queryByText("Verify certification record")).toBeNull();
   });
 });

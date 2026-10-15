@@ -65,12 +65,33 @@
     "checkWithAgencyMemberSignIn": "Verificar con {agency} (acceso de miembro)",
     "searchAgencyPortal": "Buscar en el portal de {agency}",
     "checkedWithAgencyBy": "Verificado con {agency} por {name} el {date}.",
+    "listedByAgency": "Aparece en la página de {agency}.",
     "agencyCheck": {
       "checking": "Verificando con {agency}…",
       "matched": "{agency} muestra esta certificación. Marcado como certificado.",
+      "matchedConfirmed": "{agency} muestra esta certificación. Confirmada.",
       "levelUnconfirmed": "{agency} encontró a este buceador, pero no con este nivel.",
-      "noRecord": "{agency} no tiene ningún resultado con este nombre.",
-      "unreadable": "No se pudo leer la página de {agency}."
+      "limitedCard": "{agency} muestra una certificación Junior o limitada.",
+      "juniorUnder15": "{agency} muestra una certificación Junior. Con menos de 15 años, regístrala a mano.",
+      "namesake": "{agency} muestra un buceador con este nombre, pero no con {identity, select, card_number {este número de certificación} birth_date {esta fecha de nacimiento} other {esta fecha de nacimiento ni este número de certificación}}.",
+      "noRecord": "{agency} no tiene ningún resultado con {identity, select, card_number {este número de certificación} birth_date {este nombre y esta fecha de nacimiento} other {este nombre}}.",
+      "noRecordCmas": "El portal de CMAS no muestra esta certificación. Las federaciones todavía están añadiendo las suyas, así que pregunta a la federación que figura en la certificación.",
+      "severalRecords": "{agency} muestra más de un buceador con este nombre.",
+      "unreadable": "No se pudo leer la página de {agency}.",
+      "captcha": "{agency} pide confirmar que eres una persona. Verifica en su página.",
+      "pageChanged": "La página de {agency} cambió. Verifica en su página.",
+      "unsupported": "Esta copia de la extensión no verifica con {agency}. Actualízala.",
+      "notFoundOnPage": "No se encontró a {name} en la página de {agency}. Ábrela y revísala.",
+      "noAnswer": "DiveDay no respondió. Recarga para ver cómo quedó esta certificación.",
+      "signedOut": "Inicia sesión en el PADI Pros’ Site primero y vuelve a verificar.",
+      "listed": {
+        "lead": "{agency} también muestra estas certificaciones. ¿Las añades? Cada una espera a Marcar certificado.",
+        "leadFor": "{agency} también muestra estas certificaciones de {name}. ¿Las añades? Cada una espera a Marcar certificado.",
+        "add": "Añadir",
+        "adding": "Añadiendo…",
+        "added": "Añadidas.",
+        "failed": "No se pudieron añadir. Recarga para ver las certificaciones de este buceador."
+      }
     },
     "sightCard": "Verificar registro de certificación",
     "sightCardHint": "El buceador nos indicó este nivel. Introduce la agencia y el número del registro de certificación que verificaste.",
@@ -157,7 +178,16 @@
     "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# buceador} other {# buceadores}}"
-    }
+    },
+    "viewNotBack": "Sin volver en 12 meses",
+    "lastDivedGroup": "Inmersión más reciente primero",
+    "lastDived": "última inmersión {date}",
+    "neverDived": "aún sin inmersiones",
+    "sortLabel": "Ordenar:",
+    "sortName": "Nombre",
+    "sortLastDived": "Última inmersión",
+    "sortAriaLabel": "Orden del registro",
+    "downloadList": "Descargar esta lista (CSV)"
   },
   "header": {
     "noContactDetails": "Aún sin datos de contacto",
@@ -176,7 +206,8 @@
     "emergencyContactPhoneLabel": "Teléfono del contacto de emergencia",
     "saving": "Guardando…",
     "saveDetails": "Guardar datos",
-    "visits": "{count, plural, one {# visita} other {# visitas}}"
+    "visits": "{count, plural, one {# visita} other {# visitas}}",
+    "packageBalance": "Paquete: quedan {left} de {of, plural, one {# inmersión} other {# inmersiones}}"
   },
   "bookActivity": {
     "courseOrDiveLabel": "Salida",
@@ -390,6 +421,8 @@
   "notices": {
     "alreadyBooked": "Este buceador ya está reservado en esa actividad.",
     "booked": "Reservado. Revísalo abajo, luego crea y envía la factura.",
+    "bookedConfirmed": "Reservado, y su confirmación va en camino. Revísalo abajo, luego crea y envía la factura.",
+    "bookedConfirmedNoInvoice": "Reservado, y su confirmación va en camino.",
     "bookedNoInvoice": "Reservado.",
     "bookedWaiverUndelivered": "Reservado, pero no se envió su exención por correo. Abre la pestaña Buceadores de la salida para enviarla o compartir el enlace.",
     "bookedIdentityUnconfirmed": "Reservado, pero la plaza queda retenida hasta que confirmes que es la misma persona. Abre la pestaña Buceadores de la salida para confirmarlo.",
