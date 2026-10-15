@@ -1144,7 +1144,8 @@
   Only a **physician clearance** ends it, or a clean later release standing over it (below). A
   cleared record keeps its status, so the signed records' **Medical holds** view lists every
   referral, and each row says where it stands: Waiting on physician, Cleared by physician, or Not
-  cleared.
+  cleared. A diver a captain boarded over the hold keeps it named on their manifest row after a
+  dive: in the row's capsule, or in the person panel when a louder fact takes the capsule.
 - **Physician clearance** — the shop recording that a physician evaluated a diver the medical
   questionnaire had **referred**, and cleared them to dive. It is the only thing that clears that
   `medical_review` record itself (a clean later release can stand over it, below), and it is a
