@@ -1,6 +1,6 @@
 ---
 name: stacked-prs
-description: Open work as stacked pull requests — chained bases, GitHub stacks, cascading rebase, bottom-up merge, one PR's CI at a time. Use when cutting a branch or opening a PR while any stack is open, or pushing, rebasing, or landing one.
+description: Open work as stacked pull requests — chained bases, cascading rebase, bottom-up merge, one PR's CI at a time. Use when cutting a branch or opening a PR while any stack is open, or pushing, rebasing, or landing one.
 ---
 
 # Stacked pull requests

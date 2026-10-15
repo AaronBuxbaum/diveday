@@ -496,6 +496,15 @@ jobs:
         # a layer at a time (.claude/skills/stacked-prs/SKILL.md). Workers
         # stay at 2: the oversubscription argued above is per runner, and
         # more shards do not change it.
+        #
+        # Measured, main run 38789538486 (2026-10-15, a38f98bc), the first
+        # green run with six shards: Playwright 1-6 took 525, 549, 492, 528,
+        # 632 and 609 s (mean 556 s, spread 140 s), the eight visual shards
+        # 316 to 510 s (mean 419 s) and reg-suit 67 s. The Playwright shards are
+        # still the longest job, about 2 min behind the slowest visual shard,
+        # not the 7.5 min estimated above: the recorded durations undercount
+        # the specs added since they were seeded. Refresh them from this run
+        # before dealing a seventh bin.
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
