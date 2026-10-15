@@ -244,6 +244,37 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
 });
 
 /**
+ * **A walk-in family in one pass** (fifth loop, item 9): the same form takes
+ * the rest of the party, each with an "Under 18" tick, and seats them all
+ * together on the boat.
+ */
+test("a counter walk-in family is seated together from one form", async ({ page }) => {
+  const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
+  const counter = counterPath("blue-mantis", tripId);
+  await page.goto(counter);
+  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  await find.fill("Zzyzx No Such Diver");
+  await find.press("Enter");
+  await page.getByRole("link", { name: "Add as a walk-in" }).click();
+  await page.waitForURL(/\/divers\/new\?.*surface=walk-in/);
+
+  await page.getByLabel("Full name").first().fill("Quillon Brightwater");
+  await page.getByRole("button", { name: "Add another person" }).click();
+  const second = page.getByRole("group", { name: "Person 2" });
+  await second.getByLabel("Full name").fill("Mia Brightwater");
+  await second.getByLabel(/Under 18/).check();
+  await page.getByRole("button", { name: "Add another person" }).click();
+  await page.getByRole("group", { name: "Person 3" }).getByLabel("Full name").fill("Odo Brightwater");
+  await page.getByRole("button", { name: "Add to boat" }).click();
+
+  await expect(page).toHaveURL(counter);
+  await expect(page.getByText(/^Everyone is on this boat’s list, together/)).toBeVisible();
+  for (const name of ["Quillon Brightwater", "Mia Brightwater", "Odo Brightwater"]) {
+    await expect(deskRow(page, name)).toHaveCount(1);
+  }
+});
+
+/**
  * **The counter's own guess, cleared at the counter** (H-13, issues #1556 and
  * #1696).
  *
