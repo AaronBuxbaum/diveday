@@ -496,7 +496,6 @@
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 377,
     "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 409,
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
-    "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 467,
     "src/app/shop/[shopSlug]/settings/integrations/page.tsx#IntegrationsSettingsPage": 306,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
