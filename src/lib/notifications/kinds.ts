@@ -1301,6 +1301,10 @@ const courseCertifiedSchema = z.object({
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   level: z.enum(DECLARABLE_CERTIFICATION_LEVELS),
+  /** The course the shop ran: what the card says, ahead of DiveDay's rung. */
+  courseTitle: z.string().trim().min(1).max(200).optional(),
+  /** Under 15 on the recorded date, so the card is a Junior card. */
+  junior: z.literal(true).optional(),
   /** The course's agency, which issues the card; absent, the message names none. */
   agency: z.enum(CERTIFICATION_AGENCIES).optional(),
   recordedAt: z.date(),

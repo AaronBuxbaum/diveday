@@ -1,7 +1,9 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import type { CertificationLevel } from "@/lib/certification-levels";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { canonicalAgency } from "@/lib/courses";
+import { isJuniorOnDate } from "@/lib/depth-ceiling";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { courseCertifiedText } from "@/lib/notifications/course-certified";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
@@ -109,7 +111,7 @@ export async function tellCourseCertified(
   const locale = recipientLocale(person.locale, shop.defaultLocale);
   const [issuing] = row.courseId
     ? await db
-        .select({ agency: courses.agency })
+        .select({ agency: courses.agency, title: courses.title })
         .from(courses)
         .where(and(eq(courses.id, row.courseId), eq(courses.shopId, shop.id)))
         .limit(1)
@@ -117,6 +119,13 @@ export async function tellCourseCertified(
   const next = await nextCourseAfter(db, shop.id, input.level, issuing?.agency ?? null);
   // The card's issuer, named in the message only when it is one we know.
   const agency = certificationAgency.enumValues.find((value) => value === issuing?.agency);
+  const junior =
+    person.dateOfBirth != null &&
+    isJuniorOnDate(person.dateOfBirth, calendarDateInTimezone(input.recordedAt, shop.timezone));
+  const card = {
+    ...(issuing?.title ? { courseTitle: issuing.title } : {}),
+    ...(junior ? { junior: true as const } : {}),
+  };
   const origin = providers.appOrigin === undefined ? publicAppUrl() : providers.appOrigin;
   const nextCourse =
     next && origin
@@ -139,6 +148,7 @@ export async function tellCourseCertified(
           diverName: person.fullName,
           shopName: shop.name,
           level: input.level,
+          ...card,
           ...(agency ? { agency } : {}),
           recordedAt: input.recordedAt,
           timezone: shop.timezone,
@@ -155,7 +165,7 @@ export async function tellCourseCertified(
     const sent = await sendCourtesyMessage(
       {
         to: phone,
-        body: courseCertifiedText({ locale, shopName: shop.name, level: input.level }),
+        body: courseCertifiedText({ locale, shopName: shop.name, level: input.level, ...card }),
         smsStopLine: t("notifications.sms.stopLine"),
         shopName: shop.name,
       },

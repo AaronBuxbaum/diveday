@@ -5462,13 +5462,19 @@
     },
     "courseCertified": {
       "subject": "Ya tienes tu certificación {code, select, open_water {Open Water} advanced_open_water {Advanced Open Water} rescue {Rescue Diver} divemaster {Divemaster} other {Instructor}}, {firstName}",
+      "subjectJunior": "Ya tienes tu certificación {code, select, open_water {Junior Open Water} advanced_open_water {Junior Advanced Open Water} rescue {Junior Rescue Diver} other {Junior}}, {firstName}",
+      "subjectCourse": "Terminaste {course}, {firstName}",
       "recorded": "La registró {shopName} el {date}.",
-      "card": "Tu tarjeta de {agency} te la envía {agency}; este registro ya cuenta.",
-      "cardAnyAgency": "Tu tarjeta te la envía tu agencia de certificación; este registro ya cuenta.",
+      "junior": "Hasta que cumplas 15 es una tarjeta Junior, con un límite de profundidad menor.",
+      "card": "{agency} te enviará la tarjeta; este registro ya cuenta en {shopName}.",
+      "cardAnyAgency": "Tu agencia de certificación te enviará la tarjeta; este registro ya cuenta en {shopName}.",
       "next": "Tu siguiente curso: {course}"
     },
     "smsCourseCertified": {
-      "body": "{shopName}: ya tienes tu certificación {code, select, open_water {Open Water} advanced_open_water {Advanced Open Water} rescue {Rescue Diver} divemaster {Divemaster} other {Instructor}}. La tarjeta te la envía tu agencia; este registro ya cuenta."
+      "body": "{shopName}: ya tienes tu certificación {code, select, open_water {Open Water} advanced_open_water {Advanced Open Water} rescue {Rescue Diver} divemaster {Divemaster} other {Instructor}}.",
+      "bodyJunior": "{shopName}: ya tienes tu certificación {code, select, open_water {Junior Open Water} advanced_open_water {Junior Advanced Open Water} rescue {Junior Rescue Diver} other {Junior}}.",
+      "bodyCourse": "{shopName}: terminaste {course}.",
+      "card": "Tu agencia te enviará la tarjeta; este registro ya cuenta en {shopName}."
     },
     "inquiryReceived": {
       "subject": "{shopName} recibió tu petición",

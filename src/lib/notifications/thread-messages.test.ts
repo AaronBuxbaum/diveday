@@ -10,12 +10,13 @@ import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 describe("courseCertifiedEmail", () => {
   // Fourth review, item 40: the news said once, in the subject, and the body
   // answers where the card comes from rather than repeating it.
-  it("says the news once, then who recorded it, where the card comes from, and what is next", () => {
+  it("names the course the shop ran, then who recorded it, where the card comes from, and what is next", () => {
     const email = courseCertifiedEmail({
       locale: "en-US",
       diverName: "Priya Raman",
       shopName: "Blue Mantis Divers",
       level: "open_water",
+      courseTitle: "Open Water Diver",
       agency: "padi",
       recordedAt: new Date("2026-10-25T18:00:00Z"),
       timezone: "America/New_York",
@@ -24,12 +25,46 @@ describe("courseCertifiedEmail", () => {
         url: "https://diveday.test/s/blue-mantis/courses/advanced",
       },
     });
-    expect(email.subject).toBe("You’re an Open Water Diver, Priya");
+    expect(email.subject).toBe("You’ve finished Open Water Diver, Priya");
     expect(email.text).toMatch(/^Recorded by Blue Mantis Divers on Sun, Oct\s25\./);
-    expect(email.text).toContain("Your PADI card comes from PADI; this record already counts.");
-    expect(email.text).not.toContain("You’re");
+    // Counts *here*: another operator has no such record and will ask for the card.
+    expect(email.text).toContain(
+      "Your card is on its way from PADI; this record already counts with Blue Mantis Divers.",
+    );
+    expect(email.text).not.toContain("You’");
     expect(email.text).toContain("Your next course: Advanced Open Water Diver");
     expect(email.html).toContain('href="https://diveday.test/s/blue-mantis/courses/advanced"');
+  });
+
+  it("never names DiveDay's rung for another agency's card", () => {
+    // SSI's Advanced Adventurer sits on the advanced_open_water rung, but SSI
+    // has a different rating called Advanced Open Water Diver.
+    const email = courseCertifiedEmail({
+      locale: "en-US",
+      diverName: "Priya Raman",
+      shopName: "Blue Mantis Divers",
+      level: "advanced_open_water",
+      courseTitle: "Advanced Adventurer",
+      agency: "ssi",
+      recordedAt: new Date("2026-10-25T18:00:00Z"),
+      timezone: "America/New_York",
+    });
+    expect(email.subject).toBe("You’ve finished Advanced Adventurer, Priya");
+    expect(`${email.subject} ${email.text}`).not.toContain("Advanced Open Water");
+  });
+
+  it("says Junior to a diver under 15", () => {
+    const email = courseCertifiedEmail({
+      locale: "en-US",
+      diverName: "Mia Lopez",
+      shopName: "Blue Mantis Divers",
+      level: "open_water",
+      junior: true,
+      recordedAt: new Date("2026-10-25T18:00:00Z"),
+      timezone: "America/New_York",
+    });
+    expect(email.subject).toBe("You’re a Junior Open Water Diver, Mia");
+    expect(email.text).toContain("Until you turn 15 it’s a Junior card");
   });
 
   it("escapes the shop's name in the html body", () => {
@@ -56,14 +91,26 @@ describe("courseCertifiedEmail", () => {
       timezone: "America/New_York",
     });
     expect(email.subject).toBe("You’re a Rescue Diver, Sam");
-    expect(email.text).toContain("Your card comes from your training agency;");
+    expect(email.text).toContain(
+      "Your card is on its way from your training agency; this record already counts with Blue Mantis Divers.",
+    );
   });
 
-  it("says it in Spanish as a text", () => {
+  it("says it in Spanish as a text, naming the course", () => {
     expect(
-      courseCertifiedText({ locale: "es-ES", shopName: "Blue Mantis", level: "open_water" }),
+      courseCertifiedText({
+        locale: "es-ES",
+        shopName: "Blue Mantis",
+        level: "open_water",
+        courseTitle: "Open Water Diver",
+      }),
     ).toBe(
-      "Blue Mantis: ya tienes tu certificación Open Water. La tarjeta te la envía tu agencia; este registro ya cuenta.",
+      "Blue Mantis: terminaste Open Water Diver. Tu agencia te enviará la tarjeta; este registro ya cuenta en Blue Mantis.",
+    );
+    expect(
+      courseCertifiedText({ locale: "es-ES", shopName: "Blue Mantis", level: "open_water", junior: true }),
+    ).toBe(
+      "Blue Mantis: ya tienes tu certificación Junior Open Water. Hasta que cumplas 15 es una tarjeta Junior, con un límite de profundidad menor. Tu agencia te enviará la tarjeta; este registro ya cuenta en Blue Mantis.",
     );
   });
 });

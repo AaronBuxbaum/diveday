@@ -5462,13 +5462,19 @@
     },
     "courseCertified": {
       "subject": "You’re {code, select, open_water {an Open Water Diver} advanced_open_water {an Advanced Open Water Diver} rescue {a Rescue Diver} divemaster {a Divemaster} other {an Instructor}}, {firstName}",
+      "subjectJunior": "You’re {code, select, open_water {a Junior Open Water Diver} advanced_open_water {a Junior Advanced Open Water Diver} rescue {a Junior Rescue Diver} other {a Junior diver}}, {firstName}",
+      "subjectCourse": "You’ve finished {course}, {firstName}",
       "recorded": "Recorded by {shopName} on {date}.",
-      "card": "Your {agency} card comes from {agency}; this record already counts.",
-      "cardAnyAgency": "Your card comes from your training agency; this record already counts.",
+      "junior": "Until you turn 15 it’s a Junior card, with a shallower depth limit.",
+      "card": "Your card is on its way from {agency}; this record already counts with {shopName}.",
+      "cardAnyAgency": "Your card is on its way from your training agency; this record already counts with {shopName}.",
       "next": "Your next course: {course}"
     },
     "smsCourseCertified": {
-      "body": "{shopName}: you’re {code, select, open_water {an Open Water Diver} advanced_open_water {an Advanced Open Water Diver} rescue {a Rescue Diver} divemaster {a Divemaster} other {an Instructor}} now. Your card comes from your agency; this record already counts."
+      "body": "{shopName}: you’re {code, select, open_water {an Open Water Diver} advanced_open_water {an Advanced Open Water Diver} rescue {a Rescue Diver} divemaster {a Divemaster} other {an Instructor}} now.",
+      "bodyJunior": "{shopName}: you’re {code, select, open_water {a Junior Open Water Diver} advanced_open_water {a Junior Advanced Open Water Diver} rescue {a Junior Rescue Diver} other {a Junior diver}} now.",
+      "bodyCourse": "{shopName}: you’ve finished {course}.",
+      "card": "Your card is on its way from your agency; this record already counts with {shopName}."
     },
     "inquiryReceived": {
       "subject": "{shopName} has your request",
