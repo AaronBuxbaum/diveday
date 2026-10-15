@@ -11,6 +11,7 @@ import {
 } from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
 import { weekStartOf } from "../src/lib/week-board";
+import { clearCourseForms } from "./course-form-only";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -3987,6 +3988,7 @@ for (const scheme of ["light", "dark"] as const) {
           formTitle,
           "I will dive within the limits of my training and plan every dive with my buddy.\n\nI will tell the instructor before any session if anything about my health changes.",
         );
+        await clearCourseForms(page, "open-water-diver");
         await requireCourseForm(page, "open-water-diver", formTitle);
         // 24 days out, clear of the seeded sessions whose crew would clash.
         await scheduleCrewedOpenWaterSession(page, "Open Water Diver — forms", 24);
