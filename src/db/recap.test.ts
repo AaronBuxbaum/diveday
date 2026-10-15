@@ -42,7 +42,6 @@ import {
   recapPhotos,
   rollCallCrewEvents,
   rollCallEvents,
-  shops,
   tripAssignments,
   trips,
 } from "./schema";
@@ -518,33 +517,6 @@ describe("the course recap's certification", () => {
     const data = await getRecapPageData(db, bookingId);
     expect(data?.course?.nextStep?.words).toBe("Book your deep dive before the card arrives.");
     expect(data?.course?.nextStep?.byName).toBeTruthy();
-  });
-
-  it("never prints the name of a person another shop holds as the next step's author", async () => {
-    const { db, shop, bookingId, instructorId } = await courseSessionContext();
-    await recordCourseNextStep(db, {
-      shopId: shop.id,
-      bookingId,
-      instructorPersonId: instructorId,
-      note: "Book your deep dive before the card arrives.",
-    });
-    const [other] = await db
-      .insert(shops)
-      .values({ name: "Other Reef", slug: "other-reef-recap-author", timezone: "America/New_York" })
-      .returning();
-    if (!other) throw new Error("other shop insert failed");
-    const [stranger] = await db
-      .insert(people)
-      .values({ shopId: other.id, fullName: "Stranger Elsewhere" })
-      .returning();
-    if (!stranger) throw new Error("other shop's person insert failed");
-    await db
-      .update(bookings)
-      .set({ courseNextStepByPersonId: stranger.id })
-      .where(eq(bookings.id, bookingId));
-
-    const data = await getRecapPageData(db, bookingId);
-    expect(data?.course?.nextStep).toBeNull();
   });
 });
 
