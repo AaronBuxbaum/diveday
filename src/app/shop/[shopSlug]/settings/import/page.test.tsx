@@ -4,9 +4,11 @@ import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import type { DiveDaySession } from "@/lib/auth";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 // Same mocking shape as ../embed/page.test.tsx: the page is invoked directly,
 // outside Next's request scope, so the three things that only exist inside one
@@ -42,7 +44,7 @@ function listItems(node: unknown, found: ReactElement<HostProps>[] = []) {
 }
 
 async function renderImport(what?: string) {
-  const db: AppDb = await seededTestDb();
+  const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
   const personId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);

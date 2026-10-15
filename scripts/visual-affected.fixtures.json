@@ -1,0 +1,682 @@
+{
+  "2521": {
+    "files": ["package.json", "scripts/check-repo.mjs", "vercel.json"],
+    "packageJson": null
+  },
+  "2522": {
+    "files": [
+      ".env.example",
+      "config/env-registry.mjs",
+      "drizzle/20261013035638_stripe-object-and-person-indexes/migration.sql",
+      "e2e/add-diver.spec.ts",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "scripts/check-env-reads.mjs",
+      "src/db/schema/departure-desk.ts",
+      "src/i18n/locales/en-US/staff/closeout.json",
+      "src/i18n/locales/en-US/staff/desk.json",
+      "src/i18n/locales/en-US/staff/divers.json",
+      "src/i18n/locales/en-US/staff/trips.json",
+      "src/i18n/locales/es-ES/staff/closeout.json",
+      "src/i18n/locales/es-ES/staff/desk.json",
+      "src/i18n/locales/es-ES/staff/divers.json",
+      "src/i18n/locales/es-ES/staff/trips.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/staff/closeout.json": ["notice.recapSendLimit"],
+      "src/i18n/locales/en-US/staff/desk.json": ["departureNote.refusals.sendLimit"],
+      "src/i18n/locales/en-US/staff/divers.json": ["notices.removeCrewUpcoming"],
+      "src/i18n/locales/en-US/staff/trips.json": ["rehearsal.kept"],
+      "src/i18n/locales/es-ES/staff/closeout.json": ["notice.recapSendLimit"],
+      "src/i18n/locales/es-ES/staff/desk.json": ["departureNote.refusals.sendLimit"],
+      "src/i18n/locales/es-ES/staff/divers.json": ["notices.removeCrewUpcoming"],
+      "src/i18n/locales/es-ES/staff/trips.json": ["rehearsal.kept"]
+    },
+    "packageJson": null
+  },
+  "2524": {
+    "files": [
+      "e2e/readiness.spec.ts",
+      "scripts/check-tinted-ink.mjs",
+      "src/i18n/locales/en-US/staff/trips.json",
+      "src/i18n/locales/es-ES/staff/trips.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/staff/trips.json": ["roster.paymentStatusLabel"],
+      "src/i18n/locales/es-ES/staff/trips.json": ["roster.paymentStatusLabel"]
+    }
+  },
+  "2526": {
+    "files": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/durations-refresh.yml",
+      "e2e/fixtures.ts",
+      "e2e/staff-nav.spec.ts",
+      "e2e/visual.spec.ts",
+      "scripts/agent-doctor.mjs",
+      "scripts/visual-affected.mjs",
+      "scripts/visual-compare.mjs",
+      "scripts/visual-fill.mjs",
+      "scripts/visual-pr-comment.mjs",
+      "vitest.config.ts"
+    ]
+  },
+  "2527": {
+    "files": ["scripts/agent-doctor.mjs"]
+  },
+  "2529": {
+    "files": ["src/i18n/locales/en-US/diver.json", "src/i18n/locales/es-ES/diver.json"],
+    "keys": {
+      "src/i18n/locales/en-US/diver.json": [
+        "marketing.privacy.keep.intro",
+        "marketing.privacy.keep.safety"
+      ],
+      "src/i18n/locales/es-ES/diver.json": [
+        "marketing.privacy.keep.intro",
+        "marketing.privacy.keep.safety"
+      ]
+    }
+  },
+  "2544": {
+    "files": [
+      ".github/actions/setup/action.yml",
+      ".github/workflows/ci.yml",
+      "scripts/ci-runner-pick.mjs"
+    ]
+  },
+  "2547": {
+    "files": [
+      "e2e/check-in.spec.ts",
+      "e2e/fixtures.ts",
+      "e2e/visual.spec.ts",
+      "scripts/check-adrs.mjs",
+      "src/app/_fonts/OFL-Atkinson-Hyperlegible.txt",
+      "src/app/globals.css",
+      "src/db/__snapshots__/export-bundle.shop.snap",
+      "src/db/schema/activity.ts",
+      "src/db/seed-clock.test.ts",
+      "src/i18n/locales/en-US/diver.json",
+      "src/i18n/locales/en-US/staff/activity.json",
+      "src/i18n/locales/en-US/staff/checkIn.json",
+      "src/i18n/locales/en-US/staff/diveSites.json",
+      "src/i18n/locales/en-US/staff/gear.json",
+      "src/i18n/locales/en-US/staff/manifest.json",
+      "src/i18n/locales/en-US/staff/settings.json",
+      "src/i18n/locales/en-US/staff/shared.json",
+      "src/i18n/locales/en-US/staff/shopHome.json",
+      "src/i18n/locales/en-US/staff/trips.json",
+      "src/i18n/locales/es-ES/diver.json",
+      "src/i18n/locales/es-ES/staff/activity.json",
+      "src/i18n/locales/es-ES/staff/checkIn.json",
+      "src/i18n/locales/es-ES/staff/diveSites.json",
+      "src/i18n/locales/es-ES/staff/gear.json",
+      "src/i18n/locales/es-ES/staff/manifest.json",
+      "src/i18n/locales/es-ES/staff/settings.json",
+      "src/i18n/locales/es-ES/staff/shared.json",
+      "src/i18n/locales/es-ES/staff/shopHome.json",
+      "src/i18n/locales/es-ES/staff/trips.json",
+      "vercel.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/diver.json": [
+        "notifications.reminderAction.certificationMissing",
+        "notifications.reminderAction.certificationInsufficient"
+      ],
+      "src/i18n/locales/en-US/staff/activity.json": [
+        "line.seat_added_from_trip_link",
+        "line.departure_offered"
+      ],
+      "src/i18n/locales/en-US/staff/checkIn.json": ["notice.offerAlreadySent"],
+      "src/i18n/locales/en-US/staff/diveSites.json": [
+        "-form.depthRangePlaceholder",
+        "form.depthRangePlaceholderFeet"
+      ],
+      "src/i18n/locales/en-US/staff/gear.json": ["unit.status.returnedConcern"],
+      "src/i18n/locales/en-US/staff/manifest.json": [
+        "medicalRidingOnlyNotClearedChip",
+        "medicalRidingOnlyReferralChip"
+      ],
+      "src/i18n/locales/en-US/staff/settings.json": ["team.notice.sendLimit"],
+      "src/i18n/locales/en-US/staff/shared.json": [
+        "rescheduleHold.tellingPlace",
+        "rescheduleHold.toldPlace"
+      ],
+      "src/i18n/locales/en-US/staff/shopHome.json": [
+        "firstRun.unitsBody",
+        "firstRun.unitsFahrenheit"
+      ],
+      "src/i18n/locales/en-US/staff/trips.json": [
+        "preDepartureCheck.checkedLabel",
+        "roster.waiverHeldRehearsal"
+      ],
+      "src/i18n/locales/es-ES/diver.json": [
+        "notifications.reminderAction.certificationMissing",
+        "notifications.reminderAction.certificationInsufficient"
+      ],
+      "src/i18n/locales/es-ES/staff/activity.json": [
+        "line.seat_added_from_trip_link",
+        "line.departure_offered"
+      ],
+      "src/i18n/locales/es-ES/staff/checkIn.json": ["notice.offerAlreadySent"],
+      "src/i18n/locales/es-ES/staff/diveSites.json": [
+        "-form.depthRangePlaceholder",
+        "form.depthRangePlaceholderFeet"
+      ],
+      "src/i18n/locales/es-ES/staff/gear.json": ["unit.status.returnedConcern"],
+      "src/i18n/locales/es-ES/staff/manifest.json": [
+        "medicalRidingOnlyNotClearedChip",
+        "medicalRidingOnlyReferralChip"
+      ],
+      "src/i18n/locales/es-ES/staff/settings.json": ["team.notice.sendLimit"],
+      "src/i18n/locales/es-ES/staff/shared.json": [
+        "rescheduleHold.tellingPlace",
+        "rescheduleHold.toldPlace"
+      ],
+      "src/i18n/locales/es-ES/staff/shopHome.json": [
+        "firstRun.unitsBody",
+        "firstRun.unitsFahrenheit"
+      ],
+      "src/i18n/locales/es-ES/staff/trips.json": [
+        "preDepartureCheck.checkedLabel",
+        "roster.waiverHeldRehearsal"
+      ]
+    }
+  },
+  "2565": {
+    "files": [
+      "e2e/booking.spec.ts",
+      "e2e/visual.spec.ts",
+      "package.json",
+      "scripts/check-repo.mjs",
+      "src/i18n/locales/en-US/diver.json",
+      "src/i18n/locales/en-US/staff/divers.json",
+      "src/i18n/locales/en-US/staff/inbox.json",
+      "src/i18n/locales/en-US/staff/incidents.json",
+      "src/i18n/locales/en-US/staff/reports.json",
+      "src/i18n/locales/en-US/staff/reviews.json",
+      "src/i18n/locales/en-US/staff/settings.json",
+      "src/i18n/locales/en-US/staff/shared.json",
+      "src/i18n/locales/en-US/staff/shopHome.json",
+      "src/i18n/locales/en-US/staff/staffing.json",
+      "src/i18n/locales/en-US/staff/today.json",
+      "src/i18n/locales/en-US/staff/trips.json",
+      "src/i18n/locales/es-ES/diver.json",
+      "src/i18n/locales/es-ES/staff/divers.json",
+      "src/i18n/locales/es-ES/staff/inbox.json",
+      "src/i18n/locales/es-ES/staff/incidents.json",
+      "src/i18n/locales/es-ES/staff/reports.json",
+      "src/i18n/locales/es-ES/staff/reviews.json",
+      "src/i18n/locales/es-ES/staff/settings.json",
+      "src/i18n/locales/es-ES/staff/shared.json",
+      "src/i18n/locales/es-ES/staff/shopHome.json",
+      "src/i18n/locales/es-ES/staff/staffing.json",
+      "src/i18n/locales/es-ES/staff/today.json",
+      "src/i18n/locales/es-ES/staff/trips.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/diver.json": ["-fallback.todayUntil", "fallback.todayEnds"],
+      "src/i18n/locales/en-US/staff/divers.json": ["list.viewNeedsAttention"],
+      "src/i18n/locales/en-US/staff/inbox.json": ["group.waiting"],
+      "src/i18n/locales/en-US/staff/incidents.json": [
+        "safety.crewDetailUnrecorded",
+        "safety.unrecordedTitle"
+      ],
+      "src/i18n/locales/en-US/staff/reports.json": ["byLine.caption", "metrics.revenueBasis"],
+      "src/i18n/locales/en-US/staff/reviews.json": ["group.waiting", "group.published"],
+      "src/i18n/locales/en-US/staff/settings.json": ["-team.languagesEmpty"],
+      "src/i18n/locales/en-US/staff/shared.json": [
+        "-capacity.spotsLeft",
+        "-diveIntent.aboardToday"
+      ],
+      "src/i18n/locales/en-US/staff/shopHome.json": ["-spine.spotsOpen", "spine.seatsOpen"],
+      "src/i18n/locales/en-US/staff/staffing.json": ["credentials.noneOnFile"],
+      "src/i18n/locales/en-US/staff/today.json": [
+        "-todayQueue.withheldDeskWork",
+        "-detail.missingFit"
+      ],
+      "src/i18n/locales/en-US/staff/trips.json": ["-about.perSeat", "notices.bookingRemoved"],
+      "src/i18n/locales/es-ES/diver.json": ["-fallback.todayUntil", "fallback.todayEnds"],
+      "src/i18n/locales/es-ES/staff/divers.json": ["list.viewNeedsAttention"],
+      "src/i18n/locales/es-ES/staff/inbox.json": ["group.waiting"],
+      "src/i18n/locales/es-ES/staff/incidents.json": [
+        "safety.crewDetailUnrecorded",
+        "safety.unrecordedTitle"
+      ],
+      "src/i18n/locales/es-ES/staff/reports.json": ["byLine.caption", "metrics.revenueBasis"],
+      "src/i18n/locales/es-ES/staff/reviews.json": ["group.waiting", "group.published"],
+      "src/i18n/locales/es-ES/staff/settings.json": ["-team.languagesEmpty"],
+      "src/i18n/locales/es-ES/staff/shared.json": [
+        "-capacity.spotsLeft",
+        "-diveIntent.aboardToday"
+      ],
+      "src/i18n/locales/es-ES/staff/shopHome.json": ["-spine.spotsOpen", "spine.seatsOpen"],
+      "src/i18n/locales/es-ES/staff/staffing.json": ["credentials.noneOnFile"],
+      "src/i18n/locales/es-ES/staff/today.json": [
+        "-todayQueue.withheldDeskWork",
+        "-detail.missingFit"
+      ],
+      "src/i18n/locales/es-ES/staff/trips.json": ["-about.perSeat", "notices.bookingRemovedForfeit"]
+    },
+    "packageJson": null
+  },
+  "2575": {
+    "files": [
+      "e2e/arrival-arc.spec.ts",
+      "scripts/ratchets.json",
+      "src/db/__snapshots__/export-bundle.shop.snap",
+      "src/db/seed-bookings.test.ts",
+      "src/i18n/locales/en-US/staff/activity.json",
+      "src/i18n/locales/en-US/staff/inbox.json",
+      "src/i18n/locales/en-US/staff/shopHome.json",
+      "src/i18n/locales/en-US/staff/staffing.json",
+      "src/i18n/locales/en-US/staff/trips.json",
+      "src/i18n/locales/es-ES/staff/activity.json",
+      "src/i18n/locales/es-ES/staff/inbox.json",
+      "src/i18n/locales/es-ES/staff/shopHome.json",
+      "src/i18n/locales/es-ES/staff/staffing.json",
+      "src/i18n/locales/es-ES/staff/trips.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/staff/activity.json": ["line.running_late_from_message"],
+      "src/i18n/locales/en-US/staff/inbox.json": ["seat", "late.action"],
+      "src/i18n/locales/en-US/staff/shopHome.json": ["spine.openBoat"],
+      "src/i18n/locales/en-US/staff/staffing.json": ["week.continuedFrom", "week.continuedUntil"],
+      "src/i18n/locales/en-US/staff/trips.json": ["checkInOpen", "about.meetingPoint"],
+      "src/i18n/locales/es-ES/staff/activity.json": ["line.running_late_from_message"],
+      "src/i18n/locales/es-ES/staff/inbox.json": ["seat", "late.action"],
+      "src/i18n/locales/es-ES/staff/shopHome.json": ["spine.openBoat"],
+      "src/i18n/locales/es-ES/staff/staffing.json": ["week.continuedFrom", "week.continuedUntil"],
+      "src/i18n/locales/es-ES/staff/trips.json": ["checkInOpen", "about.meetingPoint"]
+    }
+  },
+  "2576": {
+    "files": [
+      "drizzle/20261013181546_booking-minor-declared/migration.sql",
+      "e2e/a11y.spec.ts",
+      "e2e/helpers.ts",
+      "e2e/visual.spec.ts",
+      "public/dive-sites/French Angelfish Molasses Reef 20080309.jpg",
+      "scripts/ratchets.json",
+      "src/db/__snapshots__/export-bundle.divers.snap",
+      "src/db/__snapshots__/export-bundle.shop.snap",
+      "src/db/__snapshots__/export-shared-files.test.ts.snap",
+      "src/db/schema/bookings.ts",
+      "src/db/seed-bookings.ts",
+      "src/i18n/locales/en-US/diver.json",
+      "src/i18n/locales/en-US/staff/shared.json",
+      "src/i18n/locales/en-US/staff/today.json",
+      "src/i18n/locales/es-ES/diver.json",
+      "src/i18n/locales/es-ES/staff/shared.json",
+      "src/i18n/locales/es-ES/staff/today.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/diver.json": ["trip.timeline.boatRide", "packages.scopeAll"],
+      "src/i18n/locales/en-US/staff/shared.json": ["readiness.blockers.certificationNotYet"],
+      "src/i18n/locales/en-US/staff/today.json": ["blockerRow.certificationNotYet"],
+      "src/i18n/locales/es-ES/diver.json": ["trip.timeline.boatRide", "packages.scopeAll"],
+      "src/i18n/locales/es-ES/staff/shared.json": ["readiness.blockers.certificationNotYet"],
+      "src/i18n/locales/es-ES/staff/today.json": ["blockerRow.certificationNotYet"]
+    }
+  },
+  "2578": {
+    "files": [
+      "drizzle/20261014024814_date-request-handled/migration.sql",
+      "e2e/date-requests.spec.ts",
+      "e2e/visual.spec.ts",
+      "scripts/ratchets.json",
+      "src/db/__snapshots__/export-bundle.shop.snap",
+      "src/db/schema/courses.ts",
+      "src/i18n/locales/en-US/diver.json",
+      "src/i18n/locales/en-US/staff/activity.json",
+      "src/i18n/locales/en-US/staff/requests.json",
+      "src/i18n/locales/en-US/staff/schedule.json",
+      "src/i18n/locales/en-US/staff/trips.json",
+      "src/i18n/locales/es-ES/diver.json",
+      "src/i18n/locales/es-ES/staff/activity.json",
+      "src/i18n/locales/es-ES/staff/requests.json",
+      "src/i18n/locales/es-ES/staff/schedule.json",
+      "src/i18n/locales/es-ES/staff/trips.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/diver.json": [
+        "recap.course.nextStepByInstructor",
+        "notifications.sms.rescheduledSeat"
+      ],
+      "src/i18n/locales/en-US/staff/activity.json": [
+        "line.seat_moved_away",
+        "line.seat_moved_here"
+      ],
+      "src/i18n/locales/en-US/staff/requests.json": ["markDone", "reopen"],
+      "src/i18n/locales/en-US/staff/schedule.json": [
+        "notices.daysOutOfOrder",
+        "notices.daysSpanRepeat"
+      ],
+      "src/i18n/locales/en-US/staff/trips.json": ["notices.seatMoved", "notices.seatMovedUntold"],
+      "src/i18n/locales/es-ES/diver.json": [
+        "recap.course.nextStepByInstructor",
+        "notifications.sms.rescheduledSeat"
+      ],
+      "src/i18n/locales/es-ES/staff/activity.json": [
+        "line.seat_moved_away",
+        "line.seat_moved_here"
+      ],
+      "src/i18n/locales/es-ES/staff/requests.json": ["markDone", "reopen"],
+      "src/i18n/locales/es-ES/staff/schedule.json": [
+        "notices.daysOutOfOrder",
+        "notices.daysSpanRepeat"
+      ],
+      "src/i18n/locales/es-ES/staff/trips.json": ["notices.seatMoved", "notices.seatMovedUntold"]
+    }
+  },
+  "2579": {
+    "files": [
+      "e2e/boat-safety.spec.ts",
+      "e2e/visual.spec.ts",
+      "scripts/ratchets.json",
+      "src/i18n/locales/en-US/diver.json",
+      "src/i18n/locales/en-US/staff/courses.json",
+      "src/i18n/locales/en-US/staff/gear.json",
+      "src/i18n/locales/en-US/staff/orders.json",
+      "src/i18n/locales/en-US/staff/shopHome.json",
+      "src/i18n/locales/en-US/staff/waiversStaff.json",
+      "src/i18n/locales/es-ES/diver.json",
+      "src/i18n/locales/es-ES/staff/courses.json",
+      "src/i18n/locales/es-ES/staff/gear.json",
+      "src/i18n/locales/es-ES/staff/orders.json",
+      "src/i18n/locales/es-ES/staff/shopHome.json",
+      "src/i18n/locales/es-ES/staff/waiversStaff.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/diver.json": [
+        "notifications.weeklyDigest.money.heading",
+        "notifications.weeklyDigest.money.took"
+      ],
+      "src/i18n/locales/en-US/staff/courses.json": ["list.searchLabel", "list.searchPlaceholder"],
+      "src/i18n/locales/en-US/staff/gear.json": ["-addUnit.door"],
+      "src/i18n/locales/en-US/staff/orders.json": ["detail.openTrip", "detail.balanceOwed"],
+      "src/i18n/locales/en-US/staff/shopHome.json": [
+        "firstRun.releaseTitle",
+        "firstRun.releaseBody"
+      ],
+      "src/i18n/locales/en-US/staff/waiversStaff.json": [
+        "-signatures.medicalFlag",
+        "releaseDescription.sampleLive"
+      ],
+      "src/i18n/locales/es-ES/diver.json": [
+        "notifications.weeklyDigest.money.heading",
+        "notifications.weeklyDigest.money.took"
+      ],
+      "src/i18n/locales/es-ES/staff/courses.json": ["list.searchLabel", "list.searchPlaceholder"],
+      "src/i18n/locales/es-ES/staff/gear.json": ["-addUnit.door"],
+      "src/i18n/locales/es-ES/staff/orders.json": ["detail.openTrip", "detail.balanceOwed"],
+      "src/i18n/locales/es-ES/staff/shopHome.json": [
+        "firstRun.releaseTitle",
+        "firstRun.releaseBody"
+      ],
+      "src/i18n/locales/es-ES/staff/waiversStaff.json": [
+        "-signatures.medicalFlag",
+        "releaseDescription.sampleLive"
+      ]
+    }
+  },
+  "2580": {
+    "files": [
+      "e2e/boat-loop.spec.ts",
+      "scripts/check-shop-word.mjs",
+      "src/i18n/locales/en-US/diver.json",
+      "src/i18n/locales/en-US/staff/backup.json",
+      "src/i18n/locales/en-US/staff/boats.json",
+      "src/i18n/locales/en-US/staff/calendar.json",
+      "src/i18n/locales/en-US/staff/counterRentals.json",
+      "src/i18n/locales/en-US/staff/diveSites.json",
+      "src/i18n/locales/en-US/staff/divers.json",
+      "src/i18n/locales/en-US/staff/lenses.json",
+      "src/i18n/locales/en-US/staff/manifest.json",
+      "src/i18n/locales/en-US/staff/promos.json",
+      "src/i18n/locales/en-US/staff/settings.json",
+      "src/i18n/locales/en-US/staff/shared.json",
+      "src/i18n/locales/en-US/staff/tripPrep.json",
+      "src/i18n/locales/en-US/staff/trips.json",
+      "src/i18n/locales/es-ES/diver.json",
+      "src/i18n/locales/es-ES/staff/backup.json",
+      "src/i18n/locales/es-ES/staff/boats.json",
+      "src/i18n/locales/es-ES/staff/calendar.json",
+      "src/i18n/locales/es-ES/staff/counterRentals.json",
+      "src/i18n/locales/es-ES/staff/divers.json",
+      "src/i18n/locales/es-ES/staff/lenses.json",
+      "src/i18n/locales/es-ES/staff/manifest.json",
+      "src/i18n/locales/es-ES/staff/print.json",
+      "src/i18n/locales/es-ES/staff/promos.json",
+      "src/i18n/locales/es-ES/staff/settings.json",
+      "src/i18n/locales/es-ES/staff/shared.json",
+      "src/i18n/locales/es-ES/staff/tripPrep.json",
+      "src/i18n/locales/es-ES/staff/trips.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/diver.json": ["recap.photoLimitReached"],
+      "src/i18n/locales/en-US/staff/backup.json": ["deliveryError.bucket_not_found"],
+      "src/i18n/locales/en-US/staff/boats.json": ["divingOptionsSubmitting", "submitting"],
+      "src/i18n/locales/en-US/staff/calendar.json": ["actions.copyFailed"],
+      "src/i18n/locales/en-US/staff/counterRentals.json": [
+        "new.notice.unitUnavailable",
+        "new.notice.duplicate"
+      ],
+      "src/i18n/locales/en-US/staff/diveSites.json": [
+        "form.difficultyUnset",
+        "edit.templateUpdates.keepEditsHint"
+      ],
+      "src/i18n/locales/en-US/staff/divers.json": [
+        "guardianEmail.confirmHint",
+        "notices.mergeBookingConflict"
+      ],
+      "src/i18n/locales/en-US/staff/lenses.json": ["submitting", "adding"],
+      "src/i18n/locales/en-US/staff/manifest.json": ["seen.offlineLabel", "buddyDragHint"],
+      "src/i18n/locales/en-US/staff/promos.json": ["fields.whatForHint", "copyCodeFailed"],
+      "src/i18n/locales/en-US/staff/settings.json": [
+        "main.profile.descriptionPlaceholder",
+        "main.support.description"
+      ],
+      "src/i18n/locales/en-US/staff/shared.json": ["medicalClearance.evidenceHint"],
+      "src/i18n/locales/en-US/staff/tripPrep.json": ["rentalKitEmptyNeedsSortingHeading"],
+      "src/i18n/locales/en-US/staff/trips.json": ["notices.reinstated", "detail.linkCopied"],
+      "src/i18n/locales/es-ES/diver.json": ["common.smsConsent", "trip.arrivalParking"],
+      "src/i18n/locales/es-ES/staff/backup.json": ["deliveryError.bucket_not_found"],
+      "src/i18n/locales/es-ES/staff/boats.json": ["divingOptionsSubmitting", "submitting"],
+      "src/i18n/locales/es-ES/staff/calendar.json": ["actions.copyFailed"],
+      "src/i18n/locales/es-ES/staff/counterRentals.json": [
+        "new.notice.unitUnavailable",
+        "new.notice.duplicate"
+      ],
+      "src/i18n/locales/es-ES/staff/divers.json": [
+        "guardianEmail.confirmHint",
+        "notices.mergeBookingConflict"
+      ],
+      "src/i18n/locales/es-ES/staff/lenses.json": ["submitting", "adding"],
+      "src/i18n/locales/es-ES/staff/manifest.json": ["buddyDragHint"],
+      "src/i18n/locales/es-ES/staff/print.json": ["sheet.pass.parking"],
+      "src/i18n/locales/es-ES/staff/promos.json": ["fields.whatForHint", "copyCodeFailed"],
+      "src/i18n/locales/es-ES/staff/settings.json": [
+        "main.profile.descriptionPlaceholder",
+        "main.certCheck.description"
+      ],
+      "src/i18n/locales/es-ES/staff/shared.json": [
+        "medicalClearance.evidenceHint",
+        "rentalFit.itemLabels.diveComputer"
+      ],
+      "src/i18n/locales/es-ES/staff/tripPrep.json": ["rentalKitEmptyNeedsSortingHeading"],
+      "src/i18n/locales/es-ES/staff/trips.json": ["notices.reinstated", "detail.linkCopied"]
+    }
+  },
+  "2581": {
+    "files": [
+      "public/dive-sites/1973Duane.jpg",
+      "src/db/__snapshots__/export-bundle.shop.snap",
+      "src/db/seed-dive-sites.ts"
+    ]
+  },
+  "2582": {
+    "files": []
+  },
+  "2584": {
+    "files": ["scripts/guard-push.mjs"]
+  },
+  "2585": {
+    "files": [
+      "infra/lib/audit-trail.test.ts",
+      "infra/lib/email-stack.ts",
+      "infra/lib/infra-stack.ts"
+    ]
+  },
+  "2586": {
+    "files": ["scripts/import-vercel-env.mjs"]
+  },
+  "2588": {
+    "files": ["scripts/ratchets.json"]
+  },
+  "2590": {
+    "files": [
+      ".gitignore",
+      "e2e/dive-sites.spec.ts",
+      "package.json",
+      "public/dive-sites/1973Duane.jpg",
+      "public/marine-life/bar-jack.jpg",
+      "scripts/content-coverage.ts",
+      "src/content/photo-records.json",
+      "src/db/__snapshots__/export-bundle.shop.snap",
+      "src/db/seed-bookings.ts",
+      "src/i18n/locales/en-US/staff/shopHome.json",
+      "src/i18n/locales/es-ES/staff/shopHome.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/staff/shopHome.json": ["firstRun.siteBody"],
+      "src/i18n/locales/es-ES/staff/shopHome.json": ["firstRun.siteBody"]
+    },
+    "packageJson": null
+  },
+  "2591": {
+    "files": ["scripts/ratchets.json"]
+  },
+  "2593": {
+    "files": [
+      "infra/lib/infra-stack.ts",
+      "public/marine-life/almaco-jack.jpg",
+      "scripts/check-locale.mjs",
+      "src/content/photo-records.json",
+      "src/content/species-coverage.json",
+      "src/db/__snapshots__/export-bundle.shop.snap",
+      "src/i18n/locales/en-US/diver.json",
+      "src/i18n/locales/es-ES/diver.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/diver.json": [
+        "marineLife.species.caribbean-reef-shark.tip",
+        "marineLife.species.chain-moray.tip"
+      ],
+      "src/i18n/locales/es-ES/diver.json": [
+        "marineLife.kinds.eel",
+        "marineLife.species.balloonfish.name"
+      ]
+    }
+  },
+  "2594": {
+    "files": []
+  },
+  "2596": {
+    "files": [
+      "drizzle/20261014164726_incident-kind-severity-roll-call-alert/migration.sql",
+      "e2e/incident-reports.spec.ts",
+      "public/marine-life/almaco-jack.jpg",
+      "scripts/check-locale.mjs",
+      "src/content/photo-records.json",
+      "src/content/species-coverage.json",
+      "src/db/__snapshots__/export-bundle.shop.snap",
+      "src/db/schema/incidents.ts",
+      "src/i18n/locales/en-US/diver.json",
+      "src/i18n/locales/en-US/staff/incidents.json",
+      "src/i18n/locales/en-US/staff/manifest.json",
+      "src/i18n/locales/en-US/staff/today.json",
+      "src/i18n/locales/es-ES/diver.json",
+      "src/i18n/locales/es-ES/staff/incidents.json",
+      "src/i18n/locales/es-ES/staff/manifest.json",
+      "src/i18n/locales/es-ES/staff/today.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/diver.json": [
+        "marineLife.species.caribbean-reef-shark.tip",
+        "marineLife.species.chain-moray.tip"
+      ],
+      "src/i18n/locales/en-US/staff/incidents.json": ["form.kind", "form.severity"],
+      "src/i18n/locales/en-US/staff/manifest.json": [
+        "stage.openRollCall",
+        "headCountOverCertificate"
+      ],
+      "src/i18n/locales/en-US/staff/today.json": ["detail.rollCallAlerted"],
+      "src/i18n/locales/es-ES/diver.json": [
+        "marineLife.kinds.eel",
+        "marineLife.species.balloonfish.name"
+      ],
+      "src/i18n/locales/es-ES/staff/incidents.json": ["form.kind", "form.severity"],
+      "src/i18n/locales/es-ES/staff/manifest.json": [
+        "stage.openRollCall",
+        "headCountOverCertificate"
+      ],
+      "src/i18n/locales/es-ES/staff/today.json": ["detail.rollCallAlerted"]
+    }
+  },
+  "2597": {
+    "files": [
+      "drizzle/20261014195539_paid-mark-method-and-stripe-restriction/migration.sql",
+      "e2e/refunds.spec.ts",
+      "infra/lib/observability.ts",
+      "scripts/ratchets.json",
+      "src/db/__snapshots__/export-bundle.divers.snap",
+      "src/db/__snapshots__/export-bundle.shop.snap",
+      "src/db/__snapshots__/export-shared-files.test.ts.snap",
+      "src/db/schema/payments.ts",
+      "src/i18n/locales/en-US/diver.json",
+      "src/i18n/locales/en-US/staff/activity.json",
+      "src/i18n/locales/en-US/staff/today.json",
+      "src/i18n/locales/en-US/staff/trips.json",
+      "src/i18n/locales/es-ES/diver.json",
+      "src/i18n/locales/es-ES/staff/activity.json",
+      "src/i18n/locales/es-ES/staff/today.json",
+      "src/i18n/locales/es-ES/staff/trips.json"
+    ],
+    "keys": {
+      "src/i18n/locales/en-US/diver.json": ["ready.cancelConfirmParty", "ready.cancelPartyGoes"],
+      "src/i18n/locales/en-US/staff/activity.json": [
+        "line.party_seat_self_cancelled",
+        "line.party_seat_self_refunded"
+      ],
+      "src/i18n/locales/en-US/staff/today.json": [
+        "actionKind.paymentsRestricted",
+        "actionLabel.openPaymentSettings"
+      ],
+      "src/i18n/locales/en-US/staff/trips.json": ["notices.paymentAmount", "notices.paymentMethod"],
+      "src/i18n/locales/es-ES/diver.json": ["ready.cancelConfirmParty", "ready.cancelPartyGoes"],
+      "src/i18n/locales/es-ES/staff/activity.json": [
+        "line.party_seat_self_cancelled",
+        "line.party_seat_self_refunded"
+      ],
+      "src/i18n/locales/es-ES/staff/today.json": [
+        "actionKind.paymentsRestricted",
+        "actionLabel.openPaymentSettings"
+      ],
+      "src/i18n/locales/es-ES/staff/trips.json": ["notices.paymentAmount", "notices.paymentMethod"]
+    }
+  },
+  "2608": {
+    "files": ["scripts/guard-bash.mjs"]
+  },
+  "2609": {
+    "files": [
+      "e2e/dive-sites.spec.ts",
+      "public/dive-sites/Catfish Hotel Sink from left, Manatee Springs State Park.jpg",
+      "scripts/ratchets.json",
+      "src/content/coverage/florida-broward.json",
+      "src/content/photo-records.json"
+    ]
+  },
+  "_recorded": "The 28 pull requests the 2026-10-14 test review replayed (#2521-#2609): each one's changed paths outside src/**/*.ts(x) (but one seed and one schema module where it had them), docs and unit tests, one per kind (one functional spec, one script, one image per public/ folder); `keys` are a locale bundle's changed message keys (first two; a leading - means removed); `packageJson` is what packageJsonReach said on the real before and after (null: nothing that renders)."
+}

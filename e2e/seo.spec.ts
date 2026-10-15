@@ -1,11 +1,39 @@
+import type { APIRequestContext } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { expect, READ_ONLY, test } from "./fixtures";
 
 /**
  * READ_ONLY holds here: every test fetches a document — robots.txt, sitemap.xml, a
- * page's `<head>` — and asserts on its bytes.
+ * page's served HTML — and asserts on its bytes. None drives a page: what a crawler
+ * reads is the HTML the server sends, so that is what these read, through the
+ * `request` fixture (test review 2026-10-14: HTTP contracts do not need a browser).
  */
+
+/** A page's HTML as served, after the stream has finished. */
+async function servedHtml(request: APIRequestContext, path: string): Promise<string> {
+  const response = await request.get(path);
+  expect(response.status(), path).toBe(200);
+  return response.text();
+}
+
+/** Every `<meta property="…">` value of one property in served HTML, in order. */
+function metaContents(html: string, property: string): string[] {
+  const out: string[] = [];
+  for (const tag of html.match(/<meta\b[^>]*>/g) ?? []) {
+    if (!tag.includes(`property="${property}"`)) continue;
+    const content = tag.match(/\bcontent="([^"]*)"/)?.[1];
+    if (content !== undefined) out.push(content.replaceAll("&amp;", "&"));
+  }
+  return out;
+}
+
+/** Every JSON-LD block in served HTML, parsed. */
+function jsonLd(html: string): Array<Record<string, unknown>> {
+  return [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map(
+    (match) => JSON.parse(match[1]),
+  );
+}
 
 /**
  * A consolidated smoke pass over the SEO surface this batch touched:
@@ -19,8 +47,8 @@ import { expect, READ_ONLY, test } from "./fixtures";
 
 test("robots.txt disallows every token-route prefix and points at the sitemap", {
   tag: READ_ONLY,
-}, async ({ page }) => {
-  const response = await page.request.get("/robots.txt");
+}, async ({ request }) => {
+  const response = await request.get("/robots.txt");
   expect(response.ok()).toBe(true);
   const body = await response.text();
   for (const prefix of [
@@ -52,8 +80,8 @@ test("robots.txt disallows every token-route prefix and points at the sitemap", 
  */
 test("llms.txt tells an agent where the schedule, availability and booking page are", {
   tag: READ_ONLY,
-}, async ({ page }) => {
-  const response = await page.request.get("/llms.txt");
+}, async ({ request }) => {
+  const response = await request.get("/llms.txt");
   expect(response.ok()).toBe(true);
   expect(response.headers()["content-type"]).toMatch(/^text\/plain/);
   const body = await response.text();
@@ -67,8 +95,8 @@ test("llms.txt tells an agent where the schedule, availability and booking page 
 
 test("a shop's availability.json carries only what an agent needs to find a seat and hand off", {
   tag: READ_ONLY,
-}, async ({ page }) => {
-  const response = await page.request.get(`/s/${DEMO_SHOP_SLUG}/availability.json`);
+}, async ({ request }) => {
+  const response = await request.get(`/s/${DEMO_SHOP_SLUG}/availability.json`);
   expect(response.ok()).toBe(true);
   expect(response.headers()["content-type"]).toMatch(/^application\/json/);
   expect(response.headers()["cache-control"]).toContain("max-age=");
@@ -107,12 +135,11 @@ test("a shop's availability.json carries only what an agent needs to find a seat
 });
 
 test("the schedule page's JSON-LD points at the availability document", { tag: READ_ONLY }, async ({
-  page,
+  request,
 }) => {
-  await page.goto(`/s/${DEMO_SHOP_SLUG}`);
-  // `<script>` has no layout box — left unfiltered, like every head query in this file.
-  const graphs = await page.locator('script[type="application/ld+json"]').allTextContents();
-  const schedule = graphs.map((json) => JSON.parse(json)).find((graph) => graph.subjectOf);
+  const graphs = jsonLd(await servedHtml(request, `/s/${DEMO_SHOP_SLUG}`));
+  // biome-ignore lint/suspicious/noExplicitAny: a JSON-LD graph is whatever the page wrote.
+  const schedule = graphs.find((graph) => graph.subjectOf) as any;
   expect(schedule?.subjectOf).toMatchObject({
     "@type": "DataFeed",
     encodingFormat: "application/json",
@@ -132,8 +159,8 @@ test("the schedule page's JSON-LD points at the availability document", { tag: R
  */
 test("sitemap.xml lists the marketing pages, excludes the demo shop, and never leaks a token route", {
   tag: READ_ONLY,
-}, async ({ page }) => {
-  const response = await page.request.get("/sitemap.xml");
+}, async ({ request }) => {
+  const response = await request.get("/sitemap.xml");
   expect(response.ok()).toBe(true);
   const body = await response.text();
 
@@ -196,7 +223,7 @@ test("sitemap.xml lists the marketing pages, excludes the demo shop, and never l
  */
 test("an unknown URL under /s/** answers 404, not 200 with the not-found page", {
   tag: READ_ONLY,
-}, async ({ page }) => {
+}, async ({ request }) => {
   for (const path of [
     // A shop slug nobody minted.
     "/s/no-such-shop-here",
@@ -214,7 +241,7 @@ test("an unknown URL under /s/** answers 404, not 200 with the not-found page", 
     `/s/${DEMO_SHOP_SLUG}/sites/Molasses%20Reef`,
     `/s/${DEMO_SHOP_SLUG}/trips/nope`,
   ]) {
-    const res = await page.request.get(path);
+    const res = await request.get(path);
     expect(res.status(), path).toBe(404);
     // A negative answer must never be pinned to a URL that later becomes real:
     // a shop slug probed before onboarding finishes, a course slug probed
@@ -226,38 +253,33 @@ test("an unknown URL under /s/** answers 404, not 200 with the not-found page", 
   // refused at the edge since it shipped. It is asserted separately because it
   // is a complete response rather than a rewrite, and its segment is a closed
   // list in this repository that no row can turn real.
-  expect((await page.request.get(`/s/${DEMO_SHOP_SLUG}/embed/nope`)).status()).toBe(404);
+  expect((await request.get(`/s/${DEMO_SHOP_SLUG}/embed/nope`)).status()).toBe(404);
 
   for (const path of [
     `/s/${DEMO_SHOP_SLUG}`,
     `/s/${DEMO_SHOP_SLUG}/courses/discover-scuba-diving`,
   ]) {
-    expect((await page.request.get(path)).status(), path).toBe(200);
+    expect((await request.get(path)).status(), path).toBe(200);
   }
 });
 
 test("the schedule page's canonical stays on the standalone URL in both standalone and embed views, and JSON-LD only renders standalone", {
   tag: READ_ONLY,
-}, async ({ page }) => {
-  // The `.locator()` calls in this file all target `<head>` elements
-  // (link/meta/script) that never have a layout box, so
-  // `.filter({ visible: true })` would zero out every match regardless of
-  // whether the element is actually present — intentionally left unfiltered
-  // throughout this file. Each assertion also follows a fresh `page.goto`,
-  // so there's no prior client-side-navigated route to leak from anyway.
-  await page.goto(`/s/${DEMO_SHOP_SLUG}`);
-  const standaloneCanonical = await page.locator('link[rel="canonical"]').getAttribute("href");
+}, async ({ request }) => {
+  const canonicalOf = (html: string) => html.match(/<link\b[^>]*rel="canonical"[^>]*>/)?.[0];
+  const hrefOf = (tag: string | undefined) => tag?.match(/\bhref="([^"]*)"/)?.[1];
+  const standalone = await servedHtml(request, `/s/${DEMO_SHOP_SLUG}`);
+  const standaloneCanonical = hrefOf(canonicalOf(standalone));
   // Resolved against publicAppUrl()'s configured origin (never the worker's
   // own loopback baseURL, which is only where the *test* happens to talk to
   // this server) — assert the path shape, not a host this environment
   // doesn't control.
   expect(standaloneCanonical).toMatch(new RegExp(`/s/${DEMO_SHOP_SLUG}$`));
-  await expect(page.locator('script[type="application/ld+json"]').first()).toBeAttached();
+  expect(jsonLd(standalone).length).toBeGreaterThan(0);
 
-  await page.goto(`/s/${DEMO_SHOP_SLUG}?embed=1`);
-  const embedCanonical = await page.locator('link[rel="canonical"]').getAttribute("href");
-  expect(embedCanonical).toBe(standaloneCanonical);
-  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
+  const embed = await servedHtml(request, `/s/${DEMO_SHOP_SLUG}?embed=1`);
+  expect(hrefOf(canonicalOf(embed))).toBe(standaloneCanonical);
+  expect(jsonLd(embed)).toHaveLength(0);
 });
 
 /**
@@ -269,9 +291,8 @@ test("the schedule page's canonical stays on the standalone URL in both standalo
  * is exactly the place a 404 would sit unnoticed. This walks the whole hop: the
  * tag, the URL it names, and the bytes that come back from it.
  */
-test("the homepage carries a resolvable og:image", { tag: READ_ONLY }, async ({ page }) => {
-  await page.goto("/");
-  const content = await page.locator('meta[property="og:image"]').getAttribute("content");
+test("the homepage carries a resolvable og:image", { tag: READ_ONLY }, async ({ request }) => {
+  const [content] = metaContents(await servedHtml(request, "/"), "og:image");
   expect(content).toBeTruthy();
   expect(content).toMatch(/^https?:\/\//);
   expect(content, "the root layout and `/` both name the card route").toContain("/link-card");
@@ -279,7 +300,7 @@ test("the homepage carries a resolvable og:image", { tag: READ_ONLY }, async ({ 
   // Fetched relative, never through the tag's own href: `metadataBase` is baked
   // at build time from E2E_APP_HOST, which is a reserved `.example` host no
   // worker can reach (e2e/servers.ts).
-  const card = await page.request.get("/link-card");
+  const card = await request.get("/link-card");
   expect(card.ok()).toBe(true);
   expect(card.headers()["content-type"]).toContain("image/png");
   // A severed stream can still arrive as a 200 with an empty body (ADR
@@ -296,9 +317,8 @@ test("the homepage carries a resolvable og:image", { tag: READ_ONLY }, async ({ 
  */
 test("a page with no unfurl words of its own still inherits the card", {
   tag: READ_ONLY,
-}, async ({ page }) => {
-  await page.goto("/sign-in");
-  const content = await page.locator('meta[property="og:image"]').getAttribute("content");
+}, async ({ request }) => {
+  const [content] = metaContents(await servedHtml(request, "/sign-in"), "og:image");
   expect(content).toContain("/link-card");
 });
 
@@ -313,12 +333,9 @@ test("a page with no unfurl words of its own still inherits the card", {
  */
 test("every public page names the site in its unfurl, not just the ones with no words of their own", {
   tag: READ_ONLY,
-}, async ({ page }) => {
-  await page.goto(`/s/${DEMO_SHOP_SLUG}`);
-  const tripHref = await page
-    .locator(`a[href*="/s/${DEMO_SHOP_SLUG}/trips/"]`)
-    .first()
-    .getAttribute("href");
+}, async ({ request }) => {
+  const schedule = await servedHtml(request, `/s/${DEMO_SHOP_SLUG}`);
+  const tripHref = schedule.match(new RegExp(`href="(/s/${DEMO_SHOP_SLUG}/trips/[^"?#]+)`))?.[1];
   expect(tripHref, "no seeded departure to read a trip page from").toBeTruthy();
 
   for (const path of [
@@ -330,23 +347,16 @@ test("every public page names the site in its unfurl, not just the ones with no 
     // half of the pair, and the half that already worked.
     "/sign-in",
   ]) {
-    await page.goto(path);
-    expect(
-      await page.locator('meta[property="og:site_name"]').first().getAttribute("content"),
-      `${path} og:site_name`,
-    ).toBe("DiveDay");
-    expect(
-      await page.locator('meta[property="og:type"]').first().getAttribute("content"),
-      `${path} og:type`,
-    ).toBe("website");
+    const html = await servedHtml(request, path);
+    expect(metaContents(html, "og:site_name")[0], `${path} og:site_name`).toBe("DiveDay");
+    expect(metaContents(html, "og:type")[0], `${path} og:type`).toBe("website");
   }
 });
 
 test("the shop schedule page carries its own per-shop og:image", { tag: READ_ONLY }, async ({
-  page,
+  request,
 }) => {
-  await page.goto(`/s/${DEMO_SHOP_SLUG}`);
-  const content = await page.locator('meta[property="og:image"]').getAttribute("content");
+  const [content] = metaContents(await servedHtml(request, `/s/${DEMO_SHOP_SLUG}`), "og:image");
   expect(content).toBeTruthy();
   expect(content).toMatch(/^https?:\/\//);
   // Next generates a dedicated route for this file-convention image

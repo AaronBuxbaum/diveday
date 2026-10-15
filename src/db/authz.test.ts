@@ -5,6 +5,7 @@ import {
   canPersonCallDayBlowout,
   canPersonConfigureTrips,
   canPersonDeleteDiver,
+  canPersonErasePersonalData,
   canPersonExportIncidentRecord,
   canPersonManageOrders,
   canPersonManagePaymentSettings,
@@ -12,6 +13,7 @@ import {
   canPersonManageWaiverTemplates,
   canPersonOverrideGearRequest,
   canPersonReadEveryIncidentReport,
+  canPersonReadMedicalAnswers,
   canPersonReadPrivateRecapPulse,
   canPersonRefund,
   loadActiveStaffRoles,
@@ -183,6 +185,53 @@ describe("H-14 owner/manager surfaces", () => {
     }
     // Strictly tighter than the owner/manager gates it sits beside.
     expect(await canPersonRefund(db, shop.id, manager)).toBe(true);
+  });
+});
+
+describe("medical answers on a signed record (canPersonReadMedicalAnswers)", () => {
+  it("admits a live owner and manager; refuses every other staff role", async () => {
+    const { db, shop } = ctx;
+    const owner = await makeStaff(db, shop.id, ["owner"]);
+    const manager = await makeStaff(db, shop.id, ["manager"]);
+    expect(await canPersonReadMedicalAnswers(db, shop.id, owner)).toBe(true);
+    expect(await canPersonReadMedicalAnswers(db, shop.id, manager)).toBe(true);
+    for (const role of [
+      "instructor",
+      "assistant_instructor",
+      "divemaster",
+      "captain",
+      "crew",
+    ] as const) {
+      const person = await makeStaff(db, shop.id, [role]);
+      expect(await canPersonReadMedicalAnswers(db, shop.id, person)).toBe(false);
+    }
+  });
+
+  it("refuses a disabled manager, a deleted manager, and a manager of another shop", async () => {
+    const { db, shop } = ctx;
+    const disabled = await makeStaff(db, shop.id, ["manager"], { status: "disabled" });
+    const deleted = await makeStaff(db, shop.id, ["manager"], { deleted: true });
+    const manager = await makeStaff(db, shop.id, ["manager"]);
+    expect(await canPersonReadMedicalAnswers(db, shop.id, disabled)).toBe(false);
+    expect(await canPersonReadMedicalAnswers(db, shop.id, deleted)).toBe(false);
+    expect(
+      await canPersonReadMedicalAnswers(db, "00000000-0000-0000-0000-000000000000", manager),
+    ).toBe(false);
+  });
+});
+
+describe("erasure (canPersonErasePersonalData)", () => {
+  it("admits only a live owner of this shop", async () => {
+    const { db, shop } = ctx;
+    const owner = await makeStaff(db, shop.id, ["owner"]);
+    const manager = await makeStaff(db, shop.id, ["manager"]);
+    const disabledOwner = await makeStaff(db, shop.id, ["owner"], { status: "disabled" });
+    expect(await canPersonErasePersonalData(db, shop.id, owner)).toBe(true);
+    expect(await canPersonErasePersonalData(db, shop.id, manager)).toBe(false);
+    expect(await canPersonErasePersonalData(db, shop.id, disabledOwner)).toBe(false);
+    expect(
+      await canPersonErasePersonalData(db, "00000000-0000-0000-0000-000000000000", owner),
+    ).toBe(false);
   });
 });
 

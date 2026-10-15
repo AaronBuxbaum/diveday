@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
 import { listShopStaff } from "@/db/staff-accounts";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { findElements, hrefsIn } from "@/test/jsx-inspect";
 import { SETTINGS_GROUPS } from "../../settings-groups";
 import { SettingsRow } from "../SettingsRows";
@@ -23,8 +23,10 @@ import {
 } from "./groups";
 import { SettingsGroup, type SettingsView } from "./kit";
 
+const ctx = fileScopedShopContext();
+
 async function viewFor(): Promise<{ db: AppDb; view: SettingsView; personId: string }> {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const owner = (await listShopStaff(db, shop.id)).find((staff) => staff.roles.includes("owner"));
   if (!owner) throw new Error("the seed has no owner");
   const t = staffTranslator("en-US");

@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import type { CertificationLevel } from "@/lib/readiness";
+import { DEFAULT_WAIVER_BODY, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
 import { cancelBooking, createBookingParty } from "./bookings";
@@ -29,7 +30,7 @@ import {
   partySeatsKeptAfterLeadCancel,
 } from "./seat-claims";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
-import { issueWaiverRequest } from "./waivers";
+import { issueWaiverRequest, saveWaiverTemplate } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -299,7 +300,13 @@ describe("issuePartySeatClaims", () => {
       if (!issued.ok) throw new Error("waiver setup failed");
       await db
         .update(waiverRecords)
-        .set({ status: "completed", signedName: "Party Member", signatureMethod: "typed" })
+        .set({
+          status: "completed",
+          signedName: "Party Member",
+          signatureMethod: "typed",
+          signedAt: new Date(nowMs()),
+          completedAt: new Date(nowMs()),
+        })
         .where(eq(waiverRecords.bookingId, bookingId));
     }
     const signed = await issuePartySeatClaims(db, {
@@ -319,6 +326,46 @@ describe("issuePartySeatClaims", () => {
     expect(
       afterSuperseding.find((seat) => seat.bookingId === memberOne.bookingId)?.waiverSigned,
     ).toBe(false);
+  });
+
+  it("never reports a seat signed on a release that lapsed (D3)", async () => {
+    // "Signed" on the organizer's panel is the sign-once question: a release
+    // aged past its year, or signed against terms the shop has since changed,
+    // is one the diver signs again (`isCompletedWaiverCurrent`).
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne, memberTwo } = await bookParty(db, shop.id, open.id);
+    const longAgo = new Date(nowMs() - WAIVER_SIGNATURE_VALIDITY_MS - 60_000);
+    for (const [bookingId, signedAt] of [
+      [memberOne.bookingId, longAgo],
+      [memberTwo.bookingId, new Date(nowMs())],
+    ] as const) {
+      const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+      if (!issued.ok) throw new Error("waiver setup failed");
+      await db
+        .update(waiverRecords)
+        .set({
+          status: "completed",
+          signedName: "Party Member",
+          signatureMethod: "typed",
+          signedAt,
+          completedAt: signedAt,
+        })
+        .where(eq(waiverRecords.bookingId, bookingId));
+    }
+    const seatSigned = async (bookingId: string) =>
+      (await issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: lead.bookingId })).find(
+        (seat) => seat.bookingId === bookingId,
+      )?.waiverSigned;
+    expect(await seatSigned(memberOne.bookingId)).toBe(false);
+    expect(await seatSigned(memberTwo.bookingId)).toBe(true);
+
+    const terms = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      body: `${DEFAULT_WAIVER_BODY}\n\nRevised terms.`,
+      material: true,
+    });
+    expect(terms.versioned).toBe(true);
+    expect(await seatSigned(memberTwo.bookingId)).toBe(false);
   });
 
   it("stops minting once the trip has departed but keeps reporting claim status", async () => {

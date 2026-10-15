@@ -9,8 +9,10 @@ import {
   upsertIntegrationSyncRecord,
 } from "@/db/integrations";
 import { people, shopIntegrations } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { deliverXeroEvent, XERO_TOKEN_URL } from "./xero";
+
+const ctx = fileScopedShopContext();
 
 const CONFIG = { clientId: "client", clientSecret: "secret" };
 
@@ -96,7 +98,7 @@ function okResponse(body: Record<string, unknown>) {
 
 describe("deliverXeroEvent", () => {
   it("posts one bank transaction per refund slice, not only the first", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
 
     const bodies: Array<{ BankTransactions: Array<{ LineItems: Array<{ UnitAmount: number }> }> }> =
@@ -124,7 +126,7 @@ describe("deliverXeroEvent", () => {
   });
 
   it("does not post twice when one event is retried", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
 
     let calls = 0;
@@ -141,7 +143,7 @@ describe("deliverXeroEvent", () => {
   });
 
   it("sends the tenant and an idempotency key with every write", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
 
     const headers: Array<Record<string, string>> = [];
@@ -160,7 +162,7 @@ describe("deliverXeroEvent", () => {
 
   /** Settings the shop has not filled in are a refusal, never a guessed account. */
   it("refuses before calling Xero when either account code is missing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id, { salesAccountCode: "200" });
 
     let calls = 0;
@@ -176,7 +178,7 @@ describe("deliverXeroEvent", () => {
   });
 
   it("retries a Xero outage and gives up on a refusal", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
     const event = await paidEvent(db, shop.id);
 
@@ -211,7 +213,7 @@ describe("deliverXeroEvent", () => {
    * eight attempts against a grant that is gone.
    */
   it("stops on a revoked grant instead of retrying forever", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
     const event = await paidEvent(db, shop.id);
 
@@ -232,7 +234,7 @@ describe("deliverXeroEvent", () => {
 
   /** Xero rotates the refresh token, so the rotated one has to reach the row. */
   it("stores the rotated refresh token before it retries the write", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await saveShopIntegration(db, {
       shopId: shop.id,
       provider: "xero",
@@ -284,7 +286,7 @@ describe("deliverXeroEvent", () => {
 
 describe("Xero OAuth state", () => {
   it("resolves once and refuses the replay", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("expected a seeded person");
     const state = await createIntegrationOAuthState(db, {
@@ -303,7 +305,7 @@ describe("Xero OAuth state", () => {
 
   /** The callback URL names its provider; one provider's state must not open another's. */
   it("does not resolve against the QuickBooks callback", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("expected a seeded person");
     const state = await createIntegrationOAuthState(db, {
@@ -344,7 +346,7 @@ describe("deliverXeroEvent — voids", () => {
   }
 
   it("deletes the receive transaction it booked, once", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
     await upsertIntegrationSyncRecord(db, {
       shopId: shop.id,
@@ -373,7 +375,7 @@ describe("deliverXeroEvent — voids", () => {
   });
 
   it("does nothing for an order it never booked", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
     const { calls, fetchImpl } = recordingFetch();
     expect(
@@ -383,7 +385,7 @@ describe("deliverXeroEvent — voids", () => {
   });
 
   it("does not book a sale whose void is already queued", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const integration = await connectedIntegration(db, shop.id);
     const paid = await paidEvent(db, shop.id);
     const voided = await voidEvent(db, shop.id);

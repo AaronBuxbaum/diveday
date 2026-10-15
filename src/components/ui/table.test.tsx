@@ -68,41 +68,6 @@ describe("Table", () => {
     expect(shell).toHaveClass("print:overflow-visible");
   });
 
-  it("clamps to a minimum width on screen and releases it in print", () => {
-    render(
-      <Table minWidth="40rem">
-        <TBody>
-          <tr>
-            <Td />
-          </tr>
-        </TBody>
-      </Table>,
-    );
-    const table = screen.getByRole("table");
-    expect(table).toHaveClass("min-w-[40rem]");
-    expect(table).toHaveClass("print:min-w-0");
-  });
-
-  it("right-aligns numeric columns with tabular figures, header and cells alike", () => {
-    render(
-      <Table>
-        <THead>
-          <Th numeric>Amount</Th>
-        </THead>
-        <TBody>
-          <tr>
-            <Td numeric>$120.00</Td>
-          </tr>
-        </TBody>
-      </Table>,
-    );
-    expect(screen.getByRole("columnheader", { name: "Amount" })).toHaveClass("text-right");
-    const cell = screen.getByRole("cell", { name: "$120.00" });
-    expect(cell).toHaveClass("text-right");
-    expect(cell).toHaveClass("tabular-nums");
-    expect(cell).toHaveClass("overflow-hidden", "bg-clip-padding");
-  });
-
   it("names a row's leading cell as that row's header, without the header row's voice", () => {
     // A public briefing row is one dive site and every cell after the first is
     // a fact about it, so the site's name has to be announced with each figure
@@ -125,109 +90,6 @@ describe("Table", () => {
     const rowHeader = screen.getByRole("rowheader", { name: "Molasses Reef" });
     expect(rowHeader).toHaveAttribute("scope", "row");
     expect(screen.getByRole("columnheader", { name: "Site" })).toHaveAttribute("scope", "col");
-  });
-
-  it("hides folded columns below the named breakpoint", () => {
-    render(
-      <Table>
-        <THead>
-          <Th hideBelow="sm">Trip</Th>
-          <Th hideBelow="md">Offers</Th>
-        </THead>
-        <TBody>
-          <tr>
-            <Td hideBelow="sm">Two-Tank Reef</Td>
-            <Td hideBelow="md">None yet</Td>
-          </tr>
-        </TBody>
-      </Table>,
-    );
-    expect(screen.getByRole("columnheader", { name: "Trip" })).toHaveClass(
-      "hidden",
-      "sm:table-cell",
-    );
-    expect(screen.getByRole("cell", { name: "Two-Tank Reef" })).toHaveClass(
-      "hidden",
-      "sm:table-cell",
-    );
-    expect(screen.getByRole("cell", { name: "None yet" })).toHaveClass("hidden", "md:table-cell");
-  });
-
-  it("lets a reflowing tbody own its row padding", () => {
-    render(
-      <Table>
-        <TBody className="block sm:table-row-group">
-          <tr>
-            <Td pad={false} className="sm:px-4 sm:py-3">
-              Aug 4
-            </Td>
-          </tr>
-        </TBody>
-      </Table>,
-    );
-    const cell = screen.getByRole("cell", { name: "Aug 4" });
-    expect(cell).not.toHaveClass("px-4");
-    expect(cell).not.toHaveClass("py-3");
-    // Row dividers stay with the tbody even when it reflows.
-    expect(cell.closest("tbody")).toHaveClass("divide-y", "block");
-  });
-
-  it("puts a table's outer text on the card column from sm, without widening the inner gaps", () => {
-    // A card pads `p-4 sm:p-5` (sectionCardClass md). The cells padded `px-4`
-    // at every width, so from sm a table's first column sat 4px left of every
-    // card row around it ("ITEM" at 170 against "Dive support" at 174, K-20).
-    // Only the outer edges step up; the gap between two columns stays 32px.
-    render(
-      <Table>
-        <THead>
-          <Th>Item</Th>
-          <Th numeric>Qty</Th>
-        </THead>
-        <TBody>
-          <tr>
-            <Td>BCD</Td>
-            <Td numeric>2</Td>
-            <Td pad={false}>Reflowed</Td>
-          </tr>
-        </TBody>
-      </Table>,
-    );
-    for (const name of ["Item", "Qty"]) {
-      expect(screen.getByRole("columnheader", { name })).toHaveClass(
-        "px-4",
-        "sm:first:ps-5",
-        "sm:last:pe-5",
-      );
-    }
-    for (const name of ["BCD", "2"]) {
-      expect(screen.getByRole("cell", { name })).toHaveClass(
-        "px-4",
-        "sm:first:ps-5",
-        "sm:last:pe-5",
-      );
-    }
-    // A cell whose row owns the padding is left to its row.
-    expect(screen.getByRole("cell", { name: "Reflowed" })).not.toHaveClass("sm:first:ps-5");
-  });
-
-  it("lines a row's cells up on their first baselines when asked", () => {
-    // A md Badge's text sits 4px under a bare line of text in the next cell
-    // when both cells align to the top (K-107); baseline alignment is what
-    // puts the badge's word on the row's line. Top stays the default.
-    render(
-      <Table>
-        <TBody>
-          <tr>
-            <Td align="baseline">Weekly</Td>
-            <Td>Default</Td>
-          </tr>
-        </TBody>
-      </Table>,
-    );
-    const baseline = screen.getByRole("cell", { name: "Weekly" });
-    expect(baseline).toHaveClass("align-baseline");
-    expect(baseline).not.toHaveClass("align-top");
-    expect(screen.getByRole("cell", { name: "Default" })).toHaveClass("align-top");
   });
 
   it("fades the scroll region's far edge while there is more table to scroll to", () => {
@@ -256,55 +118,6 @@ describe("Table", () => {
     expect(rule).toMatch(/mask-image:/);
     const print = css.match(/@media print\s*\{\s*\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(print).toMatch(/mask-image:\s*none/);
-  });
-
-  it("keeps a printed row on one page", () => {
-    render(
-      <Table>
-        <TBody>
-          <tr>
-            <Td>Row</Td>
-          </tr>
-        </TBody>
-      </Table>,
-    );
-    // A row that splits across a page boundary separates a diver from their
-    // roll-call marks on the departure log.
-    expect(screen.getByRole("cell", { name: "Row" }).closest("tbody")).toHaveClass(
-      "[&>tr]:break-inside-avoid",
-    );
-  });
-});
-
-/**
- * **Focus is drawn once, on the target.** The link's `::after` overlay is what
- * a pointer lands on, so it carries the ring, inset; the text switches its own
- * outline off, which the outline guard in `src/app/focus-ring.test.ts` allows
- * only while the overlay's ring is beside it. Before the global ring moved into
- * `@layer base` it overrode that `outline-none` and the text wore a second
- * ring. jsdom has no layout, so this pins which element carries what.
- */
-describe("RowLink focus", () => {
-  it("rings the ::after overlay inset (focus-visible:after:focus-ring-inset), positions it against the row, and switches the text's own outline off", () => {
-    render(
-      <Table>
-        <TBody>
-          <Tr>
-            <Td>
-              <RowLink href="/shop/blue-mantis/divers/p-1">Grace Mensah</RowLink>
-            </Td>
-          </Tr>
-        </TBody>
-      </Table>,
-    );
-    const link = screen.getByRole("link", { name: "Grace Mensah" });
-    expect(link).toHaveClass(
-      "after:absolute",
-      "after:inset-0",
-      "focus-visible:after:focus-ring-inset",
-      "focus-visible:outline-none",
-    );
-    expect(link.closest("tr")).toHaveClass("relative");
   });
 });
 

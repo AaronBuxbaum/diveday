@@ -5,7 +5,9 @@ import type { AppDb } from "@/db/client";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { accountSecurity, accountSessions, userAccounts } from "@/db/schema";
 import { totpCode } from "@/lib/totp";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -31,7 +33,7 @@ const OWNER = DEV_STAFF_LOGINS.owner;
  * a refusal that still mints a session is the failure that matters.
  */
 async function harness() {
-  const db = await seededTestDb();
+  const db = ctx.db;
   vi.mocked(getDb).mockResolvedValue(db);
   const auth = createAuth(db);
   const [account] = await db

@@ -167,6 +167,7 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       await signInAs(staff, { email: minted.ownerEmail, password: minted.password });
 
       await staff.goto(shopPath());
+      // The day is named by its date (the greeting it once opened with is gone).
       await expect(staff.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
       const shots = [await snap(staff, index, id)];
 
@@ -406,7 +407,8 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       // boat closed its divers' count but never counted its crew, and the
       // spine withholds that line over a boat whose crew nobody counted
       // (#1346). The simulation drives one boat, so the stations are the
-      // claim it can make.
+      // claim it can make. (When the shop-wide line does show on a fresh
+      // shop, it reads "Your first boat is home", `shopHome.spine.firstBoatHome`.)
       const stations = staff
         .getByRole("listitem")
         .filter({ has: staff.getByRole("link", { name: "Departure log" }) });

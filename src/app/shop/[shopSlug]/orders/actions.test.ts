@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -8,6 +8,8 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The Orders index's refund of money paid after a checkout closed (issue
@@ -42,7 +44,7 @@ const { refundPaidAfterCloseAction } = await import("./actions");
 const CHECKOUT_ID = "00000000-0000-4000-8000-000000000002";
 
 async function as(email: string) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const personId = await seededStaffPersonId(db, shop.id, email);
   vi.mocked(requireStaffSession).mockResolvedValue(

@@ -7,9 +7,11 @@ import { getShopBySlug, setShopTaxEnabled } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import type { DiveDaySession } from "@/lib/auth";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { findElements, hiddenInputNamesIn, inputNamesIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
+
+const ctx = fileScopedShopContext();
 
 // Same mocking shape as ../page.test.tsx: the page is invoked directly,
 // outside Next's request scope, so the three things that only exist inside one
@@ -37,7 +39,7 @@ const SHOP_SLUG = "blue-mantis";
  * anything, which would make every assertion below vacuous.
  */
 async function shopThatCanBill() {
-  const db: AppDb = await seededTestDb();
+  const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, SHOP_SLUG);
   if (!shop) throw new Error("demo shop missing");
   const owner = (await listShopStaff(db, shop.id)).find((staff) => staff.roles.includes("owner"));

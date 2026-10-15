@@ -59,8 +59,7 @@ function GroupBars({
  * (`ShopPageHeaderSkeleton`: no eyebrow; the title two lines on a phone, the
  * intro three, one and two from `sm`), then the form's `gap-8` column: the
  * contact fields (the email's hint under its box), the certification group,
- * the sizes group, and the `md` submit's 48px. `loading.test.tsx` reads the
- * form's control and legend counts off its source.
+ * the sizes group, and the `md` submit's 48px.
  */
 export default function Loading() {
   return (

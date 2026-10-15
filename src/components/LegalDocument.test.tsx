@@ -91,9 +91,8 @@ describe("the reading column", () => {
  * So the skeleton now draws each block in the box the document draws it in —
  * the same classes, so the same type and the same line height — and each line
  * as a bar one line box tall (`h-lh`), stacked with no gap, as a paragraph's
- * line boxes are. What stays per page is how many lines its words wrap to:
- * both pages draw through this one component (`terms/loading.test.tsx`,
- * `privacy/loading.test.tsx` hold each page's counts).
+ * line boxes are. What stays per page is how many lines its words wrap to;
+ * both pages draw through this one component.
  */
 describe("the legal document's skeleton", () => {
   const SECTIONS = [[1, { terms: [1] }]] as const;

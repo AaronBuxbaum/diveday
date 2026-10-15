@@ -33,7 +33,7 @@ cheap subagent (`Explore`); a worker hands back a file path plus at most ten lin
 | --- | --- |
 | `pnpm dev` | dev server; wait for **`dev: serving … — warmed in Ns`**, one per checkout (the **run** skill) |
 | `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push` | the checklist is the **verify** skill |
-| `pnpm check:repo` | 54 static guards; each names itself and the offending line ([repo-checks.md](docs/agents/repo-checks.md)) |
+| `pnpm check:repo` | 60 static guards; each names itself and the offending line ([repo-checks.md](docs/agents/repo-checks.md)) |
 | `pnpm agent:doctor`, `node scripts/stack-map.mjs` | what this environment will trip you on; your stack's layers and top |
 
 Every other command: [working-rules.md](docs/agents/working-rules.md#commands). Pass args to a
