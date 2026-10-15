@@ -5,6 +5,7 @@ export const AFTER_STATE_TEST_IDS = {
   plannedSites: "dive-record-planned-sites",
   conditions: "dive-record-conditions",
   stamp: "dive-record-stamp",
+  certified: "dive-record-certified",
   visitLine: "dive-record-visit-line",
   printNotes: "dive-record-print-notes",
   printSignature: "dive-record-print-signature",

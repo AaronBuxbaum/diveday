@@ -180,6 +180,16 @@ const routes: SeedRoute[] = [
     },
   },
   {
+    slug: "seed-certified-recap",
+    // Issues a verified card from a course session, the record a diver's next
+    // booking is admitted on, so a route answering on a misconfigured
+    // deployment would put a credential nobody issued onto a real diver.
+    // Reaching the database is what proves the guard let it through.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
     slug: "seed-dive-times",
     // The same `executed_dives` write as the two above, carrying times in and
     // out — the instants the fly-safe line counts from. A route answering on a

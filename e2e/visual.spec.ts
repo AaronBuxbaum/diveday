@@ -2919,6 +2919,27 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The session that certified its diver** (fourth review, item 55).
+       *
+       * The record names the level the shop issued from this session, under
+       * the diver, and only from the card the roster's Certify wrote: the
+       * calm `recap` above carries no such line. Through a test route for the
+       * reason the two above give: the demo's recap is an ordinary reef day.
+       */
+      test(`a recap for a session that certified its diver renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-certified-recap");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
+        await page.getByTestId(AFTER_STATE_TEST_IDS.certified).filter({ visible: true }).waitFor();
+        await capture(page, "recap-certified", scheme);
+      });
+
+      /**
        * **The day the crew logged, with its times** (issue #1425, N-04).
        *
        * The `recap` capture above is the day with no `executed_dives` row,
