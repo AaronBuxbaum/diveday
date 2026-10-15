@@ -61,6 +61,18 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 /** Specs per Playwright step: about twenty local minutes at two workers. */
 export const E2E_CHUNK = 25;
 
+/**
+ * Playwright workers a local run uses. One, so CI's 15-second test ceiling stays the bar: a cloud
+ * container runs a built server several times slower than CI does, and with the default two
+ * workers (two Next servers on four cores) readiness.spec.ts:131 timed out here while CI passed
+ * it; alone it passed in 14.9s (2026-10-15). The old fallback Chromium was ruled out the same
+ * day: a Playwright whose pinned browser is the one the container ships failed identically.
+ */
+export const E2E_WORKERS = 1;
+
+/** The line e2e/browser.ts prints when the pinned Chromium is missing. */
+const BROWSER_FALLBACK = /^e2e: the Chromium pinned by @playwright\/test is not installed.*$/m;
+
 /** A unit, script or guard test: no page imports one, so no browser spec can move with it. */
 const UNIT_TEST = /\.test\.(?:ts|tsx|mts|mjs|js)$/;
 
@@ -138,6 +150,7 @@ export function plan({ changed, specs }) {
         name: chunks.length === 1 ? "e2e specs" : `e2e specs ${i + 1}/${chunks.length}`,
         command: "pnpm",
         args: ["e2e:run", ...chunk, "--reporter=line"],
+        env: { E2E_WORKERS: String(E2E_WORKERS) },
       });
     });
   }
@@ -355,7 +368,8 @@ function main() {
   const skipped = notRunHere({ docsOnly, testsOnly, specs, allSpecs: allSpecFiles() });
   if (args.includes("--plan")) {
     for (const step of steps) {
-      console.log(`  step ${step.name}: ${step.command} ${step.args.join(" ")}`);
+      const env = Object.entries(step.env ?? {}).map(([key, value]) => `${key}=${value} `);
+      console.log(`  step ${step.name}: ${env.join("")}${step.command} ${step.args.join(" ")}`);
     }
     for (const line of skipped) console.log(`  not run here: ${line}`);
     return;
@@ -364,6 +378,7 @@ function main() {
   const logs = gitPath(git, "diveday-verify");
   mkdirSync(logs, { recursive: true });
   const ran = [];
+  let browserNote;
   for (const step of steps) {
     if (step.build) {
       try {
@@ -379,6 +394,7 @@ function main() {
     process.stdout.write(`… ${step.name}\n`);
     const result = runStep(step.command, step.args, {
       cwd: ROOT,
+      env: { ...process.env, ...step.env },
       stdio: ["ignore", fd, fd],
       timeoutMs: SUBPROCESS_TIMEOUTS.verifyPushStep,
     });
@@ -392,6 +408,13 @@ function main() {
         failed = true;
         why = `\nIt rewrote generated files; look at them, commit them, and run verify:push again:\n${after}`;
       }
+    }
+    const fallback = step.env?.E2E_WORKERS && readFileSync(log, "utf8").match(BROWSER_FALLBACK);
+    if (fallback && !browserNote) {
+      browserNote = fallback[0];
+      // Said once, pass or fail: the older Chromium is not why a functional spec fails here
+      // (E2E_WORKERS above), so nobody chases it again.
+      console.log(`${browserNote}\n(not a cause of functional failures; see E2E_WORKERS)`);
     }
     if (failed) {
       console.error(`✗ ${step.name} (${seconds}s) — full log: ${log}\n${tail(log)}${why}`);
@@ -412,6 +435,8 @@ function main() {
     at: new Date().toISOString(),
     steps: ran,
     specs,
+    e2eWorkers: specs.length > 0 ? E2E_WORKERS : undefined,
+    browser: browserNote ?? undefined,
     notRunHere: skipped,
     baseCi: verdict.unknown
       ? { unknown: verdict.unknown }

@@ -8,6 +8,7 @@ import {
   appTreeKey,
   browserSpecs,
   E2E_CHUNK,
+  E2E_WORKERS,
   excerpt,
   notRunHere,
   plan,
@@ -226,6 +227,13 @@ describe("a large browser selection", () => {
     expect(runs.flatMap((step) => step.args.filter((arg) => arg.endsWith(".spec.ts")))).toEqual(
       specs,
     );
+  });
+
+  it("runs each step on one worker, so CI's per-test ceiling stays the bar", () => {
+    const steps = plan({ ...base, changed: ["src/lib/x.ts"], specs: ["e2e/a.spec.ts"] });
+    const run = steps.find((step) => step.name === "e2e specs");
+    expect(E2E_WORKERS).toBe(1);
+    expect(run.env).toEqual({ E2E_WORKERS: "1" });
   });
 });
 

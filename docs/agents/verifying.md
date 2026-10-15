@@ -95,7 +95,12 @@ common git dir too, so a push from any worktree finds it):
    name rather than file by file), or a hub route (one more than ten specs visit), ranked by how
    much of the diff's vocabulary a spec names, then narrowest first. Every selected spec runs, in
    steps of 25: until 2026-10-15 a time budget left the rest to CI, and on #2619 that was 30 of
-   129, one of which went red there. A diff of only unit tests runs no spec and builds nothing.
+   129, one of which went red there. The specs run on one Playwright worker (`E2E_WORKERS=1`), so
+   CI's 15-second test ceiling stays the bar: a cloud container runs a built server several
+   times slower than CI, and with two workers `readiness.spec.ts:131` timed out here while CI
+   passed it (alone: 14.9s; why it is that slow is #2624). The container's older fallback Chromium, which the run names once,
+   is not the cause: a Playwright pinned to that same browser failed identically. A diff of only
+   unit tests runs no spec and builds nothing.
    `--commit <sha>` replays one commit; over 104 commits the median reach fell from 65 specs to
    19 with the name walk.
 
