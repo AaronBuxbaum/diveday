@@ -20,6 +20,7 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { isCompletedWaiverCurrent, isUnresolvedMedicalHold } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import { bookings, people, trips, waiverRecords, waiverTemplates } from "./schema";
 import { shopTimezone } from "./waivers-templates";
 
@@ -346,7 +347,10 @@ export async function recordInPersonWaiver(
   const now = input.now ?? nowDate();
   if (!input.medicalAttested) return { ok: false, reason: "medical_attestation_required" };
   const bookingSubject = "bookingId" in input.subject ? input.subject.bookingId : null;
-  return db.transaction(async (tx): Promise<InPersonWaiverOutcome> => {
+  // Set only when this call wrote a new release, so the manifest events go out
+  // after the commit and not for an idempotent no-op (issue #2613).
+  let signedPersonId: string | null = null;
+  const outcome = await db.transaction(async (tx): Promise<InPersonWaiverOutcome> => {
     const attestedBy = await activeStaffAttestorId(tx, input.shopId, input.recordedByPersonId);
     if (!attestedBy) return { ok: false, reason: "staff_not_found" };
 
@@ -498,6 +502,9 @@ export async function recordInPersonWaiver(
       .update(waiverRecords)
       .set({ integrityHash: computeWaiverIntegrityHash(record), integrityVersion: 1 })
       .where(eq(waiverRecords.id, record.id));
+    signedPersonId = record.personId;
     return { ok: true, recordId: record.id, alreadySigned: false };
   });
+  if (signedPersonId) await publishManifestEventsForPerson(db, input.shopId, signedPersonId);
+  return outcome;
 }

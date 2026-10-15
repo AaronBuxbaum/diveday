@@ -24,6 +24,7 @@ import {
   listTripsReadiness,
   restoreCertification,
   restoreSpecialtyCertification,
+  reverseCertificationReview,
   reviewCertification,
   reviewSpecialtyCertification,
   tripRequirementSummaries,
@@ -1000,13 +1001,13 @@ describe("undoing a card review (unreviewCertification / unreviewSpecialtyCertif
     expect(kept?.agencyCheckedAt).not.toBeNull();
 
     expect(
-      await unreviewCertification(db, {
+      await reverseCertificationReview(db, {
         shopId: shop.id,
         certificationId: card.id,
         reviewedAt,
         reversingAgencyCheck: true,
       }),
-    ).toEqual({ ok: true });
+    ).toMatchObject({ ok: true });
     const [undone] = await db.select().from(certifications).where(eq(certifications.id, card.id));
     expect(undone).toMatchObject({ status: "pending", reviewNote: null, agencyCheckedAt: null });
   });

@@ -9,6 +9,7 @@ import {
 } from "@/lib/readiness";
 import { shopOffersNitrox } from "@/lib/rentals";
 import type { AppDb } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   activeCertificationReviewerId,
@@ -151,7 +152,10 @@ export async function reviewNitroxCertification(
         ),
       )
       .returning();
-    return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+    if (!certification) return { ok: false, reason: "not_found" };
+    // Open and primed manifests re-read (issue #2613).
+    await publishManifestEventsForPerson(db, input.shopId, certification.personId);
+    return { ok: true, certification };
   } catch (error) {
     if (isUniqueConstraintViolation(error)) return { ok: false, reason: "duplicate_card" };
     throw error;
@@ -171,6 +175,7 @@ export async function unreviewNitroxCertification(
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
+      personId: nitroxCertifications.personId,
       status: nitroxCertifications.status,
       reviewedAt: nitroxCertifications.reviewedAt,
       selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
@@ -214,7 +219,9 @@ export async function unreviewNitroxCertification(
       ),
     )
     .returning({ id: nitroxCertifications.id });
-  return row ? { ok: true } : { ok: false, reason: "stale" };
+  if (!row) return { ok: false, reason: "stale" };
+  await publishManifestEventsForPerson(db, input.shopId, existing.personId);
+  return { ok: true };
 }
 
 /**

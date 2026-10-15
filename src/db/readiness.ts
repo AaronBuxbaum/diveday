@@ -35,6 +35,7 @@ import {
 } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import { paymentsByBooking } from "./payments";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
@@ -693,7 +694,10 @@ export async function reviewCertification(
         ),
       )
       .returning();
-    return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+    if (!certification) return { ok: false, reason: "not_found" };
+    // Open and primed manifests re-read (issue #2613).
+    await publishManifestEventsForPerson(db, input.shopId, certification.personId);
+    return { ok: true, certification };
   } catch (error) {
     // The sighted number collides with a live card this shop already holds —
     // the same partial unique index `createCertification` refuses on (CR-009).
@@ -714,6 +718,23 @@ export async function reviewCertification(
  * neither reach another shop's evidence nor resurrect a deleted card.
  */
 export async function unreviewCertification(
+  db: AppDb,
+  input: { shopId: string; certificationId: string; reviewedAt: Date },
+): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+  const undone = await reverseCertificationReview(db, input);
+  if (!undone.ok) return undone;
+  // Open and primed manifests re-read, so a clearance taken back is not shown
+  // on the dock (issue #2613).
+  await publishManifestEventsForPerson(db, input.shopId, undone.personId);
+  return { ok: true };
+}
+
+/**
+ * The write behind {@link unreviewCertification}, with no manifest event, for a
+ * caller inside a transaction (`undoAgencyCheck`): the event goes out after the
+ * commit, never before it, or a device could re-read the old evidence.
+ */
+export async function reverseCertificationReview(
   db: DbExecutor,
   input: {
     shopId: string;
@@ -723,9 +744,10 @@ export async function unreviewCertification(
     /** Only the agency check's own Undo (`undoAgencyCheck`) reverses an agency-checked review. */
     reversingAgencyCheck?: boolean;
   },
-): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+): Promise<{ ok: true; personId: string } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
+      personId: certifications.personId,
       status: certifications.status,
       reviewedAt: certifications.reviewedAt,
       agencyCheckedAt: certifications.agencyCheckedAt,
@@ -770,7 +792,7 @@ export async function unreviewCertification(
       ),
     )
     .returning({ id: certifications.id });
-  return row ? { ok: true } : { ok: false, reason: "stale" };
+  return row ? { ok: true, personId: existing.personId } : { ok: false, reason: "stale" };
 }
 
 /** The specialty twin of {@link unreviewCertification}; same decision, same guards. */
@@ -780,6 +802,7 @@ export async function unreviewSpecialtyCertification(
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
+      personId: specialtyCertifications.personId,
       status: specialtyCertifications.status,
       reviewedAt: specialtyCertifications.reviewedAt,
       selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
@@ -823,7 +846,9 @@ export async function unreviewSpecialtyCertification(
       ),
     )
     .returning({ id: specialtyCertifications.id });
-  return row ? { ok: true } : { ok: false, reason: "stale" };
+  if (!row) return { ok: false, reason: "stale" };
+  await publishManifestEventsForPerson(db, input.shopId, existing.personId);
+  return { ok: true };
 }
 
 /**
@@ -1273,7 +1298,9 @@ export async function reviewSpecialtyCertification(
       ),
     )
     .returning();
-  return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+  if (!certification) return { ok: false, reason: "not_found" };
+  await publishManifestEventsForPerson(db, input.shopId, certification.personId);
+  return { ok: true, certification };
 }
 
 /**

@@ -13,8 +13,9 @@ import { needsImportConfirm } from "@/lib/certification-cards";
 import { nowDate } from "@/lib/clock";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
-import { unreviewCertification } from "./readiness";
+import { reverseCertificationReview } from "./readiness";
 import {
   certifications,
   nitroxCertifications,
@@ -447,7 +448,7 @@ export async function undoAgencyCheck(
   db: AppDb,
   input: { shopId: string; personId: string; certificationId: string; undoneByPersonId: string },
 ): Promise<{ ok: true; archived: number } | { ok: false }> {
-  return db.transaction(async (tx) => {
+  const outcome = await db.transaction(async (tx) => {
     const [card] = await tx
       .select({ id: certifications.id, reviewedAt: certifications.reviewedAt })
       .from(certifications)
@@ -463,7 +464,7 @@ export async function undoAgencyCheck(
       .for("update")
       .limit(1);
     if (!card?.reviewedAt) return { ok: false } as const;
-    const undone = await unreviewCertification(tx, {
+    const undone = await reverseCertificationReview(tx, {
       shopId: input.shopId,
       certificationId: input.certificationId,
       // The row is locked and was just read: this Undo reverses the review it
@@ -502,4 +503,8 @@ export async function undoAgencyCheck(
       .returning({ id: specialtyCertifications.id });
     return { ok: true, archived: nitrox.length + specialties.length } as const;
   });
+  // After the commit, so a device that re-reads sees the review gone
+  // (issue #2613).
+  if (outcome.ok) await publishManifestEventsForPerson(db, input.shopId, input.personId);
+  return outcome;
 }
