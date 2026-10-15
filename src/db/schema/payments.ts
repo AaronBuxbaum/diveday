@@ -652,6 +652,13 @@ export const orders = pgTable(
     paidAt: timestamp("paid_at", { withTimezone: true }),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
     refundedAt: timestamp("refunded_at", { withTimezone: true }),
+    /**
+     * When an open invoice was claimed for counter money and Stripe has not yet
+     * answered the out-of-band mark (`recordPaymentOnOpenOrder`). Set with the
+     * claim, cleared when the claim is settled or given back; a stamp older
+     * than `STALE_AFTER_MS` belonged to a call that died.
+     */
+    counterClaimedAt: timestamp("counter_claimed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -683,6 +690,11 @@ export const orders = pgTable(
     check(
       "orders_stripe_ids_match_collection",
       sql`(${table.collection} = 'stripe_invoice' and ${table.stripeAccountId} is not null and ${table.stripeCustomerId} is not null and ${table.stripeInvoiceId} is not null) or (${table.collection} <> 'stripe_invoice' and ${table.stripePaymentIntentId} is null and ((${table.stripeAccountId} is null and ${table.stripeCustomerId} is null and ${table.stripeInvoiceId} is null) or (${table.stripeAccountId} is not null and ${table.stripeCustomerId} is not null and ${table.stripeInvoiceId} is not null)))`,
+    ),
+    /** A counter claim exists only on an open invoice whose method is counter money. */
+    check(
+      "orders_counter_claim_open",
+      sql`${table.counterClaimedAt} is null or (${table.status} = 'open' and ${table.collection} <> 'stripe_invoice' and ${table.stripeInvoiceId} is not null)`,
     ),
   ],
 );

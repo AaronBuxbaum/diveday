@@ -9,6 +9,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { recordPaymentNotice } from "./order-detail-keys";
 import { postedCollection, postedOrderId } from "./order-form";
 
 /**
@@ -84,10 +85,5 @@ export async function recordPaymentAction(formData: FormData) {
     });
     dispatchIntegrationsAfterResponse();
   }
-  const notice = outcome?.ok
-    ? "payment-recorded"
-    : outcome?.reason === "stripe_refused"
-      ? "payment-stripe-refused"
-      : "payment-record-failed";
-  revalidateAndRedirect(back, noticeUrl(back, notice));
+  revalidateAndRedirect(back, noticeUrl(back, recordPaymentNotice(outcome)));
 }

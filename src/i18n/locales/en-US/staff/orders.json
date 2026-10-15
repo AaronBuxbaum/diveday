@@ -110,7 +110,8 @@
       "fallback": "Something changed on this order. The details below are current.",
       "paymentRecorded": "Payment recorded. Stripe won’t ask the diver for it again.",
       "paymentStripeRefused": "Stripe wouldn’t mark this invoice paid. The diver may have just paid it online, so refresh before recording anything.",
-      "paymentRecordFailed": "Couldn’t record this payment."
+      "paymentRecordFailed": "Couldn’t record this payment.",
+      "paymentInFlight": "A payment for this order is being recorded. Check the order in a minute before trying again."
     },
     "recordPayment": {
       "label": "Record payment:",

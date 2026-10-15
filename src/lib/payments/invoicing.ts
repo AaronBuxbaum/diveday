@@ -111,12 +111,41 @@ export type InvoiceLookupResult =
 
 export type VoidInvoiceResult = { status: "voided" | "not_configured" | "failed" };
 /**
- * `paid` — Stripe now holds the invoice as paid outside Stripe and will not ask
- * the diver for it again. `failed` — Stripe refused, most often because the
- * diver paid it online in the meantime; the caller reads the invoice back
- * rather than recording money twice.
+ * - `paid` — Stripe now holds the invoice as paid outside Stripe and will not
+ *   ask the diver for it again.
+ * - `refused` — Stripe answered with an error of its own (a 4xx carrying its
+ *   error envelope), so it did not mark the invoice; most often the diver paid
+ *   it online in the meantime.
+ * - `unknown` — no answer to trust: the call threw, timed out, or came back
+ *   5xx or without Stripe's envelope. Stripe may have marked the invoice, so a
+ *   caller must not act as though it refused.
  */
-export type MarkInvoicePaidResult = { status: "paid" | "not_configured" | "failed" };
+export type MarkInvoicePaidResult = {
+  status: "paid" | "not_configured" | "refused" | "unknown";
+};
+
+/**
+ * How long the out-of-band mark waits for Stripe. Well under the counter
+ * claim's horizon (`STALE_AFTER_MS`, five minutes), so a call is over before a
+ * second tap can retake the claim it is answering for.
+ */
+export const MARK_PAID_TIMEOUT_MS = 30_000;
+
+const stripeErrorEnvelopeSchema = z.object({ error: z.object({ type: z.string() }) });
+
+/**
+ * A 4xx that parses as Stripe's own error envelope: Stripe decided, and did not
+ * act. Not a 409, which says another call with the same idempotency key is
+ * still running, so the mark may yet land.
+ */
+async function isStripeRefusal(response: Response): Promise<boolean> {
+  if (response.status < 400 || response.status >= 500 || response.status === 409) return false;
+  try {
+    return stripeErrorEnvelopeSchema.safeParse(await response.json()).success;
+  } catch {
+    return false;
+  }
+}
 export type ResendInvoiceResult = { status: "sent" | "not_configured" | "failed" };
 export type RefundInvoiceResult = {
   status: "refunded" | "not_configured" | "not_refundable" | "failed";
@@ -143,6 +172,8 @@ export interface InvoicingProvider {
   markInvoicePaidOutOfBand(
     stripeAccountId: string,
     stripeInvoiceId: string,
+    /** One per order, so a retaken claim replays the first call rather than re-issuing it. */
+    idempotencyKey: string,
   ): Promise<MarkInvoicePaidResult>;
   /**
    * Re-sends the email for an invoice already created and finalized (the
@@ -318,6 +349,7 @@ export function stripeInvoicingProvider(
     path: string,
     form: URLSearchParams,
     idempotencyKey?: string,
+    signal?: AbortSignal,
   ) {
     return fetchImpl(`https://api.stripe.com/v1${path}`, {
       method: "POST",
@@ -326,6 +358,7 @@ export function stripeInvoicingProvider(
         ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: form.toString(),
+      ...(signal ? { signal } : {}),
     });
   }
 
@@ -435,17 +468,20 @@ export function stripeInvoicingProvider(
       }
     },
 
-    async markInvoicePaidOutOfBand(stripeAccountId, stripeInvoiceId) {
+    async markInvoicePaidOutOfBand(stripeAccountId, stripeInvoiceId, idempotencyKey) {
       try {
         const response = await post(
           stripeAccountId,
           `/invoices/${stripeInvoiceId}/pay`,
           new URLSearchParams({ paid_out_of_band: "true" }),
+          idempotencyKey,
+          AbortSignal.timeout(MARK_PAID_TIMEOUT_MS),
         );
-        return { status: response.ok ? "paid" : "failed" };
+        if (response.ok) return { status: "paid" };
+        return { status: (await isStripeRefusal(response)) ? "refused" : "unknown" };
       } catch (error) {
         logStripeRequestThrew("mark_invoice_paid_out_of_band", error);
-        return { status: "failed" };
+        return { status: "unknown" };
       }
     },
 

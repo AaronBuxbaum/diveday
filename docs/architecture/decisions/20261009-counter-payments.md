@@ -79,8 +79,21 @@ Fourth UX review, items 18 and 19. Two gaps in "money the shop took":
   settlement itself (`applyInvoicePaid`); any other `invoice.paid` for a claimed row is the diver's
   own online payment in the same moment and is deferred (non-2xx, no page) until the claim is given
   back. The claim is the order row itself, not a `payment_operation_intents` row: it lasts one
-  round trip, and one older than `STALE_AFTER_MS` belonged to a call that died and may be taken
-  again, by a second tap or by the next `invoice.paid`.
+  round trip, stamped in its own `counter_claimed_at` (migration `20261015052453_counter-claimed-at`,
+  checked to exist only on an open invoice with a counter method) so no other write to the row can
+  move it. One older than `STALE_AFTER_MS` belonged to a call that died and may be taken again, by a
+  second tap or by the next `invoice.paid`; while it stands, a second tap is told a payment is being
+  recorded rather than that it failed.
+- **Only a refusal Stripe answered gives the claim back** (second security review of layer r4-3).
+  `markInvoicePaidOutOfBand` tells `refused` (a 4xx carrying Stripe's error envelope) from
+  `unknown` (threw, timed out, 5xx, 409). On `unknown` Stripe may have marked the invoice, and a
+  released row would let the echo book the cash as Stripe money, so the claim stands: the echo
+  finishes it, or it goes stale. The call times out at 30 seconds, well inside the claim's horizon,
+  so it is over before anyone can retake its claim, and it carries one idempotency key per order
+  (`order:<id>:paid_out_of_band`), so a retake replays it rather than issuing a second mark.
+- **A counter line with no activity row means the call died after Stripe.** The actor is not stored
+  on the claim, so when Stripe's echo finishes it, nothing names who tapped. The webhook's
+  `order_paid_at_counter` outcome logs the order id, which the request log can be joined on.
 - **A counter-settled invoice is never voided.** Stripe holds it paid out of band and has no way to
   un-pay an invoice, so a local void would leave the books disagreeing with Stripe and the diver's
   hosted invoice reading paid with no Stripe path left to collect through. `voidCounterOrder`

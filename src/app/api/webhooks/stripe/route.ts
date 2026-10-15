@@ -133,10 +133,16 @@ const refundObjectSchema = z.object({
  * Settle the order an invoice backs (`applyInvoicePaid`), remember the
  * PaymentIntent that paid it, and tell the integrations. Returns the outcome
  * to log, or `"deferred"` while a counter claim on the invoice is in flight.
+ * A counter settlement logs its order id: when the counter call died after
+ * Stripe answered, no activity line names the staffer, and this line is what
+ * the request log can be joined on to find who tapped.
  */
-async function handleInvoicePaid(db: AppDb, event: StripeWebhookEvent): Promise<string> {
+async function handleInvoicePaid(
+  db: AppDb,
+  event: StripeWebhookEvent,
+): Promise<{ outcome: string; extra?: LogContext }> {
   const invoice = invoiceObjectSchema.safeParse(event.data.object);
-  if (!invoice.success) return "malformed_payload";
+  if (!invoice.success) return { outcome: "malformed_payload" };
   const outcome = await applyInvoicePaid(db, {
     stripeInvoiceId: invoice.data.id,
     amountPaidCents: invoice.data.amount_paid ?? 0,
@@ -144,8 +150,8 @@ async function handleInvoicePaid(db: AppDb, event: StripeWebhookEvent): Promise<
     taxCents: invoiceTaxCents(invoice.data),
     paidOutOfBand: invoice.data.paid_out_of_band,
   });
-  if (outcome.status === "deferred") return "deferred";
-  if (outcome.status === "not_found") return "order_not_found";
+  if (outcome.status === "deferred") return { outcome: "deferred" };
+  if (outcome.status === "not_found") return { outcome: "order_not_found" };
   // Only an order Stripe collected (`settled` is a row still a Stripe invoice
   // under its lock): a counter order's money never passed through a
   // PaymentIntent, whatever attempts the invoice holds.
@@ -165,7 +171,12 @@ async function handleInvoicePaid(db: AppDb, event: StripeWebhookEvent): Promise<
   // it: Stripe retries on a slow response, and a provider's latency must not
   // become a redelivery.
   dispatchIntegrationsAfterResponse();
-  return outcome.status === "settled" ? "order_paid" : "order_paid_at_counter";
+  return outcome.status === "settled"
+    ? { outcome: "order_paid" }
+    : {
+        outcome: "order_paid_at_counter",
+        extra: { orderId: outcome.order.id, shopId: outcome.order.shopId },
+      };
 }
 
 /**
@@ -580,9 +591,9 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case "invoice.paid": {
-        const outcome = await handleInvoicePaid(db, event);
+        const { outcome, extra } = await handleInvoicePaid(db, event);
         if (outcome === "deferred") deferred = true;
-        else logOutcome(outcome);
+        else logOutcome(outcome, extra);
         break;
       }
       case "invoice.voided": {

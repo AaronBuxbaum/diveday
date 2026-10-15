@@ -631,9 +631,15 @@ export type RecordPaymentOnOrderOutcome =
        *   money, or a caller who is not staff.
        * - `stripe_refused` — Stripe would not mark the invoice paid, most often
        *   because the diver paid it online meanwhile; Refresh shows which.
+       * - `stripe_unknown` — Stripe did not answer (timed out, threw, 5xx), so
+       *   it may have marked the invoice. The claim stands: Stripe's echo
+       *   finishes it if the mark landed, and it goes stale if it did not. The
+       *   staffer checks the order rather than tapping again.
+       * - `claim_held` — another tap's claim on this invoice is still waiting
+       *   on Stripe.
        * - `not_configured` — no Stripe key to tell Stripe with.
        */
-      reason: "invalid" | "stripe_refused" | "not_configured";
+      reason: "invalid" | "stripe_refused" | "stripe_unknown" | "claim_held" | "not_configured";
     };
 
 /**
@@ -650,7 +656,10 @@ export type RecordPaymentOnOrderOutcome =
  * band, so Stripe stops asking the diver for it. Then, under the lock again,
  * the claim is finished: `amount_paid_cents` is the total and `paid_at` is
  * now. If Stripe refuses (most often because the diver paid online a moment
- * earlier) the claim is given back and nothing is recorded.
+ * earlier) the claim is given back and nothing is recorded. If Stripe does not
+ * answer, the claim is left standing: it may have marked the invoice, and
+ * giving the row back to Stripe collection would let the echo book the cash
+ * as a Stripe payment. The echo finishes it, or it goes stale.
  *
  * The claim is what makes Stripe's own echo safe. The `invoice.paid` the mark
  * sends back can arrive before the mark's HTTP call returns; it finds the row
@@ -658,8 +667,9 @@ export type RecordPaymentOnOrderOutcome =
  * cash as a Stripe payment (`applyInvoicePaid`), and this call then reads the
  * row it finished. A diver's own online payment arriving during the claim
  * waits instead (Stripe delivers it again), because Stripe is about to refuse
- * the mark. A claim older than `STALE_AFTER_MS` belonged to a call that died
- * and may be taken again.
+ * the mark. The claim is `counter_claimed_at`; one older than `STALE_AFTER_MS`
+ * belonged to a call that died and may be taken again. The mark carries one
+ * idempotency key per order, so a retake replays the first call.
  *
  * The Stripe ids stay, so diver erasure still files the Stripe customer's
  * deletion request; every Stripe operation refuses the order from here on
@@ -692,15 +702,16 @@ export async function recordPaymentOnOpenOrder(
       .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
       .for("update");
     if (current?.status !== "open" || current.stripePaymentIntentId !== null) return null;
-    const open = current.collection === "stripe_invoice" || isStaleCounterClaim(current, now);
-    if (!open) return null;
+    if (current.counterClaimedAt !== null && !isStaleCounterClaim(current, now)) return "held";
+    if (current.collection !== "stripe_invoice" && current.counterClaimedAt === null) return null;
     const [row] = await tx
       .update(orders)
-      .set({ collection: input.collection, updatedAt: now })
+      .set({ collection: input.collection, counterClaimedAt: now, updatedAt: now })
       .where(eq(orders.id, current.id))
       .returning();
     return row ?? null;
   });
+  if (claimed === "held") return { ok: false, reason: "claim_held" };
   // A claim keeps the Stripe ids, so they are still there to tell Stripe with.
   if (!claimed?.stripeAccountId || !claimed.stripeInvoiceId) return invalid;
 
@@ -709,18 +720,25 @@ export async function recordPaymentOnOpenOrder(
     marked = await invoicing.markInvoicePaidOutOfBand(
       claimed.stripeAccountId,
       claimed.stripeInvoiceId,
+      `order:${claimed.id}:paid_out_of_band`,
     );
   } catch (error) {
-    await releaseCounterClaim(db, claimed);
-    throw error;
+    // No answer to trust: Stripe may have marked it. Same as `unknown`.
+    log("order.counter_mark_threw", "warn", {
+      orderId: claimed.id,
+      shopId: claimed.shopId,
+      error: error instanceof Error ? error.name : "unknown",
+    });
+    marked = { status: "unknown" };
   }
-  if (marked.status !== "paid") {
+  if (marked.status === "refused" || marked.status === "not_configured") {
     await releaseCounterClaim(db, claimed);
     return {
       ok: false,
       reason: marked.status === "not_configured" ? "not_configured" : "stripe_refused",
     };
   }
+  const answered = marked.status === "paid";
 
   const settled = await db.transaction(async (tx) => {
     const [current] = await tx.select().from(orders).where(eq(orders.id, claimed.id)).for("update");
@@ -728,8 +746,15 @@ export async function recordPaymentOnOpenOrder(
     // Stripe's echo got here first and finished the claim.
     if (current.status === "paid") return current;
     if (current.status !== "open") return null;
+    // Unanswered: the claim stands for the echo, or for its horizon.
+    if (!answered) return "unanswered" as const;
+    if (current.counterClaimedAt?.getTime() !== claimed.counterClaimedAt?.getTime()) return null;
     return settleCounterClaim(tx, current, input.collection);
   });
+  if (settled === "unanswered") {
+    log("order.counter_mark_unanswered", "warn", { orderId: claimed.id, shopId: claimed.shopId });
+    return { ok: false, reason: "stripe_unknown" };
+  }
   if (!settled) {
     // Stripe holds the invoice paid and the row moved on without us. Logged,
     // never thrown; the page reads the order as it now stands.
@@ -747,28 +772,28 @@ export async function recordPaymentOnOpenOrder(
 function isStaleCounterClaim(order: Order, now: Date): boolean {
   return (
     order.status === "open" &&
-    COUNTER_COLLECTIONS.has(order.collection) &&
-    order.stripeInvoiceId !== null &&
-    order.updatedAt.getTime() < now.getTime() - STALE_AFTER_MS
+    order.counterClaimedAt !== null &&
+    order.counterClaimedAt.getTime() < now.getTime() - STALE_AFTER_MS
   );
 }
 
 /**
- * Give a counter claim back to Stripe collection: Stripe refused the mark, the
- * call to it threw, or the claim went stale. Only that claim (its method and
- * its stamp), and only while it is still open; a row that moved on, or was
- * claimed again, is left as it is.
+ * Give a counter claim back to Stripe collection: Stripe refused the mark, or
+ * the claim went stale. Only that claim (its method and its stamp), and only
+ * while it is still open; a row that moved on, or was claimed again, is left
+ * as it is.
  */
 async function releaseCounterClaim(db: DbExecutor, claimed: Order): Promise<void> {
+  if (claimed.counterClaimedAt === null) return;
   await db
     .update(orders)
-    .set({ collection: "stripe_invoice", updatedAt: nowDate() })
+    .set({ collection: "stripe_invoice", counterClaimedAt: null, updatedAt: nowDate() })
     .where(
       and(
         eq(orders.id, claimed.id),
         eq(orders.status, "open"),
         eq(orders.collection, claimed.collection),
-        eq(orders.updatedAt, claimed.updatedAt),
+        eq(orders.counterClaimedAt, claimed.counterClaimedAt),
       ),
     );
 }
@@ -791,6 +816,7 @@ async function settleCounterClaim(
       status: "paid",
       amountPaidCents: current.totalCents,
       paidAt: now,
+      counterClaimedAt: null,
       updatedAt: now,
     })
     .where(and(eq(orders.id, current.id), eq(orders.collection, collection)))

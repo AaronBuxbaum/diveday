@@ -184,6 +184,53 @@ describe("stripe invoicing provider", () => {
     warned.mockRestore();
   });
 
+  it("marks an invoice paid out of band with one key per order and a timeout", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(ok({ id: "in_1", status: "paid" }));
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    expect(
+      await provider.markInvoicePaidOutOfBand("acct_123", "in_1", "order:o1:paid_out_of_band"),
+    ).toEqual({ status: "paid" });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://api.stripe.com/v1/invoices/in_1/pay");
+    expect(init.body).toBe("paid_out_of_band=true");
+    expect(init.headers["Idempotency-Key"]).toBe("order:o1:paid_out_of_band");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("tells a refusal Stripe answered from a mark it may have made", async () => {
+    const stripeError = { error: { type: "invalid_request_error", code: "invoice_not_open" } };
+    const cases: Array<[unknown, string]> = [
+      [{ ok: false, status: 400, json: async () => stripeError }, "refused"],
+      [{ ok: false, status: 400, json: async () => ({}) }, "unknown"],
+      [{ ok: false, status: 409, json: async () => stripeError }, "unknown"],
+      [{ ok: false, status: 502, json: async () => stripeError }, "unknown"],
+      [
+        {
+          ok: false,
+          status: 400,
+          json: async () => {
+            throw new SyntaxError("not json");
+          },
+        },
+        "unknown",
+      ],
+    ];
+    for (const [response, status] of cases) {
+      const provider = providerWith(
+        { STRIPE_SECRET_KEY: "sk_test" },
+        vi.fn().mockResolvedValue(response),
+      );
+      expect(await provider.markInvoicePaidOutOfBand("acct_123", "in_1", "k")).toEqual({ status });
+    }
+    const timedOut = providerWith(
+      { STRIPE_SECRET_KEY: "sk_test" },
+      vi.fn().mockRejectedValue(new DOMException("timed out", "TimeoutError")),
+    );
+    expect(await timedOut.markInvoicePaidOutOfBand("acct_123", "in_1", "k")).toEqual({
+      status: "unknown",
+    });
+  });
+
   it("voids an invoice on the connected account", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(ok({ id: "in_1", status: "void" }));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
