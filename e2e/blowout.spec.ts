@@ -184,11 +184,10 @@ test.describe("weather blow-out cascade", () => {
     await page.getByRole("button", { name: "Save rental fit" }).click();
     await expect(page.getByText("the crew will have your sizes")).toBeVisible();
 
-    // The captain calls it off.
-    await page.goto(`/shop/${SHOP}/schedule/board`);
-    await openTripFromBoard(page, REEF_TRIP);
-    await openTripMore(page);
-    await page.getByRole("link", { name: "Weather blow-out…" }).click();
+    // The captain calls it off. Straight to the confirm page: the first test
+    // in this file walks the board → departure → More path to it, and this
+    // test's subject is the diver's link afterwards, not the way in.
+    await page.goto(`/shop/${SHOP}/schedule/blowout/${tripId}`);
     // Wait on what the confirm page itself renders before clicking through it
     // — the click is a navigation, not an in-place toggle.
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
