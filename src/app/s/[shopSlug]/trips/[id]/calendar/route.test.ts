@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **The diver's `.ics`, as a living anchor for the day** (issue #1165, D05).
@@ -36,7 +38,7 @@ const { eq } = await import("drizzle-orm");
 
 /** The seeded demo's next departure, with the fields this route reads set. */
 async function aDeparture(meetingPoint: { label: string; address: string } | null) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   await db.update(shops).set({ dockCallMinutes: 45 }).where(eq(shops.id, shop.id));
   const [trip] = await upcomingTripsWithCounts(db, shop.id);

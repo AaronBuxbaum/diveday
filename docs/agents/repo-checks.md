@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 52 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 58 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
 
 ## The guards worth reading about
 
@@ -494,7 +494,7 @@ Refuses a delete called anything else in the message bundles under `src/i18n/loc
 
 ### Source-text guards written as tests (the `guards` Vitest project)
 
-Not a `check:repo` script, and listed here because it does the same job. About forty `*.test.ts` files under `src/` are guards in test clothing: they read the repository's own source (`readFileSync` over a page, a stylesheet, a directory of routes) and assert on its text — `instant-coverage.test.ts`, `tenant-gate-coverage.test.ts`, `provider-coverage.test.ts`, the `page.composition.test.ts` family, `import-cycles.test.ts`. They stay beside the code they guard and keep their names, because source comments, `.claude/rules/` and the design docs cite them by path; what changed (2026-10-07) is how they run. `src/test/projects.ts` puts a file in the `guards` project when it reads files and imports nothing but `vitest`, `node:*` and `@/test/stylesheet` — no app module, no `vi.*`, no dynamic `import()`, no child process — and that project runs them in one shared worker (`isolate: false`) instead of a fresh fork, transform and setup per file. Each was paying a second or two of process boot to run a few milliseconds of string matching. `pnpm test:guards` runs the set alone; `pnpm test <file>` still runs one.
+Not a `check:repo` script, and listed here because it does the same job. About forty `*.test.ts` files under `src/` are guards in test clothing: they read the repository's own source (`readFileSync` over a page, a stylesheet, a directory of routes) and assert on its text — `scripts/check-instant.mjs`, `scripts/check-tenant-gates.mjs`, `scripts/check-intl-providers.mjs`, the `page.composition.test.ts` family, `import-cycles.test.ts`. They stay beside the code they guard and keep their names, because source comments, `.claude/rules/` and the design docs cite them by path; what changed (2026-10-07) is how they run. `src/test/projects.ts` puts a file in the `guards` project when it reads files and imports nothing but `vitest`, `node:*` and `@/test/stylesheet` — no app module, no `vi.*`, no dynamic `import()`, no child process — and that project runs them in one shared worker (`isolate: false`) instead of a fresh fork, transform and setup per file. Each was paying a second or two of process boot to run a few milliseconds of string matching. `pnpm test:guards` runs the set alone; `pnpm test <file>` still runs one.
 
 A file that reads source **and** renders, hydrates a database or imports the module it guards stays where it is (its project is decided by the render or the database, not the read): the render-and-read component tests, `src/db/shop-by-slug-cache.test.ts` (spawns a React server child), the two cron route tests that read their own route source beside a mocked handler, `src/features/integrations/dispatch-on-write.test.ts`, `src/test/db-template.test.ts`, `src/app/print-bundle.test.ts` (reads the print rules into jsdom), and the `src/lib` and `src/components/ui` files that check an exported table against the source that uses it. Adding an app import to a guard moves it out of `guards` automatically; nothing has to be re-listed.
 
@@ -703,7 +703,7 @@ lands in *every* locale's bundle in the same change, and a key missing from one 
 `pnpm check:locale`. Waiver/medical wording stays English pending H-01/H-03. **Any diver Client
 Component that reads copy needs `DiverIntlProvider` above it** — without one it throws during the
 server render and the page silently degrades to a blank client-only 200;
-`src/i18n/provider-coverage.test.ts` fails on a consumer with no provider in an ancestor segment.
+`scripts/check-intl-providers.mjs` fails on a consumer with no provider in an ancestor segment.
 Staff Client Components take words as props (`staffTranslator` is server-side only). See the
 **i18n-copy** skill and the i18n rules.
 
@@ -1163,7 +1163,7 @@ For `src/i18n/`; the rules themselves are in `.claude/rules/i18n.md`.
   a bundle. Still **no `[locale]` route**: a locale in the path would fork every public URL and every
   canonical link (ADR 20260812-reader-chosen-language).
 - **Provider coverage**: any diver Client Component that reads copy needs `DiverIntlProvider` above
-  it, with a `namespaces` list that is not short; `src/i18n/provider-coverage.test.ts` fails
+  it, with a `namespaces` list that is not short; `scripts/check-intl-providers.mjs` fails
   otherwise, because the failure mode is a blank client-only 200.
 - **Voice**: no message bundle reads as machine-written — a prose em-dash, an intensifier
   (*actually*, *genuinely*, *simply*), a "Here's how" lead-in, a "not just X" contrast or a "No X.

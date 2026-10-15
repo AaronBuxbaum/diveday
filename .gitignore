@@ -93,3 +93,4 @@ public/manifest-sw.js
 
 # `pnpm content:photos candidates` contact sheets, looked at and thrown away.
 /.content-review/
+/dist/

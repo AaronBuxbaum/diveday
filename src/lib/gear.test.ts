@@ -401,7 +401,7 @@ describe("gearRegisterGroup", () => {
  * shop's own wall — a phone call, or a loss note, about kit the shop is
  * standing next to.
  *
- * A text scan, in the spirit of `src/app/instant-coverage.test.ts`: it cannot
+ * A text scan, in the spirit of `scripts/check-instant.mjs`: it cannot
  * judge prose, and it is not trying to. It fails when the entry is missing
  * altogether or has been rewritten past the one distinction it exists to carry
  * — which is exactly the change that would go unnoticed.

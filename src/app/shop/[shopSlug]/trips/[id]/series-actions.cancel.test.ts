@@ -6,13 +6,15 @@ import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { EVERY_WEEKDAY } from "@/lib/recurrence";
 import { wallTimeToUtc } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **"Cancel every upcoming date" says what it did** (review 2a / security D3,
@@ -41,7 +43,7 @@ const { cancelSeriesAction } = await import("./series-actions");
 
 describe("cancelling a run whose only upcoming date is underway", () => {
   it("says the date still stands, not that nothing went through", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
     vi.mocked(requireShopSurface).mockResolvedValue({

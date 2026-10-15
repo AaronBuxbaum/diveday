@@ -1,7 +1,9 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import type { DiveDaySession } from "@/lib/auth";
 import { nowDate, nowMs } from "@/lib/clock";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
+import { hasRequiredStepUp } from "@/lib/security-step-up";
 import { recoveryCodeHashes, TOTP_STEP_SECONDS, totpCode } from "@/lib/totp";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
@@ -208,5 +210,97 @@ describe("step-up grants", () => {
         purpose: "money",
       }),
     ).toBeNull();
+  });
+});
+
+/**
+ * **The gate every money, export and backup action asks** (security review of
+ * the test-suite layer 1). `hasStepUp` is the ledger; this is the question the
+ * routes put to it, read against the signed-in session, and it fails closed on
+ * everything but "two-factor is off".
+ */
+describe("hasRequiredStepUp", () => {
+  async function owner() {
+    const { db, shop, account } = await seededAccount();
+    const [first, second] = await Promise.all(
+      ["a", "b"].map(async (tag) => {
+        const [row] = await db
+          .insert(accountSessions)
+          .values({
+            userAccountId: account.id,
+            personId: account.personId,
+            shopId: shop.id,
+            shopSlug: shop.slug,
+            roles: ["owner"],
+            name: "Test Owner",
+            token: `step-up-${account.id}-${tag}`,
+            expiresAt: new Date(nowMs() + 3_600_000),
+          })
+          .returning({ id: accountSessions.id });
+        if (!row) throw new Error("session insert failed");
+        return row;
+      }),
+    );
+    if (!first || !second) throw new Error("sessions missing");
+    const sessionAs = (sessionId: string | undefined): DiveDaySession => ({
+      user: {
+        userAccountId: account.id,
+        sessionId,
+        personId: account.personId,
+        shopId: shop.id,
+        shopSlug: shop.slug,
+        roles: ["owner"],
+        name: "Test Owner",
+        email: "owner@dive.day",
+      },
+    });
+    const turnOnTotp = () =>
+      db.insert(accountSecurity).values({ userAccountId: account.id, totpEnabledAt: nowDate() });
+    return { db, account, first, second, sessionAs, turnOnTotp };
+  }
+
+  it("passes when two-factor is off, with no grant at all", async () => {
+    const { db, first, sessionAs } = await owner();
+    expect(await hasRequiredStepUp(db, sessionAs(first.id), "money")).toBe(true);
+  });
+
+  it("refuses with two-factor on and no grant", async () => {
+    const { db, first, sessionAs, turnOnTotp } = await owner();
+    await turnOnTotp();
+    expect(await hasRequiredStepUp(db, sessionAs(first.id), "money")).toBe(false);
+  });
+
+  it("passes with a grant held by this session, for this purpose only", async () => {
+    const { db, account, first, sessionAs, turnOnTotp } = await owner();
+    await turnOnTotp();
+    await grantStepUp(db, {
+      userAccountId: account.id,
+      accountSessionId: first.id,
+      purpose: "money",
+    });
+    expect(await hasRequiredStepUp(db, sessionAs(first.id), "money")).toBe(true);
+    expect(await hasRequiredStepUp(db, sessionAs(first.id), "export")).toBe(false);
+  });
+
+  it("refuses a grant held by another of the account's sessions", async () => {
+    const { db, account, first, second, sessionAs, turnOnTotp } = await owner();
+    await turnOnTotp();
+    await grantStepUp(db, {
+      userAccountId: account.id,
+      accountSessionId: second.id,
+      purpose: "money",
+    });
+    expect(await hasRequiredStepUp(db, sessionAs(first.id), "money")).toBe(false);
+  });
+
+  it("refuses a session that carries no session id, even with a grant on file", async () => {
+    const { db, account, first, sessionAs, turnOnTotp } = await owner();
+    await turnOnTotp();
+    await grantStepUp(db, {
+      userAccountId: account.id,
+      accountSessionId: first.id,
+      purpose: "money",
+    });
+    expect(await hasRequiredStepUp(db, sessionAs(undefined), "money")).toBe(false);
   });
 });

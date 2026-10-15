@@ -3,6 +3,14 @@
 // src/lib/cert-check-extension.test.ts fails if they drift. `fields` lists
 // what the form is filled with, in the order the agency's form asks for it.
 // `dateFormat` is how a typed (not date-picker) birth-date box wants it.
+// `origins`, on a lookup behind the shop's own sign-in, lists every host the
+// lookup may be sent between and still be the signed-in site (background.js).
+
+// PADI's own pages send pros to pro.padi.com (its sign-in page, its 2024
+// member brochure, its member FAQ); pros.padi.com also answers. Either may
+// send the tab to the other, so both are PADI's Pros' Site.
+const PADI_ORIGINS = ["https://pro.padi.com", "https://pros.padi.com"];
+
 globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
   AGENCIES: {
     ssi: {
@@ -39,7 +47,8 @@ globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
     // diver's lines come back. The address and the form are a best guess that
     // has not been tried against the live site (issue #2259).
     padi: {
-      url: "https://pros.padi.com/divechek",
+      url: "https://pro.padi.com/divechek",
+      origins: PADI_ORIGINS,
       fields: ["name", "birthDate"],
       dateFormat: "MM/DD/YYYY",
       signIn: true,
@@ -53,7 +62,8 @@ globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
   // does not read as a result writes nothing.
   ELEARNING: {
     padi: {
-      url: "https://pros.padi.com/",
+      url: "https://pro.padi.com/",
+      origins: PADI_ORIGINS,
       fields: ["email"],
       dateFormat: "YYYY-MM-DD",
       signIn: true,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   getHelpRequestForBooking,
   listTodayHelpRequests,
@@ -8,9 +8,11 @@ import {
 } from "./help-requests";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
+const ctx = fileScopedShopContext();
+
 describe("day-of help requests", () => {
   it("moves one request from diver choice to acknowledgment to handled", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find(
       (row) => row.title === "Two-Tank Reef — Molasses & French",
     );

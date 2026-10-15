@@ -10,7 +10,8 @@ const SHOP = "blue-mantis";
  * **"Check eLearning with PADI", done by the DiveDay browser extension**
  * (H-106).
  *
- * The real extension cannot run in CI, and the PADI Pros' Site is not ours to
+ * The installed extension is `agency-check-extension.spec.ts`'s; this covers
+ * the app's side of the answer, and the PADI Pros' Site is not ours to
  * hit from a test. So this stands in for it at the one seam the app sees: the
  * marker on `<html>` and the `postMessage` request and reply
  * (`src/lib/cert-check-extension.ts`). The reply is the text PADI's page might
@@ -20,7 +21,7 @@ const SHOP = "blue-mantis";
 async function installFakeExtension(page: Page) {
   await page.addInitScript(() => {
     const announce = () => {
-      document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+      document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
       window.dispatchEvent(new Event("diveday-cert-check-ready"));
     };
     if (document.readyState === "loading") {

@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { operationalWindow } from "@/lib/operational-window";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { blockedOnNextBoatDay, inHorizonReadiness } from "./blockers";
 import { upsertTripRequirements } from "./readiness";
 import { countBlockedDiversNextBoatDay } from "./today";
 import { upcomingTripsWithCounts } from "./trips";
+
+const ctx = fileScopedShopContext();
 
 /**
  * Every case reads the clock the seed is anchored to. `new Date(0)` used to
@@ -33,7 +35,7 @@ function blockedToday(
 
 describe("in-horizon readiness (in-memory PGlite)", () => {
   it("never inspects a departure outside the shared operational horizon (task 141)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { from, to } = operationalWindow(NOW);
     const evidence = await inHorizonReadiness(db, shop.id, NOW);
 
@@ -49,7 +51,7 @@ describe("in-horizon readiness (in-memory PGlite)", () => {
   });
 
   it("stays inside the horizon rather than flagging the tail as truncated", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // The demo shop has far fewer than `OPERATIONAL_MAX_TRIPS` departures in a
     // week, so the work bound never fires: departures beyond the horizon are
     // the window's business, not a truncation.
@@ -57,7 +59,7 @@ describe("in-horizon readiness (in-memory PGlite)", () => {
   });
 
   it("the badge counts today's blocked divers while today's boats are still to sail (nav badge, UX audit item 1)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const expected = blockedToday(await inHorizonReadiness(db, shop.id, NOW), shop.timezone);
     expect(expected).toBeGreaterThan(0);
 
@@ -68,7 +70,7 @@ describe("in-horizon readiness (in-memory PGlite)", () => {
   });
 
   it("the badge drops when a departure's blockers are cleared", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, NOW);
     const trips = await upcomingTripsWithCounts(db, shop.id, NOW);
     const target = trips[0];

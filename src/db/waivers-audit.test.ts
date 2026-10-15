@@ -5,7 +5,7 @@ import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { verifyWaiverIntegrity, WAIVER_INTEGRITY_VERSION_ERASED } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { people, shops, waiverRecords, waiverTemplates } from "./schema";
+import { bookings, people, shops, waiverRecords, waiverTemplates } from "./schema";
 import {
   getSignedWaiverRecordForShop,
   listSignedWaiversByPerson,
@@ -607,5 +607,103 @@ describe("signed waivers after a diver is erased", () => {
     const records = signed.get(personId) ?? [];
     expect(records).toHaveLength(1);
     expect(records[0]).toMatchObject({ signedName: null, medicalAnswers: null });
+  });
+});
+
+/**
+ * **A clean signature a fresh link replaced stays in the evidence only on the
+ * signer's own seat** (`listSignedWaiversByPerson`). It is there so the diver
+ * record reads "lapsed" rather than "nothing on file" while the link is out.
+ * A split or claimed seat's records are superseded under someone else's name
+ * (`splitBookingIdentity`, the seat claim), so carrying them would lend a
+ * stranger's signature to the record's person.
+ */
+describe("listSignedWaiversByPerson with superseded clean signatures", () => {
+  async function supersededClean() {
+    const { db, shop, booking, person } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now,
+    });
+    const [record] = await db
+      .update(waiverRecords)
+      .set({ supersededAt: new Date(now.getTime() + 60_000) })
+      .where(and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "completed")))
+      .returning();
+    if (!record) throw new Error("expected a completed record to supersede");
+    return { db, shop, booking, person, record };
+  }
+
+  it("keeps one given on the signer's own seat", async () => {
+    const { db, shop, person, record } = await supersededClean();
+    const signed = await listSignedWaiversByPerson(db, shop.id, [person.id]);
+    expect((signed.get(person.id) ?? []).map((row) => row.id)).toContain(record.id);
+  });
+
+  it("drops one given on a seat that now belongs to somebody else", async () => {
+    const { db, shop, booking, person, record } = await supersededClean();
+    // The seat was claimed by, or split off to, a diver who never signed it.
+    const [claimant] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Seat Claimant", email: "seat.claimant@example.org" })
+      .returning({ id: people.id });
+    if (!claimant) throw new Error("fixture insert failed");
+    await db.update(bookings).set({ personId: claimant.id }).where(eq(bookings.id, booking.id));
+    const signed = await listSignedWaiversByPerson(db, shop.id, [person.id, claimant.id]);
+    expect((signed.get(person.id) ?? []).map((row) => row.id)).not.toContain(record.id);
+    expect(signed.get(claimant.id) ?? []).toEqual([]);
+  });
+});
+
+/**
+ * **A superseded referral no physician cleared carries only from the signer's
+ * own seat too** (security-reviewer run 2, S1). A split or claimed seat's
+ * records are superseded under someone else's name, so a hold signed there is
+ * a stranger's answers: carrying it would pin their medical disclosure on the
+ * record's person.
+ */
+describe("listSignedWaiversByPerson with superseded uncleared referrals", () => {
+  async function supersededReferral() {
+    const { db, shop, booking, person } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+      now,
+    });
+    const [record] = await db
+      .update(waiverRecords)
+      .set({ supersededAt: new Date(now.getTime() + 60_000) })
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      )
+      .returning();
+    if (!record) throw new Error("expected a referred record to supersede");
+    return { db, shop, booking, person, record };
+  }
+
+  it("keeps one given on the signer's own seat", async () => {
+    const { db, shop, person, record } = await supersededReferral();
+    const signed = await listSignedWaiversByPerson(db, shop.id, [person.id]);
+    expect((signed.get(person.id) ?? []).map((row) => row.id)).toContain(record.id);
+  });
+
+  it("drops one given on a seat that now belongs to somebody else", async () => {
+    const { db, shop, booking, person, record } = await supersededReferral();
+    const [claimant] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Held Claimant", email: "held.claimant@example.org" })
+      .returning({ id: people.id });
+    if (!claimant) throw new Error("fixture insert failed");
+    await db.update(bookings).set({ personId: claimant.id }).where(eq(bookings.id, booking.id));
+    const signed = await listSignedWaiversByPerson(db, shop.id, [person.id, claimant.id]);
+    expect((signed.get(person.id) ?? []).map((row) => row.id)).not.toContain(record.id);
+    expect(signed.get(claimant.id) ?? []).toEqual([]);
   });
 });

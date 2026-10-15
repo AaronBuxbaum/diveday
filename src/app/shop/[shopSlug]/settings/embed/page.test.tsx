@@ -3,9 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import type { DiveDaySession } from "@/lib/auth";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -29,7 +31,7 @@ const EmbedSettingsPage = (await import("./page")).default;
 const { EmbedGenerator } = await import("./EmbedGenerator");
 
 async function seededContext() {
-  const db: AppDb = await seededTestDb();
+  const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
   // A *real* seeded person, not a placeholder id: the page re-checks the

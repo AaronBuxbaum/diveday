@@ -69,9 +69,10 @@ const MODULE_STATE =
 const READS_FILES = /\breadFileSync\s*\(|\breadFile\s*\(|\breaddirSync\s*\(/;
 /**
  * Specifiers a source-text guard may import: the test runner, Node's own
- * modules, and the stylesheet reader, which is itself only a file read.
+ * modules, and the stylesheet and source readers, which are themselves only
+ * file reads.
  */
-const GUARD_SAFE_SPECIFIER = /^(?:vitest|node:.+|@\/test\/stylesheet)$/;
+const GUARD_SAFE_SPECIFIER = /^(?:vitest|node:.+|@\/test\/(?:stylesheet|source))$/;
 /**
  * Every top-level `import … from "…"`, `} from "…"`, `export … from "…"` and
  * bare `import "…"` specifier. Anchored to column 0 so an example inside a

@@ -870,6 +870,7 @@
       "waiverNotSent": "El centro aún no ha enviado tu exención. Puedes pedirla al llegar, o contactar con ellos más abajo.",
       "waiverPending": "Firma tu exención. Solo lleva unos dos minutos.",
       "waiverExpired": "El enlace de tu exención caducó. Consigue uno nuevo; solo lleva unos dos minutos.",
+      "waiverLapsed": "Tu exención firmada caducó. Consigue un enlace nuevo y vuelve a firmar; solo lleva unos dos minutos.",
       "medicalReview": "Gracias por firmar. Una respuesta médica necesita una revisión más de cerca. Puede requerirse el visto bueno de un médico, y tu centro se pondrá en contacto sobre los siguientes pasos.",
       "guardianSignatureMissing": "Tu madre, padre o tutor legal también tiene que firmar la exención. Consigue un enlace nuevo y fírmenla juntos.",
       "certificationMissing": "Comparte tus datos de certificación con el centro (añádelos abajo o ponte en contacto) para que puedan registrarlos en tu ficha.",
@@ -4532,6 +4533,18 @@
         "heading": "Enlaces que funcionan como llaves",
         "body": "Parte de lo que DiveDay envía es un enlace que no necesita contraseña: la exención que firma un buceador, su página de preparación, el recuerdo después de una inmersión. Tener el enlace es el permiso, así que se puede abrir en el muelle con una mano libre. Esos enlaces se tratan como credenciales en todo momento: el token se elimina antes de registrar una visita o informar de un error, y antes de que ninguna línea llegue a un registro. Caducan, y un centro puede invalidar uno."
       },
+      "extension": {
+        "heading": "La extensión de verificación de certificaciones",
+        "intro": "El personal de un centro puede añadir la verificación de certificaciones de DiveDay a Chrome o Edge. Hace una sola cosa: cuando alguien del personal presiona “Verificar con SSI”, u otra agencia, en la certificación de un buceador en DiveDay, la busca en la página de consulta de esa agencia, desde su navegador, y devuelve la respuesta a DiveDay. Solo funciona en ese momento, y solo en las páginas de personal de DiveDay y en las páginas de consulta de las agencias.",
+        "sendsTerm": "Qué envía a la agencia",
+        "sendsBody": "el nombre del buceador y lo que pide el formulario de esa agencia, una fecha de nacimiento o un número de tarjeta, y solo a la agencia que eligió el miembro del personal, igual que si lo escribiera a mano. Para el eLearning de PADI de un alumno, el correo del alumno va a PADI.",
+        "readsTerm": "Qué lee",
+        "readsBody": "la respuesta de la agencia. En el PADI Pros’ Site, que el personal abre con el acceso a PADI de su propio centro, devuelve solo las líneas sobre ese buceador, o sobre el alumno cuando verifica su eLearning. Cuando una verificación falla, puede enviar a DiveDay la estructura de la página (sus etiquetas, las palabras de sus botones y sus títulos, nunca nada escrito en ella ni los datos de nadie) para poder arreglar la lectura.",
+        "keepsTerm": "Qué guarda DiveDay",
+        "keepsBody": "cuando la respuesta muestra la certificación, las palabras de la agencia pasan a ser la nota de revisión de la tarjeta, con el nombre del miembro del personal cuyo navegador la verificó. Cuando la página muestra otras certificaciones del buceador y alguien del personal las añade, las líneas de la agencia sobre el buceador pasan a ser también su nota de revisión. Si no, no se guarda nada de la página de la agencia.",
+        "neverTerm": "Lo que nunca hace",
+        "neverBody": "no guarda contraseñas ni accesos a ninguna agencia, no almacena nada en el navegador, no lee ningún otro sitio ni el historial, y no pasa nada a nadie para publicidad, para venderlo ni para evaluar créditos."
+      },
       "keep": {
         "heading": "Cuánto tiempo se guarda",
         "intro": "Los registros propios del centro se guardan mientras el centro use DiveDay, y desaparecen cuando el centro los borra o cierra su cuenta. La mayoría de los historiales tienen ventanas fijas, y estos son los números reales con los que el sistema los poda:",
@@ -5022,6 +5035,7 @@
     "reminderAction": {
       "waiverPending": "Firma tu waiver",
       "waiverExpired": "El enlace de tu exención caducó. Consigue uno nuevo; solo lleva unos dos minutos",
+      "waiverLapsed": "Tu exención firmada caducó. Vuelve a firmarla",
       "certificationMissing": "Envíanos los datos de tu certificación",
       "certificationInsufficient": "Consulta tu nivel de certificación con nosotros",
       "certificationSelfDeclared": "Trae tu certificación para que podamos verla",

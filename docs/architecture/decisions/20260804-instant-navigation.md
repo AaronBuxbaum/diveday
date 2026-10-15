@@ -158,7 +158,7 @@ The `error.tsx` files are untouched: they still call `useTranslations("errorBoun
 words still live in `src/i18n/locales/**` — which is what
 20260803-error-boundary-copy-bridge's rejection of "read `document.documentElement.lang` and pick
 from an inlined table" was protecting. Nothing is inlined here; only the *selection* is client-side.
-`src/i18n/provider-coverage.test.ts` learned the second provider so the blank-page guard still
+`scripts/check-intl-providers.mjs` learned the second provider so the blank-page guard still
 covers all ten boundaries.
 
 ## Alternatives considered

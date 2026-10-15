@@ -14,9 +14,7 @@ import { EmbedChromeCollapse } from "../../../_components/EmbedChromeCollapse";
  * frame's width, so they are 4:3 boxes rather than bars of a fixed height.
  * Below the tiles it keeps the page skeleton's order: the day's run, the
  * pitch's door, the conditions line, the alternates, then the one booking card
- * last. `loading.test.tsx` reads the column off the page's embed branch and
- * the header's box off `TripHeader`, and holds the body to the page
- * skeleton's, so none of them can drift from this. Nothing above it either:
+ * last; the visual suite photographs both. Nothing above it either:
  * `EmbedChromeCollapse` keeps the layout's chrome bar out of the frame.
  */
 export default function EmbeddedTripLoading() {

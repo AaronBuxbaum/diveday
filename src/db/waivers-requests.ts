@@ -5,10 +5,13 @@
 import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type GuardianSigner, guardianSignatureMissing } from "@/lib/guardian";
+import { isHeldToMedical } from "@/lib/participant-types";
 import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import {
+  isCleanCompletion,
   isCompletedWaiverCurrent,
+  isSignatureCurrent,
   isUnresolvedMedicalHold,
   WAIVER_LINK_TTL_MS,
 } from "@/lib/waivers";
@@ -95,6 +98,7 @@ export async function issueWaiverRequest(
             minorDeclaredAt: bookings.minorDeclaredAt,
             tripStatus: trips.status,
             identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+            participantType: bookings.participantType,
           })
           .from(bookings)
           .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -158,9 +162,25 @@ export async function issueWaiverRequest(
           isNull(waiverRecords.supersededAt),
         ),
       );
+    // A signature that has lapsed (its year, its physician's year, or terms the
+    // shop has since changed) stands for nothing: the seat reads
+    // `waiver_lapsed`, and the fix is this fresh link. A hold or a refusal on
+    // a seat in the water still stands; neither is a clean completion. A
+    // rider's seat reads a held record as a signature (H-109), so it lapses
+    // with the signature's own clock.
+    const heldToMedical = isHeldToMedical(booking?.participantType);
+    const lapsed = (record: (typeof current)[number]) =>
+      heldToMedical
+        ? isCleanCompletion(record) &&
+          !isCompletedWaiverCurrent(record, template.materialGeneration, now)
+        : (record.status === "completed" || record.status === "medical_review") &&
+          !isSignatureCurrent(record, template.materialGeneration, now);
     const alreadyStanding = booking
       ? current.some(
-          (record) => record.status !== "pending" && !guardianSignatureMissing(record, signer),
+          (record) =>
+            record.status !== "pending" &&
+            !lapsed(record) &&
+            !guardianSignatureMissing(record, signer),
         )
       : current.some(
           (record) =>

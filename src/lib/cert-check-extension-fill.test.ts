@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { RECORD_LINES } from "./agency-check";
 
 /**
  * The extension's form filler (`extension/fill.js`), on stand-in forms. The
@@ -24,14 +23,14 @@ const extension = (
         spec: unknown,
         signInPath?: string,
       ) => { ok: true } | { ok: false; missing: string[] };
-      excerptAround: (text: string, email: string) => string;
-      excerptAroundName: (text: string, firstName: string, lastName: string) => string;
+      pageAsksToSignIn: (signInPath?: string) => boolean;
       AGENCIES: Record<string, unknown>;
+      ELEARNING: Record<string, unknown>;
       SIGN_IN_PATH: string;
     };
   }
 ).DiveDayCertCheck;
-const { excerptAround, excerptAroundName, AGENCIES, SIGN_IN_PATH } = extension;
+const { AGENCIES, ELEARNING, SIGN_IN_PATH } = extension;
 /** The filler as the service worker calls it, with the sign-in rule from protocol.js. */
 const fillAgencyForm = (query: unknown, spec: unknown) =>
   extension.fillAgencyForm(query, spec, SIGN_IN_PATH);
@@ -79,6 +78,54 @@ describe("fillAgencyForm", () => {
     expect(value("#l")).toBe("Ortiz");
     expect(value("#d")).toBe("04/12/1990");
     expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  /** Domain review R7 (adversarial) 6: only a captcha on the lookup's own form stops it. */
+  it("types nothing into a lookup whose own form asks whether the staffer is human", () => {
+    document.body.innerHTML = `
+      <form>
+        <input name="first_name"><input name="last_name"><input name="dob">
+        <div class="g-recaptcha"><iframe src="https://www.google.com/recaptcha/api2/anchor?k=1"></iframe></div>
+        <button type="submit">Search</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(
+      fillAgencyForm(lena, { fields: ["name", "birthDate"], dateFormat: "MM/DD/YYYY" }),
+    ).toEqual({ ok: false, missing: ["captcha"] });
+    expect(value('[name="first_name"]')).toBe("");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("fills a lookup when the captcha is on another form, or draws no box, or is only a badge", () => {
+    for (const elsewhere of [
+      `<form><input type="email" name="newsletter"><div class="g-recaptcha"><iframe src="https://www.google.com/recaptcha/api2/anchor?k=1"></iframe></div><button>Subscribe</button></form>`,
+      `<div class="cf-turnstile"></div>`,
+      `<div class="g-recaptcha"><div class="grecaptcha-badge"><iframe src="https://www.google.com/recaptcha/api2/anchor?k=1&size=invisible"></iframe></div></div>`,
+    ]) {
+      document.body.innerHTML = `
+        <form id="lookup">
+          <input name="first_name"><input name="last_name"><input name="dob">
+          ${elsewhere.includes("newsletter") ? "" : elsewhere}
+          <button type="submit">Search</button>
+        </form>
+        ${elsewhere.includes("newsletter") ? elsewhere : ""}`;
+      const form = document.getElementById("lookup") as HTMLFormElement;
+      const onSubmit = vi.fn((event: Event) => event.preventDefault());
+      form.addEventListener("submit", onSubmit);
+      expect(
+        fillAgencyForm(lena, { fields: ["name", "birthDate"], dateFormat: "MM/DD/YYYY" }),
+        elsewhere,
+      ).toEqual({ ok: true });
+      expect(onSubmit, elsewhere).toHaveBeenCalledOnce();
+    }
+  });
+
+  /** Domain review R7 (adversarial) 7: a page with no box yet is not a changed page. */
+  it("says there is no form yet when the page has no box to type into", () => {
+    document.body.innerHTML = `<h1>Just a moment…</h1><p>Checking your browser.</p>`;
+    expect(
+      fillAgencyForm(lena, { fields: ["name", "birthDate"], dateFormat: "MM/DD/YYYY" }),
+    ).toEqual({ ok: false, missing: ["form"] });
   });
 
   it("uses a date picker's own format", () => {
@@ -135,10 +182,19 @@ describe("fillAgencyForm", () => {
   it("never types into a hidden box", () => {
     document.body.innerHTML = `
       <form><input type="hidden" name="card_number"><button>Verify</button></form>`;
+    // No box a person could type into: a form not drawn yet, never a changed one.
+    expect(fillAgencyForm(lena, { fields: ["number"], dateFormat: "YYYY-MM-DD" })).toEqual({
+      ok: false,
+      missing: ["form"],
+    });
+    expect(value('[name="card_number"]')).toBe("");
+    document.body.innerHTML = `
+      <form><input type="hidden" name="card_number"><input name="q"><button>Verify</button></form>`;
     expect(fillAgencyForm(lena, { fields: ["number"], dateFormat: "YYYY-MM-DD" })).toEqual({
       ok: false,
       missing: ["number"],
     });
+    expect(value('[name="card_number"]')).toBe("");
   });
 
   it("searches CMAS by code when there is one, and by name and birth date when not", () => {
@@ -161,6 +217,104 @@ describe("fillAgencyForm", () => {
     submitted();
     expect(fillAgencyForm({ ...lena, cardNumber: null }, cmas)).toEqual({ ok: true });
     expect(value('[aria-label="Family Name"]')).toBe("Ortiz");
+  });
+
+  /** CMAS's portal: one page, "Search by code" above "Manual Search" (read 2026-10-15). */
+  const cmasPortal = (wrap: (inner: string) => string) => `
+    ${wrap(`<input aria-label="CMAS Code"><button id="by-code">Search by code</button>`)}
+    ${wrap(`<input aria-label="Given Name"><input aria-label="Family Name">
+      <input aria-label="Birthdate"><button id="manual">Manual Search</button>`)}`;
+  const cmasSpec = AGENCIES.cmas;
+  const pressed = () => {
+    const clicks: string[] = [];
+    for (const id of ["by-code", "manual"]) {
+      document.getElementById(id)?.addEventListener("click", (event) => {
+        event.preventDefault();
+        clicks.push(id);
+      });
+    }
+    return clicks;
+  };
+
+  it.each([
+    ["one form for both searches", (inner: string) => inner, true],
+    ["no form at all", (inner: string) => `<div>${inner}</div>`, false],
+  ])("presses CMAS's Search by code for a card number, on %s", (_, wrap, oneForm) => {
+    document.body.innerHTML = oneForm ? `<form>${cmasPortal(wrap)}</form>` : cmasPortal(wrap);
+    const clicks = pressed();
+    expect(fillAgencyForm(lena, cmasSpec)).toEqual({ ok: true });
+    expect(value('[aria-label="CMAS Code"]')).toBe("123456");
+    expect(clicks).toEqual(["by-code"]);
+  });
+
+  it.each([
+    ["one form for both searches", (inner: string) => inner, true],
+    ["no form at all", (inner: string) => `<div>${inner}</div>`, false],
+  ])("presses CMAS's Manual Search for a name and birth date, on %s", (_, wrap, oneForm) => {
+    document.body.innerHTML = oneForm ? `<form>${cmasPortal(wrap)}</form>` : cmasPortal(wrap);
+    const clicks = pressed();
+    expect(fillAgencyForm({ ...lena, cardNumber: null }, cmasSpec)).toEqual({ ok: true });
+    expect(value('[aria-label="Family Name"]')).toBe("Ortiz");
+    expect(value('[aria-label="Birthdate"]')).toBe("1990-04-12");
+    expect(clicks).toEqual(["manual"]);
+  });
+
+  /** Security review R4-3: a button inside a hidden block is not on the page. */
+  it("never presses a button hidden by the block around it, on CMAS's manual search", () => {
+    document.body.innerHTML = `
+      <input aria-label="CMAS Code"><button id="by-code">Search by code</button>
+      <input aria-label="Given Name"><input aria-label="Family Name">
+      <input aria-label="Birthdate">
+      <div style="display:none"><button id="delete">Delete</button></div>
+      <button id="manual">Manual Search</button>`;
+    const clicks = pressed();
+    const deleted = vi.fn();
+    document.getElementById("delete")?.addEventListener("click", deleted);
+    expect(fillAgencyForm({ ...lena, cardNumber: null }, cmasSpec)).toEqual({ ok: true });
+    expect(deleted).not.toHaveBeenCalled();
+    expect(clicks).toEqual(["manual"]);
+  });
+
+  /** Domain review R4 (adversarial) nit: a date picker's toggle is not CMAS's search. */
+  it("never presses a date picker's toggle between CMAS's birth date and its Manual Search", () => {
+    document.body.innerHTML = `
+      <input aria-label="CMAS Code"><button id="by-code">Search by code</button>
+      <input aria-label="Given Name"><input aria-label="Family Name">
+      <input aria-label="Birthdate"><button type="button" id="calendar">Open calendar</button>
+      <button id="manual">Manual Search</button>`;
+    const clicks = pressed();
+    const calendar = vi.fn();
+    document.getElementById("calendar")?.addEventListener("click", calendar);
+    expect(fillAgencyForm({ ...lena, cardNumber: null }, cmasSpec)).toEqual({ ok: true });
+    expect(calendar).not.toHaveBeenCalled();
+    expect(clicks).toEqual(["manual"]);
+  });
+
+  /** Domain review R4 (adversarial) 4: the first button in a public form is not always its submit. */
+  it("presses a public form's Verify, never the date picker's toggle before it", () => {
+    document.body.innerHTML = `
+      <form>
+        <label for="f">First Name</label><input id="f">
+        <label for="l">Last Name</label><input id="l">
+        <label for="d">Date of Birth</label><input id="d">
+        <button type="button" id="calendar">Pick a date</button>
+        <button type="reset" id="clear">Clear</button>
+        <button id="verify">Verify</button>
+      </form>`;
+    const onSubmit = submitted();
+    const calendar = vi.fn();
+    const verify = vi.fn();
+    const clear = vi.fn();
+    document.getElementById("calendar")?.addEventListener("click", calendar);
+    document.getElementById("verify")?.addEventListener("click", verify);
+    document.getElementById("clear")?.addEventListener("click", clear);
+    expect(
+      fillAgencyForm(lena, { fields: ["name", "birthDate"], dateFormat: "MM/DD/YYYY" }),
+    ).toEqual({ ok: true });
+    expect(calendar).not.toHaveBeenCalled();
+    expect(clear).not.toHaveBeenCalled();
+    expect(verify).toHaveBeenCalledOnce();
+    expect(onSubmit).toHaveBeenCalledOnce();
   });
 
   it("types the student's email into PADI's search, and only the email", () => {
@@ -210,27 +364,6 @@ describe("fillAgencyForm", () => {
   });
 });
 
-describe("excerptAround", () => {
-  it("hands back only the lines near the student's email", () => {
-    const page = [
-      ...Array.from({ length: 20 }, (_, index) => `Other ${index}\tother${index}@example.com`),
-      "Lena Ortiz\tLena@Example.com\tOpen Water Diver Online\tComplete",
-      ...Array.from({ length: 20 }, (_, index) => `Later ${index}\tlater${index}@example.com`),
-    ].join("\n");
-    const excerpt = excerptAround(page, "lena@example.com");
-    expect(excerpt).toContain("Lena Ortiz");
-    expect(excerpt).not.toContain("other0@example.com");
-    expect(excerpt).not.toContain("later19@example.com");
-  });
-
-  it("keeps the top of a page that never names the email, to say why", () => {
-    const page = ["Search results", "No results found", ...Array(100).fill("row")].join("\n");
-    const excerpt = excerptAround(page, "lena@example.com");
-    expect(excerpt).toContain("No results found");
-    expect(excerpt.split("\n")).toHaveLength(40);
-  });
-});
-
 /**
  * **PADI DiveChek**, on the PADI Pros' Site, in the staffer's own signed-in
  * browser. The form is a best guess (#2259); what these pin is the safety the
@@ -239,6 +372,74 @@ describe("excerptAround", () => {
  */
 describe("fillAgencyForm on PADI DiveChek", () => {
   const divechek = AGENCIES.padi;
+  // The tab is on DiveChek's own address unless a test says otherwise.
+  beforeEach(() => window.history.replaceState(null, "", "/divechek"));
+
+  /** Security review R4-1a: one Verify does not make a form's every box a search. */
+  it("types nothing into a form with a box the lookup does not fill, whatever its one button says", () => {
+    document.body.innerHTML = `
+      <form>
+        <label for="f">First Name</label><input id="f">
+        <label for="l">Last Name</label><input id="l">
+        <label for="d">Date of Birth</label><input id="d">
+        <label for="p">Phone</label><input id="p">
+        <button id="go">Verify</button>
+      </form>`;
+    const onSubmit = submitted();
+    const go = vi.fn();
+    document.getElementById("go")?.addEventListener("click", go);
+    const filled = fillAgencyForm(lena, divechek);
+    expect(filled.ok).toBe(false);
+    expect((filled as { missing: string[] }).missing.length).toBeGreaterThan(0);
+    for (const box of document.querySelectorAll("input")) expect(box.value).toBe("");
+    expect(go).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  /** Security review R4-1 (path): a search form on another Pros' Site page is not DiveChek. */
+  it("types nothing on another page of the Pros' Site, even one with a search form", () => {
+    window.history.replaceState(null, "", "/me/dashboard");
+    document.body.innerHTML = `
+      <form>
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth"><button>Search</button>
+      </form>`;
+    const onSubmit = submitted();
+    const filled = fillAgencyForm(lena, divechek);
+    expect(filled.ok).toBe(false);
+    for (const box of document.querySelectorAll("input")) expect(box.value).toBe("");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("reads DiveChek's address with a trailing slash as DiveChek", () => {
+    window.history.replaceState(null, "", "/divechek/");
+    document.body.innerHTML = `
+      <form>
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth"><button>Search</button>
+      </form>`;
+    submitted();
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: true });
+  });
+
+  /** Domain review R4 (adversarial) 3: a reset that says "search" is not the search. */
+  it("presses Run Report, never a Clear search reset beside it", () => {
+    document.body.innerHTML = `
+      <form>
+        <input aria-label="First Name"><input aria-label="Last Name">
+        <input aria-label="Date of Birth">
+        <button type="reset" id="clear">Clear search</button><button id="run">Run Report</button>
+      </form>`;
+    const onSubmit = submitted();
+    const clear = vi.fn();
+    const run = vi.fn();
+    document.getElementById("clear")?.addEventListener("click", clear);
+    document.getElementById("run")?.addEventListener("click", run);
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: true });
+    expect(clear).not.toHaveBeenCalled();
+    expect(run).toHaveBeenCalledOnce();
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
 
   it("types the diver's name and birth date into DiveChek's search, and presses its Search", () => {
     document.body.innerHTML = `
@@ -254,6 +455,38 @@ describe("fillAgencyForm on PADI DiveChek", () => {
     expect(value("#l")).toBe("Ortiz");
     expect(value("#d")).toBe("04/12/1990");
     expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it("presses DiveChek's own Run Report button", () => {
+    document.body.innerHTML = `
+      <form>
+        <label for="f">First Name</label><input id="f">
+        <label for="l">Last Name</label><input id="l">
+        <label for="d">Date of Birth</label><input id="d">
+        <button type="reset">Clear</button><button id="run">Run Report</button>
+      </form>`;
+    const onSubmit = submitted();
+    const run = vi.fn();
+    document.getElementById("run")?.addEventListener("click", run);
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: true });
+    expect(run).toHaveBeenCalledOnce();
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it("never reads a Report button that does not run one as a search", () => {
+    document.body.innerHTML = `
+      <form>
+        <label for="f">First Name</label><input id="f">
+        <label for="l">Last Name</label><input id="l">
+        <label for="d">Date of Birth</label><input id="d">
+        <button>Report a problem</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(fillAgencyForm(lena, divechek)).toEqual({
+      ok: false,
+      missing: ["name", "birthDate"],
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("types nothing on a page that asks for a password, and says the staffer is signed out", () => {
@@ -426,77 +659,63 @@ describe("fillAgencyForm on PADI DiveChek", () => {
   });
 });
 
-describe("excerptAroundName", () => {
-  it("hands back only this diver's lines, and how many divers were found", () => {
-    const page = [
-      "PADI Pros’ Site",
-      "Welcome back, Coral Coast Divers",
-      "Recent students: Sam Reyes, Mia Chen",
-      "DiveChek",
-      "1 diver found",
-      ...Array.from({ length: 10 }, (_, index) => `menu ${index}`),
-      "Lena Ortiz",
-      "Date of Birth: 12 Apr 1990",
-      "Open Water Diver 15 Jun 2015",
-      ...Array.from({ length: 10 }, (_, index) => `footer ${index}`),
-    ].join("\n");
-    const excerpt = excerptAroundName(page, "Léna", "ORTIZ");
-    expect(excerpt).toContain("1 diver found");
-    expect(excerpt).toContain("Date of Birth: 12 Apr 1990");
-    expect(excerpt).toContain("Open Water Diver");
-    expect(excerpt).not.toContain("Sam Reyes");
-    expect(excerpt).not.toContain("Coral Coast Divers");
-    expect(excerpt).not.toContain("footer 9");
+/** The eLearning lookup on the Pros' Site, held to the same signed-in rules. */
+describe("fillAgencyForm on PADI eLearning", () => {
+  /** Security review R4-1b: a report's "Email a copy to" box is not a search for the student. */
+  it("never types the student's email into a box that sends a report a copy", () => {
+    document.body.innerHTML = `
+      <form>
+        <label>Email a copy to <input type="email"></label>
+        <button id="run">Run Report</button>
+      </form>`;
+    const onSubmit = submitted();
+    const run = vi.fn();
+    document.getElementById("run")?.addEventListener("click", run);
+    const filled = fillAgencyForm({ ...lena, email: "lena@example.com" }, ELEARNING.padi);
+    expect(filled.ok).toBe(false);
+    expect(value("input")).toBe("");
+    expect(run).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("hands back no more lines under a name than the server reads as one record", () => {
-    const page = ["Lena Ortiz", "a", "b", "c", "d", "Mark Lee", "e"].join("\n");
-    expect(excerptAroundName(page, "Lena", "Ortiz").split("\n")).toEqual(
-      ["Lena Ortiz", "a", "b", "c", "d"].slice(0, RECORD_LINES + 1),
-    );
+  it("types the student's email into the student search", () => {
+    document.body.innerHTML = `
+      <form>
+        <label>Student email <input type="email"></label>
+        <button>Search</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(fillAgencyForm({ ...lena, email: "lena@example.com" }, ELEARNING.padi)).toEqual({
+      ok: true,
+    });
+    expect(value("input")).toBe("lena@example.com");
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+});
+
+describe("pageAsksToSignIn", () => {
+  const { pageAsksToSignIn } = extension;
+
+  it("reads a password box on the page as a sign-in", () => {
+    document.body.innerHTML = `<form><input type="password" aria-label="Password"></form>`;
+    expect(pageAsksToSignIn(SIGN_IN_PATH)).toBe(true);
   });
 
-  it("reads a 'Last, First' name line as the diver's", () => {
-    const page = ["Menu", "Ortiz, Lena", "12 Apr 1990", "Open Water Diver"].join("\n");
-    expect(excerptAroundName(page, "Lena", "Ortiz")).toBe(
-      "Ortiz, Lena\n12 Apr 1990\nOpen Water Diver",
-    );
+  it("reads a sign-in address as a sign-in", () => {
+    window.history.replaceState(null, "", "/sign-in");
+    document.body.innerHTML = "<p>Welcome back</p>";
+    expect(pageAsksToSignIn(SIGN_IN_PATH)).toBe(true);
   });
 
-  it("keeps only the count's words from a long line around it", () => {
-    const page = [
-      `Welcome back, Coral Coast Divers. Your recent students include Sam Reyes. 2 divers found`,
-      "Lena Ortiz",
-    ].join("\n");
-    const excerpt = excerptAroundName(page, "Lena", "Ortiz");
-    expect(excerpt).toContain("2 divers found");
-    expect(excerpt).not.toContain("Sam Reyes");
+  it("reads a result page, or a password box hidden around it, as no sign-in", () => {
+    window.history.replaceState(null, "", "/divechek");
+    document.body.innerHTML = `<p>Lena Ortiz</p>
+      <div style="display:none"><input type="password"></div>`;
+    expect(pageAsksToSignIn(SIGN_IN_PATH)).toBe(false);
   });
 
-  it("keeps every record naming the diver, so the server can see there are several", () => {
-    const page = ["Lena Ortiz", "12 Apr 1990", ...Array(20).fill("x"), "Lena Ortiz", "3 Sep 1987"];
-    expect(excerptAroundName(page.join("\n"), "Lena", "Ortiz")).toContain("3 Sep 1987");
-  });
-
-  it("never takes a longer name for the diver's", () => {
-    const page = ["Welcome", ...Array(50).fill("row"), "Lenara Ortizzi", "Open Water Diver"];
-    expect(excerptAroundName(page.join("\n"), "Lena", "Ortiz")).not.toContain("Lenara");
-  });
-
-  /** Security review S4: a page without the diver hands back only why. */
-  it("keeps only the lines that say why, from a page that never names the diver", () => {
-    const page = [
-      "Welcome back, Coral Coast Divers",
-      "Recent students: Sam Reyes, Mia Chen",
-      "Sign in",
-      "Email",
-      "Password",
-      ...Array(100).fill("Mark Lee"),
-    ].join("\n");
-    expect(excerptAroundName(page, "Lena", "Ortiz")).toBe("Sign in\nPassword");
-    const none = ["DiveChek", "Sam Reyes", "No results found", "Mia Chen"].join("\n");
-    expect(excerptAroundName(none, "Lena", "Ortiz")).toBe("No results found");
-    const many = Array(30).fill("Password").join("\n");
-    expect(excerptAroundName(many, "Lena", "Ortiz").split("\n")).toHaveLength(10);
+  it("reads a page with no sign-in address rule as a sign-in", () => {
+    document.body.innerHTML = "<p>Lena Ortiz</p>";
+    expect(pageAsksToSignIn()).toBe(true);
   });
 });

@@ -1,12 +1,14 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { enqueueIntegrationEvent, listDueIntegrationDeliveries } from "./integration-events";
 import { integrationDeliveries, integrationEvents, shopIntegrations, shops } from "./schema";
 
+const ctx = fileScopedShopContext();
+
 describe("integration outbox", () => {
   it("fans out one idempotent event to connected subscribers only", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const [shop] = await db.select().from(shops).limit(1);
     if (!shop) throw new Error("expected a seeded shop");
     const [connected] = await db
@@ -48,7 +50,7 @@ describe("integration outbox", () => {
   });
 
   it("does not schedule a delivery after the retry cap", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const [shop] = await db.select().from(shops).limit(1);
     if (!shop) throw new Error("expected a seeded shop");
     const [integration] = await db

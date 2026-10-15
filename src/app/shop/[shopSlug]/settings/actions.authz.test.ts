@@ -230,6 +230,8 @@ describe("saving an optional feature switch", () => {
       dateRequestsEnabled: true,
       lastMinuteListEnabled: true,
       tipsEnabled: true,
+      // The seeded demo runs the PADI checks; turning reviews off leaves them on.
+      padiChecksEnabled: true,
     });
 
     await redirectedTo(() => saveShopFeatureAction(featureForm("reviews", true)));

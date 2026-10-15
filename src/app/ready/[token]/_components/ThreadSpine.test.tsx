@@ -129,6 +129,21 @@ describe("ThreadSpine", () => {
     expect(screen.getByText("Your shop is confirming your readiness.")).toBeVisible();
   });
 
+  it("names each step's state on its row, settled steps included", () => {
+    const { container } = render(
+      <ThreadSpine
+        steps={[
+          step({ id: "sign", state: "your_turn", current: true, body: <p>Sign</p> }),
+          step({ id: "pay", state: "done", stateWord: null }),
+        ]}
+      />,
+    );
+    const stateOf = (id: string) =>
+      container.querySelector(`li[data-thread-step='${id}']`)?.getAttribute("data-step-state");
+    expect(stateOf("sign")).toBe("your_turn");
+    expect(stateOf("pay")).toBe("done");
+  });
+
   it("gives every state a word, never color alone", () => {
     render(
       <ThreadSpine

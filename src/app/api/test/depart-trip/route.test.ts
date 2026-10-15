@@ -4,7 +4,9 @@ import { shops, trips } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { HOUR_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { noShowClaim, noShowGate } from "@/lib/no-show";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **What this route is for is a gate answer, not a column.**
@@ -74,7 +76,7 @@ afterEach(() => {
 
 describe("POST /api/test/depart-trip", () => {
   it("opens the counter's door on a boat that was still ahead a moment ago", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const trip = await aTripAhead(db, shop.id);
     expect(doorFor(trip.startsAt)).toBe("before_departure");
@@ -95,7 +97,7 @@ describe("POST /api/test/depart-trip", () => {
   });
 
   it("reaches the other half of the door once the boat is really gone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const trip = await aTripAhead(db, shop.id);
 
@@ -110,7 +112,7 @@ describe("POST /api/test/depart-trip", () => {
   });
 
   it("refuses to drag a departure forwards, so no arrival predates its own boat", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const trip = await aTripAhead(db, shop.id);
     await db
@@ -126,7 +128,7 @@ describe("POST /api/test/depart-trip", () => {
   });
 
   it("answers nothing at all without the harness's bearer token", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const trip = await aTripAhead(db, shop.id);
 
@@ -139,7 +141,7 @@ describe("POST /api/test/depart-trip", () => {
   });
 
   it("refuses a trip that is not this shop's, by the same not-found answer", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
 
     const response = await POST(
@@ -154,7 +156,7 @@ describe("POST /api/test/depart-trip", () => {
     // trusting the read two lines above. A real foreign trip rather than an
     // absent id, because an id that matches nothing cannot tell the two
     // statements apart.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Reef Runners", slug: "reef-runners", timezone: "America/New_York" })
@@ -200,7 +202,7 @@ describe("POST /api/test/depart-trip", () => {
   });
 
   it("refuses a body with no trip or no distance to move", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
 
     expect((await POST(departRequest({ minutesAgo: 10 }))).status).toBe(400);
