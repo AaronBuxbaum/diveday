@@ -64,7 +64,8 @@ export function GearReturnPane({
   action: (formData: FormData) => Promise<void>;
   labels: {
     allGood: string;
-    fitAdjusted: string;
+    /** Absent, the pane offers no fit answer: one unit off the boat (fifth-loop ideas, item 5). */
+    fitAdjusted?: string;
     serviceConcern: string;
     /** Closes an open concern, discarding its note and ticks. */
     cancelConcern: string;
@@ -108,15 +109,17 @@ export function GearReturnPane({
           >
             {labels.allGood}
           </SubmitButton>
-          <SubmitButton
-            name="outcome"
-            value="fit_adjusted"
-            formNoValidate
-            pendingLabel={labels.fitAdjusted}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {labels.fitAdjusted}
-          </SubmitButton>
+          {labels.fitAdjusted ? (
+            <SubmitButton
+              name="outcome"
+              value="fit_adjusted"
+              formNoValidate
+              pendingLabel={labels.fitAdjusted}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {labels.fitAdjusted}
+            </SubmitButton>
+          ) : null}
           <button
             ref={openerRef}
             type="button"

@@ -307,7 +307,11 @@ export const PREP_GROUP_PATH = "/shop/blue-mantis/trips/t1";
 /** The `PrepView` `PrepBody` builds for a section, on a route (no id prefix). */
 export function viewOf(
   prep: TripPrep,
-  { cancelled = false, sailed = false }: { cancelled?: boolean; sailed?: boolean } = {},
+  {
+    cancelled = false,
+    sailed = false,
+    home = false,
+  }: { cancelled?: boolean; sailed?: boolean; home?: boolean } = {},
 ): PrepView {
   return {
     prep,
@@ -318,5 +322,6 @@ export function viewOf(
     idPrefix: undefined,
     cancelled,
     sailed,
+    home,
   };
 }

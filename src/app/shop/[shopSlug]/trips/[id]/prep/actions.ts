@@ -10,6 +10,8 @@ import {
   releaseGearReservation,
   reserveGearUnit,
   returnTripGearSet,
+  returnTripGearUnit,
+  TRIP_UNIT_RETURN_OUTCOMES,
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked, screenGearPicks } from "@/db/trips";
@@ -314,6 +316,51 @@ export async function returnTripGearSetAction(formData: FormData) {
           ? "gear-nothing-out"
           : RESERVATION_ACTION_NOTICE[outcome.reason],
       { count: outcome.ok && outcome.pulled > 0 ? outcome.pulled : undefined },
+    ),
+  );
+}
+
+const returnUnitSchema = z.object({
+  tripId: z.uuid(),
+  reservationId: z.uuid(),
+  outcome: z.enum(TRIP_UNIT_RETURN_OUTCOMES),
+  note: z.string().trim().max(400).optional(),
+});
+
+/**
+ * **One unit back from the boat** (fifth-loop ideas, item 5): the Gear tab's
+ * "Back from the boat" list, once the boat is home. "Back" closes the unit;
+ * "Back with a problem" closes it as a service concern with the words, the
+ * flag a technician answers on the unit's page. The writer proves the unit was
+ * out on this departure, so a forged id from another departure closes nothing.
+ */
+export async function returnTripGearUnitAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const parsed = returnUnitSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const gear = shopPath(session.user.shopSlug, "gear");
+    revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+  }
+  const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
+  const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
+  const outcome = await returnTripGearUnit(await getDb(), {
+    shopId: session.user.shopId,
+    tripId: parsed.data.tripId,
+    reservationId: parsed.data.reservationId,
+    outcome: parsed.data.outcome,
+    note: parsed.data.note,
+  });
+  revalidateAndRedirect(
+    departure,
+    noticeUrl(
+      landing,
+      outcome.ok
+        ? parsed.data.outcome === "service_concern"
+          ? "gear-returned-flagged"
+          : "gear-returned-set"
+        : outcome.reason === "not_found"
+          ? "gear-already-returned"
+          : RESERVATION_ACTION_NOTICE[outcome.reason],
     ),
   );
 }
