@@ -267,6 +267,8 @@
   },
   "staleRollCall": {
     "pushTitle": "Roll call still open",
-    "pushBody": "{title}: {count, plural, one {# person} other {# people}} not marked after dive {dive}."
+    "pushBody": "{title}: {awaiting, plural, one {# person has} other {# people have}} no result after dive {dive}.",
+    "pushBodyMissing": "{title}: {missing, plural, one {# person} other {# people}} recorded not back aboard after dive {dive}.",
+    "pushBodyBoth": "{title}: {missing, plural, one {# person} other {# people}} recorded not back aboard after dive {dive}; {awaiting, plural, one {# more has} other {# more have}} no result."
   }
 }

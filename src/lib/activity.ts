@@ -236,6 +236,22 @@ type ActivityParamShapes = {
   review_reply_edited: { actor: string };
   review_reply_deleted: { actor: string };
   /**
+   * **Who set the shore contact's alert address** (H-118 security review):
+   * the address roll-call alerts go to outside the shop's accounts, added,
+   * replaced or removed. Shop-level lines; no address in them, so an erasure
+   * has nothing here to reach.
+   */
+  shore_alert_contact_set: { actor: string };
+  shore_alert_contact_changed: { actor: string };
+  shore_alert_contact_cleared: { actor: string };
+  /**
+   * **The shore contact stopped the alerts themselves**, with the link in one
+   * (H-118 re-review). No account did it, so the line names nobody: the one
+   * row in `activity_events` with no actor (the table's check allows it for
+   * this code only).
+   */
+  shore_alert_contact_stopped: Record<string, never>;
+  /**
    * An erasure ran over this line.
    *
    * A code rather than a blanked payload, so the row reads the same way it
@@ -343,6 +359,10 @@ export const ACTIVITY_CODES = [
   "review_replied",
   "review_reply_edited",
   "review_reply_deleted",
+  "shore_alert_contact_set",
+  "shore_alert_contact_changed",
+  "shore_alert_contact_cleared",
+  "shore_alert_contact_stopped",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",

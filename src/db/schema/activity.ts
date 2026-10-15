@@ -69,9 +69,13 @@ export const activityEvents = pgTable(
       .references(() => shops.id),
     tripId: uuid("trip_id").references(() => trips.id, { onDelete: "cascade" }),
     bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "set null" }),
-    actorPersonId: uuid("actor_person_id")
-      .notNull()
-      .references(() => people.id),
+    /**
+     * Who did it. Null on exactly one line, which no account wrote: the shore
+     * contact stopping roll-call alerts from the link in one
+     * (`shore_alert_contact_stopped`, H-118 re-review). The check below holds
+     * every other code to an actor.
+     */
+    actorPersonId: uuid("actor_person_id").references(() => people.id),
     /**
      * The person this line is **about**, where that is neither the actor nor
      * reachable through `booking_id` — today, a note written on a diver's
@@ -164,6 +168,10 @@ export const activityEvents = pgTable(
     // newest first, with `seq` breaking the frozen-clock ties.
     index("activity_events_shop_occurred_idx").on(table.shopId, table.occurredAt, table.seq),
     check("activity_events_code_not_blank", sql`length(trim(${table.code})) > 0`),
+    check(
+      "activity_events_actor_present",
+      sql`${table.actorPersonId} is not null or ${table.code} = 'shore_alert_contact_stopped'`,
+    ),
   ],
 );
 

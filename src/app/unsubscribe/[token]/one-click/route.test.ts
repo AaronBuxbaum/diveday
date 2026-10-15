@@ -16,6 +16,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/db/courtesy-email", () => ({ optOutPersonFromCourtesyEmailByToken: vi.fn() }));
 vi.mock("@/db/last-minute-list", () => ({ unsubscribeLastMinuteListEntryByToken: vi.fn() }));
 vi.mock("@/db/weekly-digest", () => ({ turnOffWeeklyDigestByToken: vi.fn() }));
+vi.mock("@/db/shore-alert-tokens", () => ({ stopShoreAlertsByToken: vi.fn() }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
@@ -25,6 +26,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 const { optOutPersonFromCourtesyEmailByToken } = await import("@/db/courtesy-email");
 const { unsubscribeLastMinuteListEntryByToken } = await import("@/db/last-minute-list");
 const { turnOffWeeklyDigestByToken } = await import("@/db/weekly-digest");
+const { stopShoreAlertsByToken } = await import("@/db/shore-alert-tokens");
 const { checkRateLimit, rateLimitKey, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { POST } = await import("./route");
 
@@ -42,6 +44,7 @@ beforeEach(() => {
   vi.mocked(unsubscribeLastMinuteListEntryByToken).mockResolvedValue(null);
   vi.mocked(optOutPersonFromCourtesyEmailByToken).mockResolvedValue(null);
   vi.mocked(turnOffWeeklyDigestByToken).mockResolvedValue(null);
+  vi.mocked(stopShoreAlertsByToken).mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -75,6 +78,23 @@ describe("POST /unsubscribe/[token]/one-click", () => {
 
     expect(response.status).toBe(200);
     expect(turnOffWeeklyDigestByToken).toHaveBeenCalledWith({}, { token: TOKEN });
+  });
+
+  // H-118: a shop's shore contact stops its roll-call alerts from the mail
+  // client's own button, tried last.
+  it("stops a shore contact's roll-call alerts when the token is none of the others", async () => {
+    const response = await post();
+
+    expect(response.status).toBe(200);
+    expect(stopShoreAlertsByToken).toHaveBeenCalledWith({}, { token: TOKEN });
+  });
+
+  it("leaves the shore contact alone when a Monday-email token matched", async () => {
+    vi.mocked(turnOffWeeklyDigestByToken).mockResolvedValue({ personId: "p" } as never);
+
+    await post();
+
+    expect(stopShoreAlertsByToken).not.toHaveBeenCalled();
   });
 
   it("leaves the Monday email alone when a courtesy-email token matched", async () => {

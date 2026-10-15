@@ -267,6 +267,8 @@
   },
   "staleRollCall": {
     "pushTitle": "Pase de lista aún abierto",
-    "pushBody": "{title}: {count, plural, one {# persona sin marcar} other {# personas sin marcar}} después de la inmersión {dive}."
+    "pushBody": "{title}: {awaiting, plural, one {# persona sin resultado} other {# personas sin resultado}} después de la inmersión {dive}.",
+    "pushBodyMissing": "{title}: {missing, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo después de la inmersión {dive}.",
+    "pushBodyBoth": "{title}: {missing, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo después de la inmersión {dive}; {awaiting, plural, one {# más sin resultado} other {# más sin resultado}}."
   }
 }

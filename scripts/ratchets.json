@@ -327,7 +327,7 @@
     "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1178,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1670,
+    "src/db/export.test.ts": 1669,
     "src/db/import.test.ts": 1077,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,

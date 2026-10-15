@@ -766,15 +766,21 @@
   serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety tab;
   read by nothing that gates. A severity is the crew's judgment, never a medical classification
   ([20261014-incident-kind-severity](../../architecture/decisions/20261014-incident-kind-severity.md)).
+- **Shore alert contact** — the one person outside the shop's accounts who hears a **stale roll
+  call**: an email address on the emergency reference page, beside the free-text shore contact a
+  crew reads, saved only with the box that records they agreed (who ticked it, and when), and sent
+  nothing until the address itself confirms by the link DiveDay mails it. Changing the address asks
+  for both again; clearing it clears them. Their copy names the shop and its phone, the departure,
+  the dive and the counts, in the shop's language, with no names and one link, the one that takes
+  the address off the shop (H-118, `src/lib/shore-alert-contact.ts`, `src/db/shore-alert-tokens.ts`).
 - **Stale roll call** — an after-dive roll call still open after its departure was due back. The
   hourly crew-notices pass asks from 30 minutes past the end; a count nobody started is open only
   once the boat is due home (the end plus the one-hour return buffer), so it alerts at the first
   hourly pass after that, while a started count or a person recorded not back aboard can alert at
   the first pass past the half hour. Once per departure the owners are emailed ("after the boat was
   due back at 4:00 PM EDT") and every device following the manifest is pushed
-  (`sendStaleRollCallAlerts`), and the Today row says when; the
-  shore contact is free text and is not messaged (H-118). It informs and never closes or changes
-  the count.
+  (`sendStaleRollCallAlerts`), and the Today row says when. A confirmed **shore alert contact** is
+  emailed too, under a claim of its own (H-118). It informs and never closes or changes the count.
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking
@@ -830,7 +836,8 @@
   differs by country, so a plausible wrong number here costs the minute it takes to find out. Free
   text throughout, including the phone lines: an international dive line is not a `tel:`-shaped
   string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
-  incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
+  incident. Its free-text shore contact is never messaged; the address DiveDay may email lives
+  beside it as the **shore alert contact**. It is a laminated card retyped, priced at zero words of DiveDay's own.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. **After a dive it may carry a
   short note** (up to `ROLL_CALL_NOTE_MAX`, 300 characters) when the mark raises a "not back
