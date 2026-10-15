@@ -39,7 +39,7 @@ export async function OwedLine({
       {owed.orders.cents > 0 ? (
         <Link
           href={`/shop/${shopSlug}/orders?status=open&range=all`}
-          className="underline underline-offset-2"
+          className="inline-flex min-h-11 items-center underline underline-offset-2"
         >
           {t("orders.index.owed.orders", {
             amount: money(owed.orders.cents),
