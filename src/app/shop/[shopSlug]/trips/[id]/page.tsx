@@ -411,6 +411,7 @@ export default async function ManageTripPage({
                   tideLines,
                   held: notice === "saved" ? held : undefined,
                   tell,
+                  refundsHeld: !mayWriteOffPayment,
                 }),
                 ...(await openSeatsRows),
               ]}
@@ -443,6 +444,7 @@ export default async function ManageTripPage({
                     series={canConfigure ? series : null}
                     crewNames={assignedCrewNames(overview)}
                     lifecycleStatus={lifecycleStatus}
+                    refundsHeld={!mayWriteOffPayment}
                     locale={locale}
                     t={t}
                   />

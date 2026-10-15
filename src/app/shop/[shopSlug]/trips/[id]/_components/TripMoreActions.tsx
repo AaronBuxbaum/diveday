@@ -40,6 +40,7 @@ export function TripMoreActions({
   series,
   crewNames,
   lifecycleStatus,
+  refundsHeld,
   locale,
   t,
 }: {
@@ -53,6 +54,8 @@ export function TripMoreActions({
   /** Who crews this departure, for the series' standing-crew question. */
   crewNames: string[];
   lifecycleStatus: FormNotice | undefined;
+  /** True when this staffer may not refund: a call-off leaves the card refunds for an owner or manager (H-123). */
+  refundsHeld: boolean;
   locale: string;
   t: StaffTranslator;
 }) {
@@ -68,6 +71,7 @@ export function TripMoreActions({
           applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
           cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
           repeatAction={setSeriesRepeatAction.bind(null, shopSlug, tripId, series.id)}
+          refundsHeld={refundsHeld}
           locale={locale}
         />
       ) : null}

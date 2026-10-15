@@ -781,6 +781,126 @@ describe("recurring trip series (in-memory PGlite)", () => {
       );
     });
 
+    // Issue #2453: the narrowing cancel treats a paid diver like the run-wide one.
+    describe("narrowing a run's cadence (issue #2453)", () => {
+      async function narrowedRun() {
+        const { db, shop } = ctx;
+        const now = at("2030-08-15T00:00:00.000Z");
+        const result = await createTripSeries(
+          db,
+          seriesInput({
+            shopId: shop.id,
+            title: "Wed and Sat Wreck",
+            endsOn: "2030-09-21",
+            weekdays: weekdaySetFrom([WED, SAT]),
+          }),
+        );
+        if (!result) throw new Error("series not created");
+        await updateSeriesCadence(
+          db,
+          shop.id,
+          result.series.id,
+          { intervalWeeks: 1, weekdays: weekdaySetFrom([SAT]), endsOn: "2030-09-21" },
+          now,
+        );
+        const [dropped] = await listOffCadenceSeriesTrips(db, shop.id, result.series.id, now);
+        if (!dropped) throw new Error("expected a dropped date");
+        const party = await createBookingParty(db, [
+          {
+            actor: "staff" as const,
+            shopId: shop.id,
+            tripId: dropped.id,
+            fullName: "Wes Dropped",
+            email: "wes.dropped@example.com",
+          },
+        ]);
+        if (!party.ok) throw new Error("could not book the dropped date");
+        await upsertShopStripeAccount(db, shop.id, "acct_narrow_cancel");
+        await setShopStripeAccountStatus(db, "acct_narrow_cancel", {
+          chargesEnabled: true,
+          payoutsEnabled: true,
+          detailsSubmitted: true,
+        });
+        const bookingId = party.bookings[0]?.bookingId as string;
+        await setBookingPayment(db, {
+          shopId: shop.id,
+          bookingId,
+          status: "paid",
+          amountCents: 15_000,
+          currency: "usd",
+          provider: "stripe",
+          providerRef: "cs_narrow_paid",
+        });
+        return { db, shop, now, result, dropped, bookingId };
+      }
+
+      it("refunds a paid diver on a dropped weekday and sends them exactly one run_ended message", async () => {
+        const run = await narrowedRun();
+        const email = fakeEmail();
+        const outcome = await cancelOffCadenceSeriesTrips(run.db, {
+          shopId: run.shop.id,
+          seriesId: run.result.series.id,
+          calledByPersonId: await ownerId(run.db, run.shop.id),
+          now: run.now,
+          provider: email.provider,
+          checkout: fakeCheckout(),
+        });
+        expect(outcome.divers).toBe(1);
+        expect(outcome.tripIds).toContain(run.dropped.id);
+        const told = email.sent.filter(
+          (sent) => sent.kind === "trip_blowout" && sent.to === "wes.dropped@example.com",
+        );
+        expect(told).toHaveLength(1);
+        expect(told[0]?.kind === "trip_blowout" && told[0].cause).toBe("run_ended");
+        expect(told[0]?.kind === "trip_blowout" && told[0].paymentStory).toBe("refunded");
+        expect((await getBookingPayment(run.db, run.shop.id, run.bookingId))?.status).toBe(
+          "refunded",
+        );
+        expect((await getTripBlowout(run.db, run.shop.id, run.dropped.id))?.cause).toBe(
+          "run_ended",
+        );
+        // A second tap finds nothing left to call and sends nobody a second message.
+        const again = await cancelOffCadenceSeriesTrips(run.db, {
+          shopId: run.shop.id,
+          seriesId: run.result.series.id,
+          calledByPersonId: await ownerId(run.db, run.shop.id),
+          now: run.now,
+          provider: email.provider,
+          checkout: fakeCheckout(),
+        });
+        expect(again.cancelled).toBe(0);
+        expect(email.sent.filter((sent) => sent.kind === "trip_blowout")).toHaveLength(1);
+      });
+
+      it("leaves a dropped date whose boarding has begun on the board, counted as skipped", async () => {
+        const run = await narrowedRun();
+        const [staff] = await listStaff(run.db, run.shop.id);
+        if (!staff) throw new Error("seed staff missing");
+        await run.db.insert(rollCallEvents).values({
+          shopId: run.shop.id,
+          tripId: run.dropped.id,
+          bookingId: run.bookingId,
+          recordedByPersonId: staff.person.id,
+          status: "boarded",
+          checkpoint: "after_dive_2",
+          occurredAt: run.now,
+        });
+        const outcome = await cancelOffCadenceSeriesTrips(run.db, {
+          shopId: run.shop.id,
+          seriesId: run.result.series.id,
+          calledByPersonId: await ownerId(run.db, run.shop.id),
+          now: run.now,
+          provider: fakeEmail().provider,
+          checkout: fakeCheckout(),
+        });
+        expect(outcome.skipped).toBeGreaterThan(0);
+        expect((await getTripWithBooked(run.db, run.shop.id, run.dropped.id))?.status).toBe(
+          "scheduled",
+        );
+        expect((await getBookingPayment(run.db, run.shop.id, run.bookingId))?.status).toBe("paid");
+      });
+    });
+
     /** The first date blown out for weather, then put back on the board. */
     async function blownOutAndReinstated(run: Awaited<ReturnType<typeof bookedRun>>) {
       const first = run.result.trips[0];
@@ -911,8 +1031,11 @@ describe("recurring trip series (in-memory PGlite)", () => {
     const [orphan] = await listOffCadenceSeriesTrips(db, shop.id, offCadence.series.id, now);
     if (!orphan) throw new Error("expected an off-cadence date");
     await setTripCrew(db, shop.id, orphan.id, [actor.id, other.id]);
-    await cancelOffCadenceSeriesTrips(db, shop.id, offCadence.series.id, now, {
-      actorPersonId: actor.id,
+    await cancelOffCadenceSeriesTrips(db, {
+      shopId: shop.id,
+      seriesId: offCadence.series.id,
+      calledByPersonId: actor.id,
+      now,
     });
     expect(await calledOff(orphan.id)).toEqual([{ personId: other.id, actorPersonId: actor.id }]);
 
@@ -1065,8 +1188,14 @@ describe("recurring trip series (in-memory PGlite)", () => {
       { intervalWeeks: 1, weekdays: weekdaySetFrom([SAT]), endsOn: null },
       now,
     );
-    const cancelled = await cancelOffCadenceSeriesTrips(db, shop.id, result.series.id, now);
-    expect(cancelled).toBeGreaterThan(0);
+    const cancelled = await cancelOffCadenceSeriesTrips(db, {
+      shopId: shop.id,
+      seriesId: result.series.id,
+      calledByPersonId: await ownerId(db, shop.id),
+      now,
+    });
+    expect(cancelled.cancelled).toBeGreaterThan(0);
+    expect(cancelled.skipped).toBe(0);
     expect(await listOffCadenceSeriesTrips(db, shop.id, result.series.id, now)).toEqual([]);
     expect((await getTripWithBooked(db, shop.id, pastWednesday.id))?.status).toBe("scheduled");
     // Cancelled, not deleted: every one is reinstatable from its own page.

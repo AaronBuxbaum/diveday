@@ -58,6 +58,8 @@ export type TripAboutRowsContext = {
   /** A retime's held reschedule notice, on the save that set it going. */
   held?: string;
   tell?: string;
+  /** True when this staffer may not refund; a call-off leaves the card refunds for an owner or manager (H-123). */
+  refundsHeld?: boolean;
 };
 
 /** The names of the staff assigned to this departure, in the shop's staff order. */
@@ -91,6 +93,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
     tideLines,
     held,
     tell,
+    refundsHeld = false,
   } = context;
   const {
     trip,
@@ -454,6 +457,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
               tripId,
               series.id,
             )}
+            refundsHeld={refundsHeld}
             locale={locale}
           />
         ) : undefined,

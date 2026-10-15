@@ -447,6 +447,14 @@ const NOTICE_KEYS: Record<
     key: "tripSeries.notices.seriesCancelled",
     countKey: "tripSeries.notices.seriesCancelledCount",
   },
+  // The caller may not refund (H-123): the run is canceled and the divers told,
+  // and the card refunds wait for an owner or manager.
+  "series-cancelled-held": {
+    form: "series",
+    tone: "success",
+    key: "tripSeries.notices.seriesCancelledHeldCount",
+    countKey: "tripSeries.notices.seriesCancelledHeldCount",
+  },
   // Some dates still stand: underway by the time the call reached them, or
   // their setup failed. The shop has a next act, so it is a warning.
   "series-cancelled-partly": {
