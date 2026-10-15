@@ -104,8 +104,7 @@ export async function POST(request: Request) {
   // against `shop.id` for the same reason.
   const [actor] = await db
     .select({ id: people.id })
-    .from(people)
-    // diveday:allow-deleted-people: an e2e seed finds the people it just seeded; nobody is removed yet.
+    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
     .where(eq(people.shopId, shop.id))
     .orderBy(people.createdAt)
     .limit(1);
@@ -117,8 +116,7 @@ export async function POST(request: Request) {
   // first-person ordering above from coupling unrelated trouble panels to it.
   const [nadia] = await db
     .select({ id: people.id })
-    .from(people)
-    // diveday:allow-deleted-people: an e2e seed finds the people it just seeded; nobody is removed yet.
+    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
     .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Nadia Petrov")))
     .limit(1);
   if (nadia) {
@@ -737,8 +735,7 @@ async function askForAPieceTheShopNoLongerRents(
   const fullName = "June Park";
   const [diver] = await db
     .select({ id: people.id })
-    .from(people)
-    // diveday:allow-deleted-people: an e2e seed finds the people it just seeded; nobody is removed yet.
+    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
     .where(and(eq(people.shopId, shopId), eq(people.fullName, fullName)))
     .limit(1);
   if (!diver) return null;
@@ -845,8 +842,7 @@ async function countHeadsOnADepartureNobodyWillMove(
   // came first.
   const [crew] = await db
     .select({ id: people.id })
-    .from(people)
-    // diveday:allow-deleted-people: an e2e seed finds the people it just seeded; nobody is removed yet.
+    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
     .limit(1);
@@ -926,8 +922,7 @@ async function seatSomebodyOffTheNamePrompt(
 ): Promise<{ diver: string; tripId: string; bookingId: string } | null> {
   const [diver] = await db
     .select({ id: people.id, fullName: people.fullName })
-    .from(people)
-    // diveday:allow-deleted-people: an e2e seed finds the people it just seeded; nobody is removed yet.
+    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
     .where(and(eq(people.shopId, shopId), eq(people.fullName, "Zoe Bennett")))
     .limit(1);
   if (!diver) return null;
@@ -1374,8 +1369,7 @@ async function askForAnIntroSessionPastItsRatio(
     .orderBy(people.fullName);
   const [asker] = await db
     .select({ id: people.id, fullName: people.fullName })
-    .from(people)
-    // diveday:allow-deleted-people: an e2e seed finds the people it just seeded; nobody is removed yet.
+    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
     .where(and(eq(people.shopId, shopId), eq(people.email, DEV_STAFF_LOGINS.divemaster.email)))
     .limit(1);
   const [kept, relief] = instructors;
@@ -1472,8 +1466,7 @@ async function boardEveryDiverAndNoCrew(
 ): Promise<void> {
   const [crew] = await db
     .select({ id: people.id })
-    .from(people)
-    // diveday:allow-deleted-people: an e2e seed finds the people it just seeded; nobody is removed yet.
+    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
     .limit(1);
@@ -1612,8 +1605,7 @@ async function boardADiverThenBlockThem(
   // this, which is a real safety write going through the real writer.
   const [crew] = await db
     .select({ id: people.id })
-    .from(people)
-    // diveday:allow-deleted-people: an e2e seed finds the people it just seeded; nobody is removed yet.
+    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
     .limit(1);
@@ -1707,8 +1699,7 @@ async function markMixedWaiverDelivery(
 ): Promise<void> {
   const [priya] = await db
     .select({ id: people.id })
-    .from(people)
-    // diveday:allow-deleted-people: an e2e seed finds the people it just seeded; nobody is removed yet.
+    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
     .where(and(eq(people.shopId, shopId), eq(people.fullName, "Priya Sharma")))
     .limit(1);
   if (!priya) return;
