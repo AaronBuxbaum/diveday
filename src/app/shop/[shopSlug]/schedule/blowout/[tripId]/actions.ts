@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { canPersonRefund } from "@/db/authz";
-import { callTripBlowout, resumeTripBlowout } from "@/db/blowouts";
+import { callTripBlowout, resumeTripBlowout, tripBlowoutCause } from "@/db/blowouts";
 import { getDb } from "@/db/client";
 import { recordTripActivity } from "@/db/operations";
 import { refundBookingsForShopCancelledTrip } from "@/db/refunds";
@@ -108,6 +108,7 @@ export async function releaseBlowoutRefundsAction(shopSlug: string, tripId: stri
   });
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (trip?.status !== "cancelled") redirect(noticeUrl(back, "error"));
+  if (!(await tripBlowoutCause(db, shop.id, tripId))) redirect(noticeUrl(back, "error"));
   await refundBookingsForShopCancelledTrip(db, { shopId: shop.id, tripId });
   refreshBlowoutSurfaces(shopSlug, tripId);
   redirect(noticeUrl(back, "refunds-released"));

@@ -1,7 +1,9 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createBookingParty } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { setBookingPayment } from "@/db/payments";
+import { trips } from "@/db/schema";
 import { createTrip, createTripSeries, getTripWithBooked } from "@/db/trips";
 import { updateSeriesCadence } from "@/db/trips-series";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -319,6 +321,17 @@ describe("releasing the refunds a call-off left queued", () => {
     expect(to).toContain("notice=error");
     expect(refundBookingsForShopCancelledTrip).not.toHaveBeenCalled();
     expect(await statusOf(trip.id)).toBe("scheduled");
+  });
+
+  it("never reaches a canceled departure that has no blow-out record, even for an owner", async () => {
+    // Canceled the ordinary way (a trip cancel, not a call-off): releasing would
+    // refund every seat of a departure this page never queued anything for.
+    const trip = await tomorrowsTrip();
+    await ctx.db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
+    await signInAs(SEEDED_OWNER_EMAIL);
+    const to = await redirectedTo(() => releaseBlowoutRefundsAction(ctx.shop.slug, trip.id));
+    expect(to).toContain("notice=error");
+    expect(refundBookingsForShopCancelledTrip).not.toHaveBeenCalled();
   });
 
   it("never reaches another shop's departure", async () => {
