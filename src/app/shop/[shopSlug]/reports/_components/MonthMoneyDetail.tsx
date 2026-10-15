@@ -194,15 +194,13 @@ export function MonthFootnotes({
   money: (cents: number) => string;
 }) {
   return (
-    <>
-      <p className="mt-3 text-end text-sm text-muted tabular-nums">
-        {t("reports.taxLine", { amount: money(taxCents) })}
-        {" · "}
-        <a href={csvHref} className="font-medium text-primary hover:underline">
-          {t("reports.downloadCsv")}
-        </a>
-      </p>
-    </>
+    <p className="mt-3 text-end text-sm text-muted tabular-nums">
+      {t("reports.taxLine", { amount: money(taxCents) })}
+      {" · "}
+      <a href={csvHref} className="font-medium text-primary hover:underline">
+        {t("reports.downloadCsv")}
+      </a>
+    </p>
   );
 }
 

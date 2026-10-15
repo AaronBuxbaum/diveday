@@ -809,6 +809,7 @@ async function sendJoinMail(
     },
   );
   let confirmationSent = false;
+  let confirmationMessageId: string | undefined;
   if (lead?.person.email && trip) {
     try {
       const delivery = await sendAndRecordNotification(
@@ -825,6 +826,7 @@ async function sendJoinMail(
         }),
       );
       confirmationSent = delivery.status === "sent";
+      if (delivery.status === "sent") confirmationMessageId = delivery.providerMessageId;
       if (delivery.status === "failed") {
         log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });
       }
@@ -851,6 +853,7 @@ async function sendJoinMail(
             bookingId,
             link: leadWaiver,
             confirmationSent,
+            confirmationProviderMessageId: confirmationMessageId,
           });
           return;
         }
