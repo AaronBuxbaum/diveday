@@ -332,7 +332,7 @@ export async function openLostItemsByPerson(
         inArray(lostItems.personId, [...new Set(personIds)]),
       ),
     )
-    .orderBy(lostItems.createdAt, lostItems.id);
+    .orderBy(lostItems.createdAt, lostItems.description, lostItems.id);
   for (const row of rows) {
     if (!row.personId) continue;
     const list = byPerson.get(row.personId) ?? [];

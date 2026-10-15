@@ -5,16 +5,16 @@ import { z } from "zod";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
-  deleteSavedAnswer,
-  restoreSavedAnswer,
-  saveAnswerFromReply,
-} from "@/db/inbox-saved-answers";
-import {
   deleteStrangerInboundMessage,
   getInboundMessage,
   markInboundAnswered,
   reopenInboundMessage,
 } from "@/db/inbound-messages";
+import {
+  deleteSavedAnswer,
+  restoreSavedAnswer,
+  saveAnswerFromReply,
+} from "@/db/inbox-saved-answers";
 import { markMessageRunningLate } from "@/db/running-late";
 import { nowDate } from "@/lib/clock";
 import { parseForm } from "@/lib/form-parse";
@@ -185,7 +185,11 @@ export async function saveAnswerFromReplyAction(formData: FormData): Promise<voi
   const outcome = await saveAnswerFromReply(db, { shopId: session.user.shopId, replyId });
   if (!("personId" in outcome)) revalidateAndRedirect(inbox, noticeUrl(inbox, "answer-gone"));
   const record = shopPath(session.user.shopSlug, "divers", outcome.personId);
-  const code = outcome.ok ? "answer-saved" : outcome.reason === "full" ? "answers-full" : "answer-duplicate";
+  const code = outcome.ok
+    ? "answer-saved"
+    : outcome.reason === "full"
+      ? "answers-full"
+      : "answer-duplicate";
   revalidateAndRedirect(record, noticeUrl(`${record}#conversation`, code, { form: "reply" }));
 }
 
@@ -199,7 +203,10 @@ export async function deleteSavedAnswerAction(formData: FormData): Promise<void>
   const parsed = parseForm(savedAnswerForm, formData);
   const answerId = parsed.ok ? uuidParam(parsed.data.answerId) : null;
   const deleted = answerId ? await deleteSavedAnswer(db, session.user.shopId, answerId) : false;
-  revalidateAndRedirect(inbox, noticeUrl(`${inbox}#saved-answers`, deleted ? "answer-deleted" : "answer-gone"));
+  revalidateAndRedirect(
+    inbox,
+    noticeUrl(`${inbox}#saved-answers`, deleted ? "answer-deleted" : "answer-gone"),
+  );
 }
 
 /** Put a deleted saved answer back among the chips. */
@@ -213,6 +220,10 @@ export async function restoreSavedAnswerAction(formData: FormData): Promise<void
   const answerId = parsed.ok ? uuidParam(parsed.data.answerId) : null;
   const outcome = answerId ? await restoreSavedAnswer(db, session.user.shopId, answerId) : "gone";
   const code =
-    outcome === "restored" ? "answer-restored" : outcome === "full" ? "answers-full" : "answer-gone";
+    outcome === "restored"
+      ? "answer-restored"
+      : outcome === "full"
+        ? "answers-full"
+        : "answer-gone";
   revalidateAndRedirect(inbox, noticeUrl(`${inbox}#saved-answers`, code));
 }

@@ -4,6 +4,7 @@ import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { schemaTableNames } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
 import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
@@ -252,10 +253,7 @@ const EXCLUDED_TABLES = [
   // not a column on an existing one.
   "inbound_messages",
   "staff_replies",
-  // The shop's saved answers (fifth loop, item 15): reply templates the
-  // composer offers as chips. Out with the inbox they serve, for the same
-  // reason: the bundle has no file for correspondence yet.
-  "inbox_saved_answers",
+  "inbox_saved_answers", // the inbox's saved replies, out with the inbox they serve
   // Which way each waiver link was handed over and what happened on that
   // channel. The outcome another system could act on is already on
   // waiver_records.csv (`delivery_status` and the provider columns beside it);
@@ -668,15 +666,7 @@ const ctx = fileScopedShopContext();
 
 describe("schema coverage", () => {
   it("forces every schema table to be exported, folded, or deliberately excluded", () => {
-    const tableNames = Object.values(schema)
-      .map((value) => {
-        try {
-          return getTableName(value as Parameters<typeof getTableName>[0]);
-        } catch {
-          return null;
-        }
-      })
-      .filter((name): name is string => typeof name === "string");
+    const tableNames = schemaTableNames();
     expect(tableNames.length).toBeGreaterThan(20);
 
     const decided = new Set([...EXPORTED_TABLES, ...FOLDED_TABLES, ...EXCLUDED_TABLES]);

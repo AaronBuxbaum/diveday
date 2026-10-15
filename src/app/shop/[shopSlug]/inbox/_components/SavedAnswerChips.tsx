@@ -25,13 +25,13 @@ export function SavedAnswerChips({
   fill: { name: string | null; trip: string | null };
   label: string;
 }) {
-  const group = useRef<HTMLDivElement>(null);
+  const group = useRef<HTMLFieldSetElement>(null);
   if (answers.length === 0) return null;
 
   const use = (body: string) => {
-    const box = group.current?.closest("form")?.querySelector<HTMLTextAreaElement>(
-      'textarea[name="body"]',
-    );
+    const box = group.current
+      ?.closest("form")
+      ?.querySelector<HTMLTextAreaElement>('textarea[name="body"]');
     if (!box) return;
     const words = fillSavedAnswer(body, fill);
     const typed = box.value.trimEnd();
@@ -44,11 +44,10 @@ export function SavedAnswerChips({
   };
 
   return (
-    <div
+    <fieldset
       ref={group}
-      role="group"
       aria-label={label}
-      className="flex flex-wrap gap-2"
+      className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0"
       data-testid="saved-answer-chips"
     >
       {answers.map((answer) => (
@@ -61,6 +60,6 @@ export function SavedAnswerChips({
           {answer.title}
         </button>
       ))}
-    </div>
+    </fieldset>
   );
 }

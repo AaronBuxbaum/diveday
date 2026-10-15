@@ -63,7 +63,9 @@ describe("saveAnswerFromReply", () => {
     expect((await saveAnswerFromReply(ctx.db, { shopId: ctx.shop.id, replyId: first })).ok).toBe(
       true,
     );
-    expect(await saveAnswerFromReply(ctx.db, { shopId: ctx.shop.id, replyId: second })).toMatchObject({
+    expect(
+      await saveAnswerFromReply(ctx.db, { shopId: ctx.shop.id, replyId: second }),
+    ).toMatchObject({
       ok: false,
       reason: "duplicate",
     });
@@ -73,11 +75,12 @@ describe("saveAnswerFromReply", () => {
     const replyId = await sentReply("Parking is behind the shop.");
     const [other] = await ctx.db
       .insert(shops)
-      .values({ name: "Other Shop", slug: `other-${Date.now()}`, timezone: "UTC" })
+      .values({ name: "Other Shop", slug: `other-${crypto.randomUUID()}`, timezone: "UTC" })
       .returning({ id: shops.id });
-    expect(
-      await saveAnswerFromReply(ctx.db, { shopId: other?.id as string, replyId }),
-    ).toEqual({ ok: false, reason: "not_found" });
+    expect(await saveAnswerFromReply(ctx.db, { shopId: other?.id as string, replyId })).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
   });
 
   it("stops at a full row of chips", async () => {

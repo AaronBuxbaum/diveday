@@ -1,7 +1,9 @@
 import { and, asc, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { HOUR_MS } from "@/lib/clock";
-import type { DbExecutor } from "./client";
+import { type CheckInQueueRow, hasArrivals, listCheckInQueue } from "./check-in";
+import type { AppDb, DbExecutor } from "./client";
 import { personSearchMatch } from "./person-search";
+import { queryAll } from "./query-helpers";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -64,7 +66,7 @@ export async function arrivalElsewhere(
         gte(trips.startsAt, new Date(now.getTime() - HOUR_MS)),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
   const nextByPerson = new Map<string, ArrivalElsewhere["next"]>();
   for (const seat of seats) {
     if (nextByPerson.has(seat.personId)) continue;
@@ -79,4 +81,24 @@ export async function arrivalElsewhere(
     fullName: person.fullName,
     next: nextByPerson.get(person.id) ?? null,
   }));
+}
+
+/**
+ * **Today's arrival lookup, in one read**: the arrivals a typed name matches,
+ * whether the counter is open at all, and the shop-wide answer for a name
+ * nobody arriving matches. With no query only the counter question is asked;
+ * with one the counter is open by definition, since somebody typed into it.
+ */
+export async function readArrivalLookup(
+  db: AppDb,
+  shopId: string,
+  query: string,
+  now: Date,
+): Promise<{ rows: CheckInQueueRow[]; counterOpen: boolean; elsewhere: ArrivalElsewhere[] }> {
+  if (!query) return { rows: [], counterOpen: await hasArrivals(db, shopId, now), elsewhere: [] };
+  const [rows, elsewhere] = await queryAll(db, [
+    () => listCheckInQueue(db, shopId, { query, now }),
+    () => arrivalElsewhere(db, shopId, query, now),
+  ]);
+  return { rows, counterOpen: true, elsewhere };
 }

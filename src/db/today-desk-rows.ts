@@ -9,6 +9,7 @@ import { type TodayAction, urgencyFor } from "@/lib/today";
 import { hasSailed } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { countOpenLostItems } from "./lost-items";
+import { queryAll } from "./query-helpers";
 import { shops } from "./schema";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at } from "./today-shared";
@@ -24,13 +25,14 @@ export const EMERGENCY_CARD_WINDOW_MS = 48 * HOUR_MS;
 export type DeskFacts = { emergencyCardHasNumbers: boolean; lostItemsWaiting: number };
 
 export async function readDeskFacts(db: DbExecutor, shopId: string): Promise<DeskFacts> {
-  const [[shop], lostItemsWaiting] = await Promise.all([
-    db
-      .select({ emergencyReference: shops.emergencyReference })
-      .from(shops)
-      .where(eq(shops.id, shopId))
-      .limit(1),
-    countOpenLostItems(db, shopId),
+  const [[shop], lostItemsWaiting] = await queryAll(db, [
+    () =>
+      db
+        .select({ emergencyReference: shops.emergencyReference })
+        .from(shops)
+        .where(eq(shops.id, shopId))
+        .limit(1),
+    () => countOpenLostItems(db, shopId),
   ]);
   return {
     // A shop row that is not there has no card to warn about.

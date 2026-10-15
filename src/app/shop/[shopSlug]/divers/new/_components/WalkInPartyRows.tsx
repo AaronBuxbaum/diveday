@@ -1,16 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { readKeptTyped } from "@/components/KeepTypedOnRefusal";
 import { applyFormFields } from "@/components/apply-form-fields";
+import { readKeptTyped } from "@/components/KeepTypedOnRefusal";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
-import {
-  WALK_IN_PARTY_FORM,
-  WALK_IN_PARTY_MAX,
-  walkInMemberField,
-} from "@/lib/walk-in-party";
+import { WALK_IN_PARTY_FORM, WALK_IN_PARTY_MAX, walkInMemberField } from "@/lib/walk-in-party";
 
 export type WalkInPartyCopy = {
   /** "Add another person" */
@@ -53,7 +49,6 @@ export function WalkInPartyRows({
   const pending = useRef<Record<string, string> | null>(null);
 
   // Rebuild the rows a refused submit carried, then fill them once they exist.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: once per refusal; `restore` is the only input.
   useEffect(() => {
     if (!restore) return;
     const kept = readKeptTyped(WALK_IN_PARTY_FORM);

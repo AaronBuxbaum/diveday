@@ -21,10 +21,18 @@ export type SavedAnswer = { id: string; title: string; body: string };
 /** The shop's live saved answers, oldest first, so a chip keeps its place. */
 export async function listSavedAnswers(db: DbExecutor, shopId: string): Promise<SavedAnswer[]> {
   return db
-    .select({ id: inboxSavedAnswers.id, title: inboxSavedAnswers.title, body: inboxSavedAnswers.body })
+    .select({
+      id: inboxSavedAnswers.id,
+      title: inboxSavedAnswers.title,
+      body: inboxSavedAnswers.body,
+    })
     .from(inboxSavedAnswers)
     .where(and(eq(inboxSavedAnswers.shopId, shopId), isNull(inboxSavedAnswers.deletedAt)))
-    .orderBy(asc(inboxSavedAnswers.createdAt), asc(inboxSavedAnswers.id))
+    .orderBy(
+      asc(inboxSavedAnswers.createdAt),
+      asc(inboxSavedAnswers.title),
+      asc(inboxSavedAnswers.id),
+    )
     .limit(SAVED_ANSWERS_MAX);
 }
 
@@ -34,7 +42,11 @@ export async function listDeletedSavedAnswers(
   shopId: string,
 ): Promise<SavedAnswer[]> {
   return db
-    .select({ id: inboxSavedAnswers.id, title: inboxSavedAnswers.title, body: inboxSavedAnswers.body })
+    .select({
+      id: inboxSavedAnswers.id,
+      title: inboxSavedAnswers.title,
+      body: inboxSavedAnswers.body,
+    })
     .from(inboxSavedAnswers)
     .where(and(eq(inboxSavedAnswers.shopId, shopId), isNotNull(inboxSavedAnswers.deletedAt)))
     .orderBy(desc(inboxSavedAnswers.deletedAt))

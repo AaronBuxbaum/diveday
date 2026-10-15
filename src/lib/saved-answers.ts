@@ -42,15 +42,15 @@ export function withNameMarker(body: string, fullName: string): string {
   return out;
 }
 
+/** What the markers become on one diver's record; null leaves the marker. */
+export type SavedAnswerFill = { name: string | null; trip: string | null };
+
 /**
  * A saved answer filled for one diver. A marker with nothing to fill it (no
  * trip booked) stays as typed, so the reader sees it in the box before sending
  * rather than a sentence with a hole in it.
  */
-export function fillSavedAnswer(
-  body: string,
-  values: { name: string | null; trip: string | null },
-): string {
+export function fillSavedAnswer(body: string, values: SavedAnswerFill): string {
   let out = body;
   if (values.name) out = out.replaceAll("{name}", values.name);
   if (values.trip) out = out.replaceAll("{trip}", values.trip);
@@ -62,12 +62,11 @@ export function fillSavedAnswer(
  * cut at a word with "…" when it runs past `SAVED_ANSWER_TITLE_MAX`.
  */
 export function savedAnswerTitle(body: string): string {
-  const line =
-    (body.split(/\r?\n/).find((candidate) => candidate.trim()) ?? "")
-      .replace(/\s*\{(?:name|trip)\}/g, "")
-      .replace(/^[\s,.;:!?-]+/, "")
-      .replace(/\s+/g, " ")
-      .trim();
+  const line = (body.split(/\r?\n/).find((candidate) => candidate.trim()) ?? "")
+    .replace(/\s*\{(?:name|trip)\}/g, "")
+    .replace(/^[\s,.;:!?-]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (line.length <= SAVED_ANSWER_TITLE_MAX) return line;
   const cut = line.slice(0, SAVED_ANSWER_TITLE_MAX - 1);
   const atWord = cut.lastIndexOf(" ");

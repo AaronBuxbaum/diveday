@@ -4606,7 +4606,10 @@ for (const scheme of ["light", "dark"] as const) {
         await second.getByLabel("Full name").fill("Mia Brightwater");
         await second.getByLabel(/Under 18/).check();
         await page.getByRole("button", { name: "Add another person" }).click();
-        await page.getByRole("group", { name: "Person 3" }).getByLabel("Full name").fill("Leo Brightwater");
+        await page
+          .getByRole("group", { name: "Person 3" })
+          .getByLabel("Full name")
+          .fill("Leo Brightwater");
         await capture(page, "trip-walk-in-party", scheme);
       });
 

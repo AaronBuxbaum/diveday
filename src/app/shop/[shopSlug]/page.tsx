@@ -20,18 +20,17 @@ import {
   RoleOrientationLine,
 } from "@/app/shop/[shopSlug]/_components/today/RoleOrientationCard";
 import { recapStatusLine } from "@/app/shop/[shopSlug]/_components/today/recap-status";
+import { TodayUpdated } from "@/app/shop/[shopSlug]/_components/today/TodayUpdated";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
 import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
-import { LiveRefresh } from "@/components/LiveRefresh";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import { arrivalElsewhere } from "@/db/arrival-elsewhere";
+import { readArrivalLookup } from "@/db/arrival-elsewhere";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { daySummaryBlocked, sharedInHorizonReadiness } from "@/db/blockers";
-import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
 import { shopFirstBooking } from "@/db/first-booking";
@@ -311,7 +310,7 @@ async function TodayBody({
     freshDrafts,
     canReadShopMoney,
     evidence,
-    [arrivalRows, counterOpen, arrivalElsewhereRows],
+    { rows: arrivalRows, counterOpen, elsewhere: arrivalElsewhereRows },
     closeout,
     shopTripCount,
     stripeAccount,
@@ -341,13 +340,7 @@ async function TodayBody({
     // ten queries; running it twice would double the page's entire database bill for one collapsed
     // disclosure.
     sharedInHorizonReadiness(db, shop.id, now),
-    Promise.all([
-      arrivalQuery ? listCheckInQueue(db, shop.id, { query: arrivalQuery, now }) : [],
-      arrivalQuery ? true : hasArrivals(db, shop.id, now),
-      // The shop-wide answer for a name nobody arriving matches (fifth loop,
-      // item 12); read beside the queue so a miss costs no second round trip.
-      arrivalQuery ? arrivalElsewhere(db, shop.id, arrivalQuery, now) : [],
-    ]),
+    readArrivalLookup(db, shop.id, arrivalQuery, now),
     // **The day's closing state** (ADR 20260827-clearwater-surface-language, decision 4): how each
     // of today's boats settled, for the evening stations.
     getDayCloseout(db, shop.id, shop.timezone, now),
@@ -717,14 +710,7 @@ async function TodayBody({
             offlineTitle: t("shared.connectivity.offlineTitle"),
           }}
         />
-        {/* **When this page last read the day** (fifth loop, item 8). The
-            desk leaves Today open all morning; `LiveRefresh` re-reads it on
-            focus and once a minute, and this line is the server's clock at
-            that read, so a stale page says so. */}
-        <p className="mt-1 text-xs text-muted print:hidden" data-testid="today-updated">
-          {t("shopHome.updatedAt", { time: formatTime(now, locale, shop.timezone) })}
-        </p>
-        <LiveRefresh />
+        <TodayUpdated t={t} time={formatTime(now, locale, shop.timezone)} />
       </DayHeader>
 
       {created && firstBookableMoment ? (

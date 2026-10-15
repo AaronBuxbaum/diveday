@@ -102,14 +102,12 @@ describe("the seat-diver trip summary", () => {
     const en = staffTranslator("en-US");
     expect(en("seatDiver.tripSummary", args)).toContain("11 of 14 booked");
     expect(en("seatDiver.tripSummary", args)).not.toContain("11/14");
-    expect(staffTranslator("es-ES")("seatDiver.tripSummary", args)).toContain(
-      "11 de 14 reservados",
-    );
+    expect(staffTranslator("es-ES")("seatDiver.tripSummary", args)).toContain("reservas: 11 de 14");
   });
 
-  it("agrees at one", () => {
+  it("reads the same at one, with no adjective to agree", () => {
     const one = { ...args, booked: 1 };
-    expect(staffTranslator("es-ES")("seatDiver.tripSummary", one)).toContain("1 de 14 reservado");
-    expect(staffTranslator("es-ES")("seatDiver.tripSummary", one)).not.toContain("reservados");
+    expect(staffTranslator("es-ES")("seatDiver.tripSummary", one)).toContain("reservas: 1 de 14");
+    expect(staffTranslator("es-ES")("seatDiver.tripSummary", one)).not.toContain("reservado");
   });
 });

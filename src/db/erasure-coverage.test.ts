@@ -3,6 +3,7 @@ import { and, eq, getTableName, isNull } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
+import { schemaTableNameOf } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
@@ -205,12 +206,9 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
   const unresolved: string[] = [];
   for (const match of source.matchAll(/\.(?:update|delete)\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
     const identifier = match[1] as string;
-    const value = (schema as Record<string, unknown>)[identifier];
-    try {
-      written.add(getTableName(value as Parameters<typeof getTableName>[0]));
-    } catch {
-      unresolved.push(identifier);
-    }
+    const name = schemaTableNameOf(identifier);
+    if (name) written.add(name);
+    else unresolved.push(identifier);
   }
   return { written, unresolved };
 }
@@ -224,13 +222,9 @@ function erasureHardDeleteOrder(): string[] {
   const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
   const order: string[] = [];
   for (const match of source.matchAll(/\.delete\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
-    const value = (schema as Record<string, unknown>)[match[1] as string];
-    try {
-      const name = getTableName(value as Parameters<typeof getTableName>[0]);
-      if (!order.includes(name)) order.push(name);
-    } catch {
-      // Resolved and reported by `erasureWriteSites`; not this function's job.
-    }
+    // An unresolved one is reported by `erasureWriteSites`; not this function's job.
+    const name = schemaTableNameOf(match[1] as string);
+    if (name && !order.includes(name)) order.push(name);
   }
   return order;
 }
@@ -397,8 +391,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
     "the front-desk address's own proof of ownership (issue #1288) — the shop’s address, not a diver’s",
   shop_whatsapp_accounts:
     "the shop’s own WhatsApp sender: a number, a template and sealed credentials",
-  inbox_saved_answers:
-    "the shop’s own reply templates (fifth loop, item 15): a chip title and the words, with no person column. One saved from a sent reply has that diver’s name swapped for a `{name}` marker before it is written (`saveAnswerFromReply`), so it is about nobody",
+  inbox_saved_answers: "the shop’s reply templates; a diver’s name becomes a `{name}` marker",
   shop_stripe_accounts: "the shop’s Connect account and what it is enabled for",
   stripe_payouts:
     "the shop’s own money leaving its Connect account for its bank: one row per Stripe payout, its amount, fees and the days it covers. No diver is named on a payout; the payments it settles are censused on their orders",

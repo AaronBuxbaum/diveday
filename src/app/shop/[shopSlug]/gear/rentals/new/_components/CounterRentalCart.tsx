@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactNode, useEffect, useEffectEvent, useId, useState } from "react";
-import { readKeptTyped } from "@/components/KeepTypedOnRefusal";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -19,14 +18,13 @@ import type { GearItemKind } from "@/lib/gear";
 import { currencySymbol, majorToMinor } from "@/lib/money";
 import {
   CONFIRM_FIELD_PREFIX,
-  COUNTER_RENTAL_FORM,
   PAYMENT_FIELD,
   PRICE_FIELD_PREFIX,
-  RENTAL_PAYMENTS,
   type RentalPayment,
   SET_PRICE_FIELD,
   UNIT_FIELD,
 } from "../../rental-form";
+import { readKeptCart } from "./kept-cart";
 
 export type PickerUnit = {
   id: string;
@@ -145,19 +143,12 @@ export function CounterRentalCart({
   const byId = new Map(groups.flatMap((group) => group.units.map((unit) => [unit.id, unit])));
 
   const restore = useEffectEvent(() => {
-    const kept = readKeptTyped(COUNTER_RENTAL_FORM);
+    const kept = readKeptCart((id) => byId.has(id));
     if (!kept) return;
-    const ids = (kept[UNIT_FIELD] ?? "").split(" ").filter((id) => byId.has(id));
-    if (ids.length > 0) setPickedIds(ids);
-    const keptPrices: Record<string, string> = {};
-    for (const id of ids) {
-      const price = kept[`${PRICE_FIELD_PREFIX}${id}`];
-      if (price !== undefined) keptPrices[id] = price;
-    }
-    setPrices(keptPrices);
-    if (kept[SET_PRICE_FIELD] !== undefined) setSetFigure(kept[SET_PRICE_FIELD]);
-    const keptPayment = RENTAL_PAYMENTS.find((value) => value === kept[PAYMENT_FIELD]);
-    if (keptPayment) setPayment(keptPayment);
+    if (kept.ids.length > 0) setPickedIds(kept.ids);
+    setPrices(kept.prices);
+    if (kept.setFigure !== undefined) setSetFigure(kept.setFigure);
+    if (kept.payment) setPayment(kept.payment);
   });
   useEffect(() => {
     if (restoreKept) restore();

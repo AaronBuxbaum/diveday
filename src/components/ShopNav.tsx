@@ -14,11 +14,8 @@ import {
 } from "@/lib/staff-destinations";
 import { commandPaletteCopy, signOutAction } from "./command-palette-props";
 import { type ShopSectionNavCopy, ShopSidebar, ShopTabBar } from "./ShopSectionNav";
-import {
-  CommandPalette,
-  type PaletteTodayBoat,
-  type SettingsShortcut,
-} from "./search/CommandPalette";
+import { CommandPalette, type SettingsShortcut } from "./search/CommandPalette";
+import type { PaletteTodayBoat } from "./search/palette-start-rows";
 
 /**
  * The words both forms of the section nav read — the sidebar and the phone's

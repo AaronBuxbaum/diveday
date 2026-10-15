@@ -18,14 +18,20 @@ import {
   staffPaletteDestinations,
 } from "@/lib/staff-destinations";
 import { PaletteGlyph } from "./PaletteGlyph";
+import { EMPTY, useCommandKey, useShopSearch } from "./palette-hooks";
 import {
   forgetRecents,
-  type RecentKind,
   type RecentRecord,
   readRecents,
   recentsStorageKey,
   rememberRecent,
 } from "./palette-recents";
+import {
+  NO_TODAY_BOATS,
+  type PaletteTodayBoat,
+  recordItem,
+  startGroups,
+} from "./palette-start-rows";
 
 /**
  * A row in the palette. Most are destinations (`href`); a few *do* something
@@ -33,7 +39,7 @@ import {
  * a page to visit and pushing a URL to change one would mean inventing a route
  * whose only job is to set a cookie and bounce.
  */
-type PaletteItem = {
+export type PaletteItem = {
   key: string;
   label: string;
   detail?: string;
@@ -66,7 +72,7 @@ type PaletteItem = {
  * label already says what it is, and a heading over it would be the heading
  * repeating the only row under it.
  */
-type PaletteGroup = { id: string; heading?: string; items: PaletteItem[] };
+export type PaletteGroup = { id: string; heading?: string; items: PaletteItem[] };
 
 /**
  * One row of the Settings rail, offered under "Go to" (the rail's own label,
@@ -94,20 +100,6 @@ const NO_SETTINGS_SHORTCUTS: readonly SettingsShortcut[] = [];
  */
 const hintKeyClass =
   "inline-flex h-4 items-center rounded border border-border bg-surface-sunken px-1.5 font-sans text-[0.65rem] leading-none font-semibold";
-
-const EMPTY: SearchResults = {
-  divers: [],
-  trips: [],
-  diveSites: [],
-  courses: [],
-  orders: [],
-  gear: [],
-};
-
-/** One of today's departures, for the palette's "Today" group (fifth loop, item 13). */
-export type PaletteTodayBoat = { id: string; title: string; time: string };
-
-const NO_TODAY_BOATS: readonly PaletteTodayBoat[] = [];
 
 export type CommandPaletteCopy = {
   search: string;
@@ -160,71 +152,6 @@ export type CommandPaletteCopy = {
   /** The per-device offline snapshot, which is not shop-scoped. */
   goToOfflineRollCall: string;
 };
-
-// ⌘K / Ctrl-K from anywhere toggles the palette. Returns true once the
-// listener is attached: the trigger publishes it as the staff surfaces'
-// `data-hydrated` flag, so a test that presses ⌘K on a fresh page can wait for
-// it rather than lose the keypress to the server-rendered button (issue #2366).
-function useCommandKey(setOpen: (update: (current: boolean) => boolean) => void): boolean {
-  const [listening, setListening] = useState(false);
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setOpen((current) => !current);
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    setListening(true);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [setOpen]);
-  return listening;
-}
-
-/**
- * Global search for the front desk: "pull up Priya" without navigating to a
- * list first. Opened by ⌘K / Ctrl-K or the nav button. A hand-rolled combobox
- * (no new dependency) with correct ARIA and full keyboard control; results are
- * shop-scoped server-side and debounced. Selecting a trip opens its staff page
- * and a shortcut its surface; a diver opens as a sheet over the day, because a
- * person is the one answer here that has no hour of its own (slice 23e).
- */
-
-/**
- * Debounced, race-safe shop search. Only queries of 2+ chars hit the server.
- * A GET (rather than the old `searchShopAction` Server Action) so keystrokes
- * don't queue behind Next's per-client Server Action serialization or any
- * in-flight mutation action, and so a stale request can be `AbortController`
- * cancelled instead of merely ignored.
- */
-function useShopSearch(query: string, setResults: (results: SearchResults) => void) {
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < 2) {
-      setResults(EMPTY);
-      return;
-    }
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          setResults(EMPTY);
-          return;
-        }
-        setResults((await response.json()) as SearchResults);
-      } catch (error) {
-        if ((error as { name?: string }).name !== "AbortError") setResults(EMPTY);
-      }
-    }, 150);
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [query, setResults]);
-}
 
 /**
  * **What the palette offers for this query**, group by group: the places to
@@ -280,36 +207,8 @@ function paletteGroups({
     copy,
   });
   const out: PaletteGroup[] = [];
-  // **Before anything is typed, what you were just doing** (fifth loop, item
-  // 13): the records this staffer last opened here, then today's boats, each
-  // one tap away above the doors.
-  if (rawQuery === "" && recents.length > 0) {
-    out.push({
-      id: "recent",
-      heading: copy.groupRecent,
-      items: recents.map((record) => ({
-        key: `recent:${record.key}`,
-        label: record.label,
-        detail: record.detail,
-        href: record.href,
-        recent: record,
-        icon: <PaletteGlyph name={record.kind} />,
-      })),
-    });
-  }
-  if (rawQuery === "" && todayBoats.length > 0) {
-    out.push({
-      id: "today",
-      heading: copy.groupToday,
-      items: todayBoats.map((boat) => ({
-        key: `today:${boat.id}`,
-        label: boat.title,
-        detail: boat.time,
-        href: `${root}/trips/${boat.id}`,
-        icon: <PaletteGlyph name="trip" />,
-      })),
-    });
-  }
+  // Before anything is typed, what you were just doing (`palette-start-rows.tsx`).
+  if (rawQuery === "") out.push(...startGroups({ recents, todayBoats, root, copy }));
   // **Ask it, and it answers.** The first row when the query names one
   // thing: the fact, and the primary act the home's ledger rows would
   // offer. The doors that ship today render beneath; a query that names
@@ -507,25 +406,6 @@ function paletteGroups({
   return out;
 }
 
-/** A row that opens one record, remembered among this staffer's recents once chosen. */
-function recordItem(
-  kind: RecentKind,
-  id: string,
-  label: string,
-  detail: string | undefined,
-  href: string,
-): PaletteItem {
-  const key = `${kind}:${id}`;
-  return {
-    key,
-    label,
-    detail,
-    href,
-    recent: { key, kind, label, detail, href },
-    icon: <PaletteGlyph name={kind} />,
-  };
-}
-
 /**
  * The "Go to" rows for one query: the boarding and offline doors, every
  * destination the nav offers this reader, and the Settings rail's rows by
@@ -614,6 +494,14 @@ function gotoItems({
   return goto;
 }
 
+/**
+ * Global search for the front desk: "pull up Priya" without navigating to a
+ * list first. Opened by ⌘K / Ctrl-K or the nav button. A hand-rolled combobox
+ * (no new dependency) with correct ARIA and full keyboard control; results are
+ * shop-scoped server-side and debounced. Selecting a trip opens its staff page
+ * and a shortcut its surface; a diver opens as a sheet over the day, because a
+ * person is the one answer here that has no hour of its own (slice 23e).
+ */
 export function CommandPalette({
   shopSlug,
   boatBoardingHref,
