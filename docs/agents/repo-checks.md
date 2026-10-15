@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 58 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 59 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
 
 ## The guards worth reading about
 
@@ -408,6 +408,18 @@ So the decision is the owner's and it is open on #1403, which carries the four o
 
 Re-measure before re-proposing this; the number is what the argument turns on and it is cheap to get, while re-deriving it from scratch is a day. The sweep's definitions and script are in #1403's own comment thread. If a variant is ever built, it needs a statement-scope hook rather than a per-line `pattern` — five of the 98 have their locator on a preceding line — and it should be built on the `statementStart` helper already in the script rather than re-deriving a walker that will drift from it.
 
+### quarantine and long literals (both in e2e-hygiene)
+
+Two policy rules from the 2026-10-14 test review ride in `scripts/check-e2e-hygiene.mjs`, outside its per-line `rules` list.
+
+**Quarantine (decision 4).** "Fix any flake you meet" stalled unrelated pull requests on someone else's flake, and agents worked around it with in-place deflakes one spec at a time. A proven flake may now leave the PR path, but only owned and only briefly: a test tagged `@quarantine` needs `// diveday:quarantine #<issue> until <YYYY-MM-DD>: <what flakes>` on its line or the four above, the date no more than 7 days out, and no more than 3 tests quarantined at once. The day after the date the guard fails on every branch, so a lapsed quarantine is a red CI rather than a permanent skip; the answer is the fix, never a later date. `playwright.config.ts`'s `grepInvert` keeps tagged tests out of every run except `.github/workflows/e2e-nightly.yml`, which sets `DIVEDAY_RUN_QUARANTINE=1`. The guard cannot tell whether the issue is still open: check:repo reads no network.
+
+**Long literals (decision 8).** A spec that finds an element by a whole sentence breaks on every rewording, and only a run that happens to include that spec notices: "47 Playwright specs a change broke that nobody ran" was this mechanism, 242 literals of 30+ characters on 2026-10-14. `getByText`/`toContainText` string literals of 40+ characters (interpolations not counted) are counted per file under `e2e-long-literals` in `scripts/ratchets.json`; a count may only fall (`--write` banks a fall and refuses a rise, `--absorb "<why>"` records a merged-in one). There is no acknowledgement marker: the fix is a role and name, or the bundle key (`diverTranslator`/`staffTranslator`, as `e2e/reviews.spec.ts` does).
+
+### critical-journeys
+
+`scripts/check-critical-journeys.mjs` reads the "Critical journeys" table in [docs/engineering/testing.md](../engineering/testing.md#critical-journeys) and fails when a row's spec is gone, or no `test(…)` in it carries the row's title, or that test is `.skip`/`.fixme`. The table replaced the AGENTS.md rule "every important flow gets an `e2e/` spec, every important surface a capture" (test review decision 2, 2026-10-14): that rule grew ten-plus "add captures" issues by rule while naming no walk that mattered more than another. A `test.describe` of the same name does not count. Renaming a journey's test renames its row in the same change.
+
 ### pre-hydration-click
 
 A press on a server-rendered staff page before React owns it is lost: the button has no handler yet, so nothing is sent and the spec waits on an answer that never comes. It was the flake class of 2026-10-12/13 (code re-review 2026-10-13, item 15): `dive-sites`, `schedule-builder`, `staffing` and `blowout` each lost one, four red runs in 21, and each was being fixed by its own hand-written wait on some `data-hydrated` flag.
@@ -740,8 +752,8 @@ worker owns its own database and resets it before every test (`e2e/servers.ts`).
 
 A user-facing change is verified by looking at it — `node scripts/screenshot.mjs <path…>` against a
 running `pnpm dev`, phone and desktop, light only unless the work is colour (then `--both`) — and by
-the **design-review** skill for a significant surface. Every important flow gets an `e2e/` spec and
-every important surface a capture in `e2e/visual.spec.ts` (the **e2e-and-visual** skill).
+the **design-review** skill for a significant surface. Its tests are testing.md's six-step list, and a
+critical journey keeps its spec (the **e2e-and-visual** skill).
 Safety-critical surfaces get a `dive-domain-expert` review.
 
 ### The db rules
@@ -1053,9 +1065,13 @@ For `e2e/`; the rules themselves are in `.claude/rules/e2e.md`.
   matches anything. It is a convention, not a guard: the rule was written and swept, and it flags
   98 lines across 46 of the 112 files here, so it is not live (#1403, counts in
   [docs/agents/repo-checks.md](repo-checks.md)).
-- **A failing or flaky test is part of the work, even when unrelated to your change.** Never skip
-  it, widen a timeout, or leave it red. Search open PRs first for a fix already in flight on the same
+- **A failing or flaky test is part of the work, even when unrelated to your change.** Fix it, or,
+  for a proven flake, quarantine it with an open issue and an expiry at most 7 days out
+  (`@quarantine`, [above](#quarantine-and-long-literals-both-in-e2e-hygiene)); never skip it,
+  widen a timeout, or leave it red. Search open PRs first for a fix already in flight on the same
   spec.
+- **Find by role and message key, not a sentence.** A new `getByText`/`toContainText` literal of
+  40+ characters is refused by `check:e2e-hygiene`'s long-literal ratchet.
 - **Screenshots are full-size and unfiltered; bound the *page*, not the capture.** A surface that
   screenshots enormous is telling you the page is unbounded, and the fix is pagination (or a default
   range) in the product — never a `?filter=` in the spec that shrinks the picture. Narrowing a
@@ -1079,8 +1095,8 @@ For `e2e/`; the rules themselves are in `.claude/rules/e2e.md`.
   20260729-reg-suit-visual-regression) — nothing to regenerate locally. "Approving" an intentional
   change means saying in the PR *why* the pixels moved and merging. Baselines are rendered on CI's
   Linux runners; on macOS nearly everything reads as changed — triage from the CI report.
-- **Every important flow gets a spec, every important surface a capture** — if unsure whether
-  something qualifies, it does.
+- **The critical journeys keep their test** (`pnpm check:critical-journeys`); every other flow
+  and surface takes what testing.md's six-step list gives it.
 
 ### The scripts rules
 

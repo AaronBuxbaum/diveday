@@ -1,3 +1,5 @@
+import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -19,6 +21,10 @@ import {
   signOut,
   threadStatus,
 } from "./helpers";
+
+// Sentences come from the bundles by key, so a rewording does not break the walk.
+const diver = diverTranslator("en-US");
+const staff = staffTranslator("en-US");
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -93,7 +99,7 @@ test.describe("staff", () => {
       page.getByRole("heading", { level: 1, name: "You’ve got a seat, Nora." }),
     ).toBeVisible();
     await expect(threadStatus(page)).toContainText("Next: sign your waiver.");
-    await expect(page.getByText("After you dive, your log entry is waiting here.")).toBeVisible();
+    await expect(page.getByText(diver("ready.logEntryWaiting"))).toBeVisible();
 
     // No email provider is configured in the e2e fleet, so nothing left the
     // building — and the page must not claim two emails are coming when they
@@ -188,9 +194,7 @@ test.describe("staff", () => {
     await page.getByRole("checkbox", { name: "Conditions hold" }).check();
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
-    await expect(page.getByRole("status")).toContainText(
-      "Crew prediction published. Divers will see it now.",
-    );
+    await expect(page.getByRole("status")).toContainText(staff("trips.notices.conditions"));
     await signOut(page);
 
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
@@ -306,7 +310,7 @@ test.describe("staff", () => {
     // second half of that line — how to change it — is gone, because this page
     // is where it is changed.
     const dayOf = await openThreadStep(page, "dayof");
-    await expect(dayOf.getByText("Your crew sees how many picked each, not who.")).toBeVisible();
+    await expect(dayOf.getByText(diver("booking.intent.audience"))).toBeVisible();
     await saveDiveIntent(page, "Small life and photos");
 
     await signInAsOwner(page);
@@ -353,7 +357,7 @@ test.describe("staff", () => {
     await saveDiveIntent(page, "Getting comfortable again");
     const dayOf = await openThreadStep(page, "dayof");
     await expect(dayOf.getByText("Anything that would help?")).toBeVisible();
-    await expect(dayOf.getByText("None of these changes whether you can book.")).toBeVisible();
+    await expect(dayOf.getByText(diver("booking.reEntry.noGate"))).toBeVisible();
     await dayOf
       .getByRole("radio", { name: "A word with the divemaster before we get in." })
       .check();
@@ -399,7 +403,7 @@ test.describe("staff", () => {
     await saveDiveIntent(page, "Getting comfortable again");
     // The question stands; the offers do not.
     const dayOf = await openThreadStep(page, "dayof");
-    await expect(dayOf.getByText("Your crew sees how many picked each, not who.")).toBeVisible();
+    await expect(dayOf.getByText(diver("booking.intent.audience"))).toBeVisible();
     await expect(page.getByText("Anything that would help?")).toHaveCount(0);
   });
 });
