@@ -44,6 +44,10 @@ account's `payouts_enabled` flag. Stripe's fees were nowhere at all. (UX review 
 - **A manual or instant payout** is read for its own balance transaction
   (`balance_transactions?source=po_…`), because Stripe will not itemize it: its fee counts toward
   Reports' fee line and its line has no "covering" clause, since the span cannot be known.
+- **Fees stay on the payout month** (decision on issue #2462, 2026-10-15). Reports' "Stripe fees" is
+  the sum of `fee_cents` on payouts arriving in the month, so it matches the bank statement, and its
+  copy says so. Attributing a fee to the month of the charge needs one Stripe read per payment and
+  a column on payments; revisit when a pilot shop's bookkeeper asks for it.
 
 ## Alternatives considered
 
