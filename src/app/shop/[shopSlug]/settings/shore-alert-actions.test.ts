@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { activityEvents, shops } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import type { Notification } from "@/lib/notifications";
+import { rateLimitKey } from "@/lib/rate-limit";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -43,10 +44,18 @@ vi.mock("@/db/notifications", async (importOriginal) => {
   };
 });
 // The per-recipient bucket is a fixed three an hour; the file sends to one
-// address more often than that, and the bucket is not what is under test.
+// address more often than that, so every check is allowed and only the keys
+// asked are recorded.
+const limited = vi.hoisted(() => ({ keys: [] as string[] }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
-  return { ...actual, checkRateLimit: async () => ({ allowed: true, retryAfterMs: 0 }) };
+  return {
+    ...actual,
+    checkRateLimit: async (key: string) => {
+      limited.keys.push(key);
+      return { allowed: true, retryAfterMs: 0 };
+    },
+  };
 });
 vi.mock("@/lib/notifications", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/notifications")>();
@@ -179,6 +188,15 @@ describe("saving the shore contact's alert address", () => {
       "shore_alert_contact_set",
       "shore_alert_contact_cleared",
     ]);
+  });
+
+  // Security re-review #4: one inbox, one hourly allowance, whichever of the
+  // shop's two confirmation links (front desk, shore contact) asks for it.
+  it("counts the link against the same per-recipient bucket as the front desk's", async () => {
+    await signedIn({ demo: false });
+    limited.keys.length = 0;
+    await redirectedTo(() => saveEmergencyReferenceAction(form(SHORE, true)));
+    expect(limited.keys).toContain(rateLimitKey("contact-confirmation", "recipient", SHORE));
   });
 
   it("sends nothing from a demo shop, and says so", async () => {

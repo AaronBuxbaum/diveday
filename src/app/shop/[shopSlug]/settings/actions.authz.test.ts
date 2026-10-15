@@ -1,7 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
+import {
+  mediaDeletionAttempts,
+  processorErasureObligations,
+  shopShoreAlertTokens,
+  shops,
+} from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -46,7 +51,11 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { revalidatePath } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
-const { saveDockDayRhythmAction, saveEmergencyReferenceAction } = await import("./boat-actions");
+const {
+  resendShoreAlertConfirmationAction,
+  saveDockDayRhythmAction,
+  saveEmergencyReferenceAction,
+} = await import("./boat-actions");
 const { savePackingAction } = await import("./booking-actions");
 const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
   await import("./data-actions");
@@ -371,7 +380,7 @@ describe("every settings mutation refuses the daily crew", () => {
    * handed.
    */
   it("refuses a captain's emergency reference, rental catalog, rental prices and profile", async () => {
-    const { db, shop, captain } = await context();
+    const { db, shop, captain, owner } = await context();
     signIn(shop, captain);
     const before = await getShopById(db, shop.id);
     const refused = `/shop/${shop.slug}/settings?notice=not-authorized`;
@@ -381,6 +390,20 @@ describe("every settings mutation refuses the daily crew", () => {
     emergency.set("emergencyLabel-0", "Chamber");
     emergency.set("emergencyPhone-0", "+1 555 0100");
     expect(await redirectedTo(() => saveEmergencyReferenceAction(emergency))).toBe(refused);
+    // "Send the link again" mails an outside address: owner/manager work too.
+    // An address waiting for its link, so an ungated resend would mint one.
+    await db
+      .update(shops)
+      .set({
+        shoreAlertEmail: "shore@example.com",
+        shoreAlertConsentAt: new Date(),
+        shoreAlertConsentByPersonId: owner,
+      })
+      .where(eq(shops.id, shop.id));
+    expect(await redirectedTo(() => resendShoreAlertConfirmationAction())).toBe(refused);
+    expect(
+      await db.select().from(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shop.id)),
+    ).toEqual([]);
 
     const items = new FormData();
     items.set("drysuit", "on");

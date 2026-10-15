@@ -210,10 +210,11 @@ async function confirmationNotice(
 
 /**
  * Mints a confirmation link for the shop's shore address and sends it there,
- * and nowhere else (H-118 security review). Per shop and per recipient rate
- * limits, the same buckets' shape the front desk's confirmation uses (issue
- * #1288): without them a save-and-resend loop is a branded-mail relay to
- * anybody's inbox. A refused or failed send leaves the address saved and
+ * and nowhere else (H-118 security review). Rate-limited per shop, and per
+ * recipient in the front desk confirmation's own bucket (issue #1288), so one
+ * inbox has one hourly allowance whichever link the shop sends it (security
+ * re-review #4): without them a save-and-resend loop is a branded-mail relay
+ * to anybody's inbox. A refused or failed send leaves the address saved and
  * unconfirmed, which sends nothing; the resend control is still there.
  */
 async function sendShoreAlertConfirmation(shop: {
@@ -231,7 +232,7 @@ async function sendShoreAlertConfirmation(shop: {
       RATE_LIMITS.contactConfirmationByShop,
     ),
     checkRateLimit(
-      rateLimitKey("shore-alert-confirmation", "recipient", shop.shoreAlertEmail.toLowerCase()),
+      rateLimitKey("contact-confirmation", "recipient", shop.shoreAlertEmail.toLowerCase()),
       RATE_LIMITS.contactConfirmationByRecipient,
     ),
   ]);
