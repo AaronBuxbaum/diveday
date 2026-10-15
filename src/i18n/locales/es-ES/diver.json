@@ -500,6 +500,13 @@
     "sentHeading": "Revisa tu correo",
     "sentBody": "Si ese correo tiene una reserva vigente con nosotros, te hemos enviado un enlace nuevo."
   },
+  "findYourBooking": {
+    "title": "Encuentra tu reserva",
+    "description": "Elige el centro donde reservaste. En su página, escribe el correo con el que reservaste y el centro te envía el enlace de nuevo.",
+    "listLabel": "Centros en DiveDay",
+    "notListed": "¿No aparece? El correo de tu reserva tiene un enlace a la página del centro.",
+    "empty": "Todavía no hay centros en la lista. El correo de tu reserva tiene un enlace a la página del centro."
+  },
   "courtesyEmailUnsubscribe": {
     "title": "¿Dejar de recibir estos correos?",
     "description": "Recibes correos opcionales de {shopName}, como avisos de lista de espera, invitaciones a salidas y resúmenes tras la inmersión. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",
@@ -3637,6 +3644,8 @@
       "heroTitle": "Cada buceador reservado, firmado, verificado y localizado.",
       "heroDescription": "Reservas en línea, exenciones y formularios médicos, control de certificaciones, check-in y el manifiesto del barco, en una sola aplicación para tu centro de buceo. Un buceador que no está listo aparece con su nombre en recepción días antes de la salida.",
       "heroPriceLine": "Un precio único de {price} {cadence}, sin comisión sobre tus reservas.",
+      "diverDoor": "¿Reservaste una inmersión?",
+      "diverDoorLink": "Encuentra tu reserva",
       "phoneFrameLabel": "Un capitán pasando lista en DiveDay en el muelle: 4 de 9 buceadores a bordo, un nombre marcado a bordo y el siguiente aún por llamar.",
       "dockEyebrow": "En el muelle",
       "dockDetail": "Guardado en este teléfono antes de que saliera el barco, así que el pase de lista sigue funcionando sin señal.",

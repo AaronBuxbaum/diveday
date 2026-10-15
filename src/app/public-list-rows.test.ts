@@ -26,6 +26,7 @@ function classStrings(file: string): string[][] {
  */
 const LISTS: readonly [page: string, skeleton: string][] = [
   ["app/s/[shopSlug]/courses/page.tsx", "app/s/[shopSlug]/courses/loading.tsx"],
+  ["app/find-your-booking/page.tsx", "app/find-your-booking/loading.tsx"],
 ];
 
 describe("the public lists' rows", () => {

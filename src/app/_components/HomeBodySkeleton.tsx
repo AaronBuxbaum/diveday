@@ -37,6 +37,8 @@ const TITLE_LINES = [
  *   - the doors, `mt-8`: two 48px buttons, stacked below `sm`;
  *   - the demo note (`mt-3`) and the price line (`mt-2`): 20px lines, two each
  *     on a phone and one from `sm`;
+ *   - the diver's line (`mt-6`): one 20px line, "Booked a dive? Find your
+ *     booking" (fourth review, item 50);
  *   - the phone: `CaptainPhoneFrame` renders 544px tall at every width (its
  *     height is its mockup's, not a ratio; the skeleton drew 450 after the
  *     roll call grew);
@@ -86,6 +88,9 @@ export function HomeBodySkeleton() {
             </div>
             <div className="mt-2">
               <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-64 max-w-full" />
+            </div>
+            <div className="mt-6">
+              <SkeletonLineBars lines={1} height="h-5" width="w-52 max-w-full" />
             </div>
           </div>
           {/* The captain's phone, and the card that overlaps its lower edge. */}

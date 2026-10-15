@@ -2289,6 +2289,14 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "get-set-up-sent", scheme);
       });
 
+      // DiveDay's door for a diver who lost their link (fourth review, item
+      // 50): the listed shops, each leading to its own find-my-booking.
+      test(`the diver's shop picker renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/find-your-booking");
+        await page.locator("h1").first().waitFor();
+        await capture(page, "find-your-booking", scheme);
+      });
+
       test(`the sign-in page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/sign-in");
         await capture(page, "sign-in", scheme);

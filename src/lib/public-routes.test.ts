@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  FIND_YOUR_BOOKING_PATH,
   LLMS_TXT_PATH,
   publicAvailabilityPath,
+  publicFindMyBookingPath,
   publicSchedulePath,
   shopSlugFromPublicPath,
   shopSlugFromStaffUrl,
@@ -14,6 +16,13 @@ describe("agent-facing paths", () => {
 
   it("keeps llms.txt at the conventional site-root path", () => {
     expect(LLMS_TXT_PATH).toBe("/llms.txt");
+  });
+});
+
+describe("a diver's way back to a lost link", () => {
+  it("keeps DiveDay's door at a top-level path and opens the shop's row by fragment", () => {
+    expect(FIND_YOUR_BOOKING_PATH).toBe("/find-your-booking");
+    expect(publicFindMyBookingPath("blue-mantis")).toBe("/s/blue-mantis#find-my-booking");
   });
 });
 

@@ -65,3 +65,24 @@ test("the form is collapsed by default and asks for nothing but an email", async
   await expect(findMyBooking.getByLabel("Email")).toBeVisible();
   await expect(findMyBooking.getByRole("button", { name: "Send my link" })).toBeVisible();
 });
+
+/**
+ * **DiveDay's door for a diver** (fourth review, item 50): a diver who lost
+ * their link and searched for DiveDay lands on the home page, which is for shop
+ * owners. One quiet line there leads to a picker of listed shops, and each
+ * shop leads to its own find-my-booking row, open on arrival.
+ */
+test("a diver on DiveDay's home page finds their way to a shop's find-my-booking", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Find your booking" }).click();
+  await page.waitForURL(/\/find-your-booking$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Find your booking" })).toBeVisible();
+  const shops = page.getByRole("list", { name: "Shops on DiveDay" });
+  // A listed shop only: the demo never appears on a public list.
+  await expect(shops.getByRole("link", { name: /Blue Mantis/ })).toHaveCount(0);
+  await shops.getByRole("link", { name: /Reef Line Divers/ }).click();
+  await page.waitForURL(/\/s\/reef-line-divers#find-my-booking$/);
+  await expect(page.locator("#find-my-booking").getByLabel("Email")).toBeVisible();
+});

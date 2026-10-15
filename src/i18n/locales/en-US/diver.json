@@ -500,6 +500,13 @@
     "sentHeading": "Check your inbox",
     "sentBody": "If that email has a current booking with us, we’ve sent a fresh link to it."
   },
+  "findYourBooking": {
+    "title": "Find your booking",
+    "description": "Pick the shop you booked with. On its page, enter the email you booked with and the shop sends your link again.",
+    "listLabel": "Shops on DiveDay",
+    "notListed": "Not here? The email from your booking links to the shop’s page.",
+    "empty": "No shops are listed yet. The email from your booking links to the shop’s page."
+  },
   "courtesyEmailUnsubscribe": {
     "title": "Stop these emails?",
     "description": "You get optional emails from {shopName}, like wait-list openings, trip invitations, and post-trip recaps. You’ll still get emails about your own bookings, waivers, and trip updates.",
@@ -3637,6 +3644,8 @@
       "heroTitle": "Every diver booked, signed, checked and accounted for.",
       "heroDescription": "Online booking, waivers and medical forms, certification checks, check-in and the boat manifest, in one app for your dive shop. A diver who isn’t ready is named at the desk days before the boat leaves.",
       "heroPriceLine": "One flat price of {price} {cadence}, and no cut of your bookings.",
+      "diverDoor": "Booked a dive?",
+      "diverDoorLink": "Find your booking",
       "phoneFrameLabel": "A captain calling the roll in DiveDay at the dock: 4 of 9 divers aboard, one name tapped aboard and the next still to call.",
       "dockEyebrow": "At the dock",
       "dockDetail": "Saved to this phone before the boat left, so the roll call keeps working with no signal.",

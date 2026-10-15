@@ -859,6 +859,8 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       // Where every "Get set up" door lands, and the `EntryDone` it ends on.
       { path: "/get-set-up", heading: /\S/ },
       { path: "/get-set-up/sent", heading: /\S/ },
+      // DiveDay's door for a diver who lost their link: a list of shops.
+      { path: "/find-your-booking", heading: /\S/ },
       // **A door that has closed** (issue #1123). Every route above is one a
       // person walks *through*, and `EntryDone` is a different composition
       // entirely — a decorative drawn mark in a circle, an `<h1>`, one muted
